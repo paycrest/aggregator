@@ -3,7 +3,6 @@
 package migrate
 
 import (
-	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/dialect/sql/schema"
 	"entgo.io/ent/schema/field"
 )
@@ -317,14 +316,16 @@ var (
 		{Name: "id", Type: field.TypeInt, Increment: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "symbol", Type: field.TypeString},
 		{Name: "fixed_conversion_rate", Type: field.TypeFloat64},
 		{Name: "floating_conversion_rate", Type: field.TypeFloat64},
 		{Name: "conversion_rate_type", Type: field.TypeEnum, Enums: []string{"fixed", "floating"}},
 		{Name: "max_order_amount", Type: field.TypeFloat64},
 		{Name: "min_order_amount", Type: field.TypeFloat64},
-		{Name: "addresses", Type: field.TypeJSON},
-		{Name: "provider_profile_order_tokens", Type: field.TypeString, Nullable: true},
+		{Name: "address", Type: field.TypeString, Nullable: true},
+		{Name: "network", Type: field.TypeString, Nullable: true},
+		{Name: "fiat_currency_provider_settings", Type: field.TypeUUID},
+		{Name: "provider_profile_order_tokens", Type: field.TypeString},
+		{Name: "token_provider_settings", Type: field.TypeInt},
 	}
 	// ProviderOrderTokensTable holds the schema information for the "provider_order_tokens" table.
 	ProviderOrderTokensTable = &schema.Table{
@@ -333,10 +334,29 @@ var (
 		PrimaryKey: []*schema.Column{ProviderOrderTokensColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "provider_order_tokens_provider_profiles_order_tokens",
+				Symbol:     "provider_order_tokens_fiat_currencies_provider_settings",
 				Columns:    []*schema.Column{ProviderOrderTokensColumns[10]},
+				RefColumns: []*schema.Column{FiatCurrenciesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "provider_order_tokens_provider_profiles_order_tokens",
+				Columns:    []*schema.Column{ProviderOrderTokensColumns[11]},
 				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
 				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "provider_order_tokens_tokens_provider_settings",
+				Columns:    []*schema.Column{ProviderOrderTokensColumns[12]},
+				RefColumns: []*schema.Column{TokensColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "providerordertoken_provider_profile_order_tokens_token_provider_settings_fiat_currency_provider_settings",
+				Unique:  true,
+				Columns: []*schema.Column{ProviderOrderTokensColumns[11], ProviderOrderTokensColumns[12], ProviderOrderTokensColumns[10]},
 			},
 		},
 	}
@@ -728,7 +748,9 @@ func init() {
 	PaymentOrdersTable.ForeignKeys[2].RefTable = SenderProfilesTable
 	PaymentOrdersTable.ForeignKeys[3].RefTable = TokensTable
 	PaymentOrderRecipientsTable.ForeignKeys[0].RefTable = PaymentOrdersTable
-	ProviderOrderTokensTable.ForeignKeys[0].RefTable = ProviderProfilesTable
+	ProviderOrderTokensTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
+	ProviderOrderTokensTable.ForeignKeys[1].RefTable = ProviderProfilesTable
+	ProviderOrderTokensTable.ForeignKeys[2].RefTable = TokensTable
 	ProviderProfilesTable.ForeignKeys[0].RefTable = UsersTable
 	ProviderRatingsTable.ForeignKeys[0].RefTable = ProviderProfilesTable
 	ProvisionBucketsTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
@@ -742,7 +764,6 @@ func init() {
 	VerificationTokensTable.ForeignKeys[0].RefTable = UsersTable
 	FiatCurrencyProvidersTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
 	FiatCurrencyProvidersTable.ForeignKeys[1].RefTable = ProviderProfilesTable
-	FiatCurrencyProvidersTable.Annotation = &entsql.Annotation{}
 	ProvisionBucketProviderProfilesTable.ForeignKeys[0].RefTable = ProvisionBucketsTable
 	ProvisionBucketProviderProfilesTable.ForeignKeys[1].RefTable = ProviderProfilesTable
 }

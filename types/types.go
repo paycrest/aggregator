@@ -208,22 +208,21 @@ type SenderProfilePayload struct {
 
 // ProviderOrderTokenPayload defines the provider setting for a token
 type ProviderOrderTokenPayload struct {
+	Currency               string                                `json:"currency" binding:"required"`
 	Symbol                 string                                `json:"symbol" binding:"required"`
 	ConversionRateType     providerordertoken.ConversionRateType `json:"conversionRateType" binding:"required"`
 	FixedConversionRate    decimal.Decimal                       `json:"fixedConversionRate" binding:"required"`
 	FloatingConversionRate decimal.Decimal                       `json:"floatingConversionRate" binding:"required"`
 	MaxOrderAmount         decimal.Decimal                       `json:"maxOrderAmount" binding:"required"`
 	MinOrderAmount         decimal.Decimal                       `json:"minOrderAmount" binding:"required"`
-	Addresses              []struct {
-		Address string `json:"address"`
-		Network string `json:"network"`
-	} `json:"addresses"`
+	Address                string                                `json:"address" binding:"required"`
+	Network                string                                `json:"network" binding:"required"`
 }
 
 // ProviderProfilePayload is the payload for the provider profile endpoint
 type ProviderProfilePayload struct {
 	TradingName          string                      `json:"tradingName"`
-	Currencies           []string                    `json:"currencies"` // TODO: will be currencies
+	Currencies           []string                    `json:"currencies"`
 	HostIdentifier       string                      `json:"hostIdentifier"`
 	IsAvailable          bool                        `json:"isAvailable"`
 	Tokens               []ProviderOrderTokenPayload `json:"tokens"`
@@ -244,7 +243,7 @@ type ProviderProfileResponse struct {
 	LastName             string                               `json:"lastName"`
 	Email                string                               `json:"email"`
 	TradingName          string                               `json:"tradingName"`
-	Currencies           []string                             `json:"currencies"` // TODO: will be currencies
+	Currencies           []string                             `json:"currencies"`
 	HostIdentifier       string                               `json:"hostIdentifier"`
 	IsAvailable          bool                                 `json:"isAvailable"`
 	Tokens               []ProviderOrderTokenPayload          `json:"tokens"`
@@ -272,17 +271,17 @@ type SenderOrderTokenResponse struct {
 
 // SenderProfileResponse is the response for the sender profile endpoint
 type SenderProfileResponse struct {
-	ID                   uuid.UUID                  `json:"id"`
-	FirstName            string                     `json:"firstName"`
-	LastName             string                     `json:"lastName"`
-	Email                string                     `json:"email"`
-	WebhookURL           string                     `json:"webhookUrl"`
-	DomainWhitelist      []string                   `json:"domainWhitelist"`
-	Tokens               []SenderOrderTokenResponse `json:"tokens"`
-	APIKey               APIKeyResponse             `json:"apiKey"`
-	ProviderID           string                     `json:"providerId"`
-	ProviderCurrencies   []string                   `json:"providerCurrencies"`
-	IsActive             bool                       `json:"isActive"`
+	ID                 uuid.UUID                  `json:"id"`
+	FirstName          string                     `json:"firstName"`
+	LastName           string                     `json:"lastName"`
+	Email              string                     `json:"email"`
+	WebhookURL         string                     `json:"webhookUrl"`
+	DomainWhitelist    []string                   `json:"domainWhitelist"`
+	Tokens             []SenderOrderTokenResponse `json:"tokens"`
+	APIKey             APIKeyResponse             `json:"apiKey"`
+	ProviderID         string                     `json:"providerId"`
+	ProviderCurrencies []string                   `json:"providerCurrencies"`
+	IsActive           bool                       `json:"isActive"`
 }
 
 // RefreshResponse is the response for the refresh endpoint

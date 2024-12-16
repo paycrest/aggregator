@@ -469,7 +469,7 @@ func CreateTestProviderProfile(overrides map[string]interface{}) (*ent.ProviderP
 		SetHostIdentifier(payload["host_identifier"].(string)).
 		SetProvisionMode(providerprofile.ProvisionMode(payload["provision_mode"].(string))).
 		SetUserID(payload["user_id"].(uuid.UUID)).
-		SetCurrencyID(payload["currency_id"].(uuid.UUID)).
+		AddCurrencyIDs(payload["currency_id"].(uuid.UUID)).
 		SetVisibilityMode(providerprofile.VisibilityMode(payload["visibility_mode"].(string))).
 		Save(context.Background())
 
@@ -492,7 +492,6 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		"floating_conversion_rate": decimal.NewFromFloat(1.0),
 		"max_order_amount":         decimal.NewFromFloat(1.0),
 		"min_order_amount":         decimal.NewFromFloat(1.0),
-		"tokenSymbol":              "",
 		"provider":                 nil,
 		"addresses": []map[string]string{
 			{
@@ -527,14 +526,20 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 
 	orderToken, err := db.Client.ProviderOrderToken.
 		Create().
-		SetSymbol(payload["tokenSymbol"].(string)).
 		SetProvider(payload["provider"].(*ent.ProviderProfile)).
 		SetMaxOrderAmount(payload["max_order_amount"].(decimal.Decimal)).
 		SetMinOrderAmount(payload["min_order_amount"].(decimal.Decimal)).
 		SetConversionRateType(providerordertoken.ConversionRateType(payload["conversion_rate_type"].(string))).
 		SetFixedConversionRate(payload["fixed_conversion_rate"].(decimal.Decimal)).
 		SetFloatingConversionRate(payload["floating_conversion_rate"].(decimal.Decimal)).
+<<<<<<< HEAD
 		SetAddresses(addresses).
+=======
+		SetAddress(payload["address"].(string)).
+		SetNetwork(payload["network"].(string)).
+		SetTokenID(payload["token"].(int)).
+		SetCurrencyID(payload["currency"].(uuid.UUID)).
+>>>>>>> 501a699 (feat: restructure provider order token + refactor for multi-currency support)
 		Save(context.Background())
 
 	return orderToken, err

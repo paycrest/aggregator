@@ -188,6 +188,7 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 				return
 			}
 
+<<<<<<< HEAD
 		} else {
 			// Get redis keys for provision buckets
 			keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currency.Code+"_*_*", 100).Result()
@@ -195,6 +196,13 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch rates", nil)
 				return
 			}
+=======
+		rateResponse, err = ctrl.priorityQueueService.GetProviderRate(ctx, provider, token.Symbol, currency.Code)
+		if err != nil {
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider rate", nil)
+			return
+		}
+>>>>>>> 501a699 (feat: restructure provider order token + refactor for multi-currency support)
 
 			highestMaxAmount := decimal.NewFromInt(0)
 
@@ -275,10 +283,14 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 		return
 	}
 
-	institution, err := storage.Client.Institution.
+	accountInstitution, err := storage.Client.Institution.
 		Query().
 		Where(institution.CodeEQ(payload.Institution)).
-		WithFiatCurrency().
+		WithFiatCurrency(
+			func(fq *ent.FiatCurrencyQuery) {
+				fq.Where(fiatcurrency.IsEnabledEQ(true))
+			},
+		).
 		Only(ctx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
@@ -289,8 +301,8 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 		return
 	}
 
-	// TODO: Remove this after testing non-NGN institutions
-	if institution.Edges.FiatCurrency.Code != "NGN" {
+	// Skip account verification for mobile money institutions
+	if accountInstitution.Type == institution.TypeMobileMoney {
 		u.APIResponse(ctx, http.StatusOK, "success", "Account name was fetched successfully", "OK")
 		return
 	}
@@ -298,8 +310,8 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 	providers, err := storage.Client.ProviderProfile.
 		Query().
 		Where(
-			providerprofile.HasCurrencyWith(
-				fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
+			providerprofile.HasCurrenciesWith(
+				fiatcurrency.CodeEQ(accountInstitution.Edges.FiatCurrency.Code),
 			),
 			providerprofile.HostIdentifierNotNil(),
 			providerprofile.IsActiveEQ(true),
@@ -307,7 +319,6 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 		).
 		All(ctx)
 	if err != nil {
-		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusBadRequest, "error",
 			"Failed to verify account", err.Error())
 		return
@@ -332,7 +343,7 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 	}
 
 	if err != nil {
-		logger.Errorf("error: %v %v", err, data)
+		logger.Errorf("Failed to verify account: %v %v", err, data)
 		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to verify account", nil)
 		return
 	}

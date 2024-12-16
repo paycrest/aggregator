@@ -39,6 +39,8 @@ const (
 	EdgeProvisionBuckets = "provision_buckets"
 	// EdgeInstitutions holds the string denoting the institutions edge name in mutations.
 	EdgeInstitutions = "institutions"
+	// EdgeProviderSettings holds the string denoting the provider_settings edge name in mutations.
+	EdgeProviderSettings = "provider_settings"
 	// Table holds the table name of the fiatcurrency in the database.
 	Table = "fiat_currencies"
 	// ProvidersTable is the table that holds the providers relation/edge. The primary key declared below.
@@ -60,6 +62,13 @@ const (
 	InstitutionsInverseTable = "institutions"
 	// InstitutionsColumn is the table column denoting the institutions relation/edge.
 	InstitutionsColumn = "fiat_currency_institutions"
+	// ProviderSettingsTable is the table that holds the provider_settings relation/edge.
+	ProviderSettingsTable = "provider_order_tokens"
+	// ProviderSettingsInverseTable is the table name for the ProviderOrderToken entity.
+	// It exists in this package in order to avoid circular dependency with the "providerordertoken" package.
+	ProviderSettingsInverseTable = "provider_order_tokens"
+	// ProviderSettingsColumn is the table column denoting the provider_settings relation/edge.
+	ProviderSettingsColumn = "fiat_currency_provider_settings"
 )
 
 // Columns holds all SQL columns for fiatcurrency fields.
@@ -201,6 +210,20 @@ func ByInstitutions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newInstitutionsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByProviderSettingsCount orders the results by provider_settings count.
+func ByProviderSettingsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newProviderSettingsStep(), opts...)
+	}
+}
+
+// ByProviderSettings orders the results by provider_settings terms.
+func ByProviderSettings(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProviderSettingsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newProvidersStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -220,5 +243,12 @@ func newInstitutionsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(InstitutionsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, InstitutionsTable, InstitutionsColumn),
+	)
+}
+func newProviderSettingsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProviderSettingsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ProviderSettingsTable, ProviderSettingsColumn),
 	)
 }

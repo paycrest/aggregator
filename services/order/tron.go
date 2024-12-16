@@ -561,9 +561,12 @@ func (s *OrderTron) settleCallData(ctx context.Context, order *ent.LockPaymentOr
 	token, err := db.Client.ProviderOrderToken.
 		Query().
 		Where(
-			providerordertoken.SymbolEQ(order.Edges.Token.Symbol),
+			providerordertoken.NetworkEQ(order.Edges.Token.Edges.Network.Identifier),
 			providerordertoken.HasProviderWith(
 				providerprofile.IDEQ(order.Edges.Provider.ID),
+			),
+			providerordertoken.HasTokenWith(
+				tokenEnt.IDEQ(order.Edges.Token.ID),
 			),
 		).
 		Only(ctx)
@@ -572,13 +575,8 @@ func (s *OrderTron) settleCallData(ctx context.Context, order *ent.LockPaymentOr
 	}
 
 	var providerAddress string
-	for _, addr := range token.Addresses {
-		if addr.Network == order.Edges.Token.Edges.Network.Identifier {
-			providerAddressTron, _ := util.Base58ToAddress(addr.Address)
-			providerAddress = providerAddressTron.Hex()[4:]
-			break
-		}
-	}
+	providerAddressTron, _ := util.Base58ToAddress(token.Address)
+	providerAddress = providerAddressTron.Hex()[4:]
 
 	if providerAddress == "" {
 		return nil, fmt.Errorf("failed to fetch provider address: %w", err)

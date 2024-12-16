@@ -196,7 +196,7 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile commit", nil)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 		return
 	}
 
@@ -246,7 +246,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 	} else {
 		update.SetIsAvailable(false)
 	}
-	
+
 	if len(payload.Currencies) > 0 {
 		newCurrencies, err := storage.Client.FiatCurrency.Query().
 			Where(
@@ -263,6 +263,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			})
 			return
 		}
+
 		// Fetch the existing currencies associated with the provider profile
 		existingCurrencies, err := storage.Client.ProviderProfile.
 			Query().
@@ -270,6 +271,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			QueryCurrencies().
 			All(ctx)
 		if err != nil {
+			logger.Errorf("Failed to fetch existing currencies: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch existing currencies", nil)
 			return
 		}
@@ -333,96 +335,106 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 
 	// Update tokens
 	for _, tokenPayload := range payload.Tokens {
-		if len(tokenPayload.Addresses) == 0 {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("No wallet address provided for %s settlements", tokenPayload.Symbol), nil)
-			return
-		}
-
 		// Check if token is supported
-		_, err := storage.Client.Token.
+		providerToken, err := storage.Client.Token.
 			Query().
 			Where(token.Symbol(tokenPayload.Symbol)).
-			First(ctx)
+			Only(ctx)
 		if err != nil {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Token not supported", nil)
+			if ent.IsNotFound(err) {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Token not supported - %s", tokenPayload.Symbol), nil)
+			} else {
+				logger.Errorf("Failed to check token support: %v", err)
+				u.APIResponse(
+					ctx,
+					http.StatusInternalServerError,
+					"error", "Failed to update profile",
+					nil,
+				)
+			}
 			return
 		}
 
 		// Check if network is supported
-		for _, addressPayload := range tokenPayload.Addresses {
-			_, err = storage.Client.Network.
-				Query().
-				Where(network.IdentifierEQ(addressPayload.Network)).
-				First(ctx)
-			if err != nil {
-				u.APIResponse(
-					ctx,
-					http.StatusBadRequest,
-					"error", "Network not supported - "+addressPayload.Network,
-					nil,
-				)
-				return
-			}
+		networkExists, err := storage.Client.Network.
+			Query().
+			Where(network.IdentifierEQ(tokenPayload.Network)).
+			Exist(ctx)
+		if err != nil {
+			logger.Errorf("Failed to check network support: %v", err)
+			u.APIResponse(
+				ctx,
+				http.StatusInternalServerError,
+				"error", "Failed to update profile",
+				nil,
+			)
+			return
+		}
+		if !networkExists {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Network not supported - %s", tokenPayload.Network), nil)
+			return
 		}
 
 		// Ensure rate is within allowed deviation from the market rate
-		// TODO: first fetch all the currencies set by the provider
-		// Fetch the existing currencies associated with the provider profile
-		payloadCurrencies, err := storage.Client.FiatCurrency.Query().
+		currency, err := storage.Client.FiatCurrency.Query().
 			Where(
-				fiatcurrency.And(
-					fiatcurrency.IsEnabledEQ(true),
-					fiatcurrency.CodeIn(payload.Currencies...),
-				),
+				fiatcurrency.IsEnabledEQ(true),
+				fiatcurrency.CodeEQ(tokenPayload.Currency),
 			).
-			All(ctx)
+			Only(ctx)
 		if err != nil {
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch currencies for rate", nil)
+			if ent.IsNotFound(err) {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Currency not supported", nil)
+			} else {
+				logger.Errorf("Failed to fetch currency: %v", err)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch currency", nil)
+			}
 			return
 		}
 
 		var rate decimal.Decimal
-		// TODO:  checking for all their supported currencies
-		for _, currency := range payloadCurrencies {
-			if tokenPayload.ConversionRateType == providerordertoken.ConversionRateTypeFloating {
-				rate = currency.MarketRate.Add(tokenPayload.FloatingConversionRate)
+		if tokenPayload.ConversionRateType == providerordertoken.ConversionRateTypeFloating {
+			rate = currency.MarketRate.Add(tokenPayload.FloatingConversionRate)
 
-				percentDeviation := u.AbsPercentageDeviation(currency.MarketRate, rate)
-				if percentDeviation.GreaterThan(orderConf.PercentDeviationFromMarketRate) {
-					u.APIResponse(ctx, http.StatusBadRequest, "error", "Rate is too far from market rate", nil)
-					return
-				}
+			percentDeviation := u.AbsPercentageDeviation(currency.MarketRate, rate)
+			if percentDeviation.GreaterThan(orderConf.PercentDeviationFromMarketRate) {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Rate is too far from market rate", nil)
+				return
 			}
 		}
+
 		// See if token already exists for provider
 		orderToken, err := storage.Client.ProviderOrderToken.
 			Query().
 			Where(
-				providerordertoken.SymbolEQ(tokenPayload.Symbol),
+				providerordertoken.HasTokenWith(token.IDEQ(providerToken.ID)),
 				providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+				providerordertoken.HasCurrencyWith(fiatcurrency.IDEQ(currency.ID)),
 			).
 			Only(ctx)
-
 		if err != nil {
 			if ent.IsNotFound(err) {
 				// Token doesn't exist, create it
 				_, err = storage.Client.ProviderOrderToken.
 					Create().
-					SetSymbol(tokenPayload.Symbol).
 					SetConversionRateType(tokenPayload.ConversionRateType).
 					SetFixedConversionRate(tokenPayload.FixedConversionRate).
 					SetFloatingConversionRate(tokenPayload.FloatingConversionRate).
 					SetMaxOrderAmount(tokenPayload.MaxOrderAmount).
 					SetMinOrderAmount(tokenPayload.MinOrderAmount).
-					SetAddresses(tokenPayload.Addresses).
+					SetAddress(tokenPayload.Address).
 					SetProviderID(provider.ID).
+					SetTokenID(providerToken.ID).
+					SetCurrencyID(currency.ID).
 					Save(ctx)
 				if err != nil {
-					u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to set token - "+tokenPayload.Symbol, nil)
+					logger.Errorf("Failed to set token: %v", err)
+					u.APIResponse(ctx, http.StatusInternalServerError, "error", fmt.Sprintf("Failed to set token - %s", tokenPayload.Symbol), nil)
 					return
 				}
 			} else {
-				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to set token - "+tokenPayload.Symbol, nil)
+				logger.Errorf("Failed to set token: %v", err)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", fmt.Sprintf("Failed to set token - %s", tokenPayload.Symbol), nil)
 				return
 			}
 		} else {
@@ -433,7 +445,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				SetFloatingConversionRate(tokenPayload.FloatingConversionRate).
 				SetMaxOrderAmount(tokenPayload.MaxOrderAmount).
 				SetMinOrderAmount(tokenPayload.MinOrderAmount).
-				SetAddresses(tokenPayload.Addresses).
+				SetAddress(tokenPayload.Address).
 				Save(ctx)
 			if err != nil {
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to set token - "+tokenPayload.Symbol, nil)
@@ -441,8 +453,9 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			}
 		}
 
-		rate, err = ctrl.priorityQueueService.GetProviderRate(ctx, provider, tokenPayload.Symbol)
+		rate, err = ctrl.priorityQueueService.GetProviderRate(ctx, provider, providerToken.Symbol, currency.Code)
 		if err != nil {
+			logger.Errorf("Failed to get rate for provider %s", provider.ID)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to set token", nil)
 			return
 		}
@@ -466,24 +479,6 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		}
 	}
 
-	// // Update rate and order amount range
-	// // TODO: remove this when rate and range is handled per token in dashboard
-	// _, err := storage.Client.ProviderOrderToken.
-	// 	Update().
-	// 	Where(
-	// 		providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
-	// 	).
-	// 	SetConversionRateType(payload.Tokens[0].ConversionRateType).
-	// 	SetFixedConversionRate(payload.Tokens[0].FixedConversionRate).
-	// 	SetFloatingConversionRate(payload.Tokens[0].FloatingConversionRate).
-	// 	SetMaxOrderAmount(payload.Tokens[0].MaxOrderAmount).
-	// 	SetMinOrderAmount(payload.Tokens[0].MinOrderAmount).
-	// 	Save(ctx)
-	// if err != nil {
-	// 	u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to set token - "+payload.Tokens[0].Symbol, nil)
-	// 	return
-	// }
-
 	// Activate profile
 	if payload.BusinessDocument != "" && payload.IdentityDocument != "" {
 		update.SetIsActive(true)
@@ -491,6 +486,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 
 	_, err := update.Save(ctx)
 	if err != nil {
+		logger.Errorf("Failed to commit update of provider profile: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 		return
 	}
@@ -511,7 +507,7 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 	user, err := sender.QueryUser().Only(ctx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile 4", nil)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)
 		return
 	}
 
@@ -519,7 +515,7 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 	apiKey, err := ctrl.apiKeyService.GetAPIKey(ctx, sender, nil)
 	if err != nil {
 		logger.Errorf("error: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile 3", nil)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)
 		return
 	}
 
@@ -534,7 +530,7 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 		All(ctx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile 2", nil)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)
 		return
 	}
 
@@ -573,16 +569,15 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 			// do nothing
 		} else {
 			logger.Errorf("error: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile 1", nil)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)
 			return
 		}
 	}
 
 	if linkedProvider != nil {
 		response.ProviderID = sender.ProviderID
-		// Extract currency codes from linkedProvider.Edges.Currencies
-		// returning the currencies codes associated with the provider instead of just a currency code
-        currencyCodes := make([]string, len(linkedProvider.Edges.Currencies))
+		// Extract currency codes from linked provider
+		currencyCodes := make([]string, len(linkedProvider.Edges.Currencies))
 		for i, currency := range linkedProvider.Edges.Currencies {
 			currencyCodes[i] = currency.Code
 		}
@@ -616,45 +611,38 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)
 		return
 	}
+
 	// Provider profile should also returns all the currencies associated with the provider
 	currencyCodes := make([]string, len(currencies))
 	for i, currency := range currencies {
 		currencyCodes[i] = currency.Code
 	}
 
-	// Get tokens
-	tokens, err := provider.QueryOrderTokens().All(ctx)
+	// Get token settings
+	orderTokens, err := provider.
+		QueryOrderTokens().
+		WithToken().
+		WithCurrency().
+		All(ctx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)
 		return
 	}
 
-	tokensPayload := make([]types.ProviderOrderTokenPayload, len(tokens))
-	for i, token := range tokens {
+	tokensPayload := make([]types.ProviderOrderTokenPayload, len(orderTokens))
+	for i, orderToken := range orderTokens {
 		payload := types.ProviderOrderTokenPayload{
-			Symbol:                 token.Symbol,
-			ConversionRateType:     token.ConversionRateType,
-			FixedConversionRate:    token.FixedConversionRate,
-			FloatingConversionRate: token.FloatingConversionRate,
-			MaxOrderAmount:         token.MaxOrderAmount,
-			MinOrderAmount:         token.MinOrderAmount,
-			Addresses: make([]struct {
-				Address string `json:"address"`
-				Network string `json:"network"`
-			}, len(token.Addresses)),
+			Currency:               orderToken.Edges.Currency.Code,
+			Symbol:                 orderToken.Edges.Token.Symbol,
+			ConversionRateType:     orderToken.ConversionRateType,
+			FixedConversionRate:    orderToken.FixedConversionRate,
+			FloatingConversionRate: orderToken.FloatingConversionRate,
+			MaxOrderAmount:         orderToken.MaxOrderAmount,
+			MinOrderAmount:         orderToken.MinOrderAmount,
+			Address:                orderToken.Address,
+			Network:                orderToken.Network,
 		}
-
-		for j, address := range token.Addresses {
-			payload.Addresses[j] = struct {
-				Address string `json:"address"`
-				Network string `json:"network"`
-			}{
-				Address: address.Address,
-				Network: address.Network,
-			}
-		}
-
 		tokensPayload[i] = payload
 	}
 
@@ -672,7 +660,7 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 		LastName:             user.LastName,
 		Email:                user.Email,
 		TradingName:          provider.TradingName,
-		Currencies:             currencyCodes,
+		Currencies:           currencyCodes,
 		HostIdentifier:       provider.HostIdentifier,
 		IsAvailable:          provider.IsAvailable,
 		Tokens:               tokensPayload,

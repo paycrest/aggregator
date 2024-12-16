@@ -12,12 +12,22 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+<<<<<<< HEAD
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/token"
+=======
+	"github.com/paycrest/protocol/ent/lockpaymentorder"
+	"github.com/paycrest/protocol/ent/network"
+	"github.com/paycrest/protocol/ent/paymentorder"
+	"github.com/paycrest/protocol/ent/predicate"
+	"github.com/paycrest/protocol/ent/providerordertoken"
+	"github.com/paycrest/protocol/ent/senderordertoken"
+	"github.com/paycrest/protocol/ent/token"
+>>>>>>> 501a699 (feat: restructure provider order token + refactor for multi-currency support)
 )
 
 // TokenQuery is the builder for querying Token entities.
@@ -31,6 +41,7 @@ type TokenQuery struct {
 	withPaymentOrders     *PaymentOrderQuery
 	withLockPaymentOrders *LockPaymentOrderQuery
 	withSenderSettings    *SenderOrderTokenQuery
+	withProviderSettings  *ProviderOrderTokenQuery
 	withFKs               bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -149,6 +160,28 @@ func (tq *TokenQuery) QuerySenderSettings() *SenderOrderTokenQuery {
 			sqlgraph.From(token.Table, token.FieldID, selector),
 			sqlgraph.To(senderordertoken.Table, senderordertoken.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, token.SenderSettingsTable, token.SenderSettingsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(tq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryProviderSettings chains the current query on the "provider_settings" edge.
+func (tq *TokenQuery) QueryProviderSettings() *ProviderOrderTokenQuery {
+	query := (&ProviderOrderTokenClient{config: tq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := tq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := tq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(token.Table, token.FieldID, selector),
+			sqlgraph.To(providerordertoken.Table, providerordertoken.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, token.ProviderSettingsTable, token.ProviderSettingsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(tq.driver.Dialect(), step)
 		return fromU, nil
@@ -352,6 +385,7 @@ func (tq *TokenQuery) Clone() *TokenQuery {
 		withPaymentOrders:     tq.withPaymentOrders.Clone(),
 		withLockPaymentOrders: tq.withLockPaymentOrders.Clone(),
 		withSenderSettings:    tq.withSenderSettings.Clone(),
+		withProviderSettings:  tq.withProviderSettings.Clone(),
 		// clone intermediate query.
 		sql:  tq.sql.Clone(),
 		path: tq.path,
@@ -399,6 +433,17 @@ func (tq *TokenQuery) WithSenderSettings(opts ...func(*SenderOrderTokenQuery)) *
 		opt(query)
 	}
 	tq.withSenderSettings = query
+	return tq
+}
+
+// WithProviderSettings tells the query-builder to eager-load the nodes that are connected to
+// the "provider_settings" edge. The optional arguments are used to configure the query builder of the edge.
+func (tq *TokenQuery) WithProviderSettings(opts ...func(*ProviderOrderTokenQuery)) *TokenQuery {
+	query := (&ProviderOrderTokenClient{config: tq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	tq.withProviderSettings = query
 	return tq
 }
 
@@ -481,11 +526,12 @@ func (tq *TokenQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Token,
 		nodes       = []*Token{}
 		withFKs     = tq.withFKs
 		_spec       = tq.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [5]bool{
 			tq.withNetwork != nil,
 			tq.withPaymentOrders != nil,
 			tq.withLockPaymentOrders != nil,
 			tq.withSenderSettings != nil,
+			tq.withProviderSettings != nil,
 		}
 	)
 	if tq.withNetwork != nil {
@@ -536,6 +582,13 @@ func (tq *TokenQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Token,
 		if err := tq.loadSenderSettings(ctx, query, nodes,
 			func(n *Token) { n.Edges.SenderSettings = []*SenderOrderToken{} },
 			func(n *Token, e *SenderOrderToken) { n.Edges.SenderSettings = append(n.Edges.SenderSettings, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := tq.withProviderSettings; query != nil {
+		if err := tq.loadProviderSettings(ctx, query, nodes,
+			func(n *Token) { n.Edges.ProviderSettings = []*ProviderOrderToken{} },
+			func(n *Token, e *ProviderOrderToken) { n.Edges.ProviderSettings = append(n.Edges.ProviderSettings, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -662,6 +715,37 @@ func (tq *TokenQuery) loadSenderSettings(ctx context.Context, query *SenderOrder
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "token_sender_settings" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (tq *TokenQuery) loadProviderSettings(ctx context.Context, query *ProviderOrderTokenQuery, nodes []*Token, init func(*Token), assign func(*Token, *ProviderOrderToken)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*Token)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.ProviderOrderToken(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(token.ProviderSettingsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.token_provider_settings
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "token_provider_settings" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "token_provider_settings" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

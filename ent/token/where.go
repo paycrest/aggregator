@@ -507,6 +507,29 @@ func HasSenderSettingsWith(preds ...predicate.SenderOrderToken) predicate.Token 
 	})
 }
 
+// HasProviderSettings applies the HasEdge predicate on the "provider_settings" edge.
+func HasProviderSettings() predicate.Token {
+	return predicate.Token(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ProviderSettingsTable, ProviderSettingsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasProviderSettingsWith applies the HasEdge predicate on the "provider_settings" edge with a given conditions (other predicates).
+func HasProviderSettingsWith(preds ...predicate.ProviderOrderToken) predicate.Token {
+	return predicate.Token(func(s *sql.Selector) {
+		step := newProviderSettingsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Token) predicate.Token {
 	return predicate.Token(sql.AndPredicates(predicates...))

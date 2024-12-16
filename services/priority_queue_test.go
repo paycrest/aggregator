@@ -298,7 +298,7 @@ func TestPriorityQueueTest(t *testing.T) {
 	})
 
 	t.Run("TestGetProviderRate", func(t *testing.T) {
-		rate, err := service.GetProviderRate(context.Background(), testCtxForPQ.publicProviderProfile, testCtxForPQ.token.Symbol)
+		rate, err := service.GetProviderRate(context.Background(), testCtxForPQ.publicProviderProfile, testCtxForPQ.token.Symbol, testCtxForPQ.currency.Code)
 		assert.NoError(t, err)
 		_rate, ok := rate.Float64()
 		assert.True(t, ok)

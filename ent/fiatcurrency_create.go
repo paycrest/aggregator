@@ -13,10 +13,18 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+<<<<<<< HEAD
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
+=======
+	"github.com/paycrest/protocol/ent/fiatcurrency"
+	"github.com/paycrest/protocol/ent/institution"
+	"github.com/paycrest/protocol/ent/providerordertoken"
+	"github.com/paycrest/protocol/ent/providerprofile"
+	"github.com/paycrest/protocol/ent/provisionbucket"
+>>>>>>> 501a699 (feat: restructure provider order token + refactor for multi-currency support)
 	"github.com/shopspring/decimal"
 )
 
@@ -171,6 +179,21 @@ func (fcc *FiatCurrencyCreate) AddInstitutions(i ...*Institution) *FiatCurrencyC
 		ids[j] = i[j].ID
 	}
 	return fcc.AddInstitutionIDs(ids...)
+}
+
+// AddProviderSettingIDs adds the "provider_settings" edge to the ProviderOrderToken entity by IDs.
+func (fcc *FiatCurrencyCreate) AddProviderSettingIDs(ids ...int) *FiatCurrencyCreate {
+	fcc.mutation.AddProviderSettingIDs(ids...)
+	return fcc
+}
+
+// AddProviderSettings adds the "provider_settings" edges to the ProviderOrderToken entity.
+func (fcc *FiatCurrencyCreate) AddProviderSettings(p ...*ProviderOrderToken) *FiatCurrencyCreate {
+	ids := make([]int, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return fcc.AddProviderSettingIDs(ids...)
 }
 
 // Mutation returns the FiatCurrencyMutation object of the builder.
@@ -372,6 +395,22 @@ func (fcc *FiatCurrencyCreate) createSpec() (*FiatCurrency, *sqlgraph.CreateSpec
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(institution.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := fcc.mutation.ProviderSettingsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   fiatcurrency.ProviderSettingsTable,
+			Columns: []string{fiatcurrency.ProviderSettingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerordertoken.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

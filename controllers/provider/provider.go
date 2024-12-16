@@ -768,10 +768,14 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 		Query().
 		Where(providerprofile.IDEQ(providerCtx.(*ent.ProviderProfile).ID)).
 		WithAPIKey().
-		WithCurrency().
+		WithCurrencies().
 		Only(ctx)
 	if err != nil {
+<<<<<<< HEAD
 		logger.Errorf("failed to fetch provider: %v", err)
+=======
+		logger.Errorf("Failed to fetch node info: %v", err)
+>>>>>>> 501a699 (feat: restructure provider order token + refactor for multi-currency support)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch node info", nil)
 		return
 	}
@@ -781,23 +785,40 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 		Build().GET("/health").
 		Send()
 	if err != nil {
+<<<<<<< HEAD
 		logger.Errorf("failed to fetch node info: %v", err)
+=======
+		logger.Errorf("Failed to fetch node info: %v", err)
+>>>>>>> 501a699 (feat: restructure provider order token + refactor for multi-currency support)
 		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
 		return
 	}
 
 	data, err := u.ParseJSONResponse(res.RawResponse)
 	if err != nil {
+<<<<<<< HEAD
 		logger.Errorf("failed to parse node info: %v", err)
+=======
+		logger.Errorf("Failed to fetch node info: %v", err)
+>>>>>>> 501a699 (feat: restructure provider order token + refactor for multi-currency support)
 		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
 		return
 	}
 
+<<<<<<< HEAD
 	currency := data["data"].(map[string]interface{})["currency"].(string)
 	if currency != provider.Edges.Currency.Code {
 		logger.Errorf("failed to match currency: %v", err)
 		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
 		return
+=======
+	currencies := data["data"].(map[string]interface{})["currencies"].(map[string]string)
+	for _, currency := range provider.Edges.Currencies {
+		if _, ok := currencies[currency.Code]; !ok {
+			u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
+			return
+		}
+>>>>>>> 501a699 (feat: restructure provider order token + refactor for multi-currency support)
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Node info fetched successfully", data)

@@ -721,6 +721,22 @@ func (c *FiatCurrencyClient) QueryInstitutions(fc *FiatCurrency) *InstitutionQue
 	return query
 }
 
+// QueryProviderSettings queries the provider_settings edge of a FiatCurrency.
+func (c *FiatCurrencyClient) QueryProviderSettings(fc *FiatCurrency) *ProviderOrderTokenQuery {
+	query := (&ProviderOrderTokenClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := fc.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(fiatcurrency.Table, fiatcurrency.FieldID, id),
+			sqlgraph.To(providerordertoken.Table, providerordertoken.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, fiatcurrency.ProviderSettingsTable, fiatcurrency.ProviderSettingsColumn),
+		)
+		fromV = sqlgraph.Neighbors(fc.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *FiatCurrencyClient) Hooks() []Hook {
 	return c.hooks.FiatCurrency
@@ -2190,6 +2206,38 @@ func (c *ProviderOrderTokenClient) QueryProvider(pot *ProviderOrderToken) *Provi
 	return query
 }
 
+// QueryToken queries the token edge of a ProviderOrderToken.
+func (c *ProviderOrderTokenClient) QueryToken(pot *ProviderOrderToken) *TokenQuery {
+	query := (&TokenClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := pot.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(providerordertoken.Table, providerordertoken.FieldID, id),
+			sqlgraph.To(token.Table, token.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, providerordertoken.TokenTable, providerordertoken.TokenColumn),
+		)
+		fromV = sqlgraph.Neighbors(pot.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryCurrency queries the currency edge of a ProviderOrderToken.
+func (c *ProviderOrderTokenClient) QueryCurrency(pot *ProviderOrderToken) *FiatCurrencyQuery {
+	query := (&FiatCurrencyClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := pot.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(providerordertoken.Table, providerordertoken.FieldID, id),
+			sqlgraph.To(fiatcurrency.Table, fiatcurrency.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, providerordertoken.CurrencyTable, providerordertoken.CurrencyColumn),
+		)
+		fromV = sqlgraph.Neighbors(pot.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *ProviderOrderTokenClient) Hooks() []Hook {
 	return c.hooks.ProviderOrderToken
@@ -3482,6 +3530,22 @@ func (c *TokenClient) QuerySenderSettings(t *Token) *SenderOrderTokenQuery {
 			sqlgraph.From(token.Table, token.FieldID, id),
 			sqlgraph.To(senderordertoken.Table, senderordertoken.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, token.SenderSettingsTable, token.SenderSettingsColumn),
+		)
+		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryProviderSettings queries the provider_settings edge of a Token.
+func (c *TokenClient) QueryProviderSettings(t *Token) *ProviderOrderTokenQuery {
+	query := (&ProviderOrderTokenClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := t.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(token.Table, token.FieldID, id),
+			sqlgraph.To(providerordertoken.Table, providerordertoken.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, token.ProviderSettingsTable, token.ProviderSettingsColumn),
 		)
 		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
 		return fromV, nil

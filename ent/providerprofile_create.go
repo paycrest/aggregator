@@ -472,6 +472,9 @@ func (ppc *ProviderProfileCreate) check() error {
 	if len(ppc.mutation.UserIDs()) == 0 {
 		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "ProviderProfile.user"`)}
 	}
+	if len(ppc.mutation.CurrenciesIDs()) == 0 {
+		return &ValidationError{Name: "currencies", err: errors.New(`ent: missing required edge "ProviderProfile.currencies"`)}
+	}
 	return nil
 }
 
