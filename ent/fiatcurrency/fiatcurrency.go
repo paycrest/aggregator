@@ -41,13 +41,11 @@ const (
 	EdgeInstitutions = "institutions"
 	// Table holds the table name of the fiatcurrency in the database.
 	Table = "fiat_currencies"
-	// ProvidersTable is the table that holds the providers relation/edge.
-	ProvidersTable = "provider_profiles"
+	// ProvidersTable is the table that holds the providers relation/edge. The primary key declared below.
+	ProvidersTable = "fiat_currency_providers"
 	// ProvidersInverseTable is the table name for the ProviderProfile entity.
 	// It exists in this package in order to avoid circular dependency with the "providerprofile" package.
 	ProvidersInverseTable = "provider_profiles"
-	// ProvidersColumn is the table column denoting the providers relation/edge.
-	ProvidersColumn = "fiat_currency_providers"
 	// ProvisionBucketsTable is the table that holds the provision_buckets relation/edge.
 	ProvisionBucketsTable = "provision_buckets"
 	// ProvisionBucketsInverseTable is the table name for the ProvisionBucket entity.
@@ -77,6 +75,12 @@ var Columns = []string{
 	FieldMarketRate,
 	FieldIsEnabled,
 }
+
+var (
+	// ProvidersPrimaryKey and ProvidersColumn2 are the table columns denoting the
+	// primary key for the providers relation (M2M).
+	ProvidersPrimaryKey = []string{"fiat_currency_id", "provider_profile_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -201,7 +205,7 @@ func newProvidersStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ProvidersInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, ProvidersTable, ProvidersColumn),
+		sqlgraph.Edge(sqlgraph.M2M, false, ProvidersTable, ProvidersPrimaryKey...),
 	)
 }
 func newProvisionBucketsStep() *sqlgraph.Step {

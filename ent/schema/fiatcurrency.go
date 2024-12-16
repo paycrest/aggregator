@@ -45,5 +45,8 @@ func (FiatCurrency) Edges() []ent.Edge {
 		edge.To("provision_buckets", ProvisionBucket.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("institutions", Institution.Type),
+		edge.From("provider_profiles", ProviderProfile.Type).
+            Ref("currencies").
+            Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }

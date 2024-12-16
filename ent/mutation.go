@@ -11417,8 +11417,9 @@ type ProviderProfileMutation struct {
 	cleareduser              bool
 	api_key                  *uuid.UUID
 	clearedapi_key           bool
-	currency                 *uuid.UUID
-	clearedcurrency          bool
+	currencies               map[uuid.UUID]struct{}
+	removedcurrencies        map[uuid.UUID]struct{}
+	clearedcurrencies        bool
 	provision_buckets        map[int]struct{}
 	removedprovision_buckets map[int]struct{}
 	clearedprovision_buckets bool
@@ -12274,43 +12275,58 @@ func (m *ProviderProfileMutation) ResetAPIKey() {
 	m.clearedapi_key = false
 }
 
-// SetCurrencyID sets the "currency" edge to the FiatCurrency entity by id.
-func (m *ProviderProfileMutation) SetCurrencyID(id uuid.UUID) {
-	m.currency = &id
+// AddCurrencyIDs adds the "currencies" edge to the FiatCurrency entity by ids.
+func (m *ProviderProfileMutation) AddCurrencyIDs(ids ...uuid.UUID) {
+	if m.currencies == nil {
+		m.currencies = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.currencies[ids[i]] = struct{}{}
+	}
 }
 
-// ClearCurrency clears the "currency" edge to the FiatCurrency entity.
-func (m *ProviderProfileMutation) ClearCurrency() {
-	m.clearedcurrency = true
+// ClearCurrencies clears the "currencies" edge to the FiatCurrency entity.
+func (m *ProviderProfileMutation) ClearCurrencies() {
+	m.clearedcurrencies = true
 }
 
-// CurrencyCleared reports if the "currency" edge to the FiatCurrency entity was cleared.
-func (m *ProviderProfileMutation) CurrencyCleared() bool {
-	return m.clearedcurrency
+// CurrenciesCleared reports if the "currencies" edge to the FiatCurrency entity was cleared.
+func (m *ProviderProfileMutation) CurrenciesCleared() bool {
+	return m.clearedcurrencies
 }
 
-// CurrencyID returns the "currency" edge ID in the mutation.
-func (m *ProviderProfileMutation) CurrencyID() (id uuid.UUID, exists bool) {
-	if m.currency != nil {
-		return *m.currency, true
+// RemoveCurrencyIDs removes the "currencies" edge to the FiatCurrency entity by IDs.
+func (m *ProviderProfileMutation) RemoveCurrencyIDs(ids ...uuid.UUID) {
+	if m.removedcurrencies == nil {
+		m.removedcurrencies = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.currencies, ids[i])
+		m.removedcurrencies[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedCurrencies returns the removed IDs of the "currencies" edge to the FiatCurrency entity.
+func (m *ProviderProfileMutation) RemovedCurrenciesIDs() (ids []uuid.UUID) {
+	for id := range m.removedcurrencies {
+		ids = append(ids, id)
 	}
 	return
 }
 
-// CurrencyIDs returns the "currency" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// CurrencyID instead. It exists only for internal usage by the builders.
-func (m *ProviderProfileMutation) CurrencyIDs() (ids []uuid.UUID) {
-	if id := m.currency; id != nil {
-		ids = append(ids, *id)
+// CurrenciesIDs returns the "currencies" edge IDs in the mutation.
+func (m *ProviderProfileMutation) CurrenciesIDs() (ids []uuid.UUID) {
+	for id := range m.currencies {
+		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetCurrency resets all changes to the "currency" edge.
-func (m *ProviderProfileMutation) ResetCurrency() {
-	m.currency = nil
-	m.clearedcurrency = false
+// ResetCurrencies resets all changes to the "currencies" edge.
+func (m *ProviderProfileMutation) ResetCurrencies() {
+	m.currencies = nil
+	m.clearedcurrencies = false
+	m.removedcurrencies = nil
 }
 
 // AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by ids.
@@ -12949,8 +12965,8 @@ func (m *ProviderProfileMutation) AddedEdges() []string {
 	if m.api_key != nil {
 		edges = append(edges, providerprofile.EdgeAPIKey)
 	}
-	if m.currency != nil {
-		edges = append(edges, providerprofile.EdgeCurrency)
+	if m.currencies != nil {
+		edges = append(edges, providerprofile.EdgeCurrencies)
 	}
 	if m.provision_buckets != nil {
 		edges = append(edges, providerprofile.EdgeProvisionBuckets)
@@ -12979,10 +12995,12 @@ func (m *ProviderProfileMutation) AddedIDs(name string) []ent.Value {
 		if id := m.api_key; id != nil {
 			return []ent.Value{*id}
 		}
-	case providerprofile.EdgeCurrency:
-		if id := m.currency; id != nil {
-			return []ent.Value{*id}
+	case providerprofile.EdgeCurrencies:
+		ids := make([]ent.Value, 0, len(m.currencies))
+		for id := range m.currencies {
+			ids = append(ids, id)
 		}
+		return ids
 	case providerprofile.EdgeProvisionBuckets:
 		ids := make([]ent.Value, 0, len(m.provision_buckets))
 		for id := range m.provision_buckets {
@@ -13012,6 +13030,9 @@ func (m *ProviderProfileMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProviderProfileMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 7)
+	if m.removedcurrencies != nil {
+		edges = append(edges, providerprofile.EdgeCurrencies)
+	}
 	if m.removedprovision_buckets != nil {
 		edges = append(edges, providerprofile.EdgeProvisionBuckets)
 	}
@@ -13028,6 +13049,12 @@ func (m *ProviderProfileMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *ProviderProfileMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
+	case providerprofile.EdgeCurrencies:
+		ids := make([]ent.Value, 0, len(m.removedcurrencies))
+		for id := range m.removedcurrencies {
+			ids = append(ids, id)
+		}
+		return ids
 	case providerprofile.EdgeProvisionBuckets:
 		ids := make([]ent.Value, 0, len(m.removedprovision_buckets))
 		for id := range m.removedprovision_buckets {
@@ -13059,8 +13086,8 @@ func (m *ProviderProfileMutation) ClearedEdges() []string {
 	if m.clearedapi_key {
 		edges = append(edges, providerprofile.EdgeAPIKey)
 	}
-	if m.clearedcurrency {
-		edges = append(edges, providerprofile.EdgeCurrency)
+	if m.clearedcurrencies {
+		edges = append(edges, providerprofile.EdgeCurrencies)
 	}
 	if m.clearedprovision_buckets {
 		edges = append(edges, providerprofile.EdgeProvisionBuckets)
@@ -13085,8 +13112,8 @@ func (m *ProviderProfileMutation) EdgeCleared(name string) bool {
 		return m.cleareduser
 	case providerprofile.EdgeAPIKey:
 		return m.clearedapi_key
-	case providerprofile.EdgeCurrency:
-		return m.clearedcurrency
+	case providerprofile.EdgeCurrencies:
+		return m.clearedcurrencies
 	case providerprofile.EdgeProvisionBuckets:
 		return m.clearedprovision_buckets
 	case providerprofile.EdgeOrderTokens:
@@ -13109,9 +13136,6 @@ func (m *ProviderProfileMutation) ClearEdge(name string) error {
 	case providerprofile.EdgeAPIKey:
 		m.ClearAPIKey()
 		return nil
-	case providerprofile.EdgeCurrency:
-		m.ClearCurrency()
-		return nil
 	case providerprofile.EdgeProviderRating:
 		m.ClearProviderRating()
 		return nil
@@ -13129,8 +13153,8 @@ func (m *ProviderProfileMutation) ResetEdge(name string) error {
 	case providerprofile.EdgeAPIKey:
 		m.ResetAPIKey()
 		return nil
-	case providerprofile.EdgeCurrency:
-		m.ResetCurrency()
+	case providerprofile.EdgeCurrencies:
+		m.ResetCurrencies()
 		return nil
 	case providerprofile.EdgeProvisionBuckets:
 		m.ResetProvisionBuckets()

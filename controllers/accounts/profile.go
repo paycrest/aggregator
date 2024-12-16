@@ -246,15 +246,16 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 	} else {
 		update.SetIsAvailable(false)
 	}
-
-	if payload.Currency != "" {
-		currency, err := storage.Client.FiatCurrency.
-			Query().
+	
+	if len(payload.Currencies) > 0 {
+		newCurrencies, err := storage.Client.FiatCurrency.Query().
 			Where(
-				fiatcurrency.IsEnabledEQ(true),
-				fiatcurrency.CodeEQ(payload.Currency),
+				fiatcurrency.And(
+					fiatcurrency.IsEnabledEQ(true),
+					fiatcurrency.CodeIn(payload.Currencies...),
+				),
 			).
-			Only(ctx)
+			All(ctx)
 		if err != nil {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 				Field:   "FiatCurrency",
@@ -262,7 +263,22 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			})
 			return
 		}
-		update.SetCurrency(currency)
+		// Fetch the existing currencies associated with the provider profile
+		existingCurrencies, err := storage.Client.ProviderProfile.
+			Query().
+			Where(providerprofile.IDEQ(provider.ID)).
+			QueryCurrencies().
+			All(ctx)
+		if err != nil {
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch existing currencies", nil)
+			return
+		}
+
+		// Combine existing and new currencies
+		allCurrencies := append(existingCurrencies, newCurrencies...)
+
+		// will be set currencies
+		update.AddCurrencies(allCurrencies...)
 	}
 
 	if payload.VisibilityMode != "" {
@@ -350,30 +366,34 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		}
 
 		// Ensure rate is within allowed deviation from the market rate
-		currency, err := storage.Client.FiatCurrency.
-			Query().
+		// TODO: first fetch all the currencies set by the provider
+		// Fetch the existing currencies associated with the provider profile
+		payloadCurrencies, err := storage.Client.FiatCurrency.Query().
 			Where(
-				fiatcurrency.IsEnabledEQ(true),
-				fiatcurrency.CodeEQ(payload.Currency),
+				fiatcurrency.And(
+					fiatcurrency.IsEnabledEQ(true),
+					fiatcurrency.CodeIn(payload.Currencies...),
+				),
 			).
-			Only(ctx)
+			All(ctx)
 		if err != nil {
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch currency", nil)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch currencies for rate", nil)
 			return
 		}
 
 		var rate decimal.Decimal
+		// TODO:  checking for all their supported currencies
+		for _, currency := range payloadCurrencies {
+			if tokenPayload.ConversionRateType == providerordertoken.ConversionRateTypeFloating {
+				rate = currency.MarketRate.Add(tokenPayload.FloatingConversionRate)
 
-		if tokenPayload.ConversionRateType == providerordertoken.ConversionRateTypeFloating {
-			rate = currency.MarketRate.Add(tokenPayload.FloatingConversionRate)
-
-			percentDeviation := u.AbsPercentageDeviation(currency.MarketRate, rate)
-			if percentDeviation.GreaterThan(orderConf.PercentDeviationFromMarketRate) {
-				u.APIResponse(ctx, http.StatusBadRequest, "error", "Rate is too far from market rate", nil)
-				return
+				percentDeviation := u.AbsPercentageDeviation(currency.MarketRate, rate)
+				if percentDeviation.GreaterThan(orderConf.PercentDeviationFromMarketRate) {
+					u.APIResponse(ctx, http.StatusBadRequest, "error", "Rate is too far from market rate", nil)
+					return
+				}
 			}
 		}
-
 		// See if token already exists for provider
 		orderToken, err := storage.Client.ProviderOrderToken.
 			Query().
@@ -546,7 +566,7 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 	linkedProvider, err := storage.Client.ProviderProfile.
 		Query().
 		Where(providerprofile.IDEQ(sender.ProviderID)).
-		WithCurrency().
+		WithCurrencies().
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -560,7 +580,13 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 
 	if linkedProvider != nil {
 		response.ProviderID = sender.ProviderID
-		response.ProviderCurrency = linkedProvider.Edges.Currency.Code
+		// Extract currency codes from linkedProvider.Edges.Currencies
+		// returning the currencies codes associated with the provider instead of just a currency code
+        currencyCodes := make([]string, len(linkedProvider.Edges.Currencies))
+		for i, currency := range linkedProvider.Edges.Currencies {
+			currencyCodes[i] = currency.Code
+		}
+		response.ProviderCurrencies = currencyCodes
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Profile retrieved successfully", response)
@@ -583,12 +609,17 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 		return
 	}
 
-	// Get currency
-	currency, err := provider.QueryCurrency().Only(ctx)
+	// Get currencies
+	currencies, err := provider.QueryCurrencies().All(ctx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)
 		return
+	}
+	// Provider profile should also returns all the currencies associated with the provider
+	currencyCodes := make([]string, len(currencies))
+	for i, currency := range currencies {
+		currencyCodes[i] = currency.Code
 	}
 
 	// Get tokens
@@ -641,7 +672,7 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 		LastName:             user.LastName,
 		Email:                user.Email,
 		TradingName:          provider.TradingName,
-		Currency:             currency.Code,
+		Currencies:             currencyCodes,
 		HostIdentifier:       provider.HostIdentifier,
 		IsAvailable:          provider.IsAvailable,
 		Tokens:               tokensPayload,

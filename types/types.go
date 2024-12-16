@@ -118,7 +118,7 @@ type RegisterPayload struct {
 	LastName  string   `json:"lastName" binding:"required"`
 	Email     string   `json:"email" binding:"required,email"`
 	Password  string   `json:"password" binding:"required,min=6,max=20"`
-	Currency  string   `json:"currency"`
+	Currency  string   `json:"currency"` // this will no longer be currency but currencies
 	Scopes    []string `json:"scopes" binding:"required,dive,oneof=sender provider"`
 }
 
@@ -223,7 +223,7 @@ type ProviderOrderTokenPayload struct {
 // ProviderProfilePayload is the payload for the provider profile endpoint
 type ProviderProfilePayload struct {
 	TradingName          string                      `json:"tradingName"`
-	Currency             string                      `json:"currency"`
+	Currencies           []string                    `json:"currencies"` // TODO: will be currencies
 	HostIdentifier       string                      `json:"hostIdentifier"`
 	IsAvailable          bool                        `json:"isAvailable"`
 	Tokens               []ProviderOrderTokenPayload `json:"tokens"`
@@ -244,7 +244,7 @@ type ProviderProfileResponse struct {
 	LastName             string                               `json:"lastName"`
 	Email                string                               `json:"email"`
 	TradingName          string                               `json:"tradingName"`
-	Currency             string                               `json:"currency"`
+	Currencies           []string                             `json:"currencies"` // TODO: will be currencies
 	HostIdentifier       string                               `json:"hostIdentifier"`
 	IsAvailable          bool                                 `json:"isAvailable"`
 	Tokens               []ProviderOrderTokenPayload          `json:"tokens"`
@@ -272,17 +272,17 @@ type SenderOrderTokenResponse struct {
 
 // SenderProfileResponse is the response for the sender profile endpoint
 type SenderProfileResponse struct {
-	ID               uuid.UUID                  `json:"id"`
-	FirstName        string                     `json:"firstName"`
-	LastName         string                     `json:"lastName"`
-	Email            string                     `json:"email"`
-	WebhookURL       string                     `json:"webhookUrl"`
-	DomainWhitelist  []string                   `json:"domainWhitelist"`
-	Tokens           []SenderOrderTokenResponse `json:"tokens"`
-	APIKey           APIKeyResponse             `json:"apiKey"`
-	ProviderID       string                     `json:"providerId"`
-	ProviderCurrency string                     `json:"providerCurrency"`
-	IsActive         bool                       `json:"isActive"`
+	ID                   uuid.UUID                  `json:"id"`
+	FirstName            string                     `json:"firstName"`
+	LastName             string                     `json:"lastName"`
+	Email                string                     `json:"email"`
+	WebhookURL           string                     `json:"webhookUrl"`
+	DomainWhitelist      []string                   `json:"domainWhitelist"`
+	Tokens               []SenderOrderTokenResponse `json:"tokens"`
+	APIKey               APIKeyResponse             `json:"apiKey"`
+	ProviderID           string                     `json:"providerId"`
+	ProviderCurrencies   []string                   `json:"providerCurrencies"`
+	IsActive             bool                       `json:"isActive"`
 }
 
 // RefreshResponse is the response for the refresh endpoint

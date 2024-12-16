@@ -537,7 +537,7 @@ func HasProviders() predicate.FiatCurrency {
 	return predicate.FiatCurrency(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, ProvidersTable, ProvidersColumn),
+			sqlgraph.Edge(sqlgraph.M2M, false, ProvidersTable, ProvidersPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})

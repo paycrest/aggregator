@@ -340,10 +340,10 @@ func (fcu *FiatCurrencyUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if fcu.mutation.ProvidersCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   fiatcurrency.ProvidersTable,
-			Columns: []string{fiatcurrency.ProvidersColumn},
+			Columns: fiatcurrency.ProvidersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
@@ -353,10 +353,10 @@ func (fcu *FiatCurrencyUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if nodes := fcu.mutation.RemovedProvidersIDs(); len(nodes) > 0 && !fcu.mutation.ProvidersCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   fiatcurrency.ProvidersTable,
-			Columns: []string{fiatcurrency.ProvidersColumn},
+			Columns: fiatcurrency.ProvidersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
@@ -369,10 +369,10 @@ func (fcu *FiatCurrencyUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if nodes := fcu.mutation.ProvidersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   fiatcurrency.ProvidersTable,
-			Columns: []string{fiatcurrency.ProvidersColumn},
+			Columns: fiatcurrency.ProvidersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
@@ -831,10 +831,10 @@ func (fcuo *FiatCurrencyUpdateOne) sqlSave(ctx context.Context) (_node *FiatCurr
 	}
 	if fcuo.mutation.ProvidersCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   fiatcurrency.ProvidersTable,
-			Columns: []string{fiatcurrency.ProvidersColumn},
+			Columns: fiatcurrency.ProvidersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
@@ -844,10 +844,10 @@ func (fcuo *FiatCurrencyUpdateOne) sqlSave(ctx context.Context) (_node *FiatCurr
 	}
 	if nodes := fcuo.mutation.RemovedProvidersIDs(); len(nodes) > 0 && !fcuo.mutation.ProvidersCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   fiatcurrency.ProvidersTable,
-			Columns: []string{fiatcurrency.ProvidersColumn},
+			Columns: fiatcurrency.ProvidersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
@@ -860,10 +860,10 @@ func (fcuo *FiatCurrencyUpdateOne) sqlSave(ctx context.Context) (_node *FiatCurr
 	}
 	if nodes := fcuo.mutation.ProvidersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   fiatcurrency.ProvidersTable,
-			Columns: []string{fiatcurrency.ProvidersColumn},
+			Columns: fiatcurrency.ProvidersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),

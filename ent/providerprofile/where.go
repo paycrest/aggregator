@@ -886,21 +886,21 @@ func HasAPIKeyWith(preds ...predicate.APIKey) predicate.ProviderProfile {
 	})
 }
 
-// HasCurrency applies the HasEdge predicate on the "currency" edge.
-func HasCurrency() predicate.ProviderProfile {
+// HasCurrencies applies the HasEdge predicate on the "currencies" edge.
+func HasCurrencies() predicate.ProviderProfile {
 	return predicate.ProviderProfile(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, CurrencyTable, CurrencyColumn),
+			sqlgraph.Edge(sqlgraph.M2M, true, CurrenciesTable, CurrenciesPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasCurrencyWith applies the HasEdge predicate on the "currency" edge with a given conditions (other predicates).
-func HasCurrencyWith(preds ...predicate.FiatCurrency) predicate.ProviderProfile {
+// HasCurrenciesWith applies the HasEdge predicate on the "currencies" edge with a given conditions (other predicates).
+func HasCurrenciesWith(preds ...predicate.FiatCurrency) predicate.ProviderProfile {
 	return predicate.ProviderProfile(func(s *sql.Selector) {
-		step := newCurrencyStep()
+		step := newCurrenciesStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

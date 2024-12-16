@@ -3,6 +3,7 @@
 package migrate
 
 import (
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/dialect/sql/schema"
 	"entgo.io/ent/schema/field"
 )
@@ -357,7 +358,6 @@ var (
 		{Name: "identity_document", Type: field.TypeString, Nullable: true},
 		{Name: "business_document", Type: field.TypeString, Nullable: true},
 		{Name: "is_kyb_verified", Type: field.TypeBool, Default: false},
-		{Name: "fiat_currency_providers", Type: field.TypeUUID},
 		{Name: "user_provider_profile", Type: field.TypeUUID, Unique: true},
 	}
 	// ProviderProfilesTable holds the schema information for the "provider_profiles" table.
@@ -367,14 +367,8 @@ var (
 		PrimaryKey: []*schema.Column{ProviderProfilesColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "provider_profiles_fiat_currencies_providers",
-				Columns:    []*schema.Column{ProviderProfilesColumns[16]},
-				RefColumns: []*schema.Column{FiatCurrenciesColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-			{
 				Symbol:     "provider_profiles_users_provider_profile",
-				Columns:    []*schema.Column{ProviderProfilesColumns[17]},
+				Columns:    []*schema.Column{ProviderProfilesColumns[16]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -641,6 +635,31 @@ var (
 		Columns:    WebhookRetryAttemptsColumns,
 		PrimaryKey: []*schema.Column{WebhookRetryAttemptsColumns[0]},
 	}
+	// FiatCurrencyProvidersColumns holds the columns for the "fiat_currency_providers" table.
+	FiatCurrencyProvidersColumns = []*schema.Column{
+		{Name: "fiat_currency_id", Type: field.TypeUUID},
+		{Name: "provider_profile_id", Type: field.TypeString},
+	}
+	// FiatCurrencyProvidersTable holds the schema information for the "fiat_currency_providers" table.
+	FiatCurrencyProvidersTable = &schema.Table{
+		Name:       "fiat_currency_providers",
+		Columns:    FiatCurrencyProvidersColumns,
+		PrimaryKey: []*schema.Column{FiatCurrencyProvidersColumns[0], FiatCurrencyProvidersColumns[1]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "fiat_currency_providers_fiat_currency_id",
+				Columns:    []*schema.Column{FiatCurrencyProvidersColumns[0]},
+				RefColumns: []*schema.Column{FiatCurrenciesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "fiat_currency_providers_provider_profile_id",
+				Columns:    []*schema.Column{FiatCurrencyProvidersColumns[1]},
+				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
 	// ProvisionBucketProviderProfilesColumns holds the columns for the "provision_bucket_provider_profiles" table.
 	ProvisionBucketProviderProfilesColumns = []*schema.Column{
 		{Name: "provision_bucket_id", Type: field.TypeInt},
@@ -690,6 +709,7 @@ var (
 		UsersTable,
 		VerificationTokensTable,
 		WebhookRetryAttemptsTable,
+		FiatCurrencyProvidersTable,
 		ProvisionBucketProviderProfilesTable,
 	}
 )
@@ -709,8 +729,7 @@ func init() {
 	PaymentOrdersTable.ForeignKeys[3].RefTable = TokensTable
 	PaymentOrderRecipientsTable.ForeignKeys[0].RefTable = PaymentOrdersTable
 	ProviderOrderTokensTable.ForeignKeys[0].RefTable = ProviderProfilesTable
-	ProviderProfilesTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
-	ProviderProfilesTable.ForeignKeys[1].RefTable = UsersTable
+	ProviderProfilesTable.ForeignKeys[0].RefTable = UsersTable
 	ProviderRatingsTable.ForeignKeys[0].RefTable = ProviderProfilesTable
 	ProvisionBucketsTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
 	ReceiveAddressesTable.ForeignKeys[0].RefTable = PaymentOrdersTable
@@ -721,6 +740,9 @@ func init() {
 	TransactionLogsTable.ForeignKeys[0].RefTable = LockPaymentOrdersTable
 	TransactionLogsTable.ForeignKeys[1].RefTable = PaymentOrdersTable
 	VerificationTokensTable.ForeignKeys[0].RefTable = UsersTable
+	FiatCurrencyProvidersTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
+	FiatCurrencyProvidersTable.ForeignKeys[1].RefTable = ProviderProfilesTable
+	FiatCurrencyProvidersTable.Annotation = &entsql.Annotation{}
 	ProvisionBucketProviderProfilesTable.ForeignKeys[0].RefTable = ProvisionBucketsTable
 	ProvisionBucketProviderProfilesTable.ForeignKeys[1].RefTable = ProviderProfilesTable
 }

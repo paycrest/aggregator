@@ -125,13 +125,14 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 
 	// Create a provider profile
 	if u.ContainsString(scopes, "provider") {
-		// Fetch currency
+		// TODO: Fetch currencies instead of currency
 		if payload.Currency == "" {
 			_ = tx.Rollback()
 			u.APIResponse(ctx, http.StatusBadRequest, "error",
 				"Currency is required for provider account", nil)
 			return
 		}
+		// TODO: get currencies not currency
 		currency, err := tx.FiatCurrency.
 			Query().
 			Where(
@@ -157,7 +158,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 
 		provider, err := tx.ProviderProfile.
 			Create().
-			SetCurrency(currency).
+			SetCurrency(currency). //TODO: this will change to currencies
 			SetVisibilityMode(providerprofile.VisibilityModePrivate).
 			SetUser(user).
 			SetProvisionMode(providerprofile.ProvisionModeAuto).

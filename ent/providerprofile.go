@@ -10,11 +10,18 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
+<<<<<<< HEAD
 	"github.com/paycrest/aggregator/ent/apikey"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
 	"github.com/paycrest/aggregator/ent/user"
+=======
+	"github.com/paycrest/protocol/ent/apikey"
+	"github.com/paycrest/protocol/ent/providerprofile"
+	"github.com/paycrest/protocol/ent/providerrating"
+	"github.com/paycrest/protocol/ent/user"
+>>>>>>> e5f1282 (feat(provider): update relationships to support multiple currencies for provider profiles)
 )
 
 // ProviderProfile is the model entity for the ProviderProfile schema.
@@ -54,10 +61,9 @@ type ProviderProfile struct {
 	IsKybVerified bool `json:"is_kyb_verified,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ProviderProfileQuery when eager-loading is set.
-	Edges                   ProviderProfileEdges `json:"edges"`
-	fiat_currency_providers *uuid.UUID
-	user_provider_profile   *uuid.UUID
-	selectValues            sql.SelectValues
+	Edges                 ProviderProfileEdges `json:"edges"`
+	user_provider_profile *uuid.UUID
+	selectValues          sql.SelectValues
 }
 
 // ProviderProfileEdges holds the relations/edges for other nodes in the graph.
@@ -66,8 +72,8 @@ type ProviderProfileEdges struct {
 	User *User `json:"user,omitempty"`
 	// APIKey holds the value of the api_key edge.
 	APIKey *APIKey `json:"api_key,omitempty"`
-	// Currency holds the value of the currency edge.
-	Currency *FiatCurrency `json:"currency,omitempty"`
+	// Currencies holds the value of the currencies edge.
+	Currencies []*FiatCurrency `json:"currencies,omitempty"`
 	// ProvisionBuckets holds the value of the provision_buckets edge.
 	ProvisionBuckets []*ProvisionBucket `json:"provision_buckets,omitempty"`
 	// OrderTokens holds the value of the order_tokens edge.
@@ -103,15 +109,13 @@ func (e ProviderProfileEdges) APIKeyOrErr() (*APIKey, error) {
 	return nil, &NotLoadedError{edge: "api_key"}
 }
 
-// CurrencyOrErr returns the Currency value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e ProviderProfileEdges) CurrencyOrErr() (*FiatCurrency, error) {
-	if e.Currency != nil {
-		return e.Currency, nil
-	} else if e.loadedTypes[2] {
-		return nil, &NotFoundError{label: fiatcurrency.Label}
+// CurrenciesOrErr returns the Currencies value or an error if the edge
+// was not loaded in eager-loading.
+func (e ProviderProfileEdges) CurrenciesOrErr() ([]*FiatCurrency, error) {
+	if e.loadedTypes[2] {
+		return e.Currencies, nil
 	}
-	return nil, &NotLoadedError{edge: "currency"}
+	return nil, &NotLoadedError{edge: "currencies"}
 }
 
 // ProvisionBucketsOrErr returns the ProvisionBuckets value or an error if the edge
@@ -163,9 +167,7 @@ func (*ProviderProfile) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case providerprofile.FieldUpdatedAt, providerprofile.FieldDateOfBirth:
 			values[i] = new(sql.NullTime)
-		case providerprofile.ForeignKeys[0]: // fiat_currency_providers
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case providerprofile.ForeignKeys[1]: // user_provider_profile
+		case providerprofile.ForeignKeys[0]: // user_provider_profile
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
@@ -280,13 +282,6 @@ func (pp *ProviderProfile) assignValues(columns []string, values []any) error {
 			}
 		case providerprofile.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field fiat_currency_providers", values[i])
-			} else if value.Valid {
-				pp.fiat_currency_providers = new(uuid.UUID)
-				*pp.fiat_currency_providers = *value.S.(*uuid.UUID)
-			}
-		case providerprofile.ForeignKeys[1]:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field user_provider_profile", values[i])
 			} else if value.Valid {
 				pp.user_provider_profile = new(uuid.UUID)
@@ -315,9 +310,9 @@ func (pp *ProviderProfile) QueryAPIKey() *APIKeyQuery {
 	return NewProviderProfileClient(pp.config).QueryAPIKey(pp)
 }
 
-// QueryCurrency queries the "currency" edge of the ProviderProfile entity.
-func (pp *ProviderProfile) QueryCurrency() *FiatCurrencyQuery {
-	return NewProviderProfileClient(pp.config).QueryCurrency(pp)
+// QueryCurrencies queries the "currencies" edge of the ProviderProfile entity.
+func (pp *ProviderProfile) QueryCurrencies() *FiatCurrencyQuery {
+	return NewProviderProfileClient(pp.config).QueryCurrencies(pp)
 }
 
 // QueryProvisionBuckets queries the "provision_buckets" edge of the ProviderProfile entity.
