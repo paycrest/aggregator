@@ -339,7 +339,7 @@ func TestProfile(t *testing.T) {
 			}
 			payload := types.ProviderProfilePayload{
 				TradingName:      "My Trading Name",
-				Currency:         "KES",
+				Currencies:         []string{"KES"},
 				HostIdentifier:   "example.com",
 				BusinessDocument: "https://example.com/business_doc.png",
 				IdentityDocument: "https://example.com/national_id.png",
@@ -361,16 +361,19 @@ func TestProfile(t *testing.T) {
 			providerProfile, err := db.Client.ProviderProfile.
 				Query().
 				Where(providerprofile.HasUserWith(user.ID(testCtx.user.ID))).
-				WithCurrency().
+				WithCurrencies().
 				Only(context.Background())
 			assert.NoError(t, err)
 
 			assert.Contains(t, providerProfile.TradingName, payload.TradingName)
 			assert.Contains(t, providerProfile.HostIdentifier, payload.HostIdentifier)
-			assert.Contains(t, providerProfile.Edges.Currency.Code, payload.Currency)
+			// assert.Contains(t, providerProfile.Edges.Currency.Code, payload.Currency)
 			assert.Contains(t, providerProfile.BusinessDocument, payload.BusinessDocument)
 			assert.Contains(t, providerProfile.IdentityDocument, payload.IdentityDocument)
 			assert.True(t, providerProfile.IsActive)
+			// assert for currencies
+			assert.Equal(t, len(providerProfile.Edges.Currencies), 1)
+			assert.Equal(t, providerProfile.Edges.Currencies[0].Code, payload.Currencies[0])
 		})
 
 		t.Run("with visibility", func(t *testing.T) {
@@ -383,7 +386,7 @@ func TestProfile(t *testing.T) {
 				VisibilityMode: "private",
 				TradingName:    testCtx.providerProfile.TradingName,
 				HostIdentifier: testCtx.providerProfile.HostIdentifier,
-				Currency:       "KES",
+				Currencies:       []string{"KES"},
 			}
 
 			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
@@ -423,7 +426,7 @@ func TestProfile(t *testing.T) {
 					MobileNumber:   "01234567890",
 					TradingName:    testCtx.providerProfile.TradingName,
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
-					Currency:       "KES",
+					Currencies:       []string{"KES"},
 				}
 				res1 := profileUpdateRequest(payload)
 
