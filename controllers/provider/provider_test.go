@@ -510,7 +510,7 @@ func TestProvider(t *testing.T) {
 						"status":  "success",
 						"message": "Node is live",
 						"data": map[string]interface{}{
-							"currency": "NGN",
+								"currencies": []string{"NGN"},
 						},
 					})
 				},
