@@ -1,6 +1,7 @@
 package accounts
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -133,8 +134,8 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 			return
 		}
 		
-		var fiatCurrencies []*ent.FiatCurrency
-		for _, currency := range currencies {
+		fiatCurrencies := make([]*ent.FiatCurrency, len(currencies))
+		for i, currency := range currencies {
 			fiatCurrency, err := tx.FiatCurrency.
 				Query().
 				Where(
@@ -148,7 +149,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 					u.APIResponse(ctx, http.StatusBadRequest, "error",
 						"Failed to validate payload", []types.ErrorData{{
 							Field:   "Currencies",
-							Message: "Currency is not supported",
+							Message: fmt.Sprintf("Currency is not supported: %s", currency),
 						}})
 					return
 				}
@@ -157,7 +158,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 					"Failed to create new user", nil)
 				return
 			}
-			fiatCurrencies = append(fiatCurrencies, fiatCurrency)
+			fiatCurrencies[i] = fiatCurrency
 		}
 
 		provider, err := tx.ProviderProfile.

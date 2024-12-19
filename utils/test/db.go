@@ -594,27 +594,47 @@ func CreateTestFiatCurrency(overrides map[string]interface{}) (*ent.FiatCurrency
 		"name":        "Nigerian Naira",
 		"market_rate": 950.0,
 	}
-
 	// Apply overrides.
 	for key, value := range overrides {
 		payload[key] = value
 	}
+	
+	var institutions []*ent.Institution
+	var err error
+	if (payload["code"] == "KES") {
+		institutions, err = db.Client.Institution.CreateBulk(
+			db.Client.Institution.
+			Create().
+			SetName("M-Pesa").
+			SetCode("MPESAKES").
+			SetType(institution.TypeMobileMoney),
+			db.Client.Institution.
+			Create().
+			SetName("Equity Bank").
+			SetCode("EQTYKES"),
+			).Save(context.Background())
 
-	institutions, err := db.Client.Institution.CreateBulk(
-		db.Client.Institution.
+			if err != nil {
+				return nil, err
+			}
+	} else {
+		institutions, err = db.Client.Institution.CreateBulk(
+			db.Client.Institution.
 			Create().
 			SetName("MTN Momo").
 			SetCode("MOMONGPC").
 			SetType(institution.TypeMobileMoney),
-		db.Client.Institution.
+			db.Client.Institution.
 			Create().
 			SetName("Access Bank").
 			SetCode("ABNGNGLA"),
-	).Save(context.Background())
-
-	if err != nil {
-		return nil, err
+			).Save(context.Background())
+			
+			if err != nil {
+				return nil, err
+			}
 	}
+	
 
 	currency, err := db.Client.FiatCurrency.
 		Create().
@@ -627,7 +647,6 @@ func CreateTestFiatCurrency(overrides map[string]interface{}) (*ent.FiatCurrency
 		SetIsEnabled(true).
 		AddInstitutions(institutions...).
 		Save(context.Background())
-
 	return currency, err
 
 }
