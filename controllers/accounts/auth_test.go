@@ -433,6 +433,54 @@ func TestAuth(t *testing.T) {
 			assert.Contains(t, errorMap, "message")
 		})
 
+		t.Run("testing UserEarlyAccess", func(t *testing.T) {
+			tests := []struct {
+				name             string
+				environment      string
+				expectedEarlyAccess bool
+			}{
+				{
+					name:             "Non-production environment (development)", 
+					environment:      "development", 
+					expectedEarlyAccess: true,
+				},
+				{
+					name:             "Non-production environment (staging)", 
+					environment:      "staging", 
+					expectedEarlyAccess: true,
+				},
+				{
+					name:             "Production environment", 
+					environment:      "production", 
+					expectedEarlyAccess: false,
+				},
+			}
+	
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					// Mock the server configuration
+					config.ServerConfig().Environment = tt.environment
+	
+					// Simulate user registration
+					ctx := context.Background()
+					user, err := client.User.Create().
+						SetFirstName("Test").
+						SetLastName("User").
+						SetEmail(fmt.Sprintf("test-%s@example.com", tt.environment)).
+						SetPassword("password").
+						Save(ctx)
+					assert.NoError(t, err)
+	
+					// Check the HasEarlyAccess field
+					assert.Equal(t, tt.expectedEarlyAccess, user.HasEarlyAccess)
+	
+					// Cleanup
+					err = client.User.DeleteOne(user).Exec(ctx)
+					assert.NoError(t, err)
+				})
+			}
+		})
+
 	})
 
 	t.Run("ConfirmEmail", func(t *testing.T) {
