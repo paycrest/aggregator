@@ -90,7 +90,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 	if serverConf.Environment != "production" {
 		userCreate = userCreate.
 			SetIsEmailVerified(true).
-			SetHasEarlyAccess(true).
+			SetHasEarlyAccess(true)
 	}
 
 	user, err := userCreate.Save(ctx)
