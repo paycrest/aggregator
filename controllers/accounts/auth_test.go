@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jarcoal/httpmock"
@@ -29,6 +30,7 @@ import (
 	"github.com/paycrest/aggregator/utils/test"
 	"github.com/paycrest/aggregator/utils/token"
 	"github.com/stretchr/testify/assert"
+	"github.com/paycrest/aggregator/config"
 )
 
 func TestAuth(t *testing.T) {
