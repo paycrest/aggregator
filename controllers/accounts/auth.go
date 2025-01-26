@@ -571,3 +571,35 @@ func (ctrl *AuthController) ChangePassword(ctx *gin.Context) {
 	// Return a success response
 	u.APIResponse(ctx, http.StatusOK, "success", "Password changed successfully", nil)
 }
+
+// DeleteAccount deletes user's account. An authorized user is required to delete account
+func (ctrl *AuthController) DeleteAccount(ctx *gin.Context) {
+	// get user id from context
+	user_id := ctx.GetString("user_id")
+	// parse user id to uuid
+	userID, err := uuid.Parse(user_id)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid credential", nil)
+	}
+
+	// Fetch user account.
+	user, err := db.Client.User.
+		Query().
+		Where(userEnt.IDEQ(userID)).
+		Only(ctx)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid credential", nil)
+	}
+
+	// Delete user account, delete user account will delete all related data via cascade
+	err = db.Client.User.
+		DeleteOne(user).
+		Exec(ctx)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to delete account", nil)
+		return
+	}
+
+	// Return a success response
+	u.APIResponse(ctx, http.StatusOK, "success", "Account deleted successfully", nil)
+}

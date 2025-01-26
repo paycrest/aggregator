@@ -67,6 +67,7 @@ func authRoutes(route *gin.Engine) {
 	v1.POST("auth/reset-password-token", middleware.OnlyWebMiddleware, authCtrl.ResetPasswordToken)
 	v1.PATCH("auth/reset-password", middleware.OnlyWebMiddleware, authCtrl.ResetPassword)
 	v1.PATCH("auth/change-password", middleware.JWTMiddleware, authCtrl.ChangePassword)
+	v1.DELETE("auth/delete-account", middleware.JWTMiddleware, authCtrl.DeleteAccount)
 
 	v1.GET(
 		"settings/provider",

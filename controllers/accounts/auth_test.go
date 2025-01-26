@@ -79,6 +79,7 @@ func TestAuth(t *testing.T) {
 	router.POST("/reset-password-token", ctrl.ResetPasswordToken)
 	router.PATCH("/reset-password", ctrl.ResetPassword)
 	router.PATCH("/change-password", middleware.JWTMiddleware, ctrl.ChangePassword)
+	router.DELETE("/delete-account", middleware.JWTMiddleware, ctrl.DeleteAccount)
 
 	var userID string
 	var accessToken string
@@ -963,4 +964,64 @@ func TestAuth(t *testing.T) {
 			assert.True(t, crypto.CheckPasswordHash(payload.NewPassword, user.Password))
 		})
 	})
+	
+	// test delete account for an authenticated user
+	t.Run("DeleteAccount", func(t *testing.T) {
+		t.Run("with valid credentials", func(t *testing.T) {
+			// Test delete account with valid credentials
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+			res, err := test.PerformRequest(t, "DELETE", "/delete-account", nil, headers, router)
+			assert.NoError(t, err)
+
+			// Assert the response body
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Account deleted successfully", response.Message)
+			assert.Nil(t, response.Data)
+		})
+
+		t.Run("with invalid credentials", func(t *testing.T) {
+			// Test delete account with invalid credentials
+			accessToken := "invalid-refresh-token"
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+			res, err := test.PerformRequest(t, "DELETE", "/delete-account", nil, headers, router)
+			assert.NoError(t, err)
+
+			// Assert the response body
+			assert.Equal(t, http.StatusUnauthorized, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Invalid or expired access token", response.Message)
+			assert.Nil(t, response.Data)
+		})
+
+		t.Run("with associated profiles", func(t *testing.T) {
+			// Test delete account with associated profiles
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+			res, err := test.PerformRequest(t, "DELETE", "/delete-account", nil, headers, router)
+			assert.NoError(t, err)
+			
+			// Assert the response body
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Account deleted successfully", response.Message)
+			assert.Nil(t, response.Data)
+		})
+	})
+			
+
 }
