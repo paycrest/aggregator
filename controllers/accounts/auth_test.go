@@ -17,6 +17,8 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/routers/middleware"
 	svc "github.com/paycrest/aggregator/services"
 	db "github.com/paycrest/aggregator/storage"
@@ -983,6 +985,15 @@ func TestAuth(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, "Account deleted successfully", response.Message)
 			assert.Nil(t, response.Data)
+
+			// Assert profile no longer exist
+
+			_, err = db.Client.User.
+				Query().
+				Where(userEnt.IDEQ(uuid.MustParse(userID))).
+				Only(context.Background())
+			assert.Error(t, err)
+
 		})
 
 		t.Run("with invalid credentials", func(t *testing.T) {
@@ -997,10 +1008,19 @@ func TestAuth(t *testing.T) {
 			// Assert the response body
 			assert.Equal(t, http.StatusUnauthorized, res.Code)
 
+			// Assert user still exist
+			user, err := db.Client.User.
+				Query().
+				Where(userEnt.IDEQ(uuid.MustParse(userID))).
+				Only(context.Background())
+			assert.NoError(t, err)
+			assert.NotNil(t, user)
+
+
 			var response types.Response
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
-			assert.Equal(t, "Invalid or expired access token", response.Message)
+			assert.Equal(t, "Invalid credential", response.Message)
 			assert.Nil(t, response.Data)
 		})
 
@@ -1020,6 +1040,28 @@ func TestAuth(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, "Account deleted successfully", response.Message)
 			assert.Nil(t, response.Data)
+
+			// Assert both Sender and Provider both profile successfully deleted.
+			_, err = db.Client.User.
+				Query().
+				Where(userEnt.IDEQ(uuid.MustParse(userID))).
+				Only(context.Background())
+			assert.Error(t, err)
+
+
+			// Assert profile no longer exist
+			_, err = db.Client.SenderProfile.
+				Query().
+				Where(senderprofile.HasUserWith(userEnt.IDEQ(uuid.MustParse(userID)))).
+				Only(context.Background())
+			assert.Error(t, err)
+
+			_, err = db.Client.ProviderProfile.
+				Query().
+				Where(providerprofile.HasUserWith(userEnt.IDEQ(uuid.MustParse(userID)))).
+				Only(context.Background())
+			assert.Error(t, err)
+
 		})
 	})
 			
