@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
-	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jarcoal/httpmock"
@@ -23,6 +23,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/gin-gonic/gin"
+	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent/enttest"
 	userEnt "github.com/paycrest/aggregator/ent/user"
 	"github.com/paycrest/aggregator/ent/verificationtoken"
@@ -30,7 +31,6 @@ import (
 	"github.com/paycrest/aggregator/utils/test"
 	"github.com/paycrest/aggregator/utils/token"
 	"github.com/stretchr/testify/assert"
-	"github.com/paycrest/aggregator/config"
 )
 
 func TestAuth(t *testing.T) {
@@ -470,11 +470,12 @@ func TestAuth(t *testing.T) {
 						SetLastName("User").
 						SetEmail(fmt.Sprintf("test-%s@example.com", tt.environment)).
 						SetPassword("password").
+						SetScope("sender").
 						Save(ctx)
 					assert.NoError(t, err)
 	
 					// Check the HasEarlyAccess field
-					assert.Equal(t, tt.expectedEarlyAccess, user.HasEarlyAccess)
+					assert.Equal(t, tt.expectedEarlyAccess, user.HasEarlyAccess, "unexpected HasEarlyAccess for environment %s", tt.environment)
 	
 					// Cleanup
 					err = client.User.DeleteOne(user).Exec(ctx)
