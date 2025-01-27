@@ -588,7 +588,7 @@ func (ctrl *AuthController) DeleteAccount(ctx *gin.Context) {
 		Where(userEnt.IDEQ(userID)).
 		Only(ctx)
 	if err != nil {
-		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid credential", nil)
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid credential", nil)
 	}
 
 	// Delete user account, delete user account will delete all related data via cascade
