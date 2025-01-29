@@ -184,6 +184,172 @@ func TestProvider(t *testing.T) {
 
 		})
 
+		// t.Run("fetch orders with cancellation reasons", func(t *testing.T) {
+		// 	// Create a test order with cancellation reasons
+		// 	order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+		// 		"gateway_id":           uuid.New().String(),
+		// 		"provider":             testCtx.provider,
+		// 		"cancellation_reasons": []string{"Out of stock", "Payment failed"},
+		// 	})
+		// 	assert.NoError(t, err)
+
+		// 	var payload = map[string]interface{}{
+		// 		"timestamp": time.Now().Unix(),
+		// 	}
+
+		// 	signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+
+		// 	headers := map[string]string{
+		// 		"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+		// 		"Client-Type":   "backend",
+		// 	}
+
+		// 	res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?timestamp=%v", payload["timestamp"]), nil, headers, router)
+		// 	assert.NoError(t, err)
+
+		// 	// Assert the response body
+		// 	assert.Equal(t, http.StatusOK, res.Code)
+
+		// 	var response types.Response
+		// 	err = json.Unmarshal(res.Body.Bytes(), &response)
+		// 	assert.NoError(t, err)
+		// 	assert.Equal(t, "Orders successfully retrieved", response.Message)
+
+		// 	data, ok := response.Data.(map[string]interface{})
+		// 	assert.True(t, ok, "response.Data is not of type map[string]interface{}")
+		// 	assert.NotNil(t, data, "response.Data is nil")
+
+		// 	// Check cancellation_reasons for the first order
+		// 	orders := data["orders"].([]interface{})
+		// 	assert.Greater(t, len(orders), 0)
+		// 	cancellationReasons := orders[0].(map[string]interface{})["cancellationReasons"].([]interface{})
+		// 	assert.Equal(t, []string{"Out of stock", "Payment failed"}, cancellationReasons)
+		// })
+
+		t.Run("fetch orders with cancellation reasons", func(t *testing.T) {
+			// Create a test order with cancellation reasons
+			order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+				"gateway_id":           uuid.New().String(),
+				"provider":             testCtx.provider,
+				"cancellation_reasons": []string{"Out of stock", "Payment failed"},
+			})
+			assert.NoError(t, err)
+
+			var payload = map[string]interface{}{
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+				"Client-Type":   "backend",
+			}
+
+			// Include the order's gateway_id in the query parameters
+			query := fmt.Sprintf("/orders?timestamp=%v&gateway_id=%s", payload["timestamp"], order.GatewayID)
+			res, err := test.PerformRequest(t, "GET", query, nil, headers, router)
+			assert.NoError(t, err)
+
+			// Assert the response body
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Orders successfully retrieved", response.Message)
+
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok, "response.Data is not of type map[string]interface{}")
+			assert.NotNil(t, data, "response.Data is nil")
+
+			// Check cancellation_reasons for the fetched order
+			orders := data["orders"].([]interface{})
+			assert.Equal(t, 1, len(orders), "Expected exactly one order in the response")
+			cancellationReasons := orders[0].(map[string]interface{})["cancellationReasons"].([]interface{})
+			assert.Equal(t, []string{"Out of stock", "Payment failed"}, cancellationReasons)
+		})
+
+		t.Run("fetch single order with cancellation reasons", func(t *testing.T) {
+			// Create a test order with cancellation reasons
+			order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+				"gateway_id":           uuid.New().String(),
+				"provider":             testCtx.provider,
+				"cancellation_reasons": []string{"Out of stock", "Payment failed"},
+			})
+			assert.NoError(t, err)
+
+			var payload = map[string]interface{}{
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+				"Client-Type":   "backend",
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders/%s?timestamp=%v", order.ID, payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+
+			// Assert the response body
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "The order has been successfully retrieved", response.Message)
+
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok, "response.Data is not of type map[string]interface{}")
+			assert.NotNil(t, data, "response.Data is nil")
+
+			// Check cancellation_reasons
+			cancellationReasons := data["cancellationReasons"].([]interface{})
+			assert.Equal(t, []string{"Out of stock", "Payment failed"}, cancellationReasons)
+		})
+
+		t.Run("fetch order without cancellation reasons", func(t *testing.T) {
+			// Create a test order without cancellation reasons
+			order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+				"gateway_id":           uuid.New().String(),
+				"provider":             testCtx.provider,
+				"cancellation_reasons": []string{},
+			})
+			assert.NoError(t, err)
+
+			var payload = map[string]interface{}{
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+				"Client-Type":   "backend",
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders/%s?timestamp=%v", order.ID, payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+
+			// Assert the response body
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "The order has been successfully retrieved", response.Message)
+
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok, "response.Data is not of type map[string]interface{}")
+			assert.NotNil(t, data, "response.Data is nil")
+
+			// Ensure cancellation_reasons is empty
+			cancellationReasons := data["cancellationReasons"].([]interface{})
+			assert.Empty(t, cancellationReasons)
+		})
+
 		t.Run("when filtering is applied", func(t *testing.T) {
 			// Test different status filters
 			var payload = map[string]interface{}{
