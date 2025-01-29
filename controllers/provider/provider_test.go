@@ -251,6 +251,8 @@ func TestProvider(t *testing.T) {
 			res, err := test.PerformRequest(t, "GET", query, nil, headers, router)
 			assert.NoError(t, err)
 
+			
+
 			// Assert the response body
 			assert.Equal(t, http.StatusOK, res.Code)
 
