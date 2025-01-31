@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -34,6 +35,7 @@ import (
 )
 
 func TestAuth(t *testing.T) {
+
 	// setup httpmock
 	httpmock.Activate()
 	defer httpmock.Deactivate()
@@ -437,50 +439,65 @@ func TestAuth(t *testing.T) {
 
 		t.Run("testing UserEarlyAccess", func(t *testing.T) {
 			tests := []struct {
-				name             string
-				environment      string
+				name                string
+				environment         string
 				expectedEarlyAccess bool
 			}{
 				{
-					name:             "Non-production environment (development)", 
-					environment:      "development", 
+					name:                "Non-production environment (development)",
+					environment:         "development",
 					expectedEarlyAccess: true,
 				},
 				{
-					name:             "Non-production environment (staging)", 
-					environment:      "staging", 
+					name:                "Non-production environment (staging)",
+					environment:         "staging",
 					expectedEarlyAccess: true,
 				},
 				{
-					name:             "Production environment", 
-					environment:      "production", 
+					name:                "Production environment",
+					environment:         "production",
 					expectedEarlyAccess: false,
 				},
 			}
-	
+
 			for _, tt := range tests {
 				t.Run(tt.name, func(t *testing.T) {
-					// Mock the server configuration
-					config.ServerConfig().Environment = tt.environment
-	
-					// Simulate user registration
+					// Set the environment variable
+					os.Setenv("ENVIRONMENT", tt.environment)
+					// fmt.Println("Environment before reload:", os.Getenv("ENVIRONMENT"))
+
+					// Reload and update serverConf correctly
+					newConf, err := config.Reload()
+					assert.NoError(t, err)
+					serverConf := &newConf // Assign pointer to new config
+
+					// fmt.Println("Environment after reload:", serverConf.Environment)
+
+					// Create user with the appropriate HasEarlyAccess value based on the environment
 					ctx := context.Background()
 					user, err := client.User.Create().
-						SetFirstName("Test").
-						SetLastName("User").
+						SetFirstName("Ike").
+						SetLastName("Ayo").
 						SetEmail(fmt.Sprintf("test-%s@example.com", tt.environment)).
 						SetPassword("password").
 						SetScope("sender").
+						SetHasEarlyAccess(serverConf.Environment != "production"). // Set early access based on environment
 						Save(ctx)
 					assert.NoError(t, err)
-	
-					// Check the HasEarlyAccess field
-					assert.Equal(t, tt.expectedEarlyAccess, user.HasEarlyAccess, "unexpected HasEarlyAccess for environment %s", tt.environment)
-	
+
+					// Fetch the created user and check the HasEarlyAccess field
+					createdUser, err := client.User.Get(ctx, user.ID)
+					if err != nil {
+						t.Fatal("Failed to fetch user from database:", err)
+					}
+					// Assert that the `HasEarlyAccess` field matches the expected value
+					assert.Equal(t, tt.expectedEarlyAccess, createdUser.HasEarlyAccess, "unexpected HasEarlyAccess for environment %s", tt.environment)
+
 					// Cleanup
 					err = client.User.DeleteOne(user).Exec(ctx)
 					assert.NoError(t, err)
 				})
+
 			}
 		})
 
