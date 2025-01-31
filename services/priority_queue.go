@@ -111,6 +111,14 @@ func (s *PriorityQueueService) GetProviderRate(ctx context.Context, provider *en
 	return rate, nil
 }
 
+// deleteQueue deletes existing circular queue
+func (s *PriorityQueueService) deleteQueue(ctx context.Context, key string) {
+	_, err := storage.RedisClient.Del(ctx, key).Result()
+	if err != nil {
+		logger.Errorf("failed to delete existing circular queue: %v", err)
+	}
+}
+
 // CreatePriorityQueueForBucket creates a priority queue for a bucket and saves it to redis
 func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context, bucket *ent.ProvisionBucket) {
 	// Create a slice to store the provider profiles sorted by trust score
@@ -141,10 +149,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 		logger.Errorf("failed to store previous provider rates: %v", err)
 	}
 
-	_, err = storage.RedisClient.Del(ctx, redisKey).Result() // delete existing queue
-	if err != nil {
-		logger.Errorf("failed to delete existing circular queue: %v", err)
-	}
+	s.deleteQueue(ctx, redisKey)
 
 	for _, provider := range providers {
 		tokens, err := storage.Client.ProviderOrderToken.
@@ -248,6 +253,7 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 	if err != nil {
 		prevRedisKey := redisKey + "_prev"
 		err = s.matchRate(ctx, prevRedisKey, orderIDPrefix, order, excludeList)
+		s.deleteQueue(ctx, prevRedisKey)
 		if err != nil {
 			return err
 		}
