@@ -559,25 +559,6 @@ func GetTokenRateFromQueue(tokenSymbol string, orderAmount decimal.Decimal, fiat
 	return rateResponse, nil
 }
 
-<<<<<<< HEAD
-type contextKey string
-
-const skipSoftDeleteKey contextKey = "skipSoftDelete"
-
-// SkipSoftDelete adds a context value to skip soft delete logic.
-func SkipSoftDelete(ctx context.Context) context.Context {
-	return context.WithValue(ctx, skipSoftDeleteKey, true)
-}
-
-// IsSkipSoftDelete returns true if the context indicates that soft delete should be skipped.
-func IsSkipSoftDelete(ctx context.Context) bool {
-	val := ctx.Value(skipSoftDeleteKey)
-	if val != nil {
-		return val.(bool)
-	}
-	return false
-}
-=======
 // GetInstitutionByCode returns the institution for a given institution code
 func GetInstitutionByCode(ctx context.Context, institutionCode string) (*ent.Institution, error) {
 	institution, err := storage.Client.Institution.
@@ -594,4 +575,5 @@ func GetInstitutionByCode(ctx context.Context, institutionCode string) (*ent.Ins
 	}
 	return institution, nil
 }
->>>>>>> 6269356 (refactor: migrate institution retrieval to utils and remove redundant method)
+
+
