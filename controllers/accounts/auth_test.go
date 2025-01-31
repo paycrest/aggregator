@@ -464,14 +464,11 @@ func TestAuth(t *testing.T) {
 				t.Run(tt.name, func(t *testing.T) {
 					// Set the environment variable
 					os.Setenv("ENVIRONMENT", tt.environment)
-					// fmt.Println("Environment before reload:", os.Getenv("ENVIRONMENT"))
 
 					// Reload and update serverConf correctly
 					newConf, err := config.Reload()
 					assert.NoError(t, err)
 					serverConf := &newConf // Assign pointer to new config
-
-					// fmt.Println("Environment after reload:", serverConf.Environment)
 
 					// Create user with the appropriate HasEarlyAccess value based on the environment
 					ctx := context.Background()
