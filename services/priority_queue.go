@@ -126,13 +126,13 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 	// Store previous provider data
 	prevData, err := storage.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
 	if err != nil {
-		logger.Errorf("failed to dequeue last provider data: %v", err)
+		logger.Errorf("failed to fetch provider rates: %v", err)
 	}
 
 	prevRedisKey := redisKey + "_prev"
 	err = storage.RedisClient.RPush(ctx, prevRedisKey, prevData, 0).Err()
 	if err != nil {
-		logger.Errorf("failed to store previous provider data: %v", err)
+		logger.Errorf("failed to store previous provider rates: %v", err)
 	}
 
 	_, err = storage.RedisClient.Del(ctx, redisKey).Result() // delete existing queue
