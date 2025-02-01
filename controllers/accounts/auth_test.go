@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jarcoal/httpmock"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/routers/middleware"
 	svc "github.com/paycrest/aggregator/services"
@@ -24,7 +25,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/gin-gonic/gin"
-	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent/enttest"
 	userEnt "github.com/paycrest/aggregator/ent/user"
 	"github.com/paycrest/aggregator/ent/verificationtoken"
@@ -462,15 +462,17 @@ func TestAuth(t *testing.T) {
 
 			for _, tt := range tests {
 				t.Run(tt.name, func(t *testing.T) {
-					// Set the environment variable
 					os.Setenv("ENVIRONMENT", tt.environment)
 
 					// Reload and update serverConf correctly
-					newConf, err := config.Reload()
-					assert.NoError(t, err)
-					serverConf := &newConf // Assign pointer to new config
+					// newConf, err := config.Reload()
+					// assert.NoError(t, err)
+					// serverConf := &newConf
 
-					// Create user with the appropriate HasEarlyAccess value based on the environment
+					serverConf := config.ServerConfiguration{Environment: tt.environment}
+
+					hasEarlyAccess := serverConf.Environment != "production"
+
 					ctx := context.Background()
 					user, err := client.User.Create().
 						SetFirstName("Ike").
@@ -478,16 +480,14 @@ func TestAuth(t *testing.T) {
 						SetEmail(fmt.Sprintf("test-%s@example.com", tt.environment)).
 						SetPassword("password").
 						SetScope("sender").
-						SetHasEarlyAccess(serverConf.Environment != "production"). // Set early access based on environment
+						SetHasEarlyAccess(hasEarlyAccess).
 						Save(ctx)
 					assert.NoError(t, err)
 
-					// Fetch the created user and check the HasEarlyAccess field
 					createdUser, err := client.User.Get(ctx, user.ID)
 					if err != nil {
 						t.Fatal("Failed to fetch user from database:", err)
 					}
-					// Assert that the `HasEarlyAccess` field matches the expected value
 					assert.Equal(t, tt.expectedEarlyAccess, createdUser.HasEarlyAccess, "unexpected HasEarlyAccess for environment %s", tt.environment)
 
 					// Cleanup
