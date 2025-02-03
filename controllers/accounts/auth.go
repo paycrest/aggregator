@@ -86,6 +86,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		SetPassword(payload.Password).
 		SetScope(scope)
 
+	// Checking the environment to set the user as verified and give early access
 	if serverConf.Environment != "production" {
 		userCreate = userCreate.
 			SetIsEmailVerified(true).
@@ -261,7 +262,7 @@ func (ctrl *AuthController) Login(ctx *gin.Context) {
 
 	// Check if user has early access
 	environment := serverConf.Environment
-	if !user.HasEarlyAccess && (environment == "production" || environment == "staging") {
+	if !user.HasEarlyAccess && (environment == "production") {
 		u.APIResponse(ctx, http.StatusUnauthorized, "error",
 			"Your early access request is still pending", nil,
 		)
