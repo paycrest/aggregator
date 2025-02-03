@@ -464,11 +464,6 @@ func TestAuth(t *testing.T) {
 				t.Run(tt.name, func(t *testing.T) {
 					os.Setenv("ENVIRONMENT", tt.environment)
 
-					// Reload and update serverConf correctly
-					// newConf, err := config.Reload()
-					// assert.NoError(t, err)
-					// serverConf := &newConf
-
 					serverConf := config.ServerConfiguration{Environment: tt.environment}
 
 					hasEarlyAccess := serverConf.Environment != "production"

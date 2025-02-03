@@ -21,8 +21,6 @@ type ServerConfiguration struct {
 	CurrenciesCacheDuration   int
 	InstitutionsCacheDuration int
 	PubKeyCacheDuration       int
-	RateLimitUnauthenticated  int
-	RateLimitAuthenticated    int
 }
 
 // ServerConfig sets the server configuration
@@ -39,8 +37,6 @@ func ServerConfig() *ServerConfiguration {
 	viper.SetDefault("CURRENCIES_CACHE_DURATION", 24)
 	viper.SetDefault("INSTITUTIONS_CACHE_DURATION", 24)
 	viper.SetDefault("PUBKEY_CACHE_DURATION", 365)
-	viper.SetDefault("RATE_LIMIT_UNAUTHENTICATED", 5)
-	viper.SetDefault("RATE_LIMIT_AUTHENTICATED", 50)
 
 	return &ServerConfiguration{
 		Debug:                     viper.GetBool("DEBUG"),
@@ -56,17 +52,7 @@ func ServerConfig() *ServerConfiguration {
 		CurrenciesCacheDuration:   viper.GetInt("CURRENCIES_CACHE_DURATION"),
 		InstitutionsCacheDuration: viper.GetInt("INSTITUTIONS_CACHE_DURATION"),
 		PubKeyCacheDuration:       viper.GetInt("PUBKEY_CACHE_DURATION"),
-		RateLimitUnauthenticated:  viper.GetInt("RATE_LIMIT_UNAUTHENTICATED"),
-		RateLimitAuthenticated:    viper.GetInt("RATE_LIMIT_AUTHENTICATED"),
 	}
-}
-
-// Reload reinitializes the configuration using the current environment variables
-func Reload() (ServerConfiguration, error) {
-	if err := SetupConfig(); err != nil {
-		return ServerConfiguration{}, fmt.Errorf("config Reload() error: %s", err)
-	}
-	return *ServerConfig(), nil // Return the updated config
 }
 
 func init() {
