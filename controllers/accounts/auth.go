@@ -38,7 +38,7 @@ func NewAuthController() *AuthController {
 	return &AuthController{
 		apiKeyService: svc.NewAPIKeyService(),
 		emailService:  svc.NewEmailService(svc.SENDGRID_MAIL_PROVIDER),
-		slackService:  svc.NewSlackService(),
+		slackService:  svc.NewSlackService(serverConf.SlackWebhookURL),
 	}
 }
 

@@ -7,26 +7,22 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/utils/logger"
 )
 
-type SlackService struct{}
+type SlackService struct {
+	SlackWebhookURL string
+}
 
-func NewSlackService() *SlackService {
-	return &SlackService{}
+func NewSlackService(webhookURL string) *SlackService {
+	return &SlackService{
+		SlackWebhookURL: webhookURL,
+	}
 }
 
 func (s *SlackService) SendUserSignupNotification(user *ent.User, scopes []string, providerCurrency string) error {
-	// Only send in production
-
-	conf := config.ServerConfig()
-	if conf.Environment != "production" {
-		return nil
-	}
-	webhookURL := conf.SlackWebhookURL
-	if webhookURL == "" {
+	if s.SlackWebhookURL == "" {
 		return fmt.Errorf("slack webhook URL not configured")
 	}
 
@@ -69,7 +65,7 @@ func (s *SlackService) SendUserSignupNotification(user *ent.User, scopes []strin
 	}
 
 	// Add provider details if applicable
-	if providerCurrency != "" {
+	if contains(scopes, "provider") && providerCurrency != "" {
 		message["blocks"] = append(message["blocks"].([]map[string]interface{}),
 			map[string]interface{}{
 				"type": "section",
@@ -89,7 +85,7 @@ func (s *SlackService) SendUserSignupNotification(user *ent.User, scopes []strin
 		return err
 	}
 
-	resp, err := http.Post(webhookURL, "application/json", bytes.NewBuffer(jsonPayload))
+	resp, err := http.Post(s.SlackWebhookURL, "application/json", bytes.NewBuffer(jsonPayload))
 	if err != nil {
 		logger.Errorf("Failed to send Slack notification: %v", err)
 		return err
@@ -102,4 +98,13 @@ func (s *SlackService) SendUserSignupNotification(user *ent.User, scopes []strin
 	}
 
 	return nil
+}
+
+func contains(slice []string, str string) bool {
+	for _, s := range slice {
+		if s == str {
+			return true
+		}
+	}
+	return false
 }
