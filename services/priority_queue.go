@@ -191,17 +191,24 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 				providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 				providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucket.Edges.Currency.Code)),
 			).
-			Select(providerordertoken.EdgeToken, providerordertoken.FieldMinOrderAmount, providerordertoken.FieldMaxOrderAmount).
 			WithToken().
 			All(ctx)
 		if err != nil {
+<<<<<<< HEAD
 			if err != context.Canceled {
 				logger.Errorf("failed to get tokens for provider %s: %v", provider.ID, err)
 			}
+=======
+			fmt.Println("error", err)
+			logger.Errorf("failed to get tokens for provider %s: %v", provider.ID, err)
+>>>>>>> df01802 (feat(test): resolve failing priority queue test)
 			continue
 		}
 
+		fmt.Println("orderTokens", orderTokens)
+
 		for _, orderToken := range orderTokens {
+			fmt.Println("orderToken", orderToken)
 			providerID := provider.ID
 			rate, err := s.GetProviderRate(ctx, provider, orderToken.Edges.Token.Symbol, bucket.Edges.Currency.Code)
 			if err != nil {
@@ -352,11 +359,8 @@ func (s *PriorityQueueService) notifyProvider(ctx context.Context, orderRequestD
 
 	provider, err := storage.Client.ProviderProfile.
 		Query().
-		Where(
-			providerprofile.IDEQ(providerID),
-		).
+		Where(providerprofile.IDEQ(providerID)).
 		WithAPIKey().
-		Select(providerprofile.FieldProvisionMode, providerprofile.FieldHostIdentifier).
 		Only(ctx)
 	if err != nil {
 		return err
