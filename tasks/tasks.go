@@ -814,6 +814,7 @@ func ReassignUnvalidatedLockOrders() {
 				if status == "failed" {
 					_, err = storage.Client.LockOrderFulfillment.
 						UpdateOneID(fulfillment.ID).
+						SetTxID(fulfillment.TxID).
 						SetValidationStatus(lockorderfulfillment.ValidationStatusFailed).
 						SetValidationError(data["data"].(map[string]interface{})["error"].(string)).
 						Save(ctx)
@@ -833,6 +834,7 @@ func ReassignUnvalidatedLockOrders() {
 				} else if status == "success" {
 					_, err = storage.Client.LockOrderFulfillment.
 						UpdateOneID(fulfillment.ID).
+						SetTxID(fulfillment.TxID).
 						SetValidationStatus(lockorderfulfillment.ValidationStatusSuccess).
 						Save(ctx)
 					if err != nil {
