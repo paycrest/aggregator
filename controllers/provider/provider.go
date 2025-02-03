@@ -20,6 +20,7 @@ import (
 	orderService "github.com/paycrest/aggregator/services/order"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
+	"github.com/paycrest/aggregator/utils"
 	u "github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/shopspring/decimal"
@@ -893,25 +894,29 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 	currencies := data["data"].(map[string]interface{})["currencies"].(map[string]string)
 =======
 	// Change this line to handle currencies as a slice instead of a map
-	currenciesData, ok := data["data"].(map[string]interface{})["currencies"].([]interface{})
+	dataMap, ok := data["data"].(map[string]interface{})
+	if !ok {
+		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Invalid data format", nil)
+		return
+	}
+
+	currenciesData, ok := dataMap["currencies"].([]interface{}) // Change to []interface{} to handle any type
 	if !ok {
 		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Currencies data is not in expected format", nil)
 		return
 	}
 
-	// Create a map to hold currency codes for easier lookup
-	currenciesMap := make(map[string]struct{})
+	// Convert []interface{} to []string
+	var currencyCodes []string
 	for _, currency := range currenciesData {
-		if currencyMap, ok := currency.(map[string]interface{}); ok {
-			if code, exists := currencyMap["code"].(string); exists {
-				currenciesMap[code] = struct{}{}
-			}
+		if code, ok := currency.(string); ok {
+			currencyCodes = append(currencyCodes, code)
 		}
 	}
 
 >>>>>>> 06ebf2c (feat(test): resolve failing node info test)
 	for _, currency := range provider.Edges.Currencies {
-		if _, ok := currenciesMap[currency.Code]; !ok {
+		if !utils.ContainsString(currencyCodes, currency.Code) {
 			u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
 			return
 		}
