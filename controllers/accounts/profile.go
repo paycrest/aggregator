@@ -612,18 +612,19 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 		return
 	}
 
-	// Provider profile should also returns all the currencies associated with the provider
+	// Provider profile should also return all the currencies associated with the provider
 	currencyCodes := make([]string, len(currencies))
 	for i, currency := range currencies {
 		currencyCodes[i] = currency.Code
 	}
 
-	// Get token settings
-	orderTokens, err := provider.
-		QueryOrderTokens().
-		WithToken().
-		WithCurrency().
-		All(ctx)
+	// Get token settings, optionally filtering by currency query parameter
+	currencyFilter := ctx.Query("currency")
+	query := provider.QueryOrderTokens().WithToken().WithCurrency()
+	if currencyFilter != "" {
+		query = query.Where(providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(currencyFilter)))
+	}
+	orderTokens, err := query.All(ctx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)

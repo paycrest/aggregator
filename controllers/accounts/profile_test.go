@@ -18,6 +18,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/paycrest/aggregator/ent/enttest"
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
@@ -104,25 +105,25 @@ func TestProfile(t *testing.T) {
 	ctrl := &ProfileController{}
 
 	router.GET(
-		"settings/sender",
+		"/settings/sender",
 		middleware.JWTMiddleware,
 		middleware.OnlySenderMiddleware,
 		ctrl.GetSenderProfile,
 	)
 	router.GET(
-		"settings/provider",
+		"/settings/provider",
 		middleware.JWTMiddleware,
 		middleware.OnlyProviderMiddleware,
 		ctrl.GetProviderProfile,
 	)
 	router.PATCH(
-		"settings/sender",
+		"/settings/sender",
 		middleware.JWTMiddleware,
 		middleware.OnlySenderMiddleware,
 		ctrl.UpdateSenderProfile,
 	)
 	router.PATCH(
-		"settings/provider",
+		"/settings/provider",
 		middleware.JWTMiddleware,
 		middleware.OnlyProviderMiddleware,
 		ctrl.UpdateProviderProfile,
@@ -339,7 +340,7 @@ func TestProfile(t *testing.T) {
 			}
 			payload := types.ProviderProfilePayload{
 				TradingName:      "My Trading Name",
-				Currencies:         []string{"KES"},
+				Currencies:       []string{"KES"},
 				HostIdentifier:   "example.com",
 				BusinessDocument: "https://example.com/business_doc.png",
 				IdentityDocument: "https://example.com/national_id.png",
@@ -386,7 +387,7 @@ func TestProfile(t *testing.T) {
 				VisibilityMode: "private",
 				TradingName:    testCtx.providerProfile.TradingName,
 				HostIdentifier: testCtx.providerProfile.HostIdentifier,
-				Currencies:       []string{"KES"},
+				Currencies:     []string{"KES"},
 			}
 
 			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
@@ -426,7 +427,7 @@ func TestProfile(t *testing.T) {
 					MobileNumber:   "01234567890",
 					TradingName:    testCtx.providerProfile.TradingName,
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
-					Currencies:       []string{"KES"},
+					Currencies:     []string{"KES"},
 				}
 				res1 := profileUpdateRequest(payload)
 
@@ -452,7 +453,7 @@ func TestProfile(t *testing.T) {
 					MobileNumber:   "+2347012345678",
 					TradingName:    testCtx.providerProfile.TradingName,
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
-					Currency:       "KES",
+					Currencies:     []string{"KES"},
 				}
 				res := profileUpdateRequest(payload)
 
@@ -624,6 +625,117 @@ func TestProfile(t *testing.T) {
 		assert.Greater(t, len(response.Data.Tokens), 0)
 		assert.Contains(t, response.Data.WebhookURL, "https://example.com")
 
+	})
+
+	t.Run("GetProviderProfile", func(t *testing.T) {
+		t.Run("with currency filter", func(t *testing.T) {
+			ctx := context.Background()
+
+			// Create a USD fiat currency
+			usd, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			// Add USD to the provider profile's currencies
+			err = db.Client.ProviderProfile.
+				UpdateOneID(testCtx.providerProfile.ID).
+				AddCurrencies(usd).
+				Exec(ctx)
+			assert.NoError(t, err)
+
+			// Retrieve the pre-created KES fiat currency (from setup)
+			kes, err := db.Client.FiatCurrency.
+				Query().
+				Where(fiatcurrency.CodeEQ("KES")).
+				Only(ctx)
+			assert.NoError(t, err)
+
+			// Create a provider order token for KES
+			_, err = db.Client.ProviderOrderToken.
+				Create().
+				SetProviderID(testCtx.providerProfile.ID).
+				SetTokenID(testCtx.token.ID).
+				SetCurrencyID(kes.ID).
+				SetConversionRateType("floating").
+				SetFixedConversionRate(decimal.NewFromInt(0)).
+				SetFloatingConversionRate(decimal.NewFromInt(1)).
+				SetMaxOrderAmount(decimal.NewFromInt(100)).
+				SetMinOrderAmount(decimal.NewFromInt(1)).
+				SetAddress("address_kes").
+				SetNetwork("polygon").
+				Save(ctx)
+			assert.NoError(t, err)
+
+			// Create a provider order token for USD
+			_, err = db.Client.ProviderOrderToken.
+				Create().
+				SetProviderID(testCtx.providerProfile.ID).
+				SetTokenID(testCtx.token.ID).
+				SetCurrencyID(usd.ID).
+				SetConversionRateType("floating").
+				SetFixedConversionRate(decimal.NewFromInt(0)).
+				SetFloatingConversionRate(decimal.NewFromInt(2)).
+				SetMaxOrderAmount(decimal.NewFromInt(200)).
+				SetMinOrderAmount(decimal.NewFromInt(10)).
+				SetAddress("address_usd").
+				SetNetwork("polygon").
+				Save(ctx)
+			assert.NoError(t, err)
+
+			// Generate a provider API key
+			apiKeyService := services.NewAPIKeyService()
+			_, _, err = apiKeyService.GenerateAPIKey(
+				context.Background(),
+				nil,
+				nil,
+				testCtx.providerProfile,
+			)
+			assert.NoError(t, err)
+
+			// Prepare a GET request with a currency filter for KES
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+			resKES, err := test.PerformRequest(t, "GET", "/settings/provider?currency=KES", nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, resKES.Code)
+
+			var respKES struct {
+				Data    types.ProviderProfileResponse `json:"data"`
+				Message string                        `json:"message"`
+				Status  string                        `json:"status"`
+			}
+			err = json.Unmarshal(resKES.Body.Bytes(), &respKES)
+			assert.NoError(t, err)
+			// Expect only one token when filtering by KES
+			assert.Len(t, respKES.Data.Tokens, 1)
+			if len(respKES.Data.Tokens) > 0 {
+				assert.Equal(t, "KES", respKES.Data.Tokens[0].Currency)
+			}
+
+			// Perform a GET request with no currency filter to retrieve both tokens
+			resAll, err := test.PerformRequest(t, "GET", "/settings/provider", nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, resAll.Code)
+
+			var respAll struct {
+				Data    types.ProviderProfileResponse `json:"data"`
+				Message string                        `json:"message"`
+				Status  string                        `json:"status"`
+			}
+			err = json.Unmarshal(resAll.Body.Bytes(), &respAll)
+			assert.NoError(t, err)
+			// Expect two tokens (one for KES and one for USD)
+			assert.Len(t, respAll.Data.Tokens, 2)
+
+		})
 	})
 
 }

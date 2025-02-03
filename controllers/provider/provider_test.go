@@ -315,38 +315,39 @@ func TestProvider(t *testing.T) {
 	})
 
 	t.Run("GetStats", func(t *testing.T) {
+		// Create a new user with no orders
+		user, err := test.CreateTestUser(map[string]interface{}{
+			"email": "no_order_user@test.com",
+		})
+		if err != nil {
+			return
+		}
+
+		currency, err := test.CreateTestFiatCurrency(nil)
+		if err != nil {
+			return
+		}
+
+		providerProfile, err := test.CreateTestProviderProfile(map[string]interface{}{
+			"user_id":     user.ID,
+			"currency_id": currency.ID,
+		})
+		if err != nil {
+			return
+		}
+
+		apiKeyService := services.NewAPIKeyService()
+		apiKey, secretKey, err := apiKeyService.GenerateAPIKey(
+			context.Background(),
+			nil,
+			nil,
+			providerProfile,
+		)
+		if err != nil {
+			return
+		}
+
 		t.Run("when no orders have been initiated", func(t *testing.T) {
-			// Create a new user with no orders
-			user, err := test.CreateTestUser(map[string]interface{}{
-				"email": "no_order_user@test.com",
-			})
-			if err != nil {
-				return
-			}
-
-			currency, err := test.CreateTestFiatCurrency(nil)
-			if err != nil {
-				return
-			}
-
-			providerProfile, err := test.CreateTestProviderProfile(map[string]interface{}{
-				"user_id":     user.ID,
-				"currency_id": currency.ID,
-			})
-			if err != nil {
-				return
-			}
-
-			apiKeyService := services.NewAPIKeyService()
-			apiKey, secretKey, err := apiKeyService.GenerateAPIKey(
-				context.Background(),
-				nil,
-				nil,
-				providerProfile,
-			)
-			if err != nil {
-				return
-			}
 
 			// Test default params
 			var payload = map[string]interface{}{
@@ -436,6 +437,58 @@ func TestProvider(t *testing.T) {
 			assert.Equal(t, 0, totalCryptoVolume.Cmp(decimal.NewFromInt(0)))
 		})
 
+		t.Run("with valid currency filter", func(t *testing.T) {
+			// Use the provider's assigned currency (created in setup)
+			var payload = map[string]interface{}{
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+				"Client-Type":   "backend",
+			}
+
+			url := fmt.Sprintf("/stats?timestamp=%v&currency=%s", payload["timestamp"], testCtx.currency.Code)
+			res, err := test.PerformRequest(t, "GET", url, nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Provider stats fetched successfully", response.Message)
+
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok, "response.Data is not of type map[string]interface{}")
+			assert.NotNil(t, data, "response.Data is nil")
+		})
+
+		t.Run("with invalid currency filter", func(t *testing.T) {
+			// Use an invalid currency code, e.g., "XYZ"
+			var payload = map[string]interface{}{
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+				"Client-Type":   "backend",
+			}
+
+			url := fmt.Sprintf("/stats?timestamp=%v&currency=%s", payload["timestamp"], "XYZ")
+			res, err := test.PerformRequest(t, "GET", url, nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Currency not found", response.Message)
+		})
+
 		t.Run("should only calculate volumes of settled orders", func(t *testing.T) {
 			// Create a settled order
 			_, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
@@ -510,7 +563,7 @@ func TestProvider(t *testing.T) {
 						"status":  "success",
 						"message": "Node is live",
 						"data": map[string]interface{}{
-								"currencies": []string{"NGN"},
+							"currencies": []string{"NGN"},
 						},
 					})
 				},
