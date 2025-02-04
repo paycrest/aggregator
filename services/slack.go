@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 )
 
@@ -24,6 +24,12 @@ func NewSlackService(webhookURL string) *SlackService {
 func (s *SlackService) SendUserSignupNotification(user *ent.User, scopes []string, providerCurrency string) error {
 	if s.SlackWebhookURL == "" {
 		return fmt.Errorf("slack webhook URL not configured")
+	}
+
+	// Format the timestamp using the utility function
+	formattedTime, err := utils.FormatTimestampToGMT1(user.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("error formatting timestamp: %v", err)
 	}
 
 	// Prepare Slack message
@@ -57,7 +63,7 @@ func (s *SlackService) SendUserSignupNotification(user *ent.User, scopes []strin
 					},
 					{
 						"type": "mrkdwn",
-						"text": fmt.Sprintf("*Timestamp:* %s", user.CreatedAt.Format(time.RFC3339)),
+						"text": fmt.Sprintf("*Timestamp:* %s", formattedTime),
 					},
 				},
 			},
@@ -65,7 +71,7 @@ func (s *SlackService) SendUserSignupNotification(user *ent.User, scopes []strin
 	}
 
 	// Add provider details if applicable
-	if contains(scopes, "provider") && providerCurrency != "" {
+	if utils.ContainsString(scopes, "provider") && providerCurrency != "" {
 		message["blocks"] = append(message["blocks"].([]map[string]interface{}),
 			map[string]interface{}{
 				"type": "section",
@@ -98,13 +104,4 @@ func (s *SlackService) SendUserSignupNotification(user *ent.User, scopes []strin
 	}
 
 	return nil
-}
-
-func contains(slice []string, str string) bool {
-	for _, s := range slice {
-		if s == str {
-			return true
-		}
-	}
-	return false
 }
