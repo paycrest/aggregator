@@ -328,6 +328,7 @@ func (s *PriorityQueueService) notifyProvider(ctx context.Context, orderRequestD
 	return nil
 }
 
+// Matches order rate with a provider rate
 func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, orderIDPrefix string, order types.LockPaymentOrderFields, excludeList []string) error {
 	for index := 0; ; index++ {
 		providerData, err := storage.RedisClient.LIndex(ctx, redisKey, int64(index)).Result()
