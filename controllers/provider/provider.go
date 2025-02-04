@@ -627,6 +627,8 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 		return
 	}
 
+	// TODO: Reassign order to another provider in background
+
 	u.APIResponse(ctx, http.StatusOK, "success", "Order cancelled successfully", nil)
 }
 
