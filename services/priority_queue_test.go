@@ -255,7 +255,7 @@ func TestPriorityQueueTest(t *testing.T) {
 			"gateway_id": "order-1",
 		})
 		assert.NoError(t, err)
-
+		fmt.Println("here")
 		_, err = test.AddProvisionBucketToLockPaymentOrder(_order, bucket.ID)
 		assert.NoError(t, err)
 
@@ -315,7 +315,7 @@ func TestPriorityQueueTest(t *testing.T) {
 		_, err = test.AddProvisionBucketToLockPaymentOrder(_order, bucket.ID)
 		assert.NoError(t, err)
 
-		err = db.RedisClient.RPush(context.Background(), fmt.Sprintf("order_exclude_list_%s", _order.ID), testCtxForPQ.publicProviderProfile.ID).Err()
+		_, err = db.RedisClient.RPush(context.Background(), fmt.Sprintf("order_exclude_list_%s", _order.ID), testCtxForPQ.publicProviderProfile.ID).Result()
 		assert.NoError(t, err)
 
 		order, err := db.Client.LockPaymentOrder.
