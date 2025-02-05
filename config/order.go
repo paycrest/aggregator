@@ -12,6 +12,7 @@ import (
 // OrderConfiguration type defines payment order configurations
 type OrderConfiguration struct {
 	OrderFulfillmentValidity         time.Duration
+	OrderRefundTimeout               time.Duration
 	ReceiveAddressValidity           time.Duration
 	OrderRequestValidity             time.Duration
 	TronProApiKey                    string
@@ -36,8 +37,9 @@ type OrderConfiguration struct {
 // OrderConfig sets the order configuration
 func OrderConfig() *OrderConfiguration {
 	viper.SetDefault("RECEIVE_ADDRESS_VALIDITY", 30)
-	viper.SetDefault("ORDER_REQUEST_VALIDITY", 120)
-	viper.SetDefault("ORDER_FULFILLMENT_VALIDITY", 10)
+	viper.SetDefault("ORDER_REQUEST_VALIDITY", 30)
+	viper.SetDefault("ORDER_FULFILLMENT_VALIDITY", 1)
+	viper.SetDefault("ORDER_REFUND_TIMEOUT", 5)
 	viper.SetDefault("BUCKET_QUEUE_REBUILD_INTERVAL", 1)
 	viper.SetDefault("REFUND_CANCELLATION_COUNT", 3)
 	viper.SetDefault("NETWORK_FEE", 0.05)
@@ -47,6 +49,7 @@ func OrderConfig() *OrderConfiguration {
 
 	return &OrderConfiguration{
 		OrderFulfillmentValidity:         time.Duration(viper.GetInt("ORDER_FULFILLMENT_VALIDITY")) * time.Minute,
+		OrderRefundTimeout:               time.Duration(viper.GetInt("ORDER_REFUND_TIMEOUT")) * time.Minute,
 		ReceiveAddressValidity:           time.Duration(viper.GetInt("RECEIVE_ADDRESS_VALIDITY")) * time.Minute,
 		OrderRequestValidity:             time.Duration(viper.GetInt("ORDER_REQUEST_VALIDITY")) * time.Second,
 		TronProApiKey:                    viper.GetString("TRON_PRO_API_KEY"),

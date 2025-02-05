@@ -184,11 +184,14 @@ func RetryStaleUserOperations() error {
 						lockpaymentorder.StatusEQ(lockpaymentorder.StatusPending),
 						lockpaymentorder.StatusEQ(lockpaymentorder.StatusCancelled),
 					),
-					lockpaymentorder.CreatedAtLTE(time.Now().Add(-10*time.Minute)),
-					lockpaymentorder.HasFulfillmentsWith(
-						lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusFailed),
-						lockorderfulfillment.Not(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusSuccess)),
-						lockorderfulfillment.Not(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusPending)),
+					lockpaymentorder.CreatedAtLTE(time.Now().Add(-orderConf.OrderRefundTimeout)),
+					lockpaymentorder.Or(
+						lockpaymentorder.Not(lockpaymentorder.HasFulfillments()),
+						lockpaymentorder.HasFulfillmentsWith(
+							lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusFailed),
+							lockorderfulfillment.Not(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusSuccess)),
+							lockorderfulfillment.Not(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusPending)),
+						),
 					),
 				),
 				lockpaymentorder.And(
@@ -636,8 +639,8 @@ func SyncLockOrderFulfillments() {
 						),
 						lockpaymentorder.HasFulfillmentsWith(
 							lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusPending),
-							lockorderfulfillment.UpdatedAtLTE(time.Now().Add(-orderConf.OrderFulfillmentValidity*time.Minute)),
-							lockorderfulfillment.Not(lockorderfulfillment.UpdatedAtGT(time.Now().Add(-orderConf.OrderFulfillmentValidity*time.Minute))),
+							lockorderfulfillment.UpdatedAtLTE(time.Now().Add(-orderConf.OrderFulfillmentValidity)),
+							lockorderfulfillment.Not(lockorderfulfillment.UpdatedAtGT(time.Now().Add(-orderConf.OrderFulfillmentValidity))),
 						),
 						lockpaymentorder.HasFulfillmentsWith(
 							lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusSuccess),
@@ -1357,7 +1360,7 @@ func StartCronJobs() {
 	// 	logger.Errorf("StartCronJobs: %v", err)
 	// }
 
-	// Sync lock order fulfillments every 2 minutes
+	// Sync lock order fulfillments every 1 minute
 	_, err = scheduler.Cron("*/1 * * * *").Do(SyncLockOrderFulfillments)
 	if err != nil {
 		logger.Errorf("StartCronJobs: %v", err)
