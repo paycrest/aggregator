@@ -2,7 +2,6 @@ package tasks
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"math"
 	"strings"
@@ -33,9 +32,7 @@ import (
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
-	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/logger"
-	tokenUtils "github.com/paycrest/aggregator/utils/token"
 	"github.com/redis/go-redis/v9"
 	"github.com/shopspring/decimal"
 )
@@ -679,38 +676,38 @@ func SyncLockOrderFulfillments() {
 	for _, order := range lockOrders {
 		if len(order.Edges.Fulfillments) == 0 {
 			// Compute HMAC
-			decodedSecret, err := base64.StdEncoding.DecodeString(order.Edges.Provider.Edges.APIKey.Secret)
-			if err != nil {
-				logger.Errorf("ProcessUnfulfilledLockOrders: %v", err)
-				return
-			}
-			decryptedSecret, err := cryptoUtils.DecryptPlain(decodedSecret)
-			if err != nil {
-				logger.Errorf("ProcessUnfulfilledLockOrders: %v", err)
-				return
-			}
+			// decodedSecret, err := base64.StdEncoding.DecodeString(order.Edges.Provider.Edges.APIKey.Secret)
+			// if err != nil {
+			// 	logger.Errorf("SyncLockOrderFulfillments: %v", err)
+			// 	return
+			// }
+			// decryptedSecret, err := cryptoUtils.DecryptPlain(decodedSecret)
+			// if err != nil {
+			// 	logger.Errorf("SyncLockOrderFulfillments: %v", err)
+			// 	return
+			// }
 
 			payload := map[string]interface{}{
 				"orderId":  order.ID,
 				"currency": order.Edges.ProvisionBucket.Edges.Currency,
 			}
-			signature := tokenUtils.GenerateHMACSignature(payload, string(decryptedSecret))
+			// signature := tokenUtils.GenerateHMACSignature(payload, string(decryptedSecret))
 
 			// Send POST request to the provider's node
 			res, err := fastshot.NewClient(order.Edges.Provider.HostIdentifier).
-				Config().SetTimeout(30*time.Second).
-				Header().Add("X-Request-Signature", signature).
+				Config().SetTimeout(30 * time.Second).
+				// Header().Add("X-Request-Signature", signature).
 				Build().POST("/tx_status").
 				Body().AsJSON(payload).
 				Send()
 			if err != nil {
-				logger.Errorf("ProcessUnfulfilledLockOrders: %v", err)
+				logger.Errorf("SyncLockOrderFulfillments: %v", err)
 				continue
 			}
 
 			data, err := utils.ParseJSONResponse(res.RawResponse)
 			if err != nil {
-				logger.Errorf("ProcessUnfulfilledLockOrders: %v %v", err, data)
+				logger.Errorf("SyncLockOrderFulfillments: %v %v", err, data)
 				continue
 			}
 
@@ -727,7 +724,7 @@ func SyncLockOrderFulfillments() {
 					SetValidationError(data["data"].(map[string]interface{})["error"].(string)).
 					Save(ctx)
 				if err != nil {
-					logger.Errorf("ProcessUnfulfilledLockOrders.UpdateFulfillmentStatusFailed: %v", err)
+					logger.Errorf("SyncLockOrderFulfillments.UpdateFulfillmentStatusFailed: %v", err)
 					continue
 				}
 
@@ -735,7 +732,7 @@ func SyncLockOrderFulfillments() {
 					SetStatus(lockpaymentorder.StatusFulfilled).
 					Save(ctx)
 				if err != nil {
-					logger.Errorf("ProcessUnfulfilledLockOrders.UpdateOrderStatusFulfilled: %v", err)
+					logger.Errorf("SyncLockOrderFulfillments.UpdateOrderStatusFulfilled: %v", err)
 					continue
 				}
 
@@ -747,7 +744,7 @@ func SyncLockOrderFulfillments() {
 					SetValidationStatus(lockorderfulfillment.ValidationStatusSuccess).
 					Save(ctx)
 				if err != nil {
-					logger.Errorf("ProcessUnfulfilledLockOrders.UpdateFulfillmentStatusSuccess: %v", err)
+					logger.Errorf("SyncLockOrderFulfillments.UpdateFulfillmentStatusSuccess: %v", err)
 					continue
 				}
 
@@ -761,7 +758,7 @@ func SyncLockOrderFulfillments() {
 					}).
 					Save(ctx)
 				if err != nil {
-					logger.Errorf("ProcessUnfulfilledLockOrders.CreateTransactionLog: %v", err)
+					logger.Errorf("SyncLockOrderFulfillments.CreateTransactionLog: %v", err)
 					continue
 				}
 
@@ -771,7 +768,7 @@ func SyncLockOrderFulfillments() {
 					AddTransactions(transactionLog).
 					Save(ctx)
 				if err != nil {
-					logger.Errorf("ProcessUnfulfilledLockOrders.UpdateOrderStatusValidated: %v", err)
+					logger.Errorf("SyncLockOrderFulfillments.UpdateOrderStatusValidated: %v", err)
 					continue
 				}
 			}
@@ -779,16 +776,16 @@ func SyncLockOrderFulfillments() {
 			for _, fulfillment := range order.Edges.Fulfillments {
 				if fulfillment.ValidationStatus == lockorderfulfillment.ValidationStatusPending {
 					// Compute HMAC
-					decodedSecret, err := base64.StdEncoding.DecodeString(order.Edges.Provider.Edges.APIKey.Secret)
-					if err != nil {
-						logger.Errorf("SyncLockOrderFulfillments: %v", err)
-						return
-					}
-					decryptedSecret, err := cryptoUtils.DecryptPlain(decodedSecret)
-					if err != nil {
-						logger.Errorf("SyncLockOrderFulfillments: %v", err)
-						return
-					}
+					// decodedSecret, err := base64.StdEncoding.DecodeString(order.Edges.Provider.Edges.APIKey.Secret)
+					// if err != nil {
+					// 	logger.Errorf("SyncLockOrderFulfillments: %v", err)
+					// 	return
+					// }
+					// decryptedSecret, err := cryptoUtils.DecryptPlain(decodedSecret)
+					// if err != nil {
+					// 	logger.Errorf("SyncLockOrderFulfillments: %v", err)
+					// 	return
+					// }
 
 					payload := map[string]interface{}{
 						"orderId":  order.ID,
@@ -797,12 +794,12 @@ func SyncLockOrderFulfillments() {
 						"txId":     fulfillment.TxID,
 					}
 
-					signature := tokenUtils.GenerateHMACSignature(payload, string(decryptedSecret))
+					// signature := tokenUtils.GenerateHMACSignature(payload, string(decryptedSecret))
 
 					// Send POST request to the provider's node
 					res, err := fastshot.NewClient(order.Edges.Provider.HostIdentifier).
-						Config().SetTimeout(30*time.Second).
-						Header().Add("X-Request-Signature", signature).
+						Config().SetTimeout(30 * time.Second).
+						// Header().Add("X-Request-Signature", signature).
 						Build().POST("/tx_status").
 						Body().AsJSON(payload).
 						Send()
