@@ -375,7 +375,6 @@ func (s *PriorityQueueService) notifyProvider(ctx context.Context, orderRequestD
 			providerprofile.IDEQ(providerID),
 		).
 		WithAPIKey().
-		Select(providerprofile.FieldProvisionMode, providerprofile.FieldHostIdentifier).
 		Only(ctx)
 	if err != nil {
 		return err
@@ -394,7 +393,7 @@ func (s *PriorityQueueService) notifyProvider(ctx context.Context, orderRequestD
 	signature := tokenUtils.GenerateHMACSignature(orderRequestData, string(decryptedSecret))
 
 	// Send POST request to the provider's node
-	_, err = fastshot.NewClient(provider.HostIdentifier).
+	res, err := fastshot.NewClient(provider.HostIdentifier).
 		Config().SetTimeout(30*time.Second).
 		Header().Add("X-Request-Signature", signature).
 		Build().POST("/new_order").
@@ -402,6 +401,11 @@ func (s *PriorityQueueService) notifyProvider(ctx context.Context, orderRequestD
 		Send()
 	if err != nil {
 		return err
+	}
+
+	data, err := utils.ParseJSONResponse(res.RawResponse)
+	if err != nil {
+		logger.Errorf("PriorityQueueService.notifyProvider: %v %v", err, data)
 	}
 
 	return nil

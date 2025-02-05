@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"math"
 	"strings"
@@ -32,7 +33,9 @@ import (
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
+	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/logger"
+	tokenUtils "github.com/paycrest/aggregator/utils/token"
 	"github.com/redis/go-redis/v9"
 	"github.com/shopspring/decimal"
 )
@@ -676,27 +679,27 @@ func SyncLockOrderFulfillments() {
 	for _, order := range lockOrders {
 		if len(order.Edges.Fulfillments) == 0 {
 			// Compute HMAC
-			// decodedSecret, err := base64.StdEncoding.DecodeString(order.Edges.Provider.Edges.APIKey.Secret)
-			// if err != nil {
-			// 	logger.Errorf("SyncLockOrderFulfillments: %v", err)
-			// 	return
-			// }
-			// decryptedSecret, err := cryptoUtils.DecryptPlain(decodedSecret)
-			// if err != nil {
-			// 	logger.Errorf("SyncLockOrderFulfillments: %v", err)
-			// 	return
-			// }
+			decodedSecret, err := base64.StdEncoding.DecodeString(order.Edges.Provider.Edges.APIKey.Secret)
+			if err != nil {
+				logger.Errorf("SyncLockOrderFulfillments: %v", err)
+				return
+			}
+			decryptedSecret, err := cryptoUtils.DecryptPlain(decodedSecret)
+			if err != nil {
+				logger.Errorf("SyncLockOrderFulfillments: %v", err)
+				return
+			}
 
 			payload := map[string]interface{}{
 				"orderId":  order.ID.String(),
-				"currency": order.Edges.ProvisionBucket.Edges.Currency.String(),
+				"currency": order.Edges.ProvisionBucket.Edges.Currency.Code,
 			}
-			// signature := tokenUtils.GenerateHMACSignature(payload, string(decryptedSecret))
+			signature := tokenUtils.GenerateHMACSignature(payload, string(decryptedSecret))
 
 			// Send POST request to the provider's node
 			res, err := fastshot.NewClient(order.Edges.Provider.HostIdentifier).
-				Config().SetTimeout(30 * time.Second).
-				// Header().Add("X-Request-Signature", signature).
+				Config().SetTimeout(30*time.Second).
+				Header().Add("X-Request-Signature", signature).
 				Build().POST("/tx_status").
 				Body().AsJSON(payload).
 				Send()
@@ -776,30 +779,30 @@ func SyncLockOrderFulfillments() {
 			for _, fulfillment := range order.Edges.Fulfillments {
 				if fulfillment.ValidationStatus == lockorderfulfillment.ValidationStatusPending {
 					// Compute HMAC
-					// decodedSecret, err := base64.StdEncoding.DecodeString(order.Edges.Provider.Edges.APIKey.Secret)
-					// if err != nil {
-					// 	logger.Errorf("SyncLockOrderFulfillments: %v", err)
-					// 	return
-					// }
-					// decryptedSecret, err := cryptoUtils.DecryptPlain(decodedSecret)
-					// if err != nil {
-					// 	logger.Errorf("SyncLockOrderFulfillments: %v", err)
-					// 	return
-					// }
+					decodedSecret, err := base64.StdEncoding.DecodeString(order.Edges.Provider.Edges.APIKey.Secret)
+					if err != nil {
+						logger.Errorf("SyncLockOrderFulfillments: %v", err)
+						return
+					}
+					decryptedSecret, err := cryptoUtils.DecryptPlain(decodedSecret)
+					if err != nil {
+						logger.Errorf("SyncLockOrderFulfillments: %v", err)
+						return
+					}
 
 					payload := map[string]interface{}{
 						"orderId":  order.ID.String(),
-						"currency": order.Edges.ProvisionBucket.Edges.Currency.String(),
+						"currency": order.Edges.ProvisionBucket.Edges.Currency.Code,
 						"psp":      fulfillment.Psp,
 						"txId":     fulfillment.TxID,
 					}
 
-					// signature := tokenUtils.GenerateHMACSignature(payload, string(decryptedSecret))
+					signature := tokenUtils.GenerateHMACSignature(payload, string(decryptedSecret))
 
 					// Send POST request to the provider's node
 					res, err := fastshot.NewClient(order.Edges.Provider.HostIdentifier).
-						Config().SetTimeout(30 * time.Second).
-						// Header().Add("X-Request-Signature", signature).
+						Config().SetTimeout(30*time.Second).
+						Header().Add("X-Request-Signature", signature).
 						Build().POST("/tx_status").
 						Body().AsJSON(payload).
 						Send()
@@ -1353,7 +1356,7 @@ func StartCronJobs() {
 	// }
 
 	// Sync lock order fulfillments every 2 minutes
-	_, err = scheduler.Cron("*/2 * * * *").Do(SyncLockOrderFulfillments)
+	_, err = scheduler.Cron("*/1 * * * *").Do(SyncLockOrderFulfillments)
 	if err != nil {
 		logger.Errorf("StartCronJobs: %v", err)
 	}
