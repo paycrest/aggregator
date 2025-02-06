@@ -123,14 +123,20 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 
 	redisKey := fmt.Sprintf("bucket_%s_%s_%s", bucket.Edges.Currency.Code, bucket.MinAmount, bucket.MaxAmount)
 
-	// Store previous provider data
 	prevData, err := storage.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
 	if err != nil {
 		logger.Errorf("failed to fetch provider rates: %v", err)
 	}
 
+	// Convert []string to []interface{}
+	values := make([]interface{}, len(prevData))
+	for i, v := range prevData {
+		values[i] = v
+	}
+
+	// Store previous provider data
 	prevRedisKey := redisKey + "_prev"
-	err = storage.RedisClient.RPush(ctx, prevRedisKey, prevData, 0).Err()
+	err = storage.RedisClient.RPush(ctx, prevRedisKey, values...).Err()
 	if err != nil {
 		logger.Errorf("failed to store previous provider rates: %v", err)
 	}
