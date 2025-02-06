@@ -255,7 +255,6 @@ func TestPriorityQueueTest(t *testing.T) {
 			"gateway_id": "order-1",
 		})
 		assert.NoError(t, err)
-		fmt.Println("here")
 		_, err = test.AddProvisionBucketToLockPaymentOrder(_order, bucket.ID)
 		assert.NoError(t, err)
 
