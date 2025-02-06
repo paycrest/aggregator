@@ -137,14 +137,14 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 	}
 
 	// Convert []string to []interface{}
-	values := make([]interface{}, len(prevData))
+	prevValues := make([]interface{}, len(prevData))
 	for i, v := range prevData {
-		values[i] = v
+		prevValues[i] = v
 	}
 
 	// Store previous provider data
 	prevRedisKey := redisKey + "_prev"
-	err = storage.RedisClient.RPush(ctx, prevRedisKey, values...).Err()
+	err = storage.RedisClient.RPush(ctx, prevRedisKey, prevValues...).Err()
 	if err != nil {
 		logger.Errorf("failed to store previous provider rates: %v", err)
 	}
@@ -257,6 +257,7 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 		if err != nil {
 			return err
 		}
+
 	}
 
 	return nil
