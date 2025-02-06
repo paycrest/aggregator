@@ -675,7 +675,6 @@ func SyncLockOrderFulfillments() {
 		}).
 		All(ctx)
 	if err != nil {
-		logger.Errorf("SyncLockOrderFulfillments.db: %v", err)
 		return
 	}
 
@@ -707,13 +706,23 @@ func SyncLockOrderFulfillments() {
 				Body().AsJSON(payload).
 				Send()
 			if err != nil {
-				logger.Errorf("SyncLockOrderFulfillments: %v", err)
+				logger.Errorf("SyncLockOrderFulfillments: %v %v", err, payload)
 				continue
 			}
 
 			data, err := utils.ParseJSONResponse(res.RawResponse)
 			if err != nil {
-				logger.Errorf("SyncLockOrderFulfillments: %v %v", err, payload)
+				if order.Status == lockpaymentorder.StatusProcessing && order.UpdatedAt.Add(orderConf.OrderFulfillmentValidity*2).Before(time.Now()) {
+					logger.Errorf("SyncLockOrderFulfillments.StuckProcessing: %v %v", err, payload)
+					// delete lock order to trigger re-indexing
+					err := storage.Client.LockPaymentOrder.
+						DeleteOneID(order.ID).
+						Exec(ctx)
+					if err != nil {
+						logger.Errorf("SyncLockOrderFulfillments.DeleteOrder: %v", err)
+					}
+					continue
+				}
 				continue
 			}
 
@@ -731,7 +740,6 @@ func SyncLockOrderFulfillments() {
 					SetValidationError(data["data"].(map[string]interface{})["error"].(string)).
 					Save(ctx)
 				if err != nil {
-					logger.Errorf("SyncLockOrderFulfillments.UpdateFulfillmentStatusFailed: %v", err)
 					continue
 				}
 
@@ -739,7 +747,6 @@ func SyncLockOrderFulfillments() {
 					SetStatus(lockpaymentorder.StatusFulfilled).
 					Save(ctx)
 				if err != nil {
-					logger.Errorf("SyncLockOrderFulfillments.UpdateOrderStatusFulfilled: %v", err)
 					continue
 				}
 
@@ -752,7 +759,6 @@ func SyncLockOrderFulfillments() {
 					SetValidationStatus(lockorderfulfillment.ValidationStatusSuccess).
 					Save(ctx)
 				if err != nil {
-					logger.Errorf("SyncLockOrderFulfillments.UpdateFulfillmentStatusSuccess: %v", err)
 					continue
 				}
 
@@ -766,7 +772,6 @@ func SyncLockOrderFulfillments() {
 					}).
 					Save(ctx)
 				if err != nil {
-					logger.Errorf("SyncLockOrderFulfillments.CreateTransactionLog: %v", err)
 					continue
 				}
 
@@ -776,7 +781,6 @@ func SyncLockOrderFulfillments() {
 					AddTransactions(transactionLog).
 					Save(ctx)
 				if err != nil {
-					logger.Errorf("SyncLockOrderFulfillments.UpdateOrderStatusValidated: %v", err)
 					continue
 				}
 			}
@@ -812,7 +816,6 @@ func SyncLockOrderFulfillments() {
 						Body().AsJSON(payload).
 						Send()
 					if err != nil {
-						logger.Errorf("SyncLockOrderFulfillments: %v", err)
 						continue
 					}
 
@@ -832,7 +835,6 @@ func SyncLockOrderFulfillments() {
 							SetValidationError(data["data"].(map[string]interface{})["error"].(string)).
 							Save(ctx)
 						if err != nil {
-							logger.Errorf("SyncLockOrderFulfillments.UpdateFulfillmentStatusFailed: %v", err)
 							continue
 						}
 
@@ -840,7 +842,6 @@ func SyncLockOrderFulfillments() {
 							SetStatus(lockpaymentorder.StatusFulfilled).
 							Save(ctx)
 						if err != nil {
-							logger.Errorf("SyncLockOrderFulfillments.UpdateOrderStatusFulfilled: %v", err)
 							continue
 						}
 
@@ -851,7 +852,6 @@ func SyncLockOrderFulfillments() {
 							SetValidationStatus(lockorderfulfillment.ValidationStatusSuccess).
 							Save(ctx)
 						if err != nil {
-							logger.Errorf("SyncLockOrderFulfillments.UpdateFulfillmentStatusSuccess: %v", err)
 							continue
 						}
 
@@ -865,7 +865,6 @@ func SyncLockOrderFulfillments() {
 							}).
 							Save(ctx)
 						if err != nil {
-							logger.Errorf("SyncLockOrderFulfillments.CreateTransactionLog: %v", err)
 							continue
 						}
 
@@ -875,7 +874,6 @@ func SyncLockOrderFulfillments() {
 							AddTransactions(transactionLog).
 							Save(ctx)
 						if err != nil {
-							logger.Errorf("SyncLockOrderFulfillments.UpdateOrderStatusValidated: %v", err)
 							continue
 						}
 					}
@@ -913,7 +911,6 @@ func SyncLockOrderFulfillments() {
 						}).
 						Save(ctx)
 					if err != nil {
-						logger.Errorf("SyncLockOrderFulfillments.CreateTransactionLog: %v", err)
 						continue
 					}
 
@@ -923,7 +920,6 @@ func SyncLockOrderFulfillments() {
 						AddTransactions(transactionLog).
 						Save(ctx)
 					if err != nil {
-						logger.Errorf("SyncLockOrderFulfillments.UpdateOrderStatusValidated: %v", err)
 						continue
 					}
 				}
