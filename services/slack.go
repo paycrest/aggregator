@@ -44,27 +44,37 @@ func (s *SlackService) SendUserSignupNotification(user *ent.User, scopes []strin
 			},
 			{
 				"type": "section",
-				"fields": []map[string]interface{}{
-					{
-						"type": "mrkdwn",
-						"text": fmt.Sprintf("*User ID:* %s", user.ID),
-					},
-					{
-						"type": "mrkdwn",
-						"text": fmt.Sprintf("*Email:* %s", user.Email),
-					},
-					{
-						"type": "mrkdwn",
-						"text": fmt.Sprintf("*Name:* %s %s", user.FirstName, user.LastName),
-					},
-					{
-						"type": "mrkdwn",
-						"text": fmt.Sprintf("*Scopes:* %v", scopes),
-					},
-					{
-						"type": "mrkdwn",
-						"text": fmt.Sprintf("*Timestamp:* %s", formattedTime),
-					},
+				"text": map[string]interface{}{
+					"type": "mrkdwn",
+					"text": fmt.Sprintf("*User ID:* %s", user.ID),
+				},
+			},
+			{
+				"type": "section",
+				"text": map[string]interface{}{
+					"type": "mrkdwn",
+					"text": fmt.Sprintf("*Email:* %s", user.Email),
+				},
+			},
+			{
+				"type": "section",
+				"text": map[string]interface{}{
+					"type": "mrkdwn",
+					"text": fmt.Sprintf("*Name:* %s %s", user.FirstName, user.LastName),
+				},
+			},
+			{
+				"type": "section",
+				"text": map[string]interface{}{
+					"type": "mrkdwn",
+					"text": fmt.Sprintf("*Scopes:* %v", scopes),
+				},
+			},
+			{
+				"type": "section",
+				"text": map[string]interface{}{
+					"type": "mrkdwn",
+					"text": fmt.Sprintf("*Timestamp:* %s", formattedTime),
 				},
 			},
 		},
@@ -75,11 +85,9 @@ func (s *SlackService) SendUserSignupNotification(user *ent.User, scopes []strin
 		message["blocks"] = append(message["blocks"].([]map[string]interface{}),
 			map[string]interface{}{
 				"type": "section",
-				"fields": []map[string]interface{}{
-					{
-						"type": "mrkdwn",
-						"text": fmt.Sprintf("*Provider Currency:* %s", providerCurrency),
-					},
+				"text": map[string]interface{}{
+					"type": "mrkdwn",
+					"text": fmt.Sprintf("*Provider Currency:* %s", providerCurrency),
 				},
 			},
 		)
