@@ -106,10 +106,6 @@ func InitializeUserOperation(ctx context.Context, client types.RPCClient, rpcUrl
 // SponsorUserOperation sponsors the user operation from stackup
 // ref: https://docs.stackup.sh/docs/paymaster-api-rpc-methods#pm_sponsoruseroperation
 func SponsorUserOperation(userOp *userop.UserOperation, mode string, token string, chainId int64) error {
-	// _, paymasterUrl, err := getEndpoints(chainId)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to get endpoints: %w", err)
-	// }
 
 	_, paymasterUrl, err := getEndpoints(context.Background(), chainId)
 	if err != nil {
@@ -261,10 +257,6 @@ func SignUserOperation(userOperation *userop.UserOperation, chainId int64) error
 
 // SendUserOperation sends the user operation
 func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, string, int64, error) {
-	// bundlerUrl, _, err := getEndpoints(chainId)
-	// if err != nil {
-	// 	return "", "", 0, fmt.Errorf("failed to get endpoints: %w", err)
-	// }
 
 	bundlerUrl, _, err := getEndpoints(context.Background(), chainId)
 	if err != nil {
@@ -337,10 +329,6 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 
 // GetUserOperationByReceipt fetches the user operation by hash
 func GetUserOperationByReceipt(userOpHash string, chainId int64) (map[string]interface{}, error) {
-	// bundlerUrl, _, err := getEndpoints(chainId)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to get endpoints: %w", err)
-	// }
 
 	bundlerUrl, _, err := getEndpoints(context.Background(), chainId)
 	if err != nil {
@@ -440,11 +428,6 @@ func GetPaymasterAccount(chainId int64) (string, error) {
 		return "0x00000f79b7faf42eebadba19acc07cd08af44789", nil
 	}
 
-	// _, paymasterUrl, err := getEndpoints(chainId)
-	// if err != nil {
-	// 	return "", fmt.Errorf("failed to get endpoints: %w", err)
-	// }
-
 	_, paymasterUrl, err := getEndpoints(context.Background(), chainId)
 	if err != nil {
 		return "", fmt.Errorf("failed to get endpoints for chain ID %d: %w", chainId, err)
@@ -476,10 +459,6 @@ func GetPaymasterAccount(chainId int64) (string, error) {
 
 // GetUserOperationStatus returns the status of the user operation
 func GetUserOperationStatus(userOpHash string, chainId int64) (bool, error) {
-	// bundlerUrl, _, err := getEndpoints(chainId)
-	// if err != nil {
-	// 	return false, fmt.Errorf("failed to get endpoints: %w", err)
-	// }
 
 	bundlerUrl, _, err := getEndpoints(context.Background(), chainId)
 	if err != nil {
@@ -553,40 +532,6 @@ func eip1559GasPrice(ctx context.Context, client types.RPCClient) (maxFeePerGas,
 	return maxFeePerGas, maxPriorityFeePerGas, nil
 }
 
-// getEndpoints returns the bundler and paymaster URLs for the given chain ID
-// func getEndpoints(chainId int64) (bundlerUrl, paymasterUrl string, err error) {
-// 	switch chainId {
-// 	case 1:
-// 		bundlerUrl = orderConf.BundlerUrlEthereum
-// 		paymasterUrl = orderConf.PaymasterUrlEthereum
-// 	case 11155111:
-// 		bundlerUrl = orderConf.BundlerUrlEthereum
-// 		paymasterUrl = orderConf.PaymasterUrlEthereum
-// 	case 137:
-// 		bundlerUrl = orderConf.BundlerUrlPolygon
-// 		paymasterUrl = orderConf.PaymasterUrlPolygon
-// 	case 56:
-// 		bundlerUrl = orderConf.BundlerUrlBSC
-// 		paymasterUrl = orderConf.PaymasterUrlBSC
-// 	case 8453:
-// 		bundlerUrl = orderConf.BundlerUrlBase
-// 		paymasterUrl = orderConf.PaymasterUrlBase
-// 	case 84532:
-// 		bundlerUrl = orderConf.BundlerUrlBase
-// 		paymasterUrl = orderConf.PaymasterUrlBase
-// 	case 42161:
-// 		bundlerUrl = orderConf.BundlerUrlArbitrum
-// 		paymasterUrl = orderConf.PaymasterUrlArbitrum
-// 	case 421614:
-// 		bundlerUrl = orderConf.BundlerUrlArbitrum
-// 		paymasterUrl = orderConf.PaymasterUrlArbitrum
-// 	default:
-// 		return "", "", fmt.Errorf("unsupported chain ID")
-// 	}
-
-// 	return bundlerUrl, paymasterUrl, nil
-// }
-
 // getEndpoints fetches bundler and paymaster URLs for the given chain ID from the database
 func getEndpoints(ctx context.Context, chainID int64) (string, string, error) {
 	client := storage.GetClient()
@@ -614,10 +559,11 @@ func getEndpoints(ctx context.Context, chainID int64) (string, string, error) {
 		return "", "", fmt.Errorf("invalid AA service URL pattern: %w", err)
 	}
 
-	log.Printf("Using AA service: %s", aaService)
+	log.Printf("Chain ID %d using AA service: %s", chainID, aaService)
 	return bundlerURL, paymasterURL, nil
 }
 
+// detectAAService detects the AA service based on the provided URL pattern
 func detectAAService(url string) (string, error) {
 	switch {
 	case strings.Contains(url, "api.stackup"):
