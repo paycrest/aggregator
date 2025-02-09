@@ -496,8 +496,8 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		"provider":                 nil,
 		"addresses": []map[string]string{
 			{
-				"address": "",
-				"network": "",
+				"address": "0x1234567890123456789012345678901234567890",
+				"network": "localhost",
 			},
 		},
 	}
@@ -529,8 +529,8 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		Create().
 		SetSymbol(payload["tokenSymbol"].(string)).
 		SetProvider(payload["provider"].(*ent.ProviderProfile)).
-		SetMaxOrderAmount(payload["min_order_amount"].(decimal.Decimal)).
-		SetMinOrderAmount(payload["max_order_amount"].(decimal.Decimal)).
+		SetMaxOrderAmount(payload["max_order_amount"].(decimal.Decimal)).
+		SetMinOrderAmount(payload["min_order_amount"].(decimal.Decimal)).
 		SetConversionRateType(providerordertoken.ConversionRateType(payload["conversion_rate_type"].(string))).
 		SetFixedConversionRate(payload["fixed_conversion_rate"].(decimal.Decimal)).
 		SetFloatingConversionRate(payload["floating_conversion_rate"].(decimal.Decimal)).
@@ -542,10 +542,12 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 
 // CreateTestProviderProfile creates a test ProviderProfile with defaults or custom values
 func CreateTestProvisionBucket(overrides map[string]interface{}) (*ent.ProvisionBucket, error) {
+	ctx := context.Background()
+
 	// Default payload
 	payload := map[string]interface{}{
-		"max_amount":  decimal.NewFromFloat(1.0),
 		"currency_id": 1,
+		"max_amount":  decimal.NewFromFloat(1.0),
 		"min_amount":  decimal.NewFromFloat(1.0),
 		"provider_id": nil,
 	}
@@ -559,7 +561,7 @@ func CreateTestProvisionBucket(overrides map[string]interface{}) (*ent.Provision
 		SetMinAmount(payload["min_amount"].(decimal.Decimal)).
 		SetMaxAmount(payload["max_amount"].(decimal.Decimal)).
 		SetCurrencyID(payload["currency_id"].(uuid.UUID)).
-		Save(context.Background())
+		Save(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -567,10 +569,11 @@ func CreateTestProvisionBucket(overrides map[string]interface{}) (*ent.Provision
 	_, err = db.Client.ProviderProfile.
 		UpdateOneID(payload["provider_id"].(string)).
 		AddProvisionBucketIDs(bucket.ID).
-		Save(context.Background())
+		Save(ctx)
 	if err != nil {
 		return nil, err
 	}
+
 	return bucket, nil
 }
 
