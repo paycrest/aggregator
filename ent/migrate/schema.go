@@ -217,6 +217,8 @@ var (
 		{Name: "rpc_endpoint", Type: field.TypeString},
 		{Name: "gateway_contract_address", Type: field.TypeString, Default: ""},
 		{Name: "is_testnet", Type: field.TypeBool},
+		{Name: "bundler_url", Type: field.TypeString, Nullable: true},
+		{Name: "paymaster_url", Type: field.TypeString, Nullable: true},
 		{Name: "fee", Type: field.TypeFloat64},
 	}
 	// NetworksTable holds the schema information for the "networks" table.

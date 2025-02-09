@@ -21,16 +21,6 @@ type OrderConfiguration struct {
 	RefundCancellationCount          int
 	PercentDeviationFromExternalRate decimal.Decimal
 	PercentDeviationFromMarketRate   decimal.Decimal
-	BundlerUrlEthereum               string
-	PaymasterUrlEthereum             string
-	BundlerUrlPolygon                string
-	PaymasterUrlPolygon              string
-	BundlerUrlBase                   string
-	PaymasterUrlBase                 string
-	BundlerUrlBSC                    string
-	PaymasterUrlBSC                  string
-	BundlerUrlArbitrum               string
-	PaymasterUrlArbitrum             string
 	ActiveAAService                  string
 }
 
@@ -54,16 +44,6 @@ func OrderConfig() *OrderConfiguration {
 		OrderRequestValidity:             time.Duration(viper.GetInt("ORDER_REQUEST_VALIDITY")) * time.Second,
 		TronProApiKey:                    viper.GetString("TRON_PRO_API_KEY"),
 		ActiveAAService:                  viper.GetString("ACTIVE_AA_SERVICE"),
-		BundlerUrlEthereum:               viper.GetString("BUNDLER_URL_ETHEREUM"),
-		PaymasterUrlEthereum:             viper.GetString("PAYMASTER_URL_ETHEREUM"),
-		BundlerUrlPolygon:                viper.GetString("BUNDLER_URL_POLYGON"),
-		PaymasterUrlPolygon:              viper.GetString("PAYMASTER_URL_POLYGON"),
-		BundlerUrlBase:                   viper.GetString("BUNDLER_URL_BASE"),
-		PaymasterUrlBase:                 viper.GetString("PAYMASTER_URL_BASE"),
-		BundlerUrlBSC:                    viper.GetString("BUNDLER_URL_BSC"),
-		PaymasterUrlBSC:                  viper.GetString("PAYMASTER_URL_BSC"),
-		BundlerUrlArbitrum:               viper.GetString("BUNDLER_URL_ARBITRUM"),
-		PaymasterUrlArbitrum:             viper.GetString("PAYMASTER_URL_ARBITRUM"),
 		EntryPointContractAddress:        common.HexToAddress(viper.GetString("ENTRY_POINT_CONTRACT_ADDRESS")),
 		BucketQueueRebuildInterval:       viper.GetInt("BUCKET_QUEUE_REBUILD_INTERVAL"),
 		RefundCancellationCount:          viper.GetInt("REFUND_CANCELLATION_COUNT"),
