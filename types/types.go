@@ -55,6 +55,54 @@ func NewEthClient(endpoint string) (RPCClient, error) {
 	return &ethRPC{ethClient}, nil
 }
 
+// Stream
+type StreamCreationParams struct {
+    Name                  string                 `json:"name"`
+    Network               string                 `json:"network"`
+    Dataset               string                 `json:"dataset"`
+    FilterFunction        string                 `json:"filter_function"`
+    Region                string                 `json:"region"`
+    StartRange            int                    `json:"start_range"`
+    EndRange              int                    `json:"end_range"`
+    DatasetBatchSize      int                    `json:"dataset_batch_size"`
+    IncludeStreamMetadata string                 `json:"include_stream_metadata"`
+    Status                string                 `json:"status"`
+    Destination           string                 `json:"destination"`
+    DestinationAttributes map[string]interface{} `json:"destination_attributes"`
+}
+
+// StreamWebhook represents the details of a stream webhook.
+type StreamReturnPayload struct {
+    ID                   string                 `json:"id"`
+    CreatedAt            string                 `json:"created_at"`
+    UpdatedAt            string                 `json:"updated_at"`
+    Name                 string                 `json:"name"`
+    Network              string                 `json:"network"`
+    Dataset              string                 `json:"dataset"`
+    Region               string                 `json:"region"`
+    FilterFunction       string                 `json:"filter_function"`
+    StartRange           int                    `json:"start_range"`
+    EndRange             int                    `json:"end_range"`
+    DatasetBatchSize     int                    `json:"dataset_batch_size"`
+    IncludeStreamMetadata string                `json:"include_stream_metadata"`
+    Status               string                 `json:"status"`
+    Destination          string                 `json:"destination"`
+    DestinationAttributes map[string]interface{} `json:"destination_attributes"`
+    Sequence             int                    `json:"sequence"`
+    CurrentHash          string                 `json:"current_hash"`
+}
+
+// DestinationAttributes holds the attributes for different destination types.
+type StreamDestinationAttributes struct {
+    URL              string            `json:"url,omitempty"`
+    Compression      string            `json:"compression,omitempty"`
+    Headers          map[string]string `json:"headers,omitempty"`
+    MaxRetry         int               `json:"max_retry,omitempty"`
+    RetryIntervalSec int               `json:"retry_interval_sec,omitempty"`
+    PostTimeoutSec   int               `json:"post_timeout_sec,omitempty"`
+}
+
+
 // TokenTransferEvent represents a token transfer event.
 type TokenTransferEvent struct {
 	BlockNumber uint64
