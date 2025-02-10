@@ -10244,6 +10244,8 @@ type ProviderOrderTokenMutation struct {
 	addmax_order_amount         *decimal.Decimal
 	min_order_amount            *decimal.Decimal
 	addmin_order_amount         *decimal.Decimal
+	rate_slippage               *decimal.Decimal
+	addrate_slippage            *decimal.Decimal
 	addresses                   *[]struct {
 		Address string "json:\"address\""
 		Network string "json:\"network\""
@@ -10726,6 +10728,76 @@ func (m *ProviderOrderTokenMutation) ResetMinOrderAmount() {
 	m.addmin_order_amount = nil
 }
 
+// SetRateSlippage sets the "rate_slippage" field.
+func (m *ProviderOrderTokenMutation) SetRateSlippage(d decimal.Decimal) {
+	m.rate_slippage = &d
+	m.addrate_slippage = nil
+}
+
+// RateSlippage returns the value of the "rate_slippage" field in the mutation.
+func (m *ProviderOrderTokenMutation) RateSlippage() (r decimal.Decimal, exists bool) {
+	v := m.rate_slippage
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRateSlippage returns the old "rate_slippage" field's value of the ProviderOrderToken entity.
+// If the ProviderOrderToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderOrderTokenMutation) OldRateSlippage(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRateSlippage is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRateSlippage requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRateSlippage: %w", err)
+	}
+	return oldValue.RateSlippage, nil
+}
+
+// AddRateSlippage adds d to the "rate_slippage" field.
+func (m *ProviderOrderTokenMutation) AddRateSlippage(d decimal.Decimal) {
+	if m.addrate_slippage != nil {
+		*m.addrate_slippage = m.addrate_slippage.Add(d)
+	} else {
+		m.addrate_slippage = &d
+	}
+}
+
+// AddedRateSlippage returns the value that was added to the "rate_slippage" field in this mutation.
+func (m *ProviderOrderTokenMutation) AddedRateSlippage() (r decimal.Decimal, exists bool) {
+	v := m.addrate_slippage
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearRateSlippage clears the value of the "rate_slippage" field.
+func (m *ProviderOrderTokenMutation) ClearRateSlippage() {
+	m.rate_slippage = nil
+	m.addrate_slippage = nil
+	m.clearedFields[providerordertoken.FieldRateSlippage] = struct{}{}
+}
+
+// RateSlippageCleared returns if the "rate_slippage" field was cleared in this mutation.
+func (m *ProviderOrderTokenMutation) RateSlippageCleared() bool {
+	_, ok := m.clearedFields[providerordertoken.FieldRateSlippage]
+	return ok
+}
+
+// ResetRateSlippage resets all changes to the "rate_slippage" field.
+func (m *ProviderOrderTokenMutation) ResetRateSlippage() {
+	m.rate_slippage = nil
+	m.addrate_slippage = nil
+	delete(m.clearedFields, providerordertoken.FieldRateSlippage)
+}
+
 // SetAddresses sets the "addresses" field.
 func (m *ProviderOrderTokenMutation) SetAddresses(s []struct {
 	Address string "json:\"address\""
@@ -10865,7 +10937,7 @@ func (m *ProviderOrderTokenMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProviderOrderTokenMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 10)
 	if m.created_at != nil {
 		fields = append(fields, providerordertoken.FieldCreatedAt)
 	}
@@ -10889,6 +10961,9 @@ func (m *ProviderOrderTokenMutation) Fields() []string {
 	}
 	if m.min_order_amount != nil {
 		fields = append(fields, providerordertoken.FieldMinOrderAmount)
+	}
+	if m.rate_slippage != nil {
+		fields = append(fields, providerordertoken.FieldRateSlippage)
 	}
 	if m.addresses != nil {
 		fields = append(fields, providerordertoken.FieldAddresses)
@@ -10917,6 +10992,8 @@ func (m *ProviderOrderTokenMutation) Field(name string) (ent.Value, bool) {
 		return m.MaxOrderAmount()
 	case providerordertoken.FieldMinOrderAmount:
 		return m.MinOrderAmount()
+	case providerordertoken.FieldRateSlippage:
+		return m.RateSlippage()
 	case providerordertoken.FieldAddresses:
 		return m.Addresses()
 	}
@@ -10944,6 +11021,8 @@ func (m *ProviderOrderTokenMutation) OldField(ctx context.Context, name string) 
 		return m.OldMaxOrderAmount(ctx)
 	case providerordertoken.FieldMinOrderAmount:
 		return m.OldMinOrderAmount(ctx)
+	case providerordertoken.FieldRateSlippage:
+		return m.OldRateSlippage(ctx)
 	case providerordertoken.FieldAddresses:
 		return m.OldAddresses(ctx)
 	}
@@ -11011,6 +11090,13 @@ func (m *ProviderOrderTokenMutation) SetField(name string, value ent.Value) erro
 		}
 		m.SetMinOrderAmount(v)
 		return nil
+	case providerordertoken.FieldRateSlippage:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRateSlippage(v)
+		return nil
 	case providerordertoken.FieldAddresses:
 		v, ok := value.([]struct {
 			Address string "json:\"address\""
@@ -11041,6 +11127,9 @@ func (m *ProviderOrderTokenMutation) AddedFields() []string {
 	if m.addmin_order_amount != nil {
 		fields = append(fields, providerordertoken.FieldMinOrderAmount)
 	}
+	if m.addrate_slippage != nil {
+		fields = append(fields, providerordertoken.FieldRateSlippage)
+	}
 	return fields
 }
 
@@ -11057,6 +11146,8 @@ func (m *ProviderOrderTokenMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedMaxOrderAmount()
 	case providerordertoken.FieldMinOrderAmount:
 		return m.AddedMinOrderAmount()
+	case providerordertoken.FieldRateSlippage:
+		return m.AddedRateSlippage()
 	}
 	return nil, false
 }
@@ -11094,6 +11185,13 @@ func (m *ProviderOrderTokenMutation) AddField(name string, value ent.Value) erro
 		}
 		m.AddMinOrderAmount(v)
 		return nil
+	case providerordertoken.FieldRateSlippage:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddRateSlippage(v)
+		return nil
 	}
 	return fmt.Errorf("unknown ProviderOrderToken numeric field %s", name)
 }
@@ -11101,7 +11199,11 @@ func (m *ProviderOrderTokenMutation) AddField(name string, value ent.Value) erro
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
 func (m *ProviderOrderTokenMutation) ClearedFields() []string {
-	return nil
+	var fields []string
+	if m.FieldCleared(providerordertoken.FieldRateSlippage) {
+		fields = append(fields, providerordertoken.FieldRateSlippage)
+	}
+	return fields
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
@@ -11114,6 +11216,11 @@ func (m *ProviderOrderTokenMutation) FieldCleared(name string) bool {
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
 func (m *ProviderOrderTokenMutation) ClearField(name string) error {
+	switch name {
+	case providerordertoken.FieldRateSlippage:
+		m.ClearRateSlippage()
+		return nil
+	}
 	return fmt.Errorf("unknown ProviderOrderToken nullable field %s", name)
 }
 
@@ -11144,6 +11251,9 @@ func (m *ProviderOrderTokenMutation) ResetField(name string) error {
 		return nil
 	case providerordertoken.FieldMinOrderAmount:
 		m.ResetMinOrderAmount()
+		return nil
+	case providerordertoken.FieldRateSlippage:
+		m.ResetRateSlippage()
 		return nil
 	case providerordertoken.FieldAddresses:
 		m.ResetAddresses()

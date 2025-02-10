@@ -320,6 +320,7 @@ var (
 		{Name: "conversion_rate_type", Type: field.TypeEnum, Enums: []string{"fixed", "floating"}},
 		{Name: "max_order_amount", Type: field.TypeFloat64},
 		{Name: "min_order_amount", Type: field.TypeFloat64},
+		{Name: "rate_slippage", Type: field.TypeFloat64, Nullable: true},
 		{Name: "addresses", Type: field.TypeJSON},
 		{Name: "provider_profile_order_tokens", Type: field.TypeString, Nullable: true},
 	}
@@ -331,7 +332,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "provider_order_tokens_provider_profiles_order_tokens",
-				Columns:    []*schema.Column{ProviderOrderTokensColumns[10]},
+				Columns:    []*schema.Column{ProviderOrderTokensColumns[11]},
 				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
