@@ -700,7 +700,7 @@ func SyncLockOrderFulfillments() {
 
 			// Send POST request to the provider's node
 			res, err := fastshot.NewClient(order.Edges.Provider.HostIdentifier).
-				Config().SetTimeout(30*time.Second).
+				Config().SetTimeout(10*time.Second).
 				Header().Add("X-Request-Signature", signature).
 				Build().POST("/tx_status").
 				Body().AsJSON(payload).
