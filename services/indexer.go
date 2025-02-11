@@ -118,7 +118,7 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 		if addressToWatch != "" {
 			fromBlock := int64(5000)
 			if token.Edges.Network.Identifier == "bnb-smart-chain" {
-				fromBlock = 1000
+				fromBlock = 500
 			}
 			addresses = []common.Address{common.HexToAddress(addressToWatch)}
 			startBlock = int64(toBlock) - fromBlock
