@@ -2,7 +2,6 @@ package utils
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log"
 	"math/big"
@@ -19,10 +18,6 @@ import (
 	"github.com/stackup-wallet/stackup-bundler/pkg/userop"
 	"github.com/stretchr/testify/assert"
 )
-
-func convertBigToDecimal(value *big.Int) decimal.Decimal {
-	return decimal.NewFromBigInt(value, 0)
-}
 
 func TestUserOp(t *testing.T) {
 
@@ -41,33 +36,29 @@ func TestUserOp(t *testing.T) {
 		SetIsTestnet(true).
 		SetRPCEndpoint("https://mock-rpc-url").
 		SetBundlerURL("http://api.stackup-bundler-url").
-		SetPaymasterURL("http://mock-paymaster-url").
-		SetFee(convertBigToDecimal(big.NewInt(1))).
+		SetPaymasterURL("http://api.stackup-paymaster-url").
+		SetFee(decimal.NewFromInt(1)).
 		Save(ctx)
 	assert.NoError(t, err)
-
-	networks, err := client.Network.Query().All(ctx)
-	assert.NoError(t, err)
-	fmt.Println("Saved networks:", networks)
 
 	t.Run("test getEndpoints", func(t *testing.T) {
 
 		// Query and verify the saved data
 		t.Run("test getEndpoints with mock data", func(t *testing.T) {
-			bundlerURL, paymasterURL, err := getEndpoints(ctx, 1)
+			bundlerURL, paymasterURL, err := getEndpoints(1)
 			assert.NoError(t, err)
 			assert.Equal(t, "http://api.stackup-bundler-url", bundlerURL)
-			assert.Equal(t, "http://mock-paymaster-url", paymasterURL)
+			assert.Equal(t, "http://api.stackup-paymaster-url", paymasterURL)
 		})
 		t.Run("when chainID is supported getEndpoints", func(t *testing.T) {
-			bundlerID, paymaster, err := getEndpoints(ctx, 1)
+			bundlerID, paymaster, err := getEndpoints(1)
 			assert.NoError(t, err)
 			assert.NotEmpty(t, bundlerID, "bundlerID should not be empty")
 			assert.NotEmpty(t, paymaster, "paymaster should not be empty")
 		})
 
 		t.Run("when chainID is not supported getEndpoints", func(t *testing.T) {
-			bundlerID, paymaster, err := getEndpoints(ctx, 1000)
+			bundlerID, paymaster, err := getEndpoints(1000)
 			assert.Error(t, err)
 			assert.Empty(t, bundlerID, "bundlerID should be empty")
 			assert.Empty(t, paymaster, "paymaster should be empty")
@@ -103,7 +94,13 @@ func TestUserOp(t *testing.T) {
 				}
 
 				if strings.Contains(string(bytes), "eth_sendUserOperation") {
-					if orderConf.ActiveAAService == "biconomy" {
+
+					aaService, err := detectAAService("http://api.stackup-bundler-url")
+					if err != nil {
+						return nil, err
+					}
+
+					if aaService == "biconomy" {
 						assert.True(t, strings.Contains(string(bytes), "validation_and_execution"))
 					} else {
 						assert.False(t, strings.Contains(string(bytes), "validation_and_execution"))
@@ -189,7 +186,7 @@ func TestUserOp(t *testing.T) {
 		}
 
 		// register mock response
-		httpmock.RegisterResponder("POST", "http://mock-paymaster-url",
+		httpmock.RegisterResponder("POST", "http://api.stackup-paymaster-url",
 			func(r *http.Request) (*http.Response, error) {
 				bytes, err := io.ReadAll(r.Body)
 				if err != nil {
@@ -197,7 +194,12 @@ func TestUserOp(t *testing.T) {
 				}
 
 				if strings.Contains(string(bytes), "pm_sponsorUserOperation") {
-					if orderConf.ActiveAAService == "biconomy" {
+					aaService, err := detectAAService("http://api.stackup-paymaster-url")
+					if err != nil {
+						return nil, err
+					}
+
+					if aaService == "biconomy" {
 						assert.True(t, strings.Contains(string(bytes), "INFINITISM"))
 						resp, err := httpmock.NewJsonResponse(200, map[string]interface{}{
 							"jsonrpc": "2.0",
@@ -211,7 +213,7 @@ func TestUserOp(t *testing.T) {
 						})
 						return resp, err
 					} else {
-						assert.True(t, strings.Contains(string(bytes), "payg"))
+						assert.True(t, strings.Contains(string(bytes), "pm_sponsorUserOperation"))
 						resp, err := httpmock.NewJsonResponse(200, map[string]interface{}{
 							"jsonrpc": "2.0",
 							"id":      1,
