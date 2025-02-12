@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -23,6 +24,7 @@ type ProvisionBucketCreate struct {
 	config
 	mutation *ProvisionBucketMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetMinAmount sets the "min_amount" field.
@@ -173,6 +175,7 @@ func (pbc *ProvisionBucketCreate) createSpec() (*ProvisionBucket, *sqlgraph.Crea
 		_node = &ProvisionBucket{config: pbc.config}
 		_spec = sqlgraph.NewCreateSpec(provisionbucket.Table, sqlgraph.NewFieldSpec(provisionbucket.FieldID, field.TypeInt))
 	)
+	_spec.OnConflict = pbc.conflict
 	if value, ok := pbc.mutation.MinAmount(); ok {
 		_spec.SetField(provisionbucket.FieldMinAmount, field.TypeFloat64, value)
 		_node.MinAmount = value
@@ -237,11 +240,217 @@ func (pbc *ProvisionBucketCreate) createSpec() (*ProvisionBucket, *sqlgraph.Crea
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.ProvisionBucket.Create().
+//		SetMinAmount(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.ProvisionBucketUpsert) {
+//			SetMinAmount(v+v).
+//		}).
+//		Exec(ctx)
+func (pbc *ProvisionBucketCreate) OnConflict(opts ...sql.ConflictOption) *ProvisionBucketUpsertOne {
+	pbc.conflict = opts
+	return &ProvisionBucketUpsertOne{
+		create: pbc,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.ProvisionBucket.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (pbc *ProvisionBucketCreate) OnConflictColumns(columns ...string) *ProvisionBucketUpsertOne {
+	pbc.conflict = append(pbc.conflict, sql.ConflictColumns(columns...))
+	return &ProvisionBucketUpsertOne{
+		create: pbc,
+	}
+}
+
+type (
+	// ProvisionBucketUpsertOne is the builder for "upsert"-ing
+	//  one ProvisionBucket node.
+	ProvisionBucketUpsertOne struct {
+		create *ProvisionBucketCreate
+	}
+
+	// ProvisionBucketUpsert is the "OnConflict" setter.
+	ProvisionBucketUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetMinAmount sets the "min_amount" field.
+func (u *ProvisionBucketUpsert) SetMinAmount(v decimal.Decimal) *ProvisionBucketUpsert {
+	u.Set(provisionbucket.FieldMinAmount, v)
+	return u
+}
+
+// UpdateMinAmount sets the "min_amount" field to the value that was provided on create.
+func (u *ProvisionBucketUpsert) UpdateMinAmount() *ProvisionBucketUpsert {
+	u.SetExcluded(provisionbucket.FieldMinAmount)
+	return u
+}
+
+// AddMinAmount adds v to the "min_amount" field.
+func (u *ProvisionBucketUpsert) AddMinAmount(v decimal.Decimal) *ProvisionBucketUpsert {
+	u.Add(provisionbucket.FieldMinAmount, v)
+	return u
+}
+
+// SetMaxAmount sets the "max_amount" field.
+func (u *ProvisionBucketUpsert) SetMaxAmount(v decimal.Decimal) *ProvisionBucketUpsert {
+	u.Set(provisionbucket.FieldMaxAmount, v)
+	return u
+}
+
+// UpdateMaxAmount sets the "max_amount" field to the value that was provided on create.
+func (u *ProvisionBucketUpsert) UpdateMaxAmount() *ProvisionBucketUpsert {
+	u.SetExcluded(provisionbucket.FieldMaxAmount)
+	return u
+}
+
+// AddMaxAmount adds v to the "max_amount" field.
+func (u *ProvisionBucketUpsert) AddMaxAmount(v decimal.Decimal) *ProvisionBucketUpsert {
+	u.Add(provisionbucket.FieldMaxAmount, v)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// Using this option is equivalent to using:
+//
+//	client.ProvisionBucket.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *ProvisionBucketUpsertOne) UpdateNewValues() *ProvisionBucketUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.CreatedAt(); exists {
+			s.SetIgnore(provisionbucket.FieldCreatedAt)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.ProvisionBucket.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *ProvisionBucketUpsertOne) Ignore() *ProvisionBucketUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *ProvisionBucketUpsertOne) DoNothing() *ProvisionBucketUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the ProvisionBucketCreate.OnConflict
+// documentation for more info.
+func (u *ProvisionBucketUpsertOne) Update(set func(*ProvisionBucketUpsert)) *ProvisionBucketUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&ProvisionBucketUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetMinAmount sets the "min_amount" field.
+func (u *ProvisionBucketUpsertOne) SetMinAmount(v decimal.Decimal) *ProvisionBucketUpsertOne {
+	return u.Update(func(s *ProvisionBucketUpsert) {
+		s.SetMinAmount(v)
+	})
+}
+
+// AddMinAmount adds v to the "min_amount" field.
+func (u *ProvisionBucketUpsertOne) AddMinAmount(v decimal.Decimal) *ProvisionBucketUpsertOne {
+	return u.Update(func(s *ProvisionBucketUpsert) {
+		s.AddMinAmount(v)
+	})
+}
+
+// UpdateMinAmount sets the "min_amount" field to the value that was provided on create.
+func (u *ProvisionBucketUpsertOne) UpdateMinAmount() *ProvisionBucketUpsertOne {
+	return u.Update(func(s *ProvisionBucketUpsert) {
+		s.UpdateMinAmount()
+	})
+}
+
+// SetMaxAmount sets the "max_amount" field.
+func (u *ProvisionBucketUpsertOne) SetMaxAmount(v decimal.Decimal) *ProvisionBucketUpsertOne {
+	return u.Update(func(s *ProvisionBucketUpsert) {
+		s.SetMaxAmount(v)
+	})
+}
+
+// AddMaxAmount adds v to the "max_amount" field.
+func (u *ProvisionBucketUpsertOne) AddMaxAmount(v decimal.Decimal) *ProvisionBucketUpsertOne {
+	return u.Update(func(s *ProvisionBucketUpsert) {
+		s.AddMaxAmount(v)
+	})
+}
+
+// UpdateMaxAmount sets the "max_amount" field to the value that was provided on create.
+func (u *ProvisionBucketUpsertOne) UpdateMaxAmount() *ProvisionBucketUpsertOne {
+	return u.Update(func(s *ProvisionBucketUpsert) {
+		s.UpdateMaxAmount()
+	})
+}
+
+// Exec executes the query.
+func (u *ProvisionBucketUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for ProvisionBucketCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *ProvisionBucketUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *ProvisionBucketUpsertOne) ID(ctx context.Context) (id int, err error) {
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *ProvisionBucketUpsertOne) IDX(ctx context.Context) int {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // ProvisionBucketCreateBulk is the builder for creating many ProvisionBucket entities in bulk.
 type ProvisionBucketCreateBulk struct {
 	config
 	err      error
 	builders []*ProvisionBucketCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the ProvisionBucket entities in the database.
@@ -271,6 +480,7 @@ func (pbcb *ProvisionBucketCreateBulk) Save(ctx context.Context) ([]*ProvisionBu
 					_, err = mutators[i+1].Mutate(root, pbcb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = pbcb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, pbcb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -321,6 +531,159 @@ func (pbcb *ProvisionBucketCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (pbcb *ProvisionBucketCreateBulk) ExecX(ctx context.Context) {
 	if err := pbcb.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.ProvisionBucket.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.ProvisionBucketUpsert) {
+//			SetMinAmount(v+v).
+//		}).
+//		Exec(ctx)
+func (pbcb *ProvisionBucketCreateBulk) OnConflict(opts ...sql.ConflictOption) *ProvisionBucketUpsertBulk {
+	pbcb.conflict = opts
+	return &ProvisionBucketUpsertBulk{
+		create: pbcb,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.ProvisionBucket.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (pbcb *ProvisionBucketCreateBulk) OnConflictColumns(columns ...string) *ProvisionBucketUpsertBulk {
+	pbcb.conflict = append(pbcb.conflict, sql.ConflictColumns(columns...))
+	return &ProvisionBucketUpsertBulk{
+		create: pbcb,
+	}
+}
+
+// ProvisionBucketUpsertBulk is the builder for "upsert"-ing
+// a bulk of ProvisionBucket nodes.
+type ProvisionBucketUpsertBulk struct {
+	create *ProvisionBucketCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.ProvisionBucket.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *ProvisionBucketUpsertBulk) UpdateNewValues() *ProvisionBucketUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.CreatedAt(); exists {
+				s.SetIgnore(provisionbucket.FieldCreatedAt)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.ProvisionBucket.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *ProvisionBucketUpsertBulk) Ignore() *ProvisionBucketUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *ProvisionBucketUpsertBulk) DoNothing() *ProvisionBucketUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the ProvisionBucketCreateBulk.OnConflict
+// documentation for more info.
+func (u *ProvisionBucketUpsertBulk) Update(set func(*ProvisionBucketUpsert)) *ProvisionBucketUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&ProvisionBucketUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetMinAmount sets the "min_amount" field.
+func (u *ProvisionBucketUpsertBulk) SetMinAmount(v decimal.Decimal) *ProvisionBucketUpsertBulk {
+	return u.Update(func(s *ProvisionBucketUpsert) {
+		s.SetMinAmount(v)
+	})
+}
+
+// AddMinAmount adds v to the "min_amount" field.
+func (u *ProvisionBucketUpsertBulk) AddMinAmount(v decimal.Decimal) *ProvisionBucketUpsertBulk {
+	return u.Update(func(s *ProvisionBucketUpsert) {
+		s.AddMinAmount(v)
+	})
+}
+
+// UpdateMinAmount sets the "min_amount" field to the value that was provided on create.
+func (u *ProvisionBucketUpsertBulk) UpdateMinAmount() *ProvisionBucketUpsertBulk {
+	return u.Update(func(s *ProvisionBucketUpsert) {
+		s.UpdateMinAmount()
+	})
+}
+
+// SetMaxAmount sets the "max_amount" field.
+func (u *ProvisionBucketUpsertBulk) SetMaxAmount(v decimal.Decimal) *ProvisionBucketUpsertBulk {
+	return u.Update(func(s *ProvisionBucketUpsert) {
+		s.SetMaxAmount(v)
+	})
+}
+
+// AddMaxAmount adds v to the "max_amount" field.
+func (u *ProvisionBucketUpsertBulk) AddMaxAmount(v decimal.Decimal) *ProvisionBucketUpsertBulk {
+	return u.Update(func(s *ProvisionBucketUpsert) {
+		s.AddMaxAmount(v)
+	})
+}
+
+// UpdateMaxAmount sets the "max_amount" field to the value that was provided on create.
+func (u *ProvisionBucketUpsertBulk) UpdateMaxAmount() *ProvisionBucketUpsertBulk {
+	return u.Update(func(s *ProvisionBucketUpsert) {
+		s.UpdateMaxAmount()
+	})
+}
+
+// Exec executes the query.
+func (u *ProvisionBucketUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the ProvisionBucketCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for ProvisionBucketCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *ProvisionBucketUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

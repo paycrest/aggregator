@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -20,6 +21,7 @@ type InstitutionCreate struct {
 	config
 	mutation *InstitutionMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -192,6 +194,7 @@ func (ic *InstitutionCreate) createSpec() (*Institution, *sqlgraph.CreateSpec) {
 		_node = &Institution{config: ic.config}
 		_spec = sqlgraph.NewCreateSpec(institution.Table, sqlgraph.NewFieldSpec(institution.FieldID, field.TypeInt))
 	)
+	_spec.OnConflict = ic.conflict
 	if value, ok := ic.mutation.CreatedAt(); ok {
 		_spec.SetField(institution.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -232,11 +235,243 @@ func (ic *InstitutionCreate) createSpec() (*Institution, *sqlgraph.CreateSpec) {
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Institution.Create().
+//		SetCreatedAt(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.InstitutionUpsert) {
+//			SetCreatedAt(v+v).
+//		}).
+//		Exec(ctx)
+func (ic *InstitutionCreate) OnConflict(opts ...sql.ConflictOption) *InstitutionUpsertOne {
+	ic.conflict = opts
+	return &InstitutionUpsertOne{
+		create: ic,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Institution.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (ic *InstitutionCreate) OnConflictColumns(columns ...string) *InstitutionUpsertOne {
+	ic.conflict = append(ic.conflict, sql.ConflictColumns(columns...))
+	return &InstitutionUpsertOne{
+		create: ic,
+	}
+}
+
+type (
+	// InstitutionUpsertOne is the builder for "upsert"-ing
+	//  one Institution node.
+	InstitutionUpsertOne struct {
+		create *InstitutionCreate
+	}
+
+	// InstitutionUpsert is the "OnConflict" setter.
+	InstitutionUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *InstitutionUpsert) SetUpdatedAt(v time.Time) *InstitutionUpsert {
+	u.Set(institution.FieldUpdatedAt, v)
+	return u
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *InstitutionUpsert) UpdateUpdatedAt() *InstitutionUpsert {
+	u.SetExcluded(institution.FieldUpdatedAt)
+	return u
+}
+
+// SetCode sets the "code" field.
+func (u *InstitutionUpsert) SetCode(v string) *InstitutionUpsert {
+	u.Set(institution.FieldCode, v)
+	return u
+}
+
+// UpdateCode sets the "code" field to the value that was provided on create.
+func (u *InstitutionUpsert) UpdateCode() *InstitutionUpsert {
+	u.SetExcluded(institution.FieldCode)
+	return u
+}
+
+// SetName sets the "name" field.
+func (u *InstitutionUpsert) SetName(v string) *InstitutionUpsert {
+	u.Set(institution.FieldName, v)
+	return u
+}
+
+// UpdateName sets the "name" field to the value that was provided on create.
+func (u *InstitutionUpsert) UpdateName() *InstitutionUpsert {
+	u.SetExcluded(institution.FieldName)
+	return u
+}
+
+// SetType sets the "type" field.
+func (u *InstitutionUpsert) SetType(v institution.Type) *InstitutionUpsert {
+	u.Set(institution.FieldType, v)
+	return u
+}
+
+// UpdateType sets the "type" field to the value that was provided on create.
+func (u *InstitutionUpsert) UpdateType() *InstitutionUpsert {
+	u.SetExcluded(institution.FieldType)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// Using this option is equivalent to using:
+//
+//	client.Institution.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *InstitutionUpsertOne) UpdateNewValues() *InstitutionUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.CreatedAt(); exists {
+			s.SetIgnore(institution.FieldCreatedAt)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.Institution.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *InstitutionUpsertOne) Ignore() *InstitutionUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *InstitutionUpsertOne) DoNothing() *InstitutionUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the InstitutionCreate.OnConflict
+// documentation for more info.
+func (u *InstitutionUpsertOne) Update(set func(*InstitutionUpsert)) *InstitutionUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&InstitutionUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *InstitutionUpsertOne) SetUpdatedAt(v time.Time) *InstitutionUpsertOne {
+	return u.Update(func(s *InstitutionUpsert) {
+		s.SetUpdatedAt(v)
+	})
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *InstitutionUpsertOne) UpdateUpdatedAt() *InstitutionUpsertOne {
+	return u.Update(func(s *InstitutionUpsert) {
+		s.UpdateUpdatedAt()
+	})
+}
+
+// SetCode sets the "code" field.
+func (u *InstitutionUpsertOne) SetCode(v string) *InstitutionUpsertOne {
+	return u.Update(func(s *InstitutionUpsert) {
+		s.SetCode(v)
+	})
+}
+
+// UpdateCode sets the "code" field to the value that was provided on create.
+func (u *InstitutionUpsertOne) UpdateCode() *InstitutionUpsertOne {
+	return u.Update(func(s *InstitutionUpsert) {
+		s.UpdateCode()
+	})
+}
+
+// SetName sets the "name" field.
+func (u *InstitutionUpsertOne) SetName(v string) *InstitutionUpsertOne {
+	return u.Update(func(s *InstitutionUpsert) {
+		s.SetName(v)
+	})
+}
+
+// UpdateName sets the "name" field to the value that was provided on create.
+func (u *InstitutionUpsertOne) UpdateName() *InstitutionUpsertOne {
+	return u.Update(func(s *InstitutionUpsert) {
+		s.UpdateName()
+	})
+}
+
+// SetType sets the "type" field.
+func (u *InstitutionUpsertOne) SetType(v institution.Type) *InstitutionUpsertOne {
+	return u.Update(func(s *InstitutionUpsert) {
+		s.SetType(v)
+	})
+}
+
+// UpdateType sets the "type" field to the value that was provided on create.
+func (u *InstitutionUpsertOne) UpdateType() *InstitutionUpsertOne {
+	return u.Update(func(s *InstitutionUpsert) {
+		s.UpdateType()
+	})
+}
+
+// Exec executes the query.
+func (u *InstitutionUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for InstitutionCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *InstitutionUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *InstitutionUpsertOne) ID(ctx context.Context) (id int, err error) {
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *InstitutionUpsertOne) IDX(ctx context.Context) int {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // InstitutionCreateBulk is the builder for creating many Institution entities in bulk.
 type InstitutionCreateBulk struct {
 	config
 	err      error
 	builders []*InstitutionCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the Institution entities in the database.
@@ -266,6 +501,7 @@ func (icb *InstitutionCreateBulk) Save(ctx context.Context) ([]*Institution, err
 					_, err = mutators[i+1].Mutate(root, icb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = icb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, icb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -316,6 +552,173 @@ func (icb *InstitutionCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (icb *InstitutionCreateBulk) ExecX(ctx context.Context) {
 	if err := icb.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Institution.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.InstitutionUpsert) {
+//			SetCreatedAt(v+v).
+//		}).
+//		Exec(ctx)
+func (icb *InstitutionCreateBulk) OnConflict(opts ...sql.ConflictOption) *InstitutionUpsertBulk {
+	icb.conflict = opts
+	return &InstitutionUpsertBulk{
+		create: icb,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Institution.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (icb *InstitutionCreateBulk) OnConflictColumns(columns ...string) *InstitutionUpsertBulk {
+	icb.conflict = append(icb.conflict, sql.ConflictColumns(columns...))
+	return &InstitutionUpsertBulk{
+		create: icb,
+	}
+}
+
+// InstitutionUpsertBulk is the builder for "upsert"-ing
+// a bulk of Institution nodes.
+type InstitutionUpsertBulk struct {
+	create *InstitutionCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.Institution.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *InstitutionUpsertBulk) UpdateNewValues() *InstitutionUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.CreatedAt(); exists {
+				s.SetIgnore(institution.FieldCreatedAt)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.Institution.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *InstitutionUpsertBulk) Ignore() *InstitutionUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *InstitutionUpsertBulk) DoNothing() *InstitutionUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the InstitutionCreateBulk.OnConflict
+// documentation for more info.
+func (u *InstitutionUpsertBulk) Update(set func(*InstitutionUpsert)) *InstitutionUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&InstitutionUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *InstitutionUpsertBulk) SetUpdatedAt(v time.Time) *InstitutionUpsertBulk {
+	return u.Update(func(s *InstitutionUpsert) {
+		s.SetUpdatedAt(v)
+	})
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *InstitutionUpsertBulk) UpdateUpdatedAt() *InstitutionUpsertBulk {
+	return u.Update(func(s *InstitutionUpsert) {
+		s.UpdateUpdatedAt()
+	})
+}
+
+// SetCode sets the "code" field.
+func (u *InstitutionUpsertBulk) SetCode(v string) *InstitutionUpsertBulk {
+	return u.Update(func(s *InstitutionUpsert) {
+		s.SetCode(v)
+	})
+}
+
+// UpdateCode sets the "code" field to the value that was provided on create.
+func (u *InstitutionUpsertBulk) UpdateCode() *InstitutionUpsertBulk {
+	return u.Update(func(s *InstitutionUpsert) {
+		s.UpdateCode()
+	})
+}
+
+// SetName sets the "name" field.
+func (u *InstitutionUpsertBulk) SetName(v string) *InstitutionUpsertBulk {
+	return u.Update(func(s *InstitutionUpsert) {
+		s.SetName(v)
+	})
+}
+
+// UpdateName sets the "name" field to the value that was provided on create.
+func (u *InstitutionUpsertBulk) UpdateName() *InstitutionUpsertBulk {
+	return u.Update(func(s *InstitutionUpsert) {
+		s.UpdateName()
+	})
+}
+
+// SetType sets the "type" field.
+func (u *InstitutionUpsertBulk) SetType(v institution.Type) *InstitutionUpsertBulk {
+	return u.Update(func(s *InstitutionUpsert) {
+		s.SetType(v)
+	})
+}
+
+// UpdateType sets the "type" field to the value that was provided on create.
+func (u *InstitutionUpsertBulk) UpdateType() *InstitutionUpsertBulk {
+	return u.Update(func(s *InstitutionUpsert) {
+		s.UpdateType()
+	})
+}
+
+// Exec executes the query.
+func (u *InstitutionUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the InstitutionCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for InstitutionCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *InstitutionUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
