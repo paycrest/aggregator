@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -19,6 +21,7 @@ type TransactionLogCreate struct {
 	config
 	mutation *TransactionLogMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetGatewayID sets the "gateway_id" field.
@@ -207,6 +210,7 @@ func (tlc *TransactionLogCreate) createSpec() (*TransactionLog, *sqlgraph.Create
 		_node = &TransactionLog{config: tlc.config}
 		_spec = sqlgraph.NewCreateSpec(transactionlog.Table, sqlgraph.NewFieldSpec(transactionlog.FieldID, field.TypeUUID))
 	)
+	_spec.OnConflict = tlc.conflict
 	if id, ok := tlc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
@@ -238,11 +242,296 @@ func (tlc *TransactionLogCreate) createSpec() (*TransactionLog, *sqlgraph.Create
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.TransactionLog.Create().
+//		SetGatewayID(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.TransactionLogUpsert) {
+//			SetGatewayID(v+v).
+//		}).
+//		Exec(ctx)
+func (tlc *TransactionLogCreate) OnConflict(opts ...sql.ConflictOption) *TransactionLogUpsertOne {
+	tlc.conflict = opts
+	return &TransactionLogUpsertOne{
+		create: tlc,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.TransactionLog.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (tlc *TransactionLogCreate) OnConflictColumns(columns ...string) *TransactionLogUpsertOne {
+	tlc.conflict = append(tlc.conflict, sql.ConflictColumns(columns...))
+	return &TransactionLogUpsertOne{
+		create: tlc,
+	}
+}
+
+type (
+	// TransactionLogUpsertOne is the builder for "upsert"-ing
+	//  one TransactionLog node.
+	TransactionLogUpsertOne struct {
+		create *TransactionLogCreate
+	}
+
+	// TransactionLogUpsert is the "OnConflict" setter.
+	TransactionLogUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetGatewayID sets the "gateway_id" field.
+func (u *TransactionLogUpsert) SetGatewayID(v string) *TransactionLogUpsert {
+	u.Set(transactionlog.FieldGatewayID, v)
+	return u
+}
+
+// UpdateGatewayID sets the "gateway_id" field to the value that was provided on create.
+func (u *TransactionLogUpsert) UpdateGatewayID() *TransactionLogUpsert {
+	u.SetExcluded(transactionlog.FieldGatewayID)
+	return u
+}
+
+// ClearGatewayID clears the value of the "gateway_id" field.
+func (u *TransactionLogUpsert) ClearGatewayID() *TransactionLogUpsert {
+	u.SetNull(transactionlog.FieldGatewayID)
+	return u
+}
+
+// SetNetwork sets the "network" field.
+func (u *TransactionLogUpsert) SetNetwork(v string) *TransactionLogUpsert {
+	u.Set(transactionlog.FieldNetwork, v)
+	return u
+}
+
+// UpdateNetwork sets the "network" field to the value that was provided on create.
+func (u *TransactionLogUpsert) UpdateNetwork() *TransactionLogUpsert {
+	u.SetExcluded(transactionlog.FieldNetwork)
+	return u
+}
+
+// ClearNetwork clears the value of the "network" field.
+func (u *TransactionLogUpsert) ClearNetwork() *TransactionLogUpsert {
+	u.SetNull(transactionlog.FieldNetwork)
+	return u
+}
+
+// SetTxHash sets the "tx_hash" field.
+func (u *TransactionLogUpsert) SetTxHash(v string) *TransactionLogUpsert {
+	u.Set(transactionlog.FieldTxHash, v)
+	return u
+}
+
+// UpdateTxHash sets the "tx_hash" field to the value that was provided on create.
+func (u *TransactionLogUpsert) UpdateTxHash() *TransactionLogUpsert {
+	u.SetExcluded(transactionlog.FieldTxHash)
+	return u
+}
+
+// ClearTxHash clears the value of the "tx_hash" field.
+func (u *TransactionLogUpsert) ClearTxHash() *TransactionLogUpsert {
+	u.SetNull(transactionlog.FieldTxHash)
+	return u
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *TransactionLogUpsert) SetMetadata(v map[string]interface{}) *TransactionLogUpsert {
+	u.Set(transactionlog.FieldMetadata, v)
+	return u
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *TransactionLogUpsert) UpdateMetadata() *TransactionLogUpsert {
+	u.SetExcluded(transactionlog.FieldMetadata)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
+// Using this option is equivalent to using:
+//
+//	client.TransactionLog.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(transactionlog.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *TransactionLogUpsertOne) UpdateNewValues() *TransactionLogUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(transactionlog.FieldID)
+		}
+		if _, exists := u.create.mutation.Status(); exists {
+			s.SetIgnore(transactionlog.FieldStatus)
+		}
+		if _, exists := u.create.mutation.CreatedAt(); exists {
+			s.SetIgnore(transactionlog.FieldCreatedAt)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.TransactionLog.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *TransactionLogUpsertOne) Ignore() *TransactionLogUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *TransactionLogUpsertOne) DoNothing() *TransactionLogUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the TransactionLogCreate.OnConflict
+// documentation for more info.
+func (u *TransactionLogUpsertOne) Update(set func(*TransactionLogUpsert)) *TransactionLogUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&TransactionLogUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetGatewayID sets the "gateway_id" field.
+func (u *TransactionLogUpsertOne) SetGatewayID(v string) *TransactionLogUpsertOne {
+	return u.Update(func(s *TransactionLogUpsert) {
+		s.SetGatewayID(v)
+	})
+}
+
+// UpdateGatewayID sets the "gateway_id" field to the value that was provided on create.
+func (u *TransactionLogUpsertOne) UpdateGatewayID() *TransactionLogUpsertOne {
+	return u.Update(func(s *TransactionLogUpsert) {
+		s.UpdateGatewayID()
+	})
+}
+
+// ClearGatewayID clears the value of the "gateway_id" field.
+func (u *TransactionLogUpsertOne) ClearGatewayID() *TransactionLogUpsertOne {
+	return u.Update(func(s *TransactionLogUpsert) {
+		s.ClearGatewayID()
+	})
+}
+
+// SetNetwork sets the "network" field.
+func (u *TransactionLogUpsertOne) SetNetwork(v string) *TransactionLogUpsertOne {
+	return u.Update(func(s *TransactionLogUpsert) {
+		s.SetNetwork(v)
+	})
+}
+
+// UpdateNetwork sets the "network" field to the value that was provided on create.
+func (u *TransactionLogUpsertOne) UpdateNetwork() *TransactionLogUpsertOne {
+	return u.Update(func(s *TransactionLogUpsert) {
+		s.UpdateNetwork()
+	})
+}
+
+// ClearNetwork clears the value of the "network" field.
+func (u *TransactionLogUpsertOne) ClearNetwork() *TransactionLogUpsertOne {
+	return u.Update(func(s *TransactionLogUpsert) {
+		s.ClearNetwork()
+	})
+}
+
+// SetTxHash sets the "tx_hash" field.
+func (u *TransactionLogUpsertOne) SetTxHash(v string) *TransactionLogUpsertOne {
+	return u.Update(func(s *TransactionLogUpsert) {
+		s.SetTxHash(v)
+	})
+}
+
+// UpdateTxHash sets the "tx_hash" field to the value that was provided on create.
+func (u *TransactionLogUpsertOne) UpdateTxHash() *TransactionLogUpsertOne {
+	return u.Update(func(s *TransactionLogUpsert) {
+		s.UpdateTxHash()
+	})
+}
+
+// ClearTxHash clears the value of the "tx_hash" field.
+func (u *TransactionLogUpsertOne) ClearTxHash() *TransactionLogUpsertOne {
+	return u.Update(func(s *TransactionLogUpsert) {
+		s.ClearTxHash()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *TransactionLogUpsertOne) SetMetadata(v map[string]interface{}) *TransactionLogUpsertOne {
+	return u.Update(func(s *TransactionLogUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *TransactionLogUpsertOne) UpdateMetadata() *TransactionLogUpsertOne {
+	return u.Update(func(s *TransactionLogUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// Exec executes the query.
+func (u *TransactionLogUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for TransactionLogCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *TransactionLogUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *TransactionLogUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: TransactionLogUpsertOne.ID is not supported by MySQL driver. Use TransactionLogUpsertOne.Exec instead")
+	}
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *TransactionLogUpsertOne) IDX(ctx context.Context) uuid.UUID {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // TransactionLogCreateBulk is the builder for creating many TransactionLog entities in bulk.
 type TransactionLogCreateBulk struct {
 	config
 	err      error
 	builders []*TransactionLogCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the TransactionLog entities in the database.
@@ -272,6 +561,7 @@ func (tlcb *TransactionLogCreateBulk) Save(ctx context.Context) ([]*TransactionL
 					_, err = mutators[i+1].Mutate(root, tlcb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = tlcb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, tlcb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -318,6 +608,203 @@ func (tlcb *TransactionLogCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (tlcb *TransactionLogCreateBulk) ExecX(ctx context.Context) {
 	if err := tlcb.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.TransactionLog.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.TransactionLogUpsert) {
+//			SetGatewayID(v+v).
+//		}).
+//		Exec(ctx)
+func (tlcb *TransactionLogCreateBulk) OnConflict(opts ...sql.ConflictOption) *TransactionLogUpsertBulk {
+	tlcb.conflict = opts
+	return &TransactionLogUpsertBulk{
+		create: tlcb,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.TransactionLog.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (tlcb *TransactionLogCreateBulk) OnConflictColumns(columns ...string) *TransactionLogUpsertBulk {
+	tlcb.conflict = append(tlcb.conflict, sql.ConflictColumns(columns...))
+	return &TransactionLogUpsertBulk{
+		create: tlcb,
+	}
+}
+
+// TransactionLogUpsertBulk is the builder for "upsert"-ing
+// a bulk of TransactionLog nodes.
+type TransactionLogUpsertBulk struct {
+	create *TransactionLogCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.TransactionLog.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(transactionlog.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *TransactionLogUpsertBulk) UpdateNewValues() *TransactionLogUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(transactionlog.FieldID)
+			}
+			if _, exists := b.mutation.Status(); exists {
+				s.SetIgnore(transactionlog.FieldStatus)
+			}
+			if _, exists := b.mutation.CreatedAt(); exists {
+				s.SetIgnore(transactionlog.FieldCreatedAt)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.TransactionLog.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *TransactionLogUpsertBulk) Ignore() *TransactionLogUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *TransactionLogUpsertBulk) DoNothing() *TransactionLogUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the TransactionLogCreateBulk.OnConflict
+// documentation for more info.
+func (u *TransactionLogUpsertBulk) Update(set func(*TransactionLogUpsert)) *TransactionLogUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&TransactionLogUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetGatewayID sets the "gateway_id" field.
+func (u *TransactionLogUpsertBulk) SetGatewayID(v string) *TransactionLogUpsertBulk {
+	return u.Update(func(s *TransactionLogUpsert) {
+		s.SetGatewayID(v)
+	})
+}
+
+// UpdateGatewayID sets the "gateway_id" field to the value that was provided on create.
+func (u *TransactionLogUpsertBulk) UpdateGatewayID() *TransactionLogUpsertBulk {
+	return u.Update(func(s *TransactionLogUpsert) {
+		s.UpdateGatewayID()
+	})
+}
+
+// ClearGatewayID clears the value of the "gateway_id" field.
+func (u *TransactionLogUpsertBulk) ClearGatewayID() *TransactionLogUpsertBulk {
+	return u.Update(func(s *TransactionLogUpsert) {
+		s.ClearGatewayID()
+	})
+}
+
+// SetNetwork sets the "network" field.
+func (u *TransactionLogUpsertBulk) SetNetwork(v string) *TransactionLogUpsertBulk {
+	return u.Update(func(s *TransactionLogUpsert) {
+		s.SetNetwork(v)
+	})
+}
+
+// UpdateNetwork sets the "network" field to the value that was provided on create.
+func (u *TransactionLogUpsertBulk) UpdateNetwork() *TransactionLogUpsertBulk {
+	return u.Update(func(s *TransactionLogUpsert) {
+		s.UpdateNetwork()
+	})
+}
+
+// ClearNetwork clears the value of the "network" field.
+func (u *TransactionLogUpsertBulk) ClearNetwork() *TransactionLogUpsertBulk {
+	return u.Update(func(s *TransactionLogUpsert) {
+		s.ClearNetwork()
+	})
+}
+
+// SetTxHash sets the "tx_hash" field.
+func (u *TransactionLogUpsertBulk) SetTxHash(v string) *TransactionLogUpsertBulk {
+	return u.Update(func(s *TransactionLogUpsert) {
+		s.SetTxHash(v)
+	})
+}
+
+// UpdateTxHash sets the "tx_hash" field to the value that was provided on create.
+func (u *TransactionLogUpsertBulk) UpdateTxHash() *TransactionLogUpsertBulk {
+	return u.Update(func(s *TransactionLogUpsert) {
+		s.UpdateTxHash()
+	})
+}
+
+// ClearTxHash clears the value of the "tx_hash" field.
+func (u *TransactionLogUpsertBulk) ClearTxHash() *TransactionLogUpsertBulk {
+	return u.Update(func(s *TransactionLogUpsert) {
+		s.ClearTxHash()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *TransactionLogUpsertBulk) SetMetadata(v map[string]interface{}) *TransactionLogUpsertBulk {
+	return u.Update(func(s *TransactionLogUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *TransactionLogUpsertBulk) UpdateMetadata() *TransactionLogUpsertBulk {
+	return u.Update(func(s *TransactionLogUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// Exec executes the query.
+func (u *TransactionLogUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the TransactionLogCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for TransactionLogCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *TransactionLogUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
