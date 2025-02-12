@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 
+	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -21,6 +23,7 @@ type APIKeyCreate struct {
 	config
 	mutation *APIKeyMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetSecret sets the "secret" field.
@@ -178,6 +181,7 @@ func (akc *APIKeyCreate) createSpec() (*APIKey, *sqlgraph.CreateSpec) {
 		_node = &APIKey{config: akc.config}
 		_spec = sqlgraph.NewCreateSpec(apikey.Table, sqlgraph.NewFieldSpec(apikey.FieldID, field.TypeUUID))
 	)
+	_spec.OnConflict = akc.conflict
 	if id, ok := akc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
@@ -239,11 +243,173 @@ func (akc *APIKeyCreate) createSpec() (*APIKey, *sqlgraph.CreateSpec) {
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.APIKey.Create().
+//		SetSecret(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.APIKeyUpsert) {
+//			SetSecret(v+v).
+//		}).
+//		Exec(ctx)
+func (akc *APIKeyCreate) OnConflict(opts ...sql.ConflictOption) *APIKeyUpsertOne {
+	akc.conflict = opts
+	return &APIKeyUpsertOne{
+		create: akc,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.APIKey.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (akc *APIKeyCreate) OnConflictColumns(columns ...string) *APIKeyUpsertOne {
+	akc.conflict = append(akc.conflict, sql.ConflictColumns(columns...))
+	return &APIKeyUpsertOne{
+		create: akc,
+	}
+}
+
+type (
+	// APIKeyUpsertOne is the builder for "upsert"-ing
+	//  one APIKey node.
+	APIKeyUpsertOne struct {
+		create *APIKeyCreate
+	}
+
+	// APIKeyUpsert is the "OnConflict" setter.
+	APIKeyUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetSecret sets the "secret" field.
+func (u *APIKeyUpsert) SetSecret(v string) *APIKeyUpsert {
+	u.Set(apikey.FieldSecret, v)
+	return u
+}
+
+// UpdateSecret sets the "secret" field to the value that was provided on create.
+func (u *APIKeyUpsert) UpdateSecret() *APIKeyUpsert {
+	u.SetExcluded(apikey.FieldSecret)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
+// Using this option is equivalent to using:
+//
+//	client.APIKey.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(apikey.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *APIKeyUpsertOne) UpdateNewValues() *APIKeyUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(apikey.FieldID)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.APIKey.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *APIKeyUpsertOne) Ignore() *APIKeyUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *APIKeyUpsertOne) DoNothing() *APIKeyUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the APIKeyCreate.OnConflict
+// documentation for more info.
+func (u *APIKeyUpsertOne) Update(set func(*APIKeyUpsert)) *APIKeyUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&APIKeyUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetSecret sets the "secret" field.
+func (u *APIKeyUpsertOne) SetSecret(v string) *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetSecret(v)
+	})
+}
+
+// UpdateSecret sets the "secret" field to the value that was provided on create.
+func (u *APIKeyUpsertOne) UpdateSecret() *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateSecret()
+	})
+}
+
+// Exec executes the query.
+func (u *APIKeyUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for APIKeyCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *APIKeyUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *APIKeyUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: APIKeyUpsertOne.ID is not supported by MySQL driver. Use APIKeyUpsertOne.Exec instead")
+	}
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *APIKeyUpsertOne) IDX(ctx context.Context) uuid.UUID {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // APIKeyCreateBulk is the builder for creating many APIKey entities in bulk.
 type APIKeyCreateBulk struct {
 	config
 	err      error
 	builders []*APIKeyCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the APIKey entities in the database.
@@ -273,6 +439,7 @@ func (akcb *APIKeyCreateBulk) Save(ctx context.Context) ([]*APIKey, error) {
 					_, err = mutators[i+1].Mutate(root, akcb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = akcb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, akcb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -319,6 +486,134 @@ func (akcb *APIKeyCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (akcb *APIKeyCreateBulk) ExecX(ctx context.Context) {
 	if err := akcb.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.APIKey.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.APIKeyUpsert) {
+//			SetSecret(v+v).
+//		}).
+//		Exec(ctx)
+func (akcb *APIKeyCreateBulk) OnConflict(opts ...sql.ConflictOption) *APIKeyUpsertBulk {
+	akcb.conflict = opts
+	return &APIKeyUpsertBulk{
+		create: akcb,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.APIKey.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (akcb *APIKeyCreateBulk) OnConflictColumns(columns ...string) *APIKeyUpsertBulk {
+	akcb.conflict = append(akcb.conflict, sql.ConflictColumns(columns...))
+	return &APIKeyUpsertBulk{
+		create: akcb,
+	}
+}
+
+// APIKeyUpsertBulk is the builder for "upsert"-ing
+// a bulk of APIKey nodes.
+type APIKeyUpsertBulk struct {
+	create *APIKeyCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.APIKey.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(apikey.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *APIKeyUpsertBulk) UpdateNewValues() *APIKeyUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(apikey.FieldID)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.APIKey.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *APIKeyUpsertBulk) Ignore() *APIKeyUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *APIKeyUpsertBulk) DoNothing() *APIKeyUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the APIKeyCreateBulk.OnConflict
+// documentation for more info.
+func (u *APIKeyUpsertBulk) Update(set func(*APIKeyUpsert)) *APIKeyUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&APIKeyUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetSecret sets the "secret" field.
+func (u *APIKeyUpsertBulk) SetSecret(v string) *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetSecret(v)
+	})
+}
+
+// UpdateSecret sets the "secret" field to the value that was provided on create.
+func (u *APIKeyUpsertBulk) UpdateSecret() *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateSecret()
+	})
+}
+
+// Exec executes the query.
+func (u *APIKeyUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the APIKeyCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for APIKeyCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *APIKeyUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

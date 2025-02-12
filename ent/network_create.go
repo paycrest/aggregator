@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/paycrest/aggregator/ent/network"
@@ -20,6 +21,7 @@ type NetworkCreate struct {
 	config
 	mutation *NetworkMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -252,6 +254,7 @@ func (nc *NetworkCreate) createSpec() (*Network, *sqlgraph.CreateSpec) {
 		_node = &Network{config: nc.config}
 		_spec = sqlgraph.NewCreateSpec(network.Table, sqlgraph.NewFieldSpec(network.FieldID, field.TypeInt))
 	)
+	_spec.OnConflict = nc.conflict
 	if value, ok := nc.mutation.CreatedAt(); ok {
 		_spec.SetField(network.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -315,11 +318,464 @@ func (nc *NetworkCreate) createSpec() (*Network, *sqlgraph.CreateSpec) {
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Network.Create().
+//		SetCreatedAt(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.NetworkUpsert) {
+//			SetCreatedAt(v+v).
+//		}).
+//		Exec(ctx)
+func (nc *NetworkCreate) OnConflict(opts ...sql.ConflictOption) *NetworkUpsertOne {
+	nc.conflict = opts
+	return &NetworkUpsertOne{
+		create: nc,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Network.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (nc *NetworkCreate) OnConflictColumns(columns ...string) *NetworkUpsertOne {
+	nc.conflict = append(nc.conflict, sql.ConflictColumns(columns...))
+	return &NetworkUpsertOne{
+		create: nc,
+	}
+}
+
+type (
+	// NetworkUpsertOne is the builder for "upsert"-ing
+	//  one Network node.
+	NetworkUpsertOne struct {
+		create *NetworkCreate
+	}
+
+	// NetworkUpsert is the "OnConflict" setter.
+	NetworkUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *NetworkUpsert) SetUpdatedAt(v time.Time) *NetworkUpsert {
+	u.Set(network.FieldUpdatedAt, v)
+	return u
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *NetworkUpsert) UpdateUpdatedAt() *NetworkUpsert {
+	u.SetExcluded(network.FieldUpdatedAt)
+	return u
+}
+
+// SetChainID sets the "chain_id" field.
+func (u *NetworkUpsert) SetChainID(v int64) *NetworkUpsert {
+	u.Set(network.FieldChainID, v)
+	return u
+}
+
+// UpdateChainID sets the "chain_id" field to the value that was provided on create.
+func (u *NetworkUpsert) UpdateChainID() *NetworkUpsert {
+	u.SetExcluded(network.FieldChainID)
+	return u
+}
+
+// AddChainID adds v to the "chain_id" field.
+func (u *NetworkUpsert) AddChainID(v int64) *NetworkUpsert {
+	u.Add(network.FieldChainID, v)
+	return u
+}
+
+// SetChainIDHex sets the "chain_id_hex" field.
+func (u *NetworkUpsert) SetChainIDHex(v string) *NetworkUpsert {
+	u.Set(network.FieldChainIDHex, v)
+	return u
+}
+
+// UpdateChainIDHex sets the "chain_id_hex" field to the value that was provided on create.
+func (u *NetworkUpsert) UpdateChainIDHex() *NetworkUpsert {
+	u.SetExcluded(network.FieldChainIDHex)
+	return u
+}
+
+// ClearChainIDHex clears the value of the "chain_id_hex" field.
+func (u *NetworkUpsert) ClearChainIDHex() *NetworkUpsert {
+	u.SetNull(network.FieldChainIDHex)
+	return u
+}
+
+// SetIdentifier sets the "identifier" field.
+func (u *NetworkUpsert) SetIdentifier(v string) *NetworkUpsert {
+	u.Set(network.FieldIdentifier, v)
+	return u
+}
+
+// UpdateIdentifier sets the "identifier" field to the value that was provided on create.
+func (u *NetworkUpsert) UpdateIdentifier() *NetworkUpsert {
+	u.SetExcluded(network.FieldIdentifier)
+	return u
+}
+
+// SetRPCEndpoint sets the "rpc_endpoint" field.
+func (u *NetworkUpsert) SetRPCEndpoint(v string) *NetworkUpsert {
+	u.Set(network.FieldRPCEndpoint, v)
+	return u
+}
+
+// UpdateRPCEndpoint sets the "rpc_endpoint" field to the value that was provided on create.
+func (u *NetworkUpsert) UpdateRPCEndpoint() *NetworkUpsert {
+	u.SetExcluded(network.FieldRPCEndpoint)
+	return u
+}
+
+// SetGatewayContractAddress sets the "gateway_contract_address" field.
+func (u *NetworkUpsert) SetGatewayContractAddress(v string) *NetworkUpsert {
+	u.Set(network.FieldGatewayContractAddress, v)
+	return u
+}
+
+// UpdateGatewayContractAddress sets the "gateway_contract_address" field to the value that was provided on create.
+func (u *NetworkUpsert) UpdateGatewayContractAddress() *NetworkUpsert {
+	u.SetExcluded(network.FieldGatewayContractAddress)
+	return u
+}
+
+// SetIsTestnet sets the "is_testnet" field.
+func (u *NetworkUpsert) SetIsTestnet(v bool) *NetworkUpsert {
+	u.Set(network.FieldIsTestnet, v)
+	return u
+}
+
+// UpdateIsTestnet sets the "is_testnet" field to the value that was provided on create.
+func (u *NetworkUpsert) UpdateIsTestnet() *NetworkUpsert {
+	u.SetExcluded(network.FieldIsTestnet)
+	return u
+}
+
+// SetBundlerURL sets the "bundler_url" field.
+func (u *NetworkUpsert) SetBundlerURL(v string) *NetworkUpsert {
+	u.Set(network.FieldBundlerURL, v)
+	return u
+}
+
+// UpdateBundlerURL sets the "bundler_url" field to the value that was provided on create.
+func (u *NetworkUpsert) UpdateBundlerURL() *NetworkUpsert {
+	u.SetExcluded(network.FieldBundlerURL)
+	return u
+}
+
+// ClearBundlerURL clears the value of the "bundler_url" field.
+func (u *NetworkUpsert) ClearBundlerURL() *NetworkUpsert {
+	u.SetNull(network.FieldBundlerURL)
+	return u
+}
+
+// SetPaymasterURL sets the "paymaster_url" field.
+func (u *NetworkUpsert) SetPaymasterURL(v string) *NetworkUpsert {
+	u.Set(network.FieldPaymasterURL, v)
+	return u
+}
+
+// UpdatePaymasterURL sets the "paymaster_url" field to the value that was provided on create.
+func (u *NetworkUpsert) UpdatePaymasterURL() *NetworkUpsert {
+	u.SetExcluded(network.FieldPaymasterURL)
+	return u
+}
+
+// ClearPaymasterURL clears the value of the "paymaster_url" field.
+func (u *NetworkUpsert) ClearPaymasterURL() *NetworkUpsert {
+	u.SetNull(network.FieldPaymasterURL)
+	return u
+}
+
+// SetFee sets the "fee" field.
+func (u *NetworkUpsert) SetFee(v decimal.Decimal) *NetworkUpsert {
+	u.Set(network.FieldFee, v)
+	return u
+}
+
+// UpdateFee sets the "fee" field to the value that was provided on create.
+func (u *NetworkUpsert) UpdateFee() *NetworkUpsert {
+	u.SetExcluded(network.FieldFee)
+	return u
+}
+
+// AddFee adds v to the "fee" field.
+func (u *NetworkUpsert) AddFee(v decimal.Decimal) *NetworkUpsert {
+	u.Add(network.FieldFee, v)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// Using this option is equivalent to using:
+//
+//	client.Network.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *NetworkUpsertOne) UpdateNewValues() *NetworkUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.CreatedAt(); exists {
+			s.SetIgnore(network.FieldCreatedAt)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.Network.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *NetworkUpsertOne) Ignore() *NetworkUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *NetworkUpsertOne) DoNothing() *NetworkUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the NetworkCreate.OnConflict
+// documentation for more info.
+func (u *NetworkUpsertOne) Update(set func(*NetworkUpsert)) *NetworkUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&NetworkUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *NetworkUpsertOne) SetUpdatedAt(v time.Time) *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetUpdatedAt(v)
+	})
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *NetworkUpsertOne) UpdateUpdatedAt() *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateUpdatedAt()
+	})
+}
+
+// SetChainID sets the "chain_id" field.
+func (u *NetworkUpsertOne) SetChainID(v int64) *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetChainID(v)
+	})
+}
+
+// AddChainID adds v to the "chain_id" field.
+func (u *NetworkUpsertOne) AddChainID(v int64) *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.AddChainID(v)
+	})
+}
+
+// UpdateChainID sets the "chain_id" field to the value that was provided on create.
+func (u *NetworkUpsertOne) UpdateChainID() *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateChainID()
+	})
+}
+
+// SetChainIDHex sets the "chain_id_hex" field.
+func (u *NetworkUpsertOne) SetChainIDHex(v string) *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetChainIDHex(v)
+	})
+}
+
+// UpdateChainIDHex sets the "chain_id_hex" field to the value that was provided on create.
+func (u *NetworkUpsertOne) UpdateChainIDHex() *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateChainIDHex()
+	})
+}
+
+// ClearChainIDHex clears the value of the "chain_id_hex" field.
+func (u *NetworkUpsertOne) ClearChainIDHex() *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.ClearChainIDHex()
+	})
+}
+
+// SetIdentifier sets the "identifier" field.
+func (u *NetworkUpsertOne) SetIdentifier(v string) *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetIdentifier(v)
+	})
+}
+
+// UpdateIdentifier sets the "identifier" field to the value that was provided on create.
+func (u *NetworkUpsertOne) UpdateIdentifier() *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateIdentifier()
+	})
+}
+
+// SetRPCEndpoint sets the "rpc_endpoint" field.
+func (u *NetworkUpsertOne) SetRPCEndpoint(v string) *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetRPCEndpoint(v)
+	})
+}
+
+// UpdateRPCEndpoint sets the "rpc_endpoint" field to the value that was provided on create.
+func (u *NetworkUpsertOne) UpdateRPCEndpoint() *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateRPCEndpoint()
+	})
+}
+
+// SetGatewayContractAddress sets the "gateway_contract_address" field.
+func (u *NetworkUpsertOne) SetGatewayContractAddress(v string) *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetGatewayContractAddress(v)
+	})
+}
+
+// UpdateGatewayContractAddress sets the "gateway_contract_address" field to the value that was provided on create.
+func (u *NetworkUpsertOne) UpdateGatewayContractAddress() *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateGatewayContractAddress()
+	})
+}
+
+// SetIsTestnet sets the "is_testnet" field.
+func (u *NetworkUpsertOne) SetIsTestnet(v bool) *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetIsTestnet(v)
+	})
+}
+
+// UpdateIsTestnet sets the "is_testnet" field to the value that was provided on create.
+func (u *NetworkUpsertOne) UpdateIsTestnet() *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateIsTestnet()
+	})
+}
+
+// SetBundlerURL sets the "bundler_url" field.
+func (u *NetworkUpsertOne) SetBundlerURL(v string) *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetBundlerURL(v)
+	})
+}
+
+// UpdateBundlerURL sets the "bundler_url" field to the value that was provided on create.
+func (u *NetworkUpsertOne) UpdateBundlerURL() *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateBundlerURL()
+	})
+}
+
+// ClearBundlerURL clears the value of the "bundler_url" field.
+func (u *NetworkUpsertOne) ClearBundlerURL() *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.ClearBundlerURL()
+	})
+}
+
+// SetPaymasterURL sets the "paymaster_url" field.
+func (u *NetworkUpsertOne) SetPaymasterURL(v string) *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetPaymasterURL(v)
+	})
+}
+
+// UpdatePaymasterURL sets the "paymaster_url" field to the value that was provided on create.
+func (u *NetworkUpsertOne) UpdatePaymasterURL() *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdatePaymasterURL()
+	})
+}
+
+// ClearPaymasterURL clears the value of the "paymaster_url" field.
+func (u *NetworkUpsertOne) ClearPaymasterURL() *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.ClearPaymasterURL()
+	})
+}
+
+// SetFee sets the "fee" field.
+func (u *NetworkUpsertOne) SetFee(v decimal.Decimal) *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetFee(v)
+	})
+}
+
+// AddFee adds v to the "fee" field.
+func (u *NetworkUpsertOne) AddFee(v decimal.Decimal) *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.AddFee(v)
+	})
+}
+
+// UpdateFee sets the "fee" field to the value that was provided on create.
+func (u *NetworkUpsertOne) UpdateFee() *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateFee()
+	})
+}
+
+// Exec executes the query.
+func (u *NetworkUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for NetworkCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *NetworkUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *NetworkUpsertOne) ID(ctx context.Context) (id int, err error) {
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *NetworkUpsertOne) IDX(ctx context.Context) int {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // NetworkCreateBulk is the builder for creating many Network entities in bulk.
 type NetworkCreateBulk struct {
 	config
 	err      error
 	builders []*NetworkCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the Network entities in the database.
@@ -349,6 +805,7 @@ func (ncb *NetworkCreateBulk) Save(ctx context.Context) ([]*Network, error) {
 					_, err = mutators[i+1].Mutate(root, ncb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = ncb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, ncb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -399,6 +856,292 @@ func (ncb *NetworkCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (ncb *NetworkCreateBulk) ExecX(ctx context.Context) {
 	if err := ncb.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Network.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.NetworkUpsert) {
+//			SetCreatedAt(v+v).
+//		}).
+//		Exec(ctx)
+func (ncb *NetworkCreateBulk) OnConflict(opts ...sql.ConflictOption) *NetworkUpsertBulk {
+	ncb.conflict = opts
+	return &NetworkUpsertBulk{
+		create: ncb,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Network.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (ncb *NetworkCreateBulk) OnConflictColumns(columns ...string) *NetworkUpsertBulk {
+	ncb.conflict = append(ncb.conflict, sql.ConflictColumns(columns...))
+	return &NetworkUpsertBulk{
+		create: ncb,
+	}
+}
+
+// NetworkUpsertBulk is the builder for "upsert"-ing
+// a bulk of Network nodes.
+type NetworkUpsertBulk struct {
+	create *NetworkCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.Network.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *NetworkUpsertBulk) UpdateNewValues() *NetworkUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.CreatedAt(); exists {
+				s.SetIgnore(network.FieldCreatedAt)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.Network.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *NetworkUpsertBulk) Ignore() *NetworkUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *NetworkUpsertBulk) DoNothing() *NetworkUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the NetworkCreateBulk.OnConflict
+// documentation for more info.
+func (u *NetworkUpsertBulk) Update(set func(*NetworkUpsert)) *NetworkUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&NetworkUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *NetworkUpsertBulk) SetUpdatedAt(v time.Time) *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetUpdatedAt(v)
+	})
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *NetworkUpsertBulk) UpdateUpdatedAt() *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateUpdatedAt()
+	})
+}
+
+// SetChainID sets the "chain_id" field.
+func (u *NetworkUpsertBulk) SetChainID(v int64) *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetChainID(v)
+	})
+}
+
+// AddChainID adds v to the "chain_id" field.
+func (u *NetworkUpsertBulk) AddChainID(v int64) *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.AddChainID(v)
+	})
+}
+
+// UpdateChainID sets the "chain_id" field to the value that was provided on create.
+func (u *NetworkUpsertBulk) UpdateChainID() *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateChainID()
+	})
+}
+
+// SetChainIDHex sets the "chain_id_hex" field.
+func (u *NetworkUpsertBulk) SetChainIDHex(v string) *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetChainIDHex(v)
+	})
+}
+
+// UpdateChainIDHex sets the "chain_id_hex" field to the value that was provided on create.
+func (u *NetworkUpsertBulk) UpdateChainIDHex() *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateChainIDHex()
+	})
+}
+
+// ClearChainIDHex clears the value of the "chain_id_hex" field.
+func (u *NetworkUpsertBulk) ClearChainIDHex() *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.ClearChainIDHex()
+	})
+}
+
+// SetIdentifier sets the "identifier" field.
+func (u *NetworkUpsertBulk) SetIdentifier(v string) *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetIdentifier(v)
+	})
+}
+
+// UpdateIdentifier sets the "identifier" field to the value that was provided on create.
+func (u *NetworkUpsertBulk) UpdateIdentifier() *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateIdentifier()
+	})
+}
+
+// SetRPCEndpoint sets the "rpc_endpoint" field.
+func (u *NetworkUpsertBulk) SetRPCEndpoint(v string) *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetRPCEndpoint(v)
+	})
+}
+
+// UpdateRPCEndpoint sets the "rpc_endpoint" field to the value that was provided on create.
+func (u *NetworkUpsertBulk) UpdateRPCEndpoint() *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateRPCEndpoint()
+	})
+}
+
+// SetGatewayContractAddress sets the "gateway_contract_address" field.
+func (u *NetworkUpsertBulk) SetGatewayContractAddress(v string) *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetGatewayContractAddress(v)
+	})
+}
+
+// UpdateGatewayContractAddress sets the "gateway_contract_address" field to the value that was provided on create.
+func (u *NetworkUpsertBulk) UpdateGatewayContractAddress() *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateGatewayContractAddress()
+	})
+}
+
+// SetIsTestnet sets the "is_testnet" field.
+func (u *NetworkUpsertBulk) SetIsTestnet(v bool) *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetIsTestnet(v)
+	})
+}
+
+// UpdateIsTestnet sets the "is_testnet" field to the value that was provided on create.
+func (u *NetworkUpsertBulk) UpdateIsTestnet() *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateIsTestnet()
+	})
+}
+
+// SetBundlerURL sets the "bundler_url" field.
+func (u *NetworkUpsertBulk) SetBundlerURL(v string) *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetBundlerURL(v)
+	})
+}
+
+// UpdateBundlerURL sets the "bundler_url" field to the value that was provided on create.
+func (u *NetworkUpsertBulk) UpdateBundlerURL() *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateBundlerURL()
+	})
+}
+
+// ClearBundlerURL clears the value of the "bundler_url" field.
+func (u *NetworkUpsertBulk) ClearBundlerURL() *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.ClearBundlerURL()
+	})
+}
+
+// SetPaymasterURL sets the "paymaster_url" field.
+func (u *NetworkUpsertBulk) SetPaymasterURL(v string) *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetPaymasterURL(v)
+	})
+}
+
+// UpdatePaymasterURL sets the "paymaster_url" field to the value that was provided on create.
+func (u *NetworkUpsertBulk) UpdatePaymasterURL() *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdatePaymasterURL()
+	})
+}
+
+// ClearPaymasterURL clears the value of the "paymaster_url" field.
+func (u *NetworkUpsertBulk) ClearPaymasterURL() *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.ClearPaymasterURL()
+	})
+}
+
+// SetFee sets the "fee" field.
+func (u *NetworkUpsertBulk) SetFee(v decimal.Decimal) *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetFee(v)
+	})
+}
+
+// AddFee adds v to the "fee" field.
+func (u *NetworkUpsertBulk) AddFee(v decimal.Decimal) *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.AddFee(v)
+	})
+}
+
+// UpdateFee sets the "fee" field to the value that was provided on create.
+func (u *NetworkUpsertBulk) UpdateFee() *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateFee()
+	})
+}
+
+// Exec executes the query.
+func (u *NetworkUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the NetworkCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for NetworkCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *NetworkUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

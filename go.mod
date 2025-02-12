@@ -1,6 +1,8 @@
 module github.com/paycrest/aggregator
 
-go 1.22.0
+go 1.23.0
+
+toolchain go1.23.6
 
 require (
 	github.com/JGLTechnologies/gin-rate-limit v1.5.4
@@ -87,14 +89,14 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 	golang.org/x/sync v0.10.0 // indirect
-	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
+	golang.org/x/tools v0.24.0 // indirect
 	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
 require (
 	ariga.io/atlas v0.19.1-0.20240203083654-5948b60a8e43 // indirect
-	entgo.io/ent v0.14.0
+	entgo.io/ent v0.14.1
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
 	github.com/bytedance/sonic v1.10.0 // indirect
@@ -135,7 +137,7 @@ require (
 	github.com/zclconf/go-cty v1.13.2 // indirect
 	golang.org/x/arch v0.4.0 // indirect
 	golang.org/x/crypto v0.31.0
-	golang.org/x/mod v0.17.0 // indirect
+	golang.org/x/mod v0.20.0 // indirect
 	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect

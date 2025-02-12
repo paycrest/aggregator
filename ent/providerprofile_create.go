@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -26,6 +28,7 @@ type ProviderProfileCreate struct {
 	config
 	mutation *ProviderProfileMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetTradingName sets the "trading_name" field.
@@ -499,6 +502,7 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 		_node = &ProviderProfile{config: ppc.config}
 		_spec = sqlgraph.NewCreateSpec(providerprofile.Table, sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString))
 	)
+	_spec.OnConflict = ppc.conflict
 	if id, ok := ppc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = id
@@ -680,11 +684,654 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.ProviderProfile.Create().
+//		SetTradingName(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.ProviderProfileUpsert) {
+//			SetTradingName(v+v).
+//		}).
+//		Exec(ctx)
+func (ppc *ProviderProfileCreate) OnConflict(opts ...sql.ConflictOption) *ProviderProfileUpsertOne {
+	ppc.conflict = opts
+	return &ProviderProfileUpsertOne{
+		create: ppc,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.ProviderProfile.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (ppc *ProviderProfileCreate) OnConflictColumns(columns ...string) *ProviderProfileUpsertOne {
+	ppc.conflict = append(ppc.conflict, sql.ConflictColumns(columns...))
+	return &ProviderProfileUpsertOne{
+		create: ppc,
+	}
+}
+
+type (
+	// ProviderProfileUpsertOne is the builder for "upsert"-ing
+	//  one ProviderProfile node.
+	ProviderProfileUpsertOne struct {
+		create *ProviderProfileCreate
+	}
+
+	// ProviderProfileUpsert is the "OnConflict" setter.
+	ProviderProfileUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetTradingName sets the "trading_name" field.
+func (u *ProviderProfileUpsert) SetTradingName(v string) *ProviderProfileUpsert {
+	u.Set(providerprofile.FieldTradingName, v)
+	return u
+}
+
+// UpdateTradingName sets the "trading_name" field to the value that was provided on create.
+func (u *ProviderProfileUpsert) UpdateTradingName() *ProviderProfileUpsert {
+	u.SetExcluded(providerprofile.FieldTradingName)
+	return u
+}
+
+// ClearTradingName clears the value of the "trading_name" field.
+func (u *ProviderProfileUpsert) ClearTradingName() *ProviderProfileUpsert {
+	u.SetNull(providerprofile.FieldTradingName)
+	return u
+}
+
+// SetHostIdentifier sets the "host_identifier" field.
+func (u *ProviderProfileUpsert) SetHostIdentifier(v string) *ProviderProfileUpsert {
+	u.Set(providerprofile.FieldHostIdentifier, v)
+	return u
+}
+
+// UpdateHostIdentifier sets the "host_identifier" field to the value that was provided on create.
+func (u *ProviderProfileUpsert) UpdateHostIdentifier() *ProviderProfileUpsert {
+	u.SetExcluded(providerprofile.FieldHostIdentifier)
+	return u
+}
+
+// ClearHostIdentifier clears the value of the "host_identifier" field.
+func (u *ProviderProfileUpsert) ClearHostIdentifier() *ProviderProfileUpsert {
+	u.SetNull(providerprofile.FieldHostIdentifier)
+	return u
+}
+
+// SetProvisionMode sets the "provision_mode" field.
+func (u *ProviderProfileUpsert) SetProvisionMode(v providerprofile.ProvisionMode) *ProviderProfileUpsert {
+	u.Set(providerprofile.FieldProvisionMode, v)
+	return u
+}
+
+// UpdateProvisionMode sets the "provision_mode" field to the value that was provided on create.
+func (u *ProviderProfileUpsert) UpdateProvisionMode() *ProviderProfileUpsert {
+	u.SetExcluded(providerprofile.FieldProvisionMode)
+	return u
+}
+
+// SetIsActive sets the "is_active" field.
+func (u *ProviderProfileUpsert) SetIsActive(v bool) *ProviderProfileUpsert {
+	u.Set(providerprofile.FieldIsActive, v)
+	return u
+}
+
+// UpdateIsActive sets the "is_active" field to the value that was provided on create.
+func (u *ProviderProfileUpsert) UpdateIsActive() *ProviderProfileUpsert {
+	u.SetExcluded(providerprofile.FieldIsActive)
+	return u
+}
+
+// SetIsAvailable sets the "is_available" field.
+func (u *ProviderProfileUpsert) SetIsAvailable(v bool) *ProviderProfileUpsert {
+	u.Set(providerprofile.FieldIsAvailable, v)
+	return u
+}
+
+// UpdateIsAvailable sets the "is_available" field to the value that was provided on create.
+func (u *ProviderProfileUpsert) UpdateIsAvailable() *ProviderProfileUpsert {
+	u.SetExcluded(providerprofile.FieldIsAvailable)
+	return u
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *ProviderProfileUpsert) SetUpdatedAt(v time.Time) *ProviderProfileUpsert {
+	u.Set(providerprofile.FieldUpdatedAt, v)
+	return u
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *ProviderProfileUpsert) UpdateUpdatedAt() *ProviderProfileUpsert {
+	u.SetExcluded(providerprofile.FieldUpdatedAt)
+	return u
+}
+
+// SetVisibilityMode sets the "visibility_mode" field.
+func (u *ProviderProfileUpsert) SetVisibilityMode(v providerprofile.VisibilityMode) *ProviderProfileUpsert {
+	u.Set(providerprofile.FieldVisibilityMode, v)
+	return u
+}
+
+// UpdateVisibilityMode sets the "visibility_mode" field to the value that was provided on create.
+func (u *ProviderProfileUpsert) UpdateVisibilityMode() *ProviderProfileUpsert {
+	u.SetExcluded(providerprofile.FieldVisibilityMode)
+	return u
+}
+
+// SetAddress sets the "address" field.
+func (u *ProviderProfileUpsert) SetAddress(v string) *ProviderProfileUpsert {
+	u.Set(providerprofile.FieldAddress, v)
+	return u
+}
+
+// UpdateAddress sets the "address" field to the value that was provided on create.
+func (u *ProviderProfileUpsert) UpdateAddress() *ProviderProfileUpsert {
+	u.SetExcluded(providerprofile.FieldAddress)
+	return u
+}
+
+// ClearAddress clears the value of the "address" field.
+func (u *ProviderProfileUpsert) ClearAddress() *ProviderProfileUpsert {
+	u.SetNull(providerprofile.FieldAddress)
+	return u
+}
+
+// SetMobileNumber sets the "mobile_number" field.
+func (u *ProviderProfileUpsert) SetMobileNumber(v string) *ProviderProfileUpsert {
+	u.Set(providerprofile.FieldMobileNumber, v)
+	return u
+}
+
+// UpdateMobileNumber sets the "mobile_number" field to the value that was provided on create.
+func (u *ProviderProfileUpsert) UpdateMobileNumber() *ProviderProfileUpsert {
+	u.SetExcluded(providerprofile.FieldMobileNumber)
+	return u
+}
+
+// ClearMobileNumber clears the value of the "mobile_number" field.
+func (u *ProviderProfileUpsert) ClearMobileNumber() *ProviderProfileUpsert {
+	u.SetNull(providerprofile.FieldMobileNumber)
+	return u
+}
+
+// SetDateOfBirth sets the "date_of_birth" field.
+func (u *ProviderProfileUpsert) SetDateOfBirth(v time.Time) *ProviderProfileUpsert {
+	u.Set(providerprofile.FieldDateOfBirth, v)
+	return u
+}
+
+// UpdateDateOfBirth sets the "date_of_birth" field to the value that was provided on create.
+func (u *ProviderProfileUpsert) UpdateDateOfBirth() *ProviderProfileUpsert {
+	u.SetExcluded(providerprofile.FieldDateOfBirth)
+	return u
+}
+
+// ClearDateOfBirth clears the value of the "date_of_birth" field.
+func (u *ProviderProfileUpsert) ClearDateOfBirth() *ProviderProfileUpsert {
+	u.SetNull(providerprofile.FieldDateOfBirth)
+	return u
+}
+
+// SetBusinessName sets the "business_name" field.
+func (u *ProviderProfileUpsert) SetBusinessName(v string) *ProviderProfileUpsert {
+	u.Set(providerprofile.FieldBusinessName, v)
+	return u
+}
+
+// UpdateBusinessName sets the "business_name" field to the value that was provided on create.
+func (u *ProviderProfileUpsert) UpdateBusinessName() *ProviderProfileUpsert {
+	u.SetExcluded(providerprofile.FieldBusinessName)
+	return u
+}
+
+// ClearBusinessName clears the value of the "business_name" field.
+func (u *ProviderProfileUpsert) ClearBusinessName() *ProviderProfileUpsert {
+	u.SetNull(providerprofile.FieldBusinessName)
+	return u
+}
+
+// SetIdentityDocumentType sets the "identity_document_type" field.
+func (u *ProviderProfileUpsert) SetIdentityDocumentType(v providerprofile.IdentityDocumentType) *ProviderProfileUpsert {
+	u.Set(providerprofile.FieldIdentityDocumentType, v)
+	return u
+}
+
+// UpdateIdentityDocumentType sets the "identity_document_type" field to the value that was provided on create.
+func (u *ProviderProfileUpsert) UpdateIdentityDocumentType() *ProviderProfileUpsert {
+	u.SetExcluded(providerprofile.FieldIdentityDocumentType)
+	return u
+}
+
+// ClearIdentityDocumentType clears the value of the "identity_document_type" field.
+func (u *ProviderProfileUpsert) ClearIdentityDocumentType() *ProviderProfileUpsert {
+	u.SetNull(providerprofile.FieldIdentityDocumentType)
+	return u
+}
+
+// SetIdentityDocument sets the "identity_document" field.
+func (u *ProviderProfileUpsert) SetIdentityDocument(v string) *ProviderProfileUpsert {
+	u.Set(providerprofile.FieldIdentityDocument, v)
+	return u
+}
+
+// UpdateIdentityDocument sets the "identity_document" field to the value that was provided on create.
+func (u *ProviderProfileUpsert) UpdateIdentityDocument() *ProviderProfileUpsert {
+	u.SetExcluded(providerprofile.FieldIdentityDocument)
+	return u
+}
+
+// ClearIdentityDocument clears the value of the "identity_document" field.
+func (u *ProviderProfileUpsert) ClearIdentityDocument() *ProviderProfileUpsert {
+	u.SetNull(providerprofile.FieldIdentityDocument)
+	return u
+}
+
+// SetBusinessDocument sets the "business_document" field.
+func (u *ProviderProfileUpsert) SetBusinessDocument(v string) *ProviderProfileUpsert {
+	u.Set(providerprofile.FieldBusinessDocument, v)
+	return u
+}
+
+// UpdateBusinessDocument sets the "business_document" field to the value that was provided on create.
+func (u *ProviderProfileUpsert) UpdateBusinessDocument() *ProviderProfileUpsert {
+	u.SetExcluded(providerprofile.FieldBusinessDocument)
+	return u
+}
+
+// ClearBusinessDocument clears the value of the "business_document" field.
+func (u *ProviderProfileUpsert) ClearBusinessDocument() *ProviderProfileUpsert {
+	u.SetNull(providerprofile.FieldBusinessDocument)
+	return u
+}
+
+// SetIsKybVerified sets the "is_kyb_verified" field.
+func (u *ProviderProfileUpsert) SetIsKybVerified(v bool) *ProviderProfileUpsert {
+	u.Set(providerprofile.FieldIsKybVerified, v)
+	return u
+}
+
+// UpdateIsKybVerified sets the "is_kyb_verified" field to the value that was provided on create.
+func (u *ProviderProfileUpsert) UpdateIsKybVerified() *ProviderProfileUpsert {
+	u.SetExcluded(providerprofile.FieldIsKybVerified)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
+// Using this option is equivalent to using:
+//
+//	client.ProviderProfile.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(providerprofile.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *ProviderProfileUpsertOne) UpdateNewValues() *ProviderProfileUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(providerprofile.FieldID)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.ProviderProfile.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *ProviderProfileUpsertOne) Ignore() *ProviderProfileUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *ProviderProfileUpsertOne) DoNothing() *ProviderProfileUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the ProviderProfileCreate.OnConflict
+// documentation for more info.
+func (u *ProviderProfileUpsertOne) Update(set func(*ProviderProfileUpsert)) *ProviderProfileUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&ProviderProfileUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetTradingName sets the "trading_name" field.
+func (u *ProviderProfileUpsertOne) SetTradingName(v string) *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetTradingName(v)
+	})
+}
+
+// UpdateTradingName sets the "trading_name" field to the value that was provided on create.
+func (u *ProviderProfileUpsertOne) UpdateTradingName() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateTradingName()
+	})
+}
+
+// ClearTradingName clears the value of the "trading_name" field.
+func (u *ProviderProfileUpsertOne) ClearTradingName() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.ClearTradingName()
+	})
+}
+
+// SetHostIdentifier sets the "host_identifier" field.
+func (u *ProviderProfileUpsertOne) SetHostIdentifier(v string) *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetHostIdentifier(v)
+	})
+}
+
+// UpdateHostIdentifier sets the "host_identifier" field to the value that was provided on create.
+func (u *ProviderProfileUpsertOne) UpdateHostIdentifier() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateHostIdentifier()
+	})
+}
+
+// ClearHostIdentifier clears the value of the "host_identifier" field.
+func (u *ProviderProfileUpsertOne) ClearHostIdentifier() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.ClearHostIdentifier()
+	})
+}
+
+// SetProvisionMode sets the "provision_mode" field.
+func (u *ProviderProfileUpsertOne) SetProvisionMode(v providerprofile.ProvisionMode) *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetProvisionMode(v)
+	})
+}
+
+// UpdateProvisionMode sets the "provision_mode" field to the value that was provided on create.
+func (u *ProviderProfileUpsertOne) UpdateProvisionMode() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateProvisionMode()
+	})
+}
+
+// SetIsActive sets the "is_active" field.
+func (u *ProviderProfileUpsertOne) SetIsActive(v bool) *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetIsActive(v)
+	})
+}
+
+// UpdateIsActive sets the "is_active" field to the value that was provided on create.
+func (u *ProviderProfileUpsertOne) UpdateIsActive() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateIsActive()
+	})
+}
+
+// SetIsAvailable sets the "is_available" field.
+func (u *ProviderProfileUpsertOne) SetIsAvailable(v bool) *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetIsAvailable(v)
+	})
+}
+
+// UpdateIsAvailable sets the "is_available" field to the value that was provided on create.
+func (u *ProviderProfileUpsertOne) UpdateIsAvailable() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateIsAvailable()
+	})
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *ProviderProfileUpsertOne) SetUpdatedAt(v time.Time) *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetUpdatedAt(v)
+	})
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *ProviderProfileUpsertOne) UpdateUpdatedAt() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateUpdatedAt()
+	})
+}
+
+// SetVisibilityMode sets the "visibility_mode" field.
+func (u *ProviderProfileUpsertOne) SetVisibilityMode(v providerprofile.VisibilityMode) *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetVisibilityMode(v)
+	})
+}
+
+// UpdateVisibilityMode sets the "visibility_mode" field to the value that was provided on create.
+func (u *ProviderProfileUpsertOne) UpdateVisibilityMode() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateVisibilityMode()
+	})
+}
+
+// SetAddress sets the "address" field.
+func (u *ProviderProfileUpsertOne) SetAddress(v string) *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetAddress(v)
+	})
+}
+
+// UpdateAddress sets the "address" field to the value that was provided on create.
+func (u *ProviderProfileUpsertOne) UpdateAddress() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateAddress()
+	})
+}
+
+// ClearAddress clears the value of the "address" field.
+func (u *ProviderProfileUpsertOne) ClearAddress() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.ClearAddress()
+	})
+}
+
+// SetMobileNumber sets the "mobile_number" field.
+func (u *ProviderProfileUpsertOne) SetMobileNumber(v string) *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetMobileNumber(v)
+	})
+}
+
+// UpdateMobileNumber sets the "mobile_number" field to the value that was provided on create.
+func (u *ProviderProfileUpsertOne) UpdateMobileNumber() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateMobileNumber()
+	})
+}
+
+// ClearMobileNumber clears the value of the "mobile_number" field.
+func (u *ProviderProfileUpsertOne) ClearMobileNumber() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.ClearMobileNumber()
+	})
+}
+
+// SetDateOfBirth sets the "date_of_birth" field.
+func (u *ProviderProfileUpsertOne) SetDateOfBirth(v time.Time) *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetDateOfBirth(v)
+	})
+}
+
+// UpdateDateOfBirth sets the "date_of_birth" field to the value that was provided on create.
+func (u *ProviderProfileUpsertOne) UpdateDateOfBirth() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateDateOfBirth()
+	})
+}
+
+// ClearDateOfBirth clears the value of the "date_of_birth" field.
+func (u *ProviderProfileUpsertOne) ClearDateOfBirth() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.ClearDateOfBirth()
+	})
+}
+
+// SetBusinessName sets the "business_name" field.
+func (u *ProviderProfileUpsertOne) SetBusinessName(v string) *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetBusinessName(v)
+	})
+}
+
+// UpdateBusinessName sets the "business_name" field to the value that was provided on create.
+func (u *ProviderProfileUpsertOne) UpdateBusinessName() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateBusinessName()
+	})
+}
+
+// ClearBusinessName clears the value of the "business_name" field.
+func (u *ProviderProfileUpsertOne) ClearBusinessName() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.ClearBusinessName()
+	})
+}
+
+// SetIdentityDocumentType sets the "identity_document_type" field.
+func (u *ProviderProfileUpsertOne) SetIdentityDocumentType(v providerprofile.IdentityDocumentType) *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetIdentityDocumentType(v)
+	})
+}
+
+// UpdateIdentityDocumentType sets the "identity_document_type" field to the value that was provided on create.
+func (u *ProviderProfileUpsertOne) UpdateIdentityDocumentType() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateIdentityDocumentType()
+	})
+}
+
+// ClearIdentityDocumentType clears the value of the "identity_document_type" field.
+func (u *ProviderProfileUpsertOne) ClearIdentityDocumentType() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.ClearIdentityDocumentType()
+	})
+}
+
+// SetIdentityDocument sets the "identity_document" field.
+func (u *ProviderProfileUpsertOne) SetIdentityDocument(v string) *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetIdentityDocument(v)
+	})
+}
+
+// UpdateIdentityDocument sets the "identity_document" field to the value that was provided on create.
+func (u *ProviderProfileUpsertOne) UpdateIdentityDocument() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateIdentityDocument()
+	})
+}
+
+// ClearIdentityDocument clears the value of the "identity_document" field.
+func (u *ProviderProfileUpsertOne) ClearIdentityDocument() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.ClearIdentityDocument()
+	})
+}
+
+// SetBusinessDocument sets the "business_document" field.
+func (u *ProviderProfileUpsertOne) SetBusinessDocument(v string) *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetBusinessDocument(v)
+	})
+}
+
+// UpdateBusinessDocument sets the "business_document" field to the value that was provided on create.
+func (u *ProviderProfileUpsertOne) UpdateBusinessDocument() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateBusinessDocument()
+	})
+}
+
+// ClearBusinessDocument clears the value of the "business_document" field.
+func (u *ProviderProfileUpsertOne) ClearBusinessDocument() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.ClearBusinessDocument()
+	})
+}
+
+// SetIsKybVerified sets the "is_kyb_verified" field.
+func (u *ProviderProfileUpsertOne) SetIsKybVerified(v bool) *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetIsKybVerified(v)
+	})
+}
+
+// UpdateIsKybVerified sets the "is_kyb_verified" field to the value that was provided on create.
+func (u *ProviderProfileUpsertOne) UpdateIsKybVerified() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateIsKybVerified()
+	})
+}
+
+// Exec executes the query.
+func (u *ProviderProfileUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for ProviderProfileCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *ProviderProfileUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *ProviderProfileUpsertOne) ID(ctx context.Context) (id string, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: ProviderProfileUpsertOne.ID is not supported by MySQL driver. Use ProviderProfileUpsertOne.Exec instead")
+	}
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *ProviderProfileUpsertOne) IDX(ctx context.Context) string {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // ProviderProfileCreateBulk is the builder for creating many ProviderProfile entities in bulk.
 type ProviderProfileCreateBulk struct {
 	config
 	err      error
 	builders []*ProviderProfileCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the ProviderProfile entities in the database.
@@ -714,6 +1361,7 @@ func (ppcb *ProviderProfileCreateBulk) Save(ctx context.Context) ([]*ProviderPro
 					_, err = mutators[i+1].Mutate(root, ppcb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = ppcb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, ppcb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -760,6 +1408,393 @@ func (ppcb *ProviderProfileCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (ppcb *ProviderProfileCreateBulk) ExecX(ctx context.Context) {
 	if err := ppcb.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.ProviderProfile.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.ProviderProfileUpsert) {
+//			SetTradingName(v+v).
+//		}).
+//		Exec(ctx)
+func (ppcb *ProviderProfileCreateBulk) OnConflict(opts ...sql.ConflictOption) *ProviderProfileUpsertBulk {
+	ppcb.conflict = opts
+	return &ProviderProfileUpsertBulk{
+		create: ppcb,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.ProviderProfile.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (ppcb *ProviderProfileCreateBulk) OnConflictColumns(columns ...string) *ProviderProfileUpsertBulk {
+	ppcb.conflict = append(ppcb.conflict, sql.ConflictColumns(columns...))
+	return &ProviderProfileUpsertBulk{
+		create: ppcb,
+	}
+}
+
+// ProviderProfileUpsertBulk is the builder for "upsert"-ing
+// a bulk of ProviderProfile nodes.
+type ProviderProfileUpsertBulk struct {
+	create *ProviderProfileCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.ProviderProfile.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(providerprofile.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *ProviderProfileUpsertBulk) UpdateNewValues() *ProviderProfileUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(providerprofile.FieldID)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.ProviderProfile.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *ProviderProfileUpsertBulk) Ignore() *ProviderProfileUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *ProviderProfileUpsertBulk) DoNothing() *ProviderProfileUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the ProviderProfileCreateBulk.OnConflict
+// documentation for more info.
+func (u *ProviderProfileUpsertBulk) Update(set func(*ProviderProfileUpsert)) *ProviderProfileUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&ProviderProfileUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetTradingName sets the "trading_name" field.
+func (u *ProviderProfileUpsertBulk) SetTradingName(v string) *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetTradingName(v)
+	})
+}
+
+// UpdateTradingName sets the "trading_name" field to the value that was provided on create.
+func (u *ProviderProfileUpsertBulk) UpdateTradingName() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateTradingName()
+	})
+}
+
+// ClearTradingName clears the value of the "trading_name" field.
+func (u *ProviderProfileUpsertBulk) ClearTradingName() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.ClearTradingName()
+	})
+}
+
+// SetHostIdentifier sets the "host_identifier" field.
+func (u *ProviderProfileUpsertBulk) SetHostIdentifier(v string) *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetHostIdentifier(v)
+	})
+}
+
+// UpdateHostIdentifier sets the "host_identifier" field to the value that was provided on create.
+func (u *ProviderProfileUpsertBulk) UpdateHostIdentifier() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateHostIdentifier()
+	})
+}
+
+// ClearHostIdentifier clears the value of the "host_identifier" field.
+func (u *ProviderProfileUpsertBulk) ClearHostIdentifier() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.ClearHostIdentifier()
+	})
+}
+
+// SetProvisionMode sets the "provision_mode" field.
+func (u *ProviderProfileUpsertBulk) SetProvisionMode(v providerprofile.ProvisionMode) *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetProvisionMode(v)
+	})
+}
+
+// UpdateProvisionMode sets the "provision_mode" field to the value that was provided on create.
+func (u *ProviderProfileUpsertBulk) UpdateProvisionMode() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateProvisionMode()
+	})
+}
+
+// SetIsActive sets the "is_active" field.
+func (u *ProviderProfileUpsertBulk) SetIsActive(v bool) *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetIsActive(v)
+	})
+}
+
+// UpdateIsActive sets the "is_active" field to the value that was provided on create.
+func (u *ProviderProfileUpsertBulk) UpdateIsActive() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateIsActive()
+	})
+}
+
+// SetIsAvailable sets the "is_available" field.
+func (u *ProviderProfileUpsertBulk) SetIsAvailable(v bool) *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetIsAvailable(v)
+	})
+}
+
+// UpdateIsAvailable sets the "is_available" field to the value that was provided on create.
+func (u *ProviderProfileUpsertBulk) UpdateIsAvailable() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateIsAvailable()
+	})
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *ProviderProfileUpsertBulk) SetUpdatedAt(v time.Time) *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetUpdatedAt(v)
+	})
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *ProviderProfileUpsertBulk) UpdateUpdatedAt() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateUpdatedAt()
+	})
+}
+
+// SetVisibilityMode sets the "visibility_mode" field.
+func (u *ProviderProfileUpsertBulk) SetVisibilityMode(v providerprofile.VisibilityMode) *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetVisibilityMode(v)
+	})
+}
+
+// UpdateVisibilityMode sets the "visibility_mode" field to the value that was provided on create.
+func (u *ProviderProfileUpsertBulk) UpdateVisibilityMode() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateVisibilityMode()
+	})
+}
+
+// SetAddress sets the "address" field.
+func (u *ProviderProfileUpsertBulk) SetAddress(v string) *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetAddress(v)
+	})
+}
+
+// UpdateAddress sets the "address" field to the value that was provided on create.
+func (u *ProviderProfileUpsertBulk) UpdateAddress() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateAddress()
+	})
+}
+
+// ClearAddress clears the value of the "address" field.
+func (u *ProviderProfileUpsertBulk) ClearAddress() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.ClearAddress()
+	})
+}
+
+// SetMobileNumber sets the "mobile_number" field.
+func (u *ProviderProfileUpsertBulk) SetMobileNumber(v string) *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetMobileNumber(v)
+	})
+}
+
+// UpdateMobileNumber sets the "mobile_number" field to the value that was provided on create.
+func (u *ProviderProfileUpsertBulk) UpdateMobileNumber() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateMobileNumber()
+	})
+}
+
+// ClearMobileNumber clears the value of the "mobile_number" field.
+func (u *ProviderProfileUpsertBulk) ClearMobileNumber() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.ClearMobileNumber()
+	})
+}
+
+// SetDateOfBirth sets the "date_of_birth" field.
+func (u *ProviderProfileUpsertBulk) SetDateOfBirth(v time.Time) *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetDateOfBirth(v)
+	})
+}
+
+// UpdateDateOfBirth sets the "date_of_birth" field to the value that was provided on create.
+func (u *ProviderProfileUpsertBulk) UpdateDateOfBirth() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateDateOfBirth()
+	})
+}
+
+// ClearDateOfBirth clears the value of the "date_of_birth" field.
+func (u *ProviderProfileUpsertBulk) ClearDateOfBirth() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.ClearDateOfBirth()
+	})
+}
+
+// SetBusinessName sets the "business_name" field.
+func (u *ProviderProfileUpsertBulk) SetBusinessName(v string) *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetBusinessName(v)
+	})
+}
+
+// UpdateBusinessName sets the "business_name" field to the value that was provided on create.
+func (u *ProviderProfileUpsertBulk) UpdateBusinessName() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateBusinessName()
+	})
+}
+
+// ClearBusinessName clears the value of the "business_name" field.
+func (u *ProviderProfileUpsertBulk) ClearBusinessName() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.ClearBusinessName()
+	})
+}
+
+// SetIdentityDocumentType sets the "identity_document_type" field.
+func (u *ProviderProfileUpsertBulk) SetIdentityDocumentType(v providerprofile.IdentityDocumentType) *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetIdentityDocumentType(v)
+	})
+}
+
+// UpdateIdentityDocumentType sets the "identity_document_type" field to the value that was provided on create.
+func (u *ProviderProfileUpsertBulk) UpdateIdentityDocumentType() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateIdentityDocumentType()
+	})
+}
+
+// ClearIdentityDocumentType clears the value of the "identity_document_type" field.
+func (u *ProviderProfileUpsertBulk) ClearIdentityDocumentType() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.ClearIdentityDocumentType()
+	})
+}
+
+// SetIdentityDocument sets the "identity_document" field.
+func (u *ProviderProfileUpsertBulk) SetIdentityDocument(v string) *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetIdentityDocument(v)
+	})
+}
+
+// UpdateIdentityDocument sets the "identity_document" field to the value that was provided on create.
+func (u *ProviderProfileUpsertBulk) UpdateIdentityDocument() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateIdentityDocument()
+	})
+}
+
+// ClearIdentityDocument clears the value of the "identity_document" field.
+func (u *ProviderProfileUpsertBulk) ClearIdentityDocument() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.ClearIdentityDocument()
+	})
+}
+
+// SetBusinessDocument sets the "business_document" field.
+func (u *ProviderProfileUpsertBulk) SetBusinessDocument(v string) *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetBusinessDocument(v)
+	})
+}
+
+// UpdateBusinessDocument sets the "business_document" field to the value that was provided on create.
+func (u *ProviderProfileUpsertBulk) UpdateBusinessDocument() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateBusinessDocument()
+	})
+}
+
+// ClearBusinessDocument clears the value of the "business_document" field.
+func (u *ProviderProfileUpsertBulk) ClearBusinessDocument() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.ClearBusinessDocument()
+	})
+}
+
+// SetIsKybVerified sets the "is_kyb_verified" field.
+func (u *ProviderProfileUpsertBulk) SetIsKybVerified(v bool) *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetIsKybVerified(v)
+	})
+}
+
+// UpdateIsKybVerified sets the "is_kyb_verified" field to the value that was provided on create.
+func (u *ProviderProfileUpsertBulk) UpdateIsKybVerified() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateIsKybVerified()
+	})
+}
+
+// Exec executes the query.
+func (u *ProviderProfileUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the ProviderProfileCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for ProviderProfileCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *ProviderProfileUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
