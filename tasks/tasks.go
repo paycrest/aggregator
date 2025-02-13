@@ -82,7 +82,9 @@ func setRPCClients(ctx context.Context) ([]*ent.Network, error) {
 
 // RetryStaleUserOperations retries stale user operations
 func RetryStaleUserOperations() error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
+	defer cancel()
+
 	var wg sync.WaitGroup
 
 	// Establish RPC connections
@@ -264,7 +266,9 @@ func RetryStaleUserOperations() error {
 
 // IndexBlockchainEvents indexes missed blocks
 func IndexBlockchainEvents() error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
+	defer cancel()
+
 	var wg sync.WaitGroup
 
 	time.Sleep(100 * time.Millisecond) // to keep out of sync with other tasks
@@ -506,7 +510,8 @@ func IndexBlockchainEvents() error {
 
 // IndexLinkAddresses indexes ERC20 transfer events to linked addresses
 func IndexLinkedAddresses() error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
 	// Establish RPC connections
 	_, err := setRPCClients(ctx)
@@ -547,7 +552,8 @@ func IndexLinkedAddresses() error {
 
 // ReassignPendingOrders reassigns declined order requests to providers
 func ReassignPendingOrders() {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
 	// Remove provider id from pending lock orders
 	_, err := storage.Client.LockPaymentOrder.
@@ -622,7 +628,8 @@ func ReassignPendingOrders() {
 
 // SyncLockOrderFulfillments syncs lock order fulfillments
 func SyncLockOrderFulfillments() {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
 	// Query unvalidated lock orders.
 	lockOrders, err := storage.Client.LockPaymentOrder.
@@ -975,7 +982,8 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 }
 
 func FixDatabaseMisHap() error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
 	// parse string to uuid
 	orderUUID, err := uuid.Parse("14baa582-84d9-40bf-96b8-94601d6ffe2b")
@@ -1010,7 +1018,8 @@ func FixDatabaseMisHap() error {
 
 // HandleReceiveAddressValidity handles receive address validity
 func HandleReceiveAddressValidity() error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
 	// Establish RPC connections
 	_, err := setRPCClients(ctx)
@@ -1064,7 +1073,8 @@ func HandleReceiveAddressValidity() error {
 
 // SubscribeToRedisKeyspaceEvents subscribes to redis keyspace events according to redis.conf settings
 func SubscribeToRedisKeyspaceEvents() {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
 	// Handle expired or deleted order request key events
 	orderRequest := storage.RedisClient.PSubscribe(
@@ -1167,7 +1177,8 @@ func fetchExternalRate(currency string) (decimal.Decimal, error) {
 
 // ComputeMarketRate computes the market price for fiat currencies
 func ComputeMarketRate() error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
 	// Fetch all fiat currencies
 	currencies, err := storage.Client.FiatCurrency.
@@ -1227,7 +1238,8 @@ func ComputeMarketRate() error {
 
 // Retry failed webhook notifications
 func RetryFailedWebhookNotifications() error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
 
 	// Fetch failed webhook notifications that are due for retry
 	attempts, err := storage.Client.WebhookRetryAttempt.
@@ -1279,7 +1291,8 @@ func RetryFailedWebhookNotifications() error {
 					Where(
 						senderprofile.IDEQ(uid),
 					).
-					WithUser().Only(ctx)
+					WithUser().
+					Only(ctx)
 				if err != nil {
 					return fmt.Errorf("RetryFailedWebhookNotifications.CouldNotFetchProfile: %w", err)
 				}
