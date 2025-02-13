@@ -121,7 +121,7 @@ func RetryStaleUserOperations() error {
 	}
 
 	wg.Add(1)
-	go func() {
+	go func(ctx context.Context) {
 		defer wg.Done()
 		for _, order := range orders {
 			orderAmountWithFees := order.Amount.Add(order.NetworkFee).Add(order.SenderFee).Add(order.ProtocolFee)
@@ -138,7 +138,7 @@ func RetryStaleUserOperations() error {
 				}
 			}
 		}
-	}()
+	}(ctx)
 
 	// Settle order process
 	lockOrders, err := storage.Client.LockPaymentOrder.
@@ -159,7 +159,7 @@ func RetryStaleUserOperations() error {
 	}
 
 	wg.Add(1)
-	go func() {
+	go func(ctx context.Context) {
 		defer wg.Done()
 		for _, order := range lockOrders {
 			var service types.OrderService
@@ -173,7 +173,7 @@ func RetryStaleUserOperations() error {
 				logger.Errorf("RetryStaleUserOperations.SettleOrder: %v", err)
 			}
 		}
-	}()
+	}(ctx)
 
 	// Refund order process
 	lockOrders, err = storage.Client.LockPaymentOrder.
@@ -218,7 +218,7 @@ func RetryStaleUserOperations() error {
 	}
 
 	wg.Add(1)
-	go func() {
+	go func(ctx context.Context) {
 		defer wg.Done()
 		for _, order := range lockOrders {
 			var service types.OrderService
@@ -232,7 +232,7 @@ func RetryStaleUserOperations() error {
 				logger.Errorf("RetryStaleUserOperations.RefundOrder: %v", err)
 			}
 		}
-	}()
+	}(ctx)
 
 	// Retry refunded linked address deposits
 	orders, err = storage.Client.PaymentOrder.
@@ -250,7 +250,7 @@ func RetryStaleUserOperations() error {
 	}
 
 	wg.Add(1)
-	go func() {
+	go func(ctx context.Context) {
 		defer wg.Done()
 		for _, order := range orders {
 			service := orderService.NewOrderEVM()
@@ -259,7 +259,7 @@ func RetryStaleUserOperations() error {
 				logger.Errorf("RetryStaleUserOperations.RetryLinkedAddress: %v", err)
 			}
 		}
-	}()
+	}(ctx)
 
 	return nil
 }
@@ -281,7 +281,7 @@ func IndexBlockchainEvents() error {
 
 	// Index ERC20 transfer events
 	wg.Add(1)
-	go func() {
+	go func(ctx context.Context) {
 		defer wg.Done()
 		_ = utils.Retry(10, 2*time.Second, func() error {
 			orders, err := storage.Client.PaymentOrder.
@@ -323,11 +323,11 @@ func IndexBlockchainEvents() error {
 
 			return fmt.Errorf("trigger retry")
 		})
-	}()
+	}(ctx)
 
 	// Index OrderCreated events
 	wg.Add(1)
-	go func() {
+	go func(ctx context.Context) {
 		defer wg.Done()
 		time.Sleep(500 * time.Millisecond)
 		_ = utils.Retry(10, 2*time.Second, func() error {
@@ -386,11 +386,11 @@ func IndexBlockchainEvents() error {
 
 			return fmt.Errorf("trigger retry")
 		})
-	}()
+	}(ctx)
 
 	// Index OrderSettled events
 	wg.Add(1)
-	go func() {
+	go func(ctx context.Context) {
 		defer wg.Done()
 		time.Sleep(1000 * time.Millisecond)
 		_ = utils.Retry(10, 2*time.Second, func() error {
@@ -443,11 +443,11 @@ func IndexBlockchainEvents() error {
 
 			return fmt.Errorf("trigger retry")
 		})
-	}()
+	}(ctx)
 
 	// Index OrderRefunded events
 	wg.Add(1)
-	go func() {
+	go func(ctx context.Context) {
 		defer wg.Done()
 		time.Sleep(1500 * time.Millisecond)
 		_ = utils.Retry(10, 2*time.Second, func() error {
@@ -503,7 +503,7 @@ func IndexBlockchainEvents() error {
 
 			return fmt.Errorf("trigger retry")
 		})
-	}()
+	}(ctx)
 
 	return nil
 }
@@ -519,7 +519,7 @@ func IndexLinkedAddresses() error {
 		return fmt.Errorf("IndexLinkedAddresses: %w", err)
 	}
 
-	go func() {
+	go func(ctx context.Context) {
 		time.Sleep(500 * time.Millisecond)
 		_ = utils.Retry(8, 2*time.Second, func() error {
 			tokens, err := storage.Client.Token.
@@ -545,7 +545,7 @@ func IndexLinkedAddresses() error {
 
 			return fmt.Errorf("trigger retry")
 		})
-	}()
+	}(ctx)
 
 	return nil
 }
