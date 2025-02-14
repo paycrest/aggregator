@@ -86,9 +86,11 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 	}
 
 	// Connect to RPC endpoint
-	client, err = types.NewEthClient(token.Edges.Network.RPCEndpoint)
-	if err != nil {
-		return err
+	if client == nil {
+		client, err = types.NewEthClient(token.Edges.Network.RPCEndpoint)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Initialize contract filterer
@@ -424,7 +426,9 @@ func (s *IndexerService) IndexOrderCreated(ctx context.Context, client types.RPC
 	// Fetch current block header
 	header, err := client.HeaderByNumber(ctx, nil)
 	if err != nil {
-		logger.Errorf("IndexOrderCreated.HeaderByNumber: %v", err)
+		if err != context.Canceled {
+			logger.Errorf("IndexOrderCreated.HeaderByNumber: %v", err)
+		}
 		return err
 	}
 	toBlock := header.Number.Uint64()
@@ -561,7 +565,9 @@ func (s *IndexerService) IndexOrderSettled(ctx context.Context, client types.RPC
 	// Filter logs from the oldest indexed to the latest
 	header, err := client.HeaderByNumber(ctx, nil)
 	if err != nil {
-		logger.Errorf("IndexOrderSettled.HeaderByNumber: %v", err)
+		if err != context.Canceled {
+			logger.Errorf("IndexOrderSettled.HeaderByNumber: %v", err)
+		}
 		return err
 	}
 	toBlock := header.Number.Uint64()
@@ -690,7 +696,9 @@ func (s *IndexerService) IndexOrderRefunded(ctx context.Context, client types.RP
 	// Filter logs from the oldest indexed to the latest
 	header, err := client.HeaderByNumber(ctx, nil)
 	if err != nil {
-		logger.Errorf("IndexOrderRefunded.HeaderByNumber: %v", err)
+		if err != context.Canceled {
+			logger.Errorf("IndexOrderRefunded.HeaderByNumber: %v", err)
+		}
 		return err
 	}
 	toBlock := header.Number.Uint64()

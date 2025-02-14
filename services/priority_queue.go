@@ -31,7 +31,7 @@ func NewPriorityQueueService() *PriorityQueueService {
 
 // ProcessBucketQueues creates a priority queue for each bucket and saves it to redis
 func (s *PriorityQueueService) ProcessBucketQueues() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
 	buckets, err := s.GetProvisionBuckets(ctx)
@@ -113,11 +113,13 @@ func (s *PriorityQueueService) GetProviderRate(ctx context.Context, provider *en
 }
 
 // deleteQueue deletes existing circular queue
-func (s *PriorityQueueService) deleteQueue(ctx context.Context, key string) {
+func (s *PriorityQueueService) deleteQueue(ctx context.Context, key string) error {
 	_, err := storage.RedisClient.Del(ctx, key).Result()
 	if err != nil {
-		logger.Errorf("failed to delete existing circular queue: %v", err)
+		return err
 	}
+
+	return nil
 }
 
 // CreatePriorityQueueForBucket creates a priority queue for a bucket and saves it to redis
@@ -133,7 +135,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 	redisKey := fmt.Sprintf("bucket_%s_%s_%s", bucket.Edges.Currency.Code, bucket.MinAmount, bucket.MaxAmount)
 
 	prevData, err := storage.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
-	if err != nil {
+	if err != nil && err != context.Canceled {
 		logger.Errorf("failed to fetch provider rates: %v", err)
 	}
 
@@ -146,11 +148,14 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 	// Store previous provider data
 	prevRedisKey := redisKey + "_prev"
 	err = storage.RedisClient.RPush(ctx, prevRedisKey, prevValues...).Err()
-	if err != nil {
+	if err != nil && err != context.Canceled {
 		logger.Errorf("failed to store previous provider rates: %v", err)
 	}
 
-	s.deleteQueue(ctx, redisKey)
+	err = s.deleteQueue(ctx, redisKey)
+	if err != nil && err != context.Canceled {
+		logger.Errorf("failed to delete existing circular queue: %v", err)
+	}
 
 	for _, provider := range providers {
 		tokens, err := storage.Client.ProviderOrderToken.
@@ -161,7 +166,9 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 			Select(providerordertoken.FieldSymbol, providerordertoken.FieldMinOrderAmount, providerordertoken.FieldMaxOrderAmount).
 			All(ctx)
 		if err != nil {
-			logger.Errorf("failed to get tokens for provider %s: %v", provider.ID, err)
+			if err != context.Canceled {
+				logger.Errorf("failed to get tokens for provider %s: %v", provider.ID, err)
+			}
 			continue
 		}
 
@@ -169,7 +176,9 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 			providerID := provider.ID
 			rate, err := s.GetProviderRate(ctx, provider, token.Symbol)
 			if err != nil {
-				logger.Errorf("failed to get %s rate for provider %s: %v", token.Symbol, providerID, err)
+				if err != context.Canceled {
+					logger.Errorf("failed to get %s rate for provider %s: %v", token.Symbol, providerID, err)
+				}
 				continue
 			}
 
@@ -187,7 +196,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 
 			// Enqueue the serialized data into the circular queue
 			err = storage.RedisClient.RPush(ctx, redisKey, data).Err()
-			if err != nil {
+			if err != nil && err != context.Canceled {
 				logger.Errorf("failed to enqueue provider data to circular queue: %v", err)
 			}
 		}
@@ -254,11 +263,9 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 	if err != nil {
 		prevRedisKey := redisKey + "_prev"
 		err = s.matchRate(ctx, prevRedisKey, orderIDPrefix, order, excludeList)
-		s.deleteQueue(ctx, prevRedisKey)
 		if err != nil {
 			return err
 		}
-
 	}
 
 	return nil

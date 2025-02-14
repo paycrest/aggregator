@@ -17,7 +17,7 @@ type OrderConfiguration struct {
 	OrderRequestValidity             time.Duration
 	TronProApiKey                    string
 	EntryPointContractAddress        common.Address
-	BucketQueueRebuildInterval       int // in hours
+	BucketQueueRebuildInterval       int
 	RefundCancellationCount          int
 	PercentDeviationFromExternalRate decimal.Decimal
 	PercentDeviationFromMarketRate   decimal.Decimal

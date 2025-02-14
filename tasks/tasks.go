@@ -266,15 +266,16 @@ func RetryStaleUserOperations() error {
 
 // IndexBlockchainEvents indexes missed blocks
 func IndexBlockchainEvents() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
-	defer cancel()
 
 	var wg sync.WaitGroup
 
 	time.Sleep(100 * time.Millisecond) // to keep out of sync with other tasks
 
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
+	defer cancel()
+
 	// Establish RPC connections
-	networks, err := setRPCClients(ctx)
+	networks, err := setRPCClients(context.Background())
 	if err != nil {
 		return fmt.Errorf("IndexBlockchainEvents: %w", err)
 	}
@@ -299,7 +300,7 @@ func IndexBlockchainEvents() error {
 				WithReceiveAddress().
 				WithRecipient().
 				All(ctx)
-			if err != nil {
+			if err != nil && err != context.Canceled {
 				logger.Errorf("IndexBlockchainEvents: %v", err)
 			}
 
@@ -419,7 +420,7 @@ func IndexBlockchainEvents() error {
 						}).
 						Order(ent.Asc(lockpaymentorder.FieldBlockNumber)).
 						All(ctx)
-					if err != nil {
+					if err != nil && err != context.Canceled {
 						logger.Errorf("IndexBlockchainEvents: %v", err)
 					}
 
@@ -479,7 +480,7 @@ func IndexBlockchainEvents() error {
 						}).
 						Order(ent.Asc(lockpaymentorder.FieldBlockNumber)).
 						All(ctx)
-					if err != nil {
+					if err != nil && err != context.Canceled {
 						logger.Errorf("IndexBlockchainEvents: %v", err)
 					}
 
@@ -529,7 +530,7 @@ func IndexLinkedAddresses() error {
 				).
 				WithNetwork().
 				All(ctx)
-			if err != nil {
+			if err != nil && err != context.Canceled {
 				logger.Errorf("IndexLinkedAddresses: %v", err)
 			}
 
