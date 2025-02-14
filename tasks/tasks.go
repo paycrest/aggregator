@@ -1279,7 +1279,8 @@ func RetryFailedWebhookNotifications() error {
 				}
 
 				_, err = services.SendTemplateEmail(types.SendEmailPayload{
-					ToAddress: profile.Edges.User.Email,
+					FromAddress: config.NotificationConfig().EmailFromAddress,
+					ToAddress:   profile.Edges.User.Email,
 					DynamicData: map[string]interface{}{
 						"first_name": profile.Edges.User.FirstName,
 					},

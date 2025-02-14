@@ -264,7 +264,7 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 	if err != nil {
 		prevRedisKey := redisKey + "_prev"
 		err = s.matchRate(ctx, prevRedisKey, orderIDPrefix, order, excludeList)
-		if err != nil {
+		if err != nil && !strings.Contains(err.Error(), "redis: nil") {
 			return err
 		}
 	}
