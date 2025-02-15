@@ -694,7 +694,7 @@ func (s *OrderTron) callMethod(ct *core.TriggerSmartContract) (*api.TransactionE
 	}
 
 	if tx.Result.Code > 0 {
-		return tx, fmt.Errorf(string(tx.Result.Message))
+		return tx, fmt.Errorf("%s", string(tx.Result.Message))
 	}
 
 	return tx, nil
@@ -728,7 +728,7 @@ func (s *OrderTron) sendTransaction(wallet *tronWallet.TronWallet, ct *core.Trig
 	}
 
 	if tx.Result.Code > 0 {
-		return "", fmt.Errorf(string(tx.Result.Message))
+		return "", fmt.Errorf("%s", string(tx.Result.Message))
 	}
 
 	// Sign and broadcast transaction

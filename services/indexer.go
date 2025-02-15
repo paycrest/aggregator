@@ -112,15 +112,17 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 	var iter *contracts.ERC20TokenTransferIterator
 
 	addresses := []common.Address{}
-	if addressToWatch != "" {
-		fromBlock := int64(5000)
-		if token.Edges.Network.Identifier == "bnb-smart-chain" {
-			fromBlock = 500
+	if startBlock == 0 {
+		if addressToWatch != "" {
+			fromBlock := int64(500)
+			if token.Edges.Network.Identifier != "bnb-smart-chain" {
+				fromBlock = 5000
+			}
+			addresses = []common.Address{common.HexToAddress(addressToWatch)}
+			startBlock = int64(toBlock) - fromBlock
+		} else {
+			startBlock = int64(toBlock) - 100
 		}
-		addresses = []common.Address{common.HexToAddress(addressToWatch)}
-		startBlock = int64(toBlock) - fromBlock
-	} else {
-		startBlock = int64(toBlock) - 100
 	}
 
 	// if strings.Contains(token.Edges.Network.Identifier, "arbitrum") {
