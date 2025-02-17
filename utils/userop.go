@@ -548,12 +548,9 @@ func eip1559GasPrice(ctx context.Context, client types.RPCClient) (maxFeePerGas,
 // getEndpoints fetches bundler and paymaster URLs for the given chain ID from the database
 func getEndpoints(chainID int64) (string, string, error) {
 	ctx := context.Background()
-	client := storage.GetClient()
-	if client == nil {
-		return "", "", fmt.Errorf("database client not initialized")
-	}
 
-	network, err := client.Network.Query().
+	network, err := storage.Client.Network.
+		Query().
 		Where(network.ChainID(chainID)).
 		Only(ctx)
 	if err != nil {
