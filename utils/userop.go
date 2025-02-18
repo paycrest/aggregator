@@ -511,7 +511,7 @@ func eip1559GasPrice(ctx context.Context, client types.RPCClient) (maxFeePerGas,
 		if err != nil {
 			return nil, nil, err
 		}
-		maxFeePerGas = big.NewInt(0).Add(tip, new(big.Int).Mul(latestHeader.BaseFee, common.Big2))
+		maxFeePerGas = big.NewInt(0).Add(tip, new(big.Int).Mul(latestHeader.BaseFee, common.Big3))
 		maxPriorityFeePerGas = tip
 	} else {
 		sgp, err := client.SuggestGasPrice(ctx)
