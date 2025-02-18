@@ -1321,13 +1321,15 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs: %v", err)
 	}
 
-	err = priorityQueue.ProcessBucketQueues()
-	if err != nil {
-		logger.Errorf("StartCronJobs: %v", err)
+	if serverConf.Environment != "production" {
+		err = priorityQueue.ProcessBucketQueues()
+		if err != nil {
+			logger.Errorf("StartCronJobs: %v", err)
+		}
 	}
 
-	// Compute market rate every 30 minutes
-	_, err = scheduler.Every(30).Minutes().Do(ComputeMarketRate)
+	// Compute market rate every 10 minutes
+	_, err = scheduler.Every(10).Minutes().Do(ComputeMarketRate)
 	if err != nil {
 		logger.Errorf("StartCronJobs: %v", err)
 	}
