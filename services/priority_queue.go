@@ -135,6 +135,13 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 
 	redisKey := fmt.Sprintf("bucket_%s_%s_%s", bucket.Edges.Currency.Code, bucket.MinAmount, bucket.MaxAmount)
 
+	// Delete the previous queue
+	err := s.deleteQueue(ctx, redisKey+"_prev")
+	if err != nil && err != context.Canceled {
+		logger.Errorf("failed to delete previous provider queue: %v", err)
+	}
+
+	// Copy the current queue to the previous queue
 	prevData, err := storage.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
 	if err != nil && err != context.Canceled {
 		logger.Errorf("failed to fetch provider rates: %v", err)
@@ -146,13 +153,14 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 		prevValues[i] = v
 	}
 
-	// Store previous provider data
+	// Update the previous queue
 	prevRedisKey := redisKey + "_prev"
 	err = storage.RedisClient.RPush(ctx, prevRedisKey, prevValues...).Err()
 	if err != nil && err != context.Canceled {
 		logger.Errorf("failed to store previous provider rates: %v", err)
 	}
 
+	// Delete the current queue
 	err = s.deleteQueue(ctx, redisKey)
 	if err != nil && err != context.Canceled {
 		logger.Errorf("failed to delete existing circular queue: %v", err)
