@@ -750,11 +750,11 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 				"id_type":             "DRIVERS_LICENSE",
 				"verification_method": "doc_verification",
 			},
-			// {
-			// 	"country":             "NG",
-			// 	"id_type":             "NIN_SLIP",
-			// 	"verification_method": "biometric_kyc",
-			// },
+			{
+				"country":             "NG",
+				"id_type":             "NIN_SLIP",
+				"verification_method": "biometric_kyc",
+			},
 			{
 				"country":             "NG",
 				"id_type":             "VOTER_ID",
