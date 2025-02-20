@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math/big"
 	"strconv"
 	"strings"
@@ -234,9 +233,6 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 		return "", "", 0, fmt.Errorf("invalid AA service URL pattern: %w", err)
 	}
 
-	op, _ := userOp.MarshalJSON()
-	log.Println("userOp", string(op))
-
 	var requestParams []interface{}
 	switch aaService {
 	case "biconomy":
@@ -250,8 +246,6 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 	default:
 		return "", "", 0, fmt.Errorf("unsupported AA service: %s", aaService)
 	}
-
-	log.Println("requestParams", requestParams)
 
 	var result json.RawMessage
 	err = client.Call(&result, "eth_sendUserOperation", requestParams...)
