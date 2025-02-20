@@ -19,6 +19,7 @@ func main() {
 	time.Local = loc
 
 	// Connect to the database
+	log.Println("Connecting to the database")
 	DSN := config.DBConfig()
 
 	if err := storage.DBConnection(DSN); err != nil {
@@ -33,19 +34,25 @@ func main() {
 	// }
 
 	// Initialize Redis
+	log.Println("Initialize Redis")
 	if err := storage.InitializeRedis(); err != nil {
 		log.Println(err)
 		logger.Fatalf("Redis initialization: %v", err)
 	}
 
 	// Subscribe to Redis keyspace events
+	log.Println("Subscribe to Redis keyspace events")
 	tasks.SubscribeToRedisKeyspaceEvents()
 
 	// Start cron jobs
+	log.Println("cron jobs")
 	tasks.StartCronJobs()
 
 	// Run the server
+	log.Println("run server")
 	router := routers.Routes()
+
+	log.Println("done with server")
 
 	appServer := fmt.Sprintf("%s:%s", conf.Host, conf.Port)
 	logger.Infof("Server Running at :%v", appServer)

@@ -131,7 +131,7 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "tx_id", Type: field.TypeString, Unique: true},
+		{Name: "tx_id", Type: field.TypeString, Nullable: true},
 		{Name: "psp", Type: field.TypeString, Nullable: true},
 		{Name: "validation_status", Type: field.TypeEnum, Enums: []string{"pending", "success", "failed"}, Default: "pending"},
 		{Name: "validation_error", Type: field.TypeString, Nullable: true},

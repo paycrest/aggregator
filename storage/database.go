@@ -27,6 +27,7 @@ var (
 
 // DBConnection create database connection
 func DBConnection(DSN string) error {
+	log.Println("Connecting to the database with DSN: ", DSN)
 	var db *sql.DB
 	var err error
 	for i := 0; i < 3; i++ { // Retry mechanism
@@ -43,12 +44,15 @@ func DBConnection(DSN string) error {
 		return err
 	}
 
+	log.Println("Connecting to the database successful")
+
 	db.SetMaxIdleConns(10)
 	db.SetMaxOpenConns(100)
 	db.SetConnMaxLifetime(2 * time.Minute)
 
 	DB = db
 
+	log.Println("DB connection config")
 	// Create an ent.Driver from `db`.
 	drv := entsql.OpenDB(dialect.Postgres, db)
 
@@ -57,14 +61,18 @@ func DBConnection(DSN string) error {
 
 	conf := config.ServerConfig()
 
+	log.Println("Running migration")	
 	// Run the auto migration tool.
 	if conf.Environment == "local" {
 		if err := client.Schema.Create(context.Background(), migrate.WithGlobalUniqueID(true)); err != nil {
+			log.Println("err", err)
 			return err
 		}
 	}
 
 	Client = client
+
+	log.Println("DB connection done")
 
 	return nil
 }

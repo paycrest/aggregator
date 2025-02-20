@@ -8,26 +8,29 @@
 -- -------------------------------------------------------------
 
 -- Truncate Tables
-TRUNCATE TABLE "public"."api_keys" CASCADE;
-TRUNCATE TABLE "public"."atlas_schema_revisions" CASCADE;
-TRUNCATE TABLE "public"."ent_types" CASCADE;
-TRUNCATE TABLE "public"."fiat_currencies" CASCADE;
-TRUNCATE TABLE "public"."fiat_currency_providers" CASCADE;
-TRUNCATE TABLE "public"."identity_verification_requests" CASCADE;
-TRUNCATE TABLE "public"."institutions" CASCADE;
-TRUNCATE TABLE "public"."linked_addresses" CASCADE;
-TRUNCATE TABLE "public"."lock_order_fulfillments" CASCADE;
-TRUNCATE TABLE "public"."lock_payment_orders" CASCADE;
-TRUNCATE TABLE "public"."networks" CASCADE;
-TRUNCATE TABLE "public"."payment_order_recipients" CASCADE;
-TRUNCATE TABLE "public"."payment_orders" CASCADE;
-TRUNCATE TABLE "public"."provider_order_tokens" CASCADE;
-TRUNCATE TABLE "public"."sender_order_tokens" CASCADE;
-TRUNCATE TABLE "public"."tokens" CASCADE;
-TRUNCATE TABLE "public"."transaction_logs" CASCADE;
-TRUNCATE TABLE "public"."users" CASCADE;
-TRUNCATE TABLE "public"."verification_tokens" CASCADE;
-TRUNCATE TABLE "public"."webhook_retry_attempts" CASCADE;
+DO $$ 
+BEGIN
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'api_keys') THEN TRUNCATE TABLE "public"."api_keys" CASCADE; END IF;
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'atlas_schema_revisions') THEN TRUNCATE TABLE "public"."atlas_schema_revisions" CASCADE; END IF;
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'ent_types') THEN TRUNCATE TABLE "public"."ent_types" CASCADE; END IF;
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'fiat_currencies') THEN TRUNCATE TABLE "public"."fiat_currencies" CASCADE; END IF;
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'fiat_currency_providers') THEN TRUNCATE TABLE "public"."fiat_currency_providers" CASCADE; END IF;
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'identity_verification_requests') THEN TRUNCATE TABLE "public"."identity_verification_requests" CASCADE; END IF;
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'institutions') THEN TRUNCATE TABLE "public"."institutions" CASCADE; END IF;
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'linked_addresses') THEN TRUNCATE TABLE "public"."linked_addresses" CASCADE; END IF;
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'lock_order_fulfillments') THEN TRUNCATE TABLE "public"."lock_order_fulfillments" CASCADE; END IF;
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'lock_payment_orders') THEN TRUNCATE TABLE "public"."lock_payment_orders" CASCADE; END IF;
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'networks') THEN TRUNCATE TABLE "public"."networks" CASCADE; END IF;
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'payment_order_recipients') THEN TRUNCATE TABLE "public"."payment_order_recipients" CASCADE; END IF;
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'payment_orders') THEN TRUNCATE TABLE "public"."payment_orders" CASCADE; END IF;
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'provider_order_tokens') THEN TRUNCATE TABLE "public"."provider_order_tokens" CASCADE; END IF;
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'sender_order_tokens') THEN TRUNCATE TABLE "public"."sender_order_tokens" CASCADE; END IF;
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'tokens') THEN TRUNCATE TABLE "public"."tokens" CASCADE; END IF;
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'transaction_logs') THEN TRUNCATE TABLE "public"."transaction_logs" CASCADE; END IF;
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'users') THEN TRUNCATE TABLE "public"."users" CASCADE; END IF;
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'verification_tokens') THEN TRUNCATE TABLE "public"."verification_tokens" CASCADE; END IF;
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'webhook_retry_attempts') THEN TRUNCATE TABLE "public"."webhook_retry_attempts" CASCADE; END IF;
+END $$;
 
 -- Drop Schema
 DROP SCHEMA IF EXISTS public CASCADE;

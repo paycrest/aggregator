@@ -4289,9 +4289,22 @@ func (m *LockOrderFulfillmentMutation) OldTxID(ctx context.Context) (v string, e
 	return oldValue.TxID, nil
 }
 
+// ClearTxID clears the value of the "tx_id" field.
+func (m *LockOrderFulfillmentMutation) ClearTxID() {
+	m.tx_id = nil
+	m.clearedFields[lockorderfulfillment.FieldTxID] = struct{}{}
+}
+
+// TxIDCleared returns if the "tx_id" field was cleared in this mutation.
+func (m *LockOrderFulfillmentMutation) TxIDCleared() bool {
+	_, ok := m.clearedFields[lockorderfulfillment.FieldTxID]
+	return ok
+}
+
 // ResetTxID resets all changes to the "tx_id" field.
 func (m *LockOrderFulfillmentMutation) ResetTxID() {
 	m.tx_id = nil
+	delete(m.clearedFields, lockorderfulfillment.FieldTxID)
 }
 
 // SetPsp sets the "psp" field.
@@ -4642,6 +4655,9 @@ func (m *LockOrderFulfillmentMutation) AddField(name string, value ent.Value) er
 // mutation.
 func (m *LockOrderFulfillmentMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(lockorderfulfillment.FieldTxID) {
+		fields = append(fields, lockorderfulfillment.FieldTxID)
+	}
 	if m.FieldCleared(lockorderfulfillment.FieldPsp) {
 		fields = append(fields, lockorderfulfillment.FieldPsp)
 	}
@@ -4662,6 +4678,9 @@ func (m *LockOrderFulfillmentMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *LockOrderFulfillmentMutation) ClearField(name string) error {
 	switch name {
+	case lockorderfulfillment.FieldTxID:
+		m.ClearTxID()
+		return nil
 	case lockorderfulfillment.FieldPsp:
 		m.ClearPsp()
 		return nil
