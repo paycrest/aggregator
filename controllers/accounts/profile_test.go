@@ -11,6 +11,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/routers/middleware"
+	"github.com/paycrest/aggregator/services"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/shopspring/decimal"
@@ -623,7 +624,7 @@ func TestProfile(t *testing.T) {
 					Currency:       "KES",
 					Tokens: []types.ProviderOrderTokenPayload{
 						{
-							Symbol:                 "BTC",
+							Symbol:                 "MATIC",
 							MaxOrderAmount:         decimal.NewFromFloat(0.5),
 							MinOrderAmount:         decimal.NewFromFloat(0.001),
 							ConversionRateType:     providerordertoken.ConversionRateTypeFloating,
@@ -634,8 +635,8 @@ func TestProfile(t *testing.T) {
 								Network string `json:"network"`
 							}{
 								{
-									Network: "bitcoin",
-									Address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+									Network: "polygon",
+									Address: "0x1234567890abcdef1234567890abcdef12345678",
 								},
 							},
 						},
@@ -661,8 +662,8 @@ func TestProfile(t *testing.T) {
 					Currency:       "KES",
 					Tokens: []types.ProviderOrderTokenPayload{
 						{
-							Symbol:                 "BTC",
-							MaxOrderAmount:         decimal.NewFromFloat(0.1), // Assuming rate of 40000 KES/BTC = 4000 KES
+							Symbol:                 "MATIC",
+							MaxOrderAmount:         decimal.NewFromFloat(0.1), // Assuming rate of 40000 KES/MATIC = 4000 KES
 							MinOrderAmount:         decimal.NewFromFloat(0.001),
 							ConversionRateType:     providerordertoken.ConversionRateTypeFloating,
 							FloatingConversionRate: decimal.NewFromFloat(0),
@@ -672,8 +673,8 @@ func TestProfile(t *testing.T) {
 								Network string `json:"network"`
 							}{
 								{
-									Network: "bitcoin",
-									Address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+									Network: "polygon",
+									Address: "0x1234567890abcdef1234567890abcdef12345678",
 								},
 							},
 						},
@@ -699,7 +700,7 @@ func TestProfile(t *testing.T) {
 					Currency:       "KES",
 					Tokens: []types.ProviderOrderTokenPayload{
 						{
-							Symbol:                 "BTC",
+							Symbol:                 "MATIC",
 							MaxOrderAmount:         decimal.NewFromFloat(0.1),
 							MinOrderAmount:         decimal.NewFromFloat(0.001),
 							ConversionRateType:     providerordertoken.ConversionRateTypeFloating,
@@ -710,8 +711,8 @@ func TestProfile(t *testing.T) {
 								Network string `json:"network"`
 							}{
 								{
-									Network: "bitcoin",
-									Address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+									Network: "polygon",
+									Address: "0x1234567890abcdef1234567890abcdef12345678",
 								},
 							},
 						},
@@ -738,7 +739,7 @@ func TestProfile(t *testing.T) {
 					Currency:       "KES",
 					Tokens: []types.ProviderOrderTokenPayload{
 						{
-							Symbol:                 "BTC",
+							Symbol:                 "MATIC",
 							MaxOrderAmount:         decimal.NewFromFloat(0.1), // Valid amount
 							MinOrderAmount:         decimal.NewFromFloat(0.001),
 							ConversionRateType:     providerordertoken.ConversionRateTypeFloating,
@@ -749,8 +750,8 @@ func TestProfile(t *testing.T) {
 								Network string `json:"network"`
 							}{
 								{
-									Network: "bitcoin",
-									Address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+									Network: "polygon",
+									Address: "0x1234567890abcdef1234567890abcdef12345678",
 								},
 							},
 						},
@@ -787,48 +788,48 @@ func TestProfile(t *testing.T) {
 
 	})
 
-	// t.Run("GetSenderProfile", func(t *testing.T) {
-	// 	testUser, err := test.CreateTestUser(map[string]interface{}{
-	// 		"email": "hello@test.com",
-	// 		"scope": "sender",
-	// 	})
-	// 	assert.NoError(t, err)
+	t.Run("GetSenderProfile", func(t *testing.T) {
+		testUser, err := test.CreateTestUser(map[string]interface{}{
+			"email": "hello@test.com",
+			"scope": "sender",
+		})
+		assert.NoError(t, err)
 
-	// 	sender, err := test.CreateTestSenderProfile(map[string]interface{}{
-	// 		"domain_whitelist": []string{"mydomain.com"},
-	// 		"user_id":          testUser.ID,
-	// 	})
-	// 	assert.NoError(t, err)
+		sender, err := test.CreateTestSenderProfile(map[string]interface{}{
+			"domain_whitelist": []string{"mydomain.com"},
+			"user_id":          testUser.ID,
+		})
+		assert.NoError(t, err)
 
-	// 	apiKeyService := services.NewAPIKeyService()
-	// 	_, _, err = apiKeyService.GenerateAPIKey(
-	// 		context.Background(),
-	// 		nil,
-	// 		sender,
-	// 		nil,
-	// 	)
-	// 	assert.NoError(t, err)
+		apiKeyService := services.NewAPIKeyService()
+		_, _, err = apiKeyService.GenerateAPIKey(
+			context.Background(),
+			nil,
+			sender,
+			nil,
+		)
+		assert.NoError(t, err)
 
-	// 	accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
-	// 	headers := map[string]string{
-	// 		"Authorization": "Bearer " + accessToken,
-	// 	}
-	// 	res, err := test.PerformRequest(t, "GET", "/settings/sender", nil, headers, router)
-	// 	assert.NoError(t, err)
+		accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+		headers := map[string]string{
+			"Authorization": "Bearer " + accessToken,
+		}
+		res, err := test.PerformRequest(t, "GET", "/settings/sender", nil, headers, router)
+		assert.NoError(t, err)
 
-	// 	// Assert the response body
-	// 	assert.Equal(t, http.StatusOK, res.Code)
-	// 	var response struct {
-	// 		Data    types.SenderProfileResponse
-	// 		Message string
-	// 	}
-	// 	err = json.Unmarshal(res.Body.Bytes(), &response)
-	// 	assert.NoError(t, err)
-	// 	assert.Equal(t, "Profile retrieved successfully", response.Message)
-	// 	assert.NotNil(t, response.Data, "response.Data is nil")
-	// 	assert.Greater(t, len(response.Data.Tokens), 0)
-	// 	assert.Contains(t, response.Data.WebhookURL, "https://example.com")
+		// Assert the response body
+		assert.Equal(t, http.StatusOK, res.Code)
+		var response struct {
+			Data    types.SenderProfileResponse
+			Message string
+		}
+		err = json.Unmarshal(res.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Equal(t, "Profile retrieved successfully", response.Message)
+		assert.NotNil(t, response.Data, "response.Data is nil")
+		assert.Greater(t, len(response.Data.Tokens), 0)
+		assert.Contains(t, response.Data.WebhookURL, "https://example.com")
 
-	// })
+	})
 
 }
