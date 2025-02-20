@@ -947,7 +947,7 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 		return nil
 	}
 
-	rate := decimal.NewFromBigInt(event.Rate, 0)
+	rate := decimal.NewFromBigInt(event.Rate, -2)
 
 	provisionBucket, err := s.getProvisionBucket(ctx, amountInDecimals.Mul(rate), currency)
 	if err != nil {
