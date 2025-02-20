@@ -505,7 +505,7 @@ func (s *OrderEVM) createOrderCallData(order *ent.PaymentOrder) ([]byte, error) 
 	params := &types.CreateOrderParams{
 		Token:              common.HexToAddress(order.Edges.Token.ContractAddress),
 		Amount:             utils.ToSubunit(amountWithProtocolFee, order.Edges.Token.Decimals),
-		Rate:               order.Rate.BigInt(),
+		Rate:               order.Rate.Mul(decimal.NewFromInt(100)).BigInt(),
 		SenderFeeRecipient: common.HexToAddress(order.FeeAddress),
 		SenderFee:          utils.ToSubunit(order.SenderFee, order.Edges.Token.Decimals),
 		RefundAddress:      common.HexToAddress(order.ReturnAddress),
