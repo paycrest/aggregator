@@ -217,6 +217,9 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 			}
 
 			// Get rate from priority queue
+			if !strings.EqualFold(token.BaseCurrency, currency.Code) && !strings.EqualFold(token.BaseCurrency, "USD") {
+				continue
+			}
 			var rateResponse decimal.Decimal
 			if !strings.EqualFold(token.BaseCurrency, currency.Code) {
 				rateResponse, err = utils.GetTokenRateFromQueue(token.Symbol, orderAmount, currency.Code, currency.MarketRate)

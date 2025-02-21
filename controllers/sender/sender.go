@@ -1,6 +1,7 @@
 package sender
 
 import (
+	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
@@ -228,6 +229,11 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			Field:   "Recipient",
 			Message: "Invalid institution code provided",
 		})
+		return
+	}
+
+	if !strings.EqualFold(token.BaseCurrency, institutionObj.Edges.FiatCurrency.Code) && !strings.EqualFold(token.BaseCurrency, "USD") {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("%s can only be converted to %s", token.Symbol, token.BaseCurrency), nil)
 		return
 	}
 

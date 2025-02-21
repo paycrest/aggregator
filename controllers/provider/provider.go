@@ -649,7 +649,7 @@ func (ctrl *ProviderController) GetMarketRate(ctx *gin.Context) {
 	}
 
 	if tokenObj == nil {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Token is not supported", nil)
+		u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Token %s is not supported", strings.ToUpper(ctx.Param("token"))), nil)
 		return
 	}
 
@@ -662,7 +662,12 @@ func (ctrl *ProviderController) GetMarketRate(ctx *gin.Context) {
 		Only(ctx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Fiat currency is not supported", nil)
+		u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Fiat currency %s is not supported", strings.ToUpper(ctx.Param("fiat"))), nil)
+		return
+	}
+
+	if !strings.EqualFold(tokenObj.BaseCurrency, currency.Code) && !strings.EqualFold(tokenObj.BaseCurrency, "USD") {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("%s can only be converted to %s", tokenObj.Symbol, tokenObj.BaseCurrency), nil)
 		return
 	}
 
