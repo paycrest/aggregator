@@ -914,7 +914,7 @@ func (ctrl *Controller) GetIDVerificationStatus(ctx *gin.Context) {
 	}
 
 	// Check if the verification URL has expired
-	if ivr.LastURLCreatedAt.Add(1 * time.Hour).Before(time.Now()) {
+	if ivr.LastURLCreatedAt.Add(1*time.Hour).Before(time.Now()) && ivr.Status == identityverificationrequest.StatusPending {
 		response.Status = "expired"
 	}
 
