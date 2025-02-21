@@ -6453,8 +6453,6 @@ type NetworkMutation struct {
 	rpc_endpoint             *string
 	gateway_contract_address *string
 	is_testnet               *bool
-	bundler_url              *string
-	paymaster_url            *string
 	fee                      *decimal.Decimal
 	addfee                   *decimal.Decimal
 	clearedFields            map[string]struct{}
@@ -6885,104 +6883,6 @@ func (m *NetworkMutation) ResetIsTestnet() {
 	m.is_testnet = nil
 }
 
-// SetBundlerURL sets the "bundler_url" field.
-func (m *NetworkMutation) SetBundlerURL(s string) {
-	m.bundler_url = &s
-}
-
-// BundlerURL returns the value of the "bundler_url" field in the mutation.
-func (m *NetworkMutation) BundlerURL() (r string, exists bool) {
-	v := m.bundler_url
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldBundlerURL returns the old "bundler_url" field's value of the Network entity.
-// If the Network object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *NetworkMutation) OldBundlerURL(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldBundlerURL is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldBundlerURL requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldBundlerURL: %w", err)
-	}
-	return oldValue.BundlerURL, nil
-}
-
-// ClearBundlerURL clears the value of the "bundler_url" field.
-func (m *NetworkMutation) ClearBundlerURL() {
-	m.bundler_url = nil
-	m.clearedFields[network.FieldBundlerURL] = struct{}{}
-}
-
-// BundlerURLCleared returns if the "bundler_url" field was cleared in this mutation.
-func (m *NetworkMutation) BundlerURLCleared() bool {
-	_, ok := m.clearedFields[network.FieldBundlerURL]
-	return ok
-}
-
-// ResetBundlerURL resets all changes to the "bundler_url" field.
-func (m *NetworkMutation) ResetBundlerURL() {
-	m.bundler_url = nil
-	delete(m.clearedFields, network.FieldBundlerURL)
-}
-
-// SetPaymasterURL sets the "paymaster_url" field.
-func (m *NetworkMutation) SetPaymasterURL(s string) {
-	m.paymaster_url = &s
-}
-
-// PaymasterURL returns the value of the "paymaster_url" field in the mutation.
-func (m *NetworkMutation) PaymasterURL() (r string, exists bool) {
-	v := m.paymaster_url
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldPaymasterURL returns the old "paymaster_url" field's value of the Network entity.
-// If the Network object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *NetworkMutation) OldPaymasterURL(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldPaymasterURL is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldPaymasterURL requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldPaymasterURL: %w", err)
-	}
-	return oldValue.PaymasterURL, nil
-}
-
-// ClearPaymasterURL clears the value of the "paymaster_url" field.
-func (m *NetworkMutation) ClearPaymasterURL() {
-	m.paymaster_url = nil
-	m.clearedFields[network.FieldPaymasterURL] = struct{}{}
-}
-
-// PaymasterURLCleared returns if the "paymaster_url" field was cleared in this mutation.
-func (m *NetworkMutation) PaymasterURLCleared() bool {
-	_, ok := m.clearedFields[network.FieldPaymasterURL]
-	return ok
-}
-
-// ResetPaymasterURL resets all changes to the "paymaster_url" field.
-func (m *NetworkMutation) ResetPaymasterURL() {
-	m.paymaster_url = nil
-	delete(m.clearedFields, network.FieldPaymasterURL)
-}
-
 // SetFee sets the "fee" field.
 func (m *NetworkMutation) SetFee(d decimal.Decimal) {
 	m.fee = &d
@@ -7127,7 +7027,7 @@ func (m *NetworkMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *NetworkMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 9)
 	if m.created_at != nil {
 		fields = append(fields, network.FieldCreatedAt)
 	}
@@ -7151,12 +7051,6 @@ func (m *NetworkMutation) Fields() []string {
 	}
 	if m.is_testnet != nil {
 		fields = append(fields, network.FieldIsTestnet)
-	}
-	if m.bundler_url != nil {
-		fields = append(fields, network.FieldBundlerURL)
-	}
-	if m.paymaster_url != nil {
-		fields = append(fields, network.FieldPaymasterURL)
 	}
 	if m.fee != nil {
 		fields = append(fields, network.FieldFee)
@@ -7185,10 +7079,6 @@ func (m *NetworkMutation) Field(name string) (ent.Value, bool) {
 		return m.GatewayContractAddress()
 	case network.FieldIsTestnet:
 		return m.IsTestnet()
-	case network.FieldBundlerURL:
-		return m.BundlerURL()
-	case network.FieldPaymasterURL:
-		return m.PaymasterURL()
 	case network.FieldFee:
 		return m.Fee()
 	}
@@ -7216,10 +7106,6 @@ func (m *NetworkMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldGatewayContractAddress(ctx)
 	case network.FieldIsTestnet:
 		return m.OldIsTestnet(ctx)
-	case network.FieldBundlerURL:
-		return m.OldBundlerURL(ctx)
-	case network.FieldPaymasterURL:
-		return m.OldPaymasterURL(ctx)
 	case network.FieldFee:
 		return m.OldFee(ctx)
 	}
@@ -7286,20 +7172,6 @@ func (m *NetworkMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetIsTestnet(v)
-		return nil
-	case network.FieldBundlerURL:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetBundlerURL(v)
-		return nil
-	case network.FieldPaymasterURL:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetPaymasterURL(v)
 		return nil
 	case network.FieldFee:
 		v, ok := value.(decimal.Decimal)
@@ -7368,12 +7240,6 @@ func (m *NetworkMutation) ClearedFields() []string {
 	if m.FieldCleared(network.FieldChainIDHex) {
 		fields = append(fields, network.FieldChainIDHex)
 	}
-	if m.FieldCleared(network.FieldBundlerURL) {
-		fields = append(fields, network.FieldBundlerURL)
-	}
-	if m.FieldCleared(network.FieldPaymasterURL) {
-		fields = append(fields, network.FieldPaymasterURL)
-	}
 	return fields
 }
 
@@ -7390,12 +7256,6 @@ func (m *NetworkMutation) ClearField(name string) error {
 	switch name {
 	case network.FieldChainIDHex:
 		m.ClearChainIDHex()
-		return nil
-	case network.FieldBundlerURL:
-		m.ClearBundlerURL()
-		return nil
-	case network.FieldPaymasterURL:
-		m.ClearPaymasterURL()
 		return nil
 	}
 	return fmt.Errorf("unknown Network nullable field %s", name)
@@ -7428,12 +7288,6 @@ func (m *NetworkMutation) ResetField(name string) error {
 		return nil
 	case network.FieldIsTestnet:
 		m.ResetIsTestnet()
-		return nil
-	case network.FieldBundlerURL:
-		m.ResetBundlerURL()
-		return nil
-	case network.FieldPaymasterURL:
-		m.ResetPaymasterURL()
 		return nil
 	case network.FieldFee:
 		m.ResetFee()

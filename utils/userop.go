@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math/big"
 	"strconv"
 	"strings"
@@ -20,9 +19,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/paycrest/aggregator/config"
-	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/services/contracts"
-	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/stackup-wallet/stackup-bundler/pkg/userop"
@@ -106,14 +103,9 @@ func InitializeUserOperation(ctx context.Context, client types.RPCClient, rpcUrl
 // SponsorUserOperation sponsors the user operation from stackup
 // ref: https://docs.stackup.sh/docs/paymaster-api-rpc-methods#pm_sponsoruseroperation
 func SponsorUserOperation(userOp *userop.UserOperation, mode string, token string, chainId int64) error {
-	// _, paymasterUrl, err := getEndpoints(chainId)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to get endpoints: %w", err)
-	// }
-
-	_, paymasterUrl, err := getEndpoints(context.Background(), chainId)
+	_, paymasterUrl, err := getEndpoints(chainId)
 	if err != nil {
-		return fmt.Errorf("failed to get endpoints for chain ID %d: %w", chainId, err)
+		return fmt.Errorf("failed to get endpoints: %w", err)
 	}
 
 	client, err := rpc.Dial(paymasterUrl)
@@ -261,14 +253,9 @@ func SignUserOperation(userOperation *userop.UserOperation, chainId int64) error
 
 // SendUserOperation sends the user operation
 func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, string, int64, error) {
-	// bundlerUrl, _, err := getEndpoints(chainId)
-	// if err != nil {
-	// 	return "", "", 0, fmt.Errorf("failed to get endpoints: %w", err)
-	// }
-
-	bundlerUrl, _, err := getEndpoints(context.Background(), chainId)
+	bundlerUrl, _, err := getEndpoints(chainId)
 	if err != nil {
-		return "", "", 0, fmt.Errorf("failed to get endpoints for chain ID %d: %w", chainId, err)
+		return "", "", 0, fmt.Errorf("failed to get endpoints: %w", err)
 	}
 
 	client, err := rpc.Dial(bundlerUrl)
@@ -337,14 +324,9 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 
 // GetUserOperationByReceipt fetches the user operation by hash
 func GetUserOperationByReceipt(userOpHash string, chainId int64) (map[string]interface{}, error) {
-	// bundlerUrl, _, err := getEndpoints(chainId)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to get endpoints: %w", err)
-	// }
-
-	bundlerUrl, _, err := getEndpoints(context.Background(), chainId)
+	bundlerUrl, _, err := getEndpoints(chainId)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get endpoints for chain ID %d: %w", chainId, err)
+		return nil, fmt.Errorf("failed to get endpoints: %w", err)
 	}
 
 	client, err := rpc.Dial(bundlerUrl)
@@ -440,14 +422,9 @@ func GetPaymasterAccount(chainId int64) (string, error) {
 		return "0x00000f79b7faf42eebadba19acc07cd08af44789", nil
 	}
 
-	// _, paymasterUrl, err := getEndpoints(chainId)
-	// if err != nil {
-	// 	return "", fmt.Errorf("failed to get endpoints: %w", err)
-	// }
-
-	_, paymasterUrl, err := getEndpoints(context.Background(), chainId)
+	_, paymasterUrl, err := getEndpoints(chainId)
 	if err != nil {
-		return "", fmt.Errorf("failed to get endpoints for chain ID %d: %w", chainId, err)
+		return "", fmt.Errorf("failed to get endpoints: %w", err)
 	}
 
 	client, err := rpc.Dial(paymasterUrl)
@@ -476,14 +453,9 @@ func GetPaymasterAccount(chainId int64) (string, error) {
 
 // GetUserOperationStatus returns the status of the user operation
 func GetUserOperationStatus(userOpHash string, chainId int64) (bool, error) {
-	// bundlerUrl, _, err := getEndpoints(chainId)
-	// if err != nil {
-	// 	return false, fmt.Errorf("failed to get endpoints: %w", err)
-	// }
-
-	bundlerUrl, _, err := getEndpoints(context.Background(), chainId)
+	bundlerUrl, _, err := getEndpoints(chainId)
 	if err != nil {
-		return false, fmt.Errorf("failed to get endpoints for chain ID %d: %w", chainId, err)
+		return false, fmt.Errorf("failed to get endpoints: %w", err)
 	}
 
 	client, err := rpc.Dial(bundlerUrl)
@@ -554,81 +526,37 @@ func eip1559GasPrice(ctx context.Context, client types.RPCClient) (maxFeePerGas,
 }
 
 // getEndpoints returns the bundler and paymaster URLs for the given chain ID
-// func getEndpoints(chainId int64) (bundlerUrl, paymasterUrl string, err error) {
-// 	switch chainId {
-// 	case 1:
-// 		bundlerUrl = orderConf.BundlerUrlEthereum
-// 		paymasterUrl = orderConf.PaymasterUrlEthereum
-// 	case 11155111:
-// 		bundlerUrl = orderConf.BundlerUrlEthereum
-// 		paymasterUrl = orderConf.PaymasterUrlEthereum
-// 	case 137:
-// 		bundlerUrl = orderConf.BundlerUrlPolygon
-// 		paymasterUrl = orderConf.PaymasterUrlPolygon
-// 	case 56:
-// 		bundlerUrl = orderConf.BundlerUrlBSC
-// 		paymasterUrl = orderConf.PaymasterUrlBSC
-// 	case 8453:
-// 		bundlerUrl = orderConf.BundlerUrlBase
-// 		paymasterUrl = orderConf.PaymasterUrlBase
-// 	case 84532:
-// 		bundlerUrl = orderConf.BundlerUrlBase
-// 		paymasterUrl = orderConf.PaymasterUrlBase
-// 	case 42161:
-// 		bundlerUrl = orderConf.BundlerUrlArbitrum
-// 		paymasterUrl = orderConf.PaymasterUrlArbitrum
-// 	case 421614:
-// 		bundlerUrl = orderConf.BundlerUrlArbitrum
-// 		paymasterUrl = orderConf.PaymasterUrlArbitrum
-// 	default:
-// 		return "", "", fmt.Errorf("unsupported chain ID")
-// 	}
-
-// 	return bundlerUrl, paymasterUrl, nil
-// }
-
-// getEndpoints fetches bundler and paymaster URLs for the given chain ID from the database
-func getEndpoints(ctx context.Context, chainID int64) (string, string, error) {
-	client := storage.GetClient()
-	if client == nil {
-		return "", "", fmt.Errorf("database client not initialized")
-	}
-
-	network, err := client.Network.Query().
-		Where(network.ChainID(chainID)).
-		Only(ctx)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to fetch network: %w", err)
-	}
-
-	bundlerURL := network.BundlerURL
-	paymasterURL := network.PaymasterURL
-
-	if bundlerURL == "" || paymasterURL == "" {
-		return "", "", fmt.Errorf("bundler or paymaster URL is missing for network ID: %d", chainID)
-	}
-
-	// Validate URL patterns
-	aaService, err := detectAAService(bundlerURL)
-	if err != nil {
-		return "", "", fmt.Errorf("invalid AA service URL pattern: %w", err)
-	}
-
-	log.Printf("Using AA service: %s", aaService)
-	return bundlerURL, paymasterURL, nil
-}
-
-func detectAAService(url string) (string, error) {
-	switch {
-	case strings.Contains(url, "api.stackup"):
-		return "stackup", nil
-	case strings.Contains(url, "api.biconomy"):
-		return "biconomy", nil
-	case strings.Contains(url, "api.pimlico"):
-		return "pimlico", nil
+func getEndpoints(chainId int64) (bundlerUrl, paymasterUrl string, err error) {
+	switch chainId {
+	case 1:
+		bundlerUrl = orderConf.BundlerUrlEthereum
+		paymasterUrl = orderConf.PaymasterUrlEthereum
+	case 11155111:
+		bundlerUrl = orderConf.BundlerUrlEthereum
+		paymasterUrl = orderConf.PaymasterUrlEthereum
+	case 137:
+		bundlerUrl = orderConf.BundlerUrlPolygon
+		paymasterUrl = orderConf.PaymasterUrlPolygon
+	case 56:
+		bundlerUrl = orderConf.BundlerUrlBSC
+		paymasterUrl = orderConf.PaymasterUrlBSC
+	case 8453:
+		bundlerUrl = orderConf.BundlerUrlBase
+		paymasterUrl = orderConf.PaymasterUrlBase
+	case 84532:
+		bundlerUrl = orderConf.BundlerUrlBase
+		paymasterUrl = orderConf.PaymasterUrlBase
+	case 42161:
+		bundlerUrl = orderConf.BundlerUrlArbitrum
+		paymasterUrl = orderConf.PaymasterUrlArbitrum
+	case 421614:
+		bundlerUrl = orderConf.BundlerUrlArbitrum
+		paymasterUrl = orderConf.PaymasterUrlArbitrum
 	default:
-		return "", fmt.Errorf("unsupported AA service URL pattern: %s", url)
+		return "", "", fmt.Errorf("unsupported chain ID")
 	}
+
+	return bundlerUrl, paymasterUrl, nil
 }
 
 // getNonce returns the nonce for the given sender

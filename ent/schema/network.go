@@ -31,10 +31,6 @@ func (Network) Fields() []ent.Field {
 		field.String("rpc_endpoint"),
 		field.String("gateway_contract_address").Default(""),
 		field.Bool("is_testnet"),
-		field.String("bundler_url").
-			Optional(),
-		field.String("paymaster_url").
-			Optional(),
 		field.Float("fee").
 			GoType(decimal.Decimal{}),
 	}
