@@ -532,6 +532,19 @@ func TestProvider(t *testing.T) {
 		})
 
 		t.Run("when orders have been initiated", func(t *testing.T) {
+
+			// Clean state before test
+			_, err := client.LockPaymentOrder.Delete().Exec(context.Background())
+			assert.NoError(t, err)
+
+			// Create exactly 10 test orders
+			for i := 0; i < 10; i++ {
+				_, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+					"gateway_id": uuid.New().String(),
+					"provider":   testCtx.provider,
+				})
+				assert.NoError(t, err)
+			}
 			// Test default params
 			var payload = map[string]interface{}{
 				"timestamp": time.Now().Unix(),
@@ -579,6 +592,7 @@ func TestProvider(t *testing.T) {
 		})
 
 		t.Run("should only calculate volumes of settled orders", func(t *testing.T) {
+
 			// Create a settled order
 			_, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
 				"gateway_id": uuid.New().String(),
