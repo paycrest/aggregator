@@ -191,6 +191,10 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 				continue
 			}
 
+			if rate.IsZero() {
+				continue
+			}
+
 			// Check provider's rate against the market rate to ensure it's not too far off
 			percentDeviation := utils.AbsPercentageDeviation(bucket.Edges.Currency.MarketRate, rate)
 
