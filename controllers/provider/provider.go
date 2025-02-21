@@ -635,24 +635,23 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 // GetMarketRate controller fetches the median rate of the cryptocurrency token against the fiat currency
 func (ctrl *ProviderController) GetMarketRate(ctx *gin.Context) {
 	// Parse path parameters
-	tokenExists, err := storage.Client.Token.
+	tokenObj, err := storage.Client.Token.
 		Query().
 		Where(
 			token.SymbolEQ(strings.ToUpper(ctx.Param("token"))),
 			token.IsEnabledEQ(true),
 		).
-		Exist(ctx)
+		First(ctx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to get market rate", nil)
 		return
 	}
 
-	if !tokenExists {
+	if tokenObj == nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Token is not supported", nil)
 		return
 	}
-	// TODO: use token to get the token rate for that currency based on the USD/Token Ratio USD/USDC can be 1.005 and USD/USD can be 0.9995
 
 	currency, err := storage.Client.FiatCurrency.
 		Query().
@@ -667,13 +666,24 @@ func (ctrl *ProviderController) GetMarketRate(ctx *gin.Context) {
 		return
 	}
 
-	deviation := currency.MarketRate.Mul(orderConf.PercentDeviationFromMarketRate.Div(decimal.NewFromInt(100)))
+	var response *types.MarketRateResponse
+	if !strings.EqualFold(tokenObj.BaseCurrency, currency.Code) {
+		deviation := currency.MarketRate.Mul(orderConf.PercentDeviationFromMarketRate.Div(decimal.NewFromInt(100)))
 
-	u.APIResponse(ctx, http.StatusOK, "success", "Rate fetched successfully", &types.MarketRateResponse{
-		MarketRate:  currency.MarketRate,
-		MinimumRate: currency.MarketRate.Sub(deviation),
-		MaximumRate: currency.MarketRate.Add(deviation),
-	})
+		response = &types.MarketRateResponse{
+			MarketRate:  currency.MarketRate,
+			MinimumRate: currency.MarketRate.Sub(deviation),
+			MaximumRate: currency.MarketRate.Add(deviation),
+		}
+	} else {
+		response = &types.MarketRateResponse{
+			MarketRate:  decimal.NewFromInt(1),
+			MinimumRate: decimal.NewFromInt(1),
+			MaximumRate: decimal.NewFromInt(1),
+		}
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Rate fetched successfully", response)
 }
 
 // Stats controller fetches provider stats

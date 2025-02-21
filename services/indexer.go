@@ -217,10 +217,15 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 			}
 
 			// Get rate from priority queue
-			rateResponse, err := utils.GetTokenRateFromQueue(token.Symbol, orderAmount, currency.Code, currency.MarketRate)
-			if err != nil {
-				logger.Errorf("IndexERC20Transfer.GetTokenRateFromQueue: %v", err)
-				continue
+			var rateResponse decimal.Decimal
+			if !strings.EqualFold(token.BaseCurrency, currency.Code) {
+				rateResponse, err = utils.GetTokenRateFromQueue(token.Symbol, orderAmount, currency.Code, currency.MarketRate)
+				if err != nil {
+					logger.Errorf("IndexERC20Transfer.GetTokenRateFromQueue: %v", err)
+					continue
+				}
+			} else {
+				rateResponse = decimal.NewFromInt(1)
 			}
 
 			tx, err := db.Client.Tx(ctx)
@@ -1137,13 +1142,22 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 		}
 
 		// Assign the lock payment order to a provider
-		if isPrivate && lockPaymentOrder.Amount.GreaterThan(maxOrderAmount) {
+		normalizedAmount := lockPaymentOrder.Amount
+		if strings.EqualFold(token.BaseCurrency, currency.Code) && token.BaseCurrency != "USD" {
+			rateResponse, err := utils.GetTokenRateFromQueue("USDT", normalizedAmount, currency.Code, currency.MarketRate)
+			if err != nil {
+				return fmt.Errorf("failed to get token rate: %w", err)
+			}
+			normalizedAmount = lockPaymentOrder.Amount.Div(rateResponse)
+		}
+
+		if isPrivate && normalizedAmount.GreaterThan(maxOrderAmount) {
 			err := s.handleCancellation(ctx, client, orderCreated, nil, "Amount is greater than the maximum order amount of the provider")
 			if err != nil {
 				return fmt.Errorf("failed to cancel order: %w", err)
 			}
 			return nil
-		} else if isPrivate && lockPaymentOrder.Amount.LessThan(minOrderAmount) {
+		} else if isPrivate && normalizedAmount.LessThan(minOrderAmount) {
 			err := s.handleCancellation(ctx, client, orderCreated, nil, "Amount is less than the minimum order amount of the provider")
 			if err != nil {
 				return fmt.Errorf("failed to cancel order: %w", err)

@@ -155,95 +155,100 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 		return
 	}
 
-	rateResponse := currency.MarketRate
+	var rateResponse decimal.Decimal
+	if !strings.EqualFold(token.BaseCurrency, currency.Code) {
+		rateResponse = currency.MarketRate
 
-	// get providerID from query params
-	providerID := ctx.Query("provider_id")
-	if providerID != "" {
-		// get the provider from the bucket
-		provider, err := storage.Client.ProviderProfile.
-			Query().
-			Where(providerprofile.IDEQ(providerID)).
-			Only(ctx)
-		if err != nil {
-			if ent.IsNotFound(err) {
-				u.APIResponse(ctx, http.StatusBadRequest, "error", "Provider not found", nil)
-				return
-			} else {
-				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider profile", nil)
+		// get providerID from query params
+		providerID := ctx.Query("provider_id")
+		if providerID != "" {
+			// get the provider from the bucket
+			provider, err := storage.Client.ProviderProfile.
+				Query().
+				Where(providerprofile.IDEQ(providerID)).
+				Only(ctx)
+			if err != nil {
+				if ent.IsNotFound(err) {
+					u.APIResponse(ctx, http.StatusBadRequest, "error", "Provider not found", nil)
+					return
+				} else {
+					u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider profile", nil)
+					return
+				}
+			}
+
+			rateResponse, err = ctrl.priorityQueueService.GetProviderRate(ctx, provider, token.Symbol)
+			if err != nil {
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider rate", nil)
 				return
 			}
-		}
 
-		rateResponse, err = ctrl.priorityQueueService.GetProviderRate(ctx, provider, token.Symbol)
-		if err != nil {
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider rate", nil)
-			return
-		}
+		} else {
+			// Get redis keys for provision buckets
+			keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currency.Code+"_*_*", 100).Result()
+			if err != nil {
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch rates", nil)
+				return
+			}
 
+			highestMaxAmount := decimal.NewFromInt(0)
+
+			// Scan through the buckets to find a matching rate
+			for _, key := range keys {
+				bucketData := strings.Split(key, "_")
+				minAmount, _ := decimal.NewFromString(bucketData[2])
+				maxAmount, _ := decimal.NewFromString(bucketData[3])
+
+				for index := 0; ; index++ {
+					// Get the topmost provider in the priority queue of the bucket
+					providerData, err := storage.RedisClient.LIndex(ctx, key, int64(index)).Result()
+					if err != nil {
+						break
+					}
+					parts := strings.Split(providerData, ":")
+					if len(parts) != 5 {
+						logger.Errorf("GetTokenRate.InvalidProviderData: %v", providerData)
+						continue
+					}
+
+					// Skip entry if token doesn't match
+					if parts[1] != token.Symbol {
+						continue
+					}
+
+					// Skip entry if order amount is not within provider's min and max order amount
+					minOrderAmount, err := decimal.NewFromString(parts[3])
+					if err != nil {
+						continue
+					}
+
+					maxOrderAmount, err := decimal.NewFromString(parts[4])
+					if err != nil {
+						continue
+					}
+
+					if tokenAmount.LessThan(minOrderAmount) || tokenAmount.GreaterThan(maxOrderAmount) {
+						continue
+					}
+
+					// Get fiat equivalent of the token amount
+					rate, _ := decimal.NewFromString(parts[2])
+					fiatAmount := tokenAmount.Mul(rate)
+
+					// Check if fiat amount is within the bucket range and set the rate
+					if fiatAmount.GreaterThanOrEqual(minAmount) && fiatAmount.LessThanOrEqual(maxAmount) {
+						rateResponse = rate
+						break
+					} else if maxAmount.GreaterThan(highestMaxAmount) {
+						// Get the highest max amount
+						highestMaxAmount = maxAmount
+						rateResponse = rate
+					}
+				}
+			}
+		}
 	} else {
-		// Get redis keys for provision buckets
-		keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currency.Code+"_*_*", 100).Result()
-		if err != nil {
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch rates", nil)
-			return
-		}
-
-		highestMaxAmount := decimal.NewFromInt(0)
-
-		// Scan through the buckets to find a matching rate
-		for _, key := range keys {
-			bucketData := strings.Split(key, "_")
-			minAmount, _ := decimal.NewFromString(bucketData[2])
-			maxAmount, _ := decimal.NewFromString(bucketData[3])
-
-			for index := 0; ; index++ {
-				// Get the topmost provider in the priority queue of the bucket
-				providerData, err := storage.RedisClient.LIndex(ctx, key, int64(index)).Result()
-				if err != nil {
-					break
-				}
-				parts := strings.Split(providerData, ":")
-				if len(parts) != 5 {
-					logger.Errorf("GetTokenRate.InvalidProviderData: %v", providerData)
-					continue
-				}
-
-				// Skip entry if token doesn't match
-				if parts[1] != token.Symbol {
-					continue
-				}
-
-				// Skip entry if order amount is not within provider's min and max order amount
-				minOrderAmount, err := decimal.NewFromString(parts[3])
-				if err != nil {
-					continue
-				}
-
-				maxOrderAmount, err := decimal.NewFromString(parts[4])
-				if err != nil {
-					continue
-				}
-
-				if tokenAmount.LessThan(minOrderAmount) || tokenAmount.GreaterThan(maxOrderAmount) {
-					continue
-				}
-
-				// Get fiat equivalent of the token amount
-				rate, _ := decimal.NewFromString(parts[2])
-				fiatAmount := tokenAmount.Mul(rate)
-
-				// Check if fiat amount is within the bucket range and set the rate
-				if fiatAmount.GreaterThanOrEqual(minAmount) && fiatAmount.LessThanOrEqual(maxAmount) {
-					rateResponse = rate
-					break
-				} else if maxAmount.GreaterThan(highestMaxAmount) {
-					// Get the highest max amount
-					highestMaxAmount = maxAmount
-					rateResponse = rate
-				}
-			}
-		}
+		rateResponse = decimal.NewFromInt(1)
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Rate fetched successfully", rateResponse)
@@ -844,7 +849,7 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 		},
 		"callback_url":            fmt.Sprintf("%s/v1/kyc/webhook", serverConf.HostDomain),
 		"data_privacy_policy_url": "https://paycrest.notion.site/KYC-Policy-10e2482d45a280e191b8d47d76a8d242",
-		"logo_url":                "https://i.postimg.cc/Twrq0gjC/mark-2x-2.png",
+		"logo_url":                "https://res.cloudinary.com/de6e0wihu/image/upload/v1726497581/upqcopbcrnfkzmum7q37.png",
 		"is_single_use":           true,
 		"user_id":                 payload.WalletAddress,
 		"expires_at":              timestamp.Add(1 * time.Hour).Format(time.RFC3339Nano),
