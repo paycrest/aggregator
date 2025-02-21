@@ -218,6 +218,7 @@ var (
 		{Name: "gateway_contract_address", Type: field.TypeString, Default: ""},
 		{Name: "is_testnet", Type: field.TypeBool},
 		{Name: "fee", Type: field.TypeFloat64},
+		{Name: "is_enabled", Type: field.TypeBool, Default: false},
 	}
 	// NetworksTable holds the schema information for the "networks" table.
 	NetworksTable = &schema.Table{

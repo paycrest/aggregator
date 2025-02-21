@@ -101,6 +101,11 @@ func Fee(v decimal.Decimal) predicate.Network {
 	return predicate.Network(sql.FieldEQ(FieldFee, v))
 }
 
+// IsEnabled applies equality check predicate on the "is_enabled" field. It's identical to IsEnabledEQ.
+func IsEnabled(v bool) predicate.Network {
+	return predicate.Network(sql.FieldEQ(FieldIsEnabled, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Network {
 	return predicate.Network(sql.FieldEQ(FieldCreatedAt, v))
@@ -539,6 +544,16 @@ func FeeLT(v decimal.Decimal) predicate.Network {
 // FeeLTE applies the LTE predicate on the "fee" field.
 func FeeLTE(v decimal.Decimal) predicate.Network {
 	return predicate.Network(sql.FieldLTE(FieldFee, v))
+}
+
+// IsEnabledEQ applies the EQ predicate on the "is_enabled" field.
+func IsEnabledEQ(v bool) predicate.Network {
+	return predicate.Network(sql.FieldEQ(FieldIsEnabled, v))
+}
+
+// IsEnabledNEQ applies the NEQ predicate on the "is_enabled" field.
+func IsEnabledNEQ(v bool) predicate.Network {
+	return predicate.Network(sql.FieldNEQ(FieldIsEnabled, v))
 }
 
 // HasTokens applies the HasEdge predicate on the "tokens" edge.

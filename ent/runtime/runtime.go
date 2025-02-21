@@ -194,6 +194,10 @@ func init() {
 	networkDescGatewayContractAddress := networkFields[4].Descriptor()
 	// network.DefaultGatewayContractAddress holds the default value on creation for the gateway_contract_address field.
 	network.DefaultGatewayContractAddress = networkDescGatewayContractAddress.Default.(string)
+	// networkDescIsEnabled is the schema descriptor for is_enabled field.
+	networkDescIsEnabled := networkFields[7].Descriptor()
+	// network.DefaultIsEnabled holds the default value on creation for the is_enabled field.
+	network.DefaultIsEnabled = networkDescIsEnabled.Default.(bool)
 	paymentorderMixin := schema.PaymentOrder{}.Mixin()
 	paymentorderMixinFields0 := paymentorderMixin[0].Fields()
 	_ = paymentorderMixinFields0

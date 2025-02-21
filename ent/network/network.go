@@ -32,6 +32,8 @@ const (
 	FieldIsTestnet = "is_testnet"
 	// FieldFee holds the string denoting the fee field in the database.
 	FieldFee = "fee"
+	// FieldIsEnabled holds the string denoting the is_enabled field in the database.
+	FieldIsEnabled = "is_enabled"
 	// EdgeTokens holds the string denoting the tokens edge name in mutations.
 	EdgeTokens = "tokens"
 	// Table holds the table name of the network in the database.
@@ -57,6 +59,7 @@ var Columns = []string{
 	FieldGatewayContractAddress,
 	FieldIsTestnet,
 	FieldFee,
+	FieldIsEnabled,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -78,6 +81,8 @@ var (
 	UpdateDefaultUpdatedAt func() time.Time
 	// DefaultGatewayContractAddress holds the default value on creation for the "gateway_contract_address" field.
 	DefaultGatewayContractAddress string
+	// DefaultIsEnabled holds the default value on creation for the "is_enabled" field.
+	DefaultIsEnabled bool
 )
 
 // OrderOption defines the ordering options for the Network queries.
@@ -131,6 +136,11 @@ func ByIsTestnet(opts ...sql.OrderTermOption) OrderOption {
 // ByFee orders the results by the fee field.
 func ByFee(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldFee, opts...).ToFunc()
+}
+
+// ByIsEnabled orders the results by the is_enabled field.
+func ByIsEnabled(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIsEnabled, opts...).ToFunc()
 }
 
 // ByTokensCount orders the results by tokens count.

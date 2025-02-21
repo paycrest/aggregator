@@ -36,6 +36,8 @@ type Network struct {
 	IsTestnet bool `json:"is_testnet,omitempty"`
 	// Fee holds the value of the "fee" field.
 	Fee decimal.Decimal `json:"fee,omitempty"`
+	// IsEnabled holds the value of the "is_enabled" field.
+	IsEnabled bool `json:"is_enabled,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the NetworkQuery when eager-loading is set.
 	Edges        NetworkEdges `json:"edges"`
@@ -67,7 +69,7 @@ func (*Network) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case network.FieldFee:
 			values[i] = new(decimal.Decimal)
-		case network.FieldIsTestnet:
+		case network.FieldIsTestnet, network.FieldIsEnabled:
 			values[i] = new(sql.NullBool)
 		case network.FieldID, network.FieldChainID:
 			values[i] = new(sql.NullInt64)
@@ -150,6 +152,12 @@ func (n *Network) assignValues(columns []string, values []any) error {
 			} else if value != nil {
 				n.Fee = *value
 			}
+		case network.FieldIsEnabled:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field is_enabled", values[i])
+			} else if value.Valid {
+				n.IsEnabled = value.Bool
+			}
 		default:
 			n.selectValues.Set(columns[i], values[i])
 		}
@@ -217,6 +225,9 @@ func (n *Network) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("fee=")
 	builder.WriteString(fmt.Sprintf("%v", n.Fee))
+	builder.WriteString(", ")
+	builder.WriteString("is_enabled=")
+	builder.WriteString(fmt.Sprintf("%v", n.IsEnabled))
 	builder.WriteByte(')')
 	return builder.String()
 }

@@ -110,6 +110,20 @@ func (nc *NetworkCreate) SetFee(d decimal.Decimal) *NetworkCreate {
 	return nc
 }
 
+// SetIsEnabled sets the "is_enabled" field.
+func (nc *NetworkCreate) SetIsEnabled(b bool) *NetworkCreate {
+	nc.mutation.SetIsEnabled(b)
+	return nc
+}
+
+// SetNillableIsEnabled sets the "is_enabled" field if the given value is not nil.
+func (nc *NetworkCreate) SetNillableIsEnabled(b *bool) *NetworkCreate {
+	if b != nil {
+		nc.SetIsEnabled(*b)
+	}
+	return nc
+}
+
 // AddTokenIDs adds the "tokens" edge to the Token entity by IDs.
 func (nc *NetworkCreate) AddTokenIDs(ids ...int) *NetworkCreate {
 	nc.mutation.AddTokenIDs(ids...)
@@ -172,6 +186,10 @@ func (nc *NetworkCreate) defaults() {
 		v := network.DefaultGatewayContractAddress
 		nc.mutation.SetGatewayContractAddress(v)
 	}
+	if _, ok := nc.mutation.IsEnabled(); !ok {
+		v := network.DefaultIsEnabled
+		nc.mutation.SetIsEnabled(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -199,6 +217,9 @@ func (nc *NetworkCreate) check() error {
 	}
 	if _, ok := nc.mutation.Fee(); !ok {
 		return &ValidationError{Name: "fee", err: errors.New(`ent: missing required field "Network.fee"`)}
+	}
+	if _, ok := nc.mutation.IsEnabled(); !ok {
+		return &ValidationError{Name: "is_enabled", err: errors.New(`ent: missing required field "Network.is_enabled"`)}
 	}
 	return nil
 }
@@ -262,6 +283,10 @@ func (nc *NetworkCreate) createSpec() (*Network, *sqlgraph.CreateSpec) {
 	if value, ok := nc.mutation.Fee(); ok {
 		_spec.SetField(network.FieldFee, field.TypeFloat64, value)
 		_node.Fee = value
+	}
+	if value, ok := nc.mutation.IsEnabled(); ok {
+		_spec.SetField(network.FieldIsEnabled, field.TypeBool, value)
+		_node.IsEnabled = value
 	}
 	if nodes := nc.mutation.TokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -445,6 +470,18 @@ func (u *NetworkUpsert) AddFee(v decimal.Decimal) *NetworkUpsert {
 	return u
 }
 
+// SetIsEnabled sets the "is_enabled" field.
+func (u *NetworkUpsert) SetIsEnabled(v bool) *NetworkUpsert {
+	u.Set(network.FieldIsEnabled, v)
+	return u
+}
+
+// UpdateIsEnabled sets the "is_enabled" field to the value that was provided on create.
+func (u *NetworkUpsert) UpdateIsEnabled() *NetworkUpsert {
+	u.SetExcluded(network.FieldIsEnabled)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create.
 // Using this option is equivalent to using:
 //
@@ -620,6 +657,20 @@ func (u *NetworkUpsertOne) AddFee(v decimal.Decimal) *NetworkUpsertOne {
 func (u *NetworkUpsertOne) UpdateFee() *NetworkUpsertOne {
 	return u.Update(func(s *NetworkUpsert) {
 		s.UpdateFee()
+	})
+}
+
+// SetIsEnabled sets the "is_enabled" field.
+func (u *NetworkUpsertOne) SetIsEnabled(v bool) *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetIsEnabled(v)
+	})
+}
+
+// UpdateIsEnabled sets the "is_enabled" field to the value that was provided on create.
+func (u *NetworkUpsertOne) UpdateIsEnabled() *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateIsEnabled()
 	})
 }
 
@@ -964,6 +1015,20 @@ func (u *NetworkUpsertBulk) AddFee(v decimal.Decimal) *NetworkUpsertBulk {
 func (u *NetworkUpsertBulk) UpdateFee() *NetworkUpsertBulk {
 	return u.Update(func(s *NetworkUpsert) {
 		s.UpdateFee()
+	})
+}
+
+// SetIsEnabled sets the "is_enabled" field.
+func (u *NetworkUpsertBulk) SetIsEnabled(v bool) *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetIsEnabled(v)
+	})
+}
+
+// UpdateIsEnabled sets the "is_enabled" field to the value that was provided on create.
+func (u *NetworkUpsertBulk) UpdateIsEnabled() *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateIsEnabled()
 	})
 }
 

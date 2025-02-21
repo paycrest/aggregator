@@ -22,6 +22,7 @@ require (
 	github.com/spf13/viper v1.16.0
 	github.com/stackup-wallet/stackup-bundler v0.6.30
 	github.com/stretchr/testify v1.8.4
+	google.golang.org/appengine v1.6.7
 	google.golang.org/grpc v1.55.0
 )
 

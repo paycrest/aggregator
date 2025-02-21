@@ -6455,6 +6455,7 @@ type NetworkMutation struct {
 	is_testnet               *bool
 	fee                      *decimal.Decimal
 	addfee                   *decimal.Decimal
+	is_enabled               *bool
 	clearedFields            map[string]struct{}
 	tokens                   map[int]struct{}
 	removedtokens            map[int]struct{}
@@ -6939,6 +6940,42 @@ func (m *NetworkMutation) ResetFee() {
 	m.addfee = nil
 }
 
+// SetIsEnabled sets the "is_enabled" field.
+func (m *NetworkMutation) SetIsEnabled(b bool) {
+	m.is_enabled = &b
+}
+
+// IsEnabled returns the value of the "is_enabled" field in the mutation.
+func (m *NetworkMutation) IsEnabled() (r bool, exists bool) {
+	v := m.is_enabled
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsEnabled returns the old "is_enabled" field's value of the Network entity.
+// If the Network object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *NetworkMutation) OldIsEnabled(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsEnabled is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsEnabled requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsEnabled: %w", err)
+	}
+	return oldValue.IsEnabled, nil
+}
+
+// ResetIsEnabled resets all changes to the "is_enabled" field.
+func (m *NetworkMutation) ResetIsEnabled() {
+	m.is_enabled = nil
+}
+
 // AddTokenIDs adds the "tokens" edge to the Token entity by ids.
 func (m *NetworkMutation) AddTokenIDs(ids ...int) {
 	if m.tokens == nil {
@@ -7027,7 +7064,7 @@ func (m *NetworkMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *NetworkMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 10)
 	if m.created_at != nil {
 		fields = append(fields, network.FieldCreatedAt)
 	}
@@ -7055,6 +7092,9 @@ func (m *NetworkMutation) Fields() []string {
 	if m.fee != nil {
 		fields = append(fields, network.FieldFee)
 	}
+	if m.is_enabled != nil {
+		fields = append(fields, network.FieldIsEnabled)
+	}
 	return fields
 }
 
@@ -7081,6 +7121,8 @@ func (m *NetworkMutation) Field(name string) (ent.Value, bool) {
 		return m.IsTestnet()
 	case network.FieldFee:
 		return m.Fee()
+	case network.FieldIsEnabled:
+		return m.IsEnabled()
 	}
 	return nil, false
 }
@@ -7108,6 +7150,8 @@ func (m *NetworkMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldIsTestnet(ctx)
 	case network.FieldFee:
 		return m.OldFee(ctx)
+	case network.FieldIsEnabled:
+		return m.OldIsEnabled(ctx)
 	}
 	return nil, fmt.Errorf("unknown Network field %s", name)
 }
@@ -7179,6 +7223,13 @@ func (m *NetworkMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetFee(v)
+		return nil
+	case network.FieldIsEnabled:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsEnabled(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Network field %s", name)
@@ -7291,6 +7342,9 @@ func (m *NetworkMutation) ResetField(name string) error {
 		return nil
 	case network.FieldFee:
 		m.ResetFee()
+		return nil
+	case network.FieldIsEnabled:
+		m.ResetIsEnabled()
 		return nil
 	}
 	return fmt.Errorf("unknown Network field %s", name)

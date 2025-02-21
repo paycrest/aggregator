@@ -54,7 +54,10 @@ func setRPCClients(ctx context.Context) ([]*ent.Network, error) {
 
 	networks, err := storage.Client.Network.
 		Query().
-		Where(networkent.IsTestnetEQ(isTestnet)).
+		Where(
+			networkent.IsTestnetEQ(isTestnet),
+			networkent.IsEnabledEQ(true),
+		).
 		All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("setRPCClients.fetchNetworks: %w", err)

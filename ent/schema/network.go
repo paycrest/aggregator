@@ -33,6 +33,7 @@ func (Network) Fields() []ent.Field {
 		field.Bool("is_testnet"),
 		field.Float("fee").
 			GoType(decimal.Decimal{}),
+		field.Bool("is_enabled").Default(false),
 	}
 }
 

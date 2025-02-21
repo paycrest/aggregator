@@ -154,6 +154,20 @@ func (nu *NetworkUpdate) AddFee(d decimal.Decimal) *NetworkUpdate {
 	return nu
 }
 
+// SetIsEnabled sets the "is_enabled" field.
+func (nu *NetworkUpdate) SetIsEnabled(b bool) *NetworkUpdate {
+	nu.mutation.SetIsEnabled(b)
+	return nu
+}
+
+// SetNillableIsEnabled sets the "is_enabled" field if the given value is not nil.
+func (nu *NetworkUpdate) SetNillableIsEnabled(b *bool) *NetworkUpdate {
+	if b != nil {
+		nu.SetIsEnabled(*b)
+	}
+	return nu
+}
+
 // AddTokenIDs adds the "tokens" edge to the Token entity by IDs.
 func (nu *NetworkUpdate) AddTokenIDs(ids ...int) *NetworkUpdate {
 	nu.mutation.AddTokenIDs(ids...)
@@ -272,6 +286,9 @@ func (nu *NetworkUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := nu.mutation.AddedFee(); ok {
 		_spec.AddField(network.FieldFee, field.TypeFloat64, value)
+	}
+	if value, ok := nu.mutation.IsEnabled(); ok {
+		_spec.SetField(network.FieldIsEnabled, field.TypeBool, value)
 	}
 	if nu.mutation.TokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -462,6 +479,20 @@ func (nuo *NetworkUpdateOne) AddFee(d decimal.Decimal) *NetworkUpdateOne {
 	return nuo
 }
 
+// SetIsEnabled sets the "is_enabled" field.
+func (nuo *NetworkUpdateOne) SetIsEnabled(b bool) *NetworkUpdateOne {
+	nuo.mutation.SetIsEnabled(b)
+	return nuo
+}
+
+// SetNillableIsEnabled sets the "is_enabled" field if the given value is not nil.
+func (nuo *NetworkUpdateOne) SetNillableIsEnabled(b *bool) *NetworkUpdateOne {
+	if b != nil {
+		nuo.SetIsEnabled(*b)
+	}
+	return nuo
+}
+
 // AddTokenIDs adds the "tokens" edge to the Token entity by IDs.
 func (nuo *NetworkUpdateOne) AddTokenIDs(ids ...int) *NetworkUpdateOne {
 	nuo.mutation.AddTokenIDs(ids...)
@@ -610,6 +641,9 @@ func (nuo *NetworkUpdateOne) sqlSave(ctx context.Context) (_node *Network, err e
 	}
 	if value, ok := nuo.mutation.AddedFee(); ok {
 		_spec.AddField(network.FieldFee, field.TypeFloat64, value)
+	}
+	if value, ok := nuo.mutation.IsEnabled(); ok {
+		_spec.SetField(network.FieldIsEnabled, field.TypeBool, value)
 	}
 	if nuo.mutation.TokensCleared() {
 		edge := &sqlgraph.EdgeSpec{

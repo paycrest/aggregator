@@ -87,6 +87,7 @@ func setup() error {
 	if err != nil {
 		return err
 	}
+
 	testCtx.apiKey = apiKey
 
 	testCtx.token = token
@@ -109,9 +110,11 @@ func setup() error {
 
 func TestSender(t *testing.T) {
 
+	ctx := context.Background()
+
 	// Set up test database client
 	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-	defer client.Close() 
+	defer client.Close()
 
 	db.Client = client
 
@@ -119,7 +122,7 @@ func TestSender(t *testing.T) {
 	err := setup()
 	assert.NoError(t, err)
 
-	senderTokens, err := client.SenderOrderToken.Query().All(context.Background())
+	senderTokens, err := client.SenderOrderToken.Query().All(ctx)
 	assert.NoError(t, err)
 	assert.Greater(t, len(senderTokens), 0)
 
@@ -136,14 +139,12 @@ func TestSender(t *testing.T) {
 	router.GET("/sender/stats", ctrl.Stats)
 
 	var paymentOrderUUID uuid.UUID
-
 	t.Run("InitiatePaymentOrder", func(t *testing.T) {
-
 		// Fetch network from db
 		network, err := db.Client.Network.
 			Query().
 			Where(network.IdentifierEQ(testCtx.networkIdentifier)).
-			Only(context.Background())
+			Only(ctx)
 		assert.NoError(t, err)
 
 		payload := map[string]interface{}{
@@ -164,69 +165,115 @@ func TestSender(t *testing.T) {
 			"API-Key": testCtx.apiKey.ID.String(),
 		}
 
-		res, err := test.PerformRequest(t, "POST", "/sender/orders", payload, headers, router)
-		assert.NoError(t, err)
-
-		// Assert the response body
-		assert.Equal(t, http.StatusCreated, res.Code)
-
-		var response types.Response
-		err = json.Unmarshal(res.Body.Bytes(), &response)
-		assert.NoError(t, err)
-		assert.Equal(t, "Payment order initiated successfully", response.Message)
-		data, ok := response.Data.(map[string]interface{})
-		assert.True(t, ok, "response.Data is not of type map[string]interface{}")
-		assert.NotNil(t, data, "response.Data is nil")
-
-		assert.Equal(t, data["amount"], payload["amount"])
-		assert.Equal(t, data["network"], payload["network"])
-		assert.Equal(t, data["reference"], payload["reference"])
-		assert.NotEmpty(t, data["validUntil"])
-
-		// Parse the payment order ID string to uuid.UUID
-		paymentOrderUUID, err = uuid.Parse(data["id"].(string))
-		assert.NoError(t, err)
-
-		// Query the database for the payment order
-		paymentOrder, err := db.Client.PaymentOrder.
-			Query().
-			Where(paymentorder.IDEQ(paymentOrderUUID)).
-			WithRecipient().
-			Only(context.Background())
-		assert.NoError(t, err)
-
-		assert.NotNil(t, paymentOrder.Edges.Recipient)
-		assert.Equal(t, paymentOrder.Edges.Recipient.AccountIdentifier, payload["recipient"].(map[string]interface{})["accountIdentifier"])
-		assert.Equal(t, paymentOrder.Edges.Recipient.Memo, payload["recipient"].(map[string]interface{})["memo"])
-		assert.Equal(t, paymentOrder.Edges.Recipient.AccountName, payload["recipient"].(map[string]interface{})["accountName"])
-		assert.Equal(t, paymentOrder.Edges.Recipient.Institution, payload["recipient"].(map[string]interface{})["institution"])
-		assert.Equal(t, data["senderFee"], "5")
-		assert.Equal(t, data["transactionFee"], network.Fee.String())
-
-		t.Run("Check Transaction Logs", func(t *testing.T) {
-			headers := map[string]string{
-				"API-Key": testCtx.apiKey.ID.String(),
-			}
-
-			res, err = test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders/%s?timestamp=%v", paymentOrderUUID.String(), payload["timestamp"]), nil, headers, router)
+		t.Run("Should fail when network is disabled", func(t *testing.T) {
+			// Temporarily disable the network
+			_, err = db.Client.Network.UpdateOne(network).
+				SetIsEnabled(false).
+				Save(ctx)
 			assert.NoError(t, err)
 
-			type Response struct {
-				Status  string                     `json:"status"`
-				Message string                     `json:"message"`
-				Data    types.PaymentOrderResponse `json:"data"`
-			}
+			res, err := test.PerformRequest(t, "POST", "/sender/orders", payload, headers, router)
+			assert.NoError(t, err)
 
-			var response2 Response
 			// Assert the response body
-			assert.Equal(t, http.StatusOK, res.Code)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
 
-			err = json.Unmarshal(res.Body.Bytes(), &response2)
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
-			assert.Equal(t, "The order has been successfully retrieved", response2.Message)
-			assert.Equal(t, 1, len(response2.Data.Transactions), "response.Data is nil")
+			assert.Equal(t, "Failed to validate payload", response.Message)
+
+			errorData, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok, "response.Data is not of type map[string]interface{}")
+			assert.Equal(t, "Token", errorData["field"])
+			assert.Equal(t, "Provided token is not supported", errorData["message"])
+
+			// Re-enable the network for subsequent tests
+			_, err = db.Client.Network.UpdateOne(network).
+				SetIsEnabled(true).
+				Save(ctx)
+			assert.NoError(t, err)
 		})
 
+		t.Run("Should succeed when network is enabled", func(t *testing.T) {
+			res, err := test.PerformRequest(t, "POST", "/sender/orders", payload, headers, router)
+			assert.NoError(t, err)
+
+			// Assert the response body
+			assert.Equal(t, http.StatusCreated, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Payment order initiated successfully", response.Message)
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok, "response.Data is not of type map[string]interface{}")
+			assert.NotNil(t, data, "response.Data is nil")
+
+			assert.Equal(t, data["amount"], payload["amount"])
+			assert.Equal(t, data["network"], payload["network"])
+			assert.Equal(t, data["reference"], payload["reference"])
+			assert.NotEmpty(t, data["validUntil"])
+
+			// Parse the payment order ID string to uuid.UUID
+			paymentOrderUUID, err = uuid.Parse(data["id"].(string))
+			assert.NoError(t, err)
+
+			// Query the database for the payment order
+			paymentOrder, err := db.Client.PaymentOrder.
+				Query().
+				Where(paymentorder.IDEQ(paymentOrderUUID)).
+				WithRecipient().
+				Only(ctx)
+			assert.NoError(t, err)
+
+			assert.NotNil(t, paymentOrder.Edges.Recipient)
+			assert.Equal(t, paymentOrder.Edges.Recipient.AccountIdentifier, payload["recipient"].(map[string]interface{})["accountIdentifier"])
+			assert.Equal(t, paymentOrder.Edges.Recipient.Memo, payload["recipient"].(map[string]interface{})["memo"])
+			assert.Equal(t, paymentOrder.Edges.Recipient.AccountName, payload["recipient"].(map[string]interface{})["accountName"])
+			assert.Equal(t, paymentOrder.Edges.Recipient.Institution, payload["recipient"].(map[string]interface{})["institution"])
+			assert.Equal(t, data["senderFee"], "5")
+			assert.Equal(t, data["transactionFee"], network.Fee.String())
+
+			t.Run("Check Transaction Logs", func(t *testing.T) {
+				headers := map[string]string{
+					"API-Key": testCtx.apiKey.ID.String(),
+				}
+
+				res, err = test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders/%s?timestamp=%v", paymentOrderUUID.String(), payload["timestamp"]), nil, headers, router)
+				assert.NoError(t, err)
+
+				type Response struct {
+					Status  string                     `json:"status"`
+					Message string                     `json:"message"`
+					Data    types.PaymentOrderResponse `json:"data"`
+				}
+
+				var response2 Response
+				// Assert the response body
+				assert.Equal(t, http.StatusOK, res.Code)
+
+				err = json.Unmarshal(res.Body.Bytes(), &response2)
+				assert.NoError(t, err)
+				assert.Equal(t, "The order has been successfully retrieved", response2.Message)
+				assert.Equal(t, 1, len(response2.Data.Transactions), "response.Data is nil")
+			})
+		})
+
+		t.Run("New networks should have is_enabled default to false", func(t *testing.T) {
+			newNetwork, err := db.Client.Network.
+				Create().
+				SetChainID(1).
+				SetIdentifier("bnb-smart-chain").
+				SetRPCEndpoint("https://testnet.rpc.url").
+				SetIdentifier("bnb-smart-chain").
+				SetIsTestnet(true).
+				SetFee(decimal.NewFromFloat(0.01)).
+				Save(ctx)
+			assert.NoError(t, err)
+
+			assert.False(t, newNetwork.IsEnabled, "is_enabled should default to false")
+		})
 	})
 
 	t.Run("GetPaymentOrderByID", func(t *testing.T) {

@@ -74,16 +74,23 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		Query().
 		Where(
 			tokenEnt.SymbolEQ(payload.Token),
-			tokenEnt.HasNetworkWith(network.IdentifierEQ(payload.Network)),
+			tokenEnt.HasNetworkWith(
+				network.IdentifierEQ(payload.Network),
+				network.IsEnabledEQ(true),
+			),
 			tokenEnt.IsEnabledEQ(true),
 		).
 		WithNetwork().
 		Only(ctx)
 	if err != nil {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
-			Field:   "Token",
-			Message: "Provided token is not supported",
-		})
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+				Field:   "Token",
+				Message: "Provided token is not supported",
+			})
+		} else {
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Internal server error", nil)
+		}
 		return
 	}
 
