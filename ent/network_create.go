@@ -104,34 +104,6 @@ func (nc *NetworkCreate) SetIsTestnet(b bool) *NetworkCreate {
 	return nc
 }
 
-// SetBundlerURL sets the "bundler_url" field.
-func (nc *NetworkCreate) SetBundlerURL(s string) *NetworkCreate {
-	nc.mutation.SetBundlerURL(s)
-	return nc
-}
-
-// SetNillableBundlerURL sets the "bundler_url" field if the given value is not nil.
-func (nc *NetworkCreate) SetNillableBundlerURL(s *string) *NetworkCreate {
-	if s != nil {
-		nc.SetBundlerURL(*s)
-	}
-	return nc
-}
-
-// SetPaymasterURL sets the "paymaster_url" field.
-func (nc *NetworkCreate) SetPaymasterURL(s string) *NetworkCreate {
-	nc.mutation.SetPaymasterURL(s)
-	return nc
-}
-
-// SetNillablePaymasterURL sets the "paymaster_url" field if the given value is not nil.
-func (nc *NetworkCreate) SetNillablePaymasterURL(s *string) *NetworkCreate {
-	if s != nil {
-		nc.SetPaymasterURL(*s)
-	}
-	return nc
-}
-
 // SetFee sets the "fee" field.
 func (nc *NetworkCreate) SetFee(d decimal.Decimal) *NetworkCreate {
 	nc.mutation.SetFee(d)
@@ -286,14 +258,6 @@ func (nc *NetworkCreate) createSpec() (*Network, *sqlgraph.CreateSpec) {
 	if value, ok := nc.mutation.IsTestnet(); ok {
 		_spec.SetField(network.FieldIsTestnet, field.TypeBool, value)
 		_node.IsTestnet = value
-	}
-	if value, ok := nc.mutation.BundlerURL(); ok {
-		_spec.SetField(network.FieldBundlerURL, field.TypeString, value)
-		_node.BundlerURL = value
-	}
-	if value, ok := nc.mutation.PaymasterURL(); ok {
-		_spec.SetField(network.FieldPaymasterURL, field.TypeString, value)
-		_node.PaymasterURL = value
 	}
 	if value, ok := nc.mutation.Fee(); ok {
 		_spec.SetField(network.FieldFee, field.TypeFloat64, value)
@@ -460,42 +424,6 @@ func (u *NetworkUpsert) SetIsTestnet(v bool) *NetworkUpsert {
 // UpdateIsTestnet sets the "is_testnet" field to the value that was provided on create.
 func (u *NetworkUpsert) UpdateIsTestnet() *NetworkUpsert {
 	u.SetExcluded(network.FieldIsTestnet)
-	return u
-}
-
-// SetBundlerURL sets the "bundler_url" field.
-func (u *NetworkUpsert) SetBundlerURL(v string) *NetworkUpsert {
-	u.Set(network.FieldBundlerURL, v)
-	return u
-}
-
-// UpdateBundlerURL sets the "bundler_url" field to the value that was provided on create.
-func (u *NetworkUpsert) UpdateBundlerURL() *NetworkUpsert {
-	u.SetExcluded(network.FieldBundlerURL)
-	return u
-}
-
-// ClearBundlerURL clears the value of the "bundler_url" field.
-func (u *NetworkUpsert) ClearBundlerURL() *NetworkUpsert {
-	u.SetNull(network.FieldBundlerURL)
-	return u
-}
-
-// SetPaymasterURL sets the "paymaster_url" field.
-func (u *NetworkUpsert) SetPaymasterURL(v string) *NetworkUpsert {
-	u.Set(network.FieldPaymasterURL, v)
-	return u
-}
-
-// UpdatePaymasterURL sets the "paymaster_url" field to the value that was provided on create.
-func (u *NetworkUpsert) UpdatePaymasterURL() *NetworkUpsert {
-	u.SetExcluded(network.FieldPaymasterURL)
-	return u
-}
-
-// ClearPaymasterURL clears the value of the "paymaster_url" field.
-func (u *NetworkUpsert) ClearPaymasterURL() *NetworkUpsert {
-	u.SetNull(network.FieldPaymasterURL)
 	return u
 }
 
@@ -671,48 +599,6 @@ func (u *NetworkUpsertOne) SetIsTestnet(v bool) *NetworkUpsertOne {
 func (u *NetworkUpsertOne) UpdateIsTestnet() *NetworkUpsertOne {
 	return u.Update(func(s *NetworkUpsert) {
 		s.UpdateIsTestnet()
-	})
-}
-
-// SetBundlerURL sets the "bundler_url" field.
-func (u *NetworkUpsertOne) SetBundlerURL(v string) *NetworkUpsertOne {
-	return u.Update(func(s *NetworkUpsert) {
-		s.SetBundlerURL(v)
-	})
-}
-
-// UpdateBundlerURL sets the "bundler_url" field to the value that was provided on create.
-func (u *NetworkUpsertOne) UpdateBundlerURL() *NetworkUpsertOne {
-	return u.Update(func(s *NetworkUpsert) {
-		s.UpdateBundlerURL()
-	})
-}
-
-// ClearBundlerURL clears the value of the "bundler_url" field.
-func (u *NetworkUpsertOne) ClearBundlerURL() *NetworkUpsertOne {
-	return u.Update(func(s *NetworkUpsert) {
-		s.ClearBundlerURL()
-	})
-}
-
-// SetPaymasterURL sets the "paymaster_url" field.
-func (u *NetworkUpsertOne) SetPaymasterURL(v string) *NetworkUpsertOne {
-	return u.Update(func(s *NetworkUpsert) {
-		s.SetPaymasterURL(v)
-	})
-}
-
-// UpdatePaymasterURL sets the "paymaster_url" field to the value that was provided on create.
-func (u *NetworkUpsertOne) UpdatePaymasterURL() *NetworkUpsertOne {
-	return u.Update(func(s *NetworkUpsert) {
-		s.UpdatePaymasterURL()
-	})
-}
-
-// ClearPaymasterURL clears the value of the "paymaster_url" field.
-func (u *NetworkUpsertOne) ClearPaymasterURL() *NetworkUpsertOne {
-	return u.Update(func(s *NetworkUpsert) {
-		s.ClearPaymasterURL()
 	})
 }
 
@@ -1057,48 +943,6 @@ func (u *NetworkUpsertBulk) SetIsTestnet(v bool) *NetworkUpsertBulk {
 func (u *NetworkUpsertBulk) UpdateIsTestnet() *NetworkUpsertBulk {
 	return u.Update(func(s *NetworkUpsert) {
 		s.UpdateIsTestnet()
-	})
-}
-
-// SetBundlerURL sets the "bundler_url" field.
-func (u *NetworkUpsertBulk) SetBundlerURL(v string) *NetworkUpsertBulk {
-	return u.Update(func(s *NetworkUpsert) {
-		s.SetBundlerURL(v)
-	})
-}
-
-// UpdateBundlerURL sets the "bundler_url" field to the value that was provided on create.
-func (u *NetworkUpsertBulk) UpdateBundlerURL() *NetworkUpsertBulk {
-	return u.Update(func(s *NetworkUpsert) {
-		s.UpdateBundlerURL()
-	})
-}
-
-// ClearBundlerURL clears the value of the "bundler_url" field.
-func (u *NetworkUpsertBulk) ClearBundlerURL() *NetworkUpsertBulk {
-	return u.Update(func(s *NetworkUpsert) {
-		s.ClearBundlerURL()
-	})
-}
-
-// SetPaymasterURL sets the "paymaster_url" field.
-func (u *NetworkUpsertBulk) SetPaymasterURL(v string) *NetworkUpsertBulk {
-	return u.Update(func(s *NetworkUpsert) {
-		s.SetPaymasterURL(v)
-	})
-}
-
-// UpdatePaymasterURL sets the "paymaster_url" field to the value that was provided on create.
-func (u *NetworkUpsertBulk) UpdatePaymasterURL() *NetworkUpsertBulk {
-	return u.Update(func(s *NetworkUpsert) {
-		s.UpdatePaymasterURL()
-	})
-}
-
-// ClearPaymasterURL clears the value of the "paymaster_url" field.
-func (u *NetworkUpsertBulk) ClearPaymasterURL() *NetworkUpsertBulk {
-	return u.Update(func(s *NetworkUpsert) {
-		s.ClearPaymasterURL()
 	})
 }
 

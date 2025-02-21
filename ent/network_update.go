@@ -133,46 +133,6 @@ func (nu *NetworkUpdate) SetNillableIsTestnet(b *bool) *NetworkUpdate {
 	return nu
 }
 
-// SetBundlerURL sets the "bundler_url" field.
-func (nu *NetworkUpdate) SetBundlerURL(s string) *NetworkUpdate {
-	nu.mutation.SetBundlerURL(s)
-	return nu
-}
-
-// SetNillableBundlerURL sets the "bundler_url" field if the given value is not nil.
-func (nu *NetworkUpdate) SetNillableBundlerURL(s *string) *NetworkUpdate {
-	if s != nil {
-		nu.SetBundlerURL(*s)
-	}
-	return nu
-}
-
-// ClearBundlerURL clears the value of the "bundler_url" field.
-func (nu *NetworkUpdate) ClearBundlerURL() *NetworkUpdate {
-	nu.mutation.ClearBundlerURL()
-	return nu
-}
-
-// SetPaymasterURL sets the "paymaster_url" field.
-func (nu *NetworkUpdate) SetPaymasterURL(s string) *NetworkUpdate {
-	nu.mutation.SetPaymasterURL(s)
-	return nu
-}
-
-// SetNillablePaymasterURL sets the "paymaster_url" field if the given value is not nil.
-func (nu *NetworkUpdate) SetNillablePaymasterURL(s *string) *NetworkUpdate {
-	if s != nil {
-		nu.SetPaymasterURL(*s)
-	}
-	return nu
-}
-
-// ClearPaymasterURL clears the value of the "paymaster_url" field.
-func (nu *NetworkUpdate) ClearPaymasterURL() *NetworkUpdate {
-	nu.mutation.ClearPaymasterURL()
-	return nu
-}
-
 // SetFee sets the "fee" field.
 func (nu *NetworkUpdate) SetFee(d decimal.Decimal) *NetworkUpdate {
 	nu.mutation.ResetFee()
@@ -306,18 +266,6 @@ func (nu *NetworkUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := nu.mutation.IsTestnet(); ok {
 		_spec.SetField(network.FieldIsTestnet, field.TypeBool, value)
-	}
-	if value, ok := nu.mutation.BundlerURL(); ok {
-		_spec.SetField(network.FieldBundlerURL, field.TypeString, value)
-	}
-	if nu.mutation.BundlerURLCleared() {
-		_spec.ClearField(network.FieldBundlerURL, field.TypeString)
-	}
-	if value, ok := nu.mutation.PaymasterURL(); ok {
-		_spec.SetField(network.FieldPaymasterURL, field.TypeString, value)
-	}
-	if nu.mutation.PaymasterURLCleared() {
-		_spec.ClearField(network.FieldPaymasterURL, field.TypeString)
 	}
 	if value, ok := nu.mutation.Fee(); ok {
 		_spec.SetField(network.FieldFee, field.TypeFloat64, value)
@@ -493,46 +441,6 @@ func (nuo *NetworkUpdateOne) SetNillableIsTestnet(b *bool) *NetworkUpdateOne {
 	return nuo
 }
 
-// SetBundlerURL sets the "bundler_url" field.
-func (nuo *NetworkUpdateOne) SetBundlerURL(s string) *NetworkUpdateOne {
-	nuo.mutation.SetBundlerURL(s)
-	return nuo
-}
-
-// SetNillableBundlerURL sets the "bundler_url" field if the given value is not nil.
-func (nuo *NetworkUpdateOne) SetNillableBundlerURL(s *string) *NetworkUpdateOne {
-	if s != nil {
-		nuo.SetBundlerURL(*s)
-	}
-	return nuo
-}
-
-// ClearBundlerURL clears the value of the "bundler_url" field.
-func (nuo *NetworkUpdateOne) ClearBundlerURL() *NetworkUpdateOne {
-	nuo.mutation.ClearBundlerURL()
-	return nuo
-}
-
-// SetPaymasterURL sets the "paymaster_url" field.
-func (nuo *NetworkUpdateOne) SetPaymasterURL(s string) *NetworkUpdateOne {
-	nuo.mutation.SetPaymasterURL(s)
-	return nuo
-}
-
-// SetNillablePaymasterURL sets the "paymaster_url" field if the given value is not nil.
-func (nuo *NetworkUpdateOne) SetNillablePaymasterURL(s *string) *NetworkUpdateOne {
-	if s != nil {
-		nuo.SetPaymasterURL(*s)
-	}
-	return nuo
-}
-
-// ClearPaymasterURL clears the value of the "paymaster_url" field.
-func (nuo *NetworkUpdateOne) ClearPaymasterURL() *NetworkUpdateOne {
-	nuo.mutation.ClearPaymasterURL()
-	return nuo
-}
-
 // SetFee sets the "fee" field.
 func (nuo *NetworkUpdateOne) SetFee(d decimal.Decimal) *NetworkUpdateOne {
 	nuo.mutation.ResetFee()
@@ -696,18 +604,6 @@ func (nuo *NetworkUpdateOne) sqlSave(ctx context.Context) (_node *Network, err e
 	}
 	if value, ok := nuo.mutation.IsTestnet(); ok {
 		_spec.SetField(network.FieldIsTestnet, field.TypeBool, value)
-	}
-	if value, ok := nuo.mutation.BundlerURL(); ok {
-		_spec.SetField(network.FieldBundlerURL, field.TypeString, value)
-	}
-	if nuo.mutation.BundlerURLCleared() {
-		_spec.ClearField(network.FieldBundlerURL, field.TypeString)
-	}
-	if value, ok := nuo.mutation.PaymasterURL(); ok {
-		_spec.SetField(network.FieldPaymasterURL, field.TypeString, value)
-	}
-	if nuo.mutation.PaymasterURLCleared() {
-		_spec.ClearField(network.FieldPaymasterURL, field.TypeString)
 	}
 	if value, ok := nuo.mutation.Fee(); ok {
 		_spec.SetField(network.FieldFee, field.TypeFloat64, value)
