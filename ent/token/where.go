@@ -85,6 +85,11 @@ func IsEnabled(v bool) predicate.Token {
 	return predicate.Token(sql.FieldEQ(FieldIsEnabled, v))
 }
 
+// BaseCurrency applies equality check predicate on the "base_currency" field. It's identical to BaseCurrencyEQ.
+func BaseCurrency(v string) predicate.Token {
+	return predicate.Token(sql.FieldEQ(FieldBaseCurrency, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Token {
 	return predicate.Token(sql.FieldEQ(FieldCreatedAt, v))
@@ -343,6 +348,71 @@ func IsEnabledEQ(v bool) predicate.Token {
 // IsEnabledNEQ applies the NEQ predicate on the "is_enabled" field.
 func IsEnabledNEQ(v bool) predicate.Token {
 	return predicate.Token(sql.FieldNEQ(FieldIsEnabled, v))
+}
+
+// BaseCurrencyEQ applies the EQ predicate on the "base_currency" field.
+func BaseCurrencyEQ(v string) predicate.Token {
+	return predicate.Token(sql.FieldEQ(FieldBaseCurrency, v))
+}
+
+// BaseCurrencyNEQ applies the NEQ predicate on the "base_currency" field.
+func BaseCurrencyNEQ(v string) predicate.Token {
+	return predicate.Token(sql.FieldNEQ(FieldBaseCurrency, v))
+}
+
+// BaseCurrencyIn applies the In predicate on the "base_currency" field.
+func BaseCurrencyIn(vs ...string) predicate.Token {
+	return predicate.Token(sql.FieldIn(FieldBaseCurrency, vs...))
+}
+
+// BaseCurrencyNotIn applies the NotIn predicate on the "base_currency" field.
+func BaseCurrencyNotIn(vs ...string) predicate.Token {
+	return predicate.Token(sql.FieldNotIn(FieldBaseCurrency, vs...))
+}
+
+// BaseCurrencyGT applies the GT predicate on the "base_currency" field.
+func BaseCurrencyGT(v string) predicate.Token {
+	return predicate.Token(sql.FieldGT(FieldBaseCurrency, v))
+}
+
+// BaseCurrencyGTE applies the GTE predicate on the "base_currency" field.
+func BaseCurrencyGTE(v string) predicate.Token {
+	return predicate.Token(sql.FieldGTE(FieldBaseCurrency, v))
+}
+
+// BaseCurrencyLT applies the LT predicate on the "base_currency" field.
+func BaseCurrencyLT(v string) predicate.Token {
+	return predicate.Token(sql.FieldLT(FieldBaseCurrency, v))
+}
+
+// BaseCurrencyLTE applies the LTE predicate on the "base_currency" field.
+func BaseCurrencyLTE(v string) predicate.Token {
+	return predicate.Token(sql.FieldLTE(FieldBaseCurrency, v))
+}
+
+// BaseCurrencyContains applies the Contains predicate on the "base_currency" field.
+func BaseCurrencyContains(v string) predicate.Token {
+	return predicate.Token(sql.FieldContains(FieldBaseCurrency, v))
+}
+
+// BaseCurrencyHasPrefix applies the HasPrefix predicate on the "base_currency" field.
+func BaseCurrencyHasPrefix(v string) predicate.Token {
+	return predicate.Token(sql.FieldHasPrefix(FieldBaseCurrency, v))
+}
+
+// BaseCurrencyHasSuffix applies the HasSuffix predicate on the "base_currency" field.
+func BaseCurrencyHasSuffix(v string) predicate.Token {
+	return predicate.Token(sql.FieldHasSuffix(FieldBaseCurrency, v))
+}
+
+// BaseCurrencyEqualFold applies the EqualFold predicate on the "base_currency" field.
+func BaseCurrencyEqualFold(v string) predicate.Token {
+	return predicate.Token(sql.FieldEqualFold(FieldBaseCurrency, v))
+}
+
+// BaseCurrencyContainsFold applies the ContainsFold predicate on the "base_currency" field.
+func BaseCurrencyContainsFold(v string) predicate.Token {
+	return predicate.Token(sql.FieldContainsFold(FieldBaseCurrency, v))
 }
 
 // HasNetwork applies the HasEdge predicate on the "network" edge.

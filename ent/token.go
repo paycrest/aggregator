@@ -30,6 +30,8 @@ type Token struct {
 	Decimals int8 `json:"decimals,omitempty"`
 	// IsEnabled holds the value of the "is_enabled" field.
 	IsEnabled bool `json:"is_enabled,omitempty"`
+	// BaseCurrency holds the value of the "base_currency" field.
+	BaseCurrency string `json:"base_currency,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the TokenQuery when eager-loading is set.
 	Edges          TokenEdges `json:"edges"`
@@ -99,7 +101,7 @@ func (*Token) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case token.FieldID, token.FieldDecimals:
 			values[i] = new(sql.NullInt64)
-		case token.FieldSymbol, token.FieldContractAddress:
+		case token.FieldSymbol, token.FieldContractAddress, token.FieldBaseCurrency:
 			values[i] = new(sql.NullString)
 		case token.FieldCreatedAt, token.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -161,6 +163,12 @@ func (t *Token) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field is_enabled", values[i])
 			} else if value.Valid {
 				t.IsEnabled = value.Bool
+			}
+		case token.FieldBaseCurrency:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field base_currency", values[i])
+			} else if value.Valid {
+				t.BaseCurrency = value.String
 			}
 		case token.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -242,6 +250,9 @@ func (t *Token) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("is_enabled=")
 	builder.WriteString(fmt.Sprintf("%v", t.IsEnabled))
+	builder.WriteString(", ")
+	builder.WriteString("base_currency=")
+	builder.WriteString(t.BaseCurrency)
 	builder.WriteByte(')')
 	return builder.String()
 }
