@@ -35,8 +35,8 @@ func TestUserOp(t *testing.T) {
 		SetIdentifier("ethereum").
 		SetIsTestnet(true).
 		SetRPCEndpoint("https://mock-rpc-url").
-		SetBundlerURL("http://bundler.biconomy.io").
-		SetPaymasterURL("http://paymaster.biconomy.io").
+		SetBundlerURL("http://api.stackup-bundler-url").
+		SetPaymasterURL("http://api.stackup-paymaster-url").
 		SetFee(decimal.NewFromInt(1)).
 		Save(ctx)
 	assert.NoError(t, err)
@@ -47,8 +47,8 @@ func TestUserOp(t *testing.T) {
 		t.Run("test getEndpoints with mock data", func(t *testing.T) {
 			bundlerURL, paymasterURL, err := getEndpoints(1)
 			assert.NoError(t, err)
-			assert.Equal(t, "http://bundler.biconomy.io", bundlerURL)
-			assert.Equal(t, "http://paymaster.biconomy.io", paymasterURL)
+			assert.Equal(t, "http://api.stackup-bundler-url", bundlerURL)
+			assert.Equal(t, "http://api.stackup-paymaster-url", paymasterURL)
 		})
 		t.Run("when chainID is supported getEndpoints", func(t *testing.T) {
 			bundlerID, paymaster, err := getEndpoints(1)
@@ -86,7 +86,7 @@ func TestUserOp(t *testing.T) {
 		}
 
 		// register mock response
-		httpmock.RegisterResponder("POST", "http://bundler.biconomy.io",
+		httpmock.RegisterResponder("POST", "http://api.stackup-bundler-url",
 			func(r *http.Request) (*http.Response, error) {
 				bytes, err := io.ReadAll(r.Body)
 				if err != nil {
@@ -95,7 +95,7 @@ func TestUserOp(t *testing.T) {
 
 				if strings.Contains(string(bytes), "eth_sendUserOperation") {
 
-					aaService, err := detectAAService("http://bundler.biconomy.io")
+					aaService, err := detectAAService("http://api.stackup-bundler-url")
 					if err != nil {
 						return nil, err
 					}
@@ -186,7 +186,7 @@ func TestUserOp(t *testing.T) {
 		}
 
 		// register mock response
-		httpmock.RegisterResponder("POST", "http://paymaster.biconomy.io",
+		httpmock.RegisterResponder("POST", "http://api.stackup-paymaster-url",
 			func(r *http.Request) (*http.Response, error) {
 				bytes, err := io.ReadAll(r.Body)
 				if err != nil {
@@ -194,24 +194,38 @@ func TestUserOp(t *testing.T) {
 				}
 
 				if strings.Contains(string(bytes), "pm_sponsorUserOperation") {
-					aaService, err := detectAAService("http://paymaster.biconomy.io")
+					aaService, err := detectAAService("http://api.stackup-paymaster-url")
 					if err != nil {
 						return nil, err
 					}
-					assert.Equal(t, "biconomy", aaService)
-					assert.True(t, strings.Contains(string(bytes), "INFINITISM"))
 
-					resp, err := httpmock.NewJsonResponse(200, map[string]interface{}{
-						"jsonrpc": "2.0",
-						"id":      1,
-						"result": map[string]interface{}{
-							"paymasterAndData":     "0x00000f79b7faf42eebadba19acc07cd08af447890000000000000000000...",
-							"preVerificationGas":   "186034",
-							"verificationGasLimit": 395693,
-							"callGasLimit":         55412,
-						},
-					})
-					return resp, err
+					if aaService == "biconomy" {
+						assert.True(t, strings.Contains(string(bytes), "INFINITISM"))
+						resp, err := httpmock.NewJsonResponse(200, map[string]interface{}{
+							"jsonrpc": "2.0",
+							"id":      1,
+							"result": map[string]interface{}{
+								"paymasterAndData":     "0x00000f79b7faf42eebadba19acc07cd08af447890000000000000000000...",
+								"preVerificationGas":   "186034",
+								"verificationGasLimit": 395693,
+								"callGasLimit":         55412,
+							},
+						})
+						return resp, err
+					} else {
+						assert.True(t, strings.Contains(string(bytes), "pm_sponsorUserOperation"))
+						resp, err := httpmock.NewJsonResponse(200, map[string]interface{}{
+							"jsonrpc": "2.0",
+							"id":      1,
+							"result": map[string]interface{}{
+								"paymasterAndData":     "0x00000f79b7faf42eebadba19acc07cd08af447890000000000000000000...",
+								"preVerificationGas":   "0x1234",
+								"verificationGasLimit": "0x1234",
+								"callGasLimit":         "0x1234",
+							},
+						})
+						return resp, err
+					}
 				}
 				return httpmock.NewBytesResponse(200, []byte(`{"jsonrpc": "2.0","id": 1,"result":[]}`)), nil
 
