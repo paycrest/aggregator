@@ -132,7 +132,7 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 	}
 
 	if token == nil {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Token is not supported", nil)
+		u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Token %s is not supported", strings.ToUpper(ctx.Param("token"))), nil)
 		return
 	}
 
@@ -145,7 +145,12 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 		Only(ctx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Fiat currency is not supported", nil)
+		u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Fiat currency %s is not supported", strings.ToUpper(ctx.Param("fiat"))), nil)
+		return
+	}
+
+	if !strings.EqualFold(token.BaseCurrency, currency.Code) && !strings.EqualFold(token.BaseCurrency, "USD") {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("%s can only be converted to %s", token.Symbol, token.BaseCurrency), nil)
 		return
 	}
 
