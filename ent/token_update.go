@@ -102,6 +102,20 @@ func (tu *TokenUpdate) SetNillableIsEnabled(b *bool) *TokenUpdate {
 	return tu
 }
 
+// SetBaseCurrency sets the "base_currency" field.
+func (tu *TokenUpdate) SetBaseCurrency(s string) *TokenUpdate {
+	tu.mutation.SetBaseCurrency(s)
+	return tu
+}
+
+// SetNillableBaseCurrency sets the "base_currency" field if the given value is not nil.
+func (tu *TokenUpdate) SetNillableBaseCurrency(s *string) *TokenUpdate {
+	if s != nil {
+		tu.SetBaseCurrency(*s)
+	}
+	return tu
+}
+
 // SetNetworkID sets the "network" edge to the Network entity by ID.
 func (tu *TokenUpdate) SetNetworkID(id int) *TokenUpdate {
 	tu.mutation.SetNetworkID(id)
@@ -315,6 +329,9 @@ func (tu *TokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := tu.mutation.IsEnabled(); ok {
 		_spec.SetField(token.FieldIsEnabled, field.TypeBool, value)
+	}
+	if value, ok := tu.mutation.BaseCurrency(); ok {
+		_spec.SetField(token.FieldBaseCurrency, field.TypeString, value)
 	}
 	if tu.mutation.NetworkCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -569,6 +586,20 @@ func (tuo *TokenUpdateOne) SetNillableIsEnabled(b *bool) *TokenUpdateOne {
 	return tuo
 }
 
+// SetBaseCurrency sets the "base_currency" field.
+func (tuo *TokenUpdateOne) SetBaseCurrency(s string) *TokenUpdateOne {
+	tuo.mutation.SetBaseCurrency(s)
+	return tuo
+}
+
+// SetNillableBaseCurrency sets the "base_currency" field if the given value is not nil.
+func (tuo *TokenUpdateOne) SetNillableBaseCurrency(s *string) *TokenUpdateOne {
+	if s != nil {
+		tuo.SetBaseCurrency(*s)
+	}
+	return tuo
+}
+
 // SetNetworkID sets the "network" edge to the Network entity by ID.
 func (tuo *TokenUpdateOne) SetNetworkID(id int) *TokenUpdateOne {
 	tuo.mutation.SetNetworkID(id)
@@ -812,6 +843,9 @@ func (tuo *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error
 	}
 	if value, ok := tuo.mutation.IsEnabled(); ok {
 		_spec.SetField(token.FieldIsEnabled, field.TypeBool, value)
+	}
+	if value, ok := tuo.mutation.BaseCurrency(); ok {
+		_spec.SetField(token.FieldBaseCurrency, field.TypeString, value)
 	}
 	if tuo.mutation.NetworkCleared() {
 		edge := &sqlgraph.EdgeSpec{

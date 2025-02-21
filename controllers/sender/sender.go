@@ -10,6 +10,7 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/storage"
+	"github.com/paycrest/aggregator/utils"
 
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/network"
@@ -210,18 +211,19 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	}
 
 	// Validate if institution exists
-	institutionExists, err := storage.Client.Institution.
+	institutionObj, err := storage.Client.Institution.
 		Query().
 		Where(
 			institution.CodeEQ(payload.Recipient.Institution),
 		).
-		Exist(ctx)
+		WithFiatCurrency().
+		First(ctx)
 	if err != nil {
 		logger.Errorf("error validating institution: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to validate institution", nil)
 		return
 	}
-	if !institutionExists {
+	if institutionObj == nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 			Field:   "Recipient",
 			Message: "Invalid institution code provided",
@@ -277,10 +279,21 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 
 	// Validate amount for private orders
 	if isPrivate {
-		if payload.Amount.LessThan(minOrderAmount) {
+		normalizedAmount := payload.Amount
+		if strings.EqualFold(token.BaseCurrency, institutionObj.Edges.FiatCurrency.Code) && token.BaseCurrency != "USD" {
+			rateResponse, err := utils.GetTokenRateFromQueue("USDT", normalizedAmount, institutionObj.Edges.FiatCurrency.Code, institutionObj.Edges.FiatCurrency.MarketRate)
+			if err != nil {
+				logger.Errorf("InitiatePaymentOrder.GetTokenRateFromQueue: %v", err)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+				return
+			}
+			normalizedAmount = payload.Amount.Div(rateResponse)
+		}
+
+		if normalizedAmount.LessThan(minOrderAmount) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "The amount is below the minimum order amount for the specified provider", nil)
 			return
-		} else if payload.Amount.GreaterThan(maxOrderAmount) {
+		} else if normalizedAmount.GreaterThan(maxOrderAmount) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "The amount is beyond the maximum order amount for the specified provider", nil)
 			return
 		}

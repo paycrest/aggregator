@@ -26,6 +26,8 @@ const (
 	FieldDecimals = "decimals"
 	// FieldIsEnabled holds the string denoting the is_enabled field in the database.
 	FieldIsEnabled = "is_enabled"
+	// FieldBaseCurrency holds the string denoting the base_currency field in the database.
+	FieldBaseCurrency = "base_currency"
 	// EdgeNetwork holds the string denoting the network edge name in mutations.
 	EdgeNetwork = "network"
 	// EdgePaymentOrders holds the string denoting the payment_orders edge name in mutations.
@@ -75,6 +77,7 @@ var Columns = []string{
 	FieldContractAddress,
 	FieldDecimals,
 	FieldIsEnabled,
+	FieldBaseCurrency,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "tokens"
@@ -111,6 +114,8 @@ var (
 	ContractAddressValidator func(string) error
 	// DefaultIsEnabled holds the default value on creation for the "is_enabled" field.
 	DefaultIsEnabled bool
+	// DefaultBaseCurrency holds the default value on creation for the "base_currency" field.
+	DefaultBaseCurrency string
 )
 
 // OrderOption defines the ordering options for the Token queries.
@@ -149,6 +154,11 @@ func ByDecimals(opts ...sql.OrderTermOption) OrderOption {
 // ByIsEnabled orders the results by the is_enabled field.
 func ByIsEnabled(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldIsEnabled, opts...).ToFunc()
+}
+
+// ByBaseCurrency orders the results by the base_currency field.
+func ByBaseCurrency(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBaseCurrency, opts...).ToFunc()
 }
 
 // ByNetworkField orders the results by network field.

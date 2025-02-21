@@ -4289,9 +4289,22 @@ func (m *LockOrderFulfillmentMutation) OldTxID(ctx context.Context) (v string, e
 	return oldValue.TxID, nil
 }
 
+// ClearTxID clears the value of the "tx_id" field.
+func (m *LockOrderFulfillmentMutation) ClearTxID() {
+	m.tx_id = nil
+	m.clearedFields[lockorderfulfillment.FieldTxID] = struct{}{}
+}
+
+// TxIDCleared returns if the "tx_id" field was cleared in this mutation.
+func (m *LockOrderFulfillmentMutation) TxIDCleared() bool {
+	_, ok := m.clearedFields[lockorderfulfillment.FieldTxID]
+	return ok
+}
+
 // ResetTxID resets all changes to the "tx_id" field.
 func (m *LockOrderFulfillmentMutation) ResetTxID() {
 	m.tx_id = nil
+	delete(m.clearedFields, lockorderfulfillment.FieldTxID)
 }
 
 // SetPsp sets the "psp" field.
@@ -4642,6 +4655,9 @@ func (m *LockOrderFulfillmentMutation) AddField(name string, value ent.Value) er
 // mutation.
 func (m *LockOrderFulfillmentMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(lockorderfulfillment.FieldTxID) {
+		fields = append(fields, lockorderfulfillment.FieldTxID)
+	}
 	if m.FieldCleared(lockorderfulfillment.FieldPsp) {
 		fields = append(fields, lockorderfulfillment.FieldPsp)
 	}
@@ -4662,6 +4678,9 @@ func (m *LockOrderFulfillmentMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *LockOrderFulfillmentMutation) ClearField(name string) error {
 	switch name {
+	case lockorderfulfillment.FieldTxID:
+		m.ClearTxID()
+		return nil
 	case lockorderfulfillment.FieldPsp:
 		m.ClearPsp()
 		return nil
@@ -17098,6 +17117,7 @@ type TokenMutation struct {
 	decimals                   *int8
 	adddecimals                *int8
 	is_enabled                 *bool
+	base_currency              *string
 	clearedFields              map[string]struct{}
 	network                    *int
 	clearednetwork             bool
@@ -17449,6 +17469,42 @@ func (m *TokenMutation) ResetIsEnabled() {
 	m.is_enabled = nil
 }
 
+// SetBaseCurrency sets the "base_currency" field.
+func (m *TokenMutation) SetBaseCurrency(s string) {
+	m.base_currency = &s
+}
+
+// BaseCurrency returns the value of the "base_currency" field in the mutation.
+func (m *TokenMutation) BaseCurrency() (r string, exists bool) {
+	v := m.base_currency
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBaseCurrency returns the old "base_currency" field's value of the Token entity.
+// If the Token object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TokenMutation) OldBaseCurrency(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBaseCurrency is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBaseCurrency requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBaseCurrency: %w", err)
+	}
+	return oldValue.BaseCurrency, nil
+}
+
+// ResetBaseCurrency resets all changes to the "base_currency" field.
+func (m *TokenMutation) ResetBaseCurrency() {
+	m.base_currency = nil
+}
+
 // SetNetworkID sets the "network" edge to the Network entity by id.
 func (m *TokenMutation) SetNetworkID(id int) {
 	m.network = &id
@@ -17684,7 +17740,7 @@ func (m *TokenMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TokenMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 7)
 	if m.created_at != nil {
 		fields = append(fields, token.FieldCreatedAt)
 	}
@@ -17702,6 +17758,9 @@ func (m *TokenMutation) Fields() []string {
 	}
 	if m.is_enabled != nil {
 		fields = append(fields, token.FieldIsEnabled)
+	}
+	if m.base_currency != nil {
+		fields = append(fields, token.FieldBaseCurrency)
 	}
 	return fields
 }
@@ -17723,6 +17782,8 @@ func (m *TokenMutation) Field(name string) (ent.Value, bool) {
 		return m.Decimals()
 	case token.FieldIsEnabled:
 		return m.IsEnabled()
+	case token.FieldBaseCurrency:
+		return m.BaseCurrency()
 	}
 	return nil, false
 }
@@ -17744,6 +17805,8 @@ func (m *TokenMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldDecimals(ctx)
 	case token.FieldIsEnabled:
 		return m.OldIsEnabled(ctx)
+	case token.FieldBaseCurrency:
+		return m.OldBaseCurrency(ctx)
 	}
 	return nil, fmt.Errorf("unknown Token field %s", name)
 }
@@ -17794,6 +17857,13 @@ func (m *TokenMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetIsEnabled(v)
+		return nil
+	case token.FieldBaseCurrency:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBaseCurrency(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Token field %s", name)
@@ -17876,6 +17946,9 @@ func (m *TokenMutation) ResetField(name string) error {
 		return nil
 	case token.FieldIsEnabled:
 		m.ResetIsEnabled()
+		return nil
+	case token.FieldBaseCurrency:
+		m.ResetBaseCurrency()
 		return nil
 	}
 	return fmt.Errorf("unknown Token field %s", name)

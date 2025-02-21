@@ -410,7 +410,15 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 			continue
 		}
 
-		if order.Amount.LessThan(minOrderAmount) || order.Amount.GreaterThan(maxOrderAmount) {
+		normalizedAmount := order.Amount
+		if strings.EqualFold(order.Token.BaseCurrency, order.ProvisionBucket.Edges.Currency.Code) && order.Token.BaseCurrency != "USD" {
+			rateResponse, err := utils.GetTokenRateFromQueue("USDT", normalizedAmount, order.ProvisionBucket.Edges.Currency.Code, order.ProvisionBucket.Edges.Currency.MarketRate)
+			if err != nil {
+				continue
+			}
+			normalizedAmount = order.Amount.Div(rateResponse)
+		}
+		if normalizedAmount.LessThan(minOrderAmount) || normalizedAmount.GreaterThan(maxOrderAmount) {
 			continue
 		}
 

@@ -402,6 +402,10 @@ func init() {
 	tokenDescIsEnabled := tokenFields[3].Descriptor()
 	// token.DefaultIsEnabled holds the default value on creation for the is_enabled field.
 	token.DefaultIsEnabled = tokenDescIsEnabled.Default.(bool)
+	// tokenDescBaseCurrency is the schema descriptor for base_currency field.
+	tokenDescBaseCurrency := tokenFields[4].Descriptor()
+	// token.DefaultBaseCurrency holds the default value on creation for the base_currency field.
+	token.DefaultBaseCurrency = tokenDescBaseCurrency.Default.(string)
 	transactionlogFields := schema.TransactionLog{}.Fields()
 	_ = transactionlogFields
 	// transactionlogDescCreatedAt is the schema descriptor for created_at field.
