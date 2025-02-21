@@ -34,10 +34,6 @@ type Network struct {
 	GatewayContractAddress string `json:"gateway_contract_address,omitempty"`
 	// IsTestnet holds the value of the "is_testnet" field.
 	IsTestnet bool `json:"is_testnet,omitempty"`
-	// BundlerURL holds the value of the "bundler_url" field.
-	BundlerURL string `json:"bundler_url,omitempty"`
-	// PaymasterURL holds the value of the "paymaster_url" field.
-	PaymasterURL string `json:"paymaster_url,omitempty"`
 	// Fee holds the value of the "fee" field.
 	Fee decimal.Decimal `json:"fee,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -75,7 +71,7 @@ func (*Network) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case network.FieldID, network.FieldChainID:
 			values[i] = new(sql.NullInt64)
-		case network.FieldChainIDHex, network.FieldIdentifier, network.FieldRPCEndpoint, network.FieldGatewayContractAddress, network.FieldBundlerURL, network.FieldPaymasterURL:
+		case network.FieldChainIDHex, network.FieldIdentifier, network.FieldRPCEndpoint, network.FieldGatewayContractAddress:
 			values[i] = new(sql.NullString)
 		case network.FieldCreatedAt, network.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -148,18 +144,6 @@ func (n *Network) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				n.IsTestnet = value.Bool
 			}
-		case network.FieldBundlerURL:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field bundler_url", values[i])
-			} else if value.Valid {
-				n.BundlerURL = value.String
-			}
-		case network.FieldPaymasterURL:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field paymaster_url", values[i])
-			} else if value.Valid {
-				n.PaymasterURL = value.String
-			}
 		case network.FieldFee:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field fee", values[i])
@@ -230,12 +214,6 @@ func (n *Network) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("is_testnet=")
 	builder.WriteString(fmt.Sprintf("%v", n.IsTestnet))
-	builder.WriteString(", ")
-	builder.WriteString("bundler_url=")
-	builder.WriteString(n.BundlerURL)
-	builder.WriteString(", ")
-	builder.WriteString("paymaster_url=")
-	builder.WriteString(n.PaymasterURL)
 	builder.WriteString(", ")
 	builder.WriteString("fee=")
 	builder.WriteString(fmt.Sprintf("%v", n.Fee))
