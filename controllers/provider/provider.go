@@ -350,10 +350,15 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
+			txID := payload.TxID
+			if txID == "" {
+				txID = orderID.String()
+			}
+
 			_, err = storage.Client.LockOrderFulfillment.
 				Create().
 				SetOrderID(orderID).
-				SetTxID(payload.TxID).
+				SetTxID(txID).
 				SetPsp(payload.PSP).
 				Save(ctx)
 			if err != nil {
