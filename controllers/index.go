@@ -742,6 +742,21 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 			// Nigeria
 			{
 				"country":             "NG",
+				"id_type":             "NIN_SLIP",
+				"verification_method": "biometric_kyc",
+			},
+			{
+				"country":             "NG",
+				"id_type":             "V_NIN",
+				"verification_method": "biometric_kyc",
+			},
+			{
+				"country":             "NG",
+				"id_type":             "BVN",
+				"verification_method": "biometric_kyc",
+			},
+			{
+				"country":             "NG",
 				"id_type":             "PASSPORT",
 				"verification_method": "doc_verification",
 			},
@@ -749,16 +764,6 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 				"country":             "NG",
 				"id_type":             "DRIVERS_LICENSE",
 				"verification_method": "doc_verification",
-			},
-			{
-				"country":             "NG",
-				"id_type":             "NIN_SLIP",
-				"verification_method": "biometric_kyc",
-			},
-			{
-				"country":             "NG",
-				"id_type":             "VOTER_ID",
-				"verification_method": "enhanced_document_verification",
 			},
 			{
 				"country":             "NG",
