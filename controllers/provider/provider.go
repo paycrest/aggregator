@@ -369,7 +369,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 
 			fulfillment, err = storage.Client.LockOrderFulfillment.
 				Query().
-				Where(lockorderfulfillment.TxIDEQ(payload.TxID)).
+				Where(lockorderfulfillment.TxIDEQ(txID)).
 				WithOrder(func(poq *ent.LockPaymentOrderQuery) {
 					poq.WithToken(func(tq *ent.TokenQuery) {
 						tq.WithNetwork()
