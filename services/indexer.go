@@ -1292,6 +1292,7 @@ func (s *IndexerService) UpdateOrderStatusRefunded(ctx context.Context, network 
 			SetStatus(transactionlog.StatusOrderRefunded).
 			SetTxHash(log.TxHash).
 			SetGatewayID(gatewayId).
+			SetNetwork(network.Identifier).
 			SetMetadata(
 				map[string]interface{}{
 					"GatewayID":       gatewayId,
@@ -1433,6 +1434,7 @@ func (s *IndexerService) UpdateOrderStatusSettled(ctx context.Context, network *
 			SetStatus(transactionlog.StatusOrderSettled).
 			SetTxHash(event.TxHash).
 			SetGatewayID(gatewayId).
+			SetNetwork(network.Identifier).
 			SetMetadata(map[string]interface{}{
 				"GatewayID":       gatewayId,
 				"TransactionData": event,
