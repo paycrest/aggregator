@@ -666,12 +666,12 @@ func SyncLockOrderFulfillments() {
 			// Compute HMAC
 			decodedSecret, err := base64.StdEncoding.DecodeString(order.Edges.Provider.Edges.APIKey.Secret)
 			if err != nil {
-				logger.Errorf("SyncLockOrderFulfillments: %v", err)
+				logger.Errorf("SyncLockOrderFulfillments.DecodeSecret: %v %v", err, order.Edges.Provider.ID)
 				return
 			}
 			decryptedSecret, err := cryptoUtils.DecryptPlain(decodedSecret)
 			if err != nil {
-				logger.Errorf("SyncLockOrderFulfillments: %v", err)
+				logger.Errorf("SyncLockOrderFulfillments.DecryptSecret: %v %v", err, order.Edges.Provider.ID)
 				return
 			}
 
@@ -723,14 +723,14 @@ func SyncLockOrderFulfillments() {
 					SetValidationError(data["data"].(map[string]interface{})["error"].(string)).
 					Save(ctx)
 				if err != nil {
-					continue
+					return
 				}
 
 				_, err = order.Update().
 					SetStatus(lockpaymentorder.StatusFulfilled).
 					Save(ctx)
 				if err != nil {
-					continue
+					return
 				}
 
 			} else if status == "success" {
@@ -742,7 +742,7 @@ func SyncLockOrderFulfillments() {
 					SetValidationStatus(lockorderfulfillment.ValidationStatusSuccess).
 					Save(ctx)
 				if err != nil {
-					continue
+					return
 				}
 
 				transactionLog, err := storage.Client.TransactionLog.
@@ -755,7 +755,7 @@ func SyncLockOrderFulfillments() {
 					}).
 					Save(ctx)
 				if err != nil {
-					continue
+					return
 				}
 
 				_, err = storage.Client.LockPaymentOrder.
@@ -764,7 +764,7 @@ func SyncLockOrderFulfillments() {
 					AddTransactions(transactionLog).
 					Save(ctx)
 				if err != nil {
-					continue
+					return
 				}
 			}
 		} else {
@@ -773,13 +773,13 @@ func SyncLockOrderFulfillments() {
 					// Compute HMAC
 					decodedSecret, err := base64.StdEncoding.DecodeString(order.Edges.Provider.Edges.APIKey.Secret)
 					if err != nil {
-						logger.Errorf("SyncLockOrderFulfillments: %v", err)
-						return
+						logger.Errorf("SyncLockOrderFulfillments.DecodeSecret: %v %v", err, order.Edges.Provider.ID)
+						continue
 					}
 					decryptedSecret, err := cryptoUtils.DecryptPlain(decodedSecret)
 					if err != nil {
-						logger.Errorf("SyncLockOrderFulfillments: %v", err)
-						return
+						logger.Errorf("SyncLockOrderFulfillments.DecryptSecret: %v %v", err, order.Edges.Provider.ID)
+						continue
 					}
 
 					payload := map[string]interface{}{
@@ -818,14 +818,14 @@ func SyncLockOrderFulfillments() {
 							SetValidationError(data["data"].(map[string]interface{})["error"].(string)).
 							Save(ctx)
 						if err != nil {
-							continue
+							return
 						}
 
 						_, err = order.Update().
 							SetStatus(lockpaymentorder.StatusFulfilled).
 							Save(ctx)
 						if err != nil {
-							continue
+							return
 						}
 
 					} else if status == "success" {
@@ -835,7 +835,7 @@ func SyncLockOrderFulfillments() {
 							SetValidationStatus(lockorderfulfillment.ValidationStatusSuccess).
 							Save(ctx)
 						if err != nil {
-							continue
+							return
 						}
 
 						transactionLog, err := storage.Client.TransactionLog.
@@ -848,7 +848,7 @@ func SyncLockOrderFulfillments() {
 							}).
 							Save(ctx)
 						if err != nil {
-							continue
+							return
 						}
 
 						_, err = storage.Client.LockPaymentOrder.
@@ -857,12 +857,36 @@ func SyncLockOrderFulfillments() {
 							AddTransactions(transactionLog).
 							Save(ctx)
 						if err != nil {
-							continue
+							return
 						}
 					}
 
 				} else if fulfillment.ValidationStatus == lockorderfulfillment.ValidationStatusFailed {
 					if order.Edges.Provider.VisibilityMode != providerprofile.VisibilityModePrivate {
+						// Push provider ID to order exclude list
+						orderKey := fmt.Sprintf("order_exclude_list_%s", order.ID)
+						_, err = storage.RedisClient.RPush(ctx, orderKey, order.Edges.Provider.ID).Result()
+						if err != nil {
+							return
+						}
+
+						_, err = storage.Client.LockPaymentOrder.
+							UpdateOneID(order.ID).
+							SetProviderID("").
+							SetStatus(lockpaymentorder.StatusPending).
+							Save(ctx)
+						if err != nil {
+							return
+						}
+
+						err = storage.Client.LockOrderFulfillment.
+							DeleteOneID(fulfillment.ID).
+							Exec(ctx)
+						if err != nil {
+							return
+						}
+
+						// Reassign the order to a provider
 						lockPaymentOrder := types.LockPaymentOrderFields{
 							ID:                order.ID,
 							Token:             order.Edges.Token,
@@ -878,7 +902,7 @@ func SyncLockOrderFulfillments() {
 							ProvisionBucket:   order.Edges.ProvisionBucket,
 						}
 
-						err := services.NewPriorityQueueService().AssignLockPaymentOrder(ctx, lockPaymentOrder)
+						err = services.NewPriorityQueueService().AssignLockPaymentOrder(ctx, lockPaymentOrder)
 						if err != nil {
 							logger.Errorf("SyncLockOrderFulfillments.AssignLockPaymentOrder: %v", err)
 						}
