@@ -33,6 +33,9 @@ func (ProviderOrderToken) Fields() []ent.Field {
 			GoType(decimal.Decimal{}),
 		field.Float("min_order_amount").
 			GoType(decimal.Decimal{}),
+		field.Float("rate_slippage").
+			GoType(decimal.Decimal{}).
+			Optional(),
 		field.JSON("addresses", []struct {
 			Address string `json:"address"`
 			Network string `json:"network"`

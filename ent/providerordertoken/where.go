@@ -91,6 +91,11 @@ func MinOrderAmount(v decimal.Decimal) predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(sql.FieldEQ(FieldMinOrderAmount, v))
 }
 
+// RateSlippage applies equality check predicate on the "rate_slippage" field. It's identical to RateSlippageEQ.
+func RateSlippage(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldRateSlippage, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(sql.FieldEQ(FieldCreatedAt, v))
@@ -414,6 +419,56 @@ func MinOrderAmountLT(v decimal.Decimal) predicate.ProviderOrderToken {
 // MinOrderAmountLTE applies the LTE predicate on the "min_order_amount" field.
 func MinOrderAmountLTE(v decimal.Decimal) predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(sql.FieldLTE(FieldMinOrderAmount, v))
+}
+
+// RateSlippageEQ applies the EQ predicate on the "rate_slippage" field.
+func RateSlippageEQ(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldRateSlippage, v))
+}
+
+// RateSlippageNEQ applies the NEQ predicate on the "rate_slippage" field.
+func RateSlippageNEQ(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNEQ(FieldRateSlippage, v))
+}
+
+// RateSlippageIn applies the In predicate on the "rate_slippage" field.
+func RateSlippageIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldIn(FieldRateSlippage, vs...))
+}
+
+// RateSlippageNotIn applies the NotIn predicate on the "rate_slippage" field.
+func RateSlippageNotIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNotIn(FieldRateSlippage, vs...))
+}
+
+// RateSlippageGT applies the GT predicate on the "rate_slippage" field.
+func RateSlippageGT(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGT(FieldRateSlippage, v))
+}
+
+// RateSlippageGTE applies the GTE predicate on the "rate_slippage" field.
+func RateSlippageGTE(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGTE(FieldRateSlippage, v))
+}
+
+// RateSlippageLT applies the LT predicate on the "rate_slippage" field.
+func RateSlippageLT(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLT(FieldRateSlippage, v))
+}
+
+// RateSlippageLTE applies the LTE predicate on the "rate_slippage" field.
+func RateSlippageLTE(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLTE(FieldRateSlippage, v))
+}
+
+// RateSlippageIsNil applies the IsNil predicate on the "rate_slippage" field.
+func RateSlippageIsNil() predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldIsNull(FieldRateSlippage))
+}
+
+// RateSlippageNotNil applies the NotNil predicate on the "rate_slippage" field.
+func RateSlippageNotNil() predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNotNull(FieldRateSlippage))
 }
 
 // HasProvider applies the HasEdge predicate on the "provider" edge.
