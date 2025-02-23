@@ -872,7 +872,7 @@ func SyncLockOrderFulfillments() {
 
 						_, err = storage.Client.LockPaymentOrder.
 							UpdateOneID(order.ID).
-							SetProviderID("").
+							ClearProvider().
 							SetStatus(lockpaymentorder.StatusPending).
 							Save(ctx)
 						if err != nil {
