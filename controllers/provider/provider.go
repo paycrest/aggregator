@@ -648,13 +648,12 @@ func (ctrl *ProviderController) GetMarketRate(ctx *gin.Context) {
 		).
 		First(ctx)
 	if err != nil {
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Token %s is not supported", strings.ToUpper(ctx.Param("token"))), nil)
+			return
+		}
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to get market rate", nil)
-		return
-	}
-
-	if tokenObj == nil {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Token %s is not supported", strings.ToUpper(ctx.Param("token"))), nil)
 		return
 	}
 
