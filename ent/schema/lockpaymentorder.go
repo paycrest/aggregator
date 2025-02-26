@@ -19,6 +19,7 @@ type LockPaymentOrder struct {
 func (LockPaymentOrder) Mixin() []ent.Mixin {
 	return []ent.Mixin{
 		TimeMixin{},
+		SoftDeleteMixin{},
 	}
 }
 

@@ -30,3 +30,17 @@ func (TimeMixin) Fields() []ent.Field {
 			UpdateDefault(time.Now),
 	}
 }
+
+// SoftDeleteMixin implements the ent.Mixin for soft delete functionality.
+type SoftDeleteMixin struct {
+	mixin.Schema
+}
+
+// Fields of the SoftDeleteMixin.
+func (SoftDeleteMixin) Fields() []ent.Field {
+	return []ent.Field{
+		field.Time("deleted_at").
+			Optional().
+			Nillable(),
+	}
+}

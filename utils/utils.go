@@ -532,3 +532,21 @@ func GetTokenRateFromQueue(tokenSymbol string, orderAmount decimal.Decimal, fiat
 
 	return rateResponse, nil
 }
+
+type contextKey string
+
+const skipSoftDeleteKey contextKey = "skipSoftDelete"
+
+// SkipSoftDelete adds a context value to skip soft delete logic.
+func SkipSoftDelete(ctx context.Context) context.Context {
+	return context.WithValue(ctx, skipSoftDeleteKey, true)
+}
+
+// IsSkipSoftDelete returns true if the context indicates that soft delete should be skipped.
+func IsSkipSoftDelete(ctx context.Context) bool {
+	val := ctx.Value(skipSoftDeleteKey)
+	if val != nil {
+		return val.(bool)
+	}
+	return false
+}
