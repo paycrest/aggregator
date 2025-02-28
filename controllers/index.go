@@ -93,7 +93,7 @@ func (ctrl *Controller) GetInstitutionsByCurrency(ctx *gin.Context) {
 	institutions, err := storage.Client.Institution.
 		Query().
 		Where(institution.HasFiatCurrencyWith(
-			fiatcurrency.CodeEQ(currencyCode),
+			fiatcurrency.CodeEQ(strings.ToUpper(currencyCode)),
 		)).
 		All(ctx)
 	if err != nil {
