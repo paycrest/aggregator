@@ -37,6 +37,7 @@ func OrderConfig() *OrderConfiguration {
 
 	return &OrderConfiguration{
 		OrderFulfillmentValidity:         time.Duration(viper.GetInt("ORDER_FULFILLMENT_VALIDITY")) * time.Minute,
+		OrderRefundTimeout:               time.Duration(viper.GetInt("ORDER_REFUND_TIMEOUT")) * time.Minute,
 		ReceiveAddressValidity:           time.Duration(viper.GetInt("RECEIVE_ADDRESS_VALIDITY")) * time.Minute,
 		OrderRequestValidity:             time.Duration(viper.GetInt("ORDER_REQUEST_VALIDITY")) * time.Second,
 		TronProApiKey:                    viper.GetString("TRON_PRO_API_KEY"),
