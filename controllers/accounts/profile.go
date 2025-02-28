@@ -362,6 +362,30 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			return
 		}
 
+		// Calculate the token max order amount in local currency
+		maxOrderAmountInLocalCurrency := tokenPayload.MaxOrderAmount.Mul(currency.MarketRate)
+
+		// Fetch the largest provision bucket for the provider's currency
+		largestBucket, err := storage.Client.ProvisionBucket.
+			Query().
+			Where(provisionbucket.HasCurrencyWith(fiatcurrency.IDEQ(currency.ID))).
+			Order(ent.Desc(provisionbucket.FieldMaxAmount)).
+			First(ctx)
+		if err != nil {
+			if ent.IsNotFound(err) {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "No provision buckets available for the currency", nil)
+				return
+			}
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provision buckets", nil)
+			return
+		}
+
+		// Compare the token's max order amount in local currency with the largest provision bucket size
+		if maxOrderAmountInLocalCurrency.GreaterThan(largestBucket.MaxAmount) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Max order amount exceeds the largest provision bucket size", nil)
+			return
+		}
+
 		var rate decimal.Decimal
 
 		if tokenPayload.ConversionRateType == providerordertoken.ConversionRateTypeFloating {
