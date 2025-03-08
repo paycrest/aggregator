@@ -34,7 +34,7 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
-	"github.com/paycrest/aggregator/ent/token"
+	tokenent "github.com/paycrest/aggregator/ent/token"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
@@ -213,7 +213,7 @@ func (s *OrderTron) RefundOrder(ctx context.Context, client types.RPCClient, net
 		Where(
 			lockpaymentorder.GatewayIDEQ(orderID),
 			lockpaymentorder.HasTokenWith(
-				token.HasNetworkWith(
+				tokenent.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
 				),
 			),
@@ -561,9 +561,12 @@ func (s *OrderTron) settleCallData(ctx context.Context, order *ent.LockPaymentOr
 	token, err := db.Client.ProviderOrderToken.
 		Query().
 		Where(
-			providerordertoken.SymbolEQ(order.Edges.Token.Symbol),
+			providerordertoken.NetworkEQ(order.Edges.Token.Edges.Network.Identifier),
 			providerordertoken.HasProviderWith(
 				providerprofile.IDEQ(order.Edges.Provider.ID),
+			),
+			providerordertoken.HasTokenWith(
+				tokenent.IDEQ(order.Edges.Token.ID),
 			),
 		).
 		Only(ctx)
@@ -572,13 +575,8 @@ func (s *OrderTron) settleCallData(ctx context.Context, order *ent.LockPaymentOr
 	}
 
 	var providerAddress string
-	for _, addr := range token.Addresses {
-		if addr.Network == order.Edges.Token.Edges.Network.Identifier {
-			providerAddressTron, _ := util.Base58ToAddress(addr.Address)
-			providerAddress = providerAddressTron.Hex()[4:]
-			break
-		}
-	}
+	providerAddressTron, _ := util.Base58ToAddress(token.Address)
+	providerAddress = providerAddressTron.Hex()[4:]
 
 	if providerAddress == "" {
 		return nil, fmt.Errorf("failed to fetch provider address: %w", err)

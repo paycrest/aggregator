@@ -15,6 +15,7 @@ import (
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/token"
 )
@@ -155,6 +156,21 @@ func (tc *TokenCreate) AddSenderSettings(s ...*SenderOrderToken) *TokenCreate {
 		ids[i] = s[i].ID
 	}
 	return tc.AddSenderSettingIDs(ids...)
+}
+
+// AddProviderSettingIDs adds the "provider_settings" edge to the ProviderOrderToken entity by IDs.
+func (tc *TokenCreate) AddProviderSettingIDs(ids ...int) *TokenCreate {
+	tc.mutation.AddProviderSettingIDs(ids...)
+	return tc
+}
+
+// AddProviderSettings adds the "provider_settings" edges to the ProviderOrderToken entity.
+func (tc *TokenCreate) AddProviderSettings(p ...*ProviderOrderToken) *TokenCreate {
+	ids := make([]int, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return tc.AddProviderSettingIDs(ids...)
 }
 
 // Mutation returns the TokenMutation object of the builder.
@@ -359,6 +375,22 @@ func (tc *TokenCreate) createSpec() (*Token, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(senderordertoken.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := tc.mutation.ProviderSettingsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   token.ProviderSettingsTable,
+			Columns: []string{token.ProviderSettingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerordertoken.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

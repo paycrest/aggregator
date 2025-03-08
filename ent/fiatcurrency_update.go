@@ -14,6 +14,7 @@ import (
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/shopspring/decimal"
@@ -195,6 +196,21 @@ func (fcu *FiatCurrencyUpdate) AddInstitutions(i ...*Institution) *FiatCurrencyU
 	return fcu.AddInstitutionIDs(ids...)
 }
 
+// AddProviderSettingIDs adds the "provider_settings" edge to the ProviderOrderToken entity by IDs.
+func (fcu *FiatCurrencyUpdate) AddProviderSettingIDs(ids ...int) *FiatCurrencyUpdate {
+	fcu.mutation.AddProviderSettingIDs(ids...)
+	return fcu
+}
+
+// AddProviderSettings adds the "provider_settings" edges to the ProviderOrderToken entity.
+func (fcu *FiatCurrencyUpdate) AddProviderSettings(p ...*ProviderOrderToken) *FiatCurrencyUpdate {
+	ids := make([]int, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return fcu.AddProviderSettingIDs(ids...)
+}
+
 // Mutation returns the FiatCurrencyMutation object of the builder.
 func (fcu *FiatCurrencyUpdate) Mutation() *FiatCurrencyMutation {
 	return fcu.mutation
@@ -261,6 +277,27 @@ func (fcu *FiatCurrencyUpdate) RemoveInstitutions(i ...*Institution) *FiatCurren
 		ids[j] = i[j].ID
 	}
 	return fcu.RemoveInstitutionIDs(ids...)
+}
+
+// ClearProviderSettings clears all "provider_settings" edges to the ProviderOrderToken entity.
+func (fcu *FiatCurrencyUpdate) ClearProviderSettings() *FiatCurrencyUpdate {
+	fcu.mutation.ClearProviderSettings()
+	return fcu
+}
+
+// RemoveProviderSettingIDs removes the "provider_settings" edge to ProviderOrderToken entities by IDs.
+func (fcu *FiatCurrencyUpdate) RemoveProviderSettingIDs(ids ...int) *FiatCurrencyUpdate {
+	fcu.mutation.RemoveProviderSettingIDs(ids...)
+	return fcu
+}
+
+// RemoveProviderSettings removes "provider_settings" edges to ProviderOrderToken entities.
+func (fcu *FiatCurrencyUpdate) RemoveProviderSettings(p ...*ProviderOrderToken) *FiatCurrencyUpdate {
+	ids := make([]int, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return fcu.RemoveProviderSettingIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -340,10 +377,10 @@ func (fcu *FiatCurrencyUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if fcu.mutation.ProvidersCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   fiatcurrency.ProvidersTable,
-			Columns: []string{fiatcurrency.ProvidersColumn},
+			Columns: fiatcurrency.ProvidersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
@@ -353,10 +390,10 @@ func (fcu *FiatCurrencyUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if nodes := fcu.mutation.RemovedProvidersIDs(); len(nodes) > 0 && !fcu.mutation.ProvidersCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   fiatcurrency.ProvidersTable,
-			Columns: []string{fiatcurrency.ProvidersColumn},
+			Columns: fiatcurrency.ProvidersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
@@ -369,10 +406,10 @@ func (fcu *FiatCurrencyUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if nodes := fcu.mutation.ProvidersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   fiatcurrency.ProvidersTable,
-			Columns: []string{fiatcurrency.ProvidersColumn},
+			Columns: fiatcurrency.ProvidersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
@@ -466,6 +503,51 @@ func (fcu *FiatCurrencyUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(institution.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if fcu.mutation.ProviderSettingsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   fiatcurrency.ProviderSettingsTable,
+			Columns: []string{fiatcurrency.ProviderSettingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerordertoken.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := fcu.mutation.RemovedProviderSettingsIDs(); len(nodes) > 0 && !fcu.mutation.ProviderSettingsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   fiatcurrency.ProviderSettingsTable,
+			Columns: []string{fiatcurrency.ProviderSettingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerordertoken.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := fcu.mutation.ProviderSettingsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   fiatcurrency.ProviderSettingsTable,
+			Columns: []string{fiatcurrency.ProviderSettingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerordertoken.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -656,6 +738,21 @@ func (fcuo *FiatCurrencyUpdateOne) AddInstitutions(i ...*Institution) *FiatCurre
 	return fcuo.AddInstitutionIDs(ids...)
 }
 
+// AddProviderSettingIDs adds the "provider_settings" edge to the ProviderOrderToken entity by IDs.
+func (fcuo *FiatCurrencyUpdateOne) AddProviderSettingIDs(ids ...int) *FiatCurrencyUpdateOne {
+	fcuo.mutation.AddProviderSettingIDs(ids...)
+	return fcuo
+}
+
+// AddProviderSettings adds the "provider_settings" edges to the ProviderOrderToken entity.
+func (fcuo *FiatCurrencyUpdateOne) AddProviderSettings(p ...*ProviderOrderToken) *FiatCurrencyUpdateOne {
+	ids := make([]int, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return fcuo.AddProviderSettingIDs(ids...)
+}
+
 // Mutation returns the FiatCurrencyMutation object of the builder.
 func (fcuo *FiatCurrencyUpdateOne) Mutation() *FiatCurrencyMutation {
 	return fcuo.mutation
@@ -722,6 +819,27 @@ func (fcuo *FiatCurrencyUpdateOne) RemoveInstitutions(i ...*Institution) *FiatCu
 		ids[j] = i[j].ID
 	}
 	return fcuo.RemoveInstitutionIDs(ids...)
+}
+
+// ClearProviderSettings clears all "provider_settings" edges to the ProviderOrderToken entity.
+func (fcuo *FiatCurrencyUpdateOne) ClearProviderSettings() *FiatCurrencyUpdateOne {
+	fcuo.mutation.ClearProviderSettings()
+	return fcuo
+}
+
+// RemoveProviderSettingIDs removes the "provider_settings" edge to ProviderOrderToken entities by IDs.
+func (fcuo *FiatCurrencyUpdateOne) RemoveProviderSettingIDs(ids ...int) *FiatCurrencyUpdateOne {
+	fcuo.mutation.RemoveProviderSettingIDs(ids...)
+	return fcuo
+}
+
+// RemoveProviderSettings removes "provider_settings" edges to ProviderOrderToken entities.
+func (fcuo *FiatCurrencyUpdateOne) RemoveProviderSettings(p ...*ProviderOrderToken) *FiatCurrencyUpdateOne {
+	ids := make([]int, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return fcuo.RemoveProviderSettingIDs(ids...)
 }
 
 // Where appends a list predicates to the FiatCurrencyUpdate builder.
@@ -831,10 +949,10 @@ func (fcuo *FiatCurrencyUpdateOne) sqlSave(ctx context.Context) (_node *FiatCurr
 	}
 	if fcuo.mutation.ProvidersCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   fiatcurrency.ProvidersTable,
-			Columns: []string{fiatcurrency.ProvidersColumn},
+			Columns: fiatcurrency.ProvidersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
@@ -844,10 +962,10 @@ func (fcuo *FiatCurrencyUpdateOne) sqlSave(ctx context.Context) (_node *FiatCurr
 	}
 	if nodes := fcuo.mutation.RemovedProvidersIDs(); len(nodes) > 0 && !fcuo.mutation.ProvidersCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   fiatcurrency.ProvidersTable,
-			Columns: []string{fiatcurrency.ProvidersColumn},
+			Columns: fiatcurrency.ProvidersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
@@ -860,10 +978,10 @@ func (fcuo *FiatCurrencyUpdateOne) sqlSave(ctx context.Context) (_node *FiatCurr
 	}
 	if nodes := fcuo.mutation.ProvidersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   fiatcurrency.ProvidersTable,
-			Columns: []string{fiatcurrency.ProvidersColumn},
+			Columns: fiatcurrency.ProvidersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
@@ -957,6 +1075,51 @@ func (fcuo *FiatCurrencyUpdateOne) sqlSave(ctx context.Context) (_node *FiatCurr
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(institution.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if fcuo.mutation.ProviderSettingsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   fiatcurrency.ProviderSettingsTable,
+			Columns: []string{fiatcurrency.ProviderSettingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerordertoken.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := fcuo.mutation.RemovedProviderSettingsIDs(); len(nodes) > 0 && !fcuo.mutation.ProviderSettingsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   fiatcurrency.ProviderSettingsTable,
+			Columns: []string{fiatcurrency.ProviderSettingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerordertoken.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := fcuo.mutation.ProviderSettingsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   fiatcurrency.ProviderSettingsTable,
+			Columns: []string{fiatcurrency.ProviderSettingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerordertoken.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

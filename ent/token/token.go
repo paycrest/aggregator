@@ -36,6 +36,8 @@ const (
 	EdgeLockPaymentOrders = "lock_payment_orders"
 	// EdgeSenderSettings holds the string denoting the sender_settings edge name in mutations.
 	EdgeSenderSettings = "sender_settings"
+	// EdgeProviderSettings holds the string denoting the provider_settings edge name in mutations.
+	EdgeProviderSettings = "provider_settings"
 	// Table holds the table name of the token in the database.
 	Table = "tokens"
 	// NetworkTable is the table that holds the network relation/edge.
@@ -66,6 +68,13 @@ const (
 	SenderSettingsInverseTable = "sender_order_tokens"
 	// SenderSettingsColumn is the table column denoting the sender_settings relation/edge.
 	SenderSettingsColumn = "token_sender_settings"
+	// ProviderSettingsTable is the table that holds the provider_settings relation/edge.
+	ProviderSettingsTable = "provider_order_tokens"
+	// ProviderSettingsInverseTable is the table name for the ProviderOrderToken entity.
+	// It exists in this package in order to avoid circular dependency with the "providerordertoken" package.
+	ProviderSettingsInverseTable = "provider_order_tokens"
+	// ProviderSettingsColumn is the table column denoting the provider_settings relation/edge.
+	ProviderSettingsColumn = "token_provider_settings"
 )
 
 // Columns holds all SQL columns for token fields.
@@ -209,6 +218,20 @@ func BySenderSettings(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newSenderSettingsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByProviderSettingsCount orders the results by provider_settings count.
+func ByProviderSettingsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newProviderSettingsStep(), opts...)
+	}
+}
+
+// ByProviderSettings orders the results by provider_settings terms.
+func ByProviderSettings(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProviderSettingsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newNetworkStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -235,5 +258,12 @@ func newSenderSettingsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(SenderSettingsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, SenderSettingsTable, SenderSettingsColumn),
+	)
+}
+func newProviderSettingsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProviderSettingsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ProviderSettingsTable, ProviderSettingsColumn),
 	)
 }

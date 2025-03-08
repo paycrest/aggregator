@@ -285,15 +285,19 @@ func (ppc *ProviderProfileCreate) SetAPIKey(a *APIKey) *ProviderProfileCreate {
 	return ppc.SetAPIKeyID(a.ID)
 }
 
-// SetCurrencyID sets the "currency" edge to the FiatCurrency entity by ID.
-func (ppc *ProviderProfileCreate) SetCurrencyID(id uuid.UUID) *ProviderProfileCreate {
-	ppc.mutation.SetCurrencyID(id)
+// AddCurrencyIDs adds the "currencies" edge to the FiatCurrency entity by IDs.
+func (ppc *ProviderProfileCreate) AddCurrencyIDs(ids ...uuid.UUID) *ProviderProfileCreate {
+	ppc.mutation.AddCurrencyIDs(ids...)
 	return ppc
 }
 
-// SetCurrency sets the "currency" edge to the FiatCurrency entity.
-func (ppc *ProviderProfileCreate) SetCurrency(f *FiatCurrency) *ProviderProfileCreate {
-	return ppc.SetCurrencyID(f.ID)
+// AddCurrencies adds the "currencies" edges to the FiatCurrency entity.
+func (ppc *ProviderProfileCreate) AddCurrencies(f ...*FiatCurrency) *ProviderProfileCreate {
+	ids := make([]uuid.UUID, len(f))
+	for i := range f {
+		ids[i] = f[i].ID
+	}
+	return ppc.AddCurrencyIDs(ids...)
 }
 
 // AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by IDs.
@@ -468,8 +472,8 @@ func (ppc *ProviderProfileCreate) check() error {
 	if len(ppc.mutation.UserIDs()) == 0 {
 		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "ProviderProfile.user"`)}
 	}
-	if len(ppc.mutation.CurrencyIDs()) == 0 {
-		return &ValidationError{Name: "currency", err: errors.New(`ent: missing required edge "ProviderProfile.currency"`)}
+	if len(ppc.mutation.CurrenciesIDs()) == 0 {
+		return &ValidationError{Name: "currencies", err: errors.New(`ent: missing required edge "ProviderProfile.currencies"`)}
 	}
 	return nil
 }
@@ -600,12 +604,12 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ppc.mutation.CurrencyIDs(); len(nodes) > 0 {
+	if nodes := ppc.mutation.CurrenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   providerprofile.CurrencyTable,
-			Columns: []string{providerprofile.CurrencyColumn},
+			Table:   providerprofile.CurrenciesTable,
+			Columns: providerprofile.CurrenciesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
@@ -614,7 +618,6 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.fiat_currency_providers = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := ppc.mutation.ProvisionBucketsIDs(); len(nodes) > 0 {

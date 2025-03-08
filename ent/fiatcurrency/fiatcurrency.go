@@ -39,15 +39,15 @@ const (
 	EdgeProvisionBuckets = "provision_buckets"
 	// EdgeInstitutions holds the string denoting the institutions edge name in mutations.
 	EdgeInstitutions = "institutions"
+	// EdgeProviderSettings holds the string denoting the provider_settings edge name in mutations.
+	EdgeProviderSettings = "provider_settings"
 	// Table holds the table name of the fiatcurrency in the database.
 	Table = "fiat_currencies"
-	// ProvidersTable is the table that holds the providers relation/edge.
-	ProvidersTable = "provider_profiles"
+	// ProvidersTable is the table that holds the providers relation/edge. The primary key declared below.
+	ProvidersTable = "fiat_currency_providers"
 	// ProvidersInverseTable is the table name for the ProviderProfile entity.
 	// It exists in this package in order to avoid circular dependency with the "providerprofile" package.
 	ProvidersInverseTable = "provider_profiles"
-	// ProvidersColumn is the table column denoting the providers relation/edge.
-	ProvidersColumn = "fiat_currency_providers"
 	// ProvisionBucketsTable is the table that holds the provision_buckets relation/edge.
 	ProvisionBucketsTable = "provision_buckets"
 	// ProvisionBucketsInverseTable is the table name for the ProvisionBucket entity.
@@ -62,6 +62,13 @@ const (
 	InstitutionsInverseTable = "institutions"
 	// InstitutionsColumn is the table column denoting the institutions relation/edge.
 	InstitutionsColumn = "fiat_currency_institutions"
+	// ProviderSettingsTable is the table that holds the provider_settings relation/edge.
+	ProviderSettingsTable = "provider_order_tokens"
+	// ProviderSettingsInverseTable is the table name for the ProviderOrderToken entity.
+	// It exists in this package in order to avoid circular dependency with the "providerordertoken" package.
+	ProviderSettingsInverseTable = "provider_order_tokens"
+	// ProviderSettingsColumn is the table column denoting the provider_settings relation/edge.
+	ProviderSettingsColumn = "fiat_currency_provider_settings"
 )
 
 // Columns holds all SQL columns for fiatcurrency fields.
@@ -77,6 +84,12 @@ var Columns = []string{
 	FieldMarketRate,
 	FieldIsEnabled,
 }
+
+var (
+	// ProvidersPrimaryKey and ProvidersColumn2 are the table columns denoting the
+	// primary key for the providers relation (M2M).
+	ProvidersPrimaryKey = []string{"fiat_currency_id", "provider_profile_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -197,11 +210,25 @@ func ByInstitutions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newInstitutionsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByProviderSettingsCount orders the results by provider_settings count.
+func ByProviderSettingsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newProviderSettingsStep(), opts...)
+	}
+}
+
+// ByProviderSettings orders the results by provider_settings terms.
+func ByProviderSettings(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProviderSettingsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newProvidersStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ProvidersInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, ProvidersTable, ProvidersColumn),
+		sqlgraph.Edge(sqlgraph.M2M, false, ProvidersTable, ProvidersPrimaryKey...),
 	)
 }
 func newProvisionBucketsStep() *sqlgraph.Step {
@@ -216,5 +243,12 @@ func newInstitutionsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(InstitutionsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, InstitutionsTable, InstitutionsColumn),
+	)
+}
+func newProviderSettingsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProviderSettingsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ProviderSettingsTable, ProviderSettingsColumn),
 	)
 }

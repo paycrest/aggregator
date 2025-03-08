@@ -67,6 +67,9 @@ func (ProviderProfile) Edges() []ent.Edge {
 		edge.From("currency", FiatCurrency.Type).
 			Ref("providers").
 			Unique().
+			Required(), // TODO: remove this constraint
+		edge.From("currencies", FiatCurrency.Type).
+			Ref("providers").
 			Required(),
 		edge.From("provision_buckets", ProvisionBucket.Type).
 			Ref("provider_profiles"),

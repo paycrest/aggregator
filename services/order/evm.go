@@ -27,7 +27,7 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
-	"github.com/paycrest/aggregator/ent/token"
+	tokenent "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
@@ -195,7 +195,7 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, client types.RPCClient, netw
 		Where(
 			lockpaymentorder.GatewayIDEQ(orderID),
 			lockpaymentorder.HasTokenWith(
-				token.HasNetworkWith(
+				tokenent.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
 				),
 			),
@@ -741,26 +741,17 @@ func (s *OrderEVM) settleCallData(ctx context.Context, order *ent.LockPaymentOrd
 	token, err := db.Client.ProviderOrderToken.
 		Query().
 		Where(
-			providerordertoken.SymbolEQ(order.Edges.Token.Symbol),
+			providerordertoken.NetworkEQ(order.Edges.Token.Edges.Network.Identifier),
 			providerordertoken.HasProviderWith(
 				providerprofile.IDEQ(order.Edges.Provider.ID),
+			),
+			providerordertoken.HasTokenWith(
+				tokenent.IDEQ(order.Edges.Token.ID),
 			),
 		).
 		Only(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch provider order token: %w", err)
-	}
-
-	var providerAddress string
-	for _, addr := range token.Addresses {
-		if addr.Network == order.Edges.Token.Edges.Network.Identifier {
-			providerAddress = addr.Address
-			break
-		}
-	}
-
-	if providerAddress == "" {
-		return nil, fmt.Errorf("failed to fetch provider address: %w", err)
 	}
 
 	orderPercent, _ := order.OrderPercent.
@@ -779,7 +770,7 @@ func (s *OrderEVM) settleCallData(ctx context.Context, order *ent.LockPaymentOrd
 		"settle",
 		utils.StringToByte32(splitOrderID),
 		utils.StringToByte32(string(orderID)),
-		common.HexToAddress(providerAddress),
+		common.HexToAddress(token.Address),
 		uint64(orderPercent),
 	)
 	if err != nil {

@@ -51,9 +51,11 @@ type FiatCurrencyEdges struct {
 	ProvisionBuckets []*ProvisionBucket `json:"provision_buckets,omitempty"`
 	// Institutions holds the value of the institutions edge.
 	Institutions []*Institution `json:"institutions,omitempty"`
+	// ProviderSettings holds the value of the provider_settings edge.
+	ProviderSettings []*ProviderOrderToken `json:"provider_settings,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 }
 
 // ProvidersOrErr returns the Providers value or an error if the edge
@@ -81,6 +83,15 @@ func (e FiatCurrencyEdges) InstitutionsOrErr() ([]*Institution, error) {
 		return e.Institutions, nil
 	}
 	return nil, &NotLoadedError{edge: "institutions"}
+}
+
+// ProviderSettingsOrErr returns the ProviderSettings value or an error if the edge
+// was not loaded in eager-loading.
+func (e FiatCurrencyEdges) ProviderSettingsOrErr() ([]*ProviderOrderToken, error) {
+	if e.loadedTypes[3] {
+		return e.ProviderSettings, nil
+	}
+	return nil, &NotLoadedError{edge: "provider_settings"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -201,6 +212,11 @@ func (fc *FiatCurrency) QueryProvisionBuckets() *ProvisionBucketQuery {
 // QueryInstitutions queries the "institutions" edge of the FiatCurrency entity.
 func (fc *FiatCurrency) QueryInstitutions() *InstitutionQuery {
 	return NewFiatCurrencyClient(fc.config).QueryInstitutions(fc)
+}
+
+// QueryProviderSettings queries the "provider_settings" edge of the FiatCurrency entity.
+func (fc *FiatCurrency) QueryProviderSettings() *ProviderOrderTokenQuery {
+	return NewFiatCurrencyClient(fc.config).QueryProviderSettings(fc)
 }
 
 // Update returns a builder for updating this FiatCurrency.

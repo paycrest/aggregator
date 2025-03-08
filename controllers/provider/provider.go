@@ -11,6 +11,7 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
+	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -19,6 +20,7 @@ import (
 	orderService "github.com/paycrest/aggregator/services/order"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
+	"github.com/paycrest/aggregator/utils"
 	u "github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/shopspring/decimal"
@@ -56,9 +58,55 @@ func (ctrl *ProviderController) GetLockPaymentOrders(ctx *gin.Context) {
 	}
 	provider := providerCtx.(*ent.ProviderProfile)
 
-	lockPaymentOrderQuery := storage.Client.LockPaymentOrder.Query()
+	// Start building the base query filtering by provider only
+	lockPaymentOrderQuery := storage.Client.LockPaymentOrder.Query().Where(
+		lockpaymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+	)
 
-	// Filter by status
+	// Only filter by currency if the query parameter is provided
+	currency := ctx.Query("currency")
+	if currency != "" {
+		// Check if the provided currency exists in the provider's currencies
+		currencyExists, err := provider.QueryCurrencies().
+			Where(fiatcurrency.CodeEQ(currency)).
+			Exist(ctx)
+		if err != nil {
+			logger.Errorf("error checking provider currency: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to check currency", nil)
+			return
+		}
+
+		if !currencyExists {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Currency not found", nil)
+			return
+		}
+
+		// Get all institution codes for the given currency in a single query
+		institutionCodes, err := storage.Client.Institution.
+			Query().
+			Where(
+				institution.HasFiatCurrencyWith(
+					fiatcurrency.CodeEQ(currency),
+				),
+			).
+			Select(institution.FieldCode).
+			Strings(ctx)
+		if err != nil {
+			logger.Errorf("error fetching institution codes: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch institutions", nil)
+			return
+		}
+
+		// Add the currency filter to the query using the institution codes
+		lockPaymentOrderQuery = lockPaymentOrderQuery.Where(
+			lockpaymentorder.InstitutionIn(institutionCodes...),
+		)
+	} else {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Currency is required", nil)
+		return
+	}
+
+	// Filter by status if provided
 	statusMap := map[string]lockpaymentorder.Status{
 		"pending":    lockpaymentorder.StatusPending,
 		"validated":  lockpaymentorder.StatusValidated,
@@ -69,15 +117,9 @@ func (ctrl *ProviderController) GetLockPaymentOrders(ctx *gin.Context) {
 	}
 
 	statusQueryParam := ctx.Query("status")
-
 	if status, ok := statusMap[statusQueryParam]; ok {
 		lockPaymentOrderQuery = lockPaymentOrderQuery.Where(
-			lockpaymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 			lockpaymentorder.StatusEQ(status),
-		)
-	} else {
-		lockPaymentOrderQuery = lockPaymentOrderQuery.Where(
-			lockpaymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 		)
 	}
 
@@ -101,7 +143,7 @@ func (ctrl *ProviderController) GetLockPaymentOrders(ctx *gin.Context) {
 		).
 		All(ctx)
 	if err != nil {
-		logger.Errorf("error: %v", err)
+		logger.Errorf("error fetching orders: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch orders", nil)
 		return
 	}
@@ -705,16 +747,57 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 	}
 	provider := providerCtx.(*ent.ProviderProfile)
 
+	// Check if currency in query is present in provider currencies
+	currency := ctx.Query("currency")
+	if currency != "" {
+		currencyExists, err := provider.QueryCurrencies().
+			Where(fiatcurrency.CodeEQ(currency)).
+			Exist(ctx)
+		if err != nil {
+			logger.Errorf("error checking provider currency: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to check currency", nil)
+			return
+		}
+
+		if !currencyExists {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Currency not found", nil)
+			return
+		}
+	} else {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Currency is required", nil)
+		return
+	}
+
+	// Get all institution codes for the given currency in a single query
+	institutionCodes, err := storage.Client.Institution.
+		Query().
+		Where(
+			institution.HasFiatCurrencyWith(
+				fiatcurrency.CodeEQ(currency),
+			),
+		).
+		Select(institution.FieldCode).
+		Strings(ctx)
+	if err != nil {
+		logger.Errorf("error fetching institution codes: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch institutions", nil)
+		return
+	}
+
 	// Fetch provider stats
 	query := storage.Client.LockPaymentOrder.
 		Query().
-		Where(lockpaymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)), lockpaymentorder.StatusEQ(lockpaymentorder.StatusSettled))
+		Where(
+			lockpaymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+			lockpaymentorder.StatusEQ(lockpaymentorder.StatusSettled),
+			lockpaymentorder.InstitutionIn(institutionCodes...),
+		)
 
 	var v []struct {
 		Sum decimal.Decimal
 	}
 
-	err := query.
+	err = query.
 		Aggregate(
 			ent.Sum(lockpaymentorder.FieldAmount),
 		).
@@ -740,7 +823,10 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 
 	count, err := storage.Client.LockPaymentOrder.
 		Query().
-		Where(lockpaymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID))).
+		Where(
+			lockpaymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+			lockpaymentorder.InstitutionIn(institutionCodes...),
+		).
 		Count(ctx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
@@ -768,7 +854,7 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 		Query().
 		Where(providerprofile.IDEQ(providerCtx.(*ent.ProviderProfile).ID)).
 		WithAPIKey().
-		WithCurrency().
+		WithCurrencies().
 		Only(ctx)
 	if err != nil {
 		logger.Errorf("failed to fetch provider: %v", err)
@@ -793,11 +879,32 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 		return
 	}
 
-	currency := data["data"].(map[string]interface{})["currency"].(string)
-	if currency != provider.Edges.Currency.Code {
-		logger.Errorf("failed to match currency: %v", err)
-		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
+	// Change this line to handle currencies as a slice instead of a map
+	dataMap, ok := data["data"].(map[string]interface{})
+	if !ok {
+		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Invalid data format", nil)
 		return
+	}
+
+	currenciesData, ok := dataMap["currencies"].([]interface{}) // Change to []interface{} to handle any type
+	if !ok {
+		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Currencies data is not in expected format", nil)
+		return
+	}
+
+	// Convert []interface{} to []string
+	var currencyCodes []string
+	for _, currency := range currenciesData {
+		if code, ok := currency.(string); ok {
+			currencyCodes = append(currencyCodes, code)
+		}
+	}
+
+	for _, currency := range provider.Edges.Currencies {
+		if !utils.ContainsString(currencyCodes, currency.Code) {
+			u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
+			return
+		}
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Node info fetched successfully", data)

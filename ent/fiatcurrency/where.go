@@ -537,7 +537,7 @@ func HasProviders() predicate.FiatCurrency {
 	return predicate.FiatCurrency(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, ProvidersTable, ProvidersColumn),
+			sqlgraph.Edge(sqlgraph.M2M, false, ProvidersTable, ProvidersPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
@@ -593,6 +593,29 @@ func HasInstitutions() predicate.FiatCurrency {
 func HasInstitutionsWith(preds ...predicate.Institution) predicate.FiatCurrency {
 	return predicate.FiatCurrency(func(s *sql.Selector) {
 		step := newInstitutionsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasProviderSettings applies the HasEdge predicate on the "provider_settings" edge.
+func HasProviderSettings() predicate.FiatCurrency {
+	return predicate.FiatCurrency(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ProviderSettingsTable, ProviderSettingsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasProviderSettingsWith applies the HasEdge predicate on the "provider_settings" edge with a given conditions (other predicates).
+func HasProviderSettingsWith(preds ...predicate.ProviderOrderToken) predicate.FiatCurrency {
+	return predicate.FiatCurrency(func(s *sql.Selector) {
+		step := newProviderSettingsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
