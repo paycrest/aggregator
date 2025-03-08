@@ -242,25 +242,32 @@ func TestPriorityQueueTest(t *testing.T) {
 	})
 
 	t.Run("TestAssignLockPaymentOrder", func(t *testing.T) {
+		ctx := context.Background()
 
 		bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
-			"provider_id": testCtxForPQ.privateProviderProfile.ID,
+			"provider_id": testCtxForPQ.publicProviderProfile.ID,
 			"min_amount":  testCtxForPQ.minAmount,
 			"max_amount":  testCtxForPQ.maxAmount,
 			"currency_id": testCtxForPQ.currency.ID,
 		})
 		assert.NoError(t, err)
+
+		_bucket, err := db.Client.ProvisionBucket.
+			Query().
+			Where(provisionbucket.IDEQ(bucket.ID)).
+			WithCurrency().
+			WithProviderProfiles().
+			Only(ctx)
+		assert.NoError(t, err)
+
 		_order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
 			"provider":   testCtxForPQ.publicProviderProfile,
+			"rate":       100.0,
 			"tokenID":    testCtxForPQ.token.ID,
 			"gateway_id": "order-1",
 		})
 		assert.NoError(t, err)
-
 		_, err = test.AddProvisionBucketToLockPaymentOrder(_order, bucket.ID)
-		assert.NoError(t, err)
-
-		err = db.RedisClient.RPush(context.Background(), fmt.Sprintf("order_exclude_list_%s", _order.ID), testCtxForPQ.publicProviderProfile.ID).Err()
 		assert.NoError(t, err)
 
 		order, err := db.Client.LockPaymentOrder.
@@ -270,11 +277,13 @@ func TestPriorityQueueTest(t *testing.T) {
 				pb.WithCurrency()
 			}).
 			WithToken().
-			Only(context.Background())
+			Only(ctx)
 
 		assert.NoError(t, err)
 
-		err = service.AssignLockPaymentOrder(context.Background(), types.LockPaymentOrderFields{
+		service.CreatePriorityQueueForBucket(ctx, _bucket)
+
+		err = service.AssignLockPaymentOrder(ctx, types.LockPaymentOrderFields{
 			ID:                order.ID,
 			Token:             testCtxForPQ.token,
 			GatewayID:         order.GatewayID,
@@ -316,7 +325,7 @@ func TestPriorityQueueTest(t *testing.T) {
 		_, err = test.AddProvisionBucketToLockPaymentOrder(_order, bucket.ID)
 		assert.NoError(t, err)
 
-		err = db.RedisClient.RPush(context.Background(), fmt.Sprintf("order_exclude_list_%s", _order.ID), testCtxForPQ.publicProviderProfile.ID).Err()
+		_, err = db.RedisClient.RPush(context.Background(), fmt.Sprintf("order_exclude_list_%s", _order.ID), testCtxForPQ.publicProviderProfile.ID).Result()
 		assert.NoError(t, err)
 
 		order, err := db.Client.LockPaymentOrder.

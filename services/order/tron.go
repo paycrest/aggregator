@@ -436,7 +436,7 @@ func (s *OrderTron) createOrderCallData(order *ent.PaymentOrder) ([]byte, error)
 	params := &types.CreateOrderParams{
 		Token:              common.HexToAddress(tokenContractAddressTron.Hex()[4:]),
 		Amount:             utils.ToSubunit(amountWithProtocolFee, order.Edges.Token.Decimals),
-		Rate:               order.Rate.BigInt(),
+		Rate:               order.Rate.Mul(decimal.NewFromInt(100)).BigInt(),
 		SenderFeeRecipient: common.HexToAddress(senderFeeRecipient),
 		SenderFee:          utils.ToSubunit(order.SenderFee, order.Edges.Token.Decimals),
 		RefundAddress:      common.HexToAddress(refundAddress),
@@ -692,7 +692,7 @@ func (s *OrderTron) callMethod(ct *core.TriggerSmartContract) (*api.TransactionE
 	}
 
 	if tx.Result.Code > 0 {
-		return tx, fmt.Errorf(string(tx.Result.Message))
+		return tx, fmt.Errorf("%s", string(tx.Result.Message))
 	}
 
 	return tx, nil
@@ -726,7 +726,7 @@ func (s *OrderTron) sendTransaction(wallet *tronWallet.TronWallet, ct *core.Trig
 	}
 
 	if tx.Result.Code > 0 {
-		return "", fmt.Errorf(string(tx.Result.Message))
+		return "", fmt.Errorf("%s", string(tx.Result.Message))
 	}
 
 	// Sign and broadcast transaction

@@ -33,6 +33,8 @@ func NewPriorityQueueService() *PriorityQueueService {
 
 // ProcessBucketQueues creates a priority queue for each bucket and saves it to redis
 func (s *PriorityQueueService) ProcessBucketQueues() error {
+	// ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	// defer cancel()
 	ctx := context.Background()
 
 	buckets, err := s.GetProvisionBuckets(ctx)
@@ -113,6 +115,16 @@ func (s *PriorityQueueService) GetProviderRate(ctx context.Context, provider *en
 	return rate, nil
 }
 
+// deleteQueue deletes existing circular queue
+func (s *PriorityQueueService) deleteQueue(ctx context.Context, key string) error {
+	_, err := storage.RedisClient.Del(ctx, key).Result()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // CreatePriorityQueueForBucket creates a priority queue for a bucket and saves it to redis
 func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context, bucket *ent.ProvisionBucket) {
 	// Create a slice to store the provider profiles sorted by trust score
@@ -123,11 +135,36 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 	// 	return trustScoreI > trustScoreJ // Sort in descending order
 	// })
 
-	// Enqueue provider ID and rate as a single string into the circular queue
 	redisKey := fmt.Sprintf("bucket_%s_%s_%s", bucket.Edges.Currency.Code, bucket.MinAmount, bucket.MaxAmount)
+	prevRedisKey := redisKey + "_prev"
 
-	_, err := storage.RedisClient.Del(ctx, redisKey).Result() // delete existing queue
-	if err != nil {
+	// Delete the previous queue
+	err := s.deleteQueue(ctx, prevRedisKey)
+	if err != nil && err != context.Canceled {
+		logger.Errorf("failed to delete previous provider queue: %v", err)
+	}
+
+	// Copy the current queue to the previous queue
+	prevData, err := storage.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
+	if err != nil && err != context.Canceled {
+		logger.Errorf("failed to fetch provider rates: %v", err)
+	}
+
+	// Convert []string to []interface{}
+	prevValues := make([]interface{}, len(prevData))
+	for i, v := range prevData {
+		prevValues[i] = v
+	}
+
+	// Update the previous queue
+	err = storage.RedisClient.RPush(ctx, prevRedisKey, prevValues...).Err()
+	if err != nil && err != context.Canceled {
+		logger.Errorf("failed to store previous provider rates: %v", err)
+	}
+
+	// Delete the current queue
+	err = s.deleteQueue(ctx, redisKey)
+	if err != nil && err != context.Canceled {
 		logger.Errorf("failed to delete existing circular queue: %v", err)
 	}
 
@@ -143,26 +180,32 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 			WithToken().
 			All(ctx)
 		if err != nil {
-			fmt.Println("error", err)
-			logger.Errorf("failed to get tokens for provider %s: %v", provider.ID, err)
+			if err != context.Canceled {
+				logger.Errorf("failed to get tokens for provider %s: %v", provider.ID, err)
+			}
 			continue
 		}
-
-		fmt.Println("orderTokens", orderTokens)
 
 		for _, orderToken := range orderTokens {
 			fmt.Println("orderToken", orderToken)
 			providerID := provider.ID
 			rate, err := s.GetProviderRate(ctx, provider, orderToken.Edges.Token.Symbol, bucket.Edges.Currency.Code)
 			if err != nil {
-				logger.Errorf("failed to get %s rate for provider %s: %v", orderToken.Edges.Token.Symbol, providerID, err)
+				if err != context.Canceled {
+					logger.Errorf("failed to get %s rate for provider %s: %v", orderToken.Edges.Token.Symbol, providerID, err)
+				}
+				continue
+			}
+
+			if rate.IsZero() {
 				continue
 			}
 
 			// Check provider's rate against the market rate to ensure it's not too far off
 			percentDeviation := utils.AbsPercentageDeviation(bucket.Edges.Currency.MarketRate, rate)
 
-			if serverConf.Environment == "production" && percentDeviation.GreaterThan(orderConf.PercentDeviationFromMarketRate) {
+			isLocalStablecoin := strings.Contains(orderToken.Edges.Token.Symbol, bucket.Edges.Currency.Code) && !strings.Contains(orderToken.Edges.Token.Symbol, "USD")
+			if serverConf.Environment == "production" && percentDeviation.GreaterThan(orderConf.PercentDeviationFromMarketRate) && !isLocalStablecoin {
 				// Skip this provider if the rate is too far off
 				// TODO: add a logic to notify the provider(s) to update his rate since it's stale. could be a cron job
 				continue
@@ -173,7 +216,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 
 			// Enqueue the serialized data into the circular queue
 			err = storage.RedisClient.RPush(ctx, redisKey, data).Err()
-			if err != nil {
+			if err != nil && err != context.Canceled {
 				logger.Errorf("failed to enqueue provider data to circular queue: %v", err)
 			}
 		}
@@ -236,102 +279,12 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 
 	// partnerProviders := []string{}
 
-	for index := 0; ; index++ {
-		providerData, err := storage.RedisClient.LIndex(ctx, redisKey, int64(index)).Result()
-		if err != nil {
-			break
-		}
-
-		// if providerData == "" {
-		// 	// Reached the end of the queue
-		// 	logger.Errorf("%s - rate didn't match a provider, finding a partner provider", orderIDPrefix)
-
-		// 	if len(partnerProviders) == 0 {
-		// 		logger.Errorf("%s - no partner providers found", orderIDPrefix)
-		// 		return nil
-		// 	}
-
-		// 	// Pick a random partner provider
-		// 	randomIndex := rand.New(rand.NewSource(time.Now().UnixNano())).Intn(len(partnerProviders))
-		// 	providerData = partnerProviders[randomIndex]
-		// }
-
-		// Extract the rate from the data (assuming it's in the format "providerID:token:rate:minAmount:maxAmount")
-		parts := strings.Split(providerData, ":")
-		if len(parts) != 5 {
-			logger.Errorf("%s - invalid data format at index %d: %s", orderIDPrefix, index, providerData)
-			continue // Skip this entry due to invalid format
-		}
-
-		order.ProviderID = parts[0]
-
-		// Skip entry if provider is excluded
-		if utils.ContainsString(excludeList, order.ProviderID) {
-			continue
-		}
-
-		// Skip entry if token doesn't match
-		if parts[1] != order.Token.Symbol {
-			continue
-		}
-
-		// Skip entry if order amount is not within provider's min and max order amount
-		minOrderAmount, err := decimal.NewFromString(parts[3])
-		if err != nil {
-			continue
-		}
-
-		maxOrderAmount, err := decimal.NewFromString(parts[4])
-		if err != nil {
-			continue
-		}
-
-		if order.Amount.LessThan(minOrderAmount) || order.Amount.GreaterThan(maxOrderAmount) {
-			continue
-		}
-
-		// Fetch and check provider for rate match
-		rate, err := decimal.NewFromString(parts[2])
-		if err != nil {
-			continue
-		}
-
-		// TODO: make the slippage of 0.5 configurable by provider
-		if rate.Sub(order.Rate).Abs().LessThanOrEqual(decimal.NewFromFloat(0.5)) {
-			// Found a match for the rate
-			if index == 0 {
-				// Match found at index 0, perform LPOP to dequeue
-				data, err := storage.RedisClient.LPop(ctx, redisKey).Result()
-				if err != nil {
-					logger.Errorf("%s - failed to dequeue from circular queue: %v", orderIDPrefix, err)
-					return err
-				}
-
-				// Enqueue data to the end of the queue
-				err = storage.RedisClient.RPush(ctx, redisKey, data).Err()
-				if err != nil {
-					logger.Errorf("%s - failed to enqueue to circular queue: %v", orderIDPrefix, err)
-					return err
-				}
-			}
-
-			// Assign the order to the provider and save it to Redis
-			err = s.sendOrderRequest(ctx, order)
-			if err != nil {
-				logger.Errorf("%s - failed to send order request to specific provider %s: %v", orderIDPrefix, order.ProviderID, err)
-
-				// Push provider ID to order exclude list
-				orderKey := fmt.Sprintf("order_exclude_list_%s", order.ID)
-				_, err = storage.RedisClient.RPush(ctx, orderKey, order.ProviderID).Result()
-				if err != nil {
-					logger.Errorf("%s - error pushing provider %s to order_exclude_list on Redis: %v", orderIDPrefix, order.ProviderID, err)
-				}
-
-				// Reassign the lock payment order to another provider
-				return s.AssignLockPaymentOrder(ctx, order)
-			}
-
-			break
+	err = s.matchRate(ctx, redisKey, orderIDPrefix, order, excludeList)
+	if err != nil {
+		prevRedisKey := redisKey + "_prev"
+		err = s.matchRate(ctx, prevRedisKey, orderIDPrefix, order, excludeList)
+		if err != nil && !strings.Contains(err.Error(), "redis: nil") {
+			return err
 		}
 	}
 
@@ -401,7 +354,7 @@ func (s *PriorityQueueService) notifyProvider(ctx context.Context, orderRequestD
 	signature := tokenUtils.GenerateHMACSignature(orderRequestData, string(decryptedSecret))
 
 	// Send POST request to the provider's node
-	_, err = fastshot.NewClient(provider.HostIdentifier).
+	res, err := fastshot.NewClient(provider.HostIdentifier).
 		Config().SetTimeout(30*time.Second).
 		Header().Add("X-Request-Signature", signature).
 		Build().POST("/new_order").
@@ -409,6 +362,123 @@ func (s *PriorityQueueService) notifyProvider(ctx context.Context, orderRequestD
 		Send()
 	if err != nil {
 		return err
+	}
+
+	data, err := utils.ParseJSONResponse(res.RawResponse)
+	if err != nil {
+		logger.Errorf("PriorityQueueService.notifyProvider: %v %v", err, data)
+	}
+
+	return nil
+}
+
+// matchRate matches order rate with a provider rate
+func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, orderIDPrefix string, order types.LockPaymentOrderFields, excludeList []string) error {
+	for index := 0; ; index++ {
+		providerData, err := storage.RedisClient.LIndex(ctx, redisKey, int64(index)).Result()
+		if err != nil {
+			return err
+		}
+
+		// if providerData == "" {
+		// 	// Reached the end of the queue
+		// 	logger.Errorf("%s - rate didn't match a provider, finding a partner provider", orderIDPrefix)
+
+		// 	if len(partnerProviders) == 0 {
+		// 		logger.Errorf("%s - no partner providers found", orderIDPrefix)
+		// 		return nil
+		// 	}
+
+		// 	// Pick a random partner provider
+		// 	randomIndex := rand.New(rand.NewSource(time.Now().UnixNano())).Intn(len(partnerProviders))
+		// 	providerData = partnerProviders[randomIndex]
+		// }
+
+		// Extract the rate from the data (assuming it's in the format "providerID:token:rate:minAmount:maxAmount")
+		parts := strings.Split(providerData, ":")
+		if len(parts) != 5 {
+			logger.Errorf("%s - invalid data format at index %d: %s", orderIDPrefix, index, providerData)
+			continue // Skip this entry due to invalid format
+		}
+
+		order.ProviderID = parts[0]
+
+		// Skip entry if provider is excluded
+		if utils.ContainsString(excludeList, order.ProviderID) {
+			continue
+		}
+
+		// Skip entry if token doesn't match
+		if parts[1] != order.Token.Symbol {
+			continue
+		}
+
+		// Skip entry if order amount is not within provider's min and max order amount
+		minOrderAmount, err := decimal.NewFromString(parts[3])
+		if err != nil {
+			continue
+		}
+
+		maxOrderAmount, err := decimal.NewFromString(parts[4])
+		if err != nil {
+			continue
+		}
+
+		normalizedAmount := order.Amount
+		if strings.EqualFold(order.Token.BaseCurrency, order.ProvisionBucket.Edges.Currency.Code) && order.Token.BaseCurrency != "USD" {
+			rateResponse, err := utils.GetTokenRateFromQueue("USDT", normalizedAmount, order.ProvisionBucket.Edges.Currency.Code, order.ProvisionBucket.Edges.Currency.MarketRate)
+			if err != nil {
+				continue
+			}
+			normalizedAmount = order.Amount.Div(rateResponse)
+		}
+		if normalizedAmount.LessThan(minOrderAmount) || normalizedAmount.GreaterThan(maxOrderAmount) {
+			continue
+		}
+
+		// Fetch and check provider for rate match
+		rate, err := decimal.NewFromString(parts[2])
+		if err != nil {
+			continue
+		}
+
+		// TODO: make the slippage of 0.5 configurable by provider
+		if rate.Sub(order.Rate).Abs().LessThanOrEqual(decimal.NewFromFloat(0.5)) {
+			// Found a match for the rate
+			if index == 0 {
+				// Match found at index 0, perform LPOP to dequeue
+				data, err := storage.RedisClient.LPop(ctx, redisKey).Result()
+				if err != nil {
+					logger.Errorf("%s - failed to dequeue from circular queue: %v", orderIDPrefix, err)
+					return err
+				}
+
+				// Enqueue data to the end of the queue
+				err = storage.RedisClient.RPush(ctx, redisKey, data).Err()
+				if err != nil {
+					logger.Errorf("%s - failed to enqueue to circular queue: %v", orderIDPrefix, err)
+					return err
+				}
+			}
+
+			// Assign the order to the provider and save it to Redis
+			err = s.sendOrderRequest(ctx, order)
+			if err != nil {
+				logger.Errorf("%s - failed to send order request to specific provider %s: %v", orderIDPrefix, order.ProviderID, err)
+
+				// Push provider ID to order exclude list
+				orderKey := fmt.Sprintf("order_exclude_list_%s", order.ID)
+				_, err = storage.RedisClient.RPush(ctx, orderKey, order.ProviderID).Result()
+				if err != nil {
+					logger.Errorf("%s - error pushing provider %s to order_exclude_list on Redis: %v", orderIDPrefix, order.ProviderID, err)
+				}
+
+				// Reassign the lock payment order to another provider
+				return s.AssignLockPaymentOrder(ctx, order)
+			}
+
+			break
+		}
 	}
 
 	return nil

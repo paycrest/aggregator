@@ -88,6 +88,20 @@ func (tc *TokenCreate) SetNillableIsEnabled(b *bool) *TokenCreate {
 	return tc
 }
 
+// SetBaseCurrency sets the "base_currency" field.
+func (tc *TokenCreate) SetBaseCurrency(s string) *TokenCreate {
+	tc.mutation.SetBaseCurrency(s)
+	return tc
+}
+
+// SetNillableBaseCurrency sets the "base_currency" field if the given value is not nil.
+func (tc *TokenCreate) SetNillableBaseCurrency(s *string) *TokenCreate {
+	if s != nil {
+		tc.SetBaseCurrency(*s)
+	}
+	return tc
+}
+
 // SetNetworkID sets the "network" edge to the Network entity by ID.
 func (tc *TokenCreate) SetNetworkID(id int) *TokenCreate {
 	tc.mutation.SetNetworkID(id)
@@ -206,6 +220,10 @@ func (tc *TokenCreate) defaults() {
 		v := token.DefaultIsEnabled
 		tc.mutation.SetIsEnabled(v)
 	}
+	if _, ok := tc.mutation.BaseCurrency(); !ok {
+		v := token.DefaultBaseCurrency
+		tc.mutation.SetBaseCurrency(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -237,6 +255,9 @@ func (tc *TokenCreate) check() error {
 	}
 	if _, ok := tc.mutation.IsEnabled(); !ok {
 		return &ValidationError{Name: "is_enabled", err: errors.New(`ent: missing required field "Token.is_enabled"`)}
+	}
+	if _, ok := tc.mutation.BaseCurrency(); !ok {
+		return &ValidationError{Name: "base_currency", err: errors.New(`ent: missing required field "Token.base_currency"`)}
 	}
 	if len(tc.mutation.NetworkIDs()) == 0 {
 		return &ValidationError{Name: "network", err: errors.New(`ent: missing required edge "Token.network"`)}
@@ -291,6 +312,10 @@ func (tc *TokenCreate) createSpec() (*Token, *sqlgraph.CreateSpec) {
 	if value, ok := tc.mutation.IsEnabled(); ok {
 		_spec.SetField(token.FieldIsEnabled, field.TypeBool, value)
 		_node.IsEnabled = value
+	}
+	if value, ok := tc.mutation.BaseCurrency(); ok {
+		_spec.SetField(token.FieldBaseCurrency, field.TypeString, value)
+		_node.BaseCurrency = value
 	}
 	if nodes := tc.mutation.NetworkIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -491,6 +516,18 @@ func (u *TokenUpsert) UpdateIsEnabled() *TokenUpsert {
 	return u
 }
 
+// SetBaseCurrency sets the "base_currency" field.
+func (u *TokenUpsert) SetBaseCurrency(v string) *TokenUpsert {
+	u.Set(token.FieldBaseCurrency, v)
+	return u
+}
+
+// UpdateBaseCurrency sets the "base_currency" field to the value that was provided on create.
+func (u *TokenUpsert) UpdateBaseCurrency() *TokenUpsert {
+	u.SetExcluded(token.FieldBaseCurrency)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create.
 // Using this option is equivalent to using:
 //
@@ -610,6 +647,20 @@ func (u *TokenUpsertOne) SetIsEnabled(v bool) *TokenUpsertOne {
 func (u *TokenUpsertOne) UpdateIsEnabled() *TokenUpsertOne {
 	return u.Update(func(s *TokenUpsert) {
 		s.UpdateIsEnabled()
+	})
+}
+
+// SetBaseCurrency sets the "base_currency" field.
+func (u *TokenUpsertOne) SetBaseCurrency(v string) *TokenUpsertOne {
+	return u.Update(func(s *TokenUpsert) {
+		s.SetBaseCurrency(v)
+	})
+}
+
+// UpdateBaseCurrency sets the "base_currency" field to the value that was provided on create.
+func (u *TokenUpsertOne) UpdateBaseCurrency() *TokenUpsertOne {
+	return u.Update(func(s *TokenUpsert) {
+		s.UpdateBaseCurrency()
 	})
 }
 
@@ -898,6 +949,20 @@ func (u *TokenUpsertBulk) SetIsEnabled(v bool) *TokenUpsertBulk {
 func (u *TokenUpsertBulk) UpdateIsEnabled() *TokenUpsertBulk {
 	return u.Update(func(s *TokenUpsert) {
 		s.UpdateIsEnabled()
+	})
+}
+
+// SetBaseCurrency sets the "base_currency" field.
+func (u *TokenUpsertBulk) SetBaseCurrency(v string) *TokenUpsertBulk {
+	return u.Update(func(s *TokenUpsert) {
+		s.SetBaseCurrency(v)
+	})
+}
+
+// UpdateBaseCurrency sets the "base_currency" field to the value that was provided on create.
+func (u *TokenUpsertBulk) UpdateBaseCurrency() *TokenUpsertBulk {
+	return u.Update(func(s *TokenUpsert) {
+		s.UpdateBaseCurrency()
 	})
 }
 

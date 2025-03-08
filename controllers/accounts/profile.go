@@ -1,7 +1,6 @@
 package accounts
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -136,7 +135,8 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 					token.And(
 						token.HasNetworkWith(network.IdentifierEQ(key)),
 						token.SymbolEQ(tokenPayload.Symbol),
-					)).
+					),
+				).
 				Only(ctx)
 			if err != nil {
 				u.APIResponse(
@@ -158,7 +158,8 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 						senderordertoken.HasTokenWith(token.IDEQ(networksToTokenId[address.Network])),
 						senderordertoken.HasSenderWith(senderprofile.IDEQ(sender.ID)),
 					),
-				).Only(context.Background())
+				).
+				Only(ctx)
 			if err != nil {
 				if ent.IsNotFound(err) {
 					_, err := tx.SenderOrderToken.
@@ -168,7 +169,7 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 						SetRefundAddress(address.RefundAddress).
 						SetFeePercent(tokenPayload.FeePercent).
 						SetFeeAddress(address.FeeAddress).
-						Save(context.Background())
+						Save(ctx)
 					if err != nil {
 						u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 						return
@@ -184,7 +185,7 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 					SetRefundAddress(address.RefundAddress).
 					SetFeePercent(tokenPayload.FeePercent).
 					SetFeeAddress(address.FeeAddress).
-					Save(context.Background())
+					Save(ctx)
 				if err != nil {
 					u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 					return

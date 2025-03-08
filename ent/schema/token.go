@@ -26,6 +26,7 @@ func (Token) Fields() []ent.Field {
 		field.String("contract_address").MaxLen(60),
 		field.Int8("decimals"),
 		field.Bool("is_enabled").Default(false),
+		field.String("base_currency").Default("USD"),
 	}
 }
 

@@ -22,7 +22,6 @@ import (
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
-	entToken "github.com/paycrest/aggregator/ent/token"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/shopspring/decimal"
@@ -122,7 +121,7 @@ func CreateERC20Token(client types.RPCClient, overrides map[string]interface{}) 
 
 	token, err := db.Client.Token.
 		Query().
-		Where(entToken.IDEQ(tokenId)).
+		Where(token.IDEQ(tokenId)).
 		WithNetwork().
 		Only(context.Background())
 
@@ -178,7 +177,7 @@ func CreateTRC20Token(client types.RPCClient, overrides map[string]interface{}) 
 
 	token, err := db.Client.Token.
 		Query().
-		Where(entToken.IDEQ(tokenId)).
+		Where(token.IDEQ(tokenId)).
 		WithNetwork().
 		Only(context.Background())
 
@@ -521,8 +520,8 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 	orderToken, err := db.Client.ProviderOrderToken.
 		Create().
 		SetProvider(payload["provider"].(*ent.ProviderProfile)).
-		SetMaxOrderAmount(payload["min_order_amount"].(decimal.Decimal)).
-		SetMinOrderAmount(payload["max_order_amount"].(decimal.Decimal)).
+		SetMaxOrderAmount(payload["max_order_amount"].(decimal.Decimal)).
+		SetMinOrderAmount(payload["min_order_amount"].(decimal.Decimal)).
 		SetConversionRateType(providerordertoken.ConversionRateType(payload["conversion_rate_type"].(string))).
 		SetFixedConversionRate(payload["fixed_conversion_rate"].(decimal.Decimal)).
 		SetFloatingConversionRate(payload["floating_conversion_rate"].(decimal.Decimal)).
@@ -537,10 +536,12 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 
 // CreateTestProviderProfile creates a test ProviderProfile with defaults or custom values
 func CreateTestProvisionBucket(overrides map[string]interface{}) (*ent.ProvisionBucket, error) {
+	ctx := context.Background()
+
 	// Default payload
 	payload := map[string]interface{}{
-		"max_amount":  decimal.NewFromFloat(1.0),
 		"currency_id": 1,
+		"max_amount":  decimal.NewFromFloat(1.0),
 		"min_amount":  decimal.NewFromFloat(1.0),
 		"provider_id": nil,
 	}
@@ -549,8 +550,6 @@ func CreateTestProvisionBucket(overrides map[string]interface{}) (*ent.Provision
 	for key, value := range overrides {
 		payload[key] = value
 	}
-
-	ctx := context.Background()
 
 	bucket, err := db.Client.ProvisionBucket.Create().
 		SetMinAmount(payload["min_amount"].(decimal.Decimal)).
@@ -568,6 +567,7 @@ func CreateTestProvisionBucket(overrides map[string]interface{}) (*ent.Provision
 	if err != nil {
 		return nil, err
 	}
+
 	return bucket, nil
 }
 

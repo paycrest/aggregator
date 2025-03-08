@@ -131,7 +131,7 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "tx_id", Type: field.TypeString, Unique: true},
+		{Name: "tx_id", Type: field.TypeString, Nullable: true},
 		{Name: "psp", Type: field.TypeString, Nullable: true},
 		{Name: "validation_status", Type: field.TypeEnum, Enums: []string{"pending", "success", "failed"}, Default: "pending"},
 		{Name: "validation_error", Type: field.TypeString, Nullable: true},
@@ -217,6 +217,8 @@ var (
 		{Name: "rpc_endpoint", Type: field.TypeString},
 		{Name: "gateway_contract_address", Type: field.TypeString, Default: ""},
 		{Name: "is_testnet", Type: field.TypeBool},
+		{Name: "bundler_url", Type: field.TypeString, Nullable: true},
+		{Name: "paymaster_url", Type: field.TypeString, Nullable: true},
 		{Name: "fee", Type: field.TypeFloat64},
 	}
 	// NetworksTable holds the schema information for the "networks" table.
@@ -536,6 +538,7 @@ var (
 		{Name: "contract_address", Type: field.TypeString, Size: 60},
 		{Name: "decimals", Type: field.TypeInt8},
 		{Name: "is_enabled", Type: field.TypeBool, Default: false},
+		{Name: "base_currency", Type: field.TypeString, Default: "USD"},
 		{Name: "network_tokens", Type: field.TypeInt},
 	}
 	// TokensTable holds the schema information for the "tokens" table.
@@ -546,7 +549,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "tokens_networks_tokens",
-				Columns:    []*schema.Column{TokensColumns[7]},
+				Columns:    []*schema.Column{TokensColumns[8]},
 				RefColumns: []*schema.Column{NetworksColumns[0]},
 				OnDelete:   schema.Cascade,
 			},

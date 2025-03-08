@@ -389,10 +389,15 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
+			txID := payload.TxID
+			if txID == "" {
+				txID = orderID.String()
+			}
+
 			_, err = storage.Client.LockOrderFulfillment.
 				Create().
 				SetOrderID(orderID).
-				SetTxID(payload.TxID).
+				SetTxID(txID).
 				SetPsp(payload.PSP).
 				Save(ctx)
 			if err != nil {
@@ -403,7 +408,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 
 			fulfillment, err = storage.Client.LockOrderFulfillment.
 				Query().
-				Where(lockorderfulfillment.TxIDEQ(payload.TxID)).
+				Where(lockorderfulfillment.TxIDEQ(txID)).
 				WithOrder(func(poq *ent.LockPaymentOrderQuery) {
 					poq.WithToken(func(tq *ent.TokenQuery) {
 						tq.WithNetwork()
@@ -666,30 +671,30 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 		return
 	}
 
+	// TODO: Reassign order to another provider in background
+
 	u.APIResponse(ctx, http.StatusOK, "success", "Order cancelled successfully", nil)
 }
 
 // GetMarketRate controller fetches the median rate of the cryptocurrency token against the fiat currency
 func (ctrl *ProviderController) GetMarketRate(ctx *gin.Context) {
 	// Parse path parameters
-	tokenExists, err := storage.Client.Token.
+	tokenObj, err := storage.Client.Token.
 		Query().
 		Where(
 			token.SymbolEQ(strings.ToUpper(ctx.Param("token"))),
 			token.IsEnabledEQ(true),
 		).
-		Exist(ctx)
+		First(ctx)
 	if err != nil {
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Token %s is not supported", strings.ToUpper(ctx.Param("token"))), nil)
+			return
+		}
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to get market rate", nil)
 		return
 	}
-
-	if !tokenExists {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Token is not supported", nil)
-		return
-	}
-	// TODO: use token to get the token rate for that currency based on the USD/Token Ratio USD/USDC can be 1.005 and USD/USD can be 0.9995
 
 	currency, err := storage.Client.FiatCurrency.
 		Query().
@@ -700,17 +705,33 @@ func (ctrl *ProviderController) GetMarketRate(ctx *gin.Context) {
 		Only(ctx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Fiat currency is not supported", nil)
+		u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Fiat currency %s is not supported", strings.ToUpper(ctx.Param("fiat"))), nil)
 		return
 	}
 
-	deviation := currency.MarketRate.Mul(orderConf.PercentDeviationFromMarketRate.Div(decimal.NewFromInt(100)))
+	if !strings.EqualFold(tokenObj.BaseCurrency, currency.Code) && !strings.EqualFold(tokenObj.BaseCurrency, "USD") {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("%s can only be converted to %s", tokenObj.Symbol, tokenObj.BaseCurrency), nil)
+		return
+	}
 
-	u.APIResponse(ctx, http.StatusOK, "success", "Rate fetched successfully", &types.MarketRateResponse{
-		MarketRate:  currency.MarketRate,
-		MinimumRate: currency.MarketRate.Sub(deviation),
-		MaximumRate: currency.MarketRate.Add(deviation),
-	})
+	var response *types.MarketRateResponse
+	if !strings.EqualFold(tokenObj.BaseCurrency, currency.Code) {
+		deviation := currency.MarketRate.Mul(orderConf.PercentDeviationFromMarketRate.Div(decimal.NewFromInt(100)))
+
+		response = &types.MarketRateResponse{
+			MarketRate:  currency.MarketRate,
+			MinimumRate: currency.MarketRate.Sub(deviation),
+			MaximumRate: currency.MarketRate.Add(deviation),
+		}
+	} else {
+		response = &types.MarketRateResponse{
+			MarketRate:  decimal.NewFromInt(1),
+			MinimumRate: decimal.NewFromInt(1),
+			MaximumRate: decimal.NewFromInt(1),
+		}
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Rate fetched successfully", response)
 }
 
 // Stats controller fetches provider stats
@@ -828,7 +849,7 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 		WithCurrencies().
 		Only(ctx)
 	if err != nil {
-		logger.Errorf("Failed to fetch node info: %v", err)
+		logger.Errorf("failed to fetch provider: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch node info", nil)
 		return
 	}
@@ -838,14 +859,14 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 		Build().GET("/health").
 		Send()
 	if err != nil {
-		logger.Errorf("Failed to fetch node info: %v", err)
+		logger.Errorf("failed to fetch node info: %v", err)
 		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
 		return
 	}
 
 	data, err := u.ParseJSONResponse(res.RawResponse)
 	if err != nil {
-		logger.Errorf("Failed to fetch node info: %v", err)
+		logger.Errorf("failed to parse node info: %v", err)
 		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
 		return
 	}

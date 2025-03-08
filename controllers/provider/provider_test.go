@@ -652,7 +652,7 @@ func TestProvider(t *testing.T) {
 			var response types.Response
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
-			assert.Equal(t, "Token is not supported", response.Message)
+			assert.Equal(t, "Token XXXX is not supported", response.Message)
 		})
 
 		t.Run("when fiat does not exist", func(t *testing.T) {
@@ -677,7 +677,7 @@ func TestProvider(t *testing.T) {
 			var response types.Response
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
-			assert.Equal(t, "Fiat currency is not supported", response.Message)
+			assert.Equal(t, "Fiat currency USD is not supported", response.Message)
 		})
 
 		t.Run("when fiat exist", func(t *testing.T) {

@@ -24,6 +24,7 @@ import (
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/token"
+	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	svc "github.com/paycrest/aggregator/services"
 	orderSvc "github.com/paycrest/aggregator/services/order"
 	"github.com/paycrest/aggregator/storage"
@@ -120,8 +121,8 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 	token, err := storage.Client.Token.
 		Query().
 		Where(
-			token.SymbolEQ(strings.ToUpper(ctx.Param("token"))),
-			token.IsEnabledEQ(true),
+			tokenEnt.SymbolEQ(strings.ToUpper(ctx.Param("token"))),
+			tokenEnt.IsEnabledEQ(true),
 		).
 		First(ctx)
 	if err != nil {
@@ -131,7 +132,7 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 	}
 
 	if token == nil {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Token is not supported", nil)
+		u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Token %s is not supported", strings.ToUpper(ctx.Param("token"))), nil)
 		return
 	}
 
@@ -144,7 +145,12 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 		Only(ctx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Fiat currency is not supported", nil)
+		u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Fiat currency %s is not supported", strings.ToUpper(ctx.Param("fiat"))), nil)
+		return
+	}
+
+	if !strings.EqualFold(token.BaseCurrency, currency.Code) && !strings.EqualFold(token.BaseCurrency, "USD") {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("%s can only be converted to %s", token.Symbol, token.BaseCurrency), nil)
 		return
 	}
 
@@ -154,58 +160,84 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 		return
 	}
 
-	rateResponse := currency.MarketRate
+	var rateResponse decimal.Decimal
+	if !strings.EqualFold(token.BaseCurrency, currency.Code) {
+		rateResponse = currency.MarketRate
 
-	// get providerID from query params
-	providerID := ctx.Query("provider_id")
-	if providerID != "" {
-		// get the provider from the bucket
-		provider, err := storage.Client.ProviderProfile.
-			Query().
-			Where(providerprofile.IDEQ(providerID)).
-			Only(ctx)
-		if err != nil {
-			if ent.IsNotFound(err) {
-				u.APIResponse(ctx, http.StatusBadRequest, "error", "Provider not found", nil)
-				return
-			} else {
-				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider profile", nil)
+		// get providerID from query params
+		providerID := ctx.Query("provider_id")
+		if providerID != "" {
+			// get the provider from the bucket
+			provider, err := storage.Client.ProviderProfile.
+				Query().
+				Where(providerprofile.IDEQ(providerID)).
+				Only(ctx)
+			if err != nil {
+				if ent.IsNotFound(err) {
+					u.APIResponse(ctx, http.StatusBadRequest, "error", "Provider not found", nil)
+					return
+				} else {
+					u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider profile", nil)
+					return
+				}
+			}
+
+			rateResponse, err = ctrl.priorityQueueService.GetProviderRate(ctx, provider, token.Symbol, currency.Code)
+			if err != nil {
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider rate", nil)
 				return
 			}
-		}
 
-		rateResponse, err = ctrl.priorityQueueService.GetProviderRate(ctx, provider, token.Symbol, currency.Code)
-		if err != nil {
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider rate", nil)
-			return
-		}
+		} else {
+			// Get redis keys for provision buckets
+			keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currency.Code+"_*_*", 100).Result()
+			if err != nil {
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch rates", nil)
+				return
+			}
 
-	} else {
-		// Get redis keys for provision buckets
-		keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currency.Code+"_*_*", 100).Result()
-		if err != nil {
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch rates", nil)
-			return
-		}
+			highestMaxAmount := decimal.NewFromInt(0)
 
-		highestMaxAmount := decimal.NewFromInt(0)
+			// Scan through the buckets to find a matching rate
+			for _, key := range keys {
+				bucketData := strings.Split(key, "_")
+				minAmount, _ := decimal.NewFromString(bucketData[2])
+				maxAmount, _ := decimal.NewFromString(bucketData[3])
 
-		// Scan through the buckets to find a matching rate
-		for _, key := range keys {
-			bucketData := strings.Split(key, "_")
-			minAmount, _ := decimal.NewFromString(bucketData[2])
-			maxAmount, _ := decimal.NewFromString(bucketData[3])
+				for index := 0; ; index++ {
+					// Get the topmost provider in the priority queue of the bucket
+					providerData, err := storage.RedisClient.LIndex(ctx, key, int64(index)).Result()
+					if err != nil {
+						break
+					}
+					parts := strings.Split(providerData, ":")
+					if len(parts) != 5 {
+						logger.Errorf("GetTokenRate.InvalidProviderData: %v", providerData)
+						continue
+					}
 
-			for index := 0; ; index++ {
-				// Get the topmost provider in the priority queue of the bucket
-				providerData, err := storage.RedisClient.LIndex(ctx, key, int64(index)).Result()
-				if err != nil {
-					break
-				}
+					// Skip entry if token doesn't match
+					if parts[1] != token.Symbol {
+						continue
+					}
 
-				if strings.Split(providerData, ":")[1] == token.Symbol {
+					// Skip entry if order amount is not within provider's min and max order amount
+					minOrderAmount, err := decimal.NewFromString(parts[3])
+					if err != nil {
+						continue
+					}
+
+					maxOrderAmount, err := decimal.NewFromString(parts[4])
+					if err != nil {
+						continue
+					}
+
+					if tokenAmount.LessThan(minOrderAmount) || tokenAmount.GreaterThan(maxOrderAmount) {
+						continue
+					}
+
 					// Get fiat equivalent of the token amount
-					rate, _ := decimal.NewFromString(strings.Split(providerData, ":")[2])
+					rate, _ := decimal.NewFromString(parts[2])
 					fiatAmount := tokenAmount.Mul(rate)
 
 					// Check if fiat amount is within the bucket range and set the rate
@@ -220,6 +252,8 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 				}
 			}
 		}
+	} else {
+		rateResponse = decimal.NewFromInt(1)
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Rate fetched successfully", rateResponse)
@@ -706,24 +740,34 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 		}
 	}
 
-	// Generate Smile Identity signature
-	h := hmac.New(sha256.New, []byte(identityConf.SmileIdentityApiKey))
-	h.Write([]byte(timestamp.Format(time.RFC3339Nano)))
-	h.Write([]byte(identityConf.SmileIdentityPartnerId))
-	h.Write([]byte("sid_request"))
-
 	// Initiate KYC verification
+	smileIDSignature := getSmileIDSignature(timestamp.Format(time.RFC3339Nano))
 	res, err := fastshot.NewClient(identityConf.SmileIdentityBaseUrl).
 		Config().SetTimeout(30 * time.Second).
 		Build().POST("/v1/smile_links").
 		Body().AsJSON(map[string]interface{}{
 		"partner_id":   identityConf.SmileIdentityPartnerId,
-		"signature":    base64.StdEncoding.EncodeToString(h.Sum(nil)),
+		"signature":    smileIDSignature,
 		"timestamp":    timestamp,
 		"name":         "Aggregator KYC",
 		"company_name": "Paycrest",
 		"id_types": []map[string]interface{}{
 			// Nigeria
+			{
+				"country":             "NG",
+				"id_type":             "NIN_SLIP",
+				"verification_method": "biometric_kyc",
+			},
+			{
+				"country":             "NG",
+				"id_type":             "V_NIN",
+				"verification_method": "biometric_kyc",
+			},
+			{
+				"country":             "NG",
+				"id_type":             "BVN",
+				"verification_method": "biometric_kyc",
+			},
 			{
 				"country":             "NG",
 				"id_type":             "PASSPORT",
@@ -733,16 +777,6 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 				"country":             "NG",
 				"id_type":             "DRIVERS_LICENSE",
 				"verification_method": "doc_verification",
-			},
-			{
-				"country":             "NG",
-				"id_type":             "V_NIN",
-				"verification_method": "biometric_kyc",
-			},
-			{
-				"country":             "NG",
-				"id_type":             "VOTER_ID",
-				"verification_method": "biometric_kyc",
 			},
 			{
 				"country":             "NG",
@@ -778,57 +812,57 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 			},
 
 			// Ghana
-			// {
-			// 	"country":             "GH",
-			// 	"id_type":             "PASSPORT",
-			// 	"verification_method": "enhanced_document_verification",
-			// },
-			// {
-			// 	"country":             "GH",
-			// 	"id_type":             "VOTER_ID",
-			// 	"verification_method": "enhanced_document_verification",
-			// },
-			// {
-			// 	"country":             "GH",
-			// 	"id_type":             "NEW_VOTER_ID",
-			// 	"verification_method": "biometric_kyc",
-			// },
-			// {
-			// 	"country":             "GH",
-			// 	"id_type":             "DRIVERS_LICENSE",
-			// 	"verification_method": "doc_verification",
-			// },
-			// {
-			// 	"country":             "GH",
-			// 	"id_type":             "SSNIT",
-			// 	"verification_method": "biometric_kyc",
-			// },
+			{
+				"country":             "GH",
+				"id_type":             "PASSPORT",
+				"verification_method": "enhanced_document_verification",
+			},
+			{
+				"country":             "GH",
+				"id_type":             "VOTER_ID",
+				"verification_method": "enhanced_document_verification",
+			},
+			{
+				"country":             "GH",
+				"id_type":             "NEW_VOTER_ID",
+				"verification_method": "biometric_kyc",
+			},
+			{
+				"country":             "GH",
+				"id_type":             "DRIVERS_LICENSE",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "GH",
+				"id_type":             "SSNIT",
+				"verification_method": "biometric_kyc",
+			},
 
 			// South Africa
-			// {
-			// 	"country":             "ZA",
-			// 	"id_type":             "PASSPORT",
-			// 	"verification_method": "doc_verification",
-			// },
-			// {
-			// 	"country":             "ZA",
-			// 	"id_type":             "DRIVERS_LICENSE",
-			// 	"verification_method": "doc_verification",
-			// },
-			// {
-			// 	"country":             "ZA",
-			// 	"id_type":             "RESIDENT_ID",
-			// 	"verification_method": "doc_verification",
-			// },
-			// {
-			// 	"country":             "ZA",
-			// 	"id_type":             "NATIONAL_ID",
-			// 	"verification_method": "biometric_kyc",
-			// },
+			{
+				"country":             "ZA",
+				"id_type":             "PASSPORT",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "ZA",
+				"id_type":             "DRIVERS_LICENSE",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "ZA",
+				"id_type":             "RESIDENT_ID",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "ZA",
+				"id_type":             "NATIONAL_ID",
+				"verification_method": "biometric_kyc",
+			},
 		},
 		"callback_url":            fmt.Sprintf("%s/v1/kyc/webhook", serverConf.HostDomain),
 		"data_privacy_policy_url": "https://paycrest.notion.site/KYC-Policy-10e2482d45a280e191b8d47d76a8d242",
-		"logo_url":                "https://i.postimg.cc/Twrq0gjC/mark-2x-2.png",
+		"logo_url":                "https://res.cloudinary.com/de6e0wihu/image/upload/v1726497581/upqcopbcrnfkzmum7q37.png",
 		"is_single_use":           true,
 		"user_id":                 payload.WalletAddress,
 		"expires_at":              timestamp.Add(1 * time.Hour).Format(time.RFC3339Nano),
@@ -855,7 +889,7 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 		SetPlatform("smile_id").
 		SetPlatformRef(data["ref_id"].(string)).
 		SetVerificationURL(data["link"].(string)).
-		SetLastURLCreatedAt(timestamp.Add(24 * time.Hour)).
+		SetLastURLCreatedAt(timestamp).
 		Save(ctx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
@@ -892,47 +926,17 @@ func (ctrl *Controller) GetIDVerificationStatus(ctx *gin.Context) {
 		return
 	}
 
-	// Check if the status is pending and fetch the status from the platform
-	// if ivr.Status == identityverificationrequest.StatusPending {
-	// 	status, err := getSmileLinkStatus(ivr.PlatformRef)
-	// 	if err != nil {
-	// 		logger.Errorf("error: %v", err)
-	// 		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch identity verification status", nil)
-	// 		return
-	// 	}
-
-	// 	response.Status = status
-
-	// 	if status != "pending" {
-	// 		// Update the verification status in the database if it's not pending
-	// 		_, err := storage.Client.IdentityVerificationRequest.
-	// 			Update().
-	// 			Where(
-	// 				identityverificationrequest.WalletAddressEQ(walletAddress),
-	// 			).
-	// 			SetStatus(identityverificationrequest.Status(response.Status)).
-	// 			Save(ctx)
-	// 		if err != nil {
-	// 			logger.Errorf("error: %v", err)
-	// 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update identity verification status", nil)
-	// 			return
-	// 		}
-	// 	}
-	// }
-
-	var status string
-
-	// Check if the verification URL has expired
-	if ivr.LastURLCreatedAt.Add(1 * time.Hour).Before(time.Now()) {
-		status = "expired"
-	} else {
-		status = ivr.Status.String()
+	response := &types.IDVerificationStatusResponse{
+		URL:    ivr.VerificationURL,
+		Status: ivr.Status.String(),
 	}
 
-	u.APIResponse(ctx, http.StatusOK, "success", "Identity verification status fetched successfully", &types.IDVerificationStatusResponse{
-		Status: status,
-		URL:    ivr.VerificationURL,
-	})
+	// Check if the verification URL has expired
+	if ivr.LastURLCreatedAt.Add(1*time.Hour).Before(time.Now()) && ivr.Status == identityverificationrequest.StatusPending {
+		response.Status = "expired"
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Identity verification status fetched successfully", response)
 }
 
 // KYCWebhook handles the webhook callback from Smile Identity
@@ -1013,61 +1017,16 @@ func (ctrl *Controller) KYCWebhook(ctx *gin.Context) {
 
 // verifyWebhookSignature verifies the signature of a Smile Identity webhook
 func verifySmileIDWebhookSignature(payload types.SmileIDWebhookPayload, receivedSignature string) bool {
-	// Create HMAC
-	// Generate Smile Identity signature
-	h := hmac.New(sha256.New, []byte(identityConf.SmileIdentityApiKey))
-	h.Write([]byte(payload.Timestamp))
-	h.Write([]byte(identityConf.SmileIdentityPartnerId))
-	h.Write([]byte("sid_request"))
-
 	// Compare the computed signature with the one in the header
-	computedSignature := base64.StdEncoding.EncodeToString(h.Sum(nil))
+	computedSignature := getSmileIDSignature(payload.Timestamp)
 	return computedSignature == receivedSignature
 }
 
-// getSmileLinkStatus fetches the status of a Smile Link
-func getSmileLinkStatus(linkID string) (string, error) {
-	// Generate signature
-	timestamp := time.Now().Format(time.RFC3339Nano)
+// getSmileIDSignature generates a signature for a Smile ID request
+func getSmileIDSignature(timestamp string) string {
 	h := hmac.New(sha256.New, []byte(identityConf.SmileIdentityApiKey))
 	h.Write([]byte(timestamp))
 	h.Write([]byte(identityConf.SmileIdentityPartnerId))
 	h.Write([]byte("sid_request"))
-
-	// Get Smile Link status
-	res, err := fastshot.NewClient(identityConf.SmileIdentityBaseUrl).
-		Config().SetTimeout(30 * time.Second).
-		Build().POST(fmt.Sprintf("/v1/smile_links/%s", linkID)).
-		Body().AsJSON(map[string]interface{}{
-		"partner_id": identityConf.SmileIdentityPartnerId,
-		"signature":  base64.StdEncoding.EncodeToString(h.Sum(nil)),
-		"timestamp":  timestamp,
-	}).
-		Send()
-	if err != nil {
-		return "", fmt.Errorf("failed to get Smile Link status: %w", err)
-	}
-
-	data, err := u.ParseJSONResponse(res.RawResponse)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse Smile Link response: %w", err)
-	}
-
-	totalJobs := data["total_jobs"].(float64)
-	successfulJobs := data["successful_jobs"].(float64)
-	failedJobs := data["failed_jobs"].(float64)
-
-	if failedJobs+successfulJobs < totalJobs {
-		return "pending", nil
-	}
-
-	if totalJobs == successfulJobs && failedJobs == 0 {
-		return "success", nil
-	}
-
-	if failedJobs > 0 {
-		return "failed", nil
-	}
-
-	return "", nil
+	return base64.StdEncoding.EncodeToString(h.Sum(nil))
 }
