@@ -101,6 +101,9 @@ func (ctrl *ProviderController) GetLockPaymentOrders(ctx *gin.Context) {
 		lockPaymentOrderQuery = lockPaymentOrderQuery.Where(
 			lockpaymentorder.InstitutionIn(institutionCodes...),
 		)
+	} else {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Currency is required", nil)
+		return
 	}
 
 	// Filter by status if provided
@@ -746,17 +749,22 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 
 	// Check if currency in query is present in provider currencies
 	currency := ctx.Query("currency")
-	currencyExists, err := provider.QueryCurrencies().
-		Where(fiatcurrency.CodeEQ(currency)).
-		Exist(ctx)
-	if err != nil {
-		logger.Errorf("error checking provider currency: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to check currency", nil)
-		return
-	}
+	if currency != "" {
+		currencyExists, err := provider.QueryCurrencies().
+			Where(fiatcurrency.CodeEQ(currency)).
+			Exist(ctx)
+		if err != nil {
+			logger.Errorf("error checking provider currency: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to check currency", nil)
+			return
+		}
 
-	if !currencyExists {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Currency not found", nil)
+		if !currencyExists {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Currency not found", nil)
+			return
+		}
+	} else {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Currency is required", nil)
 		return
 	}
 
