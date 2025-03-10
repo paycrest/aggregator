@@ -617,36 +617,36 @@ func (m *APIKeyMutation) ResetEdge(name string) error {
 // FiatCurrencyMutation represents an operation that mutates the FiatCurrency nodes in the graph.
 type FiatCurrencyMutation struct {
 	config
-	op                       Op
-	typ                      string
-	id                       *uuid.UUID
-	created_at               *time.Time
-	updated_at               *time.Time
-	code                     *string
-	short_name               *string
-	decimals                 *int
-	adddecimals              *int
-	symbol                   *string
-	name                     *string
-	market_rate              *decimal.Decimal
-	addmarket_rate           *decimal.Decimal
-	is_enabled               *bool
-	clearedFields            map[string]struct{}
-	providers                map[string]struct{}
-	removedproviders         map[string]struct{}
-	clearedproviders         bool
-	provision_buckets        map[int]struct{}
-	removedprovision_buckets map[int]struct{}
-	clearedprovision_buckets bool
-	institutions             map[int]struct{}
-	removedinstitutions      map[int]struct{}
-	clearedinstitutions      bool
-	provider_settings        map[int]struct{}
-	removedprovider_settings map[int]struct{}
-	clearedprovider_settings bool
-	done                     bool
-	oldValue                 func(context.Context) (*FiatCurrency, error)
-	predicates               []predicate.FiatCurrency
+	op                           Op
+	typ                          string
+	id                           *uuid.UUID
+	created_at                   *time.Time
+	updated_at                   *time.Time
+	code                         *string
+	short_name                   *string
+	decimals                     *int
+	adddecimals                  *int
+	symbol                       *string
+	name                         *string
+	market_rate                  *decimal.Decimal
+	addmarket_rate               *decimal.Decimal
+	is_enabled                   *bool
+	clearedFields                map[string]struct{}
+	providers                    map[string]struct{}
+	removedproviders             map[string]struct{}
+	clearedproviders             bool
+	provision_buckets            map[int]struct{}
+	removedprovision_buckets     map[int]struct{}
+	clearedprovision_buckets     bool
+	institutions                 map[int]struct{}
+	removedinstitutions          map[int]struct{}
+	clearedinstitutions          bool
+	provider_order_tokens        map[int]struct{}
+	removedprovider_order_tokens map[int]struct{}
+	clearedprovider_order_tokens bool
+	done                         bool
+	oldValue                     func(context.Context) (*FiatCurrency, error)
+	predicates                   []predicate.FiatCurrency
 }
 
 var _ ent.Mutation = (*FiatCurrencyMutation)(nil)
@@ -1279,58 +1279,58 @@ func (m *FiatCurrencyMutation) ResetInstitutions() {
 	m.removedinstitutions = nil
 }
 
-// AddProviderSettingIDs adds the "provider_settings" edge to the ProviderOrderToken entity by ids.
-func (m *FiatCurrencyMutation) AddProviderSettingIDs(ids ...int) {
-	if m.provider_settings == nil {
-		m.provider_settings = make(map[int]struct{})
+// AddProviderOrderTokenIDs adds the "provider_order_tokens" edge to the ProviderOrderToken entity by ids.
+func (m *FiatCurrencyMutation) AddProviderOrderTokenIDs(ids ...int) {
+	if m.provider_order_tokens == nil {
+		m.provider_order_tokens = make(map[int]struct{})
 	}
 	for i := range ids {
-		m.provider_settings[ids[i]] = struct{}{}
+		m.provider_order_tokens[ids[i]] = struct{}{}
 	}
 }
 
-// ClearProviderSettings clears the "provider_settings" edge to the ProviderOrderToken entity.
-func (m *FiatCurrencyMutation) ClearProviderSettings() {
-	m.clearedprovider_settings = true
+// ClearProviderOrderTokens clears the "provider_order_tokens" edge to the ProviderOrderToken entity.
+func (m *FiatCurrencyMutation) ClearProviderOrderTokens() {
+	m.clearedprovider_order_tokens = true
 }
 
-// ProviderSettingsCleared reports if the "provider_settings" edge to the ProviderOrderToken entity was cleared.
-func (m *FiatCurrencyMutation) ProviderSettingsCleared() bool {
-	return m.clearedprovider_settings
+// ProviderOrderTokensCleared reports if the "provider_order_tokens" edge to the ProviderOrderToken entity was cleared.
+func (m *FiatCurrencyMutation) ProviderOrderTokensCleared() bool {
+	return m.clearedprovider_order_tokens
 }
 
-// RemoveProviderSettingIDs removes the "provider_settings" edge to the ProviderOrderToken entity by IDs.
-func (m *FiatCurrencyMutation) RemoveProviderSettingIDs(ids ...int) {
-	if m.removedprovider_settings == nil {
-		m.removedprovider_settings = make(map[int]struct{})
+// RemoveProviderOrderTokenIDs removes the "provider_order_tokens" edge to the ProviderOrderToken entity by IDs.
+func (m *FiatCurrencyMutation) RemoveProviderOrderTokenIDs(ids ...int) {
+	if m.removedprovider_order_tokens == nil {
+		m.removedprovider_order_tokens = make(map[int]struct{})
 	}
 	for i := range ids {
-		delete(m.provider_settings, ids[i])
-		m.removedprovider_settings[ids[i]] = struct{}{}
+		delete(m.provider_order_tokens, ids[i])
+		m.removedprovider_order_tokens[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedProviderSettings returns the removed IDs of the "provider_settings" edge to the ProviderOrderToken entity.
-func (m *FiatCurrencyMutation) RemovedProviderSettingsIDs() (ids []int) {
-	for id := range m.removedprovider_settings {
+// RemovedProviderOrderTokens returns the removed IDs of the "provider_order_tokens" edge to the ProviderOrderToken entity.
+func (m *FiatCurrencyMutation) RemovedProviderOrderTokensIDs() (ids []int) {
+	for id := range m.removedprovider_order_tokens {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ProviderSettingsIDs returns the "provider_settings" edge IDs in the mutation.
-func (m *FiatCurrencyMutation) ProviderSettingsIDs() (ids []int) {
-	for id := range m.provider_settings {
+// ProviderOrderTokensIDs returns the "provider_order_tokens" edge IDs in the mutation.
+func (m *FiatCurrencyMutation) ProviderOrderTokensIDs() (ids []int) {
+	for id := range m.provider_order_tokens {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetProviderSettings resets all changes to the "provider_settings" edge.
-func (m *FiatCurrencyMutation) ResetProviderSettings() {
-	m.provider_settings = nil
-	m.clearedprovider_settings = false
-	m.removedprovider_settings = nil
+// ResetProviderOrderTokens resets all changes to the "provider_order_tokens" edge.
+func (m *FiatCurrencyMutation) ResetProviderOrderTokens() {
+	m.provider_order_tokens = nil
+	m.clearedprovider_order_tokens = false
+	m.removedprovider_order_tokens = nil
 }
 
 // Where appends a list predicates to the FiatCurrencyMutation builder.
@@ -1639,8 +1639,8 @@ func (m *FiatCurrencyMutation) AddedEdges() []string {
 	if m.institutions != nil {
 		edges = append(edges, fiatcurrency.EdgeInstitutions)
 	}
-	if m.provider_settings != nil {
-		edges = append(edges, fiatcurrency.EdgeProviderSettings)
+	if m.provider_order_tokens != nil {
+		edges = append(edges, fiatcurrency.EdgeProviderOrderTokens)
 	}
 	return edges
 }
@@ -1667,9 +1667,9 @@ func (m *FiatCurrencyMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case fiatcurrency.EdgeProviderSettings:
-		ids := make([]ent.Value, 0, len(m.provider_settings))
-		for id := range m.provider_settings {
+	case fiatcurrency.EdgeProviderOrderTokens:
+		ids := make([]ent.Value, 0, len(m.provider_order_tokens))
+		for id := range m.provider_order_tokens {
 			ids = append(ids, id)
 		}
 		return ids
@@ -1689,8 +1689,8 @@ func (m *FiatCurrencyMutation) RemovedEdges() []string {
 	if m.removedinstitutions != nil {
 		edges = append(edges, fiatcurrency.EdgeInstitutions)
 	}
-	if m.removedprovider_settings != nil {
-		edges = append(edges, fiatcurrency.EdgeProviderSettings)
+	if m.removedprovider_order_tokens != nil {
+		edges = append(edges, fiatcurrency.EdgeProviderOrderTokens)
 	}
 	return edges
 }
@@ -1717,9 +1717,9 @@ func (m *FiatCurrencyMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case fiatcurrency.EdgeProviderSettings:
-		ids := make([]ent.Value, 0, len(m.removedprovider_settings))
-		for id := range m.removedprovider_settings {
+	case fiatcurrency.EdgeProviderOrderTokens:
+		ids := make([]ent.Value, 0, len(m.removedprovider_order_tokens))
+		for id := range m.removedprovider_order_tokens {
 			ids = append(ids, id)
 		}
 		return ids
@@ -1739,8 +1739,8 @@ func (m *FiatCurrencyMutation) ClearedEdges() []string {
 	if m.clearedinstitutions {
 		edges = append(edges, fiatcurrency.EdgeInstitutions)
 	}
-	if m.clearedprovider_settings {
-		edges = append(edges, fiatcurrency.EdgeProviderSettings)
+	if m.clearedprovider_order_tokens {
+		edges = append(edges, fiatcurrency.EdgeProviderOrderTokens)
 	}
 	return edges
 }
@@ -1755,8 +1755,8 @@ func (m *FiatCurrencyMutation) EdgeCleared(name string) bool {
 		return m.clearedprovision_buckets
 	case fiatcurrency.EdgeInstitutions:
 		return m.clearedinstitutions
-	case fiatcurrency.EdgeProviderSettings:
-		return m.clearedprovider_settings
+	case fiatcurrency.EdgeProviderOrderTokens:
+		return m.clearedprovider_order_tokens
 	}
 	return false
 }
@@ -1782,8 +1782,8 @@ func (m *FiatCurrencyMutation) ResetEdge(name string) error {
 	case fiatcurrency.EdgeInstitutions:
 		m.ResetInstitutions()
 		return nil
-	case fiatcurrency.EdgeProviderSettings:
-		m.ResetProviderSettings()
+	case fiatcurrency.EdgeProviderOrderTokens:
+		m.ResetProviderOrderTokens()
 		return nil
 	}
 	return fmt.Errorf("unknown FiatCurrency edge %s", name)
@@ -17333,35 +17333,35 @@ func (m *SenderProfileMutation) ResetEdge(name string) error {
 // TokenMutation represents an operation that mutates the Token nodes in the graph.
 type TokenMutation struct {
 	config
-	op                         Op
-	typ                        string
-	id                         *int
-	created_at                 *time.Time
-	updated_at                 *time.Time
-	symbol                     *string
-	contract_address           *string
-	decimals                   *int8
-	adddecimals                *int8
-	is_enabled                 *bool
-	base_currency              *string
-	clearedFields              map[string]struct{}
-	network                    *int
-	clearednetwork             bool
-	payment_orders             map[uuid.UUID]struct{}
-	removedpayment_orders      map[uuid.UUID]struct{}
-	clearedpayment_orders      bool
-	lock_payment_orders        map[uuid.UUID]struct{}
-	removedlock_payment_orders map[uuid.UUID]struct{}
-	clearedlock_payment_orders bool
-	sender_settings            map[int]struct{}
-	removedsender_settings     map[int]struct{}
-	clearedsender_settings     bool
-	provider_settings          map[int]struct{}
-	removedprovider_settings   map[int]struct{}
-	clearedprovider_settings   bool
-	done                       bool
-	oldValue                   func(context.Context) (*Token, error)
-	predicates                 []predicate.Token
+	op                           Op
+	typ                          string
+	id                           *int
+	created_at                   *time.Time
+	updated_at                   *time.Time
+	symbol                       *string
+	contract_address             *string
+	decimals                     *int8
+	adddecimals                  *int8
+	is_enabled                   *bool
+	base_currency                *string
+	clearedFields                map[string]struct{}
+	network                      *int
+	clearednetwork               bool
+	payment_orders               map[uuid.UUID]struct{}
+	removedpayment_orders        map[uuid.UUID]struct{}
+	clearedpayment_orders        bool
+	lock_payment_orders          map[uuid.UUID]struct{}
+	removedlock_payment_orders   map[uuid.UUID]struct{}
+	clearedlock_payment_orders   bool
+	sender_order_tokens          map[int]struct{}
+	removedsender_order_tokens   map[int]struct{}
+	clearedsender_order_tokens   bool
+	provider_order_tokens        map[int]struct{}
+	removedprovider_order_tokens map[int]struct{}
+	clearedprovider_order_tokens bool
+	done                         bool
+	oldValue                     func(context.Context) (*Token, error)
+	predicates                   []predicate.Token
 }
 
 var _ ent.Mutation = (*TokenMutation)(nil)
@@ -17881,112 +17881,112 @@ func (m *TokenMutation) ResetLockPaymentOrders() {
 	m.removedlock_payment_orders = nil
 }
 
-// AddSenderSettingIDs adds the "sender_settings" edge to the SenderOrderToken entity by ids.
-func (m *TokenMutation) AddSenderSettingIDs(ids ...int) {
-	if m.sender_settings == nil {
-		m.sender_settings = make(map[int]struct{})
+// AddSenderOrderTokenIDs adds the "sender_order_tokens" edge to the SenderOrderToken entity by ids.
+func (m *TokenMutation) AddSenderOrderTokenIDs(ids ...int) {
+	if m.sender_order_tokens == nil {
+		m.sender_order_tokens = make(map[int]struct{})
 	}
 	for i := range ids {
-		m.sender_settings[ids[i]] = struct{}{}
+		m.sender_order_tokens[ids[i]] = struct{}{}
 	}
 }
 
-// ClearSenderSettings clears the "sender_settings" edge to the SenderOrderToken entity.
-func (m *TokenMutation) ClearSenderSettings() {
-	m.clearedsender_settings = true
+// ClearSenderOrderTokens clears the "sender_order_tokens" edge to the SenderOrderToken entity.
+func (m *TokenMutation) ClearSenderOrderTokens() {
+	m.clearedsender_order_tokens = true
 }
 
-// SenderSettingsCleared reports if the "sender_settings" edge to the SenderOrderToken entity was cleared.
-func (m *TokenMutation) SenderSettingsCleared() bool {
-	return m.clearedsender_settings
+// SenderOrderTokensCleared reports if the "sender_order_tokens" edge to the SenderOrderToken entity was cleared.
+func (m *TokenMutation) SenderOrderTokensCleared() bool {
+	return m.clearedsender_order_tokens
 }
 
-// RemoveSenderSettingIDs removes the "sender_settings" edge to the SenderOrderToken entity by IDs.
-func (m *TokenMutation) RemoveSenderSettingIDs(ids ...int) {
-	if m.removedsender_settings == nil {
-		m.removedsender_settings = make(map[int]struct{})
+// RemoveSenderOrderTokenIDs removes the "sender_order_tokens" edge to the SenderOrderToken entity by IDs.
+func (m *TokenMutation) RemoveSenderOrderTokenIDs(ids ...int) {
+	if m.removedsender_order_tokens == nil {
+		m.removedsender_order_tokens = make(map[int]struct{})
 	}
 	for i := range ids {
-		delete(m.sender_settings, ids[i])
-		m.removedsender_settings[ids[i]] = struct{}{}
+		delete(m.sender_order_tokens, ids[i])
+		m.removedsender_order_tokens[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedSenderSettings returns the removed IDs of the "sender_settings" edge to the SenderOrderToken entity.
-func (m *TokenMutation) RemovedSenderSettingsIDs() (ids []int) {
-	for id := range m.removedsender_settings {
+// RemovedSenderOrderTokens returns the removed IDs of the "sender_order_tokens" edge to the SenderOrderToken entity.
+func (m *TokenMutation) RemovedSenderOrderTokensIDs() (ids []int) {
+	for id := range m.removedsender_order_tokens {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// SenderSettingsIDs returns the "sender_settings" edge IDs in the mutation.
-func (m *TokenMutation) SenderSettingsIDs() (ids []int) {
-	for id := range m.sender_settings {
+// SenderOrderTokensIDs returns the "sender_order_tokens" edge IDs in the mutation.
+func (m *TokenMutation) SenderOrderTokensIDs() (ids []int) {
+	for id := range m.sender_order_tokens {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetSenderSettings resets all changes to the "sender_settings" edge.
-func (m *TokenMutation) ResetSenderSettings() {
-	m.sender_settings = nil
-	m.clearedsender_settings = false
-	m.removedsender_settings = nil
+// ResetSenderOrderTokens resets all changes to the "sender_order_tokens" edge.
+func (m *TokenMutation) ResetSenderOrderTokens() {
+	m.sender_order_tokens = nil
+	m.clearedsender_order_tokens = false
+	m.removedsender_order_tokens = nil
 }
 
-// AddProviderSettingIDs adds the "provider_settings" edge to the ProviderOrderToken entity by ids.
-func (m *TokenMutation) AddProviderSettingIDs(ids ...int) {
-	if m.provider_settings == nil {
-		m.provider_settings = make(map[int]struct{})
+// AddProviderOrderTokenIDs adds the "provider_order_tokens" edge to the ProviderOrderToken entity by ids.
+func (m *TokenMutation) AddProviderOrderTokenIDs(ids ...int) {
+	if m.provider_order_tokens == nil {
+		m.provider_order_tokens = make(map[int]struct{})
 	}
 	for i := range ids {
-		m.provider_settings[ids[i]] = struct{}{}
+		m.provider_order_tokens[ids[i]] = struct{}{}
 	}
 }
 
-// ClearProviderSettings clears the "provider_settings" edge to the ProviderOrderToken entity.
-func (m *TokenMutation) ClearProviderSettings() {
-	m.clearedprovider_settings = true
+// ClearProviderOrderTokens clears the "provider_order_tokens" edge to the ProviderOrderToken entity.
+func (m *TokenMutation) ClearProviderOrderTokens() {
+	m.clearedprovider_order_tokens = true
 }
 
-// ProviderSettingsCleared reports if the "provider_settings" edge to the ProviderOrderToken entity was cleared.
-func (m *TokenMutation) ProviderSettingsCleared() bool {
-	return m.clearedprovider_settings
+// ProviderOrderTokensCleared reports if the "provider_order_tokens" edge to the ProviderOrderToken entity was cleared.
+func (m *TokenMutation) ProviderOrderTokensCleared() bool {
+	return m.clearedprovider_order_tokens
 }
 
-// RemoveProviderSettingIDs removes the "provider_settings" edge to the ProviderOrderToken entity by IDs.
-func (m *TokenMutation) RemoveProviderSettingIDs(ids ...int) {
-	if m.removedprovider_settings == nil {
-		m.removedprovider_settings = make(map[int]struct{})
+// RemoveProviderOrderTokenIDs removes the "provider_order_tokens" edge to the ProviderOrderToken entity by IDs.
+func (m *TokenMutation) RemoveProviderOrderTokenIDs(ids ...int) {
+	if m.removedprovider_order_tokens == nil {
+		m.removedprovider_order_tokens = make(map[int]struct{})
 	}
 	for i := range ids {
-		delete(m.provider_settings, ids[i])
-		m.removedprovider_settings[ids[i]] = struct{}{}
+		delete(m.provider_order_tokens, ids[i])
+		m.removedprovider_order_tokens[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedProviderSettings returns the removed IDs of the "provider_settings" edge to the ProviderOrderToken entity.
-func (m *TokenMutation) RemovedProviderSettingsIDs() (ids []int) {
-	for id := range m.removedprovider_settings {
+// RemovedProviderOrderTokens returns the removed IDs of the "provider_order_tokens" edge to the ProviderOrderToken entity.
+func (m *TokenMutation) RemovedProviderOrderTokensIDs() (ids []int) {
+	for id := range m.removedprovider_order_tokens {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ProviderSettingsIDs returns the "provider_settings" edge IDs in the mutation.
-func (m *TokenMutation) ProviderSettingsIDs() (ids []int) {
-	for id := range m.provider_settings {
+// ProviderOrderTokensIDs returns the "provider_order_tokens" edge IDs in the mutation.
+func (m *TokenMutation) ProviderOrderTokensIDs() (ids []int) {
+	for id := range m.provider_order_tokens {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetProviderSettings resets all changes to the "provider_settings" edge.
-func (m *TokenMutation) ResetProviderSettings() {
-	m.provider_settings = nil
-	m.clearedprovider_settings = false
-	m.removedprovider_settings = nil
+// ResetProviderOrderTokens resets all changes to the "provider_order_tokens" edge.
+func (m *TokenMutation) ResetProviderOrderTokens() {
+	m.provider_order_tokens = nil
+	m.clearedprovider_order_tokens = false
+	m.removedprovider_order_tokens = nil
 }
 
 // Where appends a list predicates to the TokenMutation builder.
@@ -18249,11 +18249,11 @@ func (m *TokenMutation) AddedEdges() []string {
 	if m.lock_payment_orders != nil {
 		edges = append(edges, token.EdgeLockPaymentOrders)
 	}
-	if m.sender_settings != nil {
-		edges = append(edges, token.EdgeSenderSettings)
+	if m.sender_order_tokens != nil {
+		edges = append(edges, token.EdgeSenderOrderTokens)
 	}
-	if m.provider_settings != nil {
-		edges = append(edges, token.EdgeProviderSettings)
+	if m.provider_order_tokens != nil {
+		edges = append(edges, token.EdgeProviderOrderTokens)
 	}
 	return edges
 }
@@ -18278,15 +18278,15 @@ func (m *TokenMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case token.EdgeSenderSettings:
-		ids := make([]ent.Value, 0, len(m.sender_settings))
-		for id := range m.sender_settings {
+	case token.EdgeSenderOrderTokens:
+		ids := make([]ent.Value, 0, len(m.sender_order_tokens))
+		for id := range m.sender_order_tokens {
 			ids = append(ids, id)
 		}
 		return ids
-	case token.EdgeProviderSettings:
-		ids := make([]ent.Value, 0, len(m.provider_settings))
-		for id := range m.provider_settings {
+	case token.EdgeProviderOrderTokens:
+		ids := make([]ent.Value, 0, len(m.provider_order_tokens))
+		for id := range m.provider_order_tokens {
 			ids = append(ids, id)
 		}
 		return ids
@@ -18303,11 +18303,11 @@ func (m *TokenMutation) RemovedEdges() []string {
 	if m.removedlock_payment_orders != nil {
 		edges = append(edges, token.EdgeLockPaymentOrders)
 	}
-	if m.removedsender_settings != nil {
-		edges = append(edges, token.EdgeSenderSettings)
+	if m.removedsender_order_tokens != nil {
+		edges = append(edges, token.EdgeSenderOrderTokens)
 	}
-	if m.removedprovider_settings != nil {
-		edges = append(edges, token.EdgeProviderSettings)
+	if m.removedprovider_order_tokens != nil {
+		edges = append(edges, token.EdgeProviderOrderTokens)
 	}
 	return edges
 }
@@ -18328,15 +18328,15 @@ func (m *TokenMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case token.EdgeSenderSettings:
-		ids := make([]ent.Value, 0, len(m.removedsender_settings))
-		for id := range m.removedsender_settings {
+	case token.EdgeSenderOrderTokens:
+		ids := make([]ent.Value, 0, len(m.removedsender_order_tokens))
+		for id := range m.removedsender_order_tokens {
 			ids = append(ids, id)
 		}
 		return ids
-	case token.EdgeProviderSettings:
-		ids := make([]ent.Value, 0, len(m.removedprovider_settings))
-		for id := range m.removedprovider_settings {
+	case token.EdgeProviderOrderTokens:
+		ids := make([]ent.Value, 0, len(m.removedprovider_order_tokens))
+		for id := range m.removedprovider_order_tokens {
 			ids = append(ids, id)
 		}
 		return ids
@@ -18356,11 +18356,11 @@ func (m *TokenMutation) ClearedEdges() []string {
 	if m.clearedlock_payment_orders {
 		edges = append(edges, token.EdgeLockPaymentOrders)
 	}
-	if m.clearedsender_settings {
-		edges = append(edges, token.EdgeSenderSettings)
+	if m.clearedsender_order_tokens {
+		edges = append(edges, token.EdgeSenderOrderTokens)
 	}
-	if m.clearedprovider_settings {
-		edges = append(edges, token.EdgeProviderSettings)
+	if m.clearedprovider_order_tokens {
+		edges = append(edges, token.EdgeProviderOrderTokens)
 	}
 	return edges
 }
@@ -18375,10 +18375,10 @@ func (m *TokenMutation) EdgeCleared(name string) bool {
 		return m.clearedpayment_orders
 	case token.EdgeLockPaymentOrders:
 		return m.clearedlock_payment_orders
-	case token.EdgeSenderSettings:
-		return m.clearedsender_settings
-	case token.EdgeProviderSettings:
-		return m.clearedprovider_settings
+	case token.EdgeSenderOrderTokens:
+		return m.clearedsender_order_tokens
+	case token.EdgeProviderOrderTokens:
+		return m.clearedprovider_order_tokens
 	}
 	return false
 }
@@ -18407,11 +18407,11 @@ func (m *TokenMutation) ResetEdge(name string) error {
 	case token.EdgeLockPaymentOrders:
 		m.ResetLockPaymentOrders()
 		return nil
-	case token.EdgeSenderSettings:
-		m.ResetSenderSettings()
+	case token.EdgeSenderOrderTokens:
+		m.ResetSenderOrderTokens()
 		return nil
-	case token.EdgeProviderSettings:
-		m.ResetProviderSettings()
+	case token.EdgeProviderOrderTokens:
+		m.ResetProviderOrderTokens()
 		return nil
 	}
 	return fmt.Errorf("unknown Token edge %s", name)

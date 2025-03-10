@@ -538,10 +538,10 @@ func (potq *ProviderOrderTokenQuery) loadToken(ctx context.Context, query *Token
 	ids := make([]int, 0, len(nodes))
 	nodeids := make(map[int][]*ProviderOrderToken)
 	for i := range nodes {
-		if nodes[i].token_provider_settings == nil {
+		if nodes[i].token_provider_order_tokens == nil {
 			continue
 		}
-		fk := *nodes[i].token_provider_settings
+		fk := *nodes[i].token_provider_order_tokens
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -558,7 +558,7 @@ func (potq *ProviderOrderTokenQuery) loadToken(ctx context.Context, query *Token
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "token_provider_settings" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "token_provider_order_tokens" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -570,10 +570,10 @@ func (potq *ProviderOrderTokenQuery) loadCurrency(ctx context.Context, query *Fi
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProviderOrderToken)
 	for i := range nodes {
-		if nodes[i].fiat_currency_provider_settings == nil {
+		if nodes[i].fiat_currency_provider_order_tokens == nil {
 			continue
 		}
-		fk := *nodes[i].fiat_currency_provider_settings
+		fk := *nodes[i].fiat_currency_provider_order_tokens
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -590,7 +590,7 @@ func (potq *ProviderOrderTokenQuery) loadCurrency(ctx context.Context, query *Fi
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "fiat_currency_provider_settings" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "fiat_currency_provider_order_tokens" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

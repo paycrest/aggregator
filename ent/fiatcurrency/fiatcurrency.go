@@ -39,8 +39,8 @@ const (
 	EdgeProvisionBuckets = "provision_buckets"
 	// EdgeInstitutions holds the string denoting the institutions edge name in mutations.
 	EdgeInstitutions = "institutions"
-	// EdgeProviderSettings holds the string denoting the provider_settings edge name in mutations.
-	EdgeProviderSettings = "provider_settings"
+	// EdgeProviderOrderTokens holds the string denoting the provider_order_tokens edge name in mutations.
+	EdgeProviderOrderTokens = "provider_order_tokens"
 	// Table holds the table name of the fiatcurrency in the database.
 	Table = "fiat_currencies"
 	// ProvidersTable is the table that holds the providers relation/edge. The primary key declared below.
@@ -62,13 +62,13 @@ const (
 	InstitutionsInverseTable = "institutions"
 	// InstitutionsColumn is the table column denoting the institutions relation/edge.
 	InstitutionsColumn = "fiat_currency_institutions"
-	// ProviderSettingsTable is the table that holds the provider_settings relation/edge.
-	ProviderSettingsTable = "provider_order_tokens"
-	// ProviderSettingsInverseTable is the table name for the ProviderOrderToken entity.
+	// ProviderOrderTokensTable is the table that holds the provider_order_tokens relation/edge.
+	ProviderOrderTokensTable = "provider_order_tokens"
+	// ProviderOrderTokensInverseTable is the table name for the ProviderOrderToken entity.
 	// It exists in this package in order to avoid circular dependency with the "providerordertoken" package.
-	ProviderSettingsInverseTable = "provider_order_tokens"
-	// ProviderSettingsColumn is the table column denoting the provider_settings relation/edge.
-	ProviderSettingsColumn = "fiat_currency_provider_settings"
+	ProviderOrderTokensInverseTable = "provider_order_tokens"
+	// ProviderOrderTokensColumn is the table column denoting the provider_order_tokens relation/edge.
+	ProviderOrderTokensColumn = "fiat_currency_provider_order_tokens"
 )
 
 // Columns holds all SQL columns for fiatcurrency fields.
@@ -211,17 +211,17 @@ func ByInstitutions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
-// ByProviderSettingsCount orders the results by provider_settings count.
-func ByProviderSettingsCount(opts ...sql.OrderTermOption) OrderOption {
+// ByProviderOrderTokensCount orders the results by provider_order_tokens count.
+func ByProviderOrderTokensCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newProviderSettingsStep(), opts...)
+		sqlgraph.OrderByNeighborsCount(s, newProviderOrderTokensStep(), opts...)
 	}
 }
 
-// ByProviderSettings orders the results by provider_settings terms.
-func ByProviderSettings(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+// ByProviderOrderTokens orders the results by provider_order_tokens terms.
+func ByProviderOrderTokens(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newProviderSettingsStep(), append([]sql.OrderTerm{term}, terms...)...)
+		sqlgraph.OrderByNeighborTerms(s, newProviderOrderTokensStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 func newProvidersStep() *sqlgraph.Step {
@@ -245,10 +245,10 @@ func newInstitutionsStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.O2M, false, InstitutionsTable, InstitutionsColumn),
 	)
 }
-func newProviderSettingsStep() *sqlgraph.Step {
+func newProviderOrderTokensStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(ProviderSettingsInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, ProviderSettingsTable, ProviderSettingsColumn),
+		sqlgraph.To(ProviderOrderTokensInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ProviderOrderTokensTable, ProviderOrderTokensColumn),
 	)
 }

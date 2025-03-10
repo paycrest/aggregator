@@ -54,14 +54,14 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "token" package.
 	TokenInverseTable = "tokens"
 	// TokenColumn is the table column denoting the token relation/edge.
-	TokenColumn = "token_provider_settings"
+	TokenColumn = "token_provider_order_tokens"
 	// CurrencyTable is the table that holds the currency relation/edge.
 	CurrencyTable = "provider_order_tokens"
 	// CurrencyInverseTable is the table name for the FiatCurrency entity.
 	// It exists in this package in order to avoid circular dependency with the "fiatcurrency" package.
 	CurrencyInverseTable = "fiat_currencies"
 	// CurrencyColumn is the table column denoting the currency relation/edge.
-	CurrencyColumn = "fiat_currency_provider_settings"
+	CurrencyColumn = "fiat_currency_provider_order_tokens"
 )
 
 // Columns holds all SQL columns for providerordertoken fields.
@@ -81,9 +81,9 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "provider_order_tokens"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"fiat_currency_provider_settings",
+	"fiat_currency_provider_order_tokens",
 	"provider_profile_order_tokens",
-	"token_provider_settings",
+	"token_provider_order_tokens",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

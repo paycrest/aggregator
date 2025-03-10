@@ -870,7 +870,7 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 		},
 		"callback_url":            fmt.Sprintf("%s/v1/kyc/webhook", serverConf.HostDomain),
 		"data_privacy_policy_url": "https://paycrest.notion.site/KYC-Policy-10e2482d45a280e191b8d47d76a8d242",
-		"logo_url":                "https://res.cloudinary.com/de6e0wihu/image/upload/v1726497581/upqcopbcrnfkzmum7q37.png",
+		"logo_url":                "https://res.cloudinary.com/de6e0wihu/image/upload/v1738088043/xxhlrsld2wy9lzekahur.png",
 		"is_single_use":           true,
 		"user_id":                 payload.WalletAddress,
 		"expires_at":              timestamp.Add(1 * time.Hour).Format(time.RFC3339Nano),

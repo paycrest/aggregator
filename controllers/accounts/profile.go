@@ -336,42 +336,28 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 	// Update tokens
 	for _, tokenPayload := range payload.Tokens {
 		// Check if token is supported
+		fmt.Println("tokenPayload: %v", tokenPayload)
 		providerToken, err := storage.Client.Token.
 			Query().
-			Where(token.Symbol(tokenPayload.Symbol)).
+			Where(
+				token.Symbol(tokenPayload.Symbol),
+				token.HasNetworkWith(network.IdentifierEQ(tokenPayload.Network)),
+				token.IsEnabledEQ(true),
+			).
 			Only(ctx)
 		if err != nil {
 			if ent.IsNotFound(err) {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Token not supported - %s", tokenPayload.Symbol), nil)
 			} else {
 				logger.Errorf("Failed to check token support: %v", err)
+				fmt.Println("Failed to check token support: %v", err)
 				u.APIResponse(
 					ctx,
 					http.StatusInternalServerError,
-					"error", "Failed to update profile",
+					"error", "Failed to update profile 3",
 					nil,
 				)
 			}
-			return
-		}
-
-		// Check if network is supported
-		networkExists, err := storage.Client.Network.
-			Query().
-			Where(network.IdentifierEQ(tokenPayload.Network)).
-			Exist(ctx)
-		if err != nil {
-			logger.Errorf("Failed to check network support: %v", err)
-			u.APIResponse(
-				ctx,
-				http.StatusInternalServerError,
-				"error", "Failed to update profile",
-				nil,
-			)
-			return
-		}
-		if !networkExists {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Network not supported - %s", tokenPayload.Network), nil)
 			return
 		}
 
@@ -423,6 +409,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 					SetMaxOrderAmount(tokenPayload.MaxOrderAmount).
 					SetMinOrderAmount(tokenPayload.MinOrderAmount).
 					SetAddress(tokenPayload.Address).
+					SetNetwork(tokenPayload.Network).
 					SetProviderID(provider.ID).
 					SetTokenID(providerToken.ID).
 					SetCurrencyID(currency.ID).
@@ -446,6 +433,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				SetMaxOrderAmount(tokenPayload.MaxOrderAmount).
 				SetMinOrderAmount(tokenPayload.MinOrderAmount).
 				SetAddress(tokenPayload.Address).
+				SetNetwork(tokenPayload.Network).
 				Save(ctx)
 			if err != nil {
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to set token - "+tokenPayload.Symbol, nil)
