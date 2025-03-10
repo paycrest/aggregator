@@ -58,7 +58,7 @@ WHERE pot.network = n.identifier
 -- Avoid duplicate entries
 ON CONFLICT (token_id, provider_order_token_id) DO NOTHING;
 
--- First, create a Common Table Expression to determine the appropriate fiat_currency_id for each provider
+-- First insert into fiat_currency_providers
 WITH provider_currency_mapping AS (
   SELECT 
     pp.id AS provider_profile_id,
@@ -67,19 +67,38 @@ WITH provider_currency_mapping AS (
         SELECT 1 
         FROM provider_order_tokens pot 
         WHERE pot.provider_profile_order_tokens = pp.id 
-          AND pot.fixed_conversion_rate < 150
+          AND pot.fixed_conversion_rate < 150 AND pot.fixed_conversion_rate > 1
       ) THEN (SELECT id FROM fiat_currencies WHERE code = 'KES')
       ELSE (SELECT id FROM fiat_currencies WHERE code = 'NGN')
     END AS fiat_currency_id
   FROM provider_profiles pp
 )
+INSERT INTO fiat_currency_providers (fiat_currency_id, provider_profile_id)
+SELECT 
+  fiat_currency_id,
+  provider_profile_id
+FROM provider_currency_mapping
+ON CONFLICT (fiat_currency_id, provider_profile_id) DO NOTHING;
 
--- Now insert into fiat_currency_provider_settings
+-- Then insert into fiat_currency_provider_settings with a fresh CTE
+WITH provider_currency_mapping AS (
+  SELECT 
+    pp.id AS provider_profile_id,
+    CASE 
+      WHEN EXISTS (
+        SELECT 1 
+        FROM provider_order_tokens pot 
+        WHERE pot.provider_profile_order_tokens = pp.id 
+          AND pot.fixed_conversion_rate < 150 AND pot.fixed_conversion_rate > 1
+      ) THEN (SELECT id FROM fiat_currencies WHERE code = 'KES')
+      ELSE (SELECT id FROM fiat_currencies WHERE code = 'NGN')
+    END AS fiat_currency_id
+  FROM provider_profiles pp
+)
 INSERT INTO fiat_currency_provider_settings (fiat_currency_id, provider_order_token_id)
 SELECT 
   pcm.fiat_currency_id,
   pot.id AS provider_order_token_id
 FROM provider_order_tokens pot
 JOIN provider_currency_mapping pcm ON pot.provider_profile_order_tokens = pcm.provider_profile_id
--- Avoid duplicate entries
 ON CONFLICT (fiat_currency_id, provider_order_token_id) DO NOTHING;

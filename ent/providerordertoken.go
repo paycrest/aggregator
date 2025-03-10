@@ -42,11 +42,11 @@ type ProviderOrderToken struct {
 	Network string `json:"network,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ProviderOrderTokenQuery when eager-loading is set.
-	Edges                           ProviderOrderTokenEdges `json:"edges"`
-	fiat_currency_provider_settings *uuid.UUID
-	provider_profile_order_tokens   *string
-	token_provider_settings         *int
-	selectValues                    sql.SelectValues
+	Edges                               ProviderOrderTokenEdges `json:"edges"`
+	fiat_currency_provider_order_tokens *uuid.UUID
+	provider_profile_order_tokens       *string
+	token_provider_order_tokens         *int
+	selectValues                        sql.SelectValues
 }
 
 // ProviderOrderTokenEdges holds the relations/edges for other nodes in the graph.
@@ -108,11 +108,11 @@ func (*ProviderOrderToken) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case providerordertoken.FieldCreatedAt, providerordertoken.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
-		case providerordertoken.ForeignKeys[0]: // fiat_currency_provider_settings
+		case providerordertoken.ForeignKeys[0]: // fiat_currency_provider_order_tokens
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case providerordertoken.ForeignKeys[1]: // provider_profile_order_tokens
 			values[i] = new(sql.NullString)
-		case providerordertoken.ForeignKeys[2]: // token_provider_settings
+		case providerordertoken.ForeignKeys[2]: // token_provider_order_tokens
 			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -191,10 +191,10 @@ func (pot *ProviderOrderToken) assignValues(columns []string, values []any) erro
 			}
 		case providerordertoken.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field fiat_currency_provider_settings", values[i])
+				return fmt.Errorf("unexpected type %T for field fiat_currency_provider_order_tokens", values[i])
 			} else if value.Valid {
-				pot.fiat_currency_provider_settings = new(uuid.UUID)
-				*pot.fiat_currency_provider_settings = *value.S.(*uuid.UUID)
+				pot.fiat_currency_provider_order_tokens = new(uuid.UUID)
+				*pot.fiat_currency_provider_order_tokens = *value.S.(*uuid.UUID)
 			}
 		case providerordertoken.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -205,10 +205,10 @@ func (pot *ProviderOrderToken) assignValues(columns []string, values []any) erro
 			}
 		case providerordertoken.ForeignKeys[2]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for edge-field token_provider_settings", value)
+				return fmt.Errorf("unexpected type %T for edge-field token_provider_order_tokens", value)
 			} else if value.Valid {
-				pot.token_provider_settings = new(int)
-				*pot.token_provider_settings = int(value.Int64)
+				pot.token_provider_order_tokens = new(int)
+				*pot.token_provider_order_tokens = int(value.Int64)
 			}
 		default:
 			pot.selectValues.Set(columns[i], values[i])

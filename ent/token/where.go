@@ -484,21 +484,21 @@ func HasLockPaymentOrdersWith(preds ...predicate.LockPaymentOrder) predicate.Tok
 	})
 }
 
-// HasSenderSettings applies the HasEdge predicate on the "sender_settings" edge.
-func HasSenderSettings() predicate.Token {
+// HasSenderOrderTokens applies the HasEdge predicate on the "sender_order_tokens" edge.
+func HasSenderOrderTokens() predicate.Token {
 	return predicate.Token(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, SenderSettingsTable, SenderSettingsColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, SenderOrderTokensTable, SenderOrderTokensColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasSenderSettingsWith applies the HasEdge predicate on the "sender_settings" edge with a given conditions (other predicates).
-func HasSenderSettingsWith(preds ...predicate.SenderOrderToken) predicate.Token {
+// HasSenderOrderTokensWith applies the HasEdge predicate on the "sender_order_tokens" edge with a given conditions (other predicates).
+func HasSenderOrderTokensWith(preds ...predicate.SenderOrderToken) predicate.Token {
 	return predicate.Token(func(s *sql.Selector) {
-		step := newSenderSettingsStep()
+		step := newSenderOrderTokensStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -507,21 +507,21 @@ func HasSenderSettingsWith(preds ...predicate.SenderOrderToken) predicate.Token 
 	})
 }
 
-// HasProviderSettings applies the HasEdge predicate on the "provider_settings" edge.
-func HasProviderSettings() predicate.Token {
+// HasProviderOrderTokens applies the HasEdge predicate on the "provider_order_tokens" edge.
+func HasProviderOrderTokens() predicate.Token {
 	return predicate.Token(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, ProviderSettingsTable, ProviderSettingsColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, ProviderOrderTokensTable, ProviderOrderTokensColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasProviderSettingsWith applies the HasEdge predicate on the "provider_settings" edge with a given conditions (other predicates).
-func HasProviderSettingsWith(preds ...predicate.ProviderOrderToken) predicate.Token {
+// HasProviderOrderTokensWith applies the HasEdge predicate on the "provider_order_tokens" edge with a given conditions (other predicates).
+func HasProviderOrderTokensWith(preds ...predicate.ProviderOrderToken) predicate.Token {
 	return predicate.Token(func(s *sql.Selector) {
-		step := newProviderSettingsStep()
+		step := newProviderOrderTokensStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

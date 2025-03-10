@@ -322,7 +322,7 @@ func (potc *ProviderOrderTokenCreate) createSpec() (*ProviderOrderToken, *sqlgra
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.token_provider_settings = &nodes[0]
+		_node.token_provider_order_tokens = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := potc.mutation.CurrencyIDs(); len(nodes) > 0 {
@@ -339,7 +339,7 @@ func (potc *ProviderOrderTokenCreate) createSpec() (*ProviderOrderToken, *sqlgra
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.fiat_currency_provider_settings = &nodes[0]
+		_node.fiat_currency_provider_order_tokens = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

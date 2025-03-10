@@ -51,8 +51,8 @@ type FiatCurrencyEdges struct {
 	ProvisionBuckets []*ProvisionBucket `json:"provision_buckets,omitempty"`
 	// Institutions holds the value of the institutions edge.
 	Institutions []*Institution `json:"institutions,omitempty"`
-	// ProviderSettings holds the value of the provider_settings edge.
-	ProviderSettings []*ProviderOrderToken `json:"provider_settings,omitempty"`
+	// ProviderOrderTokens holds the value of the provider_order_tokens edge.
+	ProviderOrderTokens []*ProviderOrderToken `json:"provider_order_tokens,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [4]bool
@@ -85,13 +85,13 @@ func (e FiatCurrencyEdges) InstitutionsOrErr() ([]*Institution, error) {
 	return nil, &NotLoadedError{edge: "institutions"}
 }
 
-// ProviderSettingsOrErr returns the ProviderSettings value or an error if the edge
+// ProviderOrderTokensOrErr returns the ProviderOrderTokens value or an error if the edge
 // was not loaded in eager-loading.
-func (e FiatCurrencyEdges) ProviderSettingsOrErr() ([]*ProviderOrderToken, error) {
+func (e FiatCurrencyEdges) ProviderOrderTokensOrErr() ([]*ProviderOrderToken, error) {
 	if e.loadedTypes[3] {
-		return e.ProviderSettings, nil
+		return e.ProviderOrderTokens, nil
 	}
-	return nil, &NotLoadedError{edge: "provider_settings"}
+	return nil, &NotLoadedError{edge: "provider_order_tokens"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -214,9 +214,9 @@ func (fc *FiatCurrency) QueryInstitutions() *InstitutionQuery {
 	return NewFiatCurrencyClient(fc.config).QueryInstitutions(fc)
 }
 
-// QueryProviderSettings queries the "provider_settings" edge of the FiatCurrency entity.
-func (fc *FiatCurrency) QueryProviderSettings() *ProviderOrderTokenQuery {
-	return NewFiatCurrencyClient(fc.config).QueryProviderSettings(fc)
+// QueryProviderOrderTokens queries the "provider_order_tokens" edge of the FiatCurrency entity.
+func (fc *FiatCurrency) QueryProviderOrderTokens() *ProviderOrderTokenQuery {
+	return NewFiatCurrencyClient(fc.config).QueryProviderOrderTokens(fc)
 }
 
 // Update returns a builder for updating this FiatCurrency.

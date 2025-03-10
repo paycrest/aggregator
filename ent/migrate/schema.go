@@ -323,9 +323,9 @@ var (
 		{Name: "min_order_amount", Type: field.TypeFloat64},
 		{Name: "address", Type: field.TypeString, Nullable: true},
 		{Name: "network", Type: field.TypeString, Nullable: true},
-		{Name: "fiat_currency_provider_settings", Type: field.TypeUUID},
+		{Name: "fiat_currency_provider_order_tokens", Type: field.TypeUUID},
 		{Name: "provider_profile_order_tokens", Type: field.TypeString},
-		{Name: "token_provider_settings", Type: field.TypeInt},
+		{Name: "token_provider_order_tokens", Type: field.TypeInt},
 	}
 	// ProviderOrderTokensTable holds the schema information for the "provider_order_tokens" table.
 	ProviderOrderTokensTable = &schema.Table{
@@ -334,7 +334,7 @@ var (
 		PrimaryKey: []*schema.Column{ProviderOrderTokensColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "provider_order_tokens_fiat_currencies_provider_settings",
+				Symbol:     "provider_order_tokens_fiat_currencies_provider_order_tokens",
 				Columns:    []*schema.Column{ProviderOrderTokensColumns[10]},
 				RefColumns: []*schema.Column{FiatCurrenciesColumns[0]},
 				OnDelete:   schema.Cascade,
@@ -346,17 +346,17 @@ var (
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "provider_order_tokens_tokens_provider_settings",
+				Symbol:     "provider_order_tokens_tokens_provider_order_tokens",
 				Columns:    []*schema.Column{ProviderOrderTokensColumns[12]},
 				RefColumns: []*schema.Column{TokensColumns[0]},
-				OnDelete:   schema.NoAction,
+				OnDelete:   schema.Cascade,
 			},
 		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "providerordertoken_provider_profile_order_tokens_token_provider_settings_fiat_currency_provider_settings",
+				Name:    "providerordertoken_network_provider_profile_order_tokens_token_provider_order_tokens_fiat_currency_provider_order_tokens",
 				Unique:  true,
-				Columns: []*schema.Column{ProviderOrderTokensColumns[11], ProviderOrderTokensColumns[12], ProviderOrderTokensColumns[10]},
+				Columns: []*schema.Column{ProviderOrderTokensColumns[9], ProviderOrderTokensColumns[11], ProviderOrderTokensColumns[12], ProviderOrderTokensColumns[10]},
 			},
 		},
 	}
@@ -475,7 +475,7 @@ var (
 		{Name: "fee_address", Type: field.TypeString, Size: 60},
 		{Name: "refund_address", Type: field.TypeString, Size: 60},
 		{Name: "sender_profile_order_tokens", Type: field.TypeUUID},
-		{Name: "token_sender_settings", Type: field.TypeInt},
+		{Name: "token_sender_order_tokens", Type: field.TypeInt},
 	}
 	// SenderOrderTokensTable holds the schema information for the "sender_order_tokens" table.
 	SenderOrderTokensTable = &schema.Table{
@@ -490,15 +490,15 @@ var (
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "sender_order_tokens_tokens_sender_settings",
+				Symbol:     "sender_order_tokens_tokens_sender_order_tokens",
 				Columns:    []*schema.Column{SenderOrderTokensColumns[7]},
 				RefColumns: []*schema.Column{TokensColumns[0]},
-				OnDelete:   schema.NoAction,
+				OnDelete:   schema.Cascade,
 			},
 		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "senderordertoken_sender_profile_order_tokens_token_sender_settings",
+				Name:    "senderordertoken_sender_profile_order_tokens_token_sender_order_tokens",
 				Unique:  true,
 				Columns: []*schema.Column{SenderOrderTokensColumns[6], SenderOrderTokensColumns[7]},
 			},

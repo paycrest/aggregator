@@ -133,32 +133,38 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 				"Currencies are required for provider account", nil)
 			return
 		}
-		
+
 		fiatCurrencies := make([]*ent.FiatCurrency, len(currencies))
+		var unsupportedCurrencies []string
 		for i, currency := range currencies {
 			fiatCurrency, err := tx.FiatCurrency.
 				Query().
 				Where(
 					fiatcurrency.IsEnabledEQ(true),
-					fiatcurrency.CodeEQ(currency),
+					fiatcurrency.CodeEQ(strings.ToUpper(currency)),
 				).
 				Only(ctx)
 			if err != nil {
-				_ = tx.Rollback()
 				if ent.IsNotFound(err) {
-					u.APIResponse(ctx, http.StatusBadRequest, "error",
-						"Failed to validate payload", []types.ErrorData{{
-							Field:   "Currencies",
-							Message: fmt.Sprintf("Currency is not supported: %s", currency),
-						}})
-					return
+					unsupportedCurrencies = append(unsupportedCurrencies, strings.ToUpper(currency))
+					continue
 				}
-				logger.Errorf("error: %v", err)
+				_ = tx.Rollback()
 				u.APIResponse(ctx, http.StatusInternalServerError, "error",
 					"Failed to create new user", nil)
 				return
 			}
 			fiatCurrencies[i] = fiatCurrency
+		}
+
+		if len(unsupportedCurrencies) > 0 {
+			_ = tx.Rollback()
+			u.APIResponse(ctx, http.StatusBadRequest, "error",
+				"Failed to validate payload", []types.ErrorData{{
+					Field:   "Currencies",
+					Message: fmt.Sprintf("Currencies not supported: %s", strings.Join(unsupportedCurrencies, ", ")),
+				}})
+			return
 		}
 
 		provider, err := tx.ProviderProfile.

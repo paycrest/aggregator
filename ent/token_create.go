@@ -143,34 +143,34 @@ func (tc *TokenCreate) AddLockPaymentOrders(l ...*LockPaymentOrder) *TokenCreate
 	return tc.AddLockPaymentOrderIDs(ids...)
 }
 
-// AddSenderSettingIDs adds the "sender_settings" edge to the SenderOrderToken entity by IDs.
-func (tc *TokenCreate) AddSenderSettingIDs(ids ...int) *TokenCreate {
-	tc.mutation.AddSenderSettingIDs(ids...)
+// AddSenderOrderTokenIDs adds the "sender_order_tokens" edge to the SenderOrderToken entity by IDs.
+func (tc *TokenCreate) AddSenderOrderTokenIDs(ids ...int) *TokenCreate {
+	tc.mutation.AddSenderOrderTokenIDs(ids...)
 	return tc
 }
 
-// AddSenderSettings adds the "sender_settings" edges to the SenderOrderToken entity.
-func (tc *TokenCreate) AddSenderSettings(s ...*SenderOrderToken) *TokenCreate {
+// AddSenderOrderTokens adds the "sender_order_tokens" edges to the SenderOrderToken entity.
+func (tc *TokenCreate) AddSenderOrderTokens(s ...*SenderOrderToken) *TokenCreate {
 	ids := make([]int, len(s))
 	for i := range s {
 		ids[i] = s[i].ID
 	}
-	return tc.AddSenderSettingIDs(ids...)
+	return tc.AddSenderOrderTokenIDs(ids...)
 }
 
-// AddProviderSettingIDs adds the "provider_settings" edge to the ProviderOrderToken entity by IDs.
-func (tc *TokenCreate) AddProviderSettingIDs(ids ...int) *TokenCreate {
-	tc.mutation.AddProviderSettingIDs(ids...)
+// AddProviderOrderTokenIDs adds the "provider_order_tokens" edge to the ProviderOrderToken entity by IDs.
+func (tc *TokenCreate) AddProviderOrderTokenIDs(ids ...int) *TokenCreate {
+	tc.mutation.AddProviderOrderTokenIDs(ids...)
 	return tc
 }
 
-// AddProviderSettings adds the "provider_settings" edges to the ProviderOrderToken entity.
-func (tc *TokenCreate) AddProviderSettings(p ...*ProviderOrderToken) *TokenCreate {
+// AddProviderOrderTokens adds the "provider_order_tokens" edges to the ProviderOrderToken entity.
+func (tc *TokenCreate) AddProviderOrderTokens(p ...*ProviderOrderToken) *TokenCreate {
 	ids := make([]int, len(p))
 	for i := range p {
 		ids[i] = p[i].ID
 	}
-	return tc.AddProviderSettingIDs(ids...)
+	return tc.AddProviderOrderTokenIDs(ids...)
 }
 
 // Mutation returns the TokenMutation object of the builder.
@@ -366,12 +366,12 @@ func (tc *TokenCreate) createSpec() (*Token, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := tc.mutation.SenderSettingsIDs(); len(nodes) > 0 {
+	if nodes := tc.mutation.SenderOrderTokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   token.SenderSettingsTable,
-			Columns: []string{token.SenderSettingsColumn},
+			Table:   token.SenderOrderTokensTable,
+			Columns: []string{token.SenderOrderTokensColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(senderordertoken.FieldID, field.TypeInt),
@@ -382,12 +382,12 @@ func (tc *TokenCreate) createSpec() (*Token, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := tc.mutation.ProviderSettingsIDs(); len(nodes) > 0 {
+	if nodes := tc.mutation.ProviderOrderTokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   token.ProviderSettingsTable,
-			Columns: []string{token.ProviderSettingsColumn},
+			Table:   token.ProviderOrderTokensTable,
+			Columns: []string{token.ProviderOrderTokensColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerordertoken.FieldID, field.TypeInt),

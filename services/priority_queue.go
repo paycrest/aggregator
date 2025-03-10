@@ -187,7 +187,6 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 		}
 
 		for _, orderToken := range orderTokens {
-			fmt.Println("orderToken", orderToken)
 			providerID := provider.ID
 			rate, err := s.GetProviderRate(ctx, provider, orderToken.Edges.Token.Symbol, bucket.Edges.Currency.Code)
 			if err != nil {
