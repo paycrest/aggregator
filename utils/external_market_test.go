@@ -52,10 +52,6 @@ func TestFetchExternalRate(t *testing.T) {
 	BinanceAPIURL = binanceServer.URL
 	QuidaxAPIURL = quidaxServer.URL
 
-	fmt.Println("BitgetAPIURL:", BitgetAPIURL)
-	fmt.Println("QuidaxAPIURL:", QuidaxAPIURL)
-	fmt.Println("BinanceAPIURL:", BinanceAPIURL)
-
 	// Run test cases
 	t.Run("Fetch rate for NGN (Quidax & Bitget)", func(t *testing.T) {
 		rate, err := FetchExternalRate("NGN")

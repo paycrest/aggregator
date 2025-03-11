@@ -170,6 +170,15 @@ func Median(data []decimal.Decimal) decimal.Decimal {
 	return result
 }
 
+// buildQueryString constructs a query string from a map.
+func BuildQueryString(params map[string]string) string {
+	var parts []string
+	for key, value := range params {
+		parts = append(parts, fmt.Sprintf("%s=%s", key, value))
+	}
+	return strings.Join(parts, "&")
+}
+
 // AbsPercentageDeviation returns the absolute percentage deviation between two values
 func AbsPercentageDeviation(trueValue, measuredValue decimal.Decimal) decimal.Decimal {
 	if trueValue.IsZero() {
