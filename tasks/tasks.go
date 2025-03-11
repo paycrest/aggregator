@@ -986,33 +986,7 @@ func FixDatabaseMisHap() error {
 	// defer cancel()
 	ctx := context.Background()
 
-	// parse string to uuid
-	orderUUID, err := uuid.Parse("14baa582-84d9-40bf-96b8-94601d6ffe2b")
-	if err != nil {
-		logger.Errorf("FixDatabaseMisHap: %v", err)
-		return nil
-	}
-
-	order, err := storage.Client.PaymentOrder.
-		Query().
-		Where(
-			paymentorder.IDEQ(orderUUID),
-			paymentorder.StatusEQ(paymentorder.StatusInitiated),
-		).
-		WithToken(func(tq *ent.TokenQuery) {
-			tq.WithNetwork()
-		}).
-		WithRecipient().
-		Only(ctx)
-	if err != nil {
-		logger.Errorf("FixDatabaseMisHap: %v", err)
-	}
-
-	service := orderService.NewOrderEVM()
-	err = service.CreateOrder(ctx, rpcClients[order.Edges.Token.Edges.Network.Identifier], order.ID)
-	if err != nil {
-		logger.Errorf("FixDatabaseMisHap: %v", err)
-	}
+	logger.Infof("FixDatabaseMisHap: %v", ctx)
 
 	return nil
 }
@@ -1204,7 +1178,9 @@ func ComputeMarketRate() error {
 		tokenConfigs, err := storage.Client.ProviderOrderToken.
 			Query().
 			Where(
-				providerordertoken.SymbolIn("USDT", "USDC"),
+				providerordertoken.HasTokenWith(
+					tokenent.SymbolIn("USDT", "USDC"),
+				),
 				providerordertoken.ConversionRateTypeEQ(providerordertoken.ConversionRateTypeFixed),
 			).
 			Select(providerordertoken.FieldFixedConversionRate).

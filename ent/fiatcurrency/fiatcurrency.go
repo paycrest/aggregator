@@ -39,15 +39,15 @@ const (
 	EdgeProvisionBuckets = "provision_buckets"
 	// EdgeInstitutions holds the string denoting the institutions edge name in mutations.
 	EdgeInstitutions = "institutions"
+	// EdgeProviderOrderTokens holds the string denoting the provider_order_tokens edge name in mutations.
+	EdgeProviderOrderTokens = "provider_order_tokens"
 	// Table holds the table name of the fiatcurrency in the database.
 	Table = "fiat_currencies"
-	// ProvidersTable is the table that holds the providers relation/edge.
-	ProvidersTable = "provider_profiles"
+	// ProvidersTable is the table that holds the providers relation/edge. The primary key declared below.
+	ProvidersTable = "fiat_currency_providers"
 	// ProvidersInverseTable is the table name for the ProviderProfile entity.
 	// It exists in this package in order to avoid circular dependency with the "providerprofile" package.
 	ProvidersInverseTable = "provider_profiles"
-	// ProvidersColumn is the table column denoting the providers relation/edge.
-	ProvidersColumn = "fiat_currency_providers"
 	// ProvisionBucketsTable is the table that holds the provision_buckets relation/edge.
 	ProvisionBucketsTable = "provision_buckets"
 	// ProvisionBucketsInverseTable is the table name for the ProvisionBucket entity.
@@ -62,6 +62,13 @@ const (
 	InstitutionsInverseTable = "institutions"
 	// InstitutionsColumn is the table column denoting the institutions relation/edge.
 	InstitutionsColumn = "fiat_currency_institutions"
+	// ProviderOrderTokensTable is the table that holds the provider_order_tokens relation/edge.
+	ProviderOrderTokensTable = "provider_order_tokens"
+	// ProviderOrderTokensInverseTable is the table name for the ProviderOrderToken entity.
+	// It exists in this package in order to avoid circular dependency with the "providerordertoken" package.
+	ProviderOrderTokensInverseTable = "provider_order_tokens"
+	// ProviderOrderTokensColumn is the table column denoting the provider_order_tokens relation/edge.
+	ProviderOrderTokensColumn = "fiat_currency_provider_order_tokens"
 )
 
 // Columns holds all SQL columns for fiatcurrency fields.
@@ -77,6 +84,12 @@ var Columns = []string{
 	FieldMarketRate,
 	FieldIsEnabled,
 }
+
+var (
+	// ProvidersPrimaryKey and ProvidersColumn2 are the table columns denoting the
+	// primary key for the providers relation (M2M).
+	ProvidersPrimaryKey = []string{"fiat_currency_id", "provider_profile_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -197,11 +210,25 @@ func ByInstitutions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newInstitutionsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByProviderOrderTokensCount orders the results by provider_order_tokens count.
+func ByProviderOrderTokensCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newProviderOrderTokensStep(), opts...)
+	}
+}
+
+// ByProviderOrderTokens orders the results by provider_order_tokens terms.
+func ByProviderOrderTokens(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProviderOrderTokensStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newProvidersStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ProvidersInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, ProvidersTable, ProvidersColumn),
+		sqlgraph.Edge(sqlgraph.M2M, false, ProvidersTable, ProvidersPrimaryKey...),
 	)
 }
 func newProvisionBucketsStep() *sqlgraph.Step {
@@ -216,5 +243,12 @@ func newInstitutionsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(InstitutionsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, InstitutionsTable, InstitutionsColumn),
+	)
+}
+func newProviderOrderTokensStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProviderOrderTokensInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ProviderOrderTokensTable, ProviderOrderTokensColumn),
 	)
 }

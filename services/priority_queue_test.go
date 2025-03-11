@@ -101,8 +101,10 @@ func setupForPQ() error {
 			"floating_conversion_rate": decimal.NewFromFloat(1.0),
 			"max_order_amount":         decimal.NewFromFloat(1000),
 			"min_order_amount":         decimal.NewFromFloat(1.0),
-			"tokenSymbol":              token.Symbol,
 			"provider":                 publicProviderProfile,
+			"currency_id":              currency.ID,
+			"network":                  token.Edges.Network.Identifier,
+			"tokenID":                  token.ID,
 		},
 	)
 	if err != nil {
@@ -224,7 +226,7 @@ func TestPriorityQueueTest(t *testing.T) {
 
 		data, err := db.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
 		assert.NoError(t, err)
-		assert.Equal(t, len(data), 1)
+		assert.Equal(t, 1, len(data))
 		assert.Contains(t, data[0], testCtxForPQ.publicProviderProfile.ID)
 	})
 
@@ -298,7 +300,7 @@ func TestPriorityQueueTest(t *testing.T) {
 	})
 
 	t.Run("TestGetProviderRate", func(t *testing.T) {
-		rate, err := service.GetProviderRate(context.Background(), testCtxForPQ.publicProviderProfile, testCtxForPQ.token.Symbol)
+		rate, err := service.GetProviderRate(context.Background(), testCtxForPQ.publicProviderProfile, testCtxForPQ.token.Symbol, testCtxForPQ.currency.Code)
 		assert.NoError(t, err)
 		_rate, ok := rate.Float64()
 		assert.True(t, ok)

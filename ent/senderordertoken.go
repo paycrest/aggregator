@@ -35,7 +35,7 @@ type SenderOrderToken struct {
 	// The values are being populated by the SenderOrderTokenQuery when eager-loading is set.
 	Edges                       SenderOrderTokenEdges `json:"edges"`
 	sender_profile_order_tokens *uuid.UUID
-	token_sender_settings       *int
+	token_sender_order_tokens   *int
 	selectValues                sql.SelectValues
 }
 
@@ -87,7 +87,7 @@ func (*SenderOrderToken) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullTime)
 		case senderordertoken.ForeignKeys[0]: // sender_profile_order_tokens
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case senderordertoken.ForeignKeys[1]: // token_sender_settings
+		case senderordertoken.ForeignKeys[1]: // token_sender_order_tokens
 			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -149,10 +149,10 @@ func (sot *SenderOrderToken) assignValues(columns []string, values []any) error 
 			}
 		case senderordertoken.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for edge-field token_sender_settings", value)
+				return fmt.Errorf("unexpected type %T for edge-field token_sender_order_tokens", value)
 			} else if value.Valid {
-				sot.token_sender_settings = new(int)
-				*sot.token_sender_settings = int(value.Int64)
+				sot.token_sender_order_tokens = new(int)
+				*sot.token_sender_order_tokens = int(value.Int64)
 			}
 		default:
 			sot.selectValues.Set(columns[i], values[i])
