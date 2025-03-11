@@ -354,9 +354,9 @@ var (
 		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "providerordertoken_network_provider_profile_order_tokens_token_provider_order_tokens_fiat_currency_provider_order_tokens",
+				Name:    "providerordertoken_provider_profile_order_tokens_token_provider_order_tokens_fiat_currency_provider_order_tokens",
 				Unique:  true,
-				Columns: []*schema.Column{ProviderOrderTokensColumns[9], ProviderOrderTokensColumns[11], ProviderOrderTokensColumns[12], ProviderOrderTokensColumns[10]},
+				Columns: []*schema.Column{ProviderOrderTokensColumns[11], ProviderOrderTokensColumns[12], ProviderOrderTokensColumns[10]},
 			},
 		},
 	}
