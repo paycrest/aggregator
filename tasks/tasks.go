@@ -986,7 +986,7 @@ func FixDatabaseMisHap() error {
 	// defer cancel()
 	ctx := context.Background()
 
-	fmt.Println("FixDatabaseMisHap: %v", ctx)
+	logger.Infof("FixDatabaseMisHap: %v", ctx)
 
 	return nil
 }

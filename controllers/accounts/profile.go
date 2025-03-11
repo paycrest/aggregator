@@ -336,7 +336,6 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 	// Update tokens
 	for _, tokenPayload := range payload.Tokens {
 		// Check if token is supported
-		fmt.Println("tokenPayload: %v", tokenPayload)
 		providerToken, err := storage.Client.Token.
 			Query().
 			Where(
@@ -350,7 +349,6 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Token not supported - %s", tokenPayload.Symbol), nil)
 			} else {
 				logger.Errorf("Failed to check token support: %v", err)
-				fmt.Println("Failed to check token support: %v", err)
 				u.APIResponse(
 					ctx,
 					http.StatusInternalServerError,
