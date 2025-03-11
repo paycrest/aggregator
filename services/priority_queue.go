@@ -9,10 +9,12 @@ import (
 
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
+	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
@@ -76,17 +78,17 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 }
 
 // GetProviderRate returns the rate for a provider
-func (s *PriorityQueueService) GetProviderRate(ctx context.Context, provider *ent.ProviderProfile, token string) (decimal.Decimal, error) {
+func (s *PriorityQueueService) GetProviderRate(ctx context.Context, provider *ent.ProviderProfile, tokenSymbol string, currency string) (decimal.Decimal, error) {
 	// Fetch the token config for the provider
 	tokenConfig, err := storage.Client.ProviderOrderToken.
 		Query().
 		Where(
 			providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
-			providerordertoken.SymbolEQ(token),
+			providerordertoken.HasTokenWith(token.SymbolEQ(tokenSymbol)),
+			providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(currency)),
 		).
-		WithProvider(func(pq *ent.ProviderProfileQuery) {
-			pq.WithCurrency()
-		}).
+		WithProvider().
+		WithCurrency().
 		Select(
 			providerordertoken.FieldConversionRateType,
 			providerordertoken.FieldFixedConversionRate,
@@ -103,7 +105,7 @@ func (s *PriorityQueueService) GetProviderRate(ctx context.Context, provider *en
 		rate = tokenConfig.FixedConversionRate
 	} else {
 		// Handle floating rate case
-		marketRate := tokenConfig.Edges.Provider.Edges.Currency.MarketRate
+		marketRate := tokenConfig.Edges.Currency.MarketRate
 		floatingRate := tokenConfig.FloatingConversionRate // in percentage
 
 		// Calculate the floating rate based on the market rate
@@ -166,13 +168,22 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 		logger.Errorf("failed to delete existing circular queue: %v", err)
 	}
 
+	// TODO: add also the checks for all the currencies that a provider has
+
 	for _, provider := range providers {
-		tokens, err := storage.Client.ProviderOrderToken.
+		exists, err := provider.QueryCurrencies().
+			Where(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)).
+			Exist(ctx)
+		if err != nil || !exists {
+			continue
+		}
+		orderTokens, err := storage.Client.ProviderOrderToken.
 			Query().
 			Where(
 				providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+				providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucket.Edges.Currency.Code)),
 			).
-			Select(providerordertoken.FieldSymbol, providerordertoken.FieldMinOrderAmount, providerordertoken.FieldMaxOrderAmount).
+			WithToken().
 			All(ctx)
 		if err != nil {
 			if err != context.Canceled {
@@ -181,12 +192,12 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 			continue
 		}
 
-		for _, token := range tokens {
+		for _, orderToken := range orderTokens {
 			providerID := provider.ID
-			rate, err := s.GetProviderRate(ctx, provider, token.Symbol)
+			rate, err := s.GetProviderRate(ctx, provider, orderToken.Edges.Token.Symbol, bucket.Edges.Currency.Code)
 			if err != nil {
 				if err != context.Canceled {
-					logger.Errorf("failed to get %s rate for provider %s: %v", token.Symbol, providerID, err)
+					logger.Errorf("failed to get %s rate for provider %s: %v", orderToken.Edges.Token.Symbol, providerID, err)
 				}
 				continue
 			}
@@ -198,7 +209,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 			// Check provider's rate against the market rate to ensure it's not too far off
 			percentDeviation := utils.AbsPercentageDeviation(bucket.Edges.Currency.MarketRate, rate)
 
-			isLocalStablecoin := strings.Contains(token.Symbol, bucket.Edges.Currency.Code) && !strings.Contains(token.Symbol, "USD")
+			isLocalStablecoin := strings.Contains(orderToken.Edges.Token.Symbol, bucket.Edges.Currency.Code) && !strings.Contains(orderToken.Edges.Token.Symbol, "USD")
 			if serverConf.Environment == "production" && percentDeviation.GreaterThan(orderConf.PercentDeviationFromMarketRate) && !isLocalStablecoin {
 				// Skip this provider if the rate is too far off
 				// TODO: add a logic to notify the provider(s) to update his rate since it's stale. could be a cron job
@@ -206,7 +217,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 			}
 
 			// Serialize the provider ID, token, rate, min and max order amount into a single string
-			data := fmt.Sprintf("%s:%s:%s:%s:%s", providerID, token.Symbol, rate, token.MinOrderAmount, token.MaxOrderAmount)
+			data := fmt.Sprintf("%s:%s:%s:%s:%s", providerID, orderToken.Edges.Token.Symbol, rate, orderToken.MinOrderAmount, orderToken.MaxOrderAmount)
 
 			// Enqueue the serialized data into the circular queue
 			err = storage.RedisClient.RPush(ctx, redisKey, data).Err()
@@ -241,7 +252,7 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 			// TODO: check for provider's minimum and maximum rate for negotiation
 			// Update the rate with the current rate if order was last updated more than 10 mins ago
 			if order.UpdatedAt.Before(time.Now().Add(-10 * time.Minute)) {
-				order.Rate, err = s.GetProviderRate(ctx, provider, order.Token.Symbol)
+				order.Rate, err = s.GetProviderRate(ctx, provider, order.Token.Symbol, order.ProvisionBucket.Edges.Currency.Code)
 				if err != nil {
 					logger.Errorf("%s - failed to get rate for provider %s: %v", orderIDPrefix, order.ProviderID, err)
 				}
@@ -290,6 +301,7 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 	// Assign the order to the provider and save it to Redis
 	orderKey := fmt.Sprintf("order_request_%s", order.ID)
 
+	// TODO: Now we need to add currency
 	orderRequestData := map[string]interface{}{
 		"amount":      order.Amount.Mul(order.Rate).RoundBank(0).String(),
 		"institution": order.Institution,
@@ -327,9 +339,7 @@ func (s *PriorityQueueService) notifyProvider(ctx context.Context, orderRequestD
 
 	provider, err := storage.Client.ProviderProfile.
 		Query().
-		Where(
-			providerprofile.IDEQ(providerID),
-		).
+		Where(providerprofile.IDEQ(providerID)).
 		WithAPIKey().
 		Only(ctx)
 	if err != nil {

@@ -49,8 +49,8 @@ const (
 	EdgeUser = "user"
 	// EdgeAPIKey holds the string denoting the api_key edge name in mutations.
 	EdgeAPIKey = "api_key"
-	// EdgeCurrency holds the string denoting the currency edge name in mutations.
-	EdgeCurrency = "currency"
+	// EdgeCurrencies holds the string denoting the currencies edge name in mutations.
+	EdgeCurrencies = "currencies"
 	// EdgeProvisionBuckets holds the string denoting the provision_buckets edge name in mutations.
 	EdgeProvisionBuckets = "provision_buckets"
 	// EdgeOrderTokens holds the string denoting the order_tokens edge name in mutations.
@@ -75,13 +75,11 @@ const (
 	APIKeyInverseTable = "api_keys"
 	// APIKeyColumn is the table column denoting the api_key relation/edge.
 	APIKeyColumn = "provider_profile_api_key"
-	// CurrencyTable is the table that holds the currency relation/edge.
-	CurrencyTable = "provider_profiles"
-	// CurrencyInverseTable is the table name for the FiatCurrency entity.
+	// CurrenciesTable is the table that holds the currencies relation/edge. The primary key declared below.
+	CurrenciesTable = "fiat_currency_providers"
+	// CurrenciesInverseTable is the table name for the FiatCurrency entity.
 	// It exists in this package in order to avoid circular dependency with the "fiatcurrency" package.
-	CurrencyInverseTable = "fiat_currencies"
-	// CurrencyColumn is the table column denoting the currency relation/edge.
-	CurrencyColumn = "fiat_currency_providers"
+	CurrenciesInverseTable = "fiat_currencies"
 	// ProvisionBucketsTable is the table that holds the provision_buckets relation/edge. The primary key declared below.
 	ProvisionBucketsTable = "provision_bucket_provider_profiles"
 	// ProvisionBucketsInverseTable is the table name for the ProvisionBucket entity.
@@ -133,11 +131,13 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "provider_profiles"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"fiat_currency_providers",
 	"user_provider_profile",
 }
 
 var (
+	// CurrenciesPrimaryKey and CurrenciesColumn2 are the table columns denoting the
+	// primary key for the currencies relation (M2M).
+	CurrenciesPrimaryKey = []string{"fiat_currency_id", "provider_profile_id"}
 	// ProvisionBucketsPrimaryKey and ProvisionBucketsColumn2 are the table columns denoting the
 	// primary key for the provision_buckets relation (M2M).
 	ProvisionBucketsPrimaryKey = []string{"provision_bucket_id", "provider_profile_id"}
@@ -348,10 +348,17 @@ func ByAPIKeyField(field string, opts ...sql.OrderTermOption) OrderOption {
 	}
 }
 
-// ByCurrencyField orders the results by currency field.
-func ByCurrencyField(field string, opts ...sql.OrderTermOption) OrderOption {
+// ByCurrenciesCount orders the results by currencies count.
+func ByCurrenciesCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newCurrencyStep(), sql.OrderByField(field, opts...))
+		sqlgraph.OrderByNeighborsCount(s, newCurrenciesStep(), opts...)
+	}
+}
+
+// ByCurrencies orders the results by currencies terms.
+func ByCurrencies(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCurrenciesStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 
@@ -417,11 +424,11 @@ func newAPIKeyStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.O2O, false, APIKeyTable, APIKeyColumn),
 	)
 }
-func newCurrencyStep() *sqlgraph.Step {
+func newCurrenciesStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(CurrencyInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, true, CurrencyTable, CurrencyColumn),
+		sqlgraph.To(CurrenciesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, true, CurrenciesTable, CurrenciesPrimaryKey...),
 	)
 }
 func newProvisionBucketsStep() *sqlgraph.Step {

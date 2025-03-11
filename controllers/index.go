@@ -182,7 +182,7 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 				}
 			}
 
-			rateResponse, err = ctrl.priorityQueueService.GetProviderRate(ctx, provider, token.Symbol)
+			rateResponse, err = ctrl.priorityQueueService.GetProviderRate(ctx, provider, token.Symbol, currency.Code)
 			if err != nil {
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider rate", nil)
 				return
@@ -275,10 +275,14 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 		return
 	}
 
-	institution, err := storage.Client.Institution.
+	accountInstitution, err := storage.Client.Institution.
 		Query().
 		Where(institution.CodeEQ(payload.Institution)).
-		WithFiatCurrency().
+		WithFiatCurrency(
+			func(fq *ent.FiatCurrencyQuery) {
+				fq.Where(fiatcurrency.IsEnabledEQ(true))
+			},
+		).
 		Only(ctx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
@@ -289,8 +293,8 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 		return
 	}
 
-	// TODO: Remove this after testing non-NGN institutions
-	if institution.Edges.FiatCurrency.Code != "NGN" {
+	// Skip account verification for mobile money institutions
+	if accountInstitution.Type == institution.TypeMobileMoney {
 		u.APIResponse(ctx, http.StatusOK, "success", "Account name was fetched successfully", "OK")
 		return
 	}
@@ -298,8 +302,8 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 	providers, err := storage.Client.ProviderProfile.
 		Query().
 		Where(
-			providerprofile.HasCurrencyWith(
-				fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
+			providerprofile.HasCurrenciesWith(
+				fiatcurrency.CodeEQ(accountInstitution.Edges.FiatCurrency.Code),
 			),
 			providerprofile.HostIdentifierNotNil(),
 			providerprofile.IsActiveEQ(true),
@@ -307,7 +311,6 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 		).
 		All(ctx)
 	if err != nil {
-		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusBadRequest, "error",
 			"Failed to verify account", err.Error())
 		return
@@ -332,7 +335,7 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 	}
 
 	if err != nil {
-		logger.Errorf("error: %v %v", err, data)
+		logger.Errorf("Failed to verify account: %v %v", err, data)
 		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to verify account", nil)
 		return
 	}
@@ -859,7 +862,7 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 		},
 		"callback_url":            fmt.Sprintf("%s/v1/kyc/webhook", serverConf.HostDomain),
 		"data_privacy_policy_url": "https://paycrest.notion.site/KYC-Policy-10e2482d45a280e191b8d47d76a8d242",
-		"logo_url":                "https://res.cloudinary.com/de6e0wihu/image/upload/v1726497581/upqcopbcrnfkzmum7q37.png",
+		"logo_url":                "https://res.cloudinary.com/de6e0wihu/image/upload/v1738088043/xxhlrsld2wy9lzekahur.png",
 		"is_single_use":           true,
 		"user_id":                 payload.WalletAddress,
 		"expires_at":              timestamp.Add(1 * time.Hour).Format(time.RFC3339Nano),

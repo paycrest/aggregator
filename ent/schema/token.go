@@ -41,6 +41,9 @@ func (Token) Edges() []ent.Edge {
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("lock_payment_orders", LockPaymentOrder.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
-		edge.To("sender_settings", SenderOrderToken.Type),
+		edge.To("sender_order_tokens", SenderOrderToken.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("provider_order_tokens", ProviderOrderToken.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }

@@ -23,11 +23,13 @@ import (
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
+	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/user"
 	"github.com/paycrest/aggregator/services/contracts"
@@ -202,27 +204,13 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 				continue
 			}
 
-			currency, err := db.Client.FiatCurrency.
-				Query().
-				Where(
-					fiatcurrency.IsEnabledEQ(true),
-					fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
-				).
-				Only(ctx)
-			if err != nil {
-				if !ent.IsNotFound(err) {
-					logger.Errorf("IndexERC20Transfer.FetchFiatCurrency: %v", err)
-				}
-				continue
-			}
-
 			// Get rate from priority queue
-			if !strings.EqualFold(token.BaseCurrency, currency.Code) && !strings.EqualFold(token.BaseCurrency, "USD") {
+			if !strings.EqualFold(token.BaseCurrency, institution.Edges.FiatCurrency.Code) && !strings.EqualFold(token.BaseCurrency, "USD") {
 				continue
 			}
 			var rateResponse decimal.Decimal
-			if !strings.EqualFold(token.BaseCurrency, currency.Code) {
-				rateResponse, err = utils.GetTokenRateFromQueue(token.Symbol, orderAmount, currency.Code, currency.MarketRate)
+			if !strings.EqualFold(token.BaseCurrency, institution.Edges.FiatCurrency.Code) {
+				rateResponse, err = utils.GetTokenRateFromQueue(token.Symbol, orderAmount, institution.Edges.FiatCurrency.Code, institution.Edges.FiatCurrency.MarketRate)
 				if err != nil {
 					logger.Errorf("IndexERC20Transfer.GetTokenRateFromQueue: %v", err)
 					continue
@@ -920,8 +908,8 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 	token, err := db.Client.Token.
 		Query().
 		Where(
-			token.ContractAddressEQ(event.Token),
-			token.HasNetworkWith(
+			tokenEnt.ContractAddressEQ(event.Token),
+			tokenEnt.HasNetworkWith(
 				networkent.IDEQ(network.ID),
 			),
 		).
@@ -979,67 +967,61 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 		ProvisionBucket:   provisionBucket,
 	}
 
-	// Check if order is private
+	// Handle private order checks
 	isPrivate := false
-	isTokenNetworkPresent := false
-	isTokenPresent := false
-	maxOrderAmount := decimal.NewFromInt(0)
-	minOrderAmount := decimal.NewFromInt(0)
 	if lockPaymentOrder.ProviderID != "" {
-		providerProfile, err := db.Client.ProviderProfile.
+		orderToken, err := db.Client.ProviderOrderToken.
 			Query().
 			Where(
-				providerprofile.IDEQ(recipient.ProviderID),
-				providerprofile.HasCurrencyWith(
-					fiatcurrency.Code(institution.Edges.FiatCurrency.Code),
+				providerordertoken.NetworkEQ(token.Edges.Network.Identifier),
+				providerordertoken.HasProviderWith(
+					providerprofile.IDEQ(lockPaymentOrder.ProviderID),
+					providerprofile.IsAvailableEQ(true),
 				),
-				providerprofile.IsAvailableEQ(true),
+				providerordertoken.HasTokenWith(tokenEnt.IDEQ(token.ID)),
+				providerordertoken.HasCurrencyWith(
+					fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
+				),
 			).
-			WithOrderTokens().
+			WithProvider().
 			Only(ctx)
 		if err != nil {
-			err := s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Provider is not available")
-			if err != nil {
+			if ent.IsNotFound(err) {
+				// Provider could not be available for several reasons
+				// 1. Provider is not available
+				// 2. Provider does not support the token
+				// 3. Provider does not support the network
+				// 4. Provider does not support the currency
+				_ = s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Provider not available")
 				return nil
+			} else {
+				return fmt.Errorf("%s - failed to fetch provider: %w", lockPaymentOrder.GatewayID, err)
 			}
-			return nil
 		}
 
-		if providerProfile.VisibilityMode == providerprofile.VisibilityModePrivate {
-			isPrivate = true
-		}
-
-		for _, orderToken := range providerProfile.Edges.OrderTokens {
-			if orderToken.Symbol == token.Symbol && len(orderToken.Addresses) > 0 {
-				isTokenPresent = true
-				maxOrderAmount = orderToken.MaxOrderAmount
-				minOrderAmount = orderToken.MinOrderAmount
-			}
-
-			for _, address := range orderToken.Addresses {
-				if address.Network == token.Edges.Network.Identifier || orderToken.Symbol == token.Symbol {
-					if address.Network == token.Edges.Network.Identifier {
-						isTokenNetworkPresent = true
-						break
-					}
+		if orderToken.Edges.Provider.VisibilityMode == providerprofile.VisibilityModePrivate {
+			normalizedAmount := lockPaymentOrder.Amount
+			if strings.EqualFold(token.BaseCurrency, institution.Edges.FiatCurrency.Code) && token.BaseCurrency != "USD" {
+				rateResponse, err := utils.GetTokenRateFromQueue("USDT", normalizedAmount, institution.Edges.FiatCurrency.Code, currency.MarketRate)
+				if err != nil {
+					return fmt.Errorf("failed to get token rate: %w", err)
 				}
+				normalizedAmount = lockPaymentOrder.Amount.Div(rateResponse)
 			}
-		}
 
-		if !isTokenPresent {
-			err := s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Token is not supported by the provider")
-			if err != nil {
+			if normalizedAmount.GreaterThan(orderToken.MaxOrderAmount) {
+				err := s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Amount is greater than the maximum order amount of the provider")
+				if err != nil {
+					return fmt.Errorf("%s - failed to cancel order: %w", lockPaymentOrder.GatewayID, err)
+				}
+				return nil
+			} else if normalizedAmount.LessThan(orderToken.MinOrderAmount) {
+				err := s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Amount is less than the minimum order amount of the provider")
+				if err != nil {
+					return fmt.Errorf("%s - failed to cancel order: %w", lockPaymentOrder.GatewayID, err)
+				}
 				return nil
 			}
-			return nil
-		}
-
-		if !isTokenNetworkPresent {
-			err := s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Network is not supported by the provider")
-			if err != nil {
-				return fmt.Errorf("network is not supported by the specified provider: %w", err)
-			}
-			return nil
 		}
 	}
 
@@ -1145,31 +1127,8 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 		}
 
 		// Assign the lock payment order to a provider
-		normalizedAmount := lockPaymentOrder.Amount
-		if strings.EqualFold(token.BaseCurrency, currency.Code) && token.BaseCurrency != "USD" {
-			rateResponse, err := utils.GetTokenRateFromQueue("USDT", normalizedAmount, currency.Code, currency.MarketRate)
-			if err != nil {
-				return fmt.Errorf("failed to get token rate: %w", err)
-			}
-			normalizedAmount = lockPaymentOrder.Amount.Div(rateResponse)
-		}
-
-		if isPrivate && normalizedAmount.GreaterThan(maxOrderAmount) {
-			err := s.handleCancellation(ctx, client, orderCreated, nil, "Amount is greater than the maximum order amount of the provider")
-			if err != nil {
-				return fmt.Errorf("failed to cancel order: %w", err)
-			}
-			return nil
-		} else if isPrivate && normalizedAmount.LessThan(minOrderAmount) {
-			err := s.handleCancellation(ctx, client, orderCreated, nil, "Amount is less than the minimum order amount of the provider")
-			if err != nil {
-				return fmt.Errorf("failed to cancel order: %w", err)
-			}
-			return nil
-		} else {
-			lockPaymentOrder.ID = orderCreated.ID
-			_ = s.priorityQueue.AssignLockPaymentOrder(ctx, lockPaymentOrder)
-		}
+		lockPaymentOrder.ID = orderCreated.ID
+		_ = s.priorityQueue.AssignLockPaymentOrder(ctx, lockPaymentOrder)
 	}
 
 	return nil
@@ -1636,7 +1595,12 @@ func (s *IndexerService) UpdateReceiveAddressStatus(
 					return true, fmt.Errorf("UpdateReceiveAddressStatus.db: %v", err)
 				}
 
-				rate, err := s.priorityQueue.GetProviderRate(ctx, providerProfile, paymentOrder.Edges.Token.Symbol)
+				institution, err := s.getInstitutionByCode(ctx, orderRecipient.Institution)
+				if err != nil {
+					return true, fmt.Errorf("UpdateReceiveAddressStatus.db: %v", err)
+				}
+
+				rate, err := s.priorityQueue.GetProviderRate(ctx, providerProfile, paymentOrder.Edges.Token.Symbol, institution.Edges.FiatCurrency.Code)
 				if err != nil {
 					return true, fmt.Errorf("UpdateReceiveAddressStatus.db: %v", err)
 				}
@@ -1768,7 +1732,11 @@ func (s *IndexerService) getInstitutionByCode(ctx context.Context, institutionCo
 	institution, err := db.Client.Institution.
 		Query().
 		Where(institution.CodeEQ(institutionCode)).
-		WithFiatCurrency().
+		WithFiatCurrency(
+			func(fcq *ent.FiatCurrencyQuery) {
+				fcq.Where(fiatcurrency.IsEnabledEQ(true))
+			},
+		).
 		Only(ctx)
 	if err != nil {
 		return nil, err

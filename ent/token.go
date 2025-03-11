@@ -47,11 +47,13 @@ type TokenEdges struct {
 	PaymentOrders []*PaymentOrder `json:"payment_orders,omitempty"`
 	// LockPaymentOrders holds the value of the lock_payment_orders edge.
 	LockPaymentOrders []*LockPaymentOrder `json:"lock_payment_orders,omitempty"`
-	// SenderSettings holds the value of the sender_settings edge.
-	SenderSettings []*SenderOrderToken `json:"sender_settings,omitempty"`
+	// SenderOrderTokens holds the value of the sender_order_tokens edge.
+	SenderOrderTokens []*SenderOrderToken `json:"sender_order_tokens,omitempty"`
+	// ProviderOrderTokens holds the value of the provider_order_tokens edge.
+	ProviderOrderTokens []*ProviderOrderToken `json:"provider_order_tokens,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 }
 
 // NetworkOrErr returns the Network value or an error if the edge
@@ -83,13 +85,22 @@ func (e TokenEdges) LockPaymentOrdersOrErr() ([]*LockPaymentOrder, error) {
 	return nil, &NotLoadedError{edge: "lock_payment_orders"}
 }
 
-// SenderSettingsOrErr returns the SenderSettings value or an error if the edge
+// SenderOrderTokensOrErr returns the SenderOrderTokens value or an error if the edge
 // was not loaded in eager-loading.
-func (e TokenEdges) SenderSettingsOrErr() ([]*SenderOrderToken, error) {
+func (e TokenEdges) SenderOrderTokensOrErr() ([]*SenderOrderToken, error) {
 	if e.loadedTypes[3] {
-		return e.SenderSettings, nil
+		return e.SenderOrderTokens, nil
 	}
-	return nil, &NotLoadedError{edge: "sender_settings"}
+	return nil, &NotLoadedError{edge: "sender_order_tokens"}
+}
+
+// ProviderOrderTokensOrErr returns the ProviderOrderTokens value or an error if the edge
+// was not loaded in eager-loading.
+func (e TokenEdges) ProviderOrderTokensOrErr() ([]*ProviderOrderToken, error) {
+	if e.loadedTypes[4] {
+		return e.ProviderOrderTokens, nil
+	}
+	return nil, &NotLoadedError{edge: "provider_order_tokens"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -205,9 +216,14 @@ func (t *Token) QueryLockPaymentOrders() *LockPaymentOrderQuery {
 	return NewTokenClient(t.config).QueryLockPaymentOrders(t)
 }
 
-// QuerySenderSettings queries the "sender_settings" edge of the Token entity.
-func (t *Token) QuerySenderSettings() *SenderOrderTokenQuery {
-	return NewTokenClient(t.config).QuerySenderSettings(t)
+// QuerySenderOrderTokens queries the "sender_order_tokens" edge of the Token entity.
+func (t *Token) QuerySenderOrderTokens() *SenderOrderTokenQuery {
+	return NewTokenClient(t.config).QuerySenderOrderTokens(t)
+}
+
+// QueryProviderOrderTokens queries the "provider_order_tokens" edge of the Token entity.
+func (t *Token) QueryProviderOrderTokens() *ProviderOrderTokenQuery {
+	return NewTokenClient(t.config).QueryProviderOrderTokens(t)
 }
 
 // Update returns a builder for updating this Token.
