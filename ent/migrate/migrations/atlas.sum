@@ -1,4 +1,4 @@
-h1:6nubAAITeAidTvN/YJYLf9f9z/KR6JqAaXWJ/eUWwsM=
+h1:ytJv+ftd95MFuR+JBMpDIN+TfFj8z4ks9AFpZpfuwRU=
 20240118234246_initial.sql h1:dYuYBqns33WT+3p8VQvbKUP62k3k6w6h8S+FqNqgSvU=
 20240130122324_order_from_address.sql h1:mMVI2iBUd1roIYLUqu0d2jZ7+B6exppRN8qqn+aIHx4=
 20240202010744_fees_on_order.sql h1:P7ngxZKqDKefBM5vk6M3kbWeMPVwbZ4MZVcLBjEfS34=
@@ -48,3 +48,4 @@ h1:6nubAAITeAidTvN/YJYLf9f9z/KR6JqAaXWJ/eUWwsM=
 20250308113133_multi_currency_schema_1.sql h1:6xlXjtJ90MYTvNGjvd2pXddO99Mz1s2EXw0ZJnAXJD0=
 20250308153810_multi_currency_data_migrate.sql h1:IvlGKxCb1fwNFW+xctaxWeX9Z1x9Qzb3nZe++2akfco=
 20250308161319_multi_currency_schema_2.sql h1:7MAW4wmXt9vneVtmxSK9H97Awi52ZSFkJKRHp5J0S8Y=
+20250311055352_multi_currency_schema_3.sql h1:h2Wz1L2XywC96RuIqSvTS1yHB0fqW5OKmMUcmmr+LJ4=
