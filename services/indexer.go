@@ -23,11 +23,13 @@ import (
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
+	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/user"
 	"github.com/paycrest/aggregator/services/contracts"
@@ -86,12 +88,11 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 	}
 
 	// Connect to RPC endpoint
-	retryErr := utils.Retry(3, 1*time.Second, func() error {
+	if client == nil {
 		client, err = types.NewEthClient(token.Edges.Network.RPCEndpoint)
-		return err
-	})
-	if retryErr != nil {
-		return retryErr
+		if err != nil {
+			return err
+		}
 	}
 
 	// Initialize contract filterer
@@ -111,36 +112,33 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 
 	// Fetch logs
 	var iter *contracts.ERC20TokenTransferIterator
-	retryErr = utils.Retry(3, 1*time.Second, func() error {
-		var err error
 
-		addresses := []common.Address{}
+	addresses := []common.Address{}
+	if startBlock == 0 {
 		if addressToWatch != "" {
-			fromBlock := int64(5000)
-			if token.Edges.Network.Identifier == "bnb-smart-chain" {
-				fromBlock = 1000
+			fromBlock := int64(500)
+			if token.Edges.Network.Identifier != "bnb-smart-chain" {
+				fromBlock = 5000
 			}
 			addresses = []common.Address{common.HexToAddress(addressToWatch)}
 			startBlock = int64(toBlock) - fromBlock
 		} else {
 			startBlock = int64(toBlock) - 100
 		}
+	}
 
-		// if strings.Contains(token.Edges.Network.Identifier, "arbitrum") {
-		// 	startBlock = 268964400
-		// 	toBlock = 268964450
-		// }
+	// if strings.Contains(token.Edges.Network.Identifier, "arbitrum") {
+	// 	startBlock = 268964400
+	// 	toBlock = 268964450
+	// }
 
-		iter, err = filterer.FilterTransfer(&bind.FilterOpts{
-			Start: uint64(startBlock),
-			End:   &toBlock,
-		}, nil, addresses)
-
+	iter, err = filterer.FilterTransfer(&bind.FilterOpts{
+		Start: uint64(startBlock),
+		End:   &toBlock,
+	}, nil, addresses)
+	if err != nil {
+		logger.Errorf("IndexERC20Transfer.FilterTransfer(%s): %v", token.Edges.Network.Identifier, err)
 		return err
-	})
-	if retryErr != nil {
-		logger.Errorf("IndexERC20Transfer.FilterTransfer(%s): %v", token.Edges.Network.Identifier, retryErr)
-		return retryErr
 	}
 
 	// Iterate over logs
@@ -206,25 +204,19 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 				continue
 			}
 
-			currency, err := db.Client.FiatCurrency.
-				Query().
-				Where(
-					fiatcurrency.IsEnabledEQ(true),
-					fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
-				).
-				Only(ctx)
-			if err != nil {
-				if !ent.IsNotFound(err) {
-					logger.Errorf("IndexERC20Transfer.FetchFiatCurrency: %v", err)
-				}
+			// Get rate from priority queue
+			if !strings.EqualFold(token.BaseCurrency, institution.Edges.FiatCurrency.Code) && !strings.EqualFold(token.BaseCurrency, "USD") {
 				continue
 			}
-
-			// Get rate from priority queue
-			rateResponse, err := utils.GetTokenRateFromQueue(token.Symbol, orderAmount, currency.Code, currency.MarketRate)
-			if err != nil {
-				logger.Errorf("IndexERC20Transfer.GetTokenRateFromQueue: %v", err)
-				continue
+			var rateResponse decimal.Decimal
+			if !strings.EqualFold(token.BaseCurrency, institution.Edges.FiatCurrency.Code) {
+				rateResponse, err = utils.GetTokenRateFromQueue(token.Symbol, orderAmount, institution.Edges.FiatCurrency.Code, institution.Edges.FiatCurrency.MarketRate)
+				if err != nil {
+					logger.Errorf("IndexERC20Transfer.GetTokenRateFromQueue: %v", err)
+					continue
+				}
+			} else {
+				rateResponse = decimal.NewFromInt(1)
 			}
 
 			tx, err := db.Client.Tx(ctx)
@@ -416,13 +408,9 @@ func (s *IndexerService) IndexOrderCreated(ctx context.Context, client types.RPC
 
 	// Connect to RPC endpoint
 	if client == nil {
-		retryErr := utils.Retry(3, 1*time.Second, func() error {
-			client, err = types.NewEthClient(network.RPCEndpoint)
+		client, err = types.NewEthClient(network.RPCEndpoint)
+		if err != nil {
 			return err
-		})
-		if retryErr != nil {
-			logger.Errorf("IndexOrderCreated.NewEthClient: %v", retryErr)
-			return retryErr
 		}
 	}
 
@@ -436,29 +424,26 @@ func (s *IndexerService) IndexOrderCreated(ctx context.Context, client types.RPC
 	// Fetch current block header
 	header, err := client.HeaderByNumber(ctx, nil)
 	if err != nil {
-		logger.Errorf("IndexOrderCreated.HeaderByNumber: %v", err)
+		if err != context.Canceled {
+			logger.Errorf("IndexOrderCreated.HeaderByNumber: %v", err)
+		}
 		return err
 	}
 	toBlock := header.Number.Uint64()
 
 	// Fetch logs
 	var iter *contracts.GatewayOrderCreatedIterator
-	retryErr := utils.Retry(3, 1*time.Second, func() error {
-		fromBlock := int64(1000000)
-		if network.Identifier == "bnb-smart-chain" {
-			fromBlock = 10000
-		}
-		iter, err = filterer.FilterOrderCreated(&bind.FilterOpts{
-			Start: uint64(int64(toBlock) - fromBlock),
-			End:   &toBlock,
-		}, nil, nil, nil)
+	fromBlock := int64(1000000)
+	if network.Identifier == "bnb-smart-chain" {
+		fromBlock = 10000
+	}
+	iter, err = filterer.FilterOrderCreated(&bind.FilterOpts{
+		Start: uint64(int64(toBlock) - fromBlock),
+		End:   &toBlock,
+	}, nil, nil, nil)
+	if err != nil {
+		logger.Errorf("IndexOrderCreated.FilterOrderCreated (%s): %v", network.Identifier, err)
 		return err
-	})
-	if retryErr != nil {
-		if !strings.Contains(retryErr.Error(), "json: cannot unmarshal string into Go struct field") {
-			logger.Errorf("IndexOrderCreated.FilterOrderCreated (%s): %v", network.Identifier, retryErr)
-		}
-		return retryErr
 	}
 
 	// Iterate over logs
@@ -562,13 +547,9 @@ func (s *IndexerService) IndexOrderSettled(ctx context.Context, client types.RPC
 
 	// Connect to RPC endpoint
 	if client == nil {
-		retryErr := utils.Retry(3, 1*time.Second, func() error {
-			client, err = types.NewEthClient(network.RPCEndpoint)
+		client, err = types.NewEthClient(network.RPCEndpoint)
+		if err != nil {
 			return err
-		})
-		if retryErr != nil {
-			logger.Errorf("IndexOrderSettled.NewEthClient: %v", retryErr)
-			return retryErr
 		}
 	}
 
@@ -582,23 +563,22 @@ func (s *IndexerService) IndexOrderSettled(ctx context.Context, client types.RPC
 	// Filter logs from the oldest indexed to the latest
 	header, err := client.HeaderByNumber(ctx, nil)
 	if err != nil {
-		logger.Errorf("IndexOrderSettled.HeaderByNumber: %v", err)
+		if err != context.Canceled {
+			logger.Errorf("IndexOrderSettled.HeaderByNumber: %v", err)
+		}
 		return err
 	}
 	toBlock := header.Number.Uint64()
 
 	// Fetch logs
 	var iter *contracts.GatewayOrderSettledIterator
-	retryErr := utils.Retry(3, 1*time.Second, func() error {
-		iter, err = filterer.FilterOrderSettled(&bind.FilterOpts{
-			Start: uint64(int64(toBlock) - 5000),
-			End:   &toBlock,
-		}, nil, nil)
+	iter, err = filterer.FilterOrderSettled(&bind.FilterOpts{
+		Start: uint64(int64(toBlock) - 5000),
+		End:   &toBlock,
+	}, nil, nil)
+	if err != nil {
+		logger.Errorf("IndexOrderSettled.FilterOrderSettled: %v", err)
 		return err
-	})
-	if retryErr != nil {
-		logger.Errorf("IndexOrderSettled.FilterOrderSettled: %v", retryErr)
-		return retryErr
 	}
 
 	// Iterate over logs
@@ -698,13 +678,9 @@ func (s *IndexerService) IndexOrderRefunded(ctx context.Context, client types.RP
 
 	// Connect to RPC endpoint
 	if client == nil {
-		retryErr := utils.Retry(3, 1*time.Second, func() error {
-			client, err = types.NewEthClient(network.RPCEndpoint)
+		client, err = types.NewEthClient(network.RPCEndpoint)
+		if err != nil {
 			return err
-		})
-		if retryErr != nil {
-			logger.Errorf("IndexOrderRefunded.NewEthClient: %v", err)
-			return retryErr
 		}
 	}
 
@@ -718,23 +694,22 @@ func (s *IndexerService) IndexOrderRefunded(ctx context.Context, client types.RP
 	// Filter logs from the oldest indexed to the latest
 	header, err := client.HeaderByNumber(ctx, nil)
 	if err != nil {
-		logger.Errorf("IndexOrderRefunded.HeaderByNumber: %v", err)
+		if err != context.Canceled {
+			logger.Errorf("IndexOrderRefunded.HeaderByNumber: %v", err)
+		}
 		return err
 	}
 	toBlock := header.Number.Uint64()
 
 	// Fetch logs
 	var iter *contracts.GatewayOrderRefundedIterator
-	retryErr := utils.Retry(3, 1*time.Second, func() error {
-		iter, err = filterer.FilterOrderRefunded(&bind.FilterOpts{
-			Start: uint64(int64(toBlock) - 5000),
-			End:   &toBlock,
-		}, nil)
+	iter, err = filterer.FilterOrderRefunded(&bind.FilterOpts{
+		Start: uint64(int64(toBlock) - 5000),
+		End:   &toBlock,
+	}, nil)
+	if err != nil {
+		logger.Errorf("IndexOrderRefunded.FilterOrderRefunded: %v", err)
 		return err
-	})
-	if retryErr != nil {
-		logger.Errorf("IndexOrderRefunded.FilterOrderRefunded: %v", retryErr)
-		return retryErr
 	}
 
 	// Iterate over logs
@@ -933,8 +908,8 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 	token, err := db.Client.Token.
 		Query().
 		Where(
-			token.ContractAddressEQ(event.Token),
-			token.HasNetworkWith(
+			tokenEnt.ContractAddressEQ(event.Token),
+			tokenEnt.HasNetworkWith(
 				networkent.IDEQ(network.ID),
 			),
 		).
@@ -968,7 +943,7 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 		return nil
 	}
 
-	rate := decimal.NewFromBigInt(event.Rate, 0)
+	rate := decimal.NewFromBigInt(event.Rate, -2)
 
 	provisionBucket, err := s.getProvisionBucket(ctx, amountInDecimals.Mul(rate), currency)
 	if err != nil {
@@ -992,67 +967,61 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 		ProvisionBucket:   provisionBucket,
 	}
 
-	// Check if order is private
+	// Handle private order checks
 	isPrivate := false
-	isTokenNetworkPresent := false
-	isTokenPresent := false
-	maxOrderAmount := decimal.NewFromInt(0)
-	minOrderAmount := decimal.NewFromInt(0)
 	if lockPaymentOrder.ProviderID != "" {
-		providerProfile, err := db.Client.ProviderProfile.
+		orderToken, err := db.Client.ProviderOrderToken.
 			Query().
 			Where(
-				providerprofile.IDEQ(recipient.ProviderID),
-				providerprofile.HasCurrencyWith(
-					fiatcurrency.Code(institution.Edges.FiatCurrency.Code),
+				providerordertoken.NetworkEQ(token.Edges.Network.Identifier),
+				providerordertoken.HasProviderWith(
+					providerprofile.IDEQ(lockPaymentOrder.ProviderID),
+					providerprofile.IsAvailableEQ(true),
 				),
-				providerprofile.IsAvailableEQ(true),
+				providerordertoken.HasTokenWith(tokenEnt.IDEQ(token.ID)),
+				providerordertoken.HasCurrencyWith(
+					fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
+				),
 			).
-			WithOrderTokens().
+			WithProvider().
 			Only(ctx)
 		if err != nil {
-			err := s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Provider is not available")
-			if err != nil {
+			if ent.IsNotFound(err) {
+				// Provider could not be available for several reasons
+				// 1. Provider is not available
+				// 2. Provider does not support the token
+				// 3. Provider does not support the network
+				// 4. Provider does not support the currency
+				_ = s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Provider not available")
 				return nil
+			} else {
+				return fmt.Errorf("%s - failed to fetch provider: %w", lockPaymentOrder.GatewayID, err)
 			}
-			return nil
 		}
 
-		if providerProfile.VisibilityMode == providerprofile.VisibilityModePrivate {
-			isPrivate = true
-		}
-
-		for _, orderToken := range providerProfile.Edges.OrderTokens {
-			if orderToken.Symbol == token.Symbol && len(orderToken.Addresses) > 0 {
-				isTokenPresent = true
-				maxOrderAmount = orderToken.MaxOrderAmount
-				minOrderAmount = orderToken.MinOrderAmount
-			}
-
-			for _, address := range orderToken.Addresses {
-				if address.Network == token.Edges.Network.Identifier || orderToken.Symbol == token.Symbol {
-					if address.Network == token.Edges.Network.Identifier {
-						isTokenNetworkPresent = true
-						break
-					}
+		if orderToken.Edges.Provider.VisibilityMode == providerprofile.VisibilityModePrivate {
+			normalizedAmount := lockPaymentOrder.Amount
+			if strings.EqualFold(token.BaseCurrency, institution.Edges.FiatCurrency.Code) && token.BaseCurrency != "USD" {
+				rateResponse, err := utils.GetTokenRateFromQueue("USDT", normalizedAmount, institution.Edges.FiatCurrency.Code, currency.MarketRate)
+				if err != nil {
+					return fmt.Errorf("failed to get token rate: %w", err)
 				}
+				normalizedAmount = lockPaymentOrder.Amount.Div(rateResponse)
 			}
-		}
 
-		if !isTokenPresent {
-			err := s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Token is not supported by the provider")
-			if err != nil {
+			if normalizedAmount.GreaterThan(orderToken.MaxOrderAmount) {
+				err := s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Amount is greater than the maximum order amount of the provider")
+				if err != nil {
+					return fmt.Errorf("%s - failed to cancel order: %w", lockPaymentOrder.GatewayID, err)
+				}
+				return nil
+			} else if normalizedAmount.LessThan(orderToken.MinOrderAmount) {
+				err := s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Amount is less than the minimum order amount of the provider")
+				if err != nil {
+					return fmt.Errorf("%s - failed to cancel order: %w", lockPaymentOrder.GatewayID, err)
+				}
 				return nil
 			}
-			return nil
-		}
-
-		if !isTokenNetworkPresent {
-			err := s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Network is not supported by the provider")
-			if err != nil {
-				return fmt.Errorf("network is not supported by the specified provider: %w", err)
-			}
-			return nil
 		}
 	}
 
@@ -1158,22 +1127,8 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 		}
 
 		// Assign the lock payment order to a provider
-		if isPrivate && lockPaymentOrder.Amount.GreaterThan(maxOrderAmount) {
-			err := s.handleCancellation(ctx, client, orderCreated, nil, "Amount is greater than the maximum order amount of the provider")
-			if err != nil {
-				return fmt.Errorf("failed to cancel order: %w", err)
-			}
-			return nil
-		} else if isPrivate && lockPaymentOrder.Amount.LessThan(minOrderAmount) {
-			err := s.handleCancellation(ctx, client, orderCreated, nil, "Amount is less than the minimum order amount of the provider")
-			if err != nil {
-				return fmt.Errorf("failed to cancel order: %w", err)
-			}
-			return nil
-		} else {
-			lockPaymentOrder.ID = orderCreated.ID
-			_ = s.priorityQueue.AssignLockPaymentOrder(ctx, lockPaymentOrder)
-		}
+		lockPaymentOrder.ID = orderCreated.ID
+		_ = s.priorityQueue.AssignLockPaymentOrder(ctx, lockPaymentOrder)
 	}
 
 	return nil
@@ -1313,6 +1268,7 @@ func (s *IndexerService) UpdateOrderStatusRefunded(ctx context.Context, network 
 			SetStatus(transactionlog.StatusOrderRefunded).
 			SetTxHash(log.TxHash).
 			SetGatewayID(gatewayId).
+			SetNetwork(network.Identifier).
 			SetMetadata(
 				map[string]interface{}{
 					"GatewayID":       gatewayId,
@@ -1454,6 +1410,7 @@ func (s *IndexerService) UpdateOrderStatusSettled(ctx context.Context, network *
 			SetStatus(transactionlog.StatusOrderSettled).
 			SetTxHash(event.TxHash).
 			SetGatewayID(gatewayId).
+			SetNetwork(network.Identifier).
 			SetMetadata(map[string]interface{}{
 				"GatewayID":       gatewayId,
 				"TransactionData": event,
@@ -1638,7 +1595,12 @@ func (s *IndexerService) UpdateReceiveAddressStatus(
 					return true, fmt.Errorf("UpdateReceiveAddressStatus.db: %v", err)
 				}
 
-				rate, err := s.priorityQueue.GetProviderRate(ctx, providerProfile, paymentOrder.Edges.Token.Symbol)
+				institution, err := s.getInstitutionByCode(ctx, orderRecipient.Institution)
+				if err != nil {
+					return true, fmt.Errorf("UpdateReceiveAddressStatus.db: %v", err)
+				}
+
+				rate, err := s.priorityQueue.GetProviderRate(ctx, providerProfile, paymentOrder.Edges.Token.Symbol, institution.Edges.FiatCurrency.Code)
 				if err != nil {
 					return true, fmt.Errorf("UpdateReceiveAddressStatus.db: %v", err)
 				}
@@ -1770,7 +1732,11 @@ func (s *IndexerService) getInstitutionByCode(ctx context.Context, institutionCo
 	institution, err := db.Client.Institution.
 		Query().
 		Where(institution.CodeEQ(institutionCode)).
-		WithFiatCurrency().
+		WithFiatCurrency(
+			func(fcq *ent.FiatCurrencyQuery) {
+				fcq.Where(fiatcurrency.IsEnabledEQ(true))
+			},
+		).
 		Only(ctx)
 	if err != nil {
 		return nil, err
@@ -1950,14 +1916,9 @@ func (s *IndexerService) checkAMLCompliance(rpcUrl string, txHash string) (bool,
 	// Make RPC call to Shield3 here
 	var err error
 	var client *rpc.Client
-	if client == nil {
-		retryErr := utils.Retry(3, 1*time.Second, func() error {
-			client, err = rpc.Dial(rpcUrl)
-			return err
-		})
-		if retryErr != nil {
-			return false, fmt.Errorf("failed to connect to RPC client: %v", err)
-		}
+	client, err = rpc.Dial(rpcUrl)
+	if err != nil {
+		return false, fmt.Errorf("failed to connect to RPC client: %v", err)
 	}
 
 	var result json.RawMessage

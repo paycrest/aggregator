@@ -1,6 +1,7 @@
 package accounts
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -88,9 +89,11 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		SetPassword(payload.Password).
 		SetScope(scope)
 
+	// Checking the environment to set the user as verified and give early access
 	if serverConf.Environment != "production" {
 		userCreate = userCreate.
-			SetIsEmailVerified(true)
+			SetIsEmailVerified(true).
+			SetHasEarlyAccess(true)
 	}
 
 	user, err := userCreate.Save(ctx)
@@ -126,33 +129,44 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 	// Create a provider profile
 	var providerCurrency string
 	if u.ContainsString(scopes, "provider") {
-		// Fetch currency
-		if payload.Currency == "" {
+		currencies := payload.Currencies
+		if len(currencies) == 0 {
 			_ = tx.Rollback()
 			u.APIResponse(ctx, http.StatusBadRequest, "error",
-				"Currency is required for provider account", nil)
+				"Currencies are required for provider account", nil)
 			return
 		}
-		currency, err := tx.FiatCurrency.
-			Query().
-			Where(
-				fiatcurrency.IsEnabledEQ(true),
-				fiatcurrency.CodeEQ(payload.Currency),
-			).
-			Only(ctx)
-		if err != nil {
-			_ = tx.Rollback()
-			if ent.IsNotFound(err) {
-				u.APIResponse(ctx, http.StatusBadRequest, "error",
-					"Failed to validate payload", []types.ErrorData{{
-						Field:   "Currency",
-						Message: "Currency is not supported",
-					}})
+
+		fiatCurrencies := make([]*ent.FiatCurrency, len(currencies))
+		var unsupportedCurrencies []string
+		for i, currency := range currencies {
+			fiatCurrency, err := tx.FiatCurrency.
+				Query().
+				Where(
+					fiatcurrency.IsEnabledEQ(true),
+					fiatcurrency.CodeEQ(strings.ToUpper(currency)),
+				).
+				Only(ctx)
+			if err != nil {
+				if ent.IsNotFound(err) {
+					unsupportedCurrencies = append(unsupportedCurrencies, strings.ToUpper(currency))
+					continue
+				}
+				_ = tx.Rollback()
+				u.APIResponse(ctx, http.StatusInternalServerError, "error",
+					"Failed to create new user", nil)
 				return
 			}
-			logger.Errorf("error: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error",
-				"Failed to create new user", nil)
+			fiatCurrencies[i] = fiatCurrency
+		}
+
+		if len(unsupportedCurrencies) > 0 {
+			_ = tx.Rollback()
+			u.APIResponse(ctx, http.StatusBadRequest, "error",
+				"Failed to validate payload", []types.ErrorData{{
+					Field:   "Currencies",
+					Message: fmt.Sprintf("Currencies not supported: %s", strings.Join(unsupportedCurrencies, ", ")),
+				}})
 			return
 		}
 
@@ -160,7 +174,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 
 		provider, err := tx.ProviderProfile.
 			Create().
-			SetCurrency(currency).
+			AddCurrencies(fiatCurrencies...).
 			SetVisibilityMode(providerprofile.VisibilityModePrivate).
 			SetUser(user).
 			SetProvisionMode(providerprofile.ProvisionModeAuto).
@@ -272,7 +286,7 @@ func (ctrl *AuthController) Login(ctx *gin.Context) {
 
 	// Check if user has early access
 	environment := serverConf.Environment
-	if !user.HasEarlyAccess && (environment == "production" || environment == "staging") {
+	if !user.HasEarlyAccess && (environment == "production") {
 		u.APIResponse(ctx, http.StatusUnauthorized, "error",
 			"Your early access request is still pending", nil,
 		)
@@ -542,6 +556,7 @@ func (ctrl *AuthController) ChangePassword(ctx *gin.Context) {
 	userID, err := uuid.Parse(user_id)
 	if err != nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid credential", nil)
+		return
 	}
 
 	// Fetch user account.
@@ -551,6 +566,7 @@ func (ctrl *AuthController) ChangePassword(ctx *gin.Context) {
 		Only(ctx)
 	if err != nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid credential", nil)
+		return
 	}
 
 	// Check if the old password is correct
@@ -572,7 +588,6 @@ func (ctrl *AuthController) ChangePassword(ctx *gin.Context) {
 		UpdateOne(user).
 		SetPassword(payload.NewPassword).
 		Save(ctx)
-
 	if err != nil {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to change password", nil)
 		return
@@ -580,4 +595,43 @@ func (ctrl *AuthController) ChangePassword(ctx *gin.Context) {
 
 	// Return a success response
 	u.APIResponse(ctx, http.StatusOK, "success", "Password changed successfully", nil)
+}
+
+// DeleteAccount deletes user's account. An authorized user is required to delete account
+func (ctrl *AuthController) DeleteAccount(ctx *gin.Context) {
+	// get user id from context
+	user_id := ctx.GetString("user_id")
+	// parse user id to uuid
+	userID, err := uuid.Parse(user_id)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid authorization token", nil)
+		return
+	}
+
+	// Fetch user account.
+	user, err := db.Client.User.
+		Query().
+		Where(userEnt.IDEQ(userID)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid authorization token", nil)
+			return
+		} else {
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to delete account", nil)
+			return
+		}
+	}
+
+	// Delete user account, delete user account will delete all related data via cascade
+	err = db.Client.User.
+		DeleteOne(user).
+		Exec(ctx)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to delete account", nil)
+		return
+	}
+
+	// Return a success response
+	u.APIResponse(ctx, http.StatusOK, "success", "Account deleted successfully", nil)
 }

@@ -59,6 +59,14 @@ func (lofc *LockOrderFulfillmentCreate) SetTxID(s string) *LockOrderFulfillmentC
 	return lofc
 }
 
+// SetNillableTxID sets the "tx_id" field if the given value is not nil.
+func (lofc *LockOrderFulfillmentCreate) SetNillableTxID(s *string) *LockOrderFulfillmentCreate {
+	if s != nil {
+		lofc.SetTxID(*s)
+	}
+	return lofc
+}
+
 // SetPsp sets the "psp" field.
 func (lofc *LockOrderFulfillmentCreate) SetPsp(s string) *LockOrderFulfillmentCreate {
 	lofc.mutation.SetPsp(s)
@@ -186,9 +194,6 @@ func (lofc *LockOrderFulfillmentCreate) check() error {
 	}
 	if _, ok := lofc.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "LockOrderFulfillment.updated_at"`)}
-	}
-	if _, ok := lofc.mutation.TxID(); !ok {
-		return &ValidationError{Name: "tx_id", err: errors.New(`ent: missing required field "LockOrderFulfillment.tx_id"`)}
 	}
 	if _, ok := lofc.mutation.ValidationStatus(); !ok {
 		return &ValidationError{Name: "validation_status", err: errors.New(`ent: missing required field "LockOrderFulfillment.validation_status"`)}
@@ -354,6 +359,12 @@ func (u *LockOrderFulfillmentUpsert) UpdateTxID() *LockOrderFulfillmentUpsert {
 	return u
 }
 
+// ClearTxID clears the value of the "tx_id" field.
+func (u *LockOrderFulfillmentUpsert) ClearTxID() *LockOrderFulfillmentUpsert {
+	u.SetNull(lockorderfulfillment.FieldTxID)
+	return u
+}
+
 // SetPsp sets the "psp" field.
 func (u *LockOrderFulfillmentUpsert) SetPsp(v string) *LockOrderFulfillmentUpsert {
 	u.Set(lockorderfulfillment.FieldPsp, v)
@@ -478,6 +489,13 @@ func (u *LockOrderFulfillmentUpsertOne) SetTxID(v string) *LockOrderFulfillmentU
 func (u *LockOrderFulfillmentUpsertOne) UpdateTxID() *LockOrderFulfillmentUpsertOne {
 	return u.Update(func(s *LockOrderFulfillmentUpsert) {
 		s.UpdateTxID()
+	})
+}
+
+// ClearTxID clears the value of the "tx_id" field.
+func (u *LockOrderFulfillmentUpsertOne) ClearTxID() *LockOrderFulfillmentUpsertOne {
+	return u.Update(func(s *LockOrderFulfillmentUpsert) {
+		s.ClearTxID()
 	})
 }
 
@@ -780,6 +798,13 @@ func (u *LockOrderFulfillmentUpsertBulk) SetTxID(v string) *LockOrderFulfillment
 func (u *LockOrderFulfillmentUpsertBulk) UpdateTxID() *LockOrderFulfillmentUpsertBulk {
 	return u.Update(func(s *LockOrderFulfillmentUpsert) {
 		s.UpdateTxID()
+	})
+}
+
+// ClearTxID clears the value of the "tx_id" field.
+func (u *LockOrderFulfillmentUpsertBulk) ClearTxID() *LockOrderFulfillmentUpsertBulk {
+	return u.Update(func(s *LockOrderFulfillmentUpsert) {
+		s.ClearTxID()
 	})
 }
 

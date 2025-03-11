@@ -16,6 +16,7 @@ import (
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/token"
 )
@@ -23,15 +24,16 @@ import (
 // TokenQuery is the builder for querying Token entities.
 type TokenQuery struct {
 	config
-	ctx                   *QueryContext
-	order                 []token.OrderOption
-	inters                []Interceptor
-	predicates            []predicate.Token
-	withNetwork           *NetworkQuery
-	withPaymentOrders     *PaymentOrderQuery
-	withLockPaymentOrders *LockPaymentOrderQuery
-	withSenderSettings    *SenderOrderTokenQuery
-	withFKs               bool
+	ctx                     *QueryContext
+	order                   []token.OrderOption
+	inters                  []Interceptor
+	predicates              []predicate.Token
+	withNetwork             *NetworkQuery
+	withPaymentOrders       *PaymentOrderQuery
+	withLockPaymentOrders   *LockPaymentOrderQuery
+	withSenderOrderTokens   *SenderOrderTokenQuery
+	withProviderOrderTokens *ProviderOrderTokenQuery
+	withFKs                 bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -134,8 +136,8 @@ func (tq *TokenQuery) QueryLockPaymentOrders() *LockPaymentOrderQuery {
 	return query
 }
 
-// QuerySenderSettings chains the current query on the "sender_settings" edge.
-func (tq *TokenQuery) QuerySenderSettings() *SenderOrderTokenQuery {
+// QuerySenderOrderTokens chains the current query on the "sender_order_tokens" edge.
+func (tq *TokenQuery) QuerySenderOrderTokens() *SenderOrderTokenQuery {
 	query := (&SenderOrderTokenClient{config: tq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := tq.prepareQuery(ctx); err != nil {
@@ -148,7 +150,29 @@ func (tq *TokenQuery) QuerySenderSettings() *SenderOrderTokenQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(token.Table, token.FieldID, selector),
 			sqlgraph.To(senderordertoken.Table, senderordertoken.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, token.SenderSettingsTable, token.SenderSettingsColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, token.SenderOrderTokensTable, token.SenderOrderTokensColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(tq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryProviderOrderTokens chains the current query on the "provider_order_tokens" edge.
+func (tq *TokenQuery) QueryProviderOrderTokens() *ProviderOrderTokenQuery {
+	query := (&ProviderOrderTokenClient{config: tq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := tq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := tq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(token.Table, token.FieldID, selector),
+			sqlgraph.To(providerordertoken.Table, providerordertoken.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, token.ProviderOrderTokensTable, token.ProviderOrderTokensColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(tq.driver.Dialect(), step)
 		return fromU, nil
@@ -343,15 +367,16 @@ func (tq *TokenQuery) Clone() *TokenQuery {
 		return nil
 	}
 	return &TokenQuery{
-		config:                tq.config,
-		ctx:                   tq.ctx.Clone(),
-		order:                 append([]token.OrderOption{}, tq.order...),
-		inters:                append([]Interceptor{}, tq.inters...),
-		predicates:            append([]predicate.Token{}, tq.predicates...),
-		withNetwork:           tq.withNetwork.Clone(),
-		withPaymentOrders:     tq.withPaymentOrders.Clone(),
-		withLockPaymentOrders: tq.withLockPaymentOrders.Clone(),
-		withSenderSettings:    tq.withSenderSettings.Clone(),
+		config:                  tq.config,
+		ctx:                     tq.ctx.Clone(),
+		order:                   append([]token.OrderOption{}, tq.order...),
+		inters:                  append([]Interceptor{}, tq.inters...),
+		predicates:              append([]predicate.Token{}, tq.predicates...),
+		withNetwork:             tq.withNetwork.Clone(),
+		withPaymentOrders:       tq.withPaymentOrders.Clone(),
+		withLockPaymentOrders:   tq.withLockPaymentOrders.Clone(),
+		withSenderOrderTokens:   tq.withSenderOrderTokens.Clone(),
+		withProviderOrderTokens: tq.withProviderOrderTokens.Clone(),
 		// clone intermediate query.
 		sql:  tq.sql.Clone(),
 		path: tq.path,
@@ -391,14 +416,25 @@ func (tq *TokenQuery) WithLockPaymentOrders(opts ...func(*LockPaymentOrderQuery)
 	return tq
 }
 
-// WithSenderSettings tells the query-builder to eager-load the nodes that are connected to
-// the "sender_settings" edge. The optional arguments are used to configure the query builder of the edge.
-func (tq *TokenQuery) WithSenderSettings(opts ...func(*SenderOrderTokenQuery)) *TokenQuery {
+// WithSenderOrderTokens tells the query-builder to eager-load the nodes that are connected to
+// the "sender_order_tokens" edge. The optional arguments are used to configure the query builder of the edge.
+func (tq *TokenQuery) WithSenderOrderTokens(opts ...func(*SenderOrderTokenQuery)) *TokenQuery {
 	query := (&SenderOrderTokenClient{config: tq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	tq.withSenderSettings = query
+	tq.withSenderOrderTokens = query
+	return tq
+}
+
+// WithProviderOrderTokens tells the query-builder to eager-load the nodes that are connected to
+// the "provider_order_tokens" edge. The optional arguments are used to configure the query builder of the edge.
+func (tq *TokenQuery) WithProviderOrderTokens(opts ...func(*ProviderOrderTokenQuery)) *TokenQuery {
+	query := (&ProviderOrderTokenClient{config: tq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	tq.withProviderOrderTokens = query
 	return tq
 }
 
@@ -481,11 +517,12 @@ func (tq *TokenQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Token,
 		nodes       = []*Token{}
 		withFKs     = tq.withFKs
 		_spec       = tq.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [5]bool{
 			tq.withNetwork != nil,
 			tq.withPaymentOrders != nil,
 			tq.withLockPaymentOrders != nil,
-			tq.withSenderSettings != nil,
+			tq.withSenderOrderTokens != nil,
+			tq.withProviderOrderTokens != nil,
 		}
 	)
 	if tq.withNetwork != nil {
@@ -532,10 +569,19 @@ func (tq *TokenQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Token,
 			return nil, err
 		}
 	}
-	if query := tq.withSenderSettings; query != nil {
-		if err := tq.loadSenderSettings(ctx, query, nodes,
-			func(n *Token) { n.Edges.SenderSettings = []*SenderOrderToken{} },
-			func(n *Token, e *SenderOrderToken) { n.Edges.SenderSettings = append(n.Edges.SenderSettings, e) }); err != nil {
+	if query := tq.withSenderOrderTokens; query != nil {
+		if err := tq.loadSenderOrderTokens(ctx, query, nodes,
+			func(n *Token) { n.Edges.SenderOrderTokens = []*SenderOrderToken{} },
+			func(n *Token, e *SenderOrderToken) { n.Edges.SenderOrderTokens = append(n.Edges.SenderOrderTokens, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := tq.withProviderOrderTokens; query != nil {
+		if err := tq.loadProviderOrderTokens(ctx, query, nodes,
+			func(n *Token) { n.Edges.ProviderOrderTokens = []*ProviderOrderToken{} },
+			func(n *Token, e *ProviderOrderToken) {
+				n.Edges.ProviderOrderTokens = append(n.Edges.ProviderOrderTokens, e)
+			}); err != nil {
 			return nil, err
 		}
 	}
@@ -636,7 +682,7 @@ func (tq *TokenQuery) loadLockPaymentOrders(ctx context.Context, query *LockPaym
 	}
 	return nil
 }
-func (tq *TokenQuery) loadSenderSettings(ctx context.Context, query *SenderOrderTokenQuery, nodes []*Token, init func(*Token), assign func(*Token, *SenderOrderToken)) error {
+func (tq *TokenQuery) loadSenderOrderTokens(ctx context.Context, query *SenderOrderTokenQuery, nodes []*Token, init func(*Token), assign func(*Token, *SenderOrderToken)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[int]*Token)
 	for i := range nodes {
@@ -648,20 +694,51 @@ func (tq *TokenQuery) loadSenderSettings(ctx context.Context, query *SenderOrder
 	}
 	query.withFKs = true
 	query.Where(predicate.SenderOrderToken(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(token.SenderSettingsColumn), fks...))
+		s.Where(sql.InValues(s.C(token.SenderOrderTokensColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.token_sender_settings
+		fk := n.token_sender_order_tokens
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "token_sender_settings" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "token_sender_order_tokens" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "token_sender_settings" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "token_sender_order_tokens" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (tq *TokenQuery) loadProviderOrderTokens(ctx context.Context, query *ProviderOrderTokenQuery, nodes []*Token, init func(*Token), assign func(*Token, *ProviderOrderToken)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*Token)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.ProviderOrderToken(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(token.ProviderOrderTokensColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.token_provider_order_tokens
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "token_provider_order_tokens" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "token_provider_order_tokens" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
