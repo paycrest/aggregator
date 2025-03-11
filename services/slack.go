@@ -106,9 +106,9 @@ func (s *SlackService) SendUserSignupNotification(user *ent.User, scopes []strin
 	}
 	defer resp.Body.Close()
 
-	// Log error if notification failed, but don't interrupt registration
+	// Return error if notification fails, allowing caller to handle it
 	if resp.StatusCode != http.StatusOK {
-		logger.Errorf("Slack notification failed with status: %d", resp.StatusCode)
+		return fmt.Errorf("slack notification failed with status: %d", resp.StatusCode)
 	}
 
 	return nil
