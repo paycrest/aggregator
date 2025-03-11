@@ -171,6 +171,12 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 	// TODO: add also the checks for all the currencies that a provider has
 
 	for _, provider := range providers {
+		exists, err := provider.QueryCurrencies().
+			Where(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)).
+			Exist(ctx)
+		if err != nil || !exists {
+			continue
+		}
 		orderTokens, err := storage.Client.ProviderOrderToken.
 			Query().
 			Where(
