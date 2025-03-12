@@ -16,6 +16,8 @@ type ServerConfiguration struct {
 	Environment               string
 	SentryDSN                 string
 	HostDomain                string
+	RateLimitUnauthenticated  int
+	RateLimitAuthenticated    int
 	CurrenciesCacheDuration   int
 	InstitutionsCacheDuration int
 	PubKeyCacheDuration       int
@@ -30,6 +32,8 @@ func ServerConfig() *ServerConfiguration {
 	viper.SetDefault("ALLOWED_HOSTS", "*")
 	viper.SetDefault("ENVIRONMENT", "local")
 	viper.SetDefault("SENTRY_DSN", "")
+	viper.SetDefault("RATE_LIMIT_UNAUTHENTICATED", 5)
+	viper.SetDefault("RATE_LIMIT_AUTHENTICATED", 100)
 	viper.SetDefault("CURRENCIES_CACHE_DURATION", 24)
 	viper.SetDefault("INSTITUTIONS_CACHE_DURATION", 24)
 	viper.SetDefault("PUBKEY_CACHE_DURATION", 365)
@@ -43,6 +47,8 @@ func ServerConfig() *ServerConfiguration {
 		Environment:               viper.GetString("ENVIRONMENT"),
 		SentryDSN:                 viper.GetString("SENTRY_DSN"),
 		HostDomain:                viper.GetString("HOST_DOMAIN"),
+		RateLimitUnauthenticated:  viper.GetInt("RATE_LIMIT_UNAUTHENTICATED"),
+		RateLimitAuthenticated:    viper.GetInt("RATE_LIMIT_AUTHENTICATED"),
 		CurrenciesCacheDuration:   viper.GetInt("CURRENCIES_CACHE_DURATION"),
 		InstitutionsCacheDuration: viper.GetInt("INSTITUTIONS_CACHE_DURATION"),
 		PubKeyCacheDuration:       viper.GetInt("PUBKEY_CACHE_DURATION"),
