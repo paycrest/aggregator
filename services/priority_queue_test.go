@@ -94,21 +94,22 @@ func setupForPQ() error {
 		return err
 	}
 	testCtxForPQ.publicProviderProfileAPIKey = apiKey
-	tokens, err := test.AddProviderOrderTokenToProvider(
+	_, err = test.AddProviderOrderTokenToProvider(
 		map[string]interface{}{
 			"fixed_conversion_rate":    decimal.NewFromFloat(100),
 			"conversion_rate_type":     "fixed",
 			"floating_conversion_rate": decimal.NewFromFloat(1.0),
 			"max_order_amount":         decimal.NewFromFloat(1000),
 			"min_order_amount":         decimal.NewFromFloat(1.0),
-			"tokenSymbol":              token.Symbol,
 			"provider":                 publicProviderProfile,
+			"currency_id":              currency.ID,
+			"network":                  token.Edges.Network.Identifier,
+			"tokenID":                  token.ID,
 		},
 	)
 	if err != nil {
 		return err
 	}
-	fmt.Println("provider tokens", tokens)
 	testCtxForPQ.publicProviderProfile = publicProviderProfile
 
 	bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
@@ -225,7 +226,7 @@ func TestPriorityQueueTest(t *testing.T) {
 
 		data, err := db.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
 		assert.NoError(t, err)
-		assert.Equal(t, len(data), 1)
+		assert.Equal(t, 1, len(data))
 		assert.Contains(t, data[0], testCtxForPQ.publicProviderProfile.ID)
 	})
 
@@ -241,25 +242,32 @@ func TestPriorityQueueTest(t *testing.T) {
 	})
 
 	t.Run("TestAssignLockPaymentOrder", func(t *testing.T) {
+		ctx := context.Background()
 
 		bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
-			"provider_id": testCtxForPQ.privateProviderProfile.ID,
+			"provider_id": testCtxForPQ.publicProviderProfile.ID,
 			"min_amount":  testCtxForPQ.minAmount,
 			"max_amount":  testCtxForPQ.maxAmount,
 			"currency_id": testCtxForPQ.currency.ID,
 		})
 		assert.NoError(t, err)
+
+		_bucket, err := db.Client.ProvisionBucket.
+			Query().
+			Where(provisionbucket.IDEQ(bucket.ID)).
+			WithCurrency().
+			WithProviderProfiles().
+			Only(ctx)
+		assert.NoError(t, err)
+
 		_order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
 			"provider":   testCtxForPQ.publicProviderProfile,
+			"rate":       100.0,
 			"tokenID":    testCtxForPQ.token.ID,
 			"gateway_id": "order-1",
 		})
 		assert.NoError(t, err)
-
 		_, err = test.AddProvisionBucketToLockPaymentOrder(_order, bucket.ID)
-		assert.NoError(t, err)
-
-		err = db.RedisClient.RPush(context.Background(), fmt.Sprintf("order_exclude_list_%s", _order.ID), testCtxForPQ.publicProviderProfile.ID).Err()
 		assert.NoError(t, err)
 
 		order, err := db.Client.LockPaymentOrder.
@@ -269,11 +277,13 @@ func TestPriorityQueueTest(t *testing.T) {
 				pb.WithCurrency()
 			}).
 			WithToken().
-			Only(context.Background())
+			Only(ctx)
 
 		assert.NoError(t, err)
 
-		err = service.AssignLockPaymentOrder(context.Background(), types.LockPaymentOrderFields{
+		service.CreatePriorityQueueForBucket(ctx, _bucket)
+
+		err = service.AssignLockPaymentOrder(ctx, types.LockPaymentOrderFields{
 			ID:                order.ID,
 			Token:             testCtxForPQ.token,
 			GatewayID:         order.GatewayID,
@@ -290,7 +300,7 @@ func TestPriorityQueueTest(t *testing.T) {
 	})
 
 	t.Run("TestGetProviderRate", func(t *testing.T) {
-		rate, err := service.GetProviderRate(context.Background(), testCtxForPQ.publicProviderProfile, testCtxForPQ.token.Symbol)
+		rate, err := service.GetProviderRate(context.Background(), testCtxForPQ.publicProviderProfile, testCtxForPQ.token.Symbol, testCtxForPQ.currency.Code)
 		assert.NoError(t, err)
 		_rate, ok := rate.Float64()
 		assert.True(t, ok)
@@ -315,7 +325,7 @@ func TestPriorityQueueTest(t *testing.T) {
 		_, err = test.AddProvisionBucketToLockPaymentOrder(_order, bucket.ID)
 		assert.NoError(t, err)
 
-		err = db.RedisClient.RPush(context.Background(), fmt.Sprintf("order_exclude_list_%s", _order.ID), testCtxForPQ.publicProviderProfile.ID).Err()
+		_, err = db.RedisClient.RPush(context.Background(), fmt.Sprintf("order_exclude_list_%s", _order.ID), testCtxForPQ.publicProviderProfile.ID).Result()
 		assert.NoError(t, err)
 
 		order, err := db.Client.LockPaymentOrder.

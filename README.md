@@ -91,6 +91,10 @@ We use a combination of unit tests and integration tests to ensure the reliabili
 To run the tests, run the following command:
 
 ```bash
+# install and run ganache local blockchain
+npm install ganache --global
+HD_WALLET_MNEMONIC="media nerve fog identify typical physical aspect doll bar fossil frost because"; ganache -m "$HD_WALLET_MNEMONIC" --chain.chainId 1337 -l 21000000
+
 # run all tests
 go test ./...
 

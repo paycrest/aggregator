@@ -114,12 +114,12 @@ type CreateOrderParams struct {
 
 // RegisterPayload is the payload for the register endpoint
 type RegisterPayload struct {
-	FirstName string   `json:"firstName" binding:"required"`
-	LastName  string   `json:"lastName" binding:"required"`
-	Email     string   `json:"email" binding:"required,email"`
-	Password  string   `json:"password" binding:"required,min=6,max=20"`
-	Currency  string   `json:"currency"`
-	Scopes    []string `json:"scopes" binding:"required,dive,oneof=sender provider"`
+	FirstName    string     `json:"firstName" binding:"required"`
+	LastName     string     `json:"lastName" binding:"required"`
+	Email        string     `json:"email" binding:"required,email"`
+	Password     string     `json:"password" binding:"required,min=6,max=20"`
+	Currencies  []string    `json:"currency"`
+	Scopes      []string    `json:"scopes" binding:"required,dive,oneof=sender provider"`
 }
 
 // RegisterResponse is the response for the register endpoint
@@ -156,8 +156,8 @@ type AcceptOrderResponse struct {
 
 // FulfillLockOrderPayload is the payload for the fulfill order endpoint
 type FulfillLockOrderPayload struct {
-	TxID             string                                `json:"txId" binding:"required"`
 	PSP              string                                `json:"psp" binding:"required"`
+	TxID             string                                `json:"txId"`
 	ValidationStatus lockorderfulfillment.ValidationStatus `json:"validationStatus"`
 	ValidationError  string                                `json:"validationError"`
 }
@@ -208,6 +208,7 @@ type SenderProfilePayload struct {
 
 // ProviderOrderTokenPayload defines the provider setting for a token
 type ProviderOrderTokenPayload struct {
+	Currency               string                                `json:"currency" binding:"required"`
 	Symbol                 string                                `json:"symbol" binding:"required"`
 	ConversionRateType     providerordertoken.ConversionRateType `json:"conversionRateType" binding:"required"`
 	FixedConversionRate    decimal.Decimal                       `json:"fixedConversionRate" binding:"required"`
@@ -215,16 +216,14 @@ type ProviderOrderTokenPayload struct {
 	MaxOrderAmount         decimal.Decimal                       `json:"maxOrderAmount" binding:"required"`
 	MinOrderAmount         decimal.Decimal                       `json:"minOrderAmount" binding:"required"`
 	RateSlippage           decimal.Decimal                       `json:"rateSlippage,omitempty"`
-	Addresses              []struct {
-		Address string `json:"address"`
-		Network string `json:"network"`
-	} `json:"addresses"`
+	Address                string                                `json:"address" binding:"required"`
+	Network                string                                `json:"network" binding:"required"`
 }
 
 // ProviderProfilePayload is the payload for the provider profile endpoint
 type ProviderProfilePayload struct {
 	TradingName          string                      `json:"tradingName"`
-	Currency             string                      `json:"currency"`
+	Currencies           []string                    `json:"currencies"`
 	HostIdentifier       string                      `json:"hostIdentifier"`
 	IsAvailable          bool                        `json:"isAvailable"`
 	Tokens               []ProviderOrderTokenPayload `json:"tokens"`
@@ -245,7 +244,7 @@ type ProviderProfileResponse struct {
 	LastName             string                               `json:"lastName"`
 	Email                string                               `json:"email"`
 	TradingName          string                               `json:"tradingName"`
-	Currency             string                               `json:"currency"`
+	Currencies           []string                             `json:"currencies"`
 	HostIdentifier       string                               `json:"hostIdentifier"`
 	IsAvailable          bool                                 `json:"isAvailable"`
 	Tokens               []ProviderOrderTokenPayload          `json:"tokens"`
@@ -273,17 +272,17 @@ type SenderOrderTokenResponse struct {
 
 // SenderProfileResponse is the response for the sender profile endpoint
 type SenderProfileResponse struct {
-	ID               uuid.UUID                  `json:"id"`
-	FirstName        string                     `json:"firstName"`
-	LastName         string                     `json:"lastName"`
-	Email            string                     `json:"email"`
-	WebhookURL       string                     `json:"webhookUrl"`
-	DomainWhitelist  []string                   `json:"domainWhitelist"`
-	Tokens           []SenderOrderTokenResponse `json:"tokens"`
-	APIKey           APIKeyResponse             `json:"apiKey"`
-	ProviderID       string                     `json:"providerId"`
-	ProviderCurrency string                     `json:"providerCurrency"`
-	IsActive         bool                       `json:"isActive"`
+	ID                 uuid.UUID                  `json:"id"`
+	FirstName          string                     `json:"firstName"`
+	LastName           string                     `json:"lastName"`
+	Email              string                     `json:"email"`
+	WebhookURL         string                     `json:"webhookUrl"`
+	DomainWhitelist    []string                   `json:"domainWhitelist"`
+	Tokens             []SenderOrderTokenResponse `json:"tokens"`
+	APIKey             APIKeyResponse             `json:"apiKey"`
+	ProviderID         string                     `json:"providerId"`
+	ProviderCurrencies []string                   `json:"providerCurrencies"`
+	IsActive           bool                       `json:"isActive"`
 }
 
 // RefreshResponse is the response for the refresh endpoint

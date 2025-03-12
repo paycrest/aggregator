@@ -19,8 +19,6 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
-	// FieldSymbol holds the string denoting the symbol field in the database.
-	FieldSymbol = "symbol"
 	// FieldFixedConversionRate holds the string denoting the fixed_conversion_rate field in the database.
 	FieldFixedConversionRate = "fixed_conversion_rate"
 	// FieldFloatingConversionRate holds the string denoting the floating_conversion_rate field in the database.
@@ -33,10 +31,16 @@ const (
 	FieldMinOrderAmount = "min_order_amount"
 	// FieldRateSlippage holds the string denoting the rate_slippage field in the database.
 	FieldRateSlippage = "rate_slippage"
-	// FieldAddresses holds the string denoting the addresses field in the database.
-	FieldAddresses = "addresses"
+	// FieldAddress holds the string denoting the address field in the database.
+	FieldAddress = "address"
+	// FieldNetwork holds the string denoting the network field in the database.
+	FieldNetwork = "network"
 	// EdgeProvider holds the string denoting the provider edge name in mutations.
 	EdgeProvider = "provider"
+	// EdgeToken holds the string denoting the token edge name in mutations.
+	EdgeToken = "token"
+	// EdgeCurrency holds the string denoting the currency edge name in mutations.
+	EdgeCurrency = "currency"
 	// Table holds the table name of the providerordertoken in the database.
 	Table = "provider_order_tokens"
 	// ProviderTable is the table that holds the provider relation/edge.
@@ -46,6 +50,20 @@ const (
 	ProviderInverseTable = "provider_profiles"
 	// ProviderColumn is the table column denoting the provider relation/edge.
 	ProviderColumn = "provider_profile_order_tokens"
+	// TokenTable is the table that holds the token relation/edge.
+	TokenTable = "provider_order_tokens"
+	// TokenInverseTable is the table name for the Token entity.
+	// It exists in this package in order to avoid circular dependency with the "token" package.
+	TokenInverseTable = "tokens"
+	// TokenColumn is the table column denoting the token relation/edge.
+	TokenColumn = "token_provider_order_tokens"
+	// CurrencyTable is the table that holds the currency relation/edge.
+	CurrencyTable = "provider_order_tokens"
+	// CurrencyInverseTable is the table name for the FiatCurrency entity.
+	// It exists in this package in order to avoid circular dependency with the "fiatcurrency" package.
+	CurrencyInverseTable = "fiat_currencies"
+	// CurrencyColumn is the table column denoting the currency relation/edge.
+	CurrencyColumn = "fiat_currency_provider_order_tokens"
 )
 
 // Columns holds all SQL columns for providerordertoken fields.
@@ -53,20 +71,22 @@ var Columns = []string{
 	FieldID,
 	FieldCreatedAt,
 	FieldUpdatedAt,
-	FieldSymbol,
 	FieldFixedConversionRate,
 	FieldFloatingConversionRate,
 	FieldConversionRateType,
 	FieldMaxOrderAmount,
 	FieldMinOrderAmount,
 	FieldRateSlippage,
-	FieldAddresses,
+	FieldAddress,
+	FieldNetwork,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "provider_order_tokens"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
+	"fiat_currency_provider_order_tokens",
 	"provider_profile_order_tokens",
+	"token_provider_order_tokens",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -134,11 +154,6 @@ func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
 }
 
-// BySymbol orders the results by the symbol field.
-func BySymbol(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldSymbol, opts...).ToFunc()
-}
-
 // ByFixedConversionRate orders the results by the fixed_conversion_rate field.
 func ByFixedConversionRate(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldFixedConversionRate, opts...).ToFunc()
@@ -169,10 +184,34 @@ func ByRateSlippage(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRateSlippage, opts...).ToFunc()
 }
 
+// ByAddress orders the results by the address field.
+func ByAddress(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAddress, opts...).ToFunc()
+}
+
+// ByNetwork orders the results by the network field.
+func ByNetwork(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldNetwork, opts...).ToFunc()
+}
+
 // ByProviderField orders the results by provider field.
 func ByProviderField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
 		sqlgraph.OrderByNeighborTerms(s, newProviderStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByTokenField orders the results by token field.
+func ByTokenField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTokenStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByCurrencyField orders the results by currency field.
+func ByCurrencyField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCurrencyStep(), sql.OrderByField(field, opts...))
 	}
 }
 func newProviderStep() *sqlgraph.Step {
@@ -180,5 +219,19 @@ func newProviderStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ProviderInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, ProviderTable, ProviderColumn),
+	)
+}
+func newTokenStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TokenInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, TokenTable, TokenColumn),
+	)
+}
+func newCurrencyStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CurrencyInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, CurrencyTable, CurrencyColumn),
 	)
 }

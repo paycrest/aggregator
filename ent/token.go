@@ -30,6 +30,8 @@ type Token struct {
 	Decimals int8 `json:"decimals,omitempty"`
 	// IsEnabled holds the value of the "is_enabled" field.
 	IsEnabled bool `json:"is_enabled,omitempty"`
+	// BaseCurrency holds the value of the "base_currency" field.
+	BaseCurrency string `json:"base_currency,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the TokenQuery when eager-loading is set.
 	Edges          TokenEdges `json:"edges"`
@@ -45,11 +47,13 @@ type TokenEdges struct {
 	PaymentOrders []*PaymentOrder `json:"payment_orders,omitempty"`
 	// LockPaymentOrders holds the value of the lock_payment_orders edge.
 	LockPaymentOrders []*LockPaymentOrder `json:"lock_payment_orders,omitempty"`
-	// SenderSettings holds the value of the sender_settings edge.
-	SenderSettings []*SenderOrderToken `json:"sender_settings,omitempty"`
+	// SenderOrderTokens holds the value of the sender_order_tokens edge.
+	SenderOrderTokens []*SenderOrderToken `json:"sender_order_tokens,omitempty"`
+	// ProviderOrderTokens holds the value of the provider_order_tokens edge.
+	ProviderOrderTokens []*ProviderOrderToken `json:"provider_order_tokens,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 }
 
 // NetworkOrErr returns the Network value or an error if the edge
@@ -81,13 +85,22 @@ func (e TokenEdges) LockPaymentOrdersOrErr() ([]*LockPaymentOrder, error) {
 	return nil, &NotLoadedError{edge: "lock_payment_orders"}
 }
 
-// SenderSettingsOrErr returns the SenderSettings value or an error if the edge
+// SenderOrderTokensOrErr returns the SenderOrderTokens value or an error if the edge
 // was not loaded in eager-loading.
-func (e TokenEdges) SenderSettingsOrErr() ([]*SenderOrderToken, error) {
+func (e TokenEdges) SenderOrderTokensOrErr() ([]*SenderOrderToken, error) {
 	if e.loadedTypes[3] {
-		return e.SenderSettings, nil
+		return e.SenderOrderTokens, nil
 	}
-	return nil, &NotLoadedError{edge: "sender_settings"}
+	return nil, &NotLoadedError{edge: "sender_order_tokens"}
+}
+
+// ProviderOrderTokensOrErr returns the ProviderOrderTokens value or an error if the edge
+// was not loaded in eager-loading.
+func (e TokenEdges) ProviderOrderTokensOrErr() ([]*ProviderOrderToken, error) {
+	if e.loadedTypes[4] {
+		return e.ProviderOrderTokens, nil
+	}
+	return nil, &NotLoadedError{edge: "provider_order_tokens"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -99,7 +112,7 @@ func (*Token) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case token.FieldID, token.FieldDecimals:
 			values[i] = new(sql.NullInt64)
-		case token.FieldSymbol, token.FieldContractAddress:
+		case token.FieldSymbol, token.FieldContractAddress, token.FieldBaseCurrency:
 			values[i] = new(sql.NullString)
 		case token.FieldCreatedAt, token.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -162,6 +175,12 @@ func (t *Token) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				t.IsEnabled = value.Bool
 			}
+		case token.FieldBaseCurrency:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field base_currency", values[i])
+			} else if value.Valid {
+				t.BaseCurrency = value.String
+			}
 		case token.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field network_tokens", value)
@@ -197,9 +216,14 @@ func (t *Token) QueryLockPaymentOrders() *LockPaymentOrderQuery {
 	return NewTokenClient(t.config).QueryLockPaymentOrders(t)
 }
 
-// QuerySenderSettings queries the "sender_settings" edge of the Token entity.
-func (t *Token) QuerySenderSettings() *SenderOrderTokenQuery {
-	return NewTokenClient(t.config).QuerySenderSettings(t)
+// QuerySenderOrderTokens queries the "sender_order_tokens" edge of the Token entity.
+func (t *Token) QuerySenderOrderTokens() *SenderOrderTokenQuery {
+	return NewTokenClient(t.config).QuerySenderOrderTokens(t)
+}
+
+// QueryProviderOrderTokens queries the "provider_order_tokens" edge of the Token entity.
+func (t *Token) QueryProviderOrderTokens() *ProviderOrderTokenQuery {
+	return NewTokenClient(t.config).QueryProviderOrderTokens(t)
 }
 
 // Update returns a builder for updating this Token.
@@ -242,6 +266,9 @@ func (t *Token) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("is_enabled=")
 	builder.WriteString(fmt.Sprintf("%v", t.IsEnabled))
+	builder.WriteString(", ")
+	builder.WriteString("base_currency=")
+	builder.WriteString(t.BaseCurrency)
 	builder.WriteByte(')')
 	return builder.String()
 }

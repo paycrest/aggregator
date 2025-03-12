@@ -617,33 +617,36 @@ func (m *APIKeyMutation) ResetEdge(name string) error {
 // FiatCurrencyMutation represents an operation that mutates the FiatCurrency nodes in the graph.
 type FiatCurrencyMutation struct {
 	config
-	op                       Op
-	typ                      string
-	id                       *uuid.UUID
-	created_at               *time.Time
-	updated_at               *time.Time
-	code                     *string
-	short_name               *string
-	decimals                 *int
-	adddecimals              *int
-	symbol                   *string
-	name                     *string
-	market_rate              *decimal.Decimal
-	addmarket_rate           *decimal.Decimal
-	is_enabled               *bool
-	clearedFields            map[string]struct{}
-	providers                map[string]struct{}
-	removedproviders         map[string]struct{}
-	clearedproviders         bool
-	provision_buckets        map[int]struct{}
-	removedprovision_buckets map[int]struct{}
-	clearedprovision_buckets bool
-	institutions             map[int]struct{}
-	removedinstitutions      map[int]struct{}
-	clearedinstitutions      bool
-	done                     bool
-	oldValue                 func(context.Context) (*FiatCurrency, error)
-	predicates               []predicate.FiatCurrency
+	op                           Op
+	typ                          string
+	id                           *uuid.UUID
+	created_at                   *time.Time
+	updated_at                   *time.Time
+	code                         *string
+	short_name                   *string
+	decimals                     *int
+	adddecimals                  *int
+	symbol                       *string
+	name                         *string
+	market_rate                  *decimal.Decimal
+	addmarket_rate               *decimal.Decimal
+	is_enabled                   *bool
+	clearedFields                map[string]struct{}
+	providers                    map[string]struct{}
+	removedproviders             map[string]struct{}
+	clearedproviders             bool
+	provision_buckets            map[int]struct{}
+	removedprovision_buckets     map[int]struct{}
+	clearedprovision_buckets     bool
+	institutions                 map[int]struct{}
+	removedinstitutions          map[int]struct{}
+	clearedinstitutions          bool
+	provider_order_tokens        map[int]struct{}
+	removedprovider_order_tokens map[int]struct{}
+	clearedprovider_order_tokens bool
+	done                         bool
+	oldValue                     func(context.Context) (*FiatCurrency, error)
+	predicates                   []predicate.FiatCurrency
 }
 
 var _ ent.Mutation = (*FiatCurrencyMutation)(nil)
@@ -1276,6 +1279,60 @@ func (m *FiatCurrencyMutation) ResetInstitutions() {
 	m.removedinstitutions = nil
 }
 
+// AddProviderOrderTokenIDs adds the "provider_order_tokens" edge to the ProviderOrderToken entity by ids.
+func (m *FiatCurrencyMutation) AddProviderOrderTokenIDs(ids ...int) {
+	if m.provider_order_tokens == nil {
+		m.provider_order_tokens = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.provider_order_tokens[ids[i]] = struct{}{}
+	}
+}
+
+// ClearProviderOrderTokens clears the "provider_order_tokens" edge to the ProviderOrderToken entity.
+func (m *FiatCurrencyMutation) ClearProviderOrderTokens() {
+	m.clearedprovider_order_tokens = true
+}
+
+// ProviderOrderTokensCleared reports if the "provider_order_tokens" edge to the ProviderOrderToken entity was cleared.
+func (m *FiatCurrencyMutation) ProviderOrderTokensCleared() bool {
+	return m.clearedprovider_order_tokens
+}
+
+// RemoveProviderOrderTokenIDs removes the "provider_order_tokens" edge to the ProviderOrderToken entity by IDs.
+func (m *FiatCurrencyMutation) RemoveProviderOrderTokenIDs(ids ...int) {
+	if m.removedprovider_order_tokens == nil {
+		m.removedprovider_order_tokens = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.provider_order_tokens, ids[i])
+		m.removedprovider_order_tokens[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedProviderOrderTokens returns the removed IDs of the "provider_order_tokens" edge to the ProviderOrderToken entity.
+func (m *FiatCurrencyMutation) RemovedProviderOrderTokensIDs() (ids []int) {
+	for id := range m.removedprovider_order_tokens {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ProviderOrderTokensIDs returns the "provider_order_tokens" edge IDs in the mutation.
+func (m *FiatCurrencyMutation) ProviderOrderTokensIDs() (ids []int) {
+	for id := range m.provider_order_tokens {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetProviderOrderTokens resets all changes to the "provider_order_tokens" edge.
+func (m *FiatCurrencyMutation) ResetProviderOrderTokens() {
+	m.provider_order_tokens = nil
+	m.clearedprovider_order_tokens = false
+	m.removedprovider_order_tokens = nil
+}
+
 // Where appends a list predicates to the FiatCurrencyMutation builder.
 func (m *FiatCurrencyMutation) Where(ps ...predicate.FiatCurrency) {
 	m.predicates = append(m.predicates, ps...)
@@ -1572,7 +1629,7 @@ func (m *FiatCurrencyMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *FiatCurrencyMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.providers != nil {
 		edges = append(edges, fiatcurrency.EdgeProviders)
 	}
@@ -1581,6 +1638,9 @@ func (m *FiatCurrencyMutation) AddedEdges() []string {
 	}
 	if m.institutions != nil {
 		edges = append(edges, fiatcurrency.EdgeInstitutions)
+	}
+	if m.provider_order_tokens != nil {
+		edges = append(edges, fiatcurrency.EdgeProviderOrderTokens)
 	}
 	return edges
 }
@@ -1607,13 +1667,19 @@ func (m *FiatCurrencyMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case fiatcurrency.EdgeProviderOrderTokens:
+		ids := make([]ent.Value, 0, len(m.provider_order_tokens))
+		for id := range m.provider_order_tokens {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *FiatCurrencyMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.removedproviders != nil {
 		edges = append(edges, fiatcurrency.EdgeProviders)
 	}
@@ -1622,6 +1688,9 @@ func (m *FiatCurrencyMutation) RemovedEdges() []string {
 	}
 	if m.removedinstitutions != nil {
 		edges = append(edges, fiatcurrency.EdgeInstitutions)
+	}
+	if m.removedprovider_order_tokens != nil {
+		edges = append(edges, fiatcurrency.EdgeProviderOrderTokens)
 	}
 	return edges
 }
@@ -1648,13 +1717,19 @@ func (m *FiatCurrencyMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case fiatcurrency.EdgeProviderOrderTokens:
+		ids := make([]ent.Value, 0, len(m.removedprovider_order_tokens))
+		for id := range m.removedprovider_order_tokens {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *FiatCurrencyMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.clearedproviders {
 		edges = append(edges, fiatcurrency.EdgeProviders)
 	}
@@ -1663,6 +1738,9 @@ func (m *FiatCurrencyMutation) ClearedEdges() []string {
 	}
 	if m.clearedinstitutions {
 		edges = append(edges, fiatcurrency.EdgeInstitutions)
+	}
+	if m.clearedprovider_order_tokens {
+		edges = append(edges, fiatcurrency.EdgeProviderOrderTokens)
 	}
 	return edges
 }
@@ -1677,6 +1755,8 @@ func (m *FiatCurrencyMutation) EdgeCleared(name string) bool {
 		return m.clearedprovision_buckets
 	case fiatcurrency.EdgeInstitutions:
 		return m.clearedinstitutions
+	case fiatcurrency.EdgeProviderOrderTokens:
+		return m.clearedprovider_order_tokens
 	}
 	return false
 }
@@ -1701,6 +1781,9 @@ func (m *FiatCurrencyMutation) ResetEdge(name string) error {
 		return nil
 	case fiatcurrency.EdgeInstitutions:
 		m.ResetInstitutions()
+		return nil
+	case fiatcurrency.EdgeProviderOrderTokens:
+		m.ResetProviderOrderTokens()
 		return nil
 	}
 	return fmt.Errorf("unknown FiatCurrency edge %s", name)
@@ -4289,9 +4372,22 @@ func (m *LockOrderFulfillmentMutation) OldTxID(ctx context.Context) (v string, e
 	return oldValue.TxID, nil
 }
 
+// ClearTxID clears the value of the "tx_id" field.
+func (m *LockOrderFulfillmentMutation) ClearTxID() {
+	m.tx_id = nil
+	m.clearedFields[lockorderfulfillment.FieldTxID] = struct{}{}
+}
+
+// TxIDCleared returns if the "tx_id" field was cleared in this mutation.
+func (m *LockOrderFulfillmentMutation) TxIDCleared() bool {
+	_, ok := m.clearedFields[lockorderfulfillment.FieldTxID]
+	return ok
+}
+
 // ResetTxID resets all changes to the "tx_id" field.
 func (m *LockOrderFulfillmentMutation) ResetTxID() {
 	m.tx_id = nil
+	delete(m.clearedFields, lockorderfulfillment.FieldTxID)
 }
 
 // SetPsp sets the "psp" field.
@@ -4642,6 +4738,9 @@ func (m *LockOrderFulfillmentMutation) AddField(name string, value ent.Value) er
 // mutation.
 func (m *LockOrderFulfillmentMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(lockorderfulfillment.FieldTxID) {
+		fields = append(fields, lockorderfulfillment.FieldTxID)
+	}
 	if m.FieldCleared(lockorderfulfillment.FieldPsp) {
 		fields = append(fields, lockorderfulfillment.FieldPsp)
 	}
@@ -4662,6 +4761,9 @@ func (m *LockOrderFulfillmentMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *LockOrderFulfillmentMutation) ClearField(name string) error {
 	switch name {
+	case lockorderfulfillment.FieldTxID:
+		m.ClearTxID()
+		return nil
 	case lockorderfulfillment.FieldPsp:
 		m.ClearPsp()
 		return nil
@@ -6453,6 +6555,8 @@ type NetworkMutation struct {
 	rpc_endpoint             *string
 	gateway_contract_address *string
 	is_testnet               *bool
+	bundler_url              *string
+	paymaster_url            *string
 	fee                      *decimal.Decimal
 	addfee                   *decimal.Decimal
 	clearedFields            map[string]struct{}
@@ -6883,6 +6987,104 @@ func (m *NetworkMutation) ResetIsTestnet() {
 	m.is_testnet = nil
 }
 
+// SetBundlerURL sets the "bundler_url" field.
+func (m *NetworkMutation) SetBundlerURL(s string) {
+	m.bundler_url = &s
+}
+
+// BundlerURL returns the value of the "bundler_url" field in the mutation.
+func (m *NetworkMutation) BundlerURL() (r string, exists bool) {
+	v := m.bundler_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBundlerURL returns the old "bundler_url" field's value of the Network entity.
+// If the Network object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *NetworkMutation) OldBundlerURL(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBundlerURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBundlerURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBundlerURL: %w", err)
+	}
+	return oldValue.BundlerURL, nil
+}
+
+// ClearBundlerURL clears the value of the "bundler_url" field.
+func (m *NetworkMutation) ClearBundlerURL() {
+	m.bundler_url = nil
+	m.clearedFields[network.FieldBundlerURL] = struct{}{}
+}
+
+// BundlerURLCleared returns if the "bundler_url" field was cleared in this mutation.
+func (m *NetworkMutation) BundlerURLCleared() bool {
+	_, ok := m.clearedFields[network.FieldBundlerURL]
+	return ok
+}
+
+// ResetBundlerURL resets all changes to the "bundler_url" field.
+func (m *NetworkMutation) ResetBundlerURL() {
+	m.bundler_url = nil
+	delete(m.clearedFields, network.FieldBundlerURL)
+}
+
+// SetPaymasterURL sets the "paymaster_url" field.
+func (m *NetworkMutation) SetPaymasterURL(s string) {
+	m.paymaster_url = &s
+}
+
+// PaymasterURL returns the value of the "paymaster_url" field in the mutation.
+func (m *NetworkMutation) PaymasterURL() (r string, exists bool) {
+	v := m.paymaster_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPaymasterURL returns the old "paymaster_url" field's value of the Network entity.
+// If the Network object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *NetworkMutation) OldPaymasterURL(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPaymasterURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPaymasterURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPaymasterURL: %w", err)
+	}
+	return oldValue.PaymasterURL, nil
+}
+
+// ClearPaymasterURL clears the value of the "paymaster_url" field.
+func (m *NetworkMutation) ClearPaymasterURL() {
+	m.paymaster_url = nil
+	m.clearedFields[network.FieldPaymasterURL] = struct{}{}
+}
+
+// PaymasterURLCleared returns if the "paymaster_url" field was cleared in this mutation.
+func (m *NetworkMutation) PaymasterURLCleared() bool {
+	_, ok := m.clearedFields[network.FieldPaymasterURL]
+	return ok
+}
+
+// ResetPaymasterURL resets all changes to the "paymaster_url" field.
+func (m *NetworkMutation) ResetPaymasterURL() {
+	m.paymaster_url = nil
+	delete(m.clearedFields, network.FieldPaymasterURL)
+}
+
 // SetFee sets the "fee" field.
 func (m *NetworkMutation) SetFee(d decimal.Decimal) {
 	m.fee = &d
@@ -7027,7 +7229,7 @@ func (m *NetworkMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *NetworkMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 11)
 	if m.created_at != nil {
 		fields = append(fields, network.FieldCreatedAt)
 	}
@@ -7051,6 +7253,12 @@ func (m *NetworkMutation) Fields() []string {
 	}
 	if m.is_testnet != nil {
 		fields = append(fields, network.FieldIsTestnet)
+	}
+	if m.bundler_url != nil {
+		fields = append(fields, network.FieldBundlerURL)
+	}
+	if m.paymaster_url != nil {
+		fields = append(fields, network.FieldPaymasterURL)
 	}
 	if m.fee != nil {
 		fields = append(fields, network.FieldFee)
@@ -7079,6 +7287,10 @@ func (m *NetworkMutation) Field(name string) (ent.Value, bool) {
 		return m.GatewayContractAddress()
 	case network.FieldIsTestnet:
 		return m.IsTestnet()
+	case network.FieldBundlerURL:
+		return m.BundlerURL()
+	case network.FieldPaymasterURL:
+		return m.PaymasterURL()
 	case network.FieldFee:
 		return m.Fee()
 	}
@@ -7106,6 +7318,10 @@ func (m *NetworkMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldGatewayContractAddress(ctx)
 	case network.FieldIsTestnet:
 		return m.OldIsTestnet(ctx)
+	case network.FieldBundlerURL:
+		return m.OldBundlerURL(ctx)
+	case network.FieldPaymasterURL:
+		return m.OldPaymasterURL(ctx)
 	case network.FieldFee:
 		return m.OldFee(ctx)
 	}
@@ -7172,6 +7388,20 @@ func (m *NetworkMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetIsTestnet(v)
+		return nil
+	case network.FieldBundlerURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBundlerURL(v)
+		return nil
+	case network.FieldPaymasterURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPaymasterURL(v)
 		return nil
 	case network.FieldFee:
 		v, ok := value.(decimal.Decimal)
@@ -7240,6 +7470,12 @@ func (m *NetworkMutation) ClearedFields() []string {
 	if m.FieldCleared(network.FieldChainIDHex) {
 		fields = append(fields, network.FieldChainIDHex)
 	}
+	if m.FieldCleared(network.FieldBundlerURL) {
+		fields = append(fields, network.FieldBundlerURL)
+	}
+	if m.FieldCleared(network.FieldPaymasterURL) {
+		fields = append(fields, network.FieldPaymasterURL)
+	}
 	return fields
 }
 
@@ -7256,6 +7492,12 @@ func (m *NetworkMutation) ClearField(name string) error {
 	switch name {
 	case network.FieldChainIDHex:
 		m.ClearChainIDHex()
+		return nil
+	case network.FieldBundlerURL:
+		m.ClearBundlerURL()
+		return nil
+	case network.FieldPaymasterURL:
+		m.ClearPaymasterURL()
 		return nil
 	}
 	return fmt.Errorf("unknown Network nullable field %s", name)
@@ -7288,6 +7530,12 @@ func (m *NetworkMutation) ResetField(name string) error {
 		return nil
 	case network.FieldIsTestnet:
 		m.ResetIsTestnet()
+		return nil
+	case network.FieldBundlerURL:
+		m.ResetBundlerURL()
+		return nil
+	case network.FieldPaymasterURL:
+		m.ResetPaymasterURL()
 		return nil
 	case network.FieldFee:
 		m.ResetFee()
@@ -10234,7 +10482,6 @@ type ProviderOrderTokenMutation struct {
 	id                          *int
 	created_at                  *time.Time
 	updated_at                  *time.Time
-	symbol                      *string
 	fixed_conversion_rate       *decimal.Decimal
 	addfixed_conversion_rate    *decimal.Decimal
 	floating_conversion_rate    *decimal.Decimal
@@ -10246,20 +10493,18 @@ type ProviderOrderTokenMutation struct {
 	addmin_order_amount         *decimal.Decimal
 	rate_slippage               *decimal.Decimal
 	addrate_slippage            *decimal.Decimal
-	addresses                   *[]struct {
-		Address string "json:\"address\""
-		Network string "json:\"network\""
-	}
-	appendaddresses []struct {
-		Address string "json:\"address\""
-		Network string "json:\"network\""
-	}
-	clearedFields   map[string]struct{}
-	provider        *string
-	clearedprovider bool
-	done            bool
-	oldValue        func(context.Context) (*ProviderOrderToken, error)
-	predicates      []predicate.ProviderOrderToken
+	address                     *string
+	network                     *string
+	clearedFields               map[string]struct{}
+	provider                    *string
+	clearedprovider             bool
+	token                       *int
+	clearedtoken                bool
+	currency                    *uuid.UUID
+	clearedcurrency             bool
+	done                        bool
+	oldValue                    func(context.Context) (*ProviderOrderToken, error)
+	predicates                  []predicate.ProviderOrderToken
 }
 
 var _ ent.Mutation = (*ProviderOrderTokenMutation)(nil)
@@ -10430,42 +10675,6 @@ func (m *ProviderOrderTokenMutation) OldUpdatedAt(ctx context.Context) (v time.T
 // ResetUpdatedAt resets all changes to the "updated_at" field.
 func (m *ProviderOrderTokenMutation) ResetUpdatedAt() {
 	m.updated_at = nil
-}
-
-// SetSymbol sets the "symbol" field.
-func (m *ProviderOrderTokenMutation) SetSymbol(s string) {
-	m.symbol = &s
-}
-
-// Symbol returns the value of the "symbol" field in the mutation.
-func (m *ProviderOrderTokenMutation) Symbol() (r string, exists bool) {
-	v := m.symbol
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldSymbol returns the old "symbol" field's value of the ProviderOrderToken entity.
-// If the ProviderOrderToken object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProviderOrderTokenMutation) OldSymbol(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldSymbol is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldSymbol requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldSymbol: %w", err)
-	}
-	return oldValue.Symbol, nil
-}
-
-// ResetSymbol resets all changes to the "symbol" field.
-func (m *ProviderOrderTokenMutation) ResetSymbol() {
-	m.symbol = nil
 }
 
 // SetFixedConversionRate sets the "fixed_conversion_rate" field.
@@ -10798,70 +11007,102 @@ func (m *ProviderOrderTokenMutation) ResetRateSlippage() {
 	delete(m.clearedFields, providerordertoken.FieldRateSlippage)
 }
 
-// SetAddresses sets the "addresses" field.
-func (m *ProviderOrderTokenMutation) SetAddresses(s []struct {
-	Address string "json:\"address\""
-	Network string "json:\"network\""
-}) {
-	m.addresses = &s
-	m.appendaddresses = nil
+// SetAddress sets the "address" field.
+func (m *ProviderOrderTokenMutation) SetAddress(s string) {
+	m.address = &s
 }
 
-// Addresses returns the value of the "addresses" field in the mutation.
-func (m *ProviderOrderTokenMutation) Addresses() (r []struct {
-	Address string "json:\"address\""
-	Network string "json:\"network\""
-}, exists bool) {
-	v := m.addresses
+// Address returns the value of the "address" field in the mutation.
+func (m *ProviderOrderTokenMutation) Address() (r string, exists bool) {
+	v := m.address
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldAddresses returns the old "addresses" field's value of the ProviderOrderToken entity.
+// OldAddress returns the old "address" field's value of the ProviderOrderToken entity.
 // If the ProviderOrderToken object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProviderOrderTokenMutation) OldAddresses(ctx context.Context) (v []struct {
-	Address string "json:\"address\""
-	Network string "json:\"network\""
-}, err error) {
+func (m *ProviderOrderTokenMutation) OldAddress(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldAddresses is only allowed on UpdateOne operations")
+		return v, errors.New("OldAddress is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldAddresses requires an ID field in the mutation")
+		return v, errors.New("OldAddress requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldAddresses: %w", err)
+		return v, fmt.Errorf("querying old value for OldAddress: %w", err)
 	}
-	return oldValue.Addresses, nil
+	return oldValue.Address, nil
 }
 
-// AppendAddresses adds s to the "addresses" field.
-func (m *ProviderOrderTokenMutation) AppendAddresses(s []struct {
-	Address string "json:\"address\""
-	Network string "json:\"network\""
-}) {
-	m.appendaddresses = append(m.appendaddresses, s...)
+// ClearAddress clears the value of the "address" field.
+func (m *ProviderOrderTokenMutation) ClearAddress() {
+	m.address = nil
+	m.clearedFields[providerordertoken.FieldAddress] = struct{}{}
 }
 
-// AppendedAddresses returns the list of values that were appended to the "addresses" field in this mutation.
-func (m *ProviderOrderTokenMutation) AppendedAddresses() ([]struct {
-	Address string "json:\"address\""
-	Network string "json:\"network\""
-}, bool) {
-	if len(m.appendaddresses) == 0 {
-		return nil, false
+// AddressCleared returns if the "address" field was cleared in this mutation.
+func (m *ProviderOrderTokenMutation) AddressCleared() bool {
+	_, ok := m.clearedFields[providerordertoken.FieldAddress]
+	return ok
+}
+
+// ResetAddress resets all changes to the "address" field.
+func (m *ProviderOrderTokenMutation) ResetAddress() {
+	m.address = nil
+	delete(m.clearedFields, providerordertoken.FieldAddress)
+}
+
+// SetNetwork sets the "network" field.
+func (m *ProviderOrderTokenMutation) SetNetwork(s string) {
+	m.network = &s
+}
+
+// Network returns the value of the "network" field in the mutation.
+func (m *ProviderOrderTokenMutation) Network() (r string, exists bool) {
+	v := m.network
+	if v == nil {
+		return
 	}
-	return m.appendaddresses, true
+	return *v, true
 }
 
-// ResetAddresses resets all changes to the "addresses" field.
-func (m *ProviderOrderTokenMutation) ResetAddresses() {
-	m.addresses = nil
-	m.appendaddresses = nil
+// OldNetwork returns the old "network" field's value of the ProviderOrderToken entity.
+// If the ProviderOrderToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderOrderTokenMutation) OldNetwork(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNetwork is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNetwork requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNetwork: %w", err)
+	}
+	return oldValue.Network, nil
+}
+
+// ClearNetwork clears the value of the "network" field.
+func (m *ProviderOrderTokenMutation) ClearNetwork() {
+	m.network = nil
+	m.clearedFields[providerordertoken.FieldNetwork] = struct{}{}
+}
+
+// NetworkCleared returns if the "network" field was cleared in this mutation.
+func (m *ProviderOrderTokenMutation) NetworkCleared() bool {
+	_, ok := m.clearedFields[providerordertoken.FieldNetwork]
+	return ok
+}
+
+// ResetNetwork resets all changes to the "network" field.
+func (m *ProviderOrderTokenMutation) ResetNetwork() {
+	m.network = nil
+	delete(m.clearedFields, providerordertoken.FieldNetwork)
 }
 
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by id.
@@ -10901,6 +11142,84 @@ func (m *ProviderOrderTokenMutation) ProviderIDs() (ids []string) {
 func (m *ProviderOrderTokenMutation) ResetProvider() {
 	m.provider = nil
 	m.clearedprovider = false
+}
+
+// SetTokenID sets the "token" edge to the Token entity by id.
+func (m *ProviderOrderTokenMutation) SetTokenID(id int) {
+	m.token = &id
+}
+
+// ClearToken clears the "token" edge to the Token entity.
+func (m *ProviderOrderTokenMutation) ClearToken() {
+	m.clearedtoken = true
+}
+
+// TokenCleared reports if the "token" edge to the Token entity was cleared.
+func (m *ProviderOrderTokenMutation) TokenCleared() bool {
+	return m.clearedtoken
+}
+
+// TokenID returns the "token" edge ID in the mutation.
+func (m *ProviderOrderTokenMutation) TokenID() (id int, exists bool) {
+	if m.token != nil {
+		return *m.token, true
+	}
+	return
+}
+
+// TokenIDs returns the "token" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// TokenID instead. It exists only for internal usage by the builders.
+func (m *ProviderOrderTokenMutation) TokenIDs() (ids []int) {
+	if id := m.token; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetToken resets all changes to the "token" edge.
+func (m *ProviderOrderTokenMutation) ResetToken() {
+	m.token = nil
+	m.clearedtoken = false
+}
+
+// SetCurrencyID sets the "currency" edge to the FiatCurrency entity by id.
+func (m *ProviderOrderTokenMutation) SetCurrencyID(id uuid.UUID) {
+	m.currency = &id
+}
+
+// ClearCurrency clears the "currency" edge to the FiatCurrency entity.
+func (m *ProviderOrderTokenMutation) ClearCurrency() {
+	m.clearedcurrency = true
+}
+
+// CurrencyCleared reports if the "currency" edge to the FiatCurrency entity was cleared.
+func (m *ProviderOrderTokenMutation) CurrencyCleared() bool {
+	return m.clearedcurrency
+}
+
+// CurrencyID returns the "currency" edge ID in the mutation.
+func (m *ProviderOrderTokenMutation) CurrencyID() (id uuid.UUID, exists bool) {
+	if m.currency != nil {
+		return *m.currency, true
+	}
+	return
+}
+
+// CurrencyIDs returns the "currency" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// CurrencyID instead. It exists only for internal usage by the builders.
+func (m *ProviderOrderTokenMutation) CurrencyIDs() (ids []uuid.UUID) {
+	if id := m.currency; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetCurrency resets all changes to the "currency" edge.
+func (m *ProviderOrderTokenMutation) ResetCurrency() {
+	m.currency = nil
+	m.clearedcurrency = false
 }
 
 // Where appends a list predicates to the ProviderOrderTokenMutation builder.
@@ -10944,9 +11263,6 @@ func (m *ProviderOrderTokenMutation) Fields() []string {
 	if m.updated_at != nil {
 		fields = append(fields, providerordertoken.FieldUpdatedAt)
 	}
-	if m.symbol != nil {
-		fields = append(fields, providerordertoken.FieldSymbol)
-	}
 	if m.fixed_conversion_rate != nil {
 		fields = append(fields, providerordertoken.FieldFixedConversionRate)
 	}
@@ -10965,8 +11281,11 @@ func (m *ProviderOrderTokenMutation) Fields() []string {
 	if m.rate_slippage != nil {
 		fields = append(fields, providerordertoken.FieldRateSlippage)
 	}
-	if m.addresses != nil {
-		fields = append(fields, providerordertoken.FieldAddresses)
+	if m.address != nil {
+		fields = append(fields, providerordertoken.FieldAddress)
+	}
+	if m.network != nil {
+		fields = append(fields, providerordertoken.FieldNetwork)
 	}
 	return fields
 }
@@ -10980,8 +11299,6 @@ func (m *ProviderOrderTokenMutation) Field(name string) (ent.Value, bool) {
 		return m.CreatedAt()
 	case providerordertoken.FieldUpdatedAt:
 		return m.UpdatedAt()
-	case providerordertoken.FieldSymbol:
-		return m.Symbol()
 	case providerordertoken.FieldFixedConversionRate:
 		return m.FixedConversionRate()
 	case providerordertoken.FieldFloatingConversionRate:
@@ -10992,10 +11309,12 @@ func (m *ProviderOrderTokenMutation) Field(name string) (ent.Value, bool) {
 		return m.MaxOrderAmount()
 	case providerordertoken.FieldMinOrderAmount:
 		return m.MinOrderAmount()
-	case providerordertoken.FieldRateSlippage:
+		case providerordertoken.FieldRateSlippage:
 		return m.RateSlippage()
-	case providerordertoken.FieldAddresses:
-		return m.Addresses()
+	case providerordertoken.FieldAddress:
+		return m.Address()
+	case providerordertoken.FieldNetwork:
+		return m.Network()
 	}
 	return nil, false
 }
@@ -11009,8 +11328,6 @@ func (m *ProviderOrderTokenMutation) OldField(ctx context.Context, name string) 
 		return m.OldCreatedAt(ctx)
 	case providerordertoken.FieldUpdatedAt:
 		return m.OldUpdatedAt(ctx)
-	case providerordertoken.FieldSymbol:
-		return m.OldSymbol(ctx)
 	case providerordertoken.FieldFixedConversionRate:
 		return m.OldFixedConversionRate(ctx)
 	case providerordertoken.FieldFloatingConversionRate:
@@ -11023,8 +11340,10 @@ func (m *ProviderOrderTokenMutation) OldField(ctx context.Context, name string) 
 		return m.OldMinOrderAmount(ctx)
 	case providerordertoken.FieldRateSlippage:
 		return m.OldRateSlippage(ctx)
-	case providerordertoken.FieldAddresses:
-		return m.OldAddresses(ctx)
+	case providerordertoken.FieldAddress:
+		return m.OldAddress(ctx)
+	case providerordertoken.FieldNetwork:
+		return m.OldNetwork(ctx)
 	}
 	return nil, fmt.Errorf("unknown ProviderOrderToken field %s", name)
 }
@@ -11047,13 +11366,6 @@ func (m *ProviderOrderTokenMutation) SetField(name string, value ent.Value) erro
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetUpdatedAt(v)
-		return nil
-	case providerordertoken.FieldSymbol:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetSymbol(v)
 		return nil
 	case providerordertoken.FieldFixedConversionRate:
 		v, ok := value.(decimal.Decimal)
@@ -11097,15 +11409,19 @@ func (m *ProviderOrderTokenMutation) SetField(name string, value ent.Value) erro
 		}
 		m.SetRateSlippage(v)
 		return nil
-	case providerordertoken.FieldAddresses:
-		v, ok := value.([]struct {
-			Address string "json:\"address\""
-			Network string "json:\"network\""
-		})
+	case providerordertoken.FieldAddress:
+		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetAddresses(v)
+		m.SetAddress(v)
+		return nil
+	case providerordertoken.FieldNetwork:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNetwork(v)
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderOrderToken field %s", name)
@@ -11202,6 +11518,11 @@ func (m *ProviderOrderTokenMutation) ClearedFields() []string {
 	var fields []string
 	if m.FieldCleared(providerordertoken.FieldRateSlippage) {
 		fields = append(fields, providerordertoken.FieldRateSlippage)
+	if m.FieldCleared(providerordertoken.FieldAddress) {
+		fields = append(fields, providerordertoken.FieldAddress)
+	}
+	if m.FieldCleared(providerordertoken.FieldNetwork) {
+		fields = append(fields, providerordertoken.FieldNetwork)
 	}
 	return fields
 }
@@ -11219,6 +11540,11 @@ func (m *ProviderOrderTokenMutation) ClearField(name string) error {
 	switch name {
 	case providerordertoken.FieldRateSlippage:
 		m.ClearRateSlippage()
+	case providerordertoken.FieldAddress:
+		m.ClearAddress()
+		return nil
+	case providerordertoken.FieldNetwork:
+		m.ClearNetwork()
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderOrderToken nullable field %s", name)
@@ -11233,9 +11559,6 @@ func (m *ProviderOrderTokenMutation) ResetField(name string) error {
 		return nil
 	case providerordertoken.FieldUpdatedAt:
 		m.ResetUpdatedAt()
-		return nil
-	case providerordertoken.FieldSymbol:
-		m.ResetSymbol()
 		return nil
 	case providerordertoken.FieldFixedConversionRate:
 		m.ResetFixedConversionRate()
@@ -11255,8 +11578,11 @@ func (m *ProviderOrderTokenMutation) ResetField(name string) error {
 	case providerordertoken.FieldRateSlippage:
 		m.ResetRateSlippage()
 		return nil
-	case providerordertoken.FieldAddresses:
-		m.ResetAddresses()
+	case providerordertoken.FieldAddress:
+		m.ResetAddress()
+		return nil
+	case providerordertoken.FieldNetwork:
+		m.ResetNetwork()
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderOrderToken field %s", name)
@@ -11264,9 +11590,15 @@ func (m *ProviderOrderTokenMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ProviderOrderTokenMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 3)
 	if m.provider != nil {
 		edges = append(edges, providerordertoken.EdgeProvider)
+	}
+	if m.token != nil {
+		edges = append(edges, providerordertoken.EdgeToken)
+	}
+	if m.currency != nil {
+		edges = append(edges, providerordertoken.EdgeCurrency)
 	}
 	return edges
 }
@@ -11279,13 +11611,21 @@ func (m *ProviderOrderTokenMutation) AddedIDs(name string) []ent.Value {
 		if id := m.provider; id != nil {
 			return []ent.Value{*id}
 		}
+	case providerordertoken.EdgeToken:
+		if id := m.token; id != nil {
+			return []ent.Value{*id}
+		}
+	case providerordertoken.EdgeCurrency:
+		if id := m.currency; id != nil {
+			return []ent.Value{*id}
+		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProviderOrderTokenMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 3)
 	return edges
 }
 
@@ -11297,9 +11637,15 @@ func (m *ProviderOrderTokenMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ProviderOrderTokenMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 3)
 	if m.clearedprovider {
 		edges = append(edges, providerordertoken.EdgeProvider)
+	}
+	if m.clearedtoken {
+		edges = append(edges, providerordertoken.EdgeToken)
+	}
+	if m.clearedcurrency {
+		edges = append(edges, providerordertoken.EdgeCurrency)
 	}
 	return edges
 }
@@ -11310,6 +11656,10 @@ func (m *ProviderOrderTokenMutation) EdgeCleared(name string) bool {
 	switch name {
 	case providerordertoken.EdgeProvider:
 		return m.clearedprovider
+	case providerordertoken.EdgeToken:
+		return m.clearedtoken
+	case providerordertoken.EdgeCurrency:
+		return m.clearedcurrency
 	}
 	return false
 }
@@ -11321,6 +11671,12 @@ func (m *ProviderOrderTokenMutation) ClearEdge(name string) error {
 	case providerordertoken.EdgeProvider:
 		m.ClearProvider()
 		return nil
+	case providerordertoken.EdgeToken:
+		m.ClearToken()
+		return nil
+	case providerordertoken.EdgeCurrency:
+		m.ClearCurrency()
+		return nil
 	}
 	return fmt.Errorf("unknown ProviderOrderToken unique edge %s", name)
 }
@@ -11331,6 +11687,12 @@ func (m *ProviderOrderTokenMutation) ResetEdge(name string) error {
 	switch name {
 	case providerordertoken.EdgeProvider:
 		m.ResetProvider()
+		return nil
+	case providerordertoken.EdgeToken:
+		m.ResetToken()
+		return nil
+	case providerordertoken.EdgeCurrency:
+		m.ResetCurrency()
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderOrderToken edge %s", name)
@@ -11362,8 +11724,9 @@ type ProviderProfileMutation struct {
 	cleareduser              bool
 	api_key                  *uuid.UUID
 	clearedapi_key           bool
-	currency                 *uuid.UUID
-	clearedcurrency          bool
+	currencies               map[uuid.UUID]struct{}
+	removedcurrencies        map[uuid.UUID]struct{}
+	clearedcurrencies        bool
 	provision_buckets        map[int]struct{}
 	removedprovision_buckets map[int]struct{}
 	clearedprovision_buckets bool
@@ -12219,43 +12582,58 @@ func (m *ProviderProfileMutation) ResetAPIKey() {
 	m.clearedapi_key = false
 }
 
-// SetCurrencyID sets the "currency" edge to the FiatCurrency entity by id.
-func (m *ProviderProfileMutation) SetCurrencyID(id uuid.UUID) {
-	m.currency = &id
+// AddCurrencyIDs adds the "currencies" edge to the FiatCurrency entity by ids.
+func (m *ProviderProfileMutation) AddCurrencyIDs(ids ...uuid.UUID) {
+	if m.currencies == nil {
+		m.currencies = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.currencies[ids[i]] = struct{}{}
+	}
 }
 
-// ClearCurrency clears the "currency" edge to the FiatCurrency entity.
-func (m *ProviderProfileMutation) ClearCurrency() {
-	m.clearedcurrency = true
+// ClearCurrencies clears the "currencies" edge to the FiatCurrency entity.
+func (m *ProviderProfileMutation) ClearCurrencies() {
+	m.clearedcurrencies = true
 }
 
-// CurrencyCleared reports if the "currency" edge to the FiatCurrency entity was cleared.
-func (m *ProviderProfileMutation) CurrencyCleared() bool {
-	return m.clearedcurrency
+// CurrenciesCleared reports if the "currencies" edge to the FiatCurrency entity was cleared.
+func (m *ProviderProfileMutation) CurrenciesCleared() bool {
+	return m.clearedcurrencies
 }
 
-// CurrencyID returns the "currency" edge ID in the mutation.
-func (m *ProviderProfileMutation) CurrencyID() (id uuid.UUID, exists bool) {
-	if m.currency != nil {
-		return *m.currency, true
+// RemoveCurrencyIDs removes the "currencies" edge to the FiatCurrency entity by IDs.
+func (m *ProviderProfileMutation) RemoveCurrencyIDs(ids ...uuid.UUID) {
+	if m.removedcurrencies == nil {
+		m.removedcurrencies = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.currencies, ids[i])
+		m.removedcurrencies[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedCurrencies returns the removed IDs of the "currencies" edge to the FiatCurrency entity.
+func (m *ProviderProfileMutation) RemovedCurrenciesIDs() (ids []uuid.UUID) {
+	for id := range m.removedcurrencies {
+		ids = append(ids, id)
 	}
 	return
 }
 
-// CurrencyIDs returns the "currency" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// CurrencyID instead. It exists only for internal usage by the builders.
-func (m *ProviderProfileMutation) CurrencyIDs() (ids []uuid.UUID) {
-	if id := m.currency; id != nil {
-		ids = append(ids, *id)
+// CurrenciesIDs returns the "currencies" edge IDs in the mutation.
+func (m *ProviderProfileMutation) CurrenciesIDs() (ids []uuid.UUID) {
+	for id := range m.currencies {
+		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetCurrency resets all changes to the "currency" edge.
-func (m *ProviderProfileMutation) ResetCurrency() {
-	m.currency = nil
-	m.clearedcurrency = false
+// ResetCurrencies resets all changes to the "currencies" edge.
+func (m *ProviderProfileMutation) ResetCurrencies() {
+	m.currencies = nil
+	m.clearedcurrencies = false
+	m.removedcurrencies = nil
 }
 
 // AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by ids.
@@ -12894,8 +13272,8 @@ func (m *ProviderProfileMutation) AddedEdges() []string {
 	if m.api_key != nil {
 		edges = append(edges, providerprofile.EdgeAPIKey)
 	}
-	if m.currency != nil {
-		edges = append(edges, providerprofile.EdgeCurrency)
+	if m.currencies != nil {
+		edges = append(edges, providerprofile.EdgeCurrencies)
 	}
 	if m.provision_buckets != nil {
 		edges = append(edges, providerprofile.EdgeProvisionBuckets)
@@ -12924,10 +13302,12 @@ func (m *ProviderProfileMutation) AddedIDs(name string) []ent.Value {
 		if id := m.api_key; id != nil {
 			return []ent.Value{*id}
 		}
-	case providerprofile.EdgeCurrency:
-		if id := m.currency; id != nil {
-			return []ent.Value{*id}
+	case providerprofile.EdgeCurrencies:
+		ids := make([]ent.Value, 0, len(m.currencies))
+		for id := range m.currencies {
+			ids = append(ids, id)
 		}
+		return ids
 	case providerprofile.EdgeProvisionBuckets:
 		ids := make([]ent.Value, 0, len(m.provision_buckets))
 		for id := range m.provision_buckets {
@@ -12957,6 +13337,9 @@ func (m *ProviderProfileMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProviderProfileMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 7)
+	if m.removedcurrencies != nil {
+		edges = append(edges, providerprofile.EdgeCurrencies)
+	}
 	if m.removedprovision_buckets != nil {
 		edges = append(edges, providerprofile.EdgeProvisionBuckets)
 	}
@@ -12973,6 +13356,12 @@ func (m *ProviderProfileMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *ProviderProfileMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
+	case providerprofile.EdgeCurrencies:
+		ids := make([]ent.Value, 0, len(m.removedcurrencies))
+		for id := range m.removedcurrencies {
+			ids = append(ids, id)
+		}
+		return ids
 	case providerprofile.EdgeProvisionBuckets:
 		ids := make([]ent.Value, 0, len(m.removedprovision_buckets))
 		for id := range m.removedprovision_buckets {
@@ -13004,8 +13393,8 @@ func (m *ProviderProfileMutation) ClearedEdges() []string {
 	if m.clearedapi_key {
 		edges = append(edges, providerprofile.EdgeAPIKey)
 	}
-	if m.clearedcurrency {
-		edges = append(edges, providerprofile.EdgeCurrency)
+	if m.clearedcurrencies {
+		edges = append(edges, providerprofile.EdgeCurrencies)
 	}
 	if m.clearedprovision_buckets {
 		edges = append(edges, providerprofile.EdgeProvisionBuckets)
@@ -13030,8 +13419,8 @@ func (m *ProviderProfileMutation) EdgeCleared(name string) bool {
 		return m.cleareduser
 	case providerprofile.EdgeAPIKey:
 		return m.clearedapi_key
-	case providerprofile.EdgeCurrency:
-		return m.clearedcurrency
+	case providerprofile.EdgeCurrencies:
+		return m.clearedcurrencies
 	case providerprofile.EdgeProvisionBuckets:
 		return m.clearedprovision_buckets
 	case providerprofile.EdgeOrderTokens:
@@ -13054,9 +13443,6 @@ func (m *ProviderProfileMutation) ClearEdge(name string) error {
 	case providerprofile.EdgeAPIKey:
 		m.ClearAPIKey()
 		return nil
-	case providerprofile.EdgeCurrency:
-		m.ClearCurrency()
-		return nil
 	case providerprofile.EdgeProviderRating:
 		m.ClearProviderRating()
 		return nil
@@ -13074,8 +13460,8 @@ func (m *ProviderProfileMutation) ResetEdge(name string) error {
 	case providerprofile.EdgeAPIKey:
 		m.ResetAPIKey()
 		return nil
-	case providerprofile.EdgeCurrency:
-		m.ResetCurrency()
+	case providerprofile.EdgeCurrencies:
+		m.ResetCurrencies()
 		return nil
 	case providerprofile.EdgeProvisionBuckets:
 		m.ResetProvisionBuckets()
@@ -17052,31 +17438,35 @@ func (m *SenderProfileMutation) ResetEdge(name string) error {
 // TokenMutation represents an operation that mutates the Token nodes in the graph.
 type TokenMutation struct {
 	config
-	op                         Op
-	typ                        string
-	id                         *int
-	created_at                 *time.Time
-	updated_at                 *time.Time
-	symbol                     *string
-	contract_address           *string
-	decimals                   *int8
-	adddecimals                *int8
-	is_enabled                 *bool
-	clearedFields              map[string]struct{}
-	network                    *int
-	clearednetwork             bool
-	payment_orders             map[uuid.UUID]struct{}
-	removedpayment_orders      map[uuid.UUID]struct{}
-	clearedpayment_orders      bool
-	lock_payment_orders        map[uuid.UUID]struct{}
-	removedlock_payment_orders map[uuid.UUID]struct{}
-	clearedlock_payment_orders bool
-	sender_settings            map[int]struct{}
-	removedsender_settings     map[int]struct{}
-	clearedsender_settings     bool
-	done                       bool
-	oldValue                   func(context.Context) (*Token, error)
-	predicates                 []predicate.Token
+	op                           Op
+	typ                          string
+	id                           *int
+	created_at                   *time.Time
+	updated_at                   *time.Time
+	symbol                       *string
+	contract_address             *string
+	decimals                     *int8
+	adddecimals                  *int8
+	is_enabled                   *bool
+	base_currency                *string
+	clearedFields                map[string]struct{}
+	network                      *int
+	clearednetwork               bool
+	payment_orders               map[uuid.UUID]struct{}
+	removedpayment_orders        map[uuid.UUID]struct{}
+	clearedpayment_orders        bool
+	lock_payment_orders          map[uuid.UUID]struct{}
+	removedlock_payment_orders   map[uuid.UUID]struct{}
+	clearedlock_payment_orders   bool
+	sender_order_tokens          map[int]struct{}
+	removedsender_order_tokens   map[int]struct{}
+	clearedsender_order_tokens   bool
+	provider_order_tokens        map[int]struct{}
+	removedprovider_order_tokens map[int]struct{}
+	clearedprovider_order_tokens bool
+	done                         bool
+	oldValue                     func(context.Context) (*Token, error)
+	predicates                   []predicate.Token
 }
 
 var _ ent.Mutation = (*TokenMutation)(nil)
@@ -17413,6 +17803,42 @@ func (m *TokenMutation) ResetIsEnabled() {
 	m.is_enabled = nil
 }
 
+// SetBaseCurrency sets the "base_currency" field.
+func (m *TokenMutation) SetBaseCurrency(s string) {
+	m.base_currency = &s
+}
+
+// BaseCurrency returns the value of the "base_currency" field in the mutation.
+func (m *TokenMutation) BaseCurrency() (r string, exists bool) {
+	v := m.base_currency
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBaseCurrency returns the old "base_currency" field's value of the Token entity.
+// If the Token object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TokenMutation) OldBaseCurrency(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBaseCurrency is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBaseCurrency requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBaseCurrency: %w", err)
+	}
+	return oldValue.BaseCurrency, nil
+}
+
+// ResetBaseCurrency resets all changes to the "base_currency" field.
+func (m *TokenMutation) ResetBaseCurrency() {
+	m.base_currency = nil
+}
+
 // SetNetworkID sets the "network" edge to the Network entity by id.
 func (m *TokenMutation) SetNetworkID(id int) {
 	m.network = &id
@@ -17560,58 +17986,112 @@ func (m *TokenMutation) ResetLockPaymentOrders() {
 	m.removedlock_payment_orders = nil
 }
 
-// AddSenderSettingIDs adds the "sender_settings" edge to the SenderOrderToken entity by ids.
-func (m *TokenMutation) AddSenderSettingIDs(ids ...int) {
-	if m.sender_settings == nil {
-		m.sender_settings = make(map[int]struct{})
+// AddSenderOrderTokenIDs adds the "sender_order_tokens" edge to the SenderOrderToken entity by ids.
+func (m *TokenMutation) AddSenderOrderTokenIDs(ids ...int) {
+	if m.sender_order_tokens == nil {
+		m.sender_order_tokens = make(map[int]struct{})
 	}
 	for i := range ids {
-		m.sender_settings[ids[i]] = struct{}{}
+		m.sender_order_tokens[ids[i]] = struct{}{}
 	}
 }
 
-// ClearSenderSettings clears the "sender_settings" edge to the SenderOrderToken entity.
-func (m *TokenMutation) ClearSenderSettings() {
-	m.clearedsender_settings = true
+// ClearSenderOrderTokens clears the "sender_order_tokens" edge to the SenderOrderToken entity.
+func (m *TokenMutation) ClearSenderOrderTokens() {
+	m.clearedsender_order_tokens = true
 }
 
-// SenderSettingsCleared reports if the "sender_settings" edge to the SenderOrderToken entity was cleared.
-func (m *TokenMutation) SenderSettingsCleared() bool {
-	return m.clearedsender_settings
+// SenderOrderTokensCleared reports if the "sender_order_tokens" edge to the SenderOrderToken entity was cleared.
+func (m *TokenMutation) SenderOrderTokensCleared() bool {
+	return m.clearedsender_order_tokens
 }
 
-// RemoveSenderSettingIDs removes the "sender_settings" edge to the SenderOrderToken entity by IDs.
-func (m *TokenMutation) RemoveSenderSettingIDs(ids ...int) {
-	if m.removedsender_settings == nil {
-		m.removedsender_settings = make(map[int]struct{})
+// RemoveSenderOrderTokenIDs removes the "sender_order_tokens" edge to the SenderOrderToken entity by IDs.
+func (m *TokenMutation) RemoveSenderOrderTokenIDs(ids ...int) {
+	if m.removedsender_order_tokens == nil {
+		m.removedsender_order_tokens = make(map[int]struct{})
 	}
 	for i := range ids {
-		delete(m.sender_settings, ids[i])
-		m.removedsender_settings[ids[i]] = struct{}{}
+		delete(m.sender_order_tokens, ids[i])
+		m.removedsender_order_tokens[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedSenderSettings returns the removed IDs of the "sender_settings" edge to the SenderOrderToken entity.
-func (m *TokenMutation) RemovedSenderSettingsIDs() (ids []int) {
-	for id := range m.removedsender_settings {
+// RemovedSenderOrderTokens returns the removed IDs of the "sender_order_tokens" edge to the SenderOrderToken entity.
+func (m *TokenMutation) RemovedSenderOrderTokensIDs() (ids []int) {
+	for id := range m.removedsender_order_tokens {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// SenderSettingsIDs returns the "sender_settings" edge IDs in the mutation.
-func (m *TokenMutation) SenderSettingsIDs() (ids []int) {
-	for id := range m.sender_settings {
+// SenderOrderTokensIDs returns the "sender_order_tokens" edge IDs in the mutation.
+func (m *TokenMutation) SenderOrderTokensIDs() (ids []int) {
+	for id := range m.sender_order_tokens {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetSenderSettings resets all changes to the "sender_settings" edge.
-func (m *TokenMutation) ResetSenderSettings() {
-	m.sender_settings = nil
-	m.clearedsender_settings = false
-	m.removedsender_settings = nil
+// ResetSenderOrderTokens resets all changes to the "sender_order_tokens" edge.
+func (m *TokenMutation) ResetSenderOrderTokens() {
+	m.sender_order_tokens = nil
+	m.clearedsender_order_tokens = false
+	m.removedsender_order_tokens = nil
+}
+
+// AddProviderOrderTokenIDs adds the "provider_order_tokens" edge to the ProviderOrderToken entity by ids.
+func (m *TokenMutation) AddProviderOrderTokenIDs(ids ...int) {
+	if m.provider_order_tokens == nil {
+		m.provider_order_tokens = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.provider_order_tokens[ids[i]] = struct{}{}
+	}
+}
+
+// ClearProviderOrderTokens clears the "provider_order_tokens" edge to the ProviderOrderToken entity.
+func (m *TokenMutation) ClearProviderOrderTokens() {
+	m.clearedprovider_order_tokens = true
+}
+
+// ProviderOrderTokensCleared reports if the "provider_order_tokens" edge to the ProviderOrderToken entity was cleared.
+func (m *TokenMutation) ProviderOrderTokensCleared() bool {
+	return m.clearedprovider_order_tokens
+}
+
+// RemoveProviderOrderTokenIDs removes the "provider_order_tokens" edge to the ProviderOrderToken entity by IDs.
+func (m *TokenMutation) RemoveProviderOrderTokenIDs(ids ...int) {
+	if m.removedprovider_order_tokens == nil {
+		m.removedprovider_order_tokens = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.provider_order_tokens, ids[i])
+		m.removedprovider_order_tokens[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedProviderOrderTokens returns the removed IDs of the "provider_order_tokens" edge to the ProviderOrderToken entity.
+func (m *TokenMutation) RemovedProviderOrderTokensIDs() (ids []int) {
+	for id := range m.removedprovider_order_tokens {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ProviderOrderTokensIDs returns the "provider_order_tokens" edge IDs in the mutation.
+func (m *TokenMutation) ProviderOrderTokensIDs() (ids []int) {
+	for id := range m.provider_order_tokens {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetProviderOrderTokens resets all changes to the "provider_order_tokens" edge.
+func (m *TokenMutation) ResetProviderOrderTokens() {
+	m.provider_order_tokens = nil
+	m.clearedprovider_order_tokens = false
+	m.removedprovider_order_tokens = nil
 }
 
 // Where appends a list predicates to the TokenMutation builder.
@@ -17648,7 +18128,7 @@ func (m *TokenMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TokenMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 7)
 	if m.created_at != nil {
 		fields = append(fields, token.FieldCreatedAt)
 	}
@@ -17666,6 +18146,9 @@ func (m *TokenMutation) Fields() []string {
 	}
 	if m.is_enabled != nil {
 		fields = append(fields, token.FieldIsEnabled)
+	}
+	if m.base_currency != nil {
+		fields = append(fields, token.FieldBaseCurrency)
 	}
 	return fields
 }
@@ -17687,6 +18170,8 @@ func (m *TokenMutation) Field(name string) (ent.Value, bool) {
 		return m.Decimals()
 	case token.FieldIsEnabled:
 		return m.IsEnabled()
+	case token.FieldBaseCurrency:
+		return m.BaseCurrency()
 	}
 	return nil, false
 }
@@ -17708,6 +18193,8 @@ func (m *TokenMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldDecimals(ctx)
 	case token.FieldIsEnabled:
 		return m.OldIsEnabled(ctx)
+	case token.FieldBaseCurrency:
+		return m.OldBaseCurrency(ctx)
 	}
 	return nil, fmt.Errorf("unknown Token field %s", name)
 }
@@ -17758,6 +18245,13 @@ func (m *TokenMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetIsEnabled(v)
+		return nil
+	case token.FieldBaseCurrency:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBaseCurrency(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Token field %s", name)
@@ -17841,13 +18335,16 @@ func (m *TokenMutation) ResetField(name string) error {
 	case token.FieldIsEnabled:
 		m.ResetIsEnabled()
 		return nil
+	case token.FieldBaseCurrency:
+		m.ResetBaseCurrency()
+		return nil
 	}
 	return fmt.Errorf("unknown Token field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *TokenMutation) AddedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.network != nil {
 		edges = append(edges, token.EdgeNetwork)
 	}
@@ -17857,8 +18354,11 @@ func (m *TokenMutation) AddedEdges() []string {
 	if m.lock_payment_orders != nil {
 		edges = append(edges, token.EdgeLockPaymentOrders)
 	}
-	if m.sender_settings != nil {
-		edges = append(edges, token.EdgeSenderSettings)
+	if m.sender_order_tokens != nil {
+		edges = append(edges, token.EdgeSenderOrderTokens)
+	}
+	if m.provider_order_tokens != nil {
+		edges = append(edges, token.EdgeProviderOrderTokens)
 	}
 	return edges
 }
@@ -17883,9 +18383,15 @@ func (m *TokenMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case token.EdgeSenderSettings:
-		ids := make([]ent.Value, 0, len(m.sender_settings))
-		for id := range m.sender_settings {
+	case token.EdgeSenderOrderTokens:
+		ids := make([]ent.Value, 0, len(m.sender_order_tokens))
+		for id := range m.sender_order_tokens {
+			ids = append(ids, id)
+		}
+		return ids
+	case token.EdgeProviderOrderTokens:
+		ids := make([]ent.Value, 0, len(m.provider_order_tokens))
+		for id := range m.provider_order_tokens {
 			ids = append(ids, id)
 		}
 		return ids
@@ -17895,15 +18401,18 @@ func (m *TokenMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *TokenMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.removedpayment_orders != nil {
 		edges = append(edges, token.EdgePaymentOrders)
 	}
 	if m.removedlock_payment_orders != nil {
 		edges = append(edges, token.EdgeLockPaymentOrders)
 	}
-	if m.removedsender_settings != nil {
-		edges = append(edges, token.EdgeSenderSettings)
+	if m.removedsender_order_tokens != nil {
+		edges = append(edges, token.EdgeSenderOrderTokens)
+	}
+	if m.removedprovider_order_tokens != nil {
+		edges = append(edges, token.EdgeProviderOrderTokens)
 	}
 	return edges
 }
@@ -17924,9 +18433,15 @@ func (m *TokenMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case token.EdgeSenderSettings:
-		ids := make([]ent.Value, 0, len(m.removedsender_settings))
-		for id := range m.removedsender_settings {
+	case token.EdgeSenderOrderTokens:
+		ids := make([]ent.Value, 0, len(m.removedsender_order_tokens))
+		for id := range m.removedsender_order_tokens {
+			ids = append(ids, id)
+		}
+		return ids
+	case token.EdgeProviderOrderTokens:
+		ids := make([]ent.Value, 0, len(m.removedprovider_order_tokens))
+		for id := range m.removedprovider_order_tokens {
 			ids = append(ids, id)
 		}
 		return ids
@@ -17936,7 +18451,7 @@ func (m *TokenMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *TokenMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.clearednetwork {
 		edges = append(edges, token.EdgeNetwork)
 	}
@@ -17946,8 +18461,11 @@ func (m *TokenMutation) ClearedEdges() []string {
 	if m.clearedlock_payment_orders {
 		edges = append(edges, token.EdgeLockPaymentOrders)
 	}
-	if m.clearedsender_settings {
-		edges = append(edges, token.EdgeSenderSettings)
+	if m.clearedsender_order_tokens {
+		edges = append(edges, token.EdgeSenderOrderTokens)
+	}
+	if m.clearedprovider_order_tokens {
+		edges = append(edges, token.EdgeProviderOrderTokens)
 	}
 	return edges
 }
@@ -17962,8 +18480,10 @@ func (m *TokenMutation) EdgeCleared(name string) bool {
 		return m.clearedpayment_orders
 	case token.EdgeLockPaymentOrders:
 		return m.clearedlock_payment_orders
-	case token.EdgeSenderSettings:
-		return m.clearedsender_settings
+	case token.EdgeSenderOrderTokens:
+		return m.clearedsender_order_tokens
+	case token.EdgeProviderOrderTokens:
+		return m.clearedprovider_order_tokens
 	}
 	return false
 }
@@ -17992,8 +18512,11 @@ func (m *TokenMutation) ResetEdge(name string) error {
 	case token.EdgeLockPaymentOrders:
 		m.ResetLockPaymentOrders()
 		return nil
-	case token.EdgeSenderSettings:
-		m.ResetSenderSettings()
+	case token.EdgeSenderOrderTokens:
+		m.ResetSenderOrderTokens()
+		return nil
+	case token.EdgeProviderOrderTokens:
+		m.ResetProviderOrderTokens()
 		return nil
 	}
 	return fmt.Errorf("unknown Token edge %s", name)

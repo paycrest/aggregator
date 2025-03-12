@@ -11,8 +11,11 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/token"
 	"github.com/shopspring/decimal"
 )
 
@@ -49,12 +52,6 @@ func (potc *ProviderOrderTokenCreate) SetNillableUpdatedAt(t *time.Time) *Provid
 	if t != nil {
 		potc.SetUpdatedAt(*t)
 	}
-	return potc
-}
-
-// SetSymbol sets the "symbol" field.
-func (potc *ProviderOrderTokenCreate) SetSymbol(s string) *ProviderOrderTokenCreate {
-	potc.mutation.SetSymbol(s)
 	return potc
 }
 
@@ -98,16 +95,31 @@ func (potc *ProviderOrderTokenCreate) SetRateSlippage(d decimal.Decimal) *Provid
 func (potc *ProviderOrderTokenCreate) SetNillableRateSlippage(d *decimal.Decimal) *ProviderOrderTokenCreate {
 	if d != nil {
 		potc.SetRateSlippage(*d)
+// SetAddress sets the "address" field.
+func (potc *ProviderOrderTokenCreate) SetAddress(s string) *ProviderOrderTokenCreate {
+	potc.mutation.SetAddress(s)
+	return potc
+}
+
+// SetNillableAddress sets the "address" field if the given value is not nil.
+func (potc *ProviderOrderTokenCreate) SetNillableAddress(s *string) *ProviderOrderTokenCreate {
+	if s != nil {
+		potc.SetAddress(*s)
 	}
 	return potc
 }
 
-// SetAddresses sets the "addresses" field.
-func (potc *ProviderOrderTokenCreate) SetAddresses(s []struct {
-	Address string "json:\"address\""
-	Network string "json:\"network\""
-}) *ProviderOrderTokenCreate {
-	potc.mutation.SetAddresses(s)
+// SetNetwork sets the "network" field.
+func (potc *ProviderOrderTokenCreate) SetNetwork(s string) *ProviderOrderTokenCreate {
+	potc.mutation.SetNetwork(s)
+	return potc
+}
+
+// SetNillableNetwork sets the "network" field if the given value is not nil.
+func (potc *ProviderOrderTokenCreate) SetNillableNetwork(s *string) *ProviderOrderTokenCreate {
+	if s != nil {
+		potc.SetNetwork(*s)
+	}
 	return potc
 }
 
@@ -117,17 +129,31 @@ func (potc *ProviderOrderTokenCreate) SetProviderID(id string) *ProviderOrderTok
 	return potc
 }
 
-// SetNillableProviderID sets the "provider" edge to the ProviderProfile entity by ID if the given value is not nil.
-func (potc *ProviderOrderTokenCreate) SetNillableProviderID(id *string) *ProviderOrderTokenCreate {
-	if id != nil {
-		potc = potc.SetProviderID(*id)
-	}
-	return potc
-}
-
 // SetProvider sets the "provider" edge to the ProviderProfile entity.
 func (potc *ProviderOrderTokenCreate) SetProvider(p *ProviderProfile) *ProviderOrderTokenCreate {
 	return potc.SetProviderID(p.ID)
+}
+
+// SetTokenID sets the "token" edge to the Token entity by ID.
+func (potc *ProviderOrderTokenCreate) SetTokenID(id int) *ProviderOrderTokenCreate {
+	potc.mutation.SetTokenID(id)
+	return potc
+}
+
+// SetToken sets the "token" edge to the Token entity.
+func (potc *ProviderOrderTokenCreate) SetToken(t *Token) *ProviderOrderTokenCreate {
+	return potc.SetTokenID(t.ID)
+}
+
+// SetCurrencyID sets the "currency" edge to the FiatCurrency entity by ID.
+func (potc *ProviderOrderTokenCreate) SetCurrencyID(id uuid.UUID) *ProviderOrderTokenCreate {
+	potc.mutation.SetCurrencyID(id)
+	return potc
+}
+
+// SetCurrency sets the "currency" edge to the FiatCurrency entity.
+func (potc *ProviderOrderTokenCreate) SetCurrency(f *FiatCurrency) *ProviderOrderTokenCreate {
+	return potc.SetCurrencyID(f.ID)
 }
 
 // Mutation returns the ProviderOrderTokenMutation object of the builder.
@@ -183,9 +209,6 @@ func (potc *ProviderOrderTokenCreate) check() error {
 	if _, ok := potc.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ProviderOrderToken.updated_at"`)}
 	}
-	if _, ok := potc.mutation.Symbol(); !ok {
-		return &ValidationError{Name: "symbol", err: errors.New(`ent: missing required field "ProviderOrderToken.symbol"`)}
-	}
 	if _, ok := potc.mutation.FixedConversionRate(); !ok {
 		return &ValidationError{Name: "fixed_conversion_rate", err: errors.New(`ent: missing required field "ProviderOrderToken.fixed_conversion_rate"`)}
 	}
@@ -206,8 +229,14 @@ func (potc *ProviderOrderTokenCreate) check() error {
 	if _, ok := potc.mutation.MinOrderAmount(); !ok {
 		return &ValidationError{Name: "min_order_amount", err: errors.New(`ent: missing required field "ProviderOrderToken.min_order_amount"`)}
 	}
-	if _, ok := potc.mutation.Addresses(); !ok {
-		return &ValidationError{Name: "addresses", err: errors.New(`ent: missing required field "ProviderOrderToken.addresses"`)}
+	if len(potc.mutation.ProviderIDs()) == 0 {
+		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required edge "ProviderOrderToken.provider"`)}
+	}
+	if len(potc.mutation.TokenIDs()) == 0 {
+		return &ValidationError{Name: "token", err: errors.New(`ent: missing required edge "ProviderOrderToken.token"`)}
+	}
+	if len(potc.mutation.CurrencyIDs()) == 0 {
+		return &ValidationError{Name: "currency", err: errors.New(`ent: missing required edge "ProviderOrderToken.currency"`)}
 	}
 	return nil
 }
@@ -244,10 +273,6 @@ func (potc *ProviderOrderTokenCreate) createSpec() (*ProviderOrderToken, *sqlgra
 		_spec.SetField(providerordertoken.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if value, ok := potc.mutation.Symbol(); ok {
-		_spec.SetField(providerordertoken.FieldSymbol, field.TypeString, value)
-		_node.Symbol = value
-	}
 	if value, ok := potc.mutation.FixedConversionRate(); ok {
 		_spec.SetField(providerordertoken.FieldFixedConversionRate, field.TypeFloat64, value)
 		_node.FixedConversionRate = value
@@ -272,9 +297,13 @@ func (potc *ProviderOrderTokenCreate) createSpec() (*ProviderOrderToken, *sqlgra
 		_spec.SetField(providerordertoken.FieldRateSlippage, field.TypeFloat64, value)
 		_node.RateSlippage = value
 	}
-	if value, ok := potc.mutation.Addresses(); ok {
-		_spec.SetField(providerordertoken.FieldAddresses, field.TypeJSON, value)
-		_node.Addresses = value
+	if value, ok := potc.mutation.Address(); ok {
+		_spec.SetField(providerordertoken.FieldAddress, field.TypeString, value)
+		_node.Address = value
+	}
+	if value, ok := potc.mutation.Network(); ok {
+		_spec.SetField(providerordertoken.FieldNetwork, field.TypeString, value)
+		_node.Network = value
 	}
 	if nodes := potc.mutation.ProviderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -291,6 +320,40 @@ func (potc *ProviderOrderTokenCreate) createSpec() (*ProviderOrderToken, *sqlgra
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.provider_profile_order_tokens = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := potc.mutation.TokenIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   providerordertoken.TokenTable,
+			Columns: []string{providerordertoken.TokenColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(token.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.token_provider_order_tokens = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := potc.mutation.CurrencyIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   providerordertoken.CurrencyTable,
+			Columns: []string{providerordertoken.CurrencyColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.fiat_currency_provider_order_tokens = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
@@ -354,18 +417,6 @@ func (u *ProviderOrderTokenUpsert) SetUpdatedAt(v time.Time) *ProviderOrderToken
 // UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
 func (u *ProviderOrderTokenUpsert) UpdateUpdatedAt() *ProviderOrderTokenUpsert {
 	u.SetExcluded(providerordertoken.FieldUpdatedAt)
-	return u
-}
-
-// SetSymbol sets the "symbol" field.
-func (u *ProviderOrderTokenUpsert) SetSymbol(v string) *ProviderOrderTokenUpsert {
-	u.Set(providerordertoken.FieldSymbol, v)
-	return u
-}
-
-// UpdateSymbol sets the "symbol" field to the value that was provided on create.
-func (u *ProviderOrderTokenUpsert) UpdateSymbol() *ProviderOrderTokenUpsert {
-	u.SetExcluded(providerordertoken.FieldSymbol)
 	return u
 }
 
@@ -477,18 +528,39 @@ func (u *ProviderOrderTokenUpsert) ClearRateSlippage() *ProviderOrderTokenUpsert
 	return u
 }
 
-// SetAddresses sets the "addresses" field.
-func (u *ProviderOrderTokenUpsert) SetAddresses(v []struct {
-	Address string "json:\"address\""
-	Network string "json:\"network\""
-}) *ProviderOrderTokenUpsert {
-	u.Set(providerordertoken.FieldAddresses, v)
+// SetAddress sets the "address" field.
+func (u *ProviderOrderTokenUpsert) SetAddress(v string) *ProviderOrderTokenUpsert {
+	u.Set(providerordertoken.FieldAddress, v)
 	return u
 }
 
-// UpdateAddresses sets the "addresses" field to the value that was provided on create.
-func (u *ProviderOrderTokenUpsert) UpdateAddresses() *ProviderOrderTokenUpsert {
-	u.SetExcluded(providerordertoken.FieldAddresses)
+// UpdateAddress sets the "address" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsert) UpdateAddress() *ProviderOrderTokenUpsert {
+	u.SetExcluded(providerordertoken.FieldAddress)
+	return u
+}
+
+// ClearAddress clears the value of the "address" field.
+func (u *ProviderOrderTokenUpsert) ClearAddress() *ProviderOrderTokenUpsert {
+	u.SetNull(providerordertoken.FieldAddress)
+	return u
+}
+
+// SetNetwork sets the "network" field.
+func (u *ProviderOrderTokenUpsert) SetNetwork(v string) *ProviderOrderTokenUpsert {
+	u.Set(providerordertoken.FieldNetwork, v)
+	return u
+}
+
+// UpdateNetwork sets the "network" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsert) UpdateNetwork() *ProviderOrderTokenUpsert {
+	u.SetExcluded(providerordertoken.FieldNetwork)
+	return u
+}
+
+// ClearNetwork clears the value of the "network" field.
+func (u *ProviderOrderTokenUpsert) ClearNetwork() *ProviderOrderTokenUpsert {
+	u.SetNull(providerordertoken.FieldNetwork)
 	return u
 }
 
@@ -548,20 +620,6 @@ func (u *ProviderOrderTokenUpsertOne) SetUpdatedAt(v time.Time) *ProviderOrderTo
 func (u *ProviderOrderTokenUpsertOne) UpdateUpdatedAt() *ProviderOrderTokenUpsertOne {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
 		s.UpdateUpdatedAt()
-	})
-}
-
-// SetSymbol sets the "symbol" field.
-func (u *ProviderOrderTokenUpsertOne) SetSymbol(v string) *ProviderOrderTokenUpsertOne {
-	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.SetSymbol(v)
-	})
-}
-
-// UpdateSymbol sets the "symbol" field to the value that was provided on create.
-func (u *ProviderOrderTokenUpsertOne) UpdateSymbol() *ProviderOrderTokenUpsertOne {
-	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.UpdateSymbol()
 	})
 }
 
@@ -691,20 +749,45 @@ func (u *ProviderOrderTokenUpsertOne) ClearRateSlippage() *ProviderOrderTokenUps
 	})
 }
 
-// SetAddresses sets the "addresses" field.
-func (u *ProviderOrderTokenUpsertOne) SetAddresses(v []struct {
-	Address string "json:\"address\""
-	Network string "json:\"network\""
-}) *ProviderOrderTokenUpsertOne {
+// SetAddress sets the "address" field.
+func (u *ProviderOrderTokenUpsertOne) SetAddress(v string) *ProviderOrderTokenUpsertOne {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.SetAddresses(v)
+		s.SetAddress(v)
 	})
 }
 
-// UpdateAddresses sets the "addresses" field to the value that was provided on create.
-func (u *ProviderOrderTokenUpsertOne) UpdateAddresses() *ProviderOrderTokenUpsertOne {
+// UpdateAddress sets the "address" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertOne) UpdateAddress() *ProviderOrderTokenUpsertOne {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.UpdateAddresses()
+		s.UpdateAddress()
+	})
+}
+
+// ClearAddress clears the value of the "address" field.
+func (u *ProviderOrderTokenUpsertOne) ClearAddress() *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.ClearAddress()
+	})
+}
+
+// SetNetwork sets the "network" field.
+func (u *ProviderOrderTokenUpsertOne) SetNetwork(v string) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetNetwork(v)
+	})
+}
+
+// UpdateNetwork sets the "network" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertOne) UpdateNetwork() *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateNetwork()
+	})
+}
+
+// ClearNetwork clears the value of the "network" field.
+func (u *ProviderOrderTokenUpsertOne) ClearNetwork() *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.ClearNetwork()
 	})
 }
 
@@ -933,20 +1016,6 @@ func (u *ProviderOrderTokenUpsertBulk) UpdateUpdatedAt() *ProviderOrderTokenUpse
 	})
 }
 
-// SetSymbol sets the "symbol" field.
-func (u *ProviderOrderTokenUpsertBulk) SetSymbol(v string) *ProviderOrderTokenUpsertBulk {
-	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.SetSymbol(v)
-	})
-}
-
-// UpdateSymbol sets the "symbol" field to the value that was provided on create.
-func (u *ProviderOrderTokenUpsertBulk) UpdateSymbol() *ProviderOrderTokenUpsertBulk {
-	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.UpdateSymbol()
-	})
-}
-
 // SetFixedConversionRate sets the "fixed_conversion_rate" field.
 func (u *ProviderOrderTokenUpsertBulk) SetFixedConversionRate(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
@@ -1073,20 +1142,45 @@ func (u *ProviderOrderTokenUpsertBulk) ClearRateSlippage() *ProviderOrderTokenUp
 	})
 }
 
-// SetAddresses sets the "addresses" field.
-func (u *ProviderOrderTokenUpsertBulk) SetAddresses(v []struct {
-	Address string "json:\"address\""
-	Network string "json:\"network\""
-}) *ProviderOrderTokenUpsertBulk {
+// SetAddress sets the "address" field.
+func (u *ProviderOrderTokenUpsertBulk) SetAddress(v string) *ProviderOrderTokenUpsertBulk {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.SetAddresses(v)
+		s.SetAddress(v)
 	})
 }
 
-// UpdateAddresses sets the "addresses" field to the value that was provided on create.
-func (u *ProviderOrderTokenUpsertBulk) UpdateAddresses() *ProviderOrderTokenUpsertBulk {
+// UpdateAddress sets the "address" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertBulk) UpdateAddress() *ProviderOrderTokenUpsertBulk {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.UpdateAddresses()
+		s.UpdateAddress()
+	})
+}
+
+// ClearAddress clears the value of the "address" field.
+func (u *ProviderOrderTokenUpsertBulk) ClearAddress() *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.ClearAddress()
+	})
+}
+
+// SetNetwork sets the "network" field.
+func (u *ProviderOrderTokenUpsertBulk) SetNetwork(v string) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetNetwork(v)
+	})
+}
+
+// UpdateNetwork sets the "network" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertBulk) UpdateNetwork() *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateNetwork()
+	})
+}
+
+// ClearNetwork clears the value of the "network" field.
+func (u *ProviderOrderTokenUpsertBulk) ClearNetwork() *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.ClearNetwork()
 	})
 }
 

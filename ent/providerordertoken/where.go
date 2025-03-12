@@ -96,6 +96,16 @@ func RateSlippage(v decimal.Decimal) predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(sql.FieldEQ(FieldRateSlippage, v))
 }
 
+// Address applies equality check predicate on the "address" field. It's identical to AddressEQ.
+func Address(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldAddress, v))
+}
+
+// Network applies equality check predicate on the "network" field. It's identical to NetworkEQ.
+func Network(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldNetwork, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(sql.FieldEQ(FieldCreatedAt, v))
@@ -471,6 +481,156 @@ func RateSlippageNotNil() predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(sql.FieldNotNull(FieldRateSlippage))
 }
 
+// AddressEQ applies the EQ predicate on the "address" field.
+func AddressEQ(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldAddress, v))
+}
+
+// AddressNEQ applies the NEQ predicate on the "address" field.
+func AddressNEQ(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNEQ(FieldAddress, v))
+}
+
+// AddressIn applies the In predicate on the "address" field.
+func AddressIn(vs ...string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldIn(FieldAddress, vs...))
+}
+
+// AddressNotIn applies the NotIn predicate on the "address" field.
+func AddressNotIn(vs ...string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNotIn(FieldAddress, vs...))
+}
+
+// AddressGT applies the GT predicate on the "address" field.
+func AddressGT(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGT(FieldAddress, v))
+}
+
+// AddressGTE applies the GTE predicate on the "address" field.
+func AddressGTE(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGTE(FieldAddress, v))
+}
+
+// AddressLT applies the LT predicate on the "address" field.
+func AddressLT(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLT(FieldAddress, v))
+}
+
+// AddressLTE applies the LTE predicate on the "address" field.
+func AddressLTE(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLTE(FieldAddress, v))
+}
+
+// AddressContains applies the Contains predicate on the "address" field.
+func AddressContains(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldContains(FieldAddress, v))
+}
+
+// AddressHasPrefix applies the HasPrefix predicate on the "address" field.
+func AddressHasPrefix(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldHasPrefix(FieldAddress, v))
+}
+
+// AddressHasSuffix applies the HasSuffix predicate on the "address" field.
+func AddressHasSuffix(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldHasSuffix(FieldAddress, v))
+}
+
+// AddressIsNil applies the IsNil predicate on the "address" field.
+func AddressIsNil() predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldIsNull(FieldAddress))
+}
+
+// AddressNotNil applies the NotNil predicate on the "address" field.
+func AddressNotNil() predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNotNull(FieldAddress))
+}
+
+// AddressEqualFold applies the EqualFold predicate on the "address" field.
+func AddressEqualFold(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEqualFold(FieldAddress, v))
+}
+
+// AddressContainsFold applies the ContainsFold predicate on the "address" field.
+func AddressContainsFold(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldContainsFold(FieldAddress, v))
+}
+
+// NetworkEQ applies the EQ predicate on the "network" field.
+func NetworkEQ(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldNetwork, v))
+}
+
+// NetworkNEQ applies the NEQ predicate on the "network" field.
+func NetworkNEQ(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNEQ(FieldNetwork, v))
+}
+
+// NetworkIn applies the In predicate on the "network" field.
+func NetworkIn(vs ...string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldIn(FieldNetwork, vs...))
+}
+
+// NetworkNotIn applies the NotIn predicate on the "network" field.
+func NetworkNotIn(vs ...string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNotIn(FieldNetwork, vs...))
+}
+
+// NetworkGT applies the GT predicate on the "network" field.
+func NetworkGT(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGT(FieldNetwork, v))
+}
+
+// NetworkGTE applies the GTE predicate on the "network" field.
+func NetworkGTE(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGTE(FieldNetwork, v))
+}
+
+// NetworkLT applies the LT predicate on the "network" field.
+func NetworkLT(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLT(FieldNetwork, v))
+}
+
+// NetworkLTE applies the LTE predicate on the "network" field.
+func NetworkLTE(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLTE(FieldNetwork, v))
+}
+
+// NetworkContains applies the Contains predicate on the "network" field.
+func NetworkContains(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldContains(FieldNetwork, v))
+}
+
+// NetworkHasPrefix applies the HasPrefix predicate on the "network" field.
+func NetworkHasPrefix(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldHasPrefix(FieldNetwork, v))
+}
+
+// NetworkHasSuffix applies the HasSuffix predicate on the "network" field.
+func NetworkHasSuffix(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldHasSuffix(FieldNetwork, v))
+}
+
+// NetworkIsNil applies the IsNil predicate on the "network" field.
+func NetworkIsNil() predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldIsNull(FieldNetwork))
+}
+
+// NetworkNotNil applies the NotNil predicate on the "network" field.
+func NetworkNotNil() predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNotNull(FieldNetwork))
+}
+
+// NetworkEqualFold applies the EqualFold predicate on the "network" field.
+func NetworkEqualFold(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEqualFold(FieldNetwork, v))
+}
+
+// NetworkContainsFold applies the ContainsFold predicate on the "network" field.
+func NetworkContainsFold(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldContainsFold(FieldNetwork, v))
+}
+
 // HasProvider applies the HasEdge predicate on the "provider" edge.
 func HasProvider() predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(func(s *sql.Selector) {
@@ -486,6 +646,52 @@ func HasProvider() predicate.ProviderOrderToken {
 func HasProviderWith(preds ...predicate.ProviderProfile) predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(func(s *sql.Selector) {
 		step := newProviderStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasToken applies the HasEdge predicate on the "token" edge.
+func HasToken() predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, TokenTable, TokenColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasTokenWith applies the HasEdge predicate on the "token" edge with a given conditions (other predicates).
+func HasTokenWith(preds ...predicate.Token) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(func(s *sql.Selector) {
+		step := newTokenStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasCurrency applies the HasEdge predicate on the "currency" edge.
+func HasCurrency() predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, CurrencyTable, CurrencyColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCurrencyWith applies the HasEdge predicate on the "currency" edge with a given conditions (other predicates).
+func HasCurrencyWith(preds ...predicate.FiatCurrency) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(func(s *sql.Selector) {
+		step := newCurrencyStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

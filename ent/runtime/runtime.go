@@ -402,6 +402,10 @@ func init() {
 	tokenDescIsEnabled := tokenFields[3].Descriptor()
 	// token.DefaultIsEnabled holds the default value on creation for the is_enabled field.
 	token.DefaultIsEnabled = tokenDescIsEnabled.Default.(bool)
+	// tokenDescBaseCurrency is the schema descriptor for base_currency field.
+	tokenDescBaseCurrency := tokenFields[4].Descriptor()
+	// token.DefaultBaseCurrency holds the default value on creation for the base_currency field.
+	token.DefaultBaseCurrency = tokenDescBaseCurrency.Default.(string)
 	transactionlogFields := schema.TransactionLog{}.Fields()
 	_ = transactionlogFields
 	// transactionlogDescCreatedAt is the schema descriptor for created_at field.
@@ -496,6 +500,6 @@ func init() {
 }
 
 const (
-	Version = "v0.14.0"                                         // Version of ent codegen.
-	Sum     = "h1:EO3Z9aZ5bXJatJeGqu/EVdnNr6K4mRq3rWe5owt0MC4=" // Sum of ent codegen.
+	Version = "v0.14.3"                                         // Version of ent codegen.
+	Sum     = "h1:wokAV/kIlH9TeklJWGGS7AYJdVckr0DloWjIcO9iIIQ=" // Sum of ent codegen.
 )
