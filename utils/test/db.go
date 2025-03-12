@@ -189,16 +189,17 @@ func CreateTestLockPaymentOrder(overrides map[string]interface{}) (*ent.LockPaym
 
 	// Default payload
 	payload := map[string]interface{}{
-		"gateway_id":         "order-123",
-		"amount":             100.50,
-		"rate":               750.0,
-		"status":             "pending",
-		"block_number":       12345,
-		"institution":        "ABNGNGLA",
-		"account_identifier": "1234567890",
-		"account_name":       "Test Account",
-		"updatedAt":          time.Now(),
-		"tokenID":            0,
+		"gateway_id":           "order-123",
+		"amount":               100.50,
+		"rate":                 750.0,
+		"status":               "pending",
+		"block_number":         12345,
+		"institution":          "ABNGNGLA",
+		"account_identifier":   "1234567890",
+		"account_name":         "Test Account",
+		"updatedAt":            time.Now(),
+		"tokenID":              0,
+		"cancellation_reasons": []string{},
 	}
 
 	// Create provider profile
@@ -241,6 +242,7 @@ func CreateTestLockPaymentOrder(overrides map[string]interface{}) (*ent.LockPaym
 		SetTokenID(payload["tokenID"].(int)).
 		SetProvider(providerProfile).
 		SetUpdatedAt(payload["updatedAt"].(time.Time)).
+		SetCancellationReasons(payload["cancellation_reasons"].([]string)).
 		Save(context.Background())
 	if err != nil {
 		return nil, err

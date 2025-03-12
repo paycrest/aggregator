@@ -333,23 +333,24 @@ type TransactionLog struct {
 
 // LockPaymentOrderResponse is the response for a lock payment order
 type LockPaymentOrderResponse struct {
-	ID                uuid.UUID               `json:"id"`
-	Token             string                  `json:"token"`
-	GatewayID         string                  `json:"gatewayId"`
-	Amount            decimal.Decimal         `json:"amount"`
-	Rate              decimal.Decimal         `json:"rate"`
-	BlockNumber       int64                   `json:"blockNumber"`
-	TxHash            string                  `json:"txHash"`
-	Institution       string                  `json:"institution"`
-	AccountIdentifier string                  `json:"accountIdentifier"`
-	AccountName       string                  `json:"accountName"`
-	ProviderID        string                  `json:"providerId"`
-	Memo              string                  `json:"memo"`
-	Network           string                  `json:"network"`
-	Status            lockpaymentorder.Status `json:"status"`
-	UpdatedAt         time.Time               `json:"updatedAt"`
-	CreatedAt         time.Time               `json:"createdAt"`
-	Transactions      []TransactionLog        `json:"transactionLogs"`
+	ID                  uuid.UUID               `json:"id"`
+	Token               string                  `json:"token"`
+	GatewayID           string                  `json:"gatewayId"`
+	Amount              decimal.Decimal         `json:"amount"`
+	Rate                decimal.Decimal         `json:"rate"`
+	BlockNumber         int64                   `json:"blockNumber"`
+	TxHash              string                  `json:"txHash"`
+	Institution         string                  `json:"institution"`
+	AccountIdentifier   string                  `json:"accountIdentifier"`
+	AccountName         string                  `json:"accountName"`
+	ProviderID          string                  `json:"providerId"`
+	Memo                string                  `json:"memo"`
+	Network             string                  `json:"network"`
+	Status              lockpaymentorder.Status `json:"status"`
+	UpdatedAt           time.Time               `json:"updatedAt"`
+	CreatedAt           time.Time               `json:"createdAt"`
+	Transactions        []TransactionLog        `json:"transactionLogs"`
+	CancellationReasons []string                `json:"cancellationReasons"`
 }
 
 type LockPaymentOrderTxReceipt struct {
