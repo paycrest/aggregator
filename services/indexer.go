@@ -19,7 +19,6 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
-	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	networkent "github.com/paycrest/aggregator/ent/network"
@@ -221,7 +220,7 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 			}
 
 			// Create payment order
-			institution, err := s.getInstitutionByCode(ctx, linkedAddress.Institution)
+			institution, err := utils.GetInstitutionByCode(ctx, linkedAddress.Institution)
 			if err != nil {
 				logger.Errorf("IndexERC20Transfer.GetInstitutionByCode: %v", err)
 				continue
@@ -956,7 +955,7 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 
 	// Get provision bucket
 	amountInDecimals := utils.FromSubunit(event.Amount, token.Decimals)
-	institution, err := s.getInstitutionByCode(ctx, recipient.Institution)
+	institution, err := utils.GetInstitutionByCode(ctx, recipient.Institution)
 	if err != nil {
 		return nil
 	}
@@ -1643,7 +1642,7 @@ func (s *IndexerService) UpdateReceiveAddressStatus(
 					return true, fmt.Errorf("UpdateReceiveAddressStatus.db: %v", err)
 				}
 
-				institution, err := s.getInstitutionByCode(ctx, orderRecipient.Institution)
+				institution, err := utils.GetInstitutionByCode(ctx, orderRecipient.Institution)
 				if err != nil {
 					return true, fmt.Errorf("UpdateReceiveAddressStatus.db: %v", err)
 				}
@@ -1773,23 +1772,6 @@ func (s *IndexerService) getProvisionBucket(ctx context.Context, amount decimal.
 	}
 
 	return provisionBucket, nil
-}
-
-// getInstitutionByCode returns the institution for a given institution code
-func (s *IndexerService) getInstitutionByCode(ctx context.Context, institutionCode string) (*ent.Institution, error) {
-	institution, err := db.Client.Institution.
-		Query().
-		Where(institution.CodeEQ(institutionCode)).
-		WithFiatCurrency(
-			func(fcq *ent.FiatCurrencyQuery) {
-				fcq.Where(fiatcurrency.IsEnabledEQ(true))
-			},
-		).
-		Only(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return institution, nil
 }
 
 // splitLockPaymentOrder splits a lock payment order into multiple orders
