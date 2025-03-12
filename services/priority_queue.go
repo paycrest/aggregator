@@ -8,7 +8,6 @@ import (
 	"time"
 
 	fastshot "github.com/opus-domini/fast-shot"
-<<<<<<< HEAD
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
@@ -20,21 +19,6 @@ import (
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/logger"
 	tokenUtils "github.com/paycrest/aggregator/utils/token"
-=======
-	"github.com/paycrest/protocol/ent"
-	"github.com/paycrest/protocol/ent/fiatcurrency"
-	"github.com/paycrest/protocol/ent/paymentorder"
-	"github.com/paycrest/protocol/ent/providerordertoken"
-	"github.com/paycrest/protocol/ent/providerprofile"
-	"github.com/paycrest/protocol/ent/provisionbucket"
-	"github.com/paycrest/protocol/ent/token"
-	"github.com/paycrest/protocol/storage"
-	"github.com/paycrest/protocol/types"
-	"github.com/paycrest/protocol/utils"
-	cryptoUtils "github.com/paycrest/protocol/utils/crypto"
-	"github.com/paycrest/protocol/utils/logger"
-	tokenUtils "github.com/paycrest/protocol/utils/token"
->>>>>>> 501a699 (feat: restructure provider order token + refactor for multi-currency support)
 	"github.com/shopspring/decimal"
 )
 
@@ -200,34 +184,23 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 			WithToken().
 			All(ctx)
 		if err != nil {
-<<<<<<< HEAD
-			if err != context.Canceled {
-				logger.Errorf("failed to get tokens for provider %s: %v", provider.ID, err)
-			}
-=======
 			fmt.Println("error", err)
 			logger.Errorf("failed to get tokens for provider %s: %v", provider.ID, err)
->>>>>>> df01802 (feat(test): resolve failing priority queue test)
 			continue
 		}
 
 		fmt.Println("orderTokens", orderTokens)
 
+		tokenSymbols := []string{}
 		for _, orderToken := range orderTokens {
-			providerID := provider.ID
-			rate, err := s.GetProviderRate(ctx, provider, orderToken.Edges.Token.Symbol, bucket.Edges.Currency.Code)
-			if err != nil {
-<<<<<<< HEAD
-				if err != context.Canceled {
-					logger.Errorf("failed to get %s rate for provider %s: %v", token.Symbol, providerID, err)
-				}
+			if utils.ContainsString(tokenSymbols, orderToken.Edges.Token.Symbol) {
 				continue
 			}
+			tokenSymbols = append(tokenSymbols, orderToken.Edges.Token.Symbol)
 
-			if rate.IsZero() {
-=======
+			rate, err := s.GetProviderRate(ctx, provider, orderToken.Edges.Token.Symbol, bucket.Edges.Currency.Code)
+			if err != nil {
 				logger.Errorf("failed to get %s rate for provider %s: %v", orderToken.Edges.Token.Symbol, providerID, err)
->>>>>>> 6d3b0ae (fix(pq): resolve token symbol reference)
 				continue
 			}
 
@@ -242,7 +215,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 			}
 
 			// Serialize the provider ID, token, rate, min and max order amount into a single string
-			data := fmt.Sprintf("%s:%s:%s:%s:%s", providerID, orderToken.Edges.Token.Symbol, rate, orderToken.MinOrderAmount, orderToken.MaxOrderAmount)
+			data := fmt.Sprintf("%s:%s:%s:%s:%s", provider.ID, orderToken.Edges.Token.Symbol, rate, orderToken.MinOrderAmount, orderToken.MaxOrderAmount)
 
 			// Enqueue the serialized data into the circular queue
 			err = storage.RedisClient.RPush(ctx, redisKey, data).Err()
@@ -508,7 +481,6 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 
 	return nil
 }
-<<<<<<< HEAD
 
 // sendOrderRequest sends an order request to a provider
 func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types.LockPaymentOrderFields) error {
@@ -591,5 +563,3 @@ func (s *PriorityQueueService) notifyProvider(ctx context.Context, orderRequestD
 
 	return nil
 }
-=======
->>>>>>> bfb129f (feat: store previous rate queue in redis for rate match pre-order assignment)
