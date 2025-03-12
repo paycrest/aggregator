@@ -6,13 +6,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/paycrest/protocol/config"
-	"github.com/paycrest/protocol/controllers"
-	"github.com/paycrest/protocol/controllers/accounts"
-	"github.com/paycrest/protocol/controllers/provider"
-	"github.com/paycrest/protocol/controllers/sender"
-	"github.com/paycrest/protocol/routers/middleware"
-	u "github.com/paycrest/protocol/utils"
+	"github.com/paycrest/aggregator/config"
+	"github.com/paycrest/aggregator/controllers"
+	"github.com/paycrest/aggregator/controllers/accounts"
+	"github.com/paycrest/aggregator/controllers/provider"
+	"github.com/paycrest/aggregator/controllers/sender"
+	"github.com/paycrest/aggregator/routers/middleware"
+	u "github.com/paycrest/aggregator/utils"
 )
 
 // RegisterRoutes add all routing list here automatically get main router
