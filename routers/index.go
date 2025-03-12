@@ -13,6 +13,12 @@ import (
 	"github.com/paycrest/aggregator/controllers/sender"
 	"github.com/paycrest/aggregator/routers/middleware"
 	u "github.com/paycrest/aggregator/utils"
+	"github.com/paycrest/aggregator/controllers"
+	"github.com/paycrest/aggregator/controllers/accounts"
+	"github.com/paycrest/aggregator/controllers/provider"
+	"github.com/paycrest/aggregator/controllers/sender"
+	"github.com/paycrest/aggregator/routers/middleware"
+	u "github.com/paycrest/aggregator/utils"
 )
 
 // RegisterRoutes add all routing list here automatically get main router
@@ -56,7 +62,7 @@ func RegisterRoutes(route *gin.Engine) {
 
 	v1.GET("rates/:token/:amount/:fiat", ctrl.GetTokenRate)
 	v1.POST("verify-account", ctrl.VerifyAccount)
-	v1.GET("orders/:id", ctrl.GetLockPaymentOrderStatus)
+	v1.GET("orders/:chain_id/:id", ctrl.GetLockPaymentOrderStatus)
 
 	// KYC routes
 	v1.POST("kyc", ctrl.RequestIDVerification)
@@ -83,6 +89,7 @@ func authRoutes(route *gin.Engine) {
 	v1.POST("auth/reset-password-token", middleware.OnlyWebMiddleware, authCtrl.ResetPasswordToken)
 	v1.PATCH("auth/reset-password", middleware.OnlyWebMiddleware, authCtrl.ResetPassword)
 	v1.PATCH("auth/change-password", middleware.JWTMiddleware, authCtrl.ChangePassword)
+	v1.DELETE("auth/delete-account", middleware.JWTMiddleware, authCtrl.DeleteAccount)
 
 	v1.GET(
 		"settings/provider",

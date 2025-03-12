@@ -10,10 +10,10 @@ import (
 	"github.com/sendgrid/sendgrid-go"
 	"github.com/sendgrid/sendgrid-go/helpers/mail"
 
-	"github.com/paycrest/protocol/config"
-	"github.com/paycrest/protocol/types"
-	"github.com/paycrest/protocol/utils"
-	"github.com/paycrest/protocol/utils/logger"
+	"github.com/paycrest/aggregator/config"
+	"github.com/paycrest/aggregator/types"
+	"github.com/paycrest/aggregator/utils"
+	"github.com/paycrest/aggregator/utils/logger"
 )
 
 var (
@@ -69,7 +69,7 @@ func (m *EmailService) SendVerificationEmail(ctx context.Context, token, email, 
 		ToAddress:   email,
 		DynamicData: map[string]interface{}{
 			"first_name": firstName,
-			"token":       token,
+			"token":      token,
 		},
 	}
 	return SendTemplateEmail(payload, "d-f26d853bbb884c0c856f0bbda894032c")
@@ -84,7 +84,7 @@ func (m *EmailService) SendPasswordResetEmail(ctx context.Context, token, email,
 		ToAddress:   email,
 		DynamicData: map[string]interface{}{
 			"first_name": firstName,
-			"token":       token,
+			"token":      token,
 		},
 	}
 	return SendTemplateEmail(payload, "d-8b689801cd9947748775ccd1c4cc932e")

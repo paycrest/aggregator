@@ -12,10 +12,10 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-	"github.com/paycrest/protocol/ent/predicate"
-	"github.com/paycrest/protocol/ent/senderordertoken"
-	"github.com/paycrest/protocol/ent/senderprofile"
-	"github.com/paycrest/protocol/ent/token"
+	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/senderordertoken"
+	"github.com/paycrest/aggregator/ent/senderprofile"
+	"github.com/paycrest/aggregator/ent/token"
 	"github.com/shopspring/decimal"
 )
 

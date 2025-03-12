@@ -12,8 +12,8 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-	"github.com/paycrest/protocol/ent/predicate"
-	"github.com/paycrest/protocol/ent/transactionlog"
+	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/transactionlog"
 )
 
 // TransactionLogQuery is the builder for querying TransactionLog entities.

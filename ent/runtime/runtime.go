@@ -6,28 +6,28 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/paycrest/protocol/ent/apikey"
-	"github.com/paycrest/protocol/ent/fiatcurrency"
-	"github.com/paycrest/protocol/ent/identityverificationrequest"
-	"github.com/paycrest/protocol/ent/institution"
-	"github.com/paycrest/protocol/ent/linkedaddress"
-	"github.com/paycrest/protocol/ent/lockorderfulfillment"
-	"github.com/paycrest/protocol/ent/lockpaymentorder"
-	"github.com/paycrest/protocol/ent/network"
-	"github.com/paycrest/protocol/ent/paymentorder"
-	"github.com/paycrest/protocol/ent/providerordertoken"
-	"github.com/paycrest/protocol/ent/providerprofile"
-	"github.com/paycrest/protocol/ent/providerrating"
-	"github.com/paycrest/protocol/ent/provisionbucket"
-	"github.com/paycrest/protocol/ent/receiveaddress"
-	"github.com/paycrest/protocol/ent/schema"
-	"github.com/paycrest/protocol/ent/senderordertoken"
-	"github.com/paycrest/protocol/ent/senderprofile"
-	"github.com/paycrest/protocol/ent/token"
-	"github.com/paycrest/protocol/ent/transactionlog"
-	"github.com/paycrest/protocol/ent/user"
-	"github.com/paycrest/protocol/ent/verificationtoken"
-	"github.com/paycrest/protocol/ent/webhookretryattempt"
+	"github.com/paycrest/aggregator/ent/apikey"
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
+	"github.com/paycrest/aggregator/ent/identityverificationrequest"
+	"github.com/paycrest/aggregator/ent/institution"
+	"github.com/paycrest/aggregator/ent/linkedaddress"
+	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
+	"github.com/paycrest/aggregator/ent/lockpaymentorder"
+	"github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providerordertoken"
+	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/providerrating"
+	"github.com/paycrest/aggregator/ent/provisionbucket"
+	"github.com/paycrest/aggregator/ent/receiveaddress"
+	"github.com/paycrest/aggregator/ent/schema"
+	"github.com/paycrest/aggregator/ent/senderordertoken"
+	"github.com/paycrest/aggregator/ent/senderprofile"
+	"github.com/paycrest/aggregator/ent/token"
+	"github.com/paycrest/aggregator/ent/transactionlog"
+	"github.com/paycrest/aggregator/ent/user"
+	"github.com/paycrest/aggregator/ent/verificationtoken"
+	"github.com/paycrest/aggregator/ent/webhookretryattempt"
 )
 
 // The init function reads all schema descriptors with runtime code
@@ -402,6 +402,10 @@ func init() {
 	tokenDescIsEnabled := tokenFields[3].Descriptor()
 	// token.DefaultIsEnabled holds the default value on creation for the is_enabled field.
 	token.DefaultIsEnabled = tokenDescIsEnabled.Default.(bool)
+	// tokenDescBaseCurrency is the schema descriptor for base_currency field.
+	tokenDescBaseCurrency := tokenFields[4].Descriptor()
+	// token.DefaultBaseCurrency holds the default value on creation for the base_currency field.
+	token.DefaultBaseCurrency = tokenDescBaseCurrency.Default.(string)
 	transactionlogFields := schema.TransactionLog{}.Fields()
 	_ = transactionlogFields
 	// transactionlogDescCreatedAt is the schema descriptor for created_at field.
@@ -496,6 +500,6 @@ func init() {
 }
 
 const (
-	Version = "v0.14.0"                                         // Version of ent codegen.
-	Sum     = "h1:EO3Z9aZ5bXJatJeGqu/EVdnNr6K4mRq3rWe5owt0MC4=" // Sum of ent codegen.
+	Version = "v0.14.3"                                         // Version of ent codegen.
+	Sum     = "h1:wokAV/kIlH9TeklJWGGS7AYJdVckr0DloWjIcO9iIIQ=" // Sum of ent codegen.
 )

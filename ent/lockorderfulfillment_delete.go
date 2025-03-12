@@ -8,8 +8,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/paycrest/protocol/ent/lockorderfulfillment"
-	"github.com/paycrest/protocol/ent/predicate"
+	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
+	"github.com/paycrest/aggregator/ent/predicate"
 )
 
 // LockOrderFulfillmentDelete is the builder for deleting a LockOrderFulfillment entity.

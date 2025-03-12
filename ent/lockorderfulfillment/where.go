@@ -8,7 +8,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
-	"github.com/paycrest/protocol/ent/predicate"
+	"github.com/paycrest/aggregator/ent/predicate"
 )
 
 // ID filters vertices based on their ID field.
@@ -214,6 +214,16 @@ func TxIDHasPrefix(v string) predicate.LockOrderFulfillment {
 // TxIDHasSuffix applies the HasSuffix predicate on the "tx_id" field.
 func TxIDHasSuffix(v string) predicate.LockOrderFulfillment {
 	return predicate.LockOrderFulfillment(sql.FieldHasSuffix(FieldTxID, v))
+}
+
+// TxIDIsNil applies the IsNil predicate on the "tx_id" field.
+func TxIDIsNil() predicate.LockOrderFulfillment {
+	return predicate.LockOrderFulfillment(sql.FieldIsNull(FieldTxID))
+}
+
+// TxIDNotNil applies the NotNil predicate on the "tx_id" field.
+func TxIDNotNil() predicate.LockOrderFulfillment {
+	return predicate.LockOrderFulfillment(sql.FieldNotNull(FieldTxID))
 }
 
 // TxIDEqualFold applies the EqualFold predicate on the "tx_id" field.

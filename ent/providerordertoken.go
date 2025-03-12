@@ -3,15 +3,17 @@
 package ent
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"github.com/paycrest/protocol/ent/providerordertoken"
-	"github.com/paycrest/protocol/ent/providerprofile"
+	"github.com/google/uuid"
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
+	"github.com/paycrest/aggregator/ent/providerordertoken"
+	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/token"
 	"github.com/shopspring/decimal"
 )
 
@@ -24,8 +26,6 @@ type ProviderOrderToken struct {
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
-	// Symbol holds the value of the "symbol" field.
-	Symbol string `json:"symbol,omitempty"`
 	// FixedConversionRate holds the value of the "fixed_conversion_rate" field.
 	FixedConversionRate decimal.Decimal `json:"fixed_conversion_rate,omitempty"`
 	// FloatingConversionRate holds the value of the "floating_conversion_rate" field.
@@ -36,25 +36,30 @@ type ProviderOrderToken struct {
 	MaxOrderAmount decimal.Decimal `json:"max_order_amount,omitempty"`
 	// MinOrderAmount holds the value of the "min_order_amount" field.
 	MinOrderAmount decimal.Decimal `json:"min_order_amount,omitempty"`
-	// Addresses holds the value of the "addresses" field.
-	Addresses []struct {
-		Address string "json:\"address\""
-		Network string "json:\"network\""
-	} `json:"addresses,omitempty"`
+	// Address holds the value of the "address" field.
+	Address string `json:"address,omitempty"`
+	// Network holds the value of the "network" field.
+	Network string `json:"network,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ProviderOrderTokenQuery when eager-loading is set.
-	Edges                         ProviderOrderTokenEdges `json:"edges"`
-	provider_profile_order_tokens *string
-	selectValues                  sql.SelectValues
+	Edges                               ProviderOrderTokenEdges `json:"edges"`
+	fiat_currency_provider_order_tokens *uuid.UUID
+	provider_profile_order_tokens       *string
+	token_provider_order_tokens         *int
+	selectValues                        sql.SelectValues
 }
 
 // ProviderOrderTokenEdges holds the relations/edges for other nodes in the graph.
 type ProviderOrderTokenEdges struct {
 	// Provider holds the value of the provider edge.
 	Provider *ProviderProfile `json:"provider,omitempty"`
+	// Token holds the value of the token edge.
+	Token *Token `json:"token,omitempty"`
+	// Currency holds the value of the currency edge.
+	Currency *FiatCurrency `json:"currency,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [3]bool
 }
 
 // ProviderOrErr returns the Provider value or an error if the edge
@@ -68,23 +73,47 @@ func (e ProviderOrderTokenEdges) ProviderOrErr() (*ProviderProfile, error) {
 	return nil, &NotLoadedError{edge: "provider"}
 }
 
+// TokenOrErr returns the Token value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ProviderOrderTokenEdges) TokenOrErr() (*Token, error) {
+	if e.Token != nil {
+		return e.Token, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: token.Label}
+	}
+	return nil, &NotLoadedError{edge: "token"}
+}
+
+// CurrencyOrErr returns the Currency value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ProviderOrderTokenEdges) CurrencyOrErr() (*FiatCurrency, error) {
+	if e.Currency != nil {
+		return e.Currency, nil
+	} else if e.loadedTypes[2] {
+		return nil, &NotFoundError{label: fiatcurrency.Label}
+	}
+	return nil, &NotLoadedError{edge: "currency"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*ProviderOrderToken) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case providerordertoken.FieldAddresses:
-			values[i] = new([]byte)
 		case providerordertoken.FieldFixedConversionRate, providerordertoken.FieldFloatingConversionRate, providerordertoken.FieldMaxOrderAmount, providerordertoken.FieldMinOrderAmount:
 			values[i] = new(decimal.Decimal)
 		case providerordertoken.FieldID:
 			values[i] = new(sql.NullInt64)
-		case providerordertoken.FieldSymbol, providerordertoken.FieldConversionRateType:
+		case providerordertoken.FieldConversionRateType, providerordertoken.FieldAddress, providerordertoken.FieldNetwork:
 			values[i] = new(sql.NullString)
 		case providerordertoken.FieldCreatedAt, providerordertoken.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
-		case providerordertoken.ForeignKeys[0]: // provider_profile_order_tokens
+		case providerordertoken.ForeignKeys[0]: // fiat_currency_provider_order_tokens
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case providerordertoken.ForeignKeys[1]: // provider_profile_order_tokens
 			values[i] = new(sql.NullString)
+		case providerordertoken.ForeignKeys[2]: // token_provider_order_tokens
+			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -118,12 +147,6 @@ func (pot *ProviderOrderToken) assignValues(columns []string, values []any) erro
 			} else if value.Valid {
 				pot.UpdatedAt = value.Time
 			}
-		case providerordertoken.FieldSymbol:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field symbol", values[i])
-			} else if value.Valid {
-				pot.Symbol = value.String
-			}
 		case providerordertoken.FieldFixedConversionRate:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field fixed_conversion_rate", values[i])
@@ -154,20 +177,38 @@ func (pot *ProviderOrderToken) assignValues(columns []string, values []any) erro
 			} else if value != nil {
 				pot.MinOrderAmount = *value
 			}
-		case providerordertoken.FieldAddresses:
-			if value, ok := values[i].(*[]byte); !ok {
-				return fmt.Errorf("unexpected type %T for field addresses", values[i])
-			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &pot.Addresses); err != nil {
-					return fmt.Errorf("unmarshal field addresses: %w", err)
-				}
+		case providerordertoken.FieldAddress:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field address", values[i])
+			} else if value.Valid {
+				pot.Address = value.String
+			}
+		case providerordertoken.FieldNetwork:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field network", values[i])
+			} else if value.Valid {
+				pot.Network = value.String
 			}
 		case providerordertoken.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field fiat_currency_provider_order_tokens", values[i])
+			} else if value.Valid {
+				pot.fiat_currency_provider_order_tokens = new(uuid.UUID)
+				*pot.fiat_currency_provider_order_tokens = *value.S.(*uuid.UUID)
+			}
+		case providerordertoken.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field provider_profile_order_tokens", values[i])
 			} else if value.Valid {
 				pot.provider_profile_order_tokens = new(string)
 				*pot.provider_profile_order_tokens = value.String
+			}
+		case providerordertoken.ForeignKeys[2]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field token_provider_order_tokens", value)
+			} else if value.Valid {
+				pot.token_provider_order_tokens = new(int)
+				*pot.token_provider_order_tokens = int(value.Int64)
 			}
 		default:
 			pot.selectValues.Set(columns[i], values[i])
@@ -185,6 +226,16 @@ func (pot *ProviderOrderToken) Value(name string) (ent.Value, error) {
 // QueryProvider queries the "provider" edge of the ProviderOrderToken entity.
 func (pot *ProviderOrderToken) QueryProvider() *ProviderProfileQuery {
 	return NewProviderOrderTokenClient(pot.config).QueryProvider(pot)
+}
+
+// QueryToken queries the "token" edge of the ProviderOrderToken entity.
+func (pot *ProviderOrderToken) QueryToken() *TokenQuery {
+	return NewProviderOrderTokenClient(pot.config).QueryToken(pot)
+}
+
+// QueryCurrency queries the "currency" edge of the ProviderOrderToken entity.
+func (pot *ProviderOrderToken) QueryCurrency() *FiatCurrencyQuery {
+	return NewProviderOrderTokenClient(pot.config).QueryCurrency(pot)
 }
 
 // Update returns a builder for updating this ProviderOrderToken.
@@ -216,9 +267,6 @@ func (pot *ProviderOrderToken) String() string {
 	builder.WriteString("updated_at=")
 	builder.WriteString(pot.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
-	builder.WriteString("symbol=")
-	builder.WriteString(pot.Symbol)
-	builder.WriteString(", ")
 	builder.WriteString("fixed_conversion_rate=")
 	builder.WriteString(fmt.Sprintf("%v", pot.FixedConversionRate))
 	builder.WriteString(", ")
@@ -234,8 +282,11 @@ func (pot *ProviderOrderToken) String() string {
 	builder.WriteString("min_order_amount=")
 	builder.WriteString(fmt.Sprintf("%v", pot.MinOrderAmount))
 	builder.WriteString(", ")
-	builder.WriteString("addresses=")
-	builder.WriteString(fmt.Sprintf("%v", pot.Addresses))
+	builder.WriteString("address=")
+	builder.WriteString(pot.Address)
+	builder.WriteString(", ")
+	builder.WriteString("network=")
+	builder.WriteString(pot.Network)
 	builder.WriteByte(')')
 	return builder.String()
 }

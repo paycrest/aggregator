@@ -8,8 +8,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/paycrest/protocol/ent/paymentorderrecipient"
-	"github.com/paycrest/protocol/ent/predicate"
+	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
+	"github.com/paycrest/aggregator/ent/predicate"
 )
 
 // PaymentOrderRecipientDelete is the builder for deleting a PaymentOrderRecipient entity.

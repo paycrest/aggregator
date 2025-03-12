@@ -9,7 +9,7 @@ import (
 
 	sentryhook "github.com/chadsr/logrus-sentry"
 	"github.com/getsentry/sentry-go"
-	"github.com/paycrest/protocol/config"
+	"github.com/paycrest/aggregator/config"
 	"github.com/sirupsen/logrus"
 )
 

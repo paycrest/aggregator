@@ -7,7 +7,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
-	"github.com/paycrest/protocol/ent/predicate"
+	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/shopspring/decimal"
 )
 
@@ -94,6 +94,16 @@ func GatewayContractAddress(v string) predicate.Network {
 // IsTestnet applies equality check predicate on the "is_testnet" field. It's identical to IsTestnetEQ.
 func IsTestnet(v bool) predicate.Network {
 	return predicate.Network(sql.FieldEQ(FieldIsTestnet, v))
+}
+
+// BundlerURL applies equality check predicate on the "bundler_url" field. It's identical to BundlerURLEQ.
+func BundlerURL(v string) predicate.Network {
+	return predicate.Network(sql.FieldEQ(FieldBundlerURL, v))
+}
+
+// PaymasterURL applies equality check predicate on the "paymaster_url" field. It's identical to PaymasterURLEQ.
+func PaymasterURL(v string) predicate.Network {
+	return predicate.Network(sql.FieldEQ(FieldPaymasterURL, v))
 }
 
 // Fee applies equality check predicate on the "fee" field. It's identical to FeeEQ.
@@ -499,6 +509,156 @@ func IsTestnetEQ(v bool) predicate.Network {
 // IsTestnetNEQ applies the NEQ predicate on the "is_testnet" field.
 func IsTestnetNEQ(v bool) predicate.Network {
 	return predicate.Network(sql.FieldNEQ(FieldIsTestnet, v))
+}
+
+// BundlerURLEQ applies the EQ predicate on the "bundler_url" field.
+func BundlerURLEQ(v string) predicate.Network {
+	return predicate.Network(sql.FieldEQ(FieldBundlerURL, v))
+}
+
+// BundlerURLNEQ applies the NEQ predicate on the "bundler_url" field.
+func BundlerURLNEQ(v string) predicate.Network {
+	return predicate.Network(sql.FieldNEQ(FieldBundlerURL, v))
+}
+
+// BundlerURLIn applies the In predicate on the "bundler_url" field.
+func BundlerURLIn(vs ...string) predicate.Network {
+	return predicate.Network(sql.FieldIn(FieldBundlerURL, vs...))
+}
+
+// BundlerURLNotIn applies the NotIn predicate on the "bundler_url" field.
+func BundlerURLNotIn(vs ...string) predicate.Network {
+	return predicate.Network(sql.FieldNotIn(FieldBundlerURL, vs...))
+}
+
+// BundlerURLGT applies the GT predicate on the "bundler_url" field.
+func BundlerURLGT(v string) predicate.Network {
+	return predicate.Network(sql.FieldGT(FieldBundlerURL, v))
+}
+
+// BundlerURLGTE applies the GTE predicate on the "bundler_url" field.
+func BundlerURLGTE(v string) predicate.Network {
+	return predicate.Network(sql.FieldGTE(FieldBundlerURL, v))
+}
+
+// BundlerURLLT applies the LT predicate on the "bundler_url" field.
+func BundlerURLLT(v string) predicate.Network {
+	return predicate.Network(sql.FieldLT(FieldBundlerURL, v))
+}
+
+// BundlerURLLTE applies the LTE predicate on the "bundler_url" field.
+func BundlerURLLTE(v string) predicate.Network {
+	return predicate.Network(sql.FieldLTE(FieldBundlerURL, v))
+}
+
+// BundlerURLContains applies the Contains predicate on the "bundler_url" field.
+func BundlerURLContains(v string) predicate.Network {
+	return predicate.Network(sql.FieldContains(FieldBundlerURL, v))
+}
+
+// BundlerURLHasPrefix applies the HasPrefix predicate on the "bundler_url" field.
+func BundlerURLHasPrefix(v string) predicate.Network {
+	return predicate.Network(sql.FieldHasPrefix(FieldBundlerURL, v))
+}
+
+// BundlerURLHasSuffix applies the HasSuffix predicate on the "bundler_url" field.
+func BundlerURLHasSuffix(v string) predicate.Network {
+	return predicate.Network(sql.FieldHasSuffix(FieldBundlerURL, v))
+}
+
+// BundlerURLIsNil applies the IsNil predicate on the "bundler_url" field.
+func BundlerURLIsNil() predicate.Network {
+	return predicate.Network(sql.FieldIsNull(FieldBundlerURL))
+}
+
+// BundlerURLNotNil applies the NotNil predicate on the "bundler_url" field.
+func BundlerURLNotNil() predicate.Network {
+	return predicate.Network(sql.FieldNotNull(FieldBundlerURL))
+}
+
+// BundlerURLEqualFold applies the EqualFold predicate on the "bundler_url" field.
+func BundlerURLEqualFold(v string) predicate.Network {
+	return predicate.Network(sql.FieldEqualFold(FieldBundlerURL, v))
+}
+
+// BundlerURLContainsFold applies the ContainsFold predicate on the "bundler_url" field.
+func BundlerURLContainsFold(v string) predicate.Network {
+	return predicate.Network(sql.FieldContainsFold(FieldBundlerURL, v))
+}
+
+// PaymasterURLEQ applies the EQ predicate on the "paymaster_url" field.
+func PaymasterURLEQ(v string) predicate.Network {
+	return predicate.Network(sql.FieldEQ(FieldPaymasterURL, v))
+}
+
+// PaymasterURLNEQ applies the NEQ predicate on the "paymaster_url" field.
+func PaymasterURLNEQ(v string) predicate.Network {
+	return predicate.Network(sql.FieldNEQ(FieldPaymasterURL, v))
+}
+
+// PaymasterURLIn applies the In predicate on the "paymaster_url" field.
+func PaymasterURLIn(vs ...string) predicate.Network {
+	return predicate.Network(sql.FieldIn(FieldPaymasterURL, vs...))
+}
+
+// PaymasterURLNotIn applies the NotIn predicate on the "paymaster_url" field.
+func PaymasterURLNotIn(vs ...string) predicate.Network {
+	return predicate.Network(sql.FieldNotIn(FieldPaymasterURL, vs...))
+}
+
+// PaymasterURLGT applies the GT predicate on the "paymaster_url" field.
+func PaymasterURLGT(v string) predicate.Network {
+	return predicate.Network(sql.FieldGT(FieldPaymasterURL, v))
+}
+
+// PaymasterURLGTE applies the GTE predicate on the "paymaster_url" field.
+func PaymasterURLGTE(v string) predicate.Network {
+	return predicate.Network(sql.FieldGTE(FieldPaymasterURL, v))
+}
+
+// PaymasterURLLT applies the LT predicate on the "paymaster_url" field.
+func PaymasterURLLT(v string) predicate.Network {
+	return predicate.Network(sql.FieldLT(FieldPaymasterURL, v))
+}
+
+// PaymasterURLLTE applies the LTE predicate on the "paymaster_url" field.
+func PaymasterURLLTE(v string) predicate.Network {
+	return predicate.Network(sql.FieldLTE(FieldPaymasterURL, v))
+}
+
+// PaymasterURLContains applies the Contains predicate on the "paymaster_url" field.
+func PaymasterURLContains(v string) predicate.Network {
+	return predicate.Network(sql.FieldContains(FieldPaymasterURL, v))
+}
+
+// PaymasterURLHasPrefix applies the HasPrefix predicate on the "paymaster_url" field.
+func PaymasterURLHasPrefix(v string) predicate.Network {
+	return predicate.Network(sql.FieldHasPrefix(FieldPaymasterURL, v))
+}
+
+// PaymasterURLHasSuffix applies the HasSuffix predicate on the "paymaster_url" field.
+func PaymasterURLHasSuffix(v string) predicate.Network {
+	return predicate.Network(sql.FieldHasSuffix(FieldPaymasterURL, v))
+}
+
+// PaymasterURLIsNil applies the IsNil predicate on the "paymaster_url" field.
+func PaymasterURLIsNil() predicate.Network {
+	return predicate.Network(sql.FieldIsNull(FieldPaymasterURL))
+}
+
+// PaymasterURLNotNil applies the NotNil predicate on the "paymaster_url" field.
+func PaymasterURLNotNil() predicate.Network {
+	return predicate.Network(sql.FieldNotNull(FieldPaymasterURL))
+}
+
+// PaymasterURLEqualFold applies the EqualFold predicate on the "paymaster_url" field.
+func PaymasterURLEqualFold(v string) predicate.Network {
+	return predicate.Network(sql.FieldEqualFold(FieldPaymasterURL, v))
+}
+
+// PaymasterURLContainsFold applies the ContainsFold predicate on the "paymaster_url" field.
+func PaymasterURLContainsFold(v string) predicate.Network {
+	return predicate.Network(sql.FieldContainsFold(FieldPaymasterURL, v))
 }
 
 // FeeEQ applies the EQ predicate on the "fee" field.

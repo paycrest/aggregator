@@ -15,7 +15,7 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/ethereum/go-ethereum/common"
 	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
-	"github.com/paycrest/protocol/config"
+	"github.com/paycrest/aggregator/config"
 	tronWallet "github.com/paycrest/tron-wallet"
 	tronEnums "github.com/paycrest/tron-wallet/enums"
 	"golang.org/x/crypto/bcrypt"

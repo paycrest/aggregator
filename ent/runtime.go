@@ -2,4 +2,4 @@
 
 package ent
 
-// The schema-stitching logic is generated in github.com/paycrest/protocol/ent/runtime/runtime.go
+// The schema-stitching logic is generated in github.com/paycrest/aggregator/ent/runtime/runtime.go

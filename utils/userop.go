@@ -5,8 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
 	"time"
+
+	"encoding/hex"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -15,10 +18,12 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/shopspring/decimal"
 
-	"github.com/paycrest/protocol/config"
-	"github.com/paycrest/protocol/services/contracts"
-	"github.com/paycrest/protocol/types"
-	cryptoUtils "github.com/paycrest/protocol/utils/crypto"
+	"github.com/paycrest/aggregator/config"
+	"github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/services/contracts"
+	"github.com/paycrest/aggregator/storage"
+	"github.com/paycrest/aggregator/types"
+	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/stackup-wallet/stackup-bundler/pkg/userop"
 )
 
@@ -97,12 +102,12 @@ func InitializeUserOperation(ctx context.Context, client types.RPCClient, rpcUrl
 	return userOperation, nil
 }
 
-// SponsorUserOperation sponsors the user operation from stackup
-// ref: https://docs.stackup.sh/docs/paymaster-api-rpc-methods#pm_sponsoruseroperation
+// SponsorUserOperation sponsors the user operation with different AA services
 func SponsorUserOperation(userOp *userop.UserOperation, mode string, token string, chainId int64) error {
+
 	_, paymasterUrl, err := getEndpoints(chainId)
 	if err != nil {
-		return fmt.Errorf("failed to get endpoints: %w", err)
+		return fmt.Errorf("failed to get endpoints for chain ID %d: %w", chainId, err)
 	}
 
 	client, err := rpc.Dial(paymasterUrl)
@@ -110,36 +115,16 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 		return fmt.Errorf("failed to connect to RPC client: %w", err)
 	}
 
+	aaService, err := detectAAService(paymasterUrl)
+	if err != nil {
+		return fmt.Errorf("invalid AA service URL pattern: %w", err)
+	}
+
 	var payload map[string]interface{}
 	var requestParams []interface{}
 
-	if orderConf.ActiveAAService == "stackup" {
-		switch mode {
-		case "sponsored":
-			payload = map[string]interface{}{
-				"type": "payg",
-			}
-		case "erc20":
-			if token == "" {
-				return fmt.Errorf("token address is required")
-			}
-
-			payload = map[string]interface{}{
-				"type":  "erc20token",
-				"token": token,
-			}
-		default:
-			return fmt.Errorf("invalid mode")
-		}
-
-		requestParams = []interface{}{
-			userOp,
-			orderConf.EntryPointContractAddress.Hex(),
-			payload,
-		}
-	} else if orderConf.ActiveAAService == "biconomy" {
-		mode = "sponsored"
-
+	switch aaService {
+	case "biconomy":
 		switch mode {
 		case "sponsored":
 			payload = map[string]interface{}{
@@ -158,7 +143,6 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 			if token == "" {
 				return fmt.Errorf("token address is required")
 			}
-
 			payload = map[string]interface{}{
 				"mode": "ERC20",
 				"tokenInfo": map[string]string{
@@ -186,6 +170,8 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 			},
 			payload,
 		}
+	default:
+		return fmt.Errorf("unsupported AA service: %s", aaService)
 	}
 
 	var result json.RawMessage
@@ -195,28 +181,9 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 		return fmt.Errorf("RPC error: %w\nUser Operation: %s", err, string(op))
 	}
 
-	if orderConf.ActiveAAService == "stackup" {
-		type Response struct {
-			PaymasterAndData     string `json:"paymasterAndData"     mapstructure:"paymasterAndData"`
-			PreVerificationGas   string `json:"preVerificationGas"   mapstructure:"preVerificationGas"`
-			VerificationGasLimit string `json:"verificationGasLimit" mapstructure:"verificationGasLimit"`
-			CallGasLimit         string `json:"callGasLimit"         mapstructure:"callGasLimit"`
-		}
-		var response Response
-
-		err = json.Unmarshal(result, &response)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal response: %w", err)
-		}
-
-		userOp.CallGasLimit, _ = new(big.Int).SetString(response.CallGasLimit, 0)
-		userOp.VerificationGasLimit, _ = new(big.Int).SetString(response.VerificationGasLimit, 0)
-		userOp.PreVerificationGas, _ = new(big.Int).SetString(response.PreVerificationGas, 0)
-		userOp.PaymasterAndData = common.FromHex(response.PaymasterAndData)
-
-	} else if orderConf.ActiveAAService == "biconomy" {
+	switch aaService {
+	case "biconomy":
 		var response map[string]interface{}
-
 		err = json.Unmarshal(result, &response)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal response: %w", err)
@@ -249,25 +216,26 @@ func SignUserOperation(userOperation *userop.UserOperation, chainId int64) error
 }
 
 // SendUserOperation sends the user operation
-func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, int64, error) {
+func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, string, int64, error) {
+
 	bundlerUrl, _, err := getEndpoints(chainId)
 	if err != nil {
-		return "", 0, fmt.Errorf("failed to get endpoints: %w", err)
+		return "", "", 0, fmt.Errorf("failed to get endpoints for chain ID %d: %w", chainId, err)
 	}
 
 	client, err := rpc.Dial(bundlerUrl)
 	if err != nil {
-		return "", 0, fmt.Errorf("failed to connect to RPC client: %w", err)
+		return "", "", 0, fmt.Errorf("failed to connect to RPC client: %w", err)
+	}
+
+	aaService, err := detectAAService(bundlerUrl)
+	if err != nil {
+		return "", "", 0, fmt.Errorf("invalid AA service URL pattern: %w", err)
 	}
 
 	var requestParams []interface{}
-
-	if orderConf.ActiveAAService == "stackup" {
-		requestParams = []interface{}{
-			userOp,
-			orderConf.EntryPointContractAddress.Hex(),
-		}
-	} else if orderConf.ActiveAAService == "biconomy" {
+	switch aaService {
+	case "biconomy":
 		requestParams = []interface{}{
 			userOp,
 			orderConf.EntryPointContractAddress.Hex(),
@@ -275,44 +243,57 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, int
 				"simulation_type": "validation_and_execution",
 			},
 		}
+	default:
+		return "", "", 0, fmt.Errorf("unsupported AA service: %s", aaService)
 	}
 
 	var result json.RawMessage
 	err = client.Call(&result, "eth_sendUserOperation", requestParams...)
 	if err != nil {
 		op, _ := userOp.MarshalJSON()
-		return "", 0, fmt.Errorf("RPC error: %w\nUser Operation: %s", err, string(op))
+		return "", "", 0, fmt.Errorf("RPC error: %w\nUser Operation: %s", err, string(op))
 	}
 
 	var userOpHash string
 	err = json.Unmarshal(result, &userOpHash)
 	if err != nil {
-		return "", 0, fmt.Errorf("failed to unmarshal response: %w", err)
+		return "", "", 0, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
-	response, err := GetUserOperationByHash(userOpHash, chainId)
+	response, err := GetUserOperationByReceipt(userOpHash, chainId)
 	if err != nil {
-		return "", 0, fmt.Errorf("failed to get user operation by hash: %w", err)
+		return "", "", 0, fmt.Errorf("failed to get user operation by hash: %w", err)
 	}
 
 	transactionHash, ok := response["transactionHash"].(string)
 	if !ok {
-		return "", 0, fmt.Errorf("failed to get transaction hash")
+		return "", "", 0, fmt.Errorf("failed to get transaction hash")
 	}
-
-	blockNumber, ok := response["blockNumber"].(float64)
+	orderId, ok := response["orderId"].(string)
 	if !ok {
-		return "", 0, fmt.Errorf("failed to get block number")
+		return "", "", 0, fmt.Errorf("failed to get order ID")
 	}
 
-	return transactionHash, int64(blockNumber), nil
+	blockNumberStr, ok := response["blockNumber"].(string)
+	if !ok {
+		return "", "", 0, fmt.Errorf("failed to get block number")
+	}
+
+	blockNumberHex := blockNumberStr[2:]
+
+	blockNumberInt, err := strconv.ParseInt(blockNumberHex, 16, 64)
+	if err != nil {
+		return "", "", 0, fmt.Errorf("failed to parse block number: %w", err)
+	}
+
+	return transactionHash, orderId, blockNumberInt, nil
 }
 
-// GetUserOperationByHash fetches the user operation by hash
-func GetUserOperationByHash(userOpHash string, chainId int64) (map[string]interface{}, error) {
+// GetUserOperationByReceipt fetches the user operation by hash
+func GetUserOperationByReceipt(userOpHash string, chainId int64) (map[string]interface{}, error) {
 	bundlerUrl, _, err := getEndpoints(chainId)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get endpoints: %w", err)
+		return nil, fmt.Errorf("failed to get endpoints for chain ID %d: %w", chainId, err)
 	}
 
 	client, err := rpc.Dial(bundlerUrl)
@@ -327,7 +308,7 @@ func GetUserOperationByHash(userOpHash string, chainId int64) (map[string]interf
 	for {
 		time.Sleep(10 * time.Second)
 		var result json.RawMessage
-		err = client.Call(&result, "eth_getUserOperationByHash", []interface{}{userOpHash}...)
+		err = client.Call(&result, "eth_getUserOperationReceipt", []interface{}{userOpHash}...)
 		if err != nil {
 			return nil, fmt.Errorf("RPC error: %w", err)
 		}
@@ -337,7 +318,14 @@ func GetUserOperationByHash(userOpHash string, chainId int64) (map[string]interf
 			return nil, err
 		}
 
-		if response == nil && response["transactionHash"] == nil {
+		logs, ok := response["logs"].([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("failed to get logs")
+		}
+
+		// Transaction hash is included in the logs
+		// based on the response, if logs is empty, then the response did not include the transaction hash
+		if response == nil || len(logs) == 0 {
 			elapsed := time.Since(start)
 			if elapsed >= timeout {
 				return nil, err
@@ -348,19 +336,68 @@ func GetUserOperationByHash(userOpHash string, chainId int64) (map[string]interf
 		break
 	}
 
-	return response, nil
+	userOpTransactionLogs, ok := response["logs"].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("failed to get logs")
+	}
+	logMap, ok := userOpTransactionLogs[0].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("failed to parse log entry")
+	}
+	transactionHash, ok := logMap["transactionHash"].(string)
+	if !ok {
+		return nil, fmt.Errorf("failed to get transaction hash from log entry")
+	}
+
+	blockNumber, ok := logMap["blockNumber"].(string)
+	if !ok {
+		return nil, fmt.Errorf("failed to get block number")
+	}
+
+	receipt := response["receipt"].(map[string]interface{})
+	var orderId string
+
+	// Iterate over logs to find the OrderCreated event
+	for _, event := range receipt["logs"].([]interface{}) {
+		eventData := event.(map[string]interface{})
+		if eventData["topics"].([]interface{})[0] == "0x40ccd1ceb111a3c186ef9911e1b876dc1f789ed331b86097b3b8851055b6a137" {
+			data := strings.TrimPrefix(eventData["data"].(string), "0x")
+			unpackedEventData, err := UnpackEventData(data, contracts.GatewayMetaData.ABI, "OrderCreated")
+			if err != nil {
+				return nil, fmt.Errorf("userop failed to unpack event data: %w %v", err, eventData)
+			}
+			orderIdBytes := unpackedEventData[1].([32]byte)
+			orderId = "0x" + hex.EncodeToString(orderIdBytes[:])
+			if orderId == "" {
+				return nil, fmt.Errorf("failed to get order ID")
+			}
+			break
+		}
+	}
+
+	return map[string]interface{}{
+		"orderId":         orderId,
+		"blockNumber":     blockNumber,
+		"transactionHash": transactionHash,
+	}, nil
 }
 
-// GetPaymasterAccount fetches the paymaster account from stackup
-// ref: https://docs.stackup.sh/docs/paymaster-api-rpc-methods#pm_accounts
+// GetPaymasterAccount returns the paymaster account for the given chain ID
 func GetPaymasterAccount(chainId int64) (string, error) {
-	if orderConf.ActiveAAService == "biconomy" {
-		return "0x00000f79b7faf42eebadba19acc07cd08af44789", nil
-	}
 
 	_, paymasterUrl, err := getEndpoints(chainId)
 	if err != nil {
-		return "", fmt.Errorf("failed to get endpoints: %w", err)
+		return "", fmt.Errorf("failed to get endpoints for chain ID %d: %w", chainId, err)
+	}
+
+	aaService, err := detectAAService(paymasterUrl)
+	if err != nil {
+		return "", fmt.Errorf("failed to detect AA service: %w", err)
+	}
+
+	// Handle biconomy case specifically
+	if aaService == "biconomy" {
+		return "0x00000f79b7faf42eebadba19acc07cd08af44789", nil
 	}
 
 	client, err := rpc.Dial(paymasterUrl)
@@ -389,9 +426,10 @@ func GetPaymasterAccount(chainId int64) (string, error) {
 
 // GetUserOperationStatus returns the status of the user operation
 func GetUserOperationStatus(userOpHash string, chainId int64) (bool, error) {
+
 	bundlerUrl, _, err := getEndpoints(chainId)
 	if err != nil {
-		return false, fmt.Errorf("failed to get endpoints: %w", err)
+		return false, fmt.Errorf("failed to get endpoints for chain ID %d: %w", chainId, err)
 	}
 
 	client, err := rpc.Dial(bundlerUrl)
@@ -447,7 +485,7 @@ func eip1559GasPrice(ctx context.Context, client types.RPCClient) (maxFeePerGas,
 		if err != nil {
 			return nil, nil, err
 		}
-		maxFeePerGas = big.NewInt(0).Add(tip, new(big.Int).Mul(latestHeader.BaseFee, common.Big2))
+		maxFeePerGas = big.NewInt(0).Add(tip, new(big.Int).Mul(latestHeader.BaseFee, common.Big3))
 		maxPriorityFeePerGas = tip
 	} else {
 		sgp, err := client.SuggestGasPrice(ctx)
@@ -461,42 +499,50 @@ func eip1559GasPrice(ctx context.Context, client types.RPCClient) (maxFeePerGas,
 	return maxFeePerGas, maxPriorityFeePerGas, nil
 }
 
-// getEndpoints returns the bundler and paymaster URLs for the given chain ID
-func getEndpoints(chainId int64) (bundlerUrl, paymasterUrl string, err error) {
-	switch chainId {
-	case 1:
-		bundlerUrl = orderConf.BundlerUrlEthereum
-		paymasterUrl = orderConf.PaymasterUrlEthereum
-	case 11155111:
-		bundlerUrl = orderConf.BundlerUrlEthereum
-		paymasterUrl = orderConf.PaymasterUrlEthereum
-	case 137:
-		bundlerUrl = orderConf.BundlerUrlPolygon
-		paymasterUrl = orderConf.PaymasterUrlPolygon
-	case 56:
-		bundlerUrl = orderConf.BundlerUrlBSC
-		paymasterUrl = orderConf.PaymasterUrlBSC
-	case 8453:
-		bundlerUrl = orderConf.BundlerUrlBase
-		paymasterUrl = orderConf.PaymasterUrlBase
-	case 84532:
-		bundlerUrl = orderConf.BundlerUrlBase
-		paymasterUrl = orderConf.PaymasterUrlBase
-	case 42161:
-		bundlerUrl = orderConf.BundlerUrlArbitrum
-		paymasterUrl = orderConf.PaymasterUrlArbitrum
-	case 421614:
-		bundlerUrl = orderConf.BundlerUrlArbitrum
-		paymasterUrl = orderConf.PaymasterUrlArbitrum
-	default:
-		return "", "", fmt.Errorf("unsupported chain ID")
+// getEndpoints fetches bundler and paymaster URLs for the given chain ID from the database
+func getEndpoints(chainID int64) (string, string, error) {
+	ctx := context.Background()
+
+	network, err := storage.Client.Network.
+		Query().
+		Where(network.ChainID(chainID)).
+		Only(ctx)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to fetch network: %w", err)
 	}
 
-	return bundlerUrl, paymasterUrl, nil
+	// Handle optional AA service
+	if network.BundlerURL == "" && network.PaymasterURL == "" {
+		return "", "", fmt.Errorf("AA service not enabled for network ID: %d", chainID)
+	}
+
+	// Ensure consistency if AA service is enabled
+	if (network.BundlerURL == "") != (network.PaymasterURL == "") {
+		return "", "", fmt.Errorf("incomplete AA configuration for network ID: %d - both bundler and paymaster URLs must be set if AA service is enabled", chainID)
+	}
+
+	// Validate URL patterns
+	_, err = detectAAService(network.BundlerURL)
+	if err != nil {
+		return "", "", fmt.Errorf("invalid bundler URL pattern: %w", err)
+	}
+
+	return network.BundlerURL, network.PaymasterURL, nil
+}
+
+// detectAAService detects the AA service based on the provided URL pattern
+func detectAAService(url string) (string, error) {
+	switch {
+	case strings.Contains(url, "biconomy.io"):
+		return "biconomy", nil
+	case strings.Contains(url, "api.pimlico.io"):
+		return "pimlico", nil
+	default:
+		return "", fmt.Errorf("unsupported AA service URL pattern: %s", url)
+	}
 }
 
 // getNonce returns the nonce for the given sender
-// https://docs.stackup.sh/docs/useroperation-nonce
 func getNonce(client types.RPCClient, sender common.Address) (nonce *big.Int, err error) {
 	entrypoint, err := contracts.NewEntryPoint(orderConf.EntryPointContractAddress, client.(bind.ContractBackend))
 	if err != nil {

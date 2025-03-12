@@ -1,10 +1,22 @@
 # Start from golang base image
-FROM golang:1.22rc2-alpine3.19
+FROM golang:1.23.0-bullseye
 
-RUN apk --no-cache add curl
-# Install the air binary so we get live code-reloading when we save files
+# Install the air binary 
 RUN curl -sSfL https://raw.githubusercontent.com/cosmtrek/air/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
 
-# Run the air command in the directory where our code will live
+# Set up working directory
 WORKDIR /app
+
+# Copy go mod files first for better caching
+COPY go.mod go.sum ./
+
+# Download dependencies
+RUN go mod download
+
+# Copy the rest of the code
+COPY . .
+
+# Clear go cache and temporary files to save space
+RUN go clean -cache -modcache -i -r
+
 CMD ["air"]

@@ -14,21 +14,23 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/google/uuid"
-	"github.com/paycrest/protocol/config"
-	"github.com/paycrest/protocol/ent"
-	"github.com/paycrest/protocol/services/contracts"
-	db "github.com/paycrest/protocol/storage"
+	"github.com/paycrest/aggregator/config"
+	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/services/contracts"
+	db "github.com/paycrest/aggregator/storage"
 	"github.com/shopspring/decimal"
 
-	"github.com/paycrest/protocol/ent/institution"
-	"github.com/paycrest/protocol/ent/lockorderfulfillment"
-	"github.com/paycrest/protocol/ent/lockpaymentorder"
-	"github.com/paycrest/protocol/ent/paymentorder"
-	"github.com/paycrest/protocol/ent/providerordertoken"
-	"github.com/paycrest/protocol/ent/providerprofile"
-	"github.com/paycrest/protocol/types"
-	"github.com/paycrest/protocol/utils"
-	cryptoUtils "github.com/paycrest/protocol/utils/crypto"
+	"github.com/paycrest/aggregator/ent/institution"
+	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
+	"github.com/paycrest/aggregator/ent/lockpaymentorder"
+	networkent "github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providerordertoken"
+	"github.com/paycrest/aggregator/ent/providerprofile"
+	tokenent "github.com/paycrest/aggregator/ent/token"
+	"github.com/paycrest/aggregator/types"
+	"github.com/paycrest/aggregator/utils"
+	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 )
 
 // OrderEVM provides functionality related to on-chain interactions for payment orders
@@ -147,7 +149,7 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, client types.RPCClient, orde
 	}
 
 	// Send user operation
-	txHash, blockNumber, err := utils.SendUserOperation(userOperation, order.Edges.Token.Edges.Network.ChainID)
+	txHash, gatewayOrderId, blockNumber, err := utils.SendUserOperation(userOperation, order.Edges.Token.Edges.Network.ChainID)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.SendUserOperation: %w", orderIDPrefix, err)
 	}
@@ -156,6 +158,7 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, client types.RPCClient, orde
 	_, err = order.Update().
 		SetTxHash(txHash).
 		SetBlockNumber(blockNumber).
+		SetGatewayID(gatewayOrderId).
 		SetRate(order.Rate).
 		SetStatus(paymentorder.StatusPending).
 		Save(ctx)
@@ -183,13 +186,20 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, client types.RPCClient, orde
 }
 
 // RefundOrder refunds sender on canceled lock order
-func (s *OrderEVM) RefundOrder(ctx context.Context, client types.RPCClient, orderID string) error {
+func (s *OrderEVM) RefundOrder(ctx context.Context, client types.RPCClient, network *ent.Network, orderID string) error {
 	orderIDPrefix := strings.Split(orderID, "-")[0]
 
 	// Fetch lock order from db
 	lockOrder, err := db.Client.LockPaymentOrder.
 		Query().
-		Where(lockpaymentorder.GatewayIDEQ(orderID)).
+		Where(
+			lockpaymentorder.GatewayIDEQ(orderID),
+			lockpaymentorder.HasTokenWith(
+				tokenent.HasNetworkWith(
+					networkent.IdentifierEQ(network.Identifier),
+				),
+			),
+		).
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
@@ -228,7 +238,7 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, client types.RPCClient, orde
 	_ = utils.SignUserOperation(userOperation, lockOrder.Edges.Token.Edges.Network.ChainID)
 
 	// Send user operation
-	txHash, blockNumber, err := utils.SendUserOperation(userOperation, lockOrder.Edges.Token.Edges.Network.ChainID)
+	txHash, _, blockNumber, err := utils.SendUserOperation(userOperation, lockOrder.Edges.Token.Edges.Network.ChainID)
 	if err != nil {
 		return fmt.Errorf("%s - RefundOrder.sendUserOperation: %w", orderIDPrefix, err)
 	}
@@ -303,7 +313,7 @@ func (s *OrderEVM) SettleOrder(ctx context.Context, client types.RPCClient, orde
 	_ = utils.SignUserOperation(userOperation, order.Edges.Token.Edges.Network.ChainID)
 
 	// Send user operation
-	txHash, blockNumber, err := utils.SendUserOperation(userOperation, order.Edges.Token.Edges.Network.ChainID)
+	txHash, _, blockNumber, err := utils.SendUserOperation(userOperation, order.Edges.Token.Edges.Network.ChainID)
 	if err != nil {
 		return fmt.Errorf("%s - SettleOrder.sendUserOperation: %w", orderIDPrefix, err)
 	}
@@ -495,7 +505,7 @@ func (s *OrderEVM) createOrderCallData(order *ent.PaymentOrder) ([]byte, error) 
 	params := &types.CreateOrderParams{
 		Token:              common.HexToAddress(order.Edges.Token.ContractAddress),
 		Amount:             utils.ToSubunit(amountWithProtocolFee, order.Edges.Token.Decimals),
-		Rate:               order.Rate.BigInt(),
+		Rate:               order.Rate.Mul(decimal.NewFromInt(100)).BigInt(),
 		SenderFeeRecipient: common.HexToAddress(order.FeeAddress),
 		SenderFee:          utils.ToSubunit(order.SenderFee, order.Edges.Token.Decimals),
 		RefundAddress:      common.HexToAddress(order.ReturnAddress),
@@ -731,26 +741,17 @@ func (s *OrderEVM) settleCallData(ctx context.Context, order *ent.LockPaymentOrd
 	token, err := db.Client.ProviderOrderToken.
 		Query().
 		Where(
-			providerordertoken.SymbolEQ(order.Edges.Token.Symbol),
+			providerordertoken.NetworkEQ(order.Edges.Token.Edges.Network.Identifier),
 			providerordertoken.HasProviderWith(
 				providerprofile.IDEQ(order.Edges.Provider.ID),
+			),
+			providerordertoken.HasTokenWith(
+				tokenent.IDEQ(order.Edges.Token.ID),
 			),
 		).
 		Only(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch provider order token: %w", err)
-	}
-
-	var providerAddress string
-	for _, addr := range token.Addresses {
-		if addr.Network == order.Edges.Token.Edges.Network.Identifier {
-			providerAddress = addr.Address
-			break
-		}
-	}
-
-	if providerAddress == "" {
-		return nil, fmt.Errorf("failed to fetch provider address: %w", err)
 	}
 
 	orderPercent, _ := order.OrderPercent.
@@ -769,7 +770,7 @@ func (s *OrderEVM) settleCallData(ctx context.Context, order *ent.LockPaymentOrd
 		"settle",
 		utils.StringToByte32(splitOrderID),
 		utils.StringToByte32(string(orderID)),
-		common.HexToAddress(providerAddress),
+		common.HexToAddress(token.Address),
 		uint64(orderPercent),
 	)
 	if err != nil {
@@ -782,12 +783,12 @@ func (s *OrderEVM) settleCallData(ctx context.Context, order *ent.LockPaymentOrd
 // encryptOrderRecipient encrypts the recipient details
 func (s *OrderEVM) encryptOrderRecipient(recipient *ent.PaymentOrderRecipient) (string, error) {
 	// Generate a cryptographically secure random nonce
-    nonce := make([]byte, 32)
-    if _, err := rand.Read(nonce); err != nil {
-        return "", fmt.Errorf("failed to generate nonce: %w", err)
-    }
+	nonce := make([]byte, 32)
+	if _, err := rand.Read(nonce); err != nil {
+		return "", fmt.Errorf("failed to generate nonce: %w", err)
+	}
 	message := struct {
-		Nonce			  string
+		Nonce             string
 		AccountIdentifier string
 		AccountName       string
 		Institution       string

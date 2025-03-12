@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/paycrest/protocol/config"
+	"github.com/paycrest/aggregator/config"
 	"github.com/redis/go-redis/v9"
 )
 

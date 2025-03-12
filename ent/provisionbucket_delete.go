@@ -8,8 +8,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/paycrest/protocol/ent/predicate"
-	"github.com/paycrest/protocol/ent/provisionbucket"
+	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/provisionbucket"
 )
 
 // ProvisionBucketDelete is the builder for deleting a ProvisionBucket entity.

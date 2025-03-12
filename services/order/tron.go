@@ -18,9 +18,9 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/google/uuid"
-	"github.com/paycrest/protocol/config"
-	"github.com/paycrest/protocol/ent"
-	"github.com/paycrest/protocol/services/contracts"
+	"github.com/paycrest/aggregator/config"
+	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/services/contracts"
 	"github.com/paycrest/tron-wallet/enums"
 	"github.com/paycrest/tron-wallet/grpcClient"
 	"github.com/paycrest/tron-wallet/grpcClient/proto/api"
@@ -28,18 +28,20 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/paycrest/protocol/ent/lockorderfulfillment"
-	"github.com/paycrest/protocol/ent/lockpaymentorder"
-	"github.com/paycrest/protocol/ent/paymentorder"
-	"github.com/paycrest/protocol/ent/providerordertoken"
-	"github.com/paycrest/protocol/ent/providerprofile"
-	db "github.com/paycrest/protocol/storage"
-	"github.com/paycrest/protocol/types"
-	"github.com/paycrest/protocol/utils"
+	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
+	"github.com/paycrest/aggregator/ent/lockpaymentorder"
+	networkent "github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providerordertoken"
+	"github.com/paycrest/aggregator/ent/providerprofile"
+	tokenent "github.com/paycrest/aggregator/ent/token"
+	db "github.com/paycrest/aggregator/storage"
+	"github.com/paycrest/aggregator/types"
+	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/tron-wallet/util"
 	"github.com/shopspring/decimal"
 
-	cryptoUtils "github.com/paycrest/protocol/utils/crypto"
+	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	tronWallet "github.com/paycrest/tron-wallet"
 )
 
@@ -202,13 +204,20 @@ func (s *OrderTron) CreateOrder(ctx context.Context, client types.RPCClient, ord
 }
 
 // RefundOrder refunds sender on canceled lock order
-func (s *OrderTron) RefundOrder(ctx context.Context, client types.RPCClient, orderID string) error {
+func (s *OrderTron) RefundOrder(ctx context.Context, client types.RPCClient, network *ent.Network, orderID string) error {
 	orderIDPrefix := strings.Split(orderID, "-")[0]
 
 	// Fetch lock order from db
 	lockOrder, err := db.Client.LockPaymentOrder.
 		Query().
-		Where(lockpaymentorder.GatewayIDEQ(orderID)).
+		Where(
+			lockpaymentorder.GatewayIDEQ(orderID),
+			lockpaymentorder.HasTokenWith(
+				tokenent.HasNetworkWith(
+					networkent.IdentifierEQ(network.Identifier),
+				),
+			),
+		).
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
@@ -427,7 +436,7 @@ func (s *OrderTron) createOrderCallData(order *ent.PaymentOrder) ([]byte, error)
 	params := &types.CreateOrderParams{
 		Token:              common.HexToAddress(tokenContractAddressTron.Hex()[4:]),
 		Amount:             utils.ToSubunit(amountWithProtocolFee, order.Edges.Token.Decimals),
-		Rate:               order.Rate.BigInt(),
+		Rate:               order.Rate.Mul(decimal.NewFromInt(100)).BigInt(),
 		SenderFeeRecipient: common.HexToAddress(senderFeeRecipient),
 		SenderFee:          utils.ToSubunit(order.SenderFee, order.Edges.Token.Decimals),
 		RefundAddress:      common.HexToAddress(refundAddress),
@@ -552,9 +561,12 @@ func (s *OrderTron) settleCallData(ctx context.Context, order *ent.LockPaymentOr
 	token, err := db.Client.ProviderOrderToken.
 		Query().
 		Where(
-			providerordertoken.SymbolEQ(order.Edges.Token.Symbol),
+			providerordertoken.NetworkEQ(order.Edges.Token.Edges.Network.Identifier),
 			providerordertoken.HasProviderWith(
 				providerprofile.IDEQ(order.Edges.Provider.ID),
+			),
+			providerordertoken.HasTokenWith(
+				tokenent.IDEQ(order.Edges.Token.ID),
 			),
 		).
 		Only(ctx)
@@ -563,13 +575,8 @@ func (s *OrderTron) settleCallData(ctx context.Context, order *ent.LockPaymentOr
 	}
 
 	var providerAddress string
-	for _, addr := range token.Addresses {
-		if addr.Network == order.Edges.Token.Edges.Network.Identifier {
-			providerAddressTron, _ := util.Base58ToAddress(addr.Address)
-			providerAddress = providerAddressTron.Hex()[4:]
-			break
-		}
-	}
+	providerAddressTron, _ := util.Base58ToAddress(token.Address)
+	providerAddress = providerAddressTron.Hex()[4:]
 
 	if providerAddress == "" {
 		return nil, fmt.Errorf("failed to fetch provider address: %w", err)
@@ -604,12 +611,12 @@ func (s *OrderTron) settleCallData(ctx context.Context, order *ent.LockPaymentOr
 // encryptOrderRecipient encrypts the recipient details
 func (s *OrderTron) encryptOrderRecipient(recipient *ent.PaymentOrderRecipient) (string, error) {
 	// Generate a cryptographically secure random nonce
-    nonce := make([]byte, 32)
-    if _, err := rand.Read(nonce); err != nil {
-        return "", fmt.Errorf("failed to generate nonce: %w", err)
-    }
+	nonce := make([]byte, 32)
+	if _, err := rand.Read(nonce); err != nil {
+		return "", fmt.Errorf("failed to generate nonce: %w", err)
+	}
 	message := struct {
-		Nonce			  string
+		Nonce             string
 		AccountIdentifier string
 		AccountName       string
 		Institution       string
@@ -685,7 +692,7 @@ func (s *OrderTron) callMethod(ct *core.TriggerSmartContract) (*api.TransactionE
 	}
 
 	if tx.Result.Code > 0 {
-		return tx, fmt.Errorf(string(tx.Result.Message))
+		return tx, fmt.Errorf("%s", string(tx.Result.Message))
 	}
 
 	return tx, nil
@@ -719,7 +726,7 @@ func (s *OrderTron) sendTransaction(wallet *tronWallet.TronWallet, ct *core.Trig
 	}
 
 	if tx.Result.Code > 0 {
-		return "", fmt.Errorf(string(tx.Result.Message))
+		return "", fmt.Errorf("%s", string(tx.Result.Message))
 	}
 
 	// Sign and broadcast transaction

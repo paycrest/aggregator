@@ -12,10 +12,10 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-	"github.com/paycrest/protocol/ent/predicate"
-	"github.com/paycrest/protocol/ent/senderordertoken"
-	"github.com/paycrest/protocol/ent/senderprofile"
-	"github.com/paycrest/protocol/ent/token"
+	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/senderordertoken"
+	"github.com/paycrest/aggregator/ent/senderprofile"
+	"github.com/paycrest/aggregator/ent/token"
 )
 
 // SenderOrderTokenQuery is the builder for querying SenderOrderToken entities.
@@ -489,10 +489,10 @@ func (sotq *SenderOrderTokenQuery) loadToken(ctx context.Context, query *TokenQu
 	ids := make([]int, 0, len(nodes))
 	nodeids := make(map[int][]*SenderOrderToken)
 	for i := range nodes {
-		if nodes[i].token_sender_settings == nil {
+		if nodes[i].token_sender_order_tokens == nil {
 			continue
 		}
-		fk := *nodes[i].token_sender_settings
+		fk := *nodes[i].token_sender_order_tokens
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -509,7 +509,7 @@ func (sotq *SenderOrderTokenQuery) loadToken(ctx context.Context, query *TokenQu
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "token_sender_settings" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "token_sender_order_tokens" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

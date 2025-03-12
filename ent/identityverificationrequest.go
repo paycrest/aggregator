@@ -10,7 +10,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
-	"github.com/paycrest/protocol/ent/identityverificationrequest"
+	"github.com/paycrest/aggregator/ent/identityverificationrequest"
 )
 
 // IdentityVerificationRequest is the model entity for the IdentityVerificationRequest schema.

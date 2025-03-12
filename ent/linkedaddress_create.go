@@ -12,8 +12,8 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-	"github.com/paycrest/protocol/ent/linkedaddress"
-	"github.com/paycrest/protocol/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/linkedaddress"
+	"github.com/paycrest/aggregator/ent/paymentorder"
 )
 
 // LinkedAddressCreate is the builder for creating a LinkedAddress entity.

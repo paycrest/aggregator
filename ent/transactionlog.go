@@ -11,7 +11,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
-	"github.com/paycrest/protocol/ent/transactionlog"
+	"github.com/paycrest/aggregator/ent/transactionlog"
 )
 
 // TransactionLog is the model entity for the TransactionLog schema.

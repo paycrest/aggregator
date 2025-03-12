@@ -8,9 +8,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/paycrest/protocol/services/contracts"
-	"github.com/paycrest/protocol/types"
-	cryptoUtils "github.com/paycrest/protocol/utils/crypto"
+	"github.com/paycrest/aggregator/services/contracts"
+	"github.com/paycrest/aggregator/types"
+	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	tronWallet "github.com/paycrest/tron-wallet"
 	tronEnums "github.com/paycrest/tron-wallet/enums"
 )

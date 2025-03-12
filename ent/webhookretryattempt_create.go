@@ -11,7 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/paycrest/protocol/ent/webhookretryattempt"
+	"github.com/paycrest/aggregator/ent/webhookretryattempt"
 )
 
 // WebhookRetryAttemptCreate is the builder for creating a WebhookRetryAttempt entity.

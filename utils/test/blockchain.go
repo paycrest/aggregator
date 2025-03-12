@@ -11,10 +11,10 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/paycrest/protocol/types"
-	"github.com/paycrest/protocol/utils/crypto"
+	"github.com/paycrest/aggregator/types"
+	"github.com/paycrest/aggregator/utils/crypto"
 
-	"github.com/paycrest/protocol/services/contracts"
+	"github.com/paycrest/aggregator/services/contracts"
 )
 
 // SetUpTestBlockchain sets up a connection to a local Ethereum blockchain.

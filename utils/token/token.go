@@ -12,7 +12,7 @@ import (
 	"time"
 
 	jwt "github.com/golang-jwt/jwt/v5"
-	"github.com/paycrest/protocol/config"
+	"github.com/paycrest/aggregator/config"
 )
 
 var conf = config.AuthConfig()
@@ -103,7 +103,6 @@ func VerifyHMACSignature(payload map[string]interface{}, privateKey string, sign
 func GenerateHMACSignature(payload map[string]interface{}, privateKey string) string {
 	key := []byte(privateKey)
 	h := hmac.New(sha256.New, key)
-	payload = SortMapRecursively(payload)
 	payloadBytes, _ := json.Marshal(payload)
 	h.Write(payloadBytes)
 	return hex.EncodeToString(h.Sum(nil))

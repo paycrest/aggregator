@@ -13,10 +13,11 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-	"github.com/paycrest/protocol/ent/fiatcurrency"
-	"github.com/paycrest/protocol/ent/institution"
-	"github.com/paycrest/protocol/ent/providerprofile"
-	"github.com/paycrest/protocol/ent/provisionbucket"
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
+	"github.com/paycrest/aggregator/ent/institution"
+	"github.com/paycrest/aggregator/ent/providerordertoken"
+	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/shopspring/decimal"
 )
 
@@ -171,6 +172,21 @@ func (fcc *FiatCurrencyCreate) AddInstitutions(i ...*Institution) *FiatCurrencyC
 		ids[j] = i[j].ID
 	}
 	return fcc.AddInstitutionIDs(ids...)
+}
+
+// AddProviderOrderTokenIDs adds the "provider_order_tokens" edge to the ProviderOrderToken entity by IDs.
+func (fcc *FiatCurrencyCreate) AddProviderOrderTokenIDs(ids ...int) *FiatCurrencyCreate {
+	fcc.mutation.AddProviderOrderTokenIDs(ids...)
+	return fcc
+}
+
+// AddProviderOrderTokens adds the "provider_order_tokens" edges to the ProviderOrderToken entity.
+func (fcc *FiatCurrencyCreate) AddProviderOrderTokens(p ...*ProviderOrderToken) *FiatCurrencyCreate {
+	ids := make([]int, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return fcc.AddProviderOrderTokenIDs(ids...)
 }
 
 // Mutation returns the FiatCurrencyMutation object of the builder.
@@ -333,10 +349,10 @@ func (fcc *FiatCurrencyCreate) createSpec() (*FiatCurrency, *sqlgraph.CreateSpec
 	}
 	if nodes := fcc.mutation.ProvidersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   fiatcurrency.ProvidersTable,
-			Columns: []string{fiatcurrency.ProvidersColumn},
+			Columns: fiatcurrency.ProvidersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
@@ -372,6 +388,22 @@ func (fcc *FiatCurrencyCreate) createSpec() (*FiatCurrency, *sqlgraph.CreateSpec
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(institution.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := fcc.mutation.ProviderOrderTokensIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   fiatcurrency.ProviderOrderTokensTable,
+			Columns: []string{fiatcurrency.ProviderOrderTokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerordertoken.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

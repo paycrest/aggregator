@@ -13,15 +13,15 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-	"github.com/paycrest/protocol/ent/apikey"
-	"github.com/paycrest/protocol/ent/fiatcurrency"
-	"github.com/paycrest/protocol/ent/lockpaymentorder"
-	"github.com/paycrest/protocol/ent/predicate"
-	"github.com/paycrest/protocol/ent/providerordertoken"
-	"github.com/paycrest/protocol/ent/providerprofile"
-	"github.com/paycrest/protocol/ent/providerrating"
-	"github.com/paycrest/protocol/ent/provisionbucket"
-	"github.com/paycrest/protocol/ent/user"
+	"github.com/paycrest/aggregator/ent/apikey"
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
+	"github.com/paycrest/aggregator/ent/lockpaymentorder"
+	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/providerordertoken"
+	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/providerrating"
+	"github.com/paycrest/aggregator/ent/provisionbucket"
+	"github.com/paycrest/aggregator/ent/user"
 )
 
 // ProviderProfileQuery is the builder for querying ProviderProfile entities.
@@ -33,7 +33,7 @@ type ProviderProfileQuery struct {
 	predicates           []predicate.ProviderProfile
 	withUser             *UserQuery
 	withAPIKey           *APIKeyQuery
-	withCurrency         *FiatCurrencyQuery
+	withCurrencies       *FiatCurrencyQuery
 	withProvisionBuckets *ProvisionBucketQuery
 	withOrderTokens      *ProviderOrderTokenQuery
 	withProviderRating   *ProviderRatingQuery
@@ -119,8 +119,8 @@ func (ppq *ProviderProfileQuery) QueryAPIKey() *APIKeyQuery {
 	return query
 }
 
-// QueryCurrency chains the current query on the "currency" edge.
-func (ppq *ProviderProfileQuery) QueryCurrency() *FiatCurrencyQuery {
+// QueryCurrencies chains the current query on the "currencies" edge.
+func (ppq *ProviderProfileQuery) QueryCurrencies() *FiatCurrencyQuery {
 	query := (&FiatCurrencyClient{config: ppq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := ppq.prepareQuery(ctx); err != nil {
@@ -133,7 +133,7 @@ func (ppq *ProviderProfileQuery) QueryCurrency() *FiatCurrencyQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(providerprofile.Table, providerprofile.FieldID, selector),
 			sqlgraph.To(fiatcurrency.Table, fiatcurrency.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, providerprofile.CurrencyTable, providerprofile.CurrencyColumn),
+			sqlgraph.Edge(sqlgraph.M2M, true, providerprofile.CurrenciesTable, providerprofile.CurrenciesPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(ppq.driver.Dialect(), step)
 		return fromU, nil
@@ -423,7 +423,7 @@ func (ppq *ProviderProfileQuery) Clone() *ProviderProfileQuery {
 		predicates:           append([]predicate.ProviderProfile{}, ppq.predicates...),
 		withUser:             ppq.withUser.Clone(),
 		withAPIKey:           ppq.withAPIKey.Clone(),
-		withCurrency:         ppq.withCurrency.Clone(),
+		withCurrencies:       ppq.withCurrencies.Clone(),
 		withProvisionBuckets: ppq.withProvisionBuckets.Clone(),
 		withOrderTokens:      ppq.withOrderTokens.Clone(),
 		withProviderRating:   ppq.withProviderRating.Clone(),
@@ -456,14 +456,14 @@ func (ppq *ProviderProfileQuery) WithAPIKey(opts ...func(*APIKeyQuery)) *Provide
 	return ppq
 }
 
-// WithCurrency tells the query-builder to eager-load the nodes that are connected to
-// the "currency" edge. The optional arguments are used to configure the query builder of the edge.
-func (ppq *ProviderProfileQuery) WithCurrency(opts ...func(*FiatCurrencyQuery)) *ProviderProfileQuery {
+// WithCurrencies tells the query-builder to eager-load the nodes that are connected to
+// the "currencies" edge. The optional arguments are used to configure the query builder of the edge.
+func (ppq *ProviderProfileQuery) WithCurrencies(opts ...func(*FiatCurrencyQuery)) *ProviderProfileQuery {
 	query := (&FiatCurrencyClient{config: ppq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	ppq.withCurrency = query
+	ppq.withCurrencies = query
 	return ppq
 }
 
@@ -593,14 +593,14 @@ func (ppq *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 		loadedTypes = [7]bool{
 			ppq.withUser != nil,
 			ppq.withAPIKey != nil,
-			ppq.withCurrency != nil,
+			ppq.withCurrencies != nil,
 			ppq.withProvisionBuckets != nil,
 			ppq.withOrderTokens != nil,
 			ppq.withProviderRating != nil,
 			ppq.withAssignedOrders != nil,
 		}
 	)
-	if ppq.withUser != nil || ppq.withCurrency != nil {
+	if ppq.withUser != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -636,9 +636,10 @@ func (ppq *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 			return nil, err
 		}
 	}
-	if query := ppq.withCurrency; query != nil {
-		if err := ppq.loadCurrency(ctx, query, nodes, nil,
-			func(n *ProviderProfile, e *FiatCurrency) { n.Edges.Currency = e }); err != nil {
+	if query := ppq.withCurrencies; query != nil {
+		if err := ppq.loadCurrencies(ctx, query, nodes,
+			func(n *ProviderProfile) { n.Edges.Currencies = []*FiatCurrency{} },
+			func(n *ProviderProfile, e *FiatCurrency) { n.Edges.Currencies = append(n.Edges.Currencies, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -736,34 +737,63 @@ func (ppq *ProviderProfileQuery) loadAPIKey(ctx context.Context, query *APIKeyQu
 	}
 	return nil
 }
-func (ppq *ProviderProfileQuery) loadCurrency(ctx context.Context, query *FiatCurrencyQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *FiatCurrency)) error {
-	ids := make([]uuid.UUID, 0, len(nodes))
-	nodeids := make(map[uuid.UUID][]*ProviderProfile)
-	for i := range nodes {
-		if nodes[i].fiat_currency_providers == nil {
-			continue
+func (ppq *ProviderProfileQuery) loadCurrencies(ctx context.Context, query *FiatCurrencyQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *FiatCurrency)) error {
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[string]*ProviderProfile)
+	nids := make(map[uuid.UUID]map[*ProviderProfile]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
+		if init != nil {
+			init(node)
 		}
-		fk := *nodes[i].fiat_currency_providers
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
-		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
-	if len(ids) == 0 {
-		return nil
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(providerprofile.CurrenciesTable)
+		s.Join(joinT).On(s.C(fiatcurrency.FieldID), joinT.C(providerprofile.CurrenciesPrimaryKey[0]))
+		s.Where(sql.InValues(joinT.C(providerprofile.CurrenciesPrimaryKey[1]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(providerprofile.CurrenciesPrimaryKey[1]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
 	}
-	query.Where(fiatcurrency.IDIn(ids...))
-	neighbors, err := query.All(ctx)
+	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
+		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+			assign := spec.Assign
+			values := spec.ScanValues
+			spec.ScanValues = func(columns []string) ([]any, error) {
+				values, err := values(columns[1:])
+				if err != nil {
+					return nil, err
+				}
+				return append([]any{new(sql.NullString)}, values...), nil
+			}
+			spec.Assign = func(columns []string, values []any) error {
+				outValue := values[0].(*sql.NullString).String
+				inValue := *values[1].(*uuid.UUID)
+				if nids[inValue] == nil {
+					nids[inValue] = map[*ProviderProfile]struct{}{byID[outValue]: {}}
+					return assign(columns[1:], values[1:])
+				}
+				nids[inValue][byID[outValue]] = struct{}{}
+				return nil
+			}
+		})
+	})
+	neighbors, err := withInterceptors[[]*FiatCurrency](ctx, query, qr, query.inters)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
+		nodes, ok := nids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "fiat_currency_providers" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected "currencies" node returned %v`, n.ID)
 		}
-		for i := range nodes {
-			assign(nodes[i], n)
+		for kn := range nodes {
+			assign(kn, n)
 		}
 	}
 	return nil

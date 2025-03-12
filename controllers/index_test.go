@@ -9,16 +9,16 @@ import (
 
 	"github.com/jarcoal/httpmock"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/paycrest/protocol/config"
-	"github.com/paycrest/protocol/ent"
-	db "github.com/paycrest/protocol/storage"
-	"github.com/paycrest/protocol/types"
+	"github.com/paycrest/aggregator/config"
+	"github.com/paycrest/aggregator/ent"
+	db "github.com/paycrest/aggregator/storage"
+	"github.com/paycrest/aggregator/types"
 	"github.com/shopspring/decimal"
 
 	"github.com/gin-gonic/gin"
-	"github.com/paycrest/protocol/ent/enttest"
-	"github.com/paycrest/protocol/ent/identityverificationrequest"
-	"github.com/paycrest/protocol/utils/test"
+	"github.com/paycrest/aggregator/ent/enttest"
+	"github.com/paycrest/aggregator/ent/identityverificationrequest"
+	"github.com/paycrest/aggregator/utils/test"
 	"github.com/stretchr/testify/assert"
 )
 

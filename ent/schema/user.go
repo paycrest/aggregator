@@ -9,8 +9,8 @@ import (
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
-	gen "github.com/paycrest/protocol/ent"
-	"github.com/paycrest/protocol/ent/hook"
+	gen "github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/ent/hook"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -39,7 +39,7 @@ func (User) Fields() []ent.Field {
 		field.String("scope"),
 		field.Bool("is_email_verified").
 			Default(false),
-		field.Bool("has_early_access").
+		field.Bool("has_early_access"). // has_early_access is "false" by default
 			Default(false),
 	}
 }

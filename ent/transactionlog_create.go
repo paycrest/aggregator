@@ -13,7 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-	"github.com/paycrest/protocol/ent/transactionlog"
+	"github.com/paycrest/aggregator/ent/transactionlog"
 )
 
 // TransactionLogCreate is the builder for creating a TransactionLog entity.

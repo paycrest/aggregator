@@ -1,9 +1,9 @@
 package routers
 
 import (
-	"github.com/paycrest/protocol/config"
-	"github.com/paycrest/protocol/routers/middleware"
-	"github.com/paycrest/protocol/utils/logger"
+	"github.com/paycrest/aggregator/config"
+	"github.com/paycrest/aggregator/routers/middleware"
+	"github.com/paycrest/aggregator/utils/logger"
 
 	"github.com/gin-gonic/gin"
 )
@@ -27,6 +27,7 @@ func Routes() *gin.Engine {
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 	router.Use(middleware.CORSMiddleware())
+	router.Use(middleware.RateLimitMiddleware())
 
 	RegisterRoutes(router) //routes register
 

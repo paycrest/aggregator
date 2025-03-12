@@ -10,7 +10,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"github.com/paycrest/protocol/ent/webhookretryattempt"
+	"github.com/paycrest/aggregator/ent/webhookretryattempt"
 )
 
 // WebhookRetryAttempt is the model entity for the WebhookRetryAttempt schema.

@@ -12,19 +12,19 @@ import (
 
 	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/paycrest/protocol/ent"
-	"github.com/paycrest/protocol/routers/middleware"
-	"github.com/paycrest/protocol/services"
-	db "github.com/paycrest/protocol/storage"
-	"github.com/paycrest/protocol/types"
+	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/routers/middleware"
+	"github.com/paycrest/aggregator/services"
+	db "github.com/paycrest/aggregator/storage"
+	"github.com/paycrest/aggregator/types"
 	"github.com/shopspring/decimal"
 
 	"github.com/gin-gonic/gin"
-	"github.com/paycrest/protocol/ent/enttest"
-	"github.com/paycrest/protocol/ent/network"
-	"github.com/paycrest/protocol/ent/paymentorder"
-	"github.com/paycrest/protocol/utils/test"
-	"github.com/paycrest/protocol/utils/token"
+	"github.com/paycrest/aggregator/ent/enttest"
+	"github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/utils/test"
+	"github.com/paycrest/aggregator/utils/token"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -111,7 +111,7 @@ func TestSender(t *testing.T) {
 
 	// Set up test database client
 	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-	defer client.Close()
+	defer client.Close() 
 
 	db.Client = client
 

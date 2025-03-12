@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/jarcoal/httpmock"
-	"github.com/paycrest/protocol/config"
-	"github.com/paycrest/protocol/types"
+	"github.com/paycrest/aggregator/config"
+	"github.com/paycrest/aggregator/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,8 +16,8 @@ var (
 	mailgunEndpoint  = fmt.Sprintf("https://api.mailgun.net/v3/%s/messages", notificationConf.EmailDomain)
 	sendGridEndpoint = "https://api.sendgrid.com/v3/mail/send"
 
-	testToken = "test-token"
-	testEmail = "test@paycrest.io"
+	testToken     = "test-token"
+	testEmail     = "test@paycrest.io"
 	testFirstName = "John"
 )
 
@@ -77,7 +77,7 @@ func TestEmailService(t *testing.T) {
 					FromAddress: config.NotificationConfig().EmailFromAddress,
 					ToAddress:   "johnDoe@gmail.com",
 					DynamicData: map[string]interface{}{
-						"code":           "654321",
+						"code":       "654321",
 						"first_name": testFirstName,
 					},
 				}, "d-f26d853bbb884c0c856f0bbda894032c")

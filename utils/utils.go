@@ -18,13 +18,14 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	fastshot "github.com/opus-domini/fast-shot"
-	"github.com/paycrest/protocol/ent"
-	institutionEnt "github.com/paycrest/protocol/ent/institution"
-	"github.com/paycrest/protocol/ent/paymentorder"
-	"github.com/paycrest/protocol/storage"
-	"github.com/paycrest/protocol/types"
-	cryptoUtils "github.com/paycrest/protocol/utils/crypto"
-	tokenUtils "github.com/paycrest/protocol/utils/token"
+	"github.com/paycrest/aggregator/ent"
+	institutionEnt "github.com/paycrest/aggregator/ent/institution"
+	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/storage"
+	"github.com/paycrest/aggregator/types"
+	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
+	"github.com/paycrest/aggregator/utils/logger"
+	tokenUtils "github.com/paycrest/aggregator/utils/token"
 	"github.com/shopspring/decimal"
 )
 
@@ -511,21 +512,44 @@ func GetTokenRateFromQueue(tokenSymbol string, orderAmount decimal.Decimal, fiat
 			if err != nil {
 				break
 			}
+			parts := strings.Split(providerData, ":")
+			if len(parts) != 5 {
+				logger.Errorf("utils.GetTokenRateFromQueue.InvalidProviderData: %v", providerData)
+				continue
+			}
 
-			if strings.Split(providerData, ":")[1] == tokenSymbol {
-				// Get fiat equivalent of the token amount
-				rate, _ := decimal.NewFromString(strings.Split(providerData, ":")[2])
-				fiatAmount := orderAmount.Mul(rate)
+			// Skip entry if token doesn't match
+			if parts[1] != tokenSymbol {
+				continue
+			}
 
-				// Check if fiat amount is within the bucket range and set the rate
-				if fiatAmount.GreaterThanOrEqual(minAmount) && fiatAmount.LessThanOrEqual(maxAmount) {
-					rateResponse = rate
-					break
-				} else if maxAmount.GreaterThan(highestMaxAmount) {
-					// Get the highest max amount
-					highestMaxAmount = maxAmount
-					rateResponse = rate
-				}
+			// Skip entry if order amount is not within provider's min and max order amount
+			minOrderAmount, err := decimal.NewFromString(parts[3])
+			if err != nil {
+				continue
+			}
+
+			maxOrderAmount, err := decimal.NewFromString(parts[4])
+			if err != nil {
+				continue
+			}
+
+			if orderAmount.LessThan(minOrderAmount) || orderAmount.GreaterThan(maxOrderAmount) {
+				continue
+			}
+
+			// Get fiat equivalent of the token amount
+			rate, _ := decimal.NewFromString(parts[2])
+			fiatAmount := orderAmount.Mul(rate)
+
+			// Check if fiat amount is within the bucket range and set the rate
+			if fiatAmount.GreaterThanOrEqual(minAmount) && fiatAmount.LessThanOrEqual(maxAmount) {
+				rateResponse = rate
+				break
+			} else if maxAmount.GreaterThan(highestMaxAmount) {
+				// Get the highest max amount
+				highestMaxAmount = maxAmount
+				rateResponse = rate
 			}
 		}
 	}

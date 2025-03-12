@@ -11,9 +11,12 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/paycrest/protocol/ent/predicate"
-	"github.com/paycrest/protocol/ent/providerordertoken"
-	"github.com/paycrest/protocol/ent/providerprofile"
+	"github.com/google/uuid"
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
+	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/providerordertoken"
+	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/token"
 )
 
 // ProviderOrderTokenQuery is the builder for querying ProviderOrderToken entities.
@@ -24,6 +27,8 @@ type ProviderOrderTokenQuery struct {
 	inters       []Interceptor
 	predicates   []predicate.ProviderOrderToken
 	withProvider *ProviderProfileQuery
+	withToken    *TokenQuery
+	withCurrency *FiatCurrencyQuery
 	withFKs      bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -76,6 +81,50 @@ func (potq *ProviderOrderTokenQuery) QueryProvider() *ProviderProfileQuery {
 			sqlgraph.From(providerordertoken.Table, providerordertoken.FieldID, selector),
 			sqlgraph.To(providerprofile.Table, providerprofile.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, providerordertoken.ProviderTable, providerordertoken.ProviderColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(potq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryToken chains the current query on the "token" edge.
+func (potq *ProviderOrderTokenQuery) QueryToken() *TokenQuery {
+	query := (&TokenClient{config: potq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := potq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := potq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(providerordertoken.Table, providerordertoken.FieldID, selector),
+			sqlgraph.To(token.Table, token.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, providerordertoken.TokenTable, providerordertoken.TokenColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(potq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCurrency chains the current query on the "currency" edge.
+func (potq *ProviderOrderTokenQuery) QueryCurrency() *FiatCurrencyQuery {
+	query := (&FiatCurrencyClient{config: potq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := potq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := potq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(providerordertoken.Table, providerordertoken.FieldID, selector),
+			sqlgraph.To(fiatcurrency.Table, fiatcurrency.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, providerordertoken.CurrencyTable, providerordertoken.CurrencyColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(potq.driver.Dialect(), step)
 		return fromU, nil
@@ -276,6 +325,8 @@ func (potq *ProviderOrderTokenQuery) Clone() *ProviderOrderTokenQuery {
 		inters:       append([]Interceptor{}, potq.inters...),
 		predicates:   append([]predicate.ProviderOrderToken{}, potq.predicates...),
 		withProvider: potq.withProvider.Clone(),
+		withToken:    potq.withToken.Clone(),
+		withCurrency: potq.withCurrency.Clone(),
 		// clone intermediate query.
 		sql:  potq.sql.Clone(),
 		path: potq.path,
@@ -290,6 +341,28 @@ func (potq *ProviderOrderTokenQuery) WithProvider(opts ...func(*ProviderProfileQ
 		opt(query)
 	}
 	potq.withProvider = query
+	return potq
+}
+
+// WithToken tells the query-builder to eager-load the nodes that are connected to
+// the "token" edge. The optional arguments are used to configure the query builder of the edge.
+func (potq *ProviderOrderTokenQuery) WithToken(opts ...func(*TokenQuery)) *ProviderOrderTokenQuery {
+	query := (&TokenClient{config: potq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	potq.withToken = query
+	return potq
+}
+
+// WithCurrency tells the query-builder to eager-load the nodes that are connected to
+// the "currency" edge. The optional arguments are used to configure the query builder of the edge.
+func (potq *ProviderOrderTokenQuery) WithCurrency(opts ...func(*FiatCurrencyQuery)) *ProviderOrderTokenQuery {
+	query := (&FiatCurrencyClient{config: potq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	potq.withCurrency = query
 	return potq
 }
 
@@ -372,11 +445,13 @@ func (potq *ProviderOrderTokenQuery) sqlAll(ctx context.Context, hooks ...queryH
 		nodes       = []*ProviderOrderToken{}
 		withFKs     = potq.withFKs
 		_spec       = potq.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [3]bool{
 			potq.withProvider != nil,
+			potq.withToken != nil,
+			potq.withCurrency != nil,
 		}
 	)
-	if potq.withProvider != nil {
+	if potq.withProvider != nil || potq.withToken != nil || potq.withCurrency != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -403,6 +478,18 @@ func (potq *ProviderOrderTokenQuery) sqlAll(ctx context.Context, hooks ...queryH
 	if query := potq.withProvider; query != nil {
 		if err := potq.loadProvider(ctx, query, nodes, nil,
 			func(n *ProviderOrderToken, e *ProviderProfile) { n.Edges.Provider = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := potq.withToken; query != nil {
+		if err := potq.loadToken(ctx, query, nodes, nil,
+			func(n *ProviderOrderToken, e *Token) { n.Edges.Token = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := potq.withCurrency; query != nil {
+		if err := potq.loadCurrency(ctx, query, nodes, nil,
+			func(n *ProviderOrderToken, e *FiatCurrency) { n.Edges.Currency = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -434,6 +521,70 @@ func (potq *ProviderOrderTokenQuery) loadProvider(ctx context.Context, query *Pr
 		nodes, ok := nodeids[n.ID]
 		if !ok {
 			return fmt.Errorf(`unexpected foreign-key "provider_profile_order_tokens" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (potq *ProviderOrderTokenQuery) loadToken(ctx context.Context, query *TokenQuery, nodes []*ProviderOrderToken, init func(*ProviderOrderToken), assign func(*ProviderOrderToken, *Token)) error {
+	ids := make([]int, 0, len(nodes))
+	nodeids := make(map[int][]*ProviderOrderToken)
+	for i := range nodes {
+		if nodes[i].token_provider_order_tokens == nil {
+			continue
+		}
+		fk := *nodes[i].token_provider_order_tokens
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(token.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "token_provider_order_tokens" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (potq *ProviderOrderTokenQuery) loadCurrency(ctx context.Context, query *FiatCurrencyQuery, nodes []*ProviderOrderToken, init func(*ProviderOrderToken), assign func(*ProviderOrderToken, *FiatCurrency)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*ProviderOrderToken)
+	for i := range nodes {
+		if nodes[i].fiat_currency_provider_order_tokens == nil {
+			continue
+		}
+		fk := *nodes[i].fiat_currency_provider_order_tokens
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(fiatcurrency.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "fiat_currency_provider_order_tokens" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

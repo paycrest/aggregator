@@ -12,11 +12,12 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-	"github.com/paycrest/protocol/ent/lockpaymentorder"
-	"github.com/paycrest/protocol/ent/network"
-	"github.com/paycrest/protocol/ent/paymentorder"
-	"github.com/paycrest/protocol/ent/senderordertoken"
-	"github.com/paycrest/protocol/ent/token"
+	"github.com/paycrest/aggregator/ent/lockpaymentorder"
+	"github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providerordertoken"
+	"github.com/paycrest/aggregator/ent/senderordertoken"
+	"github.com/paycrest/aggregator/ent/token"
 )
 
 // TokenCreate is the builder for creating a Token entity.
@@ -87,6 +88,20 @@ func (tc *TokenCreate) SetNillableIsEnabled(b *bool) *TokenCreate {
 	return tc
 }
 
+// SetBaseCurrency sets the "base_currency" field.
+func (tc *TokenCreate) SetBaseCurrency(s string) *TokenCreate {
+	tc.mutation.SetBaseCurrency(s)
+	return tc
+}
+
+// SetNillableBaseCurrency sets the "base_currency" field if the given value is not nil.
+func (tc *TokenCreate) SetNillableBaseCurrency(s *string) *TokenCreate {
+	if s != nil {
+		tc.SetBaseCurrency(*s)
+	}
+	return tc
+}
+
 // SetNetworkID sets the "network" edge to the Network entity by ID.
 func (tc *TokenCreate) SetNetworkID(id int) *TokenCreate {
 	tc.mutation.SetNetworkID(id)
@@ -128,19 +143,34 @@ func (tc *TokenCreate) AddLockPaymentOrders(l ...*LockPaymentOrder) *TokenCreate
 	return tc.AddLockPaymentOrderIDs(ids...)
 }
 
-// AddSenderSettingIDs adds the "sender_settings" edge to the SenderOrderToken entity by IDs.
-func (tc *TokenCreate) AddSenderSettingIDs(ids ...int) *TokenCreate {
-	tc.mutation.AddSenderSettingIDs(ids...)
+// AddSenderOrderTokenIDs adds the "sender_order_tokens" edge to the SenderOrderToken entity by IDs.
+func (tc *TokenCreate) AddSenderOrderTokenIDs(ids ...int) *TokenCreate {
+	tc.mutation.AddSenderOrderTokenIDs(ids...)
 	return tc
 }
 
-// AddSenderSettings adds the "sender_settings" edges to the SenderOrderToken entity.
-func (tc *TokenCreate) AddSenderSettings(s ...*SenderOrderToken) *TokenCreate {
+// AddSenderOrderTokens adds the "sender_order_tokens" edges to the SenderOrderToken entity.
+func (tc *TokenCreate) AddSenderOrderTokens(s ...*SenderOrderToken) *TokenCreate {
 	ids := make([]int, len(s))
 	for i := range s {
 		ids[i] = s[i].ID
 	}
-	return tc.AddSenderSettingIDs(ids...)
+	return tc.AddSenderOrderTokenIDs(ids...)
+}
+
+// AddProviderOrderTokenIDs adds the "provider_order_tokens" edge to the ProviderOrderToken entity by IDs.
+func (tc *TokenCreate) AddProviderOrderTokenIDs(ids ...int) *TokenCreate {
+	tc.mutation.AddProviderOrderTokenIDs(ids...)
+	return tc
+}
+
+// AddProviderOrderTokens adds the "provider_order_tokens" edges to the ProviderOrderToken entity.
+func (tc *TokenCreate) AddProviderOrderTokens(p ...*ProviderOrderToken) *TokenCreate {
+	ids := make([]int, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return tc.AddProviderOrderTokenIDs(ids...)
 }
 
 // Mutation returns the TokenMutation object of the builder.
@@ -190,6 +220,10 @@ func (tc *TokenCreate) defaults() {
 		v := token.DefaultIsEnabled
 		tc.mutation.SetIsEnabled(v)
 	}
+	if _, ok := tc.mutation.BaseCurrency(); !ok {
+		v := token.DefaultBaseCurrency
+		tc.mutation.SetBaseCurrency(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -221,6 +255,9 @@ func (tc *TokenCreate) check() error {
 	}
 	if _, ok := tc.mutation.IsEnabled(); !ok {
 		return &ValidationError{Name: "is_enabled", err: errors.New(`ent: missing required field "Token.is_enabled"`)}
+	}
+	if _, ok := tc.mutation.BaseCurrency(); !ok {
+		return &ValidationError{Name: "base_currency", err: errors.New(`ent: missing required field "Token.base_currency"`)}
 	}
 	if len(tc.mutation.NetworkIDs()) == 0 {
 		return &ValidationError{Name: "network", err: errors.New(`ent: missing required edge "Token.network"`)}
@@ -276,6 +313,10 @@ func (tc *TokenCreate) createSpec() (*Token, *sqlgraph.CreateSpec) {
 		_spec.SetField(token.FieldIsEnabled, field.TypeBool, value)
 		_node.IsEnabled = value
 	}
+	if value, ok := tc.mutation.BaseCurrency(); ok {
+		_spec.SetField(token.FieldBaseCurrency, field.TypeString, value)
+		_node.BaseCurrency = value
+	}
 	if nodes := tc.mutation.NetworkIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -325,15 +366,31 @@ func (tc *TokenCreate) createSpec() (*Token, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := tc.mutation.SenderSettingsIDs(); len(nodes) > 0 {
+	if nodes := tc.mutation.SenderOrderTokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   token.SenderSettingsTable,
-			Columns: []string{token.SenderSettingsColumn},
+			Table:   token.SenderOrderTokensTable,
+			Columns: []string{token.SenderOrderTokensColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(senderordertoken.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := tc.mutation.ProviderOrderTokensIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   token.ProviderOrderTokensTable,
+			Columns: []string{token.ProviderOrderTokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerordertoken.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -459,6 +516,18 @@ func (u *TokenUpsert) UpdateIsEnabled() *TokenUpsert {
 	return u
 }
 
+// SetBaseCurrency sets the "base_currency" field.
+func (u *TokenUpsert) SetBaseCurrency(v string) *TokenUpsert {
+	u.Set(token.FieldBaseCurrency, v)
+	return u
+}
+
+// UpdateBaseCurrency sets the "base_currency" field to the value that was provided on create.
+func (u *TokenUpsert) UpdateBaseCurrency() *TokenUpsert {
+	u.SetExcluded(token.FieldBaseCurrency)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create.
 // Using this option is equivalent to using:
 //
@@ -578,6 +647,20 @@ func (u *TokenUpsertOne) SetIsEnabled(v bool) *TokenUpsertOne {
 func (u *TokenUpsertOne) UpdateIsEnabled() *TokenUpsertOne {
 	return u.Update(func(s *TokenUpsert) {
 		s.UpdateIsEnabled()
+	})
+}
+
+// SetBaseCurrency sets the "base_currency" field.
+func (u *TokenUpsertOne) SetBaseCurrency(v string) *TokenUpsertOne {
+	return u.Update(func(s *TokenUpsert) {
+		s.SetBaseCurrency(v)
+	})
+}
+
+// UpdateBaseCurrency sets the "base_currency" field to the value that was provided on create.
+func (u *TokenUpsertOne) UpdateBaseCurrency() *TokenUpsertOne {
+	return u.Update(func(s *TokenUpsert) {
+		s.UpdateBaseCurrency()
 	})
 }
 
@@ -866,6 +949,20 @@ func (u *TokenUpsertBulk) SetIsEnabled(v bool) *TokenUpsertBulk {
 func (u *TokenUpsertBulk) UpdateIsEnabled() *TokenUpsertBulk {
 	return u.Update(func(s *TokenUpsert) {
 		s.UpdateIsEnabled()
+	})
+}
+
+// SetBaseCurrency sets the "base_currency" field.
+func (u *TokenUpsertBulk) SetBaseCurrency(v string) *TokenUpsertBulk {
+	return u.Update(func(s *TokenUpsert) {
+		s.SetBaseCurrency(v)
+	})
+}
+
+// UpdateBaseCurrency sets the "base_currency" field to the value that was provided on create.
+func (u *TokenUpsertBulk) UpdateBaseCurrency() *TokenUpsertBulk {
+	return u.Update(func(s *TokenUpsert) {
+		s.UpdateBaseCurrency()
 	})
 }
 

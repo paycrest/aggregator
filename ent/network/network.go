@@ -30,6 +30,10 @@ const (
 	FieldGatewayContractAddress = "gateway_contract_address"
 	// FieldIsTestnet holds the string denoting the is_testnet field in the database.
 	FieldIsTestnet = "is_testnet"
+	// FieldBundlerURL holds the string denoting the bundler_url field in the database.
+	FieldBundlerURL = "bundler_url"
+	// FieldPaymasterURL holds the string denoting the paymaster_url field in the database.
+	FieldPaymasterURL = "paymaster_url"
 	// FieldFee holds the string denoting the fee field in the database.
 	FieldFee = "fee"
 	// EdgeTokens holds the string denoting the tokens edge name in mutations.
@@ -56,6 +60,8 @@ var Columns = []string{
 	FieldRPCEndpoint,
 	FieldGatewayContractAddress,
 	FieldIsTestnet,
+	FieldBundlerURL,
+	FieldPaymasterURL,
 	FieldFee,
 }
 
@@ -126,6 +132,16 @@ func ByGatewayContractAddress(opts ...sql.OrderTermOption) OrderOption {
 // ByIsTestnet orders the results by the is_testnet field.
 func ByIsTestnet(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldIsTestnet, opts...).ToFunc()
+}
+
+// ByBundlerURL orders the results by the bundler_url field.
+func ByBundlerURL(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBundlerURL, opts...).ToFunc()
+}
+
+// ByPaymasterURL orders the results by the paymaster_url field.
+func ByPaymasterURL(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPaymasterURL, opts...).ToFunc()
 }
 
 // ByFee orders the results by the fee field.

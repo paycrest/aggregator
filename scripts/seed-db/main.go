@@ -7,14 +7,14 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/paycrest/protocol/config"
-	"github.com/paycrest/protocol/ent"
-	"github.com/paycrest/protocol/ent/fiatcurrency"
-	"github.com/paycrest/protocol/storage"
-	"github.com/paycrest/protocol/types"
-	"github.com/paycrest/protocol/utils/crypto"
-	"github.com/paycrest/protocol/utils/logger"
-	"github.com/paycrest/protocol/utils/token"
+	"github.com/paycrest/aggregator/config"
+	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
+	"github.com/paycrest/aggregator/storage"
+	"github.com/paycrest/aggregator/types"
+	"github.com/paycrest/aggregator/utils/crypto"
+	"github.com/paycrest/aggregator/utils/logger"
+	"github.com/paycrest/aggregator/utils/token"
 	"github.com/shopspring/decimal"
 )
 
@@ -219,7 +219,6 @@ func seedProvider(ctx context.Context, client *ent.Client, bucket *ent.Provision
 		SetUser(user).
 		SetIsActive(true).
 		SetIsAvailable(true).
-		SetCurrencyID(currency.ID).
 		SetAddress("123 Main St").
 		SetMobileNumber("+2348063000000").
 		SetDateOfBirth(time.Date(1990, time.January, 1, 0, 0, 0, 0, time.UTC)).
@@ -228,6 +227,7 @@ func seedProvider(ctx context.Context, client *ent.Client, bucket *ent.Provision
 		SetIdentityDocument("https://example.com/identity_document.jpg").
 		SetBusinessDocument("https://example.com/business_document.pdf").
 		AddProvisionBuckets(bucket).
+		AddCurrencies(currency).
 		Save(ctx)
 	if err != nil {
 		return "", "", "", fmt.Errorf("failed creating provider: %s", err)
@@ -247,23 +247,17 @@ func seedProvider(ctx context.Context, client *ent.Client, bucket *ent.Provision
 	}
 
 	// Configure tokens
-	addresses := []struct {
-		Address string `json:"address"`
-		Network string `json:"network"`
-	}{
-		{Address: "0x409689E3008d43a9eb439e7B275749D4a71D8E2D", Network: "arbitrum-sepolia"},
-	}
-
 	_, err = client.ProviderOrderToken.
 		Create().
-		SetSymbol("6TEST").
 		SetConversionRateType("floating").
 		SetFixedConversionRate(decimal.NewFromFloat(0)).
 		SetFloatingConversionRate(decimal.NewFromFloat(1)).
 		SetMinOrderAmount(bucket.MinAmount).
 		SetMaxOrderAmount(bucket.MaxAmount).
-		SetAddresses(addresses).
+		SetAddress("0x409689E3008d43a9eb439e7B275749D4a71D8E2D").
+		SetNetwork("arbitrum-sepolia").
 		SetProvider(provider).
+		SetCurrency(currency).
 		Save(ctx)
 	if err != nil {
 		return "", "", "", fmt.Errorf("failed to configure order tokens: %s", err)
