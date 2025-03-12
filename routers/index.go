@@ -13,12 +13,6 @@ import (
 	"github.com/paycrest/aggregator/controllers/sender"
 	"github.com/paycrest/aggregator/routers/middleware"
 	u "github.com/paycrest/aggregator/utils"
-	"github.com/paycrest/aggregator/controllers"
-	"github.com/paycrest/aggregator/controllers/accounts"
-	"github.com/paycrest/aggregator/controllers/provider"
-	"github.com/paycrest/aggregator/controllers/sender"
-	"github.com/paycrest/aggregator/routers/middleware"
-	u "github.com/paycrest/aggregator/utils"
 )
 
 // RegisterRoutes add all routing list here automatically get main router
