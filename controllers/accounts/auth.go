@@ -30,6 +30,7 @@ var serverConf = config.ServerConfig()
 type AuthController struct {
 	apiKeyService *svc.APIKeyService
 	emailService  *svc.EmailService
+	slackService  *svc.SlackService
 }
 
 // NewAuthController creates a new instance of AuthController with injected services
@@ -37,6 +38,7 @@ func NewAuthController() *AuthController {
 	return &AuthController{
 		apiKeyService: svc.NewAPIKeyService(),
 		emailService:  svc.NewEmailService(svc.SENDGRID_MAIL_PROVIDER),
+		slackService:  svc.NewSlackService(serverConf.SlackWebhookURL),
 	}
 }
 
@@ -125,6 +127,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 	scopes := payload.Scopes
 
 	// Create a provider profile
+	var providerCurrency string
 	if u.ContainsString(scopes, "provider") {
 		currencies := payload.Currencies
 		if len(currencies) == 0 {
@@ -165,6 +168,11 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 					Message: fmt.Sprintf("Currencies not supported: %s", strings.Join(unsupportedCurrencies, ", ")),
 				}})
 			return
+		}
+
+		// Assign providerCurrency from the first valid fiat currency
+		if len(fiatCurrencies) > 0 {
+			providerCurrency = fiatCurrencies[0].Code
 		}
 
 		provider, err := tx.ProviderProfile.
@@ -238,6 +246,13 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 	}
 
 	u.APIResponse(ctx, http.StatusCreated, "success", "User created successfully", response)
+
+	// Send Slack notification
+	if serverConf.Environment == "production" {
+		if err := ctrl.slackService.SendUserSignupNotification(user, scopes, providerCurrency); err != nil {
+			logger.Errorf("failed to send Slack notification: %v", err)
+		}
+	}
 }
 
 // Login controller validates the payload and creates a new user.
