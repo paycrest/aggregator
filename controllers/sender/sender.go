@@ -1,6 +1,7 @@
 package sender
 
 import (
+	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
@@ -10,10 +11,13 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/storage"
+	"github.com/paycrest/aggregator/utils"
 
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providerordertoken"
 	providerprofile "github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
@@ -80,10 +84,15 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		WithNetwork().
 		Only(ctx)
 	if err != nil {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
-			Field:   "Token",
-			Message: "Provided token is not supported",
-		})
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+				Field:   "Token",
+				Message: "Provided token is not supported",
+			})
+		} else {
+			logger.Errorf("Failed to fetch token: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch token", nil)
+		}
 		return
 	}
 
@@ -210,79 +219,85 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	}
 
 	// Validate if institution exists
-	institutionExists, err := storage.Client.Institution.
+	institutionObj, err := storage.Client.Institution.
 		Query().
 		Where(
 			institution.CodeEQ(payload.Recipient.Institution),
 		).
-		Exist(ctx)
+		WithFiatCurrency(
+			func(q *ent.FiatCurrencyQuery) {
+				q.Where(fiatcurrency.IsEnabledEQ(true))
+			},
+		).
+		First(ctx)
 	if err != nil {
-		logger.Errorf("error validating institution: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to validate institution", nil)
-		return
-	}
-	if !institutionExists {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
-			Field:   "Recipient",
-			Message: "Invalid institution code provided",
-		})
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+				Field:   "Recipient",
+				Message: "Provided institution is not supported",
+			})
+		} else {
+			logger.Errorf("Failed to fetch institution: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to validate institution", nil)
+		}
 		return
 	}
 
-	isPrivate := false
-	isTokenNetworkPresent := false
-	maxOrderAmount := decimal.NewFromInt(0)
-	minOrderAmount := decimal.NewFromInt(0)
+	if !strings.EqualFold(token.BaseCurrency, institutionObj.Edges.FiatCurrency.Code) && !strings.EqualFold(token.BaseCurrency, "USD") {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("%s can only be converted to %s", token.Symbol, token.BaseCurrency), nil)
+		return
+	}
 
 	if payload.Recipient.ProviderID != "" {
-		providerProfile, err := storage.Client.ProviderProfile.
+		orderToken, err := storage.Client.ProviderOrderToken.
 			Query().
 			Where(
-				providerprofile.IDEQ(payload.Recipient.ProviderID),
+				providerordertoken.NetworkEQ(token.Edges.Network.Identifier),
+				providerordertoken.HasProviderWith(
+					providerprofile.IDEQ(payload.Recipient.ProviderID),
+				),
+				providerordertoken.HasTokenWith(
+					tokenEnt.IDEQ(token.ID),
+				),
+				providerordertoken.HasCurrencyWith(
+					fiatcurrency.CodeEQ(institutionObj.Edges.FiatCurrency.Code),
+				),
 			).
-			WithOrderTokens().
+			WithProvider().
 			Only(ctx)
 		if err != nil {
 			if ent.IsNotFound(err) {
-				u.APIResponse(ctx, http.StatusBadRequest, "error", "Provider not found", nil)
-				return
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Recipient",
+					Message: "The specified provider does not support the selected token",
+				})
 			} else {
-				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider profile", nil)
+				logger.Errorf("Failed to fetch provider settings: %v", err)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider settings", nil)
+			}
+			return
+		}
+
+		// Validate amount for private orders
+		if orderToken.Edges.Provider.VisibilityMode == providerprofile.VisibilityModePrivate {
+			normalizedAmount := payload.Amount
+			if strings.EqualFold(token.BaseCurrency, institutionObj.Edges.FiatCurrency.Code) && token.BaseCurrency != "USD" {
+				rateResponse, err := utils.GetTokenRateFromQueue("USDT", normalizedAmount, institutionObj.Edges.FiatCurrency.Code, institutionObj.Edges.FiatCurrency.MarketRate)
+				if err != nil {
+					logger.Errorf("InitiatePaymentOrder.GetTokenRateFromQueue: %v", err)
+					u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+					return
+				}
+				normalizedAmount = payload.Amount.Div(rateResponse)
+			}
+
+			if normalizedAmount.LessThan(orderToken.MinOrderAmount) {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "The amount is below the minimum order amount for the specified provider", nil)
+				return
+			} else if normalizedAmount.GreaterThan(orderToken.MaxOrderAmount) {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "The amount is beyond the maximum order amount for the specified provider", nil)
 				return
 			}
-		}
-
-	out:
-		for _, orderToken := range providerProfile.Edges.OrderTokens {
-			for _, address := range orderToken.Addresses {
-				if address.Network == token.Edges.Network.Identifier {
-					isTokenNetworkPresent = true
-					break out
-				}
-			}
-		}
-
-		if !isTokenNetworkPresent {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "The selected network is not supported by the specified provider", nil)
-			return
-		}
-
-		maxOrderAmount = providerProfile.Edges.OrderTokens[0].MaxOrderAmount
-		minOrderAmount = providerProfile.Edges.OrderTokens[0].MinOrderAmount
-
-		if providerProfile.VisibilityMode == providerprofile.VisibilityModePrivate {
-			isPrivate = true
-		}
-	}
-
-	// Validate amount for private orders
-	if isPrivate {
-		if payload.Amount.LessThan(minOrderAmount) {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "The amount is below the minimum order amount for the specified provider", nil)
-			return
-		} else if payload.Amount.GreaterThan(maxOrderAmount) {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "The amount is beyond the maximum order amount for the specified provider", nil)
-			return
 		}
 	}
 

@@ -2,10 +2,10 @@
 name: Feature request
 about: New feature for this project
 title: ''
-labels: ''
+labels: enhancement
 assignees: ''
----
 
+---
 
 **User Story**
 > Add the details of this issue from the user's POV

@@ -310,15 +310,19 @@ func (ppu *ProviderProfileUpdate) SetAPIKey(a *APIKey) *ProviderProfileUpdate {
 	return ppu.SetAPIKeyID(a.ID)
 }
 
-// SetCurrencyID sets the "currency" edge to the FiatCurrency entity by ID.
-func (ppu *ProviderProfileUpdate) SetCurrencyID(id uuid.UUID) *ProviderProfileUpdate {
-	ppu.mutation.SetCurrencyID(id)
+// AddCurrencyIDs adds the "currencies" edge to the FiatCurrency entity by IDs.
+func (ppu *ProviderProfileUpdate) AddCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
+	ppu.mutation.AddCurrencyIDs(ids...)
 	return ppu
 }
 
-// SetCurrency sets the "currency" edge to the FiatCurrency entity.
-func (ppu *ProviderProfileUpdate) SetCurrency(f *FiatCurrency) *ProviderProfileUpdate {
-	return ppu.SetCurrencyID(f.ID)
+// AddCurrencies adds the "currencies" edges to the FiatCurrency entity.
+func (ppu *ProviderProfileUpdate) AddCurrencies(f ...*FiatCurrency) *ProviderProfileUpdate {
+	ids := make([]uuid.UUID, len(f))
+	for i := range f {
+		ids[i] = f[i].ID
+	}
+	return ppu.AddCurrencyIDs(ids...)
 }
 
 // AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by IDs.
@@ -396,10 +400,25 @@ func (ppu *ProviderProfileUpdate) ClearAPIKey() *ProviderProfileUpdate {
 	return ppu
 }
 
-// ClearCurrency clears the "currency" edge to the FiatCurrency entity.
-func (ppu *ProviderProfileUpdate) ClearCurrency() *ProviderProfileUpdate {
-	ppu.mutation.ClearCurrency()
+// ClearCurrencies clears all "currencies" edges to the FiatCurrency entity.
+func (ppu *ProviderProfileUpdate) ClearCurrencies() *ProviderProfileUpdate {
+	ppu.mutation.ClearCurrencies()
 	return ppu
+}
+
+// RemoveCurrencyIDs removes the "currencies" edge to FiatCurrency entities by IDs.
+func (ppu *ProviderProfileUpdate) RemoveCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
+	ppu.mutation.RemoveCurrencyIDs(ids...)
+	return ppu
+}
+
+// RemoveCurrencies removes "currencies" edges to FiatCurrency entities.
+func (ppu *ProviderProfileUpdate) RemoveCurrencies(f ...*FiatCurrency) *ProviderProfileUpdate {
+	ids := make([]uuid.UUID, len(f))
+	for i := range f {
+		ids[i] = f[i].ID
+	}
+	return ppu.RemoveCurrencyIDs(ids...)
 }
 
 // ClearProvisionBuckets clears all "provision_buckets" edges to the ProvisionBucket entity.
@@ -532,9 +551,6 @@ func (ppu *ProviderProfileUpdate) check() error {
 	if ppu.mutation.UserCleared() && len(ppu.mutation.UserIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ProviderProfile.user"`)
 	}
-	if ppu.mutation.CurrencyCleared() && len(ppu.mutation.CurrencyIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "ProviderProfile.currency"`)
-	}
 	return nil
 }
 
@@ -651,12 +667,12 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if ppu.mutation.CurrencyCleared() {
+	if ppu.mutation.CurrenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   providerprofile.CurrencyTable,
-			Columns: []string{providerprofile.CurrencyColumn},
+			Table:   providerprofile.CurrenciesTable,
+			Columns: providerprofile.CurrenciesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
@@ -664,12 +680,28 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppu.mutation.CurrencyIDs(); len(nodes) > 0 {
+	if nodes := ppu.mutation.RemovedCurrenciesIDs(); len(nodes) > 0 && !ppu.mutation.CurrenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   providerprofile.CurrencyTable,
-			Columns: []string{providerprofile.CurrencyColumn},
+			Table:   providerprofile.CurrenciesTable,
+			Columns: providerprofile.CurrenciesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ppu.mutation.CurrenciesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   providerprofile.CurrenciesTable,
+			Columns: providerprofile.CurrenciesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
@@ -1139,15 +1171,19 @@ func (ppuo *ProviderProfileUpdateOne) SetAPIKey(a *APIKey) *ProviderProfileUpdat
 	return ppuo.SetAPIKeyID(a.ID)
 }
 
-// SetCurrencyID sets the "currency" edge to the FiatCurrency entity by ID.
-func (ppuo *ProviderProfileUpdateOne) SetCurrencyID(id uuid.UUID) *ProviderProfileUpdateOne {
-	ppuo.mutation.SetCurrencyID(id)
+// AddCurrencyIDs adds the "currencies" edge to the FiatCurrency entity by IDs.
+func (ppuo *ProviderProfileUpdateOne) AddCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
+	ppuo.mutation.AddCurrencyIDs(ids...)
 	return ppuo
 }
 
-// SetCurrency sets the "currency" edge to the FiatCurrency entity.
-func (ppuo *ProviderProfileUpdateOne) SetCurrency(f *FiatCurrency) *ProviderProfileUpdateOne {
-	return ppuo.SetCurrencyID(f.ID)
+// AddCurrencies adds the "currencies" edges to the FiatCurrency entity.
+func (ppuo *ProviderProfileUpdateOne) AddCurrencies(f ...*FiatCurrency) *ProviderProfileUpdateOne {
+	ids := make([]uuid.UUID, len(f))
+	for i := range f {
+		ids[i] = f[i].ID
+	}
+	return ppuo.AddCurrencyIDs(ids...)
 }
 
 // AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by IDs.
@@ -1225,10 +1261,25 @@ func (ppuo *ProviderProfileUpdateOne) ClearAPIKey() *ProviderProfileUpdateOne {
 	return ppuo
 }
 
-// ClearCurrency clears the "currency" edge to the FiatCurrency entity.
-func (ppuo *ProviderProfileUpdateOne) ClearCurrency() *ProviderProfileUpdateOne {
-	ppuo.mutation.ClearCurrency()
+// ClearCurrencies clears all "currencies" edges to the FiatCurrency entity.
+func (ppuo *ProviderProfileUpdateOne) ClearCurrencies() *ProviderProfileUpdateOne {
+	ppuo.mutation.ClearCurrencies()
 	return ppuo
+}
+
+// RemoveCurrencyIDs removes the "currencies" edge to FiatCurrency entities by IDs.
+func (ppuo *ProviderProfileUpdateOne) RemoveCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
+	ppuo.mutation.RemoveCurrencyIDs(ids...)
+	return ppuo
+}
+
+// RemoveCurrencies removes "currencies" edges to FiatCurrency entities.
+func (ppuo *ProviderProfileUpdateOne) RemoveCurrencies(f ...*FiatCurrency) *ProviderProfileUpdateOne {
+	ids := make([]uuid.UUID, len(f))
+	for i := range f {
+		ids[i] = f[i].ID
+	}
+	return ppuo.RemoveCurrencyIDs(ids...)
 }
 
 // ClearProvisionBuckets clears all "provision_buckets" edges to the ProvisionBucket entity.
@@ -1374,9 +1425,6 @@ func (ppuo *ProviderProfileUpdateOne) check() error {
 	if ppuo.mutation.UserCleared() && len(ppuo.mutation.UserIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ProviderProfile.user"`)
 	}
-	if ppuo.mutation.CurrencyCleared() && len(ppuo.mutation.CurrencyIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "ProviderProfile.currency"`)
-	}
 	return nil
 }
 
@@ -1510,12 +1558,12 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if ppuo.mutation.CurrencyCleared() {
+	if ppuo.mutation.CurrenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   providerprofile.CurrencyTable,
-			Columns: []string{providerprofile.CurrencyColumn},
+			Table:   providerprofile.CurrenciesTable,
+			Columns: providerprofile.CurrenciesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
@@ -1523,12 +1571,28 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppuo.mutation.CurrencyIDs(); len(nodes) > 0 {
+	if nodes := ppuo.mutation.RemovedCurrenciesIDs(); len(nodes) > 0 && !ppuo.mutation.CurrenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   providerprofile.CurrencyTable,
-			Columns: []string{providerprofile.CurrencyColumn},
+			Table:   providerprofile.CurrenciesTable,
+			Columns: providerprofile.CurrenciesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ppuo.mutation.CurrenciesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   providerprofile.CurrenciesTable,
+			Columns: providerprofile.CurrenciesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),

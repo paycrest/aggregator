@@ -50,6 +50,12 @@ func (lofu *LockOrderFulfillmentUpdate) SetNillableTxID(s *string) *LockOrderFul
 	return lofu
 }
 
+// ClearTxID clears the value of the "tx_id" field.
+func (lofu *LockOrderFulfillmentUpdate) ClearTxID() *LockOrderFulfillmentUpdate {
+	lofu.mutation.ClearTxID()
+	return lofu
+}
+
 // SetPsp sets the "psp" field.
 func (lofu *LockOrderFulfillmentUpdate) SetPsp(s string) *LockOrderFulfillmentUpdate {
 	lofu.mutation.SetPsp(s)
@@ -193,6 +199,9 @@ func (lofu *LockOrderFulfillmentUpdate) sqlSave(ctx context.Context) (n int, err
 	if value, ok := lofu.mutation.TxID(); ok {
 		_spec.SetField(lockorderfulfillment.FieldTxID, field.TypeString, value)
 	}
+	if lofu.mutation.TxIDCleared() {
+		_spec.ClearField(lockorderfulfillment.FieldTxID, field.TypeString)
+	}
 	if value, ok := lofu.mutation.Psp(); ok {
 		_spec.SetField(lockorderfulfillment.FieldPsp, field.TypeString, value)
 	}
@@ -274,6 +283,12 @@ func (lofuo *LockOrderFulfillmentUpdateOne) SetNillableTxID(s *string) *LockOrde
 	if s != nil {
 		lofuo.SetTxID(*s)
 	}
+	return lofuo
+}
+
+// ClearTxID clears the value of the "tx_id" field.
+func (lofuo *LockOrderFulfillmentUpdateOne) ClearTxID() *LockOrderFulfillmentUpdateOne {
+	lofuo.mutation.ClearTxID()
 	return lofuo
 }
 
@@ -449,6 +464,9 @@ func (lofuo *LockOrderFulfillmentUpdateOne) sqlSave(ctx context.Context) (_node 
 	}
 	if value, ok := lofuo.mutation.TxID(); ok {
 		_spec.SetField(lockorderfulfillment.FieldTxID, field.TypeString, value)
+	}
+	if lofuo.mutation.TxIDCleared() {
+		_spec.ClearField(lockorderfulfillment.FieldTxID, field.TypeString)
 	}
 	if value, ok := lofuo.mutation.Psp(); ok {
 		_spec.SetField(lockorderfulfillment.FieldPsp, field.TypeString, value)
