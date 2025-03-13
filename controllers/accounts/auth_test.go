@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -13,7 +15,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/jarcoal/httpmock"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/routers/middleware"
 	svc "github.com/paycrest/aggregator/services"
 	db "github.com/paycrest/aggregator/storage"
@@ -32,6 +36,7 @@ import (
 )
 
 func TestAuth(t *testing.T) {
+
 	// setup httpmock
 	httpmock.Activate()
 	defer httpmock.Deactivate()
@@ -57,8 +62,17 @@ func TestAuth(t *testing.T) {
 
 	db.Client = client
 
-	// Set up test fiat currency
 	_, _ = test.CreateTestFiatCurrency(nil)
+	KESPayloadCurrency := map[string]interface{}{
+		"code":        "KES",
+		"short_name":  "Shilling",
+		"decimals":    2,
+		"symbol":      "KSh",
+		"name":        "Kenyan Shilling",
+		"market_rate": 550.0,
+	}
+
+	_, _ = test.CreateTestFiatCurrency(KESPayloadCurrency)
 
 	// Set up test routers
 	router := gin.New()
@@ -75,6 +89,7 @@ func TestAuth(t *testing.T) {
 	router.POST("/reset-password-token", ctrl.ResetPasswordToken)
 	router.PATCH("/reset-password", ctrl.ResetPassword)
 	router.PATCH("/change-password", middleware.JWTMiddleware, ctrl.ChangePassword)
+	router.DELETE("/delete-account", middleware.JWTMiddleware, ctrl.DeleteAccount)
 
 	var userID string
 	var accessToken string
@@ -87,7 +102,7 @@ func TestAuth(t *testing.T) {
 				LastName:  "Ayo",
 				Email:     "ikeayo@example.com",
 				Password:  "password",
-				Currency:  "NGN",
+				Currencies:  []string{"NGN"},
 				Scopes:    []string{"sender", "provider"},
 			}
 
@@ -213,7 +228,7 @@ func TestAuth(t *testing.T) {
 				LastName:  "Ayo",
 				Email:     "ikeayo2@example.com",
 				Password:  "password2",
-				Currency:  "NGN",
+				Currencies:  []string{"NGN"},
 				Scopes:    []string{"provider"},
 			}
 
@@ -297,7 +312,7 @@ func TestAuth(t *testing.T) {
 				LastName:  "Ayo",
 				Email:     "ikeayoprovider@example.com",
 				Password:  "password",
-				Currency:  "NGN",
+				Currencies: []string{"NGN", "KES"},
 				Scopes:    []string{"provider"},
 			}
 
@@ -431,6 +446,62 @@ func TestAuth(t *testing.T) {
 			assert.Contains(t, errorMap, "field")
 			assert.Equal(t, "Scopes[0]", errorMap["field"].(string))
 			assert.Contains(t, errorMap, "message")
+		})
+
+		t.Run("testing UserEarlyAccess", func(t *testing.T) {
+			tests := []struct {
+				name                string
+				environment         string
+				expectedEarlyAccess bool
+			}{
+				{
+					name:                "Non-production environment (development)",
+					environment:         "development",
+					expectedEarlyAccess: true,
+				},
+				{
+					name:                "Non-production environment (staging)",
+					environment:         "staging",
+					expectedEarlyAccess: true,
+				},
+				{
+					name:                "Production environment",
+					environment:         "production",
+					expectedEarlyAccess: false,
+				},
+			}
+
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					os.Setenv("ENVIRONMENT", tt.environment)
+
+					serverConf := config.ServerConfiguration{Environment: tt.environment}
+
+					hasEarlyAccess := serverConf.Environment != "production"
+
+					ctx := context.Background()
+					user, err := client.User.Create().
+						SetFirstName("Ike").
+						SetLastName("Ayo").
+						SetEmail(fmt.Sprintf("test-%s@example.com", tt.environment)).
+						SetPassword("password").
+						SetScope("sender").
+						SetHasEarlyAccess(hasEarlyAccess).
+						Save(ctx)
+					assert.NoError(t, err)
+
+					createdUser, err := client.User.Get(ctx, user.ID)
+					if err != nil {
+						t.Fatal("Failed to fetch user from database:", err)
+					}
+					assert.Equal(t, tt.expectedEarlyAccess, createdUser.HasEarlyAccess, "unexpected HasEarlyAccess for environment %s", tt.environment)
+
+					// Cleanup
+					err = client.User.DeleteOne(user).Exec(ctx)
+					assert.NoError(t, err)
+				})
+
+			}
 		})
 
 	})
@@ -903,4 +974,102 @@ func TestAuth(t *testing.T) {
 			assert.True(t, crypto.CheckPasswordHash(payload.NewPassword, user.Password))
 		})
 	})
+	
+	// test delete account for an authenticated user
+	t.Run("DeleteAccount", func(t *testing.T) {
+
+		t.Run("with invalid credentials", func(t *testing.T) {
+			
+			headers := map[string]string{}
+			res, _ := test.PerformRequest(t, "DELETE", "/delete-account", nil, headers, router)
+			
+
+			// Assert the response body
+			assert.Equal(t, http.StatusUnauthorized, res.Code)
+
+			// Assert user still exist
+			user, err := db.Client.User.
+				Query().
+				Where(userEnt.IDEQ(uuid.MustParse(userID))).
+				Only(context.Background())
+			assert.NoError(t, err)
+			assert.NotNil(t, user)
+
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Authorization header is missing", response.Message)
+		})
+		t.Run("with valid credentials", func(t *testing.T) {
+			// Test delete account with valid credentials
+			
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+			res, err := test.PerformRequest(t, "DELETE", "/delete-account", nil, headers, router)
+			assert.NoError(t, err)
+
+			// Assert the response body
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Account deleted successfully", response.Message)
+			assert.Nil(t, response.Data)
+
+			// Assert profile no longer exist
+
+			_, err = db.Client.User.
+				Query().
+				Where(userEnt.IDEQ(uuid.MustParse(userID))).
+				Only(context.Background())
+			assert.Error(t, err)
+			
+		})
+
+
+		t.Run("with associated profiles", func(t *testing.T) {
+			// Test delete account with associated profiles
+			user, _ := test.CreateTestUser(map[string]interface{}{
+			"scope": "provider"})
+			
+			
+			accessToken, _ := token.GenerateAccessJWT(user.ID.String(), "provider")
+			
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			res, _ := test.PerformRequest(t, "DELETE", "/delete-account", nil, headers, router)
+			// Assert the response body
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err := json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Account deleted successfully", response.Message)
+			assert.Nil(t, response.Data)
+
+			// Assert Provider profile is successfully deleted.
+			_, err = db.Client.User.
+				Query().
+				Where(userEnt.IDEQ(uuid.MustParse(userID))).
+				Only(context.Background())
+			assert.Error(t, err)
+
+
+			
+
+			_, err = db.Client.ProviderProfile.
+				Query().
+				Where(providerprofile.HasUserWith(userEnt.IDEQ(uuid.MustParse(userID)))).
+				Only(context.Background())
+			assert.Error(t, err)
+
+		})
+	})
+			
+
 }

@@ -216,6 +216,16 @@ func TxIDHasSuffix(v string) predicate.LockOrderFulfillment {
 	return predicate.LockOrderFulfillment(sql.FieldHasSuffix(FieldTxID, v))
 }
 
+// TxIDIsNil applies the IsNil predicate on the "tx_id" field.
+func TxIDIsNil() predicate.LockOrderFulfillment {
+	return predicate.LockOrderFulfillment(sql.FieldIsNull(FieldTxID))
+}
+
+// TxIDNotNil applies the NotNil predicate on the "tx_id" field.
+func TxIDNotNil() predicate.LockOrderFulfillment {
+	return predicate.LockOrderFulfillment(sql.FieldNotNull(FieldTxID))
+}
+
 // TxIDEqualFold applies the EqualFold predicate on the "tx_id" field.
 func TxIDEqualFold(v string) predicate.LockOrderFulfillment {
 	return predicate.LockOrderFulfillment(sql.FieldEqualFold(FieldTxID, v))
