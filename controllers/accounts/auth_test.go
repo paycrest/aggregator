@@ -518,9 +518,13 @@ func TestAuth(t *testing.T) {
 		assert.NoError(t, fetchUserErr, "failed to fetch user by userID")
 
 		// generate verificationToken
-		verificationtoken, vtErr := user.QueryVerificationToken().
-			Where(verificationtoken.ScopeEQ(verificationtoken.ScopeEmailVerification)).
-			Only(context.Background())
+		verificationtoken, vtErr := db.Client.VerificationToken.
+			Create().
+			SetOwner(user).
+			SetToken(uuid.New().String()).
+			SetScope(verificationtoken.ScopeEmailVerification).
+			SetExpiryAt(time.Now().Add(authConf.PasswordResetLifespan)). // Use same lifespan for consistency
+			Save(context.Background())
 		assert.NoError(t, vtErr)
 
 		t.Run("confirm user email", func(t *testing.T) {
@@ -565,7 +569,7 @@ func TestAuth(t *testing.T) {
 			Create().
 			SetOwner(user).
 			SetScope(verificationtoken.ScopeResetPassword).
-			SetExpiryAt(time.Now().Add(authConf.PasswordResetLifespan)).
+			SetExpiryAt(time.Now().Add(-time.Second)).
 			Save(context.Background())
 		assert.NoError(t, vtErr)
 		t.Run("try to use expired token", func(t *testing.T) {
@@ -771,6 +775,25 @@ func TestAuth(t *testing.T) {
 		assert.NoError(t, err, "failed to set isEmailVerified to false")
 
 		t.Run("verification token should be resent", func(t *testing.T) {
+			userUUID, err := uuid.Parse(userID)
+			assert.NoError(t, err)
+
+			user, err := db.Client.User.
+				Query().
+				Where(userEnt.IDEQ(userUUID)).
+				Only(context.Background())
+			assert.NoError(t, err, "failed to fetch user by userID")
+
+			// Clean up existing tokens
+			_, err = db.Client.VerificationToken.
+				Delete().
+				Where(
+					verificationtoken.HasOwnerWith(userEnt.IDEQ(user.ID)),
+					verificationtoken.ScopeEQ(verificationtoken.ScopeEmailVerification),
+				).
+				Exec(context.Background())
+			assert.NoError(t, err)
+
 			// construct resend verification token payload
 			payload := types.ResendTokenPayload{
 				Scope: verificationtoken.ScopeEmailVerification.String(),
