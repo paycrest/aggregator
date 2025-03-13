@@ -450,7 +450,7 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 		providerToken, err := storage.Client.ProviderOrderToken.
 			Query().
 			Where(
-				providerordertoken.SymbolEQ(order.Token.Symbol),
+				// providerordertoken.SymbolEQ(order.Token.Symbol),
 				providerordertoken.HasProviderWith(providerprofile.IDEQ(order.ProviderID)),
 			).
 			Only(ctx)
