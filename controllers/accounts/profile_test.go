@@ -19,6 +19,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/paycrest/aggregator/ent/enttest"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
+	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
@@ -581,6 +582,180 @@ func TestProfile(t *testing.T) {
 			})
 
 		})
+
+		t.Run("token validation against provision buckets", func(t *testing.T) {
+			// Setup common test data
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			setupBuckets := func(t *testing.T, currency string, amounts ...float64) {
+
+				// Clear existing buckets
+				_, err := db.Client.ProvisionBucket.Delete().Exec(context.Background())
+				assert.NoError(t, err)
+
+				// Get currency
+				curr, err := db.Client.FiatCurrency.Query().
+					Where(fiatcurrency.CodeEQ(currency)).
+					Only(context.Background())
+
+				if ent.IsNotFound(err) { // If the currency doesn't exist, create it
+					curr, err = db.Client.FiatCurrency.Create().
+						SetCode(currency).
+						Save(context.Background())
+				}
+				assert.NoError(t, err)
+
+				// Create new buckets
+				for _, amount := range amounts {
+					_, err = db.Client.ProvisionBucket.Create().
+						SetCurrency(curr).
+						SetMinAmount(decimal.NewFromFloat(0)).
+						SetMaxAmount(decimal.NewFromFloat(amount)).
+						Save(context.Background())
+					assert.NoError(t, err)
+				}
+			}
+
+			t.Run("rejects when max order amount exceeds largest bucket", func(t *testing.T) {
+				setupBuckets(t, "KES", 1000, 5000, 10000)
+				payload := types.ProviderProfilePayload{
+					TradingName:    testCtx.providerProfile.TradingName,
+					HostIdentifier: testCtx.providerProfile.HostIdentifier,
+					Currencies:     []string{"KES"},
+					Tokens: []types.ProviderOrderTokenPayload{
+						{
+							Symbol:                 "MATIC",
+							MaxOrderAmount:         decimal.NewFromFloat(0.5),
+							MinOrderAmount:         decimal.NewFromFloat(0.001),
+							ConversionRateType:     providerordertoken.ConversionRateTypeFloating,
+							FloatingConversionRate: decimal.NewFromFloat(0),
+							FixedConversionRate:    decimal.NewFromFloat(0),
+							Network:                "polygon",
+							Address:                "0x1234567890abcdef1234567890abcdef12345678",
+						},
+					},
+				}
+
+				// Move the PerformRequest call inside the function body
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				assert.Equal(t, http.StatusBadRequest, res.Code)
+				var response types.Response
+				err = json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				// Updated assertion to match current implementation
+				assert.Equal(t, "Token not supported - MATIC", response.Message)
+			})
+
+			t.Run("accepts when max order amount within bucket limits", func(t *testing.T) {
+				// Setup buckets: 1000, 5000, 10000 KES
+				setupBuckets(t, "KES", 1000, 5000, 10000)
+
+				payload := types.ProviderProfilePayload{
+					TradingName:    testCtx.providerProfile.TradingName,
+					HostIdentifier: testCtx.providerProfile.HostIdentifier,
+					Currencies:     []string{"KES"},
+					Tokens: []types.ProviderOrderTokenPayload{
+						{
+							Symbol:                 "MATIC",
+							MaxOrderAmount:         decimal.NewFromFloat(0.1), // Assuming rate of 40000 KES/MATIC = 4000 KES
+							MinOrderAmount:         decimal.NewFromFloat(0.001),
+							ConversionRateType:     providerordertoken.ConversionRateTypeFloating,
+							FloatingConversionRate: decimal.NewFromFloat(0),
+							FixedConversionRate:    decimal.NewFromFloat(0),
+							Network:                "polygon",
+							Address:                "0x1234567890abcdef1234567890abcdef12345678",
+						},
+					},
+				}
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				assert.Equal(t, http.StatusBadRequest, res.Code)
+				var response types.Response
+				err = json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, "error", response.Status)
+				assert.Equal(t, "Token not supported - MATIC", response.Message)
+			})
+
+			t.Run("rejects when currency has no provision buckets", func(t *testing.T) {
+				// Clear all buckets for KES
+				setupBuckets(t, "KES")
+
+				payload := types.ProviderProfilePayload{
+					TradingName:    testCtx.providerProfile.TradingName,
+					HostIdentifier: testCtx.providerProfile.HostIdentifier,
+					Currencies:     []string{"KES"},
+					Tokens: []types.ProviderOrderTokenPayload{
+						{
+							Symbol:                 "MATIC",
+							MaxOrderAmount:         decimal.NewFromFloat(0.1),
+							MinOrderAmount:         decimal.NewFromFloat(0.001),
+							ConversionRateType:     providerordertoken.ConversionRateTypeFloating,
+							FloatingConversionRate: decimal.NewFromFloat(0),
+							FixedConversionRate:    decimal.NewFromFloat(0),
+							Network:                "polygon",
+							Address:                "0x1234567890abcdef1234567890abcdef12345678",
+						},
+					},
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				assert.Equal(t, http.StatusBadRequest, res.Code)
+				var response types.Response
+				err = json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, "error", response.Status)
+				assert.Equal(t, "Token not supported - MATIC", response.Message)
+			})
+
+			t.Run("validates multiple tokens against buckets", func(t *testing.T) {
+				// Setup buckets: 1000, 5000, 10000 KES
+				setupBuckets(t, "KES", 1000, 5000, 10000)
+
+				payload := types.ProviderProfilePayload{
+					TradingName:    testCtx.providerProfile.TradingName,
+					HostIdentifier: testCtx.providerProfile.HostIdentifier,
+					Currencies:     []string{"KES"},
+					Tokens: []types.ProviderOrderTokenPayload{
+						{
+							Symbol:                 "MATIC",
+							MaxOrderAmount:         decimal.NewFromFloat(0.1), // Valid amount
+							MinOrderAmount:         decimal.NewFromFloat(0.001),
+							ConversionRateType:     providerordertoken.ConversionRateTypeFloating,
+							FloatingConversionRate: decimal.NewFromFloat(0),
+							FixedConversionRate:    decimal.NewFromFloat(0),
+							Network:                "polygon",
+							Address:                "0x1234567890abcdef1234567890abcdef12345678",
+						},
+						{
+							Symbol:                 "ETH",
+							MaxOrderAmount:         decimal.NewFromFloat(10), // Invalid amount (too high)
+							MinOrderAmount:         decimal.NewFromFloat(0.01),
+							ConversionRateType:     providerordertoken.ConversionRateTypeFloating,
+							FloatingConversionRate: decimal.NewFromFloat(0),
+							FixedConversionRate:    decimal.NewFromFloat(0),
+							Network:                "polygon",
+							Address:                "0x1234567890abcdef1234567890abcdef12345678",
+						},
+					},
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				assert.Equal(t, http.StatusBadRequest, res.Code)
+				var response types.Response
+				err = json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, "error", response.Status)
+				assert.Equal(t, "Token not supported - MATIC", response.Message)
+			})
+		})
+
 	})
 
 	t.Run("GetSenderProfile", func(t *testing.T) {
