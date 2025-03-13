@@ -170,7 +170,10 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 			return
 		}
 
-		providerCurrency = currency.Code
+		// Assign providerCurrency from the first valid fiat currency
+		if len(fiatCurrencies) > 0 {
+			providerCurrency = fiatCurrencies[0].Code
+		}
 
 		provider, err := tx.ProviderProfile.
 			Create().
