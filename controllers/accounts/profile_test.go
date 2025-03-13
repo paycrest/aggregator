@@ -624,7 +624,7 @@ func TestProfile(t *testing.T) {
 				payload := types.ProviderProfilePayload{
 					TradingName:    testCtx.providerProfile.TradingName,
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
-					Currency:       "KES",
+					Currencies:     []string{"KES"},
 					Tokens: []types.ProviderOrderTokenPayload{
 						{
 							Symbol:                 "MATIC",
@@ -633,18 +633,13 @@ func TestProfile(t *testing.T) {
 							ConversionRateType:     providerordertoken.ConversionRateTypeFloating,
 							FloatingConversionRate: decimal.NewFromFloat(0),
 							FixedConversionRate:    decimal.NewFromFloat(0),
-							Addresses: []struct {
-								Address string `json:"address"`
-								Network string `json:"network"`
-							}{
-								{
-									Network: "polygon",
-									Address: "0x1234567890abcdef1234567890abcdef12345678",
-								},
-							},
+							Network:                "polygon",
+							Address:                "0x1234567890abcdef1234567890abcdef12345678",
 						},
 					},
 				}
+
+				// Move the PerformRequest call inside the function body
 				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
 				assert.NoError(t, err)
 				assert.Equal(t, http.StatusBadRequest, res.Code)
@@ -652,7 +647,7 @@ func TestProfile(t *testing.T) {
 				err = json.Unmarshal(res.Body.Bytes(), &response)
 				assert.NoError(t, err)
 				// Updated assertion to match current implementation
-				assert.Equal(t, "Token not supported", response.Message)
+				assert.Equal(t, "Token not supported - MATIC", response.Message)
 			})
 
 			t.Run("accepts when max order amount within bucket limits", func(t *testing.T) {
@@ -662,7 +657,7 @@ func TestProfile(t *testing.T) {
 				payload := types.ProviderProfilePayload{
 					TradingName:    testCtx.providerProfile.TradingName,
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
-					Currency:       "KES",
+					Currencies:     []string{"KES"},
 					Tokens: []types.ProviderOrderTokenPayload{
 						{
 							Symbol:                 "MATIC",
@@ -671,15 +666,8 @@ func TestProfile(t *testing.T) {
 							ConversionRateType:     providerordertoken.ConversionRateTypeFloating,
 							FloatingConversionRate: decimal.NewFromFloat(0),
 							FixedConversionRate:    decimal.NewFromFloat(0),
-							Addresses: []struct {
-								Address string `json:"address"`
-								Network string `json:"network"`
-							}{
-								{
-									Network: "polygon",
-									Address: "0x1234567890abcdef1234567890abcdef12345678",
-								},
-							},
+							Network:                "polygon",
+							Address:                "0x1234567890abcdef1234567890abcdef12345678",
 						},
 					},
 				}
@@ -690,7 +678,7 @@ func TestProfile(t *testing.T) {
 				err = json.Unmarshal(res.Body.Bytes(), &response)
 				assert.NoError(t, err)
 				assert.Equal(t, "error", response.Status)
-				assert.Equal(t, "Token not supported", response.Message)
+				assert.Equal(t, "Token not supported - MATIC", response.Message)
 			})
 
 			t.Run("rejects when currency has no provision buckets", func(t *testing.T) {
@@ -700,7 +688,7 @@ func TestProfile(t *testing.T) {
 				payload := types.ProviderProfilePayload{
 					TradingName:    testCtx.providerProfile.TradingName,
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
-					Currency:       "KES",
+					Currencies:     []string{"KES"},
 					Tokens: []types.ProviderOrderTokenPayload{
 						{
 							Symbol:                 "MATIC",
@@ -709,15 +697,8 @@ func TestProfile(t *testing.T) {
 							ConversionRateType:     providerordertoken.ConversionRateTypeFloating,
 							FloatingConversionRate: decimal.NewFromFloat(0),
 							FixedConversionRate:    decimal.NewFromFloat(0),
-							Addresses: []struct {
-								Address string `json:"address"`
-								Network string `json:"network"`
-							}{
-								{
-									Network: "polygon",
-									Address: "0x1234567890abcdef1234567890abcdef12345678",
-								},
-							},
+							Network:                "polygon",
+							Address:                "0x1234567890abcdef1234567890abcdef12345678",
 						},
 					},
 				}
@@ -729,7 +710,7 @@ func TestProfile(t *testing.T) {
 				err = json.Unmarshal(res.Body.Bytes(), &response)
 				assert.NoError(t, err)
 				assert.Equal(t, "error", response.Status)
-				assert.Equal(t, "Token not supported", response.Message)
+				assert.Equal(t, "Token not supported - MATIC", response.Message)
 			})
 
 			t.Run("validates multiple tokens against buckets", func(t *testing.T) {
@@ -739,7 +720,7 @@ func TestProfile(t *testing.T) {
 				payload := types.ProviderProfilePayload{
 					TradingName:    testCtx.providerProfile.TradingName,
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
-					Currency:       "KES",
+					Currencies:     []string{"KES"},
 					Tokens: []types.ProviderOrderTokenPayload{
 						{
 							Symbol:                 "MATIC",
@@ -748,15 +729,8 @@ func TestProfile(t *testing.T) {
 							ConversionRateType:     providerordertoken.ConversionRateTypeFloating,
 							FloatingConversionRate: decimal.NewFromFloat(0),
 							FixedConversionRate:    decimal.NewFromFloat(0),
-							Addresses: []struct {
-								Address string `json:"address"`
-								Network string `json:"network"`
-							}{
-								{
-									Network: "polygon",
-									Address: "0x1234567890abcdef1234567890abcdef12345678",
-								},
-							},
+							Network:                "polygon",
+							Address:                "0x1234567890abcdef1234567890abcdef12345678",
 						},
 						{
 							Symbol:                 "ETH",
@@ -765,15 +739,8 @@ func TestProfile(t *testing.T) {
 							ConversionRateType:     providerordertoken.ConversionRateTypeFloating,
 							FloatingConversionRate: decimal.NewFromFloat(0),
 							FixedConversionRate:    decimal.NewFromFloat(0),
-							Addresses: []struct {
-								Address string `json:"address"`
-								Network string `json:"network"`
-							}{
-								{
-									Network: "ethereum",
-									Address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
-								},
-							},
+							Network:                "polygon",
+							Address:                "0x1234567890abcdef1234567890abcdef12345678",
 						},
 					},
 				}
@@ -785,7 +752,7 @@ func TestProfile(t *testing.T) {
 				err = json.Unmarshal(res.Body.Bytes(), &response)
 				assert.NoError(t, err)
 				assert.Equal(t, "error", response.Status)
-				assert.Equal(t, "Token not supported", response.Message)
+				assert.Equal(t, "Token not supported - MATIC", response.Message)
 			})
 		})
 
