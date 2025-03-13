@@ -1,6 +1,7 @@
 package accounts
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -125,39 +126,50 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 
 	// Create a provider profile
 	if u.ContainsString(scopes, "provider") {
-		// Fetch currency
-		if payload.Currency == "" {
+		currencies := payload.Currencies
+		if len(currencies) == 0 {
 			_ = tx.Rollback()
 			u.APIResponse(ctx, http.StatusBadRequest, "error",
-				"Currency is required for provider account", nil)
+				"Currencies are required for provider account", nil)
 			return
 		}
-		currency, err := tx.FiatCurrency.
-			Query().
-			Where(
-				fiatcurrency.IsEnabledEQ(true),
-				fiatcurrency.CodeEQ(payload.Currency),
-			).
-			Only(ctx)
-		if err != nil {
-			_ = tx.Rollback()
-			if ent.IsNotFound(err) {
-				u.APIResponse(ctx, http.StatusBadRequest, "error",
-					"Failed to validate payload", []types.ErrorData{{
-						Field:   "Currency",
-						Message: "Currency is not supported",
-					}})
+
+		fiatCurrencies := make([]*ent.FiatCurrency, len(currencies))
+		var unsupportedCurrencies []string
+		for i, currency := range currencies {
+			fiatCurrency, err := tx.FiatCurrency.
+				Query().
+				Where(
+					fiatcurrency.IsEnabledEQ(true),
+					fiatcurrency.CodeEQ(strings.ToUpper(currency)),
+				).
+				Only(ctx)
+			if err != nil {
+				if ent.IsNotFound(err) {
+					unsupportedCurrencies = append(unsupportedCurrencies, strings.ToUpper(currency))
+					continue
+				}
+				_ = tx.Rollback()
+				u.APIResponse(ctx, http.StatusInternalServerError, "error",
+					"Failed to create new user", nil)
 				return
 			}
-			logger.Errorf("error: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error",
-				"Failed to create new user", nil)
+			fiatCurrencies[i] = fiatCurrency
+		}
+
+		if len(unsupportedCurrencies) > 0 {
+			_ = tx.Rollback()
+			u.APIResponse(ctx, http.StatusBadRequest, "error",
+				"Failed to validate payload", []types.ErrorData{{
+					Field:   "Currencies",
+					Message: fmt.Sprintf("Currencies not supported: %s", strings.Join(unsupportedCurrencies, ", ")),
+				}})
 			return
 		}
 
 		provider, err := tx.ProviderProfile.
 			Create().
-			SetCurrency(currency).
+			AddCurrencies(fiatCurrencies...).
 			SetVisibilityMode(providerprofile.VisibilityModePrivate).
 			SetUser(user).
 			SetProvisionMode(providerprofile.ProvisionModeAuto).
