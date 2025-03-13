@@ -396,6 +396,16 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				providerordertoken.HasCurrencyWith(fiatcurrency.IDEQ(currency.ID)),
 			).
 			Only(ctx)
+
+			// Handle slippage validation and default value
+		if tokenPayload.RateSlippage.IsZero() {
+			tokenPayload.RateSlippage = decimal.Zero // Default to 0
+		} else if tokenPayload.RateSlippage.LessThan(decimal.Zero) ||
+			tokenPayload.RateSlippage.GreaterThan(decimal.NewFromFloat(20)) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Rate slippage cannot exceed 20% of market rate", nil)
+			return
+		}
+
 		if err != nil {
 			if ent.IsNotFound(err) {
 				// Token doesn't exist, create it
@@ -409,6 +419,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 					SetAddress(tokenPayload.Address).
 					SetNetwork(tokenPayload.Network).
 					SetProviderID(provider.ID).
+					SetRateSlippage(tokenPayload.RateSlippage).
 					SetTokenID(providerToken.ID).
 					SetCurrencyID(currency.ID).
 					Save(ctx)
@@ -430,6 +441,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				SetFloatingConversionRate(tokenPayload.FloatingConversionRate).
 				SetMaxOrderAmount(tokenPayload.MaxOrderAmount).
 				SetMinOrderAmount(tokenPayload.MinOrderAmount).
+				SetRateSlippage(tokenPayload.RateSlippage).
 				SetAddress(tokenPayload.Address).
 				SetNetwork(tokenPayload.Network).
 				Save(ctx)
@@ -627,6 +639,7 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 			FloatingConversionRate: orderToken.FloatingConversionRate,
 			MaxOrderAmount:         orderToken.MaxOrderAmount,
 			MinOrderAmount:         orderToken.MinOrderAmount,
+			RateSlippage:           orderToken.RateSlippage,
 			Address:                orderToken.Address,
 			Network:                orderToken.Network,
 		}
