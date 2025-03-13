@@ -57,7 +57,7 @@ func TestFetchExternalRate(t *testing.T) {
 		rate, err := FetchExternalRate("NGN")
 		fmt.Println(rate, err)
 		assert.NoError(t, err)
-		expectedMedian := decimal.NewFromFloat(753.75)
+		expectedMedian := decimal.NewFromFloat(755.00) 
 		assert.Equal(t, expectedMedian.StringFixed(2), rate.StringFixed(2))
 
 	})

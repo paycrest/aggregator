@@ -17,7 +17,7 @@ import (
 
 var (
 	BitgetAPIURL  = "https://api.bitget.com"
-	BinanceAPIURL = "https://api.binance.com"
+	BinanceAPIURL = "https://p2p.binance.com"
 	QuidaxAPIURL  = "https://www.quidax.com"
 )
 
