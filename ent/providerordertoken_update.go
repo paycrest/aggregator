@@ -164,6 +164,7 @@ func (potu *ProviderOrderTokenUpdate) ClearRateSlippage() *ProviderOrderTokenUpd
 	return potu
 }
 
+// SetAddress sets the "address" field.
 func (potu *ProviderOrderTokenUpdate) SetAddress(s string) *ProviderOrderTokenUpdate {
 	potu.mutation.SetAddress(s)
 	return potu

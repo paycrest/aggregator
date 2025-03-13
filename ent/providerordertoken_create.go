@@ -95,6 +95,10 @@ func (potc *ProviderOrderTokenCreate) SetRateSlippage(d decimal.Decimal) *Provid
 func (potc *ProviderOrderTokenCreate) SetNillableRateSlippage(d *decimal.Decimal) *ProviderOrderTokenCreate {
 	if d != nil {
 		potc.SetRateSlippage(*d)
+	}
+	return potc
+}
+
 // SetAddress sets the "address" field.
 func (potc *ProviderOrderTokenCreate) SetAddress(s string) *ProviderOrderTokenCreate {
 	potc.mutation.SetAddress(s)

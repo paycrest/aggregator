@@ -11309,7 +11309,7 @@ func (m *ProviderOrderTokenMutation) Field(name string) (ent.Value, bool) {
 		return m.MaxOrderAmount()
 	case providerordertoken.FieldMinOrderAmount:
 		return m.MinOrderAmount()
-		case providerordertoken.FieldRateSlippage:
+	case providerordertoken.FieldRateSlippage:
 		return m.RateSlippage()
 	case providerordertoken.FieldAddress:
 		return m.Address()
@@ -11518,6 +11518,7 @@ func (m *ProviderOrderTokenMutation) ClearedFields() []string {
 	var fields []string
 	if m.FieldCleared(providerordertoken.FieldRateSlippage) {
 		fields = append(fields, providerordertoken.FieldRateSlippage)
+	}
 	if m.FieldCleared(providerordertoken.FieldAddress) {
 		fields = append(fields, providerordertoken.FieldAddress)
 	}
@@ -11540,6 +11541,7 @@ func (m *ProviderOrderTokenMutation) ClearField(name string) error {
 	switch name {
 	case providerordertoken.FieldRateSlippage:
 		m.ClearRateSlippage()
+		return nil
 	case providerordertoken.FieldAddress:
 		m.ClearAddress()
 		return nil
