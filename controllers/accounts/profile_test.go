@@ -391,13 +391,16 @@ func TestProfile(t *testing.T) {
 
 			// Base token payload with required fields
 			baseTokenPayload := types.ProviderOrderTokenPayload{
+				Currency:               "KES",
 				Symbol:                 "TST",
 				ConversionRateType:     providerordertoken.ConversionRateTypeFixed,
 				FixedConversionRate:    decimal.NewFromFloat(50000),
 				FloatingConversionRate: decimal.NewFromFloat(0),
 				MaxOrderAmount:         decimal.NewFromFloat(1),
 				MinOrderAmount:         decimal.NewFromFloat(0.001),
-				RateSlippage:           decimal.NewFromFloat(10),
+				RateSlippage:           decimal.NewFromFloat(0),
+				Address:                "0x6881B7403C506d68D5e95580C90B3c8dD6EB0676",
+				Network:                "localhost",
 			}
 
 			t.Run("fails when rate slippage exceeds 20%", func(t *testing.T) {
@@ -445,7 +448,6 @@ func TestProfile(t *testing.T) {
 				providerToken, err := db.Client.ProviderOrderToken.
 					Query().
 					Where(
-						// providerordertoken.SymbolEQ("TST"),
 						providerordertoken.HasProviderWith(providerprofile.IDEQ(testCtx.providerProfile.ID)),
 					).
 					Only(context.Background())
@@ -739,6 +741,49 @@ func TestProfile(t *testing.T) {
 
 	})
 
+	// t.Run("GetSenderProfile", func(t *testing.T) {
+	// 	testUser, err := test.CreateTestUser(map[string]interface{}{
+	// 		"email": "hello@test.com",
+	// 		"scope": "sender",
+	// 	})
+	// 	assert.NoError(t, err)
+
+	// 	sender, err := test.CreateTestSenderProfile(map[string]interface{}{
+	// 		"domain_whitelist": []string{"mydomain.com"},
+	// 		"user_id":          testUser.ID,
+	// 	})
+	// 	assert.NoError(t, err)
+
+	// 	apiKeyService := services.NewAPIKeyService()
+	// 	_, _, err = apiKeyService.GenerateAPIKey(
+	// 		context.Background(),
+	// 		nil,
+	// 		sender,
+	// 		nil,
+	// 	)
+	// 	assert.NoError(t, err)
+
+	// 	accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+	// 	headers := map[string]string{
+	// 		"Authorization": "Bearer " + accessToken,
+	// 	}
+	// 	res, err := test.PerformRequest(t, "GET", "/settings/sender", nil, headers, router)
+	// 	assert.NoError(t, err)
+
+	// 	// Assert the response body
+	// 	assert.Equal(t, http.StatusOK, res.Code)
+	// 	var response struct {
+	// 		Data    types.SenderProfileResponse
+	// 		Message string
+	// 	}
+	// 	err = json.Unmarshal(res.Body.Bytes(), &response)
+	// 	assert.NoError(t, err)
+	// 	assert.Equal(t, "Profile retrieved successfully", response.Message)
+	// 	assert.NotNil(t, response.Data, "response.Data is nil")
+	// 	assert.Greater(t, len(response.Data.Tokens), 0)
+	// 	assert.Contains(t, response.Data.WebhookURL, "https://example.com")
+
+	// })
 	t.Run("GetProviderProfile", func(t *testing.T) {
 		t.Run("with currency filter", func(t *testing.T) {
 			ctx := context.Background()
