@@ -79,7 +79,7 @@ func ParseJSONResponse(res *http.Response) (map[string]interface{}, error) {
 			return nil, fmt.Errorf("received non-JSON response: %s", string(responseBody))
 		}
 	}
-
+  
 	if res.StatusCode >= 500 { // Return on server errors
 		return body, fmt.Errorf("%s", fmt.Sprint(res.StatusCode))
 	}
