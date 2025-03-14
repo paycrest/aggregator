@@ -1021,7 +1021,7 @@ func HandleReceiveAddressValidity() error {
 		).
 		WithPaymentOrder(func(po *ent.PaymentOrderQuery) {
 			po.WithToken(func(tq *ent.TokenQuery) {
-				tq.WithNetwork() 
+				tq.WithNetwork()
 			})
 			po.WithRecipient()
 		}).
@@ -1081,7 +1081,7 @@ func ComputeMarketRate() error {
 
 	for _, currency := range currencies {
 		// Fetch external rate
-		externalRate, err := utils.FetchQuidaxRate(currency.Code)
+		externalRate, err := utils.FetchQuidaxRates(currency.Code)
 		if err != nil {
 			continue
 		}
