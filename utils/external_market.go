@@ -11,6 +11,7 @@ import (
 	"time"
 
 	fastshot "github.com/opus-domini/fast-shot"
+	"github.com/paycrest/aggregator/types"
 	"github.com/shopspring/decimal"
 )
 
@@ -190,21 +191,8 @@ func FetchBitgetRate(currency string) (decimal.Decimal, error) {
 		return decimal.Zero, fmt.Errorf("FetchBitgetRate: failed to read response body: %w", err)
 	}
 
-	// Parse JSON response
-	var resData struct {
-		Code string `json:"code"`
-		Data struct {
-			DataList []struct {
-				Price     string `json:"price"`
-				CoinCode  string `json:"coinCode"`
-				FiatCode  string `json:"fiatCode"`
-				Amount    string `json:"amount"`
-				MinAmount string `json:"minAmount"`
-				MaxAmount string `json:"maxAmount"`
-			} `json:"dataList"`
-		} `json:"data"`
-		Msg string `json:"msg"`
-	}
+	// Parse JSON response using the defined struct
+	var resData types.BitgetResponse
 	err = json.Unmarshal(bodyBytes, &resData)
 	if err != nil {
 		fmt.Printf("FetchBitgetRate: failed to parse response, raw body: %s\n", string(bodyBytes))

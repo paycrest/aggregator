@@ -114,12 +114,12 @@ type CreateOrderParams struct {
 
 // RegisterPayload is the payload for the register endpoint
 type RegisterPayload struct {
-	FirstName    string     `json:"firstName" binding:"required"`
-	LastName     string     `json:"lastName" binding:"required"`
-	Email        string     `json:"email" binding:"required,email"`
-	Password     string     `json:"password" binding:"required,min=6,max=20"`
-	Currencies  []string    `json:"currency"`
-	Scopes      []string    `json:"scopes" binding:"required,dive,oneof=sender provider"`
+	FirstName  string   `json:"firstName" binding:"required"`
+	LastName   string   `json:"lastName" binding:"required"`
+	Email      string   `json:"email" binding:"required,email"`
+	Password   string   `json:"password" binding:"required,min=6,max=20"`
+	Currencies []string `json:"currency"`
+	Scopes     []string `json:"scopes" binding:"required,dive,oneof=sender provider"`
 }
 
 // RegisterResponse is the response for the register endpoint
@@ -672,4 +672,26 @@ type LinkedAddressTransactionList struct {
 	Page         int                        `json:"page"`
 	PageSize     int                        `json:"pageSize"`
 	Transactions []LinkedAddressTransaction `json:"transactions"`
+}
+
+// BitgetResponse represents the JSON response structure from the Bitget P2P API
+type BitgetResponse struct {
+	Code string     `json:"code"`
+	Data BitgetData `json:"data"`
+	Msg  string     `json:"msg"`
+}
+
+// BitgetData contains the data field of the Bitget API response
+type BitgetData struct {
+	DataList []BitgetAd `json:"dataList"`
+}
+
+// BitgetAd represents a single P2P advertisement in the Bitget API response
+type BitgetAd struct {
+	Price     string `json:"price"`
+	CoinCode  string `json:"coinCode"`
+	FiatCode  string `json:"fiatCode"`
+	Amount    string `json:"amount"`
+	MinAmount string `json:"minAmount"`
+	MaxAmount string `json:"maxAmount"`
 }
