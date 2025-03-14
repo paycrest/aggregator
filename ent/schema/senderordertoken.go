@@ -38,7 +38,7 @@ func (SenderOrderToken) Edges() []ent.Edge {
 			Required().
 			Unique(),
 		edge.From("token", Token.Type).
-			Ref("sender_settings").
+			Ref("sender_order_tokens").
 			Required().
 			Unique(),
 	}

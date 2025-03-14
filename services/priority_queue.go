@@ -9,10 +9,12 @@ import (
 
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
+	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
@@ -31,6 +33,8 @@ func NewPriorityQueueService() *PriorityQueueService {
 
 // ProcessBucketQueues creates a priority queue for each bucket and saves it to redis
 func (s *PriorityQueueService) ProcessBucketQueues() error {
+	// ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	// defer cancel()
 	ctx := context.Background()
 
 	buckets, err := s.GetProvisionBuckets(ctx)
@@ -74,17 +78,17 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 }
 
 // GetProviderRate returns the rate for a provider
-func (s *PriorityQueueService) GetProviderRate(ctx context.Context, provider *ent.ProviderProfile, token string) (decimal.Decimal, error) {
+func (s *PriorityQueueService) GetProviderRate(ctx context.Context, provider *ent.ProviderProfile, tokenSymbol string, currency string) (decimal.Decimal, error) {
 	// Fetch the token config for the provider
 	tokenConfig, err := storage.Client.ProviderOrderToken.
 		Query().
 		Where(
 			providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
-			providerordertoken.SymbolEQ(token),
+			providerordertoken.HasTokenWith(token.SymbolEQ(tokenSymbol)),
+			providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(currency)),
 		).
-		WithProvider(func(pq *ent.ProviderProfileQuery) {
-			pq.WithCurrency()
-		}).
+		WithProvider().
+		WithCurrency().
 		Select(
 			providerordertoken.FieldConversionRateType,
 			providerordertoken.FieldFixedConversionRate,
@@ -101,7 +105,7 @@ func (s *PriorityQueueService) GetProviderRate(ctx context.Context, provider *en
 		rate = tokenConfig.FixedConversionRate
 	} else {
 		// Handle floating rate case
-		marketRate := tokenConfig.Edges.Provider.Edges.Currency.MarketRate
+		marketRate := tokenConfig.Edges.Currency.MarketRate
 		floatingRate := tokenConfig.FloatingConversionRate // in percentage
 
 		// Calculate the floating rate based on the market rate
@@ -112,11 +116,13 @@ func (s *PriorityQueueService) GetProviderRate(ctx context.Context, provider *en
 }
 
 // deleteQueue deletes existing circular queue
-func (s *PriorityQueueService) deleteQueue(ctx context.Context, key string) {
+func (s *PriorityQueueService) deleteQueue(ctx context.Context, key string) error {
 	_, err := storage.RedisClient.Del(ctx, key).Result()
 	if err != nil {
-		logger.Errorf("failed to delete existing circular queue: %v", err)
+		return err
 	}
+
+	return nil
 }
 
 // CreatePriorityQueueForBucket creates a priority queue for a bucket and saves it to redis
@@ -130,9 +136,17 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 	// })
 
 	redisKey := fmt.Sprintf("bucket_%s_%s_%s", bucket.Edges.Currency.Code, bucket.MinAmount, bucket.MaxAmount)
+	prevRedisKey := redisKey + "_prev"
 
+	// Delete the previous queue
+	err := s.deleteQueue(ctx, prevRedisKey)
+	if err != nil && err != context.Canceled {
+		logger.Errorf("failed to delete previous provider queue: %v", err)
+	}
+
+	// Copy the current queue to the previous queue
 	prevData, err := storage.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
-	if err != nil {
+	if err != nil && err != context.Canceled {
 		logger.Errorf("failed to fetch provider rates: %v", err)
 	}
 
@@ -142,51 +156,77 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 		prevValues[i] = v
 	}
 
-	// Store previous provider data
-	prevRedisKey := redisKey + "_prev"
+	// Update the previous queue
 	err = storage.RedisClient.RPush(ctx, prevRedisKey, prevValues...).Err()
-	if err != nil {
+	if err != nil && err != context.Canceled {
 		logger.Errorf("failed to store previous provider rates: %v", err)
 	}
 
-	s.deleteQueue(ctx, redisKey)
+	// Delete the current queue
+	err = s.deleteQueue(ctx, redisKey)
+	if err != nil && err != context.Canceled {
+		logger.Errorf("failed to delete existing circular queue: %v", err)
+	}
+
+	// TODO: add also the checks for all the currencies that a provider has
 
 	for _, provider := range providers {
-		tokens, err := storage.Client.ProviderOrderToken.
+		exists, err := provider.QueryCurrencies().
+			Where(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)).
+			Exist(ctx)
+		if err != nil || !exists {
+			continue
+		}
+		orderTokens, err := storage.Client.ProviderOrderToken.
 			Query().
 			Where(
 				providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+				providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucket.Edges.Currency.Code)),
 			).
-			Select(providerordertoken.FieldSymbol, providerordertoken.FieldMinOrderAmount, providerordertoken.FieldMaxOrderAmount).
+			WithToken().
 			All(ctx)
 		if err != nil {
-			logger.Errorf("failed to get tokens for provider %s: %v", provider.ID, err)
+			if err != context.Canceled {
+				logger.Errorf("failed to get tokens for provider %s: %v", provider.ID, err)
+			}
 			continue
 		}
 
-		for _, token := range tokens {
-			providerID := provider.ID
-			rate, err := s.GetProviderRate(ctx, provider, token.Symbol)
+		tokenSymbols := []string{}
+		for _, orderToken := range orderTokens {
+			if utils.ContainsString(tokenSymbols, orderToken.Edges.Token.Symbol) {
+				continue
+			}
+			tokenSymbols = append(tokenSymbols, orderToken.Edges.Token.Symbol)
+
+			rate, err := s.GetProviderRate(ctx, provider, orderToken.Edges.Token.Symbol, bucket.Edges.Currency.Code)
 			if err != nil {
-				logger.Errorf("failed to get %s rate for provider %s: %v", token.Symbol, providerID, err)
+				if err != context.Canceled {
+					logger.Errorf("failed to get %s rate for provider %s: %v", orderToken.Edges.Token.Symbol, provider.ID, err)
+				}
+				continue
+			}
+
+			if rate.IsZero() {
 				continue
 			}
 
 			// Check provider's rate against the market rate to ensure it's not too far off
 			percentDeviation := utils.AbsPercentageDeviation(bucket.Edges.Currency.MarketRate, rate)
 
-			if serverConf.Environment == "production" && percentDeviation.GreaterThan(orderConf.PercentDeviationFromMarketRate) {
+			isLocalStablecoin := strings.Contains(orderToken.Edges.Token.Symbol, bucket.Edges.Currency.Code) && !strings.Contains(orderToken.Edges.Token.Symbol, "USD")
+			if serverConf.Environment == "production" && percentDeviation.GreaterThan(orderConf.PercentDeviationFromMarketRate) && !isLocalStablecoin {
 				// Skip this provider if the rate is too far off
 				// TODO: add a logic to notify the provider(s) to update his rate since it's stale. could be a cron job
 				continue
 			}
 
 			// Serialize the provider ID, token, rate, min and max order amount into a single string
-			data := fmt.Sprintf("%s:%s:%s:%s:%s", providerID, token.Symbol, rate, token.MinOrderAmount, token.MaxOrderAmount)
+			data := fmt.Sprintf("%s:%s:%s:%s:%s", provider.ID, orderToken.Edges.Token.Symbol, rate, orderToken.MinOrderAmount, orderToken.MaxOrderAmount)
 
 			// Enqueue the serialized data into the circular queue
 			err = storage.RedisClient.RPush(ctx, redisKey, data).Err()
-			if err != nil {
+			if err != nil && err != context.Canceled {
 				logger.Errorf("failed to enqueue provider data to circular queue: %v", err)
 			}
 		}
@@ -217,7 +257,7 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 			// TODO: check for provider's minimum and maximum rate for negotiation
 			// Update the rate with the current rate if order was last updated more than 10 mins ago
 			if order.UpdatedAt.Before(time.Now().Add(-10 * time.Minute)) {
-				order.Rate, err = s.GetProviderRate(ctx, provider, order.Token.Symbol)
+				order.Rate, err = s.GetProviderRate(ctx, provider, order.Token.Symbol, order.ProvisionBucket.Edges.Currency.Code)
 				if err != nil {
 					logger.Errorf("%s - failed to get rate for provider %s: %v", orderIDPrefix, order.ProviderID, err)
 				}
@@ -253,11 +293,9 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 	if err != nil {
 		prevRedisKey := redisKey + "_prev"
 		err = s.matchRate(ctx, prevRedisKey, orderIDPrefix, order, excludeList)
-		s.deleteQueue(ctx, prevRedisKey)
-		if err != nil {
+		if err != nil && !strings.Contains(err.Error(), "redis: nil") {
 			return err
 		}
-
 	}
 
 	return nil
@@ -268,6 +306,7 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 	// Assign the order to the provider and save it to Redis
 	orderKey := fmt.Sprintf("order_request_%s", order.ID)
 
+	// TODO: Now we need to add currency
 	orderRequestData := map[string]interface{}{
 		"amount":      order.Amount.Mul(order.Rate).RoundBank(0).String(),
 		"institution": order.Institution,
@@ -305,9 +344,7 @@ func (s *PriorityQueueService) notifyProvider(ctx context.Context, orderRequestD
 
 	provider, err := storage.Client.ProviderProfile.
 		Query().
-		Where(
-			providerprofile.IDEQ(providerID),
-		).
+		Where(providerprofile.IDEQ(providerID)).
 		WithAPIKey().
 		Only(ctx)
 	if err != nil {
@@ -397,7 +434,15 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 			continue
 		}
 
-		if order.Amount.LessThan(minOrderAmount) || order.Amount.GreaterThan(maxOrderAmount) {
+		normalizedAmount := order.Amount
+		if strings.EqualFold(order.Token.BaseCurrency, order.ProvisionBucket.Edges.Currency.Code) && order.Token.BaseCurrency != "USD" {
+			rateResponse, err := utils.GetTokenRateFromQueue("USDT", normalizedAmount, order.ProvisionBucket.Edges.Currency.Code, order.ProvisionBucket.Edges.Currency.MarketRate)
+			if err != nil {
+				continue
+			}
+			normalizedAmount = order.Amount.Div(rateResponse)
+		}
+		if normalizedAmount.LessThan(minOrderAmount) || normalizedAmount.GreaterThan(maxOrderAmount) {
 			continue
 		}
 

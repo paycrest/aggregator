@@ -43,7 +43,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "token" package.
 	TokenInverseTable = "tokens"
 	// TokenColumn is the table column denoting the token relation/edge.
-	TokenColumn = "token_sender_settings"
+	TokenColumn = "token_sender_order_tokens"
 )
 
 // Columns holds all SQL columns for senderordertoken fields.
@@ -60,7 +60,7 @@ var Columns = []string{
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
 	"sender_profile_order_tokens",
-	"token_sender_settings",
+	"token_sender_order_tokens",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
