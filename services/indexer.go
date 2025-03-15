@@ -27,7 +27,6 @@ import (
 	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/senderprofile"
-	"github.com/paycrest/aggregator/ent/token"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/user"
@@ -853,7 +852,7 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 				lockpaymentorder.GatewayIDEQ(gatewayId),
 			),
 			lockpaymentorder.HasTokenWith(
-				token.HasNetworkWith(
+				tokenEnt.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
 				),
 			),
@@ -1226,7 +1225,7 @@ func (s *IndexerService) UpdateOrderStatusRefunded(ctx context.Context, network 
 		Where(
 			paymentorder.GatewayIDEQ(gatewayId),
 			paymentorder.HasTokenWith(
-				token.HasNetworkWith(
+				tokenEnt.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
 				),
 			),
@@ -1293,7 +1292,7 @@ func (s *IndexerService) UpdateOrderStatusRefunded(ctx context.Context, network 
 		Where(
 			lockpaymentorder.GatewayIDEQ(gatewayId),
 			lockpaymentorder.HasTokenWith(
-				token.HasNetworkWith(
+				tokenEnt.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
 				),
 			),
@@ -1318,7 +1317,7 @@ func (s *IndexerService) UpdateOrderStatusRefunded(ctx context.Context, network 
 			Where(
 				paymentorder.GatewayIDEQ(gatewayId),
 				paymentorder.HasTokenWith(
-					token.HasNetworkWith(
+					tokenEnt.HasNetworkWith(
 						networkent.IdentifierEQ(network.Identifier),
 					),
 				),
@@ -1370,7 +1369,7 @@ func (s *IndexerService) UpdateOrderStatusSettled(ctx context.Context, network *
 		Where(
 			paymentorder.GatewayIDEQ(gatewayId),
 			paymentorder.HasTokenWith(
-				token.HasNetworkWith(
+				tokenEnt.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
 				),
 			),
@@ -1435,7 +1434,7 @@ func (s *IndexerService) UpdateOrderStatusSettled(ctx context.Context, network *
 		Where(
 			lockpaymentorder.IDEQ(splitOrderId),
 			lockpaymentorder.HasTokenWith(
-				token.HasNetworkWith(
+				tokenEnt.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
 				),
 			),
