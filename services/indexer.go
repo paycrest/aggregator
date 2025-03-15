@@ -944,9 +944,9 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 
 	rate := decimal.NewFromBigInt(event.Rate, -2)
 
-	provisionBucket, err := s.getProvisionBucket(ctx, amountInDecimals.Mul(rate), currency)
+	provisionBucket, isLessThanMin, err := s.getProvisionBucket(ctx, amountInDecimals.Mul(rate), currency)
 	if err != nil {
-		logger.Errorf("failed to fetch provision bucket: %s %s %v", amountInDecimals, currency, err)
+		return fmt.Errorf("failed to fetch provision bucket: %w", err)
 	}
 
 	// Create lock payment order fields
@@ -964,6 +964,14 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 		ProviderID:        recipient.ProviderID,
 		Memo:              recipient.Memo,
 		ProvisionBucket:   provisionBucket,
+	}
+
+	if isLessThanMin {
+		err := s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Amount is less than the minimum bucket")
+		if err != nil {
+			return nil
+		}
+		return nil
 	}
 
 	// Handle private order checks
@@ -1706,7 +1714,7 @@ func (s *IndexerService) fetchLatestOrderEvents(rpcEndpoint, network, txHash str
 }
 
 // getProvisionBucket returns the provision bucket for a lock payment order
-func (s *IndexerService) getProvisionBucket(ctx context.Context, amount decimal.Decimal, currency *ent.FiatCurrency) (*ent.ProvisionBucket, error) {
+func (s *IndexerService) getProvisionBucket(ctx context.Context, amount decimal.Decimal, currency *ent.FiatCurrency) (*ent.ProvisionBucket, bool, error) {
 	provisionBucket, err := db.Client.ProvisionBucket.
 		Query().
 		Where(
@@ -1719,10 +1727,27 @@ func (s *IndexerService) getProvisionBucket(ctx context.Context, amount decimal.
 		WithCurrency().
 		Only(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch provision bucket: %w", err)
+		if ent.IsNotFound(err) {
+			// Check if the amount is less than the minimum bucket
+			minBucket, err := db.Client.ProvisionBucket.
+				Query().
+				Where(
+					provisionbucket.HasCurrencyWith(
+						fiatcurrency.IDEQ(currency.ID),
+					),
+				).
+				Order(ent.Asc(provisionbucket.FieldMinAmount)).
+				First(ctx)
+			if err != nil {
+				return nil, false, fmt.Errorf("failed to fetch minimum bucket: %w", err)
+			}
+			if amount.LessThan(minBucket.MinAmount) {
+				return nil, true, nil
+			}
+		}
+		return nil, false, fmt.Errorf("failed to fetch provision bucket: %w", err)
 	}
-
-	return provisionBucket, nil
+	return provisionBucket, false, nil
 }
 
 // splitLockPaymentOrder splits a lock payment order into multiple orders
@@ -1832,9 +1857,17 @@ func (s *IndexerService) splitLockPaymentOrder(ctx context.Context, client types
 	largestBucket := buckets[0]
 
 	if amountToSplit.LessThan(largestBucket.MaxAmount) {
-		bucket, err := s.getProvisionBucket(ctx, amountToSplit, currency)
+		bucket, isLessThanMin, err := s.getProvisionBucket(ctx, amountToSplit, currency)
 		if err != nil {
 			return err
+		}
+
+		if isLessThanMin {
+			err := s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "amount to split below minimum bucket threshold")
+			if err != nil {
+				logger.Errorf("failed to cancel split payment order: %v", err)
+			}
+			return nil // Or return an error if required
 		}
 
 		orderCreatedUpdate := db.Client.LockPaymentOrder.
