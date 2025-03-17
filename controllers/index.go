@@ -796,12 +796,17 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 				"id_type":             "IDENTITY_CARD",
 				"verification_method": "doc_verification",
 			},
+			{
+				"country":             "NG",
+				"id_type":             "TRAVEL_DOC",
+				"verification_method": "doc_verification",
+			},
 
 			// Kenya
 			{
 				"country":             "KE",
 				"id_type":             "PASSPORT",
-				"verification_method": "enhanced_document_verification",
+				"verification_method": "doc_verification",
 			},
 			{
 				"country":             "KE",
@@ -811,24 +816,39 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 			{
 				"country":             "KE",
 				"id_type":             "ALIEN_CARD",
-				"verification_method": "biometric_kyc",
+				"verification_method": "doc_verification",
 			},
 			{
 				"country":             "KE",
 				"id_type":             "NATIONAL_ID",
-				"verification_method": "biometric_kyc",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "KE",
+				"id_type":             "RESIDENT_ID",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "KE",
+				"id_type":             "TRAVEL_DOC",
+				"verification_method": "doc_verification",
 			},
 
 			// Ghana
 			{
 				"country":             "GH",
+				"id_type":             "IDENTITY_CARD",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "GH",
 				"id_type":             "PASSPORT",
-				"verification_method": "enhanced_document_verification",
+				"verification_method": "doc_verification",
 			},
 			{
 				"country":             "GH",
 				"id_type":             "VOTER_ID",
-				"verification_method": "enhanced_document_verification",
+				"verification_method": "doc_verification",
 			},
 			{
 				"country":             "GH",
@@ -844,6 +864,16 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 				"country":             "GH",
 				"id_type":             "SSNIT",
 				"verification_method": "biometric_kyc",
+			},
+			{
+				"country":             "GH",
+				"id_type":             "RESIDENT_ID",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "GH",
+				"id_type":             "TRAVEL_DOC",
+				"verification_method": "doc_verification",
 			},
 
 			// South Africa
@@ -864,8 +894,18 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 			},
 			{
 				"country":             "ZA",
+				"id_type":             "IDENTITY_CARD",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "ZA",
 				"id_type":             "NATIONAL_ID",
 				"verification_method": "biometric_kyc",
+			},
+			{
+				"country":             "ZA",
+				"id_type":             "TRAVEL_DOC",
+				"verification_method": "doc_verification",
 			},
 		},
 		"callback_url":            fmt.Sprintf("%s/v1/kyc/webhook", serverConf.HostDomain),
