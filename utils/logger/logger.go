@@ -16,31 +16,24 @@ import (
 
 var logger = logrus.New()
 
-func init() {
-
+func initializeLogger(cfg *config.ServerConfiguration, output io.Writer, executablePath string) {
 	logger.Level = logrus.InfoLevel
 	logger.Formatter = &formatter{}
-	cfg := config.ServerConfig()
+	logger.Out = output
 
 	if cfg.Environment == "production" || cfg.Environment == "staging" {
-		err := sentry.Init(sentry.ClientOptions{
+		if err := sentry.Init(sentry.ClientOptions{
 			Dsn:              cfg.SentryDSN,
 			Environment:      cfg.Environment,
 			AttachStacktrace: true,
 			BeforeSend: func(event *sentry.Event, hint *sentry.EventHint) *sentry.Event {
 				return event
 			},
-		})
-		if err != nil {
+		}); err != nil {
 			logger.Fatalf("Sentry initialization failed: %v", err)
 		}
-	} else {
-		ex, err := os.Executable()
-		if err != nil {
-			logger.Errorf("Failed to get the executable path: %v", err)
-			return
-		}
-		exDir := filepath.Dir(ex)
+	} else if executablePath != "" {
+		exDir := filepath.Dir(executablePath)
 		filePath := filepath.Join(exDir, "logs.txt")
 		file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 		if err == nil {
@@ -49,40 +42,24 @@ func init() {
 			logger.Errorf("Failed to open logs.txt: %v", err)
 		}
 	}
+
 	logger.SetReportCaller(true)
 }
 
-// InitForTest initializes the logger with custom config and executable path for testing
-func InitForTest(cfg config.ServerConfiguration, output io.Writer, executablePath string) {
-	logger.Level = logrus.InfoLevel
-	logger.Formatter = &formatter{}
-	logger.Out = output
-
-	if cfg.Environment == "production" || cfg.Environment == "staging" {
-		err := sentry.Init(sentry.ClientOptions{
-			Dsn:              cfg.SentryDSN,
-			Environment:      cfg.Environment,
-			AttachStacktrace: true,
-			BeforeSend: func(event *sentry.Event, hint *sentry.EventHint) *sentry.Event {
-				return event
-			},
-		})
-		if err != nil {
-			logger.Fatalf("Sentry initialization failed: %v", err)
-		}
-	} else {
-		if executablePath != "" {
-			exDir := filepath.Dir(executablePath)
-			filePath := filepath.Join(exDir, "logs.txt")
-			file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-			if err == nil {
-				logger.Out = file
-			} else {
-				logger.Errorf("Failed to open logs.txt: %v", err)
-			}
-		}
+func init() {
+	cfg := config.ServerConfig()
+	ex, err := os.Executable()
+	if err != nil {
+		logger.Errorf("Failed to get the executable path: %v", err)
+		return
 	}
-	logger.SetReportCaller(true)
+
+	initializeLogger(cfg, logger.Out, ex)
+}
+
+// InitForTest initializes the logger with custom config and output for testing
+func InitForTest(cfg *config.ServerConfiguration, output io.Writer, executablePath string) {
+	initializeLogger(cfg, output, executablePath)
 }
 
 // SetLogLevel sets the log level for the logger.

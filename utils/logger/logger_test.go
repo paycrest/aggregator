@@ -20,8 +20,8 @@ type MockConfig struct {
 	SentryDSN   string
 }
 
-func (m MockConfig) ServerConfig() config.ServerConfiguration {
-	return config.ServerConfiguration{
+func (m MockConfig) ServerConfig() *config.ServerConfiguration {
+	return &config.ServerConfiguration{
 		Environment: m.Environment,
 		SentryDSN:   m.SentryDSN,
 	}
