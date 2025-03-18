@@ -35,9 +35,9 @@ func TestLoggerComprehensive(t *testing.T) {
 
 	tempDir := t.TempDir()
 	var buf bytes.Buffer
-	defer sentry.Flush(2 * time.Second)
 
 	reinitLogger := func(env string, executablePath string) {
+		buf.Reset()
 		mockCfg := MockConfig{
 			Environment: env,
 			SentryDSN:   conf.SentryDSN,
@@ -62,7 +62,7 @@ func TestLoggerComprehensive(t *testing.T) {
 				fields := Fields{
 					"order_id": "123",
 					"user_id":  456,
-					"test":     "true",
+					"test":     true,
 				}
 				t.Log("Sending wrapped error to Sentry")
 				ErrorWithFields(testErr, fields)
@@ -74,7 +74,7 @@ func TestLoggerComprehensive(t *testing.T) {
 				assert.Contains(t, output, "order_id=123", "Should contain field order_id")
 				assert.Contains(t, output, "user_id=456", "Should contain field user_id")
 				assert.Empty(t, fileContent, "No file output in production")
-				t.Log("Check Sentry for event: 'error occurred: test error from go test' with tags order_id=123, test=true, extra user_id=456, level=error")
+				t.Log("Check Sentry for event: 'error occurred: test error from go test' with tags order_id=123, extra user_id=456, test=true, level=error")
 			},
 		},
 		{
@@ -84,6 +84,7 @@ func TestLoggerComprehensive(t *testing.T) {
 			action: func(t *testing.T) {
 				reinitLogger("development", filepath.Join(tempDir, "test"))
 				Infof("Test info %s", Fields{"key": "value"}, "message")
+				time.Sleep(100 * time.Millisecond) // Allow file write
 			},
 			verify: func(t *testing.T, output string, fileContent string) {
 				assert.Empty(t, output, "Output should go to file in development")
@@ -105,7 +106,8 @@ func TestLoggerComprehensive(t *testing.T) {
 				assert.Contains(t, output, "ERROR", "Should contain error level")
 				assert.Contains(t, output, "Payment failed 1", "Should contain formatted message")
 				assert.Contains(t, output, "amount=99", "Should contain field")
-				t.Log("Check Sentry for event: 'Payment failed 1' with extra amount=99")
+				assert.Empty(t, fileContent, "No file output in production")
+				t.Log("Check Sentry for event: 'Payment failed 1' with extra amount=99, level=error")
 			},
 		},
 		{
@@ -118,27 +120,50 @@ func TestLoggerComprehensive(t *testing.T) {
 				Debugf("Debug %s", Fields{}, "test")
 				Infof("Info %s", Fields{}, "test")
 				Warnf("Warn %s", Fields{}, "test")
+				time.Sleep(100 * time.Millisecond) // Allow file write
 			},
 			verify: func(t *testing.T, output string, fileContent string) {
+				assert.Empty(t, output, "Output should go to file in development")
 				assert.NotContains(t, fileContent, "DEBUG", "Debug should be filtered")
 				assert.NotContains(t, fileContent, "INFO", "Info should be filtered")
 				assert.Contains(t, fileContent, "WARN", "Warn should appear")
 				assert.Contains(t, fileContent, "Warn test", "Warn message should appear")
 			},
 		},
+		{
+			name:           "Staging with Warnf",
+			env:            "staging",
+			executablePath: "",
+			action: func(t *testing.T) {
+				reinitLogger("staging", "")
+				Warnf("Warning %s", Fields{"reason": "test"}, "condition")
+				time.Sleep(100 * time.Millisecond)
+			},
+			verify: func(t *testing.T, output string, fileContent string) {
+				assert.Contains(t, output, "WARN", "Should contain warn level")
+				assert.Contains(t, output, "Warning condition", "Should contain formatted message")
+				assert.Contains(t, output, "reason=test", "Should contain field")
+				assert.Empty(t, fileContent, "No file output in staging")
+				t.Log("Check Sentry for event: 'Warning condition' with extra reason=test, level=warning")
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			buf.Reset()
 			tt.action(t)
 			fileContent := ""
 			if tt.env != "production" && tt.env != "staging" {
-				data, err := os.ReadFile(filepath.Join(tempDir, "logs.txt"))
-				assert.NoError(t, err)
-				fileContent = string(data)
-				err = os.Truncate(filepath.Join(tempDir, "logs.txt"), 0)
-				assert.NoError(t, err)
+				filePath := filepath.Join(tempDir, "logs.txt")
+				data, err := os.ReadFile(filePath)
+				if err != nil {
+					t.Errorf("Failed to read logs.txt: %v", err)
+				} else {
+					fileContent = string(data)
+				}
+				if err := os.Truncate(filePath, 0); err != nil {
+					t.Errorf("Failed to truncate logs.txt: %v", err)
+				}
 			}
 			tt.verify(t, buf.String(), fileContent)
 		})
