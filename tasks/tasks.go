@@ -662,6 +662,9 @@ func SyncLockOrderFulfillments() {
 	}
 
 	for _, order := range lockOrders {
+		if order.Edges.Provider == nil {
+			continue
+		}
 		if len(order.Edges.Fulfillments) == 0 {
 			// Compute HMAC
 			decodedSecret, err := base64.StdEncoding.DecodeString(order.Edges.Provider.Edges.APIKey.Secret)
