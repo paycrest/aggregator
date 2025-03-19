@@ -58,14 +58,16 @@ func TestSlackService(t *testing.T) {
 		t.Run("SendUserSignupNotification should work properly and return no error when user is a provider", func(t *testing.T) {
 			// Test with provider role and currency
 			slackService := NewSlackService(webhookURL)
-			err := slackService.SendUserSignupNotification(mockUser, []string{"provider"}, ProviderCurrency)
+			providerCurrencies := []string{"GHS", "KES"}
+			err := slackService.SendUserSignupNotification(mockUser, []string{"provider"}, providerCurrencies)
 			assert.NoError(t, err, "unexpected error")
 		})
 
 		t.Run("SendUserSignupNotification should work properly and return no error when user is a sender", func(t *testing.T) {
 			// Test with sender role (no currency)
 			slackService := NewSlackService(webhookURL)
-			err := slackService.SendUserSignupNotification(mockUser, []string{"sender"}, "")
+			providerCurrencies := []string{}
+			err := slackService.SendUserSignupNotification(mockUser, []string{"sender"}, providerCurrencies)
 			assert.NoError(t, err, "unexpected error")
 		})
 
@@ -75,7 +77,8 @@ func TestSlackService(t *testing.T) {
 			conf.SlackWebhookURL = "" // Clear for this test
 
 			slackService := NewSlackService("")
-			err := slackService.SendUserSignupNotification(mockUser, []string{"provider"}, ProviderCurrency)
+			providerCurrencies := []string{"GHS", "KES"}
+			err := slackService.SendUserSignupNotification(mockUser, []string{"provider"}, providerCurrencies)
 
 			assert.Error(t, err, "expected error")
 
@@ -90,7 +93,8 @@ func TestSlackService(t *testing.T) {
 			defer os.Setenv("ENVIRONMENT", originalEnv) // Restore original environment variable
 
 			slackService := NewSlackService(webhookURL)
-			err := slackService.SendUserSignupNotification(mockUser, []string{"provider"}, ProviderCurrency)
+			providerCurrencies := []string{"GHS", "KES"}
+			err := slackService.SendUserSignupNotification(mockUser, []string{"provider"}, providerCurrencies)
 
 			assert.NoError(t, err, "unexpected error")
 		})
