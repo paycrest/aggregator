@@ -9,16 +9,8 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-<<<<<<< HEAD
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
-=======
-	"github.com/google/uuid"
-	"github.com/paycrest/protocol/ent/fiatcurrency"
-	"github.com/paycrest/protocol/ent/providerordertoken"
-	"github.com/paycrest/protocol/ent/providerprofile"
-	"github.com/paycrest/protocol/ent/token"
->>>>>>> 501a699 (feat: restructure provider order token + refactor for multi-currency support)
 	"github.com/shopspring/decimal"
 )
 

@@ -6,7 +6,6 @@ toolchain go1.23.6
 
 require (
 	github.com/JGLTechnologies/gin-rate-limit v1.5.4
-	github.com/alicebob/miniredis v2.5.0+incompatible
 	github.com/anaskhan96/base58check v0.0.0-20181220122047-b05365d494c4
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
 	github.com/chadsr/logrus-sentry v0.4.1
@@ -34,7 +33,6 @@ require (
 	github.com/FactomProject/btcutilecc v0.0.0-20130527213604-d3a63a5752ec // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
-	github.com/alicebob/gopher-json v0.0.0-20230218143504-906a9b012302 // indirect
 	github.com/bits-and-blooms/bitset v1.7.0 // indirect
 	github.com/bmatcuk/doublestar v1.3.4 // indirect
 	github.com/btcsuite/btcd v0.22.1 // indirect
@@ -67,7 +65,6 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/klauspost/compress v1.16.7 // indirect
-	github.com/lib/pq v1.10.9 // indirect
 	github.com/mailru/easyjson v0.0.0-20180823135443-60711f1a8329 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/mmcloughlin/addchain v0.4.0 // indirect

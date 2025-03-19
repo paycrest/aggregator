@@ -13,10 +13,11 @@ import (
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/utils"
 
-<<<<<<< HEAD
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providerordertoken"
 	providerprofile "github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
@@ -27,23 +28,6 @@ import (
 	"github.com/paycrest/aggregator/types"
 	u "github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
-=======
-	"github.com/paycrest/protocol/ent/fiatcurrency"
-	"github.com/paycrest/protocol/ent/institution"
-	"github.com/paycrest/protocol/ent/network"
-	"github.com/paycrest/protocol/ent/paymentorder"
-	"github.com/paycrest/protocol/ent/providerordertoken"
-	providerprofile "github.com/paycrest/protocol/ent/providerprofile"
-	"github.com/paycrest/protocol/ent/receiveaddress"
-	"github.com/paycrest/protocol/ent/senderordertoken"
-	"github.com/paycrest/protocol/ent/senderprofile"
-	tokenEnt "github.com/paycrest/protocol/ent/token"
-	"github.com/paycrest/protocol/ent/transactionlog"
-	svc "github.com/paycrest/protocol/services"
-	"github.com/paycrest/protocol/types"
-	u "github.com/paycrest/protocol/utils"
-	"github.com/paycrest/protocol/utils/logger"
->>>>>>> 501a699 (feat: restructure provider order token + refactor for multi-currency support)
 	"github.com/shopspring/decimal"
 
 	"github.com/gin-gonic/gin"
@@ -257,7 +241,6 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		}
 	}
 
-<<<<<<< HEAD
 	// Validate if institution exists
 	institutionObj, err := storage.Client.Institution.
 		Query().
@@ -289,8 +272,6 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	maxOrderAmount := decimal.NewFromInt(0)
 	minOrderAmount := decimal.NewFromInt(0)
 
-=======
->>>>>>> 501a699 (feat: restructure provider order token + refactor for multi-currency support)
 	if payload.Recipient.ProviderID != "" {
 		orderToken, err := storage.Client.ProviderOrderToken.
 			Query().
@@ -332,7 +313,6 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			}
 		}
 
-<<<<<<< HEAD
 	out:
 		for _, orderToken := range providerProfile.Edges.OrderTokens {
 			for _, address := range orderToken.Addresses {
@@ -376,8 +356,6 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "The amount is beyond the maximum order amount for the specified provider", nil)
 			return
 		}
-=======
->>>>>>> 501a699 (feat: restructure provider order token + refactor for multi-currency support)
 	}
 
 	// Generate receive address

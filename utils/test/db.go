@@ -498,18 +498,9 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		"max_order_amount":         decimal.NewFromFloat(1.0),
 		"min_order_amount":         decimal.NewFromFloat(1.0),
 		"provider":                 nil,
-<<<<<<< HEAD
-		"addresses": []map[string]string{
-			{
-				"address": "0x1234567890123456789012345678901234567890",
-				"network": "localhost",
-			},
-		},
-=======
 		"tokenID":                  0,
 		"address":                  "0x1234567890123456789012345678901234567890",
 		"network":                  "polygon",
->>>>>>> df01802 (feat(test): resolve failing priority queue test)
 	}
 
 	// Apply overrides

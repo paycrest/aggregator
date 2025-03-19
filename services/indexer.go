@@ -15,7 +15,6 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/google/uuid"
 	fastshot "github.com/opus-domini/fast-shot"
-<<<<<<< HEAD
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
@@ -36,30 +35,6 @@ import (
 	"github.com/paycrest/aggregator/utils"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/logger"
-=======
-	"github.com/paycrest/protocol/config"
-	"github.com/paycrest/protocol/ent"
-	"github.com/paycrest/protocol/ent/fiatcurrency"
-	"github.com/paycrest/protocol/ent/institution"
-	"github.com/paycrest/protocol/ent/linkedaddress"
-	"github.com/paycrest/protocol/ent/lockpaymentorder"
-	networkent "github.com/paycrest/protocol/ent/network"
-	"github.com/paycrest/protocol/ent/paymentorder"
-	"github.com/paycrest/protocol/ent/providerordertoken"
-	"github.com/paycrest/protocol/ent/providerprofile"
-	"github.com/paycrest/protocol/ent/provisionbucket"
-	"github.com/paycrest/protocol/ent/receiveaddress"
-	"github.com/paycrest/protocol/ent/senderprofile"
-	tokenEnt "github.com/paycrest/protocol/ent/token"
-	"github.com/paycrest/protocol/ent/transactionlog"
-	"github.com/paycrest/protocol/ent/user"
-	"github.com/paycrest/protocol/services/contracts"
-	db "github.com/paycrest/protocol/storage"
-	"github.com/paycrest/protocol/types"
-	"github.com/paycrest/protocol/utils"
-	cryptoUtils "github.com/paycrest/protocol/utils/crypto"
-	"github.com/paycrest/protocol/utils/logger"
->>>>>>> 501a699 (feat: restructure provider order token + refactor for multi-currency support)
 	"github.com/shopspring/decimal"
 )
 
@@ -227,13 +202,10 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 			}
 
 			// Get rate from priority queue
-<<<<<<< HEAD
 			if !strings.EqualFold(token.BaseCurrency, currency.Code) && !strings.EqualFold(token.BaseCurrency, "USD") {
-=======
 			rateResponse, err := utils.GetTokenRateFromQueue(token.Symbol, orderAmount, institution.Edges.FiatCurrency.Code, institution.Edges.FiatCurrency.MarketRate)
 			if err != nil {
 				logger.Errorf("IndexERC20Transfer.GetTokenRateFromQueue: %v", err)
->>>>>>> 501a699 (feat: restructure provider order token + refactor for multi-currency support)
 				continue
 			}
 			var rateResponse decimal.Decimal
@@ -1146,7 +1118,6 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 		}
 
 		// Assign the lock payment order to a provider
-<<<<<<< HEAD
 		normalizedAmount := lockPaymentOrder.Amount
 		if strings.EqualFold(token.BaseCurrency, currency.Code) && token.BaseCurrency != "USD" {
 			rateResponse, err := utils.GetTokenRateFromQueue("USDT", normalizedAmount, currency.Code, currency.MarketRate)
@@ -1172,10 +1143,8 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 			lockPaymentOrder.ID = orderCreated.ID
 			_ = s.priorityQueue.AssignLockPaymentOrder(ctx, lockPaymentOrder)
 		}
-=======
 		lockPaymentOrder.ID = orderCreated.ID
 		_ = s.priorityQueue.AssignLockPaymentOrder(ctx, lockPaymentOrder)
->>>>>>> 501a699 (feat: restructure provider order token + refactor for multi-currency support)
 	}
 
 	return nil

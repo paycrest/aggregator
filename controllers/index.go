@@ -188,7 +188,6 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 				return
 			}
 
-<<<<<<< HEAD
 		} else {
 			// Get redis keys for provision buckets
 			keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currency.Code+"_*_*", 100).Result()
@@ -196,13 +195,6 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch rates", nil)
 				return
 			}
-=======
-		rateResponse, err = ctrl.priorityQueueService.GetProviderRate(ctx, provider, token.Symbol, currency.Code)
-		if err != nil {
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider rate", nil)
-			return
-		}
->>>>>>> 501a699 (feat: restructure provider order token + refactor for multi-currency support)
 
 			highestMaxAmount := decimal.NewFromInt(0)
 
