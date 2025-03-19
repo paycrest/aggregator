@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/utils"
@@ -21,7 +22,7 @@ func NewSlackService(webhookURL string) *SlackService {
 	}
 }
 
-func (s *SlackService) SendUserSignupNotification(user *ent.User, scopes []string, providerCurrency string) error {
+func (s *SlackService) SendUserSignupNotification(user *ent.User, scopes []string, providerCurrencies []string) error {
 	if s.SlackWebhookURL == "" {
 		return fmt.Errorf("slack webhook URL not configured")
 	}
@@ -81,14 +82,15 @@ func (s *SlackService) SendUserSignupNotification(user *ent.User, scopes []strin
 	}
 
 	// Add provider details if applicable
-	if utils.ContainsString(scopes, "provider") && providerCurrency != "" {
+	if utils.ContainsString(scopes, "provider") && len(providerCurrencies) > 0 {
+		// Join the currencies with comma for display
+		currenciesString := strings.Join(providerCurrencies, ", ")
 		message["blocks"] = append(message["blocks"].([]map[string]interface{}),
 			map[string]interface{}{
 				"type": "section",
 				"text": map[string]interface{}{
 					"type": "mrkdwn",
-					"text": fmt.Sprintf("*Provider Currency:* %s", providerCurrency),
-				},
+					"text": fmt.Sprintf("*Provider Currencies:* %s", currenciesString)},
 			},
 		)
 	}
