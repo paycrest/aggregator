@@ -575,5 +575,8 @@ func GetInstitutionByCode(ctx context.Context, institutionCode string) (*ent.Ins
 	}
 	return institution, nil
 }
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 9c3e9ba (fix: improve soft delete implementation for payment orders  and lock payment orders)

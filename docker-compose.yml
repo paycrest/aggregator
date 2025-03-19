@@ -6,8 +6,8 @@ services:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
-    volumes:
-      - ./tmp/db:/var/lib/postgresql/data
+    # volumes:
+      # - ./tmp/db:/var/lib/postgresql/data
     ports:
       - ${DB_PORT}:5432
     restart: always

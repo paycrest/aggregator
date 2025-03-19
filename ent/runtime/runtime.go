@@ -145,6 +145,10 @@ func init() {
 	// lockorderfulfillment.DefaultID holds the default value on creation for the id field.
 	lockorderfulfillment.DefaultID = lockorderfulfillmentDescID.Default.(func() uuid.UUID)
 	lockpaymentorderMixin := schema.LockPaymentOrder{}.Mixin()
+	lockpaymentorderMixinHooks1 := lockpaymentorderMixin[1].Hooks()
+	lockpaymentorder.Hooks[0] = lockpaymentorderMixinHooks1[0]
+	lockpaymentorderMixinInters1 := lockpaymentorderMixin[1].Interceptors()
+	lockpaymentorder.Interceptors[0] = lockpaymentorderMixinInters1[0]
 	lockpaymentorderMixinFields0 := lockpaymentorderMixin[0].Fields()
 	_ = lockpaymentorderMixinFields0
 	lockpaymentorderFields := schema.LockPaymentOrder{}.Fields()
@@ -195,6 +199,10 @@ func init() {
 	// network.DefaultGatewayContractAddress holds the default value on creation for the gateway_contract_address field.
 	network.DefaultGatewayContractAddress = networkDescGatewayContractAddress.Default.(string)
 	paymentorderMixin := schema.PaymentOrder{}.Mixin()
+	paymentorderMixinHooks1 := paymentorderMixin[1].Hooks()
+	paymentorder.Hooks[0] = paymentorderMixinHooks1[0]
+	paymentorderMixinInters1 := paymentorderMixin[1].Interceptors()
+	paymentorder.Interceptors[0] = paymentorderMixinInters1[0]
 	paymentorderMixinFields0 := paymentorderMixin[0].Fields()
 	_ = paymentorderMixinFields0
 	paymentorderFields := schema.PaymentOrder{}.Fields()
@@ -500,6 +508,6 @@ func init() {
 }
 
 const (
-	Version = "v0.14.3"                                         // Version of ent codegen.
-	Sum     = "h1:wokAV/kIlH9TeklJWGGS7AYJdVckr0DloWjIcO9iIIQ=" // Sum of ent codegen.
+	Version = "v0.14.4"                                         // Version of ent codegen.
+	Sum     = "h1:/DhDraSLXIkBhyiVoJeSshr4ZYi7femzhj6/TckzZuI=" // Sum of ent codegen.
 )
