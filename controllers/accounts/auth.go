@@ -127,7 +127,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 	scopes := payload.Scopes
 
 	// Create a provider profile
-	var providerCurrency string
+	var providerCurrencies []string
 	if u.ContainsString(scopes, "provider") {
 		currencies := payload.Currencies
 		if len(currencies) == 0 {
@@ -158,6 +158,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 				return
 			}
 			fiatCurrencies[i] = fiatCurrency
+			providerCurrencies = append(providerCurrencies, fiatCurrency.Code) // Collect all currencies
 		}
 
 		if len(unsupportedCurrencies) > 0 {
@@ -168,11 +169,6 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 					Message: fmt.Sprintf("Currencies not supported: %s", strings.Join(unsupportedCurrencies, ", ")),
 				}})
 			return
-		}
-
-		// Assign providerCurrency from the first valid fiat currency
-		if len(fiatCurrencies) > 0 {
-			providerCurrency = fiatCurrencies[0].Code
 		}
 
 		provider, err := tx.ProviderProfile.
@@ -249,7 +245,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 
 	// Send Slack notification
 	if serverConf.Environment == "production" {
-		if err := ctrl.slackService.SendUserSignupNotification(user, scopes, providerCurrency); err != nil {
+		if err := ctrl.slackService.SendUserSignupNotification(user, scopes, providerCurrencies); err != nil {
 			logger.Errorf("failed to send Slack notification: %v", err)
 		}
 	}
