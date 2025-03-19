@@ -8,17 +8,14 @@ import (
 
 // ServerConfiguration type defines the server configurations
 type ServerConfiguration struct {
-	Debug                     bool
-	Host                      string
-	Port                      string
-	Timezone                  string
-	AllowedHosts              string
-	Environment               string
-	SentryDSN                 string
-	HostDomain                string
-	CurrenciesCacheDuration   int
-	InstitutionsCacheDuration int
-	PubKeyCacheDuration       int
+	Debug        bool
+	Host         string
+	Port         string
+	Timezone     string
+	AllowedHosts string
+	Environment  string
+	SentryDSN    string
+	HostDomain   string
 }
 
 // ServerConfig sets the server configuration
@@ -30,22 +27,16 @@ func ServerConfig() *ServerConfiguration {
 	viper.SetDefault("ALLOWED_HOSTS", "*")
 	viper.SetDefault("ENVIRONMENT", "local")
 	viper.SetDefault("SENTRY_DSN", "")
-	viper.SetDefault("CURRENCIES_CACHE_DURATION", 24)
-	viper.SetDefault("INSTITUTIONS_CACHE_DURATION", 24)
-	viper.SetDefault("PUBKEY_CACHE_DURATION", 365)
 
 	return &ServerConfiguration{
-		Debug:                     viper.GetBool("DEBUG"),
-		Host:                      viper.GetString("SERVER_HOST"),
-		Port:                      viper.GetString("SERVER_PORT"),
-		Timezone:                  viper.GetString("SERVER_TIMEZONE"),
-		AllowedHosts:              viper.GetString("ALLOWED_HOSTS"),
-		Environment:               viper.GetString("ENVIRONMENT"),
-		SentryDSN:                 viper.GetString("SENTRY_DSN"),
-		HostDomain:                viper.GetString("HOST_DOMAIN"),
-		CurrenciesCacheDuration:   viper.GetInt("CURRENCIES_CACHE_DURATION"),
-		InstitutionsCacheDuration: viper.GetInt("INSTITUTIONS_CACHE_DURATION"),
-		PubKeyCacheDuration:       viper.GetInt("PUBKEY_CACHE_DURATION"),
+		Debug:        viper.GetBool("DEBUG"),
+		Host:         viper.GetString("SERVER_HOST"),
+		Port:         viper.GetString("SERVER_PORT"),
+		Timezone:     viper.GetString("SERVER_TIMEZONE"),
+		AllowedHosts: viper.GetString("ALLOWED_HOSTS"),
+		Environment:  viper.GetString("ENVIRONMENT"),
+		SentryDSN:    viper.GetString("SENTRY_DSN"),
+		HostDomain:   viper.GetString("HOST_DOMAIN"),
 	}
 }
 
