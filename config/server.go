@@ -18,6 +18,7 @@ type ServerConfiguration struct {
 	HostDomain               string
 	RateLimitUnauthenticated int
 	RateLimitAuthenticated   int
+	SlackWebhookURL          string
 }
 
 // ServerConfig sets the server configuration
@@ -30,7 +31,8 @@ func ServerConfig() *ServerConfiguration {
 	viper.SetDefault("ENVIRONMENT", "local")
 	viper.SetDefault("SENTRY_DSN", "")
 	viper.SetDefault("RATE_LIMIT_UNAUTHENTICATED", 5)
-	viper.SetDefault("RATE_LIMIT_AUTHENTICATED", 100)
+	viper.SetDefault("RATE_LIMIT_AUTHENTICATED", 50)
+	viper.SetDefault("SLACK_WEBHOOK_URL", "")
 
 	return &ServerConfiguration{
 		Debug:                    viper.GetBool("DEBUG"),
@@ -43,6 +45,7 @@ func ServerConfig() *ServerConfiguration {
 		HostDomain:               viper.GetString("HOST_DOMAIN"),
 		RateLimitUnauthenticated: viper.GetInt("RATE_LIMIT_UNAUTHENTICATED"),
 		RateLimitAuthenticated:   viper.GetInt("RATE_LIMIT_AUTHENTICATED"),
+		SlackWebhookURL:          viper.GetString("SLACK_WEBHOOK_URL"),
 	}
 }
 
