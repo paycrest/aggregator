@@ -7,33 +7,6 @@
 -- Generation Time: 2025-01-21 10:59:35.8580
 -- -------------------------------------------------------------
 
--- Truncate Tables
-TRUNCATE TABLE "public"."api_keys" CASCADE;
-TRUNCATE TABLE "public"."atlas_schema_revisions" CASCADE;
-TRUNCATE TABLE "public"."ent_types" CASCADE;
-TRUNCATE TABLE "public"."fiat_currencies" CASCADE;
-TRUNCATE TABLE "public"."fiat_currency_providers" CASCADE;
-TRUNCATE TABLE "public"."identity_verification_requests" CASCADE;
-TRUNCATE TABLE "public"."institutions" CASCADE;
-TRUNCATE TABLE "public"."linked_addresses" CASCADE;
-TRUNCATE TABLE "public"."lock_order_fulfillments" CASCADE;
-TRUNCATE TABLE "public"."lock_payment_orders" CASCADE;
-TRUNCATE TABLE "public"."networks" CASCADE;
-TRUNCATE TABLE "public"."payment_order_recipients" CASCADE;
-TRUNCATE TABLE "public"."payment_orders" CASCADE;
-TRUNCATE TABLE "public"."provider_order_tokens" CASCADE;
-TRUNCATE TABLE "public"."provider_profiles" CASCADE;
-TRUNCATE TABLE "public"."provider_ratings" CASCADE;
-TRUNCATE TABLE "public"."provision_bucket_provider_profiles" CASCADE;
-TRUNCATE TABLE "public"."provision_buckets" CASCADE;
-TRUNCATE TABLE "public"."receive_addresses" CASCADE;
-TRUNCATE TABLE "public"."sender_order_tokens" CASCADE;
-TRUNCATE TABLE "public"."sender_profiles" CASCADE;
-TRUNCATE TABLE "public"."tokens" CASCADE;
-TRUNCATE TABLE "public"."transaction_logs" CASCADE;
-TRUNCATE TABLE "public"."users" CASCADE;
-TRUNCATE TABLE "public"."verification_tokens" CASCADE;
-TRUNCATE TABLE "public"."webhook_retry_attempts" CASCADE;
 
 -- Drop Schema
 DROP SCHEMA IF EXISTS public CASCADE;
@@ -634,7 +607,7 @@ INSERT INTO "public"."api_keys" ("id", "secret", "provider_profile_api_key", "se
 INSERT INTO "public"."provider_order_tokens" ("id", "created_at", "updated_at", "fixed_conversion_rate", "floating_conversion_rate", "conversion_rate_type", "max_order_amount", "min_order_amount", "provider_profile_order_tokens", "address", "network", "fiat_currency_provider_order_tokens", "token_provider_order_tokens") VALUES
 (30064771084, '2025-01-21 12:45:59.108096+00', '2025-01-21 16:39:25.205819+00', 1598, 0, 'fixed', 900, 100, 'AtGaDPqT', '0xf4c5c4deDde7A86b25E7430796441e209e23eBFB', 'ethereum-sepolia', '5a349408-ebcf-4c7e-98c7-46b6596e0b27', 55834574849),
 (30064771085, '2025-01-21 12:46:12.789689+00', '2025-01-21 12:46:12.78969+00', 1598, 0, 'fixed', 900, 100, 'AtGaDPqT', '0xf4c5c4deDde7A86b25E7430796441e209e23eBFB', 'base-sepolia', '5a349408-ebcf-4c7e-98c7-46b6596e0b27', 55834574852),
-(30064771086, '2025-01-21 12:46:20.289845+00', '2025-01-21 12:46:20.289845+00', 1598, 0, 'fixed', 900, 100, 'AtGaDPqT', '0xf4c5c4deDde7A86b25E7430796441e209e23eBFB', 'arbitrum-sepolia', '5a349408-ebcf-4c7e-98c7-46b6596e0b27', 55834574852);
+(30064771086, '2025-01-21 12:46:20.289845+00', '2025-01-21 12:46:20.289845+00', 1598, 0, 'fixed', 900, 100, 'AtGaDPqT', '0xf4c5c4deDde7A86b25E7430796441e209e23eBFB', 'arbitrum-sepolia', '5a349408-ebcf-4c7e-98c7-46b6596e0b27', 55834574853);
 
 INSERT INTO "public"."provider_profiles" ("id", "trading_name", "host_identifier", "provision_mode", "is_active", "is_available", "updated_at", "visibility_mode", "address", "mobile_number", "date_of_birth", "business_name", "identity_document_type", "identity_document", "business_document", "user_provider_profile", "is_kyb_verified") VALUES
 ('AtGaDPqT', 'John Doe Exchange', 'http://localhost:8105', 'auto', 't', 't', '2025-01-21 16:39:25.232449+00', 'private', '1, John Doe Street, Surulere, Lagos, Nigeria', '+2348123456789', '1993-01-01 00:00:00+00', 'John Doe Exchange Ltd', 'passport', 'https://res.cloudinary.com/de6e0wihu/image/upload/v1737463231/wbeica7nxawqthdnpazv.png', 'https://res.cloudinary.com/de6e0wihu/image/upload/v1737463231/hngwr0f5mw1z9vdvrjqm.png', '6f7209d3-8f70-499f-aec8-65644d55ad5e', 't');
