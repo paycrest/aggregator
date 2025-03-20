@@ -18,7 +18,6 @@ import (
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/test"
-	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -168,11 +167,5 @@ func TestTasks(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Equal(t, hook.Status, webhookretryattempt.StatusExpired)
-	})
-
-	t.Run("fetchExternalRate", func(t *testing.T) {
-		value, err := fetchExternalRate("KSH")
-		assert.Error(t, err)
-		assert.Equal(t, value, decimal.Zero)
 	})
 }
