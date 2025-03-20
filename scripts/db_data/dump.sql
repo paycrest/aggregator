@@ -232,7 +232,7 @@ CREATE TABLE IF NOT EXISTS "public"."provider_order_tokens" (
 
 
 -- Table Definition
-CREATE TABLE "public"."provider_profiles" (
+CREATE TABLE IF NOT EXISTS "public"."provider_profiles" (
     "id" varchar NOT NULL,
     "trading_name" varchar,
     "host_identifier" varchar,
