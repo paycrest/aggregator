@@ -388,7 +388,13 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		}
 
 		// See if token already exists for provider
-		orderToken, err := storage.Client.ProviderOrderToken.
+		tx, err := storage.Client.Tx(ctx)
+		if err != nil {
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to start transaction", nil)
+			return
+		}
+
+		orderToken, err := tx.ProviderOrderToken.
 			Query().
 			Where(
 				providerordertoken.HasTokenWith(token.IDEQ(providerToken.ID)),
@@ -399,7 +405,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		if err != nil {
 			if ent.IsNotFound(err) {
 				// Token doesn't exist, create it
-				_, err = storage.Client.ProviderOrderToken.
+				_, err = tx.ProviderOrderToken.
 					Create().
 					SetConversionRateType(tokenPayload.ConversionRateType).
 					SetFixedConversionRate(tokenPayload.FixedConversionRate).
@@ -413,13 +419,15 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 					SetCurrencyID(currency.ID).
 					Save(ctx)
 				if err != nil {
-					logger.Errorf("Failed to set token: %v", err)
-					u.APIResponse(ctx, http.StatusInternalServerError, "error", fmt.Sprintf("Failed to set token - %s", tokenPayload.Symbol), nil)
+					tx.Rollback()
+					logger.Errorf("Failed to create token: %v", err)
+					u.APIResponse(ctx, http.StatusInternalServerError, "error", fmt.Sprintf("Failed to create token - %s", tokenPayload.Symbol), nil)
 					return
 				}
 			} else {
-				logger.Errorf("Failed to set token: %v", err)
-				u.APIResponse(ctx, http.StatusInternalServerError, "error", fmt.Sprintf("Failed to set token - %s", tokenPayload.Symbol), nil)
+				tx.Rollback()
+				logger.Errorf("Failed to query token: %v", err)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", fmt.Sprintf("Failed to query token - %s", tokenPayload.Symbol), nil)
 				return
 			}
 		} else {
@@ -434,15 +442,23 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				SetNetwork(tokenPayload.Network).
 				Save(ctx)
 			if err != nil {
-				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to set token - "+tokenPayload.Symbol, nil)
+				tx.Rollback()
+				logger.Errorf("Failed to update token: %v", err)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update token - "+tokenPayload.Symbol, nil)
 				return
 			}
+		}
+
+		if err := tx.Commit(); err != nil {
+			tx.Rollback()
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to commit transaction", nil)
+			return
 		}
 
 		rate, err = ctrl.priorityQueueService.GetProviderRate(ctx, provider, providerToken.Symbol, currency.Code)
 		if err != nil {
 			logger.Errorf("Failed to get rate for provider %s", provider.ID)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to set token", nil)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to get rate", nil)
 			return
 		}
 
