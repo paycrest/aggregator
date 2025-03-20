@@ -1,27 +1,26 @@
 package utils
 
 import (
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/base64"
+	"bytes"
+	"encoding/json"
 	"fmt"
-	"strconv"
-
+	"io"
+	"net/http"
 	"strings"
 	"time"
 
 	fastshot "github.com/opus-domini/fast-shot"
-	"github.com/paycrest/aggregator/config"
+	"github.com/paycrest/aggregator/types"
 	"github.com/shopspring/decimal"
 )
 
 var (
-	BitgetAPIURL  = "https://api.bitget.com"
-	BinanceAPIURL = "https://api.binance.com"
+	BitgetAPIURL  = "https://www.bitget.com"
+	BinanceAPIURL = "https://p2p.binance.com"
 	QuidaxAPIURL  = "https://www.quidax.com"
 )
 
-// fetchExternalRate fetches the external rate for a fiat currency
+// FetchExternalRate fetches the external rate for a fiat currency
 func FetchExternalRate(currency string) (decimal.Decimal, error) {
 	currency = strings.ToUpper(currency)
 	supportedCurrencies := []string{"KES", "NGN", "GHS", "TZS", "UGX", "XOF"}
@@ -40,28 +39,21 @@ func FetchExternalRate(currency string) (decimal.Decimal, error) {
 
 	// Fetch rates based on currency
 	if currency == "NGN" {
-		quidaxRate, err := FetchQuidaxRate(currency)
+		quidaxRate, err := FetchQuidaxRates(currency)
 		if err == nil {
 			prices = append(prices, quidaxRate)
 		}
 	} else {
-		binanceRate, err := FetchBinanceRate(currency)
+		binanceRates, err := FetchBinanceRates(currency)
 		if err == nil {
-			prices = append(prices, binanceRate)
+			prices = append(prices, binanceRates...)
 		}
 	}
 
-	// Fetch Bitget rate for all supported currencies
-	// TODO: FetchBitgetRate uses /api/p2p/v1/merchant/orderList, which requires an advNo (advertisement number).
-	// To source this, we need to:
-	// 1) Create a Bitget account,
-	// 2) Become a P2P merchant (via "Buy Crypto > P2P > Post an Ad"),
-	// 3) Post a sell-USDT ad to get an advNo from the "My Ads" section.
-	// Hardcoded for now as a placeholder—please.
-	advNo := "0987654321"
-	bitgetRate, err := FetchBitgetRate(currency, advNo)
+	// Fetch Bitget rates for all supported currencies
+	bitgetRates, err := FetchBitgetRates(currency)
 	if err == nil {
-		prices = append(prices, bitgetRate)
+		prices = append(prices, bitgetRates...)
 	}
 
 	if len(prices) == 0 {
@@ -73,7 +65,7 @@ func FetchExternalRate(currency string) (decimal.Decimal, error) {
 }
 
 // FetchQuidaxRate fetches the USDT exchange rate from Quidax (NGN only)
-func FetchQuidaxRate(currency string) (decimal.Decimal, error) {
+func FetchQuidaxRates(currency string) (decimal.Decimal, error) {
 	url := fmt.Sprintf("/api/v1/markets/tickers/usdt%s", strings.ToLower(currency))
 
 	res, err := fastshot.NewClient(QuidaxAPIURL).
@@ -98,9 +90,8 @@ func FetchQuidaxRate(currency string) (decimal.Decimal, error) {
 	return price, nil
 }
 
-// FetchBinanceRate fetches the median USDT exchange rate from Binance P2P
-func FetchBinanceRate(currency string) (decimal.Decimal, error) {
-
+// FetchBinanceRates fetches USDT exchange rates from Binance P2P
+func FetchBinanceRates(currency string) ([]decimal.Decimal, error) {
 	res, err := fastshot.NewClient(BinanceAPIURL).
 		Config().SetTimeout(30*time.Second).
 		Header().Add("Content-Type", "application/json").
@@ -115,17 +106,17 @@ func FetchBinanceRate(currency string) (decimal.Decimal, error) {
 	}).
 		Send()
 	if err != nil {
-		return decimal.Zero, fmt.Errorf("FetchBinanceRate: %w", err)
+		return nil, fmt.Errorf("FetchBinanceRates: %w", err)
 	}
 
 	resData, err := ParseJSONResponse(res.RawResponse)
 	if err != nil {
-		return decimal.Zero, fmt.Errorf("FetchBinanceRate: %w", err)
+		return nil, fmt.Errorf("FetchBinanceRates: %w", err)
 	}
 
 	data, ok := resData["data"].([]interface{})
 	if !ok || len(data) == 0 {
-		return decimal.Zero, fmt.Errorf("FetchBinanceRate: no data in response")
+		return nil, fmt.Errorf("FetchBinanceRates: no data in response")
 	}
 
 	var prices []decimal.Decimal
@@ -144,104 +135,83 @@ func FetchBinanceRate(currency string) (decimal.Decimal, error) {
 	}
 
 	if len(prices) == 0 {
-		return decimal.Zero, fmt.Errorf("FetchBinanceRate: no valid prices found")
+		return nil, fmt.Errorf("FetchBinanceRates: no valid prices found")
 	}
 
-	return Median(prices), nil
+	return prices, nil
 }
 
-// FetchBitgetRate fetches the median USDT exchange rate from Bitget P2P order history
-func FetchBitgetRate(currency string, advNo string) (decimal.Decimal, error) {
-	conf := config.AuthConfig()
-
-	// Generate timestamp
-	timestamp := strconv.FormatInt(time.Now().UnixMilli(), 10)
-
-	// Build query parameters according to orderList API requirements
-	queryParams := map[string]string{
-		"advNo":        advNo,
-		"startTime":    strconv.FormatInt(time.Now().Add(-24*time.Hour).UnixMilli(), 10),
-		"languageType": "en-US",
-		"type":         "sell",
-		"coin":         "USDT",
-		"fiat":         currency,
-		"endTime":      timestamp,
-		"pageSize":     "20",
+// FetchBitgetRates fetches USDT exchange rates from Bitget P2P listings
+func FetchBitgetRates(currency string) ([]decimal.Decimal, error) {
+	payload := map[string]interface{}{
+		"side":         2,
+		"pageNo":       1,
+		"pageSize":     20,
+		"coinCode":     "USDT",
+		"fiatCode":     currency,
+		"languageType": 0,
 	}
 
-	queryString := BuildQueryString(queryParams)
-	endpoint := "/api/p2p/v1/merchant/orderList?" + queryString
-	signContent := timestamp + "GET" + "/api/p2p/v1/merchant/orderList" + "?" + queryString
-	h := hmac.New(sha256.New, []byte(conf.BitgetSecretKey))
-	h.Write([]byte(signContent))
-	signature := base64.StdEncoding.EncodeToString(h.Sum(nil))
-
-	client := fastshot.NewClient(BitgetAPIURL).
-		Config().SetTimeout(30 * time.Second).
-		Build()
-
-	// Prepare request with authentication headers
-	request := client.GET(endpoint)
-	request.Header().Set("ACCESS-KEY", conf.BitgetAccessKey)
-	request.Header().Set("ACCESS-SIGN", signature)
-	request.Header().Set("ACCESS-PASSPHRASE", conf.BitgetPassphrase)
-	request.Header().Set("ACCESS-TIMESTAMP", timestamp)
-	request.Header().Set("locale", "en-US")
-	request.Header().Set("Content-Type", "application/json")
-
-	// Execute request with retry mechanism
-	res, err := request.Retry().Set(3, 5*time.Second).Send()
+	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
-		return decimal.Zero, fmt.Errorf("FetchBitgetRate: failed to send request: %w", err)
+		return nil, fmt.Errorf("FetchBitgetRates: failed to marshal payload: %w", err)
 	}
 
-	// Parse JSON response
-	resData, err := ParseJSONResponse(res.RawResponse)
+	client := &http.Client{Timeout: 30 * time.Second}
+	req, err := http.NewRequest("POST", BitgetAPIURL+"/v1/p2p/pub/adv/queryAdvList", bytes.NewBuffer(payloadBytes))
 	if err != nil {
-		return decimal.Zero, fmt.Errorf("FetchBitgetRate: failed to parse response: %w", err)
+		return nil, fmt.Errorf("FetchBitgetRates: failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	var resp *http.Response
+	err = Retry(3, 5*time.Second, func() error {
+		var retryErr error
+		resp, retryErr = client.Do(req)
+		return retryErr
+	})
+	if err != nil {
+		return nil, fmt.Errorf("FetchBitgetRates: failed to send request after retries: %w", err)
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("FetchBitgetRates: failed to read response body: %w", err)
 	}
 
-	// Extract order list from response
-	data, ok := resData["data"].(map[string]interface{})
-	if !ok {
-		return decimal.Zero, fmt.Errorf("FetchBitgetRate: invalid data structure in response")
+	var resData types.BitgetResponse
+	err = json.Unmarshal(bodyBytes, &resData)
+	if err != nil {
+		fmt.Printf("FetchBitgetRates: failed to parse response, raw body: %s\n", string(bodyBytes))
+		return nil, fmt.Errorf("FetchBitgetRates: failed to parse response: %w", err)
 	}
 
-	orderList, ok := data["orderList"].([]interface{})
-	if !ok || len(orderList) == 0 {
-		return decimal.Zero, fmt.Errorf("FetchBitgetRate: no orders found in response")
+	if resData.Code != "00000" {
+		return nil, fmt.Errorf("FetchBitgetRates: API error: %s", resData.Msg)
 	}
 
-	// Extract and validate prices from orders
+	if len(resData.Data.DataList) == 0 {
+		return nil, fmt.Errorf("FetchBitgetRates: no sell ads found for %s/USDT", currency)
+	}
+
 	var prices []decimal.Decimal
-	for i, item := range orderList {
-		order, ok := item.(map[string]interface{})
-		if !ok {
-			fmt.Printf("FetchBitgetRate: skipping invalid order at index %d\n", i)
+	for i, ad := range resData.Data.DataList {
+		if ad.CoinCode != "USDT" || ad.FiatCode != currency {
 			continue
 		}
-
-		// Find the price field in the order data
-		priceStr, ok := order["price"].(string)
-		if !ok {
-			fmt.Printf("FetchBitgetRate: skipping order at index %d with no price\n", i)
-			continue
-		}
-
-		price, err := decimal.NewFromString(priceStr)
+		price, err := decimal.NewFromString(ad.Price)
 		if err != nil {
-			fmt.Printf("FetchBitgetRate: skipping order at index %d with invalid price: %v\n", i, err)
+			fmt.Printf("FetchBitgetRates: skipping ad at index %d with invalid price '%s': %v\n", i, ad.Price, err)
 			continue
 		}
-
 		prices = append(prices, price)
 	}
 
-	// Ensure we found at least one valid price
 	if len(prices) == 0 {
-		return decimal.Zero, fmt.Errorf("FetchBitgetRate: no valid prices found")
+		return nil, fmt.Errorf("FetchBitgetRates: no valid sell ads found for %s/USDT", currency)
 	}
 
-	// Return median price
-	return Median(prices), nil
+	return prices, nil
 }
+
