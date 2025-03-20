@@ -80,12 +80,11 @@ func ParseJSONResponse(res *http.Response) (map[string]interface{}, error) {
 		}
 	}
 
-	if res.StatusCode >= 500 {
-		return body, fmt.Errorf("server error: %d", res.StatusCode)
+	if res.StatusCode >= 500 { // Return on server errors
+		return body, fmt.Errorf("%s", fmt.Sprint(res.StatusCode))
 	}
-
-	if res.StatusCode >= 400 {
-		return body, fmt.Errorf("client error: %d", res.StatusCode)
+	if res.StatusCode >= 400 { // Return on client errors
+		return body, fmt.Errorf("%s", fmt.Sprint(res.StatusCode))
 	}
 
 	return body, nil

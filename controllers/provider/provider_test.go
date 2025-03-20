@@ -151,6 +151,7 @@ func TestProvider(t *testing.T) {
 		t.Run("fetch default list", func(t *testing.T) {
 			// Test default params
 			var payload = map[string]interface{}{
+				"currency":  "NGN",
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -161,7 +162,7 @@ func TestProvider(t *testing.T) {
 				"Client-Type":   "backend",
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?timestamp=%v", payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?currency=NGN&timestamp=%v", payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 
 			// Assert the response body
@@ -183,10 +184,16 @@ func TestProvider(t *testing.T) {
 
 		})
 
-		t.Run("when filtering is applied", func(t *testing.T) {
-			// Test different status filters
+		t.Run("fetch orders with cancellation reasons", func(t *testing.T) {
+			// Create a test order with cancellation reasons
+			order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+				"gateway_id":           uuid.New().String(),
+				"provider":             testCtx.provider,
+				"cancellation_reasons": []string{"Out of stock", "Payment failed"},
+			})
+			assert.NoError(t, err)
+
 			var payload = map[string]interface{}{
-				"status":    "pending",
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -197,7 +204,144 @@ func TestProvider(t *testing.T) {
 				"Client-Type":   "backend",
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?status=%s&timestamp=%v", "pending", payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders/%s?timestamp=%v", order.ID, payload["timestamp"]), nil, headers, router)
+
+			assert.NoError(t, err, "Error performing request")
+
+			// Check response status code
+			if !assert.Equal(t, http.StatusOK, res.Code, "Response code should be 200") {
+				t.Logf("Unexpected response body: %s", res.Body.String())
+				return
+			}
+
+			// Parse response
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err, "Failed to unmarshal response")
+			assert.Equal(t, "The order has been successfully retrieved", response.Message)
+
+			// Validate response data structure
+			data, ok := response.Data.(map[string]interface{})
+			if !assert.True(t, ok, "response.Data should be map[string]interface{}") {
+				return
+			}
+
+			// Now we directly validate the fields inside `data` instead of `data.orders`
+			assert.Equal(t, order.GatewayID, data["gatewayId"], "Gateway ID does not match")
+
+			cancellationReasons, ok := data["cancellationReasons"].([]interface{})
+			if assert.True(t, ok, "cancellationReasons should be []interface{}") {
+				assert.Equal(t, 2, len(cancellationReasons), "Expected exactly two cancellation reasons")
+				assert.Contains(t, cancellationReasons, "Out of stock", "Expected cancellation reason not found")
+				assert.Contains(t, cancellationReasons, "Payment failed", "Expected cancellation reason not found")
+			} else {
+				t.Logf("cancellationReasons: %+v", data["cancellationReasons"])
+			}
+		})
+
+		t.Run("fetch single order with cancellation reasons", func(t *testing.T) {
+			// Create a test order with cancellation reasons
+			order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+				"gateway_id":           uuid.New().String(),
+				"provider":             testCtx.provider,
+				"cancellation_reasons": []string{"Out of stock", "Payment failed"},
+			})
+			assert.NoError(t, err)
+
+			var payload = map[string]interface{}{
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+				"Client-Type":   "backend",
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders/%s?timestamp=%v", order.ID, payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+
+			// Assert the response body
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "The order has been successfully retrieved", response.Message)
+
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok, "response.Data is not of type map[string]interface{}")
+			assert.NotNil(t, data, "response.Data is nil")
+
+			// Check cancellation_reasons
+			// cancellationReasons := data["cancellationReasons"].([]interface{})
+			// assert.Equal(t, []string{"Out of stock", "Payment failed"}, cancellationReasons)
+			cancellationReasons := data["cancellationReasons"].([]interface{})
+			cancellationReasonsAsStrings := make([]string, len(cancellationReasons))
+			for i, reason := range cancellationReasons {
+				cancellationReasonsAsStrings[i] = reason.(string)
+			}
+			assert.Equal(t, []string{"Out of stock", "Payment failed"}, cancellationReasonsAsStrings)
+
+		})
+
+		t.Run("fetch order without cancellation reasons", func(t *testing.T) {
+			// Create a test order without cancellation reasons
+			order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+				"gateway_id":           uuid.New().String(),
+				"provider":             testCtx.provider,
+				"cancellation_reasons": []string{},
+			})
+			assert.NoError(t, err)
+
+			var payload = map[string]interface{}{
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+				"Client-Type":   "backend",
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders/%s?timestamp=%v", order.ID, payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+
+			// Assert the response body
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "The order has been successfully retrieved", response.Message)
+
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok, "response.Data is not of type map[string]interface{}")
+			assert.NotNil(t, data, "response.Data is nil")
+
+			// Ensure cancellation_reasons is empty
+			cancellationReasons := data["cancellationReasons"].([]interface{})
+			assert.Empty(t, cancellationReasons)
+		})
+
+		t.Run("when filtering is applied", func(t *testing.T) {
+			// Test different status filters
+			var payload = map[string]interface{}{
+				"status":    "pending",
+				"currency":  "NGN",
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+				"Client-Type":   "backend",
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?status=%s&currency=%s&timestamp=%v", "pending", "NGN", payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 
 			// Assert the response body
@@ -226,6 +370,7 @@ func TestProvider(t *testing.T) {
 			var payload = map[string]interface{}{
 				"page":      strconv.Itoa(page),
 				"pageSize":  strconv.Itoa(pageSize),
+				"currency":  "NGN",
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -236,7 +381,7 @@ func TestProvider(t *testing.T) {
 				"Client-Type":   "backend",
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?page=%s&pageSize=%s&timestamp=%v", strconv.Itoa(page), strconv.Itoa(pageSize), payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?page=%s&pageSize=%s&currency=%s&timestamp=%v", strconv.Itoa(page), strconv.Itoa(pageSize), "NGN", payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 
 			// Assert the response body
@@ -263,6 +408,7 @@ func TestProvider(t *testing.T) {
 			// Test ascending and descending ordering
 			var payload = map[string]interface{}{
 				"ordering":  "desc",
+				"currency":  "NGN",
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -273,7 +419,7 @@ func TestProvider(t *testing.T) {
 				"Client-Type":   "backend",
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?ordering=%s&timestamp=%v", payload["ordering"], payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?ordering=%s&currency=%s&timestamp=%v", payload["ordering"], "NGN", payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 
 			// Assert the response body
@@ -315,41 +461,43 @@ func TestProvider(t *testing.T) {
 	})
 
 	t.Run("GetStats", func(t *testing.T) {
+		// Create a new user with no orders
+		user, err := test.CreateTestUser(map[string]interface{}{
+			"email": "no_order_user@test.com",
+		})
+		if err != nil {
+			return
+		}
+
+		currency, err := test.CreateTestFiatCurrency(nil)
+		if err != nil {
+			return
+		}
+
+		providerProfile, err := test.CreateTestProviderProfile(map[string]interface{}{
+			"user_id":     user.ID,
+			"currency_id": currency.ID,
+		})
+		if err != nil {
+			return
+		}
+
+		apiKeyService := services.NewAPIKeyService()
+		apiKey, secretKey, err := apiKeyService.GenerateAPIKey(
+			context.Background(),
+			nil,
+			nil,
+			providerProfile,
+		)
+		if err != nil {
+			return
+		}
+
 		t.Run("when no orders have been initiated", func(t *testing.T) {
-			// Create a new user with no orders
-			user, err := test.CreateTestUser(map[string]interface{}{
-				"email": "no_order_user@test.com",
-			})
-			if err != nil {
-				return
-			}
-
-			currency, err := test.CreateTestFiatCurrency(nil)
-			if err != nil {
-				return
-			}
-
-			providerProfile, err := test.CreateTestProviderProfile(map[string]interface{}{
-				"user_id":     user.ID,
-				"currency_id": currency.ID,
-			})
-			if err != nil {
-				return
-			}
-
-			apiKeyService := services.NewAPIKeyService()
-			apiKey, secretKey, err := apiKeyService.GenerateAPIKey(
-				context.Background(),
-				nil,
-				nil,
-				providerProfile,
-			)
-			if err != nil {
-				return
-			}
 
 			// Test default params
 			var payload = map[string]interface{}{
+				"currency":  "NGN",
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -360,7 +508,7 @@ func TestProvider(t *testing.T) {
 				"Client-Type":   "backend",
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/stats?timestamp=%v", payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/stats?currency=%s&timestamp=%v", "NGN", payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 
 			// Assert the response body
@@ -392,6 +540,7 @@ func TestProvider(t *testing.T) {
 		t.Run("when orders have been initiated", func(t *testing.T) {
 			// Test default params
 			var payload = map[string]interface{}{
+				"currency":  "NGN",
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -402,7 +551,7 @@ func TestProvider(t *testing.T) {
 				"Client-Type":   "backend",
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/stats?timestamp=%v", payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/stats?currency=%s&timestamp=%v", "NGN", payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 
 			// Assert the response body
@@ -419,7 +568,7 @@ func TestProvider(t *testing.T) {
 			// Assert the totalOrders value
 			totalOrders, ok := data["totalOrders"].(float64)
 			assert.True(t, ok, "totalOrders is not of type float64")
-			assert.Equal(t, 10, int(totalOrders))
+			assert.Equal(t, 13, int(totalOrders))
 
 			// Assert the totalFiatVolume value
 			totalFiatVolumeStr, ok := data["totalFiatVolume"].(string)
@@ -436,15 +585,10 @@ func TestProvider(t *testing.T) {
 			assert.Equal(t, 0, totalCryptoVolume.Cmp(decimal.NewFromInt(0)))
 		})
 
-		t.Run("should only calculate volumes of settled orders", func(t *testing.T) {
-			// Create a settled order
-			_, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
-				"gateway_id": uuid.New().String(),
-				"provider":   testCtx.provider,
-				"status":     "settled",
-			})
-			assert.NoError(t, err)
+		t.Run("with valid currency filter", func(t *testing.T) {
+			// Use the provider's assigned currency (created in setup)
 			var payload = map[string]interface{}{
+				"currency":  "NGN",
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -455,7 +599,67 @@ func TestProvider(t *testing.T) {
 				"Client-Type":   "backend",
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/stats?timestamp=%v", payload["timestamp"]), nil, headers, router)
+			url := fmt.Sprintf("/stats?currency=%s&timestamp=%v", testCtx.currency.Code, payload["timestamp"])
+			res, err := test.PerformRequest(t, "GET", url, nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Provider stats fetched successfully", response.Message)
+
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok, "response.Data is not of type map[string]interface{}")
+			assert.NotNil(t, data, "response.Data is nil")
+		})
+
+		t.Run("with invalid currency filter", func(t *testing.T) {
+			// Use an invalid currency code, e.g., "XYZ"
+			var payload = map[string]interface{}{
+				"currency":  "NGN",
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+				"Client-Type":   "backend",
+			}
+
+			url := fmt.Sprintf("/stats?currency=%s&timestamp=%v", "NGN", payload["timestamp"])
+			res, err := test.PerformRequest(t, "GET", url, nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Currency not found", response.Message)
+		})
+
+		t.Run("should only calculate volumes of settled orders", func(t *testing.T) {
+			// Create a settled order
+			_, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+				"gateway_id": uuid.New().String(),
+				"provider":   testCtx.provider,
+				"status":     "settled",
+			})
+			assert.NoError(t, err)
+			var payload = map[string]interface{}{
+				"currency":  "NGN",
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+				"Client-Type":   "backend",
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/stats?currency=%s&timestamp=%v", "NGN", payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 
 			// Assert the response body
@@ -472,7 +676,7 @@ func TestProvider(t *testing.T) {
 			// Assert the totalOrders value
 			totalOrders, ok := data["totalOrders"].(float64)
 			assert.True(t, ok, "totalOrders is not of type float64")
-			assert.Equal(t, 11, int(totalOrders))
+			assert.Equal(t, 14, int(totalOrders))
 
 			// Assert the totalFiatVolume value
 			totalFiatVolumeStr, ok := data["totalFiatVolume"].(string)
@@ -510,7 +714,7 @@ func TestProvider(t *testing.T) {
 						"status":  "success",
 						"message": "Node is live",
 						"data": map[string]interface{}{
-							"currency": "NGN",
+							"currencies": []string{"NGN"},
 						},
 					})
 				},
@@ -599,7 +803,7 @@ func TestProvider(t *testing.T) {
 			var response types.Response
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
-			assert.Equal(t, "Token is not supported", response.Message)
+			assert.Equal(t, "Token XXXX is not supported", response.Message)
 		})
 
 		t.Run("when fiat does not exist", func(t *testing.T) {
@@ -624,7 +828,7 @@ func TestProvider(t *testing.T) {
 			var response types.Response
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
-			assert.Equal(t, "Fiat currency is not supported", response.Message)
+			assert.Equal(t, "Fiat currency USD is not supported", response.Message)
 		})
 
 		t.Run("when fiat exist", func(t *testing.T) {

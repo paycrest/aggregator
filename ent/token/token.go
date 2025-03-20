@@ -26,14 +26,18 @@ const (
 	FieldDecimals = "decimals"
 	// FieldIsEnabled holds the string denoting the is_enabled field in the database.
 	FieldIsEnabled = "is_enabled"
+	// FieldBaseCurrency holds the string denoting the base_currency field in the database.
+	FieldBaseCurrency = "base_currency"
 	// EdgeNetwork holds the string denoting the network edge name in mutations.
 	EdgeNetwork = "network"
 	// EdgePaymentOrders holds the string denoting the payment_orders edge name in mutations.
 	EdgePaymentOrders = "payment_orders"
 	// EdgeLockPaymentOrders holds the string denoting the lock_payment_orders edge name in mutations.
 	EdgeLockPaymentOrders = "lock_payment_orders"
-	// EdgeSenderSettings holds the string denoting the sender_settings edge name in mutations.
-	EdgeSenderSettings = "sender_settings"
+	// EdgeSenderOrderTokens holds the string denoting the sender_order_tokens edge name in mutations.
+	EdgeSenderOrderTokens = "sender_order_tokens"
+	// EdgeProviderOrderTokens holds the string denoting the provider_order_tokens edge name in mutations.
+	EdgeProviderOrderTokens = "provider_order_tokens"
 	// Table holds the table name of the token in the database.
 	Table = "tokens"
 	// NetworkTable is the table that holds the network relation/edge.
@@ -57,13 +61,20 @@ const (
 	LockPaymentOrdersInverseTable = "lock_payment_orders"
 	// LockPaymentOrdersColumn is the table column denoting the lock_payment_orders relation/edge.
 	LockPaymentOrdersColumn = "token_lock_payment_orders"
-	// SenderSettingsTable is the table that holds the sender_settings relation/edge.
-	SenderSettingsTable = "sender_order_tokens"
-	// SenderSettingsInverseTable is the table name for the SenderOrderToken entity.
+	// SenderOrderTokensTable is the table that holds the sender_order_tokens relation/edge.
+	SenderOrderTokensTable = "sender_order_tokens"
+	// SenderOrderTokensInverseTable is the table name for the SenderOrderToken entity.
 	// It exists in this package in order to avoid circular dependency with the "senderordertoken" package.
-	SenderSettingsInverseTable = "sender_order_tokens"
-	// SenderSettingsColumn is the table column denoting the sender_settings relation/edge.
-	SenderSettingsColumn = "token_sender_settings"
+	SenderOrderTokensInverseTable = "sender_order_tokens"
+	// SenderOrderTokensColumn is the table column denoting the sender_order_tokens relation/edge.
+	SenderOrderTokensColumn = "token_sender_order_tokens"
+	// ProviderOrderTokensTable is the table that holds the provider_order_tokens relation/edge.
+	ProviderOrderTokensTable = "provider_order_tokens"
+	// ProviderOrderTokensInverseTable is the table name for the ProviderOrderToken entity.
+	// It exists in this package in order to avoid circular dependency with the "providerordertoken" package.
+	ProviderOrderTokensInverseTable = "provider_order_tokens"
+	// ProviderOrderTokensColumn is the table column denoting the provider_order_tokens relation/edge.
+	ProviderOrderTokensColumn = "token_provider_order_tokens"
 )
 
 // Columns holds all SQL columns for token fields.
@@ -75,6 +86,7 @@ var Columns = []string{
 	FieldContractAddress,
 	FieldDecimals,
 	FieldIsEnabled,
+	FieldBaseCurrency,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "tokens"
@@ -111,6 +123,8 @@ var (
 	ContractAddressValidator func(string) error
 	// DefaultIsEnabled holds the default value on creation for the "is_enabled" field.
 	DefaultIsEnabled bool
+	// DefaultBaseCurrency holds the default value on creation for the "base_currency" field.
+	DefaultBaseCurrency string
 )
 
 // OrderOption defines the ordering options for the Token queries.
@@ -151,6 +165,11 @@ func ByIsEnabled(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldIsEnabled, opts...).ToFunc()
 }
 
+// ByBaseCurrency orders the results by the base_currency field.
+func ByBaseCurrency(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBaseCurrency, opts...).ToFunc()
+}
+
 // ByNetworkField orders the results by network field.
 func ByNetworkField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -186,17 +205,31 @@ func ByLockPaymentOrders(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption
 	}
 }
 
-// BySenderSettingsCount orders the results by sender_settings count.
-func BySenderSettingsCount(opts ...sql.OrderTermOption) OrderOption {
+// BySenderOrderTokensCount orders the results by sender_order_tokens count.
+func BySenderOrderTokensCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newSenderSettingsStep(), opts...)
+		sqlgraph.OrderByNeighborsCount(s, newSenderOrderTokensStep(), opts...)
 	}
 }
 
-// BySenderSettings orders the results by sender_settings terms.
-func BySenderSettings(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+// BySenderOrderTokens orders the results by sender_order_tokens terms.
+func BySenderOrderTokens(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newSenderSettingsStep(), append([]sql.OrderTerm{term}, terms...)...)
+		sqlgraph.OrderByNeighborTerms(s, newSenderOrderTokensStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByProviderOrderTokensCount orders the results by provider_order_tokens count.
+func ByProviderOrderTokensCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newProviderOrderTokensStep(), opts...)
+	}
+}
+
+// ByProviderOrderTokens orders the results by provider_order_tokens terms.
+func ByProviderOrderTokens(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProviderOrderTokensStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 func newNetworkStep() *sqlgraph.Step {
@@ -220,10 +253,17 @@ func newLockPaymentOrdersStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.O2M, false, LockPaymentOrdersTable, LockPaymentOrdersColumn),
 	)
 }
-func newSenderSettingsStep() *sqlgraph.Step {
+func newSenderOrderTokensStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(SenderSettingsInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, SenderSettingsTable, SenderSettingsColumn),
+		sqlgraph.To(SenderOrderTokensInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, SenderOrderTokensTable, SenderOrderTokensColumn),
+	)
+}
+func newProviderOrderTokensStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProviderOrderTokensInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ProviderOrderTokensTable, ProviderOrderTokensColumn),
 	)
 }

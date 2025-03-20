@@ -30,7 +30,7 @@ func ServerConfig() *ServerConfiguration {
 	viper.SetDefault("ENVIRONMENT", "local")
 	viper.SetDefault("SENTRY_DSN", "")
 	viper.SetDefault("RATE_LIMIT_UNAUTHENTICATED", 5)
-	viper.SetDefault("RATE_LIMIT_AUTHENTICATED", 50)
+	viper.SetDefault("RATE_LIMIT_AUTHENTICATED", 100)
 
 	return &ServerConfiguration{
 		Debug:                    viper.GetBool("DEBUG"),
