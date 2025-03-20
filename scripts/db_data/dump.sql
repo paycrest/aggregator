@@ -22,7 +22,13 @@ TRUNCATE TABLE "public"."networks" CASCADE;
 TRUNCATE TABLE "public"."payment_order_recipients" CASCADE;
 TRUNCATE TABLE "public"."payment_orders" CASCADE;
 TRUNCATE TABLE "public"."provider_order_tokens" CASCADE;
+TRUNCATE TABLE "public"."provider_profiles" CASCADE;
+TRUNCATE TABLE "public"."provider_ratings" CASCADE;
+TRUNCATE TABLE "public"."provision_bucket_provider_profiles" CASCADE;
+TRUNCATE TABLE "public"."provision_buckets" CASCADE;
+TRUNCATE TABLE "public"."receive_addresses" CASCADE;
 TRUNCATE TABLE "public"."sender_order_tokens" CASCADE;
+TRUNCATE TABLE "public"."sender_profiles" CASCADE;
 TRUNCATE TABLE "public"."tokens" CASCADE;
 TRUNCATE TABLE "public"."transaction_logs" CASCADE;
 TRUNCATE TABLE "public"."users" CASCADE;
@@ -186,6 +192,8 @@ CREATE TABLE IF NOT EXISTS "public"."networks" (
     "fee" float8 NOT NULL,
     "chain_id_hex" varchar,
     "gateway_contract_address" varchar NOT NULL DEFAULT ''::character varying,
+    "bundler_url" varchar,
+    "paymaster_url" varchar,
     PRIMARY KEY ("id")
 );
 
@@ -236,26 +244,22 @@ CREATE TABLE IF NOT EXISTS "public"."provider_order_tokens" (
     "id" int8 NOT NULL,
     "created_at" timestamptz NOT NULL,
     "updated_at" timestamptz NOT NULL,
-    "symbol" varchar NOT NULL,
     "fixed_conversion_rate" float8 NOT NULL,
     "floating_conversion_rate" float8 NOT NULL,
     "conversion_rate_type" varchar NOT NULL,
     "max_order_amount" float8 NOT NULL,
     "min_order_amount" float8 NOT NULL,
-    "addresses" jsonb NOT NULL,
-    "provider_profile_order_tokens" varchar,
+    "provider_profile_order_tokens" varchar NOT NULL,
+    "address" varchar,
+    "network" varchar,
+    "fiat_currency_provider_order_tokens" uuid NOT NULL,
+    "token_provider_order_tokens" int8 NOT NULL,
     PRIMARY KEY ("id")
 );
 
--- Table Definition
-CREATE TABLE IF NOT EXISTS "public"."provider_profile_fiat_currencies" (
-    "provider_profile_id" varchar NOT NULL,
-    "fiat_currency_id" uuid NOT NULL,
-    PRIMARY KEY ("provider_profile_id","fiat_currency_id")
-);
 
 -- Table Definition
-CREATE TABLE IF NOT EXISTS "public"."provider_profiles" (
+CREATE TABLE "public"."provider_profiles" (
     "id" varchar NOT NULL,
     "trading_name" varchar,
     "host_identifier" varchar,
@@ -273,7 +277,6 @@ CREATE TABLE IF NOT EXISTS "public"."provider_profiles" (
     "business_document" varchar,
     "user_provider_profile" uuid NOT NULL,
     "is_kyb_verified" bool NOT NULL DEFAULT false,
-    "fiat_currency_providers" uuid NOT NULL,
     PRIMARY KEY ("id")
 );
 
@@ -356,6 +359,7 @@ CREATE TABLE IF NOT EXISTS "public"."tokens" (
     "decimals" int2 NOT NULL,
     "is_enabled" bool NOT NULL DEFAULT false,
     "network_tokens" int8 NOT NULL,
+    "base_currency" varchar NOT NULL DEFAULT 'USD'::character varying,
     PRIMARY KEY ("id")
 );
 
@@ -476,7 +480,8 @@ INSERT INTO "public"."ent_types" ("id", "type") VALUES
 (19, 'institutions'),
 (20, 'sender_order_tokens'),
 (21, 'identity_verification_requests'),
-(22, 'linked_addresses');
+(22, 'linked_addresses'),
+(23, 'provision_bucket_provider_profiles');
 
 INSERT INTO "public"."fiat_currencies" ("id", "created_at", "updated_at", "code", "short_name", "decimals", "symbol", "name", "market_rate", "is_enabled") VALUES
 ('5a349408-ebcf-4c7e-98c7-46b6596e0b27', '2024-02-03 23:54:31.693539+00', '2025-01-21 18:00:00.665002+00', 'NGN', 'Naira', 2, '₦', 'Nigerian Naira', 1658.1, 't'),
@@ -486,6 +491,9 @@ INSERT INTO "public"."fiat_currencies" ("id", "created_at", "updated_at", "code"
 ('bdd94af2-1d65-4ed2-9072-cfa656677686', '2024-09-01 00:35:18.248882+00', '2024-09-01 00:35:18.248882+00', 'XOF-CIV', 'Côte d''Ivoire', 2, 'CFA', 'West African CFA franc', 599.5, 'f'),
 ('e89be396-0e0e-40fc-ac03-08691b566f75', '2024-09-01 00:35:18.248882+00', '2024-09-01 00:35:18.248882+00', 'GHS', 'Cedi', 2, 'GH¢', 'Ghana Cedi', 15.65, 'f'),
 ('e9325102-6be5-47a7-89d0-8bbeecacb3bc', '2024-09-01 00:35:18.248882+00', '2025-01-21 18:00:00.359014+00', 'KES', 'KES', 2, 'KSh', 'Kenyan Shilling', 130.005, 't');
+
+INSERT INTO "public"."fiat_currency_providers" ("fiat_currency_id", "provider_profile_id") VALUES
+('5a349408-ebcf-4c7e-98c7-46b6596e0b27', 'AtGaDPqT');
 
 INSERT INTO "public"."institutions" ("id", "created_at", "updated_at", "code", "name", "type", "fiat_currency_institutions") VALUES
 (77309411328, '2024-06-13 14:49:47.76094+00', '2024-06-13 14:49:47.76094+00', 'ABNGNGLA', 'Access Bank', 'bank', '5a349408-ebcf-4c7e-98c7-46b6596e0b27'),
@@ -601,18 +609,18 @@ INSERT INTO "public"."institutions" ("id", "created_at", "updated_at", "code", "
 (77309411438, '2024-09-01 00:38:28.242862+00', '2024-09-01 00:38:28.242862+00', 'VODAGHPC', 'Vodafone Cash', 'mobile_money', 'e89be396-0e0e-40fc-ac03-08691b566f75'),
 (77309411439, '2024-09-01 00:38:28.242862+00', '2024-09-01 00:38:28.242862+00', 'AIRTGHPC', 'AirtelTigo Money', 'mobile_money', 'e89be396-0e0e-40fc-ac03-08691b566f75');
 
-INSERT INTO "public"."networks" ("id", "created_at", "updated_at", "chain_id", "identifier", "rpc_endpoint", "is_testnet", "fee", "chain_id_hex", "gateway_contract_address") VALUES
-(17179869184, '2024-02-03 23:54:30.744922+00', '2024-02-03 23:54:30.744923+00', 11155111, 'ethereum-sepolia', 'wss://sepolia.infura.io/ws/v3/4458cf4d1689497b9a38b1d6bbf05e78', 't', 0, NULL, '0xCAD53Ff499155Cc2fAA2082A85716322906886c2'),
-(17179869185, '2024-04-29 10:39:32.596797+00', '2024-04-29 10:39:32.596797+00', 421614, 'arbitrum-sepolia', 'wss://arbitrum-sepolia.infura.io/ws/v3/4458cf4d1689497b9a38b1d6bbf05e78', 't', 5, '0x66eee', '0x87B321fc77A0fDD0ca1fEe7Ab791131157B9841A'),
-(17179869186, '2024-06-07 01:45:47.477654+00', '2024-06-07 01:45:47.477654+00', 12002, 'tron-shasta', 'https://api.shasta.trongrid.io', 't', 5, NULL, 'TYA8urq7nkN2yU7rJqAgwDShCusDZrrsxZ'),
-(17179869187, '2024-06-18 03:04:10.375048+00', '2024-06-18 03:04:10.375048+00', 84532, 'base-sepolia', 'wss://base-sepolia.infura.io/ws/v3/4458cf4d1689497b9a38b1d6bbf05e78', 't', 0, NULL, '0x847dfdAa218F9137229CF8424378871A1DA8f625');
+INSERT INTO "public"."networks" ("id", "created_at", "updated_at", "chain_id", "identifier", "rpc_endpoint", "is_testnet", "fee", "chain_id_hex", "gateway_contract_address", "bundler_url", "paymaster_url") VALUES
+(17179869184, '2024-02-03 23:54:30.744922+00', '2024-02-03 23:54:30.744923+00', 11155111, 'ethereum-sepolia', 'wss://sepolia.infura.io/ws/v3/4458cf4d1689497b9a38b1d6bbf05e78', 't', 0, NULL, '0xCAD53Ff499155Cc2fAA2082A85716322906886c2', 'https://bundler.biconomy.io/api/v2/11155111/nJPK7B3ru.dd7f7861-190d-41bd-af80-6877f74b8f44', 'https://paymaster.biconomy.io/api/v1/11155111/VD_kir2JP.9bd5c901-92c0-43ca-a30f-bb8bbbdd3286'),
+(17179869185, '2024-04-29 10:39:32.596797+00', '2024-04-29 10:39:32.596797+00', 421614, 'arbitrum-sepolia', 'wss://arbitrum-sepolia.infura.io/ws/v3/4458cf4d1689497b9a38b1d6bbf05e78', 't', 5, '0x66eee', '0x87B321fc77A0fDD0ca1fEe7Ab791131157B9841A', 'https://bundler.biconomy.io/api/v2/421614/nJPK7B3ru.dd7f7861-190d-41bd-af80-6877f74b8f44', 'https://paymaster.biconomy.io/api/v1/421614/oUg0lNcC-.5c16e9a1-2991-41c2-86ad-8bbd246ace57'),
+(17179869186, '2024-06-07 01:45:47.477654+00', '2024-06-07 01:45:47.477654+00', 12002, 'tron-shasta', 'https://api.shasta.trongrid.io', 't', 5, NULL, 'TYA8urq7nkN2yU7rJqAgwDShCusDZrrsxZ', 'https://bundler.shasta.tron.io', 'https://paymaster.shasta.tron.io'),
+(17179869187, '2024-06-18 03:04:10.375048+00', '2024-06-18 03:04:10.375048+00', 84532, 'base-sepolia', 'wss://base-sepolia.infura.io/ws/v3/4458cf4d1689497b9a38b1d6bbf05e78', 't', 0, NULL, '0x847dfdAa218F9137229CF8424378871A1DA8f625', 'https://bundler.biconomy.io/api/v2/84532/nJPK7B3ru.dd7f7861-190d-41bd-af80-6877f74b8f44', 'https://paymaster.biconomy.io/api/v1/84532/AtzxDAqR_.805ec674-af7e-4af8-828d-1e4190b51d5a');
 
-INSERT INTO "public"."tokens" ("id", "created_at", "updated_at", "symbol", "contract_address", "decimals", "is_enabled", "network_tokens") VALUES
-(55834574849, '2024-03-07 16:38:00.058+00', '2024-03-07 16:38:00.058+00', '6TEST', '0x3870419Ba2BBf0127060bCB37f69A1b1C090992B', 6, 't', 17179869184),
-(55834574850, '2024-04-29 10:39:57.365548+00', '2024-04-29 10:39:57.365548+00', '6TEST', '0x3870419Ba2BBf0127060bCB37f69A1b1C090992B', 6, 't', 17179869185),
-(55834574851, '2024-06-07 02:10:04.766128+00', '2024-06-07 02:10:04.766128+00', 'USDT', 'TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs', 6, 't', 17179869186),
-(55834574852, '2024-06-18 03:05:11.732975+00', '2024-06-18 03:05:11.732975+00', 'DAI', '0x7683022d84F726a96c4A6611cD31DBf5409c0Ac9', 18, 't', 17179869187),
-(55834574853, '2024-06-18 03:06:16.468889+00', '2024-06-18 03:06:16.468889+00', 'DAI', '0x77Ab54631BfBAE40383c62044dC30B229c7df9f5', 18, 't', 17179869184);
+INSERT INTO "public"."tokens" ("id", "created_at", "updated_at", "symbol", "contract_address", "decimals", "is_enabled", "network_tokens", "base_currency") VALUES
+(55834574849, '2024-03-07 16:38:00.058+00', '2024-03-07 16:38:00.058+00', '6TEST', '0x3870419Ba2BBf0127060bCB37f69A1b1C090992B', 6, 't', 17179869184, 'USD'),
+(55834574850, '2024-04-29 10:39:57.365548+00', '2024-04-29 10:39:57.365548+00', '6TEST', '0x3870419Ba2BBf0127060bCB37f69A1b1C090992B', 6, 't', 17179869185, 'USD'),
+(55834574851, '2024-06-07 02:10:04.766128+00', '2024-06-07 02:10:04.766128+00', 'USDT', 'TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs', 6, 't', 17179869186, 'USD'),
+(55834574852, '2024-06-18 03:05:11.732975+00', '2024-06-18 03:05:11.732975+00', 'DAI', '0x7683022d84F726a96c4A6611cD31DBf5409c0Ac9', 18, 't', 17179869187, 'USD'),
+(55834574853, '2024-06-18 03:06:16.468889+00', '2024-06-18 03:06:16.468889+00', 'DAI', '0x77Ab54631BfBAE40383c62044dC30B229c7df9f5', 18, 't', 17179869184, 'USD');
 
 INSERT INTO "public"."users" ("id", "created_at", "updated_at", "first_name", "last_name", "email", "password", "scope", "is_email_verified", "has_early_access") VALUES
 ('6f7209d3-8f70-499f-aec8-65644d55ad5e', '2025-01-21 12:36:20.39029+00', '2025-01-21 12:36:20.39029+00', 'John', 'Doe', 'john.doe@paycrest.io', '$2a$14$Y8ySFbWKeIyxYdH5Qp2ga.I2QObyuxQ/5xhKHi3BXkmgW8NeRmTKS', 'sender provider', 't', 't');
@@ -623,14 +631,13 @@ INSERT INTO "public"."api_keys" ("id", "secret", "provider_profile_api_key", "se
 ('0c73884d-4438-41a8-9624-d6aec679f868', '3n9Xj63xmqe4b7IgL3h0/EuBsHaByIQzxMmXlmm8d/hN3iBQyQhrl37MEeWVlH3LVPHG4fPBEjG2STWFJnBZ91pKYFXXBPL+', 'AtGaDPqT', NULL),
 ('11f93de0-d304-4498-8b7b-6cecbc5b2dd8', '/5OxcB9HZ2jJIfsC+AmHhEVs6Khe3x0KS9ZkhSvHZknOiVtBvEa4J+f8P8nzs9qfComAvogtkcqrzGc+suu6JA3lqbSlazyO', NULL, 'e93a1cba-832f-4a7c-aab5-929a53c84324');
 
-INSERT INTO "public"."provider_order_tokens" ("id", "created_at", "updated_at", "symbol", "fixed_conversion_rate", "floating_conversion_rate", "conversion_rate_type", "max_order_amount", "min_order_amount", "addresses", "provider_profile_order_tokens") VALUES
-(30064771084, '2025-01-21 12:45:59.108096+00', '2025-01-21 16:39:25.205819+00', '6TEST', 0, 0, 'floating', 5000, 0.5, '[{"address": "0x409689E3008d43a9eb439e7B275749D4a71D8E2D", "network": "ethereum-sepolia"}, {"address": "0x409689E3008d43a9eb439e7B275749D4a71D8E2D", "network": "arbitrum-sepolia"}, {"address": "0x409689E3008d43a9eb439e7B275749D4a71D8E2D", "network": "base-sepolia"}]', 'AtGaDPqT'),
-(30064771085, '2025-01-21 12:46:12.789689+00', '2025-01-21 12:46:12.78969+00', 'USDT', 0, 0, 'floating', 5000, 0.5, '[{"address": "0x409689E3008d43a9eb439e7B275749D4a71D8E2D", "network": "ethereum-sepolia"}, {"address": "0x409689E3008d43a9eb439e7B275749D4a71D8E2D", "network": "arbitrum-sepolia"}]', 'AtGaDPqT'),
-(30064771086, '2025-01-21 12:46:20.289845+00', '2025-01-21 12:46:20.289845+00', 'DAI', 0, 0, 'floating', 5000, 0.5, '[{"address": "0x409689E3008d43a9eb439e7B275749D4a71D8E2D", "network": "ethereum-sepolia"}, {"address": "0x409689E3008d43a9eb439e7B275749D4a71D8E2D", "network": "arbitrum-sepolia"}, {"address": "0x409689E3008d43a9eb439e7B275749D4a71D8E2D", "network": "base-sepolia"}]', 'AtGaDPqT');
+INSERT INTO "public"."provider_order_tokens" ("id", "created_at", "updated_at", "fixed_conversion_rate", "floating_conversion_rate", "conversion_rate_type", "max_order_amount", "min_order_amount", "provider_profile_order_tokens", "address", "network", "fiat_currency_provider_order_tokens", "token_provider_order_tokens") VALUES
+(30064771084, '2025-01-21 12:45:59.108096+00', '2025-01-21 16:39:25.205819+00', 1598, 0, 'fixed', 900, 100, 'AtGaDPqT', '0xf4c5c4deDde7A86b25E7430796441e209e23eBFB', 'ethereum-sepolia', '5a349408-ebcf-4c7e-98c7-46b6596e0b27', 55834574849),
+(30064771085, '2025-01-21 12:46:12.789689+00', '2025-01-21 12:46:12.78969+00', 1598, 0, 'fixed', 900, 100, 'AtGaDPqT', '0xf4c5c4deDde7A86b25E7430796441e209e23eBFB', 'base-sepolia', '5a349408-ebcf-4c7e-98c7-46b6596e0b27', 55834574852),
+(30064771086, '2025-01-21 12:46:20.289845+00', '2025-01-21 12:46:20.289845+00', 1598, 0, 'fixed', 900, 100, 'AtGaDPqT', '0xf4c5c4deDde7A86b25E7430796441e209e23eBFB', 'arbitrum-sepolia', '5a349408-ebcf-4c7e-98c7-46b6596e0b27', 55834574852);
 
-INSERT INTO "public"."provider_profiles" ("id", "trading_name", "host_identifier", "provision_mode", "is_active", "is_available", "updated_at", "visibility_mode", "address", "mobile_number", "date_of_birth", "business_name", "identity_document_type", "identity_document", "business_document", "user_provider_profile", "is_kyb_verified", "fiat_currency_providers") VALUES
-('AtGaDPqT', 'John Doe Exchange', 'http://localhost:8105', 'auto', 't', 't', '2025-01-21 16:39:25.232449+00', 'private', '1, John Doe Street, Surulere, Lagos, Nigeria', '+2348123456789', '1993-01-01 00:00:00+00', 'John Doe Exchange Ltd', 'passport', 'https://res.cloudinary.com/de6e0wihu/image/upload/v1737463231/wbeica7nxawqthdnpazv.png', 'https://res.cloudinary.com/de6e0wihu/image/upload/v1737463231/hngwr0f5mw1z9vdvrjqm.png', '6f7209d3-8f70-499f-aec8-65644d55ad5e', 't', '5a349408-ebcf-4c7e-98c7-46b6596e0b27');
-
+INSERT INTO "public"."provider_profiles" ("id", "trading_name", "host_identifier", "provision_mode", "is_active", "is_available", "updated_at", "visibility_mode", "address", "mobile_number", "date_of_birth", "business_name", "identity_document_type", "identity_document", "business_document", "user_provider_profile", "is_kyb_verified") VALUES
+('AtGaDPqT', 'John Doe Exchange', 'http://localhost:8105', 'auto', 't', 't', '2025-01-21 16:39:25.232449+00', 'private', '1, John Doe Street, Surulere, Lagos, Nigeria', '+2348123456789', '1993-01-01 00:00:00+00', 'John Doe Exchange Ltd', 'passport', 'https://res.cloudinary.com/de6e0wihu/image/upload/v1737463231/wbeica7nxawqthdnpazv.png', 'https://res.cloudinary.com/de6e0wihu/image/upload/v1737463231/hngwr0f5mw1z9vdvrjqm.png', '6f7209d3-8f70-499f-aec8-65644d55ad5e', 't');
 
 INSERT INTO "public"."provision_buckets" ("id", "min_amount", "max_amount", "created_at", "fiat_currency_provision_buckets") VALUES
 (42949672960, 5001, 50000, '2024-02-03 23:54:34.688488+00', '5a349408-ebcf-4c7e-98c7-46b6596e0b27'),
@@ -749,10 +756,14 @@ ALTER TABLE "public"."payment_orders" ADD FOREIGN KEY ("sender_profile_payment_o
 ALTER TABLE "public"."payment_orders" ADD FOREIGN KEY ("api_key_payment_orders") REFERENCES "public"."api_keys"("id") ON DELETE SET NULL;
 ALTER TABLE "public"."payment_orders" ADD FOREIGN KEY ("linked_address_payment_orders") REFERENCES "public"."linked_addresses"("id") ON DELETE SET NULL;
 ALTER TABLE "public"."provider_order_tokens" ADD FOREIGN KEY ("provider_profile_order_tokens") REFERENCES "public"."provider_profiles"("id") ON DELETE CASCADE;
-ALTER TABLE "public"."provider_profile_fiat_currencies" ADD FOREIGN KEY ("fiat_currency_id") REFERENCES "public"."fiat_currencies"("id") ON DELETE CASCADE;
-ALTER TABLE "public"."provider_profile_fiat_currencies" ADD FOREIGN KEY ("provider_profile_id") REFERENCES "public"."provider_profiles"("id") ON DELETE CASCADE;
+ALTER TABLE "public"."provider_order_tokens" ADD FOREIGN KEY ("token_provider_order_tokens") REFERENCES "public"."tokens"("id") ON DELETE CASCADE;
+ALTER TABLE "public"."provider_order_tokens" ADD FOREIGN KEY ("fiat_currency_provider_order_tokens") REFERENCES "public"."fiat_currencies"("id") ON DELETE CASCADE;
 ALTER TABLE "public"."provider_profiles" ADD FOREIGN KEY ("user_provider_profile") REFERENCES "public"."users"("id") ON DELETE CASCADE;
-ALTER TABLE "public"."provider_profiles" ADD FOREIGN KEY ("fiat_currency_providers") REFERENCES "public"."fiat_currencies"("id");
+
+
+-- Indices
+CREATE UNIQUE INDEX providerordertoken_provider_pr_6a0d0c64fd46fb967691502cb58fa192 ON public.provider_order_tokens USING btree (provider_profile_order_tokens, token_provider_order_tokens, fiat_currency_provider_order_tokens);
+ALTER TABLE "public"."provider_profiles" ADD FOREIGN KEY ("user_provider_profile") REFERENCES "public"."users"("id") ON DELETE CASCADE;
 
 
 -- Indices
