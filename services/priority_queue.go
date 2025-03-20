@@ -157,9 +157,11 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 	}
 
 	// Update the previous queue
-	err = storage.RedisClient.RPush(ctx, prevRedisKey, prevValues...).Err()
-	if err != nil && err != context.Canceled {
-		logger.Errorf("failed to store previous provider rates: %v", err)
+	if len(prevValues) > 0 {
+		err = storage.RedisClient.RPush(ctx, prevRedisKey, prevValues...).Err()
+		if err != nil && err != context.Canceled {
+			logger.Errorf("failed to store previous provider rates: %v", err)
+		}
 	}
 
 	// Delete the current queue
