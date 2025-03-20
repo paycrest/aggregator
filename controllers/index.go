@@ -182,7 +182,9 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 				}
 			}
 
-			rateResponse, err = ctrl.priorityQueueService.GetProviderRate(ctx, provider, token.Symbol)
+
+			rateResponse, err = ctrl.priorityQueueService.GetProviderRate(ctx, provider, token.Symbol, currency.Code)
+
 			if err != nil {
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider rate", nil)
 				return

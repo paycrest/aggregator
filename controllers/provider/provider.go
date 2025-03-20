@@ -858,7 +858,8 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 		WithCurrencies().
 		Only(ctx)
 	if err != nil {
-		logger.Errorf("Failed to fetch node info: %v", err)
+		logger.Errorf("failed to fetch provider: %v", err)
+
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch node info", nil)
 		return
 	}
@@ -868,26 +869,21 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 		Build().GET("/health").
 		Send()
 	if err != nil {
-		logger.Errorf("Failed to fetch node info: %v", err)
+
+		logger.Errorf("failed to fetch node info: %v", err)
+
 		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
 		return
 	}
 
 	data, err := u.ParseJSONResponse(res.RawResponse)
 	if err != nil {
-		logger.Errorf("Failed to fetch node info: %v", err)
+
+		logger.Errorf("failed to parse node info: %v", err)
+
 		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
 		return
 	}
-
-	currency := data["data"].(map[string]interface{})["currency"].(string)
-	if currency != provider.Edges.Currency.Code {
-		logger.Errorf("failed to match currency: %v", err)
-		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
-		return
-	}
-
-	// currencies := data["data"].(map[string]interface{})["currencies"].(map[string]string)
 
 	// Change this line to handle currencies as a slice instead of a map
 	dataMap, ok := data["data"].(map[string]interface{})

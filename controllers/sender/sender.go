@@ -247,13 +247,26 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		Where(
 			institution.CodeEQ(payload.Recipient.Institution),
 		).
-		WithFiatCurrency().
+
+		WithFiatCurrency(
+			func(q *ent.FiatCurrencyQuery) {
+				q.Where(fiatcurrency.IsEnabledEQ(true))
+			},
+		).
 		First(ctx)
 	if err != nil {
-		logger.Errorf("error validating institution: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to validate institution", nil)
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+				Field:   "Recipient",
+				Message: "Provided institution is not supported",
+			})
+		} else {
+			logger.Errorf("Failed to fetch institution: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to validate institution", nil)
+		}
 		return
 	}
+
 	if institutionObj == nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 			Field:   "Recipient",
@@ -284,7 +297,9 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 					tokenEnt.IDEQ(token.ID),
 				),
 				providerordertoken.HasCurrencyWith(
-					fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
+
+					fiatcurrency.CodeEQ(institutionObj.Edges.FiatCurrency.Code),
+
 				),
 			).
 			WithProvider().
@@ -298,6 +313,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			} else {
 				logger.Errorf("Failed to fetch provider settings: %v", err)
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider settings", nil)
+
 			}
 			return
 		}
@@ -310,31 +326,24 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			} else if payload.Amount.GreaterThan(orderToken.MaxOrderAmount) {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", "The amount is beyond the maximum order amount for the specified provider", nil)
 				return
-			}
-		}
 
-	out:
-		for _, orderToken := range providerProfile.Edges.OrderTokens {
-			for _, address := range orderToken.Addresses {
-				if address.Network == token.Edges.Network.Identifier {
-					isTokenNetworkPresent = true
-					break out
-				}
 			}
-		}
-
-		if !isTokenNetworkPresent {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "The selected network is not supported by the specified provider", nil)
 			return
 		}
 
-		maxOrderAmount = providerProfile.Edges.OrderTokens[0].MaxOrderAmount
-		minOrderAmount = providerProfile.Edges.OrderTokens[0].MinOrderAmount
+		// Validate amount for private orders
+		if orderToken.Edges.Provider.VisibilityMode == providerprofile.VisibilityModePrivate {
+			normalizedAmount := payload.Amount
+			if strings.EqualFold(token.BaseCurrency, institutionObj.Edges.FiatCurrency.Code) && token.BaseCurrency != "USD" {
+				rateResponse, err := utils.GetTokenRateFromQueue("USDT", normalizedAmount, institutionObj.Edges.FiatCurrency.Code, institutionObj.Edges.FiatCurrency.MarketRate)
+				if err != nil {
+					logger.Errorf("InitiatePaymentOrder.GetTokenRateFromQueue: %v", err)
+					u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+					return
+				}
+				normalizedAmount = payload.Amount.Div(rateResponse)
+			}
 
-		if providerProfile.VisibilityMode == providerprofile.VisibilityModePrivate {
-			isPrivate = true
-		}
-	}
 
 	// Validate amount for private orders
 	if isPrivate {
@@ -355,6 +364,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		} else if normalizedAmount.GreaterThan(maxOrderAmount) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "The amount is beyond the maximum order amount for the specified provider", nil)
 			return
+
 		}
 	}
 

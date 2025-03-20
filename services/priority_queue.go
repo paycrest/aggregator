@@ -9,10 +9,12 @@ import (
 
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
+	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
@@ -188,9 +190,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 			logger.Errorf("failed to get tokens for provider %s: %v", provider.ID, err)
 			continue
 		}
-
 		fmt.Println("orderTokens", orderTokens)
-
 		tokenSymbols := []string{}
 		for _, orderToken := range orderTokens {
 			if utils.ContainsString(tokenSymbols, orderToken.Edges.Token.Symbol) {
@@ -200,14 +200,22 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 
 			rate, err := s.GetProviderRate(ctx, provider, orderToken.Edges.Token.Symbol, bucket.Edges.Currency.Code)
 			if err != nil {
-				logger.Errorf("failed to get %s rate for provider %s: %v", orderToken.Edges.Token.Symbol, providerID, err)
+
+				if err != context.Canceled {
+					logger.Errorf("failed to get %s rate for provider %s: %v", orderToken.Edges.Token.Symbol, provider.ID, err)
+				}
+				continue
+			}
+
+			if rate.IsZero() {
 				continue
 			}
 
 			// Check provider's rate against the market rate to ensure it's not too far off
 			percentDeviation := utils.AbsPercentageDeviation(bucket.Edges.Currency.MarketRate, rate)
 
-			isLocalStablecoin := strings.Contains(token.Symbol, bucket.Edges.Currency.Code) && !strings.Contains(token.Symbol, "USD")
+			isLocalStablecoin := strings.Contains(orderToken.Edges.Token.Symbol, bucket.Edges.Currency.Code) && !strings.Contains(orderToken.Edges.Token.Symbol, "USD")
+
 			if serverConf.Environment == "production" && percentDeviation.GreaterThan(orderConf.PercentDeviationFromMarketRate) && !isLocalStablecoin {
 				// Skip this provider if the rate is too far off
 				// TODO: add a logic to notify the provider(s) to update his rate since it's stale. could be a cron job
@@ -357,7 +365,7 @@ func (s *PriorityQueueService) notifyProvider(ctx context.Context, orderRequestD
 	signature := tokenUtils.GenerateHMACSignature(orderRequestData, string(decryptedSecret))
 
 	// Send POST request to the provider's node
-	_, err = fastshot.NewClient(provider.HostIdentifier).
+	res, err := fastshot.NewClient(provider.HostIdentifier).
 		Config().SetTimeout(30*time.Second).
 		Header().Add("X-Request-Signature", signature).
 		Build().POST("/new_order").
@@ -367,6 +375,10 @@ func (s *PriorityQueueService) notifyProvider(ctx context.Context, orderRequestD
 		return err
 	}
 
+	data, err := utils.ParseJSONResponse(res.RawResponse)
+	if err != nil {
+		logger.Errorf("PriorityQueueService.notifyProvider: %v %v", err, data)
+	}
 	return nil
 }
 

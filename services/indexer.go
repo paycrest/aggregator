@@ -22,11 +22,13 @@ import (
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
+	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/user"
 	"github.com/paycrest/aggregator/services/contracts"
@@ -202,15 +204,12 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 			}
 
 			// Get rate from priority queue
-			if !strings.EqualFold(token.BaseCurrency, currency.Code) && !strings.EqualFold(token.BaseCurrency, "USD") {
-			rateResponse, err := utils.GetTokenRateFromQueue(token.Symbol, orderAmount, institution.Edges.FiatCurrency.Code, institution.Edges.FiatCurrency.MarketRate)
-			if err != nil {
-				logger.Errorf("IndexERC20Transfer.GetTokenRateFromQueue: %v", err)
+			if !strings.EqualFold(token.BaseCurrency, institution.Edges.FiatCurrency.Code) && !strings.EqualFold(token.BaseCurrency, "USD") {
 				continue
 			}
 			var rateResponse decimal.Decimal
-			if !strings.EqualFold(token.BaseCurrency, currency.Code) {
-				rateResponse, err = utils.GetTokenRateFromQueue(token.Symbol, orderAmount, currency.Code, currency.MarketRate)
+			if !strings.EqualFold(token.BaseCurrency, institution.Edges.FiatCurrency.Code) {
+				rateResponse, err = utils.GetTokenRateFromQueue(token.Symbol, orderAmount, institution.Edges.FiatCurrency.Code, institution.Edges.FiatCurrency.MarketRate)
 				if err != nil {
 					logger.Errorf("IndexERC20Transfer.GetTokenRateFromQueue: %v", err)
 					continue
@@ -1011,6 +1010,26 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 				if err != nil {
 					return fmt.Errorf("%s - failed to cancel order: %w", lockPaymentOrder.GatewayID, err)
 				}
+			normalizedAmount := lockPaymentOrder.Amount
+			if strings.EqualFold(token.BaseCurrency, institution.Edges.FiatCurrency.Code) && token.BaseCurrency != "USD" {
+				rateResponse, err := utils.GetTokenRateFromQueue("USDT", normalizedAmount, institution.Edges.FiatCurrency.Code, currency.MarketRate)
+				if err != nil {
+					return fmt.Errorf("failed to get token rate: %w", err)
+				}
+				normalizedAmount = lockPaymentOrder.Amount.Div(rateResponse)
+			}
+
+			if normalizedAmount.GreaterThan(orderToken.MaxOrderAmount) {
+				err := s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Amount is greater than the maximum order amount of the provider")
+				if err != nil {
+					return fmt.Errorf("%s - failed to cancel order: %w", lockPaymentOrder.GatewayID, err)
+				}
+				return nil
+			} else if normalizedAmount.LessThan(orderToken.MinOrderAmount) {
+				err := s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Amount is less than the minimum order amount of the provider")
+				if err != nil {
+					return fmt.Errorf("%s - failed to cancel order: %w", lockPaymentOrder.GatewayID, err)
+				}
 				return nil
 			}
 		}
@@ -1143,6 +1162,7 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 			lockPaymentOrder.ID = orderCreated.ID
 			_ = s.priorityQueue.AssignLockPaymentOrder(ctx, lockPaymentOrder)
 		}
+
 		lockPaymentOrder.ID = orderCreated.ID
 		_ = s.priorityQueue.AssignLockPaymentOrder(ctx, lockPaymentOrder)
 	}

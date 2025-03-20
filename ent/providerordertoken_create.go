@@ -10,8 +10,11 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/token"
 	"github.com/shopspring/decimal"
 )
 
@@ -339,6 +342,427 @@ func (potc *ProviderOrderTokenCreate) createSpec() (*ProviderOrderToken, *sqlgra
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.ProviderOrderToken.Create().
+//		SetCreatedAt(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.ProviderOrderTokenUpsert) {
+//			SetCreatedAt(v+v).
+//		}).
+//		Exec(ctx)
+func (potc *ProviderOrderTokenCreate) OnConflict(opts ...sql.ConflictOption) *ProviderOrderTokenUpsertOne {
+	potc.conflict = opts
+	return &ProviderOrderTokenUpsertOne{
+		create: potc,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.ProviderOrderToken.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (potc *ProviderOrderTokenCreate) OnConflictColumns(columns ...string) *ProviderOrderTokenUpsertOne {
+	potc.conflict = append(potc.conflict, sql.ConflictColumns(columns...))
+	return &ProviderOrderTokenUpsertOne{
+		create: potc,
+	}
+}
+
+type (
+	// ProviderOrderTokenUpsertOne is the builder for "upsert"-ing
+	//  one ProviderOrderToken node.
+	ProviderOrderTokenUpsertOne struct {
+		create *ProviderOrderTokenCreate
+	}
+
+	// ProviderOrderTokenUpsert is the "OnConflict" setter.
+	ProviderOrderTokenUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *ProviderOrderTokenUpsert) SetUpdatedAt(v time.Time) *ProviderOrderTokenUpsert {
+	u.Set(providerordertoken.FieldUpdatedAt, v)
+	return u
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsert) UpdateUpdatedAt() *ProviderOrderTokenUpsert {
+	u.SetExcluded(providerordertoken.FieldUpdatedAt)
+	return u
+}
+
+// SetFixedConversionRate sets the "fixed_conversion_rate" field.
+func (u *ProviderOrderTokenUpsert) SetFixedConversionRate(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Set(providerordertoken.FieldFixedConversionRate, v)
+	return u
+}
+
+// UpdateFixedConversionRate sets the "fixed_conversion_rate" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsert) UpdateFixedConversionRate() *ProviderOrderTokenUpsert {
+	u.SetExcluded(providerordertoken.FieldFixedConversionRate)
+	return u
+}
+
+// AddFixedConversionRate adds v to the "fixed_conversion_rate" field.
+func (u *ProviderOrderTokenUpsert) AddFixedConversionRate(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Add(providerordertoken.FieldFixedConversionRate, v)
+	return u
+}
+
+// SetFloatingConversionRate sets the "floating_conversion_rate" field.
+func (u *ProviderOrderTokenUpsert) SetFloatingConversionRate(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Set(providerordertoken.FieldFloatingConversionRate, v)
+	return u
+}
+
+// UpdateFloatingConversionRate sets the "floating_conversion_rate" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsert) UpdateFloatingConversionRate() *ProviderOrderTokenUpsert {
+	u.SetExcluded(providerordertoken.FieldFloatingConversionRate)
+	return u
+}
+
+// AddFloatingConversionRate adds v to the "floating_conversion_rate" field.
+func (u *ProviderOrderTokenUpsert) AddFloatingConversionRate(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Add(providerordertoken.FieldFloatingConversionRate, v)
+	return u
+}
+
+// SetConversionRateType sets the "conversion_rate_type" field.
+func (u *ProviderOrderTokenUpsert) SetConversionRateType(v providerordertoken.ConversionRateType) *ProviderOrderTokenUpsert {
+	u.Set(providerordertoken.FieldConversionRateType, v)
+	return u
+}
+
+// UpdateConversionRateType sets the "conversion_rate_type" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsert) UpdateConversionRateType() *ProviderOrderTokenUpsert {
+	u.SetExcluded(providerordertoken.FieldConversionRateType)
+	return u
+}
+
+// SetMaxOrderAmount sets the "max_order_amount" field.
+func (u *ProviderOrderTokenUpsert) SetMaxOrderAmount(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Set(providerordertoken.FieldMaxOrderAmount, v)
+	return u
+}
+
+// UpdateMaxOrderAmount sets the "max_order_amount" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsert) UpdateMaxOrderAmount() *ProviderOrderTokenUpsert {
+	u.SetExcluded(providerordertoken.FieldMaxOrderAmount)
+	return u
+}
+
+// AddMaxOrderAmount adds v to the "max_order_amount" field.
+func (u *ProviderOrderTokenUpsert) AddMaxOrderAmount(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Add(providerordertoken.FieldMaxOrderAmount, v)
+	return u
+}
+
+// SetMinOrderAmount sets the "min_order_amount" field.
+func (u *ProviderOrderTokenUpsert) SetMinOrderAmount(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Set(providerordertoken.FieldMinOrderAmount, v)
+	return u
+}
+
+// UpdateMinOrderAmount sets the "min_order_amount" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsert) UpdateMinOrderAmount() *ProviderOrderTokenUpsert {
+	u.SetExcluded(providerordertoken.FieldMinOrderAmount)
+	return u
+}
+
+// AddMinOrderAmount adds v to the "min_order_amount" field.
+func (u *ProviderOrderTokenUpsert) AddMinOrderAmount(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Add(providerordertoken.FieldMinOrderAmount, v)
+	return u
+}
+
+// SetAddress sets the "address" field.
+func (u *ProviderOrderTokenUpsert) SetAddress(v string) *ProviderOrderTokenUpsert {
+	u.Set(providerordertoken.FieldAddress, v)
+	return u
+}
+
+// UpdateAddress sets the "address" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsert) UpdateAddress() *ProviderOrderTokenUpsert {
+	u.SetExcluded(providerordertoken.FieldAddress)
+	return u
+}
+
+// ClearAddress clears the value of the "address" field.
+func (u *ProviderOrderTokenUpsert) ClearAddress() *ProviderOrderTokenUpsert {
+	u.SetNull(providerordertoken.FieldAddress)
+	return u
+}
+
+// SetNetwork sets the "network" field.
+func (u *ProviderOrderTokenUpsert) SetNetwork(v string) *ProviderOrderTokenUpsert {
+	u.Set(providerordertoken.FieldNetwork, v)
+	return u
+}
+
+// UpdateNetwork sets the "network" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsert) UpdateNetwork() *ProviderOrderTokenUpsert {
+	u.SetExcluded(providerordertoken.FieldNetwork)
+	return u
+}
+
+// ClearNetwork clears the value of the "network" field.
+func (u *ProviderOrderTokenUpsert) ClearNetwork() *ProviderOrderTokenUpsert {
+	u.SetNull(providerordertoken.FieldNetwork)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// Using this option is equivalent to using:
+//
+//	client.ProviderOrderToken.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *ProviderOrderTokenUpsertOne) UpdateNewValues() *ProviderOrderTokenUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.CreatedAt(); exists {
+			s.SetIgnore(providerordertoken.FieldCreatedAt)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.ProviderOrderToken.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *ProviderOrderTokenUpsertOne) Ignore() *ProviderOrderTokenUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *ProviderOrderTokenUpsertOne) DoNothing() *ProviderOrderTokenUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the ProviderOrderTokenCreate.OnConflict
+// documentation for more info.
+func (u *ProviderOrderTokenUpsertOne) Update(set func(*ProviderOrderTokenUpsert)) *ProviderOrderTokenUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&ProviderOrderTokenUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *ProviderOrderTokenUpsertOne) SetUpdatedAt(v time.Time) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetUpdatedAt(v)
+	})
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertOne) UpdateUpdatedAt() *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateUpdatedAt()
+	})
+}
+
+// SetFixedConversionRate sets the "fixed_conversion_rate" field.
+func (u *ProviderOrderTokenUpsertOne) SetFixedConversionRate(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetFixedConversionRate(v)
+	})
+}
+
+// AddFixedConversionRate adds v to the "fixed_conversion_rate" field.
+func (u *ProviderOrderTokenUpsertOne) AddFixedConversionRate(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.AddFixedConversionRate(v)
+	})
+}
+
+// UpdateFixedConversionRate sets the "fixed_conversion_rate" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertOne) UpdateFixedConversionRate() *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateFixedConversionRate()
+	})
+}
+
+// SetFloatingConversionRate sets the "floating_conversion_rate" field.
+func (u *ProviderOrderTokenUpsertOne) SetFloatingConversionRate(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetFloatingConversionRate(v)
+	})
+}
+
+// AddFloatingConversionRate adds v to the "floating_conversion_rate" field.
+func (u *ProviderOrderTokenUpsertOne) AddFloatingConversionRate(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.AddFloatingConversionRate(v)
+	})
+}
+
+// UpdateFloatingConversionRate sets the "floating_conversion_rate" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertOne) UpdateFloatingConversionRate() *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateFloatingConversionRate()
+	})
+}
+
+// SetConversionRateType sets the "conversion_rate_type" field.
+func (u *ProviderOrderTokenUpsertOne) SetConversionRateType(v providerordertoken.ConversionRateType) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetConversionRateType(v)
+	})
+}
+
+// UpdateConversionRateType sets the "conversion_rate_type" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertOne) UpdateConversionRateType() *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateConversionRateType()
+	})
+}
+
+// SetMaxOrderAmount sets the "max_order_amount" field.
+func (u *ProviderOrderTokenUpsertOne) SetMaxOrderAmount(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetMaxOrderAmount(v)
+	})
+}
+
+// AddMaxOrderAmount adds v to the "max_order_amount" field.
+func (u *ProviderOrderTokenUpsertOne) AddMaxOrderAmount(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.AddMaxOrderAmount(v)
+	})
+}
+
+// UpdateMaxOrderAmount sets the "max_order_amount" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertOne) UpdateMaxOrderAmount() *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateMaxOrderAmount()
+	})
+}
+
+// SetMinOrderAmount sets the "min_order_amount" field.
+func (u *ProviderOrderTokenUpsertOne) SetMinOrderAmount(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetMinOrderAmount(v)
+	})
+}
+
+// AddMinOrderAmount adds v to the "min_order_amount" field.
+func (u *ProviderOrderTokenUpsertOne) AddMinOrderAmount(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.AddMinOrderAmount(v)
+	})
+}
+
+// UpdateMinOrderAmount sets the "min_order_amount" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertOne) UpdateMinOrderAmount() *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateMinOrderAmount()
+	})
+}
+
+// SetAddress sets the "address" field.
+func (u *ProviderOrderTokenUpsertOne) SetAddress(v string) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetAddress(v)
+	})
+}
+
+// UpdateAddress sets the "address" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertOne) UpdateAddress() *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateAddress()
+	})
+}
+
+// ClearAddress clears the value of the "address" field.
+func (u *ProviderOrderTokenUpsertOne) ClearAddress() *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.ClearAddress()
+	})
+}
+
+// SetNetwork sets the "network" field.
+func (u *ProviderOrderTokenUpsertOne) SetNetwork(v string) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetNetwork(v)
+	})
+}
+
+// UpdateNetwork sets the "network" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertOne) UpdateNetwork() *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateNetwork()
+	})
+}
+
+// ClearNetwork clears the value of the "network" field.
+func (u *ProviderOrderTokenUpsertOne) ClearNetwork() *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.ClearNetwork()
+	})
+}
+
+// Exec executes the query.
+func (u *ProviderOrderTokenUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for ProviderOrderTokenCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *ProviderOrderTokenUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *ProviderOrderTokenUpsertOne) ID(ctx context.Context) (id int, err error) {
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	if nodes := potc.mutation.CurrencyIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   providerordertoken.CurrencyTable,
+			Columns: []string{providerordertoken.CurrencyColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.fiat_currency_provider_order_tokens = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	return _node, _spec
+}
+
 // ProviderOrderTokenCreateBulk is the builder for creating many ProviderOrderToken entities in bulk.
 type ProviderOrderTokenCreateBulk struct {
 	config
@@ -423,6 +847,271 @@ func (potcb *ProviderOrderTokenCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (potcb *ProviderOrderTokenCreateBulk) ExecX(ctx context.Context) {
 	if err := potcb.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.ProviderOrderToken.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.ProviderOrderTokenUpsert) {
+//			SetCreatedAt(v+v).
+//		}).
+//		Exec(ctx)
+func (potcb *ProviderOrderTokenCreateBulk) OnConflict(opts ...sql.ConflictOption) *ProviderOrderTokenUpsertBulk {
+	potcb.conflict = opts
+	return &ProviderOrderTokenUpsertBulk{
+		create: potcb,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.ProviderOrderToken.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (potcb *ProviderOrderTokenCreateBulk) OnConflictColumns(columns ...string) *ProviderOrderTokenUpsertBulk {
+	potcb.conflict = append(potcb.conflict, sql.ConflictColumns(columns...))
+	return &ProviderOrderTokenUpsertBulk{
+		create: potcb,
+	}
+}
+
+// ProviderOrderTokenUpsertBulk is the builder for "upsert"-ing
+// a bulk of ProviderOrderToken nodes.
+type ProviderOrderTokenUpsertBulk struct {
+	create *ProviderOrderTokenCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.ProviderOrderToken.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *ProviderOrderTokenUpsertBulk) UpdateNewValues() *ProviderOrderTokenUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.CreatedAt(); exists {
+				s.SetIgnore(providerordertoken.FieldCreatedAt)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.ProviderOrderToken.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *ProviderOrderTokenUpsertBulk) Ignore() *ProviderOrderTokenUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *ProviderOrderTokenUpsertBulk) DoNothing() *ProviderOrderTokenUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the ProviderOrderTokenCreateBulk.OnConflict
+// documentation for more info.
+func (u *ProviderOrderTokenUpsertBulk) Update(set func(*ProviderOrderTokenUpsert)) *ProviderOrderTokenUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&ProviderOrderTokenUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *ProviderOrderTokenUpsertBulk) SetUpdatedAt(v time.Time) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetUpdatedAt(v)
+	})
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertBulk) UpdateUpdatedAt() *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateUpdatedAt()
+	})
+}
+
+// SetFixedConversionRate sets the "fixed_conversion_rate" field.
+func (u *ProviderOrderTokenUpsertBulk) SetFixedConversionRate(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetFixedConversionRate(v)
+	})
+}
+
+// AddFixedConversionRate adds v to the "fixed_conversion_rate" field.
+func (u *ProviderOrderTokenUpsertBulk) AddFixedConversionRate(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.AddFixedConversionRate(v)
+	})
+}
+
+// UpdateFixedConversionRate sets the "fixed_conversion_rate" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertBulk) UpdateFixedConversionRate() *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateFixedConversionRate()
+	})
+}
+
+// SetFloatingConversionRate sets the "floating_conversion_rate" field.
+func (u *ProviderOrderTokenUpsertBulk) SetFloatingConversionRate(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetFloatingConversionRate(v)
+	})
+}
+
+// AddFloatingConversionRate adds v to the "floating_conversion_rate" field.
+func (u *ProviderOrderTokenUpsertBulk) AddFloatingConversionRate(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.AddFloatingConversionRate(v)
+	})
+}
+
+// UpdateFloatingConversionRate sets the "floating_conversion_rate" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertBulk) UpdateFloatingConversionRate() *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateFloatingConversionRate()
+	})
+}
+
+// SetConversionRateType sets the "conversion_rate_type" field.
+func (u *ProviderOrderTokenUpsertBulk) SetConversionRateType(v providerordertoken.ConversionRateType) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetConversionRateType(v)
+	})
+}
+
+// UpdateConversionRateType sets the "conversion_rate_type" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertBulk) UpdateConversionRateType() *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateConversionRateType()
+	})
+}
+
+// SetMaxOrderAmount sets the "max_order_amount" field.
+func (u *ProviderOrderTokenUpsertBulk) SetMaxOrderAmount(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetMaxOrderAmount(v)
+	})
+}
+
+// AddMaxOrderAmount adds v to the "max_order_amount" field.
+func (u *ProviderOrderTokenUpsertBulk) AddMaxOrderAmount(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.AddMaxOrderAmount(v)
+	})
+}
+
+// UpdateMaxOrderAmount sets the "max_order_amount" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertBulk) UpdateMaxOrderAmount() *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateMaxOrderAmount()
+	})
+}
+
+// SetMinOrderAmount sets the "min_order_amount" field.
+func (u *ProviderOrderTokenUpsertBulk) SetMinOrderAmount(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetMinOrderAmount(v)
+	})
+}
+
+// AddMinOrderAmount adds v to the "min_order_amount" field.
+func (u *ProviderOrderTokenUpsertBulk) AddMinOrderAmount(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.AddMinOrderAmount(v)
+	})
+}
+
+// UpdateMinOrderAmount sets the "min_order_amount" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertBulk) UpdateMinOrderAmount() *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateMinOrderAmount()
+	})
+}
+
+// SetAddress sets the "address" field.
+func (u *ProviderOrderTokenUpsertBulk) SetAddress(v string) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetAddress(v)
+	})
+}
+
+// UpdateAddress sets the "address" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertBulk) UpdateAddress() *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateAddress()
+	})
+}
+
+// ClearAddress clears the value of the "address" field.
+func (u *ProviderOrderTokenUpsertBulk) ClearAddress() *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.ClearAddress()
+	})
+}
+
+// SetNetwork sets the "network" field.
+func (u *ProviderOrderTokenUpsertBulk) SetNetwork(v string) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetNetwork(v)
+	})
+}
+
+// UpdateNetwork sets the "network" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertBulk) UpdateNetwork() *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateNetwork()
+	})
+}
+
+// ClearNetwork clears the value of the "network" field.
+func (u *ProviderOrderTokenUpsertBulk) ClearNetwork() *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.ClearNetwork()
+	})
+}
+
+// Exec executes the query.
+func (u *ProviderOrderTokenUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the ProviderOrderTokenCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for ProviderOrderTokenCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *ProviderOrderTokenUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

@@ -22,7 +22,6 @@ import (
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
-	entToken "github.com/paycrest/aggregator/ent/token"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/shopspring/decimal"
@@ -122,7 +121,7 @@ func CreateERC20Token(client types.RPCClient, overrides map[string]interface{}) 
 
 	token, err := db.Client.Token.
 		Query().
-		Where(entToken.IDEQ(tokenId)).
+		Where(token.IDEQ(tokenId)).
 		WithNetwork().
 		Only(context.Background())
 
@@ -178,7 +177,7 @@ func CreateTRC20Token(client types.RPCClient, overrides map[string]interface{}) 
 
 	token, err := db.Client.Token.
 		Query().
-		Where(entToken.IDEQ(tokenId)).
+		Where(token.IDEQ(tokenId)).
 		WithNetwork().
 		Only(context.Background())
 
@@ -520,31 +519,21 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		payload["tokenID"] = token.ID
 	}
 
-	orderToken, err := db.Client.ProviderOrderToken.
-		Create().
-		SetProvider(payload["provider"].(*ent.ProviderProfile)).
-		SetMaxOrderAmount(payload["max_order_amount"].(decimal.Decimal)).
-		SetMinOrderAmount(payload["min_order_amount"].(decimal.Decimal)).
-		SetConversionRateType(providerordertoken.ConversionRateType(payload["conversion_rate_type"].(string))).
-		SetFixedConversionRate(payload["fixed_conversion_rate"].(decimal.Decimal)).
-		SetFloatingConversionRate(payload["floating_conversion_rate"].(decimal.Decimal)).
-<<<<<<< HEAD
-		SetAddresses(addresses).
-=======
-		SetAddress(payload["address"].(string)).
-		SetNetwork(payload["network"].(string)).
-<<<<<<< HEAD
-		SetTokenID(payload["token"].(int)).
-		SetCurrencyID(payload["currency"].(uuid.UUID)).
->>>>>>> 501a699 (feat: restructure provider order token + refactor for multi-currency support)
-=======
-		SetTokenID(payload["tokenID"].(int)).
-		SetCurrencyID(payload["currency_id"].(uuid.UUID)).
->>>>>>> df01802 (feat(test): resolve failing priority queue test)
-		Save(context.Background())
+orderToken, err := db.Client.ProviderOrderToken.
+	Create().
+	SetProvider(payload["provider"].(*ent.ProviderProfile)).
+	SetMaxOrderAmount(payload["max_order_amount"].(decimal.Decimal)).
+	SetMinOrderAmount(payload["min_order_amount"].(decimal.Decimal)).
+	SetConversionRateType(providerordertoken.ConversionRateType(payload["conversion_rate_type"].(string))).
+	SetFixedConversionRate(payload["fixed_conversion_rate"].(decimal.Decimal)).
+	SetFloatingConversionRate(payload["floating_conversion_rate"].(decimal.Decimal)).
+	SetAddress(payload["address"].(string)).
+	SetNetwork(payload["network"].(string)).
+	SetTokenID(payload["tokenID"].(int)).
+	SetCurrencyID(payload["currency_id"].(uuid.UUID)).
+	Save(context.Background())
 
-	return orderToken, err
-}
+return orderToken, err
 
 // CreateTestProviderProfile creates a test ProviderProfile with defaults or custom values
 func CreateTestProvisionBucket(overrides map[string]interface{}) (*ent.ProvisionBucket, error) {

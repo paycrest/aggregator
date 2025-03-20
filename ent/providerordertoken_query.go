@@ -11,18 +11,13 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-<<<<<<< HEAD
+	"github.com/google/uuid"
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
-=======
-	"github.com/google/uuid"
-	"github.com/paycrest/protocol/ent/fiatcurrency"
-	"github.com/paycrest/protocol/ent/predicate"
-	"github.com/paycrest/protocol/ent/providerordertoken"
-	"github.com/paycrest/protocol/ent/providerprofile"
-	"github.com/paycrest/protocol/ent/token"
->>>>>>> 501a699 (feat: restructure provider order token + refactor for multi-currency support)
+	"github.com/paycrest/aggregator/ent/token"
+
 )
 
 // ProviderOrderTokenQuery is the builder for querying ProviderOrderToken entities.
