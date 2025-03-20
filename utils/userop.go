@@ -485,13 +485,27 @@ func eip1559GasPrice(ctx context.Context, client types.RPCClient) (maxFeePerGas,
 		if err != nil {
 			return nil, nil, err
 		}
-		maxFeePerGas = big.NewInt(0).Add(tip, new(big.Int).Mul(latestHeader.BaseFee, common.Big3))
+
+		// Ensure minimum priority fee of 500000 wei
+		minPriorityFee := big.NewInt(500000)
+		if tip.Cmp(minPriorityFee) < 0 {
+			tip = minPriorityFee
+		}
+
+		maxFeePerGas = big.NewInt(0).Add(tip, new(big.Int).Mul(latestHeader.BaseFee, common.Big2))
 		maxPriorityFeePerGas = tip
 	} else {
 		sgp, err := client.SuggestGasPrice(ctx)
 		if err != nil {
 			return nil, nil, err
 		}
+
+		// Ensure minimum gas price of 500000 wei
+		minGasPrice := big.NewInt(500000)
+		if sgp.Cmp(minGasPrice) < 0 {
+			sgp = minGasPrice
+		}
+
 		maxFeePerGas = sgp
 		maxPriorityFeePerGas = sgp
 	}
