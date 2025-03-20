@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	"entgo.io/ent/dialect"
-	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -22,7 +20,6 @@ type LockOrderFulfillmentCreate struct {
 	config
 	mutation *LockOrderFulfillmentMutation
 	hooks    []Hook
-	conflict []sql.ConflictOption
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -237,7 +234,6 @@ func (lofc *LockOrderFulfillmentCreate) createSpec() (*LockOrderFulfillment, *sq
 		_node = &LockOrderFulfillment{config: lofc.config}
 		_spec = sqlgraph.NewCreateSpec(lockorderfulfillment.Table, sqlgraph.NewFieldSpec(lockorderfulfillment.FieldID, field.TypeUUID))
 	)
-	_spec.OnConflict = lofc.conflict
 	if id, ok := lofc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
@@ -285,6 +281,7 @@ func (lofc *LockOrderFulfillmentCreate) createSpec() (*LockOrderFulfillment, *sq
 	}
 	return _node, _spec
 }
+
 
 // OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
 // of the `INSERT` statement. For example:
@@ -598,7 +595,6 @@ type LockOrderFulfillmentCreateBulk struct {
 	config
 	err      error
 	builders []*LockOrderFulfillmentCreate
-	conflict []sql.ConflictOption
 }
 
 // Save creates the LockOrderFulfillment entities in the database.
@@ -628,7 +624,6 @@ func (lofcb *LockOrderFulfillmentCreateBulk) Save(ctx context.Context) ([]*LockO
 					_, err = mutators[i+1].Mutate(root, lofcb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = lofcb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, lofcb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -678,6 +673,7 @@ func (lofcb *LockOrderFulfillmentCreateBulk) ExecX(ctx context.Context) {
 		panic(err)
 	}
 }
+
 
 // OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
 // of the `INSERT` statement. For example:

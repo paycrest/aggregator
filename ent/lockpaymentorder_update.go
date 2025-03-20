@@ -42,6 +42,26 @@ func (lpou *LockPaymentOrderUpdate) SetUpdatedAt(t time.Time) *LockPaymentOrderU
 	return lpou
 }
 
+// SetDeletedAt sets the "deleted_at" field.
+func (lpou *LockPaymentOrderUpdate) SetDeletedAt(t time.Time) *LockPaymentOrderUpdate {
+	lpou.mutation.SetDeletedAt(t)
+	return lpou
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (lpou *LockPaymentOrderUpdate) SetNillableDeletedAt(t *time.Time) *LockPaymentOrderUpdate {
+	if t != nil {
+		lpou.SetDeletedAt(*t)
+	}
+	return lpou
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (lpou *LockPaymentOrderUpdate) ClearDeletedAt() *LockPaymentOrderUpdate {
+	lpou.mutation.ClearDeletedAt()
+	return lpou
+}
+
 // SetGatewayID sets the "gateway_id" field.
 func (lpou *LockPaymentOrderUpdate) SetGatewayID(s string) *LockPaymentOrderUpdate {
 	lpou.mutation.SetGatewayID(s)
@@ -415,7 +435,9 @@ func (lpou *LockPaymentOrderUpdate) RemoveTransactions(t ...*TransactionLog) *Lo
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (lpou *LockPaymentOrderUpdate) Save(ctx context.Context) (int, error) {
-	lpou.defaults()
+	if err := lpou.defaults(); err != nil {
+		return 0, err
+	}
 	return withHooks(ctx, lpou.sqlSave, lpou.mutation, lpou.hooks)
 }
 
@@ -442,11 +464,15 @@ func (lpou *LockPaymentOrderUpdate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (lpou *LockPaymentOrderUpdate) defaults() {
+func (lpou *LockPaymentOrderUpdate) defaults() error {
 	if _, ok := lpou.mutation.UpdatedAt(); !ok {
+		if lockpaymentorder.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized lockpaymentorder.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := lockpaymentorder.UpdateDefaultUpdatedAt()
 		lpou.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -481,6 +507,12 @@ func (lpou *LockPaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err err
 	}
 	if value, ok := lpou.mutation.UpdatedAt(); ok {
 		_spec.SetField(lockpaymentorder.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := lpou.mutation.DeletedAt(); ok {
+		_spec.SetField(lockpaymentorder.FieldDeletedAt, field.TypeTime, value)
+	}
+	if lpou.mutation.DeletedAtCleared() {
+		_spec.ClearField(lockpaymentorder.FieldDeletedAt, field.TypeTime)
 	}
 	if value, ok := lpou.mutation.GatewayID(); ok {
 		_spec.SetField(lockpaymentorder.FieldGatewayID, field.TypeString, value)
@@ -747,6 +779,26 @@ type LockPaymentOrderUpdateOne struct {
 // SetUpdatedAt sets the "updated_at" field.
 func (lpouo *LockPaymentOrderUpdateOne) SetUpdatedAt(t time.Time) *LockPaymentOrderUpdateOne {
 	lpouo.mutation.SetUpdatedAt(t)
+	return lpouo
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (lpouo *LockPaymentOrderUpdateOne) SetDeletedAt(t time.Time) *LockPaymentOrderUpdateOne {
+	lpouo.mutation.SetDeletedAt(t)
+	return lpouo
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (lpouo *LockPaymentOrderUpdateOne) SetNillableDeletedAt(t *time.Time) *LockPaymentOrderUpdateOne {
+	if t != nil {
+		lpouo.SetDeletedAt(*t)
+	}
+	return lpouo
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (lpouo *LockPaymentOrderUpdateOne) ClearDeletedAt() *LockPaymentOrderUpdateOne {
+	lpouo.mutation.ClearDeletedAt()
 	return lpouo
 }
 
@@ -1136,7 +1188,9 @@ func (lpouo *LockPaymentOrderUpdateOne) Select(field string, fields ...string) *
 
 // Save executes the query and returns the updated LockPaymentOrder entity.
 func (lpouo *LockPaymentOrderUpdateOne) Save(ctx context.Context) (*LockPaymentOrder, error) {
-	lpouo.defaults()
+	if err := lpouo.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, lpouo.sqlSave, lpouo.mutation, lpouo.hooks)
 }
 
@@ -1163,11 +1217,15 @@ func (lpouo *LockPaymentOrderUpdateOne) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (lpouo *LockPaymentOrderUpdateOne) defaults() {
+func (lpouo *LockPaymentOrderUpdateOne) defaults() error {
 	if _, ok := lpouo.mutation.UpdatedAt(); !ok {
+		if lockpaymentorder.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized lockpaymentorder.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := lockpaymentorder.UpdateDefaultUpdatedAt()
 		lpouo.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -1219,6 +1277,12 @@ func (lpouo *LockPaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *Loc
 	}
 	if value, ok := lpouo.mutation.UpdatedAt(); ok {
 		_spec.SetField(lockpaymentorder.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := lpouo.mutation.DeletedAt(); ok {
+		_spec.SetField(lockpaymentorder.FieldDeletedAt, field.TypeTime, value)
+	}
+	if lpouo.mutation.DeletedAtCleared() {
+		_spec.ClearField(lockpaymentorder.FieldDeletedAt, field.TypeTime)
 	}
 	if value, ok := lpouo.mutation.GatewayID(); ok {
 		_spec.SetField(lockpaymentorder.FieldGatewayID, field.TypeString, value)

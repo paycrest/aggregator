@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -24,7 +23,6 @@ type ProviderOrderTokenCreate struct {
 	config
 	mutation *ProviderOrderTokenMutation
 	hooks    []Hook
-	conflict []sql.ConflictOption
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -254,7 +252,6 @@ func (potc *ProviderOrderTokenCreate) createSpec() (*ProviderOrderToken, *sqlgra
 		_node = &ProviderOrderToken{config: potc.config}
 		_spec = sqlgraph.NewCreateSpec(providerordertoken.Table, sqlgraph.NewFieldSpec(providerordertoken.FieldID, field.TypeInt))
 	)
-	_spec.OnConflict = potc.conflict
 	if value, ok := potc.mutation.CreatedAt(); ok {
 		_spec.SetField(providerordertoken.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -746,16 +743,24 @@ func (u *ProviderOrderTokenUpsertOne) ID(ctx context.Context) (id int, err error
 	if err != nil {
 		return id, err
 	}
-	return node.ID, nil
-}
-
-// IDX is like ID, but panics if an error occurs.
-func (u *ProviderOrderTokenUpsertOne) IDX(ctx context.Context) int {
-	id, err := u.ID(ctx)
-	if err != nil {
-		panic(err)
+	if nodes := potc.mutation.CurrencyIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   providerordertoken.CurrencyTable,
+			Columns: []string{providerordertoken.CurrencyColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.fiat_currency_provider_order_tokens = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
-	return id
+	return _node, _spec
 }
 
 // ProviderOrderTokenCreateBulk is the builder for creating many ProviderOrderToken entities in bulk.
@@ -763,7 +768,6 @@ type ProviderOrderTokenCreateBulk struct {
 	config
 	err      error
 	builders []*ProviderOrderTokenCreate
-	conflict []sql.ConflictOption
 }
 
 // Save creates the ProviderOrderToken entities in the database.
@@ -793,7 +797,6 @@ func (potcb *ProviderOrderTokenCreateBulk) Save(ctx context.Context) ([]*Provide
 					_, err = mutators[i+1].Mutate(root, potcb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = potcb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, potcb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {

@@ -10,10 +10,17 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
+<<<<<<< HEAD
 	"github.com/paycrest/aggregator/ent/apikey"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
 	"github.com/paycrest/aggregator/ent/user"
+=======
+	"github.com/paycrest/protocol/ent/apikey"
+	"github.com/paycrest/protocol/ent/providerprofile"
+	"github.com/paycrest/protocol/ent/providerrating"
+	"github.com/paycrest/protocol/ent/user"
+>>>>>>> e5f1282 (feat(provider): update relationships to support multiple currencies for provider profiles)
 )
 
 // ProviderProfile is the model entity for the ProviderProfile schema.

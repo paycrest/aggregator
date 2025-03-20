@@ -519,22 +519,21 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		payload["tokenID"] = token.ID
 	}
 
-	orderToken, err := db.Client.ProviderOrderToken.
-		Create().
-		SetProvider(payload["provider"].(*ent.ProviderProfile)).
-		SetMaxOrderAmount(payload["max_order_amount"].(decimal.Decimal)).
-		SetMinOrderAmount(payload["min_order_amount"].(decimal.Decimal)).
-		SetConversionRateType(providerordertoken.ConversionRateType(payload["conversion_rate_type"].(string))).
-		SetFixedConversionRate(payload["fixed_conversion_rate"].(decimal.Decimal)).
-		SetFloatingConversionRate(payload["floating_conversion_rate"].(decimal.Decimal)).
-		SetAddress(payload["address"].(string)).
-		SetNetwork(payload["network"].(string)).
-		SetTokenID(payload["tokenID"].(int)).
-		SetCurrencyID(payload["currency_id"].(uuid.UUID)).
-		Save(context.Background())
+orderToken, err := db.Client.ProviderOrderToken.
+	Create().
+	SetProvider(payload["provider"].(*ent.ProviderProfile)).
+	SetMaxOrderAmount(payload["max_order_amount"].(decimal.Decimal)).
+	SetMinOrderAmount(payload["min_order_amount"].(decimal.Decimal)).
+	SetConversionRateType(providerordertoken.ConversionRateType(payload["conversion_rate_type"].(string))).
+	SetFixedConversionRate(payload["fixed_conversion_rate"].(decimal.Decimal)).
+	SetFloatingConversionRate(payload["floating_conversion_rate"].(decimal.Decimal)).
+	SetAddress(payload["address"].(string)).
+	SetNetwork(payload["network"].(string)).
+	SetTokenID(payload["tokenID"].(int)).
+	SetCurrencyID(payload["currency_id"].(uuid.UUID)).
+	Save(context.Background())
 
-	return orderToken, err
-}
+return orderToken, err
 
 // CreateTestProviderProfile creates a test ProviderProfile with defaults or custom values
 func CreateTestProvisionBucket(overrides map[string]interface{}) (*ent.ProvisionBucket, error) {
@@ -552,6 +551,8 @@ func CreateTestProvisionBucket(overrides map[string]interface{}) (*ent.Provision
 	for key, value := range overrides {
 		payload[key] = value
 	}
+
+	ctx := context.Background()
 
 	bucket, err := db.Client.ProvisionBucket.Create().
 		SetMinAmount(payload["min_amount"].(decimal.Decimal)).
