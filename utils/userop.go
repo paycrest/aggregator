@@ -486,8 +486,8 @@ func eip1559GasPrice(ctx context.Context, client types.RPCClient) (maxFeePerGas,
 			return nil, nil, err
 		}
 
-		// Ensure minimum priority fee of 500000 wei
-		minPriorityFee := big.NewInt(500000)
+		// Ensure minimum priority fee of 700000 wei
+		minPriorityFee := big.NewInt(700000)
 		if tip.Cmp(minPriorityFee) < 0 {
 			tip = minPriorityFee
 		}
@@ -500,8 +500,8 @@ func eip1559GasPrice(ctx context.Context, client types.RPCClient) (maxFeePerGas,
 			return nil, nil, err
 		}
 
-		// Ensure minimum gas price of 500000 wei
-		minGasPrice := big.NewInt(500000)
+		// Ensure minimum gas price of 700000 wei
+		minGasPrice := big.NewInt(700000)
 		if sgp.Cmp(minGasPrice) < 0 {
 			sgp = minGasPrice
 		}
