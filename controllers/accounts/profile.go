@@ -18,6 +18,7 @@ import (
 	svc "github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
+	"github.com/paycrest/aggregator/utils"
 	u "github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/shopspring/decimal"
@@ -241,6 +242,8 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		update.SetHostIdentifier(payload.HostIdentifier)
 	}
 
+	// Track if IsAvailable is being set to false for Redis queue removal
+	isAvailableChangingToFalse := provider.IsAvailable && !payload.IsAvailable
 	if payload.IsAvailable {
 		update.SetIsAvailable(true)
 	} else {
@@ -470,11 +473,16 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		update.SetIsActive(true)
 	}
 
-	_, err := update.Save(ctx)
+	updatedProvider, err := update.Save(ctx)
 	if err != nil {
 		logger.Errorf("Failed to commit update of provider profile: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 		return
+	}
+
+	// Remove provider from Redis queues if IsAvailable is set to false
+	if isAvailableChangingToFalse {
+		utils.RemoveProviderFromQueues(ctx, updatedProvider)
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Profile updated successfully", nil)
