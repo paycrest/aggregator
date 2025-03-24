@@ -41,6 +41,8 @@ const (
 	EdgeInstitutions = "institutions"
 	// EdgeProviderOrderTokens holds the string denoting the provider_order_tokens edge name in mutations.
 	EdgeProviderOrderTokens = "provider_order_tokens"
+	// EdgeProviderAvailability holds the string denoting the provider_availability edge name in mutations.
+	EdgeProviderAvailability = "provider_availability"
 	// Table holds the table name of the fiatcurrency in the database.
 	Table = "fiat_currencies"
 	// ProvidersTable is the table that holds the providers relation/edge. The primary key declared below.
@@ -69,6 +71,13 @@ const (
 	ProviderOrderTokensInverseTable = "provider_order_tokens"
 	// ProviderOrderTokensColumn is the table column denoting the provider_order_tokens relation/edge.
 	ProviderOrderTokensColumn = "fiat_currency_provider_order_tokens"
+	// ProviderAvailabilityTable is the table that holds the provider_availability relation/edge.
+	ProviderAvailabilityTable = "provider_currency_availabilities"
+	// ProviderAvailabilityInverseTable is the table name for the ProviderCurrencyAvailability entity.
+	// It exists in this package in order to avoid circular dependency with the "providercurrencyavailability" package.
+	ProviderAvailabilityInverseTable = "provider_currency_availabilities"
+	// ProviderAvailabilityColumn is the table column denoting the provider_availability relation/edge.
+	ProviderAvailabilityColumn = "fiat_currency_provider_availability"
 )
 
 // Columns holds all SQL columns for fiatcurrency fields.
@@ -224,6 +233,20 @@ func ByProviderOrderTokens(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOpti
 		sqlgraph.OrderByNeighborTerms(s, newProviderOrderTokensStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByProviderAvailabilityCount orders the results by provider_availability count.
+func ByProviderAvailabilityCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newProviderAvailabilityStep(), opts...)
+	}
+}
+
+// ByProviderAvailability orders the results by provider_availability terms.
+func ByProviderAvailability(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProviderAvailabilityStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newProvidersStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -250,5 +273,12 @@ func newProviderOrderTokensStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ProviderOrderTokensInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, ProviderOrderTokensTable, ProviderOrderTokensColumn),
+	)
+}
+func newProviderAvailabilityStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProviderAvailabilityInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ProviderAvailabilityTable, ProviderAvailabilityColumn),
 	)
 }

@@ -624,6 +624,29 @@ func HasProviderOrderTokensWith(preds ...predicate.ProviderOrderToken) predicate
 	})
 }
 
+// HasProviderAvailability applies the HasEdge predicate on the "provider_availability" edge.
+func HasProviderAvailability() predicate.FiatCurrency {
+	return predicate.FiatCurrency(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ProviderAvailabilityTable, ProviderAvailabilityColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasProviderAvailabilityWith applies the HasEdge predicate on the "provider_availability" edge with a given conditions (other predicates).
+func HasProviderAvailabilityWith(preds ...predicate.ProviderCurrencyAvailability) predicate.FiatCurrency {
+	return predicate.FiatCurrency(func(s *sql.Selector) {
+		step := newProviderAvailabilityStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.FiatCurrency) predicate.FiatCurrency {
 	return predicate.FiatCurrency(sql.AndPredicates(predicates...))

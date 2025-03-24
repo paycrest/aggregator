@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
+	"github.com/paycrest/aggregator/ent/providercurrencyavailability"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -187,6 +188,21 @@ func (fcc *FiatCurrencyCreate) AddProviderOrderTokens(p ...*ProviderOrderToken) 
 		ids[i] = p[i].ID
 	}
 	return fcc.AddProviderOrderTokenIDs(ids...)
+}
+
+// AddProviderAvailabilityIDs adds the "provider_availability" edge to the ProviderCurrencyAvailability entity by IDs.
+func (fcc *FiatCurrencyCreate) AddProviderAvailabilityIDs(ids ...uuid.UUID) *FiatCurrencyCreate {
+	fcc.mutation.AddProviderAvailabilityIDs(ids...)
+	return fcc
+}
+
+// AddProviderAvailability adds the "provider_availability" edges to the ProviderCurrencyAvailability entity.
+func (fcc *FiatCurrencyCreate) AddProviderAvailability(p ...*ProviderCurrencyAvailability) *FiatCurrencyCreate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return fcc.AddProviderAvailabilityIDs(ids...)
 }
 
 // Mutation returns the FiatCurrencyMutation object of the builder.
@@ -404,6 +420,22 @@ func (fcc *FiatCurrencyCreate) createSpec() (*FiatCurrency, *sqlgraph.CreateSpec
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerordertoken.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := fcc.mutation.ProviderAvailabilityIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   fiatcurrency.ProviderAvailabilityTable,
+			Columns: []string{fiatcurrency.ProviderAvailabilityColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencyavailability.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
