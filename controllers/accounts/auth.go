@@ -233,7 +233,8 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		LastName:  user.LastName,
 	}
 
-	if !user.IsEmailVerified {
+	// Set email if either condition is true
+	if serverConf.Environment != "production" || !user.IsEmailVerified {
 		response.Email = user.Email
 	}
 
