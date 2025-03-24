@@ -311,6 +311,33 @@ var (
 			},
 		},
 	}
+	// ProviderCurrencyAvailabilitiesColumns holds the columns for the "provider_currency_availabilities" table.
+	ProviderCurrencyAvailabilitiesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "is_available", Type: field.TypeBool, Default: true},
+		{Name: "fiat_currency_provider_availability", Type: field.TypeUUID},
+		{Name: "provider_profile_currency_availability", Type: field.TypeString},
+	}
+	// ProviderCurrencyAvailabilitiesTable holds the schema information for the "provider_currency_availabilities" table.
+	ProviderCurrencyAvailabilitiesTable = &schema.Table{
+		Name:       "provider_currency_availabilities",
+		Columns:    ProviderCurrencyAvailabilitiesColumns,
+		PrimaryKey: []*schema.Column{ProviderCurrencyAvailabilitiesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "provider_currency_availabilities_fiat_currencies_provider_availability",
+				Columns:    []*schema.Column{ProviderCurrencyAvailabilitiesColumns[2]},
+				RefColumns: []*schema.Column{FiatCurrenciesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "provider_currency_availabilities_provider_profiles_currency_availability",
+				Columns:    []*schema.Column{ProviderCurrencyAvailabilitiesColumns[3]},
+				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+	}
 	// ProviderOrderTokensColumns holds the columns for the "provider_order_tokens" table.
 	ProviderOrderTokensColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -717,6 +744,7 @@ var (
 		NetworksTable,
 		PaymentOrdersTable,
 		PaymentOrderRecipientsTable,
+		ProviderCurrencyAvailabilitiesTable,
 		ProviderOrderTokensTable,
 		ProviderProfilesTable,
 		ProviderRatingsTable,
@@ -748,6 +776,8 @@ func init() {
 	PaymentOrdersTable.ForeignKeys[2].RefTable = SenderProfilesTable
 	PaymentOrdersTable.ForeignKeys[3].RefTable = TokensTable
 	PaymentOrderRecipientsTable.ForeignKeys[0].RefTable = PaymentOrdersTable
+	ProviderCurrencyAvailabilitiesTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
+	ProviderCurrencyAvailabilitiesTable.ForeignKeys[1].RefTable = ProviderProfilesTable
 	ProviderOrderTokensTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
 	ProviderOrderTokensTable.ForeignKeys[1].RefTable = ProviderProfilesTable
 	ProviderOrderTokensTable.ForeignKeys[2].RefTable = TokensTable

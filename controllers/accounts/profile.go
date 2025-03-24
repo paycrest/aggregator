@@ -9,6 +9,7 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/ent/providercurrencyavailability"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -18,6 +19,7 @@ import (
 	svc "github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
+	"github.com/paycrest/aggregator/utils"
 	u "github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/shopspring/decimal"
@@ -314,6 +316,57 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 
 	if payload.BusinessName != "" {
 		update.SetBusinessName(payload.BusinessName)
+	}
+
+	// Handle currency-specific availability
+	if len(payload.CurrenciesAvailability) > 0 {
+		for currencyCode, isAvailable := range payload.CurrenciesAvailability {
+			currency, err := storage.Client.FiatCurrency.Query().
+				Where(fiatcurrency.CodeEQ(currencyCode)).
+				Only(ctx)
+			if err != nil {
+				u.APIResponse(ctx, http.StatusBadRequest, "error",
+					fmt.Sprintf("Currency not found: %s", currencyCode), nil)
+				return
+			}
+
+			existingAvailability, err := storage.Client.ProviderCurrencyAvailability.
+				Query().
+				Where(
+					providercurrencyavailability.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+					providercurrencyavailability.HasCurrencyWith(fiatcurrency.IDEQ(currency.ID)),
+				).
+				Only(ctx)
+
+			if ent.IsNotFound(err) {
+				// Create new availability entry
+				_, err := storage.Client.ProviderCurrencyAvailability.
+					Create().
+					SetProvider(provider).
+					SetCurrency(currency).
+					SetIsAvailable(isAvailable).
+					Save(ctx)
+				if err != nil {
+					logger.Errorf("Failed to create availability record: %v", err)
+					continue
+				}
+			} else {
+				// Update existing record
+				_, err = existingAvailability.Update().
+					SetIsAvailable(isAvailable).
+					Save(ctx)
+				if err != nil {
+					logger.Errorf("Failed to update availability for provider %s, currency %s: %v", provider.ID, currencyCode, err)
+					continue
+				}
+			}
+
+			// Update Redis queue
+			err = utils.UpdateRedisQueue(ctx, storage.RedisClient, provider, currency.Code, isAvailable)
+			if err != nil {
+				logger.Errorf("Failed to update Redis queue for provider %s, currency %s: %v", provider.ID, currencyCode, err)
+			}
+		}
 	}
 
 	if payload.IdentityDocumentType != "" {

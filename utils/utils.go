@@ -24,11 +24,14 @@ import (
 	"github.com/paycrest/aggregator/ent/institution"
 	institutionEnt "github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/logger"
 	tokenUtils "github.com/paycrest/aggregator/utils/token"
+	"github.com/redis/go-redis/v9"
 	"github.com/shopspring/decimal"
 )
 
@@ -601,4 +604,33 @@ func IsValidHttpsUrl(urlStr string) bool {
 
 	// Verify scheme is https and host is present
 	return parsedUrl.Scheme == "https" && parsedUrl.Host != ""
+}
+
+// UpdateRedisQueue updates the Redis queue for a provider's availability for a specific currency.
+func UpdateRedisQueue(ctx context.Context, redisClient *redis.Client, provider *ent.ProviderProfile, currency string, isAvailable bool) error {
+	// Fetch relevant buckets for the provider
+	buckets, err := storage.Client.ProvisionBucket.
+		Query().
+		Where(provisionbucket.HasProviderProfilesWith(providerprofile.IDEQ(provider.ID))).
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query buckets: %v", err)
+	}
+
+	for _, bucket := range buckets {
+		redisKey := fmt.Sprintf("bucket_%s_%s_%s", currency, bucket.MinAmount, bucket.MaxAmount)
+		if !isAvailable {
+			err := redisClient.SRem(ctx, redisKey, provider.ID).Err()
+			if err != nil {
+				return fmt.Errorf("failed to remove provider %s from Redis queue %s: %w", provider.ID, redisKey, err)
+			}
+		} else {
+			err := redisClient.SAdd(ctx, redisKey, provider.ID).Err()
+			if err != nil {
+				// Fixed a typo in the original error message ("Redisqueen" -> "Redis queue")
+				return fmt.Errorf("failed to add provider %s to Redis queue %s: %w", provider.ID, redisKey, err)
+			}
+		}
+	}
+	return nil
 }

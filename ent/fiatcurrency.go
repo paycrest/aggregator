@@ -53,9 +53,11 @@ type FiatCurrencyEdges struct {
 	Institutions []*Institution `json:"institutions,omitempty"`
 	// ProviderOrderTokens holds the value of the provider_order_tokens edge.
 	ProviderOrderTokens []*ProviderOrderToken `json:"provider_order_tokens,omitempty"`
+	// ProviderAvailability holds the value of the provider_availability edge.
+	ProviderAvailability []*ProviderCurrencyAvailability `json:"provider_availability,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 }
 
 // ProvidersOrErr returns the Providers value or an error if the edge
@@ -92,6 +94,15 @@ func (e FiatCurrencyEdges) ProviderOrderTokensOrErr() ([]*ProviderOrderToken, er
 		return e.ProviderOrderTokens, nil
 	}
 	return nil, &NotLoadedError{edge: "provider_order_tokens"}
+}
+
+// ProviderAvailabilityOrErr returns the ProviderAvailability value or an error if the edge
+// was not loaded in eager-loading.
+func (e FiatCurrencyEdges) ProviderAvailabilityOrErr() ([]*ProviderCurrencyAvailability, error) {
+	if e.loadedTypes[4] {
+		return e.ProviderAvailability, nil
+	}
+	return nil, &NotLoadedError{edge: "provider_availability"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -217,6 +228,11 @@ func (fc *FiatCurrency) QueryInstitutions() *InstitutionQuery {
 // QueryProviderOrderTokens queries the "provider_order_tokens" edge of the FiatCurrency entity.
 func (fc *FiatCurrency) QueryProviderOrderTokens() *ProviderOrderTokenQuery {
 	return NewFiatCurrencyClient(fc.config).QueryProviderOrderTokens(fc)
+}
+
+// QueryProviderAvailability queries the "provider_availability" edge of the FiatCurrency entity.
+func (fc *FiatCurrency) QueryProviderAvailability() *ProviderCurrencyAvailabilityQuery {
+	return NewFiatCurrencyClient(fc.config).QueryProviderAvailability(fc)
 }
 
 // Update returns a builder for updating this FiatCurrency.

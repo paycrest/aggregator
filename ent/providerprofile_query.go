@@ -17,6 +17,7 @@ import (
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/providercurrencyavailability"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -27,18 +28,19 @@ import (
 // ProviderProfileQuery is the builder for querying ProviderProfile entities.
 type ProviderProfileQuery struct {
 	config
-	ctx                  *QueryContext
-	order                []providerprofile.OrderOption
-	inters               []Interceptor
-	predicates           []predicate.ProviderProfile
-	withUser             *UserQuery
-	withAPIKey           *APIKeyQuery
-	withCurrencies       *FiatCurrencyQuery
-	withProvisionBuckets *ProvisionBucketQuery
-	withOrderTokens      *ProviderOrderTokenQuery
-	withProviderRating   *ProviderRatingQuery
-	withAssignedOrders   *LockPaymentOrderQuery
-	withFKs              bool
+	ctx                      *QueryContext
+	order                    []providerprofile.OrderOption
+	inters                   []Interceptor
+	predicates               []predicate.ProviderProfile
+	withUser                 *UserQuery
+	withAPIKey               *APIKeyQuery
+	withCurrencies           *FiatCurrencyQuery
+	withProvisionBuckets     *ProvisionBucketQuery
+	withOrderTokens          *ProviderOrderTokenQuery
+	withProviderRating       *ProviderRatingQuery
+	withAssignedOrders       *LockPaymentOrderQuery
+	withCurrencyAvailability *ProviderCurrencyAvailabilityQuery
+	withFKs                  bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -222,6 +224,28 @@ func (ppq *ProviderProfileQuery) QueryAssignedOrders() *LockPaymentOrderQuery {
 			sqlgraph.From(providerprofile.Table, providerprofile.FieldID, selector),
 			sqlgraph.To(lockpaymentorder.Table, lockpaymentorder.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.AssignedOrdersTable, providerprofile.AssignedOrdersColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(ppq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCurrencyAvailability chains the current query on the "currency_availability" edge.
+func (ppq *ProviderProfileQuery) QueryCurrencyAvailability() *ProviderCurrencyAvailabilityQuery {
+	query := (&ProviderCurrencyAvailabilityClient{config: ppq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := ppq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := ppq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(providerprofile.Table, providerprofile.FieldID, selector),
+			sqlgraph.To(providercurrencyavailability.Table, providercurrencyavailability.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.CurrencyAvailabilityTable, providerprofile.CurrencyAvailabilityColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(ppq.driver.Dialect(), step)
 		return fromU, nil
@@ -416,18 +440,19 @@ func (ppq *ProviderProfileQuery) Clone() *ProviderProfileQuery {
 		return nil
 	}
 	return &ProviderProfileQuery{
-		config:               ppq.config,
-		ctx:                  ppq.ctx.Clone(),
-		order:                append([]providerprofile.OrderOption{}, ppq.order...),
-		inters:               append([]Interceptor{}, ppq.inters...),
-		predicates:           append([]predicate.ProviderProfile{}, ppq.predicates...),
-		withUser:             ppq.withUser.Clone(),
-		withAPIKey:           ppq.withAPIKey.Clone(),
-		withCurrencies:       ppq.withCurrencies.Clone(),
-		withProvisionBuckets: ppq.withProvisionBuckets.Clone(),
-		withOrderTokens:      ppq.withOrderTokens.Clone(),
-		withProviderRating:   ppq.withProviderRating.Clone(),
-		withAssignedOrders:   ppq.withAssignedOrders.Clone(),
+		config:                   ppq.config,
+		ctx:                      ppq.ctx.Clone(),
+		order:                    append([]providerprofile.OrderOption{}, ppq.order...),
+		inters:                   append([]Interceptor{}, ppq.inters...),
+		predicates:               append([]predicate.ProviderProfile{}, ppq.predicates...),
+		withUser:                 ppq.withUser.Clone(),
+		withAPIKey:               ppq.withAPIKey.Clone(),
+		withCurrencies:           ppq.withCurrencies.Clone(),
+		withProvisionBuckets:     ppq.withProvisionBuckets.Clone(),
+		withOrderTokens:          ppq.withOrderTokens.Clone(),
+		withProviderRating:       ppq.withProviderRating.Clone(),
+		withAssignedOrders:       ppq.withAssignedOrders.Clone(),
+		withCurrencyAvailability: ppq.withCurrencyAvailability.Clone(),
 		// clone intermediate query.
 		sql:  ppq.sql.Clone(),
 		path: ppq.path,
@@ -511,6 +536,17 @@ func (ppq *ProviderProfileQuery) WithAssignedOrders(opts ...func(*LockPaymentOrd
 	return ppq
 }
 
+// WithCurrencyAvailability tells the query-builder to eager-load the nodes that are connected to
+// the "currency_availability" edge. The optional arguments are used to configure the query builder of the edge.
+func (ppq *ProviderProfileQuery) WithCurrencyAvailability(opts ...func(*ProviderCurrencyAvailabilityQuery)) *ProviderProfileQuery {
+	query := (&ProviderCurrencyAvailabilityClient{config: ppq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	ppq.withCurrencyAvailability = query
+	return ppq
+}
+
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 //
@@ -590,7 +626,7 @@ func (ppq *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 		nodes       = []*ProviderProfile{}
 		withFKs     = ppq.withFKs
 		_spec       = ppq.querySpec()
-		loadedTypes = [7]bool{
+		loadedTypes = [8]bool{
 			ppq.withUser != nil,
 			ppq.withAPIKey != nil,
 			ppq.withCurrencies != nil,
@@ -598,6 +634,7 @@ func (ppq *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 			ppq.withOrderTokens != nil,
 			ppq.withProviderRating != nil,
 			ppq.withAssignedOrders != nil,
+			ppq.withCurrencyAvailability != nil,
 		}
 	)
 	if ppq.withUser != nil {
@@ -670,6 +707,15 @@ func (ppq *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 			func(n *ProviderProfile) { n.Edges.AssignedOrders = []*LockPaymentOrder{} },
 			func(n *ProviderProfile, e *LockPaymentOrder) {
 				n.Edges.AssignedOrders = append(n.Edges.AssignedOrders, e)
+			}); err != nil {
+			return nil, err
+		}
+	}
+	if query := ppq.withCurrencyAvailability; query != nil {
+		if err := ppq.loadCurrencyAvailability(ctx, query, nodes,
+			func(n *ProviderProfile) { n.Edges.CurrencyAvailability = []*ProviderCurrencyAvailability{} },
+			func(n *ProviderProfile, e *ProviderCurrencyAvailability) {
+				n.Edges.CurrencyAvailability = append(n.Edges.CurrencyAvailability, e)
 			}); err != nil {
 			return nil, err
 		}
@@ -944,6 +990,37 @@ func (ppq *ProviderProfileQuery) loadAssignedOrders(ctx context.Context, query *
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "provider_profile_assigned_orders" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (ppq *ProviderProfileQuery) loadCurrencyAvailability(ctx context.Context, query *ProviderCurrencyAvailabilityQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *ProviderCurrencyAvailability)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[string]*ProviderProfile)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.ProviderCurrencyAvailability(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(providerprofile.CurrencyAvailabilityColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.provider_profile_currency_availability
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "provider_profile_currency_availability" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "provider_profile_currency_availability" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

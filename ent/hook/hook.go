@@ -129,6 +129,18 @@ func (f PaymentOrderRecipientFunc) Mutate(ctx context.Context, m ent.Mutation) (
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PaymentOrderRecipientMutation", m)
 }
 
+// The ProviderCurrencyAvailabilityFunc type is an adapter to allow the use of ordinary
+// function as ProviderCurrencyAvailability mutator.
+type ProviderCurrencyAvailabilityFunc func(context.Context, *ent.ProviderCurrencyAvailabilityMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ProviderCurrencyAvailabilityFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ProviderCurrencyAvailabilityMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProviderCurrencyAvailabilityMutation", m)
+}
+
 // The ProviderOrderTokenFunc type is an adapter to allow the use of ordinary
 // function as ProviderOrderToken mutator.
 type ProviderOrderTokenFunc func(context.Context, *ent.ProviderOrderTokenMutation) (ent.Value, error)

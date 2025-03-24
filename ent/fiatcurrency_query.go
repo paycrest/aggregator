@@ -16,6 +16,7 @@ import (
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/providercurrencyavailability"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -24,14 +25,15 @@ import (
 // FiatCurrencyQuery is the builder for querying FiatCurrency entities.
 type FiatCurrencyQuery struct {
 	config
-	ctx                     *QueryContext
-	order                   []fiatcurrency.OrderOption
-	inters                  []Interceptor
-	predicates              []predicate.FiatCurrency
-	withProviders           *ProviderProfileQuery
-	withProvisionBuckets    *ProvisionBucketQuery
-	withInstitutions        *InstitutionQuery
-	withProviderOrderTokens *ProviderOrderTokenQuery
+	ctx                      *QueryContext
+	order                    []fiatcurrency.OrderOption
+	inters                   []Interceptor
+	predicates               []predicate.FiatCurrency
+	withProviders            *ProviderProfileQuery
+	withProvisionBuckets     *ProvisionBucketQuery
+	withInstitutions         *InstitutionQuery
+	withProviderOrderTokens  *ProviderOrderTokenQuery
+	withProviderAvailability *ProviderCurrencyAvailabilityQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -149,6 +151,28 @@ func (fcq *FiatCurrencyQuery) QueryProviderOrderTokens() *ProviderOrderTokenQuer
 			sqlgraph.From(fiatcurrency.Table, fiatcurrency.FieldID, selector),
 			sqlgraph.To(providerordertoken.Table, providerordertoken.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, fiatcurrency.ProviderOrderTokensTable, fiatcurrency.ProviderOrderTokensColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(fcq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryProviderAvailability chains the current query on the "provider_availability" edge.
+func (fcq *FiatCurrencyQuery) QueryProviderAvailability() *ProviderCurrencyAvailabilityQuery {
+	query := (&ProviderCurrencyAvailabilityClient{config: fcq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := fcq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := fcq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(fiatcurrency.Table, fiatcurrency.FieldID, selector),
+			sqlgraph.To(providercurrencyavailability.Table, providercurrencyavailability.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, fiatcurrency.ProviderAvailabilityTable, fiatcurrency.ProviderAvailabilityColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(fcq.driver.Dialect(), step)
 		return fromU, nil
@@ -343,15 +367,16 @@ func (fcq *FiatCurrencyQuery) Clone() *FiatCurrencyQuery {
 		return nil
 	}
 	return &FiatCurrencyQuery{
-		config:                  fcq.config,
-		ctx:                     fcq.ctx.Clone(),
-		order:                   append([]fiatcurrency.OrderOption{}, fcq.order...),
-		inters:                  append([]Interceptor{}, fcq.inters...),
-		predicates:              append([]predicate.FiatCurrency{}, fcq.predicates...),
-		withProviders:           fcq.withProviders.Clone(),
-		withProvisionBuckets:    fcq.withProvisionBuckets.Clone(),
-		withInstitutions:        fcq.withInstitutions.Clone(),
-		withProviderOrderTokens: fcq.withProviderOrderTokens.Clone(),
+		config:                   fcq.config,
+		ctx:                      fcq.ctx.Clone(),
+		order:                    append([]fiatcurrency.OrderOption{}, fcq.order...),
+		inters:                   append([]Interceptor{}, fcq.inters...),
+		predicates:               append([]predicate.FiatCurrency{}, fcq.predicates...),
+		withProviders:            fcq.withProviders.Clone(),
+		withProvisionBuckets:     fcq.withProvisionBuckets.Clone(),
+		withInstitutions:         fcq.withInstitutions.Clone(),
+		withProviderOrderTokens:  fcq.withProviderOrderTokens.Clone(),
+		withProviderAvailability: fcq.withProviderAvailability.Clone(),
 		// clone intermediate query.
 		sql:  fcq.sql.Clone(),
 		path: fcq.path,
@@ -399,6 +424,17 @@ func (fcq *FiatCurrencyQuery) WithProviderOrderTokens(opts ...func(*ProviderOrde
 		opt(query)
 	}
 	fcq.withProviderOrderTokens = query
+	return fcq
+}
+
+// WithProviderAvailability tells the query-builder to eager-load the nodes that are connected to
+// the "provider_availability" edge. The optional arguments are used to configure the query builder of the edge.
+func (fcq *FiatCurrencyQuery) WithProviderAvailability(opts ...func(*ProviderCurrencyAvailabilityQuery)) *FiatCurrencyQuery {
+	query := (&ProviderCurrencyAvailabilityClient{config: fcq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	fcq.withProviderAvailability = query
 	return fcq
 }
 
@@ -480,11 +516,12 @@ func (fcq *FiatCurrencyQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 	var (
 		nodes       = []*FiatCurrency{}
 		_spec       = fcq.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [5]bool{
 			fcq.withProviders != nil,
 			fcq.withProvisionBuckets != nil,
 			fcq.withInstitutions != nil,
 			fcq.withProviderOrderTokens != nil,
+			fcq.withProviderAvailability != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -533,6 +570,15 @@ func (fcq *FiatCurrencyQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 			func(n *FiatCurrency) { n.Edges.ProviderOrderTokens = []*ProviderOrderToken{} },
 			func(n *FiatCurrency, e *ProviderOrderToken) {
 				n.Edges.ProviderOrderTokens = append(n.Edges.ProviderOrderTokens, e)
+			}); err != nil {
+			return nil, err
+		}
+	}
+	if query := fcq.withProviderAvailability; query != nil {
+		if err := fcq.loadProviderAvailability(ctx, query, nodes,
+			func(n *FiatCurrency) { n.Edges.ProviderAvailability = []*ProviderCurrencyAvailability{} },
+			func(n *FiatCurrency, e *ProviderCurrencyAvailability) {
+				n.Edges.ProviderAvailability = append(n.Edges.ProviderAvailability, e)
 			}); err != nil {
 			return nil, err
 		}
@@ -689,6 +735,37 @@ func (fcq *FiatCurrencyQuery) loadProviderOrderTokens(ctx context.Context, query
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "fiat_currency_provider_order_tokens" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (fcq *FiatCurrencyQuery) loadProviderAvailability(ctx context.Context, query *ProviderCurrencyAvailabilityQuery, nodes []*FiatCurrency, init func(*FiatCurrency), assign func(*FiatCurrency, *ProviderCurrencyAvailability)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*FiatCurrency)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.ProviderCurrencyAvailability(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(fiatcurrency.ProviderAvailabilityColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.fiat_currency_provider_availability
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "fiat_currency_provider_availability" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "fiat_currency_provider_availability" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

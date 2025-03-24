@@ -23,6 +23,7 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
 	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/providercurrencyavailability"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -47,28 +48,29 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeAPIKey                      = "APIKey"
-	TypeFiatCurrency                = "FiatCurrency"
-	TypeIdentityVerificationRequest = "IdentityVerificationRequest"
-	TypeInstitution                 = "Institution"
-	TypeLinkedAddress               = "LinkedAddress"
-	TypeLockOrderFulfillment        = "LockOrderFulfillment"
-	TypeLockPaymentOrder            = "LockPaymentOrder"
-	TypeNetwork                     = "Network"
-	TypePaymentOrder                = "PaymentOrder"
-	TypePaymentOrderRecipient       = "PaymentOrderRecipient"
-	TypeProviderOrderToken          = "ProviderOrderToken"
-	TypeProviderProfile             = "ProviderProfile"
-	TypeProviderRating              = "ProviderRating"
-	TypeProvisionBucket             = "ProvisionBucket"
-	TypeReceiveAddress              = "ReceiveAddress"
-	TypeSenderOrderToken            = "SenderOrderToken"
-	TypeSenderProfile               = "SenderProfile"
-	TypeToken                       = "Token"
-	TypeTransactionLog              = "TransactionLog"
-	TypeUser                        = "User"
-	TypeVerificationToken           = "VerificationToken"
-	TypeWebhookRetryAttempt         = "WebhookRetryAttempt"
+	TypeAPIKey                       = "APIKey"
+	TypeFiatCurrency                 = "FiatCurrency"
+	TypeIdentityVerificationRequest  = "IdentityVerificationRequest"
+	TypeInstitution                  = "Institution"
+	TypeLinkedAddress                = "LinkedAddress"
+	TypeLockOrderFulfillment         = "LockOrderFulfillment"
+	TypeLockPaymentOrder             = "LockPaymentOrder"
+	TypeNetwork                      = "Network"
+	TypePaymentOrder                 = "PaymentOrder"
+	TypePaymentOrderRecipient        = "PaymentOrderRecipient"
+	TypeProviderCurrencyAvailability = "ProviderCurrencyAvailability"
+	TypeProviderOrderToken           = "ProviderOrderToken"
+	TypeProviderProfile              = "ProviderProfile"
+	TypeProviderRating               = "ProviderRating"
+	TypeProvisionBucket              = "ProvisionBucket"
+	TypeReceiveAddress               = "ReceiveAddress"
+	TypeSenderOrderToken             = "SenderOrderToken"
+	TypeSenderProfile                = "SenderProfile"
+	TypeToken                        = "Token"
+	TypeTransactionLog               = "TransactionLog"
+	TypeUser                         = "User"
+	TypeVerificationToken            = "VerificationToken"
+	TypeWebhookRetryAttempt          = "WebhookRetryAttempt"
 )
 
 // APIKeyMutation represents an operation that mutates the APIKey nodes in the graph.
@@ -644,6 +646,9 @@ type FiatCurrencyMutation struct {
 	provider_order_tokens        map[int]struct{}
 	removedprovider_order_tokens map[int]struct{}
 	clearedprovider_order_tokens bool
+	provider_availability        map[uuid.UUID]struct{}
+	removedprovider_availability map[uuid.UUID]struct{}
+	clearedprovider_availability bool
 	done                         bool
 	oldValue                     func(context.Context) (*FiatCurrency, error)
 	predicates                   []predicate.FiatCurrency
@@ -1333,6 +1338,60 @@ func (m *FiatCurrencyMutation) ResetProviderOrderTokens() {
 	m.removedprovider_order_tokens = nil
 }
 
+// AddProviderAvailabilityIDs adds the "provider_availability" edge to the ProviderCurrencyAvailability entity by ids.
+func (m *FiatCurrencyMutation) AddProviderAvailabilityIDs(ids ...uuid.UUID) {
+	if m.provider_availability == nil {
+		m.provider_availability = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.provider_availability[ids[i]] = struct{}{}
+	}
+}
+
+// ClearProviderAvailability clears the "provider_availability" edge to the ProviderCurrencyAvailability entity.
+func (m *FiatCurrencyMutation) ClearProviderAvailability() {
+	m.clearedprovider_availability = true
+}
+
+// ProviderAvailabilityCleared reports if the "provider_availability" edge to the ProviderCurrencyAvailability entity was cleared.
+func (m *FiatCurrencyMutation) ProviderAvailabilityCleared() bool {
+	return m.clearedprovider_availability
+}
+
+// RemoveProviderAvailabilityIDs removes the "provider_availability" edge to the ProviderCurrencyAvailability entity by IDs.
+func (m *FiatCurrencyMutation) RemoveProviderAvailabilityIDs(ids ...uuid.UUID) {
+	if m.removedprovider_availability == nil {
+		m.removedprovider_availability = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.provider_availability, ids[i])
+		m.removedprovider_availability[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedProviderAvailability returns the removed IDs of the "provider_availability" edge to the ProviderCurrencyAvailability entity.
+func (m *FiatCurrencyMutation) RemovedProviderAvailabilityIDs() (ids []uuid.UUID) {
+	for id := range m.removedprovider_availability {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ProviderAvailabilityIDs returns the "provider_availability" edge IDs in the mutation.
+func (m *FiatCurrencyMutation) ProviderAvailabilityIDs() (ids []uuid.UUID) {
+	for id := range m.provider_availability {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetProviderAvailability resets all changes to the "provider_availability" edge.
+func (m *FiatCurrencyMutation) ResetProviderAvailability() {
+	m.provider_availability = nil
+	m.clearedprovider_availability = false
+	m.removedprovider_availability = nil
+}
+
 // Where appends a list predicates to the FiatCurrencyMutation builder.
 func (m *FiatCurrencyMutation) Where(ps ...predicate.FiatCurrency) {
 	m.predicates = append(m.predicates, ps...)
@@ -1629,7 +1688,7 @@ func (m *FiatCurrencyMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *FiatCurrencyMutation) AddedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.providers != nil {
 		edges = append(edges, fiatcurrency.EdgeProviders)
 	}
@@ -1641,6 +1700,9 @@ func (m *FiatCurrencyMutation) AddedEdges() []string {
 	}
 	if m.provider_order_tokens != nil {
 		edges = append(edges, fiatcurrency.EdgeProviderOrderTokens)
+	}
+	if m.provider_availability != nil {
+		edges = append(edges, fiatcurrency.EdgeProviderAvailability)
 	}
 	return edges
 }
@@ -1673,13 +1735,19 @@ func (m *FiatCurrencyMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case fiatcurrency.EdgeProviderAvailability:
+		ids := make([]ent.Value, 0, len(m.provider_availability))
+		for id := range m.provider_availability {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *FiatCurrencyMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.removedproviders != nil {
 		edges = append(edges, fiatcurrency.EdgeProviders)
 	}
@@ -1691,6 +1759,9 @@ func (m *FiatCurrencyMutation) RemovedEdges() []string {
 	}
 	if m.removedprovider_order_tokens != nil {
 		edges = append(edges, fiatcurrency.EdgeProviderOrderTokens)
+	}
+	if m.removedprovider_availability != nil {
+		edges = append(edges, fiatcurrency.EdgeProviderAvailability)
 	}
 	return edges
 }
@@ -1723,13 +1794,19 @@ func (m *FiatCurrencyMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case fiatcurrency.EdgeProviderAvailability:
+		ids := make([]ent.Value, 0, len(m.removedprovider_availability))
+		for id := range m.removedprovider_availability {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *FiatCurrencyMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.clearedproviders {
 		edges = append(edges, fiatcurrency.EdgeProviders)
 	}
@@ -1741,6 +1818,9 @@ func (m *FiatCurrencyMutation) ClearedEdges() []string {
 	}
 	if m.clearedprovider_order_tokens {
 		edges = append(edges, fiatcurrency.EdgeProviderOrderTokens)
+	}
+	if m.clearedprovider_availability {
+		edges = append(edges, fiatcurrency.EdgeProviderAvailability)
 	}
 	return edges
 }
@@ -1757,6 +1837,8 @@ func (m *FiatCurrencyMutation) EdgeCleared(name string) bool {
 		return m.clearedinstitutions
 	case fiatcurrency.EdgeProviderOrderTokens:
 		return m.clearedprovider_order_tokens
+	case fiatcurrency.EdgeProviderAvailability:
+		return m.clearedprovider_availability
 	}
 	return false
 }
@@ -1784,6 +1866,9 @@ func (m *FiatCurrencyMutation) ResetEdge(name string) error {
 		return nil
 	case fiatcurrency.EdgeProviderOrderTokens:
 		m.ResetProviderOrderTokens()
+		return nil
+	case fiatcurrency.EdgeProviderAvailability:
+		m.ResetProviderAvailability()
 		return nil
 	}
 	return fmt.Errorf("unknown FiatCurrency edge %s", name)
@@ -10474,6 +10559,464 @@ func (m *PaymentOrderRecipientMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown PaymentOrderRecipient edge %s", name)
 }
 
+// ProviderCurrencyAvailabilityMutation represents an operation that mutates the ProviderCurrencyAvailability nodes in the graph.
+type ProviderCurrencyAvailabilityMutation struct {
+	config
+	op              Op
+	typ             string
+	id              *uuid.UUID
+	is_available    *bool
+	clearedFields   map[string]struct{}
+	provider        *string
+	clearedprovider bool
+	currency        *uuid.UUID
+	clearedcurrency bool
+	done            bool
+	oldValue        func(context.Context) (*ProviderCurrencyAvailability, error)
+	predicates      []predicate.ProviderCurrencyAvailability
+}
+
+var _ ent.Mutation = (*ProviderCurrencyAvailabilityMutation)(nil)
+
+// providercurrencyavailabilityOption allows management of the mutation configuration using functional options.
+type providercurrencyavailabilityOption func(*ProviderCurrencyAvailabilityMutation)
+
+// newProviderCurrencyAvailabilityMutation creates new mutation for the ProviderCurrencyAvailability entity.
+func newProviderCurrencyAvailabilityMutation(c config, op Op, opts ...providercurrencyavailabilityOption) *ProviderCurrencyAvailabilityMutation {
+	m := &ProviderCurrencyAvailabilityMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeProviderCurrencyAvailability,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withProviderCurrencyAvailabilityID sets the ID field of the mutation.
+func withProviderCurrencyAvailabilityID(id uuid.UUID) providercurrencyavailabilityOption {
+	return func(m *ProviderCurrencyAvailabilityMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ProviderCurrencyAvailability
+		)
+		m.oldValue = func(ctx context.Context) (*ProviderCurrencyAvailability, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ProviderCurrencyAvailability.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withProviderCurrencyAvailability sets the old ProviderCurrencyAvailability of the mutation.
+func withProviderCurrencyAvailability(node *ProviderCurrencyAvailability) providercurrencyavailabilityOption {
+	return func(m *ProviderCurrencyAvailabilityMutation) {
+		m.oldValue = func(context.Context) (*ProviderCurrencyAvailability, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ProviderCurrencyAvailabilityMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ProviderCurrencyAvailabilityMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ProviderCurrencyAvailability entities.
+func (m *ProviderCurrencyAvailabilityMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ProviderCurrencyAvailabilityMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ProviderCurrencyAvailabilityMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ProviderCurrencyAvailability.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetIsAvailable sets the "is_available" field.
+func (m *ProviderCurrencyAvailabilityMutation) SetIsAvailable(b bool) {
+	m.is_available = &b
+}
+
+// IsAvailable returns the value of the "is_available" field in the mutation.
+func (m *ProviderCurrencyAvailabilityMutation) IsAvailable() (r bool, exists bool) {
+	v := m.is_available
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsAvailable returns the old "is_available" field's value of the ProviderCurrencyAvailability entity.
+// If the ProviderCurrencyAvailability object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderCurrencyAvailabilityMutation) OldIsAvailable(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsAvailable is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsAvailable requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsAvailable: %w", err)
+	}
+	return oldValue.IsAvailable, nil
+}
+
+// ResetIsAvailable resets all changes to the "is_available" field.
+func (m *ProviderCurrencyAvailabilityMutation) ResetIsAvailable() {
+	m.is_available = nil
+}
+
+// SetProviderID sets the "provider" edge to the ProviderProfile entity by id.
+func (m *ProviderCurrencyAvailabilityMutation) SetProviderID(id string) {
+	m.provider = &id
+}
+
+// ClearProvider clears the "provider" edge to the ProviderProfile entity.
+func (m *ProviderCurrencyAvailabilityMutation) ClearProvider() {
+	m.clearedprovider = true
+}
+
+// ProviderCleared reports if the "provider" edge to the ProviderProfile entity was cleared.
+func (m *ProviderCurrencyAvailabilityMutation) ProviderCleared() bool {
+	return m.clearedprovider
+}
+
+// ProviderID returns the "provider" edge ID in the mutation.
+func (m *ProviderCurrencyAvailabilityMutation) ProviderID() (id string, exists bool) {
+	if m.provider != nil {
+		return *m.provider, true
+	}
+	return
+}
+
+// ProviderIDs returns the "provider" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ProviderID instead. It exists only for internal usage by the builders.
+func (m *ProviderCurrencyAvailabilityMutation) ProviderIDs() (ids []string) {
+	if id := m.provider; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetProvider resets all changes to the "provider" edge.
+func (m *ProviderCurrencyAvailabilityMutation) ResetProvider() {
+	m.provider = nil
+	m.clearedprovider = false
+}
+
+// SetCurrencyID sets the "currency" edge to the FiatCurrency entity by id.
+func (m *ProviderCurrencyAvailabilityMutation) SetCurrencyID(id uuid.UUID) {
+	m.currency = &id
+}
+
+// ClearCurrency clears the "currency" edge to the FiatCurrency entity.
+func (m *ProviderCurrencyAvailabilityMutation) ClearCurrency() {
+	m.clearedcurrency = true
+}
+
+// CurrencyCleared reports if the "currency" edge to the FiatCurrency entity was cleared.
+func (m *ProviderCurrencyAvailabilityMutation) CurrencyCleared() bool {
+	return m.clearedcurrency
+}
+
+// CurrencyID returns the "currency" edge ID in the mutation.
+func (m *ProviderCurrencyAvailabilityMutation) CurrencyID() (id uuid.UUID, exists bool) {
+	if m.currency != nil {
+		return *m.currency, true
+	}
+	return
+}
+
+// CurrencyIDs returns the "currency" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// CurrencyID instead. It exists only for internal usage by the builders.
+func (m *ProviderCurrencyAvailabilityMutation) CurrencyIDs() (ids []uuid.UUID) {
+	if id := m.currency; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetCurrency resets all changes to the "currency" edge.
+func (m *ProviderCurrencyAvailabilityMutation) ResetCurrency() {
+	m.currency = nil
+	m.clearedcurrency = false
+}
+
+// Where appends a list predicates to the ProviderCurrencyAvailabilityMutation builder.
+func (m *ProviderCurrencyAvailabilityMutation) Where(ps ...predicate.ProviderCurrencyAvailability) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ProviderCurrencyAvailabilityMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ProviderCurrencyAvailabilityMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ProviderCurrencyAvailability, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ProviderCurrencyAvailabilityMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ProviderCurrencyAvailabilityMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ProviderCurrencyAvailability).
+func (m *ProviderCurrencyAvailabilityMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ProviderCurrencyAvailabilityMutation) Fields() []string {
+	fields := make([]string, 0, 1)
+	if m.is_available != nil {
+		fields = append(fields, providercurrencyavailability.FieldIsAvailable)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ProviderCurrencyAvailabilityMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case providercurrencyavailability.FieldIsAvailable:
+		return m.IsAvailable()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ProviderCurrencyAvailabilityMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case providercurrencyavailability.FieldIsAvailable:
+		return m.OldIsAvailable(ctx)
+	}
+	return nil, fmt.Errorf("unknown ProviderCurrencyAvailability field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ProviderCurrencyAvailabilityMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case providercurrencyavailability.FieldIsAvailable:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsAvailable(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderCurrencyAvailability field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ProviderCurrencyAvailabilityMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ProviderCurrencyAvailabilityMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ProviderCurrencyAvailabilityMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown ProviderCurrencyAvailability numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ProviderCurrencyAvailabilityMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ProviderCurrencyAvailabilityMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ProviderCurrencyAvailabilityMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown ProviderCurrencyAvailability nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ProviderCurrencyAvailabilityMutation) ResetField(name string) error {
+	switch name {
+	case providercurrencyavailability.FieldIsAvailable:
+		m.ResetIsAvailable()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderCurrencyAvailability field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ProviderCurrencyAvailabilityMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.provider != nil {
+		edges = append(edges, providercurrencyavailability.EdgeProvider)
+	}
+	if m.currency != nil {
+		edges = append(edges, providercurrencyavailability.EdgeCurrency)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ProviderCurrencyAvailabilityMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case providercurrencyavailability.EdgeProvider:
+		if id := m.provider; id != nil {
+			return []ent.Value{*id}
+		}
+	case providercurrencyavailability.EdgeCurrency:
+		if id := m.currency; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ProviderCurrencyAvailabilityMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ProviderCurrencyAvailabilityMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ProviderCurrencyAvailabilityMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedprovider {
+		edges = append(edges, providercurrencyavailability.EdgeProvider)
+	}
+	if m.clearedcurrency {
+		edges = append(edges, providercurrencyavailability.EdgeCurrency)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ProviderCurrencyAvailabilityMutation) EdgeCleared(name string) bool {
+	switch name {
+	case providercurrencyavailability.EdgeProvider:
+		return m.clearedprovider
+	case providercurrencyavailability.EdgeCurrency:
+		return m.clearedcurrency
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ProviderCurrencyAvailabilityMutation) ClearEdge(name string) error {
+	switch name {
+	case providercurrencyavailability.EdgeProvider:
+		m.ClearProvider()
+		return nil
+	case providercurrencyavailability.EdgeCurrency:
+		m.ClearCurrency()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderCurrencyAvailability unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ProviderCurrencyAvailabilityMutation) ResetEdge(name string) error {
+	switch name {
+	case providercurrencyavailability.EdgeProvider:
+		m.ResetProvider()
+		return nil
+	case providercurrencyavailability.EdgeCurrency:
+		m.ResetCurrency()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderCurrencyAvailability edge %s", name)
+}
+
 // ProviderOrderTokenMutation represents an operation that mutates the ProviderOrderToken nodes in the graph.
 type ProviderOrderTokenMutation struct {
 	config
@@ -11596,46 +12139,49 @@ func (m *ProviderOrderTokenMutation) ResetEdge(name string) error {
 // ProviderProfileMutation represents an operation that mutates the ProviderProfile nodes in the graph.
 type ProviderProfileMutation struct {
 	config
-	op                       Op
-	typ                      string
-	id                       *string
-	trading_name             *string
-	host_identifier          *string
-	provision_mode           *providerprofile.ProvisionMode
-	is_active                *bool
-	is_available             *bool
-	updated_at               *time.Time
-	visibility_mode          *providerprofile.VisibilityMode
-	address                  *string
-	mobile_number            *string
-	date_of_birth            *time.Time
-	business_name            *string
-	identity_document_type   *providerprofile.IdentityDocumentType
-	identity_document        *string
-	business_document        *string
-	is_kyb_verified          *bool
-	clearedFields            map[string]struct{}
-	user                     *uuid.UUID
-	cleareduser              bool
-	api_key                  *uuid.UUID
-	clearedapi_key           bool
-	currencies               map[uuid.UUID]struct{}
-	removedcurrencies        map[uuid.UUID]struct{}
-	clearedcurrencies        bool
-	provision_buckets        map[int]struct{}
-	removedprovision_buckets map[int]struct{}
-	clearedprovision_buckets bool
-	order_tokens             map[int]struct{}
-	removedorder_tokens      map[int]struct{}
-	clearedorder_tokens      bool
-	provider_rating          *int
-	clearedprovider_rating   bool
-	assigned_orders          map[uuid.UUID]struct{}
-	removedassigned_orders   map[uuid.UUID]struct{}
-	clearedassigned_orders   bool
-	done                     bool
-	oldValue                 func(context.Context) (*ProviderProfile, error)
-	predicates               []predicate.ProviderProfile
+	op                           Op
+	typ                          string
+	id                           *string
+	trading_name                 *string
+	host_identifier              *string
+	provision_mode               *providerprofile.ProvisionMode
+	is_active                    *bool
+	is_available                 *bool
+	updated_at                   *time.Time
+	visibility_mode              *providerprofile.VisibilityMode
+	address                      *string
+	mobile_number                *string
+	date_of_birth                *time.Time
+	business_name                *string
+	identity_document_type       *providerprofile.IdentityDocumentType
+	identity_document            *string
+	business_document            *string
+	is_kyb_verified              *bool
+	clearedFields                map[string]struct{}
+	user                         *uuid.UUID
+	cleareduser                  bool
+	api_key                      *uuid.UUID
+	clearedapi_key               bool
+	currencies                   map[uuid.UUID]struct{}
+	removedcurrencies            map[uuid.UUID]struct{}
+	clearedcurrencies            bool
+	provision_buckets            map[int]struct{}
+	removedprovision_buckets     map[int]struct{}
+	clearedprovision_buckets     bool
+	order_tokens                 map[int]struct{}
+	removedorder_tokens          map[int]struct{}
+	clearedorder_tokens          bool
+	provider_rating              *int
+	clearedprovider_rating       bool
+	assigned_orders              map[uuid.UUID]struct{}
+	removedassigned_orders       map[uuid.UUID]struct{}
+	clearedassigned_orders       bool
+	currency_availability        map[uuid.UUID]struct{}
+	removedcurrency_availability map[uuid.UUID]struct{}
+	clearedcurrency_availability bool
+	done                         bool
+	oldValue                     func(context.Context) (*ProviderProfile, error)
+	predicates                   []predicate.ProviderProfile
 }
 
 var _ ent.Mutation = (*ProviderProfileMutation)(nil)
@@ -12732,6 +13278,60 @@ func (m *ProviderProfileMutation) ResetAssignedOrders() {
 	m.removedassigned_orders = nil
 }
 
+// AddCurrencyAvailabilityIDs adds the "currency_availability" edge to the ProviderCurrencyAvailability entity by ids.
+func (m *ProviderProfileMutation) AddCurrencyAvailabilityIDs(ids ...uuid.UUID) {
+	if m.currency_availability == nil {
+		m.currency_availability = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.currency_availability[ids[i]] = struct{}{}
+	}
+}
+
+// ClearCurrencyAvailability clears the "currency_availability" edge to the ProviderCurrencyAvailability entity.
+func (m *ProviderProfileMutation) ClearCurrencyAvailability() {
+	m.clearedcurrency_availability = true
+}
+
+// CurrencyAvailabilityCleared reports if the "currency_availability" edge to the ProviderCurrencyAvailability entity was cleared.
+func (m *ProviderProfileMutation) CurrencyAvailabilityCleared() bool {
+	return m.clearedcurrency_availability
+}
+
+// RemoveCurrencyAvailabilityIDs removes the "currency_availability" edge to the ProviderCurrencyAvailability entity by IDs.
+func (m *ProviderProfileMutation) RemoveCurrencyAvailabilityIDs(ids ...uuid.UUID) {
+	if m.removedcurrency_availability == nil {
+		m.removedcurrency_availability = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.currency_availability, ids[i])
+		m.removedcurrency_availability[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedCurrencyAvailability returns the removed IDs of the "currency_availability" edge to the ProviderCurrencyAvailability entity.
+func (m *ProviderProfileMutation) RemovedCurrencyAvailabilityIDs() (ids []uuid.UUID) {
+	for id := range m.removedcurrency_availability {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// CurrencyAvailabilityIDs returns the "currency_availability" edge IDs in the mutation.
+func (m *ProviderProfileMutation) CurrencyAvailabilityIDs() (ids []uuid.UUID) {
+	for id := range m.currency_availability {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetCurrencyAvailability resets all changes to the "currency_availability" edge.
+func (m *ProviderProfileMutation) ResetCurrencyAvailability() {
+	m.currency_availability = nil
+	m.clearedcurrency_availability = false
+	m.removedcurrency_availability = nil
+}
+
 // Where appends a list predicates to the ProviderProfileMutation builder.
 func (m *ProviderProfileMutation) Where(ps ...predicate.ProviderProfile) {
 	m.predicates = append(m.predicates, ps...)
@@ -13160,7 +13760,7 @@ func (m *ProviderProfileMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ProviderProfileMutation) AddedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.user != nil {
 		edges = append(edges, providerprofile.EdgeUser)
 	}
@@ -13181,6 +13781,9 @@ func (m *ProviderProfileMutation) AddedEdges() []string {
 	}
 	if m.assigned_orders != nil {
 		edges = append(edges, providerprofile.EdgeAssignedOrders)
+	}
+	if m.currency_availability != nil {
+		edges = append(edges, providerprofile.EdgeCurrencyAvailability)
 	}
 	return edges
 }
@@ -13225,13 +13828,19 @@ func (m *ProviderProfileMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case providerprofile.EdgeCurrencyAvailability:
+		ids := make([]ent.Value, 0, len(m.currency_availability))
+		for id := range m.currency_availability {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProviderProfileMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.removedcurrencies != nil {
 		edges = append(edges, providerprofile.EdgeCurrencies)
 	}
@@ -13243,6 +13852,9 @@ func (m *ProviderProfileMutation) RemovedEdges() []string {
 	}
 	if m.removedassigned_orders != nil {
 		edges = append(edges, providerprofile.EdgeAssignedOrders)
+	}
+	if m.removedcurrency_availability != nil {
+		edges = append(edges, providerprofile.EdgeCurrencyAvailability)
 	}
 	return edges
 }
@@ -13275,13 +13887,19 @@ func (m *ProviderProfileMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case providerprofile.EdgeCurrencyAvailability:
+		ids := make([]ent.Value, 0, len(m.removedcurrency_availability))
+		for id := range m.removedcurrency_availability {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ProviderProfileMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.cleareduser {
 		edges = append(edges, providerprofile.EdgeUser)
 	}
@@ -13302,6 +13920,9 @@ func (m *ProviderProfileMutation) ClearedEdges() []string {
 	}
 	if m.clearedassigned_orders {
 		edges = append(edges, providerprofile.EdgeAssignedOrders)
+	}
+	if m.clearedcurrency_availability {
+		edges = append(edges, providerprofile.EdgeCurrencyAvailability)
 	}
 	return edges
 }
@@ -13324,6 +13945,8 @@ func (m *ProviderProfileMutation) EdgeCleared(name string) bool {
 		return m.clearedprovider_rating
 	case providerprofile.EdgeAssignedOrders:
 		return m.clearedassigned_orders
+	case providerprofile.EdgeCurrencyAvailability:
+		return m.clearedcurrency_availability
 	}
 	return false
 }
@@ -13369,6 +13992,9 @@ func (m *ProviderProfileMutation) ResetEdge(name string) error {
 		return nil
 	case providerprofile.EdgeAssignedOrders:
 		m.ResetAssignedOrders()
+		return nil
+	case providerprofile.EdgeCurrencyAvailability:
+		m.ResetCurrencyAvailability()
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderProfile edge %s", name)
