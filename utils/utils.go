@@ -629,8 +629,6 @@ func RemoveProviderFromQueues(ctx *gin.Context, provider *ent.ProviderProfile) {
 						logger.Errorf("Failed to atomically remove provider %s from Redis queue %s: %v", provider.ID, redisKey, err)
 						continue
 					}
-
-					logger.Infof("Successfully removed provider %s from Redis queue %s", provider.ID, redisKey)
 					break
 				}
 			}
