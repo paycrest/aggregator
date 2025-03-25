@@ -608,26 +608,52 @@ func IsValidHttpsUrl(urlStr string) bool {
 
 // UpdateRedisQueue updates the Redis queue for a provider's availability for a specific currency.
 func UpdateRedisQueue(ctx context.Context, redisClient *redis.Client, provider *ent.ProviderProfile, currency string, isAvailable bool) error {
-	// Fetch relevant buckets for the provider
+	if redisClient == nil {
+		return fmt.Errorf("redis client is nil; cannot remove provider %s from queue for currency %s", provider.ID, currency)
+	}
+
 	buckets, err := storage.Client.ProvisionBucket.
 		Query().
 		Where(provisionbucket.HasProviderProfilesWith(providerprofile.IDEQ(provider.ID))).
 		All(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to query buckets: %v", err)
+		return fmt.Errorf("failed to fetch provision buckets for provider %s: %v", provider.ID, err)
 	}
 
 	for _, bucket := range buckets {
 		redisKey := fmt.Sprintf("bucket_%s_%s_%s", currency, bucket.MinAmount, bucket.MaxAmount)
 		if !isAvailable {
-			err := redisClient.SRem(ctx, redisKey, provider.ID).Err()
-			if err != nil {
-				return fmt.Errorf("failed to remove provider %s from Redis queue %s: %w", provider.ID, redisKey, err)
+			for index := int64(-1); ; index-- {
+				providerData, err := redisClient.LIndex(ctx, redisKey, index).Result()
+				if err != nil {
+					if err != redis.Nil {
+						logger.Errorf("Failed to fetch provider data at index %d from Redis queue %s: %v", index, redisKey, err)
+					}
+					break
+				}
+				parts := strings.Split(providerData, ":")
+				if len(parts) != 5 {
+					logger.Errorf("Invalid provider data format in Redis queue %s: %s", redisKey, providerData)
+					continue
+				}
+				if parts[0] == provider.ID {
+					err = redisClient.Watch(ctx, func(tx *redis.Tx) error {
+						_, err := tx.LSet(ctx, redisKey, index, "DELETED_PROVIDER").Result()
+						if err != nil {
+							return err
+						}
+						_, err = tx.LRem(ctx, redisKey, 0, "DELETED_PROVIDER").Result()
+						return err
+					}, redisKey)
+					if err != nil {
+						return fmt.Errorf("failed to atomically remove provider %s from Redis queue %s: %w", provider.ID, redisKey, err)
+					}
+					break
+				}
 			}
 		} else {
-			err := redisClient.SAdd(ctx, redisKey, provider.ID).Err()
+			err := redisClient.RPush(ctx, redisKey, provider.ID+":data:more:info:here").Err()
 			if err != nil {
-				// Fixed a typo in the original error message ("Redisqueen" -> "Redis queue")
 				return fmt.Errorf("failed to add provider %s to Redis queue %s: %w", provider.ID, redisKey, err)
 			}
 		}
