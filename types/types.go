@@ -114,12 +114,12 @@ type CreateOrderParams struct {
 
 // RegisterPayload is the payload for the register endpoint
 type RegisterPayload struct {
-	FirstName    string     `json:"firstName" binding:"required"`
-	LastName     string     `json:"lastName" binding:"required"`
-	Email        string     `json:"email" binding:"required,email"`
-	Password     string     `json:"password" binding:"required,min=6,max=20"`
-	Currencies  []string    `json:"currency"`
-	Scopes      []string    `json:"scopes" binding:"required,dive,oneof=sender provider"`
+	FirstName  string   `json:"firstName" binding:"required"`
+	LastName   string   `json:"lastName" binding:"required"`
+	Email      string   `json:"email" binding:"required,email"`
+	Password   string   `json:"password" binding:"required,min=6,max=20"`
+	Currencies []string `json:"currency"`
+	Scopes     []string `json:"scopes" binding:"required,dive,oneof=sender provider"`
 }
 
 // RegisterResponse is the response for the register endpoint
@@ -221,19 +221,20 @@ type ProviderOrderTokenPayload struct {
 
 // ProviderProfilePayload is the payload for the provider profile endpoint
 type ProviderProfilePayload struct {
-	TradingName          string                      `json:"tradingName"`
-	Currencies           []string                    `json:"currencies"`
-	HostIdentifier       string                      `json:"hostIdentifier"`
-	IsAvailable          bool                        `json:"isAvailable"`
-	Tokens               []ProviderOrderTokenPayload `json:"tokens"`
-	VisibilityMode       string                      `json:"visibilityMode"`
-	Address              string                      `json:"address"`
-	MobileNumber         string                      `json:"mobileNumber"`
-	DateOfBirth          time.Time                   `json:"dateOfBirth"`
-	BusinessName         string                      `json:"businessName"`
-	IdentityDocumentType string                      `json:"identityType"`
-	IdentityDocument     string                      `json:"identityDocument"`
-	BusinessDocument     string                      `json:"businessDocument"`
+	TradingName            string                      `json:"tradingName"`
+	Currencies             []string                    `json:"currencies"`
+	HostIdentifier         string                      `json:"hostIdentifier"`
+	IsAvailable            bool                        `json:"isAvailable"`
+	Tokens                 []ProviderOrderTokenPayload `json:"tokens"`
+	VisibilityMode         string                      `json:"visibilityMode"`
+	Address                string                      `json:"address"`
+	MobileNumber           string                      `json:"mobileNumber"`
+	DateOfBirth            time.Time                   `json:"dateOfBirth"`
+	BusinessName           string                      `json:"businessName"`
+	CurrenciesAvailability map[string]bool             `json:"currencies_availability,omitempty"`
+	IdentityDocumentType   string                      `json:"identityType"`
+	IdentityDocument       string                      `json:"identityDocument"`
+	BusinessDocument       string                      `json:"businessDocument"`
 }
 
 // ProviderProfileResponse is the response for the provider profile endpoint
