@@ -1078,94 +1078,6 @@ func SubscribeToRedisKeyspaceEvents() {
 	go ReassignStaleOrderRequest(ctx, orderRequestChan)
 }
 
-// fetchExternalRate fetches the external rate for a fiat currency
-func fetchExternalRate(currency string) (decimal.Decimal, error) {
-	currency = strings.ToUpper(currency)
-	supportedCurrencies := []string{"KES", "NGN", "GHS", "TZS", "UGX", "XOF"}
-	isSupported := false
-	for _, supported := range supportedCurrencies {
-		if currency == supported {
-			isSupported = true
-			break
-		}
-	}
-	if !isSupported {
-		return decimal.Zero, fmt.Errorf("ComputeMarketRate: currency not supported")
-	}
-
-	// Fetch rates from third-party APIs
-	var price decimal.Decimal
-	if currency == "NGN" {
-		res, err := fastshot.NewClient("https://www.quidax.com").
-			Config().SetTimeout(30*time.Second).
-			Build().GET(fmt.Sprintf("/api/v1/markets/tickers/usdt%s", strings.ToLower(currency))).
-			Retry().Set(3, 5*time.Second).
-			Send()
-		if err != nil {
-			return decimal.Zero, fmt.Errorf("ComputeMarketRate: %w", err)
-		}
-
-		data, err := utils.ParseJSONResponse(res.RawResponse)
-		if err != nil {
-			return decimal.Zero, fmt.Errorf("ComputeMarketRate: %w %v", err, data)
-		}
-
-		price, err = decimal.NewFromString(data["data"].(map[string]interface{})["ticker"].(map[string]interface{})["buy"].(string))
-		if err != nil {
-			return decimal.Zero, fmt.Errorf("ComputeMarketRate: %w", err)
-		}
-	} else {
-		res, err := fastshot.NewClient("https://p2p.binance.com").
-			Config().SetTimeout(30*time.Second).
-			Header().Add("Content-Type", "application/json").
-			Build().POST("/bapi/c2c/v2/friendly/c2c/adv/search").
-			Retry().Set(3, 5*time.Second).
-			Body().AsJSON(map[string]interface{}{
-			"asset":     "USDT",
-			"fiat":      currency,
-			"tradeType": "SELL",
-			"page":      1,
-			"rows":      20,
-		}).
-			Send()
-		if err != nil {
-			return decimal.Zero, fmt.Errorf("ComputeMarketRate: %w", err)
-		}
-
-		resData, err := utils.ParseJSONResponse(res.RawResponse)
-		if err != nil {
-			return decimal.Zero, fmt.Errorf("ComputeMarketRate: %w", err)
-		}
-
-		// Access the data array
-		data, ok := resData["data"].([]interface{})
-		if !ok || len(data) == 0 {
-			return decimal.Zero, fmt.Errorf("ComputeMarketRate: No data in the response")
-		}
-
-		// Loop through the data array and extract prices
-		var prices []decimal.Decimal
-		for _, item := range data {
-			adv, ok := item.(map[string]interface{})["adv"].(map[string]interface{})
-			if !ok {
-				continue
-			}
-
-			price, err := decimal.NewFromString(adv["price"].(string))
-			if err != nil {
-				continue
-			}
-
-			prices = append(prices, price)
-		}
-
-		// Calculate and return the median
-		price = utils.Median(prices)
-	}
-
-	return price, nil
-}
-
 // ComputeMarketRate computes the market price for fiat currencies
 func ComputeMarketRate() error {
 	// ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -1183,7 +1095,7 @@ func ComputeMarketRate() error {
 
 	for _, currency := range currencies {
 		// Fetch external rate
-		externalRate, err := fetchExternalRate(currency.Code)
+		externalRate, err := utils.FetchQuidaxRates(currency.Code)
 		if err != nil {
 			continue
 		}
