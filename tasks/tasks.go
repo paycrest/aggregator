@@ -693,6 +693,17 @@ func SyncLockOrderFulfillments() {
 				Send()
 			if err != nil {
 				logger.Errorf("SyncLockOrderFulfillments: %v %v", err, payload)
+
+				// Set status to pending on 400 error
+				if strings.Contains(err.Error(), "400") {
+					_, updateErr := storage.Client.LockPaymentOrder.
+						UpdateOneID(order.ID).
+						SetStatus(lockpaymentorder.StatusPending).
+						Save(ctx)
+					if updateErr != nil {
+						logger.Errorf("SyncLockOrderFulfillments.UpdateStatus: %v", updateErr)
+					}
+				}
 				continue
 			}
 
