@@ -46,6 +46,7 @@ func (FiatCurrency) Edges() []ent.Edge {
 		edge.To("institutions", Institution.Type),
 		edge.To("provider_order_tokens", ProviderOrderToken.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
-		edge.To("provider_availability", ProviderCurrencyAvailability.Type),
+		edge.To("provider_availability", ProviderCurrencyAvailability.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }

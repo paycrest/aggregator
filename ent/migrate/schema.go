@@ -328,13 +328,13 @@ var (
 				Symbol:     "provider_currency_availabilities_fiat_currencies_provider_availability",
 				Columns:    []*schema.Column{ProviderCurrencyAvailabilitiesColumns[2]},
 				RefColumns: []*schema.Column{FiatCurrenciesColumns[0]},
-				OnDelete:   schema.NoAction,
+				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "provider_currency_availabilities_provider_profiles_currency_availability",
 				Columns:    []*schema.Column{ProviderCurrencyAvailabilitiesColumns[3]},
 				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
-				OnDelete:   schema.NoAction,
+				OnDelete:   schema.Cascade,
 			},
 		},
 	}
