@@ -393,15 +393,10 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			txID := payload.TxID
-			if txID == "" {
-				txID = orderID.String()
-			}
-
 			_, err = storage.Client.LockOrderFulfillment.
 				Create().
 				SetOrderID(orderID).
-				SetTxID(txID).
+				SetTxID(payload.TxID).
 				SetPsp(payload.PSP).
 				Save(ctx)
 			if err != nil {
@@ -412,7 +407,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 
 			fulfillment, err = storage.Client.LockOrderFulfillment.
 				Query().
-				Where(lockorderfulfillment.TxIDEQ(txID)).
+				Where(lockorderfulfillment.TxIDEQ(payload.TxID)).
 				WithOrder(func(poq *ent.LockPaymentOrderQuery) {
 					poq.WithToken(func(tq *ent.TokenQuery) {
 						tq.WithNetwork()

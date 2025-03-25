@@ -157,7 +157,7 @@ type AcceptOrderResponse struct {
 // FulfillLockOrderPayload is the payload for the fulfill order endpoint
 type FulfillLockOrderPayload struct {
 	PSP              string                                `json:"psp" binding:"required"`
-	TxID             string                                `json:"txId"`
+	TxID             string                                `json:"txId" binding:"required"`
 	ValidationStatus lockorderfulfillment.ValidationStatus `json:"validationStatus"`
 	ValidationError  string                                `json:"validationError"`
 }
