@@ -259,6 +259,47 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 	u.APIResponse(ctx, http.StatusOK, "success", "Rate fetched successfully", rateResponse)
 }
 
+// GetSupportedTokens controller fetches supported cryptocurrency tokens
+func (ctrl *Controller) GetSupportedTokens(ctx *gin.Context) {
+	// Get network filter from query parameter
+	networkFilter := ctx.Query("network")
+
+	// Build query
+	query := storage.Client.Token.
+		Query().
+		Where(token.IsEnabled(true)).
+		WithNetwork()
+
+	// Apply network filter if provided
+	if networkFilter != "" {
+		query = query.Where(token.HasNetworkWith(
+			network.Identifier(strings.ToLower(networkFilter)),
+		))
+	}
+
+	// Execute query
+	tokens, err := query.All(ctx)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch tokens", nil)
+		return
+	}
+
+	// Transform tokens for response
+	response := make([]types.SupportedTokenResponse, 0, len(tokens))
+	for _, t := range tokens {
+		response = append(response, types.SupportedTokenResponse{
+			Symbol:          t.Symbol,
+			ContractAddress: t.ContractAddress,
+			Decimals:        t.Decimals,
+			BaseCurrency:    t.BaseCurrency,
+			Network:         t.Edges.Network.Identifier,
+		})
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Tokens retrieved successfully", response)
+}
+
 // GetAggregatorPublicKey controller expose Aggregator Public Key
 func (ctrl *Controller) GetAggregatorPublicKey(ctx *gin.Context) {
 	u.APIResponse(ctx, http.StatusOK, "success", "OK", cryptoConf.AggregatorPublicKey)
