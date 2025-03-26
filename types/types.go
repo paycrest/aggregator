@@ -674,3 +674,12 @@ type LinkedAddressTransactionList struct {
 	PageSize     int                        `json:"pageSize"`
 	Transactions []LinkedAddressTransaction `json:"transactions"`
 }
+
+// SupportedTokenResponse represents the structure for supported tokens
+type SupportedTokenResponse struct {
+	Symbol          string `json:"symbol"`
+	ContractAddress string `json:"contractAddress"`
+	Decimals        int8   `json:"decimals"`
+	BaseCurrency    string `json:"baseCurrency"`
+	Network         string `json:"network"`
+}
