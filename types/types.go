@@ -114,12 +114,12 @@ type CreateOrderParams struct {
 
 // RegisterPayload is the payload for the register endpoint
 type RegisterPayload struct {
-	FirstName    string     `json:"firstName" binding:"required"`
-	LastName     string     `json:"lastName" binding:"required"`
-	Email        string     `json:"email" binding:"required,email"`
-	Password     string     `json:"password" binding:"required,min=6,max=20"`
-	Currencies  []string    `json:"currency"`
-	Scopes      []string    `json:"scopes" binding:"required,dive,oneof=sender provider"`
+	FirstName  string   `json:"firstName" binding:"required"`
+	LastName   string   `json:"lastName" binding:"required"`
+	Email      string   `json:"email" binding:"required,email"`
+	Password   string   `json:"password" binding:"required,min=6,max=20"`
+	Currencies []string `json:"currencies"`
+	Scopes     []string `json:"scopes" binding:"required,dive,oneof=sender provider"`
 }
 
 // RegisterResponse is the response for the register endpoint
@@ -157,7 +157,7 @@ type AcceptOrderResponse struct {
 // FulfillLockOrderPayload is the payload for the fulfill order endpoint
 type FulfillLockOrderPayload struct {
 	PSP              string                                `json:"psp" binding:"required"`
-	TxID             string                                `json:"txId"`
+	TxID             string                                `json:"txId" binding:"required"`
 	ValidationStatus lockorderfulfillment.ValidationStatus `json:"validationStatus"`
 	ValidationError  string                                `json:"validationError"`
 }
@@ -334,23 +334,24 @@ type TransactionLog struct {
 
 // LockPaymentOrderResponse is the response for a lock payment order
 type LockPaymentOrderResponse struct {
-	ID                uuid.UUID               `json:"id"`
-	Token             string                  `json:"token"`
-	GatewayID         string                  `json:"gatewayId"`
-	Amount            decimal.Decimal         `json:"amount"`
-	Rate              decimal.Decimal         `json:"rate"`
-	BlockNumber       int64                   `json:"blockNumber"`
-	TxHash            string                  `json:"txHash"`
-	Institution       string                  `json:"institution"`
-	AccountIdentifier string                  `json:"accountIdentifier"`
-	AccountName       string                  `json:"accountName"`
-	ProviderID        string                  `json:"providerId"`
-	Memo              string                  `json:"memo"`
-	Network           string                  `json:"network"`
-	Status            lockpaymentorder.Status `json:"status"`
-	UpdatedAt         time.Time               `json:"updatedAt"`
-	CreatedAt         time.Time               `json:"createdAt"`
-	Transactions      []TransactionLog        `json:"transactionLogs"`
+	ID                  uuid.UUID               `json:"id"`
+	Token               string                  `json:"token"`
+	GatewayID           string                  `json:"gatewayId"`
+	Amount              decimal.Decimal         `json:"amount"`
+	Rate                decimal.Decimal         `json:"rate"`
+	BlockNumber         int64                   `json:"blockNumber"`
+	TxHash              string                  `json:"txHash"`
+	Institution         string                  `json:"institution"`
+	AccountIdentifier   string                  `json:"accountIdentifier"`
+	AccountName         string                  `json:"accountName"`
+	ProviderID          string                  `json:"providerId"`
+	Memo                string                  `json:"memo"`
+	Network             string                  `json:"network"`
+	Status              lockpaymentorder.Status `json:"status"`
+	UpdatedAt           time.Time               `json:"updatedAt"`
+	CreatedAt           time.Time               `json:"createdAt"`
+	Transactions        []TransactionLog        `json:"transactionLogs"`
+	CancellationReasons []string                `json:"cancellationReasons"`
 }
 
 type LockPaymentOrderTxReceipt struct {

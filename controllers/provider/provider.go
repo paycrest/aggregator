@@ -151,20 +151,21 @@ func (ctrl *ProviderController) GetLockPaymentOrders(ctx *gin.Context) {
 	var orders []types.LockPaymentOrderResponse
 	for _, order := range lockPaymentOrders {
 		orders = append(orders, types.LockPaymentOrderResponse{
-			ID:                order.ID,
-			Token:             order.Edges.Token.Symbol,
-			GatewayID:         order.GatewayID,
-			Amount:            order.Amount,
-			Rate:              order.Rate,
-			Institution:       order.Institution,
-			AccountIdentifier: order.AccountIdentifier,
-			AccountName:       order.AccountName,
-			TxHash:            order.TxHash,
-			Status:            order.Status,
-			Memo:              order.Memo,
-			Network:           order.Edges.Token.Edges.Network.Identifier,
-			UpdatedAt:         order.UpdatedAt,
-			CreatedAt:         order.CreatedAt,
+			ID:                  order.ID,
+			Token:               order.Edges.Token.Symbol,
+			GatewayID:           order.GatewayID,
+			Amount:              order.Amount,
+			Rate:                order.Rate,
+			Institution:         order.Institution,
+			AccountIdentifier:   order.AccountIdentifier,
+			AccountName:         order.AccountName,
+			TxHash:              order.TxHash,
+			Status:              order.Status,
+			Memo:                order.Memo,
+			Network:             order.Edges.Token.Edges.Network.Identifier,
+			CancellationReasons: order.CancellationReasons,
+			UpdatedAt:           order.UpdatedAt,
+			CreatedAt:           order.CreatedAt,
 		})
 	}
 
@@ -392,15 +393,10 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			txID := payload.TxID
-			if txID == "" {
-				txID = orderID.String()
-			}
-
 			_, err = storage.Client.LockOrderFulfillment.
 				Create().
 				SetOrderID(orderID).
-				SetTxID(txID).
+				SetTxID(payload.TxID).
 				SetPsp(payload.PSP).
 				Save(ctx)
 			if err != nil {
@@ -411,7 +407,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 
 			fulfillment, err = storage.Client.LockOrderFulfillment.
 				Query().
-				Where(lockorderfulfillment.TxIDEQ(txID)).
+				Where(lockorderfulfillment.TxIDEQ(payload.TxID)).
 				WithOrder(func(poq *ent.LockPaymentOrderQuery) {
 					poq.WithToken(func(tq *ent.TokenQuery) {
 						tq.WithNetwork()
@@ -965,20 +961,21 @@ func (ctrl *ProviderController) GetLockPaymentOrderByID(ctx *gin.Context) {
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "The order has been successfully retrieved", &types.LockPaymentOrderResponse{
-		ID:                lockPaymentOrder.ID,
-		Token:             lockPaymentOrder.Edges.Token.Symbol,
-		GatewayID:         lockPaymentOrder.GatewayID,
-		Amount:            lockPaymentOrder.Amount,
-		Rate:              lockPaymentOrder.Rate,
-		Institution:       lockPaymentOrder.Institution,
-		AccountIdentifier: lockPaymentOrder.AccountIdentifier,
-		AccountName:       lockPaymentOrder.AccountName,
-		TxHash:            lockPaymentOrder.TxHash,
-		Status:            lockPaymentOrder.Status,
-		Memo:              lockPaymentOrder.Memo,
-		Network:           lockPaymentOrder.Edges.Token.Edges.Network.Identifier,
-		UpdatedAt:         lockPaymentOrder.UpdatedAt,
-		CreatedAt:         lockPaymentOrder.CreatedAt,
-		Transactions:      transactions,
+		ID:                  lockPaymentOrder.ID,
+		Token:               lockPaymentOrder.Edges.Token.Symbol,
+		GatewayID:           lockPaymentOrder.GatewayID,
+		Amount:              lockPaymentOrder.Amount,
+		Rate:                lockPaymentOrder.Rate,
+		Institution:         lockPaymentOrder.Institution,
+		AccountIdentifier:   lockPaymentOrder.AccountIdentifier,
+		AccountName:         lockPaymentOrder.AccountName,
+		TxHash:              lockPaymentOrder.TxHash,
+		Status:              lockPaymentOrder.Status,
+		Memo:                lockPaymentOrder.Memo,
+		Network:             lockPaymentOrder.Edges.Token.Edges.Network.Identifier,
+		UpdatedAt:           lockPaymentOrder.UpdatedAt,
+		CreatedAt:           lockPaymentOrder.CreatedAt,
+		Transactions:        transactions,
+		CancellationReasons: lockPaymentOrder.CancellationReasons,
 	})
 }
