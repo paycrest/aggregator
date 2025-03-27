@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"log"
 	"time"
-
+	"fmt"
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
 	"github.com/paycrest/aggregator/config"
@@ -38,6 +38,7 @@ func DBConnection(DSN string) error {
 	}
 
 	if err != nil {
+		fmt.Println("DB CONNECT ERR 1", err)
 		Err = err
 		log.Println("Database connection error")
 		return err
@@ -60,6 +61,7 @@ func DBConnection(DSN string) error {
 	// Run the auto migration tool.
 	if conf.Environment == "local" {
 		if err := client.Schema.Create(context.Background(), migrate.WithGlobalUniqueID(true)); err != nil {
+			fmt.Println("DB CONNECT ERR 2", err)
 			return err
 		}
 	}
