@@ -57,7 +57,7 @@ chmod +x scripts/import_db.sh
 
 Here, we’d make use of a demo provision node and connect it to our local aggregator
 
-That's it! The server will now be running at http://localhost:8000. You can use an API testing tool like Postman or cURL to interact with the API.
+That's it! The server will now be running at http://localhost:8000. You can use an API testing tool like Postman or cURL to interact with the Sender API using the sandbox API Key `11f93de0-d304-4498-8b7b-6cecbc5b2dd8`.
 
 
 ## Usage
