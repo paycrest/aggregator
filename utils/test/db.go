@@ -644,7 +644,7 @@ func CreateTestFiatCurrency(overrides map[string]interface{}) (*ent.FiatCurrency
 }
 
 // Helper function to create test networks and tokens
-func CrateTestTokenData(t *testing.T, client *ent.Client) ([]*ent.Network, []*ent.Token) {
+func CreateTestTokenData(t *testing.T, client *ent.Client) ([]*ent.Network, []*ent.Token) {
 	ctx := context.Background()
 
 	// Create test networks
