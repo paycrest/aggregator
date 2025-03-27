@@ -999,6 +999,17 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 		}
 
 		if orderToken.Edges.Provider.VisibilityMode == providerprofile.VisibilityModePrivate {
+			if lockPaymentOrder.Amount.GreaterThan(orderToken.MaxOrderAmount) {
+				err := s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Amount is greater than the maximum order amount of the provider")
+				if err != nil {
+					return fmt.Errorf("%s - failed to cancel order: %w", lockPaymentOrder.GatewayID, err)
+				}
+				return nil
+			} else if lockPaymentOrder.Amount.LessThan(orderToken.MinOrderAmount) {
+				err := s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Amount is less than the minimum order amount of the provider")
+				if err != nil {
+					return fmt.Errorf("%s - failed to cancel order: %w", lockPaymentOrder.GatewayID, err)
+				}
 			normalizedAmount := lockPaymentOrder.Amount
 			if strings.EqualFold(token.BaseCurrency, institution.Edges.FiatCurrency.Code) && token.BaseCurrency != "USD" {
 				rateResponse, err := utils.GetTokenRateFromQueue("USDT", normalizedAmount, institution.Edges.FiatCurrency.Code, currency.MarketRate)
@@ -1126,6 +1137,32 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 		}
 
 		// Assign the lock payment order to a provider
+		normalizedAmount := lockPaymentOrder.Amount
+		if strings.EqualFold(token.BaseCurrency, currency.Code) && token.BaseCurrency != "USD" {
+			rateResponse, err := utils.GetTokenRateFromQueue("USDT", normalizedAmount, currency.Code, currency.MarketRate)
+			if err != nil {
+				return fmt.Errorf("failed to get token rate: %w", err)
+			}
+			normalizedAmount = lockPaymentOrder.Amount.Div(rateResponse)
+		}
+
+		if isPrivate && normalizedAmount.GreaterThan(maxOrderAmount) {
+			err := s.handleCancellation(ctx, client, orderCreated, nil, "Amount is greater than the maximum order amount of the provider")
+			if err != nil {
+				return fmt.Errorf("failed to cancel order: %w", err)
+			}
+			return nil
+		} else if isPrivate && normalizedAmount.LessThan(minOrderAmount) {
+			err := s.handleCancellation(ctx, client, orderCreated, nil, "Amount is less than the minimum order amount of the provider")
+			if err != nil {
+				return fmt.Errorf("failed to cancel order: %w", err)
+			}
+			return nil
+		} else {
+			lockPaymentOrder.ID = orderCreated.ID
+			_ = s.priorityQueue.AssignLockPaymentOrder(ctx, lockPaymentOrder)
+		}
+
 		lockPaymentOrder.ID = orderCreated.ID
 		_ = s.priorityQueue.AssignLockPaymentOrder(ctx, lockPaymentOrder)
 	}

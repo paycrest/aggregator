@@ -188,12 +188,11 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 			WithToken().
 			All(ctx)
 		if err != nil {
-			if err != context.Canceled {
-				logger.Errorf("failed to get tokens for provider %s: %v", provider.ID, err)
-			}
+			fmt.Println("error", err)
+			logger.Errorf("failed to get tokens for provider %s: %v", provider.ID, err)
 			continue
 		}
-
+		fmt.Println("orderTokens", orderTokens)
 		tokenSymbols := []string{}
 		for _, orderToken := range orderTokens {
 			if utils.ContainsString(tokenSymbols, orderToken.Edges.Token.Symbol) {
@@ -203,6 +202,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 
 			rate, err := s.GetProviderRate(ctx, provider, orderToken.Edges.Token.Symbol, bucket.Edges.Currency.Code)
 			if err != nil {
+
 				if err != context.Canceled {
 					logger.Errorf("failed to get %s rate for provider %s: %v", orderToken.Edges.Token.Symbol, provider.ID, err)
 				}
@@ -217,6 +217,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 			percentDeviation := utils.AbsPercentageDeviation(bucket.Edges.Currency.MarketRate, rate)
 
 			isLocalStablecoin := strings.Contains(orderToken.Edges.Token.Symbol, bucket.Edges.Currency.Code) && !strings.Contains(orderToken.Edges.Token.Symbol, "USD")
+
 			if serverConf.Environment == "production" && percentDeviation.GreaterThan(orderConf.PercentDeviationFromMarketRate) && !isLocalStablecoin {
 				// Skip this provider if the rate is too far off
 				// TODO: add a logic to notify the provider(s) to update his rate since it's stale. could be a cron job
@@ -380,7 +381,6 @@ func (s *PriorityQueueService) notifyProvider(ctx context.Context, orderRequestD
 	if err != nil {
 		logger.Errorf("PriorityQueueService.notifyProvider: %v %v", err, data)
 	}
-
 	return nil
 }
 

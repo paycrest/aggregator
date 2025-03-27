@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -25,7 +24,6 @@ type TokenCreate struct {
 	config
 	mutation *TokenMutation
 	hooks    []Hook
-	conflict []sql.ConflictOption
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -288,7 +286,6 @@ func (tc *TokenCreate) createSpec() (*Token, *sqlgraph.CreateSpec) {
 		_node = &Token{config: tc.config}
 		_spec = sqlgraph.NewCreateSpec(token.Table, sqlgraph.NewFieldSpec(token.FieldID, field.TypeInt))
 	)
-	_spec.OnConflict = tc.conflict
 	if value, ok := tc.mutation.CreatedAt(); ok {
 		_spec.SetField(token.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -694,7 +691,7 @@ func (u *TokenUpsertOne) IDX(ctx context.Context) int {
 	if err != nil {
 		panic(err)
 	}
-	return id
+	return _node, _spec
 }
 
 // TokenCreateBulk is the builder for creating many Token entities in bulk.
@@ -702,7 +699,6 @@ type TokenCreateBulk struct {
 	config
 	err      error
 	builders []*TokenCreate
-	conflict []sql.ConflictOption
 }
 
 // Save creates the Token entities in the database.
@@ -732,7 +728,6 @@ func (tcb *TokenCreateBulk) Save(ctx context.Context) ([]*Token, error) {
 					_, err = mutators[i+1].Mutate(root, tcb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = tcb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, tcb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -786,6 +781,7 @@ func (tcb *TokenCreateBulk) ExecX(ctx context.Context) {
 		panic(err)
 	}
 }
+
 
 // OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
 // of the `INSERT` statement. For example:

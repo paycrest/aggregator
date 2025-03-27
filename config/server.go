@@ -8,16 +8,14 @@ import (
 
 // ServerConfiguration type defines the server configurations
 type ServerConfiguration struct {
-	Debug                    bool
-	Host                     string
-	Port                     string
-	Timezone                 string
-	AllowedHosts             string
-	Environment              string
-	SentryDSN                string
-	HostDomain               string
-	RateLimitUnauthenticated int
-	RateLimitAuthenticated   int
+	Debug        bool
+	Host         string
+	Port         string
+	Timezone     string
+	AllowedHosts string
+	Environment  string
+	SentryDSN    string
+	HostDomain   string
 }
 
 // ServerConfig sets the server configuration

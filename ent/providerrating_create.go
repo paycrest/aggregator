@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -21,7 +20,6 @@ type ProviderRatingCreate struct {
 	config
 	mutation *ProviderRatingMutation
 	hooks    []Hook
-	conflict []sql.ConflictOption
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -154,7 +152,6 @@ func (prc *ProviderRatingCreate) createSpec() (*ProviderRating, *sqlgraph.Create
 		_node = &ProviderRating{config: prc.config}
 		_spec = sqlgraph.NewCreateSpec(providerrating.Table, sqlgraph.NewFieldSpec(providerrating.FieldID, field.TypeInt))
 	)
-	_spec.OnConflict = prc.conflict
 	if value, ok := prc.mutation.CreatedAt(); ok {
 		_spec.SetField(providerrating.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -187,204 +184,11 @@ func (prc *ProviderRatingCreate) createSpec() (*ProviderRating, *sqlgraph.Create
 	return _node, _spec
 }
 
-// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
-// of the `INSERT` statement. For example:
-//
-//	client.ProviderRating.Create().
-//		SetCreatedAt(v).
-//		OnConflict(
-//			// Update the row with the new values
-//			// the was proposed for insertion.
-//			sql.ResolveWithNewValues(),
-//		).
-//		// Override some of the fields with custom
-//		// update values.
-//		Update(func(u *ent.ProviderRatingUpsert) {
-//			SetCreatedAt(v+v).
-//		}).
-//		Exec(ctx)
-func (prc *ProviderRatingCreate) OnConflict(opts ...sql.ConflictOption) *ProviderRatingUpsertOne {
-	prc.conflict = opts
-	return &ProviderRatingUpsertOne{
-		create: prc,
-	}
-}
-
-// OnConflictColumns calls `OnConflict` and configures the columns
-// as conflict target. Using this option is equivalent to using:
-//
-//	client.ProviderRating.Create().
-//		OnConflict(sql.ConflictColumns(columns...)).
-//		Exec(ctx)
-func (prc *ProviderRatingCreate) OnConflictColumns(columns ...string) *ProviderRatingUpsertOne {
-	prc.conflict = append(prc.conflict, sql.ConflictColumns(columns...))
-	return &ProviderRatingUpsertOne{
-		create: prc,
-	}
-}
-
-type (
-	// ProviderRatingUpsertOne is the builder for "upsert"-ing
-	//  one ProviderRating node.
-	ProviderRatingUpsertOne struct {
-		create *ProviderRatingCreate
-	}
-
-	// ProviderRatingUpsert is the "OnConflict" setter.
-	ProviderRatingUpsert struct {
-		*sql.UpdateSet
-	}
-)
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *ProviderRatingUpsert) SetUpdatedAt(v time.Time) *ProviderRatingUpsert {
-	u.Set(providerrating.FieldUpdatedAt, v)
-	return u
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *ProviderRatingUpsert) UpdateUpdatedAt() *ProviderRatingUpsert {
-	u.SetExcluded(providerrating.FieldUpdatedAt)
-	return u
-}
-
-// SetTrustScore sets the "trust_score" field.
-func (u *ProviderRatingUpsert) SetTrustScore(v decimal.Decimal) *ProviderRatingUpsert {
-	u.Set(providerrating.FieldTrustScore, v)
-	return u
-}
-
-// UpdateTrustScore sets the "trust_score" field to the value that was provided on create.
-func (u *ProviderRatingUpsert) UpdateTrustScore() *ProviderRatingUpsert {
-	u.SetExcluded(providerrating.FieldTrustScore)
-	return u
-}
-
-// AddTrustScore adds v to the "trust_score" field.
-func (u *ProviderRatingUpsert) AddTrustScore(v decimal.Decimal) *ProviderRatingUpsert {
-	u.Add(providerrating.FieldTrustScore, v)
-	return u
-}
-
-// UpdateNewValues updates the mutable fields using the new values that were set on create.
-// Using this option is equivalent to using:
-//
-//	client.ProviderRating.Create().
-//		OnConflict(
-//			sql.ResolveWithNewValues(),
-//		).
-//		Exec(ctx)
-func (u *ProviderRatingUpsertOne) UpdateNewValues() *ProviderRatingUpsertOne {
-	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
-	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
-		if _, exists := u.create.mutation.CreatedAt(); exists {
-			s.SetIgnore(providerrating.FieldCreatedAt)
-		}
-	}))
-	return u
-}
-
-// Ignore sets each column to itself in case of conflict.
-// Using this option is equivalent to using:
-//
-//	client.ProviderRating.Create().
-//	    OnConflict(sql.ResolveWithIgnore()).
-//	    Exec(ctx)
-func (u *ProviderRatingUpsertOne) Ignore() *ProviderRatingUpsertOne {
-	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
-	return u
-}
-
-// DoNothing configures the conflict_action to `DO NOTHING`.
-// Supported only by SQLite and PostgreSQL.
-func (u *ProviderRatingUpsertOne) DoNothing() *ProviderRatingUpsertOne {
-	u.create.conflict = append(u.create.conflict, sql.DoNothing())
-	return u
-}
-
-// Update allows overriding fields `UPDATE` values. See the ProviderRatingCreate.OnConflict
-// documentation for more info.
-func (u *ProviderRatingUpsertOne) Update(set func(*ProviderRatingUpsert)) *ProviderRatingUpsertOne {
-	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
-		set(&ProviderRatingUpsert{UpdateSet: update})
-	}))
-	return u
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *ProviderRatingUpsertOne) SetUpdatedAt(v time.Time) *ProviderRatingUpsertOne {
-	return u.Update(func(s *ProviderRatingUpsert) {
-		s.SetUpdatedAt(v)
-	})
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *ProviderRatingUpsertOne) UpdateUpdatedAt() *ProviderRatingUpsertOne {
-	return u.Update(func(s *ProviderRatingUpsert) {
-		s.UpdateUpdatedAt()
-	})
-}
-
-// SetTrustScore sets the "trust_score" field.
-func (u *ProviderRatingUpsertOne) SetTrustScore(v decimal.Decimal) *ProviderRatingUpsertOne {
-	return u.Update(func(s *ProviderRatingUpsert) {
-		s.SetTrustScore(v)
-	})
-}
-
-// AddTrustScore adds v to the "trust_score" field.
-func (u *ProviderRatingUpsertOne) AddTrustScore(v decimal.Decimal) *ProviderRatingUpsertOne {
-	return u.Update(func(s *ProviderRatingUpsert) {
-		s.AddTrustScore(v)
-	})
-}
-
-// UpdateTrustScore sets the "trust_score" field to the value that was provided on create.
-func (u *ProviderRatingUpsertOne) UpdateTrustScore() *ProviderRatingUpsertOne {
-	return u.Update(func(s *ProviderRatingUpsert) {
-		s.UpdateTrustScore()
-	})
-}
-
-// Exec executes the query.
-func (u *ProviderRatingUpsertOne) Exec(ctx context.Context) error {
-	if len(u.create.conflict) == 0 {
-		return errors.New("ent: missing options for ProviderRatingCreate.OnConflict")
-	}
-	return u.create.Exec(ctx)
-}
-
-// ExecX is like Exec, but panics if an error occurs.
-func (u *ProviderRatingUpsertOne) ExecX(ctx context.Context) {
-	if err := u.create.Exec(ctx); err != nil {
-		panic(err)
-	}
-}
-
-// Exec executes the UPSERT query and returns the inserted/updated ID.
-func (u *ProviderRatingUpsertOne) ID(ctx context.Context) (id int, err error) {
-	node, err := u.create.Save(ctx)
-	if err != nil {
-		return id, err
-	}
-	return node.ID, nil
-}
-
-// IDX is like ID, but panics if an error occurs.
-func (u *ProviderRatingUpsertOne) IDX(ctx context.Context) int {
-	id, err := u.ID(ctx)
-	if err != nil {
-		panic(err)
-	}
-	return id
-}
-
 // ProviderRatingCreateBulk is the builder for creating many ProviderRating entities in bulk.
 type ProviderRatingCreateBulk struct {
 	config
 	err      error
 	builders []*ProviderRatingCreate
-	conflict []sql.ConflictOption
 }
 
 // Save creates the ProviderRating entities in the database.
@@ -414,7 +218,6 @@ func (prcb *ProviderRatingCreateBulk) Save(ctx context.Context) ([]*ProviderRati
 					_, err = mutators[i+1].Mutate(root, prcb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = prcb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, prcb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -465,152 +268,6 @@ func (prcb *ProviderRatingCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (prcb *ProviderRatingCreateBulk) ExecX(ctx context.Context) {
 	if err := prcb.Exec(ctx); err != nil {
-		panic(err)
-	}
-}
-
-// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
-// of the `INSERT` statement. For example:
-//
-//	client.ProviderRating.CreateBulk(builders...).
-//		OnConflict(
-//			// Update the row with the new values
-//			// the was proposed for insertion.
-//			sql.ResolveWithNewValues(),
-//		).
-//		// Override some of the fields with custom
-//		// update values.
-//		Update(func(u *ent.ProviderRatingUpsert) {
-//			SetCreatedAt(v+v).
-//		}).
-//		Exec(ctx)
-func (prcb *ProviderRatingCreateBulk) OnConflict(opts ...sql.ConflictOption) *ProviderRatingUpsertBulk {
-	prcb.conflict = opts
-	return &ProviderRatingUpsertBulk{
-		create: prcb,
-	}
-}
-
-// OnConflictColumns calls `OnConflict` and configures the columns
-// as conflict target. Using this option is equivalent to using:
-//
-//	client.ProviderRating.Create().
-//		OnConflict(sql.ConflictColumns(columns...)).
-//		Exec(ctx)
-func (prcb *ProviderRatingCreateBulk) OnConflictColumns(columns ...string) *ProviderRatingUpsertBulk {
-	prcb.conflict = append(prcb.conflict, sql.ConflictColumns(columns...))
-	return &ProviderRatingUpsertBulk{
-		create: prcb,
-	}
-}
-
-// ProviderRatingUpsertBulk is the builder for "upsert"-ing
-// a bulk of ProviderRating nodes.
-type ProviderRatingUpsertBulk struct {
-	create *ProviderRatingCreateBulk
-}
-
-// UpdateNewValues updates the mutable fields using the new values that
-// were set on create. Using this option is equivalent to using:
-//
-//	client.ProviderRating.Create().
-//		OnConflict(
-//			sql.ResolveWithNewValues(),
-//		).
-//		Exec(ctx)
-func (u *ProviderRatingUpsertBulk) UpdateNewValues() *ProviderRatingUpsertBulk {
-	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
-	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
-		for _, b := range u.create.builders {
-			if _, exists := b.mutation.CreatedAt(); exists {
-				s.SetIgnore(providerrating.FieldCreatedAt)
-			}
-		}
-	}))
-	return u
-}
-
-// Ignore sets each column to itself in case of conflict.
-// Using this option is equivalent to using:
-//
-//	client.ProviderRating.Create().
-//		OnConflict(sql.ResolveWithIgnore()).
-//		Exec(ctx)
-func (u *ProviderRatingUpsertBulk) Ignore() *ProviderRatingUpsertBulk {
-	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
-	return u
-}
-
-// DoNothing configures the conflict_action to `DO NOTHING`.
-// Supported only by SQLite and PostgreSQL.
-func (u *ProviderRatingUpsertBulk) DoNothing() *ProviderRatingUpsertBulk {
-	u.create.conflict = append(u.create.conflict, sql.DoNothing())
-	return u
-}
-
-// Update allows overriding fields `UPDATE` values. See the ProviderRatingCreateBulk.OnConflict
-// documentation for more info.
-func (u *ProviderRatingUpsertBulk) Update(set func(*ProviderRatingUpsert)) *ProviderRatingUpsertBulk {
-	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
-		set(&ProviderRatingUpsert{UpdateSet: update})
-	}))
-	return u
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *ProviderRatingUpsertBulk) SetUpdatedAt(v time.Time) *ProviderRatingUpsertBulk {
-	return u.Update(func(s *ProviderRatingUpsert) {
-		s.SetUpdatedAt(v)
-	})
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *ProviderRatingUpsertBulk) UpdateUpdatedAt() *ProviderRatingUpsertBulk {
-	return u.Update(func(s *ProviderRatingUpsert) {
-		s.UpdateUpdatedAt()
-	})
-}
-
-// SetTrustScore sets the "trust_score" field.
-func (u *ProviderRatingUpsertBulk) SetTrustScore(v decimal.Decimal) *ProviderRatingUpsertBulk {
-	return u.Update(func(s *ProviderRatingUpsert) {
-		s.SetTrustScore(v)
-	})
-}
-
-// AddTrustScore adds v to the "trust_score" field.
-func (u *ProviderRatingUpsertBulk) AddTrustScore(v decimal.Decimal) *ProviderRatingUpsertBulk {
-	return u.Update(func(s *ProviderRatingUpsert) {
-		s.AddTrustScore(v)
-	})
-}
-
-// UpdateTrustScore sets the "trust_score" field to the value that was provided on create.
-func (u *ProviderRatingUpsertBulk) UpdateTrustScore() *ProviderRatingUpsertBulk {
-	return u.Update(func(s *ProviderRatingUpsert) {
-		s.UpdateTrustScore()
-	})
-}
-
-// Exec executes the query.
-func (u *ProviderRatingUpsertBulk) Exec(ctx context.Context) error {
-	if u.create.err != nil {
-		return u.create.err
-	}
-	for i, b := range u.create.builders {
-		if len(b.conflict) != 0 {
-			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the ProviderRatingCreateBulk instead", i)
-		}
-	}
-	if len(u.create.conflict) == 0 {
-		return errors.New("ent: missing options for ProviderRatingCreateBulk.OnConflict")
-	}
-	return u.create.Exec(ctx)
-}
-
-// ExecX is like Exec, but panics if an error occurs.
-func (u *ProviderRatingUpsertBulk) ExecX(ctx context.Context) {
-	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

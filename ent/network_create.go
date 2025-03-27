@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/paycrest/aggregator/ent/network"
@@ -21,7 +20,6 @@ type NetworkCreate struct {
 	config
 	mutation *NetworkMutation
 	hooks    []Hook
-	conflict []sql.ConflictOption
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -254,7 +252,6 @@ func (nc *NetworkCreate) createSpec() (*Network, *sqlgraph.CreateSpec) {
 		_node = &Network{config: nc.config}
 		_spec = sqlgraph.NewCreateSpec(network.Table, sqlgraph.NewFieldSpec(network.FieldID, field.TypeInt))
 	)
-	_spec.OnConflict = nc.conflict
 	if value, ok := nc.mutation.CreatedAt(); ok {
 		_spec.SetField(network.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -317,6 +314,7 @@ func (nc *NetworkCreate) createSpec() (*Network, *sqlgraph.CreateSpec) {
 	}
 	return _node, _spec
 }
+
 
 // OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
 // of the `INSERT` statement. For example:
@@ -775,7 +773,6 @@ type NetworkCreateBulk struct {
 	config
 	err      error
 	builders []*NetworkCreate
-	conflict []sql.ConflictOption
 }
 
 // Save creates the Network entities in the database.
@@ -805,7 +802,6 @@ func (ncb *NetworkCreateBulk) Save(ctx context.Context) ([]*Network, error) {
 					_, err = mutators[i+1].Mutate(root, ncb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = ncb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, ncb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
