@@ -50,7 +50,7 @@ docker-compose up -d
 chmod +x scripts/import_db.sh
 
 # run the script to seed db with sample configured sender & provider profile
-./scripts/import_db.sh
+./scripts/import_db.sh -h localhost
 ```
 
 3. Run our sandbox provision node and connect it to your local aggregator by following the [instructions here](https://paycrest.notion.site/run-sandbox-provision-node)
