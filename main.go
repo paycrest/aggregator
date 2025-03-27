@@ -20,11 +20,12 @@ func main() {
 
 	// Connect to the database
 	DSN := config.DBConfig()
-
+	fmt.Println("start")
 	if err := storage.DBConnection(DSN); err != nil {
+		fmt.Println(err)
 		logger.Fatalf("database DBConnection: %s", err)
 	}
-
+    fmt.Println("start2")
 	defer storage.GetClient().Close()
 
 	// err := tasks.FixDatabaseMisHap()
