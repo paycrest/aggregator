@@ -266,7 +266,7 @@ func TestIndex(t *testing.T) {
 
 	t.Run("GetSupportedTokens", func(t *testing.T) {
 		// Setup test data for tokens
-		networks, tokens := test.CrateTestTokenData(t, client)
+		networks, tokens := test.CreateTestTokenData(t, client)
 
 		// Define response structure
 		type Response struct {
