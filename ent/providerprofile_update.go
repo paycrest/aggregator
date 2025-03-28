@@ -16,6 +16,7 @@ import (
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/providercurrencyavailability"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -389,6 +390,21 @@ func (ppu *ProviderProfileUpdate) AddAssignedOrders(l ...*LockPaymentOrder) *Pro
 	return ppu.AddAssignedOrderIDs(ids...)
 }
 
+// AddCurrencyAvailabilityIDs adds the "currency_availability" edge to the ProviderCurrencyAvailability entity by IDs.
+func (ppu *ProviderProfileUpdate) AddCurrencyAvailabilityIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
+	ppu.mutation.AddCurrencyAvailabilityIDs(ids...)
+	return ppu
+}
+
+// AddCurrencyAvailability adds the "currency_availability" edges to the ProviderCurrencyAvailability entity.
+func (ppu *ProviderProfileUpdate) AddCurrencyAvailability(p ...*ProviderCurrencyAvailability) *ProviderProfileUpdate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return ppu.AddCurrencyAvailabilityIDs(ids...)
+}
+
 // Mutation returns the ProviderProfileMutation object of the builder.
 func (ppu *ProviderProfileUpdate) Mutation() *ProviderProfileMutation {
 	return ppu.mutation
@@ -488,6 +504,27 @@ func (ppu *ProviderProfileUpdate) RemoveAssignedOrders(l ...*LockPaymentOrder) *
 		ids[i] = l[i].ID
 	}
 	return ppu.RemoveAssignedOrderIDs(ids...)
+}
+
+// ClearCurrencyAvailability clears all "currency_availability" edges to the ProviderCurrencyAvailability entity.
+func (ppu *ProviderProfileUpdate) ClearCurrencyAvailability() *ProviderProfileUpdate {
+	ppu.mutation.ClearCurrencyAvailability()
+	return ppu
+}
+
+// RemoveCurrencyAvailabilityIDs removes the "currency_availability" edge to ProviderCurrencyAvailability entities by IDs.
+func (ppu *ProviderProfileUpdate) RemoveCurrencyAvailabilityIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
+	ppu.mutation.RemoveCurrencyAvailabilityIDs(ids...)
+	return ppu
+}
+
+// RemoveCurrencyAvailability removes "currency_availability" edges to ProviderCurrencyAvailability entities.
+func (ppu *ProviderProfileUpdate) RemoveCurrencyAvailability(p ...*ProviderCurrencyAvailability) *ProviderProfileUpdate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return ppu.RemoveCurrencyAvailabilityIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -876,6 +913,51 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if ppu.mutation.CurrencyAvailabilityCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.CurrencyAvailabilityTable,
+			Columns: []string{providerprofile.CurrencyAvailabilityColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencyavailability.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ppu.mutation.RemovedCurrencyAvailabilityIDs(); len(nodes) > 0 && !ppu.mutation.CurrencyAvailabilityCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.CurrencyAvailabilityTable,
+			Columns: []string{providerprofile.CurrencyAvailabilityColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencyavailability.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ppu.mutation.CurrencyAvailabilityIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.CurrencyAvailabilityTable,
+			Columns: []string{providerprofile.CurrencyAvailabilityColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencyavailability.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, ppu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{providerprofile.Label}
@@ -1250,6 +1332,21 @@ func (ppuo *ProviderProfileUpdateOne) AddAssignedOrders(l ...*LockPaymentOrder) 
 	return ppuo.AddAssignedOrderIDs(ids...)
 }
 
+// AddCurrencyAvailabilityIDs adds the "currency_availability" edge to the ProviderCurrencyAvailability entity by IDs.
+func (ppuo *ProviderProfileUpdateOne) AddCurrencyAvailabilityIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
+	ppuo.mutation.AddCurrencyAvailabilityIDs(ids...)
+	return ppuo
+}
+
+// AddCurrencyAvailability adds the "currency_availability" edges to the ProviderCurrencyAvailability entity.
+func (ppuo *ProviderProfileUpdateOne) AddCurrencyAvailability(p ...*ProviderCurrencyAvailability) *ProviderProfileUpdateOne {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return ppuo.AddCurrencyAvailabilityIDs(ids...)
+}
+
 // Mutation returns the ProviderProfileMutation object of the builder.
 func (ppuo *ProviderProfileUpdateOne) Mutation() *ProviderProfileMutation {
 	return ppuo.mutation
@@ -1349,6 +1446,27 @@ func (ppuo *ProviderProfileUpdateOne) RemoveAssignedOrders(l ...*LockPaymentOrde
 		ids[i] = l[i].ID
 	}
 	return ppuo.RemoveAssignedOrderIDs(ids...)
+}
+
+// ClearCurrencyAvailability clears all "currency_availability" edges to the ProviderCurrencyAvailability entity.
+func (ppuo *ProviderProfileUpdateOne) ClearCurrencyAvailability() *ProviderProfileUpdateOne {
+	ppuo.mutation.ClearCurrencyAvailability()
+	return ppuo
+}
+
+// RemoveCurrencyAvailabilityIDs removes the "currency_availability" edge to ProviderCurrencyAvailability entities by IDs.
+func (ppuo *ProviderProfileUpdateOne) RemoveCurrencyAvailabilityIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
+	ppuo.mutation.RemoveCurrencyAvailabilityIDs(ids...)
+	return ppuo
+}
+
+// RemoveCurrencyAvailability removes "currency_availability" edges to ProviderCurrencyAvailability entities.
+func (ppuo *ProviderProfileUpdateOne) RemoveCurrencyAvailability(p ...*ProviderCurrencyAvailability) *ProviderProfileUpdateOne {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return ppuo.RemoveCurrencyAvailabilityIDs(ids...)
 }
 
 // Where appends a list predicates to the ProviderProfileUpdate builder.
@@ -1760,6 +1878,51 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if ppuo.mutation.CurrencyAvailabilityCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.CurrencyAvailabilityTable,
+			Columns: []string{providerprofile.CurrencyAvailabilityColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencyavailability.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ppuo.mutation.RemovedCurrencyAvailabilityIDs(); len(nodes) > 0 && !ppuo.mutation.CurrencyAvailabilityCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.CurrencyAvailabilityTable,
+			Columns: []string{providerprofile.CurrencyAvailabilityColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencyavailability.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ppuo.mutation.CurrencyAvailabilityIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.CurrencyAvailabilityTable,
+			Columns: []string{providerprofile.CurrencyAvailabilityColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencyavailability.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
