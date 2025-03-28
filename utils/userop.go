@@ -477,7 +477,7 @@ func GetPaymasterAccount(chainId int64) (string, error) {
 
 	// Handle biconomy case specifically
 	if aaService == "biconomy" {
-		return "0x00000f79b7faf42eebadba19acc07cd08af44789", nil
+		return "0x00000f7365ca6c59a2c93719ad53d567ed49c14c", nil
 	}
 
 	client, err := rpc.Dial(paymasterUrl)
