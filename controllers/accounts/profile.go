@@ -352,7 +352,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				u.APIResponse(
 					ctx,
 					http.StatusInternalServerError,
-					"error", "Failed to update profile 3",
+					"error", "Failed to update profile",
 					nil,
 				)
 			}
@@ -401,7 +401,20 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 				providerordertoken.HasCurrencyWith(fiatcurrency.IDEQ(currency.ID)),
 			).
+			WithCurrency().
 			Only(ctx)
+
+		fmt.Println("orderToken", orderToken)
+
+		// Handle slippage validation and default value
+		if tokenPayload.RateSlippage.IsZero() {
+			tokenPayload.RateSlippage = decimal.NewFromFloat(0.5)
+		} else if tokenPayload.RateSlippage.LessThan(decimal.Zero) ||
+			(orderToken.Edges.Currency.MarketRate.IsZero() && tokenPayload.RateSlippage.GreaterThan(decimal.NewFromFloat(0.2))) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Rate slippage is too high", nil)
+			return
+		}
+
 		if err != nil {
 			if ent.IsNotFound(err) {
 				// Token doesn't exist, create it
@@ -415,6 +428,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 					SetAddress(tokenPayload.Address).
 					SetNetwork(tokenPayload.Network).
 					SetProviderID(provider.ID).
+					SetRateSlippage(tokenPayload.RateSlippage).
 					SetTokenID(providerToken.ID).
 					SetCurrencyID(currency.ID).
 					Save(ctx)
@@ -438,6 +452,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				SetFloatingConversionRate(tokenPayload.FloatingConversionRate).
 				SetMaxOrderAmount(tokenPayload.MaxOrderAmount).
 				SetMinOrderAmount(tokenPayload.MinOrderAmount).
+				SetRateSlippage(tokenPayload.RateSlippage).
 				SetAddress(tokenPayload.Address).
 				SetNetwork(tokenPayload.Network).
 				Save(ctx)
@@ -643,6 +658,7 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 			FloatingConversionRate: orderToken.FloatingConversionRate,
 			MaxOrderAmount:         orderToken.MaxOrderAmount,
 			MinOrderAmount:         orderToken.MinOrderAmount,
+			RateSlippage:           orderToken.RateSlippage,
 			Address:                orderToken.Address,
 			Network:                orderToken.Network,
 		}
