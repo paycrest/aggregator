@@ -352,7 +352,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				u.APIResponse(
 					ctx,
 					http.StatusInternalServerError,
-					"error", "Failed to update profile 3",
+					"error", "Failed to update profile",
 					nil,
 				)
 			}
@@ -401,14 +401,17 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 				providerordertoken.HasCurrencyWith(fiatcurrency.IDEQ(currency.ID)),
 			).
+			WithCurrency().
 			Only(ctx)
 
-			// Handle slippage validation and default value
+		fmt.Println("orderToken", orderToken)
+
+		// Handle slippage validation and default value
 		if tokenPayload.RateSlippage.IsZero() {
-			tokenPayload.RateSlippage = decimal.Zero // Default to 0
+			tokenPayload.RateSlippage = decimal.NewFromFloat(0.5)
 		} else if tokenPayload.RateSlippage.LessThan(decimal.Zero) ||
-			tokenPayload.RateSlippage.GreaterThan(decimal.NewFromFloat(20)) {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Rate slippage cannot exceed 20% of market rate", nil)
+			(orderToken.Edges.Currency.MarketRate.IsZero() && tokenPayload.RateSlippage.GreaterThan(decimal.NewFromFloat(0.2))) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Rate slippage is too high", nil)
 			return
 		}
 

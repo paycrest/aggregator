@@ -198,7 +198,7 @@ func CreateTestLockPaymentOrder(overrides map[string]interface{}) (*ent.LockPaym
 		"account_identifier":   "1234567890",
 		"account_name":         "Test Account",
 		"updatedAt":            time.Now(),
-		"tokenID":              0,
+		"token_id":              0,
 		"cancellation_reasons": []string{},
 	}
 
@@ -215,7 +215,7 @@ func CreateTestLockPaymentOrder(overrides map[string]interface{}) (*ent.LockPaym
 		payload[key] = value
 	}
 
-	if payload["tokenID"].(int) == 0 {
+	if payload["token_id"].(int) == 0 {
 		// Create test token
 		backend, _ := SetUpTestBlockchain()
 		token, err := CreateERC20Token(backend, map[string]interface{}{
@@ -224,7 +224,7 @@ func CreateTestLockPaymentOrder(overrides map[string]interface{}) (*ent.LockPaym
 		if err != nil {
 			return nil, err
 		}
-		payload["tokenID"] = token.ID
+		payload["token_id"] = token.ID
 	}
 
 	// Create LockPaymentOrder
@@ -239,7 +239,7 @@ func CreateTestLockPaymentOrder(overrides map[string]interface{}) (*ent.LockPaym
 		SetInstitution(payload["institution"].(string)).
 		SetAccountIdentifier(payload["account_identifier"].(string)).
 		SetAccountName(payload["account_name"].(string)).
-		SetTokenID(payload["tokenID"].(int)).
+		SetTokenID(payload["token_id"].(int)).
 		SetProvider(providerProfile).
 		SetUpdatedAt(payload["updatedAt"].(time.Time)).
 		SetCancellationReasons(payload["cancellation_reasons"].([]string)).
@@ -497,7 +497,7 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		"max_order_amount":         decimal.NewFromFloat(1.0),
 		"min_order_amount":         decimal.NewFromFloat(1.0),
 		"provider":                 nil,
-		"tokenID":                  0,
+		"token_id":                  0,
 		"address":                  "0x1234567890123456789012345678901234567890",
 		"network":                  "polygon",
 	}
@@ -507,7 +507,7 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		payload[key] = value
 	}
 
-	if payload["tokenID"].(int) == 0 {
+	if payload["token_id"].(int) == 0 {
 		// Create test token
 		backend, _ := SetUpTestBlockchain()
 		token, err := CreateERC20Token(backend, map[string]interface{}{
@@ -516,8 +516,10 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		if err != nil {
 			return nil, err
 		}
-		payload["tokenID"] = token.ID
+		payload["token_id"] = token.ID
 	}
+
+	fmt.Println("payload", payload)
 
 	orderToken, err := db.Client.ProviderOrderToken.
 		Create().
@@ -529,7 +531,7 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		SetFloatingConversionRate(payload["floating_conversion_rate"].(decimal.Decimal)).
 		SetAddress(payload["address"].(string)).
 		SetNetwork(payload["network"].(string)).
-		SetTokenID(payload["tokenID"].(int)).
+		SetTokenID(payload["token_id"].(int)).
 		SetCurrencyID(payload["currency_id"].(uuid.UUID)).
 		Save(context.Background())
 

@@ -403,8 +403,17 @@ func TestProfile(t *testing.T) {
 				Network:                "localhost",
 			}
 
-			t.Run("fails when rate slippage exceeds 20%", func(t *testing.T) {
+			currencies, err := testCtx.providerProfile.QueryCurrencies().All(context.Background())
+			assert.NoError(t, err)
 
+			_, err = test.AddProviderOrderTokenToProvider(map[string]interface{}{
+				"provider": testCtx.providerProfile,
+				"token_id":  testCtx.token.ID,
+				"currency_id": currencies[0].ID,
+			})
+			assert.NoError(t, err)
+
+			t.Run("fails when rate slippage exceeds 20 percent of market rate", func(t *testing.T) {
 				tokenPayload := baseTokenPayload
 				tokenPayload.RateSlippage = decimal.NewFromFloat(25) // 25% slippage
 
@@ -421,8 +430,7 @@ func TestProfile(t *testing.T) {
 				var response types.Response
 				err := json.Unmarshal(res.Body.Bytes(), &response)
 				assert.NoError(t, err)
-				assert.Equal(t, "Rate slippage cannot exceed 20% of market rate", response.Message)
-
+				assert.Equal(t, "Rate slippage is too high", response.Message)
 			})
 
 			t.Run("succeeds with valid rate slippage", func(t *testing.T) {
