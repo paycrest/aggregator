@@ -883,21 +883,21 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 				"id_type":             "VOTER_ID",
 				"verification_method": "doc_verification",
 			},
-			{
-				"country":             "GH",
-				"id_type":             "NEW_VOTER_ID",
-				"verification_method": "biometric_kyc",
-			},
+			// {
+			// 	"country":             "GH",
+			// 	"id_type":             "NEW_VOTER_ID",
+			// 	"verification_method": "biometric_kyc",
+			// },
 			{
 				"country":             "GH",
 				"id_type":             "DRIVERS_LICENSE",
 				"verification_method": "doc_verification",
 			},
-			{
-				"country":             "GH",
-				"id_type":             "SSNIT",
-				"verification_method": "biometric_kyc",
-			},
+			// {
+			// 	"country":             "GH",
+			// 	"id_type":             "SSNIT",
+			// 	"verification_method": "biometric_kyc",
+			// },
 			{
 				"country":             "GH",
 				"id_type":             "RESIDENT_ID",
