@@ -20,6 +20,7 @@ import (
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/shopspring/decimal"
 
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
@@ -737,6 +738,11 @@ func (s *OrderEVM) settleCallData(ctx context.Context, order *ent.LockPaymentOrd
 		return nil, fmt.Errorf("failed to parse GatewayOrder ABI: %w", err)
 	}
 
+	institution, err := utils.GetInstitutionByCode(ctx, order.Institution)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get institution: %w", err)
+	}
+
 	// Fetch provider address from db
 	token, err := db.Client.ProviderOrderToken.
 		Query().
@@ -747,6 +753,9 @@ func (s *OrderEVM) settleCallData(ctx context.Context, order *ent.LockPaymentOrd
 			),
 			providerordertoken.HasTokenWith(
 				tokenent.IDEQ(order.Edges.Token.ID),
+			),
+			providerordertoken.HasCurrencyWith(
+				fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
 			),
 		).
 		Only(ctx)

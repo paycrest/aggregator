@@ -24,6 +24,7 @@ import (
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
+	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/stackup-wallet/stackup-bundler/pkg/userop"
 )
 
@@ -122,6 +123,20 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 
 	var payload map[string]interface{}
 	var requestParams []interface{}
+	method := "pm_sponsorUserOperation"
+	userOpExpanded := map[string]interface{}{
+		"sender":               userOp.Sender.Hex(),
+		"nonce":                userOp.Nonce.String(),
+		"initCode":             hexutil.Encode(userOp.InitCode),
+		"callData":             hexutil.Encode(userOp.CallData),
+		"callGasLimit":         userOp.CallGasLimit.String(),
+		"verificationGasLimit": userOp.VerificationGasLimit.String(),
+		"preVerificationGas":   userOp.PreVerificationGas.String(),
+		"maxFeePerGas":         userOp.MaxFeePerGas.String(),
+		"maxPriorityFeePerGas": userOp.MaxPriorityFeePerGas.String(),
+		"paymasterAndData":     hexutil.Encode(userOp.PaymasterAndData),
+		"signature":            hexutil.Encode(userOp.Signature),
+	}
 
 	switch aaService {
 	case "biconomy":
@@ -155,40 +170,90 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 		}
 
 		requestParams = []interface{}{
-			map[string]interface{}{
-				"sender":               userOp.Sender.Hex(),
-				"nonce":                userOp.Nonce.String(),
-				"initCode":             hexutil.Encode(userOp.InitCode),
-				"callData":             hexutil.Encode(userOp.CallData),
-				"callGasLimit":         userOp.CallGasLimit.String(),
-				"verificationGasLimit": userOp.VerificationGasLimit.String(),
-				"preVerificationGas":   userOp.PreVerificationGas.String(),
-				"maxFeePerGas":         userOp.MaxFeePerGas.String(),
-				"maxPriorityFeePerGas": userOp.MaxPriorityFeePerGas.String(),
-				"paymasterAndData":     hexutil.Encode(userOp.PaymasterAndData),
-				"signature":            hexutil.Encode(userOp.Signature),
-			},
+			userOpExpanded,
 			payload,
+		}
+	case "zerodev":
+		method = "zd_sponsorUserOperation"
+		var shouldOverrideFee bool
+		var shouldConsume bool
+
+		if mode == "sponsored" {
+			shouldOverrideFee = true
+			shouldConsume = false
+		} else if mode == "erc20" {
+			shouldOverrideFee = true
+			shouldConsume = true
+		} else {
+			return fmt.Errorf("invalid mode")
+		}
+
+		requestParams = []interface{}{
+			chainId,
+			userOpExpanded,
+			orderConf.EntryPointContractAddress.Hex(),
+			map[string]interface{}{
+				"tokenAddress": token,
+			},
+			shouldOverrideFee,
+			shouldConsume,
+		}
+	case "pimlico":
+		requestParams = []interface{}{
+			userOpExpanded,
+			map[string]interface{}{
+				"entryPoint": orderConf.EntryPointContractAddress.Hex(),
+			},
+		}
+
+		if mode == "erc20" {
+			if token == "" {
+				return fmt.Errorf("token address is required")
+			}
+			requestParams = append(requestParams, map[string]interface{}{
+				"sponsorPaymaster": "erc20",
+				"feeToken":         token,
+			})
+		} else if mode == "sponsored" {
+			requestParams = append(requestParams, map[string]interface{}{
+				"sponsorPaymaster": "verifying",
+			})
+		} else {
+			return fmt.Errorf("invalid mode")
 		}
 	default:
 		return fmt.Errorf("unsupported AA service: %s", aaService)
 	}
 
 	var result json.RawMessage
-	err = client.Call(&result, "pm_sponsorUserOperation", requestParams...)
+	err = client.Call(&result, method, requestParams...)
 	if err != nil {
 		op, _ := userOp.MarshalJSON()
 		return fmt.Errorf("RPC error: %w\nUser Operation: %s", err, string(op))
 	}
 
+	var response map[string]interface{}
+	err = json.Unmarshal(result, &response)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	logger.Errorf("sponsorUserOperation: aaService: %s response: %v", aaService, response)
+
 	switch aaService {
 	case "biconomy":
-		var response map[string]interface{}
-		err = json.Unmarshal(result, &response)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal response: %w", err)
-		}
+		userOp.PaymasterAndData = common.FromHex(response["paymasterAndData"].(string))
+		userOp.PreVerificationGas, _ = new(big.Int).SetString(response["preVerificationGas"].(string), 0)
+		userOp.VerificationGasLimit = decimal.NewFromFloat(response["verificationGasLimit"].(float64)).BigInt()
+		userOp.CallGasLimit = decimal.NewFromFloat(response["callGasLimit"].(float64)).BigInt()
 
+	case "zerodev":
+		userOp.PaymasterAndData = common.FromHex(response["paymasterAndData"].(string))
+		userOp.PreVerificationGas, _ = new(big.Int).SetString(response["preVerificationGas"].(string), 0)
+		userOp.VerificationGasLimit = decimal.NewFromFloat(response["verificationGasLimit"].(float64)).BigInt()
+		userOp.CallGasLimit = decimal.NewFromFloat(response["callGasLimit"].(float64)).BigInt()
+
+	case "pimlico":
 		userOp.PaymasterAndData = common.FromHex(response["paymasterAndData"].(string))
 		userOp.PreVerificationGas, _ = new(big.Int).SetString(response["preVerificationGas"].(string), 0)
 		userOp.VerificationGasLimit = decimal.NewFromFloat(response["verificationGasLimit"].(float64)).BigInt()
@@ -234,6 +299,7 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 	}
 
 	var requestParams []interface{}
+	method := "eth_sendUserOperation"
 	switch aaService {
 	case "biconomy":
 		requestParams = []interface{}{
@@ -243,16 +309,30 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 				"simulation_type": "validation_and_execution",
 			},
 		}
+	case "zerodev":
+		method = "zd_sendUserOperation"
+		requestParams = []interface{}{
+			chainId,
+			userOp,
+			orderConf.EntryPointContractAddress.Hex(),
+		}
+	case "pimlico":
+		requestParams = []interface{}{
+			userOp,
+			orderConf.EntryPointContractAddress.Hex(),
+		}
 	default:
 		return "", "", 0, fmt.Errorf("unsupported AA service: %s", aaService)
 	}
 
 	var result json.RawMessage
-	err = client.Call(&result, "eth_sendUserOperation", requestParams...)
+	err = client.Call(&result, method, requestParams...)
 	if err != nil {
 		op, _ := userOp.MarshalJSON()
 		return "", "", 0, fmt.Errorf("RPC error: %w\nUser Operation: %s", err, string(op))
 	}
+
+	logger.Errorf("sendUserOperation: aaService: %s result: %v", aaService, result)
 
 	var userOpHash string
 	err = json.Unmarshal(result, &userOpHash)
@@ -485,13 +565,27 @@ func eip1559GasPrice(ctx context.Context, client types.RPCClient) (maxFeePerGas,
 		if err != nil {
 			return nil, nil, err
 		}
-		maxFeePerGas = big.NewInt(0).Add(tip, new(big.Int).Mul(latestHeader.BaseFee, common.Big3))
+
+		// Ensure minimum priority fee of 700000 wei
+		minPriorityFee := big.NewInt(700000)
+		if tip.Cmp(minPriorityFee) < 0 {
+			tip = minPriorityFee
+		}
+
+		maxFeePerGas = big.NewInt(0).Add(tip, new(big.Int).Mul(latestHeader.BaseFee, common.Big2))
 		maxPriorityFeePerGas = tip
 	} else {
 		sgp, err := client.SuggestGasPrice(ctx)
 		if err != nil {
 			return nil, nil, err
 		}
+
+		// Ensure minimum gas price of 700000 wei
+		minGasPrice := big.NewInt(700000)
+		if sgp.Cmp(minGasPrice) < 0 {
+			sgp = minGasPrice
+		}
+
 		maxFeePerGas = sgp
 		maxPriorityFeePerGas = sgp
 	}
@@ -537,6 +631,8 @@ func detectAAService(url string) (string, error) {
 		return "biconomy", nil
 	case strings.Contains(url, "api.pimlico.io"):
 		return "pimlico", nil
+	case strings.Contains(url, "rpc.zerodev.app"):
+		return "zerodev", nil
 	default:
 		return "", fmt.Errorf("unsupported AA service URL pattern: %s", url)
 	}

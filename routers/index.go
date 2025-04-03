@@ -53,7 +53,7 @@ func RegisterRoutes(route *gin.Engine) {
 		cacheService.CacheMiddleware(time.Duration(serverConf.PubKeyCacheDuration)*24*time.Hour),
 		ctrl.GetAggregatorPublicKey,
 	)
-
+	v1.GET("tokens", ctrl.GetSupportedTokens)
 	v1.GET("rates/:token/:amount/:fiat", ctrl.GetTokenRate)
 	v1.POST("verify-account", ctrl.VerifyAccount)
 	v1.GET("orders/:chain_id/:id", ctrl.GetLockPaymentOrderStatus)

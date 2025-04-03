@@ -259,6 +259,47 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 	u.APIResponse(ctx, http.StatusOK, "success", "Rate fetched successfully", rateResponse)
 }
 
+// GetSupportedTokens controller fetches supported cryptocurrency tokens
+func (ctrl *Controller) GetSupportedTokens(ctx *gin.Context) {
+	// Get network filter from query parameter
+	networkFilter := ctx.Query("network")
+
+	// Build query
+	query := storage.Client.Token.
+		Query().
+		Where(token.IsEnabled(true)).
+		WithNetwork()
+
+	// Apply network filter if provided
+	if networkFilter != "" {
+		query = query.Where(token.HasNetworkWith(
+			network.Identifier(strings.ToLower(networkFilter)),
+		))
+	}
+
+	// Execute query
+	tokens, err := query.All(ctx)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch tokens", nil)
+		return
+	}
+
+	// Transform tokens for response
+	response := make([]types.SupportedTokenResponse, 0, len(tokens))
+	for _, t := range tokens {
+		response = append(response, types.SupportedTokenResponse{
+			Symbol:          t.Symbol,
+			ContractAddress: t.ContractAddress,
+			Decimals:        t.Decimals,
+			BaseCurrency:    t.BaseCurrency,
+			Network:         t.Edges.Network.Identifier,
+		})
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Tokens retrieved successfully", response)
+}
+
 // GetAggregatorPublicKey controller expose Aggregator Public Key
 func (ctrl *Controller) GetAggregatorPublicKey(ctx *gin.Context) {
 	u.APIResponse(ctx, http.StatusOK, "success", "OK", cryptoConf.AggregatorPublicKey)
@@ -788,12 +829,17 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 				"id_type":             "IDENTITY_CARD",
 				"verification_method": "doc_verification",
 			},
+			{
+				"country":             "NG",
+				"id_type":             "TRAVEL_DOC",
+				"verification_method": "doc_verification",
+			},
 
 			// Kenya
 			{
 				"country":             "KE",
 				"id_type":             "PASSPORT",
-				"verification_method": "enhanced_document_verification",
+				"verification_method": "doc_verification",
 			},
 			{
 				"country":             "KE",
@@ -803,24 +849,39 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 			{
 				"country":             "KE",
 				"id_type":             "ALIEN_CARD",
-				"verification_method": "biometric_kyc",
+				"verification_method": "doc_verification",
 			},
 			{
 				"country":             "KE",
 				"id_type":             "NATIONAL_ID",
-				"verification_method": "biometric_kyc",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "KE",
+				"id_type":             "RESIDENT_ID",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "KE",
+				"id_type":             "TRAVEL_DOC",
+				"verification_method": "doc_verification",
 			},
 
 			// Ghana
 			{
 				"country":             "GH",
+				"id_type":             "IDENTITY_CARD",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "GH",
 				"id_type":             "PASSPORT",
-				"verification_method": "enhanced_document_verification",
+				"verification_method": "doc_verification",
 			},
 			{
 				"country":             "GH",
 				"id_type":             "VOTER_ID",
-				"verification_method": "enhanced_document_verification",
+				"verification_method": "doc_verification",
 			},
 			{
 				"country":             "GH",
@@ -836,6 +897,16 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 				"country":             "GH",
 				"id_type":             "SSNIT",
 				"verification_method": "biometric_kyc",
+			},
+			{
+				"country":             "GH",
+				"id_type":             "RESIDENT_ID",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "GH",
+				"id_type":             "TRAVEL_DOC",
+				"verification_method": "doc_verification",
 			},
 
 			// South Africa
@@ -856,8 +927,18 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 			},
 			{
 				"country":             "ZA",
+				"id_type":             "IDENTITY_CARD",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "ZA",
 				"id_type":             "NATIONAL_ID",
 				"verification_method": "biometric_kyc",
+			},
+			{
+				"country":             "ZA",
+				"id_type":             "TRAVEL_DOC",
+				"verification_method": "doc_verification",
 			},
 		},
 		"callback_url":            fmt.Sprintf("%s/v1/kyc/webhook", serverConf.HostDomain),

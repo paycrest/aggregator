@@ -19,6 +19,8 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
+	"github.com/paycrest/aggregator/ent/institution"
 	institutionEnt "github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/storage"
@@ -555,4 +557,21 @@ func GetTokenRateFromQueue(tokenSymbol string, orderAmount decimal.Decimal, fiat
 	}
 
 	return rateResponse, nil
+}
+
+// GetInstitutionByCode returns the institution for a given institution code
+func GetInstitutionByCode(ctx context.Context, institutionCode string) (*ent.Institution, error) {
+	institution, err := storage.Client.Institution.
+		Query().
+		Where(institution.CodeEQ(institutionCode)).
+		WithFiatCurrency(
+			func(fcq *ent.FiatCurrencyQuery) {
+				fcq.Where(fiatcurrency.IsEnabledEQ(true))
+			},
+		).
+		Only(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return institution, nil
 }
