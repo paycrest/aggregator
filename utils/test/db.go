@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -25,6 +26,7 @@ import (
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/shopspring/decimal"
+	"github.com/stretchr/testify/assert"
 )
 
 // CreateTestUser creates a test user with default or custom values
@@ -639,6 +641,66 @@ func CreateTestFiatCurrency(overrides map[string]interface{}) (*ent.FiatCurrency
 		Save(context.Background())
 	return currency, err
 
+}
+
+// Helper function to create test networks and tokens
+func CreateTestTokenData(t *testing.T, client *ent.Client) ([]*ent.Network, []*ent.Token) {
+	ctx := context.Background()
+
+	// Create test networks
+	network1, err := client.Network.Create().
+		SetIdentifier("arbitrum-one").
+		SetChainID(42161).
+		SetRPCEndpoint("https://arb1.arbitrum.io/rpc").
+		SetGatewayContractAddress("0x123").
+		SetIsTestnet(false).
+		SetFee(decimal.NewFromFloat(0.01)).
+		Save(ctx)
+	assert.NoError(t, err)
+
+	network2, err := client.Network.Create().
+		SetIdentifier("polygon").
+		SetChainID(137).
+		SetRPCEndpoint("https://polygon-rpc.com").
+		SetGatewayContractAddress("0x456").
+		SetIsTestnet(false).
+		SetFee(decimal.NewFromFloat(0.02)).
+		Save(ctx)
+	assert.NoError(t, err)
+
+	// Create test tokens
+	token1, err := client.Token.Create().
+		SetSymbol("USDC").
+		SetContractAddress("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48").
+		SetDecimals(6).
+		SetBaseCurrency("USD").
+		SetIsEnabled(true).
+		SetNetwork(network1).
+		Save(ctx)
+	assert.NoError(t, err)
+
+	token2, err := client.Token.Create().
+		SetSymbol("USDT").
+		SetContractAddress("0xdAC17F958D2ee523a2206206994597C13D831ec7").
+		SetDecimals(6).
+		SetBaseCurrency("USD").
+		SetIsEnabled(true).
+		SetNetwork(network2).
+		Save(ctx)
+	assert.NoError(t, err)
+
+	// Disabled token (should not appear in results)
+	_, err = client.Token.Create().
+		SetSymbol("DAI").
+		SetContractAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F").
+		SetDecimals(18).
+		SetBaseCurrency("USD").
+		SetIsEnabled(false).
+		SetNetwork(network1).
+		Save(ctx)
+	assert.NoError(t, err)
+
+	return []*ent.Network{network1, network2}, []*ent.Token{token1, token2}
 }
 
 // CreateEnvFile creates a new file with Key=Value format.

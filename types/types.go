@@ -114,12 +114,12 @@ type CreateOrderParams struct {
 
 // RegisterPayload is the payload for the register endpoint
 type RegisterPayload struct {
-	FirstName    string     `json:"firstName" binding:"required"`
-	LastName     string     `json:"lastName" binding:"required"`
-	Email        string     `json:"email" binding:"required,email"`
-	Password     string     `json:"password" binding:"required,min=6,max=20"`
-	Currencies  []string    `json:"currency"`
-	Scopes      []string    `json:"scopes" binding:"required,dive,oneof=sender provider"`
+	FirstName  string   `json:"firstName" binding:"required"`
+	LastName   string   `json:"lastName" binding:"required"`
+	Email      string   `json:"email" binding:"required,email"`
+	Password   string   `json:"password" binding:"required,min=6,max=20"`
+	Currencies []string `json:"currencies"`
+	Scopes     []string `json:"scopes" binding:"required,dive,oneof=sender provider"`
 }
 
 // RegisterResponse is the response for the register endpoint
@@ -157,7 +157,7 @@ type AcceptOrderResponse struct {
 // FulfillLockOrderPayload is the payload for the fulfill order endpoint
 type FulfillLockOrderPayload struct {
 	PSP              string                                `json:"psp" binding:"required"`
-	TxID             string                                `json:"txId"`
+	TxID             string                                `json:"txId" binding:"required"`
 	ValidationStatus lockorderfulfillment.ValidationStatus `json:"validationStatus"`
 	ValidationError  string                                `json:"validationError"`
 }
@@ -695,4 +695,12 @@ type BitgetAd struct {
 	Amount    string `json:"amount"`
 	MinAmount string `json:"minAmount"`
 	MaxAmount string `json:"maxAmount"`
+}
+// SupportedTokenResponse represents the structure for supported tokens
+type SupportedTokenResponse struct {
+	Symbol          string `json:"symbol"`
+	ContractAddress string `json:"contractAddress"`
+	Decimals        int8   `json:"decimals"`
+	BaseCurrency    string `json:"baseCurrency"`
+	Network         string `json:"network"`
 }

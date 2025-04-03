@@ -18,6 +18,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/paycrest/aggregator/ent/enttest"
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
+	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/utils/test"
 	"github.com/stretchr/testify/assert"
 )
@@ -58,6 +59,7 @@ func TestIndex(t *testing.T) {
 	router.POST("kyc", ctrl.RequestIDVerification)
 	router.GET("kyc/:wallet_address", ctrl.GetIDVerificationStatus)
 	router.POST("kyc/webhook", ctrl.KYCWebhook)
+	router.GET("/v1/tokens", ctrl.GetSupportedTokens)
 
 	t.Run("GetInstitutions By Currency", func(t *testing.T) {
 
@@ -260,5 +262,90 @@ func TestIndex(t *testing.T) {
 		data, ok := response.Data.(map[string]interface{})
 		assert.True(t, ok, "response.Data is not of type map[string]interface{}")
 		assert.Equal(t, "pending", data["status"])
+	})
+
+	t.Run("GetSupportedTokens", func(t *testing.T) {
+		// Setup test data for tokens
+		networks, tokens := test.CreateTestTokenData(t, client)
+
+		// Define response structure
+		type Response struct {
+			Status  string                         `json:"status"`
+			Message string                         `json:"message"`
+			Data    []types.SupportedTokenResponse `json:"data"`
+		}
+
+		t.Run("Fetch all enabled tokens", func(t *testing.T) {
+			res, err := test.PerformRequest(t, "GET", "/v1/tokens", nil, nil, router)
+			assert.NoError(t, err)
+
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "success", response.Status)
+			assert.Equal(t, "Tokens retrieved successfully", response.Message)
+			assert.Equal(t, 2, len(response.Data)) // Should only include enabled tokens
+
+			// Verify token details
+			assert.Equal(t, tokens[0].Symbol, response.Data[0].Symbol)
+			assert.Equal(t, tokens[0].ContractAddress, response.Data[0].ContractAddress)
+			assert.Equal(t, tokens[0].Decimals, response.Data[0].Decimals)
+			assert.Equal(t, tokens[0].BaseCurrency, response.Data[0].BaseCurrency)
+			assert.Equal(t, networks[0].Identifier, response.Data[0].Network)
+		})
+
+		t.Run("Fetch tokens by network", func(t *testing.T) {
+			res, err := test.PerformRequest(t, "GET", "/v1/tokens?network=arbitrum-one", nil, nil, router)
+			assert.NoError(t, err)
+
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "success", response.Status)
+			assert.Equal(t, "Tokens retrieved successfully", response.Message)
+			assert.Equal(t, 1, len(response.Data)) // Should only include tokens for the specified network
+
+			assert.Equal(t, "USDC", response.Data[0].Symbol)
+			assert.Equal(t, "arbitrum-one", response.Data[0].Network)
+		})
+
+		t.Run("Fetch with invalid network", func(t *testing.T) {
+			res, err := test.PerformRequest(t, "GET", "/v1/tokens?network=invalid-network", nil, nil, router)
+			assert.NoError(t, err)
+
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "success", response.Status)
+			assert.Equal(t, "Tokens retrieved successfully", response.Message)
+			assert.Equal(t, 0, len(response.Data)) // No tokens for invalid network
+		})
+
+		t.Run("Fetch with no enabled tokens", func(t *testing.T) {
+			// Disable all tokens
+			_, err := client.Token.Update().
+				Where(token.IsEnabled(true)).
+				SetIsEnabled(false).
+				Save(context.Background())
+			assert.NoError(t, err)
+
+			res, err := test.PerformRequest(t, "GET", "/v1/tokens", nil, nil, router)
+			assert.NoError(t, err)
+
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "success", response.Status)
+			assert.Equal(t, "Tokens retrieved successfully", response.Message)
+			assert.Equal(t, 0, len(response.Data)) // No enabled tokens
+		})
 	})
 }
