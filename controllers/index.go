@@ -868,6 +868,33 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 				"verification_method": "doc_verification",
 			},
 
+			// New Zealand
+			{
+				"country":             "NZ",
+				"id_type":             "IDENTITY_CARD",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "NZ",
+				"id_type":             "PASSPORT",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "NZ",
+				"id_type":             "DRIVERS_LICENSE",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "NZ",
+				"id_type":             "PROVISIONAL_DRIVERS_LICENSE",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "NZ",
+				"id_type":             "TRAVEL_DOC",
+				"verification_method": "doc_verification",
+			},
+
 			// South Africa
 			{
 				"country":             "ZA",
