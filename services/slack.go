@@ -24,7 +24,7 @@ func NewSlackService(webhookURL string) *SlackService {
 
 func (s *SlackService) SendUserSignupNotification(user *ent.User, scopes []string, providerCurrencies []string) error {
 	if s.SlackWebhookURL == "" {
-		return fmt.Errorf("slack webhook URL not configured")
+		return nil
 	}
 
 	// Format the timestamp using the utility function
