@@ -71,7 +71,7 @@ func TestSlackService(t *testing.T) {
 			assert.NoError(t, err, "unexpected error")
 		})
 
-		t.Run("SendUserSignupNotification should return error if webhook URL is not configured", func(t *testing.T) {
+		t.Run("SendUserSignupNotification should fail silently if webhook URL is not configured", func(t *testing.T) {
 			// Remove the SlackWebhookURL from serverConfig for this test
 			originalWebhookURL := conf.SlackWebhookURL
 			conf.SlackWebhookURL = "" // Clear for this test
@@ -80,7 +80,7 @@ func TestSlackService(t *testing.T) {
 			providerCurrencies := []string{"GHS", "KES"}
 			err := slackService.SendUserSignupNotification(mockUser, []string{"provider"}, providerCurrencies)
 
-			assert.Error(t, err, "expected error")
+			assert.NoError(t, err, "expected no error")
 
 			// Restore the SlackWebhookURL for subsequent tests
 			conf.SlackWebhookURL = originalWebhookURL
