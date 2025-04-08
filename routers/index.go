@@ -37,6 +37,7 @@ func RegisterRoutes(route *gin.Engine) {
 		"institutions/:currency_code",
 		ctrl.GetInstitutionsByCurrency,
 	)
+	v1.GET("tokens", ctrl.GetSupportedTokens)
 	v1.GET("rates/:token/:amount/:fiat", ctrl.GetTokenRate)
 	v1.GET("pubkey", ctrl.GetAggregatorPublicKey)
 	v1.POST("verify-account", ctrl.VerifyAccount)

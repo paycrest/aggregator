@@ -98,12 +98,12 @@ func TestAuth(t *testing.T) {
 		t.Run("with valid payload and both sender and provider scopes", func(t *testing.T) {
 			// Test register with valid payload
 			payload := types.RegisterPayload{
-				FirstName: "Ike",
-				LastName:  "Ayo",
-				Email:     "ikeayo@example.com",
-				Password:  "password",
-				Currencies:  []string{"NGN"},
-				Scopes:    []string{"sender", "provider"},
+				FirstName:  "Ike",
+				LastName:   "Ayo",
+				Email:      "ikeayo@example.com",
+				Password:   "password",
+				Currencies: []string{"NGN"},
+				Scopes:     []string{"sender", "provider"},
 			}
 
 			header := map[string]string{
@@ -224,12 +224,12 @@ func TestAuth(t *testing.T) {
 		t.Run("with only provider scope payload", func(t *testing.T) {
 			// Test register with valid payload
 			payload := types.RegisterPayload{
-				FirstName: "Ike",
-				LastName:  "Ayo",
-				Email:     "ikeayo2@example.com",
-				Password:  "password2",
-				Currencies:  []string{"NGN"},
-				Scopes:    []string{"provider"},
+				FirstName:  "Ike",
+				LastName:   "Ayo",
+				Email:      "ikeayo2@example.com",
+				Password:   "password2",
+				Currencies: []string{"NGN"},
+				Scopes:     []string{"provider"},
 			}
 
 			header := map[string]string{
@@ -308,12 +308,12 @@ func TestAuth(t *testing.T) {
 		t.Run("from the provider app", func(t *testing.T) {
 			// Test register with valid payload
 			payload := types.RegisterPayload{
-				FirstName: "Ike",
-				LastName:  "Ayo",
-				Email:     "ikeayoprovider@example.com",
-				Password:  "password",
+				FirstName:  "Ike",
+				LastName:   "Ayo",
+				Email:      "ikeayoprovider@example.com",
+				Password:   "password",
 				Currencies: []string{"NGN", "KES"},
-				Scopes:    []string{"provider"},
+				Scopes:     []string{"provider"},
 			}
 
 			headers := map[string]string{
@@ -518,9 +518,13 @@ func TestAuth(t *testing.T) {
 		assert.NoError(t, fetchUserErr, "failed to fetch user by userID")
 
 		// generate verificationToken
-		verificationtoken, vtErr := user.QueryVerificationToken().
-			Where(verificationtoken.ScopeEQ(verificationtoken.ScopeEmailVerification)).
-			Only(context.Background())
+		verificationtoken, vtErr := db.Client.VerificationToken.
+			Create().
+			SetOwner(user).
+			SetToken(uuid.New().String()).
+			SetScope(verificationtoken.ScopeEmailVerification).
+			SetExpiryAt(time.Now().Add(authConf.PasswordResetLifespan)). // Use same lifespan for consistency
+			Save(context.Background())
 		assert.NoError(t, vtErr)
 
 		t.Run("confirm user email", func(t *testing.T) {
@@ -565,7 +569,7 @@ func TestAuth(t *testing.T) {
 			Create().
 			SetOwner(user).
 			SetScope(verificationtoken.ScopeResetPassword).
-			SetExpiryAt(time.Now().Add(authConf.PasswordResetLifespan)).
+			SetExpiryAt(time.Now().Add(-time.Second)).
 			Save(context.Background())
 		assert.NoError(t, vtErr)
 		t.Run("try to use expired token", func(t *testing.T) {
@@ -771,6 +775,25 @@ func TestAuth(t *testing.T) {
 		assert.NoError(t, err, "failed to set isEmailVerified to false")
 
 		t.Run("verification token should be resent", func(t *testing.T) {
+			userUUID, err := uuid.Parse(userID)
+			assert.NoError(t, err)
+
+			user, err := db.Client.User.
+				Query().
+				Where(userEnt.IDEQ(userUUID)).
+				Only(context.Background())
+			assert.NoError(t, err, "failed to fetch user by userID")
+
+			// Clean up existing tokens
+			_, err = db.Client.VerificationToken.
+				Delete().
+				Where(
+					verificationtoken.HasOwnerWith(userEnt.IDEQ(user.ID)),
+					verificationtoken.ScopeEQ(verificationtoken.ScopeEmailVerification),
+				).
+				Exec(context.Background())
+			assert.NoError(t, err)
+
 			// construct resend verification token payload
 			payload := types.ResendTokenPayload{
 				Scope: verificationtoken.ScopeEmailVerification.String(),
@@ -974,15 +997,14 @@ func TestAuth(t *testing.T) {
 			assert.True(t, crypto.CheckPasswordHash(payload.NewPassword, user.Password))
 		})
 	})
-	
+
 	// test delete account for an authenticated user
 	t.Run("DeleteAccount", func(t *testing.T) {
 
 		t.Run("with invalid credentials", func(t *testing.T) {
-			
+
 			headers := map[string]string{}
 			res, _ := test.PerformRequest(t, "DELETE", "/delete-account", nil, headers, router)
-			
 
 			// Assert the response body
 			assert.Equal(t, http.StatusUnauthorized, res.Code)
@@ -995,7 +1017,6 @@ func TestAuth(t *testing.T) {
 			assert.NoError(t, err)
 			assert.NotNil(t, user)
 
-
 			var response types.Response
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
@@ -1003,7 +1024,7 @@ func TestAuth(t *testing.T) {
 		})
 		t.Run("with valid credentials", func(t *testing.T) {
 			// Test delete account with valid credentials
-			
+
 			headers := map[string]string{
 				"Authorization": "Bearer " + accessToken,
 			}
@@ -1026,18 +1047,16 @@ func TestAuth(t *testing.T) {
 				Where(userEnt.IDEQ(uuid.MustParse(userID))).
 				Only(context.Background())
 			assert.Error(t, err)
-			
-		})
 
+		})
 
 		t.Run("with associated profiles", func(t *testing.T) {
 			// Test delete account with associated profiles
 			user, _ := test.CreateTestUser(map[string]interface{}{
-			"scope": "provider"})
-			
-			
+				"scope": "provider"})
+
 			accessToken, _ := token.GenerateAccessJWT(user.ID.String(), "provider")
-			
+
 			headers := map[string]string{
 				"Authorization": "Bearer " + accessToken,
 			}
@@ -1059,9 +1078,6 @@ func TestAuth(t *testing.T) {
 				Only(context.Background())
 			assert.Error(t, err)
 
-
-			
-
 			_, err = db.Client.ProviderProfile.
 				Query().
 				Where(providerprofile.HasUserWith(userEnt.IDEQ(uuid.MustParse(userID)))).
@@ -1070,6 +1086,5 @@ func TestAuth(t *testing.T) {
 
 		})
 	})
-			
 
 }
