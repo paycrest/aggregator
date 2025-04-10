@@ -238,6 +238,15 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 	}
 
 	if payload.HostIdentifier != "" {
+		// Validate HTTPS protocol
+		if !u.IsValidHttpsUrl(payload.HostIdentifier) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error",
+				"Host identifier must use HTTPS protocol and be a valid URL", types.ErrorData{
+					Field:   "HostIdentifier",
+					Message: "Please provide a valid URL starting with https://",
+				})
+			return
+		}
 		update.SetHostIdentifier(payload.HostIdentifier)
 	}
 
