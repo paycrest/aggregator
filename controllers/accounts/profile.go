@@ -9,6 +9,7 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/ent/providercurrencyavailability"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -18,6 +19,7 @@ import (
 	svc "github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
+	"github.com/paycrest/aggregator/utils"
 	u "github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/shopspring/decimal"
@@ -306,6 +308,65 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 	if payload.BusinessName != "" {
 		update.SetBusinessName(payload.BusinessName)
 	}
+
+	// Handle currency-specific availability
+	if len(payload.Tokens) > 0 {
+    tokenPayload := payload.Tokens[0]
+    // Find the currency for this token
+    currency, err := storage.Client.FiatCurrency.Query().
+        Where(
+            fiatcurrency.IsEnabledEQ(true),
+            fiatcurrency.CodeEQ(tokenPayload.Currency),
+        ).
+        Only(ctx)
+    if err != nil {
+        u.APIResponse(ctx, http.StatusBadRequest, "error",
+            fmt.Sprintf("Currency not found: %s", tokenPayload.Currency), nil)
+        return
+    }
+
+    isAvailable := payload.IsAvailable
+
+    // Create or update ProviderCurrencyAvailability record
+    existingAvailability, err := storage.Client.ProviderCurrencyAvailability.
+        Query().
+        Where(
+            providercurrencyavailability.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+            providercurrencyavailability.HasCurrencyWith(fiatcurrency.IDEQ(currency.ID)),
+        ).
+        Only(ctx)
+
+    if ent.IsNotFound(err) {
+        _, err := storage.Client.ProviderCurrencyAvailability.
+            Create().
+            SetProvider(provider).
+            SetCurrency(currency).
+            SetIsAvailable(isAvailable).
+            Save(ctx)
+        if err != nil {
+            logger.Errorf("Failed to create availability record: %v", err)
+            u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create availability record", nil)
+            return
+        }
+    } else {
+        _, err = existingAvailability.Update().
+            SetIsAvailable(isAvailable).
+            Save(ctx)
+        if err != nil {
+            logger.Errorf("Failed to update availability for provider %s, currency %s: %v", provider.ID, currency.Code, err)
+            u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update availability record", nil)
+            return
+        }
+    }
+
+    // Update Redis queue
+    err = utils.UpdateRedisQueue(ctx, storage.RedisClient, provider, currency.Code, isAvailable)
+    if err != nil {
+        logger.Errorf("Failed to update Redis queue for provider %s, currency %s: %v", provider.ID, currency.Code, err)
+        u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update Redis queue", nil)
+        return
+    }
+}
 
 	if payload.IdentityDocumentType != "" {
 		if providerprofile.IdentityDocumentType(payload.IdentityDocumentType) != providerprofile.IdentityDocumentTypePassport &&

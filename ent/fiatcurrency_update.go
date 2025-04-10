@@ -11,9 +11,11 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/providercurrencyavailability"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -211,6 +213,21 @@ func (fcu *FiatCurrencyUpdate) AddProviderOrderTokens(p ...*ProviderOrderToken) 
 	return fcu.AddProviderOrderTokenIDs(ids...)
 }
 
+// AddProviderAvailabilityIDs adds the "provider_availability" edge to the ProviderCurrencyAvailability entity by IDs.
+func (fcu *FiatCurrencyUpdate) AddProviderAvailabilityIDs(ids ...uuid.UUID) *FiatCurrencyUpdate {
+	fcu.mutation.AddProviderAvailabilityIDs(ids...)
+	return fcu
+}
+
+// AddProviderAvailability adds the "provider_availability" edges to the ProviderCurrencyAvailability entity.
+func (fcu *FiatCurrencyUpdate) AddProviderAvailability(p ...*ProviderCurrencyAvailability) *FiatCurrencyUpdate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return fcu.AddProviderAvailabilityIDs(ids...)
+}
+
 // Mutation returns the FiatCurrencyMutation object of the builder.
 func (fcu *FiatCurrencyUpdate) Mutation() *FiatCurrencyMutation {
 	return fcu.mutation
@@ -298,6 +315,27 @@ func (fcu *FiatCurrencyUpdate) RemoveProviderOrderTokens(p ...*ProviderOrderToke
 		ids[i] = p[i].ID
 	}
 	return fcu.RemoveProviderOrderTokenIDs(ids...)
+}
+
+// ClearProviderAvailability clears all "provider_availability" edges to the ProviderCurrencyAvailability entity.
+func (fcu *FiatCurrencyUpdate) ClearProviderAvailability() *FiatCurrencyUpdate {
+	fcu.mutation.ClearProviderAvailability()
+	return fcu
+}
+
+// RemoveProviderAvailabilityIDs removes the "provider_availability" edge to ProviderCurrencyAvailability entities by IDs.
+func (fcu *FiatCurrencyUpdate) RemoveProviderAvailabilityIDs(ids ...uuid.UUID) *FiatCurrencyUpdate {
+	fcu.mutation.RemoveProviderAvailabilityIDs(ids...)
+	return fcu
+}
+
+// RemoveProviderAvailability removes "provider_availability" edges to ProviderCurrencyAvailability entities.
+func (fcu *FiatCurrencyUpdate) RemoveProviderAvailability(p ...*ProviderCurrencyAvailability) *FiatCurrencyUpdate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return fcu.RemoveProviderAvailabilityIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -555,6 +593,51 @@ func (fcu *FiatCurrencyUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if fcu.mutation.ProviderAvailabilityCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   fiatcurrency.ProviderAvailabilityTable,
+			Columns: []string{fiatcurrency.ProviderAvailabilityColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencyavailability.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := fcu.mutation.RemovedProviderAvailabilityIDs(); len(nodes) > 0 && !fcu.mutation.ProviderAvailabilityCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   fiatcurrency.ProviderAvailabilityTable,
+			Columns: []string{fiatcurrency.ProviderAvailabilityColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencyavailability.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := fcu.mutation.ProviderAvailabilityIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   fiatcurrency.ProviderAvailabilityTable,
+			Columns: []string{fiatcurrency.ProviderAvailabilityColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencyavailability.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, fcu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{fiatcurrency.Label}
@@ -753,6 +836,21 @@ func (fcuo *FiatCurrencyUpdateOne) AddProviderOrderTokens(p ...*ProviderOrderTok
 	return fcuo.AddProviderOrderTokenIDs(ids...)
 }
 
+// AddProviderAvailabilityIDs adds the "provider_availability" edge to the ProviderCurrencyAvailability entity by IDs.
+func (fcuo *FiatCurrencyUpdateOne) AddProviderAvailabilityIDs(ids ...uuid.UUID) *FiatCurrencyUpdateOne {
+	fcuo.mutation.AddProviderAvailabilityIDs(ids...)
+	return fcuo
+}
+
+// AddProviderAvailability adds the "provider_availability" edges to the ProviderCurrencyAvailability entity.
+func (fcuo *FiatCurrencyUpdateOne) AddProviderAvailability(p ...*ProviderCurrencyAvailability) *FiatCurrencyUpdateOne {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return fcuo.AddProviderAvailabilityIDs(ids...)
+}
+
 // Mutation returns the FiatCurrencyMutation object of the builder.
 func (fcuo *FiatCurrencyUpdateOne) Mutation() *FiatCurrencyMutation {
 	return fcuo.mutation
@@ -840,6 +938,27 @@ func (fcuo *FiatCurrencyUpdateOne) RemoveProviderOrderTokens(p ...*ProviderOrder
 		ids[i] = p[i].ID
 	}
 	return fcuo.RemoveProviderOrderTokenIDs(ids...)
+}
+
+// ClearProviderAvailability clears all "provider_availability" edges to the ProviderCurrencyAvailability entity.
+func (fcuo *FiatCurrencyUpdateOne) ClearProviderAvailability() *FiatCurrencyUpdateOne {
+	fcuo.mutation.ClearProviderAvailability()
+	return fcuo
+}
+
+// RemoveProviderAvailabilityIDs removes the "provider_availability" edge to ProviderCurrencyAvailability entities by IDs.
+func (fcuo *FiatCurrencyUpdateOne) RemoveProviderAvailabilityIDs(ids ...uuid.UUID) *FiatCurrencyUpdateOne {
+	fcuo.mutation.RemoveProviderAvailabilityIDs(ids...)
+	return fcuo
+}
+
+// RemoveProviderAvailability removes "provider_availability" edges to ProviderCurrencyAvailability entities.
+func (fcuo *FiatCurrencyUpdateOne) RemoveProviderAvailability(p ...*ProviderCurrencyAvailability) *FiatCurrencyUpdateOne {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return fcuo.RemoveProviderAvailabilityIDs(ids...)
 }
 
 // Where appends a list predicates to the FiatCurrencyUpdate builder.
@@ -1120,6 +1239,51 @@ func (fcuo *FiatCurrencyUpdateOne) sqlSave(ctx context.Context) (_node *FiatCurr
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerordertoken.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if fcuo.mutation.ProviderAvailabilityCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   fiatcurrency.ProviderAvailabilityTable,
+			Columns: []string{fiatcurrency.ProviderAvailabilityColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencyavailability.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := fcuo.mutation.RemovedProviderAvailabilityIDs(); len(nodes) > 0 && !fcuo.mutation.ProviderAvailabilityCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   fiatcurrency.ProviderAvailabilityTable,
+			Columns: []string{fiatcurrency.ProviderAvailabilityColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencyavailability.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := fcuo.mutation.ProviderAvailabilityIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   fiatcurrency.ProviderAvailabilityTable,
+			Columns: []string{fiatcurrency.ProviderAvailabilityColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencyavailability.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

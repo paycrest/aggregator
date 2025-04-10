@@ -16,6 +16,7 @@ import (
 	"github.com/paycrest/aggregator/ent/apikey"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
+	"github.com/paycrest/aggregator/ent/providercurrencyavailability"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -364,6 +365,21 @@ func (ppc *ProviderProfileCreate) AddAssignedOrders(l ...*LockPaymentOrder) *Pro
 	return ppc.AddAssignedOrderIDs(ids...)
 }
 
+// AddCurrencyAvailabilityIDs adds the "currency_availability" edge to the ProviderCurrencyAvailability entity by IDs.
+func (ppc *ProviderProfileCreate) AddCurrencyAvailabilityIDs(ids ...uuid.UUID) *ProviderProfileCreate {
+	ppc.mutation.AddCurrencyAvailabilityIDs(ids...)
+	return ppc
+}
+
+// AddCurrencyAvailability adds the "currency_availability" edges to the ProviderCurrencyAvailability entity.
+func (ppc *ProviderProfileCreate) AddCurrencyAvailability(p ...*ProviderCurrencyAvailability) *ProviderProfileCreate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return ppc.AddCurrencyAvailabilityIDs(ids...)
+}
+
 // Mutation returns the ProviderProfileMutation object of the builder.
 func (ppc *ProviderProfileCreate) Mutation() *ProviderProfileMutation {
 	return ppc.mutation
@@ -677,6 +693,22 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := ppc.mutation.CurrencyAvailabilityIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.CurrencyAvailabilityTable,
+			Columns: []string{providerprofile.CurrencyAvailabilityColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencyavailability.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
