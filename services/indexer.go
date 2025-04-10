@@ -1558,6 +1558,11 @@ func (s *IndexerService) UpdateReceiveAddressStatus(
 		fees := paymentOrder.NetworkFee.Add(paymentOrder.SenderFee).Add(paymentOrder.ProtocolFee)
 		orderAmountWithFees := paymentOrder.Amount.Add(fees).Round(int32(paymentOrder.Edges.Token.Decimals))
 		orderAmountWithFeesInSubunit := utils.ToSubunit(orderAmountWithFees, paymentOrder.Edges.Token.Decimals)
+
+		tolerance := big.NewInt(1)
+		lowerBound := new(big.Int).Sub(orderAmountWithFeesInSubunit, tolerance)
+		upperBound := new(big.Int).Add(orderAmountWithFeesInSubunit, tolerance)
+		withinTolerance := event.Value.Cmp(lowerBound) >= 0 && event.Value.Cmp(upperBound) <= 0
 		comparisonResult := event.Value.Cmp(orderAmountWithFeesInSubunit)
 
 		tx, err := db.Client.Tx(ctx)
@@ -1572,9 +1577,16 @@ func (s *IndexerService) UpdateReceiveAddressStatus(
 
 		orderRecipient := paymentOrder.Edges.Recipient
 		if comparisonResult != 0 {
-			// Update the order amount will be updated to whatever amount was sent to the receive address
-			newOrderAmount := utils.FromSubunit(event.Value, paymentOrder.Edges.Token.Decimals).Sub(fees.Round(int32(4)))
-			paymentOrderUpdate = paymentOrderUpdate.SetAmount(newOrderAmount.Round(int32(4)))
+			newOrderAmount := utils.FromSubunit(event.Value, paymentOrder.Edges.Token.Decimals).Sub(fees.Round(int32(paymentOrder.Edges.Token.Decimals)))
+			if newOrderAmount.LessThan(decimal.Zero) {
+				_ = tx.Rollback()
+				return true, fmt.Errorf("transferred amount insufficient to cover fees")
+			}
+			if !withinTolerance {
+				paymentOrderUpdate = paymentOrderUpdate.SetAmount(newOrderAmount.Round(int32(paymentOrder.Edges.Token.Decimals)))
+			} else {
+				comparisonResult = 0
+			}
 
 			// Update the rate with the current rate if order is older than 30 mins for a P2P order from the sender dashboard
 			if strings.HasPrefix(orderRecipient.Memo, "P#P") && orderRecipient.ProviderID != "" && paymentOrder.CreatedAt.Before(time.Now().Add(-30*time.Minute)) {
