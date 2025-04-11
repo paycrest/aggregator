@@ -25,6 +25,7 @@ import (
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
+	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/stackup-wallet/stackup-bundler/pkg/userop"
 )
 
@@ -257,6 +258,14 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 	client, err := rpc.Dial(bundlerUrl)
 	if err != nil {
 		return "", "", 0, fmt.Errorf("failed to connect to RPC client: %w", err)
+	}
+
+	maxFeePerGas, maxPriorityFeePerGas, err := getStandardGasPrices(chainId)
+	if err == nil {
+		userOp.MaxFeePerGas = maxFeePerGas
+		userOp.MaxPriorityFeePerGas = maxPriorityFeePerGas
+	} else {
+		logger.Errorf("Failed to get Pimlico gas prices, falling back to network prices: %v", err)
 	}
 
 	aaService, err := detectAAService(bundlerUrl)
@@ -562,6 +571,48 @@ func eip1559GasPrice(ctx context.Context, client types.RPCClient) (maxFeePerGas,
 		maxFeePerGas = sgp
 		maxPriorityFeePerGas = sgp
 	}
+
+	return maxFeePerGas, maxPriorityFeePerGas, nil
+}
+
+func getStandardGasPrices(chainId int64) (*big.Int, *big.Int, error) {
+	_, paymasterUrl, err := getEndpoints(chainId)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get endpoints for chain ID %d: %w", chainId, err)
+	}
+
+	client, err := rpc.Dial(paymasterUrl)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to connect to RPC client: %w", err)
+	}
+	defer client.Close()
+
+	var result struct {
+		Slow struct {
+			MaxFeePerGas         string `json:"maxFeePerGas"`
+			MaxPriorityFeePerGas string `json:"maxPriorityFeePerGas"`
+		} `json:"slow"`
+		Standard struct {
+			MaxFeePerGas         string `json:"maxFeePerGas"`
+			MaxPriorityFeePerGas string `json:"maxPriorityFeePerGas"`
+		} `json:"standard"`
+		Fast struct {
+			MaxFeePerGas         string `json:"maxFeePerGas"`
+			MaxPriorityFeePerGas string `json:"maxPriorityFeePerGas"`
+		} `json:"fast"`
+	}
+
+	err = client.Call(&result, "pimlico_getUserOperationGasPrice")
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get gas prices: %w", err)
+	}
+
+	// Convert hex strings to big.Int
+	maxFeePerGas := new(big.Int)
+	maxFeePerGas.SetString(result.Standard.MaxFeePerGas, 0)
+
+	maxPriorityFeePerGas := new(big.Int)
+	maxPriorityFeePerGas.SetString(result.Standard.MaxPriorityFeePerGas, 0)
 
 	return maxFeePerGas, maxPriorityFeePerGas, nil
 }
