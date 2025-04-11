@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -173,8 +174,23 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 			userOpExpanded,
 			payload,
 		}
-	case "pimlico":
 	case "thirdweb":
+		httpClient := &http.Client{
+			Transport: &http.Transport{},
+		}
+		header := http.Header{}
+		header.Set("x-secret-key", orderConf.ThirdwebSecretKey)
+
+		client, err = rpc.DialOptions(
+			context.Background(),
+			paymasterUrl,
+			rpc.WithHTTPClient(httpClient),
+			rpc.WithHeaders(header),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to connect to RPC client: %w", err)
+		}
+
 		requestParams = []interface{}{
 			userOpExpanded,
 			map[string]interface{}{
@@ -223,7 +239,6 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 		userOp.VerificationGasLimit = decimal.NewFromFloat(response["verificationGasLimit"].(float64)).BigInt()
 		userOp.CallGasLimit = decimal.NewFromFloat(response["callGasLimit"].(float64)).BigInt()
 
-	case "pimlico":
 	case "thirdweb":
 		userOp.PaymasterAndData = common.FromHex(response["paymasterAndData"].(string))
 		userOp.PreVerificationGas, _ = new(big.Int).SetString(response["preVerificationGas"].(string), 0)
@@ -280,8 +295,23 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 				"simulation_type": "validation_and_execution",
 			},
 		}
-	case "pimlico":
 	case "thirdweb":
+		httpClient := &http.Client{
+			Transport: &http.Transport{},
+		}
+		header := http.Header{}
+		header.Set("x-secret-key", orderConf.ThirdwebSecretKey)
+
+		client, err = rpc.DialOptions(
+			context.Background(),
+			bundlerUrl,
+			rpc.WithHTTPClient(httpClient),
+			rpc.WithHeaders(header),
+		)
+		if err != nil {
+			return "", "", 0, fmt.Errorf("failed to connect to RPC client: %w", err)
+		}
+
 		requestParams = []interface{}{
 			userOp,
 			orderConf.EntryPointContractAddress.Hex(),
@@ -296,8 +326,6 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 		op, _ := userOp.MarshalJSON()
 		return "", "", 0, fmt.Errorf("RPC error: %w\nUser Operation: %s", err, string(op))
 	}
-
-	logger.Errorf("sendUserOperation: aaService: %s result: %v", aaService, result)
 
 	var userOpHash string
 	err = json.Unmarshal(result, &userOpHash)
@@ -594,8 +622,6 @@ func detectAAService(url string) (string, error) {
 	switch {
 	case strings.Contains(url, "biconomy.io"):
 		return "biconomy", nil
-	case strings.Contains(url, "api.pimlico.io"):
-		return "pimlico", nil
 	case strings.Contains(url, "thirdweb.com"):
 		return "thirdweb", nil
 	default:
