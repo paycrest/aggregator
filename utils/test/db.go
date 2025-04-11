@@ -200,7 +200,7 @@ func CreateTestLockPaymentOrder(overrides map[string]interface{}) (*ent.LockPaym
 		"account_identifier":   "1234567890",
 		"account_name":         "Test Account",
 		"updatedAt":            time.Now(),
-		"token_id":              0,
+		"token_id":             0,
 		"cancellation_reasons": []string{},
 	}
 
@@ -468,7 +468,6 @@ func CreateTestProviderProfile(overrides map[string]interface{}) (*ent.ProviderP
 	// Create ProviderProfile
 	profile, err := db.Client.ProviderProfile.
 		Create().
-		SetID(payload["user_id"].(uuid.UUID).String()).
 		SetTradingName(payload["trading_name"].(string)).
 		SetHostIdentifier(payload["host_identifier"].(string)).
 		SetProvisionMode(providerprofile.ProvisionMode(payload["provision_mode"].(string))).
@@ -499,9 +498,9 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		"max_order_amount":         decimal.NewFromFloat(1.0),
 		"min_order_amount":         decimal.NewFromFloat(1.0),
 		"provider":                 nil,
-		"token_id":                  0,
+		"token_id":                 0,
 		"address":                  "0x1234567890123456789012345678901234567890",
-		"network":                  "polygon",
+		"network":                  "localhost",
 	}
 
 	// Apply overrides
@@ -521,8 +520,6 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		payload["token_id"] = token.ID
 	}
 
-	fmt.Println("payload", payload)
-
 	orderToken, err := db.Client.ProviderOrderToken.
 		Create().
 		SetProvider(payload["provider"].(*ent.ProviderProfile)).
@@ -535,7 +532,16 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		SetNetwork(payload["network"].(string)).
 		SetTokenID(payload["token_id"].(int)).
 		SetCurrencyID(payload["currency_id"].(uuid.UUID)).
+		SetRateSlippage(decimal.NewFromFloat(0.1)).
 		Save(context.Background())
+
+	orderToken, err = db.Client.ProviderOrderToken.
+		Query().
+		Where(providerordertoken.IDEQ(orderToken.ID)).
+		WithCurrency().
+		WithToken().
+		WithProvider().
+		Only(context.Background())
 
 	return orderToken, err
 }

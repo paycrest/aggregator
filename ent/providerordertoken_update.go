@@ -158,12 +158,6 @@ func (potu *ProviderOrderTokenUpdate) AddRateSlippage(d decimal.Decimal) *Provid
 	return potu
 }
 
-// ClearRateSlippage clears the value of the "rate_slippage" field.
-func (potu *ProviderOrderTokenUpdate) ClearRateSlippage() *ProviderOrderTokenUpdate {
-	potu.mutation.ClearRateSlippage()
-	return potu
-}
-
 // SetAddress sets the "address" field.
 func (potu *ProviderOrderTokenUpdate) SetAddress(s string) *ProviderOrderTokenUpdate {
 	potu.mutation.SetAddress(s)
@@ -362,9 +356,6 @@ func (potu *ProviderOrderTokenUpdate) sqlSave(ctx context.Context) (n int, err e
 	}
 	if value, ok := potu.mutation.AddedRateSlippage(); ok {
 		_spec.AddField(providerordertoken.FieldRateSlippage, field.TypeFloat64, value)
-	}
-	if potu.mutation.RateSlippageCleared() {
-		_spec.ClearField(providerordertoken.FieldRateSlippage, field.TypeFloat64)
 	}
 	if value, ok := potu.mutation.Address(); ok {
 		_spec.SetField(providerordertoken.FieldAddress, field.TypeString, value)
@@ -610,12 +601,6 @@ func (potuo *ProviderOrderTokenUpdateOne) AddRateSlippage(d decimal.Decimal) *Pr
 	return potuo
 }
 
-// ClearRateSlippage clears the value of the "rate_slippage" field.
-func (potuo *ProviderOrderTokenUpdateOne) ClearRateSlippage() *ProviderOrderTokenUpdateOne {
-	potuo.mutation.ClearRateSlippage()
-	return potuo
-}
-
 // SetAddress sets the "address" field.
 func (potuo *ProviderOrderTokenUpdateOne) SetAddress(s string) *ProviderOrderTokenUpdateOne {
 	potuo.mutation.SetAddress(s)
@@ -844,9 +829,6 @@ func (potuo *ProviderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *P
 	}
 	if value, ok := potuo.mutation.AddedRateSlippage(); ok {
 		_spec.AddField(providerordertoken.FieldRateSlippage, field.TypeFloat64, value)
-	}
-	if potuo.mutation.RateSlippageCleared() {
-		_spec.ClearField(providerordertoken.FieldRateSlippage, field.TypeFloat64)
 	}
 	if value, ok := potuo.mutation.Address(); ok {
 		_spec.SetField(providerordertoken.FieldAddress, field.TypeString, value)

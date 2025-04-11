@@ -401,16 +401,6 @@ func RateSlippageLTE(v decimal.Decimal) predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(sql.FieldLTE(FieldRateSlippage, v))
 }
 
-// RateSlippageIsNil applies the IsNil predicate on the "rate_slippage" field.
-func RateSlippageIsNil() predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldIsNull(FieldRateSlippage))
-}
-
-// RateSlippageNotNil applies the NotNil predicate on the "rate_slippage" field.
-func RateSlippageNotNil() predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldNotNull(FieldRateSlippage))
-}
-
 // AddressEQ applies the EQ predicate on the "address" field.
 func AddressEQ(v string) predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(sql.FieldEQ(FieldAddress, v))

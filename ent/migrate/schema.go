@@ -321,7 +321,7 @@ var (
 		{Name: "conversion_rate_type", Type: field.TypeEnum, Enums: []string{"fixed", "floating"}},
 		{Name: "max_order_amount", Type: field.TypeFloat64},
 		{Name: "min_order_amount", Type: field.TypeFloat64},
-		{Name: "rate_slippage", Type: field.TypeFloat64, Nullable: true},
+		{Name: "rate_slippage", Type: field.TypeFloat64},
 		{Name: "address", Type: field.TypeString, Nullable: true},
 		{Name: "network", Type: field.TypeString, Nullable: true},
 		{Name: "fiat_currency_provider_order_tokens", Type: field.TypeUUID},

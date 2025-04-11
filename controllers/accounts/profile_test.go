@@ -19,6 +19,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/paycrest/aggregator/ent/enttest"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
+	"github.com/paycrest/aggregator/ent/migrate"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
@@ -34,6 +35,7 @@ var testCtx = struct {
 	user            *ent.User
 	providerProfile *ent.ProviderProfile
 	token           *ent.Token
+	orderToken      *ent.ProviderOrderToken
 	client          types.RPCClient
 }{}
 
@@ -78,14 +80,24 @@ func setup() error {
 		return err
 	}
 
-	provderProfile, err := test.CreateTestProviderProfile(map[string]interface{}{
+	providerProfile, err := test.CreateTestProviderProfile(map[string]interface{}{
 		"user_id":     testCtx.user.ID,
 		"currency_id": currency.ID,
 	})
 	if err != nil {
 		return err
 	}
-	testCtx.providerProfile = provderProfile
+
+	testCtx.providerProfile = providerProfile
+	orderToken, err := test.AddProviderOrderTokenToProvider(map[string]interface{}{
+		"provider":    testCtx.providerProfile,
+		"token_id":    testCtx.token.ID,
+		"currency_id": currency.ID,
+	})
+	if err != nil {
+		return err
+	}
+	testCtx.orderToken = orderToken
 
 	return nil
 }
@@ -94,6 +106,11 @@ func TestProfile(t *testing.T) {
 	// Set up test database client
 	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
 	defer client.Close()
+
+	// Run schema migrations
+	if err := client.Schema.Create(context.Background(), migrate.WithGlobalUniqueID(true)); err != nil {
+		t.Fatal(err)
+	}
 
 	db.Client = client
 
@@ -332,13 +349,18 @@ func TestProfile(t *testing.T) {
 	})
 
 	t.Run("UpdateProviderProfile", func(t *testing.T) {
-
-		t.Run("with all fields complete and check if it is active", func(t *testing.T) {
-			// Test partial update
+		profileUpdateRequest := func(payload types.ProviderProfilePayload) *httptest.ResponseRecorder {
 			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
 			headers := map[string]string{
 				"Authorization": "Bearer " + accessToken,
 			}
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			return res
+		}
+
+		t.Run("with all fields complete and check if it is active", func(t *testing.T) {
+			// Test partial update
 			payload := types.ProviderProfilePayload{
 				TradingName:      "My Trading Name",
 				Currencies:       []string{"KES"},
@@ -348,8 +370,7 @@ func TestProfile(t *testing.T) {
 				IsAvailable:      true,
 			}
 
-			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
-			assert.NoError(t, err)
+			res := profileUpdateRequest(payload)
 
 			// Assert the response body
 			assert.Equal(t, http.StatusOK, res.Code)
@@ -379,49 +400,62 @@ func TestProfile(t *testing.T) {
 		})
 
 		t.Run("with token rate slippage", func(t *testing.T) {
-			profileUpdateRequest := func(payload types.ProviderProfilePayload) *httptest.ResponseRecorder {
-				accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
-				headers := map[string]string{
-					"Authorization": "Bearer " + accessToken,
-				}
-				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
-				assert.NoError(t, err)
-				return res
-			}
-
-			// Base token payload with required fields
-			baseTokenPayload := types.ProviderOrderTokenPayload{
-				Currency:               "KES",
-				Symbol:                 "TST",
-				ConversionRateType:     providerordertoken.ConversionRateTypeFixed,
-				FixedConversionRate:    decimal.NewFromFloat(50000),
-				FloatingConversionRate: decimal.NewFromFloat(0),
-				MaxOrderAmount:         decimal.NewFromFloat(1),
-				MinOrderAmount:         decimal.NewFromFloat(0.001),
-				RateSlippage:           decimal.NewFromFloat(0),
-				Address:                "0x6881B7403C506d68D5e95580C90B3c8dD6EB0676",
-				Network:                "localhost",
-			}
-
-			currencies, err := testCtx.providerProfile.QueryCurrencies().All(context.Background())
-			assert.NoError(t, err)
-
-			_, err = test.AddProviderOrderTokenToProvider(map[string]interface{}{
-				"provider": testCtx.providerProfile,
-				"token_id":  testCtx.token.ID,
-				"currency_id": currencies[0].ID,
-			})
-			assert.NoError(t, err)
 
 			t.Run("fails when rate slippage exceeds 20 percent of market rate", func(t *testing.T) {
-				tokenPayload := baseTokenPayload
-				tokenPayload.RateSlippage = decimal.NewFromFloat(25) // 25% slippage
-
 				payload := types.ProviderProfilePayload{
 					TradingName:    testCtx.providerProfile.TradingName,
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
 					Currencies:     []string{"KES"},
-					Tokens:         []types.ProviderOrderTokenPayload{tokenPayload},
+					Tokens: []types.ProviderOrderTokenPayload{{
+						Currency:     testCtx.orderToken.Edges.Currency.Code,
+						Symbol:       testCtx.orderToken.Edges.Token.Symbol,
+						Network:      testCtx.orderToken.Network,
+						RateSlippage: decimal.NewFromFloat(25), // 25% slippage
+					}},
+				}
+
+				res := profileUpdateRequest(payload)
+				assert.Equal(t, http.StatusBadRequest, res.Code)
+
+				var response types.Response
+				err = json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, "Rate slippage is too high", response.Message)
+			})
+
+			t.Run("fails when rate slippage is less than 0.1", func(t *testing.T) {
+				payload := types.ProviderProfilePayload{
+					TradingName:    testCtx.providerProfile.TradingName,
+					HostIdentifier: testCtx.providerProfile.HostIdentifier,
+					Currencies:     []string{"KES"},
+					Tokens: []types.ProviderOrderTokenPayload{{
+						Currency:     testCtx.orderToken.Edges.Currency.Code,
+						Symbol:       testCtx.orderToken.Edges.Token.Symbol,
+						Network:      testCtx.orderToken.Network,
+						RateSlippage: decimal.NewFromFloat(0.09), // 0.09% slippage
+					}},
+				}
+
+				res := profileUpdateRequest(payload)
+				assert.Equal(t, http.StatusBadRequest, res.Code)
+
+				var response types.Response
+				err = json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, "Rate slippage cannot be less than 0.1", response.Message)
+			})
+
+			t.Run("fails when rate slippage is negative", func(t *testing.T) {
+				payload := types.ProviderProfilePayload{
+					TradingName:    testCtx.providerProfile.TradingName,
+					HostIdentifier: testCtx.providerProfile.HostIdentifier,
+					Currencies:     []string{"KES"},
+					Tokens: []types.ProviderOrderTokenPayload{{
+						Currency:     testCtx.orderToken.Edges.Currency.Code,
+						Symbol:       testCtx.orderToken.Edges.Token.Symbol,
+						Network:      testCtx.orderToken.Network,
+						RateSlippage: decimal.NewFromFloat(-1), // Negative slippage
+					}},
 				}
 
 				res := profileUpdateRequest(payload)
@@ -430,18 +464,20 @@ func TestProfile(t *testing.T) {
 				var response types.Response
 				err := json.Unmarshal(res.Body.Bytes(), &response)
 				assert.NoError(t, err)
-				assert.Equal(t, "Rate slippage is too high", response.Message)
+				assert.Equal(t, "Rate slippage cannot be negative", response.Message)
 			})
 
 			t.Run("succeeds with valid rate slippage", func(t *testing.T) {
-				tokenPayload := baseTokenPayload
-				tokenPayload.RateSlippage = decimal.NewFromFloat(15) // 15% slippage
-
 				payload := types.ProviderProfilePayload{
 					TradingName:    testCtx.providerProfile.TradingName,
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
 					Currencies:     []string{"KES"},
-					Tokens:         []types.ProviderOrderTokenPayload{tokenPayload},
+					Tokens: []types.ProviderOrderTokenPayload{{
+						Currency:     testCtx.orderToken.Edges.Currency.Code,
+						Symbol:       testCtx.orderToken.Edges.Token.Symbol,
+						Network:      testCtx.orderToken.Network,
+						RateSlippage: decimal.NewFromFloat(15), // 15% slippage
+					}},
 				}
 
 				res := profileUpdateRequest(payload)
@@ -465,14 +501,15 @@ func TestProfile(t *testing.T) {
 			})
 
 			t.Run("defaults to zero slippage when not specified", func(t *testing.T) {
-				tokenPayload := baseTokenPayload
-				// Don't set RateSlippage field
-
 				payload := types.ProviderProfilePayload{
 					TradingName:    testCtx.providerProfile.TradingName,
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
 					Currencies:     []string{"KES"},
-					Tokens:         []types.ProviderOrderTokenPayload{tokenPayload},
+					Tokens: []types.ProviderOrderTokenPayload{{
+						Currency: testCtx.orderToken.Edges.Currency.Code,
+						Symbol:   testCtx.orderToken.Edges.Token.Symbol,
+						Network:  testCtx.orderToken.Network,
+					}},
 				}
 
 				res := profileUpdateRequest(payload)
@@ -492,14 +529,16 @@ func TestProfile(t *testing.T) {
 			})
 
 			t.Run("uses token-specific slippage during rate matching", func(t *testing.T) {
-				tokenPayload := baseTokenPayload
-				tokenPayload.RateSlippage = decimal.NewFromFloat(15) // 15% slippage
-
 				payload := types.ProviderProfilePayload{
 					TradingName:    testCtx.providerProfile.TradingName,
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
 					Currencies:     []string{"KES"},
-					Tokens:         []types.ProviderOrderTokenPayload{tokenPayload},
+					Tokens: []types.ProviderOrderTokenPayload{{
+						Currency:     testCtx.orderToken.Edges.Currency.Code,
+						Symbol:       testCtx.orderToken.Edges.Token.Symbol,
+						Network:      testCtx.orderToken.Network,
+						RateSlippage: decimal.NewFromFloat(15), // 15% slippage
+					}},
 				}
 
 				accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
@@ -575,18 +614,18 @@ func TestProfile(t *testing.T) {
 		})
 
 		t.Run("with optional fields", func(t *testing.T) {
-			profileUpdateRequest := func(payload types.ProviderProfilePayload) *httptest.ResponseRecorder {
-				// Test partial update
-				accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
-				headers := map[string]string{
-					"Authorization": "Bearer " + accessToken,
-				}
+			// profileUpdateRequest := func(payload types.ProviderProfilePayload) *httptest.ResponseRecorder {
+			// 	// Test partial update
+			// 	accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			// 	headers := map[string]string{
+			// 		"Authorization": "Bearer " + accessToken,
+			// 	}
 
-				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
-				assert.NoError(t, err)
+			// 	res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			// 	assert.NoError(t, err)
 
-				return res
-			}
+			// 	return res
+			// }
 			t.Run("fails for invalid mobile number", func(t *testing.T) {
 				payload := types.ProviderProfilePayload{
 					MobileNumber:   "01234567890",

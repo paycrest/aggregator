@@ -91,14 +91,6 @@ func (potc *ProviderOrderTokenCreate) SetRateSlippage(d decimal.Decimal) *Provid
 	return potc
 }
 
-// SetNillableRateSlippage sets the "rate_slippage" field if the given value is not nil.
-func (potc *ProviderOrderTokenCreate) SetNillableRateSlippage(d *decimal.Decimal) *ProviderOrderTokenCreate {
-	if d != nil {
-		potc.SetRateSlippage(*d)
-	}
-	return potc
-}
-
 // SetAddress sets the "address" field.
 func (potc *ProviderOrderTokenCreate) SetAddress(s string) *ProviderOrderTokenCreate {
 	potc.mutation.SetAddress(s)
@@ -232,6 +224,9 @@ func (potc *ProviderOrderTokenCreate) check() error {
 	}
 	if _, ok := potc.mutation.MinOrderAmount(); !ok {
 		return &ValidationError{Name: "min_order_amount", err: errors.New(`ent: missing required field "ProviderOrderToken.min_order_amount"`)}
+	}
+	if _, ok := potc.mutation.RateSlippage(); !ok {
+		return &ValidationError{Name: "rate_slippage", err: errors.New(`ent: missing required field "ProviderOrderToken.rate_slippage"`)}
 	}
 	if len(potc.mutation.ProviderIDs()) == 0 {
 		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required edge "ProviderOrderToken.provider"`)}
@@ -526,12 +521,6 @@ func (u *ProviderOrderTokenUpsert) AddRateSlippage(v decimal.Decimal) *ProviderO
 	return u
 }
 
-// ClearRateSlippage clears the value of the "rate_slippage" field.
-func (u *ProviderOrderTokenUpsert) ClearRateSlippage() *ProviderOrderTokenUpsert {
-	u.SetNull(providerordertoken.FieldRateSlippage)
-	return u
-}
-
 // SetAddress sets the "address" field.
 func (u *ProviderOrderTokenUpsert) SetAddress(v string) *ProviderOrderTokenUpsert {
 	u.Set(providerordertoken.FieldAddress, v)
@@ -743,13 +732,6 @@ func (u *ProviderOrderTokenUpsertOne) AddRateSlippage(v decimal.Decimal) *Provid
 func (u *ProviderOrderTokenUpsertOne) UpdateRateSlippage() *ProviderOrderTokenUpsertOne {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
 		s.UpdateRateSlippage()
-	})
-}
-
-// ClearRateSlippage clears the value of the "rate_slippage" field.
-func (u *ProviderOrderTokenUpsertOne) ClearRateSlippage() *ProviderOrderTokenUpsertOne {
-	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.ClearRateSlippage()
 	})
 }
 
@@ -1136,13 +1118,6 @@ func (u *ProviderOrderTokenUpsertBulk) AddRateSlippage(v decimal.Decimal) *Provi
 func (u *ProviderOrderTokenUpsertBulk) UpdateRateSlippage() *ProviderOrderTokenUpsertBulk {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
 		s.UpdateRateSlippage()
-	})
-}
-
-// ClearRateSlippage clears the value of the "rate_slippage" field.
-func (u *ProviderOrderTokenUpsertBulk) ClearRateSlippage() *ProviderOrderTokenUpsertBulk {
-	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.ClearRateSlippage()
 	})
 }
 

@@ -10987,24 +10987,10 @@ func (m *ProviderOrderTokenMutation) AddedRateSlippage() (r decimal.Decimal, exi
 	return *v, true
 }
 
-// ClearRateSlippage clears the value of the "rate_slippage" field.
-func (m *ProviderOrderTokenMutation) ClearRateSlippage() {
-	m.rate_slippage = nil
-	m.addrate_slippage = nil
-	m.clearedFields[providerordertoken.FieldRateSlippage] = struct{}{}
-}
-
-// RateSlippageCleared returns if the "rate_slippage" field was cleared in this mutation.
-func (m *ProviderOrderTokenMutation) RateSlippageCleared() bool {
-	_, ok := m.clearedFields[providerordertoken.FieldRateSlippage]
-	return ok
-}
-
 // ResetRateSlippage resets all changes to the "rate_slippage" field.
 func (m *ProviderOrderTokenMutation) ResetRateSlippage() {
 	m.rate_slippage = nil
 	m.addrate_slippage = nil
-	delete(m.clearedFields, providerordertoken.FieldRateSlippage)
 }
 
 // SetAddress sets the "address" field.
@@ -11516,9 +11502,6 @@ func (m *ProviderOrderTokenMutation) AddField(name string, value ent.Value) erro
 // mutation.
 func (m *ProviderOrderTokenMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(providerordertoken.FieldRateSlippage) {
-		fields = append(fields, providerordertoken.FieldRateSlippage)
-	}
 	if m.FieldCleared(providerordertoken.FieldAddress) {
 		fields = append(fields, providerordertoken.FieldAddress)
 	}
@@ -11539,9 +11522,6 @@ func (m *ProviderOrderTokenMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *ProviderOrderTokenMutation) ClearField(name string) error {
 	switch name {
-	case providerordertoken.FieldRateSlippage:
-		m.ClearRateSlippage()
-		return nil
 	case providerordertoken.FieldAddress:
 		m.ClearAddress()
 		return nil
