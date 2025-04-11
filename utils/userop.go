@@ -192,26 +192,8 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 		}
 
 		requestParams = []interface{}{
-			userOpExpanded,
-			map[string]interface{}{
-				"entryPoint": orderConf.EntryPointContractAddress.Hex(),
-			},
-		}
-
-		if mode == "erc20" {
-			if token == "" {
-				return fmt.Errorf("token address is required")
-			}
-			requestParams = append(requestParams, map[string]interface{}{
-				"sponsorPaymaster": "erc20",
-				"feeToken":         token,
-			})
-		} else if mode == "sponsored" {
-			requestParams = append(requestParams, map[string]interface{}{
-				"sponsorPaymaster": "verifying",
-			})
-		} else {
-			return fmt.Errorf("invalid mode")
+			userOp,
+			orderConf.EntryPointContractAddress.Hex(),
 		}
 	default:
 		return fmt.Errorf("unsupported AA service: %s", aaService)
