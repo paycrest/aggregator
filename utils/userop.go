@@ -260,14 +260,6 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 		return "", "", 0, fmt.Errorf("failed to connect to RPC client: %w", err)
 	}
 
-	maxFeePerGas, maxPriorityFeePerGas, err := getStandardGasPrices(chainId)
-	if err == nil {
-		userOp.MaxFeePerGas = maxFeePerGas
-		userOp.MaxPriorityFeePerGas = maxPriorityFeePerGas
-	} else {
-		logger.Errorf("Failed to get Pimlico gas prices, falling back to network prices: %v", err)
-	}
-
 	aaService, err := detectAAService(bundlerUrl)
 	if err != nil {
 		return "", "", 0, fmt.Errorf("invalid AA service URL pattern: %w", err)
@@ -285,6 +277,14 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 			},
 		}
 	case "thirdweb":
+		maxFeePerGas, maxPriorityFeePerGas, err := getStandardGasPrices(chainId)
+		if err == nil {
+			userOp.MaxFeePerGas = maxFeePerGas
+			userOp.MaxPriorityFeePerGas = maxPriorityFeePerGas
+		} else {
+			logger.Errorf("Failed to get Pimlico gas prices, falling back to network prices: %v", err)
+		}
+
 		httpClient := &http.Client{
 			Transport: &http.Transport{},
 		}
@@ -581,11 +581,21 @@ func getStandardGasPrices(chainId int64) (*big.Int, *big.Int, error) {
 		return nil, nil, fmt.Errorf("failed to get endpoints for chain ID %d: %w", chainId, err)
 	}
 
-	client, err := rpc.Dial(paymasterUrl)
+	httpClient := &http.Client{
+		Transport: &http.Transport{},
+	}
+	header := http.Header{}
+	header.Set("x-secret-key", orderConf.ThirdwebSecretKey)
+
+	client, err := rpc.DialOptions(
+		context.Background(),
+		paymasterUrl,
+		rpc.WithHTTPClient(httpClient),
+		rpc.WithHeaders(header),
+	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to connect to RPC client: %w", err)
 	}
-	defer client.Close()
 
 	var result struct {
 		Slow struct {
