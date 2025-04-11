@@ -352,7 +352,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				u.APIResponse(
 					ctx,
 					http.StatusInternalServerError,
-					"error", "Failed to update profile 3",
+					"error", "Failed to update profile",
 					nil,
 				)
 			}
@@ -394,13 +394,24 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			return
 		}
 
+		// Handle slippage validation and default value
+		if tokenPayload.RateSlippage.LessThan(decimal.NewFromFloat(0.1)) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Rate slippage cannot be less than 0.1", nil)
+			return
+		} else if tokenPayload.RateSlippage.GreaterThan(rate.Mul(decimal.NewFromFloat(0.05))) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Rate slippage is too high", nil)
+			return
+		}
+
 		orderToken, err := tx.ProviderOrderToken.
 			Query().
 			Where(
 				providerordertoken.HasTokenWith(token.IDEQ(providerToken.ID)),
 				providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 				providerordertoken.HasCurrencyWith(fiatcurrency.IDEQ(currency.ID)),
+				providerordertoken.NetworkEQ(tokenPayload.Network),
 			).
+			WithCurrency().
 			Only(ctx)
 		if err != nil {
 			if ent.IsNotFound(err) {
@@ -415,6 +426,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 					SetAddress(tokenPayload.Address).
 					SetNetwork(tokenPayload.Network).
 					SetProviderID(provider.ID).
+					SetRateSlippage(tokenPayload.RateSlippage).
 					SetTokenID(providerToken.ID).
 					SetCurrencyID(currency.ID).
 					Save(ctx)
@@ -438,6 +450,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				SetFloatingConversionRate(tokenPayload.FloatingConversionRate).
 				SetMaxOrderAmount(tokenPayload.MaxOrderAmount).
 				SetMinOrderAmount(tokenPayload.MinOrderAmount).
+				SetRateSlippage(tokenPayload.RateSlippage).
 				SetAddress(tokenPayload.Address).
 				SetNetwork(tokenPayload.Network).
 				Save(ctx)
@@ -643,6 +656,7 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 			FloatingConversionRate: orderToken.FloatingConversionRate,
 			MaxOrderAmount:         orderToken.MaxOrderAmount,
 			MinOrderAmount:         orderToken.MinOrderAmount,
+			RateSlippage:           orderToken.RateSlippage,
 			Address:                orderToken.Address,
 			Network:                orderToken.Network,
 		}
