@@ -612,7 +612,7 @@ func getStandardGasPrices(chainId int64) (*big.Int, *big.Int, error) {
 		} `json:"fast"`
 	}
 
-	err = client.Call(&result, "pimlico_getUserOperationGasPrice")
+	err = client.Call(&result, "thirdweb_getUserOperationGasPrice")
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get gas prices: %w", err)
 	}
