@@ -173,32 +173,8 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 			userOpExpanded,
 			payload,
 		}
-	case "zerodev":
-		method = "zd_sponsorUserOperation"
-		var shouldOverrideFee bool
-		var shouldConsume bool
-
-		if mode == "sponsored" {
-			shouldOverrideFee = true
-			shouldConsume = false
-		} else if mode == "erc20" {
-			shouldOverrideFee = true
-			shouldConsume = true
-		} else {
-			return fmt.Errorf("invalid mode")
-		}
-
-		requestParams = []interface{}{
-			chainId,
-			userOpExpanded,
-			orderConf.EntryPointContractAddress.Hex(),
-			map[string]interface{}{
-				"tokenAddress": token,
-			},
-			shouldOverrideFee,
-			shouldConsume,
-		}
 	case "pimlico":
+	case "thirdweb":
 		requestParams = []interface{}{
 			userOpExpanded,
 			map[string]interface{}{
@@ -247,13 +223,8 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 		userOp.VerificationGasLimit = decimal.NewFromFloat(response["verificationGasLimit"].(float64)).BigInt()
 		userOp.CallGasLimit = decimal.NewFromFloat(response["callGasLimit"].(float64)).BigInt()
 
-	case "zerodev":
-		userOp.PaymasterAndData = common.FromHex(response["paymasterAndData"].(string))
-		userOp.PreVerificationGas, _ = new(big.Int).SetString(response["preVerificationGas"].(string), 0)
-		userOp.VerificationGasLimit = decimal.NewFromFloat(response["verificationGasLimit"].(float64)).BigInt()
-		userOp.CallGasLimit = decimal.NewFromFloat(response["callGasLimit"].(float64)).BigInt()
-
 	case "pimlico":
+	case "thirdweb":
 		userOp.PaymasterAndData = common.FromHex(response["paymasterAndData"].(string))
 		userOp.PreVerificationGas, _ = new(big.Int).SetString(response["preVerificationGas"].(string), 0)
 		userOp.VerificationGasLimit = decimal.NewFromFloat(response["verificationGasLimit"].(float64)).BigInt()
@@ -309,14 +280,8 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 				"simulation_type": "validation_and_execution",
 			},
 		}
-	case "zerodev":
-		method = "zd_sendUserOperation"
-		requestParams = []interface{}{
-			chainId,
-			userOp,
-			orderConf.EntryPointContractAddress.Hex(),
-		}
 	case "pimlico":
+	case "thirdweb":
 		requestParams = []interface{}{
 			userOp,
 			orderConf.EntryPointContractAddress.Hex(),
@@ -631,8 +596,8 @@ func detectAAService(url string) (string, error) {
 		return "biconomy", nil
 	case strings.Contains(url, "api.pimlico.io"):
 		return "pimlico", nil
-	case strings.Contains(url, "rpc.zerodev.app"):
-		return "zerodev", nil
+	case strings.Contains(url, "thirdweb.com"):
+		return "thirdweb", nil
 	default:
 		return "", fmt.Errorf("unsupported AA service URL pattern: %s", url)
 	}
