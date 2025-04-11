@@ -25,7 +25,6 @@ import (
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
-	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/stackup-wallet/stackup-bundler/pkg/userop"
 )
 
@@ -212,8 +211,6 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 		return fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
-	logger.Errorf("sponsorUserOperation: aaService: %s response: %v", aaService, response)
-
 	switch aaService {
 	case "biconomy":
 		userOp.PaymasterAndData = common.FromHex(response["paymasterAndData"].(string))
@@ -222,10 +219,11 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 		userOp.CallGasLimit = decimal.NewFromFloat(response["callGasLimit"].(float64)).BigInt()
 
 	case "thirdweb":
-		userOp.PaymasterAndData = common.FromHex(response["paymasterAndData"].(string))
+		userOp.CallGasLimit, _ = new(big.Int).SetString(response["callGasLimit"].(string), 0)
+		userOp.VerificationGasLimit, _ = new(big.Int).SetString(response["verificationGasLimit"].(string), 0)
 		userOp.PreVerificationGas, _ = new(big.Int).SetString(response["preVerificationGas"].(string), 0)
-		userOp.VerificationGasLimit = decimal.NewFromFloat(response["verificationGasLimit"].(float64)).BigInt()
-		userOp.CallGasLimit = decimal.NewFromFloat(response["callGasLimit"].(float64)).BigInt()
+		userOp.PaymasterAndData = common.FromHex(response["paymasterAndData"].(string))
+
 	}
 
 	return nil
