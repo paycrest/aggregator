@@ -581,6 +581,83 @@ func TestProfile(t *testing.T) {
 			})
 
 		})
+		t.Run("HostIdentifier URL validation", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			t.Run("fails for HTTP URL", func(t *testing.T) {
+				payload := types.ProviderProfilePayload{
+					TradingName:    "Paycrest Profile",
+					HostIdentifier: "http://example.com",
+					Currencies:     []string{"KES"},
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				assert.Equal(t, http.StatusBadRequest, res.Code)
+				var response types.Response
+				err = json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, "Host identifier must use HTTPS protocol and be a valid URL", response.Message)
+				assert.NotNil(t, response.Data, "Response data should not be nil")
+			})
+
+			t.Run("fails for malformed URL", func(t *testing.T) {
+				payload := types.ProviderProfilePayload{
+					TradingName:    "Paycrest Profile",
+					HostIdentifier: "not-a-valid-url",
+					Currencies:     []string{"KES"},
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				assert.Equal(t, http.StatusBadRequest, res.Code)
+				var response types.Response
+				err = json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, "Host identifier must use HTTPS protocol and be a valid URL", response.Message)
+			})
+
+			t.Run("fails for URL without host", func(t *testing.T) {
+				payload := types.ProviderProfilePayload{
+					TradingName:    "Paycrest Profile",
+					HostIdentifier: "https://",
+					Currencies:     []string{"KES"},
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				assert.Equal(t, http.StatusBadRequest, res.Code)
+				var response types.Response
+				err = json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, "Host identifier must use HTTPS protocol and be a valid URL", response.Message)
+			})
+
+			t.Run("succeeds with valid HTTPS URL", func(t *testing.T) {
+				payload := types.ProviderProfilePayload{
+					TradingName:    "Paycrest Profile",
+					HostIdentifier: "https://example.com",
+					Currencies:     []string{"KES"},
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				assert.Equal(t, http.StatusOK, res.Code)
+				var response types.Response
+				err = json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, "Profile updated successfully", response.Message)
+				providerProfile, err := db.Client.ProviderProfile.
+					Query().
+					Where(providerprofile.HasUserWith(user.ID(testCtx.user.ID))).
+					Only(context.Background())
+				assert.NoError(t, err)
+				assert.Equal(t, "https://example.com", providerProfile.HostIdentifier)
+			})
+		})
 	})
 
 	t.Run("GetSenderProfile", func(t *testing.T) {
