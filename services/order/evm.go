@@ -399,6 +399,10 @@ func (s *OrderEVM) executeBatchCreateOrderCallData(order *ent.PaymentOrder) ([]b
 	}
 
 	// Initialize calls array with gateway approve and create order
+	addresses := []common.Address{
+		common.HexToAddress(order.Edges.Token.ContractAddress),
+		common.HexToAddress(order.Edges.Token.Edges.Network.GatewayContractAddress),
+	}
 	calls := [][]byte{approveGatewayData, createOrderData}
 
 	if order.Edges.Token.Edges.Network.Fee.GreaterThan(decimal.NewFromInt(0)) {
@@ -423,6 +427,7 @@ func (s *OrderEVM) executeBatchCreateOrderCallData(order *ent.PaymentOrder) ([]b
 
 		// Add paymaster approve call if fee is greater than 0
 		calls = append([][]byte{approvePaymasterData}, calls...)
+		addresses = append(addresses, common.HexToAddress(order.Edges.Token.ContractAddress))
 	}
 
 	simpleAccountABI, err := abi.JSON(strings.NewReader(contracts.SimpleAccountMetaData.ABI))
@@ -432,11 +437,7 @@ func (s *OrderEVM) executeBatchCreateOrderCallData(order *ent.PaymentOrder) ([]b
 
 	executeBatchCreateOrderCallData, err := simpleAccountABI.Pack(
 		"executeBatch",
-		[]common.Address{
-			common.HexToAddress(order.Edges.Token.ContractAddress),
-			common.HexToAddress(order.Edges.Token.ContractAddress),
-			common.HexToAddress(order.Edges.Token.Edges.Network.GatewayContractAddress),
-		},
+		addresses,
 		calls,
 	)
 	if err != nil {
