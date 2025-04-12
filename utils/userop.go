@@ -358,7 +358,28 @@ func GetUserOperationByReceipt(userOpHash string, chainId int64) (map[string]int
 		return nil, fmt.Errorf("failed to get endpoints for chain ID %d: %w", chainId, err)
 	}
 
-	client, err := rpc.Dial(bundlerUrl)
+	aaService, err := detectAAService(bundlerUrl)
+	if err != nil {
+		return nil, fmt.Errorf("invalid AA service URL pattern: %w", err)
+	}
+
+	var client *rpc.Client
+	if aaService == "thirdweb" {
+		httpClient := &http.Client{
+			Transport: &http.Transport{},
+		}
+		header := http.Header{}
+		header.Set("x-secret-key", orderConf.ThirdwebSecretKey)
+
+		client, err = rpc.DialOptions(
+			context.Background(),
+			bundlerUrl,
+			rpc.WithHTTPClient(httpClient),
+			rpc.WithHeaders(header),
+		)
+	} else {
+		client, err = rpc.Dial(bundlerUrl)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to RPC client: %w", err)
 	}
@@ -488,13 +509,33 @@ func GetPaymasterAccount(chainId int64) (string, error) {
 
 // GetUserOperationStatus returns the status of the user operation
 func GetUserOperationStatus(userOpHash string, chainId int64) (bool, error) {
-
 	bundlerUrl, _, err := getEndpoints(chainId)
 	if err != nil {
 		return false, fmt.Errorf("failed to get endpoints for chain ID %d: %w", chainId, err)
 	}
 
-	client, err := rpc.Dial(bundlerUrl)
+	aaService, err := detectAAService(bundlerUrl)
+	if err != nil {
+		return false, fmt.Errorf("invalid AA service URL pattern: %w", err)
+	}
+
+	var client *rpc.Client
+	if aaService == "thirdweb" {
+		httpClient := &http.Client{
+			Transport: &http.Transport{},
+		}
+		header := http.Header{}
+		header.Set("x-secret-key", orderConf.ThirdwebSecretKey)
+
+		client, err = rpc.DialOptions(
+			context.Background(),
+			bundlerUrl,
+			rpc.WithHTTPClient(httpClient),
+			rpc.WithHeaders(header),
+		)
+	} else {
+		client, err = rpc.Dial(bundlerUrl)
+	}
 	if err != nil {
 		return false, fmt.Errorf("failed to connect to RPC client: %w", err)
 	}
