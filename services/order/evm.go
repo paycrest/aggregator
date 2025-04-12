@@ -392,29 +392,37 @@ func (s *OrderEVM) executeBatchCreateOrderCallData(order *ent.PaymentOrder) ([]b
 		return nil, fmt.Errorf("failed to create gateway approve calldata: %w", err)
 	}
 
-	// Fetch paymaster account
-	paymasterAccount, err := utils.GetPaymasterAccount(order.Edges.Token.Edges.Network.ChainID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get paymaster account: %w", err)
-	}
-
-	if serverConf.Environment != "production" {
-		time.Sleep(5 * time.Second)
-	}
-
-	// Create approve data for paymaster contract
-	approvePaymasterData, err := s.approveCallData(
-		common.HexToAddress(paymasterAccount),
-		utils.ToSubunit(orderAmountWithFees.Add(order.Edges.Token.Edges.Network.Fee), order.Edges.Token.Decimals),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create paymaster approve calldata : %w", err)
-	}
-
 	// Create createOrder data
 	createOrderData, err := s.createOrderCallData(order)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create createOrder calldata: %w", err)
+	}
+
+	// Initialize calls array with gateway approve and create order
+	calls := [][]byte{approveGatewayData, createOrderData}
+
+	if order.Edges.Token.Edges.Network.Fee.GreaterThan(decimal.NewFromInt(0)) {
+		// Fetch paymaster account
+		paymasterAccount, err := utils.GetPaymasterAccount(order.Edges.Token.Edges.Network.ChainID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get paymaster account: %w", err)
+		}
+
+		if serverConf.Environment != "production" {
+			time.Sleep(5 * time.Second)
+		}
+
+		// Create approve data for paymaster contract
+		approvePaymasterData, err := s.approveCallData(
+			common.HexToAddress(paymasterAccount),
+			utils.ToSubunit(orderAmountWithFees.Add(order.Edges.Token.Edges.Network.Fee), order.Edges.Token.Decimals),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create paymaster approve calldata : %w", err)
+		}
+
+		// Add paymaster approve call if fee is greater than 0
+		calls = append([][]byte{approvePaymasterData}, calls...)
 	}
 
 	simpleAccountABI, err := abi.JSON(strings.NewReader(contracts.SimpleAccountMetaData.ABI))
@@ -429,7 +437,7 @@ func (s *OrderEVM) executeBatchCreateOrderCallData(order *ent.PaymentOrder) ([]b
 			common.HexToAddress(order.Edges.Token.ContractAddress),
 			common.HexToAddress(order.Edges.Token.Edges.Network.GatewayContractAddress),
 		},
-		[][]byte{approvePaymasterData, approveGatewayData, createOrderData},
+		calls,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to pack execute ABI: %w", err)
