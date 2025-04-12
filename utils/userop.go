@@ -462,7 +462,18 @@ func GetPaymasterAccount(chainId int64) (string, error) {
 		return "0x00000f79b7faf42eebadba19acc07cd08af44789", nil
 	}
 
-	client, err := rpc.Dial(paymasterUrl)
+	httpClient := &http.Client{
+		Transport: &http.Transport{},
+	}
+	header := http.Header{}
+	header.Set("x-secret-key", orderConf.ThirdwebSecretKey)
+
+	client, err := rpc.DialOptions(
+		context.Background(),
+		paymasterUrl,
+		rpc.WithHTTPClient(httpClient),
+		rpc.WithHeaders(header),
+	)
 	if err != nil {
 		return "", fmt.Errorf("failed to connect to RPC client: %w", err)
 	}
