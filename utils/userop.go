@@ -281,8 +281,18 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 		if err == nil {
 			userOp.MaxFeePerGas = maxFeePerGas
 			userOp.MaxPriorityFeePerGas = maxPriorityFeePerGas
+		} else if chainId == 137 {
+			// increase maxFeePerGas and maxPriorityFeePerGas by 50%
+			userOp.MaxFeePerGas = new(big.Int).Div(
+				new(big.Int).Mul(maxFeePerGas, big.NewInt(150)),
+				big.NewInt(100),
+			)
+			userOp.MaxPriorityFeePerGas = new(big.Int).Div(
+				new(big.Int).Mul(maxPriorityFeePerGas, big.NewInt(150)),
+				big.NewInt(100),
+			)
 		} else {
-			logger.Errorf("Failed to get Pimlico gas prices, falling back to network prices: %v", err)
+			logger.Errorf("Failed to get bundler gas prices, falling back to network prices: %v", err)
 		}
 
 		httpClient := &http.Client{
@@ -660,10 +670,10 @@ func getStandardGasPrices(chainId int64) (*big.Int, *big.Int, error) {
 
 	// Convert hex strings to big.Int
 	maxFeePerGas := new(big.Int)
-	maxFeePerGas.SetString(result.Fast.MaxFeePerGas, 0)
+	maxFeePerGas.SetString(result.Standard.MaxFeePerGas, 0)
 
 	maxPriorityFeePerGas := new(big.Int)
-	maxPriorityFeePerGas.SetString(result.Fast.MaxPriorityFeePerGas, 0)
+	maxPriorityFeePerGas.SetString(result.Standard.MaxPriorityFeePerGas, 0)
 
 	return maxFeePerGas, maxPriorityFeePerGas, nil
 }
