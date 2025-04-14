@@ -1,0 +1,2741 @@
+{
+  "continents": [
+    {
+      "name": "Africa",
+      "countries": [
+        {
+          "name": "Algeria",
+          "code": "DZ",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Angola",
+          "code": "AO",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SOCIAL_ID", "verification_method": "document_image" },
+            { "type": "TAX_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Benin",
+          "code": "BJ",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Botswana",
+          "code": "BW",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Burkina Faso",
+          "code": "BF",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Burundi",
+          "code": "BI",
+          "id_types": [
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Cameroon",
+          "code": "CM",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Cape Verde",
+          "code": "CV",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Central African Republic",
+          "code": "CF",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Chad",
+          "code": "TD",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Comoros",
+          "code": "KM",
+          "id_types": [
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Congo",
+          "code": "CG",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TAX_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Congo, Democratic Republic of the",
+          "code": "CD",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Cote d'Ivoire",
+          "code": "CI",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Djibouti",
+          "code": "DJ",
+          "id_types": [
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Egypt",
+          "code": "EG",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Equatorial Guinea",
+          "code": "GQ",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Eritrea",
+          "code": "ER",
+          "id_types": [
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Eswatini",
+          "code": "SZ",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Ethiopia",
+          "code": "ET",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TAX_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Gabon",
+          "code": "GA",
+          "id_types": [
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Gambia",
+          "code": "GM",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Ghana",
+          "code": "GH",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "SOCIAL_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Guinea",
+          "code": "GN",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Guinea-Bissau",
+          "code": "GW",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Kenya",
+          "code": "KE",
+          "id_types": [
+            { "type": "ALIEN_CARD", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Lesotho",
+          "code": "LS",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Liberia",
+          "code": "LR",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Libya",
+          "code": "LY",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Madagascar",
+          "code": "MG",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Malawi",
+          "code": "MW",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Mali",
+          "code": "ML",
+          "id_types": [
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Mauritania",
+          "code": "MR",
+          "id_types": [
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Mauritius",
+          "code": "MU",
+          "id_types": [
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Morocco",
+          "code": "MA",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Mozambique",
+          "code": "MZ",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRADE_LICENSE", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Namibia",
+          "code": "NA",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Niger",
+          "code": "NE",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Nigeria",
+          "code": "NG",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Rwanda",
+          "code": "RW",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Saint Helena, Ascension and Tristan da Cunha",
+          "code": "SH",
+          "id_types": [
+            { "type": "PASSPORT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Sao Tome and Principe",
+          "code": "ST",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Senegal",
+          "code": "SN",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Seychelles",
+          "code": "SC",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Sierra Leone",
+          "code": "SL",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "SOCIAL_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Somalia",
+          "code": "SO",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "South Africa",
+          "code": "ZA",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "South Sudan",
+          "code": "SS",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Sudan",
+          "code": "SD",
+          "id_types": [
+            { "type": "ALIEN_CARD", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Tanzania, United Republic of",
+          "code": "TZ",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Togo",
+          "code": "TG",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Tunisia",
+          "code": "TN",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Uganda",
+          "code": "UG",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Western Sahara",
+          "code": "EH",
+          "id_types": [
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Zambia",
+          "code": "ZM",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Zimbabwe",
+          "code": "ZW",
+          "id_types": [
+            { "type": "CITIZEN_ID", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Asia and the Middle East",
+      "countries": [
+        {
+          "name": "Afghanistan",
+          "code": "AF",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Armenia",
+          "code": "AM",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Azerbaijan",
+          "code": "AZ",
+          "id_types": [
+            { "type": "ALIEN_CARD", "verification_method": "document_image" },
+            { "type": "CITIZEN_ID", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Bahrain",
+          "code": "BH",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRADE_LICENSE", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Bangladesh",
+          "code": "BD",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Bhutan",
+          "code": "BT",
+          "id_types": [
+            { "type": "CITIZEN_ID", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRADE_LICENSE", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Brunei Darussalam",
+          "code": "BN",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Cambodia",
+          "code": "KH",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "China",
+          "code": "CN",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "PROVISIONAL_DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "SOCIAL_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Cyprus",
+          "code": "CY",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Georgia",
+          "code": "GE",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Hong Kong",
+          "code": "HK",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "India",
+          "code": "IN",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TAX_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Indonesia",
+          "code": "ID",
+          "id_types": [
+            { "type": "CITIZEN_ID", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TAX_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Iran, Islamic Republic of",
+          "code": "IR",
+          "id_types": [
+            { "type": "CITIZEN_ID", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Iraq",
+          "code": "IQ",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Israel",
+          "code": "IL",
+          "id_types": [
+            { "type": "CITIZEN_ID", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Japan",
+          "code": "JP",
+          "id_types": [
+            { "type": "ALIEN_CARD", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Jordan",
+          "code": "JO",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Kazakhstan",
+          "code": "KZ",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Korea, Democratic People's Republic of",
+          "code": "KP",
+          "id_types": [
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Korea, Republic of",
+          "code": "KR",
+          "id_types": [
+            { "type": "ALIEN_CARD", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "SOCIAL_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Kuwait",
+          "code": "KW",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Kyrgyzstan",
+          "code": "KG",
+          "id_types": [
+            { "type": "CITIZEN_ID", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Lao People's Democratic Republic",
+          "code": "LA",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Lebanon",
+          "code": "LB",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Macao",
+          "code": "MO",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Malaysia",
+          "code": "MY",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "PROVISIONAL_DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Maldives",
+          "code": "MV",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Mongolia",
+          "code": "MN",
+          "id_types": [
+            { "type": "ALIEN_CARD", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Myanmar",
+          "code": "MM",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "SOCIAL_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Nepal",
+          "code": "NP",
+          "id_types": [
+            { "type": "CITIZEN_ID", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "PROVISIONAL_DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "TAX_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Oman",
+          "code": "OM",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Pakistan",
+          "code": "PK",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Palestine, State of",
+          "code": "PS",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Philippines",
+          "code": "PH",
+          "id_types": [
+            { "type": "ALIEN_CARD", "verification_method": "document_image" },
+            { "type": "CITIZEN_ID", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "SOCIAL_ID", "verification_method": "document_image" },
+            { "type": "TAX_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Qatar",
+          "code": "QA",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "PROVISIONAL_DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Saudi Arabia",
+          "code": "SA",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Singapore",
+          "code": "SG",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Sri Lanka",
+          "code": "LK",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Syrian Arab Republic",
+          "code": "SY",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Taiwan, Province of China",
+          "code": "TW",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Tajikistan",
+          "code": "TJ",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Thailand",
+          "code": "TH",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "PROVISIONAL_DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Timor-Leste",
+          "code": "TL",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Turkey",
+          "code": "TR",
+          "id_types": [
+            { "type": "ADDRESS_CARD", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Turkmenistan",
+          "code": "TM",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "United Arab Emirates",
+          "code": "AE",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRADE_LICENSE", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Uzbekistan",
+          "code": "UZ",
+          "id_types": [
+            { "type": "CITIZEN_ID", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Viet Nam",
+          "code": "VN",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Yemen",
+          "code": "YE",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Europe",
+      "countries": [
+        {
+          "name": "Albania",
+          "code": "AL",
+          "id_types": [
+            { "type": "ALIEN_CARD", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Andorra",
+          "code": "AD",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Austria",
+          "code": "AT",
+          "id_types": [
+            { "type": "ALIEN_CARD", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Belarus",
+          "code": "BY",
+          "id_types": [
+            { "type": "CITIZEN_ID", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "PROVISIONAL_DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "SOCIAL_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Belgium",
+          "code": "BE",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "PROVISIONAL_DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Bosnia and Herzegovina",
+          "code": "BA",
+          "id_types": [
+            { "type": "ALIEN_CARD", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Bulgaria",
+          "code": "BG",
+          "id_types": [
+            { "type": "CITIZEN_ID", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Croatia",
+          "code": "HR",
+          "id_types": [
+            { "type": "ALIEN_CARD", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Czech Republic",
+          "code": "CZ",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Denmark",
+          "code": "DK",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Estonia",
+          "code": "EE",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Faroe Islands",
+          "code": "FO",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Finland",
+          "code": "FI",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "France",
+          "code": "FR",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRADE_LICENSE", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Germany",
+          "code": "DE",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Gibraltar",
+          "code": "GI",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Greece",
+          "code": "GR",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Guernsey",
+          "code": "GG",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Holy See (Vatican City State)",
+          "code": "VA",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Hungary",
+          "code": "HU",
+          "id_types": [
+            { "type": "ADDRESS_CARD", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Iceland",
+          "code": "IS",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Ireland",
+          "code": "IE",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "PROVISIONAL_DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Isle of Man",
+          "code": "IM",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Italy",
+          "code": "IT",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TAX_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Jersey",
+          "code": "JE",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Kosovo",
+          "code": "XK",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Latvia",
+          "code": "LV",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "PROVISIONAL_DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Liechtenstein",
+          "code": "LI",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Lithuania",
+          "code": "LT",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Luxembourg",
+          "code": "LU",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Malta",
+          "code": "MT",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Moldova, Republic of",
+          "code": "MD",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Monaco",
+          "code": "MC",
+          "id_types": [
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Montenegro",
+          "code": "ME",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Netherlands",
+          "code": "NL",
+          "id_types": [
+            { "type": "ALIEN_CARD", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "North Macedonia, Republic of",
+          "code": "MK",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Norway",
+          "code": "NO",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Poland",
+          "code": "PL",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" },
+            { "type": "VEHICLE_PARTICULARS", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Portugal",
+          "code": "PT",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Romania",
+          "code": "RO",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SOCIAL_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Russian Federation",
+          "code": "RU",
+          "id_types": [
+            { "type": "ALIEN_CARD", "verification_method": "document_image" },
+            { "type": "CITIZEN_ID", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "SOCIAL_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" },
+            { "type": "VEHICLE_PARTICULARS", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "San Marino",
+          "code": "SM",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Serbia",
+          "code": "RS",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "PROVISIONAL_DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Slovakia",
+          "code": "SK",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Slovenia",
+          "code": "SI",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Spain",
+          "code": "ES",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Sweden",
+          "code": "SE",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TAX_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Switzerland",
+          "code": "CH",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Ukraine",
+          "code": "UA",
+          "id_types": [
+            { "type": "CITIZEN_ID", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "SOCIAL_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "United Kingdom",
+          "code": "GB",
+          "id_types": [
+            { "type": "ALIEN_CARD", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "PROVISIONAL_DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "SOCIAL_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+            ]
+        }
+      ]
+    },
+    {
+      "name": "North America",
+      "countries": [
+        {
+          "name": "Anguilla",
+          "code": "AI",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Antigua and Barbuda",
+          "code": "AG",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "SOCIAL_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Aruba",
+          "code": "AW",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Bahamas",
+          "code": "BS",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Barbados",
+          "code": "BB",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Belize",
+          "code": "BZ",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "PROVISIONAL_DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SOCIAL_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Bermuda",
+          "code": "BM",
+          "id_types": [
+            { "type": "CITIZEN_ID", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Bonaire, Sint Eustatius and Saba",
+          "code": "BQ",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Canada",
+          "code": "CA",
+          "id_types": [
+            { "type": "CITIZEN_ID", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "PROVISIONAL_DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Cayman Islands",
+          "code": "KY",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Costa Rica",
+          "code": "CR",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Cuba",
+          "code": "CU",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Curacao",
+          "code": "CW",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Dominica",
+          "code": "DM",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Dominican Republic",
+          "code": "DO",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "PROVISIONAL_DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "El Salvador",
+          "code": "SV",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Greenland",
+          "code": "GL",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Grenada",
+          "code": "GD",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Guatemala",
+          "code": "GT",
+          "id_types": [
+            { "type": "ALIEN_CARD", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Haiti",
+          "code": "HT",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Honduras",
+          "code": "HN",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Jamaica",
+          "code": "JM",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Mexico",
+          "code": "MX",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "SOCIAL_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Montserrat",
+          "code": "MS",
+          "id_types": [
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Nicaragua",
+          "code": "NI",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Panama",
+          "code": "PA",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Puerto Rico",
+          "code": "PR",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Saint Kitts and Nevis",
+          "code": "KN",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Saint Lucia",
+          "code": "LC",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Saint Martin (French part)",
+          "code": "MF",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Saint Vincent and the Grenadines",
+          "code": "VC",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Sint Maarten (Dutch part)",
+          "code": "SX",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Trinidad and Tobago",
+          "code": "TT",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Turks and Caicos Islands",
+          "code": "TC",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "United States",
+          "code": "US",
+          "id_types": [
+            { "type": "ALIEN_CARD", "verification_method": "document_image" },
+            { "type": "CITIZEN_ID", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "PROVISIONAL_DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "SOCIAL_ID", "verification_method": "document_image" },
+            { "type": "TAX_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "TRIBAL_CARD", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Virgin Islands, British",
+          "code": "VG",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Virgin Islands, U.S.",
+          "code": "VI",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PROVISIONAL_DRIVERS_LICENSE", "verification_method": "document_image" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Oceania",
+      "countries": [
+        {
+          "name": "American Samoa",
+          "code": "AS",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Australia",
+          "code": "AU",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "PROVISIONAL_DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Cook Islands",
+          "code": "CK",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Fiji",
+          "code": "FJ",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TAX_ID", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "French Polynesia",
+          "code": "PF",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Guam",
+          "code": "GU",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PROVISIONAL_DRIVERS_LICENSE", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Kiribati",
+          "code": "KI",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Marshall Islands",
+          "code": "MH",
+          "id_types": [
+            { "type": "CITIZEN_ID", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Micronesia, Federated States of",
+          "code": "FM",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Nauru",
+          "code": "NR",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "New Zealand",
+          "code": "NZ",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "PROVISIONAL_DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Niue",
+          "code": "NU",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Northern Mariana Islands",
+          "code": "MP",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Palau",
+          "code": "PW",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Papua New Guinea",
+          "code": "PG",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Samoa",
+          "code": "WS",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Solomon Islands",
+          "code": "SB",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Tonga",
+          "code": "TO",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Tuvalu",
+          "code": "TV",
+          "id_types": [
+            { "type": "PASSPORT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Vanuatu",
+          "code": "VU",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "South America",
+      "countries": [
+        {
+          "name": "Argentina",
+          "code": "AR",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VEHICLE_PARTICULARS", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Bolivia, Plurinational State of",
+          "code": "BO",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "SEAMANS_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Brazil",
+          "code": "BR",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Chile",
+          "code": "CL",
+          "id_types": [
+            { "type": "ALIEN_CARD", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Colombia",
+          "code": "CO",
+          "id_types": [
+            { "type": "ALIEN_CARD", "verification_method": "document_image" },
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "HEALTH_CARD", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "UNIFORMED_SERVICES_CARD", "verification_method": "document_image" },
+            { "type": "WORK_PERMIT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Ecuador",
+          "code": "EC",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" },
+            { "type": "VOTER_ID", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Guyana",
+          "code": "GY",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Paraguay",
+          "code": "PY",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Peru",
+          "code": "PE",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "OCCUPATION_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "RESIDENT_ID", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Suriname",
+          "code": "SR",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Uruguay",
+          "code": "UY",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "REGISTRATION_CERTIFICATE", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        },
+        {
+          "name": "Venezuela, Bolivarian Republic of",
+          "code": "VE",
+          "id_types": [
+            { "type": "DRIVERS_LICENSE", "verification_method": "document_image" },
+            { "type": "IDENTITY_CARD", "verification_method": "document_image" },
+            { "type": "PASSPORT", "verification_method": "document_image" },
+            { "type": "TRAVEL_DOC", "verification_method": "document_image" }
+          ]
+        }
+      ]
+    }
+    ]
+    }
+    
