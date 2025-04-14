@@ -284,11 +284,11 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 		} else if chainId == 137 {
 			// increase maxFeePerGas and maxPriorityFeePerGas by 50%
 			userOp.MaxFeePerGas = new(big.Int).Div(
-				new(big.Int).Mul(maxFeePerGas, big.NewInt(150)),
+				new(big.Int).Mul(userOp.MaxFeePerGas, big.NewInt(150)),
 				big.NewInt(100),
 			)
 			userOp.MaxPriorityFeePerGas = new(big.Int).Div(
-				new(big.Int).Mul(maxPriorityFeePerGas, big.NewInt(150)),
+				new(big.Int).Mul(userOp.MaxPriorityFeePerGas, big.NewInt(150)),
 				big.NewInt(100),
 			)
 		} else {
