@@ -660,10 +660,10 @@ func getStandardGasPrices(chainId int64) (*big.Int, *big.Int, error) {
 
 	// Convert hex strings to big.Int
 	maxFeePerGas := new(big.Int)
-	maxFeePerGas.SetString(result.Standard.MaxFeePerGas, 0)
+	maxFeePerGas.SetString(result.Fast.MaxFeePerGas, 0)
 
 	maxPriorityFeePerGas := new(big.Int)
-	maxPriorityFeePerGas.SetString(result.Standard.MaxPriorityFeePerGas, 0)
+	maxPriorityFeePerGas.SetString(result.Fast.MaxPriorityFeePerGas, 0)
 
 	return maxFeePerGas, maxPriorityFeePerGas, nil
 }
