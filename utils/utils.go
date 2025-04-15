@@ -5,8 +5,10 @@ import (
 	"crypto/ecdsa"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math/big"
+	"os"
 	"reflect"
 	"regexp"
 	"sort"
@@ -18,6 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	fastshot "github.com/opus-domini/fast-shot"
+	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
@@ -583,4 +586,19 @@ func GetInstitutionByCode(ctx context.Context, institutionCode string) (*ent.Ins
 		return nil, err
 	}
 	return institution, nil
+}
+
+// LoadSmileIDConfig loads and parses smile_id_types.json into a SmileIDConfig struct.
+func LoadSmileIDConfig(filePath string) (config.SmileIDConfig, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return config.SmileIDConfig{}, fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	var cfg config.SmileIDConfig
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return config.SmileIDConfig{}, fmt.Errorf("failed to parse JSON: %w", err)
+	}
+
+	return cfg, nil
 }

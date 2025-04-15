@@ -9,6 +9,7 @@ import (
 	"github.com/paycrest/aggregator/routers"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/tasks"
+	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 )
 
@@ -17,6 +18,17 @@ func main() {
 	conf := config.ServerConfig()
 	loc, _ := time.LoadLocation(conf.Timezone)
 	time.Local = loc
+
+	// Validate SmileID config
+	if err := config.ValidateSmileIDConfig("./smile_id_types.json"); err != nil {
+		logger.Fatalf("Failed to validate SmileID config: %v", err)
+	}
+
+	// Load SmileID config
+	_, err := utils.LoadSmileIDConfig("./smile_id_types.json")
+	if err != nil {
+		logger.Fatalf("Failed to load SmileID config: %v", err)
+	}
 
 	// Connect to the database
 	DSN := config.DBConfig()
