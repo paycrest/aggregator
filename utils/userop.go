@@ -292,7 +292,7 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 				big.NewInt(100),
 			)
 		} else {
-			logger.Errorf("Failed to get bundler gas prices, falling back to network prices: %v", err)
+			logger.Errorf("Failed to get bundler gas prices, falling back to network prices (chainId: %d): %v", chainId, err)
 		}
 
 		httpClient := &http.Client{
