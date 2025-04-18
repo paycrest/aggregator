@@ -25,7 +25,6 @@ import (
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
-	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/stackup-wallet/stackup-bundler/pkg/userop"
 )
 
@@ -291,8 +290,6 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 				new(big.Int).Mul(userOp.MaxPriorityFeePerGas, big.NewInt(150)),
 				big.NewInt(100),
 			)
-		} else {
-			logger.Errorf("Failed to get bundler gas prices, falling back to network prices (chainId: %d): %v", chainId, err)
 		}
 
 		httpClient := &http.Client{
@@ -490,7 +487,7 @@ func GetPaymasterAccount(chainId int64) (string, error) {
 
 	// Handle biconomy case specifically
 	if aaService == "biconomy" {
-		return "0x00000f79b7faf42eebadba19acc07cd08af44789", nil
+		return "0x00000f7365ca6c59a2c93719ad53d567ed49c14c", nil
 	}
 
 	client, err := rpc.Dial(paymasterUrl)
