@@ -79,7 +79,7 @@ export PGPASSWORD="$DB_PASSWORD"
 import_sql() {
     local file="$1"
     echo "Importing $file..."
-    PGSSLMODE=require psql -h "$DB_HOST" -p "$DB_PORT" -d "$DB_NAME" -U "$DB_USER" \
+    PGSSLMODE=prefer psql -h "$DB_HOST" -p "$DB_PORT" -d "$DB_NAME" -U "$DB_USER" \
         --set ON_ERROR_STOP=1 \
         -f "$file"
     
@@ -97,7 +97,7 @@ echo "Using database: $DB_NAME on $DB_HOST:$DB_PORT"
 
 # Test connection first
 echo "Testing database connection..."
-if ! PGSSLMODE=require psql -h "$DB_HOST" -p "$DB_PORT" -d "$DB_NAME" -U "$DB_USER" -c '\q'; then
+if ! PGSSLMODE=prefer psql -h "$DB_HOST" -p "$DB_PORT" -d "$DB_NAME" -U "$DB_USER" -c '\q'; then
     echo "Error: Could not connect to database. Please check your connection parameters."
     exit 1
 fi
