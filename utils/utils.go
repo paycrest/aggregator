@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"net/url"
 	"reflect"
 	"regexp"
 	"sort"
@@ -583,4 +584,21 @@ func GetInstitutionByCode(ctx context.Context, institutionCode string) (*ent.Ins
 		return nil, err
 	}
 	return institution, nil
+}
+
+// Helper function to validate HTTPS URL
+func IsValidHttpsUrl(urlStr string) bool {
+	// Check if URL starts with https://
+	if !strings.HasPrefix(strings.ToLower(urlStr), "https://") {
+		return false
+	}
+
+	// Parse URL to ensure it's valid
+	parsedUrl, err := url.Parse(urlStr)
+	if err != nil {
+		return false
+	}
+
+	// Verify scheme is https and host is present
+	return parsedUrl.Scheme == "https" && parsedUrl.Host != ""
 }
