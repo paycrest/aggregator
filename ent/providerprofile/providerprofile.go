@@ -59,6 +59,8 @@ const (
 	EdgeProviderRating = "provider_rating"
 	// EdgeAssignedOrders holds the string denoting the assigned_orders edge name in mutations.
 	EdgeAssignedOrders = "assigned_orders"
+	// EdgeCurrencyAvailability holds the string denoting the currency_availability edge name in mutations.
+	EdgeCurrencyAvailability = "currency_availability"
 	// Table holds the table name of the providerprofile in the database.
 	Table = "provider_profiles"
 	// UserTable is the table that holds the user relation/edge.
@@ -106,6 +108,13 @@ const (
 	AssignedOrdersInverseTable = "lock_payment_orders"
 	// AssignedOrdersColumn is the table column denoting the assigned_orders relation/edge.
 	AssignedOrdersColumn = "provider_profile_assigned_orders"
+	// CurrencyAvailabilityTable is the table that holds the currency_availability relation/edge.
+	CurrencyAvailabilityTable = "provider_currency_availabilities"
+	// CurrencyAvailabilityInverseTable is the table name for the ProviderCurrencyAvailability entity.
+	// It exists in this package in order to avoid circular dependency with the "providercurrencyavailability" package.
+	CurrencyAvailabilityInverseTable = "provider_currency_availabilities"
+	// CurrencyAvailabilityColumn is the table column denoting the currency_availability relation/edge.
+	CurrencyAvailabilityColumn = "provider_profile_currency_availability"
 )
 
 // Columns holds all SQL columns for providerprofile fields.
@@ -410,6 +419,20 @@ func ByAssignedOrders(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newAssignedOrdersStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByCurrencyAvailabilityCount orders the results by currency_availability count.
+func ByCurrencyAvailabilityCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newCurrencyAvailabilityStep(), opts...)
+	}
+}
+
+// ByCurrencyAvailability orders the results by currency_availability terms.
+func ByCurrencyAvailability(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCurrencyAvailabilityStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newUserStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -457,5 +480,12 @@ func newAssignedOrdersStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(AssignedOrdersInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, AssignedOrdersTable, AssignedOrdersColumn),
+	)
+}
+func newCurrencyAvailabilityStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CurrencyAvailabilityInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, CurrencyAvailabilityTable, CurrencyAvailabilityColumn),
 	)
 }

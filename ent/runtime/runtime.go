@@ -15,6 +15,7 @@ import (
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providercurrencyavailability"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -245,6 +246,16 @@ func init() {
 	paymentorderDescID := paymentorderFields[0].Descriptor()
 	// paymentorder.DefaultID holds the default value on creation for the id field.
 	paymentorder.DefaultID = paymentorderDescID.Default.(func() uuid.UUID)
+	providercurrencyavailabilityFields := schema.ProviderCurrencyAvailability{}.Fields()
+	_ = providercurrencyavailabilityFields
+	// providercurrencyavailabilityDescIsAvailable is the schema descriptor for is_available field.
+	providercurrencyavailabilityDescIsAvailable := providercurrencyavailabilityFields[1].Descriptor()
+	// providercurrencyavailability.DefaultIsAvailable holds the default value on creation for the is_available field.
+	providercurrencyavailability.DefaultIsAvailable = providercurrencyavailabilityDescIsAvailable.Default.(bool)
+	// providercurrencyavailabilityDescID is the schema descriptor for id field.
+	providercurrencyavailabilityDescID := providercurrencyavailabilityFields[0].Descriptor()
+	// providercurrencyavailability.DefaultID holds the default value on creation for the id field.
+	providercurrencyavailability.DefaultID = providercurrencyavailabilityDescID.Default.(func() uuid.UUID)
 	providerordertokenMixin := schema.ProviderOrderToken{}.Mixin()
 	providerordertokenMixinFields0 := providerordertokenMixin[0].Fields()
 	_ = providerordertokenMixinFields0
