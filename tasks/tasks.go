@@ -1196,6 +1196,9 @@ func ComputeMarketRate() error {
 					tokenent.SymbolIn("USDT", "USDC"),
 				),
 				providerordertoken.ConversionRateTypeEQ(providerordertoken.ConversionRateTypeFixed),
+				providerordertoken.HasProviderWith(
+					providerprofile.IsAvailableEQ(true),
+				),
 			).
 			Select(providerordertoken.FieldFixedConversionRate).
 			All(ctx)

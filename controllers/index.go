@@ -703,6 +703,7 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Identity verification requested successfully", response)
+
 }
 
 // GetIDVerificationStatus controller fetches the status of an identity verification request
