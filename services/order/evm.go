@@ -134,11 +134,11 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, client types.RPCClient, orde
 
 	// Sponsor user operation.
 	// This will populate the following fields in userOperation: PaymasterAndData, PreVerificationGas, VerificationGasLimit, CallGasLimit
-	if serverConf.Environment != "production" {
-		err = utils.SponsorUserOperation(userOperation, "erc20", order.Edges.Token.ContractAddress, order.Edges.Token.Edges.Network.ChainID)
-	} else {
-		err = utils.SponsorUserOperation(userOperation, "sponsored", "", order.Edges.Token.Edges.Network.ChainID)
-	}
+	// if serverConf.Environment != "production" {
+	// 	err = utils.SponsorUserOperation(userOperation, "erc20", order.Edges.Token.ContractAddress, order.Edges.Token.Edges.Network.ChainID)
+	// } else {
+	err = utils.SponsorUserOperation(userOperation, "sponsored", "", order.Edges.Token.Edges.Network.ChainID)
+	// }
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.SponsorUserOperation: %w", orderIDPrefix, err)
 	}
@@ -226,11 +226,11 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, client types.RPCClient, netw
 
 	// Sponsor user operation.
 	// This will populate the following fields in userOperation: PaymasterAndData, PreVerificationGas, VerificationGasLimit, CallGasLimit
-	if serverConf.Environment != "production" {
-		err = utils.SponsorUserOperation(userOperation, "erc20", lockOrder.Edges.Token.ContractAddress, lockOrder.Edges.Token.Edges.Network.ChainID)
-	} else {
-		err = utils.SponsorUserOperation(userOperation, "sponsored", "", lockOrder.Edges.Token.Edges.Network.ChainID)
-	}
+	// if serverConf.Environment != "production" {
+	// 	err = utils.SponsorUserOperation(userOperation, "erc20", lockOrder.Edges.Token.ContractAddress, lockOrder.Edges.Token.Edges.Network.ChainID)
+	// } else {
+	err = utils.SponsorUserOperation(userOperation, "sponsored", "", lockOrder.Edges.Token.Edges.Network.ChainID)
+	// }
 	if err != nil {
 		return fmt.Errorf("%s - RefundOrder.sponsorUserOperation: %w", orderIDPrefix, err)
 	}
@@ -301,11 +301,11 @@ func (s *OrderEVM) SettleOrder(ctx context.Context, client types.RPCClient, orde
 
 	// Sponsor user operation.
 	// This will populate the following fields in userOperation: PaymasterAndData, PreVerificationGas, VerificationGasLimit, CallGasLimit
-	if serverConf.Environment != "production" {
-		err = utils.SponsorUserOperation(userOperation, "erc20", order.Edges.Token.ContractAddress, order.Edges.Token.Edges.Network.ChainID)
-	} else {
-		err = utils.SponsorUserOperation(userOperation, "sponsored", "", order.Edges.Token.Edges.Network.ChainID)
-	}
+	// if serverConf.Environment != "production" {
+	// 	err = utils.SponsorUserOperation(userOperation, "erc20", order.Edges.Token.ContractAddress, order.Edges.Token.Edges.Network.ChainID)
+	// } else {
+	err = utils.SponsorUserOperation(userOperation, "sponsored", "", order.Edges.Token.Edges.Network.ChainID)
+	// }
 	if err != nil {
 		return fmt.Errorf("%s - SettleOrder.sponsorUserOperation: %w", orderIDPrefix, err)
 	}
@@ -405,30 +405,30 @@ func (s *OrderEVM) executeBatchCreateOrderCallData(order *ent.PaymentOrder) ([]b
 	}
 	calls := [][]byte{approveGatewayData, createOrderData}
 
-	if order.Edges.Token.Edges.Network.Fee.GreaterThan(decimal.NewFromInt(0)) {
-		// Fetch paymaster account
-		paymasterAccount, err := utils.GetPaymasterAccount(order.Edges.Token.Edges.Network.ChainID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get paymaster account: %w", err)
-		}
+	// if order.Edges.Token.Edges.Network.IsTestnet {
+	// 	// Fetch paymaster account
+	// 	paymasterAccount, err := utils.GetPaymasterAccount(order.Edges.Token.Edges.Network.ChainID)
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("failed to get paymaster account: %w", err)
+	// 	}
 
-		if serverConf.Environment != "production" {
-			time.Sleep(5 * time.Second)
-		}
+	// 	if serverConf.Environment != "production" {
+	// 		time.Sleep(5 * time.Second)
+	// 	}
 
-		// Create approve data for paymaster contract
-		approvePaymasterData, err := s.approveCallData(
-			common.HexToAddress(paymasterAccount),
-			utils.ToSubunit(orderAmountWithFees.Add(order.Edges.Token.Edges.Network.Fee), order.Edges.Token.Decimals),
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create paymaster approve calldata : %w", err)
-		}
+	// 	// Create approve data for paymaster contract
+	// 	approvePaymasterData, err := s.approveCallData(
+	// 		common.HexToAddress(paymasterAccount),
+	// 		utils.ToSubunit(orderAmountWithFees.Add(order.Edges.Token.Edges.Network.Fee), order.Edges.Token.Decimals),
+	// 	)
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("failed to create paymaster approve calldata : %w", err)
+	// 	}
 
-		// Add paymaster approve call if fee is greater than 0
-		calls = append([][]byte{approvePaymasterData}, calls...)
-		addresses = append(addresses, common.HexToAddress(order.Edges.Token.ContractAddress))
-	}
+	// 	// Add paymaster approve call if fee is greater than 0
+	// 	calls = append([][]byte{approvePaymasterData}, calls...)
+	// 	addresses = append(addresses, common.HexToAddress(order.Edges.Token.ContractAddress))
+	// }
 
 	simpleAccountABI, err := abi.JSON(strings.NewReader(contracts.SimpleAccountMetaData.ABI))
 	if err != nil {
@@ -604,33 +604,33 @@ func (s *OrderEVM) executeBatchRefundCallData(order *ent.LockPaymentOrder) ([]by
 
 	data := [][]byte{approveGatewayData, refundData}
 
-	if serverConf.Environment != "production" {
-		paymasterAccount, err := utils.GetPaymasterAccount(order.Edges.Token.Edges.Network.ChainID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get paymaster account: %w", err)
-		}
-		time.Sleep(5 * time.Second)
+	// if order.Edges.Token.Edges.Network.IsTestnet {
+	// 	paymasterAccount, err := utils.GetPaymasterAccount(order.Edges.Token.Edges.Network.ChainID)
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("failed to get paymaster account: %w", err)
+	// 	}
+	// 	time.Sleep(5 * time.Second)
 
-		refundAmount := utils.FromSubunit(orderInfo.Amount, order.Edges.Token.Decimals).Add(order.Edges.Token.Edges.Network.Fee)
+	// 	refundAmount := utils.FromSubunit(orderInfo.Amount, order.Edges.Token.Decimals).Add(order.Edges.Token.Edges.Network.Fee)
 
-		// Create approve data for paymaster contract
-		approvePaymasterData, err := s.approveCallData(
-			common.HexToAddress(paymasterAccount),
-			utils.ToSubunit(refundAmount, order.Edges.Token.Decimals),
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create paymaster approve calldata : %w", err)
-		}
+	// 	// Create approve data for paymaster contract
+	// 	approvePaymasterData, err := s.approveCallData(
+	// 		common.HexToAddress(paymasterAccount),
+	// 		utils.ToSubunit(refundAmount, order.Edges.Token.Decimals),
+	// 	)
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("failed to create paymaster approve calldata : %w", err)
+	// 	}
 
-		contractAddresses = append(
-			[]common.Address{common.HexToAddress(order.Edges.Token.ContractAddress)},
-			contractAddresses...,
-		)
-		data = append(
-			[][]byte{approvePaymasterData},
-			data...,
-		)
-	}
+	// 	contractAddresses = append(
+	// 		[]common.Address{common.HexToAddress(order.Edges.Token.ContractAddress)},
+	// 		contractAddresses...,
+	// 	)
+	// 	data = append(
+	// 		[][]byte{approvePaymasterData},
+	// 		data...,
+	// 	)
+	// }
 
 	executeBatchRefundCallData, err := simpleAccountABI.Pack(
 		"executeBatch",
@@ -687,29 +687,29 @@ func (s *OrderEVM) executeBatchSettleCallData(ctx context.Context, order *ent.Lo
 
 	data := [][]byte{approveGatewayData}
 
-	if serverConf.Environment != "production" {
-		// Fetch paymaster account
-		paymasterAccount, err := utils.GetPaymasterAccount(order.Edges.Token.Edges.Network.ChainID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get paymaster account: %w", err)
-		}
-		time.Sleep(5 * time.Second)
+	// if order.Edges.Token.Edges.Network.IsTestnet {
+	// 	// Fetch paymaster account
+	// 	paymasterAccount, err := utils.GetPaymasterAccount(order.Edges.Token.Edges.Network.ChainID)
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("failed to get paymaster account: %w", err)
+	// 	}
+	// 	time.Sleep(5 * time.Second)
 
-		// Create approve data for paymaster contract
-		approvePaymasterData, err := s.approveCallData(
-			common.HexToAddress(paymasterAccount),
-			utils.ToSubunit(order.Amount.Add(order.Edges.Token.Edges.Network.Fee), order.Edges.Token.Decimals),
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create paymaster approve calldata : %w", err)
-		}
+	// 	// Create approve data for paymaster contract
+	// 	approvePaymasterData, err := s.approveCallData(
+	// 		common.HexToAddress(paymasterAccount),
+	// 		utils.ToSubunit(order.Amount.Add(order.Edges.Token.Edges.Network.Fee), order.Edges.Token.Decimals),
+	// 	)
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("failed to create paymaster approve calldata : %w", err)
+	// 	}
 
-		contractAddresses = append(
-			contractAddresses,
-			common.HexToAddress(order.Edges.Token.ContractAddress),
-		)
-		data = append(data, approvePaymasterData)
-	}
+	// 	contractAddresses = append(
+	// 		contractAddresses,
+	// 		common.HexToAddress(order.Edges.Token.ContractAddress),
+	// 	)
+	// 	data = append(data, approvePaymasterData)
+	// }
 
 	// Create settle data
 	settleData, err := s.settleCallData(ctx, order)
