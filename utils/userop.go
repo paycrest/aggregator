@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -24,7 +25,6 @@ import (
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
-	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/stackup-wallet/stackup-bundler/pkg/userop"
 )
 
@@ -173,8 +173,32 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 			userOpExpanded,
 			payload,
 		}
+	case "zerodev":
+		method = "zd_sponsorUserOperation"
+		var shouldOverrideFee bool
+		var shouldConsume bool
+
+		if mode == "sponsored" {
+			shouldOverrideFee = true
+			shouldConsume = false
+		} else if mode == "erc20" {
+			shouldOverrideFee = true
+			shouldConsume = true
+		} else {
+			return fmt.Errorf("invalid mode")
+		}
+
+		requestParams = []interface{}{
+			chainId,
+			userOpExpanded,
+			orderConf.EntryPointContractAddress.Hex(),
+			map[string]interface{}{
+				"tokenAddress": token,
+			},
+			shouldOverrideFee,
+			shouldConsume,
+		}
 	case "pimlico":
-	case "thirdweb":
 		requestParams = []interface{}{
 			userOpExpanded,
 			map[string]interface{}{
@@ -214,8 +238,6 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 		return fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
-	logger.Errorf("sponsorUserOperation: aaService: %s response: %v", aaService, response)
-
 	switch aaService {
 	case "biconomy":
 		userOp.PaymasterAndData = common.FromHex(response["paymasterAndData"].(string))
@@ -223,12 +245,15 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 		userOp.VerificationGasLimit = decimal.NewFromFloat(response["verificationGasLimit"].(float64)).BigInt()
 		userOp.CallGasLimit = decimal.NewFromFloat(response["callGasLimit"].(float64)).BigInt()
 
-	case "pimlico":
-	case "thirdweb":
+	case "zerodev":
 		userOp.PaymasterAndData = common.FromHex(response["paymasterAndData"].(string))
 		userOp.PreVerificationGas, _ = new(big.Int).SetString(response["preVerificationGas"].(string), 0)
 		userOp.VerificationGasLimit = decimal.NewFromFloat(response["verificationGasLimit"].(float64)).BigInt()
 		userOp.CallGasLimit = decimal.NewFromFloat(response["callGasLimit"].(float64)).BigInt()
+
+	case "pimlico":
+		userOp.PaymasterAndData = common.FromHex(response["paymasterAndData"].(string))
+
 	}
 
 	return nil
@@ -280,8 +305,14 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 				"simulation_type": "validation_and_execution",
 			},
 		}
+	case "zerodev":
+		method = "zd_sendUserOperation"
+		requestParams = []interface{}{
+			chainId,
+			userOp,
+			orderConf.EntryPointContractAddress.Hex(),
+		}
 	case "pimlico":
-	case "thirdweb":
 		requestParams = []interface{}{
 			userOp,
 			orderConf.EntryPointContractAddress.Hex(),
@@ -296,8 +327,6 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 		op, _ := userOp.MarshalJSON()
 		return "", "", 0, fmt.Errorf("RPC error: %w\nUser Operation: %s", err, string(op))
 	}
-
-	logger.Errorf("sendUserOperation: aaService: %s result: %v", aaService, result)
 
 	var userOpHash string
 	err = json.Unmarshal(result, &userOpHash)
@@ -341,7 +370,28 @@ func GetUserOperationByReceipt(userOpHash string, chainId int64) (map[string]int
 		return nil, fmt.Errorf("failed to get endpoints for chain ID %d: %w", chainId, err)
 	}
 
-	client, err := rpc.Dial(bundlerUrl)
+	aaService, err := detectAAService(bundlerUrl)
+	if err != nil {
+		return nil, fmt.Errorf("invalid AA service URL pattern: %w", err)
+	}
+
+	var client *rpc.Client
+	if aaService == "thirdweb" {
+		httpClient := &http.Client{
+			Transport: &http.Transport{},
+		}
+		header := http.Header{}
+		header.Set("x-secret-key", orderConf.ThirdwebSecretKey)
+
+		client, err = rpc.DialOptions(
+			context.Background(),
+			bundlerUrl,
+			rpc.WithHTTPClient(httpClient),
+			rpc.WithHeaders(header),
+		)
+	} else {
+		client, err = rpc.Dial(bundlerUrl)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to RPC client: %w", err)
 	}
@@ -442,7 +492,7 @@ func GetPaymasterAccount(chainId int64) (string, error) {
 
 	// Handle biconomy case specifically
 	if aaService == "biconomy" {
-		return "0x00000f79b7faf42eebadba19acc07cd08af44789", nil
+		return "0x00000f7365ca6c59a2c93719ad53d567ed49c14c", nil
 	}
 
 	client, err := rpc.Dial(paymasterUrl)
@@ -471,13 +521,33 @@ func GetPaymasterAccount(chainId int64) (string, error) {
 
 // GetUserOperationStatus returns the status of the user operation
 func GetUserOperationStatus(userOpHash string, chainId int64) (bool, error) {
-
 	bundlerUrl, _, err := getEndpoints(chainId)
 	if err != nil {
 		return false, fmt.Errorf("failed to get endpoints for chain ID %d: %w", chainId, err)
 	}
 
-	client, err := rpc.Dial(bundlerUrl)
+	aaService, err := detectAAService(bundlerUrl)
+	if err != nil {
+		return false, fmt.Errorf("invalid AA service URL pattern: %w", err)
+	}
+
+	var client *rpc.Client
+	if aaService == "thirdweb" {
+		httpClient := &http.Client{
+			Transport: &http.Transport{},
+		}
+		header := http.Header{}
+		header.Set("x-secret-key", orderConf.ThirdwebSecretKey)
+
+		client, err = rpc.DialOptions(
+			context.Background(),
+			bundlerUrl,
+			rpc.WithHTTPClient(httpClient),
+			rpc.WithHeaders(header),
+		)
+	} else {
+		client, err = rpc.Dial(bundlerUrl)
+	}
 	if err != nil {
 		return false, fmt.Errorf("failed to connect to RPC client: %w", err)
 	}
@@ -558,6 +628,58 @@ func eip1559GasPrice(ctx context.Context, client types.RPCClient) (maxFeePerGas,
 	return maxFeePerGas, maxPriorityFeePerGas, nil
 }
 
+func getStandardGasPrices(chainId int64) (*big.Int, *big.Int, error) {
+	_, paymasterUrl, err := getEndpoints(chainId)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get endpoints for chain ID %d: %w", chainId, err)
+	}
+
+	httpClient := &http.Client{
+		Transport: &http.Transport{},
+	}
+	header := http.Header{}
+	header.Set("x-secret-key", orderConf.ThirdwebSecretKey)
+
+	client, err := rpc.DialOptions(
+		context.Background(),
+		paymasterUrl,
+		rpc.WithHTTPClient(httpClient),
+		rpc.WithHeaders(header),
+	)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to connect to RPC client: %w", err)
+	}
+
+	var result struct {
+		Slow struct {
+			MaxFeePerGas         string `json:"maxFeePerGas"`
+			MaxPriorityFeePerGas string `json:"maxPriorityFeePerGas"`
+		} `json:"slow"`
+		Standard struct {
+			MaxFeePerGas         string `json:"maxFeePerGas"`
+			MaxPriorityFeePerGas string `json:"maxPriorityFeePerGas"`
+		} `json:"standard"`
+		Fast struct {
+			MaxFeePerGas         string `json:"maxFeePerGas"`
+			MaxPriorityFeePerGas string `json:"maxPriorityFeePerGas"`
+		} `json:"fast"`
+	}
+
+	err = client.Call(&result, "thirdweb_getUserOperationGasPrice")
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get gas prices: %w", err)
+	}
+
+	// Convert hex strings to big.Int
+	maxFeePerGas := new(big.Int)
+	maxFeePerGas.SetString(result.Standard.MaxFeePerGas, 0)
+
+	maxPriorityFeePerGas := new(big.Int)
+	maxPriorityFeePerGas.SetString(result.Standard.MaxPriorityFeePerGas, 0)
+
+	return maxFeePerGas, maxPriorityFeePerGas, nil
+}
+
 // getEndpoints fetches bundler and paymaster URLs for the given chain ID from the database
 func getEndpoints(chainID int64) (string, string, error) {
 	ctx := context.Background()
@@ -596,8 +718,8 @@ func detectAAService(url string) (string, error) {
 		return "biconomy", nil
 	case strings.Contains(url, "api.pimlico.io"):
 		return "pimlico", nil
-	case strings.Contains(url, "thirdweb.com"):
-		return "thirdweb", nil
+	case strings.Contains(url, "rpc.zerodev.app"):
+		return "zerodev", nil
 	default:
 		return "", fmt.Errorf("unsupported AA service URL pattern: %s", url)
 	}
