@@ -173,53 +173,26 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 			userOpExpanded,
 			payload,
 		}
-	case "zerodev":
-		method = "zd_sponsorUserOperation"
-		var shouldOverrideFee bool
-		var shouldConsume bool
+	case "thirdweb":
+		httpClient := &http.Client{
+			Transport: &http.Transport{},
+		}
+		header := http.Header{}
+		header.Set("x-secret-key", orderConf.ThirdwebSecretKey)
 
-		if mode == "sponsored" {
-			shouldOverrideFee = true
-			shouldConsume = false
-		} else if mode == "erc20" {
-			shouldOverrideFee = true
-			shouldConsume = true
-		} else {
-			return fmt.Errorf("invalid mode")
+		client, err = rpc.DialOptions(
+			context.Background(),
+			paymasterUrl,
+			rpc.WithHTTPClient(httpClient),
+			rpc.WithHeaders(header),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to connect to RPC client: %w", err)
 		}
 
 		requestParams = []interface{}{
-			chainId,
-			userOpExpanded,
+			userOp,
 			orderConf.EntryPointContractAddress.Hex(),
-			map[string]interface{}{
-				"tokenAddress": token,
-			},
-			shouldOverrideFee,
-			shouldConsume,
-		}
-	case "pimlico":
-		requestParams = []interface{}{
-			userOpExpanded,
-			map[string]interface{}{
-				"entryPoint": orderConf.EntryPointContractAddress.Hex(),
-			},
-		}
-
-		if mode == "erc20" {
-			if token == "" {
-				return fmt.Errorf("token address is required")
-			}
-			requestParams = append(requestParams, map[string]interface{}{
-				"sponsorPaymaster": "erc20",
-				"feeToken":         token,
-			})
-		} else if mode == "sponsored" {
-			requestParams = append(requestParams, map[string]interface{}{
-				"sponsorPaymaster": "verifying",
-			})
-		} else {
-			return fmt.Errorf("invalid mode")
 		}
 	default:
 		return fmt.Errorf("unsupported AA service: %s", aaService)
@@ -245,13 +218,10 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 		userOp.VerificationGasLimit = decimal.NewFromFloat(response["verificationGasLimit"].(float64)).BigInt()
 		userOp.CallGasLimit = decimal.NewFromFloat(response["callGasLimit"].(float64)).BigInt()
 
-	case "zerodev":
-		userOp.PaymasterAndData = common.FromHex(response["paymasterAndData"].(string))
+	case "thirdweb":
+		userOp.CallGasLimit, _ = new(big.Int).SetString(response["callGasLimit"].(string), 0)
+		userOp.VerificationGasLimit, _ = new(big.Int).SetString(response["verificationGasLimit"].(string), 0)
 		userOp.PreVerificationGas, _ = new(big.Int).SetString(response["preVerificationGas"].(string), 0)
-		userOp.VerificationGasLimit = decimal.NewFromFloat(response["verificationGasLimit"].(float64)).BigInt()
-		userOp.CallGasLimit = decimal.NewFromFloat(response["callGasLimit"].(float64)).BigInt()
-
-	case "pimlico":
 		userOp.PaymasterAndData = common.FromHex(response["paymasterAndData"].(string))
 
 	}
@@ -305,14 +275,39 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 				"simulation_type": "validation_and_execution",
 			},
 		}
-	case "zerodev":
-		method = "zd_sendUserOperation"
-		requestParams = []interface{}{
-			chainId,
-			userOp,
-			orderConf.EntryPointContractAddress.Hex(),
+	case "thirdweb":
+		maxFeePerGas, maxPriorityFeePerGas, err := getStandardGasPrices(chainId)
+		if err == nil {
+			userOp.MaxFeePerGas = maxFeePerGas
+			userOp.MaxPriorityFeePerGas = maxPriorityFeePerGas
+		} else if chainId == 137 {
+			// increase maxFeePerGas and maxPriorityFeePerGas by 50%
+			userOp.MaxFeePerGas = new(big.Int).Div(
+				new(big.Int).Mul(userOp.MaxFeePerGas, big.NewInt(150)),
+				big.NewInt(100),
+			)
+			userOp.MaxPriorityFeePerGas = new(big.Int).Div(
+				new(big.Int).Mul(userOp.MaxPriorityFeePerGas, big.NewInt(150)),
+				big.NewInt(100),
+			)
 		}
-	case "pimlico":
+
+		httpClient := &http.Client{
+			Transport: &http.Transport{},
+		}
+		header := http.Header{}
+		header.Set("x-secret-key", orderConf.ThirdwebSecretKey)
+
+		client, err = rpc.DialOptions(
+			context.Background(),
+			bundlerUrl,
+			rpc.WithHTTPClient(httpClient),
+			rpc.WithHeaders(header),
+		)
+		if err != nil {
+			return "", "", 0, fmt.Errorf("failed to connect to RPC client: %w", err)
+		}
+
 		requestParams = []interface{}{
 			userOp,
 			orderConf.EntryPointContractAddress.Hex(),
@@ -716,10 +711,8 @@ func detectAAService(url string) (string, error) {
 	switch {
 	case strings.Contains(url, "biconomy.io"):
 		return "biconomy", nil
-	case strings.Contains(url, "api.pimlico.io"):
-		return "pimlico", nil
-	case strings.Contains(url, "rpc.zerodev.app"):
-		return "zerodev", nil
+	case strings.Contains(url, "thirdweb.com"):
+		return "thirdweb", nil
 	default:
 		return "", fmt.Errorf("unsupported AA service URL pattern: %s", url)
 	}
