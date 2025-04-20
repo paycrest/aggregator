@@ -51,7 +51,8 @@ func TestIndex(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Set up test routers
-	var ctrl Controller
+	// var ctrl Controller
+	ctrl := NewController()
 	router := gin.New()
 
 	router.GET("currencies", ctrl.GetFiatCurrencies)
@@ -152,8 +153,8 @@ func TestIndex(t *testing.T) {
 		)
 		t.Run("with valid details", func(t *testing.T) {
 			payload := kyc.NewIDVerificationRequest{
-				Signature:     "b1dcfa6beba6c93e5abd38c23890a1ff2e553721c5c379a80b66a2ad74b3755f543cd8e7d8fb064ae4fdeeba93302c156bd012e390c2321a763eddaa12e5ab5d1c",
 				WalletAddress: "0xf4c5c4deDde7A86b25E7430796441e209e23eBFB",
+				Signature:     "b1dcfa6beba6c93e5abd38c23890a1ff2e553721c5c379a80b66a2ad74b3755f543cd8e7d8fb064ae4fdeeba93302c156bd012e390c2321a763eddaa12e5ab5d1c",
 				Nonce:         "e08511abb6087c47",
 			}
 
