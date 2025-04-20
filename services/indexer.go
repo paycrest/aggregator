@@ -432,7 +432,7 @@ func (s *IndexerService) IndexOrderCreated(ctx context.Context, client types.RPC
 
 	// Fetch logs
 	var iter *contracts.GatewayOrderCreatedIterator
-	fromBlock := int64(1000000)
+	fromBlock := int64(100000)
 	if network.Identifier == "bnb-smart-chain" {
 		fromBlock = 10000
 	}

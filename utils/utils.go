@@ -110,6 +110,15 @@ func BigMin(x, y *big.Int) *big.Int {
 	return y
 }
 
+// FormatTimestampToGMT1 formats the timestamp to GMT+1 (Africa/Lagos time zone) and returns a formatted string
+func FormatTimestampToGMT1(timestamp time.Time) (string, error) {
+	loc, err := time.LoadLocation("Africa/Lagos")
+	if err != nil {
+		return "", err
+	}
+	return timestamp.In(loc).Format("January 2, 2006 at 3:04 PM"), nil
+}
+
 // PersonalSign is an equivalent of ethers.personal_sign for signing ethereum messages
 // Ref: https://github.com/etaaa/Golang-Ethereum-Personal-Sign/blob/main/main.go
 func PersonalSign(message string, privateKey *ecdsa.PrivateKey) ([]byte, error) {

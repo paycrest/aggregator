@@ -696,6 +696,7 @@ type BitgetAd struct {
 	MinAmount string `json:"minAmount"`
 	MaxAmount string `json:"maxAmount"`
 }
+
 // SupportedTokenResponse represents the structure for supported tokens
 type SupportedTokenResponse struct {
 	Symbol          string `json:"symbol"`
