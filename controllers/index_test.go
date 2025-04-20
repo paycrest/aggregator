@@ -224,7 +224,7 @@ func TestIndex(t *testing.T) {
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
 			assert.Equal(t, "success", response.Status)
-			assert.Equal(t, "This account has a pending identity verification request", response.Message)
+			assert.Equal(t, "Identity verification requested successfully", response.Message)
 		})
 
 		t.Run("with invalid signature", func(t *testing.T) {
