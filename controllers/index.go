@@ -793,6 +793,63 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 		"name":         "Aggregator KYC",
 		"company_name": "Paycrest",
 		"id_types": []map[string]interface{}{
+			// Canada
+			{
+				"country":             "CA",
+				"id_type":             "CITIZEN_ID",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "CA",
+				"id_type":             "DRIVERS_LICENSE",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "CA",
+				"id_type":             "HEALTH_CARD",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "CA",
+				"id_type":             "IDENTITY_CARD",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "CA",
+				"id_type":             "PASSPORT",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "CA",
+				"id_type":             "PROVISIONAL_DRIVERS_LICENSE",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "CA",
+				"id_type":             "RESIDENT_ID",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "CA",
+				"id_type":             "SEAMANS_ID",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "CA",
+				"id_type":             "TRAVEL_DOC",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "CA",
+				"id_type":             "UNIFORMED_SERVICES_CARD",
+				"verification_method": "doc_verification",
+			},
+			{
+				"country":             "CA",
+				"id_type":             "WORK_PERMIT",
+				"verification_method": "doc_verification",
+			},
+
 			// Nigeria
 			{
 				"country":             "NG",
