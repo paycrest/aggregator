@@ -968,7 +968,7 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 	if isLessThanMin {
 		err := s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Amount is less than the minimum bucket")
 		if err != nil {
-			return nil
+			return fmt.Errorf("failed to handle cancellation: %w", err)
 		}
 		return nil
 	}
@@ -1746,6 +1746,7 @@ func (s *IndexerService) getProvisionBucket(ctx context.Context, amount decimal.
 		}
 		return nil, false, fmt.Errorf("failed to fetch provision bucket: %w", err)
 	}
+
 	return provisionBucket, false, nil
 }
 
