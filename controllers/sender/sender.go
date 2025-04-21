@@ -358,8 +358,8 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		return
 	}
 
-	senderFee := feePercent.Mul(payload.Amount).Div(decimal.NewFromInt(100)).Round(int32(token.Decimals))
-	protocolFee := decimal.NewFromFloat(0).Round(int32(token.Decimals))
+	senderFee := feePercent.Mul(payload.Amount).Div(decimal.NewFromInt(100)).Round(4)
+	protocolFee := decimal.NewFromFloat(0).Round(4)
 
 	// Create transaction Log
 	transactionLog, err := tx.TransactionLog.
