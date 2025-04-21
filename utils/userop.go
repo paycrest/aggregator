@@ -173,6 +173,7 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 			userOpExpanded,
 			payload,
 		}
+
 	case "thirdweb":
 		httpClient := &http.Client{
 			Transport: &http.Transport{},
@@ -217,6 +218,7 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 		userOp.PreVerificationGas, _ = new(big.Int).SetString(response["preVerificationGas"].(string), 0)
 		userOp.VerificationGasLimit = decimal.NewFromFloat(response["verificationGasLimit"].(float64)).BigInt()
 		userOp.CallGasLimit = decimal.NewFromFloat(response["callGasLimit"].(float64)).BigInt()
+
 
 	case "thirdweb":
 		userOp.CallGasLimit, _ = new(big.Int).SetString(response["callGasLimit"].(string), 0)
@@ -307,6 +309,7 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 		if err != nil {
 			return "", "", 0, fmt.Errorf("failed to connect to RPC client: %w", err)
 		}
+
 
 		requestParams = []interface{}{
 			userOp,
@@ -711,6 +714,7 @@ func detectAAService(url string) (string, error) {
 	switch {
 	case strings.Contains(url, "biconomy.io"):
 		return "biconomy", nil
+
 	case strings.Contains(url, "thirdweb.com"):
 		return "thirdweb", nil
 	default:
