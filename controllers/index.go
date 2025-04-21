@@ -346,6 +346,7 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 			providerprofile.HostIdentifierNotNil(),
 			providerprofile.IsActiveEQ(true),
 			providerprofile.IsAvailableEQ(true),
+			providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
 		).
 		All(ctx)
 	if err != nil {
