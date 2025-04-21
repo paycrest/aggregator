@@ -673,7 +673,6 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 	var payload kyc.NewIDVerificationRequest
 
 	if err := ctx.ShouldBindJSON(&payload); err != nil {
-		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusBadRequest, "error",
 			"Failed to validate payload", u.GetErrorData(err))
 		return
@@ -681,9 +680,8 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 
 	response, err := ctrl.kycService.RequestVerification(ctx, payload)
 	if err != nil {
-		logger.Errorf("error: %v", err)
 		switch err.Error() {
-		case "invalid signature", "invalid signature: signature is not in the correct format",
+			case "invalid signature", "invalid signature: signature is not in the correct format",
 			"invalid signature: signature length is not correct",
 			"invalid signature: invalid recovery ID":
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid signature", err.Error())
@@ -698,6 +696,7 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to request identity verification", "Couldn't reach identity provider")
 			return
 		default:
+			logger.Errorf("error: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to request identity verification", nil)
 			return
 		}
