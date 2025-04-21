@@ -516,7 +516,7 @@ func GetTokenRateFromQueue(tokenSymbol string, orderAmount decimal.Decimal, fiat
 			}
 			parts := strings.Split(providerData, ":")
 			if len(parts) != 5 {
-				logger.Errorf("utils.GetTokenRateFromQueue.InvalidProviderData: %v", providerData)
+				logger.Errorf("utils.GetTokenRateFromQueue.InvalidProviderData: %v", logger.Fields{"providerData": providerData})
 				continue
 			}
 
