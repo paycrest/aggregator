@@ -341,7 +341,7 @@ func TestProfile(t *testing.T) {
 			payload := types.ProviderProfilePayload{
 				TradingName:      "My Trading Name",
 				Currencies:       []string{"KES"},
-				HostIdentifier:   "example.com",
+				HostIdentifier:   "https://example.com",
 				BusinessDocument: "https://example.com/business_doc.png",
 				IdentityDocument: "https://example.com/national_id.png",
 				IsAvailable:      true,
@@ -366,11 +366,10 @@ func TestProfile(t *testing.T) {
 				Only(context.Background())
 			assert.NoError(t, err)
 
-			assert.Contains(t, providerProfile.TradingName, payload.TradingName)
-			assert.Contains(t, providerProfile.HostIdentifier, payload.HostIdentifier)
-			// assert.Contains(t, providerProfile.Edges.Currency.Code, payload.Currency)
-			assert.Contains(t, providerProfile.BusinessDocument, payload.BusinessDocument)
-			assert.Contains(t, providerProfile.IdentityDocument, payload.IdentityDocument)
+			assert.Equal(t, payload.TradingName, providerProfile.TradingName) 
+			assert.Equal(t, payload.HostIdentifier, providerProfile.HostIdentifier) 
+			assert.Equal(t, payload.BusinessDocument, providerProfile.BusinessDocument) 
+			assert.Equal(t, payload.IdentityDocument, providerProfile.IdentityDocument) 
 			assert.True(t, providerProfile.IsActive)
 			// assert for currencies
 			assert.Equal(t, len(providerProfile.Edges.Currencies), 1)
