@@ -111,57 +111,38 @@ func (s *SmileIDService) RequestVerification(ctx context.Context, payload NewIDV
 		}
 	}
 
+	// Load the SmileIDConfig
+	smileIDConfig, err := utils.LoadSmileIDConfig("./config/smile_id_types.json")
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		return nil, fmt.Errorf("failed to request identity verification")
+	}
+
+	// Generate ID types from the config
+	var idTypes []map[string]interface{}
+	for _, continent := range smileIDConfig.Continents {
+		for _, country := range continent.Countries {
+			for _, idType := range country.IDTypes {
+				idTypes = append(idTypes, map[string]interface{}{
+					"country":             country.Name,
+					"id_type":             idType.Type,
+					"verification_method": idType.VerificationMethod,
+				})
+			}
+		}
+	}
+
 	smileIDSignature := s.getSmileIDSignature(timestamp.Format(time.RFC3339Nano))
 	res, err := fastshot.NewClient(s.identityConf.SmileIdentityBaseUrl).
 		Config().SetTimeout(30 * time.Second).
 		Build().POST("/v1/smile_links").
 		Body().AsJSON(map[string]interface{}{
-		"partner_id":   s.identityConf.SmileIdentityPartnerId,
-		"signature":    smileIDSignature,
-		"timestamp":    timestamp,
-		"name":         "Aggregator KYC",
-		"company_name": "Paycrest",
-		"id_types": []map[string]interface{}{
-			{"country": "NG", "id_type": "NIN_SLIP", "verification_method": "biometric_kyc"},
-			{"country": "NG", "id_type": "V_NIN", "verification_method": "biometric_kyc"},
-			{"country": "NG", "id_type": "BVN", "verification_method": "biometric_kyc"},
-			{"country": "NG", "id_type": "PASSPORT", "verification_method": "doc_verification"},
-			{"country": "NG", "id_type": "DRIVERS_LICENSE", "verification_method": "doc_verification"},
-			{"country": "NG", "id_type": "RESIDENT_ID", "verification_method": "doc_verification"},
-			{"country": "NG", "id_type": "IDENTITY_CARD", "verification_method": "doc_verification"},
-			{"country": "NG", "id_type": "TRAVEL_DOC", "verification_method": "doc_verification"},
-			{"country": "KE", "id_type": "PASSPORT", "verification_method": "doc_verification"},
-			{"country": "KE", "id_type": "DRIVERS_LICENSE", "verification_method": "doc_verification"},
-			{"country": "KE", "id_type": "ALIEN_CARD", "verification_method": "doc_verification"},
-			{"country": "KE", "id_type": "NATIONAL_ID", "verification_method": "doc_verification"},
-			{"country": "KE", "id_type": "RESIDENT_ID", "verification_method": "doc_verification"},
-			{"country": "KE", "id_type": "TRAVEL_DOC", "verification_method": "doc_verification"},
-			{"country": "GH", "id_type": "IDENTITY_CARD", "verification_method": "doc_verification"},
-			{"country": "GH", "id_type": "PASSPORT", "verification_method": "doc_verification"},
-			{"country": "GH", "id_type": "VOTER_ID", "verification_method": "doc_verification"},
-			// {"country": "GH", "id_type": "NEW_VOTER_ID", "verification_method": "biometric_kyc"},
-			{"country": "GH", "id_type": "DRIVERS_LICENSE", "verification_method": "doc_verification"},
-			// {"country": "GH", "id_type": "SSNIT", "verification_method": "biometric_kyc"},
-			{"country": "GH", "id_type": "RESIDENT_ID", "verification_method": "doc_verification"},
-			{"country": "GH", "id_type": "TRAVEL_DOC", "verification_method": "doc_verification"},
-			{"country": "ZA", "id_type": "PASSPORT", "verification_method": "doc_verification"},
-			{"country": "ZA", "id_type": "DRIVERS_LICENSE", "verification_method": "doc_verification"},
-			{"country": "ZA", "id_type": "RESIDENT_ID", "verification_method": "doc_verification"},
-			{"country": "ZA", "id_type": "IDENTITY_CARD", "verification_method": "doc_verification"},
-			{"country": "ZA", "id_type": "NATIONAL_ID", "verification_method": "biometric_kyc"},
-			{"country": "ZA", "id_type": "TRAVEL_DOC", "verification_method": "doc_verification"},
-			{"country": "CA", "id_type": "CITIZEN_ID", "verification_method": "doc_verification"},
-			{"country": "CA", "id_type": "DRIVERS_LICENSE", "verification_method": "doc_verification"},
-			{"country": "CA", "id_type": "HEALTH_CARD", "verification_method": "doc_verification"},
-			{"country": "CA", "id_type": "IDENTITY_CARD", "verification_method": "doc_verification"},
-			{"country": "CA", "id_type": "PASSPORT", "verification_method": "doc_verification"},
-			{"country": "CA", "id_type": "PROVISIONAL_DRIVERS_LICENSE", "verification_method": "doc_verification"},
-			{"country": "CA", "id_type": "RESIDENT_ID", "verification_method": "doc_verification"},
-			{"country": "CA", "id_type": "SEAMANS_ID", "verification_method": "doc_verification"},
-			{"country": "CA", "id_type": "TRAVEL_DOC", "verification_method": "doc_verification"},
-			{"country": "CA", "id_type": "UNIFORMED_SERVICES_CARD", "verification_method": "doc_verification"},
-			{"country": "CA", "id_type": "WORK_PERMIT", "verification_method": "doc_verification"},
-		},
+		"partner_id":              s.identityConf.SmileIdentityPartnerId,
+		"signature":               smileIDSignature,
+		"timestamp":               timestamp,
+		"name":                    "Aggregator KYC",
+		"company_name":            "Paycrest",
+		"id_types":                idTypes,
 		"callback_url":            fmt.Sprintf("%s/v1/kyc/webhook", s.serverConf.HostDomain),
 		"data_privacy_policy_url": "https://paycrest.notion.site/KYC-Policy-10e2482d45a280e191b8d47d76a8d242",
 		"logo_url":                "https://res.cloudinary.com/de6e0wihu/image/upload/v1738088043/xxhlrsld2wy9lzekahur.png",
