@@ -602,6 +602,7 @@ func LoadSmileIDConfig(filePath string) (config.SmileIDConfig, error) {
 	}
 
 	return cfg, nil
+}
 
 // Helper function to validate HTTPS URL
 func IsValidHttpsUrl(urlStr string) bool {
@@ -618,5 +619,4 @@ func IsValidHttpsUrl(urlStr string) bool {
 
 	// Verify scheme is https and host is present
 	return parsedUrl.Scheme == "https" && parsedUrl.Host != ""
-
 }
