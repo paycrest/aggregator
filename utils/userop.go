@@ -174,6 +174,22 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 			payload,
 		}
 	case "thirdweb":
+		maxFeePerGas, maxPriorityFeePerGas, err := getStandardGasPrices(chainId)
+		if err == nil {
+			userOp.MaxFeePerGas = maxFeePerGas
+			userOp.MaxPriorityFeePerGas = maxPriorityFeePerGas
+		} else if chainId == 137 {
+			// increase maxFeePerGas and maxPriorityFeePerGas by 50%
+			userOp.MaxFeePerGas = new(big.Int).Div(
+				new(big.Int).Mul(userOp.MaxFeePerGas, big.NewInt(150)),
+				big.NewInt(100),
+			)
+			userOp.MaxPriorityFeePerGas = new(big.Int).Div(
+				new(big.Int).Mul(userOp.MaxPriorityFeePerGas, big.NewInt(150)),
+				big.NewInt(100),
+			)
+		}
+
 		httpClient := &http.Client{
 			Transport: &http.Transport{},
 		}
@@ -276,22 +292,6 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 			},
 		}
 	case "thirdweb":
-		maxFeePerGas, maxPriorityFeePerGas, err := getStandardGasPrices(chainId)
-		if err == nil {
-			userOp.MaxFeePerGas = maxFeePerGas
-			userOp.MaxPriorityFeePerGas = maxPriorityFeePerGas
-		} else if chainId == 137 {
-			// increase maxFeePerGas and maxPriorityFeePerGas by 50%
-			userOp.MaxFeePerGas = new(big.Int).Div(
-				new(big.Int).Mul(userOp.MaxFeePerGas, big.NewInt(150)),
-				big.NewInt(100),
-			)
-			userOp.MaxPriorityFeePerGas = new(big.Int).Div(
-				new(big.Int).Mul(userOp.MaxPriorityFeePerGas, big.NewInt(150)),
-				big.NewInt(100),
-			)
-		}
-
 		httpClient := &http.Client{
 			Transport: &http.Transport{},
 		}
