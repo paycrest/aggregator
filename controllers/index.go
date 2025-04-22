@@ -17,7 +17,6 @@ import (
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/providerprofile"
-	"github.com/paycrest/aggregator/ent/token"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	svc "github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/kyc"
@@ -264,12 +263,12 @@ func (ctrl *Controller) GetSupportedTokens(ctx *gin.Context) {
 	// Build query
 	query := storage.Client.Token.
 		Query().
-		Where(token.IsEnabled(true)).
+		Where(tokenEnt.IsEnabled(true)).
 		WithNetwork()
 
 	// Apply network filter if provided
 	if networkFilter != "" {
-		query = query.Where(token.HasNetworkWith(
+		query = query.Where(tokenEnt.HasNetworkWith(
 			network.Identifier(strings.ToLower(networkFilter)),
 		))
 	}
@@ -398,7 +397,7 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 		Where(
 			lockpaymentorder.GatewayIDEQ(orderID),
 			lockpaymentorder.HasTokenWith(
-				token.HasNetworkWith(
+				tokenEnt.HasNetworkWith(
 					network.ChainIDEQ(chainID),
 				),
 			),
