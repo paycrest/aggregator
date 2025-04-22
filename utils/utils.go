@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"net/url"
 	"reflect"
 	"regexp"
 	"sort"
@@ -601,4 +602,21 @@ func LoadSmileIDConfig(filePath string) (config.SmileIDConfig, error) {
 	}
 
 	return cfg, nil
+
+// Helper function to validate HTTPS URL
+func IsValidHttpsUrl(urlStr string) bool {
+	// Check if URL starts with https://
+	if !strings.HasPrefix(strings.ToLower(urlStr), "https://") {
+		return false
+	}
+
+	// Parse URL to ensure it's valid
+	parsedUrl, err := url.Parse(urlStr)
+	if err != nil {
+		return false
+	}
+
+	// Verify scheme is https and host is present
+	return parsedUrl.Scheme == "https" && parsedUrl.Host != ""
+
 }
