@@ -124,7 +124,7 @@ func (s *SmileIDService) RequestVerification(ctx context.Context, payload NewIDV
 		for _, country := range continent.Countries {
 			for _, idType := range country.IDTypes {
 				idTypes = append(idTypes, map[string]interface{}{
-					"country":             country.Name,
+					"country":             country.Code,
 					"id_type":             idType.Type,
 					"verification_method": idType.VerificationMethod,
 				})
