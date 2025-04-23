@@ -662,7 +662,6 @@ func (s *IndexerService) IndexOrderSettled(ctx context.Context, client types.RPC
 		End:   &toBlock,
 	}, nil, nil)
 	if err != nil {
-		// logger.Errorf("IndexOrderSettled.FilterOrderSettled: %v", err)
 		logger.WithFields(logger.Fields{
 			"Error": err,
 			"Start": uint64(int64(toBlock) - 5000),
@@ -684,7 +683,10 @@ func (s *IndexerService) IndexOrderSettled(ctx context.Context, client types.RPC
 
 		err := s.UpdateOrderStatusSettled(ctx, network, settledEvent)
 		if err != nil {
-			logger.Errorf("IndexOrderSettled.UpdateOrderStatusSettled: %v", err)
+			logger.WithFields(logger.Fields{
+				"Error": err,
+				"OrderID": settledEvent.OrderId,
+			}).Errorf("Failed to update order status settlement when indexing order created events for %s", network.Identifier)
 			continue
 		}
 	}
@@ -715,17 +717,25 @@ func (s *IndexerService) IndexOrderSettledTron(ctx context.Context, order *ent.L
 				Retry().Set(3, 1*time.Second).
 				Send()
 			if err != nil {
-				logger.Errorf("fetch txn event logs: %v", err)
+				logger.WithFields(logger.Fields{
+					"Error": err,
+					"TxHash": order.TxHash,
+				}).Errorf("Failed to fetch trx info by id for %s", order.Edges.Token.Edges.Network.Identifier)
 				return err
 			}
 
 			data, err := utils.ParseJSONResponse(res.RawResponse)
 			if err != nil {
-				logger.Errorf("failed to parse JSON response: %v %v", err, data)
+				logger.WithFields(logger.Fields{
+					"Error": err,
+				}).Errorf("Failed to parse JSON response for %s", order.Edges.Token.Edges.Network.Identifier)
 				return err
 			}
 
-			logger.Errorf("IndexOrderSettledTron.gettransactioninfobyid: %v", data)
+			logger.WithFields(logger.Fields{
+				"TxHash": order.TxHash,
+				"Data": data,
+			}).Infof("Index Order settlment for %s", order.Edges.Token.Edges.Network.Identifier)
 
 			// Parse event data
 			for _, event := range data["log"].([]interface{}) {
@@ -733,7 +743,10 @@ func (s *IndexerService) IndexOrderSettledTron(ctx context.Context, order *ent.L
 				if eventData["topics"].([]interface{})[0] == "98ece21e01a01cbe1d1c0dad3b053c8fbd368f99be78be958fcf1d1d13fd249a" {
 					unpackedEventData, err := utils.UnpackEventData(eventData["data"].(string), contracts.GatewayMetaData.ABI, "OrderSettled")
 					if err != nil {
-						logger.Errorf("IndexOrderSettledTron.UnpackEventData: %v", err)
+						logger.WithFields(logger.Fields{
+							"Error": err,
+							"OrderID": order.ID,
+						}).Errorf("Failed to unpack event data for %s", order.Edges.Token.Edges.Network.Identifier)
 						return err
 					}
 
@@ -748,7 +761,10 @@ func (s *IndexerService) IndexOrderSettledTron(ctx context.Context, order *ent.L
 
 					err = s.UpdateOrderStatusSettled(ctx, order.Edges.Token.Edges.Network, event)
 					if err != nil {
-						logger.Errorf("IndexOrderSettledTron.UpdateOrderStatusSettled: %v", err)
+						logger.WithFields(logger.Fields{
+							"Error": err,
+							"OrderID": order.ID,
+						}).Errorf("Failed to update order status settlement when indexing order created events for %s", order.Edges.Token.Edges.Network.Identifier)
 					}
 
 					break
@@ -777,7 +793,9 @@ func (s *IndexerService) IndexOrderRefunded(ctx context.Context, client types.RP
 	// Initialize contract filterer
 	filterer, err := contracts.NewGatewayFilterer(common.HexToAddress(network.GatewayContractAddress), client)
 	if err != nil {
-		logger.Errorf("IndexOrderRefunded.NewGatewayFilterer: %v", err)
+		logger.WithFields(logger.Fields{
+			"Error": err,
+		}).Errorf("Failed to filterer when indexing order created events for %s", network.Identifier)
 		return err
 	}
 
@@ -785,7 +803,9 @@ func (s *IndexerService) IndexOrderRefunded(ctx context.Context, client types.RP
 	header, err := client.HeaderByNumber(ctx, nil)
 	if err != nil {
 		if err != context.Canceled {
-			logger.Errorf("IndexOrderRefunded.HeaderByNumber: %v", err)
+			logger.WithFields(logger.Fields{
+				"Error": err,
+			}).Errorf("Failed to fetch header by number when indexing order created events for %s", network.Identifier)
 		}
 		return err
 	}
@@ -798,7 +818,11 @@ func (s *IndexerService) IndexOrderRefunded(ctx context.Context, client types.RP
 		End:   &toBlock,
 	}, nil)
 	if err != nil {
-		logger.Errorf("IndexOrderRefunded.FilterOrderRefunded: %v", err)
+		logger.WithFields(logger.Fields{
+			"Error": err,
+			"Start": uint64(int64(toBlock) - 5000),
+			"End":   toBlock,
+		}).Errorf("Failed to filter order created events for %s when indexing order created events", network.Identifier)
 		return err
 	}
 
@@ -813,7 +837,11 @@ func (s *IndexerService) IndexOrderRefunded(ctx context.Context, client types.RP
 
 		err := s.UpdateOrderStatusRefunded(ctx, network, refundedEvent)
 		if err != nil {
-			logger.Errorf("IndexOrderRefunded.UpdateOrderStatusRefunded: %v", err)
+			logger.WithFields(logger.Fields{
+				"Error": err,
+				"OrderID": refundedEvent.OrderId,
+				"TxHash": refundedEvent.TxHash,
+			}).Errorf("Failed to update order status refund when indexing order created events for %s", network.Identifier)
 			continue
 		}
 	}
@@ -844,17 +872,26 @@ func (s *IndexerService) IndexOrderRefundedTron(ctx context.Context, order *ent.
 				Retry().Set(3, 1*time.Second).
 				Send()
 			if err != nil {
-				logger.Errorf("fetch txn event logs: %v", err)
+				logger.WithFields(logger.Fields{
+					"Error": err,
+					"TxHash": order.TxHash,
+				}).Errorf("Failed to fetch event logs for %s", order.Edges.Token.Edges.Network.Identifier)
 				return err
 			}
 
 			data, err := utils.ParseJSONResponse(res.RawResponse)
 			if err != nil {
-				logger.Errorf("failed to parse JSON response: %v %v", err, data)
+				logger.WithFields(logger.Fields{
+					"Error": err,
+					"Response": data,
+				}).Errorf("Failed to parse JSON response for %s after fetching event logs", order.Edges.Token.Edges.Network.Identifier)
 				return err
 			}
 
-			logger.Errorf("IndexOrderRefundedTron.gettransactioninfobyid: %v", data)
+			logger.WithFields(logger.Fields{
+				"TxHash": order.TxHash,
+				"Data": data,
+			}).Infof("Index Order refund for %s", order.Edges.Token.Edges.Network.Identifier)
 
 			// Parse event data
 			for _, event := range data["log"].([]interface{}) {
@@ -862,7 +899,9 @@ func (s *IndexerService) IndexOrderRefundedTron(ctx context.Context, order *ent.
 				if eventData["topics"].([]interface{})[0] == "0736fe428e1747ca8d387c2e6fa1a31a0cde62d3a167c40a46ade59a3cdc828e" {
 					unpackedEventData, err := utils.UnpackEventData(eventData["data"].(string), contracts.GatewayMetaData.ABI, "OrderRefunded")
 					if err != nil {
-						logger.Errorf("IndexOrderRefundedTron.UnpackEventData: %v", err)
+						logger.WithFields(logger.Fields{
+							"Error": err,
+						}).Errorf("Failed to unpack event data for %s after fetching event logs", order.Edges.Token.Edges.Network.Identifier)
 						return err
 					}
 
@@ -875,7 +914,11 @@ func (s *IndexerService) IndexOrderRefundedTron(ctx context.Context, order *ent.
 
 					err = s.UpdateOrderStatusRefunded(ctx, order.Edges.Token.Edges.Network, event)
 					if err != nil {
-						logger.Errorf("IndexOrderRefundedTron.UpdateOrderStatusRefunded: %v", err)
+						logger.WithFields(logger.Fields{
+							"Error": err,
+							"OrderID": event.OrderId,
+							"TxHash": event.TxHash,
+						}).Errorf("Failed to update order status refund when indexing order created events for %s", order.Edges.Token.Edges.Network.Identifier)
 					}
 
 					break
@@ -1037,7 +1080,11 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 
 	provisionBucket, isLessThanMin, err := s.getProvisionBucket(ctx, amountInDecimals.Mul(rate), currency)
 	if err != nil {
-		logger.Errorf("failed to fetch provision bucket: %s %s %v", amountInDecimals, currency, err)
+		logger.WithFields(logger.Fields{
+			"Error": err,
+			"Amount": amountInDecimals,
+			"Currency": currency,
+		}).Errorf("failed to fetch provision bucket when creating lock payment order")
 	}
 
 	// Create lock payment order fields
@@ -1212,7 +1259,11 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 		if serverConf.Environment == "production" && !strings.HasPrefix(network.Identifier, "tron") {
 			ok, err := s.checkAMLCompliance(network.RPCEndpoint, event.TxHash)
 			if err != nil {
-				logger.Errorf("checkAMLCompliance: %v", err)
+				logger.WithFields(logger.Fields{
+					"Error": err,
+					"endpoint": network.RPCEndpoint,
+					"TxHash": event.TxHash,
+				}).Errorf("Failed to check AML Compliance")
 			}
 
 			if !ok && err == nil {
@@ -1275,7 +1326,12 @@ func (s *IndexerService) handleCancellation(ctx context.Context, client types.RP
 
 		err = s.order.RefundOrder(ctx, client, network, lockPaymentOrder.GatewayID)
 		if err != nil {
-			logger.Errorf("handleCancellation.RefundOrder(%v): %v", order.ID, err)
+			logger.WithFields(logger.Fields{
+				"Error": err,
+				"OrderID": order.ID,
+				"OrderTrxHash": order.TxHash,
+				"GatewayID": order.GatewayID,
+			}).Errorf("Handle cancellation failed to refund order")
 		}
 
 	} else if createdLockPaymentOrder != nil {
@@ -1299,7 +1355,12 @@ func (s *IndexerService) handleCancellation(ctx context.Context, client types.RP
 
 		err = s.order.RefundOrder(ctx, client, network, createdLockPaymentOrder.GatewayID)
 		if err != nil {
-			logger.Errorf("handleCancellation.RefundOrder(%v): %v", createdLockPaymentOrder.ID, err)
+			logger.WithFields(logger.Fields{
+				"Error": err,
+				"OrderID": createdLockPaymentOrder.ID,
+				"OrderTrxHash": createdLockPaymentOrder.TxHash,
+				"GatewayID": createdLockPaymentOrder.GatewayID,
+			}).Errorf("Handle cancellation failed to refund order")
 		}
 	}
 
@@ -1787,13 +1848,19 @@ func (s *IndexerService) fetchLatestOrderEvents(rpcEndpoint, network, txHash str
 		Retry().Set(3, 1*time.Second).
 		Send()
 	if err != nil {
-		logger.Errorf("fetch txn event logs: %v", err)
+		logger.WithFields(logger.Fields{
+			"Error": err,
+			"TxHash": txHash,
+		}).Errorf("Failed to fetch txn event logs for %s", network)
 		return nil, err
 	}
 
 	data, err := utils.ParseJSONResponse(res.RawResponse)
 	if err != nil {
-		logger.Errorf("failed to parse JSON response: %v %v", err, data)
+		logger.WithFields(logger.Fields{
+			"Error": err,
+			"Response": data,
+		}).Errorf("Failed to parse JSON response for %s after fetching event logs", network)
 		return nil, err
 	}
 
@@ -1853,7 +1920,12 @@ func (s *IndexerService) splitLockPaymentOrder(ctx context.Context, client types
 		Order(ent.Desc(provisionbucket.FieldMaxAmount)).
 		All(ctx)
 	if err != nil {
-		logger.Errorf("failed to fetch provision buckets: %v", err)
+		logger.WithFields(logger.Fields{
+			"Error": err,
+			"Currency": currency.ID,
+			"CurrencyCode": currency.Code,
+			"CurrencEnabled": currency.IsEnabled,
+		}).Errorf("failed to fetch provision buckets when splitting lock payment order")
 		return err
 	}
 
@@ -1909,14 +1981,20 @@ func (s *IndexerService) splitLockPaymentOrder(ctx context.Context, client types
 			CreateBulk(lockOrders...).
 			Save(ctx)
 		if err != nil {
-			logger.Errorf("failed to create lock payment orders in bulk: %v", err)
+			logger.WithFields(logger.Fields{
+				"Error": err,
+				"OrderID": lockPaymentOrder.GatewayID,
+			}).Errorf("Failed to create lock payment order in Bulk when splitting lock payment order")
 			_ = tx.Rollback()
 			return err
 		}
 
 		// Commit the transaction if everything succeeded
 		if err := tx.Commit(); err != nil {
-			logger.Errorf("failed to split lock payment order: %v", err)
+			logger.WithFields(logger.Fields{
+				"Error": err,
+				"OrderID": lockPaymentOrder.GatewayID,
+			}).Errorf("Failed to commit transaction when splitting lock payment order")
 			return err
 		}
 
@@ -1924,14 +2002,23 @@ func (s *IndexerService) splitLockPaymentOrder(ctx context.Context, client types
 		if serverConf.Environment == "production" && !strings.HasPrefix(lockPaymentOrder.Network.Identifier, "tron") {
 			ok, err := s.checkAMLCompliance(lockPaymentOrder.Network.RPCEndpoint, lockPaymentOrder.TxHash)
 			if err != nil {
-				logger.Errorf("splitLockPaymentOrder.checkAMLCompliance: %v", err)
+				logger.WithFields(logger.Fields{
+					"Error": err,
+					"endpoint": lockPaymentOrder.Network.RPCEndpoint,
+					"TxHash": lockPaymentOrder.TxHash,
+				}).Errorf("Failed to check AML Compliance")
 			}
 
 			if !ok && err == nil && len(ordersCreated) > 0 {
 				isRefunded = true
 				err := s.handleCancellation(ctx, client, ordersCreated[0], nil, "AML compliance check failed")
 				if err != nil {
-					logger.Errorf("splitLockPaymentOrder.checkAMLCompliance.RefundOrder: %v", err)
+					logger.WithFields(logger.Fields{
+						"Error": err,
+						"OrderID": ordersCreated[0].ID,
+						"OrderGatewayID": ordersCreated[0].GatewayID,
+						"Reason": "AML compliance check failed",
+					}).Errorf("Failed to handle cancellation when splitting lock payment order")
 				}
 				break
 			}
@@ -1974,7 +2061,10 @@ func (s *IndexerService) splitLockPaymentOrder(ctx context.Context, client types
 
 		orderCreated, err := orderCreatedUpdate.Save(ctx)
 		if err != nil {
-			logger.Errorf("failed to create lock payment order: %v", err)
+			logger.WithFields(logger.Fields{
+				"Error": err,
+				"OrderID": lockPaymentOrder.GatewayID,
+			}).Errorf("Failed to create lock payment order when splitting lock payment order")
 			return err
 		}
 
