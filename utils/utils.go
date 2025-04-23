@@ -8,8 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"os"
 	"net/url"
+	"os"
 	"reflect"
 	"regexp"
 	"sort"
@@ -589,19 +589,46 @@ func GetInstitutionByCode(ctx context.Context, institutionCode string) (*ent.Ins
 	return institution, nil
 }
 
-// LoadSmileIDConfig loads and parses smile_id_types.json into a SmileIDConfig struct.
-func LoadSmileIDConfig(filePath string) (config.SmileIDConfig, error) {
+// FlattenSmileIDConfig converts the hierarchical SmileIDConfig into a flat array of id_types
+func FlattenSmileIDConfig(config config.SmileIDConfig) ([]map[string]interface{}, error) {
+	var idTypes []map[string]interface{}
+
+	for _, continent := range config.Continents {
+		for _, country := range continent.Countries {
+			for _, idType := range country.IDTypes {
+				idTypeEntry := map[string]interface{}{
+					"country":             country.Code,
+					"id_type":             idType.Type,
+					"verification_method": idType.VerificationMethod,
+				}
+				idTypes = append(idTypes, idTypeEntry)
+			}
+		}
+	}
+
+	if len(idTypes) == 0 {
+		return nil, fmt.Errorf("no ID types found in configuration")
+	}
+
+	return idTypes, nil
+}
+
+// LoadSmileIDConfig loads the JSON file and flattens it
+func LoadSmileIDConfig(filePath string) ([]map[string]interface{}, error) {
+	// Read the config file
 	data, err := os.ReadFile(filePath)
 	if err != nil {
-		return config.SmileIDConfig{}, fmt.Errorf("failed to read config file: %w", err)
+		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
-	var cfg config.SmileIDConfig
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return config.SmileIDConfig{}, fmt.Errorf("failed to parse JSON: %w", err)
+	// Parse the JSON into SmileIDConfig
+	var config config.SmileIDConfig
+	if err := json.Unmarshal(data, &config); err != nil {
+		return nil, fmt.Errorf("failed to parse JSON: %w", err)
 	}
 
-	return cfg, nil
+	// Flatten the structure
+	return FlattenSmileIDConfig(config)
 }
 
 // Helper function to validate HTTPS URL

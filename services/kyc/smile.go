@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -111,25 +112,16 @@ func (s *SmileIDService) RequestVerification(ctx context.Context, payload NewIDV
 		}
 	}
 
-	// Load the SmileIDConfig
-	smileIDConfig, err := utils.LoadSmileIDConfig("./config/smile_id_types.json")
+	filePath, err := filepath.Abs("../../aggregator/config/smile_id_types.json")
 	if err != nil {
-		logger.Errorf("error: %v", err)
-		return nil, fmt.Errorf("failed to request identity verification")
+		return nil, fmt.Errorf("failed to resolve file path: %v", err)
 	}
 
-	// Generate ID types from the config
-	var idTypes []map[string]interface{}
-	for _, continent := range smileIDConfig.Continents {
-		for _, country := range continent.Countries {
-			for _, idType := range country.IDTypes {
-				idTypes = append(idTypes, map[string]interface{}{
-					"country":             country.Code,
-					"id_type":             idType.Type,
-					"verification_method": idType.VerificationMethod,
-				})
-			}
-		}
+	// Load and flatten the JSON file
+	idTypes, err := utils.LoadSmileIDConfig(filePath)
+	if err != nil {
+		fmt.Printf("Failed to flatten JSON: %v\n", err)
+		return nil, fmt.Errorf("failed to flatten JSON: %v", err)
 	}
 
 	smileIDSignature := s.getSmileIDSignature(timestamp.Format(time.RFC3339Nano))
