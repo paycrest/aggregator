@@ -121,7 +121,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 			if _, err := ctrl.emailService.SendVerificationEmail(ctx, verificationToken.Token, user.Email, user.FirstName); err != nil {
 				logger.WithFields(logger.Fields{
 					"Error": fmt.Sprintf("%v", err),
-					"Email": user.Email,
+					"UserID": user.ID,
 				}).Errorf("Failed to send verification email")
 			}
 		}
@@ -186,7 +186,6 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 			logger.WithFields(logger.Fields{
 				"Error": fmt.Sprintf("%v", err),
 				"UserID": user.ID,
-				"Email": user.Email,
 			}).Errorf("Failed to create provider profile")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error",
 				"Failed to create new user", nil)
@@ -201,7 +200,6 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 				"Error": fmt.Sprintf("%v", err),
 				"UserID": user.ID,
 				"ProviderID": provider.ID,
-				"Email": user.Email,
 			}).Errorf("Failed to create API key for provider")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error",
 				"Failed to create new user", nil)
@@ -220,7 +218,6 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 			logger.WithFields(logger.Fields{
 				"Error": fmt.Sprintf("%v", err),
 				"UserID": user.ID,
-				"Email": user.Email,
 			}).Errorf("Failed to create sender profile")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error",
 				"Failed to create new user", nil)
@@ -235,7 +232,6 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 				"Error": fmt.Sprintf("%v", err),
 				"UserID": user.ID,
 				"SenderID": sender.ID,
-				"Email": user.Email,
 			}).Errorf("Failed to create API key for sender")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error",
 				"Failed to create new user", nil)
