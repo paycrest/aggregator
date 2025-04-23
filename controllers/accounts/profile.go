@@ -281,7 +281,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			All(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
-				"Error": err,
+				"Error": fmt.Sprintf("%v", err),
 				"ProviderID": provider.ID,
 			}).Errorf("Failed to fetch existing currencies for provider")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch existing currencies", nil)
@@ -361,7 +361,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Token not supported - %s", tokenPayload.Symbol), nil)
 			} else {
 				logger.WithFields(logger.Fields{
-					"Error": err,
+					"Error": fmt.Sprintf("%v", err),
 					"Token": tokenPayload.Symbol,
 				}).Errorf("Failed to check token support during update")
 				u.APIResponse(
@@ -386,7 +386,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", "Currency not supported", nil)
 			} else {
 				logger.WithFields(logger.Fields{
-					"Error": err,
+					"Error": fmt.Sprintf("%v", err),
 					"Currency": tokenPayload.Currency,
 				}).Errorf("Failed to fetch currency during update")
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
@@ -470,7 +470,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				if err != nil {
 					tx.Rollback()
 					logger.WithFields(logger.Fields{
-						"Error": err,
+						"Error": fmt.Sprintf("%v", err),
 						"Token": tokenPayload.Symbol,
 						"Currency": tokenPayload.Currency,
 					}).Errorf("Failed to create token during update")
@@ -480,7 +480,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			} else {
 				tx.Rollback()
 				logger.WithFields(logger.Fields{
-					"Error": err,
+					"Error": fmt.Sprintf("%v", err),
 					"Token": tokenPayload.Symbol,
 					"Currency": tokenPayload.Currency,
 				}).Errorf("Failed to query token during update")
@@ -514,7 +514,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			if err != nil {
 				tx.Rollback()
 				logger.WithFields(logger.Fields{
-					"Error": err,
+					"Error": fmt.Sprintf("%v", err),
 					"Token": tokenPayload.Symbol,
 					"Currency": tokenPayload.Currency,
 				}).Errorf("Failed to update token during update")
@@ -543,7 +543,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			All(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
-				"Error": err,
+				"Error": fmt.Sprintf("%v", err),
 				"ProviderID": provider.ID,
 				"MinAmount": tokenPayload.MinOrderAmount,
 				"MaxAmount": tokenPayload.MaxOrderAmount,
@@ -562,7 +562,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 	_, err := update.Save(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error": err,
+			"Error": fmt.Sprintf("%v", err),
 			"ProviderID": provider.ID,
 		}).Errorf("Failed to commit update of provider profile")
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
@@ -593,7 +593,7 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 	apiKey, err := ctrl.apiKeyService.GetAPIKey(ctx, sender, nil)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error": err,
+			"Error": fmt.Sprintf("%v", err),
 			"SenderID": sender.ID,
 		}).Errorf("Failed to fetch sender API key")
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)
@@ -611,7 +611,7 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 		All(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error": err,
+			"Error": fmt.Sprintf("%v", err),
 			"SenderID": sender.ID,
 		}).Errorf("Failed to fetch sender order tokens")
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)
@@ -653,7 +653,7 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 			// do nothing
 		} else {
 			logger.WithFields(logger.Fields{
-				"Error": err,
+				"Error": fmt.Sprintf("%v", err),
 				"SenderID": sender.ID,
 			}).Errorf("Failed to fetch linked providerf for sender")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)
@@ -695,7 +695,7 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 	currencies, err := provider.QueryCurrencies().All(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error": err,
+			"Error": fmt.Sprintf("%v", err),
 			"ProviderID": provider.ID,
 		}).Errorf("Failed to fetch currencies for provider")
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)
@@ -717,7 +717,7 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 	orderTokens, err := query.All(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error": err,
+			"Error": fmt.Sprintf("%v", err),
 			"ProviderID": provider.ID,
 		}).Errorf("Failed to fetch order tokens for provider")
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)
@@ -745,7 +745,7 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 	apiKey, err := ctrl.apiKeyService.GetAPIKey(ctx, nil, provider)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error": err,
+			"Error": fmt.Sprintf("%v", err),
 			"ProviderID": provider.ID,
 		}).Errorf("Failed to fetch provider API key")
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)

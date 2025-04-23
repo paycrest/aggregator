@@ -141,7 +141,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 	err := s.deleteQueue(ctx, prevRedisKey)
 	if err != nil && err != context.Canceled {
 		logger.WithFields(logger.Fields{
-			"Error": err,
+			"Error": fmt.Sprintf("%v", err),
 			"Key": prevRedisKey,
 		}).Errorf("failed to delete previous provider queue")
 	}
@@ -150,7 +150,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 	prevData, err := storage.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
 	if err != nil && err != context.Canceled {
 		logger.WithFields(logger.Fields{
-			"Error": err,
+			"Error": fmt.Sprintf("%v", err),
 			"Key": redisKey,
 		}).Errorf("failed to fetch provider rates")
 	}
@@ -166,7 +166,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 		err = storage.RedisClient.RPush(ctx, prevRedisKey, prevValues...).Err()
 		if err != nil && err != context.Canceled {
 			logger.WithFields(logger.Fields{
-				"Error": err,
+				"Error": fmt.Sprintf("%v", err),
 				"Key": prevRedisKey,
 				"Values": prevValues,
 			}).Errorf("failed to store previous provider rates")
@@ -177,7 +177,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 	err = s.deleteQueue(ctx, redisKey)
 	if err != nil && err != context.Canceled {
 		logger.WithFields(logger.Fields{
-			"Error": err,
+			"Error": fmt.Sprintf("%v", err),
 			"Key": redisKey,
 		}).Errorf("failed to delete existing circular queue")
 	}
@@ -202,7 +202,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 		if err != nil {
 			if err != context.Canceled {
 				logger.WithFields(logger.Fields{
-					"Error": err,
+					"Error": fmt.Sprintf("%v", err),
 					"ProviderID": provider.ID,
 					"Currency": bucket.Edges.Currency.Code,
 				}).Errorf("failed to get tokens for provider")
@@ -221,7 +221,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 			if err != nil {
 				if err != context.Canceled {
 					logger.WithFields(logger.Fields{
-						"Error": err,
+						"Error": fmt.Sprintf("%v", err),
 						"ProviderID": provider.ID,
 						"Token": orderToken.Edges.Token.Symbol,
 						"Currency": bucket.Edges.Currency.Code,
@@ -251,7 +251,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 			err = storage.RedisClient.RPush(ctx, redisKey, data).Err()
 			if err != nil && err != context.Canceled {
 				logger.WithFields(logger.Fields{
-					"Error": err,
+					"Error": fmt.Sprintf("%v", err),
 					"Key": redisKey,
 					"Data": data,
 				}).Errorf("failed to enqueue provider data to circular queue")
@@ -267,7 +267,7 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 	excludeList, err := storage.RedisClient.LRange(ctx, fmt.Sprintf("order_exclude_list_%s", order.ID), 0, -1).Result()
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error": err,
+			"Error": fmt.Sprintf("%v", err),
 			"OrderID": order.ID,
 			"ProviderID": order.ProviderID,
 		}).Errorf("failed to get exclude list")
@@ -291,7 +291,7 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 				order.Rate, err = s.GetProviderRate(ctx, provider, order.Token.Symbol, order.ProvisionBucket.Edges.Currency.Code)
 				if err != nil {
 					logger.WithFields(logger.Fields{
-						"Error": err,
+						"Error": fmt.Sprintf("%v", err),
 						"OrderID": order.ID,
 						"ProviderID": order.ProviderID,
 					}).Errorf("failed to get rate for provider")
@@ -303,7 +303,7 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 					Save(ctx)
 				if err != nil {
 					logger.WithFields(logger.Fields{
-						"Error": err,
+						"Error": fmt.Sprintf("%v", err),
 						"OrderID": order.ID,
 						"ProviderID": order.ProviderID,
 					}).Errorf("failed to update rate for provider")
@@ -314,13 +314,13 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 				return nil
 			}
 			logger.WithFields(logger.Fields{
-				"Error": err,
+				"Error": fmt.Sprintf("%v", err),
 				"OrderID": order.ID,
 				"ProviderID": order.ProviderID,
 			}).Errorf("failed to send order request to specific provider")
 		} else {
 			logger.WithFields(logger.Fields{
-				"Error": err,
+				"Error": fmt.Sprintf("%v", err),
 				"OrderID": order.ID,
 				"ProviderID": order.ProviderID,
 			}).Errorf("failed to get provider")
@@ -340,7 +340,7 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 	if err != nil {
 		prevRedisKey := redisKey + "_prev"
 		err = s.matchRate(ctx, prevRedisKey, orderIDPrefix, order, excludeList)
-		if err != nil && !strings.Contains(err.Error(), "redis: nil") {
+		if err != nil && !strings.Contains(fmt.Sprintf("%v", err), "redis: nil") {
 			return err
 		}
 	}
@@ -362,7 +362,7 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 
 	if err := storage.RedisClient.HSet(ctx, orderKey, orderRequestData).Err(); err != nil {
 		logger.WithFields(logger.Fields{
-			"Error": err,
+			"Error": fmt.Sprintf("%v", err),
 			"OrderID": order.ID,
 			"ProviderID": order.ProviderID,
 			"orderKey": orderKey,
@@ -375,7 +375,7 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 	if err != nil {
 		// logger.Errorf("failed to set TTL for order request: %v", err)
 		logger.WithFields(logger.Fields{
-			"Error": err,
+			"Error": fmt.Sprintf("%v", err),
 			"orderKey": orderKey,
 		}).Errorf("failed to set TTL for order request")
 		return err
@@ -385,7 +385,7 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 	orderRequestData["orderId"] = order.ID
 	if err := s.notifyProvider(ctx, orderRequestData); err != nil {
 		logger.WithFields(logger.Fields{
-			"Error": err,
+			"Error": fmt.Sprintf("%v", err),
 			"OrderID": order.ID,
 			"ProviderID": order.ProviderID,
 		}).Errorf("failed to notify provider")
@@ -437,7 +437,7 @@ func (s *PriorityQueueService) notifyProvider(ctx context.Context, orderRequestD
 	data, err := utils.ParseJSONResponse(res.RawResponse)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error": err,
+			"Error": fmt.Sprintf("%v", err),
 			"ProviderID": providerID,
 		}).Errorf("failed to parse JSON response after new order request with data: %v", data)
 		return err
@@ -472,7 +472,7 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 		parts := strings.Split(providerData, ":")
 		if len(parts) != 5 {
 			logger.WithFields(logger.Fields{
-				"Error": err,
+				"Error": fmt.Sprintf("%v", err),
 				"OrderID": order.ID,
 				"ProviderID": order.ProviderID,
 				"ProviderData": providerData,
@@ -551,7 +551,7 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 				data, err := storage.RedisClient.LPop(ctx, redisKey).Result()
 				if err != nil {
 					logger.WithFields(logger.Fields{
-						"Error": err,
+						"Error": fmt.Sprintf("%v", err),
 						"OrderID": order.ID,
 						"ProviderID": order.ProviderID,
 						"redisKey": redisKey,
@@ -564,7 +564,7 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 				err = storage.RedisClient.RPush(ctx, redisKey, data).Err()
 				if err != nil {
 					logger.WithFields(logger.Fields{
-						"Error": err,
+						"Error": fmt.Sprintf("%v", err),
 						"OrderID": order.ID,
 						"ProviderID": order.ProviderID,
 						"redisKey": redisKey,
@@ -578,7 +578,7 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 			err = s.sendOrderRequest(ctx, order)
 			if err != nil {
 				logger.WithFields(logger.Fields{
-					"Error": err,
+					"Error": fmt.Sprintf("%v", err),
 					"OrderID": order.ID,
 					"ProviderID": order.ProviderID,
 					"redisKey": redisKey,
@@ -590,7 +590,7 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 				_, err = storage.RedisClient.RPush(ctx, orderKey, order.ProviderID).Result()
 				if err != nil {
 					logger.WithFields(logger.Fields{
-						"Error": err,
+						"Error": fmt.Sprintf("%v", err),
 						"OrderID": order.ID,
 						"ProviderID": order.ProviderID,
 						"redisKey": redisKey,

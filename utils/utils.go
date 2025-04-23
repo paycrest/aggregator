@@ -527,7 +527,7 @@ func GetTokenRateFromQueue(tokenSymbol string, orderAmount decimal.Decimal, fiat
 			parts := strings.Split(providerData, ":")
 			if len(parts) != 5 {
 				logger.WithFields(logger.Fields{
-					"Error": err,
+					"Error": fmt.Sprintf("%v", err),
 					"ProviderData": providerData,
 					"Token": tokenSymbol,
 					"Currency": fiatCurrency,

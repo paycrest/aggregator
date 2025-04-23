@@ -63,7 +63,7 @@ func (ctrl *Controller) GetFiatCurrencies(ctx *gin.Context) {
 		logger.Errorf("Error: Failed to fetch fiat currencies: %v", err)
 
 		u.APIResponse(ctx, http.StatusBadRequest, "error",
-			"Failed to fetch FiatCurrencies", err.Error())
+			"Failed to fetch FiatCurrencies", fmt.Sprintf("%v", err))
 		return
 	}
 
@@ -210,7 +210,7 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 					parts := strings.Split(providerData, ":")
 					if len(parts) != 5 {
 						logger.WithFields(logger.Fields{
-							"Error": err,
+							"Error": fmt.Sprintf("%v", err),
 							"ProviderData": providerData,
 							"Token": token.Symbol,
 							"Currency": currency.Code,
@@ -315,7 +315,7 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 
 	if err := ctx.ShouldBindJSON(&payload); err != nil {
 		logger.WithFields(logger.Fields{
-			"Error": err,
+			"Error": fmt.Sprintf("%v", err),
 			"Institution": payload.Institution,
 			"AccountIdentifier": payload.AccountIdentifier,
 		}).Errorf("Failed to validate payload when verifying account")
@@ -335,7 +335,7 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 		Only(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error": err,
+			"Error": fmt.Sprintf("%v", err),
 			"Institution": payload.Institution,
 			"AccountIdentifier": payload.AccountIdentifier,
 		}).Errorf("Failed to validate payload when verifying account")
@@ -366,7 +366,7 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 		All(ctx)
 	if err != nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error",
-			"Failed to verify account", err.Error())
+			"Failed to verify account", fmt.Sprintf("%v", err))
 		return
 	}
 
@@ -390,7 +390,7 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error": err,
+			"Error": fmt.Sprintf("%v", err),
 			"Institution": payload.Institution,
 			"AccountIdentifier": payload.AccountIdentifier,
 			"AccountName": data["data"].(string),
@@ -430,7 +430,7 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 		All(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error": err,
+			"Error": fmt.Sprintf("%v", err),
 			"OrderID": orderID,
 			"ChainID": chainID,
 		}).Errorf("Failed to fetch locked order status")
@@ -508,7 +508,7 @@ func (ctrl *Controller) CreateLinkedAddress(ctx *gin.Context) {
 
 	if err := ctx.ShouldBindJSON(&payload); err != nil {
 		logger.WithFields(logger.Fields{
-			"Error": err,
+			"Error": fmt.Sprintf("%v", err),
 			"Institution": payload.Institution,
 			"AccountIdentifier": payload.AccountIdentifier,
 			"AccountName": payload.AccountName,
@@ -540,7 +540,7 @@ func (ctrl *Controller) CreateLinkedAddress(ctx *gin.Context) {
 		Save(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error": err,
+			"Error": fmt.Sprintf("%v", err),
 			"Institution": payload.Institution,
 			"AccountIdentifier": payload.AccountIdentifier,
 			"OwnerAddress": ownerAddress,
@@ -577,7 +577,7 @@ func (ctrl *Controller) GetLinkedAddress(ctx *gin.Context) {
 			return
 		} else {
 			logger.WithFields(logger.Fields{
-				"Error": err,
+				"Error": fmt.Sprintf("%v", err),
 				"OwnerAddress": owner_address,
 			}).Errorf("Failed to fetch linked address")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch linked address", nil)
@@ -592,7 +592,7 @@ func (ctrl *Controller) GetLinkedAddress(ctx *gin.Context) {
 		Only(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error": err,
+			"Error": fmt.Sprintf("%v", err),
 			"OwnerAddress": owner_address,
 			"LinkedAddressInstitution": linkedAddress.Institution,
 		}).Errorf("Failed to fetch linked address")
@@ -633,7 +633,7 @@ func (ctrl *Controller) GetLinkedAddressTransactions(ctx *gin.Context) {
 			return
 		} else {
 			logger.WithFields(logger.Fields{
-				"Error": err,
+				"Error": fmt.Sprintf("%v", err),
 				"LinkedAddress": linked_address,
 			}).Errorf("Failed to fetch linked address")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch linked address", nil)
@@ -650,7 +650,7 @@ func (ctrl *Controller) GetLinkedAddressTransactions(ctx *gin.Context) {
 	count, err := paymentOrderQuery.Count(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error": err,
+			"Error": fmt.Sprintf("%v", err),
 			"LinkedAddress": linked_address,
 			"LinkedAddressID": linkedAddress.ID,
 			"LinkedAddressOwnerAddress": linkedAddress.OwnerAddress,
@@ -669,7 +669,7 @@ func (ctrl *Controller) GetLinkedAddressTransactions(ctx *gin.Context) {
 		All(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error": err,
+			"Error": fmt.Sprintf("%v", err),
 			"LinkedAddress": linked_address,
 			"LinkedAddressID": linkedAddress.ID,
 			"LinkedAddressOwnerAddress": linkedAddress.OwnerAddress,
@@ -688,7 +688,7 @@ func (ctrl *Controller) GetLinkedAddressTransactions(ctx *gin.Context) {
 			Only(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
-				"Error": err,
+				"Error": fmt.Sprintf("%v", err),
 				"LinkedAddress": linked_address,
 				"LinkedAddressID": linkedAddress.ID,
 				"LinkedAddressOwnerAddress": linkedAddress.OwnerAddress,
@@ -741,24 +741,24 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 
 	response, err := ctrl.kycService.RequestVerification(ctx, payload)
 	if err != nil {
-		switch err.Error() {
+		switch fmt.Sprintf("%v", err) {
 			case "invalid signature", "invalid signature: signature is not in the correct format",
 			"invalid signature: signature length is not correct",
 			"invalid signature: invalid recovery ID":
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid signature", err.Error())
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid signature", fmt.Sprintf("%v", err))
 			return
 		case "signature already used for identity verification":
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Signature already used for identity verification", nil)
 			return
 		case "this account has already been successfully verified":
-			u.APIResponse(ctx, http.StatusBadRequest, "success", "Failed to request identity verification", err.Error())
+			u.APIResponse(ctx, http.StatusBadRequest, "success", "Failed to request identity verification", fmt.Sprintf("%v", err))
 			return
 		case "failed to request identity verification: couldn't reach identity provider":
 			u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to request identity verification", "Couldn't reach identity provider")
 			return
 		default:
 			logger.WithFields(logger.Fields{
-				"Error": err,
+				"Error": fmt.Sprintf("%v", err),
 				"WalletAddress": payload.WalletAddress,
 				"Nonce": payload.Nonce,
 			}).Errorf("Failed to request identity verification")
@@ -779,10 +779,10 @@ func (ctrl *Controller) GetIDVerificationStatus(ctx *gin.Context) {
 	response, err := ctrl.kycService.CheckStatus(ctx, walletAddress)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error": err,
+			"Error": fmt.Sprintf("%v", err),
 			"WalletAddress": walletAddress,
 		}).Errorf("Failed to fetch identity verification status")
-		if err.Error() == "no verification request found for this wallet address" {
+		if fmt.Sprintf("%v", err) == "no verification request found for this wallet address" {
 			u.APIResponse(ctx, http.StatusNotFound, "error", "No verification request found for this wallet address", nil)
 			return
 		}
@@ -805,14 +805,14 @@ func (ctrl *Controller) KYCWebhook(ctx *gin.Context) {
 	err = ctrl.kycService.HandleWebhook(ctx, payload)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error": err,
+			"Error": fmt.Sprintf("%v", err),
 			"Payload": string(payload),
 		}).Errorf("Failed to process webhook for kyc")
-		if err.Error() == "invalid payload" {
+		if fmt.Sprintf("%v", err) == "invalid payload" {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
 			return
 		}
-		if err.Error() == "invalid signature" {
+		if fmt.Sprintf("%v", err) == "invalid signature" {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid signature"})
 			return
 		}

@@ -120,7 +120,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		if verificationToken != nil {
 			if _, err := ctrl.emailService.SendVerificationEmail(ctx, verificationToken.Token, user.Email, user.FirstName); err != nil {
 				logger.WithFields(logger.Fields{
-					"Error": err,
+					"Error": fmt.Sprintf("%v", err),
 					"Email": user.Email,
 				}).Errorf("Failed to send verification email")
 			}
@@ -184,7 +184,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		if err != nil {
 			_ = tx.Rollback()
 			logger.WithFields(logger.Fields{
-				"Error": err,
+				"Error": fmt.Sprintf("%v", err),
 				"UserID": user.ID,
 				"Email": user.Email,
 			}).Errorf("Failed to create provider profile")
@@ -198,7 +198,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		if err != nil {
 			_ = tx.Rollback()
 			logger.WithFields(logger.Fields{
-				"Error": err,
+				"Error": fmt.Sprintf("%v", err),
 				"UserID": user.ID,
 				"ProviderID": provider.ID,
 				"Email": user.Email,
@@ -218,7 +218,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		if err != nil {
 			_ = tx.Rollback()
 			logger.WithFields(logger.Fields{
-				"Error": err,
+				"Error": fmt.Sprintf("%v", err),
 				"UserID": user.ID,
 				"Email": user.Email,
 			}).Errorf("Failed to create sender profile")
@@ -232,7 +232,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		if err != nil {
 			_ = tx.Rollback()
 			logger.WithFields(logger.Fields{
-				"Error": err,
+				"Error": fmt.Sprintf("%v", err),
 				"UserID": user.ID,
 				"SenderID": sender.ID,
 				"Email": user.Email,
