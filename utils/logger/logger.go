@@ -84,10 +84,10 @@ func WithFields(fields Fields) *logrus.Entry {
 		// Add caller information to fields
 		logrusFields := logrus.Fields(fields)
 		if _, exists := logrusFields["file"]; !exists {
-			logrusFields["file"] = fileName
+			logrusFields["File"] = fileName
 		}
 		if _, exists := logrusFields["line"]; !exists {
-			logrusFields["line"] = line
+			logrusFields["Line"] = line
 		}
 
 		// Try to get function name
@@ -99,7 +99,7 @@ func WithFields(fields Fields) *logrus.Entry {
 				funcName = funcName[lastDot+1:]
 			}
 			if _, exists := logrusFields["function"]; !exists {
-				logrusFields["function"] = funcName
+				logrusFields["Function"] = funcName
 			}
 		}
 
