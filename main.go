@@ -36,6 +36,13 @@ func main() {
 		logger.Fatalf("Redis initialization: %v", err)
 	}
 
+	// Log Redis initialization with detailed context - file, line, function added automatically
+	logger.WithFields(logger.Fields{
+		"service":   "redis",
+		"status":    "initialized",
+		"timestamp": time.Now().Format(time.RFC3339),
+	}).Errorf("Redis service initialized successfully")
+
 	// Subscribe to Redis keyspace events
 	tasks.SubscribeToRedisKeyspaceEvents()
 
