@@ -393,6 +393,12 @@ func IsValidFileURL(url string) bool {
 	return matched
 }
 
+// IsValidURL checks if a string is a valid URL.
+func IsValidURL(url string) bool {
+	regex := regexp.MustCompile(`^https?://[^\s/$.?#].[^\s]*$`)
+	return regex.MatchString(url)
+}
+
 // IsValidEthereumAddress checks if a string is a valid Ethereum address
 func IsValidEthereumAddress(address string) bool {
 	pattern := `^0x[a-fA-F0-9]{40}$`

@@ -171,13 +171,25 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 			return
 		}
 
-		provider, err := tx.ProviderProfile.
+		providerCreate := tx.ProviderProfile.
 			Create().
 			AddCurrencies(fiatCurrencies...).
 			SetVisibilityMode(providerprofile.VisibilityModePrivate).
 			SetUser(user).
-			SetProvisionMode(providerprofile.ProvisionModeAuto).
-			Save(ctx)
+			SetProvisionMode(providerprofile.ProvisionModeAuto)
+
+		if payload.MonthlyVolume != nil {
+			monthlyVolumeFloat, _ := payload.MonthlyVolume.Float64()
+			if monthlyVolumeFloat <= 0 {
+				_ = tx.Rollback()
+				u.APIResponse(ctx, http.StatusBadRequest, "error",
+					"Monthly volume must be greater than zero", nil)
+				return
+			}
+			providerCreate = providerCreate.SetMonthlyVolume(monthlyVolumeFloat)
+		}
+
+		provider, err := providerCreate.Save(ctx)
 		if err != nil {
 			_ = tx.Rollback()
 			logger.Errorf("error: %v", err)
@@ -199,15 +211,49 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 
 	// Create a sender profile
 	if u.ContainsString(scopes, "sender") {
-		sender, err := tx.SenderProfile.
+		// Validate business_website if provided
+		if payload.BusinessWebsite != "" && !u.IsValidURL(payload.BusinessWebsite) {
+			_ = tx.Rollback()
+			u.APIResponse(ctx, http.StatusBadRequest, "error",
+				"Invalid business website URL", nil)
+			return
+		}
+
+		// Validate business_description length
+		if len(payload.NatureOfBusiness) > 255 {
+			_ = tx.Rollback()
+			u.APIResponse(ctx, http.StatusBadRequest, "error",
+				"Nature of business exceeds character limit", nil)
+			return
+		}
+
+		senderCreate := tx.SenderProfile.
 			Create().
-			SetUser(user).
-			Save(ctx)
+			SetUser(user)
+
+			// Set optional fields
+		if payload.MonthlyVolume != nil {
+			monthlyVolumeFloat, _ := payload.MonthlyVolume.Float64()
+			if monthlyVolumeFloat <= 0 {
+				_ = tx.Rollback()
+				u.APIResponse(ctx, http.StatusBadRequest, "error",
+					"Monthly volume must be greater than zero", nil)
+				return
+			}
+			senderCreate = senderCreate.SetMonthlyVolume(monthlyVolumeFloat)
+		}
+		if payload.BusinessWebsite != "" {
+			senderCreate = senderCreate.SetBusinessWebsite(payload.BusinessWebsite)
+		}
+		if payload.NatureOfBusiness != "" {
+			senderCreate = senderCreate.SetNatureOfBusiness(payload.NatureOfBusiness)
+		}
+
+		sender, err := senderCreate.Save(ctx)
 		if err != nil {
 			_ = tx.Rollback()
 			logger.Errorf("error: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error",
-				"Failed to create new user", nil)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create new user", nil)
 			return
 		}
 
@@ -217,7 +263,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 			_ = tx.Rollback()
 			logger.Errorf("error: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error",
-				"Failed to create new user", nil)
+				"Failed to create API key", nil)
 			return
 		}
 	}

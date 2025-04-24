@@ -22,6 +22,7 @@ import (
 	svc "github.com/paycrest/aggregator/services"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
+	"github.com/shopspring/decimal"
 	"github.com/spf13/viper"
 	"golang.org/x/crypto/bcrypt"
 
@@ -34,6 +35,11 @@ import (
 	"github.com/paycrest/aggregator/utils/token"
 	"github.com/stretchr/testify/assert"
 )
+
+// Helper function to create a pointer to a decimal.Decimal
+func decimalPtr(d decimal.Decimal) *decimal.Decimal {
+	return &d
+}
 
 func TestAuth(t *testing.T) {
 
@@ -98,12 +104,15 @@ func TestAuth(t *testing.T) {
 		t.Run("with valid payload and both sender and provider scopes", func(t *testing.T) {
 			// Test register with valid payload
 			payload := types.RegisterPayload{
-				FirstName:  "Ike",
-				LastName:   "Ayo",
-				Email:      "ikeayo@example.com",
-				Password:   "password",
-				Currencies: []string{"NGN"},
-				Scopes:     []string{"sender", "provider"},
+				FirstName:        "Ike",
+				LastName:         "Ayo",
+				Email:            "ikeayo@example.com",
+				Password:         "password",
+				Currencies:       []string{"NGN"},
+				Scopes:           []string{"sender", "provider"},
+				MonthlyVolume:    decimalPtr(decimal.NewFromInt(1000)),
+				BusinessWebsite:  "https://example.com",
+				NatureOfBusiness: "Example business",
 			}
 
 			header := map[string]string{
@@ -166,11 +175,14 @@ func TestAuth(t *testing.T) {
 		t.Run("with only sender scope payload", func(t *testing.T) {
 			// Test register with valid payload
 			payload := types.RegisterPayload{
-				FirstName: "Ike",
-				LastName:  "Ayo",
-				Email:     "ikeayo1@example.com",
-				Password:  "password1",
-				Scopes:    []string{"sender"},
+				FirstName:        "Ike",
+				LastName:         "Ayo",
+				Email:            "ikeayo1@example.com",
+				Password:         "password1",
+				Scopes:           []string{"sender"},
+				MonthlyVolume:    decimalPtr(decimal.NewFromInt(1000)),
+				BusinessWebsite:  "https://example.com",
+				NatureOfBusiness: "Example business",
 			}
 
 			res, err := test.PerformRequest(t, "POST", "/register", payload, nil, router)
@@ -224,12 +236,13 @@ func TestAuth(t *testing.T) {
 		t.Run("with only provider scope payload", func(t *testing.T) {
 			// Test register with valid payload
 			payload := types.RegisterPayload{
-				FirstName:  "Ike",
-				LastName:   "Ayo",
-				Email:      "ikeayo2@example.com",
-				Password:   "password2",
-				Currencies: []string{"NGN"},
-				Scopes:     []string{"provider"},
+				FirstName:     "Ike",
+				LastName:      "Ayo",
+				Email:         "ikeayo2@example.com",
+				Password:      "password2",
+				Currencies:    []string{"NGN"},
+				Scopes:        []string{"provider"},
+				MonthlyVolume: decimalPtr(decimal.NewFromInt(1000)),
 			}
 
 			header := map[string]string{
@@ -304,6 +317,65 @@ func TestAuth(t *testing.T) {
 			// 	// Assert the response body
 			// 	assert.Equal(t, http.StatusInternalServerError, res.Code)
 			// })
+		})
+		t.Run("with invalid monthly volume", func(t *testing.T) {
+			payload := types.RegisterPayload{
+				FirstName:     "Ike",
+				LastName:      "Ayo",
+				Email:         "invalidvolume@example.com",
+				Password:      "password",
+				Scopes:        []string{"sender"},
+				MonthlyVolume: decimalPtr(decimal.NewFromInt(-1)),
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/register", payload, nil, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Monthly volume must be greater than zero", response.Message)
+		})
+
+		t.Run("with invalid business website", func(t *testing.T) {
+			payload := types.RegisterPayload{
+				FirstName:       "Ike",
+				LastName:        "Ayo",
+				Email:           "invalidwebsite@example.com",
+				Password:        "password",
+				Scopes:          []string{"sender"},
+				BusinessWebsite: "invalid-url",
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/register", payload, nil, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Invalid business website URL", response.Message)
+		})
+
+		t.Run("with nature of business exceeding character limit", func(t *testing.T) {
+			payload := types.RegisterPayload{
+				FirstName:        "Ike",
+				LastName:         "Ayo",
+				Email:            "longdescription@example.com",
+				Password:         "password",
+				Scopes:           []string{"sender"},
+				NatureOfBusiness: strings.Repeat("a", 256),
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/register", payload, nil, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Nature of business exceeds character limit", response.Message)
 		})
 		t.Run("from the provider app", func(t *testing.T) {
 			// Test register with valid payload

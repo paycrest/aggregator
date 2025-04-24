@@ -241,6 +241,20 @@ func (ppc *ProviderProfileCreate) SetNillableIsKybVerified(b *bool) *ProviderPro
 	return ppc
 }
 
+// SetMonthlyVolume sets the "monthly_volume" field.
+func (ppc *ProviderProfileCreate) SetMonthlyVolume(f float64) *ProviderProfileCreate {
+	ppc.mutation.SetMonthlyVolume(f)
+	return ppc
+}
+
+// SetNillableMonthlyVolume sets the "monthly_volume" field if the given value is not nil.
+func (ppc *ProviderProfileCreate) SetNillableMonthlyVolume(f *float64) *ProviderProfileCreate {
+	if f != nil {
+		ppc.SetMonthlyVolume(*f)
+	}
+	return ppc
+}
+
 // SetID sets the "id" field.
 func (ppc *ProviderProfileCreate) SetID(s string) *ProviderProfileCreate {
 	ppc.mutation.SetID(s)
@@ -570,6 +584,10 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 	if value, ok := ppc.mutation.IsKybVerified(); ok {
 		_spec.SetField(providerprofile.FieldIsKybVerified, field.TypeBool, value)
 		_node.IsKybVerified = value
+	}
+	if value, ok := ppc.mutation.MonthlyVolume(); ok {
+		_spec.SetField(providerprofile.FieldMonthlyVolume, field.TypeFloat64, value)
+		_node.MonthlyVolume = &value
 	}
 	if nodes := ppc.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -970,6 +988,30 @@ func (u *ProviderProfileUpsert) UpdateIsKybVerified() *ProviderProfileUpsert {
 	return u
 }
 
+// SetMonthlyVolume sets the "monthly_volume" field.
+func (u *ProviderProfileUpsert) SetMonthlyVolume(v float64) *ProviderProfileUpsert {
+	u.Set(providerprofile.FieldMonthlyVolume, v)
+	return u
+}
+
+// UpdateMonthlyVolume sets the "monthly_volume" field to the value that was provided on create.
+func (u *ProviderProfileUpsert) UpdateMonthlyVolume() *ProviderProfileUpsert {
+	u.SetExcluded(providerprofile.FieldMonthlyVolume)
+	return u
+}
+
+// AddMonthlyVolume adds v to the "monthly_volume" field.
+func (u *ProviderProfileUpsert) AddMonthlyVolume(v float64) *ProviderProfileUpsert {
+	u.Add(providerprofile.FieldMonthlyVolume, v)
+	return u
+}
+
+// ClearMonthlyVolume clears the value of the "monthly_volume" field.
+func (u *ProviderProfileUpsert) ClearMonthlyVolume() *ProviderProfileUpsert {
+	u.SetNull(providerprofile.FieldMonthlyVolume)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
@@ -1288,6 +1330,34 @@ func (u *ProviderProfileUpsertOne) SetIsKybVerified(v bool) *ProviderProfileUpse
 func (u *ProviderProfileUpsertOne) UpdateIsKybVerified() *ProviderProfileUpsertOne {
 	return u.Update(func(s *ProviderProfileUpsert) {
 		s.UpdateIsKybVerified()
+	})
+}
+
+// SetMonthlyVolume sets the "monthly_volume" field.
+func (u *ProviderProfileUpsertOne) SetMonthlyVolume(v float64) *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetMonthlyVolume(v)
+	})
+}
+
+// AddMonthlyVolume adds v to the "monthly_volume" field.
+func (u *ProviderProfileUpsertOne) AddMonthlyVolume(v float64) *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.AddMonthlyVolume(v)
+	})
+}
+
+// UpdateMonthlyVolume sets the "monthly_volume" field to the value that was provided on create.
+func (u *ProviderProfileUpsertOne) UpdateMonthlyVolume() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateMonthlyVolume()
+	})
+}
+
+// ClearMonthlyVolume clears the value of the "monthly_volume" field.
+func (u *ProviderProfileUpsertOne) ClearMonthlyVolume() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.ClearMonthlyVolume()
 	})
 }
 
@@ -1776,6 +1846,34 @@ func (u *ProviderProfileUpsertBulk) SetIsKybVerified(v bool) *ProviderProfileUps
 func (u *ProviderProfileUpsertBulk) UpdateIsKybVerified() *ProviderProfileUpsertBulk {
 	return u.Update(func(s *ProviderProfileUpsert) {
 		s.UpdateIsKybVerified()
+	})
+}
+
+// SetMonthlyVolume sets the "monthly_volume" field.
+func (u *ProviderProfileUpsertBulk) SetMonthlyVolume(v float64) *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetMonthlyVolume(v)
+	})
+}
+
+// AddMonthlyVolume adds v to the "monthly_volume" field.
+func (u *ProviderProfileUpsertBulk) AddMonthlyVolume(v float64) *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.AddMonthlyVolume(v)
+	})
+}
+
+// UpdateMonthlyVolume sets the "monthly_volume" field to the value that was provided on create.
+func (u *ProviderProfileUpsertBulk) UpdateMonthlyVolume() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateMonthlyVolume()
+	})
+}
+
+// ClearMonthlyVolume clears the value of the "monthly_volume" field.
+func (u *ProviderProfileUpsertBulk) ClearMonthlyVolume() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.ClearMonthlyVolume()
 	})
 }
 

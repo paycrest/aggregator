@@ -120,6 +120,73 @@ func (spu *SenderProfileUpdate) SetUpdatedAt(t time.Time) *SenderProfileUpdate {
 	return spu
 }
 
+// SetMonthlyVolume sets the "monthly_volume" field.
+func (spu *SenderProfileUpdate) SetMonthlyVolume(f float64) *SenderProfileUpdate {
+	spu.mutation.ResetMonthlyVolume()
+	spu.mutation.SetMonthlyVolume(f)
+	return spu
+}
+
+// SetNillableMonthlyVolume sets the "monthly_volume" field if the given value is not nil.
+func (spu *SenderProfileUpdate) SetNillableMonthlyVolume(f *float64) *SenderProfileUpdate {
+	if f != nil {
+		spu.SetMonthlyVolume(*f)
+	}
+	return spu
+}
+
+// AddMonthlyVolume adds f to the "monthly_volume" field.
+func (spu *SenderProfileUpdate) AddMonthlyVolume(f float64) *SenderProfileUpdate {
+	spu.mutation.AddMonthlyVolume(f)
+	return spu
+}
+
+// ClearMonthlyVolume clears the value of the "monthly_volume" field.
+func (spu *SenderProfileUpdate) ClearMonthlyVolume() *SenderProfileUpdate {
+	spu.mutation.ClearMonthlyVolume()
+	return spu
+}
+
+// SetBusinessWebsite sets the "business_website" field.
+func (spu *SenderProfileUpdate) SetBusinessWebsite(s string) *SenderProfileUpdate {
+	spu.mutation.SetBusinessWebsite(s)
+	return spu
+}
+
+// SetNillableBusinessWebsite sets the "business_website" field if the given value is not nil.
+func (spu *SenderProfileUpdate) SetNillableBusinessWebsite(s *string) *SenderProfileUpdate {
+	if s != nil {
+		spu.SetBusinessWebsite(*s)
+	}
+	return spu
+}
+
+// ClearBusinessWebsite clears the value of the "business_website" field.
+func (spu *SenderProfileUpdate) ClearBusinessWebsite() *SenderProfileUpdate {
+	spu.mutation.ClearBusinessWebsite()
+	return spu
+}
+
+// SetNatureOfBusiness sets the "nature_of_business" field.
+func (spu *SenderProfileUpdate) SetNatureOfBusiness(s string) *SenderProfileUpdate {
+	spu.mutation.SetNatureOfBusiness(s)
+	return spu
+}
+
+// SetNillableNatureOfBusiness sets the "nature_of_business" field if the given value is not nil.
+func (spu *SenderProfileUpdate) SetNillableNatureOfBusiness(s *string) *SenderProfileUpdate {
+	if s != nil {
+		spu.SetNatureOfBusiness(*s)
+	}
+	return spu
+}
+
+// ClearNatureOfBusiness clears the value of the "nature_of_business" field.
+func (spu *SenderProfileUpdate) ClearNatureOfBusiness() *SenderProfileUpdate {
+	spu.mutation.ClearNatureOfBusiness()
+	return spu
+}
+
 // SetAPIKeyID sets the "api_key" edge to the APIKey entity by ID.
 func (spu *SenderProfileUpdate) SetAPIKeyID(id uuid.UUID) *SenderProfileUpdate {
 	spu.mutation.SetAPIKeyID(id)
@@ -296,6 +363,16 @@ func (spu *SenderProfileUpdate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (spu *SenderProfileUpdate) check() error {
+	if v, ok := spu.mutation.BusinessWebsite(); ok {
+		if err := senderprofile.BusinessWebsiteValidator(v); err != nil {
+			return &ValidationError{Name: "business_website", err: fmt.Errorf(`ent: validator failed for field "SenderProfile.business_website": %w`, err)}
+		}
+	}
+	if v, ok := spu.mutation.NatureOfBusiness(); ok {
+		if err := senderprofile.NatureOfBusinessValidator(v); err != nil {
+			return &ValidationError{Name: "nature_of_business", err: fmt.Errorf(`ent: validator failed for field "SenderProfile.nature_of_business": %w`, err)}
+		}
+	}
 	if spu.mutation.UserCleared() && len(spu.mutation.UserIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "SenderProfile.user"`)
 	}
@@ -342,6 +419,27 @@ func (spu *SenderProfileUpdate) sqlSave(ctx context.Context) (n int, err error) 
 	}
 	if value, ok := spu.mutation.UpdatedAt(); ok {
 		_spec.SetField(senderprofile.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := spu.mutation.MonthlyVolume(); ok {
+		_spec.SetField(senderprofile.FieldMonthlyVolume, field.TypeFloat64, value)
+	}
+	if value, ok := spu.mutation.AddedMonthlyVolume(); ok {
+		_spec.AddField(senderprofile.FieldMonthlyVolume, field.TypeFloat64, value)
+	}
+	if spu.mutation.MonthlyVolumeCleared() {
+		_spec.ClearField(senderprofile.FieldMonthlyVolume, field.TypeFloat64)
+	}
+	if value, ok := spu.mutation.BusinessWebsite(); ok {
+		_spec.SetField(senderprofile.FieldBusinessWebsite, field.TypeString, value)
+	}
+	if spu.mutation.BusinessWebsiteCleared() {
+		_spec.ClearField(senderprofile.FieldBusinessWebsite, field.TypeString)
+	}
+	if value, ok := spu.mutation.NatureOfBusiness(); ok {
+		_spec.SetField(senderprofile.FieldNatureOfBusiness, field.TypeString, value)
+	}
+	if spu.mutation.NatureOfBusinessCleared() {
+		_spec.ClearField(senderprofile.FieldNatureOfBusiness, field.TypeString)
 	}
 	if spu.mutation.APIKeyCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -613,6 +711,73 @@ func (spuo *SenderProfileUpdateOne) SetUpdatedAt(t time.Time) *SenderProfileUpda
 	return spuo
 }
 
+// SetMonthlyVolume sets the "monthly_volume" field.
+func (spuo *SenderProfileUpdateOne) SetMonthlyVolume(f float64) *SenderProfileUpdateOne {
+	spuo.mutation.ResetMonthlyVolume()
+	spuo.mutation.SetMonthlyVolume(f)
+	return spuo
+}
+
+// SetNillableMonthlyVolume sets the "monthly_volume" field if the given value is not nil.
+func (spuo *SenderProfileUpdateOne) SetNillableMonthlyVolume(f *float64) *SenderProfileUpdateOne {
+	if f != nil {
+		spuo.SetMonthlyVolume(*f)
+	}
+	return spuo
+}
+
+// AddMonthlyVolume adds f to the "monthly_volume" field.
+func (spuo *SenderProfileUpdateOne) AddMonthlyVolume(f float64) *SenderProfileUpdateOne {
+	spuo.mutation.AddMonthlyVolume(f)
+	return spuo
+}
+
+// ClearMonthlyVolume clears the value of the "monthly_volume" field.
+func (spuo *SenderProfileUpdateOne) ClearMonthlyVolume() *SenderProfileUpdateOne {
+	spuo.mutation.ClearMonthlyVolume()
+	return spuo
+}
+
+// SetBusinessWebsite sets the "business_website" field.
+func (spuo *SenderProfileUpdateOne) SetBusinessWebsite(s string) *SenderProfileUpdateOne {
+	spuo.mutation.SetBusinessWebsite(s)
+	return spuo
+}
+
+// SetNillableBusinessWebsite sets the "business_website" field if the given value is not nil.
+func (spuo *SenderProfileUpdateOne) SetNillableBusinessWebsite(s *string) *SenderProfileUpdateOne {
+	if s != nil {
+		spuo.SetBusinessWebsite(*s)
+	}
+	return spuo
+}
+
+// ClearBusinessWebsite clears the value of the "business_website" field.
+func (spuo *SenderProfileUpdateOne) ClearBusinessWebsite() *SenderProfileUpdateOne {
+	spuo.mutation.ClearBusinessWebsite()
+	return spuo
+}
+
+// SetNatureOfBusiness sets the "nature_of_business" field.
+func (spuo *SenderProfileUpdateOne) SetNatureOfBusiness(s string) *SenderProfileUpdateOne {
+	spuo.mutation.SetNatureOfBusiness(s)
+	return spuo
+}
+
+// SetNillableNatureOfBusiness sets the "nature_of_business" field if the given value is not nil.
+func (spuo *SenderProfileUpdateOne) SetNillableNatureOfBusiness(s *string) *SenderProfileUpdateOne {
+	if s != nil {
+		spuo.SetNatureOfBusiness(*s)
+	}
+	return spuo
+}
+
+// ClearNatureOfBusiness clears the value of the "nature_of_business" field.
+func (spuo *SenderProfileUpdateOne) ClearNatureOfBusiness() *SenderProfileUpdateOne {
+	spuo.mutation.ClearNatureOfBusiness()
+	return spuo
+}
+
 // SetAPIKeyID sets the "api_key" edge to the APIKey entity by ID.
 func (spuo *SenderProfileUpdateOne) SetAPIKeyID(id uuid.UUID) *SenderProfileUpdateOne {
 	spuo.mutation.SetAPIKeyID(id)
@@ -802,6 +967,16 @@ func (spuo *SenderProfileUpdateOne) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (spuo *SenderProfileUpdateOne) check() error {
+	if v, ok := spuo.mutation.BusinessWebsite(); ok {
+		if err := senderprofile.BusinessWebsiteValidator(v); err != nil {
+			return &ValidationError{Name: "business_website", err: fmt.Errorf(`ent: validator failed for field "SenderProfile.business_website": %w`, err)}
+		}
+	}
+	if v, ok := spuo.mutation.NatureOfBusiness(); ok {
+		if err := senderprofile.NatureOfBusinessValidator(v); err != nil {
+			return &ValidationError{Name: "nature_of_business", err: fmt.Errorf(`ent: validator failed for field "SenderProfile.nature_of_business": %w`, err)}
+		}
+	}
 	if spuo.mutation.UserCleared() && len(spuo.mutation.UserIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "SenderProfile.user"`)
 	}
@@ -865,6 +1040,27 @@ func (spuo *SenderProfileUpdateOne) sqlSave(ctx context.Context) (_node *SenderP
 	}
 	if value, ok := spuo.mutation.UpdatedAt(); ok {
 		_spec.SetField(senderprofile.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := spuo.mutation.MonthlyVolume(); ok {
+		_spec.SetField(senderprofile.FieldMonthlyVolume, field.TypeFloat64, value)
+	}
+	if value, ok := spuo.mutation.AddedMonthlyVolume(); ok {
+		_spec.AddField(senderprofile.FieldMonthlyVolume, field.TypeFloat64, value)
+	}
+	if spuo.mutation.MonthlyVolumeCleared() {
+		_spec.ClearField(senderprofile.FieldMonthlyVolume, field.TypeFloat64)
+	}
+	if value, ok := spuo.mutation.BusinessWebsite(); ok {
+		_spec.SetField(senderprofile.FieldBusinessWebsite, field.TypeString, value)
+	}
+	if spuo.mutation.BusinessWebsiteCleared() {
+		_spec.ClearField(senderprofile.FieldBusinessWebsite, field.TypeString)
+	}
+	if value, ok := spuo.mutation.NatureOfBusiness(); ok {
+		_spec.SetField(senderprofile.FieldNatureOfBusiness, field.TypeString, value)
+	}
+	if spuo.mutation.NatureOfBusinessCleared() {
+		_spec.ClearField(senderprofile.FieldNatureOfBusiness, field.TypeString)
 	}
 	if spuo.mutation.APIKeyCleared() {
 		edge := &sqlgraph.EdgeSpec{

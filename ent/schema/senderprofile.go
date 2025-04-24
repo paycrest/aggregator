@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"regexp"
 	"time"
 
 	"entgo.io/ent"
@@ -30,6 +31,19 @@ func (SenderProfile) Fields() []ent.Field {
 		field.Time("updated_at").
 			Default(time.Now).
 			UpdateDefault(time.Now),
+		field.Float("monthly_volume").
+			Optional().
+			Nillable().
+			Comment("Monthly transaction volume for the sender"),
+		field.String("business_website").
+			Optional().
+			MaxLen(255).
+			Match(regexp.MustCompile(`^https?:\/\/.*`)).
+			Comment("Business website URL"),
+		field.String("nature_of_business").
+			Optional().
+			MaxLen(255).
+			Comment("Nature of business description"),
 	}
 }
 

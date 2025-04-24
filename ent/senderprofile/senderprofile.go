@@ -27,6 +27,12 @@ const (
 	FieldIsActive = "is_active"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// FieldMonthlyVolume holds the string denoting the monthly_volume field in the database.
+	FieldMonthlyVolume = "monthly_volume"
+	// FieldBusinessWebsite holds the string denoting the business_website field in the database.
+	FieldBusinessWebsite = "business_website"
+	// FieldNatureOfBusiness holds the string denoting the nature_of_business field in the database.
+	FieldNatureOfBusiness = "nature_of_business"
 	// EdgeUser holds the string denoting the user edge name in mutations.
 	EdgeUser = "user"
 	// EdgeAPIKey holds the string denoting the api_key edge name in mutations.
@@ -85,6 +91,9 @@ var Columns = []string{
 	FieldIsPartner,
 	FieldIsActive,
 	FieldUpdatedAt,
+	FieldMonthlyVolume,
+	FieldBusinessWebsite,
+	FieldNatureOfBusiness,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "sender_profiles"
@@ -119,6 +128,10 @@ var (
 	DefaultUpdatedAt func() time.Time
 	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
 	UpdateDefaultUpdatedAt func() time.Time
+	// BusinessWebsiteValidator is a validator for the "business_website" field. It is called by the builders before save.
+	BusinessWebsiteValidator func(string) error
+	// NatureOfBusinessValidator is a validator for the "nature_of_business" field. It is called by the builders before save.
+	NatureOfBusinessValidator func(string) error
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -154,6 +167,21 @@ func ByIsActive(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByMonthlyVolume orders the results by the monthly_volume field.
+func ByMonthlyVolume(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMonthlyVolume, opts...).ToFunc()
+}
+
+// ByBusinessWebsite orders the results by the business_website field.
+func ByBusinessWebsite(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBusinessWebsite, opts...).ToFunc()
+}
+
+// ByNatureOfBusiness orders the results by the nature_of_business field.
+func ByNatureOfBusiness(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldNatureOfBusiness, opts...).ToFunc()
 }
 
 // ByUserField orders the results by user field.
