@@ -914,7 +914,7 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 		WithNetwork().
 		Only(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to fetch token: %w", err)
+		return fmt.Errorf("failed to fetch token: %w %v %v", err, event.Token, network.Identifier)
 	}
 
 	// Get order recipient from message hash
