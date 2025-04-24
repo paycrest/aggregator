@@ -393,7 +393,6 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 			"Error": fmt.Sprintf("%v", err),
 			"Institution": payload.Institution,
 			"AccountIdentifier": payload.AccountIdentifier,
-			"AccountName": data["data"].(string),
 		}).Errorf("Failed to verify account")
 		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to verify account", nil)
 		return
@@ -511,7 +510,6 @@ func (ctrl *Controller) CreateLinkedAddress(ctx *gin.Context) {
 			"Error": fmt.Sprintf("%v", err),
 			"Institution": payload.Institution,
 			"AccountIdentifier": payload.AccountIdentifier,
-			"AccountName": payload.AccountName,
 		}).Errorf("Failed to validate payload when creating linked address")
 		u.APIResponse(ctx, http.StatusBadRequest, "error",
 			"Failed to validate payload", u.GetErrorData(err))
@@ -542,7 +540,6 @@ func (ctrl *Controller) CreateLinkedAddress(ctx *gin.Context) {
 		logger.WithFields(logger.Fields{
 			"Error": fmt.Sprintf("%v", err),
 			"Institution": payload.Institution,
-			"AccountIdentifier": payload.AccountIdentifier,
 			"OwnerAddress": ownerAddress,
 			"Address": address,
 		}).Errorf("Failed to set linked address")

@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"time"
@@ -268,7 +269,7 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error": fmt.Sprintf("%v", err),
-			"OrderID": order.ID,
+			"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(order.ID[:])),
 			"ProviderID": order.ProviderID,
 		}).Errorf("failed to get exclude list")
 		return err
@@ -292,7 +293,7 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 				if err != nil {
 					logger.WithFields(logger.Fields{
 						"Error": fmt.Sprintf("%v", err),
-						"OrderID": order.ID,
+						"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(order.ID[:])),
 						"ProviderID": order.ProviderID,
 					}).Errorf("failed to get rate for provider")
 				}
@@ -304,7 +305,7 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 				if err != nil {
 					logger.WithFields(logger.Fields{
 						"Error": fmt.Sprintf("%v", err),
-						"OrderID": order.ID,
+						"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(order.ID[:])),
 						"ProviderID": order.ProviderID,
 					}).Errorf("failed to update rate for provider")
 				}
@@ -315,13 +316,13 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 			}
 			logger.WithFields(logger.Fields{
 				"Error": fmt.Sprintf("%v", err),
-				"OrderID": order.ID,
+				"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(order.ID[:])),
 				"ProviderID": order.ProviderID,
 			}).Errorf("failed to send order request to specific provider")
 		} else {
 			logger.WithFields(logger.Fields{
 				"Error": fmt.Sprintf("%v", err),
-				"OrderID": order.ID,
+				"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(order.ID[:])),
 				"ProviderID": order.ProviderID,
 			}).Errorf("failed to get provider")
 		}
@@ -363,7 +364,7 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 	if err := storage.RedisClient.HSet(ctx, orderKey, orderRequestData).Err(); err != nil {
 		logger.WithFields(logger.Fields{
 			"Error": fmt.Sprintf("%v", err),
-			"OrderID": order.ID,
+			"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(order.ID[:])),
 			"ProviderID": order.ProviderID,
 			"orderKey": orderKey,
 		}).Errorf("failed to map order to a provider in Redis")
@@ -386,7 +387,7 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 	if err := s.notifyProvider(ctx, orderRequestData); err != nil {
 		logger.WithFields(logger.Fields{
 			"Error": fmt.Sprintf("%v", err),
-			"OrderID": order.ID,
+			"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(order.ID[:])),
 			"ProviderID": order.ProviderID,
 		}).Errorf("failed to notify provider")
 		return err
@@ -473,7 +474,7 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 		if len(parts) != 5 {
 			logger.WithFields(logger.Fields{
 				"Error": fmt.Sprintf("%v", err),
-				"OrderID": order.ID,
+				"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(order.ID[:])),
 				"ProviderID": order.ProviderID,
 				"ProviderData": providerData,
 			}).Errorf("invalid data format at index %d when matching rate", index)
@@ -552,7 +553,7 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 				if err != nil {
 					logger.WithFields(logger.Fields{
 						"Error": fmt.Sprintf("%v", err),
-						"OrderID": order.ID,
+						"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(order.ID[:])),
 						"ProviderID": order.ProviderID,
 						"redisKey": redisKey,
 						"orderIDPrefix": orderIDPrefix,
@@ -565,7 +566,7 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 				if err != nil {
 					logger.WithFields(logger.Fields{
 						"Error": fmt.Sprintf("%v", err),
-						"OrderID": order.ID,
+						"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(order.ID[:])),
 						"ProviderID": order.ProviderID,
 						"redisKey": redisKey,
 						"orderIDPrefix": orderIDPrefix,
@@ -579,7 +580,7 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error": fmt.Sprintf("%v", err),
-					"OrderID": order.ID,
+					"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(order.ID[:])),
 					"ProviderID": order.ProviderID,
 					"redisKey": redisKey,
 					"orderIDPrefix": orderIDPrefix,
@@ -591,7 +592,7 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 				if err != nil {
 					logger.WithFields(logger.Fields{
 						"Error": fmt.Sprintf("%v", err),
-						"OrderID": order.ID,
+						"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(order.ID[:])),
 						"ProviderID": order.ProviderID,
 						"redisKey": redisKey,
 						"orderIDPrefix": orderIDPrefix,

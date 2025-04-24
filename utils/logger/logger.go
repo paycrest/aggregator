@@ -26,7 +26,6 @@ func init() {
 		// init sentry
 		err := sentry.Init(sentry.ClientOptions{
 			Dsn: config.SentryDSN,
-			AttachStacktrace: true,
 		})
 		if err != nil {
 			logger.Fatalf("Sentry initialization failed: %v", err)
