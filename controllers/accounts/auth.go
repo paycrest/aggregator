@@ -241,7 +241,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 			Create().
 			SetUser(user)
 
-		// Set optional fields
+			// Set optional fields
 		if payload.MonthlyVolume != nil {
 			monthlyVolumeFloat, _ := payload.MonthlyVolume.Float64()
 			if monthlyVolumeFloat <= 0 {
@@ -262,12 +262,8 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		sender, err := senderCreate.Save(ctx)
 		if err != nil {
 			_ = tx.Rollback()
-			logger.WithFields(logger.Fields{
-				"Error":  fmt.Sprintf("%v", err),
-				"UserID": user.ID,
-			}).Errorf("Failed to create sender profile")
-			u.APIResponse(ctx, http.StatusInternalServerError, "error",
-				"Failed to create new user", nil)
+			logger.Errorf("error: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create new user", nil)
 			return
 		}
 
