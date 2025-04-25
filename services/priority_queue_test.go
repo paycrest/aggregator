@@ -339,6 +339,18 @@ func TestPriorityQueueTest(t *testing.T) {
 
 		assert.NoError(t, err)
 
+		// Setup httpmock for sendOrderRequest
+		httpmock.Activate()
+		defer httpmock.DeactivateAndReset()
+
+		httpmock.RegisterResponder("POST", testCtxForPQ.publicProviderProfile.HostIdentifier+"/new_order",
+			func(req *http.Request) (*http.Response, error) {
+				return httpmock.NewJsonResponse(200, map[string]interface{}{
+					"status": "success",
+					"message": "Order processed successfully",
+				})
+		})
+
 		err = service.sendOrderRequest(context.Background(), types.LockPaymentOrderFields{
 			ID:                order.ID,
 			ProviderID:        testCtxForPQ.publicProviderProfile.ID,
