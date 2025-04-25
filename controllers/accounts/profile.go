@@ -733,7 +733,7 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 	apiKey, err := ctrl.apiKeyService.GetAPIKey(ctx, nil, provider)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error": fmt.Sprintf("%v", err),
+            "Error": fmt.Sprintf("%v", err),
 			"ProviderID": provider.ID,
 		}).Errorf("Failed to fetch provider API key")
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)
