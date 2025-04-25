@@ -637,13 +637,7 @@ func (s *IndexerService) IndexOrderSettled(ctx context.Context, client types.RPC
 	// Initialize contract filterer
 	filterer, err := contracts.NewGatewayFilterer(common.HexToAddress(network.GatewayContractAddress), client)
 	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error": fmt.Sprintf("%v", err),
-<<<<<<< HEAD
-		}).Errorf("Failed to filterer when indexing order settled events for %s", network.Identifier)
-=======
-		}).Errorf("Failed to filterer when indexing order created events for %s", network.Identifier)
->>>>>>> 81cbaa2 (feat: enhance logging with contextual information across services (#459))
+		logger.Errorf("IndexOrderSettled.NewGatewayFilterer: %v", err)
 		return err
 	}
 
@@ -666,15 +660,7 @@ func (s *IndexerService) IndexOrderSettled(ctx context.Context, client types.RPC
 		End:   &toBlock,
 	}, nil, nil)
 	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error": fmt.Sprintf("%v", err),
-			"Start": uint64(int64(toBlock) - 5000),
-			"End":   toBlock,
-<<<<<<< HEAD
-		}).Errorf("Failed to filter order settled events for %s when indexing order settled events", network.Identifier)
-=======
-		}).Errorf("Failed to filter order created events for %s when indexing order created events", network.Identifier)
->>>>>>> 81cbaa2 (feat: enhance logging with contextual information across services (#459))
+		logger.Errorf("IndexOrderSettled.FilterOrderSettled: %v", err)
 		return err
 	}
 
@@ -691,14 +677,7 @@ func (s *IndexerService) IndexOrderSettled(ctx context.Context, client types.RPC
 
 		err := s.UpdateOrderStatusSettled(ctx, network, settledEvent)
 		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error": fmt.Sprintf("%v", err),
-				"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(settledEvent.OrderId[:])),
-<<<<<<< HEAD
-			}).Errorf("Failed to update order status settlement when indexing order settled events for %s", network.Identifier)
-=======
-			}).Errorf("Failed to update order status settlement when indexing order created events for %s", network.Identifier)
->>>>>>> 81cbaa2 (feat: enhance logging with contextual information across services (#459))
+			logger.Errorf("IndexOrderSettled.UpdateOrderStatusSettled: %v", err)
 			continue
 		}
 	}
@@ -773,14 +752,7 @@ func (s *IndexerService) IndexOrderSettledTron(ctx context.Context, order *ent.L
 
 					err = s.UpdateOrderStatusSettled(ctx, order.Edges.Token.Edges.Network, event)
 					if err != nil {
-						logger.WithFields(logger.Fields{
-							"Error": fmt.Sprintf("%v", err),
-							"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(order.ID[:])),
-<<<<<<< HEAD
-						}).Errorf("Failed to update order status settlement when indexing order settled events for %s", order.Edges.Token.Edges.Network.Identifier)
-=======
-						}).Errorf("Failed to update order status settlement when indexing order created events for %s", order.Edges.Token.Edges.Network.Identifier)
->>>>>>> 81cbaa2 (feat: enhance logging with contextual information across services (#459))
+						logger.Errorf("IndexOrderSettledTron.UpdateOrderStatusSettled: %v", err)
 					}
 
 					break
@@ -809,13 +781,7 @@ func (s *IndexerService) IndexOrderRefunded(ctx context.Context, client types.RP
 	// Initialize contract filterer
 	filterer, err := contracts.NewGatewayFilterer(common.HexToAddress(network.GatewayContractAddress), client)
 	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error": fmt.Sprintf("%v", err),
-<<<<<<< HEAD
-		}).Errorf("Failed to filter when indexing order refunded events for %s", network.Identifier)
-=======
-		}).Errorf("Failed to filterer when indexing order created events for %s", network.Identifier)
->>>>>>> 81cbaa2 (feat: enhance logging with contextual information across services (#459))
+		logger.Errorf("IndexOrderRefunded.NewGatewayFilterer: %v", err)
 		return err
 	}
 
@@ -823,13 +789,7 @@ func (s *IndexerService) IndexOrderRefunded(ctx context.Context, client types.RP
 	header, err := client.HeaderByNumber(ctx, nil)
 	if err != nil {
 		if err != context.Canceled {
-			logger.WithFields(logger.Fields{
-				"Error": fmt.Sprintf("%v", err),
-<<<<<<< HEAD
-			}).Errorf("Failed to fetch header by number when indexing order refunded events for %s", network.Identifier)
-=======
-			}).Errorf("Failed to fetch header by number when indexing order created events for %s", network.Identifier)
->>>>>>> 81cbaa2 (feat: enhance logging with contextual information across services (#459))
+			logger.Errorf("IndexOrderRefunded.HeaderByNumber: %v", err)
 		}
 		return err
 	}
@@ -842,15 +802,7 @@ func (s *IndexerService) IndexOrderRefunded(ctx context.Context, client types.RP
 		End:   &toBlock,
 	}, nil)
 	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error": fmt.Sprintf("%v", err),
-			"Start": uint64(int64(toBlock) - 5000),
-			"End":   toBlock,
-<<<<<<< HEAD
-		}).Errorf("Failed to filter order refunded events for %s when indexing order refunded events", network.Identifier)
-=======
-		}).Errorf("Failed to filter order created events for %s when indexing order created events", network.Identifier)
->>>>>>> 81cbaa2 (feat: enhance logging with contextual information across services (#459))
+		logger.Errorf("IndexOrderRefunded.FilterOrderRefunded: %v", err)
 		return err
 	}
 
@@ -865,15 +817,7 @@ func (s *IndexerService) IndexOrderRefunded(ctx context.Context, client types.RP
 
 		err := s.UpdateOrderStatusRefunded(ctx, network, refundedEvent)
 		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error": fmt.Sprintf("%v", err),
-				"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(refundedEvent.OrderId[:])),
-				"TxHash": refundedEvent.TxHash,
-<<<<<<< HEAD
-			}).Errorf("Failed to update order status refund when indexing order refunded events for %s", network.Identifier)
-=======
-			}).Errorf("Failed to update order status refund when indexing order created events for %s", network.Identifier)
->>>>>>> 81cbaa2 (feat: enhance logging with contextual information across services (#459))
+			logger.Errorf("IndexOrderRefunded.UpdateOrderStatusRefunded: %v", err)
 			continue
 		}
 	}
@@ -946,15 +890,7 @@ func (s *IndexerService) IndexOrderRefundedTron(ctx context.Context, order *ent.
 
 					err = s.UpdateOrderStatusRefunded(ctx, order.Edges.Token.Edges.Network, event)
 					if err != nil {
-						logger.WithFields(logger.Fields{
-							"Error": fmt.Sprintf("%v", err),
-							"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(event.OrderId[:])),
-							"TxHash": event.TxHash,
-<<<<<<< HEAD
-						}).Errorf("Failed to update order status refund when indexing order refunded events for %s", order.Edges.Token.Edges.Network.Identifier)
-=======
-						}).Errorf("Failed to update order status refund when indexing order created events for %s", order.Edges.Token.Edges.Network.Identifier)
->>>>>>> 81cbaa2 (feat: enhance logging with contextual information across services (#459))
+						logger.Errorf("IndexOrderRefundedTron.UpdateOrderStatusRefunded: %v", err)
 					}
 
 					break
