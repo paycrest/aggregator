@@ -667,7 +667,6 @@ func (s *IndexerService) IndexOrderSettled(ctx context.Context, client types.RPC
 			"Start": uint64(int64(toBlock) - 5000),
 			"End":   toBlock,
 		}).Errorf("Failed to filter order created events for %s when indexing order created events", network.Identifier)
-
 		return err
 	}
 
@@ -684,6 +683,7 @@ func (s *IndexerService) IndexOrderSettled(ctx context.Context, client types.RPC
 
 		err := s.UpdateOrderStatusSettled(ctx, network, settledEvent)
 		if err != nil {
+
 			logger.WithFields(logger.Fields{
 				"Error":   fmt.Sprintf("%v", err),
 				"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(settledEvent.OrderId[:])),
@@ -762,6 +762,7 @@ func (s *IndexerService) IndexOrderSettledTron(ctx context.Context, order *ent.L
 
 					err = s.UpdateOrderStatusSettled(ctx, order.Edges.Token.Edges.Network, event)
 					if err != nil {
+
 						logger.WithFields(logger.Fields{
 							"Error":   fmt.Sprintf("%v", err),
 							"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(order.ID[:])),
