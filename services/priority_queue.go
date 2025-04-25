@@ -80,8 +80,7 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 // GetProviderRate returns the rate for a provider
 func (s *PriorityQueueService) GetProviderRate(ctx context.Context, provider *ent.ProviderProfile, tokenSymbol string, currency string) (decimal.Decimal, error) {
 	// Fetch the token config for the provider
-	tokenConfig, err := storage.Client.ProviderOrderToken.
-		Query().
+	tokenConfig, err := provider.QueryOrderTokens().
 		Where(
 			providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 			providerordertoken.HasTokenWith(token.SymbolEQ(tokenSymbol)),
@@ -437,8 +436,15 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 		}
 
 		normalizedAmount := order.Amount
-		if strings.EqualFold(order.Token.BaseCurrency, order.ProvisionBucket.Edges.Currency.Code) && order.Token.BaseCurrency != "USD" {
-			rateResponse, err := utils.GetTokenRateFromQueue("USDT", normalizedAmount, order.ProvisionBucket.Edges.Currency.Code, order.ProvisionBucket.Edges.Currency.MarketRate)
+		bucketCurrency := order.ProvisionBucket.Edges.Currency
+		if bucketCurrency == nil {
+			bucketCurrency, err = order.ProvisionBucket.QueryCurrency().Only(ctx)
+			if err != nil {
+				continue
+			}
+		}
+		if strings.EqualFold(order.Token.BaseCurrency, bucketCurrency.Code) && order.Token.BaseCurrency != "USD" {
+			rateResponse, err := utils.GetTokenRateFromQueue("USDT", normalizedAmount, bucketCurrency.Code, bucketCurrency.MarketRate)
 			if err != nil {
 				continue
 			}
@@ -457,32 +463,18 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 		providerToken, err := storage.Client.ProviderOrderToken.
 			Query().
 			Where(
-				// providerordertoken.SymbolEQ(order.Token.Symbol),
+				providerordertoken.HasTokenWith(token.SymbolEQ(order.Token.Symbol)),
 				providerordertoken.HasProviderWith(providerprofile.IDEQ(order.ProviderID)),
+				providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketCurrency.Code)),
 			).
-			Only(ctx)
-
+			First(ctx)
 		if err != nil {
 			logger.Errorf("%s - failed to fetch provider token: %v", orderIDPrefix, err)
 			return err
 		}
 
-		// Default slippage to 0 if not set
-		var slippageThreshold decimal.Decimal = decimal.NewFromFloat(0)
-
-		if !providerToken.RateSlippage.IsZero() {
-			slippageThreshold = providerToken.RateSlippage
-
-			// Ensure slippage does not exceed 20% of market rate
-			maxAllowedSlippage := decimal.NewFromFloat(20) // 20% limit
-			if slippageThreshold.GreaterThan(maxAllowedSlippage) {
-				logger.Errorf("%s - rate_slippage exceeds allowed limit for provider %s: %v", orderIDPrefix, order.ProviderID, slippageThreshold)
-				return fmt.Errorf("rate_slippage exceeds allowed limit of 20%%")
-			}
-		}
-
 		// Calculate allowed deviation based on slippage
-		allowedDeviation := order.Rate.Mul(slippageThreshold.Div(decimal.NewFromInt(100)))
+		allowedDeviation := order.Rate.Mul(providerToken.RateSlippage.Div(decimal.NewFromInt(100)))
 
 		if rate.Sub(order.Rate).Abs().LessThanOrEqual(allowedDeviation) {
 			// Found a match for the rate

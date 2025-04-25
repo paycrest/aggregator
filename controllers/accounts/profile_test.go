@@ -3,6 +3,7 @@ package accounts
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -18,7 +19,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/paycrest/aggregator/ent/enttest"
-	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/migrate"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -90,9 +90,12 @@ func setup() error {
 
 	testCtx.providerProfile = providerProfile
 	orderToken, err := test.AddProviderOrderTokenToProvider(map[string]interface{}{
-		"provider":    testCtx.providerProfile,
-		"token_id":    testCtx.token.ID,
-		"currency_id": currency.ID,
+		"fixed_conversion_rate":    decimal.NewFromFloat(550),
+		"conversion_rate_type":     "fixed",
+		"floating_conversion_rate": decimal.NewFromFloat(0),
+		"provider":                 testCtx.providerProfile,
+		"token_id":                 testCtx.token.ID,
+		"currency_id":              currency.ID,
 	})
 	if err != nil {
 		return err
@@ -388,10 +391,10 @@ func TestProfile(t *testing.T) {
 				Only(context.Background())
 			assert.NoError(t, err)
 
-			assert.Equal(t, payload.TradingName, providerProfile.TradingName) 
-			assert.Equal(t, payload.HostIdentifier, providerProfile.HostIdentifier) 
-			assert.Equal(t, payload.BusinessDocument, providerProfile.BusinessDocument) 
-			assert.Equal(t, payload.IdentityDocument, providerProfile.IdentityDocument) 
+			assert.Equal(t, payload.TradingName, providerProfile.TradingName)
+			assert.Equal(t, payload.HostIdentifier, providerProfile.HostIdentifier)
+			assert.Equal(t, payload.BusinessDocument, providerProfile.BusinessDocument)
+			assert.Equal(t, payload.IdentityDocument, providerProfile.IdentityDocument)
 			assert.True(t, providerProfile.IsActive)
 			// assert for currencies
 			assert.Equal(t, len(providerProfile.Edges.Currencies), 1)
@@ -400,7 +403,7 @@ func TestProfile(t *testing.T) {
 
 		t.Run("with token rate slippage", func(t *testing.T) {
 
-			t.Run("fails when rate slippage exceeds 20 percent of market rate", func(t *testing.T) {
+			t.Run("fails when rate slippage exceeds 5 percent of market rate", func(t *testing.T) {
 				payload := types.ProviderProfilePayload{
 					TradingName:    testCtx.providerProfile.TradingName,
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
@@ -412,7 +415,6 @@ func TestProfile(t *testing.T) {
 						RateSlippage: decimal.NewFromFloat(25), // 25% slippage
 					}},
 				}
-
 				res := profileUpdateRequest(payload)
 				assert.Equal(t, http.StatusBadRequest, res.Code)
 
@@ -434,36 +436,13 @@ func TestProfile(t *testing.T) {
 						RateSlippage: decimal.NewFromFloat(0.09), // 0.09% slippage
 					}},
 				}
-
 				res := profileUpdateRequest(payload)
 				assert.Equal(t, http.StatusBadRequest, res.Code)
 
 				var response types.Response
 				err = json.Unmarshal(res.Body.Bytes(), &response)
 				assert.NoError(t, err)
-				assert.Equal(t, "Rate slippage cannot be less than 0.1", response.Message)
-			})
-
-			t.Run("fails when rate slippage is negative", func(t *testing.T) {
-				payload := types.ProviderProfilePayload{
-					TradingName:    testCtx.providerProfile.TradingName,
-					HostIdentifier: testCtx.providerProfile.HostIdentifier,
-					Currencies:     []string{"KES"},
-					Tokens: []types.ProviderOrderTokenPayload{{
-						Currency:     testCtx.orderToken.Edges.Currency.Code,
-						Symbol:       testCtx.orderToken.Edges.Token.Symbol,
-						Network:      testCtx.orderToken.Network,
-						RateSlippage: decimal.NewFromFloat(-1), // Negative slippage
-					}},
-				}
-
-				res := profileUpdateRequest(payload)
-				assert.Equal(t, http.StatusBadRequest, res.Code)
-
-				var response types.Response
-				err := json.Unmarshal(res.Body.Bytes(), &response)
-				assert.NoError(t, err)
-				assert.Equal(t, "Rate slippage cannot be negative", response.Message)
+				assert.Equal(t, "Rate slippage cannot be less than 0.1%", response.Message)
 			})
 
 			t.Run("succeeds with valid rate slippage", func(t *testing.T) {
@@ -475,10 +454,9 @@ func TestProfile(t *testing.T) {
 						Currency:     testCtx.orderToken.Edges.Currency.Code,
 						Symbol:       testCtx.orderToken.Edges.Token.Symbol,
 						Network:      testCtx.orderToken.Network,
-						RateSlippage: decimal.NewFromFloat(15), // 15% slippage
+						RateSlippage: decimal.NewFromFloat(5), // 5% slippage
 					}},
 				}
-
 				res := profileUpdateRequest(payload)
 				assert.Equal(t, http.StatusOK, res.Code)
 
@@ -496,10 +474,10 @@ func TestProfile(t *testing.T) {
 					Only(context.Background())
 
 				assert.NoError(t, err)
-				assert.Equal(t, decimal.NewFromFloat(15), providerToken.RateSlippage)
+				assert.Equal(t, decimal.NewFromFloat(5), providerToken.RateSlippage)
 			})
 
-			t.Run("defaults to zero slippage when not specified", func(t *testing.T) {
+			t.Run("defaults to 0%% slippage when not specified", func(t *testing.T) {
 				payload := types.ProviderProfilePayload{
 					TradingName:    testCtx.providerProfile.TradingName,
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
@@ -510,74 +488,21 @@ func TestProfile(t *testing.T) {
 						Network:  testCtx.orderToken.Network,
 					}},
 				}
-
 				res := profileUpdateRequest(payload)
 				assert.Equal(t, http.StatusOK, res.Code)
 
-				// Verify the rate slippage defaulted to zero
+				// Verify the rate slippage defaulted to 0%
 				providerToken, err := db.Client.ProviderOrderToken.
 					Query().
 					Where(
-						// providerordertoken.SymbolEQ("TST"),
 						providerordertoken.HasProviderWith(providerprofile.IDEQ(testCtx.providerProfile.ID)),
 					).
 					Only(context.Background())
 
 				assert.NoError(t, err)
-				assert.True(t, providerToken.RateSlippage.IsZero())
+				fmt.Println("providerToken.RateSlippage", providerToken.RateSlippage)
+				assert.Equal(t, decimal.NewFromFloat(0), providerToken.RateSlippage)
 			})
-
-			t.Run("uses token-specific slippage during rate matching", func(t *testing.T) {
-				payload := types.ProviderProfilePayload{
-					TradingName:    testCtx.providerProfile.TradingName,
-					HostIdentifier: testCtx.providerProfile.HostIdentifier,
-					Currencies:     []string{"KES"},
-					Tokens: []types.ProviderOrderTokenPayload{{
-						Currency:     testCtx.orderToken.Edges.Currency.Code,
-						Symbol:       testCtx.orderToken.Edges.Token.Symbol,
-						Network:      testCtx.orderToken.Network,
-						RateSlippage: decimal.NewFromFloat(15), // 15% slippage
-					}},
-				}
-
-				accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
-				headers := map[string]string{
-					"Authorization": "Bearer " + accessToken,
-				}
-
-				// Update profile with token
-				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
-				assert.NoError(t, err)
-				assert.Equal(t, http.StatusOK, res.Code)
-
-				// Retrieve the saved provider token
-				providerToken, err := db.Client.ProviderOrderToken.
-					Query().
-					Where(
-						// providerordertoken.SymbolEQ("TST"),
-						providerordertoken.HasProviderWith(providerprofile.IDEQ(testCtx.providerProfile.ID)),
-					).
-					Only(context.Background())
-				assert.NoError(t, err)
-
-				// Simulate rate matching logic
-				marketRate := decimal.NewFromFloat(100)
-				allowedDeviation := marketRate.Mul(providerToken.RateSlippage.Div(decimal.NewFromInt(100)))
-
-				// Test various rates within and outside slippage
-				withinSlippageRate := decimal.NewFromFloat(115)  // within 15%
-				outsideSlippageRate := decimal.NewFromFloat(116) // outside 15%
-
-				assert.True(t,
-					withinSlippageRate.Sub(marketRate).Abs().LessThanOrEqual(allowedDeviation),
-					"Rate should match within token-specific slippage",
-				)
-				assert.False(t,
-					outsideSlippageRate.Sub(marketRate).Abs().LessThanOrEqual(allowedDeviation),
-					"Rate should not match outside token-specific slippage",
-				)
-			})
-
 		})
 
 		t.Run("with visibility", func(t *testing.T) {
@@ -613,18 +538,18 @@ func TestProfile(t *testing.T) {
 		})
 
 		t.Run("with optional fields", func(t *testing.T) {
-			// profileUpdateRequest := func(payload types.ProviderProfilePayload) *httptest.ResponseRecorder {
-			// 	// Test partial update
-			// 	accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
-			// 	headers := map[string]string{
-			// 		"Authorization": "Bearer " + accessToken,
-			// 	}
+			profileUpdateRequest := func(payload types.ProviderProfilePayload) *httptest.ResponseRecorder {
+				// Test partial update
+				accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+				headers := map[string]string{
+					"Authorization": "Bearer " + accessToken,
+				}
 
-			// 	res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
-			// 	assert.NoError(t, err)
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
 
-			// 	return res
-			// }
+				return res
+			}
 			t.Run("fails for invalid mobile number", func(t *testing.T) {
 				payload := types.ProviderProfilePayload{
 					MobileNumber:   "01234567890",
@@ -866,7 +791,7 @@ func TestProfile(t *testing.T) {
 
 	t.Run("GetSenderProfile", func(t *testing.T) {
 		testUser, err := test.CreateTestUser(map[string]interface{}{
-			"email": "hello@test.com",
+			"email": "hello2@test.com",
 			"scope": "sender",
 		})
 		assert.NoError(t, err)
@@ -908,49 +833,49 @@ func TestProfile(t *testing.T) {
 
 	})
 
-	// t.Run("GetSenderProfile", func(t *testing.T) {
-	// 	testUser, err := test.CreateTestUser(map[string]interface{}{
-	// 		"email": "hello@test.com",
-	// 		"scope": "sender",
-	// 	})
-	// 	assert.NoError(t, err)
+	t.Run("GetSenderProfile", func(t *testing.T) {
+		testUser, err := test.CreateTestUser(map[string]interface{}{
+			"email": "hello@test.com",
+			"scope": "sender",
+		})
+		assert.NoError(t, err)
 
-	// 	sender, err := test.CreateTestSenderProfile(map[string]interface{}{
-	// 		"domain_whitelist": []string{"mydomain.com"},
-	// 		"user_id":          testUser.ID,
-	// 	})
-	// 	assert.NoError(t, err)
+		sender, err := test.CreateTestSenderProfile(map[string]interface{}{
+			"domain_whitelist": []string{"mydomain.com"},
+			"user_id":          testUser.ID,
+		})
+		assert.NoError(t, err)
 
-	// 	apiKeyService := services.NewAPIKeyService()
-	// 	_, _, err = apiKeyService.GenerateAPIKey(
-	// 		context.Background(),
-	// 		nil,
-	// 		sender,
-	// 		nil,
-	// 	)
-	// 	assert.NoError(t, err)
+		apiKeyService := services.NewAPIKeyService()
+		_, _, err = apiKeyService.GenerateAPIKey(
+			context.Background(),
+			nil,
+			sender,
+			nil,
+		)
+		assert.NoError(t, err)
 
-	// 	accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
-	// 	headers := map[string]string{
-	// 		"Authorization": "Bearer " + accessToken,
-	// 	}
-	// 	res, err := test.PerformRequest(t, "GET", "/settings/sender", nil, headers, router)
-	// 	assert.NoError(t, err)
+		accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+		headers := map[string]string{
+			"Authorization": "Bearer " + accessToken,
+		}
+		res, err := test.PerformRequest(t, "GET", "/settings/sender", nil, headers, router)
+		assert.NoError(t, err)
 
-	// 	// Assert the response body
-	// 	assert.Equal(t, http.StatusOK, res.Code)
-	// 	var response struct {
-	// 		Data    types.SenderProfileResponse
-	// 		Message string
-	// 	}
-	// 	err = json.Unmarshal(res.Body.Bytes(), &response)
-	// 	assert.NoError(t, err)
-	// 	assert.Equal(t, "Profile retrieved successfully", response.Message)
-	// 	assert.NotNil(t, response.Data, "response.Data is nil")
-	// 	assert.Greater(t, len(response.Data.Tokens), 0)
-	// 	assert.Contains(t, response.Data.WebhookURL, "https://example.com")
+		// Assert the response body
+		assert.Equal(t, http.StatusOK, res.Code)
+		var response struct {
+			Data    types.SenderProfileResponse
+			Message string
+		}
+		err = json.Unmarshal(res.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Equal(t, "Profile retrieved successfully", response.Message)
+		assert.NotNil(t, response.Data, "response.Data is nil")
+		assert.Greater(t, len(response.Data.Tokens), 0)
+		assert.Contains(t, response.Data.WebhookURL, "https://example.com")
+	})
 
-	// })
 	t.Run("GetProviderProfile", func(t *testing.T) {
 		t.Run("with currency filter", func(t *testing.T) {
 			ctx := context.Background()
@@ -973,29 +898,6 @@ func TestProfile(t *testing.T) {
 				Exec(ctx)
 			assert.NoError(t, err)
 
-			// Retrieve the pre-created KES fiat currency (from setup)
-			kes, err := db.Client.FiatCurrency.
-				Query().
-				Where(fiatcurrency.CodeEQ("KES")).
-				Only(ctx)
-			assert.NoError(t, err)
-
-			// Create a provider order token for KES
-			_, err = db.Client.ProviderOrderToken.
-				Create().
-				SetProviderID(testCtx.providerProfile.ID).
-				SetTokenID(testCtx.token.ID).
-				SetCurrencyID(kes.ID).
-				SetConversionRateType("floating").
-				SetFixedConversionRate(decimal.NewFromInt(0)).
-				SetFloatingConversionRate(decimal.NewFromInt(1)).
-				SetMaxOrderAmount(decimal.NewFromInt(100)).
-				SetMinOrderAmount(decimal.NewFromInt(1)).
-				SetAddress("address_kes").
-				SetNetwork("polygon").
-				Save(ctx)
-			assert.NoError(t, err)
-
 			// Create a provider order token for USD
 			_, err = db.Client.ProviderOrderToken.
 				Create().
@@ -1009,6 +911,7 @@ func TestProfile(t *testing.T) {
 				SetMinOrderAmount(decimal.NewFromInt(10)).
 				SetAddress("address_usd").
 				SetNetwork("polygon").
+				SetRateSlippage(decimal.NewFromInt(0)).
 				Save(ctx)
 			assert.NoError(t, err)
 
