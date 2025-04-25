@@ -241,7 +241,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 			Create().
 			SetUser(user)
 
-			// Set optional fields
+		// Set optional fields
 		if payload.MonthlyVolume != nil {
 			monthlyVolumeFloat, _ := payload.MonthlyVolume.Float64()
 			if monthlyVolumeFloat <= 0 {
