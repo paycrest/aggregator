@@ -164,13 +164,13 @@ func SendTemplateEmail(content types.SendEmailPayload, templateId string) (types
 		Body().AsJSON(reqBody).
 		Send()
 	if err != nil {
-		logger.Errorf("error sending request: %v", err)
+		logger.Errorf("Failed to send Email: %v", err)
 		return types.SendEmailResponse{}, fmt.Errorf("error sending request: %w", err)
 	}
 
 	data, err := utils.ParseJSONResponse(res.RawResponse)
 	if err != nil {
-		logger.Errorf("error parsing response: %v %v", err, data)
+		logger.Errorf("Failed to decode %v response after sending Email: %v", data, err)
 		return types.SendEmailResponse{}, fmt.Errorf("error parsing response: %w", err)
 	}
 
@@ -215,13 +215,13 @@ func SendTemplateEmailWithJsonAttachment(content types.SendEmailPayload, templat
 		Body().AsJSON(reqBody).
 		Send()
 	if err != nil {
-		logger.Errorf("error sending request: %v", err)
+		logger.Errorf("Failed to send Email with JSON attachment: %v", err)
 		return fmt.Errorf("error sending request: %w", err)
 	}
 
 	data, err := utils.ParseJSONResponse(res.RawResponse)
 	if err != nil {
-		logger.Errorf("error parsing response: %v %v", err, data)
+		logger.Errorf("Failed to decode %v response after sending Email with JSON attachment: %v", data, err)
 		return fmt.Errorf("error parsing response: %w", err)
 	}
 
