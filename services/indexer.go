@@ -667,6 +667,7 @@ func (s *IndexerService) IndexOrderSettled(ctx context.Context, client types.RPC
 			"Start": uint64(int64(toBlock) - 5000),
 			"End":   toBlock,
 		}).Errorf("Failed to filter order created events for %s when indexing order created events", network.Identifier)
+
 		return err
 	}
 
