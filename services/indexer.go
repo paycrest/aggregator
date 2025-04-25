@@ -637,7 +637,6 @@ func (s *IndexerService) IndexOrderSettled(ctx context.Context, client types.RPC
 	// Initialize contract filterer
 	filterer, err := contracts.NewGatewayFilterer(common.HexToAddress(network.GatewayContractAddress), client)
 	if err != nil {
-
 		logger.WithFields(logger.Fields{
 			"Error": fmt.Sprintf("%v", err),
 		}).Errorf("Failed to filterer when indexing order created events for %s", network.Identifier)
@@ -796,7 +795,6 @@ func (s *IndexerService) IndexOrderRefunded(ctx context.Context, client types.RP
 	// Initialize contract filterer
 	filterer, err := contracts.NewGatewayFilterer(common.HexToAddress(network.GatewayContractAddress), client)
 	if err != nil {
-
 		logger.WithFields(logger.Fields{
 			"Error": fmt.Sprintf("%v", err),
 		}).Errorf("Failed to filterer when indexing order created events for %s", network.Identifier)
@@ -807,7 +805,6 @@ func (s *IndexerService) IndexOrderRefunded(ctx context.Context, client types.RP
 	header, err := client.HeaderByNumber(ctx, nil)
 	if err != nil {
 		if err != context.Canceled {
-
 			logger.WithFields(logger.Fields{
 				"Error": fmt.Sprintf("%v", err),
 			}).Errorf("Failed to fetch header by number when indexing order created events for %s", network.Identifier)
