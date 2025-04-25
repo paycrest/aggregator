@@ -262,8 +262,17 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		sender, err := senderCreate.Save(ctx)
 		if err != nil {
 			_ = tx.Rollback()
+<<<<<<< HEAD
 			logger.Errorf("error: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create new user", nil)
+=======
+			logger.WithFields(logger.Fields{
+				"Error": fmt.Sprintf("%v", err),
+				"UserID": user.ID,
+			}).Errorf("Failed to create sender profile")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error",
+				"Failed to create new user", nil)
+>>>>>>> 088148e (feat: enhance logging with contextual information across services (#459))
 			return
 		}
 
