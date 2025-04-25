@@ -89,6 +89,7 @@ func JWTMiddleware(c *gin.Context) {
 			Where(providerprofile.HasUserWith(user.IDEQ(userUUID))).
 			Only(c)
 		if err != nil && !senderAndProvider {
+			fmt.Println("error", err)
 			c.Set("provider", nil)
 		}
 

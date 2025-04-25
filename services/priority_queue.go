@@ -80,8 +80,7 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 // GetProviderRate returns the rate for a provider
 func (s *PriorityQueueService) GetProviderRate(ctx context.Context, provider *ent.ProviderProfile, tokenSymbol string, currency string) (decimal.Decimal, error) {
 	// Fetch the token config for the provider
-	tokenConfig, err := storage.Client.ProviderOrderToken.
-		Query().
+	tokenConfig, err := provider.QueryOrderTokens().
 		Where(
 			providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 			providerordertoken.HasTokenWith(token.SymbolEQ(tokenSymbol)),
@@ -437,8 +436,15 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 		}
 
 		normalizedAmount := order.Amount
-		if strings.EqualFold(order.Token.BaseCurrency, order.ProvisionBucket.Edges.Currency.Code) && order.Token.BaseCurrency != "USD" {
-			rateResponse, err := utils.GetTokenRateFromQueue("USDT", normalizedAmount, order.ProvisionBucket.Edges.Currency.Code, order.ProvisionBucket.Edges.Currency.MarketRate)
+		bucketCurrency := order.ProvisionBucket.Edges.Currency
+		if bucketCurrency == nil {
+			bucketCurrency, err = order.ProvisionBucket.QueryCurrency().Only(ctx)
+			if err != nil {
+				continue
+			}
+		}
+		if strings.EqualFold(order.Token.BaseCurrency, bucketCurrency.Code) && order.Token.BaseCurrency != "USD" {
+			rateResponse, err := utils.GetTokenRateFromQueue("USDT", normalizedAmount, bucketCurrency.Code, bucketCurrency.MarketRate)
 			if err != nil {
 				continue
 			}
@@ -454,8 +460,23 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 			continue
 		}
 
-		// TODO: make the slippage of 0.5 configurable by provider
-		if rate.Sub(order.Rate).Abs().LessThanOrEqual(decimal.NewFromFloat(0.5)) {
+		providerToken, err := storage.Client.ProviderOrderToken.
+			Query().
+			Where(
+				providerordertoken.HasTokenWith(token.SymbolEQ(order.Token.Symbol)),
+				providerordertoken.HasProviderWith(providerprofile.IDEQ(order.ProviderID)),
+				providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketCurrency.Code)),
+			).
+			First(ctx)
+		if err != nil {
+			logger.Errorf("%s - failed to fetch provider token: %v", orderIDPrefix, err)
+			return err
+		}
+
+		// Calculate allowed deviation based on slippage
+		allowedDeviation := order.Rate.Mul(providerToken.RateSlippage.Div(decimal.NewFromInt(100)))
+
+		if rate.Sub(order.Rate).Abs().LessThanOrEqual(allowedDeviation) {
 			// Found a match for the rate
 			if index == 0 {
 				// Match found at index 0, perform LPOP to dequeue

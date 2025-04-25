@@ -361,7 +361,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				u.APIResponse(
 					ctx,
 					http.StatusInternalServerError,
-					"error", "Failed to update profile 3",
+					"error", "Failed to update profile",
 					nil,
 				)
 			}
@@ -380,14 +380,13 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", "Currency not supported", nil)
 			} else {
 				logger.Errorf("Failed to fetch currency: %v", err)
-				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch currency", nil)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 			}
 			return
 		}
 
-		var rate decimal.Decimal
 		if tokenPayload.ConversionRateType == providerordertoken.ConversionRateTypeFloating {
-			rate = currency.MarketRate.Add(tokenPayload.FloatingConversionRate)
+			rate := currency.MarketRate.Add(tokenPayload.FloatingConversionRate)
 
 			percentDeviation := u.AbsPercentageDeviation(currency.MarketRate, rate)
 			if percentDeviation.GreaterThan(orderConf.PercentDeviationFromMarketRate) {
@@ -396,10 +395,34 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			}
 		}
 
+		// Get rate for provider
+		rate, err := ctrl.priorityQueueService.GetProviderRate(ctx, provider, providerToken.Symbol, currency.Code)
+		if err != nil {
+			logger.Errorf("Failed to get rate for provider %s", provider.ID)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+			return
+		}
+
 		// See if token already exists for provider
 		tx, err := storage.Client.Tx(ctx)
 		if err != nil {
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to start transaction", nil)
+			tx.Rollback()
+			logger.Errorf("Failed to start transaction: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+			return
+		}
+
+		// Handle slippage validation and default value
+		if tokenPayload.RateSlippage.IsZero() {
+			// Set default slippage to 0% if not provided
+			tokenPayload.RateSlippage = decimal.NewFromFloat(0)
+		} else if tokenPayload.RateSlippage.LessThan(decimal.NewFromFloat(0.1)) {
+			tx.Rollback()
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Rate slippage cannot be less than 0.1%", nil)
+			return
+		} else if rate.Mul(tokenPayload.RateSlippage.Div(decimal.NewFromFloat(100))).GreaterThan(currency.MarketRate.Mul(decimal.NewFromFloat(0.05))) {
+			tx.Rollback()
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Rate slippage is too high", nil)
 			return
 		}
 
@@ -409,7 +432,9 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				providerordertoken.HasTokenWith(token.IDEQ(providerToken.ID)),
 				providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 				providerordertoken.HasCurrencyWith(fiatcurrency.IDEQ(currency.ID)),
+				providerordertoken.NetworkEQ(tokenPayload.Network),
 			).
+			WithCurrency().
 			Only(ctx)
 		if err != nil {
 			if ent.IsNotFound(err) {
@@ -424,6 +449,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 					SetAddress(tokenPayload.Address).
 					SetNetwork(tokenPayload.Network).
 					SetProviderID(provider.ID).
+					SetRateSlippage(tokenPayload.RateSlippage).
 					SetTokenID(providerToken.ID).
 					SetCurrencyID(currency.ID).
 					Save(ctx)
@@ -435,39 +461,47 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				}
 			} else {
 				tx.Rollback()
-				logger.Errorf("Failed to query token: %v", err)
-				u.APIResponse(ctx, http.StatusInternalServerError, "error", fmt.Sprintf("Failed to query token - %s", tokenPayload.Symbol), nil)
+				logger.Errorf("Failed to query token: %v %s", err, tokenPayload.Symbol)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 				return
 			}
 		} else {
 			// Token exists, update it
-			_, err = orderToken.Update().
-				SetConversionRateType(tokenPayload.ConversionRateType).
-				SetFixedConversionRate(tokenPayload.FixedConversionRate).
-				SetFloatingConversionRate(tokenPayload.FloatingConversionRate).
-				SetMaxOrderAmount(tokenPayload.MaxOrderAmount).
-				SetMinOrderAmount(tokenPayload.MinOrderAmount).
+			update := orderToken.Update().
 				SetAddress(tokenPayload.Address).
 				SetNetwork(tokenPayload.Network).
-				Save(ctx)
+				SetRateSlippage(tokenPayload.RateSlippage)
+			// Update optional fields if they are present in the payload
+			if tokenPayload.ConversionRateType == providerordertoken.ConversionRateTypeFixed {
+				if tokenPayload.FixedConversionRate.IsPositive() {
+					update = update.SetFixedConversionRate(tokenPayload.FixedConversionRate)
+				}
+			} else if tokenPayload.ConversionRateType == providerordertoken.ConversionRateTypeFloating {
+				if tokenPayload.FloatingConversionRate.IsPositive() {
+					update = update.SetFloatingConversionRate(tokenPayload.FloatingConversionRate)
+				}
+			}
+			if tokenPayload.MaxOrderAmount.IsPositive() {
+				update = update.SetMaxOrderAmount(tokenPayload.MaxOrderAmount)
+			}
+			if tokenPayload.MinOrderAmount.IsPositive() {
+				update = update.SetMinOrderAmount(tokenPayload.MinOrderAmount)
+			}
+
+			_, err = update.Save(ctx)
 			if err != nil {
 				tx.Rollback()
-				logger.Errorf("Failed to update token: %v", err)
-				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update token - "+tokenPayload.Symbol, nil)
+				fmt.Println("error", err)
+				logger.Errorf("Failed to update token: %v %s", err, tokenPayload.Symbol)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 				return
 			}
 		}
 
 		if err := tx.Commit(); err != nil {
 			tx.Rollback()
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to commit transaction", nil)
-			return
-		}
-
-		rate, err = ctrl.priorityQueueService.GetProviderRate(ctx, provider, providerToken.Symbol, currency.Code)
-		if err != nil {
-			logger.Errorf("Failed to get rate for provider %s", provider.ID)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to get rate", nil)
+			logger.Errorf("Failed to commit transaction: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 			return
 		}
 
@@ -652,6 +686,7 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 			FloatingConversionRate: orderToken.FloatingConversionRate,
 			MaxOrderAmount:         orderToken.MaxOrderAmount,
 			MinOrderAmount:         orderToken.MinOrderAmount,
+			RateSlippage:           orderToken.RateSlippage,
 			Address:                orderToken.Address,
 			Network:                orderToken.Network,
 		}
