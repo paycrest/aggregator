@@ -262,7 +262,6 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		sender, err := senderCreate.Save(ctx)
 		if err != nil {
 			_ = tx.Rollback()
-
 			logger.WithFields(logger.Fields{
 				"Error":  fmt.Sprintf("%v", err),
 				"UserID": user.ID,

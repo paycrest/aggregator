@@ -796,6 +796,7 @@ func (s *IndexerService) IndexOrderRefunded(ctx context.Context, client types.RP
 		logger.WithFields(logger.Fields{
 			"Error": fmt.Sprintf("%v", err),
 		}).Errorf("Failed to filterer when indexing order created events for %s", network.Identifier)
+
 		return err
 	}
 
