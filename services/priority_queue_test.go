@@ -104,7 +104,7 @@ func setupForPQ() error {
 			"provider":                 publicProviderProfile,
 			"currency_id":              currency.ID,
 			"network":                  token.Edges.Network.Identifier,
-			"tokenID":                  token.ID,
+			"token_id":                 token.ID,
 		},
 	)
 	if err != nil {
@@ -154,7 +154,7 @@ func setupForPQ() error {
 	// Set up payment order
 	_, err = test.CreateTestLockPaymentOrder(map[string]interface{}{
 		"provider":   privateProviderProfile,
-		"tokenID":    testCtxForPQ.token.ID,
+		"token_id":   testCtxForPQ.token.ID,
 		"gateway_id": "order-12345",
 	})
 	if err != nil {
@@ -162,7 +162,7 @@ func setupForPQ() error {
 	}
 	_, err = test.CreateTestLockPaymentOrder(map[string]interface{}{
 		"provider": publicProviderProfile,
-		"tokenID":  testCtxForPQ.token.ID,
+		"token_id": testCtxForPQ.token.ID,
 	})
 	if err != nil {
 		return err
@@ -263,7 +263,7 @@ func TestPriorityQueueTest(t *testing.T) {
 		_order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
 			"provider":   testCtxForPQ.publicProviderProfile,
 			"rate":       100.0,
-			"tokenID":    testCtxForPQ.token.ID,
+			"token_id":   testCtxForPQ.token.ID,
 			"gateway_id": "order-1",
 		})
 		assert.NoError(t, err)
@@ -317,7 +317,7 @@ func TestPriorityQueueTest(t *testing.T) {
 		assert.NoError(t, err)
 		_order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
 			"provider":   testCtxForPQ.publicProviderProfile,
-			"tokenID":    testCtxForPQ.token.ID,
+			"token_id":   testCtxForPQ.token.ID,
 			"gateway_id": "order-1234",
 		})
 		assert.NoError(t, err)
@@ -338,6 +338,18 @@ func TestPriorityQueueTest(t *testing.T) {
 			Only(context.Background())
 
 		assert.NoError(t, err)
+
+		// Setup httpmock for sendOrderRequest
+		httpmock.Activate()
+		defer httpmock.DeactivateAndReset()
+
+		httpmock.RegisterResponder("POST", testCtxForPQ.publicProviderProfile.HostIdentifier+"/new_order",
+			func(req *http.Request) (*http.Response, error) {
+				return httpmock.NewJsonResponse(200, map[string]interface{}{
+					"status": "success",
+					"message": "Order processed successfully",
+				})
+		})
 
 		err = service.sendOrderRequest(context.Background(), types.LockPaymentOrderFields{
 			ID:                order.ID,
@@ -406,7 +418,7 @@ func TestPriorityQueueTest(t *testing.T) {
 	// 		assert.NoError(t, err)
 	// 		_order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
 	// 			"provider": testCtxForPQ.publicProviderProfile,
-	// 			"tokenID":  testCtxForPQ.token.ID,
+	// 			"token_id":  testCtxForPQ.token.ID,
 	// 			"status":   lockpaymentorder.StatusProcessing.String(),
 	// 		})
 	// 		assert.NoError(t, err)
@@ -435,7 +447,7 @@ func TestPriorityQueueTest(t *testing.T) {
 	// 		assert.NoError(t, err)
 	// 		_order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
 	// 			"provider":  testCtxForPQ.privateProviderProfile,
-	// 			"tokenID":   testCtxForPQ.token.ID,
+	// 			"token_id":   testCtxForPQ.token.ID,
 	// 			"status":    lockpaymentorder.StatusProcessing.String(),
 	// 			"updatedAt": time.Now().Add(-5 * time.Minute),
 	// 		})

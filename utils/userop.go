@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -122,6 +123,20 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 
 	var payload map[string]interface{}
 	var requestParams []interface{}
+	method := "pm_sponsorUserOperation"
+	userOpExpanded := map[string]interface{}{
+		"sender":               userOp.Sender.Hex(),
+		"nonce":                userOp.Nonce.String(),
+		"initCode":             hexutil.Encode(userOp.InitCode),
+		"callData":             hexutil.Encode(userOp.CallData),
+		"callGasLimit":         userOp.CallGasLimit.String(),
+		"verificationGasLimit": userOp.VerificationGasLimit.String(),
+		"preVerificationGas":   userOp.PreVerificationGas.String(),
+		"maxFeePerGas":         userOp.MaxFeePerGas.String(),
+		"maxPriorityFeePerGas": userOp.MaxPriorityFeePerGas.String(),
+		"paymasterAndData":     hexutil.Encode(userOp.PaymasterAndData),
+		"signature":            hexutil.Encode(userOp.Signature),
+	}
 
 	switch aaService {
 	case "biconomy":
@@ -155,44 +170,78 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 		}
 
 		requestParams = []interface{}{
-			map[string]interface{}{
-				"sender":               userOp.Sender.Hex(),
-				"nonce":                userOp.Nonce.String(),
-				"initCode":             hexutil.Encode(userOp.InitCode),
-				"callData":             hexutil.Encode(userOp.CallData),
-				"callGasLimit":         userOp.CallGasLimit.String(),
-				"verificationGasLimit": userOp.VerificationGasLimit.String(),
-				"preVerificationGas":   userOp.PreVerificationGas.String(),
-				"maxFeePerGas":         userOp.MaxFeePerGas.String(),
-				"maxPriorityFeePerGas": userOp.MaxPriorityFeePerGas.String(),
-				"paymasterAndData":     hexutil.Encode(userOp.PaymasterAndData),
-				"signature":            hexutil.Encode(userOp.Signature),
-			},
+			userOpExpanded,
 			payload,
+		}
+
+	case "thirdweb":
+		maxFeePerGas, maxPriorityFeePerGas, err := getStandardGasPrices(chainId)
+		if err == nil {
+			userOp.MaxFeePerGas = maxFeePerGas
+			userOp.MaxPriorityFeePerGas = maxPriorityFeePerGas
+		} else if chainId == 137 {
+			// increase maxFeePerGas and maxPriorityFeePerGas by 50%
+			userOp.MaxFeePerGas = new(big.Int).Div(
+				new(big.Int).Mul(userOp.MaxFeePerGas, big.NewInt(150)),
+				big.NewInt(100),
+			)
+			userOp.MaxPriorityFeePerGas = new(big.Int).Div(
+				new(big.Int).Mul(userOp.MaxPriorityFeePerGas, big.NewInt(150)),
+				big.NewInt(100),
+			)
+		}
+
+		httpClient := &http.Client{
+			Transport: &http.Transport{},
+		}
+		header := http.Header{}
+		header.Set("x-secret-key", orderConf.ThirdwebSecretKey)
+
+		client, err = rpc.DialOptions(
+			context.Background(),
+			paymasterUrl,
+			rpc.WithHTTPClient(httpClient),
+			rpc.WithHeaders(header),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to connect to RPC client: %w", err)
+		}
+
+		requestParams = []interface{}{
+			userOp,
+			orderConf.EntryPointContractAddress.Hex(),
 		}
 	default:
 		return fmt.Errorf("unsupported AA service: %s", aaService)
 	}
 
 	var result json.RawMessage
-	err = client.Call(&result, "pm_sponsorUserOperation", requestParams...)
+	err = client.Call(&result, method, requestParams...)
 	if err != nil {
 		op, _ := userOp.MarshalJSON()
 		return fmt.Errorf("RPC error: %w\nUser Operation: %s", err, string(op))
 	}
 
+	var response map[string]interface{}
+	err = json.Unmarshal(result, &response)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
 	switch aaService {
 	case "biconomy":
-		var response map[string]interface{}
-		err = json.Unmarshal(result, &response)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal response: %w", err)
-		}
-
 		userOp.PaymasterAndData = common.FromHex(response["paymasterAndData"].(string))
 		userOp.PreVerificationGas, _ = new(big.Int).SetString(response["preVerificationGas"].(string), 0)
 		userOp.VerificationGasLimit = decimal.NewFromFloat(response["verificationGasLimit"].(float64)).BigInt()
 		userOp.CallGasLimit = decimal.NewFromFloat(response["callGasLimit"].(float64)).BigInt()
+
+
+	case "thirdweb":
+		userOp.CallGasLimit, _ = new(big.Int).SetString(response["callGasLimit"].(string), 0)
+		userOp.VerificationGasLimit, _ = new(big.Int).SetString(response["verificationGasLimit"].(string), 0)
+		userOp.PreVerificationGas, _ = new(big.Int).SetString(response["preVerificationGas"].(string), 0)
+		userOp.PaymasterAndData = common.FromHex(response["paymasterAndData"].(string))
+
 	}
 
 	return nil
@@ -234,6 +283,7 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 	}
 
 	var requestParams []interface{}
+	method := "eth_sendUserOperation"
 	switch aaService {
 	case "biconomy":
 		requestParams = []interface{}{
@@ -243,12 +293,34 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 				"simulation_type": "validation_and_execution",
 			},
 		}
+	case "thirdweb":
+		httpClient := &http.Client{
+			Transport: &http.Transport{},
+		}
+		header := http.Header{}
+		header.Set("x-secret-key", orderConf.ThirdwebSecretKey)
+
+		client, err = rpc.DialOptions(
+			context.Background(),
+			bundlerUrl,
+			rpc.WithHTTPClient(httpClient),
+			rpc.WithHeaders(header),
+		)
+		if err != nil {
+			return "", "", 0, fmt.Errorf("failed to connect to RPC client: %w", err)
+		}
+
+
+		requestParams = []interface{}{
+			userOp,
+			orderConf.EntryPointContractAddress.Hex(),
+		}
 	default:
 		return "", "", 0, fmt.Errorf("unsupported AA service: %s", aaService)
 	}
 
 	var result json.RawMessage
-	err = client.Call(&result, "eth_sendUserOperation", requestParams...)
+	err = client.Call(&result, method, requestParams...)
 	if err != nil {
 		op, _ := userOp.MarshalJSON()
 		return "", "", 0, fmt.Errorf("RPC error: %w\nUser Operation: %s", err, string(op))
@@ -296,7 +368,28 @@ func GetUserOperationByReceipt(userOpHash string, chainId int64) (map[string]int
 		return nil, fmt.Errorf("failed to get endpoints for chain ID %d: %w", chainId, err)
 	}
 
-	client, err := rpc.Dial(bundlerUrl)
+	aaService, err := detectAAService(bundlerUrl)
+	if err != nil {
+		return nil, fmt.Errorf("invalid AA service URL pattern: %w", err)
+	}
+
+	var client *rpc.Client
+	if aaService == "thirdweb" {
+		httpClient := &http.Client{
+			Transport: &http.Transport{},
+		}
+		header := http.Header{}
+		header.Set("x-secret-key", orderConf.ThirdwebSecretKey)
+
+		client, err = rpc.DialOptions(
+			context.Background(),
+			bundlerUrl,
+			rpc.WithHTTPClient(httpClient),
+			rpc.WithHeaders(header),
+		)
+	} else {
+		client, err = rpc.Dial(bundlerUrl)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to RPC client: %w", err)
 	}
@@ -397,7 +490,7 @@ func GetPaymasterAccount(chainId int64) (string, error) {
 
 	// Handle biconomy case specifically
 	if aaService == "biconomy" {
-		return "0x00000f79b7faf42eebadba19acc07cd08af44789", nil
+		return "0x00000f7365ca6c59a2c93719ad53d567ed49c14c", nil
 	}
 
 	client, err := rpc.Dial(paymasterUrl)
@@ -426,13 +519,33 @@ func GetPaymasterAccount(chainId int64) (string, error) {
 
 // GetUserOperationStatus returns the status of the user operation
 func GetUserOperationStatus(userOpHash string, chainId int64) (bool, error) {
-
 	bundlerUrl, _, err := getEndpoints(chainId)
 	if err != nil {
 		return false, fmt.Errorf("failed to get endpoints for chain ID %d: %w", chainId, err)
 	}
 
-	client, err := rpc.Dial(bundlerUrl)
+	aaService, err := detectAAService(bundlerUrl)
+	if err != nil {
+		return false, fmt.Errorf("invalid AA service URL pattern: %w", err)
+	}
+
+	var client *rpc.Client
+	if aaService == "thirdweb" {
+		httpClient := &http.Client{
+			Transport: &http.Transport{},
+		}
+		header := http.Header{}
+		header.Set("x-secret-key", orderConf.ThirdwebSecretKey)
+
+		client, err = rpc.DialOptions(
+			context.Background(),
+			bundlerUrl,
+			rpc.WithHTTPClient(httpClient),
+			rpc.WithHeaders(header),
+		)
+	} else {
+		client, err = rpc.Dial(bundlerUrl)
+	}
 	if err != nil {
 		return false, fmt.Errorf("failed to connect to RPC client: %w", err)
 	}
@@ -485,16 +598,82 @@ func eip1559GasPrice(ctx context.Context, client types.RPCClient) (maxFeePerGas,
 		if err != nil {
 			return nil, nil, err
 		}
-		maxFeePerGas = big.NewInt(0).Add(tip, new(big.Int).Mul(latestHeader.BaseFee, common.Big3))
+
+		// Ensure minimum priority fee of 700000 wei
+		minPriorityFee := big.NewInt(700000)
+		if tip.Cmp(minPriorityFee) < 0 {
+			tip = minPriorityFee
+		}
+
+		maxFeePerGas = big.NewInt(0).Add(tip, new(big.Int).Mul(latestHeader.BaseFee, common.Big2))
 		maxPriorityFeePerGas = tip
 	} else {
 		sgp, err := client.SuggestGasPrice(ctx)
 		if err != nil {
 			return nil, nil, err
 		}
+
+		// Ensure minimum gas price of 700000 wei
+		minGasPrice := big.NewInt(700000)
+		if sgp.Cmp(minGasPrice) < 0 {
+			sgp = minGasPrice
+		}
+
 		maxFeePerGas = sgp
 		maxPriorityFeePerGas = sgp
 	}
+
+	return maxFeePerGas, maxPriorityFeePerGas, nil
+}
+
+func getStandardGasPrices(chainId int64) (*big.Int, *big.Int, error) {
+	_, paymasterUrl, err := getEndpoints(chainId)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get endpoints for chain ID %d: %w", chainId, err)
+	}
+
+	httpClient := &http.Client{
+		Transport: &http.Transport{},
+	}
+	header := http.Header{}
+	header.Set("x-secret-key", orderConf.ThirdwebSecretKey)
+
+	client, err := rpc.DialOptions(
+		context.Background(),
+		paymasterUrl,
+		rpc.WithHTTPClient(httpClient),
+		rpc.WithHeaders(header),
+	)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to connect to RPC client: %w", err)
+	}
+
+	var result struct {
+		Slow struct {
+			MaxFeePerGas         string `json:"maxFeePerGas"`
+			MaxPriorityFeePerGas string `json:"maxPriorityFeePerGas"`
+		} `json:"slow"`
+		Standard struct {
+			MaxFeePerGas         string `json:"maxFeePerGas"`
+			MaxPriorityFeePerGas string `json:"maxPriorityFeePerGas"`
+		} `json:"standard"`
+		Fast struct {
+			MaxFeePerGas         string `json:"maxFeePerGas"`
+			MaxPriorityFeePerGas string `json:"maxPriorityFeePerGas"`
+		} `json:"fast"`
+	}
+
+	err = client.Call(&result, "thirdweb_getUserOperationGasPrice")
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get gas prices: %w", err)
+	}
+
+	// Convert hex strings to big.Int
+	maxFeePerGas := new(big.Int)
+	maxFeePerGas.SetString(result.Standard.MaxFeePerGas, 0)
+
+	maxPriorityFeePerGas := new(big.Int)
+	maxPriorityFeePerGas.SetString(result.Standard.MaxPriorityFeePerGas, 0)
 
 	return maxFeePerGas, maxPriorityFeePerGas, nil
 }
@@ -535,8 +714,9 @@ func detectAAService(url string) (string, error) {
 	switch {
 	case strings.Contains(url, "biconomy.io"):
 		return "biconomy", nil
-	case strings.Contains(url, "api.pimlico.io"):
-		return "pimlico", nil
+
+	case strings.Contains(url, "thirdweb.com"):
+		return "thirdweb", nil
 	default:
 		return "", fmt.Errorf("unsupported AA service URL pattern: %s", url)
 	}

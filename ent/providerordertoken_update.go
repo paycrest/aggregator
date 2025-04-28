@@ -137,6 +137,27 @@ func (potu *ProviderOrderTokenUpdate) AddMinOrderAmount(d decimal.Decimal) *Prov
 	return potu
 }
 
+// SetRateSlippage sets the "rate_slippage" field.
+func (potu *ProviderOrderTokenUpdate) SetRateSlippage(d decimal.Decimal) *ProviderOrderTokenUpdate {
+	potu.mutation.ResetRateSlippage()
+	potu.mutation.SetRateSlippage(d)
+	return potu
+}
+
+// SetNillableRateSlippage sets the "rate_slippage" field if the given value is not nil.
+func (potu *ProviderOrderTokenUpdate) SetNillableRateSlippage(d *decimal.Decimal) *ProviderOrderTokenUpdate {
+	if d != nil {
+		potu.SetRateSlippage(*d)
+	}
+	return potu
+}
+
+// AddRateSlippage adds d to the "rate_slippage" field.
+func (potu *ProviderOrderTokenUpdate) AddRateSlippage(d decimal.Decimal) *ProviderOrderTokenUpdate {
+	potu.mutation.AddRateSlippage(d)
+	return potu
+}
+
 // SetAddress sets the "address" field.
 func (potu *ProviderOrderTokenUpdate) SetAddress(s string) *ProviderOrderTokenUpdate {
 	potu.mutation.SetAddress(s)
@@ -329,6 +350,12 @@ func (potu *ProviderOrderTokenUpdate) sqlSave(ctx context.Context) (n int, err e
 	}
 	if value, ok := potu.mutation.AddedMinOrderAmount(); ok {
 		_spec.AddField(providerordertoken.FieldMinOrderAmount, field.TypeFloat64, value)
+	}
+	if value, ok := potu.mutation.RateSlippage(); ok {
+		_spec.SetField(providerordertoken.FieldRateSlippage, field.TypeFloat64, value)
+	}
+	if value, ok := potu.mutation.AddedRateSlippage(); ok {
+		_spec.AddField(providerordertoken.FieldRateSlippage, field.TypeFloat64, value)
 	}
 	if value, ok := potu.mutation.Address(); ok {
 		_spec.SetField(providerordertoken.FieldAddress, field.TypeString, value)
@@ -550,6 +577,27 @@ func (potuo *ProviderOrderTokenUpdateOne) SetNillableMinOrderAmount(d *decimal.D
 // AddMinOrderAmount adds d to the "min_order_amount" field.
 func (potuo *ProviderOrderTokenUpdateOne) AddMinOrderAmount(d decimal.Decimal) *ProviderOrderTokenUpdateOne {
 	potuo.mutation.AddMinOrderAmount(d)
+	return potuo
+}
+
+// SetRateSlippage sets the "rate_slippage" field.
+func (potuo *ProviderOrderTokenUpdateOne) SetRateSlippage(d decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	potuo.mutation.ResetRateSlippage()
+	potuo.mutation.SetRateSlippage(d)
+	return potuo
+}
+
+// SetNillableRateSlippage sets the "rate_slippage" field if the given value is not nil.
+func (potuo *ProviderOrderTokenUpdateOne) SetNillableRateSlippage(d *decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	if d != nil {
+		potuo.SetRateSlippage(*d)
+	}
+	return potuo
+}
+
+// AddRateSlippage adds d to the "rate_slippage" field.
+func (potuo *ProviderOrderTokenUpdateOne) AddRateSlippage(d decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	potuo.mutation.AddRateSlippage(d)
 	return potuo
 }
 
@@ -775,6 +823,12 @@ func (potuo *ProviderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *P
 	}
 	if value, ok := potuo.mutation.AddedMinOrderAmount(); ok {
 		_spec.AddField(providerordertoken.FieldMinOrderAmount, field.TypeFloat64, value)
+	}
+	if value, ok := potuo.mutation.RateSlippage(); ok {
+		_spec.SetField(providerordertoken.FieldRateSlippage, field.TypeFloat64, value)
+	}
+	if value, ok := potuo.mutation.AddedRateSlippage(); ok {
+		_spec.AddField(providerordertoken.FieldRateSlippage, field.TypeFloat64, value)
 	}
 	if value, ok := potuo.mutation.Address(); ok {
 		_spec.SetField(providerordertoken.FieldAddress, field.TypeString, value)

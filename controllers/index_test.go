@@ -11,6 +11,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/services/kyc"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/shopspring/decimal"
@@ -18,6 +19,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/paycrest/aggregator/ent/enttest"
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
+	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/utils/test"
 	"github.com/stretchr/testify/assert"
 )
@@ -49,7 +51,8 @@ func TestIndex(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Set up test routers
-	var ctrl Controller
+	// var ctrl Controller
+	ctrl := NewController()
 	router := gin.New()
 
 	router.GET("currencies", ctrl.GetFiatCurrencies)
@@ -58,6 +61,7 @@ func TestIndex(t *testing.T) {
 	router.POST("kyc", ctrl.RequestIDVerification)
 	router.GET("kyc/:wallet_address", ctrl.GetIDVerificationStatus)
 	router.POST("kyc/webhook", ctrl.KYCWebhook)
+	router.GET("/v1/tokens", ctrl.GetSupportedTokens)
 
 	t.Run("GetInstitutions By Currency", func(t *testing.T) {
 
@@ -148,9 +152,9 @@ func TestIndex(t *testing.T) {
 			},
 		)
 		t.Run("with valid details", func(t *testing.T) {
-			payload := types.NewIDVerificationRequest{
-				Signature:     "b1dcfa6beba6c93e5abd38c23890a1ff2e553721c5c379a80b66a2ad74b3755f543cd8e7d8fb064ae4fdeeba93302c156bd012e390c2321a763eddaa12e5ab5d1c",
+			payload := kyc.NewIDVerificationRequest{
 				WalletAddress: "0xf4c5c4deDde7A86b25E7430796441e209e23eBFB",
+				Signature:     "b1dcfa6beba6c93e5abd38c23890a1ff2e553721c5c379a80b66a2ad74b3755f543cd8e7d8fb064ae4fdeeba93302c156bd012e390c2321a763eddaa12e5ab5d1c",
 				Nonce:         "e08511abb6087c47",
 			}
 
@@ -183,7 +187,7 @@ func TestIndex(t *testing.T) {
 		})
 
 		t.Run("with an already used signature", func(t *testing.T) {
-			payload := types.NewIDVerificationRequest{
+			payload := kyc.NewIDVerificationRequest{
 				Signature:     "b1dcfa6beba6c93e5abd38c23890a1ff2e553721c5c379a80b66a2ad74b3755f543cd8e7d8fb064ae4fdeeba93302c156bd012e390c2321a763eddaa12e5ab5d1c",
 				WalletAddress: "0xf4c5c4deDde7A86b25E7430796441e209e23eBFB",
 				Nonce:         "e08511abb6087c47",
@@ -204,7 +208,7 @@ func TestIndex(t *testing.T) {
 		})
 
 		t.Run("with a different signature for same wallet address with validity duration", func(t *testing.T) {
-			payload := types.NewIDVerificationRequest{
+			payload := kyc.NewIDVerificationRequest{
 				Signature:     "dea3406fa45aa364283e1704b3a8c3b70973a25c262540b71e857efe25e8582b23f98b969cebe320dd2851e5ea36c781253edf7e7d1cd5fe6be704f5709f76df1b",
 				WalletAddress: "0xf4c5c4deDde7A86b25E7430796441e209e23eBFB",
 				Nonce:         "8c400162fbfe0527",
@@ -220,11 +224,11 @@ func TestIndex(t *testing.T) {
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
 			assert.Equal(t, "success", response.Status)
-			assert.Equal(t, "This account has a pending identity verification request", response.Message)
+			assert.Equal(t, "Identity verification requested successfully", response.Message)
 		})
 
 		t.Run("with invalid signature", func(t *testing.T) {
-			payload := types.NewIDVerificationRequest{
+			payload := kyc.NewIDVerificationRequest{
 				Signature:     "invalid_signature",
 				WalletAddress: "0xf4c5c4deDde7A86b25E7430796441e209e23eBFB",
 				Nonce:         "e08511abb6087c47",
@@ -260,5 +264,90 @@ func TestIndex(t *testing.T) {
 		data, ok := response.Data.(map[string]interface{})
 		assert.True(t, ok, "response.Data is not of type map[string]interface{}")
 		assert.Equal(t, "pending", data["status"])
+	})
+
+	t.Run("GetSupportedTokens", func(t *testing.T) {
+		// Setup test data for tokens
+		networks, tokens := test.CreateTestTokenData(t, client)
+
+		// Define response structure
+		type Response struct {
+			Status  string                         `json:"status"`
+			Message string                         `json:"message"`
+			Data    []types.SupportedTokenResponse `json:"data"`
+		}
+
+		t.Run("Fetch all enabled tokens", func(t *testing.T) {
+			res, err := test.PerformRequest(t, "GET", "/v1/tokens", nil, nil, router)
+			assert.NoError(t, err)
+
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "success", response.Status)
+			assert.Equal(t, "Tokens retrieved successfully", response.Message)
+			assert.Equal(t, 2, len(response.Data)) // Should only include enabled tokens
+
+			// Verify token details
+			assert.Equal(t, tokens[0].Symbol, response.Data[0].Symbol)
+			assert.Equal(t, tokens[0].ContractAddress, response.Data[0].ContractAddress)
+			assert.Equal(t, tokens[0].Decimals, response.Data[0].Decimals)
+			assert.Equal(t, tokens[0].BaseCurrency, response.Data[0].BaseCurrency)
+			assert.Equal(t, networks[0].Identifier, response.Data[0].Network)
+		})
+
+		t.Run("Fetch tokens by network", func(t *testing.T) {
+			res, err := test.PerformRequest(t, "GET", "/v1/tokens?network=arbitrum-one", nil, nil, router)
+			assert.NoError(t, err)
+
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "success", response.Status)
+			assert.Equal(t, "Tokens retrieved successfully", response.Message)
+			assert.Equal(t, 1, len(response.Data)) // Should only include tokens for the specified network
+
+			assert.Equal(t, "USDC", response.Data[0].Symbol)
+			assert.Equal(t, "arbitrum-one", response.Data[0].Network)
+		})
+
+		t.Run("Fetch with invalid network", func(t *testing.T) {
+			res, err := test.PerformRequest(t, "GET", "/v1/tokens?network=invalid-network", nil, nil, router)
+			assert.NoError(t, err)
+
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "success", response.Status)
+			assert.Equal(t, "Tokens retrieved successfully", response.Message)
+			assert.Equal(t, 0, len(response.Data)) // No tokens for invalid network
+		})
+
+		t.Run("Fetch with no enabled tokens", func(t *testing.T) {
+			// Disable all tokens
+			_, err := client.Token.Update().
+				Where(token.IsEnabled(true)).
+				SetIsEnabled(false).
+				Save(context.Background())
+			assert.NoError(t, err)
+
+			res, err := test.PerformRequest(t, "GET", "/v1/tokens", nil, nil, router)
+			assert.NoError(t, err)
+
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "success", response.Status)
+			assert.Equal(t, "Tokens retrieved successfully", response.Message)
+			assert.Equal(t, 0, len(response.Data)) // No enabled tokens
+		})
 	})
 }

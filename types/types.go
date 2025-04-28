@@ -114,12 +114,12 @@ type CreateOrderParams struct {
 
 // RegisterPayload is the payload for the register endpoint
 type RegisterPayload struct {
-	FirstName    string     `json:"firstName" binding:"required"`
-	LastName     string     `json:"lastName" binding:"required"`
-	Email        string     `json:"email" binding:"required,email"`
-	Password     string     `json:"password" binding:"required,min=6,max=20"`
-	Currencies  []string    `json:"currency"`
-	Scopes      []string    `json:"scopes" binding:"required,dive,oneof=sender provider"`
+	FirstName  string   `json:"firstName" binding:"required"`
+	LastName   string   `json:"lastName" binding:"required"`
+	Email      string   `json:"email" binding:"required,email"`
+	Password   string   `json:"password" binding:"required,min=6,max=20"`
+	Currencies []string `json:"currencies"`
+	Scopes     []string `json:"scopes" binding:"required,dive,oneof=sender provider"`
 }
 
 // RegisterResponse is the response for the register endpoint
@@ -157,7 +157,7 @@ type AcceptOrderResponse struct {
 // FulfillLockOrderPayload is the payload for the fulfill order endpoint
 type FulfillLockOrderPayload struct {
 	PSP              string                                `json:"psp" binding:"required"`
-	TxID             string                                `json:"txId"`
+	TxID             string                                `json:"txId" binding:"required"`
 	ValidationStatus lockorderfulfillment.ValidationStatus `json:"validationStatus"`
 	ValidationError  string                                `json:"validationError"`
 }
@@ -210,11 +210,12 @@ type SenderProfilePayload struct {
 type ProviderOrderTokenPayload struct {
 	Currency               string                                `json:"currency" binding:"required"`
 	Symbol                 string                                `json:"symbol" binding:"required"`
-	ConversionRateType     providerordertoken.ConversionRateType `json:"conversionRateType" binding:"required"`
-	FixedConversionRate    decimal.Decimal                       `json:"fixedConversionRate" binding:"required"`
+	ConversionRateType     providerordertoken.ConversionRateType `json:"conversionRateType" binding:"required,oneof=fixed floating"`
+	FixedConversionRate    decimal.Decimal                       `json:"fixedConversionRate" binding:"required,gt=0"`
 	FloatingConversionRate decimal.Decimal                       `json:"floatingConversionRate" binding:"required"`
-	MaxOrderAmount         decimal.Decimal                       `json:"maxOrderAmount" binding:"required"`
-	MinOrderAmount         decimal.Decimal                       `json:"minOrderAmount" binding:"required"`
+	MaxOrderAmount         decimal.Decimal                       `json:"maxOrderAmount" binding:"required,gt=0"`
+	MinOrderAmount         decimal.Decimal                       `json:"minOrderAmount" binding:"required,gt=0"`
+	RateSlippage           decimal.Decimal                       `json:"rateSlippage" binding:"gte=0.1"`
 	Address                string                                `json:"address" binding:"required"`
 	Network                string                                `json:"network" binding:"required"`
 }
@@ -586,35 +587,6 @@ type VerifyAccountRequest struct {
 	AccountIdentifier string `json:"accountIdentifier" binding:"required"`
 }
 
-// NewIDVerificationRequest is the request for a new identity verification request
-type NewIDVerificationRequest struct {
-	WalletAddress string `json:"walletAddress" binding:"required"`
-	Signature     string `json:"signature" binding:"required"`
-	Nonce         string `json:"nonce" binding:"required"`
-}
-
-// NewIDVerificationResponse is the response for a new identity verification request
-type NewIDVerificationResponse struct {
-	URL       string    `json:"url"`
-	ExpiresAt time.Time `json:"expiresAt"`
-}
-
-type IDVerificationStatusResponse struct {
-	Status string `json:"status"`
-	URL    string `json:"url"`
-}
-
-// SmileIDWebhookPayload represents the payload structure from Smile Identity
-type SmileIDWebhookPayload struct {
-	ResultCode    string `json:"ResultCode"`
-	PartnerParams struct {
-		UserID string `json:"user_id"`
-	} `json:"PartnerParams"`
-	Signature string `json:"signature"`
-	Timestamp string `json:"timestamp"`
-	// Add other fields as needed
-}
-
 // NewLinkedAddressRequest is the request for linking a new address
 type NewLinkedAddressRequest struct {
 	Institution       string `json:"institution" binding:"required"`
@@ -673,4 +645,13 @@ type LinkedAddressTransactionList struct {
 	Page         int                        `json:"page"`
 	PageSize     int                        `json:"pageSize"`
 	Transactions []LinkedAddressTransaction `json:"transactions"`
+}
+
+// SupportedTokenResponse represents the structure for supported tokens
+type SupportedTokenResponse struct {
+	Symbol          string `json:"symbol"`
+	ContractAddress string `json:"contractAddress"`
+	Decimals        int8   `json:"decimals"`
+	BaseCurrency    string `json:"baseCurrency"`
+	Network         string `json:"network"`
 }

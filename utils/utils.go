@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"net/url"
 	"reflect"
 	"regexp"
 	"sort"
@@ -110,6 +111,15 @@ func BigMin(x, y *big.Int) *big.Int {
 		return x
 	}
 	return y
+}
+
+// FormatTimestampToGMT1 formats the timestamp to GMT+1 (Africa/Lagos time zone) and returns a formatted string
+func FormatTimestampToGMT1(timestamp time.Time) (string, error) {
+	loc, err := time.LoadLocation("Africa/Lagos")
+	if err != nil {
+		return "", err
+	}
+	return timestamp.In(loc).Format("January 2, 2006 at 3:04 PM"), nil
 }
 
 // PersonalSign is an equivalent of ethers.personal_sign for signing ethereum messages
@@ -518,7 +528,14 @@ func GetTokenRateFromQueue(tokenSymbol string, orderAmount decimal.Decimal, fiat
 			}
 			parts := strings.Split(providerData, ":")
 			if len(parts) != 5 {
-				logger.Errorf("utils.GetTokenRateFromQueue.InvalidProviderData: %v", providerData)
+				logger.WithFields(logger.Fields{
+					"Error": fmt.Sprintf("%v", err),
+					"ProviderData": providerData,
+					"Token": tokenSymbol,
+					"Currency": fiatCurrency,
+					"MinAmount": minAmount,
+					"MaxAmount": maxAmount,
+				}).Errorf("GetTokenRate.InvalidProviderData: %v", providerData)
 				continue
 			}
 
@@ -578,6 +595,7 @@ func GetInstitutionByCode(ctx context.Context, institutionCode string) (*ent.Ins
 	return institution, nil
 }
 
+
 // removeProviderFromQueues removes a provider from all relevant Redis queues when their availability changes to false
 func RemoveProviderFromQueues(ctx *gin.Context, provider *ent.ProviderProfile) {
 	// Fetch all provision buckets and currencies associated with the provider
@@ -634,4 +652,21 @@ func RemoveProviderFromQueues(ctx *gin.Context, provider *ent.ProviderProfile) {
 			}
 		}
 	}
+
+// Helper function to validate HTTPS URL
+func IsValidHttpsUrl(urlStr string) bool {
+	// Check if URL starts with https://
+	if !strings.HasPrefix(strings.ToLower(urlStr), "https://") {
+		return false
+	}
+
+	// Parse URL to ensure it's valid
+	parsedUrl, err := url.Parse(urlStr)
+	if err != nil {
+		return false
+	}
+
+	// Verify scheme is https and host is present
+	return parsedUrl.Scheme == "https" && parsedUrl.Host != ""
+
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -25,6 +26,7 @@ import (
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/shopspring/decimal"
+	"github.com/stretchr/testify/assert"
 )
 
 // CreateTestUser creates a test user with default or custom values
@@ -198,7 +200,7 @@ func CreateTestLockPaymentOrder(overrides map[string]interface{}) (*ent.LockPaym
 		"account_identifier":   "1234567890",
 		"account_name":         "Test Account",
 		"updatedAt":            time.Now(),
-		"tokenID":              0,
+		"token_id":             0,
 		"cancellation_reasons": []string{},
 	}
 
@@ -215,7 +217,7 @@ func CreateTestLockPaymentOrder(overrides map[string]interface{}) (*ent.LockPaym
 		payload[key] = value
 	}
 
-	if payload["tokenID"].(int) == 0 {
+	if payload["token_id"].(int) == 0 {
 		// Create test token
 		backend, _ := SetUpTestBlockchain()
 		token, err := CreateERC20Token(backend, map[string]interface{}{
@@ -224,7 +226,7 @@ func CreateTestLockPaymentOrder(overrides map[string]interface{}) (*ent.LockPaym
 		if err != nil {
 			return nil, err
 		}
-		payload["tokenID"] = token.ID
+		payload["token_id"] = token.ID
 	}
 
 	// Create LockPaymentOrder
@@ -239,7 +241,7 @@ func CreateTestLockPaymentOrder(overrides map[string]interface{}) (*ent.LockPaym
 		SetInstitution(payload["institution"].(string)).
 		SetAccountIdentifier(payload["account_identifier"].(string)).
 		SetAccountName(payload["account_name"].(string)).
-		SetTokenID(payload["tokenID"].(int)).
+		SetTokenID(payload["token_id"].(int)).
 		SetProvider(providerProfile).
 		SetUpdatedAt(payload["updatedAt"].(time.Time)).
 		SetCancellationReasons(payload["cancellation_reasons"].([]string)).
@@ -466,7 +468,6 @@ func CreateTestProviderProfile(overrides map[string]interface{}) (*ent.ProviderP
 	// Create ProviderProfile
 	profile, err := db.Client.ProviderProfile.
 		Create().
-		SetID(payload["user_id"].(uuid.UUID).String()).
 		SetTradingName(payload["trading_name"].(string)).
 		SetHostIdentifier(payload["host_identifier"].(string)).
 		SetProvisionMode(providerprofile.ProvisionMode(payload["provision_mode"].(string))).
@@ -497,9 +498,9 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		"max_order_amount":         decimal.NewFromFloat(1.0),
 		"min_order_amount":         decimal.NewFromFloat(1.0),
 		"provider":                 nil,
-		"tokenID":                  0,
+		"token_id":                 0,
 		"address":                  "0x1234567890123456789012345678901234567890",
-		"network":                  "polygon",
+		"network":                  "localhost",
 	}
 
 	// Apply overrides
@@ -507,7 +508,7 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		payload[key] = value
 	}
 
-	if payload["tokenID"].(int) == 0 {
+	if payload["token_id"].(int) == 0 {
 		// Create test token
 		backend, _ := SetUpTestBlockchain()
 		token, err := CreateERC20Token(backend, map[string]interface{}{
@@ -516,7 +517,7 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		if err != nil {
 			return nil, err
 		}
-		payload["tokenID"] = token.ID
+		payload["token_id"] = token.ID
 	}
 
 	orderToken, err := db.Client.ProviderOrderToken.
@@ -529,9 +530,18 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		SetFloatingConversionRate(payload["floating_conversion_rate"].(decimal.Decimal)).
 		SetAddress(payload["address"].(string)).
 		SetNetwork(payload["network"].(string)).
-		SetTokenID(payload["tokenID"].(int)).
+		SetTokenID(payload["token_id"].(int)).
 		SetCurrencyID(payload["currency_id"].(uuid.UUID)).
+		SetRateSlippage(decimal.NewFromFloat(0.1)).
 		Save(context.Background())
+
+	orderToken, err = db.Client.ProviderOrderToken.
+		Query().
+		Where(providerordertoken.IDEQ(orderToken.ID)).
+		WithCurrency().
+		WithToken().
+		WithProvider().
+		Only(context.Background())
 
 	return orderToken, err
 }
@@ -639,6 +649,66 @@ func CreateTestFiatCurrency(overrides map[string]interface{}) (*ent.FiatCurrency
 		Save(context.Background())
 	return currency, err
 
+}
+
+// Helper function to create test networks and tokens
+func CreateTestTokenData(t *testing.T, client *ent.Client) ([]*ent.Network, []*ent.Token) {
+	ctx := context.Background()
+
+	// Create test networks
+	network1, err := client.Network.Create().
+		SetIdentifier("arbitrum-one").
+		SetChainID(42161).
+		SetRPCEndpoint("https://arb1.arbitrum.io/rpc").
+		SetGatewayContractAddress("0x123").
+		SetIsTestnet(false).
+		SetFee(decimal.NewFromFloat(0.01)).
+		Save(ctx)
+	assert.NoError(t, err)
+
+	network2, err := client.Network.Create().
+		SetIdentifier("polygon").
+		SetChainID(137).
+		SetRPCEndpoint("https://polygon-rpc.com").
+		SetGatewayContractAddress("0x456").
+		SetIsTestnet(false).
+		SetFee(decimal.NewFromFloat(0.02)).
+		Save(ctx)
+	assert.NoError(t, err)
+
+	// Create test tokens
+	token1, err := client.Token.Create().
+		SetSymbol("USDC").
+		SetContractAddress("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48").
+		SetDecimals(6).
+		SetBaseCurrency("USD").
+		SetIsEnabled(true).
+		SetNetwork(network1).
+		Save(ctx)
+	assert.NoError(t, err)
+
+	token2, err := client.Token.Create().
+		SetSymbol("USDT").
+		SetContractAddress("0xdAC17F958D2ee523a2206206994597C13D831ec7").
+		SetDecimals(6).
+		SetBaseCurrency("USD").
+		SetIsEnabled(true).
+		SetNetwork(network2).
+		Save(ctx)
+	assert.NoError(t, err)
+
+	// Disabled token (should not appear in results)
+	_, err = client.Token.Create().
+		SetSymbol("DAI").
+		SetContractAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F").
+		SetDecimals(18).
+		SetBaseCurrency("USD").
+		SetIsEnabled(false).
+		SetNetwork(network1).
+		Save(ctx)
+	assert.NoError(t, err)
+
+	return []*ent.Network{network1, network2}, []*ent.Token{token1, token2}
 }
 
 // CreateEnvFile creates a new file with Key=Value format.
