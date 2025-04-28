@@ -639,7 +639,7 @@ func (s *IndexerService) IndexOrderSettled(ctx context.Context, client types.RPC
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error": fmt.Sprintf("%v", err),
-		}).Errorf("Failed to filterer when indexing order created events for %s", network.Identifier)
+		}).Errorf("Failed to filterer when indexing order settled events for %s", network.Identifier)
 		return err
 	}
 
@@ -666,7 +666,7 @@ func (s *IndexerService) IndexOrderSettled(ctx context.Context, client types.RPC
 			"Error": fmt.Sprintf("%v", err),
 			"Start": uint64(int64(toBlock) - 5000),
 			"End":   toBlock,
-		}).Errorf("Failed to filter order created events for %s when indexing order created events", network.Identifier)
+		}).Errorf("Failed to filter order settled events for %s when indexing order settled events", network.Identifier)
 		return err
 	}
 
@@ -686,7 +686,7 @@ func (s *IndexerService) IndexOrderSettled(ctx context.Context, client types.RPC
 			logger.WithFields(logger.Fields{
 				"Error": fmt.Sprintf("%v", err),
 				"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(settledEvent.OrderId[:])),
-			}).Errorf("Failed to update order status settlement when indexing order created events for %s", network.Identifier)
+			}).Errorf("Failed to update order status settlement when indexing order settled events for %s", network.Identifier)
 			continue
 		}
 	}
@@ -764,7 +764,7 @@ func (s *IndexerService) IndexOrderSettledTron(ctx context.Context, order *ent.L
 						logger.WithFields(logger.Fields{
 							"Error": fmt.Sprintf("%v", err),
 							"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(order.ID[:])),
-						}).Errorf("Failed to update order status settlement when indexing order created events for %s", order.Edges.Token.Edges.Network.Identifier)
+						}).Errorf("Failed to update order status settlement when indexing order settled events for %s", order.Edges.Token.Edges.Network.Identifier)
 					}
 
 					break
@@ -795,7 +795,7 @@ func (s *IndexerService) IndexOrderRefunded(ctx context.Context, client types.RP
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error": fmt.Sprintf("%v", err),
-		}).Errorf("Failed to filterer when indexing order created events for %s", network.Identifier)
+		}).Errorf("Failed to filter when indexing order refunded events for %s", network.Identifier)
 		return err
 	}
 
@@ -805,7 +805,7 @@ func (s *IndexerService) IndexOrderRefunded(ctx context.Context, client types.RP
 		if err != context.Canceled {
 			logger.WithFields(logger.Fields{
 				"Error": fmt.Sprintf("%v", err),
-			}).Errorf("Failed to fetch header by number when indexing order created events for %s", network.Identifier)
+			}).Errorf("Failed to fetch header by number when indexing order refunded events for %s", network.Identifier)
 		}
 		return err
 	}
@@ -822,7 +822,7 @@ func (s *IndexerService) IndexOrderRefunded(ctx context.Context, client types.RP
 			"Error": fmt.Sprintf("%v", err),
 			"Start": uint64(int64(toBlock) - 5000),
 			"End":   toBlock,
-		}).Errorf("Failed to filter order created events for %s when indexing order created events", network.Identifier)
+		}).Errorf("Failed to filter order refunded events for %s when indexing order refunded events", network.Identifier)
 		return err
 	}
 
@@ -841,7 +841,7 @@ func (s *IndexerService) IndexOrderRefunded(ctx context.Context, client types.RP
 				"Error": fmt.Sprintf("%v", err),
 				"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(refundedEvent.OrderId[:])),
 				"TxHash": refundedEvent.TxHash,
-			}).Errorf("Failed to update order status refund when indexing order created events for %s", network.Identifier)
+			}).Errorf("Failed to update order status refund when indexing order refunded events for %s", network.Identifier)
 			continue
 		}
 	}
@@ -918,7 +918,7 @@ func (s *IndexerService) IndexOrderRefundedTron(ctx context.Context, order *ent.
 							"Error": fmt.Sprintf("%v", err),
 							"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(event.OrderId[:])),
 							"TxHash": event.TxHash,
-						}).Errorf("Failed to update order status refund when indexing order created events for %s", order.Edges.Token.Edges.Network.Identifier)
+						}).Errorf("Failed to update order status refund when indexing order refunded events for %s", order.Edges.Token.Edges.Network.Identifier)
 					}
 
 					break
