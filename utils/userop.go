@@ -25,7 +25,6 @@ import (
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
-	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/stackup-wallet/stackup-bundler/pkg/userop"
 )
 
@@ -174,7 +173,24 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 			userOpExpanded,
 			payload,
 		}
+
 	case "thirdweb":
+		maxFeePerGas, maxPriorityFeePerGas, err := getStandardGasPrices(chainId)
+		if err == nil {
+			userOp.MaxFeePerGas = maxFeePerGas
+			userOp.MaxPriorityFeePerGas = maxPriorityFeePerGas
+		} else if chainId == 137 {
+			// increase maxFeePerGas and maxPriorityFeePerGas by 50%
+			userOp.MaxFeePerGas = new(big.Int).Div(
+				new(big.Int).Mul(userOp.MaxFeePerGas, big.NewInt(150)),
+				big.NewInt(100),
+			)
+			userOp.MaxPriorityFeePerGas = new(big.Int).Div(
+				new(big.Int).Mul(userOp.MaxPriorityFeePerGas, big.NewInt(150)),
+				big.NewInt(100),
+			)
+		}
+
 		httpClient := &http.Client{
 			Transport: &http.Transport{},
 		}
@@ -218,6 +234,7 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 		userOp.PreVerificationGas, _ = new(big.Int).SetString(response["preVerificationGas"].(string), 0)
 		userOp.VerificationGasLimit = decimal.NewFromFloat(response["verificationGasLimit"].(float64)).BigInt()
 		userOp.CallGasLimit = decimal.NewFromFloat(response["callGasLimit"].(float64)).BigInt()
+
 
 	case "thirdweb":
 		userOp.CallGasLimit, _ = new(big.Int).SetString(response["callGasLimit"].(string), 0)
@@ -277,24 +294,6 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 			},
 		}
 	case "thirdweb":
-		maxFeePerGas, maxPriorityFeePerGas, err := getStandardGasPrices(chainId)
-		if err == nil {
-			userOp.MaxFeePerGas = maxFeePerGas
-			userOp.MaxPriorityFeePerGas = maxPriorityFeePerGas
-		} else if chainId == 137 {
-			// increase maxFeePerGas and maxPriorityFeePerGas by 50%
-			userOp.MaxFeePerGas = new(big.Int).Div(
-				new(big.Int).Mul(userOp.MaxFeePerGas, big.NewInt(150)),
-				big.NewInt(100),
-			)
-			userOp.MaxPriorityFeePerGas = new(big.Int).Div(
-				new(big.Int).Mul(userOp.MaxPriorityFeePerGas, big.NewInt(150)),
-				big.NewInt(100),
-			)
-		} else {
-			logger.Errorf("Failed to get bundler gas prices, falling back to network prices: %v", err)
-		}
-
 		httpClient := &http.Client{
 			Transport: &http.Transport{},
 		}
@@ -310,6 +309,7 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 		if err != nil {
 			return "", "", 0, fmt.Errorf("failed to connect to RPC client: %w", err)
 		}
+
 
 		requestParams = []interface{}{
 			userOp,
@@ -490,7 +490,7 @@ func GetPaymasterAccount(chainId int64) (string, error) {
 
 	// Handle biconomy case specifically
 	if aaService == "biconomy" {
-		return "0x00000f79b7faf42eebadba19acc07cd08af44789", nil
+		return "0x00000f7365ca6c59a2c93719ad53d567ed49c14c", nil
 	}
 
 	client, err := rpc.Dial(paymasterUrl)
@@ -714,6 +714,7 @@ func detectAAService(url string) (string, error) {
 	switch {
 	case strings.Contains(url, "biconomy.io"):
 		return "biconomy", nil
+
 	case strings.Contains(url, "thirdweb.com"):
 		return "thirdweb", nil
 	default:
