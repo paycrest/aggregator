@@ -10,23 +10,23 @@ import (
 
 var cnfg = config.ServerConfig()
 
-func TestRealGlitchTipService(t *testing.T) {
-	// Create a real alert
+func TestGlitchTipService(t *testing.T) {
+	// Create a test alert
 	mockAlert := &GlitchTipAlert{
-		ProjectName: "Real Project",
-		Title:       "Real Alert",
-		Message:     "This is a real alert for testing purposes...",
+		ProjectName: "Aggregator",
+		Title:       "Test Alert",
+		Message:     "Testing GlitchTip alert...",
 		Level:       LevelError,
-		URL:         "https://example.com/error",
-		Function:    "real_function",
-		Environment: "production",
+		URL:         "https://example.com/test",
+		Function:    "TestFunction",
+		Environment: "test",
 		Timestamp:   time.Now(),
 	}
 
-	// Initialize the GlitchTipService with real configurations
-	service := NewGlitchTipService(cnfg.SlackWebhookURL, cnfg.GlitchTipDSN)
+	// Initialize the GlitchTipService with configurations
+	service := NewGlitchTipService(cnfg.GlitchTipDSN)
 
-	// Send the alert to both Slack and GlitchTip
+	// Send the alert to GlitchTip
 	err := service.SendGlitchTipAlert(mockAlert)
 	assert.NoError(t, err)
 }
