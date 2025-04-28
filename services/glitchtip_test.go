@@ -1,6 +1,7 @@
 package services
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -11,22 +12,51 @@ import (
 var cnfg = config.ServerConfig()
 
 func TestGlitchTipService(t *testing.T) {
-	// Create a test alert
-	mockAlert := &GlitchTipAlert{
-		ProjectName: "Aggregator",
-		Title:       "Test Alert",
-		Message:     "Testing GlitchTip alert...",
-		Level:       LevelError,
-		URL:         "https://example.com/test",
-		Function:    "TestFunction",
-		Environment: "test",
-		Timestamp:   time.Now(),
+	// Set test release version
+	os.Setenv("RELEASE_VERSION", "v1.0.0")
+	defer os.Unsetenv("RELEASE_VERSION")
+
+	tests := []struct {
+		name    string
+		alert   *GlitchTipAlert
+		wantErr bool
+	}{
+		{
+			name: "error alert",
+			alert: &GlitchTipAlert{
+				ProjectName: "Payment Service",
+				Title:       "Transaction Processing Failed",
+				Message:     "Failed to process transaction: timeout",
+				Level:       LevelError,
+				Environment: "test",
+				Timestamp:   time.Now(),
+			},
+			wantErr: false,
+		},
+		{
+			name: "info alert",
+			alert: &GlitchTipAlert{
+				ProjectName: "System Monitor",
+				Title:       "Daily Health Check",
+				Message:     "All systems operational",
+				Level:       LevelInfo,
+				Environment: "test",
+				Timestamp:   time.Now(),
+			},
+			wantErr: false,
+		},
 	}
 
-	// Initialize the GlitchTipService with configurations
 	service := NewGlitchTipService(cnfg.GlitchTipDSN)
 
-	// Send the alert to GlitchTip
-	err := service.SendGlitchTipAlert(mockAlert)
-	assert.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := service.SendGlitchTipAlert(tt.alert)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"os"
 	"runtime"
 	"strings"
 	"time"
@@ -45,6 +46,12 @@ func NewGlitchTipService(glitchTipDSN string) *GlitchTipService {
 			Dsn:              glitchTipDSN,
 			Environment:      "production",
 			TracesSampleRate: 1.0,
+			// Disable email notifications
+			BeforeSend: func(event *sentry.Event, hint *sentry.EventHint) *sentry.Event {
+				// Disable email notifications by removing email addresses
+				event.User.Email = ""
+				return event
+			},
 		})
 		if err != nil {
 			logger.Errorf("Failed to initialize GlitchTip: %v", err)
@@ -76,9 +83,14 @@ func (s *GlitchTipService) sendToGlitchTip(alert *GlitchTipAlert) error {
 		file = file[strings.LastIndex(file, "/")+1:]
 	}
 
+	var eventID *sentry.EventID
+
 	// Add additional context and structured data
 	sentry.WithScope(func(scope *sentry.Scope) {
-		// Create an event with proper structure
+		// Set scope properties
+		scope.SetTag("project", alert.ProjectName)
+		scope.SetLevel(sentry.Level(alert.Level))
+
 		event := sentry.Event{
 			Message:     alert.Message,
 			ServerName:  alert.ProjectName,
@@ -86,24 +98,31 @@ func (s *GlitchTipService) sendToGlitchTip(alert *GlitchTipAlert) error {
 			Level:       sentry.Level(alert.Level),
 			Extra: map[string]interface{}{
 				"file":     file,
-				"function": functionName,
 				"line":     line,
-			},
-			Tags: map[string]string{
-				"project": alert.ProjectName,
-				"title":   alert.Title,
+				"function": functionName,
 			},
 		}
 
-		// Capture the event
-		eventID := sentry.CaptureEvent(&event)
+		// Add release info if available
+		if release := os.Getenv("RELEASE_VERSION"); release != "" {
+			event.Release = release
+		}
+
+		if alert.Extra != nil {
+			for k, v := range alert.Extra {
+				event.Extra[k] = v
+			}
+		}
+
+		// Capture the event and store the ID
+		eventID = sentry.CaptureEvent(&event)
 		if eventID == nil {
 			logger.Errorf("Failed to send event to GlitchTip")
 		}
 	})
 
 	// Ensure events are sent before continuing
-	if ok := sentry.Flush(5 * time.Second); !ok {
+	if ok := sentry.Flush(2 * time.Second); !ok {
 		logger.Warnf("Failed to flush all events to GlitchTip")
 	}
 
