@@ -652,6 +652,7 @@ func RemoveProviderFromQueues(ctx *gin.Context, provider *ent.ProviderProfile) {
 			}
 		}
 	}
+}
 
 // Helper function to validate HTTPS URL
 func IsValidHttpsUrl(urlStr string) bool {
