@@ -34,7 +34,7 @@ type SenderProfile struct {
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// Monthly transaction volume for the sender
-	MonthlyVolume float64 `json:"monthly_volume,omitempty"`
+	MonthlyVolume *float64 `json:"monthly_volume,omitempty"`
 	// Business website URL
 	BusinessWebsite string `json:"business_website,omitempty"`
 	// Nature of business description
@@ -194,7 +194,8 @@ func (sp *SenderProfile) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullFloat64); !ok {
 				return fmt.Errorf("unexpected type %T for field monthly_volume", values[i])
 			} else if value.Valid {
-				sp.MonthlyVolume = value.Float64
+				sp.MonthlyVolume = new(float64)
+				*sp.MonthlyVolume = value.Float64
 			}
 		case senderprofile.FieldBusinessWebsite:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -294,8 +295,10 @@ func (sp *SenderProfile) String() string {
 	builder.WriteString("updated_at=")
 	builder.WriteString(sp.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
-	builder.WriteString("monthly_volume=")
-	builder.WriteString(fmt.Sprintf("%v", sp.MonthlyVolume))
+	if v := sp.MonthlyVolume; v != nil {
+		builder.WriteString("monthly_volume=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("business_website=")
 	builder.WriteString(sp.BusinessWebsite)

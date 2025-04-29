@@ -885,6 +885,16 @@ func MonthlyVolumeLTE(v float64) predicate.ProviderProfile {
 	return predicate.ProviderProfile(sql.FieldLTE(FieldMonthlyVolume, v))
 }
 
+// MonthlyVolumeIsNil applies the IsNil predicate on the "monthly_volume" field.
+func MonthlyVolumeIsNil() predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldIsNull(FieldMonthlyVolume))
+}
+
+// MonthlyVolumeNotNil applies the NotNil predicate on the "monthly_volume" field.
+func MonthlyVolumeNotNil() predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldNotNull(FieldMonthlyVolume))
+}
+
 // HasUser applies the HasEdge predicate on the "user" edge.
 func HasUser() predicate.ProviderProfile {
 	return predicate.ProviderProfile(func(s *sql.Selector) {

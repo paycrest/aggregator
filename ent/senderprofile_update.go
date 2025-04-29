@@ -141,6 +141,12 @@ func (spu *SenderProfileUpdate) AddMonthlyVolume(f float64) *SenderProfileUpdate
 	return spu
 }
 
+// ClearMonthlyVolume clears the value of the "monthly_volume" field.
+func (spu *SenderProfileUpdate) ClearMonthlyVolume() *SenderProfileUpdate {
+	spu.mutation.ClearMonthlyVolume()
+	return spu
+}
+
 // SetBusinessWebsite sets the "business_website" field.
 func (spu *SenderProfileUpdate) SetBusinessWebsite(s string) *SenderProfileUpdate {
 	spu.mutation.SetBusinessWebsite(s)
@@ -357,11 +363,6 @@ func (spu *SenderProfileUpdate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (spu *SenderProfileUpdate) check() error {
-	if v, ok := spu.mutation.MonthlyVolume(); ok {
-		if err := senderprofile.MonthlyVolumeValidator(v); err != nil {
-			return &ValidationError{Name: "monthly_volume", err: fmt.Errorf(`ent: validator failed for field "SenderProfile.monthly_volume": %w`, err)}
-		}
-	}
 	if v, ok := spu.mutation.BusinessWebsite(); ok {
 		if err := senderprofile.BusinessWebsiteValidator(v); err != nil {
 			return &ValidationError{Name: "business_website", err: fmt.Errorf(`ent: validator failed for field "SenderProfile.business_website": %w`, err)}
@@ -424,6 +425,9 @@ func (spu *SenderProfileUpdate) sqlSave(ctx context.Context) (n int, err error) 
 	}
 	if value, ok := spu.mutation.AddedMonthlyVolume(); ok {
 		_spec.AddField(senderprofile.FieldMonthlyVolume, field.TypeFloat64, value)
+	}
+	if spu.mutation.MonthlyVolumeCleared() {
+		_spec.ClearField(senderprofile.FieldMonthlyVolume, field.TypeFloat64)
 	}
 	if value, ok := spu.mutation.BusinessWebsite(); ok {
 		_spec.SetField(senderprofile.FieldBusinessWebsite, field.TypeString, value)
@@ -728,6 +732,12 @@ func (spuo *SenderProfileUpdateOne) AddMonthlyVolume(f float64) *SenderProfileUp
 	return spuo
 }
 
+// ClearMonthlyVolume clears the value of the "monthly_volume" field.
+func (spuo *SenderProfileUpdateOne) ClearMonthlyVolume() *SenderProfileUpdateOne {
+	spuo.mutation.ClearMonthlyVolume()
+	return spuo
+}
+
 // SetBusinessWebsite sets the "business_website" field.
 func (spuo *SenderProfileUpdateOne) SetBusinessWebsite(s string) *SenderProfileUpdateOne {
 	spuo.mutation.SetBusinessWebsite(s)
@@ -957,11 +967,6 @@ func (spuo *SenderProfileUpdateOne) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (spuo *SenderProfileUpdateOne) check() error {
-	if v, ok := spuo.mutation.MonthlyVolume(); ok {
-		if err := senderprofile.MonthlyVolumeValidator(v); err != nil {
-			return &ValidationError{Name: "monthly_volume", err: fmt.Errorf(`ent: validator failed for field "SenderProfile.monthly_volume": %w`, err)}
-		}
-	}
 	if v, ok := spuo.mutation.BusinessWebsite(); ok {
 		if err := senderprofile.BusinessWebsiteValidator(v); err != nil {
 			return &ValidationError{Name: "business_website", err: fmt.Errorf(`ent: validator failed for field "SenderProfile.business_website": %w`, err)}
@@ -1041,6 +1046,9 @@ func (spuo *SenderProfileUpdateOne) sqlSave(ctx context.Context) (_node *SenderP
 	}
 	if value, ok := spuo.mutation.AddedMonthlyVolume(); ok {
 		_spec.AddField(senderprofile.FieldMonthlyVolume, field.TypeFloat64, value)
+	}
+	if spuo.mutation.MonthlyVolumeCleared() {
+		_spec.ClearField(senderprofile.FieldMonthlyVolume, field.TypeFloat64)
 	}
 	if value, ok := spuo.mutation.BusinessWebsite(); ok {
 		_spec.SetField(senderprofile.FieldBusinessWebsite, field.TypeString, value)

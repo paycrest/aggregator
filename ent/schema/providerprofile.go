@@ -51,7 +51,8 @@ func (ProviderProfile) Fields() []ent.Field {
 		field.String("business_document").Optional(),
 		field.Bool("is_kyb_verified").Default(false),
 		field.Float("monthly_volume").
-			Positive().
+			Optional().
+			Nillable().
 			Comment("Monthly transaction volume for the provider"),
 	}
 }

@@ -346,6 +346,16 @@ func MonthlyVolumeLTE(v float64) predicate.SenderProfile {
 	return predicate.SenderProfile(sql.FieldLTE(FieldMonthlyVolume, v))
 }
 
+// MonthlyVolumeIsNil applies the IsNil predicate on the "monthly_volume" field.
+func MonthlyVolumeIsNil() predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldIsNull(FieldMonthlyVolume))
+}
+
+// MonthlyVolumeNotNil applies the NotNil predicate on the "monthly_volume" field.
+func MonthlyVolumeNotNil() predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldNotNull(FieldMonthlyVolume))
+}
+
 // BusinessWebsiteEQ applies the EQ predicate on the "business_website" field.
 func BusinessWebsiteEQ(v string) predicate.SenderProfile {
 	return predicate.SenderProfile(sql.FieldEQ(FieldBusinessWebsite, v))

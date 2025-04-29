@@ -128,8 +128,6 @@ var (
 	DefaultUpdatedAt func() time.Time
 	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
 	UpdateDefaultUpdatedAt func() time.Time
-	// MonthlyVolumeValidator is a validator for the "monthly_volume" field. It is called by the builders before save.
-	MonthlyVolumeValidator func(float64) error
 	// BusinessWebsiteValidator is a validator for the "business_website" field. It is called by the builders before save.
 	BusinessWebsiteValidator func(string) error
 	// NatureOfBusinessValidator is a validator for the "nature_of_business" field. It is called by the builders before save.

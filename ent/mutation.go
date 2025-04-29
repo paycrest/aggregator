@@ -12506,7 +12506,7 @@ func (m *ProviderProfileMutation) MonthlyVolume() (r float64, exists bool) {
 // OldMonthlyVolume returns the old "monthly_volume" field's value of the ProviderProfile entity.
 // If the ProviderProfile object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProviderProfileMutation) OldMonthlyVolume(ctx context.Context) (v float64, err error) {
+func (m *ProviderProfileMutation) OldMonthlyVolume(ctx context.Context) (v *float64, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldMonthlyVolume is only allowed on UpdateOne operations")
 	}
@@ -12538,10 +12538,24 @@ func (m *ProviderProfileMutation) AddedMonthlyVolume() (r float64, exists bool) 
 	return *v, true
 }
 
+// ClearMonthlyVolume clears the value of the "monthly_volume" field.
+func (m *ProviderProfileMutation) ClearMonthlyVolume() {
+	m.monthly_volume = nil
+	m.addmonthly_volume = nil
+	m.clearedFields[providerprofile.FieldMonthlyVolume] = struct{}{}
+}
+
+// MonthlyVolumeCleared returns if the "monthly_volume" field was cleared in this mutation.
+func (m *ProviderProfileMutation) MonthlyVolumeCleared() bool {
+	_, ok := m.clearedFields[providerprofile.FieldMonthlyVolume]
+	return ok
+}
+
 // ResetMonthlyVolume resets all changes to the "monthly_volume" field.
 func (m *ProviderProfileMutation) ResetMonthlyVolume() {
 	m.monthly_volume = nil
 	m.addmonthly_volume = nil
+	delete(m.clearedFields, providerprofile.FieldMonthlyVolume)
 }
 
 // SetUserID sets the "user" edge to the User entity by id.
@@ -13234,6 +13248,9 @@ func (m *ProviderProfileMutation) ClearedFields() []string {
 	if m.FieldCleared(providerprofile.FieldBusinessDocument) {
 		fields = append(fields, providerprofile.FieldBusinessDocument)
 	}
+	if m.FieldCleared(providerprofile.FieldMonthlyVolume) {
+		fields = append(fields, providerprofile.FieldMonthlyVolume)
+	}
 	return fields
 }
 
@@ -13274,6 +13291,9 @@ func (m *ProviderProfileMutation) ClearField(name string) error {
 		return nil
 	case providerprofile.FieldBusinessDocument:
 		m.ClearBusinessDocument()
+		return nil
+	case providerprofile.FieldMonthlyVolume:
+		m.ClearMonthlyVolume()
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderProfile nullable field %s", name)
@@ -16886,7 +16906,7 @@ func (m *SenderProfileMutation) MonthlyVolume() (r float64, exists bool) {
 // OldMonthlyVolume returns the old "monthly_volume" field's value of the SenderProfile entity.
 // If the SenderProfile object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *SenderProfileMutation) OldMonthlyVolume(ctx context.Context) (v float64, err error) {
+func (m *SenderProfileMutation) OldMonthlyVolume(ctx context.Context) (v *float64, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldMonthlyVolume is only allowed on UpdateOne operations")
 	}
@@ -16918,10 +16938,24 @@ func (m *SenderProfileMutation) AddedMonthlyVolume() (r float64, exists bool) {
 	return *v, true
 }
 
+// ClearMonthlyVolume clears the value of the "monthly_volume" field.
+func (m *SenderProfileMutation) ClearMonthlyVolume() {
+	m.monthly_volume = nil
+	m.addmonthly_volume = nil
+	m.clearedFields[senderprofile.FieldMonthlyVolume] = struct{}{}
+}
+
+// MonthlyVolumeCleared returns if the "monthly_volume" field was cleared in this mutation.
+func (m *SenderProfileMutation) MonthlyVolumeCleared() bool {
+	_, ok := m.clearedFields[senderprofile.FieldMonthlyVolume]
+	return ok
+}
+
 // ResetMonthlyVolume resets all changes to the "monthly_volume" field.
 func (m *SenderProfileMutation) ResetMonthlyVolume() {
 	m.monthly_volume = nil
 	m.addmonthly_volume = nil
+	delete(m.clearedFields, senderprofile.FieldMonthlyVolume)
 }
 
 // SetBusinessWebsite sets the "business_website" field.
@@ -17500,6 +17534,9 @@ func (m *SenderProfileMutation) ClearedFields() []string {
 	if m.FieldCleared(senderprofile.FieldProviderID) {
 		fields = append(fields, senderprofile.FieldProviderID)
 	}
+	if m.FieldCleared(senderprofile.FieldMonthlyVolume) {
+		fields = append(fields, senderprofile.FieldMonthlyVolume)
+	}
 	if m.FieldCleared(senderprofile.FieldBusinessWebsite) {
 		fields = append(fields, senderprofile.FieldBusinessWebsite)
 	}
@@ -17525,6 +17562,9 @@ func (m *SenderProfileMutation) ClearField(name string) error {
 		return nil
 	case senderprofile.FieldProviderID:
 		m.ClearProviderID()
+		return nil
+	case senderprofile.FieldMonthlyVolume:
+		m.ClearMonthlyVolume()
 		return nil
 	case senderprofile.FieldBusinessWebsite:
 		m.ClearBusinessWebsite()

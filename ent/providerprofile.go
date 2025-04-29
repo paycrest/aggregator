@@ -52,7 +52,7 @@ type ProviderProfile struct {
 	// IsKybVerified holds the value of the "is_kyb_verified" field.
 	IsKybVerified bool `json:"is_kyb_verified,omitempty"`
 	// Monthly transaction volume for the provider
-	MonthlyVolume float64 `json:"monthly_volume,omitempty"`
+	MonthlyVolume *float64 `json:"monthly_volume,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ProviderProfileQuery when eager-loading is set.
 	Edges                 ProviderProfileEdges `json:"edges"`
@@ -280,7 +280,8 @@ func (pp *ProviderProfile) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullFloat64); !ok {
 				return fmt.Errorf("unexpected type %T for field monthly_volume", values[i])
 			} else if value.Valid {
-				pp.MonthlyVolume = value.Float64
+				pp.MonthlyVolume = new(float64)
+				*pp.MonthlyVolume = value.Float64
 			}
 		case providerprofile.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -405,8 +406,10 @@ func (pp *ProviderProfile) String() string {
 	builder.WriteString("is_kyb_verified=")
 	builder.WriteString(fmt.Sprintf("%v", pp.IsKybVerified))
 	builder.WriteString(", ")
-	builder.WriteString("monthly_volume=")
-	builder.WriteString(fmt.Sprintf("%v", pp.MonthlyVolume))
+	if v := pp.MonthlyVolume; v != nil {
+		builder.WriteString("monthly_volume=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteByte(')')
 	return builder.String()
 }

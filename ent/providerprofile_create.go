@@ -247,6 +247,14 @@ func (ppc *ProviderProfileCreate) SetMonthlyVolume(f float64) *ProviderProfileCr
 	return ppc
 }
 
+// SetNillableMonthlyVolume sets the "monthly_volume" field if the given value is not nil.
+func (ppc *ProviderProfileCreate) SetNillableMonthlyVolume(f *float64) *ProviderProfileCreate {
+	if f != nil {
+		ppc.SetMonthlyVolume(*f)
+	}
+	return ppc
+}
+
 // SetID sets the "id" field.
 func (ppc *ProviderProfileCreate) SetID(s string) *ProviderProfileCreate {
 	ppc.mutation.SetID(s)
@@ -475,14 +483,6 @@ func (ppc *ProviderProfileCreate) check() error {
 	if _, ok := ppc.mutation.IsKybVerified(); !ok {
 		return &ValidationError{Name: "is_kyb_verified", err: errors.New(`ent: missing required field "ProviderProfile.is_kyb_verified"`)}
 	}
-	if _, ok := ppc.mutation.MonthlyVolume(); !ok {
-		return &ValidationError{Name: "monthly_volume", err: errors.New(`ent: missing required field "ProviderProfile.monthly_volume"`)}
-	}
-	if v, ok := ppc.mutation.MonthlyVolume(); ok {
-		if err := providerprofile.MonthlyVolumeValidator(v); err != nil {
-			return &ValidationError{Name: "monthly_volume", err: fmt.Errorf(`ent: validator failed for field "ProviderProfile.monthly_volume": %w`, err)}
-		}
-	}
 	if len(ppc.mutation.UserIDs()) == 0 {
 		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "ProviderProfile.user"`)}
 	}
@@ -587,7 +587,7 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 	}
 	if value, ok := ppc.mutation.MonthlyVolume(); ok {
 		_spec.SetField(providerprofile.FieldMonthlyVolume, field.TypeFloat64, value)
-		_node.MonthlyVolume = value
+		_node.MonthlyVolume = &value
 	}
 	if nodes := ppc.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -1006,6 +1006,12 @@ func (u *ProviderProfileUpsert) AddMonthlyVolume(v float64) *ProviderProfileUpse
 	return u
 }
 
+// ClearMonthlyVolume clears the value of the "monthly_volume" field.
+func (u *ProviderProfileUpsert) ClearMonthlyVolume() *ProviderProfileUpsert {
+	u.SetNull(providerprofile.FieldMonthlyVolume)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
@@ -1345,6 +1351,13 @@ func (u *ProviderProfileUpsertOne) AddMonthlyVolume(v float64) *ProviderProfileU
 func (u *ProviderProfileUpsertOne) UpdateMonthlyVolume() *ProviderProfileUpsertOne {
 	return u.Update(func(s *ProviderProfileUpsert) {
 		s.UpdateMonthlyVolume()
+	})
+}
+
+// ClearMonthlyVolume clears the value of the "monthly_volume" field.
+func (u *ProviderProfileUpsertOne) ClearMonthlyVolume() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.ClearMonthlyVolume()
 	})
 }
 
@@ -1854,6 +1867,13 @@ func (u *ProviderProfileUpsertBulk) AddMonthlyVolume(v float64) *ProviderProfile
 func (u *ProviderProfileUpsertBulk) UpdateMonthlyVolume() *ProviderProfileUpsertBulk {
 	return u.Update(func(s *ProviderProfileUpsert) {
 		s.UpdateMonthlyVolume()
+	})
+}
+
+// ClearMonthlyVolume clears the value of the "monthly_volume" field.
+func (u *ProviderProfileUpsertBulk) ClearMonthlyVolume() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.ClearMonthlyVolume()
 	})
 }
 

@@ -111,6 +111,14 @@ func (spc *SenderProfileCreate) SetMonthlyVolume(f float64) *SenderProfileCreate
 	return spc
 }
 
+// SetNillableMonthlyVolume sets the "monthly_volume" field if the given value is not nil.
+func (spc *SenderProfileCreate) SetNillableMonthlyVolume(f *float64) *SenderProfileCreate {
+	if f != nil {
+		spc.SetMonthlyVolume(*f)
+	}
+	return spc
+}
+
 // SetBusinessWebsite sets the "business_website" field.
 func (spc *SenderProfileCreate) SetBusinessWebsite(s string) *SenderProfileCreate {
 	spc.mutation.SetBusinessWebsite(s)
@@ -299,14 +307,6 @@ func (spc *SenderProfileCreate) check() error {
 	if _, ok := spc.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "SenderProfile.updated_at"`)}
 	}
-	if _, ok := spc.mutation.MonthlyVolume(); !ok {
-		return &ValidationError{Name: "monthly_volume", err: errors.New(`ent: missing required field "SenderProfile.monthly_volume"`)}
-	}
-	if v, ok := spc.mutation.MonthlyVolume(); ok {
-		if err := senderprofile.MonthlyVolumeValidator(v); err != nil {
-			return &ValidationError{Name: "monthly_volume", err: fmt.Errorf(`ent: validator failed for field "SenderProfile.monthly_volume": %w`, err)}
-		}
-	}
 	if v, ok := spc.mutation.BusinessWebsite(); ok {
 		if err := senderprofile.BusinessWebsiteValidator(v); err != nil {
 			return &ValidationError{Name: "business_website", err: fmt.Errorf(`ent: validator failed for field "SenderProfile.business_website": %w`, err)}
@@ -382,7 +382,7 @@ func (spc *SenderProfileCreate) createSpec() (*SenderProfile, *sqlgraph.CreateSp
 	}
 	if value, ok := spc.mutation.MonthlyVolume(); ok {
 		_spec.SetField(senderprofile.FieldMonthlyVolume, field.TypeFloat64, value)
-		_node.MonthlyVolume = value
+		_node.MonthlyVolume = &value
 	}
 	if value, ok := spc.mutation.BusinessWebsite(); ok {
 		_spec.SetField(senderprofile.FieldBusinessWebsite, field.TypeString, value)
@@ -627,6 +627,12 @@ func (u *SenderProfileUpsert) AddMonthlyVolume(v float64) *SenderProfileUpsert {
 	return u
 }
 
+// ClearMonthlyVolume clears the value of the "monthly_volume" field.
+func (u *SenderProfileUpsert) ClearMonthlyVolume() *SenderProfileUpsert {
+	u.SetNull(senderprofile.FieldMonthlyVolume)
+	return u
+}
+
 // SetBusinessWebsite sets the "business_website" field.
 func (u *SenderProfileUpsert) SetBusinessWebsite(v string) *SenderProfileUpsert {
 	u.Set(senderprofile.FieldBusinessWebsite, v)
@@ -827,6 +833,13 @@ func (u *SenderProfileUpsertOne) AddMonthlyVolume(v float64) *SenderProfileUpser
 func (u *SenderProfileUpsertOne) UpdateMonthlyVolume() *SenderProfileUpsertOne {
 	return u.Update(func(s *SenderProfileUpsert) {
 		s.UpdateMonthlyVolume()
+	})
+}
+
+// ClearMonthlyVolume clears the value of the "monthly_volume" field.
+func (u *SenderProfileUpsertOne) ClearMonthlyVolume() *SenderProfileUpsertOne {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.ClearMonthlyVolume()
 	})
 }
 
@@ -1203,6 +1216,13 @@ func (u *SenderProfileUpsertBulk) AddMonthlyVolume(v float64) *SenderProfileUpse
 func (u *SenderProfileUpsertBulk) UpdateMonthlyVolume() *SenderProfileUpsertBulk {
 	return u.Update(func(s *SenderProfileUpsert) {
 		s.UpdateMonthlyVolume()
+	})
+}
+
+// ClearMonthlyVolume clears the value of the "monthly_volume" field.
+func (u *SenderProfileUpsertBulk) ClearMonthlyVolume() *SenderProfileUpsertBulk {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.ClearMonthlyVolume()
 	})
 }
 

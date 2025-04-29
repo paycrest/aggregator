@@ -32,7 +32,8 @@ func (SenderProfile) Fields() []ent.Field {
 			Default(time.Now).
 			UpdateDefault(time.Now),
 		field.Float("monthly_volume").
-			Positive().
+			Optional().
+			Nillable().
 			Comment("Monthly transaction volume for the sender"),
 		field.String("business_website").
 			Optional().

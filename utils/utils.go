@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math/big"
 	"net/url"
@@ -624,13 +625,11 @@ func DecimalPtr(d decimal.Decimal) *decimal.Decimal {
 // ValidateMonthlyVolume validates the monthly volume provided in the payload.
 func ValidateMonthlyVolume(monthlyVolume *decimal.Decimal) (float64, error) {
 	if monthlyVolume == nil {
-		return 0, fmt.Errorf("monthly volume must be provided and greater than zero")
+		return 0, errors.New("monthly volume must be provided and greater than zero")
 	}
-
-	monthlyVolumeFloat, exact := monthlyVolume.Float64()
-	if !exact || monthlyVolumeFloat <= 0 {
-		return 0, fmt.Errorf("monthly volume must be a positive number")
+	if monthlyVolume.LessThanOrEqual(decimal.Zero) {
+		return 0, errors.New("monthly volume must be a positive number")
 	}
-
+	monthlyVolumeFloat, _ := monthlyVolume.Float64()
 	return monthlyVolumeFloat, nil
 }

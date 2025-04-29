@@ -397,7 +397,6 @@ func TestAuth(t *testing.T) {
 			res, err := test.PerformRequest(t, "POST", "/register", payload, nil, router)
 			assert.NoError(t, err)
 
-			// Assert the response body
 			assert.Equal(t, http.StatusBadRequest, res.Code)
 
 			var response types.Response
@@ -425,8 +424,11 @@ func TestAuth(t *testing.T) {
 			// First, ensure the currency exists in the database
 			ctx := context.Background()
 			_, err := db.Client.FiatCurrency.Create().
-				SetCode("NGN").
+				SetCode("NG").
 				SetName("Nigerian Naira").
+				SetShortName("NGN").
+				SetSymbol("#").
+				SetMarketRate(decimal.NewFromInt(1000)).
 				SetIsEnabled(true).
 				Save(ctx)
 			assert.NoError(t, err)
@@ -437,13 +439,6 @@ func TestAuth(t *testing.T) {
 			var response types.Response
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
-
-			// Add more detailed logging
-			t.Logf("Response Status Code: %d", res.Code)
-			t.Logf("Response Body: %+v", response)
-			if response.Data != nil {
-				t.Logf("Response Data: %+v", response.Data)
-			}
 
 			assert.Equal(t, http.StatusCreated, res.Code)
 
