@@ -33,6 +33,12 @@ type SenderProfile struct {
 	IsActive bool `json:"is_active,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Monthly transaction volume for the sender
+	MonthlyVolume float64 `json:"monthly_volume,omitempty"`
+	// Business website URL
+	BusinessWebsite string `json:"business_website,omitempty"`
+	// Nature of business description
+	NatureOfBusiness string `json:"nature_of_business,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the SenderProfileQuery when eager-loading is set.
 	Edges               SenderProfileEdges `json:"edges"`
@@ -115,7 +121,9 @@ func (*SenderProfile) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case senderprofile.FieldIsPartner, senderprofile.FieldIsActive:
 			values[i] = new(sql.NullBool)
-		case senderprofile.FieldWebhookURL, senderprofile.FieldProviderID:
+		case senderprofile.FieldMonthlyVolume:
+			values[i] = new(sql.NullFloat64)
+		case senderprofile.FieldWebhookURL, senderprofile.FieldProviderID, senderprofile.FieldBusinessWebsite, senderprofile.FieldNatureOfBusiness:
 			values[i] = new(sql.NullString)
 		case senderprofile.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -181,6 +189,24 @@ func (sp *SenderProfile) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
 				sp.UpdatedAt = value.Time
+			}
+		case senderprofile.FieldMonthlyVolume:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field monthly_volume", values[i])
+			} else if value.Valid {
+				sp.MonthlyVolume = value.Float64
+			}
+		case senderprofile.FieldBusinessWebsite:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field business_website", values[i])
+			} else if value.Valid {
+				sp.BusinessWebsite = value.String
+			}
+		case senderprofile.FieldNatureOfBusiness:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field nature_of_business", values[i])
+			} else if value.Valid {
+				sp.NatureOfBusiness = value.String
 			}
 		case senderprofile.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -267,6 +293,15 @@ func (sp *SenderProfile) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
 	builder.WriteString(sp.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("monthly_volume=")
+	builder.WriteString(fmt.Sprintf("%v", sp.MonthlyVolume))
+	builder.WriteString(", ")
+	builder.WriteString("business_website=")
+	builder.WriteString(sp.BusinessWebsite)
+	builder.WriteString(", ")
+	builder.WriteString("nature_of_business=")
+	builder.WriteString(sp.NatureOfBusiness)
 	builder.WriteByte(')')
 	return builder.String()
 }

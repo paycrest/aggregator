@@ -11701,6 +11701,8 @@ type ProviderProfileMutation struct {
 	identity_document        *string
 	business_document        *string
 	is_kyb_verified          *bool
+	monthly_volume           *float64
+	addmonthly_volume        *float64
 	clearedFields            map[string]struct{}
 	user                     *uuid.UUID
 	cleareduser              bool
@@ -12486,6 +12488,62 @@ func (m *ProviderProfileMutation) ResetIsKybVerified() {
 	m.is_kyb_verified = nil
 }
 
+// SetMonthlyVolume sets the "monthly_volume" field.
+func (m *ProviderProfileMutation) SetMonthlyVolume(f float64) {
+	m.monthly_volume = &f
+	m.addmonthly_volume = nil
+}
+
+// MonthlyVolume returns the value of the "monthly_volume" field in the mutation.
+func (m *ProviderProfileMutation) MonthlyVolume() (r float64, exists bool) {
+	v := m.monthly_volume
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMonthlyVolume returns the old "monthly_volume" field's value of the ProviderProfile entity.
+// If the ProviderProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderProfileMutation) OldMonthlyVolume(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMonthlyVolume is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMonthlyVolume requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMonthlyVolume: %w", err)
+	}
+	return oldValue.MonthlyVolume, nil
+}
+
+// AddMonthlyVolume adds f to the "monthly_volume" field.
+func (m *ProviderProfileMutation) AddMonthlyVolume(f float64) {
+	if m.addmonthly_volume != nil {
+		*m.addmonthly_volume += f
+	} else {
+		m.addmonthly_volume = &f
+	}
+}
+
+// AddedMonthlyVolume returns the value that was added to the "monthly_volume" field in this mutation.
+func (m *ProviderProfileMutation) AddedMonthlyVolume() (r float64, exists bool) {
+	v := m.addmonthly_volume
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetMonthlyVolume resets all changes to the "monthly_volume" field.
+func (m *ProviderProfileMutation) ResetMonthlyVolume() {
+	m.monthly_volume = nil
+	m.addmonthly_volume = nil
+}
+
 // SetUserID sets the "user" edge to the User entity by id.
 func (m *ProviderProfileMutation) SetUserID(id uuid.UUID) {
 	m.user = &id
@@ -12853,7 +12911,7 @@ func (m *ProviderProfileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProviderProfileMutation) Fields() []string {
-	fields := make([]string, 0, 15)
+	fields := make([]string, 0, 16)
 	if m.trading_name != nil {
 		fields = append(fields, providerprofile.FieldTradingName)
 	}
@@ -12899,6 +12957,9 @@ func (m *ProviderProfileMutation) Fields() []string {
 	if m.is_kyb_verified != nil {
 		fields = append(fields, providerprofile.FieldIsKybVerified)
 	}
+	if m.monthly_volume != nil {
+		fields = append(fields, providerprofile.FieldMonthlyVolume)
+	}
 	return fields
 }
 
@@ -12937,6 +12998,8 @@ func (m *ProviderProfileMutation) Field(name string) (ent.Value, bool) {
 		return m.BusinessDocument()
 	case providerprofile.FieldIsKybVerified:
 		return m.IsKybVerified()
+	case providerprofile.FieldMonthlyVolume:
+		return m.MonthlyVolume()
 	}
 	return nil, false
 }
@@ -12976,6 +13039,8 @@ func (m *ProviderProfileMutation) OldField(ctx context.Context, name string) (en
 		return m.OldBusinessDocument(ctx)
 	case providerprofile.FieldIsKybVerified:
 		return m.OldIsKybVerified(ctx)
+	case providerprofile.FieldMonthlyVolume:
+		return m.OldMonthlyVolume(ctx)
 	}
 	return nil, fmt.Errorf("unknown ProviderProfile field %s", name)
 }
@@ -13090,6 +13155,13 @@ func (m *ProviderProfileMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetIsKybVerified(v)
 		return nil
+	case providerprofile.FieldMonthlyVolume:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMonthlyVolume(v)
+		return nil
 	}
 	return fmt.Errorf("unknown ProviderProfile field %s", name)
 }
@@ -13097,13 +13169,21 @@ func (m *ProviderProfileMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *ProviderProfileMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	if m.addmonthly_volume != nil {
+		fields = append(fields, providerprofile.FieldMonthlyVolume)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *ProviderProfileMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case providerprofile.FieldMonthlyVolume:
+		return m.AddedMonthlyVolume()
+	}
 	return nil, false
 }
 
@@ -13112,6 +13192,13 @@ func (m *ProviderProfileMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *ProviderProfileMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case providerprofile.FieldMonthlyVolume:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddMonthlyVolume(v)
+		return nil
 	}
 	return fmt.Errorf("unknown ProviderProfile numeric field %s", name)
 }
@@ -13240,6 +13327,9 @@ func (m *ProviderProfileMutation) ResetField(name string) error {
 		return nil
 	case providerprofile.FieldIsKybVerified:
 		m.ResetIsKybVerified()
+		return nil
+	case providerprofile.FieldMonthlyVolume:
+		m.ResetMonthlyVolume()
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderProfile field %s", name)
@@ -16394,6 +16484,10 @@ type SenderProfileMutation struct {
 	is_partner             *bool
 	is_active              *bool
 	updated_at             *time.Time
+	monthly_volume         *float64
+	addmonthly_volume      *float64
+	business_website       *string
+	nature_of_business     *string
 	clearedFields          map[string]struct{}
 	user                   *uuid.UUID
 	cleareduser            bool
@@ -16774,6 +16868,160 @@ func (m *SenderProfileMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
+// SetMonthlyVolume sets the "monthly_volume" field.
+func (m *SenderProfileMutation) SetMonthlyVolume(f float64) {
+	m.monthly_volume = &f
+	m.addmonthly_volume = nil
+}
+
+// MonthlyVolume returns the value of the "monthly_volume" field in the mutation.
+func (m *SenderProfileMutation) MonthlyVolume() (r float64, exists bool) {
+	v := m.monthly_volume
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMonthlyVolume returns the old "monthly_volume" field's value of the SenderProfile entity.
+// If the SenderProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SenderProfileMutation) OldMonthlyVolume(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMonthlyVolume is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMonthlyVolume requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMonthlyVolume: %w", err)
+	}
+	return oldValue.MonthlyVolume, nil
+}
+
+// AddMonthlyVolume adds f to the "monthly_volume" field.
+func (m *SenderProfileMutation) AddMonthlyVolume(f float64) {
+	if m.addmonthly_volume != nil {
+		*m.addmonthly_volume += f
+	} else {
+		m.addmonthly_volume = &f
+	}
+}
+
+// AddedMonthlyVolume returns the value that was added to the "monthly_volume" field in this mutation.
+func (m *SenderProfileMutation) AddedMonthlyVolume() (r float64, exists bool) {
+	v := m.addmonthly_volume
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetMonthlyVolume resets all changes to the "monthly_volume" field.
+func (m *SenderProfileMutation) ResetMonthlyVolume() {
+	m.monthly_volume = nil
+	m.addmonthly_volume = nil
+}
+
+// SetBusinessWebsite sets the "business_website" field.
+func (m *SenderProfileMutation) SetBusinessWebsite(s string) {
+	m.business_website = &s
+}
+
+// BusinessWebsite returns the value of the "business_website" field in the mutation.
+func (m *SenderProfileMutation) BusinessWebsite() (r string, exists bool) {
+	v := m.business_website
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBusinessWebsite returns the old "business_website" field's value of the SenderProfile entity.
+// If the SenderProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SenderProfileMutation) OldBusinessWebsite(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBusinessWebsite is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBusinessWebsite requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBusinessWebsite: %w", err)
+	}
+	return oldValue.BusinessWebsite, nil
+}
+
+// ClearBusinessWebsite clears the value of the "business_website" field.
+func (m *SenderProfileMutation) ClearBusinessWebsite() {
+	m.business_website = nil
+	m.clearedFields[senderprofile.FieldBusinessWebsite] = struct{}{}
+}
+
+// BusinessWebsiteCleared returns if the "business_website" field was cleared in this mutation.
+func (m *SenderProfileMutation) BusinessWebsiteCleared() bool {
+	_, ok := m.clearedFields[senderprofile.FieldBusinessWebsite]
+	return ok
+}
+
+// ResetBusinessWebsite resets all changes to the "business_website" field.
+func (m *SenderProfileMutation) ResetBusinessWebsite() {
+	m.business_website = nil
+	delete(m.clearedFields, senderprofile.FieldBusinessWebsite)
+}
+
+// SetNatureOfBusiness sets the "nature_of_business" field.
+func (m *SenderProfileMutation) SetNatureOfBusiness(s string) {
+	m.nature_of_business = &s
+}
+
+// NatureOfBusiness returns the value of the "nature_of_business" field in the mutation.
+func (m *SenderProfileMutation) NatureOfBusiness() (r string, exists bool) {
+	v := m.nature_of_business
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNatureOfBusiness returns the old "nature_of_business" field's value of the SenderProfile entity.
+// If the SenderProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SenderProfileMutation) OldNatureOfBusiness(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNatureOfBusiness is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNatureOfBusiness requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNatureOfBusiness: %w", err)
+	}
+	return oldValue.NatureOfBusiness, nil
+}
+
+// ClearNatureOfBusiness clears the value of the "nature_of_business" field.
+func (m *SenderProfileMutation) ClearNatureOfBusiness() {
+	m.nature_of_business = nil
+	m.clearedFields[senderprofile.FieldNatureOfBusiness] = struct{}{}
+}
+
+// NatureOfBusinessCleared returns if the "nature_of_business" field was cleared in this mutation.
+func (m *SenderProfileMutation) NatureOfBusinessCleared() bool {
+	_, ok := m.clearedFields[senderprofile.FieldNatureOfBusiness]
+	return ok
+}
+
+// ResetNatureOfBusiness resets all changes to the "nature_of_business" field.
+func (m *SenderProfileMutation) ResetNatureOfBusiness() {
+	m.nature_of_business = nil
+	delete(m.clearedFields, senderprofile.FieldNatureOfBusiness)
+}
+
 // SetUserID sets the "user" edge to the User entity by id.
 func (m *SenderProfileMutation) SetUserID(id uuid.UUID) {
 	m.user = &id
@@ -17048,7 +17296,7 @@ func (m *SenderProfileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *SenderProfileMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 9)
 	if m.webhook_url != nil {
 		fields = append(fields, senderprofile.FieldWebhookURL)
 	}
@@ -17066,6 +17314,15 @@ func (m *SenderProfileMutation) Fields() []string {
 	}
 	if m.updated_at != nil {
 		fields = append(fields, senderprofile.FieldUpdatedAt)
+	}
+	if m.monthly_volume != nil {
+		fields = append(fields, senderprofile.FieldMonthlyVolume)
+	}
+	if m.business_website != nil {
+		fields = append(fields, senderprofile.FieldBusinessWebsite)
+	}
+	if m.nature_of_business != nil {
+		fields = append(fields, senderprofile.FieldNatureOfBusiness)
 	}
 	return fields
 }
@@ -17087,6 +17344,12 @@ func (m *SenderProfileMutation) Field(name string) (ent.Value, bool) {
 		return m.IsActive()
 	case senderprofile.FieldUpdatedAt:
 		return m.UpdatedAt()
+	case senderprofile.FieldMonthlyVolume:
+		return m.MonthlyVolume()
+	case senderprofile.FieldBusinessWebsite:
+		return m.BusinessWebsite()
+	case senderprofile.FieldNatureOfBusiness:
+		return m.NatureOfBusiness()
 	}
 	return nil, false
 }
@@ -17108,6 +17371,12 @@ func (m *SenderProfileMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldIsActive(ctx)
 	case senderprofile.FieldUpdatedAt:
 		return m.OldUpdatedAt(ctx)
+	case senderprofile.FieldMonthlyVolume:
+		return m.OldMonthlyVolume(ctx)
+	case senderprofile.FieldBusinessWebsite:
+		return m.OldBusinessWebsite(ctx)
+	case senderprofile.FieldNatureOfBusiness:
+		return m.OldNatureOfBusiness(ctx)
 	}
 	return nil, fmt.Errorf("unknown SenderProfile field %s", name)
 }
@@ -17159,6 +17428,27 @@ func (m *SenderProfileMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetUpdatedAt(v)
 		return nil
+	case senderprofile.FieldMonthlyVolume:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMonthlyVolume(v)
+		return nil
+	case senderprofile.FieldBusinessWebsite:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBusinessWebsite(v)
+		return nil
+	case senderprofile.FieldNatureOfBusiness:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNatureOfBusiness(v)
+		return nil
 	}
 	return fmt.Errorf("unknown SenderProfile field %s", name)
 }
@@ -17166,13 +17456,21 @@ func (m *SenderProfileMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *SenderProfileMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	if m.addmonthly_volume != nil {
+		fields = append(fields, senderprofile.FieldMonthlyVolume)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *SenderProfileMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case senderprofile.FieldMonthlyVolume:
+		return m.AddedMonthlyVolume()
+	}
 	return nil, false
 }
 
@@ -17181,6 +17479,13 @@ func (m *SenderProfileMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *SenderProfileMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case senderprofile.FieldMonthlyVolume:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddMonthlyVolume(v)
+		return nil
 	}
 	return fmt.Errorf("unknown SenderProfile numeric field %s", name)
 }
@@ -17194,6 +17499,12 @@ func (m *SenderProfileMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(senderprofile.FieldProviderID) {
 		fields = append(fields, senderprofile.FieldProviderID)
+	}
+	if m.FieldCleared(senderprofile.FieldBusinessWebsite) {
+		fields = append(fields, senderprofile.FieldBusinessWebsite)
+	}
+	if m.FieldCleared(senderprofile.FieldNatureOfBusiness) {
+		fields = append(fields, senderprofile.FieldNatureOfBusiness)
 	}
 	return fields
 }
@@ -17214,6 +17525,12 @@ func (m *SenderProfileMutation) ClearField(name string) error {
 		return nil
 	case senderprofile.FieldProviderID:
 		m.ClearProviderID()
+		return nil
+	case senderprofile.FieldBusinessWebsite:
+		m.ClearBusinessWebsite()
+		return nil
+	case senderprofile.FieldNatureOfBusiness:
+		m.ClearNatureOfBusiness()
 		return nil
 	}
 	return fmt.Errorf("unknown SenderProfile nullable field %s", name)
@@ -17240,6 +17557,15 @@ func (m *SenderProfileMutation) ResetField(name string) error {
 		return nil
 	case senderprofile.FieldUpdatedAt:
 		m.ResetUpdatedAt()
+		return nil
+	case senderprofile.FieldMonthlyVolume:
+		m.ResetMonthlyVolume()
+		return nil
+	case senderprofile.FieldBusinessWebsite:
+		m.ResetBusinessWebsite()
+		return nil
+	case senderprofile.FieldNatureOfBusiness:
+		m.ResetNatureOfBusiness()
 		return nil
 	}
 	return fmt.Errorf("unknown SenderProfile field %s", name)

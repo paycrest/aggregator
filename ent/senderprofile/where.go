@@ -81,6 +81,21 @@ func UpdatedAt(v time.Time) predicate.SenderProfile {
 	return predicate.SenderProfile(sql.FieldEQ(FieldUpdatedAt, v))
 }
 
+// MonthlyVolume applies equality check predicate on the "monthly_volume" field. It's identical to MonthlyVolumeEQ.
+func MonthlyVolume(v float64) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldEQ(FieldMonthlyVolume, v))
+}
+
+// BusinessWebsite applies equality check predicate on the "business_website" field. It's identical to BusinessWebsiteEQ.
+func BusinessWebsite(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldEQ(FieldBusinessWebsite, v))
+}
+
+// NatureOfBusiness applies equality check predicate on the "nature_of_business" field. It's identical to NatureOfBusinessEQ.
+func NatureOfBusiness(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldEQ(FieldNatureOfBusiness, v))
+}
+
 // WebhookURLEQ applies the EQ predicate on the "webhook_url" field.
 func WebhookURLEQ(v string) predicate.SenderProfile {
 	return predicate.SenderProfile(sql.FieldEQ(FieldWebhookURL, v))
@@ -289,6 +304,196 @@ func UpdatedAtLT(v time.Time) predicate.SenderProfile {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.SenderProfile {
 	return predicate.SenderProfile(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// MonthlyVolumeEQ applies the EQ predicate on the "monthly_volume" field.
+func MonthlyVolumeEQ(v float64) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldEQ(FieldMonthlyVolume, v))
+}
+
+// MonthlyVolumeNEQ applies the NEQ predicate on the "monthly_volume" field.
+func MonthlyVolumeNEQ(v float64) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldNEQ(FieldMonthlyVolume, v))
+}
+
+// MonthlyVolumeIn applies the In predicate on the "monthly_volume" field.
+func MonthlyVolumeIn(vs ...float64) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldIn(FieldMonthlyVolume, vs...))
+}
+
+// MonthlyVolumeNotIn applies the NotIn predicate on the "monthly_volume" field.
+func MonthlyVolumeNotIn(vs ...float64) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldNotIn(FieldMonthlyVolume, vs...))
+}
+
+// MonthlyVolumeGT applies the GT predicate on the "monthly_volume" field.
+func MonthlyVolumeGT(v float64) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldGT(FieldMonthlyVolume, v))
+}
+
+// MonthlyVolumeGTE applies the GTE predicate on the "monthly_volume" field.
+func MonthlyVolumeGTE(v float64) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldGTE(FieldMonthlyVolume, v))
+}
+
+// MonthlyVolumeLT applies the LT predicate on the "monthly_volume" field.
+func MonthlyVolumeLT(v float64) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldLT(FieldMonthlyVolume, v))
+}
+
+// MonthlyVolumeLTE applies the LTE predicate on the "monthly_volume" field.
+func MonthlyVolumeLTE(v float64) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldLTE(FieldMonthlyVolume, v))
+}
+
+// BusinessWebsiteEQ applies the EQ predicate on the "business_website" field.
+func BusinessWebsiteEQ(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldEQ(FieldBusinessWebsite, v))
+}
+
+// BusinessWebsiteNEQ applies the NEQ predicate on the "business_website" field.
+func BusinessWebsiteNEQ(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldNEQ(FieldBusinessWebsite, v))
+}
+
+// BusinessWebsiteIn applies the In predicate on the "business_website" field.
+func BusinessWebsiteIn(vs ...string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldIn(FieldBusinessWebsite, vs...))
+}
+
+// BusinessWebsiteNotIn applies the NotIn predicate on the "business_website" field.
+func BusinessWebsiteNotIn(vs ...string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldNotIn(FieldBusinessWebsite, vs...))
+}
+
+// BusinessWebsiteGT applies the GT predicate on the "business_website" field.
+func BusinessWebsiteGT(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldGT(FieldBusinessWebsite, v))
+}
+
+// BusinessWebsiteGTE applies the GTE predicate on the "business_website" field.
+func BusinessWebsiteGTE(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldGTE(FieldBusinessWebsite, v))
+}
+
+// BusinessWebsiteLT applies the LT predicate on the "business_website" field.
+func BusinessWebsiteLT(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldLT(FieldBusinessWebsite, v))
+}
+
+// BusinessWebsiteLTE applies the LTE predicate on the "business_website" field.
+func BusinessWebsiteLTE(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldLTE(FieldBusinessWebsite, v))
+}
+
+// BusinessWebsiteContains applies the Contains predicate on the "business_website" field.
+func BusinessWebsiteContains(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldContains(FieldBusinessWebsite, v))
+}
+
+// BusinessWebsiteHasPrefix applies the HasPrefix predicate on the "business_website" field.
+func BusinessWebsiteHasPrefix(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldHasPrefix(FieldBusinessWebsite, v))
+}
+
+// BusinessWebsiteHasSuffix applies the HasSuffix predicate on the "business_website" field.
+func BusinessWebsiteHasSuffix(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldHasSuffix(FieldBusinessWebsite, v))
+}
+
+// BusinessWebsiteIsNil applies the IsNil predicate on the "business_website" field.
+func BusinessWebsiteIsNil() predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldIsNull(FieldBusinessWebsite))
+}
+
+// BusinessWebsiteNotNil applies the NotNil predicate on the "business_website" field.
+func BusinessWebsiteNotNil() predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldNotNull(FieldBusinessWebsite))
+}
+
+// BusinessWebsiteEqualFold applies the EqualFold predicate on the "business_website" field.
+func BusinessWebsiteEqualFold(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldEqualFold(FieldBusinessWebsite, v))
+}
+
+// BusinessWebsiteContainsFold applies the ContainsFold predicate on the "business_website" field.
+func BusinessWebsiteContainsFold(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldContainsFold(FieldBusinessWebsite, v))
+}
+
+// NatureOfBusinessEQ applies the EQ predicate on the "nature_of_business" field.
+func NatureOfBusinessEQ(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldEQ(FieldNatureOfBusiness, v))
+}
+
+// NatureOfBusinessNEQ applies the NEQ predicate on the "nature_of_business" field.
+func NatureOfBusinessNEQ(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldNEQ(FieldNatureOfBusiness, v))
+}
+
+// NatureOfBusinessIn applies the In predicate on the "nature_of_business" field.
+func NatureOfBusinessIn(vs ...string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldIn(FieldNatureOfBusiness, vs...))
+}
+
+// NatureOfBusinessNotIn applies the NotIn predicate on the "nature_of_business" field.
+func NatureOfBusinessNotIn(vs ...string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldNotIn(FieldNatureOfBusiness, vs...))
+}
+
+// NatureOfBusinessGT applies the GT predicate on the "nature_of_business" field.
+func NatureOfBusinessGT(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldGT(FieldNatureOfBusiness, v))
+}
+
+// NatureOfBusinessGTE applies the GTE predicate on the "nature_of_business" field.
+func NatureOfBusinessGTE(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldGTE(FieldNatureOfBusiness, v))
+}
+
+// NatureOfBusinessLT applies the LT predicate on the "nature_of_business" field.
+func NatureOfBusinessLT(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldLT(FieldNatureOfBusiness, v))
+}
+
+// NatureOfBusinessLTE applies the LTE predicate on the "nature_of_business" field.
+func NatureOfBusinessLTE(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldLTE(FieldNatureOfBusiness, v))
+}
+
+// NatureOfBusinessContains applies the Contains predicate on the "nature_of_business" field.
+func NatureOfBusinessContains(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldContains(FieldNatureOfBusiness, v))
+}
+
+// NatureOfBusinessHasPrefix applies the HasPrefix predicate on the "nature_of_business" field.
+func NatureOfBusinessHasPrefix(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldHasPrefix(FieldNatureOfBusiness, v))
+}
+
+// NatureOfBusinessHasSuffix applies the HasSuffix predicate on the "nature_of_business" field.
+func NatureOfBusinessHasSuffix(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldHasSuffix(FieldNatureOfBusiness, v))
+}
+
+// NatureOfBusinessIsNil applies the IsNil predicate on the "nature_of_business" field.
+func NatureOfBusinessIsNil() predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldIsNull(FieldNatureOfBusiness))
+}
+
+// NatureOfBusinessNotNil applies the NotNil predicate on the "nature_of_business" field.
+func NatureOfBusinessNotNil() predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldNotNull(FieldNatureOfBusiness))
+}
+
+// NatureOfBusinessEqualFold applies the EqualFold predicate on the "nature_of_business" field.
+func NatureOfBusinessEqualFold(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldEqualFold(FieldNatureOfBusiness, v))
+}
+
+// NatureOfBusinessContainsFold applies the ContainsFold predicate on the "nature_of_business" field.
+func NatureOfBusinessContainsFold(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldContainsFold(FieldNatureOfBusiness, v))
 }
 
 // HasUser applies the HasEdge predicate on the "user" edge.

@@ -527,12 +527,12 @@ func GetTokenRateFromQueue(tokenSymbol string, orderAmount decimal.Decimal, fiat
 			parts := strings.Split(providerData, ":")
 			if len(parts) != 5 {
 				logger.WithFields(logger.Fields{
-					"Error": fmt.Sprintf("%v", err),
+					"Error":        fmt.Sprintf("%v", err),
 					"ProviderData": providerData,
-					"Token": tokenSymbol,
-					"Currency": fiatCurrency,
-					"MinAmount": minAmount,
-					"MaxAmount": maxAmount,
+					"Token":        tokenSymbol,
+					"Currency":     fiatCurrency,
+					"MinAmount":    minAmount,
+					"MaxAmount":    maxAmount,
 				}).Errorf("GetTokenRate.InvalidProviderData: %v", providerData)
 				continue
 			}
@@ -608,4 +608,29 @@ func IsValidHttpsUrl(urlStr string) bool {
 
 	// Verify scheme is https and host is present
 	return parsedUrl.Scheme == "https" && parsedUrl.Host != ""
+}
+
+// IsValidURL checks if a string is a valid URL.
+func IsValidURL(url string) bool {
+	regex := regexp.MustCompile(`^https?://[^\s/$.?#].[^\s]*$`)
+	return regex.MatchString(url)
+}
+
+// Helper function to create a pointer to a decimal.Decimal
+func DecimalPtr(d decimal.Decimal) *decimal.Decimal {
+	return &d
+}
+
+// ValidateMonthlyVolume validates the monthly volume provided in the payload.
+func ValidateMonthlyVolume(monthlyVolume *decimal.Decimal) (float64, error) {
+	if monthlyVolume == nil {
+		return 0, fmt.Errorf("monthly volume must be provided and greater than zero")
+	}
+
+	monthlyVolumeFloat, exact := monthlyVolume.Float64()
+	if !exact || monthlyVolumeFloat <= 0 {
+		return 0, fmt.Errorf("monthly volume must be a positive number")
+	}
+
+	return monthlyVolumeFloat, nil
 }

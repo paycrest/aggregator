@@ -284,6 +284,10 @@ func init() {
 	providerprofileDescIsKybVerified := providerprofileFields[15].Descriptor()
 	// providerprofile.DefaultIsKybVerified holds the default value on creation for the is_kyb_verified field.
 	providerprofile.DefaultIsKybVerified = providerprofileDescIsKybVerified.Default.(bool)
+	// providerprofileDescMonthlyVolume is the schema descriptor for monthly_volume field.
+	providerprofileDescMonthlyVolume := providerprofileFields[16].Descriptor()
+	// providerprofile.MonthlyVolumeValidator is a validator for the "monthly_volume" field. It is called by the builders before save.
+	providerprofile.MonthlyVolumeValidator = providerprofileDescMonthlyVolume.Validators[0].(func(float64) error)
 	// providerprofileDescID is the schema descriptor for id field.
 	providerprofileDescID := providerprofileFields[0].Descriptor()
 	// providerprofile.DefaultID holds the default value on creation for the id field.
@@ -371,6 +375,32 @@ func init() {
 	senderprofile.DefaultUpdatedAt = senderprofileDescUpdatedAt.Default.(func() time.Time)
 	// senderprofile.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	senderprofile.UpdateDefaultUpdatedAt = senderprofileDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// senderprofileDescMonthlyVolume is the schema descriptor for monthly_volume field.
+	senderprofileDescMonthlyVolume := senderprofileFields[7].Descriptor()
+	// senderprofile.MonthlyVolumeValidator is a validator for the "monthly_volume" field. It is called by the builders before save.
+	senderprofile.MonthlyVolumeValidator = senderprofileDescMonthlyVolume.Validators[0].(func(float64) error)
+	// senderprofileDescBusinessWebsite is the schema descriptor for business_website field.
+	senderprofileDescBusinessWebsite := senderprofileFields[8].Descriptor()
+	// senderprofile.BusinessWebsiteValidator is a validator for the "business_website" field. It is called by the builders before save.
+	senderprofile.BusinessWebsiteValidator = func() func(string) error {
+		validators := senderprofileDescBusinessWebsite.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(business_website string) error {
+			for _, fn := range fns {
+				if err := fn(business_website); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// senderprofileDescNatureOfBusiness is the schema descriptor for nature_of_business field.
+	senderprofileDescNatureOfBusiness := senderprofileFields[9].Descriptor()
+	// senderprofile.NatureOfBusinessValidator is a validator for the "nature_of_business" field. It is called by the builders before save.
+	senderprofile.NatureOfBusinessValidator = senderprofileDescNatureOfBusiness.Validators[0].(func(string) error)
 	// senderprofileDescID is the schema descriptor for id field.
 	senderprofileDescID := senderprofileFields[0].Descriptor()
 	// senderprofile.DefaultID holds the default value on creation for the id field.

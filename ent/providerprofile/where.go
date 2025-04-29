@@ -125,6 +125,11 @@ func IsKybVerified(v bool) predicate.ProviderProfile {
 	return predicate.ProviderProfile(sql.FieldEQ(FieldIsKybVerified, v))
 }
 
+// MonthlyVolume applies equality check predicate on the "monthly_volume" field. It's identical to MonthlyVolumeEQ.
+func MonthlyVolume(v float64) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldEQ(FieldMonthlyVolume, v))
+}
+
 // TradingNameEQ applies the EQ predicate on the "trading_name" field.
 func TradingNameEQ(v string) predicate.ProviderProfile {
 	return predicate.ProviderProfile(sql.FieldEQ(FieldTradingName, v))
@@ -838,6 +843,46 @@ func IsKybVerifiedEQ(v bool) predicate.ProviderProfile {
 // IsKybVerifiedNEQ applies the NEQ predicate on the "is_kyb_verified" field.
 func IsKybVerifiedNEQ(v bool) predicate.ProviderProfile {
 	return predicate.ProviderProfile(sql.FieldNEQ(FieldIsKybVerified, v))
+}
+
+// MonthlyVolumeEQ applies the EQ predicate on the "monthly_volume" field.
+func MonthlyVolumeEQ(v float64) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldEQ(FieldMonthlyVolume, v))
+}
+
+// MonthlyVolumeNEQ applies the NEQ predicate on the "monthly_volume" field.
+func MonthlyVolumeNEQ(v float64) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldNEQ(FieldMonthlyVolume, v))
+}
+
+// MonthlyVolumeIn applies the In predicate on the "monthly_volume" field.
+func MonthlyVolumeIn(vs ...float64) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldIn(FieldMonthlyVolume, vs...))
+}
+
+// MonthlyVolumeNotIn applies the NotIn predicate on the "monthly_volume" field.
+func MonthlyVolumeNotIn(vs ...float64) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldNotIn(FieldMonthlyVolume, vs...))
+}
+
+// MonthlyVolumeGT applies the GT predicate on the "monthly_volume" field.
+func MonthlyVolumeGT(v float64) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldGT(FieldMonthlyVolume, v))
+}
+
+// MonthlyVolumeGTE applies the GTE predicate on the "monthly_volume" field.
+func MonthlyVolumeGTE(v float64) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldGTE(FieldMonthlyVolume, v))
+}
+
+// MonthlyVolumeLT applies the LT predicate on the "monthly_volume" field.
+func MonthlyVolumeLT(v float64) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldLT(FieldMonthlyVolume, v))
+}
+
+// MonthlyVolumeLTE applies the LTE predicate on the "monthly_volume" field.
+func MonthlyVolumeLTE(v float64) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldLTE(FieldMonthlyVolume, v))
 }
 
 // HasUser applies the HasEdge predicate on the "user" edge.

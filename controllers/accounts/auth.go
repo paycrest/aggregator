@@ -79,6 +79,13 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		return
 	}
 
+	// Validate monthly volume for all users
+	monthlyVolumeFloat, err := u.ValidateMonthlyVolume(payload.MonthlyVolume)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", err.Error(), nil)
+		return
+	}
+
 	// Save the user
 	scope := strings.Join(payload.Scopes, " ")
 	userCreate := tx.User.
@@ -120,7 +127,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		if verificationToken != nil {
 			if _, err := ctrl.emailService.SendVerificationEmail(ctx, verificationToken.Token, user.Email, user.FirstName); err != nil {
 				logger.WithFields(logger.Fields{
-					"Error": fmt.Sprintf("%v", err),
+					"Error":  fmt.Sprintf("%v", err),
 					"UserID": user.ID,
 				}).Errorf("Failed to send verification email")
 			}
@@ -174,17 +181,20 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 			return
 		}
 
-		provider, err := tx.ProviderProfile.
+		// Create provider profile
+		providerCreate := tx.ProviderProfile.
 			Create().
 			AddCurrencies(fiatCurrencies...).
 			SetVisibilityMode(providerprofile.VisibilityModePrivate).
 			SetUser(user).
 			SetProvisionMode(providerprofile.ProvisionModeAuto).
-			Save(ctx)
+			SetMonthlyVolume(monthlyVolumeFloat)
+
+		provider, err := providerCreate.Save(ctx)
 		if err != nil {
 			_ = tx.Rollback()
 			logger.WithFields(logger.Fields{
-				"Error": fmt.Sprintf("%v", err),
+				"Error":  fmt.Sprintf("%v", err),
 				"UserID": user.ID,
 			}).Errorf("Failed to create provider profile")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error",
@@ -197,8 +207,8 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		if err != nil {
 			_ = tx.Rollback()
 			logger.WithFields(logger.Fields{
-				"Error": fmt.Sprintf("%v", err),
-				"UserID": user.ID,
+				"Error":      fmt.Sprintf("%v", err),
+				"UserID":     user.ID,
 				"ProviderID": provider.ID,
 			}).Errorf("Failed to create API key for provider")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error",
@@ -209,14 +219,41 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 
 	// Create a sender profile
 	if u.ContainsString(scopes, "sender") {
-		sender, err := tx.SenderProfile.
+		// Validate business_website if provided
+		if payload.BusinessWebsite != "" && !u.IsValidURL(payload.BusinessWebsite) {
+			_ = tx.Rollback()
+			u.APIResponse(ctx, http.StatusBadRequest, "error",
+				"Invalid business website URL", nil)
+			return
+		}
+
+		// Validate nature_of_business length if provided
+		if len(payload.NatureOfBusiness) > 255 {
+			_ = tx.Rollback()
+			u.APIResponse(ctx, http.StatusBadRequest, "error",
+				"Nature of business exceeds character limit", nil)
+			return
+		}
+
+		// Create sender profile
+		senderCreate := tx.SenderProfile.
 			Create().
 			SetUser(user).
-			Save(ctx)
+			SetMonthlyVolume(monthlyVolumeFloat)
+
+		// Set optional fields
+		if payload.BusinessWebsite != "" {
+			senderCreate = senderCreate.SetBusinessWebsite(payload.BusinessWebsite)
+		}
+		if payload.NatureOfBusiness != "" {
+			senderCreate = senderCreate.SetNatureOfBusiness(payload.NatureOfBusiness)
+		}
+
+		sender, err := senderCreate.Save(ctx)
 		if err != nil {
 			_ = tx.Rollback()
 			logger.WithFields(logger.Fields{
-				"Error": fmt.Sprintf("%v", err),
+				"Error":  fmt.Sprintf("%v", err),
 				"UserID": user.ID,
 			}).Errorf("Failed to create sender profile")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error",
@@ -229,8 +266,8 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		if err != nil {
 			_ = tx.Rollback()
 			logger.WithFields(logger.Fields{
-				"Error": fmt.Sprintf("%v", err),
-				"UserID": user.ID,
+				"Error":    fmt.Sprintf("%v", err),
+				"UserID":   user.ID,
 				"SenderID": sender.ID,
 			}).Errorf("Failed to create API key for sender")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error",

@@ -45,6 +45,8 @@ const (
 	FieldBusinessDocument = "business_document"
 	// FieldIsKybVerified holds the string denoting the is_kyb_verified field in the database.
 	FieldIsKybVerified = "is_kyb_verified"
+	// FieldMonthlyVolume holds the string denoting the monthly_volume field in the database.
+	FieldMonthlyVolume = "monthly_volume"
 	// EdgeUser holds the string denoting the user edge name in mutations.
 	EdgeUser = "user"
 	// EdgeAPIKey holds the string denoting the api_key edge name in mutations.
@@ -126,6 +128,7 @@ var Columns = []string{
 	FieldIdentityDocument,
 	FieldBusinessDocument,
 	FieldIsKybVerified,
+	FieldMonthlyVolume,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "provider_profiles"
@@ -171,6 +174,8 @@ var (
 	UpdateDefaultUpdatedAt func() time.Time
 	// DefaultIsKybVerified holds the default value on creation for the "is_kyb_verified" field.
 	DefaultIsKybVerified bool
+	// MonthlyVolumeValidator is a validator for the "monthly_volume" field. It is called by the builders before save.
+	MonthlyVolumeValidator func(float64) error
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() string
 )
@@ -332,6 +337,11 @@ func ByBusinessDocument(opts ...sql.OrderTermOption) OrderOption {
 // ByIsKybVerified orders the results by the is_kyb_verified field.
 func ByIsKybVerified(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldIsKybVerified, opts...).ToFunc()
+}
+
+// ByMonthlyVolume orders the results by the monthly_volume field.
+func ByMonthlyVolume(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMonthlyVolume, opts...).ToFunc()
 }
 
 // ByUserField orders the results by user field.
