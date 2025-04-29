@@ -407,17 +407,12 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			}
 		}
 
-		// Get rate for provider
-		rate, err := ctrl.priorityQueueService.GetProviderRate(ctx, provider, providerToken.Symbol, currency.Code)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":      err,
-				"ProviderID": provider.ID,
-				"Token":      tokenPayload.Symbol,
-				"Currency":   tokenPayload.Currency,
-			}).Errorf("Failed to get rate for provider during update")
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
-			return
+		// Calculate rate from tokenPayload based on conversion type
+		var rate decimal.Decimal
+		if tokenPayload.ConversionRateType == providerordertoken.ConversionRateTypeFixed {
+			rate = tokenPayload.FixedConversionRate
+		} else {
+			rate = currency.MarketRate.Add(tokenPayload.FloatingConversionRate)
 		}
 
 		// See if token already exists for provider
