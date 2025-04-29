@@ -91,13 +91,6 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		}
 	}
 
-	// // Validate monthly volume for all users
-	// monthlyVolumeFloat, err := u.ValidateMonthlyVolume(payload.MonthlyVolume)
-	// if err != nil {
-	// 	u.APIResponse(ctx, http.StatusBadRequest, "error", err.Error(), nil)
-	// 	return
-	// }
-
 	// Save the user
 	scope := strings.Join(payload.Scopes, " ")
 	userCreate := tx.User.
@@ -193,13 +186,6 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 			return
 		}
 
-		// // Validate monthly volume for all users
-		// monthlyVolumeFloat, err := u.ValidateMonthlyVolume(payload.MonthlyVolume)
-		// if err != nil {
-		// 	u.APIResponse(ctx, http.StatusBadRequest, "error", err.Error(), nil)
-		// 	return
-		// }
-
 		// Create provider profile
 		providerCreate := tx.ProviderProfile.
 			Create().
@@ -253,13 +239,6 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 				"Nature of business exceeds character limit", nil)
 			return
 		}
-
-		// // Validate monthly volume for all users
-		// monthlyVolumeFloat, err := u.ValidateMonthlyVolume(payload.MonthlyVolume)
-		// if err != nil {
-		// 	u.APIResponse(ctx, http.StatusBadRequest, "error", err.Error(), nil)
-		// 	return
-		// }
 
 		// Create sender profile
 		senderCreate := tx.SenderProfile.
