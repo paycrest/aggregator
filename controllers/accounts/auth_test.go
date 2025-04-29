@@ -452,11 +452,12 @@ func TestAuth(t *testing.T) {
 		t.Run("with existing user", func(t *testing.T) {
 			// Test register with existing user
 			payload := types.RegisterPayload{
-				FirstName: "Ike",
-				LastName:  "Ayo",
-				Email:     "ikeayo@example.com",
-				Password:  "password",
-				Scopes:    []string{"sender"},
+				FirstName:     "Ike",
+				LastName:      "Ayo",
+				Email:         "ikeayo@example.com",
+				Password:      "password",
+				Scopes:        []string{"sender"},
+				MonthlyVolume: nil,
 			}
 
 			res, err := test.PerformRequest(t, "POST", "/register", payload, nil, router)

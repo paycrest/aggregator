@@ -568,6 +568,11 @@ func (ppu *ProviderProfileUpdate) check() error {
 			return &ValidationError{Name: "identity_document_type", err: fmt.Errorf(`ent: validator failed for field "ProviderProfile.identity_document_type": %w`, err)}
 		}
 	}
+	if v, ok := ppu.mutation.MonthlyVolume(); ok {
+		if err := providerprofile.MonthlyVolumeValidator(v); err != nil {
+			return &ValidationError{Name: "monthly_volume", err: fmt.Errorf(`ent: validator failed for field "ProviderProfile.monthly_volume": %w`, err)}
+		}
+	}
 	if ppu.mutation.UserCleared() && len(ppu.mutation.UserIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ProviderProfile.user"`)
 	}
@@ -1466,6 +1471,11 @@ func (ppuo *ProviderProfileUpdateOne) check() error {
 	if v, ok := ppuo.mutation.IdentityDocumentType(); ok {
 		if err := providerprofile.IdentityDocumentTypeValidator(v); err != nil {
 			return &ValidationError{Name: "identity_document_type", err: fmt.Errorf(`ent: validator failed for field "ProviderProfile.identity_document_type": %w`, err)}
+		}
+	}
+	if v, ok := ppuo.mutation.MonthlyVolume(); ok {
+		if err := providerprofile.MonthlyVolumeValidator(v); err != nil {
+			return &ValidationError{Name: "monthly_volume", err: fmt.Errorf(`ent: validator failed for field "ProviderProfile.monthly_volume": %w`, err)}
 		}
 	}
 	if ppuo.mutation.UserCleared() && len(ppuo.mutation.UserIDs()) > 0 {

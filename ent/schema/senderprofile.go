@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"regexp"
 	"time"
 
 	"entgo.io/ent"

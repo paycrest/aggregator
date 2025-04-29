@@ -483,6 +483,14 @@ func (ppc *ProviderProfileCreate) check() error {
 	if _, ok := ppc.mutation.IsKybVerified(); !ok {
 		return &ValidationError{Name: "is_kyb_verified", err: errors.New(`ent: missing required field "ProviderProfile.is_kyb_verified"`)}
 	}
+	if _, ok := ppc.mutation.MonthlyVolume(); !ok {
+		return &ValidationError{Name: "monthly_volume", err: errors.New(`ent: missing required field "ProviderProfile.monthly_volume"`)}
+	}
+	if v, ok := ppc.mutation.MonthlyVolume(); ok {
+		if err := providerprofile.MonthlyVolumeValidator(v); err != nil {
+			return &ValidationError{Name: "monthly_volume", err: fmt.Errorf(`ent: validator failed for field "ProviderProfile.monthly_volume": %w`, err)}
+		}
+	}
 	if len(ppc.mutation.UserIDs()) == 0 {
 		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "ProviderProfile.user"`)}
 	}
