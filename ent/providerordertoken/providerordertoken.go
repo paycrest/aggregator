@@ -29,6 +29,8 @@ const (
 	FieldMaxOrderAmount = "max_order_amount"
 	// FieldMinOrderAmount holds the string denoting the min_order_amount field in the database.
 	FieldMinOrderAmount = "min_order_amount"
+	// FieldRateSlippage holds the string denoting the rate_slippage field in the database.
+	FieldRateSlippage = "rate_slippage"
 	// FieldAddress holds the string denoting the address field in the database.
 	FieldAddress = "address"
 	// FieldNetwork holds the string denoting the network field in the database.
@@ -74,6 +76,7 @@ var Columns = []string{
 	FieldConversionRateType,
 	FieldMaxOrderAmount,
 	FieldMinOrderAmount,
+	FieldRateSlippage,
 	FieldAddress,
 	FieldNetwork,
 }
@@ -174,6 +177,11 @@ func ByMaxOrderAmount(opts ...sql.OrderTermOption) OrderOption {
 // ByMinOrderAmount orders the results by the min_order_amount field.
 func ByMinOrderAmount(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMinOrderAmount, opts...).ToFunc()
+}
+
+// ByRateSlippage orders the results by the rate_slippage field.
+func ByRateSlippage(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRateSlippage, opts...).ToFunc()
 }
 
 // ByAddress orders the results by the address field.
