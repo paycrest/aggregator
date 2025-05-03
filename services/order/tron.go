@@ -28,6 +28,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	networkent "github.com/paycrest/aggregator/ent/network"
@@ -557,6 +558,11 @@ func (s *OrderTron) settleCallData(ctx context.Context, order *ent.LockPaymentOr
 		return nil, fmt.Errorf("failed to parse GatewayOrder ABI: %w", err)
 	}
 
+	institution, err := utils.GetInstitutionByCode(ctx, order.Institution)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get institution: %w", err)
+	}
+
 	// Fetch provider address from db
 	token, err := db.Client.ProviderOrderToken.
 		Query().
@@ -568,6 +574,10 @@ func (s *OrderTron) settleCallData(ctx context.Context, order *ent.LockPaymentOr
 			providerordertoken.HasTokenWith(
 				tokenent.IDEQ(order.Edges.Token.ID),
 			),
+			providerordertoken.HasCurrencyWith(
+				fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
+			),
+			providerordertoken.AddressNEQ(""),
 		).
 		Only(ctx)
 	if err != nil {

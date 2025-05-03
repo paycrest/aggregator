@@ -766,6 +766,7 @@ func (s *OrderEVM) settleCallData(ctx context.Context, order *ent.LockPaymentOrd
 			providerordertoken.HasCurrencyWith(
 				fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
 			),
+			providerordertoken.AddressNEQ(""),
 		).
 		Only(ctx)
 	if err != nil {
