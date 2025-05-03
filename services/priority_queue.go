@@ -552,7 +552,7 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 			).
 			First(ctx)
 		if err != nil {
-			return err
+			continue
 		}
 
 		// Calculate allowed deviation based on slippage
