@@ -483,6 +483,11 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				return
 			}
 		} else {
+			// TODO: Remove when dashboard allows rate slippage to be set
+			if tokenPayload.RateSlippage.IsZero() && orderToken.RateSlippage.GreaterThan(decimal.NewFromFloat(0)) {
+				tokenPayload.RateSlippage = orderToken.RateSlippage
+			}
+
 			// Token exists, update it
 			_, err := orderToken.Update().
 				SetAddress(tokenPayload.Address).
