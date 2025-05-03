@@ -1127,6 +1127,7 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 				providerordertoken.HasCurrencyWith(
 					fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
 				),
+				providerordertoken.AddressNEQ(""),
 			).
 			WithProvider().
 			Only(ctx)
@@ -1137,6 +1138,7 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 				// 2. Provider does not support the token
 				// 3. Provider does not support the network
 				// 4. Provider does not support the currency
+				// 5. Provider have not configured a settlement address for the network
 				_ = s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Provider not available")
 				return nil
 			} else {
