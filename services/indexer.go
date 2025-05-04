@@ -210,7 +210,7 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 			}
 
 			// Create payment order
-			institution, err := utils.GetInstitutionByCode(ctx, linkedAddress.Institution)
+			institution, err := utils.GetInstitutionByCode(ctx, linkedAddress.Institution, true)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":                    fmt.Sprintf("%v", err),
@@ -1060,7 +1060,7 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 
 	// Get provision bucket
 	amountInDecimals := utils.FromSubunit(event.Amount, token.Decimals)
-	institution, err := utils.GetInstitutionByCode(ctx, recipient.Institution)
+	institution, err := utils.GetInstitutionByCode(ctx, recipient.Institution, true)
 	if err != nil {
 		return nil
 	}
@@ -1755,7 +1755,7 @@ func (s *IndexerService) UpdateReceiveAddressStatus(
 					return true, fmt.Errorf("UpdateReceiveAddressStatus.db: %v", err)
 				}
 
-				institution, err := utils.GetInstitutionByCode(ctx, orderRecipient.Institution)
+				institution, err := utils.GetInstitutionByCode(ctx, orderRecipient.Institution, true)
 				if err != nil {
 					return true, fmt.Errorf("UpdateReceiveAddressStatus.db: %v", err)
 				}
