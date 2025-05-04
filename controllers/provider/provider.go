@@ -844,7 +844,7 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 
 	var totalFiatVolume decimal.Decimal
 	for _, order := range settledOrders {
-		totalFiatVolume = totalFiatVolume.Add(order.Amount.Mul(order.Rate).RoundBank(2))
+		totalFiatVolume = totalFiatVolume.Add(order.Amount.Mul(order.Rate).RoundBank(0))
 	}
 
 	count, err := storage.Client.LockPaymentOrder.

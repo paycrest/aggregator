@@ -22,6 +22,7 @@ import (
 	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
+	"github.com/paycrest/aggregator/ent/token"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	svc "github.com/paycrest/aggregator/services"
@@ -735,13 +736,18 @@ func (ctrl *SenderController) Stats(ctx *gin.Context) {
 
 	// Aggregate sender stats from db
 
+	// Get USD volume
 	var w []struct {
 		Sum               decimal.Decimal
 		SumFieldSenderFee decimal.Decimal
 	}
 	err := storage.Client.PaymentOrder.
 		Query().
-		Where(paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)), paymentorder.StatusEQ(paymentorder.StatusSettled)).
+		Where(
+			paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)),
+			paymentorder.HasTokenWith(token.BaseCurrencyEQ("USD")),
+			paymentorder.StatusEQ(paymentorder.StatusSettled),
+		).
 		Aggregate(
 			ent.Sum(paymentorder.FieldAmount),
 			ent.As(ent.Sum(paymentorder.FieldSenderFee), "SumFieldSenderFee"),
@@ -753,16 +759,49 @@ func (ctrl *SenderController) Stats(ctx *gin.Context) {
 		return
 	}
 
-	var v []struct {
-		Count int
-	}
-	err = storage.Client.PaymentOrder.
+	// Get local stablecoin volume
+	paymentOrders, err := storage.Client.PaymentOrder.
 		Query().
-		Where(paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID))).
-		Aggregate(
-			ent.Count(),
+		Where(
+			paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)),
+			paymentorder.HasTokenWith(token.BaseCurrencyNEQ("USD")),
+			paymentorder.StatusEQ(paymentorder.StatusSettled),
 		).
-		Scan(ctx, &v)
+		WithRecipient().
+		All(ctx)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch sender stats", nil)
+		return
+	}
+
+	var localStablecoinSum decimal.Decimal
+	var localStablecoinSenderFee decimal.Decimal
+
+	// Convert local stablecoin volume to USD
+	for _, paymentOrder := range paymentOrders {
+		institution, err := utils.GetInstitutionByCode(ctx, paymentOrder.Edges.Recipient.Institution, false)
+		if err != nil {
+			logger.Errorf("error: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch sender stats", nil)
+			return
+		}
+
+		paymentOrder.Amount = paymentOrder.Amount.Div(institution.Edges.FiatCurrency.MarketRate)
+		if paymentOrder.SenderFee.GreaterThan(decimal.Zero) {
+			paymentOrder.SenderFee = paymentOrder.SenderFee.Div(institution.Edges.FiatCurrency.MarketRate)
+		}
+
+		localStablecoinSum = localStablecoinSum.Add(paymentOrder.Amount)
+		localStablecoinSenderFee = localStablecoinSenderFee.Add(paymentOrder.SenderFee)
+	}
+
+	count, err := storage.Client.PaymentOrder.
+		Query().
+		Where(
+			paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)),
+		).
+		Count(ctx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch sender stats", nil)
@@ -770,8 +809,8 @@ func (ctrl *SenderController) Stats(ctx *gin.Context) {
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Sender stats retrieved successfully", types.SenderStatsResponse{
-		TotalOrders:      v[0].Count,
-		TotalOrderVolume: w[0].Sum,
-		TotalFeeEarnings: w[0].SumFieldSenderFee,
+		TotalOrders:      count,
+		TotalOrderVolume: w[0].Sum.Add(localStablecoinSum),
+		TotalFeeEarnings: w[0].SumFieldSenderFee.Add(localStablecoinSenderFee),
 	})
 }
