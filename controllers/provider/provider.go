@@ -835,7 +835,6 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 	}
 
 	settledOrders, err := query.
-		WithToken().
 		All(ctx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
@@ -845,11 +844,7 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 
 	var totalFiatVolume decimal.Decimal
 	for _, order := range settledOrders {
-		if order.Edges.Token.BaseCurrency == currency {
-			totalFiatVolume = totalFiatVolume.Add(order.Amount)
-		} else {
-			totalFiatVolume = totalFiatVolume.Add(order.Amount.Mul(order.Rate).RoundBank(0))
-		}
+		totalFiatVolume = totalFiatVolume.Add(order.Amount.Mul(order.Rate).RoundBank(2))
 	}
 
 	count, err := storage.Client.LockPaymentOrder.
