@@ -810,7 +810,10 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 		Sum decimal.Decimal
 	}
 	err = query.
-		Where(lockpaymentorder.HasTokenWith(token.BaseCurrencyEQ(currency))).
+		Where(
+			lockpaymentorder.HasTokenWith(token.BaseCurrencyEQ(currency)),
+			lockpaymentorder.HasTokenWith(token.BaseCurrencyNEQ("USD")),
+		).
 		Aggregate(
 			ent.Sum(lockpaymentorder.FieldAmount),
 		).
@@ -834,17 +837,22 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 		localStablecoinVolume[0].Sum = localStablecoinVolume[0].Sum.Div(fiatCurrency.MarketRate)
 	}
 
-	settledOrders, err := query.
+	var totalFiatVolume decimal.Decimal
+	settledOrders, err := storage.Client.LockPaymentOrder.
+		Query().
+		Where(
+			lockpaymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+			lockpaymentorder.StatusEQ(lockpaymentorder.StatusSettled),
+			lockpaymentorder.InstitutionIn(institutionCodes...),
+		).
 		All(ctx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider stats", nil)
 		return
 	}
-
-	var totalFiatVolume decimal.Decimal
 	for _, order := range settledOrders {
-		totalFiatVolume = totalFiatVolume.Add(order.Amount.Mul(order.Rate).RoundBank(0))
+		totalFiatVolume = totalFiatVolume.Add(order.Amount.Mul(order.Rate).RoundBank(2))
 	}
 
 	count, err := storage.Client.LockPaymentOrder.

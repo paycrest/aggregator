@@ -807,6 +807,11 @@ func (ctrl *SenderController) Stats(ctx *gin.Context) {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch sender stats", nil)
 		return
 	}
+	fmt.Println(types.SenderStatsResponse{
+		TotalOrders:      count,
+		TotalOrderVolume: w[0].Sum.Add(localStablecoinSum),
+		TotalFeeEarnings: w[0].SumFieldSenderFee.Add(localStablecoinSenderFee),
+	})
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Sender stats retrieved successfully", types.SenderStatsResponse{
 		TotalOrders:      count,
