@@ -789,15 +789,32 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 			lockpaymentorder.InstitutionIn(institutionCodes...),
 		)
 
-	var v []struct {
+	var usdVolume []struct {
+		Sum decimal.Decimal
+	}
+
+	var localStablecoinVolume []struct {
 		Sum decimal.Decimal
 	}
 
 	err = query.
+		Where(lockpaymentorder.AmountGT(decimal.NewFromInt(1))).
 		Aggregate(
 			ent.Sum(lockpaymentorder.FieldAmount),
 		).
-		Scan(ctx, &v)
+		Scan(ctx, &usdVolume)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider stats", nil)
+		return
+	}
+
+	err = query.
+		Where(lockpaymentorder.HasTokenWith(token.BaseCurrencyEQ(currency))).
+		Aggregate(
+			ent.Sum(lockpaymentorder.FieldAmount),
+		).
+		Scan(ctx, &localStablecoinVolume)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider stats", nil)
@@ -805,6 +822,7 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 	}
 
 	settledOrders, err := query.
+		WithToken().
 		All(ctx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
@@ -814,7 +832,11 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 
 	var totalFiatVolume decimal.Decimal
 	for _, order := range settledOrders {
-		totalFiatVolume = totalFiatVolume.Add(order.Amount.Mul(order.Rate).RoundBank(0))
+		if order.Edges.Token.BaseCurrency == currency {
+			totalFiatVolume = totalFiatVolume.Add(order.Amount)
+		} else {
+			totalFiatVolume = totalFiatVolume.Add(order.Amount.Mul(order.Rate).RoundBank(0))
+		}
 	}
 
 	count, err := storage.Client.LockPaymentOrder.
@@ -833,7 +855,7 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 	u.APIResponse(ctx, http.StatusOK, "success", "Provider stats fetched successfully", &types.ProviderStatsResponse{
 		TotalOrders:       count,
 		TotalFiatVolume:   totalFiatVolume,
-		TotalCryptoVolume: v[0].Sum,
+		TotalCryptoVolume: usdVolume[0].Sum.Add(localStablecoinVolume[0].Sum),
 	})
 }
 
