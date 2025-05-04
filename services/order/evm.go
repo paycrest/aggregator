@@ -747,7 +747,7 @@ func (s *OrderEVM) settleCallData(ctx context.Context, order *ent.LockPaymentOrd
 		return nil, fmt.Errorf("failed to parse GatewayOrder ABI: %w", err)
 	}
 
-	institution, err := utils.GetInstitutionByCode(ctx, order.Institution)
+	institution, err := utils.GetInstitutionByCode(ctx, order.Institution, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get institution: %w", err)
 	}

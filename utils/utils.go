@@ -536,12 +536,12 @@ func GetTokenRateFromQueue(tokenSymbol string, orderAmount decimal.Decimal, fiat
 			parts := strings.Split(providerData, ":")
 			if len(parts) != 5 {
 				logger.WithFields(logger.Fields{
-					"Error": fmt.Sprintf("%v", err),
+					"Error":        fmt.Sprintf("%v", err),
 					"ProviderData": providerData,
-					"Token": tokenSymbol,
-					"Currency": fiatCurrency,
-					"MinAmount": minAmount,
-					"MaxAmount": maxAmount,
+					"Token":        tokenSymbol,
+					"Currency":     fiatCurrency,
+					"MinAmount":    minAmount,
+					"MaxAmount":    maxAmount,
 				}).Errorf("GetTokenRate.InvalidProviderData: %v", providerData)
 				continue
 			}
@@ -586,16 +586,22 @@ func GetTokenRateFromQueue(tokenSymbol string, orderAmount decimal.Decimal, fiat
 }
 
 // GetInstitutionByCode returns the institution for a given institution code
-func GetInstitutionByCode(ctx context.Context, institutionCode string) (*ent.Institution, error) {
-	institution, err := storage.Client.Institution.
+func GetInstitutionByCode(ctx context.Context, institutionCode string, enabledFiatCurrency bool) (*ent.Institution, error) {
+	institutionQuery := storage.Client.Institution.
 		Query().
-		Where(institution.CodeEQ(institutionCode)).
-		WithFiatCurrency(
+		Where(institution.CodeEQ(institutionCode))
+
+	if enabledFiatCurrency {
+		institutionQuery = institutionQuery.WithFiatCurrency(
 			func(fcq *ent.FiatCurrencyQuery) {
 				fcq.Where(fiatcurrency.IsEnabledEQ(true))
 			},
-		).
-		Only(ctx)
+		)
+	} else {
+		institutionQuery = institutionQuery.WithFiatCurrency()
+	}
+
+	institution, err := institutionQuery.Only(ctx)
 	if err != nil {
 		return nil, err
 	}
