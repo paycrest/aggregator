@@ -794,7 +794,7 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 		Sum decimal.Decimal
 	}
 	err = query.
-		Where(lockpaymentorder.AmountGT(decimal.NewFromInt(1))).
+		Where(lockpaymentorder.HasTokenWith(token.BaseCurrencyEQ("USD"))).
 		Aggregate(
 			ent.Sum(lockpaymentorder.FieldAmount),
 		).
