@@ -210,11 +210,12 @@ type SenderProfilePayload struct {
 type ProviderOrderTokenPayload struct {
 	Currency               string                                `json:"currency" binding:"required"`
 	Symbol                 string                                `json:"symbol" binding:"required"`
-	ConversionRateType     providerordertoken.ConversionRateType `json:"conversionRateType" binding:"required"`
-	FixedConversionRate    decimal.Decimal                       `json:"fixedConversionRate" binding:"required"`
+	ConversionRateType     providerordertoken.ConversionRateType `json:"conversionRateType" binding:"required,oneof=fixed floating"`
+	FixedConversionRate    decimal.Decimal                       `json:"fixedConversionRate" binding:"required,gt=0"`
 	FloatingConversionRate decimal.Decimal                       `json:"floatingConversionRate" binding:"required"`
-	MaxOrderAmount         decimal.Decimal                       `json:"maxOrderAmount" binding:"required"`
-	MinOrderAmount         decimal.Decimal                       `json:"minOrderAmount" binding:"required"`
+	MaxOrderAmount         decimal.Decimal                       `json:"maxOrderAmount" binding:"required,gt=0"`
+	MinOrderAmount         decimal.Decimal                       `json:"minOrderAmount" binding:"required,gt=0"`
+	RateSlippage           decimal.Decimal                       `json:"rateSlippage" binding:"gte=0.1"`
 	Address                string                                `json:"address" binding:"required"`
 	Network                string                                `json:"network" binding:"required"`
 }

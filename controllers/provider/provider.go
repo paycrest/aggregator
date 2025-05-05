@@ -789,32 +789,70 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 			lockpaymentorder.InstitutionIn(institutionCodes...),
 		)
 
-	var v []struct {
+	// Get USD volume
+	var usdVolume []struct {
 		Sum decimal.Decimal
 	}
-
 	err = query.
+		Where(lockpaymentorder.HasTokenWith(token.BaseCurrencyEQ("USD"))).
 		Aggregate(
 			ent.Sum(lockpaymentorder.FieldAmount),
 		).
-		Scan(ctx, &v)
+		Scan(ctx, &usdVolume)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider stats", nil)
 		return
 	}
 
-	settledOrders, err := query.
+	// Get local stablecoin volume
+	var localStablecoinVolume []struct {
+		Sum decimal.Decimal
+	}
+	err = query.
+		Where(
+			lockpaymentorder.HasTokenWith(token.BaseCurrencyEQ(currency)),
+			lockpaymentorder.HasTokenWith(token.BaseCurrencyNEQ("USD")),
+		).
+		Aggregate(
+			ent.Sum(lockpaymentorder.FieldAmount),
+		).
+		Scan(ctx, &localStablecoinVolume)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider stats", nil)
+		return
+	}
+	if localStablecoinVolume[0].Sum.GreaterThan(decimal.NewFromInt(0)) {
+		// Divide local stablecoin volume by market rate of the currency
+		fiatCurrency, err := storage.Client.FiatCurrency.
+			Query().
+			Where(fiatcurrency.CodeEQ(currency)).
+			Only(ctx)
+		if err != nil {
+			logger.Errorf("error: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider stats", nil)
+			return
+		}
+		localStablecoinVolume[0].Sum = localStablecoinVolume[0].Sum.Div(fiatCurrency.MarketRate)
+	}
+
+	var totalFiatVolume decimal.Decimal
+	settledOrders, err := storage.Client.LockPaymentOrder.
+		Query().
+		Where(
+			lockpaymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+			lockpaymentorder.StatusEQ(lockpaymentorder.StatusSettled),
+			lockpaymentorder.InstitutionIn(institutionCodes...),
+		).
 		All(ctx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider stats", nil)
 		return
 	}
-
-	var totalFiatVolume decimal.Decimal
 	for _, order := range settledOrders {
-		totalFiatVolume = totalFiatVolume.Add(order.Amount.Mul(order.Rate).RoundBank(0))
+		totalFiatVolume = totalFiatVolume.Add(order.Amount.Mul(order.Rate).RoundBank(2))
 	}
 
 	count, err := storage.Client.LockPaymentOrder.
@@ -833,7 +871,7 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 	u.APIResponse(ctx, http.StatusOK, "success", "Provider stats fetched successfully", &types.ProviderStatsResponse{
 		TotalOrders:       count,
 		TotalFiatVolume:   totalFiatVolume,
-		TotalCryptoVolume: v[0].Sum,
+		TotalCryptoVolume: usdVolume[0].Sum.Add(localStablecoinVolume[0].Sum),
 	})
 }
 
