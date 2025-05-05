@@ -111,12 +111,9 @@ func BigMin(x, y *big.Int) *big.Int {
 	return y
 }
 
-// FormatTimestampToGMT1 formats the timestamp to GMT+1 (Africa/Lagos time zone) and returns a formatted string
+// FormatTimestampToGMT1 formats the timestamp to GMT+1 (Africa/Lagos time zone) and returns a formatted string.
 func FormatTimestampToGMT1(timestamp time.Time) (string, error) {
-	loc, err := time.LoadLocation("Africa/Lagos")
-	if err != nil {
-		return "", err
-	}
+	loc := time.FixedZone("GMT+1", 1*60*60)
 	return timestamp.In(loc).Format("January 2, 2006 at 3:04 PM"), nil
 }
 
