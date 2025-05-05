@@ -81,7 +81,7 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 	// save or update SenderOrderToken
 	tx, err := storage.Client.Tx(ctx)
 	if err != nil {
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile init", nil)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 		return
 	}
 
@@ -176,7 +176,7 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 						return
 					}
 				} else {
-					u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile err:", nil)
+					u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 					return
 				}
 
