@@ -11,7 +11,6 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/storage"
-	"github.com/paycrest/aggregator/utils"
 
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
@@ -22,7 +21,6 @@ import (
 	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
-	"github.com/paycrest/aggregator/ent/token"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	svc "github.com/paycrest/aggregator/services"
@@ -283,7 +281,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		if orderToken.Edges.Provider.VisibilityMode == providerprofile.VisibilityModePrivate {
 			normalizedAmount := payload.Amount
 			if strings.EqualFold(token.BaseCurrency, institutionObj.Edges.FiatCurrency.Code) && token.BaseCurrency != "USD" {
-				rateResponse, err := utils.GetTokenRateFromQueue("USDT", normalizedAmount, institutionObj.Edges.FiatCurrency.Code, institutionObj.Edges.FiatCurrency.MarketRate)
+				rateResponse, err := u.GetTokenRateFromQueue("USDT", normalizedAmount, institutionObj.Edges.FiatCurrency.Code, institutionObj.Edges.FiatCurrency.MarketRate)
 				if err != nil {
 					logger.Errorf("InitiatePaymentOrder.GetTokenRateFromQueue: %v", err)
 					u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
@@ -745,7 +743,7 @@ func (ctrl *SenderController) Stats(ctx *gin.Context) {
 		Query().
 		Where(
 			paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)),
-			paymentorder.HasTokenWith(token.BaseCurrencyEQ("USD")),
+			paymentorder.HasTokenWith(tokenEnt.BaseCurrencyEQ("USD")),
 			paymentorder.StatusEQ(paymentorder.StatusSettled),
 		).
 		Aggregate(
@@ -764,7 +762,7 @@ func (ctrl *SenderController) Stats(ctx *gin.Context) {
 		Query().
 		Where(
 			paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)),
-			paymentorder.HasTokenWith(token.BaseCurrencyNEQ("USD")),
+			paymentorder.HasTokenWith(tokenEnt.BaseCurrencyNEQ("USD")),
 			paymentorder.StatusEQ(paymentorder.StatusSettled),
 		).
 		WithRecipient().
@@ -780,7 +778,7 @@ func (ctrl *SenderController) Stats(ctx *gin.Context) {
 
 	// Convert local stablecoin volume to USD
 	for _, paymentOrder := range paymentOrders {
-		institution, err := utils.GetInstitutionByCode(ctx, paymentOrder.Edges.Recipient.Institution, false)
+		institution, err := u.GetInstitutionByCode(ctx, paymentOrder.Edges.Recipient.Institution, false)
 		if err != nil {
 			logger.Errorf("error: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch sender stats", nil)
