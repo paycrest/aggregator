@@ -11,12 +11,13 @@ import (
 )
 
 var (
-	configPath = "./smile_id_types.json"
-	schemaPath = "./smile_id_types_schema.json"
+	configPath = "./id_types.json"
+	schemaPath = "./id_types_schema.json"
 )
 
-// TestValidateSmileIDConfig tests the validation of smile_id_types.json
+// TestValidateSmileIDConfig tests the validation of id_types.json
 func TestValidateSmileIDConfig(t *testing.T) {
+
 	// Ensure the real config and schema files exist
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		t.Fatalf("Config file %s not found", configPath)
@@ -310,7 +311,7 @@ func TestValidateSmileIDConfig(t *testing.T) {
 	})
 }
 
-// TestFullConfig tests the full smile_id_types.json
+// TestFullConfig tests the full id_types.json
 func TestFullConfig(t *testing.T) {
 	// Validate the config
 	err := ValidateSmileIDConfig(configPath)

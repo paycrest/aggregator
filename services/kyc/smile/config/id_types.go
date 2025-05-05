@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/xeipuuv/gojsonschema"
 )
@@ -28,6 +29,35 @@ type SmileIDConfig struct {
 	Continents []Continent `json:"continents"`
 }
 
+// NewIDVerificationRequest is the request for a new identity verification request
+type NewIDVerificationRequest struct {
+	WalletAddress string `json:"walletAddress" binding:"required"`
+	Signature     string `json:"signature" binding:"required"`
+	Nonce         string `json:"nonce" binding:"required"`
+}
+
+// NewIDVerificationResponse is the response for a new identity verification request
+type NewIDVerificationResponse struct {
+	URL       string    `json:"url"`
+	ExpiresAt time.Time `json:"expiresAt"`
+}
+
+type IDVerificationStatusResponse struct {
+	Status string `json:"status"`
+	URL    string `json:"url"`
+}
+
+// SmileIDWebhookPayload represents the payload structure from Smile Identity
+type SmileIDWebhookPayload struct {
+	ResultCode    string `json:"ResultCode"`
+	PartnerParams struct {
+		UserID string `json:"user_id"`
+	} `json:"PartnerParams"`
+	Signature string `json:"signature"`
+	Timestamp string `json:"timestamp"`
+	// Add other fields as needed
+}
+
 func ValidateSmileIDConfig(filePath string) error {
 	// Read the config file
 	data, err := os.ReadFile(filePath)
@@ -36,7 +66,7 @@ func ValidateSmileIDConfig(filePath string) error {
 	}
 
 	// Validate against JSON schema
-	schemaPath := "./smile_id_types_schema.json"
+	schemaPath := "./id_types_schema.json"
 	schemaLoader := gojsonschema.NewReferenceLoader("file://" + schemaPath)
 	documentLoader := gojsonschema.NewBytesLoader(data)
 	result, err := gojsonschema.Validate(schemaLoader, documentLoader)

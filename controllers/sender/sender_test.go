@@ -111,7 +111,7 @@ func TestSender(t *testing.T) {
 
 	// Set up test database client
 	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-	defer client.Close() 
+	defer client.Close()
 
 	db.Client = client
 

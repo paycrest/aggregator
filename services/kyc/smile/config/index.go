@@ -1,4 +1,4 @@
-package kyc
+package config
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -112,15 +113,15 @@ func (s *SmileIDService) RequestVerification(ctx context.Context, payload NewIDV
 		}
 	}
 
-	filePath, err := filepath.Abs("../../aggregator/config/smile_id_types.json")
+	// the path should be changed
+	filePath, err := filepath.Abs("../../aggregator/services/kyc/smile/config/id_types.json")
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve file path: %v", err)
 	}
 
 	// Load and flatten the JSON file
-	idTypes, err := utils.LoadSmileIDConfig(filePath)
+	idTypes, err := loadSmileIDConfig(filePath)
 	if err != nil {
-		fmt.Printf("Failed to flatten JSON: %v\n", err)
 		return nil, fmt.Errorf("failed to flatten JSON: %v", err)
 	}
 
@@ -285,4 +286,46 @@ func (s *SmileIDService) getSmileIDSignature(timestamp string) string {
 	h.Write([]byte(s.identityConf.SmileIdentityPartnerId))
 	h.Write([]byte("sid_request"))
 	return base64.StdEncoding.EncodeToString(h.Sum(nil))
+}
+
+// FlattenSmileIDConfig converts the hierarchical SmileIDConfig into a flat array of id_types
+func flattenSmileIDConfig(config SmileIDConfig) ([]map[string]interface{}, error) {
+	var idTypes []map[string]interface{}
+
+	for _, continent := range config.Continents {
+		for _, country := range continent.Countries {
+			for _, idType := range country.IDTypes {
+				idTypeEntry := map[string]interface{}{
+					"country":             country.Code,
+					"id_type":             idType.Type,
+					"verification_method": idType.VerificationMethod,
+				}
+				idTypes = append(idTypes, idTypeEntry)
+			}
+		}
+	}
+
+	if len(idTypes) == 0 {
+		return nil, fmt.Errorf("no ID types found in configuration")
+	}
+
+	return idTypes, nil
+}
+
+// LoadSmileIDConfig loads the JSON file and flattens it
+func loadSmileIDConfig(filePath string) ([]map[string]interface{}, error) {
+	// Read the config file
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	// Parse the JSON into SmileIDConfig
+	var config SmileIDConfig
+	if err := json.Unmarshal(data, &config); err != nil {
+		return nil, fmt.Errorf("failed to parse JSON: %w", err)
+	}
+
+	// Flatten the structure
+	return flattenSmileIDConfig(config)
 }

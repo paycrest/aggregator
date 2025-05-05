@@ -20,6 +20,7 @@ import (
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	svc "github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/kyc"
+	smConfig "github.com/paycrest/aggregator/services/kyc/smile/config"
 	orderSvc "github.com/paycrest/aggregator/services/order"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
@@ -31,7 +32,8 @@ import (
 )
 
 var cryptoConf = config.CryptoConfig()
-var serverConf = config.ServerConfig()
+
+// var serverConf = config.ServerConfig()
 var identityConf = config.IdentityConfig()
 
 // Controller is the default controller for other endpoints
@@ -48,7 +50,7 @@ func NewController() *Controller {
 		orderService:          orderSvc.NewOrderEVM(),
 		priorityQueueService:  svc.NewPriorityQueueService(),
 		receiveAddressService: svc.NewReceiveAddressService(),
-		kycService:            kyc.NewSmileIDService(),
+		kycService:            smConfig.NewSmileIDService(),
 	}
 }
 
@@ -669,7 +671,7 @@ func (ctrl *Controller) GetLinkedAddressTransactions(ctx *gin.Context) {
 
 // RequestIDVerification controller requests identity verification details
 func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
-	var payload kyc.NewIDVerificationRequest
+	var payload smConfig.NewIDVerificationRequest
 
 	if err := ctx.ShouldBindJSON(&payload); err != nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error",
@@ -680,7 +682,7 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 	response, err := ctrl.kycService.RequestVerification(ctx, payload)
 	if err != nil {
 		switch err.Error() {
-			case "invalid signature", "invalid signature: signature is not in the correct format",
+		case "invalid signature", "invalid signature: signature is not in the correct format",
 			"invalid signature: signature length is not correct",
 			"invalid signature: invalid recovery ID":
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid signature", err.Error())
