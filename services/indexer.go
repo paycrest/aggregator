@@ -1173,13 +1173,20 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 	}
 
 	if provisionBucket == nil && !isPrivate {
+		// TODO: Activate this when split order is tested and working
 		// Split lock payment order into multiple orders
-		err = s.splitLockPaymentOrder(
-			ctx, client, lockPaymentOrder, currency,
-		)
+		// err = s.splitLockPaymentOrder(
+		// 	ctx, client, lockPaymentOrder, currency,
+		// )
+		// if err != nil {
+		// 	return fmt.Errorf("%s - failed to split lock payment order: %w", lockPaymentOrder.GatewayID, err)
+		// }
+
+		err = s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Amount is larger than the maximum bucket")
 		if err != nil {
-			return fmt.Errorf("%s - failed to split lock payment order: %w", lockPaymentOrder.GatewayID, err)
+			return fmt.Errorf("failed to handle cancellation: %w", err)
 		}
+		return nil
 	} else {
 		// Create LockPaymentOrder and recipient in a transaction
 		tx, err := db.Client.Tx(ctx)
