@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"time"
@@ -113,11 +114,12 @@ func (s *SmileIDService) RequestVerification(ctx context.Context, payload NewIDV
 		}
 	}
 
-	// the path should be changed
-	filePath, err := filepath.Abs("../../aggregator/services/kyc/smile/config/id_types.json")
+	rootDir, err := getModuleRootDir()
 	if err != nil {
-		return nil, fmt.Errorf("failed to resolve file path: %v", err)
+		return nil, fmt.Errorf("failed to find module root: %v", err)
 	}
+
+	filePath := filepath.Join(rootDir, "services", "kyc", "smile", "config", "id_types.json")
 
 	// Load and flatten the JSON file
 	idTypes, err := loadSmileIDConfig(filePath)
@@ -328,4 +330,21 @@ func loadSmileIDConfig(filePath string) ([]map[string]interface{}, error) {
 
 	// Flatten the structure
 	return flattenSmileIDConfig(config)
+}
+
+// getModuleRootDir finds the root directory of the Go module
+func getModuleRootDir() (string, error) {
+	// Get the path to the current file
+	_, filename, _, _ := runtime.Caller(0)
+	dir := filepath.Dir(filename)
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", fmt.Errorf("could not find module root (no go.mod file found)")
+		}
+		dir = parent
+	}
 }
