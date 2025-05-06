@@ -18,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/gin-gonic/gin"
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
@@ -29,6 +30,7 @@ import (
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/logger"
 	tokenUtils "github.com/paycrest/aggregator/utils/token"
+	"github.com/redis/go-redis/v9"
 	"github.com/shopspring/decimal"
 )
 
@@ -596,6 +598,65 @@ func GetInstitutionByCode(ctx context.Context, institutionCode string, enabledFi
 	return institution, nil
 }
 
+
+// removeProviderFromQueues removes a provider from all relevant Redis queues when their availability changes to false
+func RemoveProviderFromQueues(ctx *gin.Context, provider *ent.ProviderProfile) {
+	// Fetch all provision buckets and currencies associated with the provider
+	buckets, err := provider.QueryProvisionBuckets().All(ctx)
+	if err != nil {
+		logger.Errorf("Failed to fetch provision buckets for provider %s: %v", provider.ID, err)
+		return
+	}
+
+	currencies, err := provider.QueryCurrencies().All(ctx)
+	if err != nil {
+		logger.Errorf("Failed to fetch currencies for provider %s: %v", provider.ID, err)
+		return
+	}
+
+	// Iterate over all combinations of currencies and buckets
+	for _, currency := range currencies {
+		for _, bucket := range buckets {
+			redisKey := fmt.Sprintf("bucket_%s_%s_%s", currency.Code, bucket.MinAmount, bucket.MaxAmount)
+
+			// Remove provider from Redis queue, iterating backward.
+			for index := int64(-1); ; index-- {
+				providerData, err := storage.RedisClient.LIndex(ctx, redisKey, index).Result()
+				if err != nil { // End of list or error
+					if err != redis.Nil {
+						logger.Errorf("Failed to fetch provider data at index %d from Redis queue %s: %v", index, redisKey, err)
+					}
+					break
+				}
+
+				parts := strings.Split(providerData, ":")
+				if len(parts) != 5 {
+					logger.Errorf("Invalid provider data format in Redis queue %s: %s", redisKey, providerData)
+					continue
+				}
+
+				if parts[0] == provider.ID {
+					// Use a Redis transaction for atomicity
+					err = storage.RedisClient.Watch(ctx, func(tx *redis.Tx) error {
+						_, err := tx.LSet(ctx, redisKey, index, "DELETED_PROVIDER").Result()
+						if err != nil {
+							return err
+						}
+						_, err = tx.LRem(ctx, redisKey, 0, "DELETED_PROVIDER").Result()
+						return err
+					}, redisKey)
+
+					if err != nil {
+						logger.Errorf("Failed to atomically remove provider %s from Redis queue %s: %v", provider.ID, redisKey, err)
+						continue
+					}
+					break
+				}
+			}
+		}
+	}
+}
+
 // Helper function to validate HTTPS URL
 func IsValidHttpsUrl(urlStr string) bool {
 	// Check if URL starts with https://
@@ -611,4 +672,5 @@ func IsValidHttpsUrl(urlStr string) bool {
 
 	// Verify scheme is https and host is present
 	return parsedUrl.Scheme == "https" && parsedUrl.Host != ""
+
 }
