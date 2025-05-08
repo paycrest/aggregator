@@ -1630,17 +1630,6 @@
           ]
         },
         {
-          "name": "Kosovo",
-          "code": "XK",
-          "id_types": [
-            { "type": "DRIVERS_LICENSE", "verification_method": "doc_verification" },
-            { "type": "IDENTITY_CARD", "verification_method": "doc_verification" },
-            { "type": "PASSPORT", "verification_method": "doc_verification" },
-            { "type": "RESIDENT_ID", "verification_method": "doc_verification" },
-            { "type": "TRAVEL_DOC", "verification_method": "doc_verification" }
-          ]
-        },
-        {
           "name": "Latvia",
           "code": "LV",
           "id_types": [
