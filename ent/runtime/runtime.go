@@ -374,21 +374,7 @@ func init() {
 	// senderprofileDescBusinessWebsite is the schema descriptor for business_website field.
 	senderprofileDescBusinessWebsite := senderprofileFields[8].Descriptor()
 	// senderprofile.BusinessWebsiteValidator is a validator for the "business_website" field. It is called by the builders before save.
-	senderprofile.BusinessWebsiteValidator = func() func(string) error {
-		validators := senderprofileDescBusinessWebsite.Validators
-		fns := [...]func(string) error{
-			validators[0].(func(string) error),
-			validators[1].(func(string) error),
-		}
-		return func(business_website string) error {
-			for _, fn := range fns {
-				if err := fn(business_website); err != nil {
-					return err
-				}
-			}
-			return nil
-		}
-	}()
+	senderprofile.BusinessWebsiteValidator = senderprofileDescBusinessWebsite.Validators[0].(func(string) error)
 	// senderprofileDescNatureOfBusiness is the schema descriptor for nature_of_business field.
 	senderprofileDescNatureOfBusiness := senderprofileFields[9].Descriptor()
 	// senderprofile.NatureOfBusinessValidator is a validator for the "nature_of_business" field. It is called by the builders before save.

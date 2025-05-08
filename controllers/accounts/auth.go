@@ -79,18 +79,6 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		return
 	}
 
-	// Validate monthly volume for new business users
-	var monthlyVolumeFloat float64
-	if u.ContainsString(payload.Scopes, "provider") || u.ContainsString(payload.Scopes, "sender") {
-		var err error
-		monthlyVolumeFloat, err = u.ValidateMonthlyVolume(payload.MonthlyVolume)
-		if err != nil {
-			_ = tx.Rollback()
-			u.APIResponse(ctx, http.StatusBadRequest, "error", err.Error(), nil)
-			return
-		}
-	}
-
 	// Save the user
 	scope := strings.Join(payload.Scopes, " ")
 	userCreate := tx.User.
@@ -193,7 +181,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 			SetVisibilityMode(providerprofile.VisibilityModePrivate).
 			SetUser(user).
 			SetProvisionMode(providerprofile.ProvisionModeAuto).
-			SetMonthlyVolume(monthlyVolumeFloat)
+			SetMonthlyVolume(payload.MonthlyVolume)
 
 		provider, err := providerCreate.Save(ctx)
 		if err != nil {
@@ -224,35 +212,14 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 
 	// Create a sender profile
 	if u.ContainsString(scopes, "sender") {
-		// Validate business_website if provided
-		if payload.BusinessWebsite != "" && !u.IsValidURL(payload.BusinessWebsite) {
-			_ = tx.Rollback()
-			u.APIResponse(ctx, http.StatusBadRequest, "error",
-				"Invalid business website URL", nil)
-			return
-		}
-
-		// Validate nature_of_business length if provided
-		if len(payload.NatureOfBusiness) > 255 {
-			_ = tx.Rollback()
-			u.APIResponse(ctx, http.StatusBadRequest, "error",
-				"Nature of business exceeds character limit", nil)
-			return
-		}
 
 		// Create sender profile
 		senderCreate := tx.SenderProfile.
 			Create().
 			SetUser(user).
-			SetMonthlyVolume(monthlyVolumeFloat)
-
-		// Set optional fields
-		if payload.BusinessWebsite != "" {
-			senderCreate = senderCreate.SetBusinessWebsite(payload.BusinessWebsite)
-		}
-		if payload.NatureOfBusiness != "" {
-			senderCreate = senderCreate.SetNatureOfBusiness(payload.NatureOfBusiness)
-		}
+			SetMonthlyVolume(payload.MonthlyVolume).
+			SetBusinessWebsite(payload.BusinessWebsite).
+			SetNatureOfBusiness(payload.NatureOfBusiness)
 
 		sender, err := senderCreate.Save(ctx)
 		if err != nil {

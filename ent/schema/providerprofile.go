@@ -38,7 +38,6 @@ func (ProviderProfile) Fields() []ent.Field {
 		field.Enum("visibility_mode").
 			Values("private", "public").
 			Default("public"),
-
 		// KYB fields
 		field.Text("address").Optional(),
 		field.String("mobile_number").Optional(),
@@ -50,7 +49,7 @@ func (ProviderProfile) Fields() []ent.Field {
 		field.String("identity_document").Optional(),
 		field.String("business_document").Optional(),
 		field.Bool("is_kyb_verified").Default(false),
-		field.Float("monthly_volume").
+		field.String("monthly_volume").
 			Optional().
 			Nillable().
 			Comment("Monthly transaction volume for the provider"),

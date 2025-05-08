@@ -292,23 +292,16 @@ func (ppu *ProviderProfileUpdate) SetNillableIsKybVerified(b *bool) *ProviderPro
 }
 
 // SetMonthlyVolume sets the "monthly_volume" field.
-func (ppu *ProviderProfileUpdate) SetMonthlyVolume(f float64) *ProviderProfileUpdate {
-	ppu.mutation.ResetMonthlyVolume()
-	ppu.mutation.SetMonthlyVolume(f)
+func (ppu *ProviderProfileUpdate) SetMonthlyVolume(s string) *ProviderProfileUpdate {
+	ppu.mutation.SetMonthlyVolume(s)
 	return ppu
 }
 
 // SetNillableMonthlyVolume sets the "monthly_volume" field if the given value is not nil.
-func (ppu *ProviderProfileUpdate) SetNillableMonthlyVolume(f *float64) *ProviderProfileUpdate {
-	if f != nil {
-		ppu.SetMonthlyVolume(*f)
+func (ppu *ProviderProfileUpdate) SetNillableMonthlyVolume(s *string) *ProviderProfileUpdate {
+	if s != nil {
+		ppu.SetMonthlyVolume(*s)
 	}
-	return ppu
-}
-
-// AddMonthlyVolume adds f to the "monthly_volume" field.
-func (ppu *ProviderProfileUpdate) AddMonthlyVolume(f float64) *ProviderProfileUpdate {
-	ppu.mutation.AddMonthlyVolume(f)
 	return ppu
 }
 
@@ -666,13 +659,10 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		_spec.SetField(providerprofile.FieldIsKybVerified, field.TypeBool, value)
 	}
 	if value, ok := ppu.mutation.MonthlyVolume(); ok {
-		_spec.SetField(providerprofile.FieldMonthlyVolume, field.TypeFloat64, value)
-	}
-	if value, ok := ppu.mutation.AddedMonthlyVolume(); ok {
-		_spec.AddField(providerprofile.FieldMonthlyVolume, field.TypeFloat64, value)
+		_spec.SetField(providerprofile.FieldMonthlyVolume, field.TypeString, value)
 	}
 	if ppu.mutation.MonthlyVolumeCleared() {
-		_spec.ClearField(providerprofile.FieldMonthlyVolume, field.TypeFloat64)
+		_spec.ClearField(providerprofile.FieldMonthlyVolume, field.TypeString)
 	}
 	if ppu.mutation.APIKeyCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1189,23 +1179,16 @@ func (ppuo *ProviderProfileUpdateOne) SetNillableIsKybVerified(b *bool) *Provide
 }
 
 // SetMonthlyVolume sets the "monthly_volume" field.
-func (ppuo *ProviderProfileUpdateOne) SetMonthlyVolume(f float64) *ProviderProfileUpdateOne {
-	ppuo.mutation.ResetMonthlyVolume()
-	ppuo.mutation.SetMonthlyVolume(f)
+func (ppuo *ProviderProfileUpdateOne) SetMonthlyVolume(s string) *ProviderProfileUpdateOne {
+	ppuo.mutation.SetMonthlyVolume(s)
 	return ppuo
 }
 
 // SetNillableMonthlyVolume sets the "monthly_volume" field if the given value is not nil.
-func (ppuo *ProviderProfileUpdateOne) SetNillableMonthlyVolume(f *float64) *ProviderProfileUpdateOne {
-	if f != nil {
-		ppuo.SetMonthlyVolume(*f)
+func (ppuo *ProviderProfileUpdateOne) SetNillableMonthlyVolume(s *string) *ProviderProfileUpdateOne {
+	if s != nil {
+		ppuo.SetMonthlyVolume(*s)
 	}
-	return ppuo
-}
-
-// AddMonthlyVolume adds f to the "monthly_volume" field.
-func (ppuo *ProviderProfileUpdateOne) AddMonthlyVolume(f float64) *ProviderProfileUpdateOne {
-	ppuo.mutation.AddMonthlyVolume(f)
 	return ppuo
 }
 
@@ -1593,13 +1576,10 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		_spec.SetField(providerprofile.FieldIsKybVerified, field.TypeBool, value)
 	}
 	if value, ok := ppuo.mutation.MonthlyVolume(); ok {
-		_spec.SetField(providerprofile.FieldMonthlyVolume, field.TypeFloat64, value)
-	}
-	if value, ok := ppuo.mutation.AddedMonthlyVolume(); ok {
-		_spec.AddField(providerprofile.FieldMonthlyVolume, field.TypeFloat64, value)
+		_spec.SetField(providerprofile.FieldMonthlyVolume, field.TypeString, value)
 	}
 	if ppuo.mutation.MonthlyVolumeCleared() {
-		_spec.ClearField(providerprofile.FieldMonthlyVolume, field.TypeFloat64)
+		_spec.ClearField(providerprofile.FieldMonthlyVolume, field.TypeString)
 	}
 	if ppuo.mutation.APIKeyCleared() {
 		edge := &sqlgraph.EdgeSpec{

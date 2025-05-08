@@ -34,7 +34,7 @@ type SenderProfile struct {
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// Monthly transaction volume for the sender
-	MonthlyVolume *float64 `json:"monthly_volume,omitempty"`
+	MonthlyVolume *string `json:"monthly_volume,omitempty"`
 	// Business website URL
 	BusinessWebsite string `json:"business_website,omitempty"`
 	// Nature of business description
@@ -121,9 +121,7 @@ func (*SenderProfile) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case senderprofile.FieldIsPartner, senderprofile.FieldIsActive:
 			values[i] = new(sql.NullBool)
-		case senderprofile.FieldMonthlyVolume:
-			values[i] = new(sql.NullFloat64)
-		case senderprofile.FieldWebhookURL, senderprofile.FieldProviderID, senderprofile.FieldBusinessWebsite, senderprofile.FieldNatureOfBusiness:
+		case senderprofile.FieldWebhookURL, senderprofile.FieldProviderID, senderprofile.FieldMonthlyVolume, senderprofile.FieldBusinessWebsite, senderprofile.FieldNatureOfBusiness:
 			values[i] = new(sql.NullString)
 		case senderprofile.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -191,11 +189,11 @@ func (sp *SenderProfile) assignValues(columns []string, values []any) error {
 				sp.UpdatedAt = value.Time
 			}
 		case senderprofile.FieldMonthlyVolume:
-			if value, ok := values[i].(*sql.NullFloat64); !ok {
+			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field monthly_volume", values[i])
 			} else if value.Valid {
-				sp.MonthlyVolume = new(float64)
-				*sp.MonthlyVolume = value.Float64
+				sp.MonthlyVolume = new(string)
+				*sp.MonthlyVolume = value.String
 			}
 		case senderprofile.FieldBusinessWebsite:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -297,7 +295,7 @@ func (sp *SenderProfile) String() string {
 	builder.WriteString(", ")
 	if v := sp.MonthlyVolume; v != nil {
 		builder.WriteString("monthly_volume=")
-		builder.WriteString(fmt.Sprintf("%v", *v))
+		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")
 	builder.WriteString("business_website=")

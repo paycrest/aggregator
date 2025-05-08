@@ -106,15 +106,15 @@ func (spc *SenderProfileCreate) SetNillableUpdatedAt(t *time.Time) *SenderProfil
 }
 
 // SetMonthlyVolume sets the "monthly_volume" field.
-func (spc *SenderProfileCreate) SetMonthlyVolume(f float64) *SenderProfileCreate {
-	spc.mutation.SetMonthlyVolume(f)
+func (spc *SenderProfileCreate) SetMonthlyVolume(s string) *SenderProfileCreate {
+	spc.mutation.SetMonthlyVolume(s)
 	return spc
 }
 
 // SetNillableMonthlyVolume sets the "monthly_volume" field if the given value is not nil.
-func (spc *SenderProfileCreate) SetNillableMonthlyVolume(f *float64) *SenderProfileCreate {
-	if f != nil {
-		spc.SetMonthlyVolume(*f)
+func (spc *SenderProfileCreate) SetNillableMonthlyVolume(s *string) *SenderProfileCreate {
+	if s != nil {
+		spc.SetMonthlyVolume(*s)
 	}
 	return spc
 }
@@ -381,7 +381,7 @@ func (spc *SenderProfileCreate) createSpec() (*SenderProfile, *sqlgraph.CreateSp
 		_node.UpdatedAt = value
 	}
 	if value, ok := spc.mutation.MonthlyVolume(); ok {
-		_spec.SetField(senderprofile.FieldMonthlyVolume, field.TypeFloat64, value)
+		_spec.SetField(senderprofile.FieldMonthlyVolume, field.TypeString, value)
 		_node.MonthlyVolume = &value
 	}
 	if value, ok := spc.mutation.BusinessWebsite(); ok {
@@ -610,7 +610,7 @@ func (u *SenderProfileUpsert) UpdateUpdatedAt() *SenderProfileUpsert {
 }
 
 // SetMonthlyVolume sets the "monthly_volume" field.
-func (u *SenderProfileUpsert) SetMonthlyVolume(v float64) *SenderProfileUpsert {
+func (u *SenderProfileUpsert) SetMonthlyVolume(v string) *SenderProfileUpsert {
 	u.Set(senderprofile.FieldMonthlyVolume, v)
 	return u
 }
@@ -618,12 +618,6 @@ func (u *SenderProfileUpsert) SetMonthlyVolume(v float64) *SenderProfileUpsert {
 // UpdateMonthlyVolume sets the "monthly_volume" field to the value that was provided on create.
 func (u *SenderProfileUpsert) UpdateMonthlyVolume() *SenderProfileUpsert {
 	u.SetExcluded(senderprofile.FieldMonthlyVolume)
-	return u
-}
-
-// AddMonthlyVolume adds v to the "monthly_volume" field.
-func (u *SenderProfileUpsert) AddMonthlyVolume(v float64) *SenderProfileUpsert {
-	u.Add(senderprofile.FieldMonthlyVolume, v)
 	return u
 }
 
@@ -816,16 +810,9 @@ func (u *SenderProfileUpsertOne) UpdateUpdatedAt() *SenderProfileUpsertOne {
 }
 
 // SetMonthlyVolume sets the "monthly_volume" field.
-func (u *SenderProfileUpsertOne) SetMonthlyVolume(v float64) *SenderProfileUpsertOne {
+func (u *SenderProfileUpsertOne) SetMonthlyVolume(v string) *SenderProfileUpsertOne {
 	return u.Update(func(s *SenderProfileUpsert) {
 		s.SetMonthlyVolume(v)
-	})
-}
-
-// AddMonthlyVolume adds v to the "monthly_volume" field.
-func (u *SenderProfileUpsertOne) AddMonthlyVolume(v float64) *SenderProfileUpsertOne {
-	return u.Update(func(s *SenderProfileUpsert) {
-		s.AddMonthlyVolume(v)
 	})
 }
 
@@ -1199,16 +1186,9 @@ func (u *SenderProfileUpsertBulk) UpdateUpdatedAt() *SenderProfileUpsertBulk {
 }
 
 // SetMonthlyVolume sets the "monthly_volume" field.
-func (u *SenderProfileUpsertBulk) SetMonthlyVolume(v float64) *SenderProfileUpsertBulk {
+func (u *SenderProfileUpsertBulk) SetMonthlyVolume(v string) *SenderProfileUpsertBulk {
 	return u.Update(func(s *SenderProfileUpsert) {
 		s.SetMonthlyVolume(v)
-	})
-}
-
-// AddMonthlyVolume adds v to the "monthly_volume" field.
-func (u *SenderProfileUpsertBulk) AddMonthlyVolume(v float64) *SenderProfileUpsertBulk {
-	return u.Update(func(s *SenderProfileUpsert) {
-		s.AddMonthlyVolume(v)
 	})
 }
 

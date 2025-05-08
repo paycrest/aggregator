@@ -121,23 +121,16 @@ func (spu *SenderProfileUpdate) SetUpdatedAt(t time.Time) *SenderProfileUpdate {
 }
 
 // SetMonthlyVolume sets the "monthly_volume" field.
-func (spu *SenderProfileUpdate) SetMonthlyVolume(f float64) *SenderProfileUpdate {
-	spu.mutation.ResetMonthlyVolume()
-	spu.mutation.SetMonthlyVolume(f)
+func (spu *SenderProfileUpdate) SetMonthlyVolume(s string) *SenderProfileUpdate {
+	spu.mutation.SetMonthlyVolume(s)
 	return spu
 }
 
 // SetNillableMonthlyVolume sets the "monthly_volume" field if the given value is not nil.
-func (spu *SenderProfileUpdate) SetNillableMonthlyVolume(f *float64) *SenderProfileUpdate {
-	if f != nil {
-		spu.SetMonthlyVolume(*f)
+func (spu *SenderProfileUpdate) SetNillableMonthlyVolume(s *string) *SenderProfileUpdate {
+	if s != nil {
+		spu.SetMonthlyVolume(*s)
 	}
-	return spu
-}
-
-// AddMonthlyVolume adds f to the "monthly_volume" field.
-func (spu *SenderProfileUpdate) AddMonthlyVolume(f float64) *SenderProfileUpdate {
-	spu.mutation.AddMonthlyVolume(f)
 	return spu
 }
 
@@ -421,13 +414,10 @@ func (spu *SenderProfileUpdate) sqlSave(ctx context.Context) (n int, err error) 
 		_spec.SetField(senderprofile.FieldUpdatedAt, field.TypeTime, value)
 	}
 	if value, ok := spu.mutation.MonthlyVolume(); ok {
-		_spec.SetField(senderprofile.FieldMonthlyVolume, field.TypeFloat64, value)
-	}
-	if value, ok := spu.mutation.AddedMonthlyVolume(); ok {
-		_spec.AddField(senderprofile.FieldMonthlyVolume, field.TypeFloat64, value)
+		_spec.SetField(senderprofile.FieldMonthlyVolume, field.TypeString, value)
 	}
 	if spu.mutation.MonthlyVolumeCleared() {
-		_spec.ClearField(senderprofile.FieldMonthlyVolume, field.TypeFloat64)
+		_spec.ClearField(senderprofile.FieldMonthlyVolume, field.TypeString)
 	}
 	if value, ok := spu.mutation.BusinessWebsite(); ok {
 		_spec.SetField(senderprofile.FieldBusinessWebsite, field.TypeString, value)
@@ -712,23 +702,16 @@ func (spuo *SenderProfileUpdateOne) SetUpdatedAt(t time.Time) *SenderProfileUpda
 }
 
 // SetMonthlyVolume sets the "monthly_volume" field.
-func (spuo *SenderProfileUpdateOne) SetMonthlyVolume(f float64) *SenderProfileUpdateOne {
-	spuo.mutation.ResetMonthlyVolume()
-	spuo.mutation.SetMonthlyVolume(f)
+func (spuo *SenderProfileUpdateOne) SetMonthlyVolume(s string) *SenderProfileUpdateOne {
+	spuo.mutation.SetMonthlyVolume(s)
 	return spuo
 }
 
 // SetNillableMonthlyVolume sets the "monthly_volume" field if the given value is not nil.
-func (spuo *SenderProfileUpdateOne) SetNillableMonthlyVolume(f *float64) *SenderProfileUpdateOne {
-	if f != nil {
-		spuo.SetMonthlyVolume(*f)
+func (spuo *SenderProfileUpdateOne) SetNillableMonthlyVolume(s *string) *SenderProfileUpdateOne {
+	if s != nil {
+		spuo.SetMonthlyVolume(*s)
 	}
-	return spuo
-}
-
-// AddMonthlyVolume adds f to the "monthly_volume" field.
-func (spuo *SenderProfileUpdateOne) AddMonthlyVolume(f float64) *SenderProfileUpdateOne {
-	spuo.mutation.AddMonthlyVolume(f)
 	return spuo
 }
 
@@ -1042,13 +1025,10 @@ func (spuo *SenderProfileUpdateOne) sqlSave(ctx context.Context) (_node *SenderP
 		_spec.SetField(senderprofile.FieldUpdatedAt, field.TypeTime, value)
 	}
 	if value, ok := spuo.mutation.MonthlyVolume(); ok {
-		_spec.SetField(senderprofile.FieldMonthlyVolume, field.TypeFloat64, value)
-	}
-	if value, ok := spuo.mutation.AddedMonthlyVolume(); ok {
-		_spec.AddField(senderprofile.FieldMonthlyVolume, field.TypeFloat64, value)
+		_spec.SetField(senderprofile.FieldMonthlyVolume, field.TypeString, value)
 	}
 	if spuo.mutation.MonthlyVolumeCleared() {
-		_spec.ClearField(senderprofile.FieldMonthlyVolume, field.TypeFloat64)
+		_spec.ClearField(senderprofile.FieldMonthlyVolume, field.TypeString)
 	}
 	if value, ok := spuo.mutation.BusinessWebsite(); ok {
 		_spec.SetField(senderprofile.FieldBusinessWebsite, field.TypeString, value)

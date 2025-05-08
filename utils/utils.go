@@ -5,7 +5,6 @@ import (
 	"crypto/ecdsa"
 	"encoding/base64"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"math/big"
 	"net/url"
@@ -609,27 +608,4 @@ func IsValidHttpsUrl(urlStr string) bool {
 
 	// Verify scheme is https and host is present
 	return parsedUrl.Scheme == "https" && parsedUrl.Host != ""
-}
-
-// IsValidURL checks if a string is a valid URL.
-func IsValidURL(url string) bool {
-	regex := regexp.MustCompile(`^https?://[^\s/$.?#].[^\s]*$`)
-	return regex.MatchString(url)
-}
-
-// Helper function to create a pointer to a decimal.Decimal
-func DecimalPtr(d decimal.Decimal) *decimal.Decimal {
-	return &d
-}
-
-// ValidateMonthlyVolume validates the monthly volume provided in the payload.
-func ValidateMonthlyVolume(monthlyVolume *decimal.Decimal) (float64, error) {
-	if monthlyVolume == nil {
-		return 0, errors.New("monthly volume must be provided and greater than zero")
-	}
-	if monthlyVolume.LessThanOrEqual(decimal.Zero) {
-		return 0, errors.New("monthly volume must be a positive number")
-	}
-	monthlyVolumeFloat, _ := monthlyVolume.Float64()
-	return monthlyVolumeFloat, nil
 }

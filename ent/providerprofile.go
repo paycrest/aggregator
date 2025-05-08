@@ -52,7 +52,7 @@ type ProviderProfile struct {
 	// IsKybVerified holds the value of the "is_kyb_verified" field.
 	IsKybVerified bool `json:"is_kyb_verified,omitempty"`
 	// Monthly transaction volume for the provider
-	MonthlyVolume *float64 `json:"monthly_volume,omitempty"`
+	MonthlyVolume *string `json:"monthly_volume,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ProviderProfileQuery when eager-loading is set.
 	Edges                 ProviderProfileEdges `json:"edges"`
@@ -157,9 +157,7 @@ func (*ProviderProfile) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case providerprofile.FieldIsActive, providerprofile.FieldIsAvailable, providerprofile.FieldIsKybVerified:
 			values[i] = new(sql.NullBool)
-		case providerprofile.FieldMonthlyVolume:
-			values[i] = new(sql.NullFloat64)
-		case providerprofile.FieldID, providerprofile.FieldTradingName, providerprofile.FieldHostIdentifier, providerprofile.FieldProvisionMode, providerprofile.FieldVisibilityMode, providerprofile.FieldAddress, providerprofile.FieldMobileNumber, providerprofile.FieldBusinessName, providerprofile.FieldIdentityDocumentType, providerprofile.FieldIdentityDocument, providerprofile.FieldBusinessDocument:
+		case providerprofile.FieldID, providerprofile.FieldTradingName, providerprofile.FieldHostIdentifier, providerprofile.FieldProvisionMode, providerprofile.FieldVisibilityMode, providerprofile.FieldAddress, providerprofile.FieldMobileNumber, providerprofile.FieldBusinessName, providerprofile.FieldIdentityDocumentType, providerprofile.FieldIdentityDocument, providerprofile.FieldBusinessDocument, providerprofile.FieldMonthlyVolume:
 			values[i] = new(sql.NullString)
 		case providerprofile.FieldUpdatedAt, providerprofile.FieldDateOfBirth:
 			values[i] = new(sql.NullTime)
@@ -277,11 +275,11 @@ func (pp *ProviderProfile) assignValues(columns []string, values []any) error {
 				pp.IsKybVerified = value.Bool
 			}
 		case providerprofile.FieldMonthlyVolume:
-			if value, ok := values[i].(*sql.NullFloat64); !ok {
+			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field monthly_volume", values[i])
 			} else if value.Valid {
-				pp.MonthlyVolume = new(float64)
-				*pp.MonthlyVolume = value.Float64
+				pp.MonthlyVolume = new(string)
+				*pp.MonthlyVolume = value.String
 			}
 		case providerprofile.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -408,7 +406,7 @@ func (pp *ProviderProfile) String() string {
 	builder.WriteString(", ")
 	if v := pp.MonthlyVolume; v != nil {
 		builder.WriteString("monthly_volume=")
-		builder.WriteString(fmt.Sprintf("%v", *v))
+		builder.WriteString(*v)
 	}
 	builder.WriteByte(')')
 	return builder.String()
