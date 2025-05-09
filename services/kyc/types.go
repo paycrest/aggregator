@@ -1,37 +1,32 @@
 package kyc
 
 import (
+	"context"
 	"time"
 )
 
-
-// NewIDVerificationRequest is the request for a new identity verification request
-type NewIDVerificationRequest struct {
-	WalletAddress string `json:"walletAddress" binding:"required"`
-	Signature     string `json:"signature" binding:"required"`
-	Nonce         string `json:"nonce" binding:"required"`
+// VerificationRequest represents a generic KYC verification request
+type VerificationRequest struct {
+	WalletAddress string `json:"walletAddress"`
+	Signature     string `json:"signature"`
+	Nonce         string `json:"nonce"`
 }
 
-// NewIDVerificationResponse is the response for a new identity verification request
-type NewIDVerificationResponse struct {
+// VerificationResponse represents a generic KYC verification response
+type VerificationResponse struct {
 	URL       string    `json:"url"`
 	ExpiresAt time.Time `json:"expiresAt"`
 }
 
-type IDVerificationStatusResponse struct {
-	Status string `json:"status"`
+// VerificationStatus represents the status of a KYC verification
+type VerificationStatus struct {
 	URL    string `json:"url"`
+	Status string `json:"status"`
 }
 
-// SmileIDWebhookPayload represents the payload structure from Smile Identity
-type SmileIDWebhookPayload struct {
-	ResultCode    string `json:"ResultCode"`
-	PartnerParams struct {
-		UserID string `json:"user_id"`
-	} `json:"PartnerParams"`
-	Signature string `json:"signature"`
-	Timestamp string `json:"timestamp"`
-	// Add other fields as needed
+// KYCProvider defines the interface for KYC verification providers
+type KYCProvider interface {
+	RequestVerification(ctx context.Context, req VerificationRequest) (*VerificationResponse, error)
+	CheckStatus(ctx context.Context, walletAddress string) (*VerificationStatus, error)
+	HandleWebhook(ctx context.Context, payload []byte) error
 }
-
-
