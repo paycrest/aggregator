@@ -5,24 +5,22 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"slices"
-	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
+	"github.com/paycrest/aggregator/services/kyc"
+	kycErrors "github.com/paycrest/aggregator/services/kyc/errors"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/utils"
-	"github.com/paycrest/aggregator/utils/logger"
 )
 
 type SmileIDService struct {
@@ -31,7 +29,7 @@ type SmileIDService struct {
 	db           *ent.Client
 }
 
-func NewSmileIDService() *SmileIDService {
+func NewSmileIDService() kyc.KYCProvider {
 	return &SmileIDService{
 		identityConf: config.IdentityConfig(),
 		serverConf:   config.ServerConfig(),
@@ -39,48 +37,23 @@ func NewSmileIDService() *SmileIDService {
 	}
 }
 
-func (s *SmileIDService) RequestVerification(ctx context.Context, payload NewIDVerificationRequest) (*NewIDVerificationResponse, error) {
-	signature, err := hex.DecodeString(payload.Signature)
-	if err != nil {
-		return nil, fmt.Errorf("invalid signature: signature is not in the correct format")
-	}
-	if len(signature) != 65 {
-		return nil, fmt.Errorf("invalid signature: signature length is not correct")
-	}
-	if signature[64] != 27 && signature[64] != 28 {
-		return nil, fmt.Errorf("invalid signature: invalid recovery ID")
-	}
-	signature[64] -= 27
-
-	message := fmt.Sprintf("I accept the KYC Policy and hereby request an identity verification check for %s with nonce %s", payload.WalletAddress, payload.Nonce)
-	prefix := "\x19Ethereum Signed Message:\n" + fmt.Sprint(len(message))
-	hash := crypto.Keccak256Hash([]byte(prefix + message))
-
-	sigPublicKeyECDSA, err := crypto.SigToPub(hash.Bytes(), signature)
-	if err != nil {
-		return nil, fmt.Errorf("invalid signature")
-	}
-	recoveredAddress := crypto.PubkeyToAddress(*sigPublicKeyECDSA)
-	if !strings.EqualFold(recoveredAddress.Hex(), payload.WalletAddress) {
-		return nil, fmt.Errorf("invalid signature")
-	}
-
+// RequestVerification implements the KYCProvider interface
+func (s *SmileIDService) RequestVerification(ctx context.Context, req kyc.VerificationRequest) (*kyc.VerificationResponse, error) {
 	ivr, err := s.db.IdentityVerificationRequest.
 		Query().
-		Where(identityverificationrequest.WalletAddressEQ(payload.WalletAddress)).
+		Where(identityverificationrequest.WalletAddressEQ(req.WalletAddress)).
 		Only(ctx)
 	if err != nil {
 		if !ent.IsNotFound(err) {
-			logger.Errorf("error: %v", err)
-			return nil, fmt.Errorf("failed to request identity verification")
+			return nil, kycErrors.ErrDatabase{Err: err}
 		}
 	}
 
 	timestamp := time.Now()
 
 	if ivr != nil {
-		if ivr.WalletSignature == payload.Signature {
-			return nil, fmt.Errorf("signature already used for identity verification")
+		if ivr.WalletSignature == req.Signature {
+			return nil, kycErrors.ErrSignatureAlreadyUsed{}
 		}
 
 		expiryPeriod := 15 * time.Minute
@@ -88,29 +61,27 @@ func (s *SmileIDService) RequestVerification(ctx context.Context, payload NewIDV
 		if ivr.Status == identityverificationrequest.StatusFailed || (ivr.Status == identityverificationrequest.StatusPending && ivr.LastURLCreatedAt.Add(expiryPeriod).Before(timestamp)) {
 			_, err := s.db.IdentityVerificationRequest.
 				Delete().
-				Where(identityverificationrequest.WalletAddressEQ(payload.WalletAddress)).
+				Where(identityverificationrequest.WalletAddressEQ(req.WalletAddress)).
 				Exec(ctx)
 			if err != nil {
-				logger.Errorf("error: %v", err)
-				return nil, fmt.Errorf("failed to request identity verification")
+				return nil, kycErrors.ErrDatabase{Err: err}
 			}
 		} else if ivr.Status == identityverificationrequest.StatusPending && (ivr.LastURLCreatedAt.Add(expiryPeriod).Equal(timestamp) || ivr.LastURLCreatedAt.Add(expiryPeriod).After(timestamp)) {
 			_, err = ivr.
 				Update().
-				SetWalletSignature(payload.Signature).
+				SetWalletSignature(req.Signature).
 				Save(ctx)
 			if err != nil {
-				logger.Errorf("error: %v", err)
-				return nil, fmt.Errorf("failed to request identity verification")
+				return nil, kycErrors.ErrDatabase{Err: err}
 			}
-			return &NewIDVerificationResponse{
+			return &kyc.VerificationResponse{
 				URL:       ivr.VerificationURL,
 				ExpiresAt: ivr.LastURLCreatedAt,
 			}, nil
 		}
 
 		if ivr.Status == identityverificationrequest.StatusSuccess {
-			return nil, fmt.Errorf("this account has already been successfully verified")
+			return nil, kycErrors.ErrAlreadyVerified{}
 		}
 	}
 
@@ -142,57 +113,52 @@ func (s *SmileIDService) RequestVerification(ctx context.Context, payload NewIDV
 		"data_privacy_policy_url": "https://paycrest.notion.site/KYC-Policy-10e2482d45a280e191b8d47d76a8d242",
 		"logo_url":                "https://res.cloudinary.com/de6e0wihu/image/upload/v1738088043/xxhlrsld2wy9lzekahur.png",
 		"is_single_use":           true,
-		"user_id":                 payload.WalletAddress,
+		"user_id":                 req.WalletAddress,
 		"expires_at":              timestamp.Add(1 * time.Hour).Format(time.RFC3339Nano),
 	}).
 		Send()
 	if err != nil {
-		logger.Errorf("error: %v", err)
-		return nil, fmt.Errorf("failed to request identity verification: couldn't reach identity provider")
+		return nil, kycErrors.ErrProviderUnreachable{Err: err}
 	}
 
 	data, err := utils.ParseJSONResponse(res.RawResponse)
 	if err != nil {
-		logger.Errorf("error: %v %v", err, data)
-		return nil, fmt.Errorf("failed to request identity verification: %v", data)
+		return nil, kycErrors.ErrProviderResponse{Err: fmt.Errorf("%v, %v", err, data)}
 	}
 
 	ivr, err = s.db.IdentityVerificationRequest.
 		Create().
-		SetWalletAddress(payload.WalletAddress).
-		SetWalletSignature(payload.Signature).
+		SetWalletAddress(req.WalletAddress).
+		SetWalletSignature(req.Signature).
 		SetPlatform("smile_id").
 		SetPlatformRef(data["ref_id"].(string)).
 		SetVerificationURL(data["link"].(string)).
 		SetLastURLCreatedAt(timestamp).
 		Save(ctx)
 	if err != nil {
-		logger.Errorf("error: %v", err)
-		return nil, fmt.Errorf("failed to request identity verification")
+		return nil, kycErrors.ErrDatabase{Err: err}
 	}
 
-	return &NewIDVerificationResponse{
+	return &kyc.VerificationResponse{
 		URL:       ivr.VerificationURL,
 		ExpiresAt: ivr.LastURLCreatedAt,
 	}, nil
 }
 
-func (s *SmileIDService) CheckStatus(ctx context.Context, walletAddress string) (*IDVerificationStatusResponse, error) {
-
+// CheckStatus implements the KYCProvider interface
+func (s *SmileIDService) CheckStatus(ctx context.Context, walletAddress string) (*kyc.VerificationStatus, error) {
 	ivr, err := s.db.IdentityVerificationRequest.
 		Query().
 		Where(identityverificationrequest.WalletAddressEQ(walletAddress)).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			// Check the platform's status endpoint
 			return nil, fmt.Errorf("no verification request found for this wallet address")
 		}
-		logger.Errorf("error: %v", err)
-		return nil, fmt.Errorf("failed to fetch identity verification status")
+		return nil, kycErrors.ErrDatabase{Err: err}
 	}
 
-	response := &IDVerificationStatusResponse{
+	response := &kyc.VerificationStatus{
 		URL:    ivr.VerificationURL,
 		Status: ivr.Status.String(),
 	}
@@ -205,17 +171,16 @@ func (s *SmileIDService) CheckStatus(ctx context.Context, walletAddress string) 
 	return response, nil
 }
 
+// HandleWebhook implements the KYCProvider interface
 func (s *SmileIDService) HandleWebhook(ctx context.Context, payload []byte) error {
 	var smilePayload SmileIDWebhookPayload
 
 	// Parse the JSON payload
 	if err := json.Unmarshal(payload, &smilePayload); err != nil {
-		logger.Errorf("failed to parse webhook payload: %v", err)
 		return fmt.Errorf("invalid payload")
 	}
 
 	if !s.verifySmileIDWebhookSignature(smilePayload, smilePayload.Signature) {
-		logger.Errorf("invalid webhook signature")
 		return fmt.Errorf("invalid signature")
 	}
 
@@ -268,8 +233,7 @@ func (s *SmileIDService) HandleWebhook(ctx context.Context, payload []byte) erro
 		SetStatus(status).
 		Save(ctx)
 	if err != nil {
-		logger.Errorf("failed to update verification status: %v", err)
-		return fmt.Errorf("failed to process webhook")
+		return kycErrors.ErrDatabase{Err: err}
 	}
 
 	return nil

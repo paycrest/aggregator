@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/xeipuuv/gojsonschema"
 )
@@ -27,24 +26,6 @@ type Continent struct {
 
 type SmileIDConfig struct {
 	Continents []Continent `json:"continents"`
-}
-
-// NewIDVerificationRequest is the request for a new identity verification request
-type NewIDVerificationRequest struct {
-	WalletAddress string `json:"walletAddress" binding:"required"`
-	Signature     string `json:"signature" binding:"required"`
-	Nonce         string `json:"nonce" binding:"required"`
-}
-
-// NewIDVerificationResponse is the response for a new identity verification request
-type NewIDVerificationResponse struct {
-	URL       string    `json:"url"`
-	ExpiresAt time.Time `json:"expiresAt"`
-}
-
-type IDVerificationStatusResponse struct {
-	Status string `json:"status"`
-	URL    string `json:"url"`
 }
 
 // SmileIDWebhookPayload represents the payload structure from Smile Identity

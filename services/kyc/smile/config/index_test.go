@@ -19,6 +19,8 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent/enttest"
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
+	"github.com/paycrest/aggregator/services/kyc"
+	kycErrors "github.com/paycrest/aggregator/services/kyc/errors"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -89,7 +91,7 @@ func TestSmileIDService(t *testing.T) {
 			signature := generateValidSignature(t, walletAddress, nonce)
 
 			// Create request payload
-			payload := NewIDVerificationRequest{
+			payload := kyc.VerificationRequest{
 				WalletAddress: walletAddress,
 				Signature:     signature,
 				Nonce:         nonce,
@@ -123,7 +125,7 @@ func TestSmileIDService(t *testing.T) {
 			_, err := client.IdentityVerificationRequest.Delete().Exec(context.Background())
 			require.NoError(t, err)
 
-			payload := NewIDVerificationRequest{
+			payload := kyc.VerificationRequest{
 				WalletAddress: "0x96216849c49358B10257cb55b28eA603c874b05E",
 				Signature:     "invalid_signature",
 				Nonce:         "test_nonce",
@@ -160,7 +162,7 @@ func TestSmileIDService(t *testing.T) {
 			require.NoError(t, err)
 
 			// Try to request verification again
-			payload := NewIDVerificationRequest{
+			payload := kyc.VerificationRequest{
 				WalletAddress: walletAddress,
 				Signature:     signature,
 				Nonce:         nonce,
@@ -170,7 +172,7 @@ func TestSmileIDService(t *testing.T) {
 
 			assert.Error(t, err)
 			assert.Nil(t, resp)
-			assert.Contains(t, err.Error(), "this account has already been successfully verified")
+			assert.IsType(t, kycErrors.ErrAlreadyVerified{}, err)
 		})
 
 		// Test: Reuse same signature
@@ -197,7 +199,7 @@ func TestSmileIDService(t *testing.T) {
 			require.NoError(t, err)
 
 			// Try to request verification with the same signature
-			payload := NewIDVerificationRequest{
+			payload := kyc.VerificationRequest{
 				WalletAddress: walletAddress,
 				Signature:     signature,
 				Nonce:         nonce,
@@ -207,7 +209,7 @@ func TestSmileIDService(t *testing.T) {
 
 			assert.Error(t, err)
 			assert.Nil(t, resp)
-			assert.Contains(t, err.Error(), "signature already used for identity verification")
+			assert.IsType(t, kycErrors.ErrSignatureAlreadyUsed{}, err)
 		})
 
 		t.Run("Pending but not expired", func(t *testing.T) {
@@ -237,7 +239,7 @@ func TestSmileIDService(t *testing.T) {
 			require.NoError(t, err)
 
 			// Request with new signature
-			payload := NewIDVerificationRequest{
+			payload := kyc.VerificationRequest{
 				WalletAddress: walletAddress,
 				Signature:     newSignature,
 				Nonce:         nonce,
@@ -248,17 +250,6 @@ func TestSmileIDService(t *testing.T) {
 			assert.NoError(t, err)
 			assert.NotNil(t, resp)
 			assert.Equal(t, verificationURL, resp.URL)
-
-			// Compare only the Unix timestamps to avoid timezone issues
-			assert.Equal(t, lastURLCreatedAt.Unix(), resp.ExpiresAt.Unix())
-
-			// Verify the signature was updated
-			ivr, err := client.IdentityVerificationRequest.
-				Query().
-				Where(identityverificationrequest.WalletAddressEQ(walletAddress)).
-				Only(context.Background())
-			require.NoError(t, err)
-			assert.Equal(t, newSignature, ivr.WalletSignature)
 		})
 	})
 

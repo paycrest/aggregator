@@ -294,6 +294,7 @@
             { "type": "ALIEN_CARD", "verification_method": "doc_verification" },
             { "type": "DRIVERS_LICENSE", "verification_method": "doc_verification" },
             { "type": "IDENTITY_CARD", "verification_method": "doc_verification" },
+            { "type": "NATIONAL_ID", "verification_method": "doc_verification"},
             { "type": "PASSPORT", "verification_method": "doc_verification" },
             { "type": "RESIDENT_ID", "verification_method": "doc_verification" },
             { "type": "TRAVEL_DOC", "verification_method": "doc_verification" },
@@ -430,13 +431,16 @@
           "name": "Nigeria",
           "code": "NG",
           "id_types": [
+            { "type": "BVN", "verification_method": "biometric_kyc" },
             { "type": "DRIVERS_LICENSE", "verification_method": "doc_verification" },
             { "type": "IDENTITY_CARD", "verification_method": "doc_verification" },
+            { "type": "NIN_SLIP", "verification_method": "biometric_kyc" },
             { "type": "PASSPORT", "verification_method": "doc_verification" },
             { "type": "REGISTRATION_CERTIFICATE", "verification_method": "doc_verification" },
             { "type": "RESIDENT_ID", "verification_method": "doc_verification" },
             { "type": "TRAVEL_DOC", "verification_method": "doc_verification" },
-            { "type": "VOTER_ID", "verification_method": "doc_verification" }
+            { "type": "VOTER_ID", "verification_method": "doc_verification" },
+            { "type": "V_NIN", "verification_method": "biometric_kyc" }
           ]
         },
         {
