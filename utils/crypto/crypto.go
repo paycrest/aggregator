@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 	"github.com/paycrest/aggregator/config"
+	"github.com/paycrest/aggregator/ent"
 	tronWallet "github.com/paycrest/tron-wallet"
 	tronEnums "github.com/paycrest/tron-wallet/enums"
 	"golang.org/x/crypto/bcrypt"
@@ -245,4 +247,32 @@ func GenerateTronAccountFromIndex(accountIndex int) (wallet *tronWallet.TronWall
 	}
 
 	return wallet, nil
+}
+
+// EncryptOrderRecipient encrypts the recipient details using the aggregator's public key
+func EncryptOrderRecipient(recipient *ent.PaymentOrderRecipient) (string, error) {
+	// Generate a cryptographically secure random nonce
+	nonce := make([]byte, 32)
+	if _, err := rand.Read(nonce); err != nil {
+		return "", fmt.Errorf("failed to generate nonce: %w", err)
+	}
+	message := struct {
+		Nonce             string
+		AccountIdentifier string
+		AccountName       string
+		Institution       string
+		ProviderID        string
+		Memo              string
+		Metadata          map[string]interface{}
+	}{
+		base64.StdEncoding.EncodeToString(nonce), recipient.AccountIdentifier, recipient.AccountName, recipient.Institution, recipient.ProviderID, recipient.Memo, recipient.Metadata,
+	}
+
+	// Encrypt with the public key of the aggregator
+	messageCipher, err := PublicKeyEncryptJSON(message, cryptoConf.AggregatorPublicKey)
+	if err != nil {
+		return "", fmt.Errorf("failed to encrypt message: %w", err)
+	}
+
+	return base64.StdEncoding.EncodeToString(messageCipher), nil
 }

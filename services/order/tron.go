@@ -3,9 +3,7 @@ package order
 import (
 	"context"
 	"crypto/ecdsa"
-	"crypto/rand"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -419,7 +417,7 @@ func (s *OrderTron) approveCallData(spender util.Address, amount *big.Int) ([]by
 // createOrderCallData creates the data for the createOrder method
 func (s *OrderTron) createOrderCallData(order *ent.PaymentOrder) ([]byte, error) {
 	// Encrypt recipient details
-	encryptedOrderRecipient, err := s.encryptOrderRecipient(order.Edges.Recipient)
+	encryptedOrderRecipient, err := cryptoUtils.EncryptOrderRecipient(order.Edges.Recipient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encrypt recipient details: %w", err)
 	}
@@ -616,33 +614,6 @@ func (s *OrderTron) settleCallData(ctx context.Context, order *ent.LockPaymentOr
 	}
 
 	return data, nil
-}
-
-// encryptOrderRecipient encrypts the recipient details
-func (s *OrderTron) encryptOrderRecipient(recipient *ent.PaymentOrderRecipient) (string, error) {
-	// Generate a cryptographically secure random nonce
-	nonce := make([]byte, 32)
-	if _, err := rand.Read(nonce); err != nil {
-		return "", fmt.Errorf("failed to generate nonce: %w", err)
-	}
-	message := struct {
-		Nonce             string
-		AccountIdentifier string
-		AccountName       string
-		Institution       string
-		ProviderID        string
-		Memo              string
-	}{
-		base64.StdEncoding.EncodeToString(nonce), recipient.AccountIdentifier, recipient.AccountName, recipient.Institution, recipient.ProviderID, recipient.Memo,
-	}
-
-	// Encrypt with the public key of the aggregator
-	messageCipher, err := cryptoUtils.PublicKeyEncryptJSON(message, cryptoConf.AggregatorPublicKey)
-	if err != nil {
-		return "", fmt.Errorf("failed to encrypt message: %w", err)
-	}
-
-	return base64.StdEncoding.EncodeToString(messageCipher), nil
 }
 
 // signTransaction signs a transaction with a private key

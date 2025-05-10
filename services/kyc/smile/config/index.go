@@ -109,7 +109,7 @@ func (s *SmileIDService) RequestVerification(ctx context.Context, req kyc.Verifi
 		"name":                    "Aggregator KYC",
 		"company_name":            "Paycrest",
 		"id_types":                idTypes,
-		"callback_url":            fmt.Sprintf("%s/v1/kyc/webhook", s.serverConf.HostDomain),
+		"callback_url":            fmt.Sprintf("%s/v1/kyc/webhook", s.serverConf.ServerURL),
 		"data_privacy_policy_url": "https://paycrest.notion.site/KYC-Policy-10e2482d45a280e191b8d47d76a8d242",
 		"logo_url":                "https://res.cloudinary.com/de6e0wihu/image/upload/v1738088043/xxhlrsld2wy9lzekahur.png",
 		"is_single_use":           true,

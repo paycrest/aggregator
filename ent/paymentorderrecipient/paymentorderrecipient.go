@@ -22,6 +22,8 @@ const (
 	FieldMemo = "memo"
 	// FieldProviderID holds the string denoting the provider_id field in the database.
 	FieldProviderID = "provider_id"
+	// FieldMetadata holds the string denoting the metadata field in the database.
+	FieldMetadata = "metadata"
 	// EdgePaymentOrder holds the string denoting the payment_order edge name in mutations.
 	EdgePaymentOrder = "payment_order"
 	// Table holds the table name of the paymentorderrecipient in the database.
@@ -43,6 +45,7 @@ var Columns = []string{
 	FieldAccountName,
 	FieldMemo,
 	FieldProviderID,
+	FieldMetadata,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "payment_order_recipients"

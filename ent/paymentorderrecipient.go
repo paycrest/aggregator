@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -28,6 +29,8 @@ type PaymentOrderRecipient struct {
 	Memo string `json:"memo,omitempty"`
 	// ProviderID holds the value of the "provider_id" field.
 	ProviderID string `json:"provider_id,omitempty"`
+	// Metadata holds the value of the "metadata" field.
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the PaymentOrderRecipientQuery when eager-loading is set.
 	Edges                   PaymentOrderRecipientEdges `json:"edges"`
@@ -60,6 +63,8 @@ func (*PaymentOrderRecipient) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case paymentorderrecipient.FieldMetadata:
+			values[i] = new([]byte)
 		case paymentorderrecipient.FieldID:
 			values[i] = new(sql.NullInt64)
 		case paymentorderrecipient.FieldInstitution, paymentorderrecipient.FieldAccountIdentifier, paymentorderrecipient.FieldAccountName, paymentorderrecipient.FieldMemo, paymentorderrecipient.FieldProviderID:
@@ -116,6 +121,14 @@ func (por *PaymentOrderRecipient) assignValues(columns []string, values []any) e
 				return fmt.Errorf("unexpected type %T for field provider_id", values[i])
 			} else if value.Valid {
 				por.ProviderID = value.String
+			}
+		case paymentorderrecipient.FieldMetadata:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field metadata", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &por.Metadata); err != nil {
+					return fmt.Errorf("unmarshal field metadata: %w", err)
+				}
 			}
 		case paymentorderrecipient.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -179,6 +192,9 @@ func (por *PaymentOrderRecipient) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("provider_id=")
 	builder.WriteString(por.ProviderID)
+	builder.WriteString(", ")
+	builder.WriteString("metadata=")
+	builder.WriteString(fmt.Sprintf("%v", por.Metadata))
 	builder.WriteByte(')')
 	return builder.String()
 }

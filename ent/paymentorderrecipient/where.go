@@ -423,6 +423,16 @@ func ProviderIDContainsFold(v string) predicate.PaymentOrderRecipient {
 	return predicate.PaymentOrderRecipient(sql.FieldContainsFold(FieldProviderID, v))
 }
 
+// MetadataIsNil applies the IsNil predicate on the "metadata" field.
+func MetadataIsNil() predicate.PaymentOrderRecipient {
+	return predicate.PaymentOrderRecipient(sql.FieldIsNull(FieldMetadata))
+}
+
+// MetadataNotNil applies the NotNil predicate on the "metadata" field.
+func MetadataNotNil() predicate.PaymentOrderRecipient {
+	return predicate.PaymentOrderRecipient(sql.FieldNotNull(FieldMetadata))
+}
+
 // HasPaymentOrder applies the HasEdge predicate on the "payment_order" edge.
 func HasPaymentOrder() predicate.PaymentOrderRecipient {
 	return predicate.PaymentOrderRecipient(func(s *sql.Selector) {

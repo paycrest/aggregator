@@ -111,6 +111,18 @@ func (poru *PaymentOrderRecipientUpdate) ClearProviderID() *PaymentOrderRecipien
 	return poru
 }
 
+// SetMetadata sets the "metadata" field.
+func (poru *PaymentOrderRecipientUpdate) SetMetadata(m map[string]interface{}) *PaymentOrderRecipientUpdate {
+	poru.mutation.SetMetadata(m)
+	return poru
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (poru *PaymentOrderRecipientUpdate) ClearMetadata() *PaymentOrderRecipientUpdate {
+	poru.mutation.ClearMetadata()
+	return poru
+}
+
 // SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID.
 func (poru *PaymentOrderRecipientUpdate) SetPaymentOrderID(id uuid.UUID) *PaymentOrderRecipientUpdate {
 	poru.mutation.SetPaymentOrderID(id)
@@ -200,6 +212,12 @@ func (poru *PaymentOrderRecipientUpdate) sqlSave(ctx context.Context) (n int, er
 	}
 	if poru.mutation.ProviderIDCleared() {
 		_spec.ClearField(paymentorderrecipient.FieldProviderID, field.TypeString)
+	}
+	if value, ok := poru.mutation.Metadata(); ok {
+		_spec.SetField(paymentorderrecipient.FieldMetadata, field.TypeJSON, value)
+	}
+	if poru.mutation.MetadataCleared() {
+		_spec.ClearField(paymentorderrecipient.FieldMetadata, field.TypeJSON)
 	}
 	if poru.mutation.PaymentOrderCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -332,6 +350,18 @@ func (poruo *PaymentOrderRecipientUpdateOne) ClearProviderID() *PaymentOrderReci
 	return poruo
 }
 
+// SetMetadata sets the "metadata" field.
+func (poruo *PaymentOrderRecipientUpdateOne) SetMetadata(m map[string]interface{}) *PaymentOrderRecipientUpdateOne {
+	poruo.mutation.SetMetadata(m)
+	return poruo
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (poruo *PaymentOrderRecipientUpdateOne) ClearMetadata() *PaymentOrderRecipientUpdateOne {
+	poruo.mutation.ClearMetadata()
+	return poruo
+}
+
 // SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID.
 func (poruo *PaymentOrderRecipientUpdateOne) SetPaymentOrderID(id uuid.UUID) *PaymentOrderRecipientUpdateOne {
 	poruo.mutation.SetPaymentOrderID(id)
@@ -451,6 +481,12 @@ func (poruo *PaymentOrderRecipientUpdateOne) sqlSave(ctx context.Context) (_node
 	}
 	if poruo.mutation.ProviderIDCleared() {
 		_spec.ClearField(paymentorderrecipient.FieldProviderID, field.TypeString)
+	}
+	if value, ok := poruo.mutation.Metadata(); ok {
+		_spec.SetField(paymentorderrecipient.FieldMetadata, field.TypeJSON, value)
+	}
+	if poruo.mutation.MetadataCleared() {
+		_spec.ClearField(paymentorderrecipient.FieldMetadata, field.TypeJSON)
 	}
 	if poruo.mutation.PaymentOrderCleared() {
 		edge := &sqlgraph.EdgeSpec{
