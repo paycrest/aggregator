@@ -20,9 +20,8 @@ import (
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	svc "github.com/paycrest/aggregator/services"
-	"github.com/paycrest/aggregator/services/kyc"
 	kycErrors "github.com/paycrest/aggregator/services/kyc/errors"
-	smConfig "github.com/paycrest/aggregator/services/kyc/smile/config"
+	"github.com/paycrest/aggregator/services/kyc/smile"
 	orderSvc "github.com/paycrest/aggregator/services/order"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
@@ -44,7 +43,7 @@ type Controller struct {
 	orderService          types.OrderService
 	priorityQueueService  *svc.PriorityQueueService
 	receiveAddressService *svc.ReceiveAddressService
-	kycService            kyc.KYCProvider
+	kycService            types.KYCProvider
 }
 
 // NewController creates a new instance of AuthController with injected services
@@ -53,7 +52,7 @@ func NewController() *Controller {
 		orderService:          orderSvc.NewOrderEVM(),
 		priorityQueueService:  svc.NewPriorityQueueService(),
 		receiveAddressService: svc.NewReceiveAddressService(),
-		kycService:            smConfig.NewSmileIDService(),
+		kycService:            smile.NewSmileIDService(),
 	}
 }
 
@@ -763,7 +762,7 @@ func (ctrl *Controller) verifyWalletSignature(walletAddress, signature, nonce st
 
 // RequestIDVerification controller requests identity verification details
 func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
-	var payload kyc.VerificationRequest
+	var payload types.VerificationRequest
 
 	if err := ctx.ShouldBindJSON(&payload); err != nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error",
