@@ -1,4 +1,4 @@
-package config
+package smile
 
 import (
 	"context"
@@ -19,9 +19,9 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent/enttest"
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
-	"github.com/paycrest/aggregator/services/kyc"
 	kycErrors "github.com/paycrest/aggregator/services/kyc/errors"
 	db "github.com/paycrest/aggregator/storage"
+	"github.com/paycrest/aggregator/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -91,7 +91,7 @@ func TestSmileIDService(t *testing.T) {
 			signature := generateValidSignature(t, walletAddress, nonce)
 
 			// Create request payload
-			payload := kyc.VerificationRequest{
+			payload := types.VerificationRequest{
 				WalletAddress: walletAddress,
 				Signature:     signature,
 				Nonce:         nonce,
@@ -125,7 +125,7 @@ func TestSmileIDService(t *testing.T) {
 			_, err := client.IdentityVerificationRequest.Delete().Exec(context.Background())
 			require.NoError(t, err)
 
-			payload := kyc.VerificationRequest{
+			payload := types.VerificationRequest{
 				WalletAddress: "0x96216849c49358B10257cb55b28eA603c874b05E",
 				Signature:     "invalid_signature",
 				Nonce:         "test_nonce",
@@ -162,7 +162,7 @@ func TestSmileIDService(t *testing.T) {
 			require.NoError(t, err)
 
 			// Try to request verification again
-			payload := kyc.VerificationRequest{
+			payload := types.VerificationRequest{
 				WalletAddress: walletAddress,
 				Signature:     signature,
 				Nonce:         nonce,
@@ -199,7 +199,7 @@ func TestSmileIDService(t *testing.T) {
 			require.NoError(t, err)
 
 			// Try to request verification with the same signature
-			payload := kyc.VerificationRequest{
+			payload := types.VerificationRequest{
 				WalletAddress: walletAddress,
 				Signature:     signature,
 				Nonce:         nonce,
@@ -239,7 +239,7 @@ func TestSmileIDService(t *testing.T) {
 			require.NoError(t, err)
 
 			// Request with new signature
-			payload := kyc.VerificationRequest{
+			payload := types.VerificationRequest{
 				WalletAddress: walletAddress,
 				Signature:     newSignature,
 				Nonce:         nonce,
