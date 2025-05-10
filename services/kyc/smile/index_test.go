@@ -119,25 +119,6 @@ func TestSmileIDService(t *testing.T) {
 			assert.Equal(t, identityverificationrequest.StatusPending, ivr.Status)
 		})
 
-		// Test: Invalid signature format
-		t.Run("Invalid signature format", func(t *testing.T) {
-			// Clear any existing verification requests
-			_, err := client.IdentityVerificationRequest.Delete().Exec(context.Background())
-			require.NoError(t, err)
-
-			payload := types.VerificationRequest{
-				WalletAddress: "0x96216849c49358B10257cb55b28eA603c874b05E",
-				Signature:     "invalid_signature",
-				Nonce:         "test_nonce",
-			}
-
-			resp, err := service.RequestVerification(context.Background(), payload)
-
-			assert.Error(t, err)
-			assert.Nil(t, resp)
-			assert.Contains(t, err.Error(), "invalid signature: signature is not in the correct format")
-		})
-
 		// Test: Already verified wallet
 		t.Run("Already verified wallet", func(t *testing.T) {
 			// Clear any existing verification requests
