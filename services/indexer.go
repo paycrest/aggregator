@@ -299,6 +299,7 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 				SetInstitution(linkedAddress.Institution).
 				SetAccountIdentifier(linkedAddress.AccountIdentifier).
 				SetAccountName(linkedAddress.AccountName).
+				SetMetadata(linkedAddress.Metadata).
 				SetPaymentOrder(order).
 				Save(ctx)
 			if err != nil {

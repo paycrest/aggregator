@@ -122,7 +122,7 @@ func init() {
 	// linkedaddress.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	linkedaddress.UpdateDefaultUpdatedAt = linkedaddressDescUpdatedAt.UpdateDefault.(func() time.Time)
 	// linkedaddressDescTxHash is the schema descriptor for tx_hash field.
-	linkedaddressDescTxHash := linkedaddressFields[7].Descriptor()
+	linkedaddressDescTxHash := linkedaddressFields[8].Descriptor()
 	// linkedaddress.TxHashValidator is a validator for the "tx_hash" field. It is called by the builders before save.
 	linkedaddress.TxHashValidator = linkedaddressDescTxHash.Validators[0].(func(string) error)
 	lockorderfulfillmentMixin := schema.LockOrderFulfillment{}.Mixin()

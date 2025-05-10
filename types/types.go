@@ -416,6 +416,7 @@ type PaymentOrderRecipient struct {
 	ProviderID        string                 `json:"providerId"`
 	Metadata          map[string]interface{} `json:"metadata"`
 	Currency          string                 `json:"currency"`
+	Nonce             string                 `json:"nonce"`
 }
 
 // NewPaymentOrderPayload is the payload for the create payment order endpoint

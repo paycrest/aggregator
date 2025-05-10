@@ -107,6 +107,7 @@ var (
 		{Name: "institution", Type: field.TypeString},
 		{Name: "account_identifier", Type: field.TypeString},
 		{Name: "account_name", Type: field.TypeString},
+		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
 		{Name: "owner_address", Type: field.TypeString, Unique: true},
 		{Name: "last_indexed_block", Type: field.TypeInt64, Nullable: true},
 		{Name: "tx_hash", Type: field.TypeString, Nullable: true, Size: 70},
@@ -120,7 +121,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "linked_addresses_sender_profiles_linked_address",
-				Columns:    []*schema.Column{LinkedAddressesColumns[11]},
+				Columns:    []*schema.Column{LinkedAddressesColumns[12]},
 				RefColumns: []*schema.Column{SenderProfilesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},

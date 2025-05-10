@@ -3175,6 +3175,7 @@ type LinkedAddressMutation struct {
 	institution           *string
 	account_identifier    *string
 	account_name          *string
+	metadata              *map[string]interface{}
 	owner_address         *string
 	last_indexed_block    *int64
 	addlast_indexed_block *int64
@@ -3538,6 +3539,55 @@ func (m *LinkedAddressMutation) ResetAccountName() {
 	m.account_name = nil
 }
 
+// SetMetadata sets the "metadata" field.
+func (m *LinkedAddressMutation) SetMetadata(value map[string]interface{}) {
+	m.metadata = &value
+}
+
+// Metadata returns the value of the "metadata" field in the mutation.
+func (m *LinkedAddressMutation) Metadata() (r map[string]interface{}, exists bool) {
+	v := m.metadata
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMetadata returns the old "metadata" field's value of the LinkedAddress entity.
+// If the LinkedAddress object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LinkedAddressMutation) OldMetadata(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMetadata is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMetadata requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMetadata: %w", err)
+	}
+	return oldValue.Metadata, nil
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (m *LinkedAddressMutation) ClearMetadata() {
+	m.metadata = nil
+	m.clearedFields[linkedaddress.FieldMetadata] = struct{}{}
+}
+
+// MetadataCleared returns if the "metadata" field was cleared in this mutation.
+func (m *LinkedAddressMutation) MetadataCleared() bool {
+	_, ok := m.clearedFields[linkedaddress.FieldMetadata]
+	return ok
+}
+
+// ResetMetadata resets all changes to the "metadata" field.
+func (m *LinkedAddressMutation) ResetMetadata() {
+	m.metadata = nil
+	delete(m.clearedFields, linkedaddress.FieldMetadata)
+}
+
 // SetOwnerAddress sets the "owner_address" field.
 func (m *LinkedAddressMutation) SetOwnerAddress(s string) {
 	m.owner_address = &s
@@ -3781,7 +3831,7 @@ func (m *LinkedAddressMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *LinkedAddressMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 11)
 	if m.created_at != nil {
 		fields = append(fields, linkedaddress.FieldCreatedAt)
 	}
@@ -3802,6 +3852,9 @@ func (m *LinkedAddressMutation) Fields() []string {
 	}
 	if m.account_name != nil {
 		fields = append(fields, linkedaddress.FieldAccountName)
+	}
+	if m.metadata != nil {
+		fields = append(fields, linkedaddress.FieldMetadata)
 	}
 	if m.owner_address != nil {
 		fields = append(fields, linkedaddress.FieldOwnerAddress)
@@ -3834,6 +3887,8 @@ func (m *LinkedAddressMutation) Field(name string) (ent.Value, bool) {
 		return m.AccountIdentifier()
 	case linkedaddress.FieldAccountName:
 		return m.AccountName()
+	case linkedaddress.FieldMetadata:
+		return m.Metadata()
 	case linkedaddress.FieldOwnerAddress:
 		return m.OwnerAddress()
 	case linkedaddress.FieldLastIndexedBlock:
@@ -3863,6 +3918,8 @@ func (m *LinkedAddressMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldAccountIdentifier(ctx)
 	case linkedaddress.FieldAccountName:
 		return m.OldAccountName(ctx)
+	case linkedaddress.FieldMetadata:
+		return m.OldMetadata(ctx)
 	case linkedaddress.FieldOwnerAddress:
 		return m.OldOwnerAddress(ctx)
 	case linkedaddress.FieldLastIndexedBlock:
@@ -3926,6 +3983,13 @@ func (m *LinkedAddressMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetAccountName(v)
+		return nil
+	case linkedaddress.FieldMetadata:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMetadata(v)
 		return nil
 	case linkedaddress.FieldOwnerAddress:
 		v, ok := value.(string)
@@ -3993,6 +4057,9 @@ func (m *LinkedAddressMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *LinkedAddressMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(linkedaddress.FieldMetadata) {
+		fields = append(fields, linkedaddress.FieldMetadata)
+	}
 	if m.FieldCleared(linkedaddress.FieldLastIndexedBlock) {
 		fields = append(fields, linkedaddress.FieldLastIndexedBlock)
 	}
@@ -4013,6 +4080,9 @@ func (m *LinkedAddressMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *LinkedAddressMutation) ClearField(name string) error {
 	switch name {
+	case linkedaddress.FieldMetadata:
+		m.ClearMetadata()
+		return nil
 	case linkedaddress.FieldLastIndexedBlock:
 		m.ClearLastIndexedBlock()
 		return nil
@@ -4047,6 +4117,9 @@ func (m *LinkedAddressMutation) ResetField(name string) error {
 		return nil
 	case linkedaddress.FieldAccountName:
 		m.ResetAccountName()
+		return nil
+	case linkedaddress.FieldMetadata:
+		m.ResetMetadata()
 		return nil
 	case linkedaddress.FieldOwnerAddress:
 		m.ResetOwnerAddress()

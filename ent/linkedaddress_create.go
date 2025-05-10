@@ -82,6 +82,12 @@ func (lac *LinkedAddressCreate) SetAccountName(s string) *LinkedAddressCreate {
 	return lac
 }
 
+// SetMetadata sets the "metadata" field.
+func (lac *LinkedAddressCreate) SetMetadata(m map[string]interface{}) *LinkedAddressCreate {
+	lac.mutation.SetMetadata(m)
+	return lac
+}
+
 // SetOwnerAddress sets the "owner_address" field.
 func (lac *LinkedAddressCreate) SetOwnerAddress(s string) *LinkedAddressCreate {
 	lac.mutation.SetOwnerAddress(s)
@@ -262,6 +268,10 @@ func (lac *LinkedAddressCreate) createSpec() (*LinkedAddress, *sqlgraph.CreateSp
 		_spec.SetField(linkedaddress.FieldAccountName, field.TypeString, value)
 		_node.AccountName = value
 	}
+	if value, ok := lac.mutation.Metadata(); ok {
+		_spec.SetField(linkedaddress.FieldMetadata, field.TypeJSON, value)
+		_node.Metadata = value
+	}
 	if value, ok := lac.mutation.OwnerAddress(); ok {
 		_spec.SetField(linkedaddress.FieldOwnerAddress, field.TypeString, value)
 		_node.OwnerAddress = value
@@ -399,6 +409,24 @@ func (u *LinkedAddressUpsert) SetAccountName(v string) *LinkedAddressUpsert {
 // UpdateAccountName sets the "account_name" field to the value that was provided on create.
 func (u *LinkedAddressUpsert) UpdateAccountName() *LinkedAddressUpsert {
 	u.SetExcluded(linkedaddress.FieldAccountName)
+	return u
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *LinkedAddressUpsert) SetMetadata(v map[string]interface{}) *LinkedAddressUpsert {
+	u.Set(linkedaddress.FieldMetadata, v)
+	return u
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *LinkedAddressUpsert) UpdateMetadata() *LinkedAddressUpsert {
+	u.SetExcluded(linkedaddress.FieldMetadata)
+	return u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *LinkedAddressUpsert) ClearMetadata() *LinkedAddressUpsert {
+	u.SetNull(linkedaddress.FieldMetadata)
 	return u
 }
 
@@ -571,6 +599,27 @@ func (u *LinkedAddressUpsertOne) SetAccountName(v string) *LinkedAddressUpsertOn
 func (u *LinkedAddressUpsertOne) UpdateAccountName() *LinkedAddressUpsertOne {
 	return u.Update(func(s *LinkedAddressUpsert) {
 		s.UpdateAccountName()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *LinkedAddressUpsertOne) SetMetadata(v map[string]interface{}) *LinkedAddressUpsertOne {
+	return u.Update(func(s *LinkedAddressUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *LinkedAddressUpsertOne) UpdateMetadata() *LinkedAddressUpsertOne {
+	return u.Update(func(s *LinkedAddressUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *LinkedAddressUpsertOne) ClearMetadata() *LinkedAddressUpsertOne {
+	return u.Update(func(s *LinkedAddressUpsert) {
+		s.ClearMetadata()
 	})
 }
 
@@ -918,6 +967,27 @@ func (u *LinkedAddressUpsertBulk) SetAccountName(v string) *LinkedAddressUpsertB
 func (u *LinkedAddressUpsertBulk) UpdateAccountName() *LinkedAddressUpsertBulk {
 	return u.Update(func(s *LinkedAddressUpsert) {
 		s.UpdateAccountName()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *LinkedAddressUpsertBulk) SetMetadata(v map[string]interface{}) *LinkedAddressUpsertBulk {
+	return u.Update(func(s *LinkedAddressUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *LinkedAddressUpsertBulk) UpdateMetadata() *LinkedAddressUpsertBulk {
+	return u.Update(func(s *LinkedAddressUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *LinkedAddressUpsertBulk) ClearMetadata() *LinkedAddressUpsertBulk {
+	return u.Update(func(s *LinkedAddressUpsert) {
+		s.ClearMetadata()
 	})
 }
 

@@ -1,3 +1,5 @@
+-- Modify "linked_addresses" table
+ALTER TABLE "linked_addresses" ADD COLUMN "metadata" jsonb NULL;
 -- Modify "lock_payment_orders" table
 ALTER TABLE "lock_payment_orders" ADD COLUMN "metadata" jsonb NULL;
 -- Modify "payment_order_recipients" table
