@@ -1,9 +1,10 @@
-package config
+package smile
 
 import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
+	_ "embed"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -17,11 +18,14 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
-	"github.com/paycrest/aggregator/services/kyc"
 	kycErrors "github.com/paycrest/aggregator/services/kyc/errors"
 	"github.com/paycrest/aggregator/storage"
+	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
 )
+
+//go:embed id_types.json
+var idTypesJSON []byte
 
 type SmileIDService struct {
 	identityConf *config.IdentityConfiguration
@@ -29,7 +33,7 @@ type SmileIDService struct {
 	db           *ent.Client
 }
 
-func NewSmileIDService() kyc.KYCProvider {
+func NewSmileIDService() types.KYCProvider {
 	return &SmileIDService{
 		identityConf: config.IdentityConfig(),
 		serverConf:   config.ServerConfig(),
@@ -38,7 +42,7 @@ func NewSmileIDService() kyc.KYCProvider {
 }
 
 // RequestVerification implements the KYCProvider interface
-func (s *SmileIDService) RequestVerification(ctx context.Context, req kyc.VerificationRequest) (*kyc.VerificationResponse, error) {
+func (s *SmileIDService) RequestVerification(ctx context.Context, req types.VerificationRequest) (*types.VerificationResponse, error) {
 	ivr, err := s.db.IdentityVerificationRequest.
 		Query().
 		Where(identityverificationrequest.WalletAddressEQ(req.WalletAddress)).
@@ -74,7 +78,7 @@ func (s *SmileIDService) RequestVerification(ctx context.Context, req kyc.Verifi
 			if err != nil {
 				return nil, kycErrors.ErrDatabase{Err: err}
 			}
-			return &kyc.VerificationResponse{
+			return &types.VerificationResponse{
 				URL:       ivr.VerificationURL,
 				ExpiresAt: ivr.LastURLCreatedAt,
 			}, nil
@@ -85,17 +89,10 @@ func (s *SmileIDService) RequestVerification(ctx context.Context, req kyc.Verifi
 		}
 	}
 
-	rootDir, err := getModuleRootDir()
-	if err != nil {
-		return nil, fmt.Errorf("failed to find module root: %v", err)
-	}
-
-	filePath := filepath.Join(rootDir, "services", "kyc", "smile", "config", "id_types.json")
-
 	// Load and flatten the JSON file
-	idTypes, err := loadSmileIDConfig(filePath)
+	idTypes, err := loadSmileIDConfig(idTypesJSON)
 	if err != nil {
-		return nil, fmt.Errorf("failed to flatten JSON: %v", err)
+		return nil, fmt.Errorf("failed to load ID types: %v", err)
 	}
 
 	smileIDSignature := s.getSmileIDSignature(timestamp.Format(time.RFC3339Nano))
@@ -109,7 +106,7 @@ func (s *SmileIDService) RequestVerification(ctx context.Context, req kyc.Verifi
 		"name":                    "Aggregator KYC",
 		"company_name":            "Paycrest",
 		"id_types":                idTypes,
-		"callback_url":            fmt.Sprintf("%s/v1/kyc/webhook", s.serverConf.HostDomain),
+		"callback_url":            fmt.Sprintf("%s/v1/kyc/webhook", s.serverConf.ServerURL),
 		"data_privacy_policy_url": "https://paycrest.notion.site/KYC-Policy-10e2482d45a280e191b8d47d76a8d242",
 		"logo_url":                "https://res.cloudinary.com/de6e0wihu/image/upload/v1738088043/xxhlrsld2wy9lzekahur.png",
 		"is_single_use":           true,
@@ -139,14 +136,14 @@ func (s *SmileIDService) RequestVerification(ctx context.Context, req kyc.Verifi
 		return nil, kycErrors.ErrDatabase{Err: err}
 	}
 
-	return &kyc.VerificationResponse{
+	return &types.VerificationResponse{
 		URL:       ivr.VerificationURL,
 		ExpiresAt: ivr.LastURLCreatedAt,
 	}, nil
 }
 
 // CheckStatus implements the KYCProvider interface
-func (s *SmileIDService) CheckStatus(ctx context.Context, walletAddress string) (*kyc.VerificationStatus, error) {
+func (s *SmileIDService) CheckStatus(ctx context.Context, walletAddress string) (*types.VerificationStatus, error) {
 	ivr, err := s.db.IdentityVerificationRequest.
 		Query().
 		Where(identityverificationrequest.WalletAddressEQ(walletAddress)).
@@ -158,7 +155,7 @@ func (s *SmileIDService) CheckStatus(ctx context.Context, walletAddress string) 
 		return nil, kycErrors.ErrDatabase{Err: err}
 	}
 
-	response := &kyc.VerificationStatus{
+	response := &types.VerificationStatus{
 		URL:    ivr.VerificationURL,
 		Status: ivr.Status.String(),
 	}
@@ -278,14 +275,8 @@ func flattenSmileIDConfig(config SmileIDConfig) ([]map[string]interface{}, error
 	return idTypes, nil
 }
 
-// LoadSmileIDConfig loads the JSON file and flattens it
-func loadSmileIDConfig(filePath string) ([]map[string]interface{}, error) {
-	// Read the config file
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read config file: %w", err)
-	}
-
+// LoadSmileIDConfig loads and flattens the JSON data
+func loadSmileIDConfig(data []byte) ([]map[string]interface{}, error) {
 	// Parse the JSON into SmileIDConfig
 	var config SmileIDConfig
 	if err := json.Unmarshal(data, &config); err != nil {
@@ -311,4 +302,35 @@ func getModuleRootDir() (string, error) {
 		}
 		dir = parent
 	}
+}
+
+type IDType struct {
+	Type               string `json:"type"`
+	VerificationMethod string `json:"verification_method"`
+}
+
+type Country struct {
+	Name    string   `json:"name"`
+	Code    string   `json:"code"`
+	IDTypes []IDType `json:"id_types"`
+}
+
+type Continent struct {
+	Name      string    `json:"name"`
+	Countries []Country `json:"countries"`
+}
+
+type SmileIDConfig struct {
+	Continents []Continent `json:"continents"`
+}
+
+// SmileIDWebhookPayload represents the payload structure from Smile Identity
+type SmileIDWebhookPayload struct {
+	ResultCode    string `json:"ResultCode"`
+	PartnerParams struct {
+		UserID string `json:"user_id"`
+	} `json:"PartnerParams"`
+	Signature string `json:"signature"`
+	Timestamp string `json:"timestamp"`
+	// Add other fields as needed
 }

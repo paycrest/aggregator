@@ -15,7 +15,7 @@ type ServerConfiguration struct {
 	AllowedHosts             string
 	Environment              string
 	SentryDSN                string
-	HostDomain               string
+	ServerURL                string
 	RateLimitUnauthenticated int
 	RateLimitAuthenticated   int
 	SlackWebhookURL          string
@@ -42,7 +42,7 @@ func ServerConfig() *ServerConfiguration {
 		AllowedHosts:             viper.GetString("ALLOWED_HOSTS"),
 		Environment:              viper.GetString("ENVIRONMENT"),
 		SentryDSN:                viper.GetString("SENTRY_DSN"),
-		HostDomain:               viper.GetString("HOST_DOMAIN"),
+		ServerURL:                viper.GetString("SERVER_URL"),
 		RateLimitUnauthenticated: viper.GetInt("RATE_LIMIT_UNAUTHENTICATED"),
 		RateLimitAuthenticated:   viper.GetInt("RATE_LIMIT_AUTHENTICATED"),
 		SlackWebhookURL:          viper.GetString("SLACK_WEBHOOK_URL"),

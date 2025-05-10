@@ -1,7 +1,8 @@
-package config
+package smile
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,6 +15,38 @@ var (
 	configPath = "./id_types.json"
 	schemaPath = "./id_types_schema.json"
 )
+
+func ValidateSmileIDConfig(filePath string) error {
+	// Read the config file
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	// Validate against JSON schema
+	schemaPath := "./id_types_schema.json"
+	schemaLoader := gojsonschema.NewReferenceLoader("file://" + schemaPath)
+	documentLoader := gojsonschema.NewBytesLoader(data)
+	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
+	if err != nil {
+		return fmt.Errorf("failed to validate schema: %w", err)
+	}
+	if !result.Valid() {
+		var errors []string
+		for _, e := range result.Errors() {
+			errors = append(errors, e.String())
+		}
+		return fmt.Errorf("schema validation failed: %v", errors)
+	}
+
+	// Ensure JSON is parseable into SmileIDConfig
+	var config SmileIDConfig
+	if err := json.Unmarshal(data, &config); err != nil {
+		return fmt.Errorf("failed to parse JSON: %w", err)
+	}
+
+	return nil
+}
 
 // TestValidateSmileIDConfig tests the validation of id_types.json
 func TestValidateSmileIDConfig(t *testing.T) {
