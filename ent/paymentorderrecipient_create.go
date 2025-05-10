@@ -69,6 +69,12 @@ func (porc *PaymentOrderRecipientCreate) SetNillableProviderID(s *string) *Payme
 	return porc
 }
 
+// SetMetadata sets the "metadata" field.
+func (porc *PaymentOrderRecipientCreate) SetMetadata(m map[string]interface{}) *PaymentOrderRecipientCreate {
+	porc.mutation.SetMetadata(m)
+	return porc
+}
+
 // SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID.
 func (porc *PaymentOrderRecipientCreate) SetPaymentOrderID(id uuid.UUID) *PaymentOrderRecipientCreate {
 	porc.mutation.SetPaymentOrderID(id)
@@ -172,6 +178,10 @@ func (porc *PaymentOrderRecipientCreate) createSpec() (*PaymentOrderRecipient, *
 	if value, ok := porc.mutation.ProviderID(); ok {
 		_spec.SetField(paymentorderrecipient.FieldProviderID, field.TypeString, value)
 		_node.ProviderID = value
+	}
+	if value, ok := porc.mutation.Metadata(); ok {
+		_spec.SetField(paymentorderrecipient.FieldMetadata, field.TypeJSON, value)
+		_node.Metadata = value
 	}
 	if nodes := porc.mutation.PaymentOrderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -314,6 +324,24 @@ func (u *PaymentOrderRecipientUpsert) ClearProviderID() *PaymentOrderRecipientUp
 	return u
 }
 
+// SetMetadata sets the "metadata" field.
+func (u *PaymentOrderRecipientUpsert) SetMetadata(v map[string]interface{}) *PaymentOrderRecipientUpsert {
+	u.Set(paymentorderrecipient.FieldMetadata, v)
+	return u
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *PaymentOrderRecipientUpsert) UpdateMetadata() *PaymentOrderRecipientUpsert {
+	u.SetExcluded(paymentorderrecipient.FieldMetadata)
+	return u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *PaymentOrderRecipientUpsert) ClearMetadata() *PaymentOrderRecipientUpsert {
+	u.SetNull(paymentorderrecipient.FieldMetadata)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create.
 // Using this option is equivalent to using:
 //
@@ -435,6 +463,27 @@ func (u *PaymentOrderRecipientUpsertOne) UpdateProviderID() *PaymentOrderRecipie
 func (u *PaymentOrderRecipientUpsertOne) ClearProviderID() *PaymentOrderRecipientUpsertOne {
 	return u.Update(func(s *PaymentOrderRecipientUpsert) {
 		s.ClearProviderID()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *PaymentOrderRecipientUpsertOne) SetMetadata(v map[string]interface{}) *PaymentOrderRecipientUpsertOne {
+	return u.Update(func(s *PaymentOrderRecipientUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *PaymentOrderRecipientUpsertOne) UpdateMetadata() *PaymentOrderRecipientUpsertOne {
+	return u.Update(func(s *PaymentOrderRecipientUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *PaymentOrderRecipientUpsertOne) ClearMetadata() *PaymentOrderRecipientUpsertOne {
+	return u.Update(func(s *PaymentOrderRecipientUpsert) {
+		s.ClearMetadata()
 	})
 }
 
@@ -722,6 +771,27 @@ func (u *PaymentOrderRecipientUpsertBulk) UpdateProviderID() *PaymentOrderRecipi
 func (u *PaymentOrderRecipientUpsertBulk) ClearProviderID() *PaymentOrderRecipientUpsertBulk {
 	return u.Update(func(s *PaymentOrderRecipientUpsert) {
 		s.ClearProviderID()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *PaymentOrderRecipientUpsertBulk) SetMetadata(v map[string]interface{}) *PaymentOrderRecipientUpsertBulk {
+	return u.Update(func(s *PaymentOrderRecipientUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *PaymentOrderRecipientUpsertBulk) UpdateMetadata() *PaymentOrderRecipientUpsertBulk {
+	return u.Update(func(s *PaymentOrderRecipientUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *PaymentOrderRecipientUpsertBulk) ClearMetadata() *PaymentOrderRecipientUpsertBulk {
+	return u.Update(func(s *PaymentOrderRecipientUpsert) {
+		s.ClearMetadata()
 	})
 }
 

@@ -792,6 +792,16 @@ func MemoContainsFold(v string) predicate.LockPaymentOrder {
 	return predicate.LockPaymentOrder(sql.FieldContainsFold(FieldMemo, v))
 }
 
+// MetadataIsNil applies the IsNil predicate on the "metadata" field.
+func MetadataIsNil() predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldIsNull(FieldMetadata))
+}
+
+// MetadataNotNil applies the NotNil predicate on the "metadata" field.
+func MetadataNotNil() predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldNotNull(FieldMetadata))
+}
+
 // CancellationCountEQ applies the EQ predicate on the "cancellation_count" field.
 func CancellationCountEQ(v int) predicate.LockPaymentOrder {
 	return predicate.LockPaymentOrder(sql.FieldEQ(FieldCancellationCount, v))

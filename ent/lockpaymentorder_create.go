@@ -148,6 +148,12 @@ func (lpoc *LockPaymentOrderCreate) SetNillableMemo(s *string) *LockPaymentOrder
 	return lpoc
 }
 
+// SetMetadata sets the "metadata" field.
+func (lpoc *LockPaymentOrderCreate) SetMetadata(m map[string]interface{}) *LockPaymentOrderCreate {
+	lpoc.mutation.SetMetadata(m)
+	return lpoc
+}
+
 // SetCancellationCount sets the "cancellation_count" field.
 func (lpoc *LockPaymentOrderCreate) SetCancellationCount(i int) *LockPaymentOrderCreate {
 	lpoc.mutation.SetCancellationCount(i)
@@ -463,6 +469,10 @@ func (lpoc *LockPaymentOrderCreate) createSpec() (*LockPaymentOrder, *sqlgraph.C
 	if value, ok := lpoc.mutation.Memo(); ok {
 		_spec.SetField(lockpaymentorder.FieldMemo, field.TypeString, value)
 		_node.Memo = value
+	}
+	if value, ok := lpoc.mutation.Metadata(); ok {
+		_spec.SetField(lockpaymentorder.FieldMetadata, field.TypeJSON, value)
+		_node.Metadata = value
 	}
 	if value, ok := lpoc.mutation.CancellationCount(); ok {
 		_spec.SetField(lockpaymentorder.FieldCancellationCount, field.TypeInt, value)
@@ -787,6 +797,24 @@ func (u *LockPaymentOrderUpsert) ClearMemo() *LockPaymentOrderUpsert {
 	return u
 }
 
+// SetMetadata sets the "metadata" field.
+func (u *LockPaymentOrderUpsert) SetMetadata(v map[string]interface{}) *LockPaymentOrderUpsert {
+	u.Set(lockpaymentorder.FieldMetadata, v)
+	return u
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsert) UpdateMetadata() *LockPaymentOrderUpsert {
+	u.SetExcluded(lockpaymentorder.FieldMetadata)
+	return u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *LockPaymentOrderUpsert) ClearMetadata() *LockPaymentOrderUpsert {
+	u.SetNull(lockpaymentorder.FieldMetadata)
+	return u
+}
+
 // SetCancellationCount sets the "cancellation_count" field.
 func (u *LockPaymentOrderUpsert) SetCancellationCount(v int) *LockPaymentOrderUpsert {
 	u.Set(lockpaymentorder.FieldCancellationCount, v)
@@ -1075,6 +1103,27 @@ func (u *LockPaymentOrderUpsertOne) UpdateMemo() *LockPaymentOrderUpsertOne {
 func (u *LockPaymentOrderUpsertOne) ClearMemo() *LockPaymentOrderUpsertOne {
 	return u.Update(func(s *LockPaymentOrderUpsert) {
 		s.ClearMemo()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *LockPaymentOrderUpsertOne) SetMetadata(v map[string]interface{}) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertOne) UpdateMetadata() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *LockPaymentOrderUpsertOne) ClearMetadata() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.ClearMetadata()
 	})
 }
 
@@ -1538,6 +1587,27 @@ func (u *LockPaymentOrderUpsertBulk) UpdateMemo() *LockPaymentOrderUpsertBulk {
 func (u *LockPaymentOrderUpsertBulk) ClearMemo() *LockPaymentOrderUpsertBulk {
 	return u.Update(func(s *LockPaymentOrderUpsert) {
 		s.ClearMemo()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *LockPaymentOrderUpsertBulk) SetMetadata(v map[string]interface{}) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertBulk) UpdateMetadata() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *LockPaymentOrderUpsertBulk) ClearMetadata() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.ClearMetadata()
 	})
 }
 

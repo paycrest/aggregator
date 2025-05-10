@@ -72,7 +72,7 @@ func TestSmileIDService(t *testing.T) {
 			SmileIdentityApiKey:    "test_api_key",
 		},
 		serverConf: &config.ServerConfiguration{
-			HostDomain: "https://api.example.com",
+			ServerURL: "https://api.example.com",
 		},
 		db: client,
 	}
