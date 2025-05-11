@@ -1,0 +1,29 @@
+name: Atlas Database Migrations
+
+on:
+  push:
+    branches:
+      - main
+      - stable
+  pull_request:
+    branches:
+      - main
+      - stable
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/main' && 'staging' || 'production' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Atlas
+        run: |
+          curl -sSf https://atlasgo.sh | sh
+          echo "$HOME/.atlas/bin" >> $GITHUB_PATH
+
+      - name: Run Migrations
+        run: |
+          atlas migrate apply \
+            --dir "file://ent/migrate/migrations" \
+            --url "${{ secrets.DB_URL }}" 
