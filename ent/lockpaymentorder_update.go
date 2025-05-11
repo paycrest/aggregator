@@ -236,6 +236,18 @@ func (lpou *LockPaymentOrderUpdate) ClearMemo() *LockPaymentOrderUpdate {
 	return lpou
 }
 
+// SetMetadata sets the "metadata" field.
+func (lpou *LockPaymentOrderUpdate) SetMetadata(m map[string]interface{}) *LockPaymentOrderUpdate {
+	lpou.mutation.SetMetadata(m)
+	return lpou
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (lpou *LockPaymentOrderUpdate) ClearMetadata() *LockPaymentOrderUpdate {
+	lpou.mutation.ClearMetadata()
+	return lpou
+}
+
 // SetCancellationCount sets the "cancellation_count" field.
 func (lpou *LockPaymentOrderUpdate) SetCancellationCount(i int) *LockPaymentOrderUpdate {
 	lpou.mutation.ResetCancellationCount()
@@ -532,6 +544,12 @@ func (lpou *LockPaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err err
 	}
 	if lpou.mutation.MemoCleared() {
 		_spec.ClearField(lockpaymentorder.FieldMemo, field.TypeString)
+	}
+	if value, ok := lpou.mutation.Metadata(); ok {
+		_spec.SetField(lockpaymentorder.FieldMetadata, field.TypeJSON, value)
+	}
+	if lpou.mutation.MetadataCleared() {
+		_spec.ClearField(lockpaymentorder.FieldMetadata, field.TypeJSON)
 	}
 	if value, ok := lpou.mutation.CancellationCount(); ok {
 		_spec.SetField(lockpaymentorder.FieldCancellationCount, field.TypeInt, value)
@@ -944,6 +962,18 @@ func (lpouo *LockPaymentOrderUpdateOne) ClearMemo() *LockPaymentOrderUpdateOne {
 	return lpouo
 }
 
+// SetMetadata sets the "metadata" field.
+func (lpouo *LockPaymentOrderUpdateOne) SetMetadata(m map[string]interface{}) *LockPaymentOrderUpdateOne {
+	lpouo.mutation.SetMetadata(m)
+	return lpouo
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (lpouo *LockPaymentOrderUpdateOne) ClearMetadata() *LockPaymentOrderUpdateOne {
+	lpouo.mutation.ClearMetadata()
+	return lpouo
+}
+
 // SetCancellationCount sets the "cancellation_count" field.
 func (lpouo *LockPaymentOrderUpdateOne) SetCancellationCount(i int) *LockPaymentOrderUpdateOne {
 	lpouo.mutation.ResetCancellationCount()
@@ -1270,6 +1300,12 @@ func (lpouo *LockPaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *Loc
 	}
 	if lpouo.mutation.MemoCleared() {
 		_spec.ClearField(lockpaymentorder.FieldMemo, field.TypeString)
+	}
+	if value, ok := lpouo.mutation.Metadata(); ok {
+		_spec.SetField(lockpaymentorder.FieldMetadata, field.TypeJSON, value)
+	}
+	if lpouo.mutation.MetadataCleared() {
+		_spec.ClearField(lockpaymentorder.FieldMetadata, field.TypeJSON)
 	}
 	if value, ok := lpouo.mutation.CancellationCount(); ok {
 		_spec.SetField(lockpaymentorder.FieldCancellationCount, field.TypeInt, value)

@@ -42,6 +42,8 @@ const (
 	FieldAccountName = "account_name"
 	// FieldMemo holds the string denoting the memo field in the database.
 	FieldMemo = "memo"
+	// FieldMetadata holds the string denoting the metadata field in the database.
+	FieldMetadata = "metadata"
 	// FieldCancellationCount holds the string denoting the cancellation_count field in the database.
 	FieldCancellationCount = "cancellation_count"
 	// FieldCancellationReasons holds the string denoting the cancellation_reasons field in the database.
@@ -111,6 +113,7 @@ var Columns = []string{
 	FieldAccountIdentifier,
 	FieldAccountName,
 	FieldMemo,
+	FieldMetadata,
 	FieldCancellationCount,
 	FieldCancellationReasons,
 }

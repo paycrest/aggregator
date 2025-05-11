@@ -485,6 +485,16 @@ func AccountNameContainsFold(v string) predicate.LinkedAddress {
 	return predicate.LinkedAddress(sql.FieldContainsFold(FieldAccountName, v))
 }
 
+// MetadataIsNil applies the IsNil predicate on the "metadata" field.
+func MetadataIsNil() predicate.LinkedAddress {
+	return predicate.LinkedAddress(sql.FieldIsNull(FieldMetadata))
+}
+
+// MetadataNotNil applies the NotNil predicate on the "metadata" field.
+func MetadataNotNil() predicate.LinkedAddress {
+	return predicate.LinkedAddress(sql.FieldNotNull(FieldMetadata))
+}
+
 // OwnerAddressEQ applies the EQ predicate on the "owner_address" field.
 func OwnerAddressEQ(v string) predicate.LinkedAddress {
 	return predicate.LinkedAddress(sql.FieldEQ(FieldOwnerAddress, v))
