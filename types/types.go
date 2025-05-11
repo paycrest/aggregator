@@ -344,6 +344,7 @@ type LockPaymentOrderFields struct {
 	AccountName       string
 	ProviderID        string
 	Memo              string
+	Metadata          map[string]interface{}
 	ProvisionBucket   *ent.ProvisionBucket
 	UpdatedAt         time.Time
 	CreatedAt         time.Time
@@ -408,13 +409,14 @@ type LockPaymentOrderStatusResponse struct {
 
 // PaymentOrderRecipient describes a payment order recipient
 type PaymentOrderRecipient struct {
-	Institution       string `json:"institution" binding:"required"`
-	AccountIdentifier string `json:"accountIdentifier" binding:"required"`
-	AccountName       string `json:"accountName" binding:"required"`
-	Memo              string `json:"memo" binding:"required"`
-	ProviderID        string `json:"providerId"`
-	Currency          string `json:"currency"`
-	Nonce             string `json:"nonce"`
+	Institution       string                 `json:"institution" binding:"required"`
+	AccountIdentifier string                 `json:"accountIdentifier" binding:"required"`
+	AccountName       string                 `json:"accountName" binding:"required"`
+	Memo              string                 `json:"memo" binding:"required"`
+	ProviderID        string                 `json:"providerId"`
+	Metadata          map[string]interface{} `json:"metadata"`
+	Currency          string                 `json:"currency"`
+	Nonce             string                 `json:"nonce"`
 }
 
 // NewPaymentOrderPayload is the payload for the create payment order endpoint

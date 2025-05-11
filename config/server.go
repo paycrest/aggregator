@@ -33,6 +33,7 @@ func ServerConfig() *ServerConfiguration {
 	viper.SetDefault("RATE_LIMIT_UNAUTHENTICATED", 5)
 	viper.SetDefault("RATE_LIMIT_AUTHENTICATED", 100)
 	viper.SetDefault("SLACK_WEBHOOK_URL", "")
+	viper.SetDefault("SERVER_URL", "")
 
 	return &ServerConfiguration{
 		Debug:                    viper.GetBool("DEBUG"),

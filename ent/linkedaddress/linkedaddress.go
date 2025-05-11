@@ -28,6 +28,8 @@ const (
 	FieldAccountIdentifier = "account_identifier"
 	// FieldAccountName holds the string denoting the account_name field in the database.
 	FieldAccountName = "account_name"
+	// FieldMetadata holds the string denoting the metadata field in the database.
+	FieldMetadata = "metadata"
 	// FieldOwnerAddress holds the string denoting the owner_address field in the database.
 	FieldOwnerAddress = "owner_address"
 	// FieldLastIndexedBlock holds the string denoting the last_indexed_block field in the database.
@@ -57,6 +59,7 @@ var Columns = []string{
 	FieldInstitution,
 	FieldAccountIdentifier,
 	FieldAccountName,
+	FieldMetadata,
 	FieldOwnerAddress,
 	FieldLastIndexedBlock,
 	FieldTxHash,
