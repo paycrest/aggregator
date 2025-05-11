@@ -111,12 +111,9 @@ func BigMin(x, y *big.Int) *big.Int {
 	return y
 }
 
-// FormatTimestampToGMT1 formats the timestamp to GMT+1 (Africa/Lagos time zone) and returns a formatted string
+// FormatTimestampToGMT1 formats the timestamp to GMT+1 (Africa/Lagos time zone) and returns a formatted string.
 func FormatTimestampToGMT1(timestamp time.Time) (string, error) {
-	loc, err := time.LoadLocation("Africa/Lagos")
-	if err != nil {
-		return "", err
-	}
+	loc := time.FixedZone("GMT+1", 1*60*60)
 	return timestamp.In(loc).Format("January 2, 2006 at 3:04 PM"), nil
 }
 
@@ -577,16 +574,22 @@ func GetTokenRateFromQueue(tokenSymbol string, orderAmount decimal.Decimal, fiat
 }
 
 // GetInstitutionByCode returns the institution for a given institution code
-func GetInstitutionByCode(ctx context.Context, institutionCode string) (*ent.Institution, error) {
-	institution, err := storage.Client.Institution.
+func GetInstitutionByCode(ctx context.Context, institutionCode string, enabledFiatCurrency bool) (*ent.Institution, error) {
+	institutionQuery := storage.Client.Institution.
 		Query().
-		Where(institution.CodeEQ(institutionCode)).
-		WithFiatCurrency(
+		Where(institution.CodeEQ(institutionCode))
+
+	if enabledFiatCurrency {
+		institutionQuery = institutionQuery.WithFiatCurrency(
 			func(fcq *ent.FiatCurrencyQuery) {
 				fcq.Where(fiatcurrency.IsEnabledEQ(true))
 			},
-		).
-		Only(ctx)
+		)
+	} else {
+		institutionQuery = institutionQuery.WithFiatCurrency()
+	}
+
+	institution, err := institutionQuery.Only(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -3175,6 +3175,7 @@ type LinkedAddressMutation struct {
 	institution           *string
 	account_identifier    *string
 	account_name          *string
+	metadata              *map[string]interface{}
 	owner_address         *string
 	last_indexed_block    *int64
 	addlast_indexed_block *int64
@@ -3538,6 +3539,55 @@ func (m *LinkedAddressMutation) ResetAccountName() {
 	m.account_name = nil
 }
 
+// SetMetadata sets the "metadata" field.
+func (m *LinkedAddressMutation) SetMetadata(value map[string]interface{}) {
+	m.metadata = &value
+}
+
+// Metadata returns the value of the "metadata" field in the mutation.
+func (m *LinkedAddressMutation) Metadata() (r map[string]interface{}, exists bool) {
+	v := m.metadata
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMetadata returns the old "metadata" field's value of the LinkedAddress entity.
+// If the LinkedAddress object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LinkedAddressMutation) OldMetadata(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMetadata is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMetadata requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMetadata: %w", err)
+	}
+	return oldValue.Metadata, nil
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (m *LinkedAddressMutation) ClearMetadata() {
+	m.metadata = nil
+	m.clearedFields[linkedaddress.FieldMetadata] = struct{}{}
+}
+
+// MetadataCleared returns if the "metadata" field was cleared in this mutation.
+func (m *LinkedAddressMutation) MetadataCleared() bool {
+	_, ok := m.clearedFields[linkedaddress.FieldMetadata]
+	return ok
+}
+
+// ResetMetadata resets all changes to the "metadata" field.
+func (m *LinkedAddressMutation) ResetMetadata() {
+	m.metadata = nil
+	delete(m.clearedFields, linkedaddress.FieldMetadata)
+}
+
 // SetOwnerAddress sets the "owner_address" field.
 func (m *LinkedAddressMutation) SetOwnerAddress(s string) {
 	m.owner_address = &s
@@ -3781,7 +3831,7 @@ func (m *LinkedAddressMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *LinkedAddressMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 11)
 	if m.created_at != nil {
 		fields = append(fields, linkedaddress.FieldCreatedAt)
 	}
@@ -3802,6 +3852,9 @@ func (m *LinkedAddressMutation) Fields() []string {
 	}
 	if m.account_name != nil {
 		fields = append(fields, linkedaddress.FieldAccountName)
+	}
+	if m.metadata != nil {
+		fields = append(fields, linkedaddress.FieldMetadata)
 	}
 	if m.owner_address != nil {
 		fields = append(fields, linkedaddress.FieldOwnerAddress)
@@ -3834,6 +3887,8 @@ func (m *LinkedAddressMutation) Field(name string) (ent.Value, bool) {
 		return m.AccountIdentifier()
 	case linkedaddress.FieldAccountName:
 		return m.AccountName()
+	case linkedaddress.FieldMetadata:
+		return m.Metadata()
 	case linkedaddress.FieldOwnerAddress:
 		return m.OwnerAddress()
 	case linkedaddress.FieldLastIndexedBlock:
@@ -3863,6 +3918,8 @@ func (m *LinkedAddressMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldAccountIdentifier(ctx)
 	case linkedaddress.FieldAccountName:
 		return m.OldAccountName(ctx)
+	case linkedaddress.FieldMetadata:
+		return m.OldMetadata(ctx)
 	case linkedaddress.FieldOwnerAddress:
 		return m.OldOwnerAddress(ctx)
 	case linkedaddress.FieldLastIndexedBlock:
@@ -3926,6 +3983,13 @@ func (m *LinkedAddressMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetAccountName(v)
+		return nil
+	case linkedaddress.FieldMetadata:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMetadata(v)
 		return nil
 	case linkedaddress.FieldOwnerAddress:
 		v, ok := value.(string)
@@ -3993,6 +4057,9 @@ func (m *LinkedAddressMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *LinkedAddressMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(linkedaddress.FieldMetadata) {
+		fields = append(fields, linkedaddress.FieldMetadata)
+	}
 	if m.FieldCleared(linkedaddress.FieldLastIndexedBlock) {
 		fields = append(fields, linkedaddress.FieldLastIndexedBlock)
 	}
@@ -4013,6 +4080,9 @@ func (m *LinkedAddressMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *LinkedAddressMutation) ClearField(name string) error {
 	switch name {
+	case linkedaddress.FieldMetadata:
+		m.ClearMetadata()
+		return nil
 	case linkedaddress.FieldLastIndexedBlock:
 		m.ClearLastIndexedBlock()
 		return nil
@@ -4047,6 +4117,9 @@ func (m *LinkedAddressMutation) ResetField(name string) error {
 		return nil
 	case linkedaddress.FieldAccountName:
 		m.ResetAccountName()
+		return nil
+	case linkedaddress.FieldMetadata:
+		m.ResetMetadata()
 		return nil
 	case linkedaddress.FieldOwnerAddress:
 		m.ResetOwnerAddress()
@@ -4897,6 +4970,7 @@ type LockPaymentOrderMutation struct {
 	account_identifier         *string
 	account_name               *string
 	memo                       *string
+	metadata                   *map[string]interface{}
 	cancellation_count         *int
 	addcancellation_count      *int
 	cancellation_reasons       *[]string
@@ -5597,6 +5671,55 @@ func (m *LockPaymentOrderMutation) ResetMemo() {
 	delete(m.clearedFields, lockpaymentorder.FieldMemo)
 }
 
+// SetMetadata sets the "metadata" field.
+func (m *LockPaymentOrderMutation) SetMetadata(value map[string]interface{}) {
+	m.metadata = &value
+}
+
+// Metadata returns the value of the "metadata" field in the mutation.
+func (m *LockPaymentOrderMutation) Metadata() (r map[string]interface{}, exists bool) {
+	v := m.metadata
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMetadata returns the old "metadata" field's value of the LockPaymentOrder entity.
+// If the LockPaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LockPaymentOrderMutation) OldMetadata(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMetadata is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMetadata requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMetadata: %w", err)
+	}
+	return oldValue.Metadata, nil
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (m *LockPaymentOrderMutation) ClearMetadata() {
+	m.metadata = nil
+	m.clearedFields[lockpaymentorder.FieldMetadata] = struct{}{}
+}
+
+// MetadataCleared returns if the "metadata" field was cleared in this mutation.
+func (m *LockPaymentOrderMutation) MetadataCleared() bool {
+	_, ok := m.clearedFields[lockpaymentorder.FieldMetadata]
+	return ok
+}
+
+// ResetMetadata resets all changes to the "metadata" field.
+func (m *LockPaymentOrderMutation) ResetMetadata() {
+	m.metadata = nil
+	delete(m.clearedFields, lockpaymentorder.FieldMetadata)
+}
+
 // SetCancellationCount sets the "cancellation_count" field.
 func (m *LockPaymentOrderMutation) SetCancellationCount(i int) {
 	m.cancellation_count = &i
@@ -5963,7 +6086,7 @@ func (m *LockPaymentOrderMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *LockPaymentOrderMutation) Fields() []string {
-	fields := make([]string, 0, 15)
+	fields := make([]string, 0, 16)
 	if m.created_at != nil {
 		fields = append(fields, lockpaymentorder.FieldCreatedAt)
 	}
@@ -6002,6 +6125,9 @@ func (m *LockPaymentOrderMutation) Fields() []string {
 	}
 	if m.memo != nil {
 		fields = append(fields, lockpaymentorder.FieldMemo)
+	}
+	if m.metadata != nil {
+		fields = append(fields, lockpaymentorder.FieldMetadata)
 	}
 	if m.cancellation_count != nil {
 		fields = append(fields, lockpaymentorder.FieldCancellationCount)
@@ -6043,6 +6169,8 @@ func (m *LockPaymentOrderMutation) Field(name string) (ent.Value, bool) {
 		return m.AccountName()
 	case lockpaymentorder.FieldMemo:
 		return m.Memo()
+	case lockpaymentorder.FieldMetadata:
+		return m.Metadata()
 	case lockpaymentorder.FieldCancellationCount:
 		return m.CancellationCount()
 	case lockpaymentorder.FieldCancellationReasons:
@@ -6082,6 +6210,8 @@ func (m *LockPaymentOrderMutation) OldField(ctx context.Context, name string) (e
 		return m.OldAccountName(ctx)
 	case lockpaymentorder.FieldMemo:
 		return m.OldMemo(ctx)
+	case lockpaymentorder.FieldMetadata:
+		return m.OldMetadata(ctx)
 	case lockpaymentorder.FieldCancellationCount:
 		return m.OldCancellationCount(ctx)
 	case lockpaymentorder.FieldCancellationReasons:
@@ -6185,6 +6315,13 @@ func (m *LockPaymentOrderMutation) SetField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetMemo(v)
+		return nil
+	case lockpaymentorder.FieldMetadata:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMetadata(v)
 		return nil
 	case lockpaymentorder.FieldCancellationCount:
 		v, ok := value.(int)
@@ -6299,6 +6436,9 @@ func (m *LockPaymentOrderMutation) ClearedFields() []string {
 	if m.FieldCleared(lockpaymentorder.FieldMemo) {
 		fields = append(fields, lockpaymentorder.FieldMemo)
 	}
+	if m.FieldCleared(lockpaymentorder.FieldMetadata) {
+		fields = append(fields, lockpaymentorder.FieldMetadata)
+	}
 	return fields
 }
 
@@ -6318,6 +6458,9 @@ func (m *LockPaymentOrderMutation) ClearField(name string) error {
 		return nil
 	case lockpaymentorder.FieldMemo:
 		m.ClearMemo()
+		return nil
+	case lockpaymentorder.FieldMetadata:
+		m.ClearMetadata()
 		return nil
 	}
 	return fmt.Errorf("unknown LockPaymentOrder nullable field %s", name)
@@ -6365,6 +6508,9 @@ func (m *LockPaymentOrderMutation) ResetField(name string) error {
 		return nil
 	case lockpaymentorder.FieldMemo:
 		m.ResetMemo()
+		return nil
+	case lockpaymentorder.FieldMetadata:
+		m.ResetMetadata()
 		return nil
 	case lockpaymentorder.FieldCancellationCount:
 		m.ResetCancellationCount()
@@ -9835,6 +9981,7 @@ type PaymentOrderRecipientMutation struct {
 	account_name         *string
 	memo                 *string
 	provider_id          *string
+	metadata             *map[string]interface{}
 	clearedFields        map[string]struct{}
 	payment_order        *uuid.UUID
 	clearedpayment_order bool
@@ -10147,6 +10294,55 @@ func (m *PaymentOrderRecipientMutation) ResetProviderID() {
 	delete(m.clearedFields, paymentorderrecipient.FieldProviderID)
 }
 
+// SetMetadata sets the "metadata" field.
+func (m *PaymentOrderRecipientMutation) SetMetadata(value map[string]interface{}) {
+	m.metadata = &value
+}
+
+// Metadata returns the value of the "metadata" field in the mutation.
+func (m *PaymentOrderRecipientMutation) Metadata() (r map[string]interface{}, exists bool) {
+	v := m.metadata
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMetadata returns the old "metadata" field's value of the PaymentOrderRecipient entity.
+// If the PaymentOrderRecipient object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentOrderRecipientMutation) OldMetadata(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMetadata is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMetadata requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMetadata: %w", err)
+	}
+	return oldValue.Metadata, nil
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (m *PaymentOrderRecipientMutation) ClearMetadata() {
+	m.metadata = nil
+	m.clearedFields[paymentorderrecipient.FieldMetadata] = struct{}{}
+}
+
+// MetadataCleared returns if the "metadata" field was cleared in this mutation.
+func (m *PaymentOrderRecipientMutation) MetadataCleared() bool {
+	_, ok := m.clearedFields[paymentorderrecipient.FieldMetadata]
+	return ok
+}
+
+// ResetMetadata resets all changes to the "metadata" field.
+func (m *PaymentOrderRecipientMutation) ResetMetadata() {
+	m.metadata = nil
+	delete(m.clearedFields, paymentorderrecipient.FieldMetadata)
+}
+
 // SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by id.
 func (m *PaymentOrderRecipientMutation) SetPaymentOrderID(id uuid.UUID) {
 	m.payment_order = &id
@@ -10220,7 +10416,7 @@ func (m *PaymentOrderRecipientMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PaymentOrderRecipientMutation) Fields() []string {
-	fields := make([]string, 0, 5)
+	fields := make([]string, 0, 6)
 	if m.institution != nil {
 		fields = append(fields, paymentorderrecipient.FieldInstitution)
 	}
@@ -10235,6 +10431,9 @@ func (m *PaymentOrderRecipientMutation) Fields() []string {
 	}
 	if m.provider_id != nil {
 		fields = append(fields, paymentorderrecipient.FieldProviderID)
+	}
+	if m.metadata != nil {
+		fields = append(fields, paymentorderrecipient.FieldMetadata)
 	}
 	return fields
 }
@@ -10254,6 +10453,8 @@ func (m *PaymentOrderRecipientMutation) Field(name string) (ent.Value, bool) {
 		return m.Memo()
 	case paymentorderrecipient.FieldProviderID:
 		return m.ProviderID()
+	case paymentorderrecipient.FieldMetadata:
+		return m.Metadata()
 	}
 	return nil, false
 }
@@ -10273,6 +10474,8 @@ func (m *PaymentOrderRecipientMutation) OldField(ctx context.Context, name strin
 		return m.OldMemo(ctx)
 	case paymentorderrecipient.FieldProviderID:
 		return m.OldProviderID(ctx)
+	case paymentorderrecipient.FieldMetadata:
+		return m.OldMetadata(ctx)
 	}
 	return nil, fmt.Errorf("unknown PaymentOrderRecipient field %s", name)
 }
@@ -10317,6 +10520,13 @@ func (m *PaymentOrderRecipientMutation) SetField(name string, value ent.Value) e
 		}
 		m.SetProviderID(v)
 		return nil
+	case paymentorderrecipient.FieldMetadata:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMetadata(v)
+		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrderRecipient field %s", name)
 }
@@ -10353,6 +10563,9 @@ func (m *PaymentOrderRecipientMutation) ClearedFields() []string {
 	if m.FieldCleared(paymentorderrecipient.FieldProviderID) {
 		fields = append(fields, paymentorderrecipient.FieldProviderID)
 	}
+	if m.FieldCleared(paymentorderrecipient.FieldMetadata) {
+		fields = append(fields, paymentorderrecipient.FieldMetadata)
+	}
 	return fields
 }
 
@@ -10372,6 +10585,9 @@ func (m *PaymentOrderRecipientMutation) ClearField(name string) error {
 		return nil
 	case paymentorderrecipient.FieldProviderID:
 		m.ClearProviderID()
+		return nil
+	case paymentorderrecipient.FieldMetadata:
+		m.ClearMetadata()
 		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrderRecipient nullable field %s", name)
@@ -10395,6 +10611,9 @@ func (m *PaymentOrderRecipientMutation) ResetField(name string) error {
 		return nil
 	case paymentorderrecipient.FieldProviderID:
 		m.ResetProviderID()
+		return nil
+	case paymentorderrecipient.FieldMetadata:
+		m.ResetMetadata()
 		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrderRecipient field %s", name)

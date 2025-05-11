@@ -92,6 +92,18 @@ func (lau *LinkedAddressUpdate) SetNillableAccountName(s *string) *LinkedAddress
 	return lau
 }
 
+// SetMetadata sets the "metadata" field.
+func (lau *LinkedAddressUpdate) SetMetadata(m map[string]interface{}) *LinkedAddressUpdate {
+	lau.mutation.SetMetadata(m)
+	return lau
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (lau *LinkedAddressUpdate) ClearMetadata() *LinkedAddressUpdate {
+	lau.mutation.ClearMetadata()
+	return lau
+}
+
 // SetOwnerAddress sets the "owner_address" field.
 func (lau *LinkedAddressUpdate) SetOwnerAddress(s string) *LinkedAddressUpdate {
 	lau.mutation.SetOwnerAddress(s)
@@ -267,6 +279,12 @@ func (lau *LinkedAddressUpdate) sqlSave(ctx context.Context) (n int, err error) 
 	if value, ok := lau.mutation.AccountName(); ok {
 		_spec.SetField(linkedaddress.FieldAccountName, field.TypeString, value)
 	}
+	if value, ok := lau.mutation.Metadata(); ok {
+		_spec.SetField(linkedaddress.FieldMetadata, field.TypeJSON, value)
+	}
+	if lau.mutation.MetadataCleared() {
+		_spec.ClearField(linkedaddress.FieldMetadata, field.TypeJSON)
+	}
 	if value, ok := lau.mutation.OwnerAddress(); ok {
 		_spec.SetField(linkedaddress.FieldOwnerAddress, field.TypeString, value)
 	}
@@ -409,6 +427,18 @@ func (lauo *LinkedAddressUpdateOne) SetNillableAccountName(s *string) *LinkedAdd
 	if s != nil {
 		lauo.SetAccountName(*s)
 	}
+	return lauo
+}
+
+// SetMetadata sets the "metadata" field.
+func (lauo *LinkedAddressUpdateOne) SetMetadata(m map[string]interface{}) *LinkedAddressUpdateOne {
+	lauo.mutation.SetMetadata(m)
+	return lauo
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (lauo *LinkedAddressUpdateOne) ClearMetadata() *LinkedAddressUpdateOne {
+	lauo.mutation.ClearMetadata()
 	return lauo
 }
 
@@ -616,6 +646,12 @@ func (lauo *LinkedAddressUpdateOne) sqlSave(ctx context.Context) (_node *LinkedA
 	}
 	if value, ok := lauo.mutation.AccountName(); ok {
 		_spec.SetField(linkedaddress.FieldAccountName, field.TypeString, value)
+	}
+	if value, ok := lauo.mutation.Metadata(); ok {
+		_spec.SetField(linkedaddress.FieldMetadata, field.TypeJSON, value)
+	}
+	if lauo.mutation.MetadataCleared() {
+		_spec.ClearField(linkedaddress.FieldMetadata, field.TypeJSON)
 	}
 	if value, ok := lauo.mutation.OwnerAddress(); ok {
 		_spec.SetField(linkedaddress.FieldOwnerAddress, field.TypeString, value)

@@ -122,7 +122,7 @@ func init() {
 	// linkedaddress.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	linkedaddress.UpdateDefaultUpdatedAt = linkedaddressDescUpdatedAt.UpdateDefault.(func() time.Time)
 	// linkedaddressDescTxHash is the schema descriptor for tx_hash field.
-	linkedaddressDescTxHash := linkedaddressFields[7].Descriptor()
+	linkedaddressDescTxHash := linkedaddressFields[8].Descriptor()
 	// linkedaddress.TxHashValidator is a validator for the "tx_hash" field. It is called by the builders before save.
 	linkedaddress.TxHashValidator = linkedaddressDescTxHash.Validators[0].(func(string) error)
 	lockorderfulfillmentMixin := schema.LockOrderFulfillment{}.Mixin()
@@ -164,11 +164,11 @@ func init() {
 	// lockpaymentorder.TxHashValidator is a validator for the "tx_hash" field. It is called by the builders before save.
 	lockpaymentorder.TxHashValidator = lockpaymentorderDescTxHash.Validators[0].(func(string) error)
 	// lockpaymentorderDescCancellationCount is the schema descriptor for cancellation_count field.
-	lockpaymentorderDescCancellationCount := lockpaymentorderFields[12].Descriptor()
+	lockpaymentorderDescCancellationCount := lockpaymentorderFields[13].Descriptor()
 	// lockpaymentorder.DefaultCancellationCount holds the default value on creation for the cancellation_count field.
 	lockpaymentorder.DefaultCancellationCount = lockpaymentorderDescCancellationCount.Default.(int)
 	// lockpaymentorderDescCancellationReasons is the schema descriptor for cancellation_reasons field.
-	lockpaymentorderDescCancellationReasons := lockpaymentorderFields[13].Descriptor()
+	lockpaymentorderDescCancellationReasons := lockpaymentorderFields[14].Descriptor()
 	// lockpaymentorder.DefaultCancellationReasons holds the default value on creation for the cancellation_reasons field.
 	lockpaymentorder.DefaultCancellationReasons = lockpaymentorderDescCancellationReasons.Default.([]string)
 	// lockpaymentorderDescID is the schema descriptor for id field.

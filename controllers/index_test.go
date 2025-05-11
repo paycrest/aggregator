@@ -11,7 +11,6 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
-	"github.com/paycrest/aggregator/services/kyc"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/shopspring/decimal"
@@ -152,7 +151,7 @@ func TestIndex(t *testing.T) {
 			},
 		)
 		t.Run("with valid details", func(t *testing.T) {
-			payload := kyc.NewIDVerificationRequest{
+			payload := types.VerificationRequest{
 				WalletAddress: "0xf4c5c4deDde7A86b25E7430796441e209e23eBFB",
 				Signature:     "b1dcfa6beba6c93e5abd38c23890a1ff2e553721c5c379a80b66a2ad74b3755f543cd8e7d8fb064ae4fdeeba93302c156bd012e390c2321a763eddaa12e5ab5d1c",
 				Nonce:         "e08511abb6087c47",
@@ -187,7 +186,7 @@ func TestIndex(t *testing.T) {
 		})
 
 		t.Run("with an already used signature", func(t *testing.T) {
-			payload := kyc.NewIDVerificationRequest{
+			payload := types.VerificationRequest{
 				Signature:     "b1dcfa6beba6c93e5abd38c23890a1ff2e553721c5c379a80b66a2ad74b3755f543cd8e7d8fb064ae4fdeeba93302c156bd012e390c2321a763eddaa12e5ab5d1c",
 				WalletAddress: "0xf4c5c4deDde7A86b25E7430796441e209e23eBFB",
 				Nonce:         "e08511abb6087c47",
@@ -208,7 +207,7 @@ func TestIndex(t *testing.T) {
 		})
 
 		t.Run("with a different signature for same wallet address with validity duration", func(t *testing.T) {
-			payload := kyc.NewIDVerificationRequest{
+			payload := types.VerificationRequest{
 				Signature:     "dea3406fa45aa364283e1704b3a8c3b70973a25c262540b71e857efe25e8582b23f98b969cebe320dd2851e5ea36c781253edf7e7d1cd5fe6be704f5709f76df1b",
 				WalletAddress: "0xf4c5c4deDde7A86b25E7430796441e209e23eBFB",
 				Nonce:         "8c400162fbfe0527",
@@ -228,7 +227,7 @@ func TestIndex(t *testing.T) {
 		})
 
 		t.Run("with invalid signature", func(t *testing.T) {
-			payload := kyc.NewIDVerificationRequest{
+			payload := types.VerificationRequest{
 				Signature:     "invalid_signature",
 				WalletAddress: "0xf4c5c4deDde7A86b25E7430796441e209e23eBFB",
 				Nonce:         "e08511abb6087c47",

@@ -210,7 +210,7 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 			}
 
 			// Create payment order
-			institution, err := utils.GetInstitutionByCode(ctx, linkedAddress.Institution)
+			institution, err := utils.GetInstitutionByCode(ctx, linkedAddress.Institution, true)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":                    fmt.Sprintf("%v", err),
@@ -299,6 +299,7 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 				SetInstitution(linkedAddress.Institution).
 				SetAccountIdentifier(linkedAddress.AccountIdentifier).
 				SetAccountName(linkedAddress.AccountName).
+				SetMetadata(linkedAddress.Metadata).
 				SetPaymentOrder(order).
 				Save(ctx)
 			if err != nil {
@@ -1060,7 +1061,7 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 
 	// Get provision bucket
 	amountInDecimals := utils.FromSubunit(event.Amount, token.Decimals)
-	institution, err := utils.GetInstitutionByCode(ctx, recipient.Institution)
+	institution, err := utils.GetInstitutionByCode(ctx, recipient.Institution, true)
 	if err != nil {
 		return nil
 	}
@@ -1101,6 +1102,7 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 		AccountName:       recipient.AccountName,
 		ProviderID:        recipient.ProviderID,
 		Memo:              recipient.Memo,
+		Metadata:          recipient.Metadata,
 		ProvisionBucket:   provisionBucket,
 	}
 
@@ -1173,13 +1175,20 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 	}
 
 	if provisionBucket == nil && !isPrivate {
+		// TODO: Activate this when split order is tested and working
 		// Split lock payment order into multiple orders
-		err = s.splitLockPaymentOrder(
-			ctx, client, lockPaymentOrder, currency,
-		)
+		// err = s.splitLockPaymentOrder(
+		// 	ctx, client, lockPaymentOrder, currency,
+		// )
+		// if err != nil {
+		// 	return fmt.Errorf("%s - failed to split lock payment order: %w", lockPaymentOrder.GatewayID, err)
+		// }
+
+		err = s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Amount is larger than the maximum bucket")
 		if err != nil {
-			return fmt.Errorf("%s - failed to split lock payment order: %w", lockPaymentOrder.GatewayID, err)
+			return fmt.Errorf("failed to handle cancellation: %w", err)
 		}
+		return nil
 	} else {
 		// Create LockPaymentOrder and recipient in a transaction
 		tx, err := db.Client.Tx(ctx)
@@ -1213,8 +1222,9 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 							"Amount":          lockPaymentOrder.Amount,
 							"Rate":            lockPaymentOrder.Rate,
 							"Memo":            lockPaymentOrder.Memo,
-							"ProvisionBucket": lockPaymentOrder.ProvisionBucket,
+							"Metadata":        lockPaymentOrder.Metadata,
 							"ProviderID":      lockPaymentOrder.ProviderID,
+							"ProvisionBucket": lockPaymentOrder.ProvisionBucket,
 						}).
 					Save(ctx)
 				if err != nil {
@@ -1237,6 +1247,7 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 			SetAccountIdentifier(lockPaymentOrder.AccountIdentifier).
 			SetAccountName(lockPaymentOrder.AccountName).
 			SetMemo(lockPaymentOrder.Memo).
+			SetMetadata(lockPaymentOrder.Metadata).
 			SetProvisionBucket(lockPaymentOrder.ProvisionBucket)
 
 		if lockPaymentOrder.ProviderID != "" {
@@ -1306,6 +1317,7 @@ func (s *IndexerService) handleCancellation(ctx context.Context, client types.RP
 			SetAccountIdentifier(lockPaymentOrder.AccountIdentifier).
 			SetAccountName(lockPaymentOrder.AccountName).
 			SetMemo(lockPaymentOrder.Memo).
+			SetMetadata(lockPaymentOrder.Metadata).
 			SetProvisionBucket(lockPaymentOrder.ProvisionBucket).
 			SetCancellationCount(3).
 			SetCancellationReasons([]string{cancellationReason}).
@@ -1755,7 +1767,7 @@ func (s *IndexerService) UpdateReceiveAddressStatus(
 					return true, fmt.Errorf("UpdateReceiveAddressStatus.db: %v", err)
 				}
 
-				institution, err := utils.GetInstitutionByCode(ctx, orderRecipient.Institution)
+				institution, err := utils.GetInstitutionByCode(ctx, orderRecipient.Institution, true)
 				if err != nil {
 					return true, fmt.Errorf("UpdateReceiveAddressStatus.db: %v", err)
 				}

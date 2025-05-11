@@ -10,6 +10,7 @@ import (
 	"github.com/jarcoal/httpmock"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -97,6 +98,28 @@ func TestSlackService(t *testing.T) {
 			err := slackService.SendUserSignupNotification(mockUser, []string{"provider"}, providerCurrencies)
 
 			assert.NoError(t, err, "unexpected error")
+		})
+
+		t.Run("FormatTimestampToGMT1 should work with any timezone configuration", func(t *testing.T) {
+			testTime := time.Date(2023, 5, 15, 14, 30, 0, 0, time.UTC)
+
+			formattedTime, err := utils.FormatTimestampToGMT1(testTime)
+
+			assert.NoError(t, err, "formatting timestamp should not produce an error")
+			assert.NotEmpty(t, formattedTime, "formatted time should not be empty")
+			assert.Contains(t, formattedTime, "May 15, 2023")
+			assert.Contains(t, formattedTime, "3:30 PM")
+		})
+
+		t.Run("FormatTimestampToGMT1 should work with current time", func(t *testing.T) {
+			// Get current time
+			now := time.Now().UTC()
+
+			formattedTime, err := utils.FormatTimestampToGMT1(now)
+
+			assert.NoError(t, err, "formatting current timestamp should not produce an error")
+			assert.NotEmpty(t, formattedTime, "formatted time should not be empty")
+			assert.Contains(t, formattedTime, now.In(time.FixedZone("GMT+1", 3600)).Format("2006"))
 		})
 	})
 }

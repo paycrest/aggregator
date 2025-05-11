@@ -24,6 +24,7 @@ require (
 	github.com/spf13/viper v1.16.0
 	github.com/stackup-wallet/stackup-bundler v0.6.30
 	github.com/stretchr/testify v1.8.4
+	github.com/xeipuuv/gojsonschema v1.2.0
 	google.golang.org/grpc v1.55.0
 )
 
@@ -88,6 +89,8 @@ require (
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/tyler-smith/go-bip32 v1.0.0 // indirect
+	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect
+	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
 	github.com/zclconf/go-cty-yaml v1.1.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
