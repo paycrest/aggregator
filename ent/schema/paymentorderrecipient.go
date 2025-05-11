@@ -21,6 +21,8 @@ func (PaymentOrderRecipient) Fields() []ent.Field {
 			Optional(),
 		field.String("provider_id").
 			Optional(),
+		field.JSON("metadata", map[string]interface{}{}).
+			Optional(),
 	}
 }
 

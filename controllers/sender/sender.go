@@ -414,6 +414,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		SetAccountName(payload.Recipient.AccountName).
 		SetProviderID(payload.Recipient.ProviderID).
 		SetMemo(payload.Recipient.Memo).
+		SetMetadata(payload.Recipient.Metadata).
 		SetPaymentOrder(paymentOrder).
 		Save(ctx)
 	if err != nil {

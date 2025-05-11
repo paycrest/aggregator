@@ -299,6 +299,7 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 				SetInstitution(linkedAddress.Institution).
 				SetAccountIdentifier(linkedAddress.AccountIdentifier).
 				SetAccountName(linkedAddress.AccountName).
+				SetMetadata(linkedAddress.Metadata).
 				SetPaymentOrder(order).
 				Save(ctx)
 			if err != nil {
@@ -1101,6 +1102,7 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 		AccountName:       recipient.AccountName,
 		ProviderID:        recipient.ProviderID,
 		Memo:              recipient.Memo,
+		Metadata:          recipient.Metadata,
 		ProvisionBucket:   provisionBucket,
 	}
 
@@ -1220,8 +1222,9 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 							"Amount":          lockPaymentOrder.Amount,
 							"Rate":            lockPaymentOrder.Rate,
 							"Memo":            lockPaymentOrder.Memo,
-							"ProvisionBucket": lockPaymentOrder.ProvisionBucket,
+							"Metadata":        lockPaymentOrder.Metadata,
 							"ProviderID":      lockPaymentOrder.ProviderID,
+							"ProvisionBucket": lockPaymentOrder.ProvisionBucket,
 						}).
 					Save(ctx)
 				if err != nil {
@@ -1244,6 +1247,7 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 			SetAccountIdentifier(lockPaymentOrder.AccountIdentifier).
 			SetAccountName(lockPaymentOrder.AccountName).
 			SetMemo(lockPaymentOrder.Memo).
+			SetMetadata(lockPaymentOrder.Metadata).
 			SetProvisionBucket(lockPaymentOrder.ProvisionBucket)
 
 		if lockPaymentOrder.ProviderID != "" {
@@ -1313,6 +1317,7 @@ func (s *IndexerService) handleCancellation(ctx context.Context, client types.RP
 			SetAccountIdentifier(lockPaymentOrder.AccountIdentifier).
 			SetAccountName(lockPaymentOrder.AccountName).
 			SetMemo(lockPaymentOrder.Memo).
+			SetMetadata(lockPaymentOrder.Metadata).
 			SetProvisionBucket(lockPaymentOrder.ProvisionBucket).
 			SetCancellationCount(3).
 			SetCancellationReasons([]string{cancellationReason}).
