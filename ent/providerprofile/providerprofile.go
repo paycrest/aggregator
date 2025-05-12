@@ -174,8 +174,6 @@ var (
 	UpdateDefaultUpdatedAt func() time.Time
 	// DefaultIsKybVerified holds the default value on creation for the "is_kyb_verified" field.
 	DefaultIsKybVerified bool
-	// MonthlyVolumeValidator is a validator for the "monthly_volume" field. It is called by the builders before save.
-	MonthlyVolumeValidator func(float64) error
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() string
 )

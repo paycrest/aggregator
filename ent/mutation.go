@@ -13380,21 +13380,13 @@ func (m *ProviderProfileMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *ProviderProfileMutation) AddedFields() []string {
-	var fields []string
-	if m.addmonthly_volume != nil {
-		fields = append(fields, providerprofile.FieldMonthlyVolume)
-	}
-	return fields
+	return nil
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *ProviderProfileMutation) AddedField(name string) (ent.Value, bool) {
-	switch name {
-	case providerprofile.FieldMonthlyVolume:
-		return m.AddedMonthlyVolume()
-	}
 	return nil, false
 }
 
@@ -13403,13 +13395,6 @@ func (m *ProviderProfileMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *ProviderProfileMutation) AddField(name string, value ent.Value) error {
 	switch name {
-	case providerprofile.FieldMonthlyVolume:
-		v, ok := value.(float64)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddMonthlyVolume(v)
-		return nil
 	}
 	return fmt.Errorf("unknown ProviderProfile numeric field %s", name)
 }
@@ -17665,21 +17650,13 @@ func (m *SenderProfileMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *SenderProfileMutation) AddedFields() []string {
-	var fields []string
-	if m.addmonthly_volume != nil {
-		fields = append(fields, senderprofile.FieldMonthlyVolume)
-	}
-	return fields
+	return nil
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *SenderProfileMutation) AddedField(name string) (ent.Value, bool) {
-	switch name {
-	case senderprofile.FieldMonthlyVolume:
-		return m.AddedMonthlyVolume()
-	}
 	return nil, false
 }
 
@@ -17688,13 +17665,6 @@ func (m *SenderProfileMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *SenderProfileMutation) AddField(name string, value ent.Value) error {
 	switch name {
-	case senderprofile.FieldMonthlyVolume:
-		v, ok := value.(float64)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddMonthlyVolume(v)
-		return nil
 	}
 	return fmt.Errorf("unknown SenderProfile numeric field %s", name)
 }

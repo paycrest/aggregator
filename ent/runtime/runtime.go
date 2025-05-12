@@ -284,10 +284,6 @@ func init() {
 	providerprofileDescIsKybVerified := providerprofileFields[15].Descriptor()
 	// providerprofile.DefaultIsKybVerified holds the default value on creation for the is_kyb_verified field.
 	providerprofile.DefaultIsKybVerified = providerprofileDescIsKybVerified.Default.(bool)
-	// providerprofileDescMonthlyVolume is the schema descriptor for monthly_volume field.
-	providerprofileDescMonthlyVolume := providerprofileFields[16].Descriptor()
-	// providerprofile.MonthlyVolumeValidator is a validator for the "monthly_volume" field. It is called by the builders before save.
-	providerprofile.MonthlyVolumeValidator = providerprofileDescMonthlyVolume.Validators[0].(func(float64) error)
 	// providerprofileDescID is the schema descriptor for id field.
 	providerprofileDescID := providerprofileFields[0].Descriptor()
 	// providerprofile.DefaultID holds the default value on creation for the id field.
