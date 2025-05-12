@@ -457,7 +457,6 @@ func TestAuth(t *testing.T) {
 				Email:         "ikeayo@example.com",
 				Password:      "password",
 				Scopes:        []string{"sender"},
-				MonthlyVolume: nil,
 			}
 
 			res, err := test.PerformRequest(t, "POST", "/register", payload, nil, router)
