@@ -675,28 +675,6 @@ type LinkedAddressTransactionList struct {
 	Transactions []LinkedAddressTransaction `json:"transactions"`
 }
 
-// BitgetResponse is the response for Bitget advertisement endpoint
-type BitgetResponse struct {
-	Code string     `json:"code"`
-	Data BitgetData `json:"data"`
-	Msg  string     `json:"msg"`
-}
-
-// BitgetData is the struct for Bitget advertisement data
-type BitgetData struct {
-	DataList []BitgetAd `json:"dataList"`
-}
-
-// BitgetAd is the struct for Bitget advertisement data item
-type BitgetAd struct {
-	Price     string `json:"price"`
-	CoinCode  string `json:"coinCode"`
-	FiatCode  string `json:"fiatCode"`
-	Amount    string `json:"amount"`
-	MinAmount string `json:"minAmount"`
-	MaxAmount string `json:"maxAmount"`
-}
-
 // SupportedTokenResponse represents the structure for supported tokens
 type SupportedTokenResponse struct {
 	Symbol          string `json:"symbol"`
