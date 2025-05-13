@@ -27,6 +27,8 @@ type LockPaymentOrder struct {
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// DeletedAt holds the value of the "deleted_at" field.
+	DeletedAt time.Time `json:"deleted_at,omitempty"`
 	// GatewayID holds the value of the "gateway_id" field.
 	GatewayID string `json:"gateway_id,omitempty"`
 	// Amount holds the value of the "amount" field.
@@ -145,7 +147,7 @@ func (*LockPaymentOrder) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case lockpaymentorder.FieldGatewayID, lockpaymentorder.FieldTxHash, lockpaymentorder.FieldStatus, lockpaymentorder.FieldInstitution, lockpaymentorder.FieldAccountIdentifier, lockpaymentorder.FieldAccountName, lockpaymentorder.FieldMemo:
 			values[i] = new(sql.NullString)
-		case lockpaymentorder.FieldCreatedAt, lockpaymentorder.FieldUpdatedAt:
+		case lockpaymentorder.FieldCreatedAt, lockpaymentorder.FieldUpdatedAt, lockpaymentorder.FieldDeletedAt:
 			values[i] = new(sql.NullTime)
 		case lockpaymentorder.FieldID:
 			values[i] = new(uuid.UUID)
@@ -187,6 +189,12 @@ func (lpo *LockPaymentOrder) assignValues(columns []string, values []any) error 
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
 				lpo.UpdatedAt = value.Time
+			}
+		case lockpaymentorder.FieldDeletedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field deleted_at", values[i])
+			} else if value.Valid {
+				lpo.DeletedAt = value.Time
 			}
 		case lockpaymentorder.FieldGatewayID:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -363,6 +371,9 @@ func (lpo *LockPaymentOrder) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
 	builder.WriteString(lpo.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("deleted_at=")
+	builder.WriteString(lpo.DeletedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("gateway_id=")
 	builder.WriteString(lpo.GatewayID)

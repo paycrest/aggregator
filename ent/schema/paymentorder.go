@@ -18,6 +18,7 @@ type PaymentOrder struct {
 func (PaymentOrder) Mixin() []ent.Mixin {
 	return []ent.Mixin{
 		TimeMixin{},
+		SoftDeleteMixin{},
 	}
 }
 

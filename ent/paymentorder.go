@@ -28,6 +28,8 @@ type PaymentOrder struct {
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// DeletedAt holds the value of the "deleted_at" field.
+	DeletedAt time.Time `json:"deleted_at,omitempty"`
 	// Amount holds the value of the "amount" field.
 	Amount decimal.Decimal `json:"amount,omitempty"`
 	// AmountPaid holds the value of the "amount_paid" field.
@@ -168,7 +170,7 @@ func (*PaymentOrder) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case paymentorder.FieldTxHash, paymentorder.FieldFromAddress, paymentorder.FieldReturnAddress, paymentorder.FieldReceiveAddressText, paymentorder.FieldFeeAddress, paymentorder.FieldGatewayID, paymentorder.FieldReference, paymentorder.FieldStatus:
 			values[i] = new(sql.NullString)
-		case paymentorder.FieldCreatedAt, paymentorder.FieldUpdatedAt:
+		case paymentorder.FieldCreatedAt, paymentorder.FieldUpdatedAt, paymentorder.FieldDeletedAt:
 			values[i] = new(sql.NullTime)
 		case paymentorder.FieldID:
 			values[i] = new(uuid.UUID)
@@ -212,6 +214,12 @@ func (po *PaymentOrder) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
 				po.UpdatedAt = value.Time
+			}
+		case paymentorder.FieldDeletedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field deleted_at", values[i])
+			} else if value.Valid {
+				po.DeletedAt = value.Time
 			}
 		case paymentorder.FieldAmount:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
@@ -420,6 +428,9 @@ func (po *PaymentOrder) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
 	builder.WriteString(po.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("deleted_at=")
+	builder.WriteString(po.DeletedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("amount=")
 	builder.WriteString(fmt.Sprintf("%v", po.Amount))

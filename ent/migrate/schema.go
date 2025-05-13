@@ -157,6 +157,7 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
 		{Name: "gateway_id", Type: field.TypeString},
 		{Name: "amount", Type: field.TypeFloat64},
 		{Name: "rate", Type: field.TypeFloat64},
@@ -183,19 +184,19 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "lock_payment_orders_provider_profiles_assigned_orders",
-				Columns:    []*schema.Column{LockPaymentOrdersColumns[17]},
+				Columns:    []*schema.Column{LockPaymentOrdersColumns[18]},
 				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "lock_payment_orders_provision_buckets_lock_payment_orders",
-				Columns:    []*schema.Column{LockPaymentOrdersColumns[18]},
+				Columns:    []*schema.Column{LockPaymentOrdersColumns[19]},
 				RefColumns: []*schema.Column{ProvisionBucketsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "lock_payment_orders_tokens_lock_payment_orders",
-				Columns:    []*schema.Column{LockPaymentOrdersColumns[19]},
+				Columns:    []*schema.Column{LockPaymentOrdersColumns[20]},
 				RefColumns: []*schema.Column{TokensColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -204,7 +205,7 @@ var (
 			{
 				Name:    "lockpaymentorder_gateway_id_rate_tx_hash_block_number_institution_account_identifier_account_name_memo_token_lock_payment_orders",
 				Unique:  true,
-				Columns: []*schema.Column{LockPaymentOrdersColumns[3], LockPaymentOrdersColumns[5], LockPaymentOrdersColumns[7], LockPaymentOrdersColumns[9], LockPaymentOrdersColumns[10], LockPaymentOrdersColumns[11], LockPaymentOrdersColumns[12], LockPaymentOrdersColumns[13], LockPaymentOrdersColumns[19]},
+				Columns: []*schema.Column{LockPaymentOrdersColumns[4], LockPaymentOrdersColumns[6], LockPaymentOrdersColumns[8], LockPaymentOrdersColumns[10], LockPaymentOrdersColumns[11], LockPaymentOrdersColumns[12], LockPaymentOrdersColumns[13], LockPaymentOrdersColumns[14], LockPaymentOrdersColumns[20]},
 			},
 		},
 	}
@@ -234,6 +235,7 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
 		{Name: "amount", Type: field.TypeFloat64},
 		{Name: "amount_paid", Type: field.TypeFloat64},
 		{Name: "amount_returned", Type: field.TypeFloat64},
@@ -265,25 +267,25 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "payment_orders_api_keys_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[21]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[22]},
 				RefColumns: []*schema.Column{APIKeysColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "payment_orders_linked_addresses_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[22]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[23]},
 				RefColumns: []*schema.Column{LinkedAddressesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "payment_orders_sender_profiles_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[23]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[24]},
 				RefColumns: []*schema.Column{SenderProfilesColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "payment_orders_tokens_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[24]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[25]},
 				RefColumns: []*schema.Column{TokensColumns[0]},
 				OnDelete:   schema.Cascade,
 			},

@@ -58,6 +58,20 @@ func (lpoc *LockPaymentOrderCreate) SetNillableUpdatedAt(t *time.Time) *LockPaym
 	return lpoc
 }
 
+// SetDeletedAt sets the "deleted_at" field.
+func (lpoc *LockPaymentOrderCreate) SetDeletedAt(t time.Time) *LockPaymentOrderCreate {
+	lpoc.mutation.SetDeletedAt(t)
+	return lpoc
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (lpoc *LockPaymentOrderCreate) SetNillableDeletedAt(t *time.Time) *LockPaymentOrderCreate {
+	if t != nil {
+		lpoc.SetDeletedAt(*t)
+	}
+	return lpoc
+}
+
 // SetGatewayID sets the "gateway_id" field.
 func (lpoc *LockPaymentOrderCreate) SetGatewayID(s string) *LockPaymentOrderCreate {
 	lpoc.mutation.SetGatewayID(s)
@@ -274,7 +288,9 @@ func (lpoc *LockPaymentOrderCreate) Mutation() *LockPaymentOrderMutation {
 
 // Save creates the LockPaymentOrder in the database.
 func (lpoc *LockPaymentOrderCreate) Save(ctx context.Context) (*LockPaymentOrder, error) {
-	lpoc.defaults()
+	if err := lpoc.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, lpoc.sqlSave, lpoc.mutation, lpoc.hooks)
 }
 
@@ -301,12 +317,18 @@ func (lpoc *LockPaymentOrderCreate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (lpoc *LockPaymentOrderCreate) defaults() {
+func (lpoc *LockPaymentOrderCreate) defaults() error {
 	if _, ok := lpoc.mutation.CreatedAt(); !ok {
+		if lockpaymentorder.DefaultCreatedAt == nil {
+			return fmt.Errorf("ent: uninitialized lockpaymentorder.DefaultCreatedAt (forgotten import ent/runtime?)")
+		}
 		v := lockpaymentorder.DefaultCreatedAt()
 		lpoc.mutation.SetCreatedAt(v)
 	}
 	if _, ok := lpoc.mutation.UpdatedAt(); !ok {
+		if lockpaymentorder.DefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized lockpaymentorder.DefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := lockpaymentorder.DefaultUpdatedAt()
 		lpoc.mutation.SetUpdatedAt(v)
 	}
@@ -323,9 +345,13 @@ func (lpoc *LockPaymentOrderCreate) defaults() {
 		lpoc.mutation.SetCancellationReasons(v)
 	}
 	if _, ok := lpoc.mutation.ID(); !ok {
+		if lockpaymentorder.DefaultID == nil {
+			return fmt.Errorf("ent: uninitialized lockpaymentorder.DefaultID (forgotten import ent/runtime?)")
+		}
 		v := lockpaymentorder.DefaultID()
 		lpoc.mutation.SetID(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -425,6 +451,10 @@ func (lpoc *LockPaymentOrderCreate) createSpec() (*LockPaymentOrder, *sqlgraph.C
 	if value, ok := lpoc.mutation.UpdatedAt(); ok {
 		_spec.SetField(lockpaymentorder.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if value, ok := lpoc.mutation.DeletedAt(); ok {
+		_spec.SetField(lockpaymentorder.FieldDeletedAt, field.TypeTime, value)
+		_node.DeletedAt = value
 	}
 	if value, ok := lpoc.mutation.GatewayID(); ok {
 		_spec.SetField(lockpaymentorder.FieldGatewayID, field.TypeString, value)
@@ -626,6 +656,24 @@ func (u *LockPaymentOrderUpsert) SetUpdatedAt(v time.Time) *LockPaymentOrderUpse
 // UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
 func (u *LockPaymentOrderUpsert) UpdateUpdatedAt() *LockPaymentOrderUpsert {
 	u.SetExcluded(lockpaymentorder.FieldUpdatedAt)
+	return u
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (u *LockPaymentOrderUpsert) SetDeletedAt(v time.Time) *LockPaymentOrderUpsert {
+	u.Set(lockpaymentorder.FieldDeletedAt, v)
+	return u
+}
+
+// UpdateDeletedAt sets the "deleted_at" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsert) UpdateDeletedAt() *LockPaymentOrderUpsert {
+	u.SetExcluded(lockpaymentorder.FieldDeletedAt)
+	return u
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (u *LockPaymentOrderUpsert) ClearDeletedAt() *LockPaymentOrderUpsert {
+	u.SetNull(lockpaymentorder.FieldDeletedAt)
 	return u
 }
 
@@ -907,6 +955,27 @@ func (u *LockPaymentOrderUpsertOne) SetUpdatedAt(v time.Time) *LockPaymentOrderU
 func (u *LockPaymentOrderUpsertOne) UpdateUpdatedAt() *LockPaymentOrderUpsertOne {
 	return u.Update(func(s *LockPaymentOrderUpsert) {
 		s.UpdateUpdatedAt()
+	})
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (u *LockPaymentOrderUpsertOne) SetDeletedAt(v time.Time) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetDeletedAt(v)
+	})
+}
+
+// UpdateDeletedAt sets the "deleted_at" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertOne) UpdateDeletedAt() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateDeletedAt()
+	})
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (u *LockPaymentOrderUpsertOne) ClearDeletedAt() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.ClearDeletedAt()
 	})
 }
 
@@ -1391,6 +1460,27 @@ func (u *LockPaymentOrderUpsertBulk) SetUpdatedAt(v time.Time) *LockPaymentOrder
 func (u *LockPaymentOrderUpsertBulk) UpdateUpdatedAt() *LockPaymentOrderUpsertBulk {
 	return u.Update(func(s *LockPaymentOrderUpsert) {
 		s.UpdateUpdatedAt()
+	})
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (u *LockPaymentOrderUpsertBulk) SetDeletedAt(v time.Time) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetDeletedAt(v)
+	})
+}
+
+// UpdateDeletedAt sets the "deleted_at" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertBulk) UpdateDeletedAt() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateDeletedAt()
+	})
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (u *LockPaymentOrderUpsertBulk) ClearDeletedAt() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.ClearDeletedAt()
 	})
 }
 

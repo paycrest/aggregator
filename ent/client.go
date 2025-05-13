@@ -1532,12 +1532,14 @@ func (c *LockPaymentOrderClient) QueryTransactions(lpo *LockPaymentOrder) *Trans
 
 // Hooks returns the client hooks.
 func (c *LockPaymentOrderClient) Hooks() []Hook {
-	return c.hooks.LockPaymentOrder
+	hooks := c.hooks.LockPaymentOrder
+	return append(hooks[:len(hooks):len(hooks)], lockpaymentorder.Hooks[:]...)
 }
 
 // Interceptors returns the client interceptors.
 func (c *LockPaymentOrderClient) Interceptors() []Interceptor {
-	return c.inters.LockPaymentOrder
+	inters := c.inters.LockPaymentOrder
+	return append(inters[:len(inters):len(inters)], lockpaymentorder.Interceptors[:]...)
 }
 
 func (c *LockPaymentOrderClient) mutate(ctx context.Context, m *LockPaymentOrderMutation) (Value, error) {
@@ -1910,12 +1912,14 @@ func (c *PaymentOrderClient) QueryTransactions(po *PaymentOrder) *TransactionLog
 
 // Hooks returns the client hooks.
 func (c *PaymentOrderClient) Hooks() []Hook {
-	return c.hooks.PaymentOrder
+	hooks := c.hooks.PaymentOrder
+	return append(hooks[:len(hooks):len(hooks)], paymentorder.Hooks[:]...)
 }
 
 // Interceptors returns the client interceptors.
 func (c *PaymentOrderClient) Interceptors() []Interceptor {
-	return c.inters.PaymentOrder
+	inters := c.inters.PaymentOrder
+	return append(inters[:len(inters):len(inters)], paymentorder.Interceptors[:]...)
 }
 
 func (c *PaymentOrderClient) mutate(ctx context.Context, m *PaymentOrderMutation) (Value, error) {
