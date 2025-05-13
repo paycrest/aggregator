@@ -528,17 +528,31 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 			continue
 		}
 
+		network := order.Token.Edges.Network
+		if network == nil {
+			network, err = order.Token.QueryNetwork().Only(ctx)
+			if err != nil {
+				continue
+			}
+		}
+
 		providerToken, err := storage.Client.ProviderOrderToken.
 			Query().
 			Where(
-				providerordertoken.HasTokenWith(token.SymbolEQ(order.Token.Symbol)),
-				providerordertoken.HasProviderWith(providerprofile.IDEQ(order.ProviderID)),
-				providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketCurrency.Code)),
+				providerordertoken.NetworkEQ(network.Identifier),
+				providerordertoken.HasProviderWith(
+					providerprofile.IDEQ(order.ProviderID),
+					providerprofile.IsAvailableEQ(true),
+				),
+				providerordertoken.HasTokenWith(token.IDEQ(order.Token.ID)),
+				providerordertoken.HasCurrencyWith(
+					fiatcurrency.CodeEQ(bucketCurrency.Code),
+				),
+				providerordertoken.AddressNEQ(""),
 			).
 			First(ctx)
 		if err != nil {
-			logger.Errorf("%s - failed to fetch provider token: %v", orderIDPrefix, err)
-			return err
+			continue
 		}
 
 		// Calculate allowed deviation based on slippage

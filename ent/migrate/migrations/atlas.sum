@@ -1,4 +1,4 @@
-h1:hnnyOKbXNW/QelAvcUjzbCnU9Hx9eh2Hy4BzpDa3L1E=
+h1:mbjYUn+9Ft6WqrWeZurNpG+pt3iyhucaGjJHe2+C+uI=
 20240118234246_initial.sql h1:dYuYBqns33WT+3p8VQvbKUP62k3k6w6h8S+FqNqgSvU=
 20240130122324_order_from_address.sql h1:mMVI2iBUd1roIYLUqu0d2jZ7+B6exppRN8qqn+aIHx4=
 20240202010744_fees_on_order.sql h1:P7ngxZKqDKefBM5vk6M3kbWeMPVwbZ4MZVcLBjEfS34=
@@ -51,3 +51,6 @@ h1:hnnyOKbXNW/QelAvcUjzbCnU9Hx9eh2Hy4BzpDa3L1E=
 20250311055352_multi_currency_schema_3.sql h1:1GH1Gy466XwQA12Gr4Nx81x+6MIBZKPDW2WzYrtL+fw=
 20250414215438_add_soft_delete_field.sql h1:IAX+38Myja6FoAGs8XcWwA3u7ozckQEp8Q/AEKwO2f8=
 20250425202927_rate_slippage.sql h1:+I0bp1gHMyiZ+vTvbX+y14Xq/bFTKPmr4LeSUWddYgc=
+20250505033200_tzs_bank_institutions.sql h1:kQHdkewxxx63Z5dMQJYsq5LPL1SaeBv8hGv84fpsLCQ=
+20250505033210_ugx_bank_institutions.sql h1:8ex3xOuruqqPQJbcR9rUNpPDHU4n8Q3URvUIXQ6oDDE=
+20250510231545_order_metadata.sql h1:BrHlYt3LvuYcnsw7b9xfzjg5U4D1RfPy+RusxRDj66k=

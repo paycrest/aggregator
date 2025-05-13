@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -32,6 +33,8 @@ type LinkedAddress struct {
 	AccountIdentifier string `json:"account_identifier,omitempty"`
 	// AccountName holds the value of the "account_name" field.
 	AccountName string `json:"account_name,omitempty"`
+	// Metadata holds the value of the "metadata" field.
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
 	// OwnerAddress holds the value of the "owner_address" field.
 	OwnerAddress string `json:"owner_address,omitempty"`
 	// LastIndexedBlock holds the value of the "last_indexed_block" field.
@@ -68,7 +71,7 @@ func (*LinkedAddress) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case linkedaddress.FieldSalt:
+		case linkedaddress.FieldSalt, linkedaddress.FieldMetadata:
 			values[i] = new([]byte)
 		case linkedaddress.FieldID, linkedaddress.FieldLastIndexedBlock:
 			values[i] = new(sql.NullInt64)
@@ -140,6 +143,14 @@ func (la *LinkedAddress) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field account_name", values[i])
 			} else if value.Valid {
 				la.AccountName = value.String
+			}
+		case linkedaddress.FieldMetadata:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field metadata", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &la.Metadata); err != nil {
+					return fmt.Errorf("unmarshal field metadata: %w", err)
+				}
 			}
 		case linkedaddress.FieldOwnerAddress:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -227,6 +238,9 @@ func (la *LinkedAddress) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("account_name=")
 	builder.WriteString(la.AccountName)
+	builder.WriteString(", ")
+	builder.WriteString("metadata=")
+	builder.WriteString(fmt.Sprintf("%v", la.Metadata))
 	builder.WriteString(", ")
 	builder.WriteString("owner_address=")
 	builder.WriteString(la.OwnerAddress)

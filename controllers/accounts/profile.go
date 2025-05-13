@@ -80,7 +80,7 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 	// save or update SenderOrderToken
 	tx, err := storage.Client.Tx(ctx)
 	if err != nil {
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile init", nil)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 		return
 	}
 
@@ -175,7 +175,7 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 						return
 					}
 				} else {
-					u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile err:", nil)
+					u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 					return
 				}
 
@@ -483,6 +483,11 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				return
 			}
 		} else {
+			// TODO: Remove when dashboard allows rate slippage to be set
+			if tokenPayload.RateSlippage.IsZero() && orderToken.RateSlippage.GreaterThan(decimal.NewFromFloat(0)) {
+				tokenPayload.RateSlippage = orderToken.RateSlippage
+			}
+
 			// Token exists, update it
 			_, err := orderToken.Update().
 				SetAddress(tokenPayload.Address).

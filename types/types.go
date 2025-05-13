@@ -101,6 +101,13 @@ type OrderService interface {
 	SettleOrder(ctx context.Context, client RPCClient, orderID uuid.UUID) error
 }
 
+// KYCProvider defines the interface for KYC verification providers
+type KYCProvider interface {
+	RequestVerification(ctx context.Context, req VerificationRequest) (*VerificationResponse, error)
+	CheckStatus(ctx context.Context, walletAddress string) (*VerificationStatus, error)
+	HandleWebhook(ctx context.Context, payload []byte) error
+}
+
 // CreateOrderParams is the parameters for the create order payload
 type CreateOrderParams struct {
 	Token              common.Address
@@ -110,6 +117,25 @@ type CreateOrderParams struct {
 	SenderFee          *big.Int
 	RefundAddress      common.Address
 	MessageHash        string
+}
+
+// VerificationRequest represents a generic KYC verification request
+type VerificationRequest struct {
+	WalletAddress string `json:"walletAddress"`
+	Signature     string `json:"signature"`
+	Nonce         string `json:"nonce"`
+}
+
+// VerificationResponse represents a generic KYC verification response
+type VerificationResponse struct {
+	URL       string    `json:"url"`
+	ExpiresAt time.Time `json:"expiresAt"`
+}
+
+// VerificationStatus represents the status of a KYC verification
+type VerificationStatus struct {
+	URL    string `json:"url"`
+	Status string `json:"status"`
 }
 
 // RegisterPayload is the payload for the register endpoint
@@ -318,6 +344,7 @@ type LockPaymentOrderFields struct {
 	AccountName       string
 	ProviderID        string
 	Memo              string
+	Metadata          map[string]interface{}
 	ProvisionBucket   *ent.ProvisionBucket
 	UpdatedAt         time.Time
 	CreatedAt         time.Time
@@ -382,13 +409,14 @@ type LockPaymentOrderStatusResponse struct {
 
 // PaymentOrderRecipient describes a payment order recipient
 type PaymentOrderRecipient struct {
-	Institution       string `json:"institution" binding:"required"`
-	AccountIdentifier string `json:"accountIdentifier" binding:"required"`
-	AccountName       string `json:"accountName" binding:"required"`
-	Memo              string `json:"memo" binding:"required"`
-	ProviderID        string `json:"providerId"`
-	Currency          string `json:"currency"`
-	Nonce             string `json:"nonce"`
+	Institution       string                 `json:"institution" binding:"required"`
+	AccountIdentifier string                 `json:"accountIdentifier" binding:"required"`
+	AccountName       string                 `json:"accountName" binding:"required"`
+	Memo              string                 `json:"memo" binding:"required"`
+	ProviderID        string                 `json:"providerId"`
+	Metadata          map[string]interface{} `json:"metadata"`
+	Currency          string                 `json:"currency"`
+	Nonce             string                 `json:"nonce"`
 }
 
 // NewPaymentOrderPayload is the payload for the create payment order endpoint

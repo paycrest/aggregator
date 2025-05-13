@@ -47,6 +47,8 @@ func (LockPaymentOrder) Fields() []ent.Field {
 		field.String("account_name"),
 		field.String("memo").
 			Optional(),
+		field.JSON("metadata", map[string]interface{}{}).
+			Optional(),
 		field.Int("cancellation_count").
 			Default(0),
 		field.Strings("cancellation_reasons").
