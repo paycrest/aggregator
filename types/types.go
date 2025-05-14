@@ -146,7 +146,7 @@ type RegisterPayload struct {
 	Password         string   `json:"password" binding:"required,min=6,max=20"`
 	Currencies       []string `json:"currencies"`
 	Scopes           []string `json:"scopes" binding:"required,dive,oneof=sender provider"`
-	MonthlyVolume    string   `json:"monthlyVolume"`
+	MonthlyVolume    string   `json:"monthlyVolume" binding:"required"`
 	BusinessWebsite  string   `json:"businessWebsite" binding:"omitempty,url"`
 	NatureOfBusiness string   `json:"natureOfBusiness" binding:"omitempty,max=255"`
 }

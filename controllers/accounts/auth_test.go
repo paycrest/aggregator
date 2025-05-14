@@ -105,7 +105,7 @@ func TestAuth(t *testing.T) {
 				Password:         "password",
 				Currencies:       []string{"NGN"},
 				Scopes:           []string{"sender", "provider"},
-				MonthlyVolume:    "10000",
+				MonthlyVolume:    "10k-50k",
 				BusinessWebsite:  "https://example.com",
 				NatureOfBusiness: "Example business",
 			}
@@ -175,7 +175,7 @@ func TestAuth(t *testing.T) {
 				Email:            "ikeayo1@example.com",
 				Password:         "password1",
 				Scopes:           []string{"sender"},
-				MonthlyVolume:    "10000",
+				MonthlyVolume:    "10k",
 				BusinessWebsite:  "https://example.com",
 				NatureOfBusiness: "Example business",
 			}
@@ -237,7 +237,7 @@ func TestAuth(t *testing.T) {
 				Password:      "password2",
 				Currencies:    []string{"NGN"},
 				Scopes:        []string{"provider"},
-				MonthlyVolume: "10000",
+				MonthlyVolume: "50k-100k",
 			}
 
 			header := map[string]string{
@@ -321,7 +321,7 @@ func TestAuth(t *testing.T) {
 				Email:            "ikeayo6@example.com",
 				Password:         "password",
 				Scopes:           []string{"sender"},
-				MonthlyVolume:    "10000",
+				MonthlyVolume:    "10k",
 				BusinessWebsite:  "https://example.com",
 				NatureOfBusiness: longDescription,
 			}
@@ -355,7 +355,7 @@ func TestAuth(t *testing.T) {
 				Email:            "ikeayo5@example.com",
 				Password:         "password",
 				Scopes:           []string{"sender"},
-				MonthlyVolume:    "10000",
+				MonthlyVolume:    "10k",
 				BusinessWebsite:  "invalid-url",
 				NatureOfBusiness: "Example business",
 			}
@@ -392,7 +392,7 @@ func TestAuth(t *testing.T) {
 				Password:      "password",
 				Currencies:    []string{"NGN", "KES"},
 				Scopes:        []string{"provider"},
-				MonthlyVolume: "10000",
+				MonthlyVolume: "100k",
 			}
 
 			headers := map[string]string{
@@ -457,6 +457,7 @@ func TestAuth(t *testing.T) {
 				Email:         "ikeayo@example.com",
 				Password:      "password",
 				Scopes:        []string{"sender"},
+				MonthlyVolume: "100k",
 			}
 
 			res, err := test.PerformRequest(t, "POST", "/register", payload, nil, router)
@@ -475,11 +476,12 @@ func TestAuth(t *testing.T) {
 		t.Run("with invalid email", func(t *testing.T) {
 			// Test register with invalid email
 			payload := types.RegisterPayload{
-				FirstName: "Ike",
-				LastName:  "Ayo",
-				Email:     "invalid-email",
-				Password:  "password",
-				Scopes:    []string{"sender"},
+				FirstName:     "Ike",
+				LastName:      "Ayo",
+				Email:         "invalid-email",
+				Password:      "password",
+				Scopes:        []string{"sender"},
+				MonthlyVolume: "100k",
 			}
 
 			res, err := test.PerformRequest(t, "POST", "/register", payload, nil, router)
@@ -511,11 +513,12 @@ func TestAuth(t *testing.T) {
 		t.Run("with invalid scope", func(t *testing.T) {
 			// Test register with invalid email
 			payload := types.RegisterPayload{
-				FirstName: "Ike",
-				LastName:  "Ayo",
-				Email:     "ikeayovalidator@example.com",
-				Password:  "password",
-				Scopes:    []string{"validator"},
+				FirstName:     "Ike",
+				LastName:      "Ayo",
+				Email:         "ikeayovalidator@example.com",
+				Password:      "password",
+				Scopes:        []string{"validator"},
+				MonthlyVolume: "100k",
 			}
 
 			res, err := test.PerformRequest(t, "POST", "/register", payload, nil, router)
