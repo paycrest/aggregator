@@ -227,20 +227,6 @@ func (ppc *ProviderProfileCreate) SetNillableBusinessDocument(s *string) *Provid
 	return ppc
 }
 
-// SetIsKybVerified sets the "is_kyb_verified" field.
-func (ppc *ProviderProfileCreate) SetIsKybVerified(b bool) *ProviderProfileCreate {
-	ppc.mutation.SetIsKybVerified(b)
-	return ppc
-}
-
-// SetNillableIsKybVerified sets the "is_kyb_verified" field if the given value is not nil.
-func (ppc *ProviderProfileCreate) SetNillableIsKybVerified(b *bool) *ProviderProfileCreate {
-	if b != nil {
-		ppc.SetIsKybVerified(*b)
-	}
-	return ppc
-}
-
 // SetMonthlyVolume sets the "monthly_volume" field.
 func (ppc *ProviderProfileCreate) SetMonthlyVolume(s string) *ProviderProfileCreate {
 	ppc.mutation.SetMonthlyVolume(s)
@@ -251,6 +237,20 @@ func (ppc *ProviderProfileCreate) SetMonthlyVolume(s string) *ProviderProfileCre
 func (ppc *ProviderProfileCreate) SetNillableMonthlyVolume(s *string) *ProviderProfileCreate {
 	if s != nil {
 		ppc.SetMonthlyVolume(*s)
+	}
+	return ppc
+}
+
+// SetIsKybVerified sets the "is_kyb_verified" field.
+func (ppc *ProviderProfileCreate) SetIsKybVerified(b bool) *ProviderProfileCreate {
+	ppc.mutation.SetIsKybVerified(b)
+	return ppc
+}
+
+// SetNillableIsKybVerified sets the "is_kyb_verified" field if the given value is not nil.
+func (ppc *ProviderProfileCreate) SetNillableIsKybVerified(b *bool) *ProviderProfileCreate {
+	if b != nil {
+		ppc.SetIsKybVerified(*b)
 	}
 	return ppc
 }
@@ -581,13 +581,13 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 		_spec.SetField(providerprofile.FieldBusinessDocument, field.TypeString, value)
 		_node.BusinessDocument = value
 	}
+	if value, ok := ppc.mutation.MonthlyVolume(); ok {
+		_spec.SetField(providerprofile.FieldMonthlyVolume, field.TypeString, value)
+		_node.MonthlyVolume = value
+	}
 	if value, ok := ppc.mutation.IsKybVerified(); ok {
 		_spec.SetField(providerprofile.FieldIsKybVerified, field.TypeBool, value)
 		_node.IsKybVerified = value
-	}
-	if value, ok := ppc.mutation.MonthlyVolume(); ok {
-		_spec.SetField(providerprofile.FieldMonthlyVolume, field.TypeString, value)
-		_node.MonthlyVolume = &value
 	}
 	if nodes := ppc.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -976,18 +976,6 @@ func (u *ProviderProfileUpsert) ClearBusinessDocument() *ProviderProfileUpsert {
 	return u
 }
 
-// SetIsKybVerified sets the "is_kyb_verified" field.
-func (u *ProviderProfileUpsert) SetIsKybVerified(v bool) *ProviderProfileUpsert {
-	u.Set(providerprofile.FieldIsKybVerified, v)
-	return u
-}
-
-// UpdateIsKybVerified sets the "is_kyb_verified" field to the value that was provided on create.
-func (u *ProviderProfileUpsert) UpdateIsKybVerified() *ProviderProfileUpsert {
-	u.SetExcluded(providerprofile.FieldIsKybVerified)
-	return u
-}
-
 // SetMonthlyVolume sets the "monthly_volume" field.
 func (u *ProviderProfileUpsert) SetMonthlyVolume(v string) *ProviderProfileUpsert {
 	u.Set(providerprofile.FieldMonthlyVolume, v)
@@ -1003,6 +991,18 @@ func (u *ProviderProfileUpsert) UpdateMonthlyVolume() *ProviderProfileUpsert {
 // ClearMonthlyVolume clears the value of the "monthly_volume" field.
 func (u *ProviderProfileUpsert) ClearMonthlyVolume() *ProviderProfileUpsert {
 	u.SetNull(providerprofile.FieldMonthlyVolume)
+	return u
+}
+
+// SetIsKybVerified sets the "is_kyb_verified" field.
+func (u *ProviderProfileUpsert) SetIsKybVerified(v bool) *ProviderProfileUpsert {
+	u.Set(providerprofile.FieldIsKybVerified, v)
+	return u
+}
+
+// UpdateIsKybVerified sets the "is_kyb_verified" field to the value that was provided on create.
+func (u *ProviderProfileUpsert) UpdateIsKybVerified() *ProviderProfileUpsert {
+	u.SetExcluded(providerprofile.FieldIsKybVerified)
 	return u
 }
 
@@ -1313,20 +1313,6 @@ func (u *ProviderProfileUpsertOne) ClearBusinessDocument() *ProviderProfileUpser
 	})
 }
 
-// SetIsKybVerified sets the "is_kyb_verified" field.
-func (u *ProviderProfileUpsertOne) SetIsKybVerified(v bool) *ProviderProfileUpsertOne {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.SetIsKybVerified(v)
-	})
-}
-
-// UpdateIsKybVerified sets the "is_kyb_verified" field to the value that was provided on create.
-func (u *ProviderProfileUpsertOne) UpdateIsKybVerified() *ProviderProfileUpsertOne {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.UpdateIsKybVerified()
-	})
-}
-
 // SetMonthlyVolume sets the "monthly_volume" field.
 func (u *ProviderProfileUpsertOne) SetMonthlyVolume(v string) *ProviderProfileUpsertOne {
 	return u.Update(func(s *ProviderProfileUpsert) {
@@ -1345,6 +1331,20 @@ func (u *ProviderProfileUpsertOne) UpdateMonthlyVolume() *ProviderProfileUpsertO
 func (u *ProviderProfileUpsertOne) ClearMonthlyVolume() *ProviderProfileUpsertOne {
 	return u.Update(func(s *ProviderProfileUpsert) {
 		s.ClearMonthlyVolume()
+	})
+}
+
+// SetIsKybVerified sets the "is_kyb_verified" field.
+func (u *ProviderProfileUpsertOne) SetIsKybVerified(v bool) *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetIsKybVerified(v)
+	})
+}
+
+// UpdateIsKybVerified sets the "is_kyb_verified" field to the value that was provided on create.
+func (u *ProviderProfileUpsertOne) UpdateIsKybVerified() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateIsKybVerified()
 	})
 }
 
@@ -1822,20 +1822,6 @@ func (u *ProviderProfileUpsertBulk) ClearBusinessDocument() *ProviderProfileUpse
 	})
 }
 
-// SetIsKybVerified sets the "is_kyb_verified" field.
-func (u *ProviderProfileUpsertBulk) SetIsKybVerified(v bool) *ProviderProfileUpsertBulk {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.SetIsKybVerified(v)
-	})
-}
-
-// UpdateIsKybVerified sets the "is_kyb_verified" field to the value that was provided on create.
-func (u *ProviderProfileUpsertBulk) UpdateIsKybVerified() *ProviderProfileUpsertBulk {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.UpdateIsKybVerified()
-	})
-}
-
 // SetMonthlyVolume sets the "monthly_volume" field.
 func (u *ProviderProfileUpsertBulk) SetMonthlyVolume(v string) *ProviderProfileUpsertBulk {
 	return u.Update(func(s *ProviderProfileUpsert) {
@@ -1854,6 +1840,20 @@ func (u *ProviderProfileUpsertBulk) UpdateMonthlyVolume() *ProviderProfileUpsert
 func (u *ProviderProfileUpsertBulk) ClearMonthlyVolume() *ProviderProfileUpsertBulk {
 	return u.Update(func(s *ProviderProfileUpsert) {
 		s.ClearMonthlyVolume()
+	})
+}
+
+// SetIsKybVerified sets the "is_kyb_verified" field.
+func (u *ProviderProfileUpsertBulk) SetIsKybVerified(v bool) *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetIsKybVerified(v)
+	})
+}
+
+// UpdateIsKybVerified sets the "is_kyb_verified" field to the value that was provided on create.
+func (u *ProviderProfileUpsertBulk) UpdateIsKybVerified() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateIsKybVerified()
 	})
 }
 

@@ -66,21 +66,6 @@ func ProviderID(v string) predicate.SenderProfile {
 	return predicate.SenderProfile(sql.FieldEQ(FieldProviderID, v))
 }
 
-// IsPartner applies equality check predicate on the "is_partner" field. It's identical to IsPartnerEQ.
-func IsPartner(v bool) predicate.SenderProfile {
-	return predicate.SenderProfile(sql.FieldEQ(FieldIsPartner, v))
-}
-
-// IsActive applies equality check predicate on the "is_active" field. It's identical to IsActiveEQ.
-func IsActive(v bool) predicate.SenderProfile {
-	return predicate.SenderProfile(sql.FieldEQ(FieldIsActive, v))
-}
-
-// UpdatedAt applies equality check predicate on the "updated_at" field. It's identical to UpdatedAtEQ.
-func UpdatedAt(v time.Time) predicate.SenderProfile {
-	return predicate.SenderProfile(sql.FieldEQ(FieldUpdatedAt, v))
-}
-
 // MonthlyVolume applies equality check predicate on the "monthly_volume" field. It's identical to MonthlyVolumeEQ.
 func MonthlyVolume(v string) predicate.SenderProfile {
 	return predicate.SenderProfile(sql.FieldEQ(FieldMonthlyVolume, v))
@@ -94,6 +79,21 @@ func BusinessWebsite(v string) predicate.SenderProfile {
 // NatureOfBusiness applies equality check predicate on the "nature_of_business" field. It's identical to NatureOfBusinessEQ.
 func NatureOfBusiness(v string) predicate.SenderProfile {
 	return predicate.SenderProfile(sql.FieldEQ(FieldNatureOfBusiness, v))
+}
+
+// IsPartner applies equality check predicate on the "is_partner" field. It's identical to IsPartnerEQ.
+func IsPartner(v bool) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldEQ(FieldIsPartner, v))
+}
+
+// IsActive applies equality check predicate on the "is_active" field. It's identical to IsActiveEQ.
+func IsActive(v bool) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldEQ(FieldIsActive, v))
+}
+
+// UpdatedAt applies equality check predicate on the "updated_at" field. It's identical to UpdatedAtEQ.
+func UpdatedAt(v time.Time) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldEQ(FieldUpdatedAt, v))
 }
 
 // WebhookURLEQ applies the EQ predicate on the "webhook_url" field.
@@ -244,66 +244,6 @@ func ProviderIDEqualFold(v string) predicate.SenderProfile {
 // ProviderIDContainsFold applies the ContainsFold predicate on the "provider_id" field.
 func ProviderIDContainsFold(v string) predicate.SenderProfile {
 	return predicate.SenderProfile(sql.FieldContainsFold(FieldProviderID, v))
-}
-
-// IsPartnerEQ applies the EQ predicate on the "is_partner" field.
-func IsPartnerEQ(v bool) predicate.SenderProfile {
-	return predicate.SenderProfile(sql.FieldEQ(FieldIsPartner, v))
-}
-
-// IsPartnerNEQ applies the NEQ predicate on the "is_partner" field.
-func IsPartnerNEQ(v bool) predicate.SenderProfile {
-	return predicate.SenderProfile(sql.FieldNEQ(FieldIsPartner, v))
-}
-
-// IsActiveEQ applies the EQ predicate on the "is_active" field.
-func IsActiveEQ(v bool) predicate.SenderProfile {
-	return predicate.SenderProfile(sql.FieldEQ(FieldIsActive, v))
-}
-
-// IsActiveNEQ applies the NEQ predicate on the "is_active" field.
-func IsActiveNEQ(v bool) predicate.SenderProfile {
-	return predicate.SenderProfile(sql.FieldNEQ(FieldIsActive, v))
-}
-
-// UpdatedAtEQ applies the EQ predicate on the "updated_at" field.
-func UpdatedAtEQ(v time.Time) predicate.SenderProfile {
-	return predicate.SenderProfile(sql.FieldEQ(FieldUpdatedAt, v))
-}
-
-// UpdatedAtNEQ applies the NEQ predicate on the "updated_at" field.
-func UpdatedAtNEQ(v time.Time) predicate.SenderProfile {
-	return predicate.SenderProfile(sql.FieldNEQ(FieldUpdatedAt, v))
-}
-
-// UpdatedAtIn applies the In predicate on the "updated_at" field.
-func UpdatedAtIn(vs ...time.Time) predicate.SenderProfile {
-	return predicate.SenderProfile(sql.FieldIn(FieldUpdatedAt, vs...))
-}
-
-// UpdatedAtNotIn applies the NotIn predicate on the "updated_at" field.
-func UpdatedAtNotIn(vs ...time.Time) predicate.SenderProfile {
-	return predicate.SenderProfile(sql.FieldNotIn(FieldUpdatedAt, vs...))
-}
-
-// UpdatedAtGT applies the GT predicate on the "updated_at" field.
-func UpdatedAtGT(v time.Time) predicate.SenderProfile {
-	return predicate.SenderProfile(sql.FieldGT(FieldUpdatedAt, v))
-}
-
-// UpdatedAtGTE applies the GTE predicate on the "updated_at" field.
-func UpdatedAtGTE(v time.Time) predicate.SenderProfile {
-	return predicate.SenderProfile(sql.FieldGTE(FieldUpdatedAt, v))
-}
-
-// UpdatedAtLT applies the LT predicate on the "updated_at" field.
-func UpdatedAtLT(v time.Time) predicate.SenderProfile {
-	return predicate.SenderProfile(sql.FieldLT(FieldUpdatedAt, v))
-}
-
-// UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
-func UpdatedAtLTE(v time.Time) predicate.SenderProfile {
-	return predicate.SenderProfile(sql.FieldLTE(FieldUpdatedAt, v))
 }
 
 // MonthlyVolumeEQ applies the EQ predicate on the "monthly_volume" field.
@@ -529,6 +469,66 @@ func NatureOfBusinessEqualFold(v string) predicate.SenderProfile {
 // NatureOfBusinessContainsFold applies the ContainsFold predicate on the "nature_of_business" field.
 func NatureOfBusinessContainsFold(v string) predicate.SenderProfile {
 	return predicate.SenderProfile(sql.FieldContainsFold(FieldNatureOfBusiness, v))
+}
+
+// IsPartnerEQ applies the EQ predicate on the "is_partner" field.
+func IsPartnerEQ(v bool) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldEQ(FieldIsPartner, v))
+}
+
+// IsPartnerNEQ applies the NEQ predicate on the "is_partner" field.
+func IsPartnerNEQ(v bool) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldNEQ(FieldIsPartner, v))
+}
+
+// IsActiveEQ applies the EQ predicate on the "is_active" field.
+func IsActiveEQ(v bool) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldEQ(FieldIsActive, v))
+}
+
+// IsActiveNEQ applies the NEQ predicate on the "is_active" field.
+func IsActiveNEQ(v bool) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldNEQ(FieldIsActive, v))
+}
+
+// UpdatedAtEQ applies the EQ predicate on the "updated_at" field.
+func UpdatedAtEQ(v time.Time) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldEQ(FieldUpdatedAt, v))
+}
+
+// UpdatedAtNEQ applies the NEQ predicate on the "updated_at" field.
+func UpdatedAtNEQ(v time.Time) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldNEQ(FieldUpdatedAt, v))
+}
+
+// UpdatedAtIn applies the In predicate on the "updated_at" field.
+func UpdatedAtIn(vs ...time.Time) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldIn(FieldUpdatedAt, vs...))
+}
+
+// UpdatedAtNotIn applies the NotIn predicate on the "updated_at" field.
+func UpdatedAtNotIn(vs ...time.Time) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldNotIn(FieldUpdatedAt, vs...))
+}
+
+// UpdatedAtGT applies the GT predicate on the "updated_at" field.
+func UpdatedAtGT(v time.Time) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldGT(FieldUpdatedAt, v))
+}
+
+// UpdatedAtGTE applies the GTE predicate on the "updated_at" field.
+func UpdatedAtGTE(v time.Time) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldGTE(FieldUpdatedAt, v))
+}
+
+// UpdatedAtLT applies the LT predicate on the "updated_at" field.
+func UpdatedAtLT(v time.Time) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldLT(FieldUpdatedAt, v))
+}
+
+// UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
+func UpdatedAtLTE(v time.Time) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldLTE(FieldUpdatedAt, v))
 }
 
 // HasUser applies the HasEdge predicate on the "user" edge.

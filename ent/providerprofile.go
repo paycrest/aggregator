@@ -49,10 +49,10 @@ type ProviderProfile struct {
 	IdentityDocument string `json:"identity_document,omitempty"`
 	// BusinessDocument holds the value of the "business_document" field.
 	BusinessDocument string `json:"business_document,omitempty"`
+	// MonthlyVolume holds the value of the "monthly_volume" field.
+	MonthlyVolume string `json:"monthly_volume,omitempty"`
 	// IsKybVerified holds the value of the "is_kyb_verified" field.
 	IsKybVerified bool `json:"is_kyb_verified,omitempty"`
-	// Monthly transaction volume for the provider
-	MonthlyVolume *string `json:"monthly_volume,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ProviderProfileQuery when eager-loading is set.
 	Edges                 ProviderProfileEdges `json:"edges"`
@@ -268,18 +268,17 @@ func (pp *ProviderProfile) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				pp.BusinessDocument = value.String
 			}
+		case providerprofile.FieldMonthlyVolume:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field monthly_volume", values[i])
+			} else if value.Valid {
+				pp.MonthlyVolume = value.String
+			}
 		case providerprofile.FieldIsKybVerified:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field is_kyb_verified", values[i])
 			} else if value.Valid {
 				pp.IsKybVerified = value.Bool
-			}
-		case providerprofile.FieldMonthlyVolume:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field monthly_volume", values[i])
-			} else if value.Valid {
-				pp.MonthlyVolume = new(string)
-				*pp.MonthlyVolume = value.String
 			}
 		case providerprofile.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -401,13 +400,11 @@ func (pp *ProviderProfile) String() string {
 	builder.WriteString("business_document=")
 	builder.WriteString(pp.BusinessDocument)
 	builder.WriteString(", ")
+	builder.WriteString("monthly_volume=")
+	builder.WriteString(pp.MonthlyVolume)
+	builder.WriteString(", ")
 	builder.WriteString("is_kyb_verified=")
 	builder.WriteString(fmt.Sprintf("%v", pp.IsKybVerified))
-	builder.WriteString(", ")
-	if v := pp.MonthlyVolume; v != nil {
-		builder.WriteString("monthly_volume=")
-		builder.WriteString(*v)
-	}
 	builder.WriteByte(')')
 	return builder.String()
 }

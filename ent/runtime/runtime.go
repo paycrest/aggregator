@@ -281,7 +281,7 @@ func init() {
 	// providerprofile.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	providerprofile.UpdateDefaultUpdatedAt = providerprofileDescUpdatedAt.UpdateDefault.(func() time.Time)
 	// providerprofileDescIsKybVerified is the schema descriptor for is_kyb_verified field.
-	providerprofileDescIsKybVerified := providerprofileFields[15].Descriptor()
+	providerprofileDescIsKybVerified := providerprofileFields[16].Descriptor()
 	// providerprofile.DefaultIsKybVerified holds the default value on creation for the is_kyb_verified field.
 	providerprofile.DefaultIsKybVerified = providerprofileDescIsKybVerified.Default.(bool)
 	// providerprofileDescID is the schema descriptor for id field.
@@ -357,28 +357,28 @@ func init() {
 	senderprofileDescDomainWhitelist := senderprofileFields[2].Descriptor()
 	// senderprofile.DefaultDomainWhitelist holds the default value on creation for the domain_whitelist field.
 	senderprofile.DefaultDomainWhitelist = senderprofileDescDomainWhitelist.Default.([]string)
+	// senderprofileDescBusinessWebsite is the schema descriptor for business_website field.
+	senderprofileDescBusinessWebsite := senderprofileFields[5].Descriptor()
+	// senderprofile.BusinessWebsiteValidator is a validator for the "business_website" field. It is called by the builders before save.
+	senderprofile.BusinessWebsiteValidator = senderprofileDescBusinessWebsite.Validators[0].(func(string) error)
+	// senderprofileDescNatureOfBusiness is the schema descriptor for nature_of_business field.
+	senderprofileDescNatureOfBusiness := senderprofileFields[6].Descriptor()
+	// senderprofile.NatureOfBusinessValidator is a validator for the "nature_of_business" field. It is called by the builders before save.
+	senderprofile.NatureOfBusinessValidator = senderprofileDescNatureOfBusiness.Validators[0].(func(string) error)
 	// senderprofileDescIsPartner is the schema descriptor for is_partner field.
-	senderprofileDescIsPartner := senderprofileFields[4].Descriptor()
+	senderprofileDescIsPartner := senderprofileFields[7].Descriptor()
 	// senderprofile.DefaultIsPartner holds the default value on creation for the is_partner field.
 	senderprofile.DefaultIsPartner = senderprofileDescIsPartner.Default.(bool)
 	// senderprofileDescIsActive is the schema descriptor for is_active field.
-	senderprofileDescIsActive := senderprofileFields[5].Descriptor()
+	senderprofileDescIsActive := senderprofileFields[8].Descriptor()
 	// senderprofile.DefaultIsActive holds the default value on creation for the is_active field.
 	senderprofile.DefaultIsActive = senderprofileDescIsActive.Default.(bool)
 	// senderprofileDescUpdatedAt is the schema descriptor for updated_at field.
-	senderprofileDescUpdatedAt := senderprofileFields[6].Descriptor()
+	senderprofileDescUpdatedAt := senderprofileFields[9].Descriptor()
 	// senderprofile.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	senderprofile.DefaultUpdatedAt = senderprofileDescUpdatedAt.Default.(func() time.Time)
 	// senderprofile.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	senderprofile.UpdateDefaultUpdatedAt = senderprofileDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// senderprofileDescBusinessWebsite is the schema descriptor for business_website field.
-	senderprofileDescBusinessWebsite := senderprofileFields[8].Descriptor()
-	// senderprofile.BusinessWebsiteValidator is a validator for the "business_website" field. It is called by the builders before save.
-	senderprofile.BusinessWebsiteValidator = senderprofileDescBusinessWebsite.Validators[0].(func(string) error)
-	// senderprofileDescNatureOfBusiness is the schema descriptor for nature_of_business field.
-	senderprofileDescNatureOfBusiness := senderprofileFields[9].Descriptor()
-	// senderprofile.NatureOfBusinessValidator is a validator for the "nature_of_business" field. It is called by the builders before save.
-	senderprofile.NatureOfBusinessValidator = senderprofileDescNatureOfBusiness.Validators[0].(func(string) error)
 	// senderprofileDescID is the schema descriptor for id field.
 	senderprofileDescID := senderprofileFields[0].Descriptor()
 	// senderprofile.DefaultID holds the default value on creation for the id field.

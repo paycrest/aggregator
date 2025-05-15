@@ -277,20 +277,6 @@ func (ppu *ProviderProfileUpdate) ClearBusinessDocument() *ProviderProfileUpdate
 	return ppu
 }
 
-// SetIsKybVerified sets the "is_kyb_verified" field.
-func (ppu *ProviderProfileUpdate) SetIsKybVerified(b bool) *ProviderProfileUpdate {
-	ppu.mutation.SetIsKybVerified(b)
-	return ppu
-}
-
-// SetNillableIsKybVerified sets the "is_kyb_verified" field if the given value is not nil.
-func (ppu *ProviderProfileUpdate) SetNillableIsKybVerified(b *bool) *ProviderProfileUpdate {
-	if b != nil {
-		ppu.SetIsKybVerified(*b)
-	}
-	return ppu
-}
-
 // SetMonthlyVolume sets the "monthly_volume" field.
 func (ppu *ProviderProfileUpdate) SetMonthlyVolume(s string) *ProviderProfileUpdate {
 	ppu.mutation.SetMonthlyVolume(s)
@@ -308,6 +294,20 @@ func (ppu *ProviderProfileUpdate) SetNillableMonthlyVolume(s *string) *ProviderP
 // ClearMonthlyVolume clears the value of the "monthly_volume" field.
 func (ppu *ProviderProfileUpdate) ClearMonthlyVolume() *ProviderProfileUpdate {
 	ppu.mutation.ClearMonthlyVolume()
+	return ppu
+}
+
+// SetIsKybVerified sets the "is_kyb_verified" field.
+func (ppu *ProviderProfileUpdate) SetIsKybVerified(b bool) *ProviderProfileUpdate {
+	ppu.mutation.SetIsKybVerified(b)
+	return ppu
+}
+
+// SetNillableIsKybVerified sets the "is_kyb_verified" field if the given value is not nil.
+func (ppu *ProviderProfileUpdate) SetNillableIsKybVerified(b *bool) *ProviderProfileUpdate {
+	if b != nil {
+		ppu.SetIsKybVerified(*b)
+	}
 	return ppu
 }
 
@@ -655,14 +655,14 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 	if ppu.mutation.BusinessDocumentCleared() {
 		_spec.ClearField(providerprofile.FieldBusinessDocument, field.TypeString)
 	}
-	if value, ok := ppu.mutation.IsKybVerified(); ok {
-		_spec.SetField(providerprofile.FieldIsKybVerified, field.TypeBool, value)
-	}
 	if value, ok := ppu.mutation.MonthlyVolume(); ok {
 		_spec.SetField(providerprofile.FieldMonthlyVolume, field.TypeString, value)
 	}
 	if ppu.mutation.MonthlyVolumeCleared() {
 		_spec.ClearField(providerprofile.FieldMonthlyVolume, field.TypeString)
+	}
+	if value, ok := ppu.mutation.IsKybVerified(); ok {
+		_spec.SetField(providerprofile.FieldIsKybVerified, field.TypeBool, value)
 	}
 	if ppu.mutation.APIKeyCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1164,20 +1164,6 @@ func (ppuo *ProviderProfileUpdateOne) ClearBusinessDocument() *ProviderProfileUp
 	return ppuo
 }
 
-// SetIsKybVerified sets the "is_kyb_verified" field.
-func (ppuo *ProviderProfileUpdateOne) SetIsKybVerified(b bool) *ProviderProfileUpdateOne {
-	ppuo.mutation.SetIsKybVerified(b)
-	return ppuo
-}
-
-// SetNillableIsKybVerified sets the "is_kyb_verified" field if the given value is not nil.
-func (ppuo *ProviderProfileUpdateOne) SetNillableIsKybVerified(b *bool) *ProviderProfileUpdateOne {
-	if b != nil {
-		ppuo.SetIsKybVerified(*b)
-	}
-	return ppuo
-}
-
 // SetMonthlyVolume sets the "monthly_volume" field.
 func (ppuo *ProviderProfileUpdateOne) SetMonthlyVolume(s string) *ProviderProfileUpdateOne {
 	ppuo.mutation.SetMonthlyVolume(s)
@@ -1195,6 +1181,20 @@ func (ppuo *ProviderProfileUpdateOne) SetNillableMonthlyVolume(s *string) *Provi
 // ClearMonthlyVolume clears the value of the "monthly_volume" field.
 func (ppuo *ProviderProfileUpdateOne) ClearMonthlyVolume() *ProviderProfileUpdateOne {
 	ppuo.mutation.ClearMonthlyVolume()
+	return ppuo
+}
+
+// SetIsKybVerified sets the "is_kyb_verified" field.
+func (ppuo *ProviderProfileUpdateOne) SetIsKybVerified(b bool) *ProviderProfileUpdateOne {
+	ppuo.mutation.SetIsKybVerified(b)
+	return ppuo
+}
+
+// SetNillableIsKybVerified sets the "is_kyb_verified" field if the given value is not nil.
+func (ppuo *ProviderProfileUpdateOne) SetNillableIsKybVerified(b *bool) *ProviderProfileUpdateOne {
+	if b != nil {
+		ppuo.SetIsKybVerified(*b)
+	}
 	return ppuo
 }
 
@@ -1572,14 +1572,14 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 	if ppuo.mutation.BusinessDocumentCleared() {
 		_spec.ClearField(providerprofile.FieldBusinessDocument, field.TypeString)
 	}
-	if value, ok := ppuo.mutation.IsKybVerified(); ok {
-		_spec.SetField(providerprofile.FieldIsKybVerified, field.TypeBool, value)
-	}
 	if value, ok := ppuo.mutation.MonthlyVolume(); ok {
 		_spec.SetField(providerprofile.FieldMonthlyVolume, field.TypeString, value)
 	}
 	if ppuo.mutation.MonthlyVolumeCleared() {
 		_spec.ClearField(providerprofile.FieldMonthlyVolume, field.TypeString)
+	}
+	if value, ok := ppuo.mutation.IsKybVerified(); ok {
+		_spec.SetField(providerprofile.FieldIsKybVerified, field.TypeBool, value)
 	}
 	if ppuo.mutation.APIKeyCleared() {
 		edge := &sqlgraph.EdgeSpec{

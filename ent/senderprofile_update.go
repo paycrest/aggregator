@@ -86,40 +86,6 @@ func (spu *SenderProfileUpdate) ClearProviderID() *SenderProfileUpdate {
 	return spu
 }
 
-// SetIsPartner sets the "is_partner" field.
-func (spu *SenderProfileUpdate) SetIsPartner(b bool) *SenderProfileUpdate {
-	spu.mutation.SetIsPartner(b)
-	return spu
-}
-
-// SetNillableIsPartner sets the "is_partner" field if the given value is not nil.
-func (spu *SenderProfileUpdate) SetNillableIsPartner(b *bool) *SenderProfileUpdate {
-	if b != nil {
-		spu.SetIsPartner(*b)
-	}
-	return spu
-}
-
-// SetIsActive sets the "is_active" field.
-func (spu *SenderProfileUpdate) SetIsActive(b bool) *SenderProfileUpdate {
-	spu.mutation.SetIsActive(b)
-	return spu
-}
-
-// SetNillableIsActive sets the "is_active" field if the given value is not nil.
-func (spu *SenderProfileUpdate) SetNillableIsActive(b *bool) *SenderProfileUpdate {
-	if b != nil {
-		spu.SetIsActive(*b)
-	}
-	return spu
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (spu *SenderProfileUpdate) SetUpdatedAt(t time.Time) *SenderProfileUpdate {
-	spu.mutation.SetUpdatedAt(t)
-	return spu
-}
-
 // SetMonthlyVolume sets the "monthly_volume" field.
 func (spu *SenderProfileUpdate) SetMonthlyVolume(s string) *SenderProfileUpdate {
 	spu.mutation.SetMonthlyVolume(s)
@@ -177,6 +143,40 @@ func (spu *SenderProfileUpdate) SetNillableNatureOfBusiness(s *string) *SenderPr
 // ClearNatureOfBusiness clears the value of the "nature_of_business" field.
 func (spu *SenderProfileUpdate) ClearNatureOfBusiness() *SenderProfileUpdate {
 	spu.mutation.ClearNatureOfBusiness()
+	return spu
+}
+
+// SetIsPartner sets the "is_partner" field.
+func (spu *SenderProfileUpdate) SetIsPartner(b bool) *SenderProfileUpdate {
+	spu.mutation.SetIsPartner(b)
+	return spu
+}
+
+// SetNillableIsPartner sets the "is_partner" field if the given value is not nil.
+func (spu *SenderProfileUpdate) SetNillableIsPartner(b *bool) *SenderProfileUpdate {
+	if b != nil {
+		spu.SetIsPartner(*b)
+	}
+	return spu
+}
+
+// SetIsActive sets the "is_active" field.
+func (spu *SenderProfileUpdate) SetIsActive(b bool) *SenderProfileUpdate {
+	spu.mutation.SetIsActive(b)
+	return spu
+}
+
+// SetNillableIsActive sets the "is_active" field if the given value is not nil.
+func (spu *SenderProfileUpdate) SetNillableIsActive(b *bool) *SenderProfileUpdate {
+	if b != nil {
+		spu.SetIsActive(*b)
+	}
+	return spu
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (spu *SenderProfileUpdate) SetUpdatedAt(t time.Time) *SenderProfileUpdate {
+	spu.mutation.SetUpdatedAt(t)
 	return spu
 }
 
@@ -404,15 +404,6 @@ func (spu *SenderProfileUpdate) sqlSave(ctx context.Context) (n int, err error) 
 	if spu.mutation.ProviderIDCleared() {
 		_spec.ClearField(senderprofile.FieldProviderID, field.TypeString)
 	}
-	if value, ok := spu.mutation.IsPartner(); ok {
-		_spec.SetField(senderprofile.FieldIsPartner, field.TypeBool, value)
-	}
-	if value, ok := spu.mutation.IsActive(); ok {
-		_spec.SetField(senderprofile.FieldIsActive, field.TypeBool, value)
-	}
-	if value, ok := spu.mutation.UpdatedAt(); ok {
-		_spec.SetField(senderprofile.FieldUpdatedAt, field.TypeTime, value)
-	}
 	if value, ok := spu.mutation.MonthlyVolume(); ok {
 		_spec.SetField(senderprofile.FieldMonthlyVolume, field.TypeString, value)
 	}
@@ -430,6 +421,15 @@ func (spu *SenderProfileUpdate) sqlSave(ctx context.Context) (n int, err error) 
 	}
 	if spu.mutation.NatureOfBusinessCleared() {
 		_spec.ClearField(senderprofile.FieldNatureOfBusiness, field.TypeString)
+	}
+	if value, ok := spu.mutation.IsPartner(); ok {
+		_spec.SetField(senderprofile.FieldIsPartner, field.TypeBool, value)
+	}
+	if value, ok := spu.mutation.IsActive(); ok {
+		_spec.SetField(senderprofile.FieldIsActive, field.TypeBool, value)
+	}
+	if value, ok := spu.mutation.UpdatedAt(); ok {
+		_spec.SetField(senderprofile.FieldUpdatedAt, field.TypeTime, value)
 	}
 	if spu.mutation.APIKeyCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -667,40 +667,6 @@ func (spuo *SenderProfileUpdateOne) ClearProviderID() *SenderProfileUpdateOne {
 	return spuo
 }
 
-// SetIsPartner sets the "is_partner" field.
-func (spuo *SenderProfileUpdateOne) SetIsPartner(b bool) *SenderProfileUpdateOne {
-	spuo.mutation.SetIsPartner(b)
-	return spuo
-}
-
-// SetNillableIsPartner sets the "is_partner" field if the given value is not nil.
-func (spuo *SenderProfileUpdateOne) SetNillableIsPartner(b *bool) *SenderProfileUpdateOne {
-	if b != nil {
-		spuo.SetIsPartner(*b)
-	}
-	return spuo
-}
-
-// SetIsActive sets the "is_active" field.
-func (spuo *SenderProfileUpdateOne) SetIsActive(b bool) *SenderProfileUpdateOne {
-	spuo.mutation.SetIsActive(b)
-	return spuo
-}
-
-// SetNillableIsActive sets the "is_active" field if the given value is not nil.
-func (spuo *SenderProfileUpdateOne) SetNillableIsActive(b *bool) *SenderProfileUpdateOne {
-	if b != nil {
-		spuo.SetIsActive(*b)
-	}
-	return spuo
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (spuo *SenderProfileUpdateOne) SetUpdatedAt(t time.Time) *SenderProfileUpdateOne {
-	spuo.mutation.SetUpdatedAt(t)
-	return spuo
-}
-
 // SetMonthlyVolume sets the "monthly_volume" field.
 func (spuo *SenderProfileUpdateOne) SetMonthlyVolume(s string) *SenderProfileUpdateOne {
 	spuo.mutation.SetMonthlyVolume(s)
@@ -758,6 +724,40 @@ func (spuo *SenderProfileUpdateOne) SetNillableNatureOfBusiness(s *string) *Send
 // ClearNatureOfBusiness clears the value of the "nature_of_business" field.
 func (spuo *SenderProfileUpdateOne) ClearNatureOfBusiness() *SenderProfileUpdateOne {
 	spuo.mutation.ClearNatureOfBusiness()
+	return spuo
+}
+
+// SetIsPartner sets the "is_partner" field.
+func (spuo *SenderProfileUpdateOne) SetIsPartner(b bool) *SenderProfileUpdateOne {
+	spuo.mutation.SetIsPartner(b)
+	return spuo
+}
+
+// SetNillableIsPartner sets the "is_partner" field if the given value is not nil.
+func (spuo *SenderProfileUpdateOne) SetNillableIsPartner(b *bool) *SenderProfileUpdateOne {
+	if b != nil {
+		spuo.SetIsPartner(*b)
+	}
+	return spuo
+}
+
+// SetIsActive sets the "is_active" field.
+func (spuo *SenderProfileUpdateOne) SetIsActive(b bool) *SenderProfileUpdateOne {
+	spuo.mutation.SetIsActive(b)
+	return spuo
+}
+
+// SetNillableIsActive sets the "is_active" field if the given value is not nil.
+func (spuo *SenderProfileUpdateOne) SetNillableIsActive(b *bool) *SenderProfileUpdateOne {
+	if b != nil {
+		spuo.SetIsActive(*b)
+	}
+	return spuo
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (spuo *SenderProfileUpdateOne) SetUpdatedAt(t time.Time) *SenderProfileUpdateOne {
+	spuo.mutation.SetUpdatedAt(t)
 	return spuo
 }
 
@@ -1015,15 +1015,6 @@ func (spuo *SenderProfileUpdateOne) sqlSave(ctx context.Context) (_node *SenderP
 	if spuo.mutation.ProviderIDCleared() {
 		_spec.ClearField(senderprofile.FieldProviderID, field.TypeString)
 	}
-	if value, ok := spuo.mutation.IsPartner(); ok {
-		_spec.SetField(senderprofile.FieldIsPartner, field.TypeBool, value)
-	}
-	if value, ok := spuo.mutation.IsActive(); ok {
-		_spec.SetField(senderprofile.FieldIsActive, field.TypeBool, value)
-	}
-	if value, ok := spuo.mutation.UpdatedAt(); ok {
-		_spec.SetField(senderprofile.FieldUpdatedAt, field.TypeTime, value)
-	}
 	if value, ok := spuo.mutation.MonthlyVolume(); ok {
 		_spec.SetField(senderprofile.FieldMonthlyVolume, field.TypeString, value)
 	}
@@ -1041,6 +1032,15 @@ func (spuo *SenderProfileUpdateOne) sqlSave(ctx context.Context) (_node *SenderP
 	}
 	if spuo.mutation.NatureOfBusinessCleared() {
 		_spec.ClearField(senderprofile.FieldNatureOfBusiness, field.TypeString)
+	}
+	if value, ok := spuo.mutation.IsPartner(); ok {
+		_spec.SetField(senderprofile.FieldIsPartner, field.TypeBool, value)
+	}
+	if value, ok := spuo.mutation.IsActive(); ok {
+		_spec.SetField(senderprofile.FieldIsActive, field.TypeBool, value)
+	}
+	if value, ok := spuo.mutation.UpdatedAt(); ok {
+		_spec.SetField(senderprofile.FieldUpdatedAt, field.TypeTime, value)
 	}
 	if spuo.mutation.APIKeyCleared() {
 		edge := &sqlgraph.EdgeSpec{

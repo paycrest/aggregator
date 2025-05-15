@@ -21,18 +21,18 @@ const (
 	FieldDomainWhitelist = "domain_whitelist"
 	// FieldProviderID holds the string denoting the provider_id field in the database.
 	FieldProviderID = "provider_id"
-	// FieldIsPartner holds the string denoting the is_partner field in the database.
-	FieldIsPartner = "is_partner"
-	// FieldIsActive holds the string denoting the is_active field in the database.
-	FieldIsActive = "is_active"
-	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
-	FieldUpdatedAt = "updated_at"
 	// FieldMonthlyVolume holds the string denoting the monthly_volume field in the database.
 	FieldMonthlyVolume = "monthly_volume"
 	// FieldBusinessWebsite holds the string denoting the business_website field in the database.
 	FieldBusinessWebsite = "business_website"
 	// FieldNatureOfBusiness holds the string denoting the nature_of_business field in the database.
 	FieldNatureOfBusiness = "nature_of_business"
+	// FieldIsPartner holds the string denoting the is_partner field in the database.
+	FieldIsPartner = "is_partner"
+	// FieldIsActive holds the string denoting the is_active field in the database.
+	FieldIsActive = "is_active"
+	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
+	FieldUpdatedAt = "updated_at"
 	// EdgeUser holds the string denoting the user edge name in mutations.
 	EdgeUser = "user"
 	// EdgeAPIKey holds the string denoting the api_key edge name in mutations.
@@ -88,12 +88,12 @@ var Columns = []string{
 	FieldWebhookURL,
 	FieldDomainWhitelist,
 	FieldProviderID,
-	FieldIsPartner,
-	FieldIsActive,
-	FieldUpdatedAt,
 	FieldMonthlyVolume,
 	FieldBusinessWebsite,
 	FieldNatureOfBusiness,
+	FieldIsPartner,
+	FieldIsActive,
+	FieldUpdatedAt,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "sender_profiles"
@@ -120,6 +120,10 @@ func ValidColumn(column string) bool {
 var (
 	// DefaultDomainWhitelist holds the default value on creation for the "domain_whitelist" field.
 	DefaultDomainWhitelist []string
+	// BusinessWebsiteValidator is a validator for the "business_website" field. It is called by the builders before save.
+	BusinessWebsiteValidator func(string) error
+	// NatureOfBusinessValidator is a validator for the "nature_of_business" field. It is called by the builders before save.
+	NatureOfBusinessValidator func(string) error
 	// DefaultIsPartner holds the default value on creation for the "is_partner" field.
 	DefaultIsPartner bool
 	// DefaultIsActive holds the default value on creation for the "is_active" field.
@@ -128,10 +132,6 @@ var (
 	DefaultUpdatedAt func() time.Time
 	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
 	UpdateDefaultUpdatedAt func() time.Time
-	// BusinessWebsiteValidator is a validator for the "business_website" field. It is called by the builders before save.
-	BusinessWebsiteValidator func(string) error
-	// NatureOfBusinessValidator is a validator for the "nature_of_business" field. It is called by the builders before save.
-	NatureOfBusinessValidator func(string) error
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -154,21 +154,6 @@ func ByProviderID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldProviderID, opts...).ToFunc()
 }
 
-// ByIsPartner orders the results by the is_partner field.
-func ByIsPartner(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldIsPartner, opts...).ToFunc()
-}
-
-// ByIsActive orders the results by the is_active field.
-func ByIsActive(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldIsActive, opts...).ToFunc()
-}
-
-// ByUpdatedAt orders the results by the updated_at field.
-func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
-}
-
 // ByMonthlyVolume orders the results by the monthly_volume field.
 func ByMonthlyVolume(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMonthlyVolume, opts...).ToFunc()
@@ -182,6 +167,21 @@ func ByBusinessWebsite(opts ...sql.OrderTermOption) OrderOption {
 // ByNatureOfBusiness orders the results by the nature_of_business field.
 func ByNatureOfBusiness(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldNatureOfBusiness, opts...).ToFunc()
+}
+
+// ByIsPartner orders the results by the is_partner field.
+func ByIsPartner(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIsPartner, opts...).ToFunc()
+}
+
+// ByIsActive orders the results by the is_active field.
+func ByIsActive(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIsActive, opts...).ToFunc()
+}
+
+// ByUpdatedAt orders the results by the updated_at field.
+func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
 }
 
 // ByUserField orders the results by user field.

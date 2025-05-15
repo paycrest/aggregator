@@ -381,8 +381,8 @@ var (
 		{Name: "identity_document_type", Type: field.TypeEnum, Nullable: true, Enums: []string{"passport", "drivers_license", "national_id"}},
 		{Name: "identity_document", Type: field.TypeString, Nullable: true},
 		{Name: "business_document", Type: field.TypeString, Nullable: true},
-		{Name: "is_kyb_verified", Type: field.TypeBool, Default: false},
 		{Name: "monthly_volume", Type: field.TypeString, Nullable: true},
+		{Name: "is_kyb_verified", Type: field.TypeBool, Default: false},
 		{Name: "user_provider_profile", Type: field.TypeUUID, Unique: true},
 	}
 	// ProviderProfilesTable holds the schema information for the "provider_profiles" table.
@@ -515,12 +515,12 @@ var (
 		{Name: "webhook_url", Type: field.TypeString, Nullable: true},
 		{Name: "domain_whitelist", Type: field.TypeJSON},
 		{Name: "provider_id", Type: field.TypeString, Nullable: true},
-		{Name: "is_partner", Type: field.TypeBool, Default: false},
-		{Name: "is_active", Type: field.TypeBool, Default: false},
-		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "monthly_volume", Type: field.TypeString, Nullable: true},
 		{Name: "business_website", Type: field.TypeString, Nullable: true, Size: 255},
 		{Name: "nature_of_business", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "is_partner", Type: field.TypeBool, Default: false},
+		{Name: "is_active", Type: field.TypeBool, Default: false},
+		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "user_sender_profile", Type: field.TypeUUID, Unique: true},
 	}
 	// SenderProfilesTable holds the schema information for the "sender_profiles" table.

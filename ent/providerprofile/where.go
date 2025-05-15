@@ -120,14 +120,14 @@ func BusinessDocument(v string) predicate.ProviderProfile {
 	return predicate.ProviderProfile(sql.FieldEQ(FieldBusinessDocument, v))
 }
 
-// IsKybVerified applies equality check predicate on the "is_kyb_verified" field. It's identical to IsKybVerifiedEQ.
-func IsKybVerified(v bool) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldEQ(FieldIsKybVerified, v))
-}
-
 // MonthlyVolume applies equality check predicate on the "monthly_volume" field. It's identical to MonthlyVolumeEQ.
 func MonthlyVolume(v string) predicate.ProviderProfile {
 	return predicate.ProviderProfile(sql.FieldEQ(FieldMonthlyVolume, v))
+}
+
+// IsKybVerified applies equality check predicate on the "is_kyb_verified" field. It's identical to IsKybVerifiedEQ.
+func IsKybVerified(v bool) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldEQ(FieldIsKybVerified, v))
 }
 
 // TradingNameEQ applies the EQ predicate on the "trading_name" field.
@@ -835,16 +835,6 @@ func BusinessDocumentContainsFold(v string) predicate.ProviderProfile {
 	return predicate.ProviderProfile(sql.FieldContainsFold(FieldBusinessDocument, v))
 }
 
-// IsKybVerifiedEQ applies the EQ predicate on the "is_kyb_verified" field.
-func IsKybVerifiedEQ(v bool) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldEQ(FieldIsKybVerified, v))
-}
-
-// IsKybVerifiedNEQ applies the NEQ predicate on the "is_kyb_verified" field.
-func IsKybVerifiedNEQ(v bool) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldNEQ(FieldIsKybVerified, v))
-}
-
 // MonthlyVolumeEQ applies the EQ predicate on the "monthly_volume" field.
 func MonthlyVolumeEQ(v string) predicate.ProviderProfile {
 	return predicate.ProviderProfile(sql.FieldEQ(FieldMonthlyVolume, v))
@@ -918,6 +908,16 @@ func MonthlyVolumeEqualFold(v string) predicate.ProviderProfile {
 // MonthlyVolumeContainsFold applies the ContainsFold predicate on the "monthly_volume" field.
 func MonthlyVolumeContainsFold(v string) predicate.ProviderProfile {
 	return predicate.ProviderProfile(sql.FieldContainsFold(FieldMonthlyVolume, v))
+}
+
+// IsKybVerifiedEQ applies the EQ predicate on the "is_kyb_verified" field.
+func IsKybVerifiedEQ(v bool) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldEQ(FieldIsKybVerified, v))
+}
+
+// IsKybVerifiedNEQ applies the NEQ predicate on the "is_kyb_verified" field.
+func IsKybVerifiedNEQ(v bool) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldNEQ(FieldIsKybVerified, v))
 }
 
 // HasUser applies the HasEdge predicate on the "user" edge.

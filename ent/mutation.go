@@ -11919,8 +11919,8 @@ type ProviderProfileMutation struct {
 	identity_document_type   *providerprofile.IdentityDocumentType
 	identity_document        *string
 	business_document        *string
-	is_kyb_verified          *bool
 	monthly_volume           *string
+	is_kyb_verified          *bool
 	clearedFields            map[string]struct{}
 	user                     *uuid.UUID
 	cleareduser              bool
@@ -12670,6 +12670,55 @@ func (m *ProviderProfileMutation) ResetBusinessDocument() {
 	delete(m.clearedFields, providerprofile.FieldBusinessDocument)
 }
 
+// SetMonthlyVolume sets the "monthly_volume" field.
+func (m *ProviderProfileMutation) SetMonthlyVolume(s string) {
+	m.monthly_volume = &s
+}
+
+// MonthlyVolume returns the value of the "monthly_volume" field in the mutation.
+func (m *ProviderProfileMutation) MonthlyVolume() (r string, exists bool) {
+	v := m.monthly_volume
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMonthlyVolume returns the old "monthly_volume" field's value of the ProviderProfile entity.
+// If the ProviderProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderProfileMutation) OldMonthlyVolume(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMonthlyVolume is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMonthlyVolume requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMonthlyVolume: %w", err)
+	}
+	return oldValue.MonthlyVolume, nil
+}
+
+// ClearMonthlyVolume clears the value of the "monthly_volume" field.
+func (m *ProviderProfileMutation) ClearMonthlyVolume() {
+	m.monthly_volume = nil
+	m.clearedFields[providerprofile.FieldMonthlyVolume] = struct{}{}
+}
+
+// MonthlyVolumeCleared returns if the "monthly_volume" field was cleared in this mutation.
+func (m *ProviderProfileMutation) MonthlyVolumeCleared() bool {
+	_, ok := m.clearedFields[providerprofile.FieldMonthlyVolume]
+	return ok
+}
+
+// ResetMonthlyVolume resets all changes to the "monthly_volume" field.
+func (m *ProviderProfileMutation) ResetMonthlyVolume() {
+	m.monthly_volume = nil
+	delete(m.clearedFields, providerprofile.FieldMonthlyVolume)
+}
+
 // SetIsKybVerified sets the "is_kyb_verified" field.
 func (m *ProviderProfileMutation) SetIsKybVerified(b bool) {
 	m.is_kyb_verified = &b
@@ -12704,55 +12753,6 @@ func (m *ProviderProfileMutation) OldIsKybVerified(ctx context.Context) (v bool,
 // ResetIsKybVerified resets all changes to the "is_kyb_verified" field.
 func (m *ProviderProfileMutation) ResetIsKybVerified() {
 	m.is_kyb_verified = nil
-}
-
-// SetMonthlyVolume sets the "monthly_volume" field.
-func (m *ProviderProfileMutation) SetMonthlyVolume(s string) {
-	m.monthly_volume = &s
-}
-
-// MonthlyVolume returns the value of the "monthly_volume" field in the mutation.
-func (m *ProviderProfileMutation) MonthlyVolume() (r string, exists bool) {
-	v := m.monthly_volume
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldMonthlyVolume returns the old "monthly_volume" field's value of the ProviderProfile entity.
-// If the ProviderProfile object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProviderProfileMutation) OldMonthlyVolume(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldMonthlyVolume is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldMonthlyVolume requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldMonthlyVolume: %w", err)
-	}
-	return oldValue.MonthlyVolume, nil
-}
-
-// ClearMonthlyVolume clears the value of the "monthly_volume" field.
-func (m *ProviderProfileMutation) ClearMonthlyVolume() {
-	m.monthly_volume = nil
-	m.clearedFields[providerprofile.FieldMonthlyVolume] = struct{}{}
-}
-
-// MonthlyVolumeCleared returns if the "monthly_volume" field was cleared in this mutation.
-func (m *ProviderProfileMutation) MonthlyVolumeCleared() bool {
-	_, ok := m.clearedFields[providerprofile.FieldMonthlyVolume]
-	return ok
-}
-
-// ResetMonthlyVolume resets all changes to the "monthly_volume" field.
-func (m *ProviderProfileMutation) ResetMonthlyVolume() {
-	m.monthly_volume = nil
-	delete(m.clearedFields, providerprofile.FieldMonthlyVolume)
 }
 
 // SetUserID sets the "user" edge to the User entity by id.
@@ -13165,11 +13165,11 @@ func (m *ProviderProfileMutation) Fields() []string {
 	if m.business_document != nil {
 		fields = append(fields, providerprofile.FieldBusinessDocument)
 	}
-	if m.is_kyb_verified != nil {
-		fields = append(fields, providerprofile.FieldIsKybVerified)
-	}
 	if m.monthly_volume != nil {
 		fields = append(fields, providerprofile.FieldMonthlyVolume)
+	}
+	if m.is_kyb_verified != nil {
+		fields = append(fields, providerprofile.FieldIsKybVerified)
 	}
 	return fields
 }
@@ -13207,10 +13207,10 @@ func (m *ProviderProfileMutation) Field(name string) (ent.Value, bool) {
 		return m.IdentityDocument()
 	case providerprofile.FieldBusinessDocument:
 		return m.BusinessDocument()
-	case providerprofile.FieldIsKybVerified:
-		return m.IsKybVerified()
 	case providerprofile.FieldMonthlyVolume:
 		return m.MonthlyVolume()
+	case providerprofile.FieldIsKybVerified:
+		return m.IsKybVerified()
 	}
 	return nil, false
 }
@@ -13248,10 +13248,10 @@ func (m *ProviderProfileMutation) OldField(ctx context.Context, name string) (en
 		return m.OldIdentityDocument(ctx)
 	case providerprofile.FieldBusinessDocument:
 		return m.OldBusinessDocument(ctx)
-	case providerprofile.FieldIsKybVerified:
-		return m.OldIsKybVerified(ctx)
 	case providerprofile.FieldMonthlyVolume:
 		return m.OldMonthlyVolume(ctx)
+	case providerprofile.FieldIsKybVerified:
+		return m.OldIsKybVerified(ctx)
 	}
 	return nil, fmt.Errorf("unknown ProviderProfile field %s", name)
 }
@@ -13359,19 +13359,19 @@ func (m *ProviderProfileMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetBusinessDocument(v)
 		return nil
-	case providerprofile.FieldIsKybVerified:
-		v, ok := value.(bool)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetIsKybVerified(v)
-		return nil
 	case providerprofile.FieldMonthlyVolume:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetMonthlyVolume(v)
+		return nil
+	case providerprofile.FieldIsKybVerified:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsKybVerified(v)
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderProfile field %s", name)
@@ -13527,11 +13527,11 @@ func (m *ProviderProfileMutation) ResetField(name string) error {
 	case providerprofile.FieldBusinessDocument:
 		m.ResetBusinessDocument()
 		return nil
-	case providerprofile.FieldIsKybVerified:
-		m.ResetIsKybVerified()
-		return nil
 	case providerprofile.FieldMonthlyVolume:
 		m.ResetMonthlyVolume()
+		return nil
+	case providerprofile.FieldIsKybVerified:
+		m.ResetIsKybVerified()
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderProfile field %s", name)
@@ -16683,12 +16683,12 @@ type SenderProfileMutation struct {
 	domain_whitelist       *[]string
 	appenddomain_whitelist []string
 	provider_id            *string
-	is_partner             *bool
-	is_active              *bool
-	updated_at             *time.Time
 	monthly_volume         *string
 	business_website       *string
 	nature_of_business     *string
+	is_partner             *bool
+	is_active              *bool
+	updated_at             *time.Time
 	clearedFields          map[string]struct{}
 	user                   *uuid.UUID
 	cleareduser            bool
@@ -16961,114 +16961,6 @@ func (m *SenderProfileMutation) ResetProviderID() {
 	delete(m.clearedFields, senderprofile.FieldProviderID)
 }
 
-// SetIsPartner sets the "is_partner" field.
-func (m *SenderProfileMutation) SetIsPartner(b bool) {
-	m.is_partner = &b
-}
-
-// IsPartner returns the value of the "is_partner" field in the mutation.
-func (m *SenderProfileMutation) IsPartner() (r bool, exists bool) {
-	v := m.is_partner
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldIsPartner returns the old "is_partner" field's value of the SenderProfile entity.
-// If the SenderProfile object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *SenderProfileMutation) OldIsPartner(ctx context.Context) (v bool, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldIsPartner is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldIsPartner requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldIsPartner: %w", err)
-	}
-	return oldValue.IsPartner, nil
-}
-
-// ResetIsPartner resets all changes to the "is_partner" field.
-func (m *SenderProfileMutation) ResetIsPartner() {
-	m.is_partner = nil
-}
-
-// SetIsActive sets the "is_active" field.
-func (m *SenderProfileMutation) SetIsActive(b bool) {
-	m.is_active = &b
-}
-
-// IsActive returns the value of the "is_active" field in the mutation.
-func (m *SenderProfileMutation) IsActive() (r bool, exists bool) {
-	v := m.is_active
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldIsActive returns the old "is_active" field's value of the SenderProfile entity.
-// If the SenderProfile object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *SenderProfileMutation) OldIsActive(ctx context.Context) (v bool, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldIsActive is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldIsActive requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldIsActive: %w", err)
-	}
-	return oldValue.IsActive, nil
-}
-
-// ResetIsActive resets all changes to the "is_active" field.
-func (m *SenderProfileMutation) ResetIsActive() {
-	m.is_active = nil
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (m *SenderProfileMutation) SetUpdatedAt(t time.Time) {
-	m.updated_at = &t
-}
-
-// UpdatedAt returns the value of the "updated_at" field in the mutation.
-func (m *SenderProfileMutation) UpdatedAt() (r time.Time, exists bool) {
-	v := m.updated_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldUpdatedAt returns the old "updated_at" field's value of the SenderProfile entity.
-// If the SenderProfile object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *SenderProfileMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
-	}
-	return oldValue.UpdatedAt, nil
-}
-
-// ResetUpdatedAt resets all changes to the "updated_at" field.
-func (m *SenderProfileMutation) ResetUpdatedAt() {
-	m.updated_at = nil
-}
-
 // SetMonthlyVolume sets the "monthly_volume" field.
 func (m *SenderProfileMutation) SetMonthlyVolume(s string) {
 	m.monthly_volume = &s
@@ -17086,7 +16978,7 @@ func (m *SenderProfileMutation) MonthlyVolume() (r string, exists bool) {
 // OldMonthlyVolume returns the old "monthly_volume" field's value of the SenderProfile entity.
 // If the SenderProfile object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *SenderProfileMutation) OldMonthlyVolume(ctx context.Context) (v *string, err error) {
+func (m *SenderProfileMutation) OldMonthlyVolume(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldMonthlyVolume is only allowed on UpdateOne operations")
 	}
@@ -17214,6 +17106,114 @@ func (m *SenderProfileMutation) NatureOfBusinessCleared() bool {
 func (m *SenderProfileMutation) ResetNatureOfBusiness() {
 	m.nature_of_business = nil
 	delete(m.clearedFields, senderprofile.FieldNatureOfBusiness)
+}
+
+// SetIsPartner sets the "is_partner" field.
+func (m *SenderProfileMutation) SetIsPartner(b bool) {
+	m.is_partner = &b
+}
+
+// IsPartner returns the value of the "is_partner" field in the mutation.
+func (m *SenderProfileMutation) IsPartner() (r bool, exists bool) {
+	v := m.is_partner
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsPartner returns the old "is_partner" field's value of the SenderProfile entity.
+// If the SenderProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SenderProfileMutation) OldIsPartner(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsPartner is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsPartner requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsPartner: %w", err)
+	}
+	return oldValue.IsPartner, nil
+}
+
+// ResetIsPartner resets all changes to the "is_partner" field.
+func (m *SenderProfileMutation) ResetIsPartner() {
+	m.is_partner = nil
+}
+
+// SetIsActive sets the "is_active" field.
+func (m *SenderProfileMutation) SetIsActive(b bool) {
+	m.is_active = &b
+}
+
+// IsActive returns the value of the "is_active" field in the mutation.
+func (m *SenderProfileMutation) IsActive() (r bool, exists bool) {
+	v := m.is_active
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsActive returns the old "is_active" field's value of the SenderProfile entity.
+// If the SenderProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SenderProfileMutation) OldIsActive(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsActive is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsActive requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsActive: %w", err)
+	}
+	return oldValue.IsActive, nil
+}
+
+// ResetIsActive resets all changes to the "is_active" field.
+func (m *SenderProfileMutation) ResetIsActive() {
+	m.is_active = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *SenderProfileMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *SenderProfileMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the SenderProfile entity.
+// If the SenderProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SenderProfileMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *SenderProfileMutation) ResetUpdatedAt() {
+	m.updated_at = nil
 }
 
 // SetUserID sets the "user" edge to the User entity by id.
@@ -17500,15 +17500,6 @@ func (m *SenderProfileMutation) Fields() []string {
 	if m.provider_id != nil {
 		fields = append(fields, senderprofile.FieldProviderID)
 	}
-	if m.is_partner != nil {
-		fields = append(fields, senderprofile.FieldIsPartner)
-	}
-	if m.is_active != nil {
-		fields = append(fields, senderprofile.FieldIsActive)
-	}
-	if m.updated_at != nil {
-		fields = append(fields, senderprofile.FieldUpdatedAt)
-	}
 	if m.monthly_volume != nil {
 		fields = append(fields, senderprofile.FieldMonthlyVolume)
 	}
@@ -17517,6 +17508,15 @@ func (m *SenderProfileMutation) Fields() []string {
 	}
 	if m.nature_of_business != nil {
 		fields = append(fields, senderprofile.FieldNatureOfBusiness)
+	}
+	if m.is_partner != nil {
+		fields = append(fields, senderprofile.FieldIsPartner)
+	}
+	if m.is_active != nil {
+		fields = append(fields, senderprofile.FieldIsActive)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, senderprofile.FieldUpdatedAt)
 	}
 	return fields
 }
@@ -17532,18 +17532,18 @@ func (m *SenderProfileMutation) Field(name string) (ent.Value, bool) {
 		return m.DomainWhitelist()
 	case senderprofile.FieldProviderID:
 		return m.ProviderID()
-	case senderprofile.FieldIsPartner:
-		return m.IsPartner()
-	case senderprofile.FieldIsActive:
-		return m.IsActive()
-	case senderprofile.FieldUpdatedAt:
-		return m.UpdatedAt()
 	case senderprofile.FieldMonthlyVolume:
 		return m.MonthlyVolume()
 	case senderprofile.FieldBusinessWebsite:
 		return m.BusinessWebsite()
 	case senderprofile.FieldNatureOfBusiness:
 		return m.NatureOfBusiness()
+	case senderprofile.FieldIsPartner:
+		return m.IsPartner()
+	case senderprofile.FieldIsActive:
+		return m.IsActive()
+	case senderprofile.FieldUpdatedAt:
+		return m.UpdatedAt()
 	}
 	return nil, false
 }
@@ -17559,18 +17559,18 @@ func (m *SenderProfileMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldDomainWhitelist(ctx)
 	case senderprofile.FieldProviderID:
 		return m.OldProviderID(ctx)
-	case senderprofile.FieldIsPartner:
-		return m.OldIsPartner(ctx)
-	case senderprofile.FieldIsActive:
-		return m.OldIsActive(ctx)
-	case senderprofile.FieldUpdatedAt:
-		return m.OldUpdatedAt(ctx)
 	case senderprofile.FieldMonthlyVolume:
 		return m.OldMonthlyVolume(ctx)
 	case senderprofile.FieldBusinessWebsite:
 		return m.OldBusinessWebsite(ctx)
 	case senderprofile.FieldNatureOfBusiness:
 		return m.OldNatureOfBusiness(ctx)
+	case senderprofile.FieldIsPartner:
+		return m.OldIsPartner(ctx)
+	case senderprofile.FieldIsActive:
+		return m.OldIsActive(ctx)
+	case senderprofile.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
 	}
 	return nil, fmt.Errorf("unknown SenderProfile field %s", name)
 }
@@ -17601,27 +17601,6 @@ func (m *SenderProfileMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetProviderID(v)
 		return nil
-	case senderprofile.FieldIsPartner:
-		v, ok := value.(bool)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetIsPartner(v)
-		return nil
-	case senderprofile.FieldIsActive:
-		v, ok := value.(bool)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetIsActive(v)
-		return nil
-	case senderprofile.FieldUpdatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetUpdatedAt(v)
-		return nil
 	case senderprofile.FieldMonthlyVolume:
 		v, ok := value.(string)
 		if !ok {
@@ -17642,6 +17621,27 @@ func (m *SenderProfileMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetNatureOfBusiness(v)
+		return nil
+	case senderprofile.FieldIsPartner:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsPartner(v)
+		return nil
+	case senderprofile.FieldIsActive:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsActive(v)
+		return nil
+	case senderprofile.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
 		return nil
 	}
 	return fmt.Errorf("unknown SenderProfile field %s", name)
@@ -17734,15 +17734,6 @@ func (m *SenderProfileMutation) ResetField(name string) error {
 	case senderprofile.FieldProviderID:
 		m.ResetProviderID()
 		return nil
-	case senderprofile.FieldIsPartner:
-		m.ResetIsPartner()
-		return nil
-	case senderprofile.FieldIsActive:
-		m.ResetIsActive()
-		return nil
-	case senderprofile.FieldUpdatedAt:
-		m.ResetUpdatedAt()
-		return nil
 	case senderprofile.FieldMonthlyVolume:
 		m.ResetMonthlyVolume()
 		return nil
@@ -17751,6 +17742,15 @@ func (m *SenderProfileMutation) ResetField(name string) error {
 		return nil
 	case senderprofile.FieldNatureOfBusiness:
 		m.ResetNatureOfBusiness()
+		return nil
+	case senderprofile.FieldIsPartner:
+		m.ResetIsPartner()
+		return nil
+	case senderprofile.FieldIsActive:
+		m.ResetIsActive()
+		return nil
+	case senderprofile.FieldUpdatedAt:
+		m.ResetUpdatedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown SenderProfile field %s", name)

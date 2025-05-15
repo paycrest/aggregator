@@ -63,48 +63,6 @@ func (spc *SenderProfileCreate) SetNillableProviderID(s *string) *SenderProfileC
 	return spc
 }
 
-// SetIsPartner sets the "is_partner" field.
-func (spc *SenderProfileCreate) SetIsPartner(b bool) *SenderProfileCreate {
-	spc.mutation.SetIsPartner(b)
-	return spc
-}
-
-// SetNillableIsPartner sets the "is_partner" field if the given value is not nil.
-func (spc *SenderProfileCreate) SetNillableIsPartner(b *bool) *SenderProfileCreate {
-	if b != nil {
-		spc.SetIsPartner(*b)
-	}
-	return spc
-}
-
-// SetIsActive sets the "is_active" field.
-func (spc *SenderProfileCreate) SetIsActive(b bool) *SenderProfileCreate {
-	spc.mutation.SetIsActive(b)
-	return spc
-}
-
-// SetNillableIsActive sets the "is_active" field if the given value is not nil.
-func (spc *SenderProfileCreate) SetNillableIsActive(b *bool) *SenderProfileCreate {
-	if b != nil {
-		spc.SetIsActive(*b)
-	}
-	return spc
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (spc *SenderProfileCreate) SetUpdatedAt(t time.Time) *SenderProfileCreate {
-	spc.mutation.SetUpdatedAt(t)
-	return spc
-}
-
-// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (spc *SenderProfileCreate) SetNillableUpdatedAt(t *time.Time) *SenderProfileCreate {
-	if t != nil {
-		spc.SetUpdatedAt(*t)
-	}
-	return spc
-}
-
 // SetMonthlyVolume sets the "monthly_volume" field.
 func (spc *SenderProfileCreate) SetMonthlyVolume(s string) *SenderProfileCreate {
 	spc.mutation.SetMonthlyVolume(s)
@@ -143,6 +101,48 @@ func (spc *SenderProfileCreate) SetNatureOfBusiness(s string) *SenderProfileCrea
 func (spc *SenderProfileCreate) SetNillableNatureOfBusiness(s *string) *SenderProfileCreate {
 	if s != nil {
 		spc.SetNatureOfBusiness(*s)
+	}
+	return spc
+}
+
+// SetIsPartner sets the "is_partner" field.
+func (spc *SenderProfileCreate) SetIsPartner(b bool) *SenderProfileCreate {
+	spc.mutation.SetIsPartner(b)
+	return spc
+}
+
+// SetNillableIsPartner sets the "is_partner" field if the given value is not nil.
+func (spc *SenderProfileCreate) SetNillableIsPartner(b *bool) *SenderProfileCreate {
+	if b != nil {
+		spc.SetIsPartner(*b)
+	}
+	return spc
+}
+
+// SetIsActive sets the "is_active" field.
+func (spc *SenderProfileCreate) SetIsActive(b bool) *SenderProfileCreate {
+	spc.mutation.SetIsActive(b)
+	return spc
+}
+
+// SetNillableIsActive sets the "is_active" field if the given value is not nil.
+func (spc *SenderProfileCreate) SetNillableIsActive(b *bool) *SenderProfileCreate {
+	if b != nil {
+		spc.SetIsActive(*b)
+	}
+	return spc
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (spc *SenderProfileCreate) SetUpdatedAt(t time.Time) *SenderProfileCreate {
+	spc.mutation.SetUpdatedAt(t)
+	return spc
+}
+
+// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
+func (spc *SenderProfileCreate) SetNillableUpdatedAt(t *time.Time) *SenderProfileCreate {
+	if t != nil {
+		spc.SetUpdatedAt(*t)
 	}
 	return spc
 }
@@ -298,15 +298,6 @@ func (spc *SenderProfileCreate) check() error {
 	if _, ok := spc.mutation.DomainWhitelist(); !ok {
 		return &ValidationError{Name: "domain_whitelist", err: errors.New(`ent: missing required field "SenderProfile.domain_whitelist"`)}
 	}
-	if _, ok := spc.mutation.IsPartner(); !ok {
-		return &ValidationError{Name: "is_partner", err: errors.New(`ent: missing required field "SenderProfile.is_partner"`)}
-	}
-	if _, ok := spc.mutation.IsActive(); !ok {
-		return &ValidationError{Name: "is_active", err: errors.New(`ent: missing required field "SenderProfile.is_active"`)}
-	}
-	if _, ok := spc.mutation.UpdatedAt(); !ok {
-		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "SenderProfile.updated_at"`)}
-	}
 	if v, ok := spc.mutation.BusinessWebsite(); ok {
 		if err := senderprofile.BusinessWebsiteValidator(v); err != nil {
 			return &ValidationError{Name: "business_website", err: fmt.Errorf(`ent: validator failed for field "SenderProfile.business_website": %w`, err)}
@@ -316,6 +307,15 @@ func (spc *SenderProfileCreate) check() error {
 		if err := senderprofile.NatureOfBusinessValidator(v); err != nil {
 			return &ValidationError{Name: "nature_of_business", err: fmt.Errorf(`ent: validator failed for field "SenderProfile.nature_of_business": %w`, err)}
 		}
+	}
+	if _, ok := spc.mutation.IsPartner(); !ok {
+		return &ValidationError{Name: "is_partner", err: errors.New(`ent: missing required field "SenderProfile.is_partner"`)}
+	}
+	if _, ok := spc.mutation.IsActive(); !ok {
+		return &ValidationError{Name: "is_active", err: errors.New(`ent: missing required field "SenderProfile.is_active"`)}
+	}
+	if _, ok := spc.mutation.UpdatedAt(); !ok {
+		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "SenderProfile.updated_at"`)}
 	}
 	if len(spc.mutation.UserIDs()) == 0 {
 		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "SenderProfile.user"`)}
@@ -368,6 +368,18 @@ func (spc *SenderProfileCreate) createSpec() (*SenderProfile, *sqlgraph.CreateSp
 		_spec.SetField(senderprofile.FieldProviderID, field.TypeString, value)
 		_node.ProviderID = value
 	}
+	if value, ok := spc.mutation.MonthlyVolume(); ok {
+		_spec.SetField(senderprofile.FieldMonthlyVolume, field.TypeString, value)
+		_node.MonthlyVolume = value
+	}
+	if value, ok := spc.mutation.BusinessWebsite(); ok {
+		_spec.SetField(senderprofile.FieldBusinessWebsite, field.TypeString, value)
+		_node.BusinessWebsite = value
+	}
+	if value, ok := spc.mutation.NatureOfBusiness(); ok {
+		_spec.SetField(senderprofile.FieldNatureOfBusiness, field.TypeString, value)
+		_node.NatureOfBusiness = value
+	}
 	if value, ok := spc.mutation.IsPartner(); ok {
 		_spec.SetField(senderprofile.FieldIsPartner, field.TypeBool, value)
 		_node.IsPartner = value
@@ -379,18 +391,6 @@ func (spc *SenderProfileCreate) createSpec() (*SenderProfile, *sqlgraph.CreateSp
 	if value, ok := spc.mutation.UpdatedAt(); ok {
 		_spec.SetField(senderprofile.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
-	}
-	if value, ok := spc.mutation.MonthlyVolume(); ok {
-		_spec.SetField(senderprofile.FieldMonthlyVolume, field.TypeString, value)
-		_node.MonthlyVolume = &value
-	}
-	if value, ok := spc.mutation.BusinessWebsite(); ok {
-		_spec.SetField(senderprofile.FieldBusinessWebsite, field.TypeString, value)
-		_node.BusinessWebsite = value
-	}
-	if value, ok := spc.mutation.NatureOfBusiness(); ok {
-		_spec.SetField(senderprofile.FieldNatureOfBusiness, field.TypeString, value)
-		_node.NatureOfBusiness = value
 	}
 	if nodes := spc.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -573,42 +573,6 @@ func (u *SenderProfileUpsert) ClearProviderID() *SenderProfileUpsert {
 	return u
 }
 
-// SetIsPartner sets the "is_partner" field.
-func (u *SenderProfileUpsert) SetIsPartner(v bool) *SenderProfileUpsert {
-	u.Set(senderprofile.FieldIsPartner, v)
-	return u
-}
-
-// UpdateIsPartner sets the "is_partner" field to the value that was provided on create.
-func (u *SenderProfileUpsert) UpdateIsPartner() *SenderProfileUpsert {
-	u.SetExcluded(senderprofile.FieldIsPartner)
-	return u
-}
-
-// SetIsActive sets the "is_active" field.
-func (u *SenderProfileUpsert) SetIsActive(v bool) *SenderProfileUpsert {
-	u.Set(senderprofile.FieldIsActive, v)
-	return u
-}
-
-// UpdateIsActive sets the "is_active" field to the value that was provided on create.
-func (u *SenderProfileUpsert) UpdateIsActive() *SenderProfileUpsert {
-	u.SetExcluded(senderprofile.FieldIsActive)
-	return u
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *SenderProfileUpsert) SetUpdatedAt(v time.Time) *SenderProfileUpsert {
-	u.Set(senderprofile.FieldUpdatedAt, v)
-	return u
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *SenderProfileUpsert) UpdateUpdatedAt() *SenderProfileUpsert {
-	u.SetExcluded(senderprofile.FieldUpdatedAt)
-	return u
-}
-
 // SetMonthlyVolume sets the "monthly_volume" field.
 func (u *SenderProfileUpsert) SetMonthlyVolume(v string) *SenderProfileUpsert {
 	u.Set(senderprofile.FieldMonthlyVolume, v)
@@ -660,6 +624,42 @@ func (u *SenderProfileUpsert) UpdateNatureOfBusiness() *SenderProfileUpsert {
 // ClearNatureOfBusiness clears the value of the "nature_of_business" field.
 func (u *SenderProfileUpsert) ClearNatureOfBusiness() *SenderProfileUpsert {
 	u.SetNull(senderprofile.FieldNatureOfBusiness)
+	return u
+}
+
+// SetIsPartner sets the "is_partner" field.
+func (u *SenderProfileUpsert) SetIsPartner(v bool) *SenderProfileUpsert {
+	u.Set(senderprofile.FieldIsPartner, v)
+	return u
+}
+
+// UpdateIsPartner sets the "is_partner" field to the value that was provided on create.
+func (u *SenderProfileUpsert) UpdateIsPartner() *SenderProfileUpsert {
+	u.SetExcluded(senderprofile.FieldIsPartner)
+	return u
+}
+
+// SetIsActive sets the "is_active" field.
+func (u *SenderProfileUpsert) SetIsActive(v bool) *SenderProfileUpsert {
+	u.Set(senderprofile.FieldIsActive, v)
+	return u
+}
+
+// UpdateIsActive sets the "is_active" field to the value that was provided on create.
+func (u *SenderProfileUpsert) UpdateIsActive() *SenderProfileUpsert {
+	u.SetExcluded(senderprofile.FieldIsActive)
+	return u
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *SenderProfileUpsert) SetUpdatedAt(v time.Time) *SenderProfileUpsert {
+	u.Set(senderprofile.FieldUpdatedAt, v)
+	return u
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *SenderProfileUpsert) UpdateUpdatedAt() *SenderProfileUpsert {
+	u.SetExcluded(senderprofile.FieldUpdatedAt)
 	return u
 }
 
@@ -767,48 +767,6 @@ func (u *SenderProfileUpsertOne) ClearProviderID() *SenderProfileUpsertOne {
 	})
 }
 
-// SetIsPartner sets the "is_partner" field.
-func (u *SenderProfileUpsertOne) SetIsPartner(v bool) *SenderProfileUpsertOne {
-	return u.Update(func(s *SenderProfileUpsert) {
-		s.SetIsPartner(v)
-	})
-}
-
-// UpdateIsPartner sets the "is_partner" field to the value that was provided on create.
-func (u *SenderProfileUpsertOne) UpdateIsPartner() *SenderProfileUpsertOne {
-	return u.Update(func(s *SenderProfileUpsert) {
-		s.UpdateIsPartner()
-	})
-}
-
-// SetIsActive sets the "is_active" field.
-func (u *SenderProfileUpsertOne) SetIsActive(v bool) *SenderProfileUpsertOne {
-	return u.Update(func(s *SenderProfileUpsert) {
-		s.SetIsActive(v)
-	})
-}
-
-// UpdateIsActive sets the "is_active" field to the value that was provided on create.
-func (u *SenderProfileUpsertOne) UpdateIsActive() *SenderProfileUpsertOne {
-	return u.Update(func(s *SenderProfileUpsert) {
-		s.UpdateIsActive()
-	})
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *SenderProfileUpsertOne) SetUpdatedAt(v time.Time) *SenderProfileUpsertOne {
-	return u.Update(func(s *SenderProfileUpsert) {
-		s.SetUpdatedAt(v)
-	})
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *SenderProfileUpsertOne) UpdateUpdatedAt() *SenderProfileUpsertOne {
-	return u.Update(func(s *SenderProfileUpsert) {
-		s.UpdateUpdatedAt()
-	})
-}
-
 // SetMonthlyVolume sets the "monthly_volume" field.
 func (u *SenderProfileUpsertOne) SetMonthlyVolume(v string) *SenderProfileUpsertOne {
 	return u.Update(func(s *SenderProfileUpsert) {
@@ -869,6 +827,48 @@ func (u *SenderProfileUpsertOne) UpdateNatureOfBusiness() *SenderProfileUpsertOn
 func (u *SenderProfileUpsertOne) ClearNatureOfBusiness() *SenderProfileUpsertOne {
 	return u.Update(func(s *SenderProfileUpsert) {
 		s.ClearNatureOfBusiness()
+	})
+}
+
+// SetIsPartner sets the "is_partner" field.
+func (u *SenderProfileUpsertOne) SetIsPartner(v bool) *SenderProfileUpsertOne {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.SetIsPartner(v)
+	})
+}
+
+// UpdateIsPartner sets the "is_partner" field to the value that was provided on create.
+func (u *SenderProfileUpsertOne) UpdateIsPartner() *SenderProfileUpsertOne {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.UpdateIsPartner()
+	})
+}
+
+// SetIsActive sets the "is_active" field.
+func (u *SenderProfileUpsertOne) SetIsActive(v bool) *SenderProfileUpsertOne {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.SetIsActive(v)
+	})
+}
+
+// UpdateIsActive sets the "is_active" field to the value that was provided on create.
+func (u *SenderProfileUpsertOne) UpdateIsActive() *SenderProfileUpsertOne {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.UpdateIsActive()
+	})
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *SenderProfileUpsertOne) SetUpdatedAt(v time.Time) *SenderProfileUpsertOne {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.SetUpdatedAt(v)
+	})
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *SenderProfileUpsertOne) UpdateUpdatedAt() *SenderProfileUpsertOne {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.UpdateUpdatedAt()
 	})
 }
 
@@ -1143,48 +1143,6 @@ func (u *SenderProfileUpsertBulk) ClearProviderID() *SenderProfileUpsertBulk {
 	})
 }
 
-// SetIsPartner sets the "is_partner" field.
-func (u *SenderProfileUpsertBulk) SetIsPartner(v bool) *SenderProfileUpsertBulk {
-	return u.Update(func(s *SenderProfileUpsert) {
-		s.SetIsPartner(v)
-	})
-}
-
-// UpdateIsPartner sets the "is_partner" field to the value that was provided on create.
-func (u *SenderProfileUpsertBulk) UpdateIsPartner() *SenderProfileUpsertBulk {
-	return u.Update(func(s *SenderProfileUpsert) {
-		s.UpdateIsPartner()
-	})
-}
-
-// SetIsActive sets the "is_active" field.
-func (u *SenderProfileUpsertBulk) SetIsActive(v bool) *SenderProfileUpsertBulk {
-	return u.Update(func(s *SenderProfileUpsert) {
-		s.SetIsActive(v)
-	})
-}
-
-// UpdateIsActive sets the "is_active" field to the value that was provided on create.
-func (u *SenderProfileUpsertBulk) UpdateIsActive() *SenderProfileUpsertBulk {
-	return u.Update(func(s *SenderProfileUpsert) {
-		s.UpdateIsActive()
-	})
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *SenderProfileUpsertBulk) SetUpdatedAt(v time.Time) *SenderProfileUpsertBulk {
-	return u.Update(func(s *SenderProfileUpsert) {
-		s.SetUpdatedAt(v)
-	})
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *SenderProfileUpsertBulk) UpdateUpdatedAt() *SenderProfileUpsertBulk {
-	return u.Update(func(s *SenderProfileUpsert) {
-		s.UpdateUpdatedAt()
-	})
-}
-
 // SetMonthlyVolume sets the "monthly_volume" field.
 func (u *SenderProfileUpsertBulk) SetMonthlyVolume(v string) *SenderProfileUpsertBulk {
 	return u.Update(func(s *SenderProfileUpsert) {
@@ -1245,6 +1203,48 @@ func (u *SenderProfileUpsertBulk) UpdateNatureOfBusiness() *SenderProfileUpsertB
 func (u *SenderProfileUpsertBulk) ClearNatureOfBusiness() *SenderProfileUpsertBulk {
 	return u.Update(func(s *SenderProfileUpsert) {
 		s.ClearNatureOfBusiness()
+	})
+}
+
+// SetIsPartner sets the "is_partner" field.
+func (u *SenderProfileUpsertBulk) SetIsPartner(v bool) *SenderProfileUpsertBulk {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.SetIsPartner(v)
+	})
+}
+
+// UpdateIsPartner sets the "is_partner" field to the value that was provided on create.
+func (u *SenderProfileUpsertBulk) UpdateIsPartner() *SenderProfileUpsertBulk {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.UpdateIsPartner()
+	})
+}
+
+// SetIsActive sets the "is_active" field.
+func (u *SenderProfileUpsertBulk) SetIsActive(v bool) *SenderProfileUpsertBulk {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.SetIsActive(v)
+	})
+}
+
+// UpdateIsActive sets the "is_active" field to the value that was provided on create.
+func (u *SenderProfileUpsertBulk) UpdateIsActive() *SenderProfileUpsertBulk {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.UpdateIsActive()
+	})
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *SenderProfileUpsertBulk) SetUpdatedAt(v time.Time) *SenderProfileUpsertBulk {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.SetUpdatedAt(v)
+	})
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *SenderProfileUpsertBulk) UpdateUpdatedAt() *SenderProfileUpsertBulk {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.UpdateUpdatedAt()
 	})
 }
 

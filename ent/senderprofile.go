@@ -27,18 +27,18 @@ type SenderProfile struct {
 	DomainWhitelist []string `json:"domain_whitelist,omitempty"`
 	// ProviderID holds the value of the "provider_id" field.
 	ProviderID string `json:"provider_id,omitempty"`
+	// MonthlyVolume holds the value of the "monthly_volume" field.
+	MonthlyVolume string `json:"monthly_volume,omitempty"`
+	// BusinessWebsite holds the value of the "business_website" field.
+	BusinessWebsite string `json:"business_website,omitempty"`
+	// NatureOfBusiness holds the value of the "nature_of_business" field.
+	NatureOfBusiness string `json:"nature_of_business,omitempty"`
 	// IsPartner holds the value of the "is_partner" field.
 	IsPartner bool `json:"is_partner,omitempty"`
 	// IsActive holds the value of the "is_active" field.
 	IsActive bool `json:"is_active,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
-	// Monthly transaction volume for the sender
-	MonthlyVolume *string `json:"monthly_volume,omitempty"`
-	// Business website URL
-	BusinessWebsite string `json:"business_website,omitempty"`
-	// Nature of business description
-	NatureOfBusiness string `json:"nature_of_business,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the SenderProfileQuery when eager-loading is set.
 	Edges               SenderProfileEdges `json:"edges"`
@@ -170,6 +170,24 @@ func (sp *SenderProfile) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				sp.ProviderID = value.String
 			}
+		case senderprofile.FieldMonthlyVolume:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field monthly_volume", values[i])
+			} else if value.Valid {
+				sp.MonthlyVolume = value.String
+			}
+		case senderprofile.FieldBusinessWebsite:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field business_website", values[i])
+			} else if value.Valid {
+				sp.BusinessWebsite = value.String
+			}
+		case senderprofile.FieldNatureOfBusiness:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field nature_of_business", values[i])
+			} else if value.Valid {
+				sp.NatureOfBusiness = value.String
+			}
 		case senderprofile.FieldIsPartner:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field is_partner", values[i])
@@ -187,25 +205,6 @@ func (sp *SenderProfile) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
 				sp.UpdatedAt = value.Time
-			}
-		case senderprofile.FieldMonthlyVolume:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field monthly_volume", values[i])
-			} else if value.Valid {
-				sp.MonthlyVolume = new(string)
-				*sp.MonthlyVolume = value.String
-			}
-		case senderprofile.FieldBusinessWebsite:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field business_website", values[i])
-			} else if value.Valid {
-				sp.BusinessWebsite = value.String
-			}
-		case senderprofile.FieldNatureOfBusiness:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field nature_of_business", values[i])
-			} else if value.Valid {
-				sp.NatureOfBusiness = value.String
 			}
 		case senderprofile.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -284,6 +283,15 @@ func (sp *SenderProfile) String() string {
 	builder.WriteString("provider_id=")
 	builder.WriteString(sp.ProviderID)
 	builder.WriteString(", ")
+	builder.WriteString("monthly_volume=")
+	builder.WriteString(sp.MonthlyVolume)
+	builder.WriteString(", ")
+	builder.WriteString("business_website=")
+	builder.WriteString(sp.BusinessWebsite)
+	builder.WriteString(", ")
+	builder.WriteString("nature_of_business=")
+	builder.WriteString(sp.NatureOfBusiness)
+	builder.WriteString(", ")
 	builder.WriteString("is_partner=")
 	builder.WriteString(fmt.Sprintf("%v", sp.IsPartner))
 	builder.WriteString(", ")
@@ -292,17 +300,6 @@ func (sp *SenderProfile) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
 	builder.WriteString(sp.UpdatedAt.Format(time.ANSIC))
-	builder.WriteString(", ")
-	if v := sp.MonthlyVolume; v != nil {
-		builder.WriteString("monthly_volume=")
-		builder.WriteString(*v)
-	}
-	builder.WriteString(", ")
-	builder.WriteString("business_website=")
-	builder.WriteString(sp.BusinessWebsite)
-	builder.WriteString(", ")
-	builder.WriteString("nature_of_business=")
-	builder.WriteString(sp.NatureOfBusiness)
 	builder.WriteByte(')')
 	return builder.String()
 }
