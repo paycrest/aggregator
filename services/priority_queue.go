@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"math/rand"
 	"strings"
 	"time"
 
@@ -133,6 +134,11 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 	// 	trustScoreJ, _ := providers[j].Edges.ProviderRating.TrustScore.Float64()
 	// 	return trustScoreI > trustScoreJ // Sort in descending order
 	// })
+
+	// Randomize the order of providers
+	rand.Shuffle(len(providers), func(i, j int) {
+		providers[i], providers[j] = providers[j], providers[i]
+	})
 
 	redisKey := fmt.Sprintf("bucket_%s_%s_%s", bucket.Edges.Currency.Code, bucket.MinAmount, bucket.MaxAmount)
 	prevRedisKey := redisKey + "_prev"
