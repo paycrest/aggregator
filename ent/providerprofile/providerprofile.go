@@ -43,6 +43,8 @@ const (
 	FieldIdentityDocument = "identity_document"
 	// FieldBusinessDocument holds the string denoting the business_document field in the database.
 	FieldBusinessDocument = "business_document"
+	// FieldMonthlyVolume holds the string denoting the monthly_volume field in the database.
+	FieldMonthlyVolume = "monthly_volume"
 	// FieldIsKybVerified holds the string denoting the is_kyb_verified field in the database.
 	FieldIsKybVerified = "is_kyb_verified"
 	// EdgeUser holds the string denoting the user edge name in mutations.
@@ -125,6 +127,7 @@ var Columns = []string{
 	FieldIdentityDocumentType,
 	FieldIdentityDocument,
 	FieldBusinessDocument,
+	FieldMonthlyVolume,
 	FieldIsKybVerified,
 }
 
@@ -327,6 +330,11 @@ func ByIdentityDocument(opts ...sql.OrderTermOption) OrderOption {
 // ByBusinessDocument orders the results by the business_document field.
 func ByBusinessDocument(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldBusinessDocument, opts...).ToFunc()
+}
+
+// ByMonthlyVolume orders the results by the monthly_volume field.
+func ByMonthlyVolume(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMonthlyVolume, opts...).ToFunc()
 }
 
 // ByIsKybVerified orders the results by the is_kyb_verified field.

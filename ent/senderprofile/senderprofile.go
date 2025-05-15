@@ -21,6 +21,12 @@ const (
 	FieldDomainWhitelist = "domain_whitelist"
 	// FieldProviderID holds the string denoting the provider_id field in the database.
 	FieldProviderID = "provider_id"
+	// FieldMonthlyVolume holds the string denoting the monthly_volume field in the database.
+	FieldMonthlyVolume = "monthly_volume"
+	// FieldBusinessWebsite holds the string denoting the business_website field in the database.
+	FieldBusinessWebsite = "business_website"
+	// FieldNatureOfBusiness holds the string denoting the nature_of_business field in the database.
+	FieldNatureOfBusiness = "nature_of_business"
 	// FieldIsPartner holds the string denoting the is_partner field in the database.
 	FieldIsPartner = "is_partner"
 	// FieldIsActive holds the string denoting the is_active field in the database.
@@ -82,6 +88,9 @@ var Columns = []string{
 	FieldWebhookURL,
 	FieldDomainWhitelist,
 	FieldProviderID,
+	FieldMonthlyVolume,
+	FieldBusinessWebsite,
+	FieldNatureOfBusiness,
 	FieldIsPartner,
 	FieldIsActive,
 	FieldUpdatedAt,
@@ -111,6 +120,10 @@ func ValidColumn(column string) bool {
 var (
 	// DefaultDomainWhitelist holds the default value on creation for the "domain_whitelist" field.
 	DefaultDomainWhitelist []string
+	// BusinessWebsiteValidator is a validator for the "business_website" field. It is called by the builders before save.
+	BusinessWebsiteValidator func(string) error
+	// NatureOfBusinessValidator is a validator for the "nature_of_business" field. It is called by the builders before save.
+	NatureOfBusinessValidator func(string) error
 	// DefaultIsPartner holds the default value on creation for the "is_partner" field.
 	DefaultIsPartner bool
 	// DefaultIsActive holds the default value on creation for the "is_active" field.
@@ -139,6 +152,21 @@ func ByWebhookURL(opts ...sql.OrderTermOption) OrderOption {
 // ByProviderID orders the results by the provider_id field.
 func ByProviderID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldProviderID, opts...).ToFunc()
+}
+
+// ByMonthlyVolume orders the results by the monthly_volume field.
+func ByMonthlyVolume(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMonthlyVolume, opts...).ToFunc()
+}
+
+// ByBusinessWebsite orders the results by the business_website field.
+func ByBusinessWebsite(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBusinessWebsite, opts...).ToFunc()
+}
+
+// ByNatureOfBusiness orders the results by the nature_of_business field.
+func ByNatureOfBusiness(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldNatureOfBusiness, opts...).ToFunc()
 }
 
 // ByIsPartner orders the results by the is_partner field.

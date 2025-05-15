@@ -63,6 +63,48 @@ func (spc *SenderProfileCreate) SetNillableProviderID(s *string) *SenderProfileC
 	return spc
 }
 
+// SetMonthlyVolume sets the "monthly_volume" field.
+func (spc *SenderProfileCreate) SetMonthlyVolume(s string) *SenderProfileCreate {
+	spc.mutation.SetMonthlyVolume(s)
+	return spc
+}
+
+// SetNillableMonthlyVolume sets the "monthly_volume" field if the given value is not nil.
+func (spc *SenderProfileCreate) SetNillableMonthlyVolume(s *string) *SenderProfileCreate {
+	if s != nil {
+		spc.SetMonthlyVolume(*s)
+	}
+	return spc
+}
+
+// SetBusinessWebsite sets the "business_website" field.
+func (spc *SenderProfileCreate) SetBusinessWebsite(s string) *SenderProfileCreate {
+	spc.mutation.SetBusinessWebsite(s)
+	return spc
+}
+
+// SetNillableBusinessWebsite sets the "business_website" field if the given value is not nil.
+func (spc *SenderProfileCreate) SetNillableBusinessWebsite(s *string) *SenderProfileCreate {
+	if s != nil {
+		spc.SetBusinessWebsite(*s)
+	}
+	return spc
+}
+
+// SetNatureOfBusiness sets the "nature_of_business" field.
+func (spc *SenderProfileCreate) SetNatureOfBusiness(s string) *SenderProfileCreate {
+	spc.mutation.SetNatureOfBusiness(s)
+	return spc
+}
+
+// SetNillableNatureOfBusiness sets the "nature_of_business" field if the given value is not nil.
+func (spc *SenderProfileCreate) SetNillableNatureOfBusiness(s *string) *SenderProfileCreate {
+	if s != nil {
+		spc.SetNatureOfBusiness(*s)
+	}
+	return spc
+}
+
 // SetIsPartner sets the "is_partner" field.
 func (spc *SenderProfileCreate) SetIsPartner(b bool) *SenderProfileCreate {
 	spc.mutation.SetIsPartner(b)
@@ -256,6 +298,16 @@ func (spc *SenderProfileCreate) check() error {
 	if _, ok := spc.mutation.DomainWhitelist(); !ok {
 		return &ValidationError{Name: "domain_whitelist", err: errors.New(`ent: missing required field "SenderProfile.domain_whitelist"`)}
 	}
+	if v, ok := spc.mutation.BusinessWebsite(); ok {
+		if err := senderprofile.BusinessWebsiteValidator(v); err != nil {
+			return &ValidationError{Name: "business_website", err: fmt.Errorf(`ent: validator failed for field "SenderProfile.business_website": %w`, err)}
+		}
+	}
+	if v, ok := spc.mutation.NatureOfBusiness(); ok {
+		if err := senderprofile.NatureOfBusinessValidator(v); err != nil {
+			return &ValidationError{Name: "nature_of_business", err: fmt.Errorf(`ent: validator failed for field "SenderProfile.nature_of_business": %w`, err)}
+		}
+	}
 	if _, ok := spc.mutation.IsPartner(); !ok {
 		return &ValidationError{Name: "is_partner", err: errors.New(`ent: missing required field "SenderProfile.is_partner"`)}
 	}
@@ -315,6 +367,18 @@ func (spc *SenderProfileCreate) createSpec() (*SenderProfile, *sqlgraph.CreateSp
 	if value, ok := spc.mutation.ProviderID(); ok {
 		_spec.SetField(senderprofile.FieldProviderID, field.TypeString, value)
 		_node.ProviderID = value
+	}
+	if value, ok := spc.mutation.MonthlyVolume(); ok {
+		_spec.SetField(senderprofile.FieldMonthlyVolume, field.TypeString, value)
+		_node.MonthlyVolume = value
+	}
+	if value, ok := spc.mutation.BusinessWebsite(); ok {
+		_spec.SetField(senderprofile.FieldBusinessWebsite, field.TypeString, value)
+		_node.BusinessWebsite = value
+	}
+	if value, ok := spc.mutation.NatureOfBusiness(); ok {
+		_spec.SetField(senderprofile.FieldNatureOfBusiness, field.TypeString, value)
+		_node.NatureOfBusiness = value
 	}
 	if value, ok := spc.mutation.IsPartner(); ok {
 		_spec.SetField(senderprofile.FieldIsPartner, field.TypeBool, value)
@@ -509,6 +573,60 @@ func (u *SenderProfileUpsert) ClearProviderID() *SenderProfileUpsert {
 	return u
 }
 
+// SetMonthlyVolume sets the "monthly_volume" field.
+func (u *SenderProfileUpsert) SetMonthlyVolume(v string) *SenderProfileUpsert {
+	u.Set(senderprofile.FieldMonthlyVolume, v)
+	return u
+}
+
+// UpdateMonthlyVolume sets the "monthly_volume" field to the value that was provided on create.
+func (u *SenderProfileUpsert) UpdateMonthlyVolume() *SenderProfileUpsert {
+	u.SetExcluded(senderprofile.FieldMonthlyVolume)
+	return u
+}
+
+// ClearMonthlyVolume clears the value of the "monthly_volume" field.
+func (u *SenderProfileUpsert) ClearMonthlyVolume() *SenderProfileUpsert {
+	u.SetNull(senderprofile.FieldMonthlyVolume)
+	return u
+}
+
+// SetBusinessWebsite sets the "business_website" field.
+func (u *SenderProfileUpsert) SetBusinessWebsite(v string) *SenderProfileUpsert {
+	u.Set(senderprofile.FieldBusinessWebsite, v)
+	return u
+}
+
+// UpdateBusinessWebsite sets the "business_website" field to the value that was provided on create.
+func (u *SenderProfileUpsert) UpdateBusinessWebsite() *SenderProfileUpsert {
+	u.SetExcluded(senderprofile.FieldBusinessWebsite)
+	return u
+}
+
+// ClearBusinessWebsite clears the value of the "business_website" field.
+func (u *SenderProfileUpsert) ClearBusinessWebsite() *SenderProfileUpsert {
+	u.SetNull(senderprofile.FieldBusinessWebsite)
+	return u
+}
+
+// SetNatureOfBusiness sets the "nature_of_business" field.
+func (u *SenderProfileUpsert) SetNatureOfBusiness(v string) *SenderProfileUpsert {
+	u.Set(senderprofile.FieldNatureOfBusiness, v)
+	return u
+}
+
+// UpdateNatureOfBusiness sets the "nature_of_business" field to the value that was provided on create.
+func (u *SenderProfileUpsert) UpdateNatureOfBusiness() *SenderProfileUpsert {
+	u.SetExcluded(senderprofile.FieldNatureOfBusiness)
+	return u
+}
+
+// ClearNatureOfBusiness clears the value of the "nature_of_business" field.
+func (u *SenderProfileUpsert) ClearNatureOfBusiness() *SenderProfileUpsert {
+	u.SetNull(senderprofile.FieldNatureOfBusiness)
+	return u
+}
+
 // SetIsPartner sets the "is_partner" field.
 func (u *SenderProfileUpsert) SetIsPartner(v bool) *SenderProfileUpsert {
 	u.Set(senderprofile.FieldIsPartner, v)
@@ -646,6 +764,69 @@ func (u *SenderProfileUpsertOne) UpdateProviderID() *SenderProfileUpsertOne {
 func (u *SenderProfileUpsertOne) ClearProviderID() *SenderProfileUpsertOne {
 	return u.Update(func(s *SenderProfileUpsert) {
 		s.ClearProviderID()
+	})
+}
+
+// SetMonthlyVolume sets the "monthly_volume" field.
+func (u *SenderProfileUpsertOne) SetMonthlyVolume(v string) *SenderProfileUpsertOne {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.SetMonthlyVolume(v)
+	})
+}
+
+// UpdateMonthlyVolume sets the "monthly_volume" field to the value that was provided on create.
+func (u *SenderProfileUpsertOne) UpdateMonthlyVolume() *SenderProfileUpsertOne {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.UpdateMonthlyVolume()
+	})
+}
+
+// ClearMonthlyVolume clears the value of the "monthly_volume" field.
+func (u *SenderProfileUpsertOne) ClearMonthlyVolume() *SenderProfileUpsertOne {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.ClearMonthlyVolume()
+	})
+}
+
+// SetBusinessWebsite sets the "business_website" field.
+func (u *SenderProfileUpsertOne) SetBusinessWebsite(v string) *SenderProfileUpsertOne {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.SetBusinessWebsite(v)
+	})
+}
+
+// UpdateBusinessWebsite sets the "business_website" field to the value that was provided on create.
+func (u *SenderProfileUpsertOne) UpdateBusinessWebsite() *SenderProfileUpsertOne {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.UpdateBusinessWebsite()
+	})
+}
+
+// ClearBusinessWebsite clears the value of the "business_website" field.
+func (u *SenderProfileUpsertOne) ClearBusinessWebsite() *SenderProfileUpsertOne {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.ClearBusinessWebsite()
+	})
+}
+
+// SetNatureOfBusiness sets the "nature_of_business" field.
+func (u *SenderProfileUpsertOne) SetNatureOfBusiness(v string) *SenderProfileUpsertOne {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.SetNatureOfBusiness(v)
+	})
+}
+
+// UpdateNatureOfBusiness sets the "nature_of_business" field to the value that was provided on create.
+func (u *SenderProfileUpsertOne) UpdateNatureOfBusiness() *SenderProfileUpsertOne {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.UpdateNatureOfBusiness()
+	})
+}
+
+// ClearNatureOfBusiness clears the value of the "nature_of_business" field.
+func (u *SenderProfileUpsertOne) ClearNatureOfBusiness() *SenderProfileUpsertOne {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.ClearNatureOfBusiness()
 	})
 }
 
@@ -959,6 +1140,69 @@ func (u *SenderProfileUpsertBulk) UpdateProviderID() *SenderProfileUpsertBulk {
 func (u *SenderProfileUpsertBulk) ClearProviderID() *SenderProfileUpsertBulk {
 	return u.Update(func(s *SenderProfileUpsert) {
 		s.ClearProviderID()
+	})
+}
+
+// SetMonthlyVolume sets the "monthly_volume" field.
+func (u *SenderProfileUpsertBulk) SetMonthlyVolume(v string) *SenderProfileUpsertBulk {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.SetMonthlyVolume(v)
+	})
+}
+
+// UpdateMonthlyVolume sets the "monthly_volume" field to the value that was provided on create.
+func (u *SenderProfileUpsertBulk) UpdateMonthlyVolume() *SenderProfileUpsertBulk {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.UpdateMonthlyVolume()
+	})
+}
+
+// ClearMonthlyVolume clears the value of the "monthly_volume" field.
+func (u *SenderProfileUpsertBulk) ClearMonthlyVolume() *SenderProfileUpsertBulk {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.ClearMonthlyVolume()
+	})
+}
+
+// SetBusinessWebsite sets the "business_website" field.
+func (u *SenderProfileUpsertBulk) SetBusinessWebsite(v string) *SenderProfileUpsertBulk {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.SetBusinessWebsite(v)
+	})
+}
+
+// UpdateBusinessWebsite sets the "business_website" field to the value that was provided on create.
+func (u *SenderProfileUpsertBulk) UpdateBusinessWebsite() *SenderProfileUpsertBulk {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.UpdateBusinessWebsite()
+	})
+}
+
+// ClearBusinessWebsite clears the value of the "business_website" field.
+func (u *SenderProfileUpsertBulk) ClearBusinessWebsite() *SenderProfileUpsertBulk {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.ClearBusinessWebsite()
+	})
+}
+
+// SetNatureOfBusiness sets the "nature_of_business" field.
+func (u *SenderProfileUpsertBulk) SetNatureOfBusiness(v string) *SenderProfileUpsertBulk {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.SetNatureOfBusiness(v)
+	})
+}
+
+// UpdateNatureOfBusiness sets the "nature_of_business" field to the value that was provided on create.
+func (u *SenderProfileUpsertBulk) UpdateNatureOfBusiness() *SenderProfileUpsertBulk {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.UpdateNatureOfBusiness()
+	})
+}
+
+// ClearNatureOfBusiness clears the value of the "nature_of_business" field.
+func (u *SenderProfileUpsertBulk) ClearNatureOfBusiness() *SenderProfileUpsertBulk {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.ClearNatureOfBusiness()
 	})
 }
 

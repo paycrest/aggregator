@@ -120,6 +120,11 @@ func BusinessDocument(v string) predicate.ProviderProfile {
 	return predicate.ProviderProfile(sql.FieldEQ(FieldBusinessDocument, v))
 }
 
+// MonthlyVolume applies equality check predicate on the "monthly_volume" field. It's identical to MonthlyVolumeEQ.
+func MonthlyVolume(v string) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldEQ(FieldMonthlyVolume, v))
+}
+
 // IsKybVerified applies equality check predicate on the "is_kyb_verified" field. It's identical to IsKybVerifiedEQ.
 func IsKybVerified(v bool) predicate.ProviderProfile {
 	return predicate.ProviderProfile(sql.FieldEQ(FieldIsKybVerified, v))
@@ -828,6 +833,81 @@ func BusinessDocumentEqualFold(v string) predicate.ProviderProfile {
 // BusinessDocumentContainsFold applies the ContainsFold predicate on the "business_document" field.
 func BusinessDocumentContainsFold(v string) predicate.ProviderProfile {
 	return predicate.ProviderProfile(sql.FieldContainsFold(FieldBusinessDocument, v))
+}
+
+// MonthlyVolumeEQ applies the EQ predicate on the "monthly_volume" field.
+func MonthlyVolumeEQ(v string) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldEQ(FieldMonthlyVolume, v))
+}
+
+// MonthlyVolumeNEQ applies the NEQ predicate on the "monthly_volume" field.
+func MonthlyVolumeNEQ(v string) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldNEQ(FieldMonthlyVolume, v))
+}
+
+// MonthlyVolumeIn applies the In predicate on the "monthly_volume" field.
+func MonthlyVolumeIn(vs ...string) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldIn(FieldMonthlyVolume, vs...))
+}
+
+// MonthlyVolumeNotIn applies the NotIn predicate on the "monthly_volume" field.
+func MonthlyVolumeNotIn(vs ...string) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldNotIn(FieldMonthlyVolume, vs...))
+}
+
+// MonthlyVolumeGT applies the GT predicate on the "monthly_volume" field.
+func MonthlyVolumeGT(v string) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldGT(FieldMonthlyVolume, v))
+}
+
+// MonthlyVolumeGTE applies the GTE predicate on the "monthly_volume" field.
+func MonthlyVolumeGTE(v string) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldGTE(FieldMonthlyVolume, v))
+}
+
+// MonthlyVolumeLT applies the LT predicate on the "monthly_volume" field.
+func MonthlyVolumeLT(v string) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldLT(FieldMonthlyVolume, v))
+}
+
+// MonthlyVolumeLTE applies the LTE predicate on the "monthly_volume" field.
+func MonthlyVolumeLTE(v string) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldLTE(FieldMonthlyVolume, v))
+}
+
+// MonthlyVolumeContains applies the Contains predicate on the "monthly_volume" field.
+func MonthlyVolumeContains(v string) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldContains(FieldMonthlyVolume, v))
+}
+
+// MonthlyVolumeHasPrefix applies the HasPrefix predicate on the "monthly_volume" field.
+func MonthlyVolumeHasPrefix(v string) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldHasPrefix(FieldMonthlyVolume, v))
+}
+
+// MonthlyVolumeHasSuffix applies the HasSuffix predicate on the "monthly_volume" field.
+func MonthlyVolumeHasSuffix(v string) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldHasSuffix(FieldMonthlyVolume, v))
+}
+
+// MonthlyVolumeIsNil applies the IsNil predicate on the "monthly_volume" field.
+func MonthlyVolumeIsNil() predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldIsNull(FieldMonthlyVolume))
+}
+
+// MonthlyVolumeNotNil applies the NotNil predicate on the "monthly_volume" field.
+func MonthlyVolumeNotNil() predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldNotNull(FieldMonthlyVolume))
+}
+
+// MonthlyVolumeEqualFold applies the EqualFold predicate on the "monthly_volume" field.
+func MonthlyVolumeEqualFold(v string) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldEqualFold(FieldMonthlyVolume, v))
+}
+
+// MonthlyVolumeContainsFold applies the ContainsFold predicate on the "monthly_volume" field.
+func MonthlyVolumeContainsFold(v string) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldContainsFold(FieldMonthlyVolume, v))
 }
 
 // IsKybVerifiedEQ applies the EQ predicate on the "is_kyb_verified" field.

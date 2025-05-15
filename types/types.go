@@ -140,12 +140,15 @@ type VerificationStatus struct {
 
 // RegisterPayload is the payload for the register endpoint
 type RegisterPayload struct {
-	FirstName  string   `json:"firstName" binding:"required"`
-	LastName   string   `json:"lastName" binding:"required"`
-	Email      string   `json:"email" binding:"required,email"`
-	Password   string   `json:"password" binding:"required,min=6,max=20"`
-	Currencies []string `json:"currencies"`
-	Scopes     []string `json:"scopes" binding:"required,dive,oneof=sender provider"`
+	FirstName        string   `json:"firstName" binding:"required"`
+	LastName         string   `json:"lastName" binding:"required"`
+	Email            string   `json:"email" binding:"required,email"`
+	Password         string   `json:"password" binding:"required,min=6,max=20"`
+	Currencies       []string `json:"currencies"`
+	Scopes           []string `json:"scopes" binding:"required,dive,oneof=sender provider"`
+	MonthlyVolume    string   `json:"monthlyVolume" binding:"required"`
+	BusinessWebsite  string   `json:"businessWebsite" binding:"omitempty,url"`
+	NatureOfBusiness string   `json:"natureOfBusiness" binding:"omitempty,max=255"`
 }
 
 // RegisterResponse is the response for the register endpoint

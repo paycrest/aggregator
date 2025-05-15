@@ -120,7 +120,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		if verificationToken != nil {
 			if _, err := ctrl.emailService.SendVerificationEmail(ctx, verificationToken.Token, user.Email, user.FirstName); err != nil {
 				logger.WithFields(logger.Fields{
-					"Error": fmt.Sprintf("%v", err),
+					"Error":  fmt.Sprintf("%v", err),
 					"UserID": user.ID,
 				}).Errorf("Failed to send verification email")
 			}
@@ -174,17 +174,20 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 			return
 		}
 
-		provider, err := tx.ProviderProfile.
+		// Create provider profile
+		providerCreate := tx.ProviderProfile.
 			Create().
 			AddCurrencies(fiatCurrencies...).
 			SetVisibilityMode(providerprofile.VisibilityModePrivate).
 			SetUser(user).
 			SetProvisionMode(providerprofile.ProvisionModeAuto).
-			Save(ctx)
+			SetMonthlyVolume(payload.MonthlyVolume)
+
+		provider, err := providerCreate.Save(ctx)
 		if err != nil {
 			_ = tx.Rollback()
 			logger.WithFields(logger.Fields{
-				"Error": fmt.Sprintf("%v", err),
+				"Error":  fmt.Sprintf("%v", err),
 				"UserID": user.ID,
 			}).Errorf("Failed to create provider profile")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error",
@@ -197,8 +200,8 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		if err != nil {
 			_ = tx.Rollback()
 			logger.WithFields(logger.Fields{
-				"Error": fmt.Sprintf("%v", err),
-				"UserID": user.ID,
+				"Error":      fmt.Sprintf("%v", err),
+				"UserID":     user.ID,
 				"ProviderID": provider.ID,
 			}).Errorf("Failed to create API key for provider")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error",
@@ -209,14 +212,19 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 
 	// Create a sender profile
 	if u.ContainsString(scopes, "sender") {
+
+		// Create sender profile
 		sender, err := tx.SenderProfile.
 			Create().
 			SetUser(user).
+			SetMonthlyVolume(payload.MonthlyVolume).
+			SetBusinessWebsite(payload.BusinessWebsite).
+			SetNatureOfBusiness(payload.NatureOfBusiness).
 			Save(ctx)
 		if err != nil {
 			_ = tx.Rollback()
 			logger.WithFields(logger.Fields{
-				"Error": fmt.Sprintf("%v", err),
+				"Error":  fmt.Sprintf("%v", err),
 				"UserID": user.ID,
 			}).Errorf("Failed to create sender profile")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error",
@@ -229,8 +237,8 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		if err != nil {
 			_ = tx.Rollback()
 			logger.WithFields(logger.Fields{
-				"Error": fmt.Sprintf("%v", err),
-				"UserID": user.ID,
+				"Error":    fmt.Sprintf("%v", err),
+				"UserID":   user.ID,
 				"SenderID": sender.ID,
 			}).Errorf("Failed to create API key for sender")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error",

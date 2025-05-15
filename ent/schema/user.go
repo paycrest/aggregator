@@ -40,7 +40,7 @@ func (User) Fields() []ent.Field {
 		field.Bool("is_email_verified").
 			Default(false),
 		field.Bool("has_early_access"). // has_early_access is "false" by default
-			Default(false),
+						Default(false),
 	}
 }
 

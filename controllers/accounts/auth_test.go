@@ -22,6 +22,7 @@ import (
 	svc "github.com/paycrest/aggregator/services"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
+	"github.com/shopspring/decimal"
 	"github.com/spf13/viper"
 	"golang.org/x/crypto/bcrypt"
 
@@ -98,12 +99,15 @@ func TestAuth(t *testing.T) {
 		t.Run("with valid payload and both sender and provider scopes", func(t *testing.T) {
 			// Test register with valid payload
 			payload := types.RegisterPayload{
-				FirstName:  "Ike",
-				LastName:   "Ayo",
-				Email:      "ikeayo@example.com",
-				Password:   "password",
-				Currencies: []string{"NGN"},
-				Scopes:     []string{"sender", "provider"},
+				FirstName:        "Ike",
+				LastName:         "Ayo",
+				Email:            "ikeayo@example.com",
+				Password:         "password",
+				Currencies:       []string{"NGN"},
+				Scopes:           []string{"sender", "provider"},
+				MonthlyVolume:    "10k-50k",
+				BusinessWebsite:  "https://example.com",
+				NatureOfBusiness: "Example business",
 			}
 
 			header := map[string]string{
@@ -166,11 +170,14 @@ func TestAuth(t *testing.T) {
 		t.Run("with only sender scope payload", func(t *testing.T) {
 			// Test register with valid payload
 			payload := types.RegisterPayload{
-				FirstName: "Ike",
-				LastName:  "Ayo",
-				Email:     "ikeayo1@example.com",
-				Password:  "password1",
-				Scopes:    []string{"sender"},
+				FirstName:        "Ike",
+				LastName:         "Ayo",
+				Email:            "ikeayo1@example.com",
+				Password:         "password1",
+				Scopes:           []string{"sender"},
+				MonthlyVolume:    "10k",
+				BusinessWebsite:  "https://example.com",
+				NatureOfBusiness: "Example business",
 			}
 
 			res, err := test.PerformRequest(t, "POST", "/register", payload, nil, router)
@@ -224,12 +231,13 @@ func TestAuth(t *testing.T) {
 		t.Run("with only provider scope payload", func(t *testing.T) {
 			// Test register with valid payload
 			payload := types.RegisterPayload{
-				FirstName:  "Ike",
-				LastName:   "Ayo",
-				Email:      "ikeayo2@example.com",
-				Password:   "password2",
-				Currencies: []string{"NGN"},
-				Scopes:     []string{"provider"},
+				FirstName:     "Ike",
+				LastName:      "Ayo",
+				Email:         "ikeayo2@example.com",
+				Password:      "password2",
+				Currencies:    []string{"NGN"},
+				Scopes:        []string{"provider"},
+				MonthlyVolume: "50k-100k",
 			}
 
 			header := map[string]string{
@@ -305,30 +313,118 @@ func TestAuth(t *testing.T) {
 			// 	assert.Equal(t, http.StatusInternalServerError, res.Code)
 			// })
 		})
+		t.Run("with NatureOfBusiness exceeding 255 characters", func(t *testing.T) {
+			longDescription := strings.Repeat("a", 256)
+			payload := types.RegisterPayload{
+				FirstName:        "Ike",
+				LastName:         "Ayo",
+				Email:            "ikeayo6@example.com",
+				Password:         "password",
+				Scopes:           []string{"sender"},
+				MonthlyVolume:    "10k",
+				BusinessWebsite:  "https://example.com",
+				NatureOfBusiness: longDescription,
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/register", payload, nil, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Failed to validate payload", response.Message)
+			assert.Equal(t, "error", response.Status)
+
+			data, ok := response.Data.([]interface{})
+			if !ok || data == nil {
+				t.Errorf("response.Data is not of type []interface{} or is nil: got %v", response.Data)
+				return
+			}
+
+			assert.Len(t, data, 1)
+			errorMap, ok := data[0].(map[string]interface{})
+			assert.True(t, ok)
+			assert.NotNil(t, errorMap)
+			assert.Equal(t, "NatureOfBusiness", errorMap["field"].(string))
+		})
+		t.Run("with invalid BusinessWebsite", func(t *testing.T) {
+			payload := types.RegisterPayload{
+				FirstName:        "Ike",
+				LastName:         "Ayo",
+				Email:            "ikeayo5@example.com",
+				Password:         "password",
+				Scopes:           []string{"sender"},
+				MonthlyVolume:    "10k",
+				BusinessWebsite:  "invalid-url",
+				NatureOfBusiness: "Example business",
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/register", payload, nil, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Failed to validate payload", response.Message)
+			assert.Equal(t, "error", response.Status)
+
+			data, ok := response.Data.([]interface{})
+			if !ok || data == nil {
+				t.Errorf("response.Data is not of type []interface{} or is nil: got %v", response.Data)
+				return
+			}
+
+			assert.Len(t, data, 1)
+			errorMap, ok := data[0].(map[string]interface{})
+			assert.True(t, ok)
+			assert.NotNil(t, errorMap)
+			assert.Equal(t, "BusinessWebsite", errorMap["field"].(string))
+			// assert.Equal(t, "Unknown error", errorMap["message"].(string)) // Update to "Invalid URL" if u.GetErrorData is fixed
+		})
 		t.Run("from the provider app", func(t *testing.T) {
 			// Test register with valid payload
 			payload := types.RegisterPayload{
-				FirstName:  "Ike",
-				LastName:   "Ayo",
-				Email:      "ikeayoprovider@example.com",
-				Password:   "password",
-				Currencies: []string{"NGN", "KES"},
-				Scopes:     []string{"provider"},
+				FirstName:     "Ike",
+				LastName:      "Ayo",
+				Email:         "ikeayoprovider@example.com",
+				Password:      "password",
+				Currencies:    []string{"NGN", "KES"},
+				Scopes:        []string{"provider"},
+				MonthlyVolume: "100k",
 			}
 
 			headers := map[string]string{
 				"Client-Type": "mobile",
 			}
 
-			res, err := test.PerformRequest(t, "POST", "/register", payload, headers, router)
+			// First, ensure the currency exists in the database
+			ctx := context.Background()
+			_, err := db.Client.FiatCurrency.Create().
+				SetCode("NG").
+				SetName("Nigerian Naira").
+				SetShortName("NGN").
+				SetSymbol("#").
+				SetMarketRate(decimal.NewFromInt(1000)).
+				SetIsEnabled(true).
+				Save(ctx)
 			assert.NoError(t, err)
 
-			// Assert the response body
-			assert.Equal(t, http.StatusCreated, res.Code)
+			res, err := test.PerformRequest(t, "POST", "/register", payload, headers, router)
+			assert.NoError(t, err)
 
 			var response types.Response
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
+
+			assert.Equal(t, http.StatusCreated, res.Code)
+
+			if res.Code != http.StatusCreated {
+				t.Logf("Error Message: %s", response.Message)
+				return
+			}
+
 			data, ok := response.Data.(map[string]interface{})
 			assert.True(t, ok, "response.Data is not of type map[string]interface{}")
 			assert.NotNil(t, data, "response.Data is nil")
@@ -346,22 +442,22 @@ func TestAuth(t *testing.T) {
 						q.WithAPIKey()
 					}).
 				WithSenderProfile().
-				Only(context.Background())
+				Only(ctx)
 			assert.NoError(t, err)
 
 			assert.NotNil(t, user)
 			assert.NotNil(t, user.Edges.ProviderProfile.Edges.APIKey)
 			assert.Nil(t, user.Edges.SenderProfile)
 		})
-
 		t.Run("with existing user", func(t *testing.T) {
 			// Test register with existing user
 			payload := types.RegisterPayload{
-				FirstName: "Ike",
-				LastName:  "Ayo",
-				Email:     "ikeayo@example.com",
-				Password:  "password",
-				Scopes:    []string{"sender"},
+				FirstName:     "Ike",
+				LastName:      "Ayo",
+				Email:         "ikeayo@example.com",
+				Password:      "password",
+				Scopes:        []string{"sender"},
+				MonthlyVolume: "100k",
 			}
 
 			res, err := test.PerformRequest(t, "POST", "/register", payload, nil, router)
@@ -380,11 +476,12 @@ func TestAuth(t *testing.T) {
 		t.Run("with invalid email", func(t *testing.T) {
 			// Test register with invalid email
 			payload := types.RegisterPayload{
-				FirstName: "Ike",
-				LastName:  "Ayo",
-				Email:     "invalid-email",
-				Password:  "password",
-				Scopes:    []string{"sender"},
+				FirstName:     "Ike",
+				LastName:      "Ayo",
+				Email:         "invalid-email",
+				Password:      "password",
+				Scopes:        []string{"sender"},
+				MonthlyVolume: "100k",
 			}
 
 			res, err := test.PerformRequest(t, "POST", "/register", payload, nil, router)
@@ -416,11 +513,12 @@ func TestAuth(t *testing.T) {
 		t.Run("with invalid scope", func(t *testing.T) {
 			// Test register with invalid email
 			payload := types.RegisterPayload{
-				FirstName: "Ike",
-				LastName:  "Ayo",
-				Email:     "ikeayovalidator@example.com",
-				Password:  "password",
-				Scopes:    []string{"validator"},
+				FirstName:     "Ike",
+				LastName:      "Ayo",
+				Email:         "ikeayovalidator@example.com",
+				Password:      "password",
+				Scopes:        []string{"validator"},
+				MonthlyVolume: "100k",
 			}
 
 			res, err := test.PerformRequest(t, "POST", "/register", payload, nil, router)
