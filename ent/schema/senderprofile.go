@@ -24,24 +24,20 @@ func (SenderProfile) Fields() []ent.Field {
 		field.Strings("domain_whitelist").
 			Default([]string{}),
 		field.String("provider_id").Optional(),
+		field.String("monthly_volume").
+			Optional(),
+		field.String("business_website").
+			Optional().
+			MaxLen(255),
+		field.String("nature_of_business").
+			Optional().
+			MaxLen(255),
 		field.Bool("is_partner").Default(false),
 		field.Bool("is_active").
 			Default(false),
 		field.Time("updated_at").
 			Default(time.Now).
 			UpdateDefault(time.Now),
-		field.String("monthly_volume").
-			Optional().
-			Nillable().
-			Comment("Monthly transaction volume for the sender"),
-		field.String("business_website").
-			Optional().
-			MaxLen(255).
-			Comment("Business website URL"),
-		field.String("nature_of_business").
-			Optional().
-			MaxLen(255).
-			Comment("Nature of business description"),
 	}
 }
 

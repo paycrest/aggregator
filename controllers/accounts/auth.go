@@ -214,14 +214,13 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 	if u.ContainsString(scopes, "sender") {
 
 		// Create sender profile
-		senderCreate := tx.SenderProfile.
+		sender, err := tx.SenderProfile.
 			Create().
 			SetUser(user).
 			SetMonthlyVolume(payload.MonthlyVolume).
 			SetBusinessWebsite(payload.BusinessWebsite).
-			SetNatureOfBusiness(payload.NatureOfBusiness)
-
-		sender, err := senderCreate.Save(ctx)
+			SetNatureOfBusiness(payload.NatureOfBusiness).
+			Save(ctx)
 		if err != nil {
 			_ = tx.Rollback()
 			logger.WithFields(logger.Fields{
