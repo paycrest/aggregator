@@ -227,3 +227,17 @@ func SendTemplateEmailWithJsonAttachment(content types.SendEmailPayload, templat
 
 	return nil
 }
+
+// SendWelcomeEmail sends a welcome email to the user
+func (m *EmailService) SendWelcomeEmail(ctx context.Context, email, firstName string, scopes []string) (types.SendEmailResponse, error) {
+    payload := types.SendEmailPayload{
+        FromAddress: _DefaultFromAddress,
+        ToAddress:   email,
+        DynamicData: map[string]interface{}{
+            "first_name": firstName,
+            "email":     email,
+            "scopes":    scopes,
+        },
+    }
+    return SendTemplateEmail(payload, "WELCOME_EMAIL_TEMPLATE_ID")
+}
