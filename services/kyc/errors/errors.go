@@ -9,6 +9,7 @@ type (
 	ErrProviderUnreachable  struct{ Err error }
 	ErrProviderResponse     struct{ Err error }
 	ErrDatabase             struct{ Err error }
+	ErrNotFound             struct{}
 )
 
 func (e ErrSignatureAlreadyUsed) Error() string {
@@ -29,4 +30,8 @@ func (e ErrProviderResponse) Error() string {
 
 func (e ErrDatabase) Error() string {
 	return fmt.Sprintf("database error: %v", e.Err)
+}
+
+func (e ErrNotFound) Error() string {
+	return "no verification request found for this wallet address"
 }
