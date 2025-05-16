@@ -21,6 +21,8 @@ type ServerConfiguration struct {
 	CurrenciesCacheDuration   int
 	InstitutionsCacheDuration int
 	PubKeyCacheDuration       int
+	ServerURL                 string
+	SlackWebhookURL           string
 }
 
 // ServerConfig sets the server configuration
@@ -37,6 +39,8 @@ func ServerConfig() *ServerConfiguration {
 	viper.SetDefault("CURRENCIES_CACHE_DURATION", 24)
 	viper.SetDefault("INSTITUTIONS_CACHE_DURATION", 24)
 	viper.SetDefault("PUBKEY_CACHE_DURATION", 365)
+	viper.SetDefault("SERVER_URL", "")
+	viper.SetDefault("SLACK_WEBHOOK_URL", "")
 
 	return &ServerConfiguration{
 		Debug:                     viper.GetBool("DEBUG"),
@@ -46,9 +50,11 @@ func ServerConfig() *ServerConfiguration {
 		AllowedHosts:              viper.GetString("ALLOWED_HOSTS"),
 		Environment:               viper.GetString("ENVIRONMENT"),
 		SentryDSN:                 viper.GetString("SENTRY_DSN"),
+		ServerURL:                 viper.GetString("SERVER_URL"),
 		HostDomain:                viper.GetString("HOST_DOMAIN"),
 		RateLimitUnauthenticated:  viper.GetInt("RATE_LIMIT_UNAUTHENTICATED"),
 		RateLimitAuthenticated:    viper.GetInt("RATE_LIMIT_AUTHENTICATED"),
+		SlackWebhookURL:           viper.GetString("SLACK_WEBHOOK_URL"),
 		CurrenciesCacheDuration:   viper.GetInt("CURRENCIES_CACHE_DURATION"),
 		InstitutionsCacheDuration: viper.GetInt("INSTITUTIONS_CACHE_DURATION"),
 		PubKeyCacheDuration:       viper.GetInt("PUBKEY_CACHE_DURATION"),
