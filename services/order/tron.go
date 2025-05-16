@@ -3,9 +3,7 @@ package order
 import (
 	"context"
 	"crypto/ecdsa"
-	"crypto/rand"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -28,6 +26,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	networkent "github.com/paycrest/aggregator/ent/network"
@@ -418,7 +417,7 @@ func (s *OrderTron) approveCallData(spender util.Address, amount *big.Int) ([]by
 // createOrderCallData creates the data for the createOrder method
 func (s *OrderTron) createOrderCallData(order *ent.PaymentOrder) ([]byte, error) {
 	// Encrypt recipient details
-	encryptedOrderRecipient, err := s.encryptOrderRecipient(order.Edges.Recipient)
+	encryptedOrderRecipient, err := cryptoUtils.EncryptOrderRecipient(order.Edges.Recipient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encrypt recipient details: %w", err)
 	}
@@ -557,6 +556,11 @@ func (s *OrderTron) settleCallData(ctx context.Context, order *ent.LockPaymentOr
 		return nil, fmt.Errorf("failed to parse GatewayOrder ABI: %w", err)
 	}
 
+	institution, err := utils.GetInstitutionByCode(ctx, order.Institution, true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get institution: %w", err)
+	}
+
 	// Fetch provider address from db
 	token, err := db.Client.ProviderOrderToken.
 		Query().
@@ -568,6 +572,10 @@ func (s *OrderTron) settleCallData(ctx context.Context, order *ent.LockPaymentOr
 			providerordertoken.HasTokenWith(
 				tokenent.IDEQ(order.Edges.Token.ID),
 			),
+			providerordertoken.HasCurrencyWith(
+				fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
+			),
+			providerordertoken.AddressNEQ(""),
 		).
 		Only(ctx)
 	if err != nil {
@@ -606,33 +614,6 @@ func (s *OrderTron) settleCallData(ctx context.Context, order *ent.LockPaymentOr
 	}
 
 	return data, nil
-}
-
-// encryptOrderRecipient encrypts the recipient details
-func (s *OrderTron) encryptOrderRecipient(recipient *ent.PaymentOrderRecipient) (string, error) {
-	// Generate a cryptographically secure random nonce
-	nonce := make([]byte, 32)
-	if _, err := rand.Read(nonce); err != nil {
-		return "", fmt.Errorf("failed to generate nonce: %w", err)
-	}
-	message := struct {
-		Nonce             string
-		AccountIdentifier string
-		AccountName       string
-		Institution       string
-		ProviderID        string
-		Memo              string
-	}{
-		base64.StdEncoding.EncodeToString(nonce), recipient.AccountIdentifier, recipient.AccountName, recipient.Institution, recipient.ProviderID, recipient.Memo,
-	}
-
-	// Encrypt with the public key of the aggregator
-	messageCipher, err := cryptoUtils.PublicKeyEncryptJSON(message, cryptoConf.AggregatorPublicKey)
-	if err != nil {
-		return "", fmt.Errorf("failed to encrypt message: %w", err)
-	}
-
-	return base64.StdEncoding.EncodeToString(messageCipher), nil
 }
 
 // signTransaction signs a transaction with a private key

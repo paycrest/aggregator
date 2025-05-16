@@ -27,7 +27,6 @@ import (
 	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/senderprofile"
-	"github.com/paycrest/aggregator/ent/token"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/user"
@@ -97,7 +96,12 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 	// Initialize contract filterer
 	filterer, err := contracts.NewERC20TokenFilterer(common.HexToAddress(token.ContractAddress), client)
 	if err != nil {
-		logger.Errorf("IndexERC20Transfer.NewERC20TokenFilterer(%s): %v", token.Edges.Network.Identifier, err)
+		// Need to group by network
+		logger.WithFields(logger.Fields{
+			"Error":          fmt.Sprintf("%v", err),
+			"Token":          token.ContractAddress,
+			"ReceiveAddress": addressToWatch,
+		}).Errorf("Failed to index ERC20 transfers for %s", token.Edges.Network.Identifier)
 		return err
 	}
 
@@ -136,7 +140,13 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 		End:   &toBlock,
 	}, nil, addresses)
 	if err != nil {
-		logger.Errorf("IndexERC20Transfer.FilterTransfer(%s): %v", token.Edges.Network.Identifier, err)
+		logger.WithFields(logger.Fields{
+			"Error":          fmt.Sprintf("%v", err),
+			"Token":          token.ContractAddress,
+			"ReceiveAddress": addressToWatch,
+			"StartBlock":     startBlock,
+			"EndBlock":       toBlock,
+		}).Errorf("Failed to index ERC20 transfers for %s", token.Edges.Network.Identifier)
 		return err
 	}
 
@@ -162,7 +172,10 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 			Only(ctx)
 		if err != nil {
 			if !ent.IsNotFound(err) {
-				logger.Errorf("IndexERC20Transfer.db: %v", err)
+				logger.WithFields(logger.Fields{
+					"Error":   fmt.Sprintf("%v", err),
+					"Address": transferEvent.To,
+				}).Errorf("Failed to query linked address when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
 			}
 		}
 
@@ -197,9 +210,13 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 			}
 
 			// Create payment order
-			institution, err := utils.GetInstitutionByCode(ctx, linkedAddress.Institution)
+			institution, err := utils.GetInstitutionByCode(ctx, linkedAddress.Institution, true)
 			if err != nil {
-				logger.Errorf("IndexERC20Transfer.GetInstitutionByCode: %v", err)
+				logger.WithFields(logger.Fields{
+					"Error":                    fmt.Sprintf("%v", err),
+					"LinkedAddress":            linkedAddress.Address,
+					"LinkedAddressInstitution": linkedAddress.Institution,
+				}).Errorf("Failed to get institution when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
 				continue
 			}
 
@@ -211,7 +228,12 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 			if !strings.EqualFold(token.BaseCurrency, institution.Edges.FiatCurrency.Code) {
 				rateResponse, err = utils.GetTokenRateFromQueue(token.Symbol, orderAmount, institution.Edges.FiatCurrency.Code, institution.Edges.FiatCurrency.MarketRate)
 				if err != nil {
-					logger.Errorf("IndexERC20Transfer.GetTokenRateFromQueue: %v", err)
+					logger.WithFields(logger.Fields{
+						"Error":                    fmt.Sprintf("%v", err),
+						"Token":                    token.Symbol,
+						"LinkedAddressInstitution": linkedAddress.Institution,
+						"Code":                     institution.Edges.FiatCurrency.Code,
+					}).Errorf("Failed to get token rate when indexing ERC20 transfers for %s from queue", token.Edges.Network.Identifier)
 					continue
 				}
 			} else {
@@ -220,7 +242,10 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 
 			tx, err := db.Client.Tx(ctx)
 			if err != nil {
-				logger.Errorf("IndexERC20Transfer.Tx: %v", err)
+				logger.WithFields(logger.Fields{
+					"Error":         fmt.Sprintf("%v", err),
+					"LinkedAddress": linkedAddress.Address,
+				}).Errorf("Failed to create transaction when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
 				continue
 			}
 
@@ -261,7 +286,10 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 				// AddTransactions(transactionLog).
 				Save(ctx)
 			if err != nil {
-				logger.Errorf("IndexERC20Transfer.CreatePaymentOrder: %v", err)
+				logger.WithFields(logger.Fields{
+					"Error":         fmt.Sprintf("%v", err),
+					"LinkedAddress": linkedAddress.Address,
+				}).Errorf("Failed to create payment order when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
 				_ = tx.Rollback()
 				continue
 			}
@@ -271,10 +299,14 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 				SetInstitution(linkedAddress.Institution).
 				SetAccountIdentifier(linkedAddress.AccountIdentifier).
 				SetAccountName(linkedAddress.AccountName).
+				SetMetadata(linkedAddress.Metadata).
 				SetPaymentOrder(order).
 				Save(ctx)
 			if err != nil {
-				logger.Errorf("IndexERC20Transfer.CreatePaymentOrderRecipient: %v", err)
+				logger.WithFields(logger.Fields{
+					"Error":         fmt.Sprintf("%v", err),
+					"LinkedAddress": linkedAddress.Address,
+				}).Errorf("Failed to create payment order recipient when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
 				_ = tx.Rollback()
 				continue
 			}
@@ -285,19 +317,28 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 				SetLastIndexedBlock(int64(transferEvent.BlockNumber)).
 				Save(ctx)
 			if err != nil {
-				logger.Errorf("IndexERC20Transfer.UpdateLinkedAddress: %v", err)
+				logger.WithFields(logger.Fields{
+					"Error":         fmt.Sprintf("%v", err),
+					"LinkedAddress": linkedAddress.Address,
+				}).Errorf("Failed to update linked address when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
 				_ = tx.Rollback()
 				continue
 			}
 
 			if err := tx.Commit(); err != nil {
-				logger.Errorf("IndexERC20Transfer.Commit: %v", err)
+				logger.WithFields(logger.Fields{
+					"Error":         fmt.Sprintf("%v", err),
+					"LinkedAddress": linkedAddress.Address,
+				}).Errorf("Failed to commit transaction when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
 				continue
 			}
 
 			err = s.order.CreateOrder(ctx, client, order.ID)
 			if err != nil {
-				logger.Errorf("IndexERC20Transfer.CreateOrder: %v", err)
+				logger.WithFields(logger.Fields{
+					"Error":   fmt.Sprintf("%v", err),
+					"OrderID": order.ID.String(),
+				}).Errorf("Failed to create order when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
 				continue
 			}
 
@@ -305,8 +346,11 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 			// Process transfer event for receive address
 			done, err := s.UpdateReceiveAddressStatus(ctx, client, order.Edges.ReceiveAddress, order, transferEvent)
 			if err != nil {
-				if !strings.Contains(err.Error(), "Duplicate payment order") {
-					logger.Errorf("IndexERC20Transfer.UpdateReceiveAddressStatus: %v", err)
+				if !strings.Contains(fmt.Sprintf("%v", err), "Duplicate payment order") {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"OrderID": order.ID.String(),
+					}).Errorf("Failed to update receive address status when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
 				}
 				continue
 			}
@@ -337,13 +381,19 @@ func (s *IndexerService) IndexTRC20Transfer(ctx context.Context, order *ent.Paym
 		Retry().Set(3, 1*time.Second).
 		Send()
 	if err != nil {
-		logger.Errorf("IndexTRC20Transfer.FetchTransfer: %v", err)
+		logger.WithFields(logger.Fields{
+			"Error":   fmt.Sprintf("%v", err),
+			"OrderID": order.ID.String(),
+		}).Errorf("Failed to fetch TRC20 transfer for %s", order.Edges.Token.Edges.Network.Identifier)
 		return err
 	}
 
 	data, err := utils.ParseJSONResponse(res.RawResponse)
 	if err != nil {
-		logger.Errorf("IndexTRC20Transfer.ParseJSONResponse: %v %v", err, data)
+		logger.WithFields(logger.Fields{
+			"Error":    fmt.Sprintf("%v", err),
+			"Response": data,
+		}).Errorf("Failed to parse JSON response for TRC20 transfer for %s", order.Edges.Token.Edges.Network.Identifier)
 		return err
 	}
 
@@ -353,7 +403,10 @@ func (s *IndexerService) IndexTRC20Transfer(ctx context.Context, order *ent.Paym
 
 			value, err := decimal.NewFromString(eventData["value"].(string))
 			if err != nil {
-				logger.Errorf("IndexTRC20Transfer.NewFromString: %v", err)
+				logger.WithFields(logger.Fields{
+					"Error": fmt.Sprintf("%v", err),
+					"Value": eventData["value"],
+				}).Errorf("Failed to parse decimal value from TRC20 transfer for %s", order.Edges.Token.Edges.Network.Identifier)
 				return err
 			}
 
@@ -369,13 +422,19 @@ func (s *IndexerService) IndexTRC20Transfer(ctx context.Context, order *ent.Paym
 				Retry().Set(3, 1*time.Second).
 				Send()
 			if err != nil {
-				logger.Errorf("IndexTRC20Transfer.FetchBlockNumber: %v", err)
+				logger.WithFields(logger.Fields{
+					"Error":         fmt.Sprintf("%v", err),
+					"TransactionID": eventData["transaction_id"],
+				}).Errorf("Failed to fetch block number for TRC20 transfer for %s", order.Edges.Token.Edges.Network.Identifier)
 				return err
 			}
 
 			data, err = utils.ParseJSONResponse(res.RawResponse)
 			if err != nil {
-				logger.Errorf("IndexTRC20Transfer.ParseJSONResponse: %v %v", err, data)
+				logger.WithFields(logger.Fields{
+					"Error":    fmt.Sprintf("%v", err),
+					"Response": data,
+				}).Errorf("Failed to parse JSON response for TRC20 transfer for %s", order.Edges.Token.Edges.Network.Identifier)
 				return err
 			}
 
@@ -391,7 +450,10 @@ func (s *IndexerService) IndexTRC20Transfer(ctx context.Context, order *ent.Paym
 				go func() {
 					_, err := s.UpdateReceiveAddressStatus(ctx, nil, order.Edges.ReceiveAddress, order, transferEvent)
 					if err != nil {
-						logger.Errorf("IndexTRC20Transfer.UpdateReceiveAddressStatus: %v", err)
+						logger.WithFields(logger.Fields{
+							"Error":   fmt.Sprintf("%v", err),
+							"OrderID": order.ID.String(),
+						}).Errorf("Failed to update receive address status when indexing TRC20 transfers for %s", order.Edges.Token.Edges.Network.Identifier)
 					}
 				}()
 			}
@@ -416,7 +478,9 @@ func (s *IndexerService) IndexOrderCreated(ctx context.Context, client types.RPC
 	// Initialize contract filterer
 	filterer, err := contracts.NewGatewayFilterer(common.HexToAddress(network.GatewayContractAddress), client)
 	if err != nil {
-		logger.Errorf("IndexOrderCreated.NewGatewayFilterer: %v", err)
+		logger.WithFields(logger.Fields{
+			"Error": fmt.Sprintf("%v", err),
+		}).Errorf("Failed to create gateway filterer when indexing order created events for %s", network.Identifier)
 		return err
 	}
 
@@ -424,7 +488,9 @@ func (s *IndexerService) IndexOrderCreated(ctx context.Context, client types.RPC
 	header, err := client.HeaderByNumber(ctx, nil)
 	if err != nil {
 		if err != context.Canceled {
-			logger.Errorf("IndexOrderCreated.HeaderByNumber: %v", err)
+			logger.WithFields(logger.Fields{
+				"Error": fmt.Sprintf("%v", err),
+			}).Errorf("Failed to fetch current block header for %s when indexing order created events", network.Identifier)
 		}
 		return err
 	}
@@ -432,7 +498,7 @@ func (s *IndexerService) IndexOrderCreated(ctx context.Context, client types.RPC
 
 	// Fetch logs
 	var iter *contracts.GatewayOrderCreatedIterator
-	fromBlock := int64(1000000)
+	fromBlock := int64(100000)
 	if network.Identifier == "bnb-smart-chain" {
 		fromBlock = 10000
 	}
@@ -441,7 +507,11 @@ func (s *IndexerService) IndexOrderCreated(ctx context.Context, client types.RPC
 		End:   &toBlock,
 	}, nil, nil, nil)
 	if err != nil {
-		logger.Errorf("IndexOrderCreated.FilterOrderCreated (%s): %v", network.Identifier, err)
+		logger.WithFields(logger.Fields{
+			"Error": fmt.Sprintf("%v", err),
+			"Start": uint64(int64(toBlock) - fromBlock),
+			"End":   toBlock,
+		}).Errorf("Failed to filter order created events for %s when indexing order created events", network.Identifier)
 		return err
 	}
 
@@ -460,8 +530,11 @@ func (s *IndexerService) IndexOrderCreated(ctx context.Context, client types.RPC
 
 		err := s.CreateLockPaymentOrder(ctx, client, network, event)
 		if err != nil {
-			if !strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
-				logger.Errorf("IndexOrderCreated.CreateLockPaymentOrder: %v", err)
+			if !strings.Contains(fmt.Sprintf("%v", err), "duplicate key value violates unique constraint") {
+				logger.WithFields(logger.Fields{
+					"Error":   fmt.Sprintf("%v", err),
+					"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(event.OrderId[:])),
+				}).Errorf("Failed to create lock payment order when indexing order created events for %s", network.Identifier)
 			}
 			continue
 		}
@@ -493,13 +566,18 @@ func (s *IndexerService) IndexOrderCreatedTron(ctx context.Context, order *ent.P
 				Retry().Set(3, 1*time.Second).
 				Send()
 			if err != nil {
-				logger.Errorf("fetch txn event logs: %v", err)
+				logger.WithFields(logger.Fields{
+					"Error":  fmt.Sprintf("%v", err),
+					"TxHash": order.TxHash,
+				}).Errorf("Failed to fetch trx info by id for %s", order.Edges.Token.Edges.Network.Identifier)
 				return err
 			}
 
 			data, err := utils.ParseJSONResponse(res.RawResponse)
 			if err != nil {
-				logger.Errorf("failed to parse JSON response: %v %v", err, data)
+				logger.WithFields(logger.Fields{
+					"Error": fmt.Sprintf("%v", err),
+				}).Errorf("Failed to parse JSON response for %s", order.Edges.Token.Edges.Network.Identifier)
 				return err
 			}
 
@@ -509,7 +587,9 @@ func (s *IndexerService) IndexOrderCreatedTron(ctx context.Context, order *ent.P
 				if eventData["topics"].([]interface{})[0] == "40ccd1ceb111a3c186ef9911e1b876dc1f789ed331b86097b3b8851055b6a137" {
 					unpackedEventData, err := utils.UnpackEventData(eventData["data"].(string), contracts.GatewayMetaData.ABI, "OrderCreated")
 					if err != nil {
-						logger.Errorf("IndexOrderCreatedTron.UnpackEventData: %v", err)
+						logger.WithFields(logger.Fields{
+							"Error": fmt.Sprintf("%v", err),
+						}).Errorf("Failed to unpack event data for %s", order.Edges.Token.Edges.Network.Identifier)
 						return err
 					}
 
@@ -526,7 +606,10 @@ func (s *IndexerService) IndexOrderCreatedTron(ctx context.Context, order *ent.P
 
 					err = s.CreateLockPaymentOrder(ctx, nil, order.Edges.Token.Edges.Network, event)
 					if err != nil {
-						logger.Errorf("IndexOrderCreatedTron.CreateLockPaymentOrder: %v", err)
+						logger.WithFields(logger.Fields{
+							"Error":   fmt.Sprintf("%v", err),
+							"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(event.OrderId[:])),
+						}).Errorf("Failed to create lock payment order when indexing order created events for %s", order.Edges.Token.Edges.Network.Identifier)
 					}
 
 					break
@@ -555,7 +638,9 @@ func (s *IndexerService) IndexOrderSettled(ctx context.Context, client types.RPC
 	// Initialize contract filterer
 	filterer, err := contracts.NewGatewayFilterer(common.HexToAddress(network.GatewayContractAddress), client)
 	if err != nil {
-		logger.Errorf("IndexOrderSettled.NewGatewayFilterer: %v", err)
+		logger.WithFields(logger.Fields{
+			"Error": fmt.Sprintf("%v", err),
+		}).Errorf("Failed to filterer when indexing order settled events for %s", network.Identifier)
 		return err
 	}
 
@@ -563,7 +648,9 @@ func (s *IndexerService) IndexOrderSettled(ctx context.Context, client types.RPC
 	header, err := client.HeaderByNumber(ctx, nil)
 	if err != nil {
 		if err != context.Canceled {
-			logger.Errorf("IndexOrderSettled.HeaderByNumber: %v", err)
+			logger.WithFields(logger.Fields{
+				"Error": fmt.Sprintf("%v", err),
+			}).Errorf("Failed to fetch header by number when indexing order created events for %s", network.Identifier)
 		}
 		return err
 	}
@@ -576,7 +663,11 @@ func (s *IndexerService) IndexOrderSettled(ctx context.Context, client types.RPC
 		End:   &toBlock,
 	}, nil, nil)
 	if err != nil {
-		logger.Errorf("IndexOrderSettled.FilterOrderSettled: %v", err)
+		logger.WithFields(logger.Fields{
+			"Error": fmt.Sprintf("%v", err),
+			"Start": uint64(int64(toBlock) - 5000),
+			"End":   toBlock,
+		}).Errorf("Failed to filter order settled events for %s when indexing order settled events", network.Identifier)
 		return err
 	}
 
@@ -593,7 +684,10 @@ func (s *IndexerService) IndexOrderSettled(ctx context.Context, client types.RPC
 
 		err := s.UpdateOrderStatusSettled(ctx, network, settledEvent)
 		if err != nil {
-			logger.Errorf("IndexOrderSettled.UpdateOrderStatusSettled: %v", err)
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(settledEvent.OrderId[:])),
+			}).Errorf("Failed to update order status settlement when indexing order settled events for %s", network.Identifier)
 			continue
 		}
 	}
@@ -624,17 +718,25 @@ func (s *IndexerService) IndexOrderSettledTron(ctx context.Context, order *ent.L
 				Retry().Set(3, 1*time.Second).
 				Send()
 			if err != nil {
-				logger.Errorf("fetch txn event logs: %v", err)
+				logger.WithFields(logger.Fields{
+					"Error":  fmt.Sprintf("%v", err),
+					"TxHash": order.TxHash,
+				}).Errorf("Failed to fetch trx info by id for %s", order.Edges.Token.Edges.Network.Identifier)
 				return err
 			}
 
 			data, err := utils.ParseJSONResponse(res.RawResponse)
 			if err != nil {
-				logger.Errorf("failed to parse JSON response: %v %v", err, data)
+				logger.WithFields(logger.Fields{
+					"Error": fmt.Sprintf("%v", err),
+				}).Errorf("Failed to parse JSON response for %s", order.Edges.Token.Edges.Network.Identifier)
 				return err
 			}
 
-			logger.Errorf("IndexOrderSettledTron.gettransactioninfobyid: %v", data)
+			logger.WithFields(logger.Fields{
+				"TxHash": order.TxHash,
+				"Data":   data,
+			}).Infof("Index Order settlment for %s", order.Edges.Token.Edges.Network.Identifier)
 
 			// Parse event data
 			for _, event := range data["log"].([]interface{}) {
@@ -642,7 +744,10 @@ func (s *IndexerService) IndexOrderSettledTron(ctx context.Context, order *ent.L
 				if eventData["topics"].([]interface{})[0] == "98ece21e01a01cbe1d1c0dad3b053c8fbd368f99be78be958fcf1d1d13fd249a" {
 					unpackedEventData, err := utils.UnpackEventData(eventData["data"].(string), contracts.GatewayMetaData.ABI, "OrderSettled")
 					if err != nil {
-						logger.Errorf("IndexOrderSettledTron.UnpackEventData: %v", err)
+						logger.WithFields(logger.Fields{
+							"Error":   fmt.Sprintf("%v", err),
+							"OrderID": order.ID.String(),
+						}).Errorf("Failed to unpack event data for %s", order.Edges.Token.Edges.Network.Identifier)
 						return err
 					}
 
@@ -657,7 +762,10 @@ func (s *IndexerService) IndexOrderSettledTron(ctx context.Context, order *ent.L
 
 					err = s.UpdateOrderStatusSettled(ctx, order.Edges.Token.Edges.Network, event)
 					if err != nil {
-						logger.Errorf("IndexOrderSettledTron.UpdateOrderStatusSettled: %v", err)
+						logger.WithFields(logger.Fields{
+							"Error":   fmt.Sprintf("%v", err),
+							"OrderID": order.ID.String(),
+						}).Errorf("Failed to update order status settlement when indexing order settled events for %s", order.Edges.Token.Edges.Network.Identifier)
 					}
 
 					break
@@ -686,7 +794,9 @@ func (s *IndexerService) IndexOrderRefunded(ctx context.Context, client types.RP
 	// Initialize contract filterer
 	filterer, err := contracts.NewGatewayFilterer(common.HexToAddress(network.GatewayContractAddress), client)
 	if err != nil {
-		logger.Errorf("IndexOrderRefunded.NewGatewayFilterer: %v", err)
+		logger.WithFields(logger.Fields{
+			"Error": fmt.Sprintf("%v", err),
+		}).Errorf("Failed to filter when indexing order refunded events for %s", network.Identifier)
 		return err
 	}
 
@@ -694,7 +804,9 @@ func (s *IndexerService) IndexOrderRefunded(ctx context.Context, client types.RP
 	header, err := client.HeaderByNumber(ctx, nil)
 	if err != nil {
 		if err != context.Canceled {
-			logger.Errorf("IndexOrderRefunded.HeaderByNumber: %v", err)
+			logger.WithFields(logger.Fields{
+				"Error": fmt.Sprintf("%v", err),
+			}).Errorf("Failed to fetch header by number when indexing order refunded events for %s", network.Identifier)
 		}
 		return err
 	}
@@ -707,7 +819,11 @@ func (s *IndexerService) IndexOrderRefunded(ctx context.Context, client types.RP
 		End:   &toBlock,
 	}, nil)
 	if err != nil {
-		logger.Errorf("IndexOrderRefunded.FilterOrderRefunded: %v", err)
+		logger.WithFields(logger.Fields{
+			"Error": fmt.Sprintf("%v", err),
+			"Start": uint64(int64(toBlock) - 5000),
+			"End":   toBlock,
+		}).Errorf("Failed to filter order refunded events for %s when indexing order refunded events", network.Identifier)
 		return err
 	}
 
@@ -722,7 +838,11 @@ func (s *IndexerService) IndexOrderRefunded(ctx context.Context, client types.RP
 
 		err := s.UpdateOrderStatusRefunded(ctx, network, refundedEvent)
 		if err != nil {
-			logger.Errorf("IndexOrderRefunded.UpdateOrderStatusRefunded: %v", err)
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(refundedEvent.OrderId[:])),
+				"TxHash":  refundedEvent.TxHash,
+			}).Errorf("Failed to update order status refund when indexing order refunded events for %s", network.Identifier)
 			continue
 		}
 	}
@@ -753,17 +873,26 @@ func (s *IndexerService) IndexOrderRefundedTron(ctx context.Context, order *ent.
 				Retry().Set(3, 1*time.Second).
 				Send()
 			if err != nil {
-				logger.Errorf("fetch txn event logs: %v", err)
+				logger.WithFields(logger.Fields{
+					"Error":  fmt.Sprintf("%v", err),
+					"TxHash": order.TxHash,
+				}).Errorf("Failed to fetch event logs for %s", order.Edges.Token.Edges.Network.Identifier)
 				return err
 			}
 
 			data, err := utils.ParseJSONResponse(res.RawResponse)
 			if err != nil {
-				logger.Errorf("failed to parse JSON response: %v %v", err, data)
+				logger.WithFields(logger.Fields{
+					"Error":    fmt.Sprintf("%v", err),
+					"Response": data,
+				}).Errorf("Failed to parse JSON response for %s after fetching event logs", order.Edges.Token.Edges.Network.Identifier)
 				return err
 			}
 
-			logger.Errorf("IndexOrderRefundedTron.gettransactioninfobyid: %v", data)
+			logger.WithFields(logger.Fields{
+				"TxHash": order.TxHash,
+				"Data":   data,
+			}).Infof("Index Order refund for %s", order.Edges.Token.Edges.Network.Identifier)
 
 			// Parse event data
 			for _, event := range data["log"].([]interface{}) {
@@ -771,7 +900,9 @@ func (s *IndexerService) IndexOrderRefundedTron(ctx context.Context, order *ent.
 				if eventData["topics"].([]interface{})[0] == "0736fe428e1747ca8d387c2e6fa1a31a0cde62d3a167c40a46ade59a3cdc828e" {
 					unpackedEventData, err := utils.UnpackEventData(eventData["data"].(string), contracts.GatewayMetaData.ABI, "OrderRefunded")
 					if err != nil {
-						logger.Errorf("IndexOrderRefundedTron.UnpackEventData: %v", err)
+						logger.WithFields(logger.Fields{
+							"Error": fmt.Sprintf("%v", err),
+						}).Errorf("Failed to unpack event data for %s after fetching event logs", order.Edges.Token.Edges.Network.Identifier)
 						return err
 					}
 
@@ -784,7 +915,11 @@ func (s *IndexerService) IndexOrderRefundedTron(ctx context.Context, order *ent.
 
 					err = s.UpdateOrderStatusRefunded(ctx, order.Edges.Token.Edges.Network, event)
 					if err != nil {
-						logger.Errorf("IndexOrderRefundedTron.UpdateOrderStatusRefunded: %v", err)
+						logger.WithFields(logger.Fields{
+							"Error":   fmt.Sprintf("%v", err),
+							"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(event.OrderId[:])),
+							"TxHash":  event.TxHash,
+						}).Errorf("Failed to update order status refund when indexing order refunded events for %s", order.Edges.Token.Edges.Network.Identifier)
 					}
 
 					break
@@ -853,7 +988,7 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 				lockpaymentorder.GatewayIDEQ(gatewayId),
 			),
 			lockpaymentorder.HasTokenWith(
-				token.HasNetworkWith(
+				tokenEnt.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
 				),
 			),
@@ -915,7 +1050,7 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 		WithNetwork().
 		Only(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to fetch token: %w", err)
+		return nil
 	}
 
 	// Get order recipient from message hash
@@ -926,7 +1061,7 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 
 	// Get provision bucket
 	amountInDecimals := utils.FromSubunit(event.Amount, token.Decimals)
-	institution, err := utils.GetInstitutionByCode(ctx, recipient.Institution)
+	institution, err := utils.GetInstitutionByCode(ctx, recipient.Institution, true)
 	if err != nil {
 		return nil
 	}
@@ -944,9 +1079,13 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 
 	rate := decimal.NewFromBigInt(event.Rate, -2)
 
-	provisionBucket, err := s.getProvisionBucket(ctx, amountInDecimals.Mul(rate), currency)
+	provisionBucket, isLessThanMin, err := s.getProvisionBucket(ctx, amountInDecimals.Mul(rate), currency)
 	if err != nil {
-		logger.Errorf("failed to fetch provision bucket: %s %s %v", amountInDecimals, currency, err)
+		logger.WithFields(logger.Fields{
+			"Error":    fmt.Sprintf("%v", err),
+			"Amount":   amountInDecimals,
+			"Currency": currency,
+		}).Errorf("failed to fetch provision bucket when creating lock payment order")
 	}
 
 	// Create lock payment order fields
@@ -963,7 +1102,16 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 		AccountName:       recipient.AccountName,
 		ProviderID:        recipient.ProviderID,
 		Memo:              recipient.Memo,
+		Metadata:          recipient.Metadata,
 		ProvisionBucket:   provisionBucket,
+	}
+
+	if isLessThanMin {
+		err := s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Amount is less than the minimum bucket")
+		if err != nil {
+			return fmt.Errorf("failed to handle cancellation: %w", err)
+		}
+		return nil
 	}
 
 	// Handle private order checks
@@ -981,6 +1129,7 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 				providerordertoken.HasCurrencyWith(
 					fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
 				),
+				providerordertoken.AddressNEQ(""),
 			).
 			WithProvider().
 			Only(ctx)
@@ -991,6 +1140,7 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 				// 2. Provider does not support the token
 				// 3. Provider does not support the network
 				// 4. Provider does not support the currency
+				// 5. Provider have not configured a settlement address for the network
 				_ = s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Provider not available")
 				return nil
 			} else {
@@ -1025,13 +1175,20 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 	}
 
 	if provisionBucket == nil && !isPrivate {
+		// TODO: Activate this when split order is tested and working
 		// Split lock payment order into multiple orders
-		err = s.splitLockPaymentOrder(
-			ctx, client, lockPaymentOrder, currency,
-		)
+		// err = s.splitLockPaymentOrder(
+		// 	ctx, client, lockPaymentOrder, currency,
+		// )
+		// if err != nil {
+		// 	return fmt.Errorf("%s - failed to split lock payment order: %w", lockPaymentOrder.GatewayID, err)
+		// }
+
+		err = s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Amount is larger than the maximum bucket")
 		if err != nil {
-			return fmt.Errorf("%s - failed to split lock payment order: %w", lockPaymentOrder.GatewayID, err)
+			return fmt.Errorf("failed to handle cancellation: %w", err)
 		}
+		return nil
 	} else {
 		// Create LockPaymentOrder and recipient in a transaction
 		tx, err := db.Client.Tx(ctx)
@@ -1065,8 +1222,9 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 							"Amount":          lockPaymentOrder.Amount,
 							"Rate":            lockPaymentOrder.Rate,
 							"Memo":            lockPaymentOrder.Memo,
-							"ProvisionBucket": lockPaymentOrder.ProvisionBucket,
+							"Metadata":        lockPaymentOrder.Metadata,
 							"ProviderID":      lockPaymentOrder.ProviderID,
+							"ProvisionBucket": lockPaymentOrder.ProvisionBucket,
 						}).
 					Save(ctx)
 				if err != nil {
@@ -1089,6 +1247,7 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 			SetAccountIdentifier(lockPaymentOrder.AccountIdentifier).
 			SetAccountName(lockPaymentOrder.AccountName).
 			SetMemo(lockPaymentOrder.Memo).
+			SetMetadata(lockPaymentOrder.Metadata).
 			SetProvisionBucket(lockPaymentOrder.ProvisionBucket)
 
 		if lockPaymentOrder.ProviderID != "" {
@@ -1113,7 +1272,11 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 		if serverConf.Environment == "production" && !strings.HasPrefix(network.Identifier, "tron") {
 			ok, err := s.checkAMLCompliance(network.RPCEndpoint, event.TxHash)
 			if err != nil {
-				logger.Errorf("checkAMLCompliance: %v", err)
+				logger.WithFields(logger.Fields{
+					"Error":    fmt.Sprintf("%v", err),
+					"endpoint": network.RPCEndpoint,
+					"TxHash":   event.TxHash,
+				}).Errorf("Failed to check AML Compliance")
 			}
 
 			if !ok && err == nil {
@@ -1154,6 +1317,7 @@ func (s *IndexerService) handleCancellation(ctx context.Context, client types.RP
 			SetAccountIdentifier(lockPaymentOrder.AccountIdentifier).
 			SetAccountName(lockPaymentOrder.AccountName).
 			SetMemo(lockPaymentOrder.Memo).
+			SetMetadata(lockPaymentOrder.Metadata).
 			SetProvisionBucket(lockPaymentOrder.ProvisionBucket).
 			SetCancellationCount(3).
 			SetCancellationReasons([]string{cancellationReason}).
@@ -1176,7 +1340,12 @@ func (s *IndexerService) handleCancellation(ctx context.Context, client types.RP
 
 		err = s.order.RefundOrder(ctx, client, network, lockPaymentOrder.GatewayID)
 		if err != nil {
-			logger.Errorf("handleCancellation.RefundOrder(%v): %v", order.ID, err)
+			logger.WithFields(logger.Fields{
+				"Error":        fmt.Sprintf("%v", err),
+				"OrderID":      order.ID.String(),
+				"OrderTrxHash": order.TxHash,
+				"GatewayID":    order.GatewayID,
+			}).Errorf("Handle cancellation failed to refund order")
 		}
 
 	} else if createdLockPaymentOrder != nil {
@@ -1200,7 +1369,12 @@ func (s *IndexerService) handleCancellation(ctx context.Context, client types.RP
 
 		err = s.order.RefundOrder(ctx, client, network, createdLockPaymentOrder.GatewayID)
 		if err != nil {
-			logger.Errorf("handleCancellation.RefundOrder(%v): %v", createdLockPaymentOrder.ID, err)
+			logger.WithFields(logger.Fields{
+				"Error":        fmt.Sprintf("%v", err),
+				"OrderID":      fmt.Sprintf("0x%v", hex.EncodeToString(createdLockPaymentOrder.ID[:])),
+				"OrderTrxHash": createdLockPaymentOrder.TxHash,
+				"GatewayID":    createdLockPaymentOrder.GatewayID,
+			}).Errorf("Handle cancellation failed to refund order")
 		}
 	}
 
@@ -1218,7 +1392,7 @@ func (s *IndexerService) UpdateOrderStatusRefunded(ctx context.Context, network 
 		Where(
 			paymentorder.GatewayIDEQ(gatewayId),
 			paymentorder.HasTokenWith(
-				token.HasNetworkWith(
+				tokenEnt.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
 				),
 			),
@@ -1285,7 +1459,7 @@ func (s *IndexerService) UpdateOrderStatusRefunded(ctx context.Context, network 
 		Where(
 			lockpaymentorder.GatewayIDEQ(gatewayId),
 			lockpaymentorder.HasTokenWith(
-				token.HasNetworkWith(
+				tokenEnt.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
 				),
 			),
@@ -1310,7 +1484,7 @@ func (s *IndexerService) UpdateOrderStatusRefunded(ctx context.Context, network 
 			Where(
 				paymentorder.GatewayIDEQ(gatewayId),
 				paymentorder.HasTokenWith(
-					token.HasNetworkWith(
+					tokenEnt.HasNetworkWith(
 						networkent.IdentifierEQ(network.Identifier),
 					),
 				),
@@ -1362,7 +1536,7 @@ func (s *IndexerService) UpdateOrderStatusSettled(ctx context.Context, network *
 		Where(
 			paymentorder.GatewayIDEQ(gatewayId),
 			paymentorder.HasTokenWith(
-				token.HasNetworkWith(
+				tokenEnt.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
 				),
 			),
@@ -1427,7 +1601,7 @@ func (s *IndexerService) UpdateOrderStatusSettled(ctx context.Context, network *
 		Where(
 			lockpaymentorder.IDEQ(splitOrderId),
 			lockpaymentorder.HasTokenWith(
-				token.HasNetworkWith(
+				tokenEnt.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
 				),
 			),
@@ -1573,9 +1747,8 @@ func (s *IndexerService) UpdateReceiveAddressStatus(
 		orderRecipient := paymentOrder.Edges.Recipient
 		if comparisonResult != 0 {
 			// Update the order amount will be updated to whatever amount was sent to the receive address
-			newOrderAmount := utils.FromSubunit(event.Value, paymentOrder.Edges.Token.Decimals).Sub(fees.Round(int32(4)))
-			paymentOrderUpdate = paymentOrderUpdate.SetAmount(newOrderAmount.Round(int32(4)))
-
+			newOrderAmount := utils.FromSubunit(event.Value, paymentOrder.Edges.Token.Decimals).Sub(fees.Round(int32(paymentOrder.Edges.Token.Decimals)))
+			paymentOrderUpdate = paymentOrderUpdate.SetAmount(newOrderAmount.Round(int32(paymentOrder.Edges.Token.Decimals)))
 			// Update the rate with the current rate if order is older than 30 mins for a P2P order from the sender dashboard
 			if strings.HasPrefix(orderRecipient.Memo, "P#P") && orderRecipient.ProviderID != "" && paymentOrder.CreatedAt.Before(time.Now().Add(-30*time.Minute)) {
 				providerProfile, err := db.Client.ProviderProfile.
@@ -1594,7 +1767,7 @@ func (s *IndexerService) UpdateReceiveAddressStatus(
 					return true, fmt.Errorf("UpdateReceiveAddressStatus.db: %v", err)
 				}
 
-				institution, err := utils.GetInstitutionByCode(ctx, orderRecipient.Institution)
+				institution, err := utils.GetInstitutionByCode(ctx, orderRecipient.Institution, true)
 				if err != nil {
 					return true, fmt.Errorf("UpdateReceiveAddressStatus.db: %v", err)
 				}
@@ -1689,13 +1862,19 @@ func (s *IndexerService) fetchLatestOrderEvents(rpcEndpoint, network, txHash str
 		Retry().Set(3, 1*time.Second).
 		Send()
 	if err != nil {
-		logger.Errorf("fetch txn event logs: %v", err)
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"TxHash": txHash,
+		}).Errorf("Failed to fetch txn event logs for %s", network)
 		return nil, err
 	}
 
 	data, err := utils.ParseJSONResponse(res.RawResponse)
 	if err != nil {
-		logger.Errorf("failed to parse JSON response: %v %v", err, data)
+		logger.WithFields(logger.Fields{
+			"Error":    fmt.Sprintf("%v", err),
+			"Response": data,
+		}).Errorf("Failed to parse JSON response for %s after fetching event logs", network)
 		return nil, err
 	}
 
@@ -1707,7 +1886,7 @@ func (s *IndexerService) fetchLatestOrderEvents(rpcEndpoint, network, txHash str
 }
 
 // getProvisionBucket returns the provision bucket for a lock payment order
-func (s *IndexerService) getProvisionBucket(ctx context.Context, amount decimal.Decimal, currency *ent.FiatCurrency) (*ent.ProvisionBucket, error) {
+func (s *IndexerService) getProvisionBucket(ctx context.Context, amount decimal.Decimal, currency *ent.FiatCurrency) (*ent.ProvisionBucket, bool, error) {
 	provisionBucket, err := db.Client.ProvisionBucket.
 		Query().
 		Where(
@@ -1720,10 +1899,28 @@ func (s *IndexerService) getProvisionBucket(ctx context.Context, amount decimal.
 		WithCurrency().
 		Only(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch provision bucket: %w", err)
+		if ent.IsNotFound(err) {
+			// Check if the amount is less than the minimum bucket
+			minBucket, err := db.Client.ProvisionBucket.
+				Query().
+				Where(
+					provisionbucket.HasCurrencyWith(
+						fiatcurrency.IDEQ(currency.ID),
+					),
+				).
+				Order(ent.Asc(provisionbucket.FieldMinAmount)).
+				First(ctx)
+			if err != nil {
+				return nil, false, fmt.Errorf("failed to fetch minimum bucket: %w", err)
+			}
+			if amount.LessThan(minBucket.MinAmount) {
+				return nil, true, nil
+			}
+		}
+		return nil, false, fmt.Errorf("failed to fetch provision bucket: %w", err)
 	}
 
-	return provisionBucket, nil
+	return provisionBucket, false, nil
 }
 
 // splitLockPaymentOrder splits a lock payment order into multiple orders
@@ -1737,7 +1934,12 @@ func (s *IndexerService) splitLockPaymentOrder(ctx context.Context, client types
 		Order(ent.Desc(provisionbucket.FieldMaxAmount)).
 		All(ctx)
 	if err != nil {
-		logger.Errorf("failed to fetch provision buckets: %v", err)
+		logger.WithFields(logger.Fields{
+			"Error":          fmt.Sprintf("%v", err),
+			"Currency":       currency.ID,
+			"CurrencyCode":   currency.Code,
+			"CurrencEnabled": currency.IsEnabled,
+		}).Errorf("failed to fetch provision buckets when splitting lock payment order")
 		return err
 	}
 
@@ -1793,14 +1995,20 @@ func (s *IndexerService) splitLockPaymentOrder(ctx context.Context, client types
 			CreateBulk(lockOrders...).
 			Save(ctx)
 		if err != nil {
-			logger.Errorf("failed to create lock payment orders in bulk: %v", err)
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"OrderID": lockPaymentOrder.GatewayID,
+			}).Errorf("Failed to create lock payment order in Bulk when splitting lock payment order")
 			_ = tx.Rollback()
 			return err
 		}
 
 		// Commit the transaction if everything succeeded
 		if err := tx.Commit(); err != nil {
-			logger.Errorf("failed to split lock payment order: %v", err)
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"OrderID": lockPaymentOrder.GatewayID,
+			}).Errorf("Failed to commit transaction when splitting lock payment order")
 			return err
 		}
 
@@ -1808,14 +2016,23 @@ func (s *IndexerService) splitLockPaymentOrder(ctx context.Context, client types
 		if serverConf.Environment == "production" && !strings.HasPrefix(lockPaymentOrder.Network.Identifier, "tron") {
 			ok, err := s.checkAMLCompliance(lockPaymentOrder.Network.RPCEndpoint, lockPaymentOrder.TxHash)
 			if err != nil {
-				logger.Errorf("splitLockPaymentOrder.checkAMLCompliance: %v", err)
+				logger.WithFields(logger.Fields{
+					"Error":    fmt.Sprintf("%v", err),
+					"endpoint": lockPaymentOrder.Network.RPCEndpoint,
+					"TxHash":   lockPaymentOrder.TxHash,
+				}).Errorf("Failed to check AML Compliance")
 			}
 
 			if !ok && err == nil && len(ordersCreated) > 0 {
 				isRefunded = true
 				err := s.handleCancellation(ctx, client, ordersCreated[0], nil, "AML compliance check failed")
 				if err != nil {
-					logger.Errorf("splitLockPaymentOrder.checkAMLCompliance.RefundOrder: %v", err)
+					logger.WithFields(logger.Fields{
+						"Error":          fmt.Sprintf("%v", err),
+						"OrderID":        ordersCreated[0].ID,
+						"OrderGatewayID": ordersCreated[0].GatewayID,
+						"Reason":         "AML compliance check failed",
+					}).Errorf("Failed to handle cancellation when splitting lock payment order")
 				}
 				break
 			}
@@ -1833,7 +2050,7 @@ func (s *IndexerService) splitLockPaymentOrder(ctx context.Context, client types
 	largestBucket := buckets[0]
 
 	if amountToSplit.LessThan(largestBucket.MaxAmount) {
-		bucket, err := s.getProvisionBucket(ctx, amountToSplit, currency)
+		bucket, _, err := s.getProvisionBucket(ctx, amountToSplit, currency)
 		if err != nil {
 			return err
 		}
@@ -1858,7 +2075,10 @@ func (s *IndexerService) splitLockPaymentOrder(ctx context.Context, client types
 
 		orderCreated, err := orderCreatedUpdate.Save(ctx)
 		if err != nil {
-			logger.Errorf("failed to create lock payment order: %v", err)
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"OrderID": lockPaymentOrder.GatewayID,
+			}).Errorf("Failed to create lock payment order when splitting lock payment order")
 			return err
 		}
 

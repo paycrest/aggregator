@@ -21,6 +21,8 @@ type Configuration struct {
 func SetupConfig() error {
 	var configuration *Configuration
 
+	viper.AddConfigPath("../../../..")
+	viper.AddConfigPath("../../..")
 	viper.AddConfigPath("../..")
 	viper.AddConfigPath("..")
 	viper.AddConfigPath(".")

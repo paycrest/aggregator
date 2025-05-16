@@ -49,6 +49,8 @@ type LockPaymentOrder struct {
 	AccountName string `json:"account_name,omitempty"`
 	// Memo holds the value of the "memo" field.
 	Memo string `json:"memo,omitempty"`
+	// Metadata holds the value of the "metadata" field.
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
 	// CancellationCount holds the value of the "cancellation_count" field.
 	CancellationCount int `json:"cancellation_count,omitempty"`
 	// CancellationReasons holds the value of the "cancellation_reasons" field.
@@ -135,7 +137,7 @@ func (*LockPaymentOrder) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case lockpaymentorder.FieldCancellationReasons:
+		case lockpaymentorder.FieldMetadata, lockpaymentorder.FieldCancellationReasons:
 			values[i] = new([]byte)
 		case lockpaymentorder.FieldAmount, lockpaymentorder.FieldRate, lockpaymentorder.FieldOrderPercent:
 			values[i] = new(decimal.Decimal)
@@ -251,6 +253,14 @@ func (lpo *LockPaymentOrder) assignValues(columns []string, values []any) error 
 				return fmt.Errorf("unexpected type %T for field memo", values[i])
 			} else if value.Valid {
 				lpo.Memo = value.String
+			}
+		case lockpaymentorder.FieldMetadata:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field metadata", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &lpo.Metadata); err != nil {
+					return fmt.Errorf("unmarshal field metadata: %w", err)
+				}
 			}
 		case lockpaymentorder.FieldCancellationCount:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -386,6 +396,9 @@ func (lpo *LockPaymentOrder) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("memo=")
 	builder.WriteString(lpo.Memo)
+	builder.WriteString(", ")
+	builder.WriteString("metadata=")
+	builder.WriteString(fmt.Sprintf("%v", lpo.Metadata))
 	builder.WriteString(", ")
 	builder.WriteString("cancellation_count=")
 	builder.WriteString(fmt.Sprintf("%v", lpo.CancellationCount))

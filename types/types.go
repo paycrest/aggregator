@@ -101,6 +101,13 @@ type OrderService interface {
 	SettleOrder(ctx context.Context, client RPCClient, orderID uuid.UUID) error
 }
 
+// KYCProvider defines the interface for KYC verification providers
+type KYCProvider interface {
+	RequestVerification(ctx context.Context, req VerificationRequest) (*VerificationResponse, error)
+	CheckStatus(ctx context.Context, walletAddress string) (*VerificationStatus, error)
+	HandleWebhook(ctx context.Context, payload []byte) error
+}
+
 // CreateOrderParams is the parameters for the create order payload
 type CreateOrderParams struct {
 	Token              common.Address
@@ -110,6 +117,25 @@ type CreateOrderParams struct {
 	SenderFee          *big.Int
 	RefundAddress      common.Address
 	MessageHash        string
+}
+
+// VerificationRequest represents a generic KYC verification request
+type VerificationRequest struct {
+	WalletAddress string `json:"walletAddress"`
+	Signature     string `json:"signature"`
+	Nonce         string `json:"nonce"`
+}
+
+// VerificationResponse represents a generic KYC verification response
+type VerificationResponse struct {
+	URL       string    `json:"url"`
+	ExpiresAt time.Time `json:"expiresAt"`
+}
+
+// VerificationStatus represents the status of a KYC verification
+type VerificationStatus struct {
+	URL    string `json:"url"`
+	Status string `json:"status"`
 }
 
 // RegisterPayload is the payload for the register endpoint
@@ -210,11 +236,12 @@ type SenderProfilePayload struct {
 type ProviderOrderTokenPayload struct {
 	Currency               string                                `json:"currency" binding:"required"`
 	Symbol                 string                                `json:"symbol" binding:"required"`
-	ConversionRateType     providerordertoken.ConversionRateType `json:"conversionRateType" binding:"required"`
-	FixedConversionRate    decimal.Decimal                       `json:"fixedConversionRate" binding:"required"`
+	ConversionRateType     providerordertoken.ConversionRateType `json:"conversionRateType" binding:"required,oneof=fixed floating"`
+	FixedConversionRate    decimal.Decimal                       `json:"fixedConversionRate" binding:"required,gt=0"`
 	FloatingConversionRate decimal.Decimal                       `json:"floatingConversionRate" binding:"required"`
-	MaxOrderAmount         decimal.Decimal                       `json:"maxOrderAmount" binding:"required"`
-	MinOrderAmount         decimal.Decimal                       `json:"minOrderAmount" binding:"required"`
+	MaxOrderAmount         decimal.Decimal                       `json:"maxOrderAmount" binding:"required,gt=0"`
+	MinOrderAmount         decimal.Decimal                       `json:"minOrderAmount" binding:"required,gt=0"`
+	RateSlippage           decimal.Decimal                       `json:"rateSlippage" binding:"gte=0.1"`
 	Address                string                                `json:"address" binding:"required"`
 	Network                string                                `json:"network" binding:"required"`
 }
@@ -317,6 +344,7 @@ type LockPaymentOrderFields struct {
 	AccountName       string
 	ProviderID        string
 	Memo              string
+	Metadata          map[string]interface{}
 	ProvisionBucket   *ent.ProvisionBucket
 	UpdatedAt         time.Time
 	CreatedAt         time.Time
@@ -381,13 +409,14 @@ type LockPaymentOrderStatusResponse struct {
 
 // PaymentOrderRecipient describes a payment order recipient
 type PaymentOrderRecipient struct {
-	Institution       string `json:"institution" binding:"required"`
-	AccountIdentifier string `json:"accountIdentifier" binding:"required"`
-	AccountName       string `json:"accountName" binding:"required"`
-	Memo              string `json:"memo" binding:"required"`
-	ProviderID        string `json:"providerId"`
-	Currency          string `json:"currency"`
-	Nonce             string `json:"nonce"`
+	Institution       string                 `json:"institution" binding:"required"`
+	AccountIdentifier string                 `json:"accountIdentifier" binding:"required"`
+	AccountName       string                 `json:"accountName" binding:"required"`
+	Memo              string                 `json:"memo" binding:"required"`
+	ProviderID        string                 `json:"providerId"`
+	Metadata          map[string]interface{} `json:"metadata"`
+	Currency          string                 `json:"currency"`
+	Nonce             string                 `json:"nonce"`
 }
 
 // NewPaymentOrderPayload is the payload for the create payment order endpoint
@@ -584,35 +613,6 @@ type ProviderStatsResponse struct {
 type VerifyAccountRequest struct {
 	Institution       string `json:"institution" binding:"required"`
 	AccountIdentifier string `json:"accountIdentifier" binding:"required"`
-}
-
-// NewIDVerificationRequest is the request for a new identity verification request
-type NewIDVerificationRequest struct {
-	WalletAddress string `json:"walletAddress" binding:"required"`
-	Signature     string `json:"signature" binding:"required"`
-	Nonce         string `json:"nonce" binding:"required"`
-}
-
-// NewIDVerificationResponse is the response for a new identity verification request
-type NewIDVerificationResponse struct {
-	URL       string    `json:"url"`
-	ExpiresAt time.Time `json:"expiresAt"`
-}
-
-type IDVerificationStatusResponse struct {
-	Status string `json:"status"`
-	URL    string `json:"url"`
-}
-
-// SmileIDWebhookPayload represents the payload structure from Smile Identity
-type SmileIDWebhookPayload struct {
-	ResultCode    string `json:"ResultCode"`
-	PartnerParams struct {
-		UserID string `json:"user_id"`
-	} `json:"PartnerParams"`
-	Signature string `json:"signature"`
-	Timestamp string `json:"timestamp"`
-	// Add other fields as needed
 }
 
 // NewLinkedAddressRequest is the request for linking a new address

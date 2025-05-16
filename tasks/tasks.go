@@ -69,7 +69,10 @@ func setRPCClients(ctx context.Context) ([]*ent.Network, error) {
 				return err
 			})
 			if retryErr != nil {
-				logger.Errorf("failed to connect to %s RPC %v", network.Identifier, retryErr)
+				logger.WithFields(logger.Fields{
+					"Error":   fmt.Sprintf("%v", err),
+					"Network": network.Identifier,
+				}).Errorf("failed to connect to RPC client")
 				continue
 			}
 
@@ -135,7 +138,15 @@ func RetryStaleUserOperations() error {
 				}
 				err := service.CreateOrder(ctx, rpcClients[order.Edges.Token.Edges.Network.Identifier], order.ID)
 				if err != nil {
-					logger.Errorf("RetryStaleUserOperations.CreateOrder %v", err)
+					logger.WithFields(logger.Fields{
+						"Error":             fmt.Sprintf("%v", err),
+						"OrderID":           order.ID.String(),
+						"AmountPaid":        order.AmountPaid,
+						"Amount":            order.Amount,
+						"PercentSettled":    order.PercentSettled,
+						"GatewayID":         order.GatewayID,
+						"NetworkIdentifier": order.Edges.Token.Edges.Network.Identifier,
+					}).Errorf("RetryStaleUserOperations.CreateOrder")
 				}
 			}
 		}
@@ -171,7 +182,13 @@ func RetryStaleUserOperations() error {
 			}
 			err := service.SettleOrder(ctx, rpcClients[order.Edges.Token.Edges.Network.Identifier], order.ID)
 			if err != nil {
-				logger.Errorf("RetryStaleUserOperations.SettleOrder: %v", err)
+				logger.WithFields(logger.Fields{
+					"Error":             fmt.Sprintf("%v", err),
+					"OrderID":           order.ID.String(),
+					"Amount":            order.Amount,
+					"GatewayID":         order.GatewayID,
+					"NetworkIdentifier": order.Edges.Token.Edges.Network.Identifier,
+				}).Errorf("RetryStaleUserOperations.SettleOrder")
 			}
 		}
 	}(ctx)
@@ -230,7 +247,13 @@ func RetryStaleUserOperations() error {
 			}
 			err := service.RefundOrder(ctx, rpcClients[order.Edges.Token.Edges.Network.Identifier], order.Edges.Token.Edges.Network, order.GatewayID)
 			if err != nil {
-				logger.Errorf("RetryStaleUserOperations.RefundOrder: %v", err)
+				logger.WithFields(logger.Fields{
+					"Error":             fmt.Sprintf("%v", err),
+					"OrderID":           order.ID.String(),
+					"Amount":            order.Amount,
+					"GatewayID":         order.GatewayID,
+					"NetworkIdentifier": order.Edges.Token.Edges.Network.Identifier,
+				}).Errorf("RetryStaleUserOperations.RefundOrder")
 			}
 		}
 	}(ctx)
@@ -257,7 +280,13 @@ func RetryStaleUserOperations() error {
 			service := orderService.NewOrderEVM()
 			err = service.CreateOrder(ctx, rpcClients[order.Edges.Token.Edges.Network.Identifier], order.ID)
 			if err != nil {
-				logger.Errorf("RetryStaleUserOperations.RetryLinkedAddress: %v", err)
+				logger.WithFields(logger.Fields{
+					"Error":             fmt.Sprintf("%v", err),
+					"OrderID":           order.ID.String(),
+					"Amount":            order.Amount,
+					"GatewayID":         order.GatewayID,
+					"NetworkIdentifier": order.Edges.Token.Edges.Network.Identifier,
+				}).Errorf("RetryStaleUserOperations.RetryLinkedAddress")
 			}
 		}
 	}(ctx)
@@ -301,7 +330,10 @@ func IndexBlockchainEvents() error {
 			WithRecipient().
 			All(ctx)
 		if err != nil && err != context.Canceled {
-			logger.Errorf("IndexBlockchainEvents: %v", err)
+			logger.WithFields(logger.Fields{
+				"Error":  fmt.Sprintf("%v", err),
+				"Status": paymentorder.StatusInitiated,
+			}).Errorf("Failed to index blockchain events for unused receive addresses")
 		}
 
 		for _, order := range orders {
@@ -408,7 +440,13 @@ func IndexBlockchainEvents() error {
 					Order(ent.Asc(lockpaymentorder.FieldBlockNumber)).
 					All(ctx)
 				if err != nil && err != context.Canceled {
-					logger.Errorf("IndexBlockchainEvents: %v", err)
+					logger.WithFields(logger.Fields{
+						"Error":          fmt.Sprintf("%v", err),
+						"Status":         lockpaymentorder.StatusValidated,
+						"Network":        network.Identifier,
+						"NetworkID":      network.ID,
+						"FieldGatewayID": lockpaymentorder.FieldGatewayID,
+					}).Errorf("Failed to index blockchain events for unused receive addresses")
 				}
 
 				for _, order := range lockOrders {
@@ -462,7 +500,13 @@ func IndexBlockchainEvents() error {
 					Order(ent.Asc(lockpaymentorder.FieldBlockNumber)).
 					All(ctx)
 				if err != nil && err != context.Canceled {
-					logger.Errorf("IndexBlockchainEvents: %v", err)
+					logger.WithFields(logger.Fields{
+						"Error":          fmt.Sprintf("%v", err),
+						"Status":         lockpaymentorder.StatusPending,
+						"Network":        network.Identifier,
+						"NetworkID":      network.ID,
+						"FieldGatewayID": lockpaymentorder.FieldGatewayID,
+					}).Errorf("Failed to index blockchain events for unused receive addresses")
 				}
 
 				if len(lockOrders) > 0 {
@@ -509,7 +553,12 @@ func IndexLinkedAddresses() error {
 			WithNetwork().
 			All(ctx)
 		if err != nil && err != context.Canceled {
-			logger.Errorf("IndexLinkedAddresses: %v", err)
+			logger.WithFields(logger.Fields{
+				"Error":  fmt.Sprintf("%v", err),
+				"Status": tokenent.IsEnabled(true),
+				"Reason": "db:No tokens found",
+			}).Errorf("Failed to index blockchain events for linked addresses")
+			return
 		}
 
 		for _, token := range tokens {
@@ -540,7 +589,11 @@ func ReassignPendingOrders() {
 		ClearProvider().
 		Save(ctx)
 	if err != nil {
-		logger.Errorf("ReassignPendingOrders.db: %v", err)
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"Status": lockpaymentorder.StatusPending,
+			"Reason": "db: No pending orders found",
+		}).Errorf("Failed to reassign pending orders")
 		return
 	}
 
@@ -560,7 +613,11 @@ func ReassignPendingOrders() {
 		).
 		All(ctx)
 	if err != nil {
-		logger.Errorf("ReassignPendingOrders.db: %v", err)
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"Status": lockpaymentorder.StatusPending,
+			"Reason": "db: No pending orders found",
+		}).Errorf("Failed to reassign pending orders")
 		return
 	}
 
@@ -569,7 +626,12 @@ func ReassignPendingOrders() {
 		orderKey := fmt.Sprintf("order_request_%s", order.ID)
 		exists, err := storage.RedisClient.Exists(ctx, orderKey).Result()
 		if err != nil {
-			logger.Errorf("ReassignPendingOrders.redis: %v", err)
+			logger.WithFields(logger.Fields{
+				"Error":    fmt.Sprintf("%v", err),
+				"OrderID":  order.ID.String(),
+				"OrderKey": orderKey,
+				"Reason":   "redis: No pending orders found",
+			}).Errorf("Redis: Failed to reassign pending orders")
 			continue
 		}
 
@@ -595,8 +657,69 @@ func ReassignPendingOrders() {
 
 			err := services.NewPriorityQueueService().AssignLockPaymentOrder(ctx, lockPaymentOrder)
 			if err != nil {
-				logger.Errorf("failed to reassign declined order request: %v", err)
+				logger.WithFields(logger.Fields{
+					"Error":     fmt.Sprintf("%v", err),
+					"OrderID":   order.ID.String(),
+					"OrderKey":  orderKey,
+					"GatewayID": order.GatewayID,
+				}).Errorf("Redis: Failed to reassign declined order request")
 			}
+		}
+	}
+}
+
+// reassignCancelledOrder reassigns cancelled orders to providers
+func reassignCancelledOrder(ctx context.Context, order *ent.LockPaymentOrder, fulfillment *ent.LockOrderFulfillment) {
+	if order.Edges.Provider.VisibilityMode != providerprofile.VisibilityModePrivate && order.CancellationCount < orderConf.RefundCancellationCount {
+		// Push provider ID to order exclude list
+		orderKey := fmt.Sprintf("order_exclude_list_%s", order.ID)
+		_, err := storage.RedisClient.RPush(ctx, orderKey, order.Edges.Provider.ID).Result()
+		if err != nil {
+			return
+		}
+
+		_, err = storage.Client.LockPaymentOrder.
+			UpdateOneID(order.ID).
+			ClearProvider().
+			SetStatus(lockpaymentorder.StatusPending).
+			Save(ctx)
+		if err != nil {
+			return
+		}
+
+		if fulfillment != nil {
+			err = storage.Client.LockOrderFulfillment.
+				DeleteOneID(fulfillment.ID).
+				Exec(ctx)
+			if err != nil {
+				return
+			}
+		}
+
+		// Reassign the order to a provider
+		lockPaymentOrder := types.LockPaymentOrderFields{
+			ID:                order.ID,
+			Token:             order.Edges.Token,
+			GatewayID:         order.GatewayID,
+			Amount:            order.Amount,
+			Rate:              order.Rate,
+			BlockNumber:       order.BlockNumber,
+			Institution:       order.Institution,
+			AccountIdentifier: order.AccountIdentifier,
+			AccountName:       order.AccountName,
+			ProviderID:        "",
+			Memo:              order.Memo,
+			ProvisionBucket:   order.Edges.ProvisionBucket,
+		}
+
+		err = services.NewPriorityQueueService().AssignLockPaymentOrder(ctx, lockPaymentOrder)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":     fmt.Sprintf("%v", err),
+				"OrderID":   order.ID.String(),
+				"OrderKey":  orderKey,
+				"GatewayID": order.GatewayID,
+			}).Errorf("Redis: Failed to reassign declined order request")
 		}
 	}
 }
@@ -666,15 +789,30 @@ func SyncLockOrderFulfillments() {
 			continue
 		}
 		if len(order.Edges.Fulfillments) == 0 {
+			if order.Status == lockpaymentorder.StatusCancelled {
+				reassignCancelledOrder(ctx, order, nil)
+				continue
+			}
+
 			// Compute HMAC
 			decodedSecret, err := base64.StdEncoding.DecodeString(order.Edges.Provider.Edges.APIKey.Secret)
 			if err != nil {
-				logger.Errorf("SyncLockOrderFulfillments.DecodeSecret: %v %v", err, order.Edges.Provider.ID)
+				logger.WithFields(logger.Fields{
+					"Error":      fmt.Sprintf("%v", err),
+					"OrderID":    order.ID.String(),
+					"ProviderID": order.Edges.Provider.ID,
+					"Reason":     "internal: Failed to decode provider secret",
+				}).Errorf("SyncLockOrderFulfillments.DecodeSecret")
 				continue
 			}
 			decryptedSecret, err := cryptoUtils.DecryptPlain(decodedSecret)
 			if err != nil {
-				logger.Errorf("SyncLockOrderFulfillments.DecryptSecret: %v %v", err, order.Edges.Provider.ID)
+				logger.WithFields(logger.Fields{
+					"Error":      fmt.Sprintf("%v", err),
+					"OrderID":    order.ID.String(),
+					"ProviderID": order.Edges.Provider.ID,
+					"Reason":     "internal: Failed to decrypt provider secret",
+				}).Errorf("SyncLockOrderFulfillments.DecryptSecret")
 				continue
 			}
 
@@ -692,16 +830,27 @@ func SyncLockOrderFulfillments() {
 				Body().AsJSON(payload).
 				Send()
 			if err != nil {
-				logger.Errorf("SyncLockOrderFulfillments: %v %v", err, payload)
+				logger.WithFields(logger.Fields{
+					"Error":           fmt.Sprintf("%v", err),
+					"ProviderID":      order.Edges.Provider.ID,
+					"PayloadOrderId":  payload["orderId"],
+					"PayloadCurrency": payload["currency"],
+					"Reason":          "internal: Failed to send tx_status request to provider",
+				}).Errorf("SyncLockOrderFulfillments.SendTxStatusRequest")
 
 				// Set status to pending on 400 error
-				if strings.Contains(err.Error(), "400") {
+				if strings.Contains(fmt.Sprintf("%v", err), "400") {
 					_, updateErr := storage.Client.LockPaymentOrder.
 						UpdateOneID(order.ID).
 						SetStatus(lockpaymentorder.StatusPending).
 						Save(ctx)
 					if updateErr != nil {
-						logger.Errorf("SyncLockOrderFulfillments.UpdateStatus: %v", updateErr)
+						logger.WithFields(logger.Fields{
+							"Error":      updateErr,
+							"OrderID":    order.ID.String(),
+							"ProviderID": order.Edges.Provider.ID,
+							"Reason":     "internal: Failed to update order status",
+						}).Errorf("SyncLockOrderFulfillments.UpdateStatus")
 					}
 				}
 				continue
@@ -710,13 +859,22 @@ func SyncLockOrderFulfillments() {
 			data, err := utils.ParseJSONResponse(res.RawResponse)
 			if err != nil {
 				if order.Status == lockpaymentorder.StatusProcessing && order.UpdatedAt.Add(orderConf.OrderFulfillmentValidity*2).Before(time.Now()) {
-					logger.Errorf("SyncLockOrderFulfillments.StuckProcessing: %v %v", err, payload)
+					logger.WithFields(logger.Fields{
+						"Error":           fmt.Sprintf("%v", err),
+						"ProviderID":      order.Edges.Provider.ID,
+						"PayloadOrderId":  payload["orderId"],
+						"PayloadCurrency": payload["currency"],
+					}).Errorf("Failed to parse JSON response after getting trx status from provider")
 					// delete lock order to trigger re-indexing
 					err := storage.Client.LockPaymentOrder.
 						DeleteOneID(order.ID).
 						Exec(ctx)
 					if err != nil {
-						logger.Errorf("SyncLockOrderFulfillments.DeleteOrder: %v", err)
+						logger.WithFields(logger.Fields{
+							"Error":      fmt.Sprintf("%v", err),
+							"OrderID":    order.ID.String(),
+							"ProviderID": order.Edges.Provider.ID,
+						}).Errorf("Failed to delete order after failing to parse JSON response when getting trx status from provider")
 					}
 					continue
 				}
@@ -787,12 +945,20 @@ func SyncLockOrderFulfillments() {
 					// Compute HMAC
 					decodedSecret, err := base64.StdEncoding.DecodeString(order.Edges.Provider.Edges.APIKey.Secret)
 					if err != nil {
-						logger.Errorf("SyncLockOrderFulfillments.DecodeSecret: %v %v", err, order.Edges.Provider.ID)
+						logger.WithFields(logger.Fields{
+							"Error":      fmt.Sprintf("%v", err),
+							"OrderID":    order.ID.String(),
+							"ProviderID": order.Edges.Provider.ID,
+						}).Errorf("Failed to decode provider secret for pending fulfillment")
 						continue
 					}
 					decryptedSecret, err := cryptoUtils.DecryptPlain(decodedSecret)
 					if err != nil {
-						logger.Errorf("SyncLockOrderFulfillments.DecryptSecret: %v %v", err, order.Edges.Provider.ID)
+						logger.WithFields(logger.Fields{
+							"Error":      fmt.Sprintf("%v", err),
+							"OrderID":    order.ID.String(),
+							"ProviderID": order.Edges.Provider.ID,
+						}).Errorf("Failed to decrypt provider secret for pending fulfillment")
 						continue
 					}
 
@@ -818,7 +984,15 @@ func SyncLockOrderFulfillments() {
 
 					data, err := utils.ParseJSONResponse(res.RawResponse)
 					if err != nil {
-						logger.Errorf("SyncLockOrderFulfillments: %v %v", err, payload)
+						logger.WithFields(logger.Fields{
+							"Error":           fmt.Sprintf("%v", err),
+							"OrderID":         order.ID.String(),
+							"ProviderID":      order.Edges.Provider.ID,
+							"PayloadOrderId":  payload["orderId"],
+							"PayloadCurrency": payload["currency"],
+							"PayloadPsp":      payload["psp"],
+							"PayloadTxId":     payload["txId"],
+						}).Errorf("Failed to parse JSON response after getting trx status from provider")
 						continue
 					}
 
@@ -876,51 +1050,9 @@ func SyncLockOrderFulfillments() {
 					}
 
 				} else if fulfillment.ValidationStatus == lockorderfulfillment.ValidationStatusFailed {
-					if order.Edges.Provider.VisibilityMode != providerprofile.VisibilityModePrivate {
-						// Push provider ID to order exclude list
-						orderKey := fmt.Sprintf("order_exclude_list_%s", order.ID)
-						_, err = storage.RedisClient.RPush(ctx, orderKey, order.Edges.Provider.ID).Result()
-						if err != nil {
-							continue
-						}
+					reassignCancelledOrder(ctx, order, fulfillment)
+					continue
 
-						_, err = storage.Client.LockPaymentOrder.
-							UpdateOneID(order.ID).
-							ClearProvider().
-							SetStatus(lockpaymentorder.StatusPending).
-							Save(ctx)
-						if err != nil {
-							continue
-						}
-
-						err = storage.Client.LockOrderFulfillment.
-							DeleteOneID(fulfillment.ID).
-							Exec(ctx)
-						if err != nil {
-							continue
-						}
-
-						// Reassign the order to a provider
-						lockPaymentOrder := types.LockPaymentOrderFields{
-							ID:                order.ID,
-							Token:             order.Edges.Token,
-							GatewayID:         order.GatewayID,
-							Amount:            order.Amount,
-							Rate:              order.Rate,
-							BlockNumber:       order.BlockNumber,
-							Institution:       order.Institution,
-							AccountIdentifier: order.AccountIdentifier,
-							AccountName:       order.AccountName,
-							ProviderID:        "",
-							Memo:              order.Memo,
-							ProvisionBucket:   order.Edges.ProvisionBucket,
-						}
-
-						err = services.NewPriorityQueueService().AssignLockPaymentOrder(ctx, lockPaymentOrder)
-						if err != nil {
-							logger.Errorf("SyncLockOrderFulfillments.AssignLockPaymentOrder: %v", err)
-						}
-					}
 				} else if fulfillment.ValidationStatus == lockorderfulfillment.ValidationStatusSuccess {
 					transactionLog, err := storage.Client.TransactionLog.
 						Create().
@@ -957,7 +1089,10 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 
 		orderUUID, err := uuid.Parse(orderID)
 		if err != nil {
-			logger.Errorf("ReassignStaleOrderRequest: %v", err)
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"OrderID": orderID,
+			}).Errorf("ReassignStaleOrderRequest: Failed to parse order ID")
 			continue
 		}
 
@@ -970,7 +1105,11 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 			WithProvisionBucket().
 			Only(ctx)
 		if err != nil {
-			logger.Errorf("ReassignStaleOrderRequest: %v", err)
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"OrderID": order.ID.String(),
+				"UUID":    orderUUID,
+			}).Errorf("ReassignStaleOrderRequest: Failed to get order from database")
 			continue
 		}
 
@@ -990,7 +1129,13 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 		// Assign the order to a provider
 		err = services.NewPriorityQueueService().AssignLockPaymentOrder(ctx, orderFields)
 		if err != nil {
-			logger.Errorf("ReassignStaleOrderRequest.AssignLockPaymentOrder: %v", err)
+			// logger.Errorf("ReassignStaleOrderRequest.AssignLockPaymentOrder: %v", err)
+			logger.WithFields(logger.Fields{
+				"Error":     fmt.Sprintf("%v", err),
+				"OrderID":   order.ID.String(),
+				"UUID":      orderUUID,
+				"GatewayID": order.GatewayID,
+			}).Errorf("ReassignStaleOrderRequest: Failed to assign order to provider")
 		}
 	}
 }
@@ -1196,6 +1341,9 @@ func ComputeMarketRate() error {
 					tokenent.SymbolIn("USDT", "USDC"),
 				),
 				providerordertoken.ConversionRateTypeEQ(providerordertoken.ConversionRateTypeFixed),
+				providerordertoken.HasProviderWith(
+					providerprofile.IsAvailableEQ(true),
+				),
 			).
 			Select(providerordertoken.FieldFixedConversionRate).
 			All(ctx)
@@ -1332,32 +1480,32 @@ func StartCronJobs() {
 
 	err := ComputeMarketRate()
 	if err != nil {
-		logger.Errorf("StartCronJobs: %v", err)
+		logger.Errorf("StartCronJobs for ComputeMarketRate: %v", err)
 	}
 
 	if serverConf.Environment != "production" {
 		err = priorityQueue.ProcessBucketQueues()
 		if err != nil {
-			logger.Errorf("StartCronJobs: %v", err)
+			logger.Errorf("StartCronJobs for ProcessBucketQueues: %v", err)
 		}
 	}
 
 	// Compute market rate every 10 minutes
 	_, err = scheduler.Every(10).Minutes().Do(ComputeMarketRate)
 	if err != nil {
-		logger.Errorf("StartCronJobs: %v", err)
+		logger.Errorf("StartCronJobs for ComputeMarketRate after 10 minutes: %v", err)
 	}
 
 	// Refresh provision bucket priority queues every X minutes
 	_, err = scheduler.Every(orderConf.BucketQueueRebuildInterval).Minutes().Do(priorityQueue.ProcessBucketQueues)
 	if err != nil {
-		logger.Errorf("StartCronJobs: %v", err)
+		logger.Errorf("StartCronJobs for ProcessBucketQueues: %v", err)
 	}
 
 	// Retry failed webhook notifications every 59 minutes
 	_, err = scheduler.Every(59).Minutes().Do(RetryFailedWebhookNotifications)
 	if err != nil {
-		logger.Errorf("StartCronJobs: %v", err)
+		logger.Errorf("StartCronJobs for RetryFailedWebhookNotifications: %v", err)
 	}
 
 	// Reassign pending order requests every 13 minutes
@@ -1369,31 +1517,31 @@ func StartCronJobs() {
 	// Sync lock order fulfillments every 1 minute
 	_, err = scheduler.Every(1).Minute().Do(SyncLockOrderFulfillments)
 	if err != nil {
-		logger.Errorf("StartCronJobs: %v", err)
+		logger.Errorf("StartCronJobs for SyncLockOrderFulfillments: %v", err)
 	}
 
 	// Handle receive address validity every 31 minutes
 	_, err = scheduler.Every(31).Minutes().Do(HandleReceiveAddressValidity)
 	if err != nil {
-		logger.Errorf("StartCronJobs: %v", err)
+		logger.Errorf("StartCronJobs for HandleReceiveAddressValidity: %v", err)
 	}
 
 	// Retry stale user operations every 2 minutes
 	_, err = scheduler.Every(2).Minutes().Do(RetryStaleUserOperations)
 	if err != nil {
-		logger.Errorf("StartCronJobs: %v", err)
+		logger.Errorf("StartCronJobs for RetryStaleUserOperations: %v", err)
 	}
 
 	// Index blockchain events every 10 seconds
 	_, err = scheduler.Every(10).Seconds().Do(IndexBlockchainEvents)
 	if err != nil {
-		logger.Errorf("StartCronJobs: %v", err)
+		logger.Errorf("StartCronJobs for IndexBlockchainEvents: %v", err)
 	}
 
 	// Index linked addresses every 1 minute
 	_, err = scheduler.Every(1).Minute().Do(IndexLinkedAddresses)
 	if err != nil {
-		logger.Errorf("StartCronJobs: %v", err)
+		logger.Errorf("StartCronJobs for IndexLinkedAddresses: %v", err)
 	}
 
 	// Start scheduler

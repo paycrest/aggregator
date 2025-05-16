@@ -50,7 +50,8 @@ func TestIndex(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Set up test routers
-	var ctrl Controller
+	// var ctrl Controller
+	ctrl := NewController()
 	router := gin.New()
 
 	router.GET("currencies", ctrl.GetFiatCurrencies)
@@ -150,9 +151,9 @@ func TestIndex(t *testing.T) {
 			},
 		)
 		t.Run("with valid details", func(t *testing.T) {
-			payload := types.NewIDVerificationRequest{
-				Signature:     "b1dcfa6beba6c93e5abd38c23890a1ff2e553721c5c379a80b66a2ad74b3755f543cd8e7d8fb064ae4fdeeba93302c156bd012e390c2321a763eddaa12e5ab5d1c",
+			payload := types.VerificationRequest{
 				WalletAddress: "0xf4c5c4deDde7A86b25E7430796441e209e23eBFB",
+				Signature:     "b1dcfa6beba6c93e5abd38c23890a1ff2e553721c5c379a80b66a2ad74b3755f543cd8e7d8fb064ae4fdeeba93302c156bd012e390c2321a763eddaa12e5ab5d1c",
 				Nonce:         "e08511abb6087c47",
 			}
 
@@ -185,7 +186,7 @@ func TestIndex(t *testing.T) {
 		})
 
 		t.Run("with an already used signature", func(t *testing.T) {
-			payload := types.NewIDVerificationRequest{
+			payload := types.VerificationRequest{
 				Signature:     "b1dcfa6beba6c93e5abd38c23890a1ff2e553721c5c379a80b66a2ad74b3755f543cd8e7d8fb064ae4fdeeba93302c156bd012e390c2321a763eddaa12e5ab5d1c",
 				WalletAddress: "0xf4c5c4deDde7A86b25E7430796441e209e23eBFB",
 				Nonce:         "e08511abb6087c47",
@@ -206,7 +207,7 @@ func TestIndex(t *testing.T) {
 		})
 
 		t.Run("with a different signature for same wallet address with validity duration", func(t *testing.T) {
-			payload := types.NewIDVerificationRequest{
+			payload := types.VerificationRequest{
 				Signature:     "dea3406fa45aa364283e1704b3a8c3b70973a25c262540b71e857efe25e8582b23f98b969cebe320dd2851e5ea36c781253edf7e7d1cd5fe6be704f5709f76df1b",
 				WalletAddress: "0xf4c5c4deDde7A86b25E7430796441e209e23eBFB",
 				Nonce:         "8c400162fbfe0527",
@@ -222,11 +223,11 @@ func TestIndex(t *testing.T) {
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
 			assert.Equal(t, "success", response.Status)
-			assert.Equal(t, "This account has a pending identity verification request", response.Message)
+			assert.Equal(t, "Identity verification requested successfully", response.Message)
 		})
 
 		t.Run("with invalid signature", func(t *testing.T) {
-			payload := types.NewIDVerificationRequest{
+			payload := types.VerificationRequest{
 				Signature:     "invalid_signature",
 				WalletAddress: "0xf4c5c4deDde7A86b25E7430796441e209e23eBFB",
 				Nonce:         "e08511abb6087c47",

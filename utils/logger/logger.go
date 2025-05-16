@@ -2,8 +2,10 @@ package logger
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -20,7 +22,6 @@ func init() {
 	logger.Formatter = &formatter{}
 
 	config := config.ServerConfig()
-
 	if config.Environment == "production" || config.Environment == "staging" {
 		// init sentry
 		err := sentry.Init(sentry.ClientOptions{
@@ -70,6 +71,47 @@ func SetLogLevel(level logrus.Level) {
 
 // Fields type, used to pass to `WithFields`.
 type Fields logrus.Fields
+
+// WithFields returns a new entry with the provided fields and automatically adds caller information.
+func WithFields(fields Fields) *logrus.Entry {
+	// Get caller information (skip 1 stack frame to get the caller of WithFields)
+	_, file, line, ok := runtime.Caller(1)
+	if ok {
+		// Extract just the filename without the full path
+		_, fileName := filepath.Split(file)
+
+		// Add caller information to fields
+		logrusFields := logrus.Fields(fields)
+		if _, exists := logrusFields["file"]; !exists {
+			logrusFields["File"] = fileName
+		}
+		if _, exists := logrusFields["line"]; !exists {
+			logrusFields["Line"] = line
+		}
+
+		// Try to get function name
+		pc, _, _, funcOk := runtime.Caller(1)
+		if funcOk {
+			funcName := runtime.FuncForPC(pc).Name()
+			// Extract just the function name without the full package path
+			if lastDot := strings.LastIndex(funcName, "."); lastDot != -1 {
+				funcName = funcName[lastDot+1:]
+			}
+			if _, exists := logrusFields["function"]; !exists {
+				logrusFields["Function"] = funcName
+			}
+		}
+
+		return logger.WithFields(logrusFields)
+	}
+
+	return logger.WithFields(logrus.Fields(fields))
+}
+
+// WithField returns a new entry with the provided field and automatically adds caller information.
+func WithField(key string, value interface{}) *logrus.Entry {
+	return WithFields(Fields{key: value})
+}
 
 // Debugf logs a message at level Debug on the standard logger.
 func Debugf(format string, args ...interface{}) {
@@ -127,5 +169,22 @@ func (f *formatter) Format(entry *logrus.Entry) ([]byte, error) {
 	sb.WriteString(f.prefix)
 	sb.WriteString(entry.Message)
 
+	// Add fields to the log message if there are any
+	if len(entry.Data) > 0 {
+		sb.WriteString(" | ")
+		first := true
+		for k, v := range entry.Data {
+			if first {
+				first = false
+			} else {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(k)
+			sb.WriteString("=")
+			sb.WriteString(fmt.Sprintf("%v", v))
+		}
+	}
+
+	sb.WriteString("\n")
 	return sb.Bytes(), nil
 }

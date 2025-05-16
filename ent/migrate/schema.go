@@ -107,6 +107,7 @@ var (
 		{Name: "institution", Type: field.TypeString},
 		{Name: "account_identifier", Type: field.TypeString},
 		{Name: "account_name", Type: field.TypeString},
+		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
 		{Name: "owner_address", Type: field.TypeString, Unique: true},
 		{Name: "last_indexed_block", Type: field.TypeInt64, Nullable: true},
 		{Name: "tx_hash", Type: field.TypeString, Nullable: true, Size: 70},
@@ -120,7 +121,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "linked_addresses_sender_profiles_linked_address",
-				Columns:    []*schema.Column{LinkedAddressesColumns[11]},
+				Columns:    []*schema.Column{LinkedAddressesColumns[12]},
 				RefColumns: []*schema.Column{SenderProfilesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -167,6 +168,7 @@ var (
 		{Name: "account_identifier", Type: field.TypeString},
 		{Name: "account_name", Type: field.TypeString},
 		{Name: "memo", Type: field.TypeString, Nullable: true},
+		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
 		{Name: "cancellation_count", Type: field.TypeInt, Default: 0},
 		{Name: "cancellation_reasons", Type: field.TypeJSON},
 		{Name: "provider_profile_assigned_orders", Type: field.TypeString, Nullable: true},
@@ -181,19 +183,19 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "lock_payment_orders_provider_profiles_assigned_orders",
-				Columns:    []*schema.Column{LockPaymentOrdersColumns[16]},
+				Columns:    []*schema.Column{LockPaymentOrdersColumns[17]},
 				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "lock_payment_orders_provision_buckets_lock_payment_orders",
-				Columns:    []*schema.Column{LockPaymentOrdersColumns[17]},
+				Columns:    []*schema.Column{LockPaymentOrdersColumns[18]},
 				RefColumns: []*schema.Column{ProvisionBucketsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "lock_payment_orders_tokens_lock_payment_orders",
-				Columns:    []*schema.Column{LockPaymentOrdersColumns[18]},
+				Columns:    []*schema.Column{LockPaymentOrdersColumns[19]},
 				RefColumns: []*schema.Column{TokensColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -202,7 +204,7 @@ var (
 			{
 				Name:    "lockpaymentorder_gateway_id_rate_tx_hash_block_number_institution_account_identifier_account_name_memo_token_lock_payment_orders",
 				Unique:  true,
-				Columns: []*schema.Column{LockPaymentOrdersColumns[3], LockPaymentOrdersColumns[5], LockPaymentOrdersColumns[7], LockPaymentOrdersColumns[9], LockPaymentOrdersColumns[10], LockPaymentOrdersColumns[11], LockPaymentOrdersColumns[12], LockPaymentOrdersColumns[13], LockPaymentOrdersColumns[18]},
+				Columns: []*schema.Column{LockPaymentOrdersColumns[3], LockPaymentOrdersColumns[5], LockPaymentOrdersColumns[7], LockPaymentOrdersColumns[9], LockPaymentOrdersColumns[10], LockPaymentOrdersColumns[11], LockPaymentOrdersColumns[12], LockPaymentOrdersColumns[13], LockPaymentOrdersColumns[19]},
 			},
 		},
 	}
@@ -295,6 +297,7 @@ var (
 		{Name: "account_name", Type: field.TypeString},
 		{Name: "memo", Type: field.TypeString, Nullable: true},
 		{Name: "provider_id", Type: field.TypeString, Nullable: true},
+		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
 		{Name: "payment_order_recipient", Type: field.TypeUUID, Unique: true},
 	}
 	// PaymentOrderRecipientsTable holds the schema information for the "payment_order_recipients" table.
@@ -305,7 +308,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "payment_order_recipients_payment_orders_recipient",
-				Columns:    []*schema.Column{PaymentOrderRecipientsColumns[6]},
+				Columns:    []*schema.Column{PaymentOrderRecipientsColumns[7]},
 				RefColumns: []*schema.Column{PaymentOrdersColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -321,6 +324,7 @@ var (
 		{Name: "conversion_rate_type", Type: field.TypeEnum, Enums: []string{"fixed", "floating"}},
 		{Name: "max_order_amount", Type: field.TypeFloat64},
 		{Name: "min_order_amount", Type: field.TypeFloat64},
+		{Name: "rate_slippage", Type: field.TypeFloat64},
 		{Name: "address", Type: field.TypeString, Nullable: true},
 		{Name: "network", Type: field.TypeString, Nullable: true},
 		{Name: "fiat_currency_provider_order_tokens", Type: field.TypeUUID},
@@ -335,19 +339,19 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "provider_order_tokens_fiat_currencies_provider_order_tokens",
-				Columns:    []*schema.Column{ProviderOrderTokensColumns[10]},
+				Columns:    []*schema.Column{ProviderOrderTokensColumns[11]},
 				RefColumns: []*schema.Column{FiatCurrenciesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "provider_order_tokens_provider_profiles_order_tokens",
-				Columns:    []*schema.Column{ProviderOrderTokensColumns[11]},
+				Columns:    []*schema.Column{ProviderOrderTokensColumns[12]},
 				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "provider_order_tokens_tokens_provider_order_tokens",
-				Columns:    []*schema.Column{ProviderOrderTokensColumns[12]},
+				Columns:    []*schema.Column{ProviderOrderTokensColumns[13]},
 				RefColumns: []*schema.Column{TokensColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -356,7 +360,7 @@ var (
 			{
 				Name:    "providerordertoken_provider_profile_order_tokens_token_provider_order_tokens_fiat_currency_provider_order_tokens",
 				Unique:  true,
-				Columns: []*schema.Column{ProviderOrderTokensColumns[11], ProviderOrderTokensColumns[12], ProviderOrderTokensColumns[10]},
+				Columns: []*schema.Column{ProviderOrderTokensColumns[12], ProviderOrderTokensColumns[13], ProviderOrderTokensColumns[11]},
 			},
 		},
 	}

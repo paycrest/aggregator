@@ -30,6 +30,7 @@ var serverConf = config.ServerConfig()
 type AuthController struct {
 	apiKeyService *svc.APIKeyService
 	emailService  *svc.EmailService
+	slackService  *svc.SlackService
 }
 
 // NewAuthController creates a new instance of AuthController with injected services
@@ -37,6 +38,7 @@ func NewAuthController() *AuthController {
 	return &AuthController{
 		apiKeyService: svc.NewAPIKeyService(),
 		emailService:  svc.NewEmailService(svc.SENDGRID_MAIL_PROVIDER),
+		slackService:  svc.NewSlackService(serverConf.SlackWebhookURL),
 	}
 }
 
@@ -56,7 +58,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 
 	tx, err := db.Client.Tx(ctx)
 	if err != nil {
-		logger.Errorf("error: %v", err)
+		logger.Errorf("Error: Failed to create new user: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error",
 			"Failed to create new user", nil)
 		return
@@ -97,7 +99,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 	user, err := userCreate.Save(ctx)
 	if err != nil {
 		_ = tx.Rollback()
-		logger.Errorf("error: %v", err)
+		logger.Errorf("Error: Failed to save new user: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error",
 			"Failed to create new user", nil)
 		return
@@ -111,13 +113,16 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		SetExpiryAt(time.Now().Add(authConf.PasswordResetLifespan)).
 		Save(ctx)
 	if err != nil {
-		logger.Errorf("error: %v", err)
+		logger.Errorf("Error: Failed to create verification token: %v", err)
 	}
 
 	if serverConf.Environment == "production" {
 		if verificationToken != nil {
 			if _, err := ctrl.emailService.SendVerificationEmail(ctx, verificationToken.Token, user.Email, user.FirstName); err != nil {
-				logger.Errorf("error: %v", err)
+				logger.WithFields(logger.Fields{
+					"Error": fmt.Sprintf("%v", err),
+					"UserID": user.ID,
+				}).Errorf("Failed to send verification email")
 			}
 		}
 	}
@@ -125,6 +130,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 	scopes := payload.Scopes
 
 	// Create a provider profile
+	var providerCurrencies []string
 	if u.ContainsString(scopes, "provider") {
 		currencies := payload.Currencies
 		if len(currencies) == 0 {
@@ -155,6 +161,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 				return
 			}
 			fiatCurrencies[i] = fiatCurrency
+			providerCurrencies = append(providerCurrencies, fiatCurrency.Code) // Collect all currencies
 		}
 
 		if len(unsupportedCurrencies) > 0 {
@@ -176,7 +183,10 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 			Save(ctx)
 		if err != nil {
 			_ = tx.Rollback()
-			logger.Errorf("error: %v", err)
+			logger.WithFields(logger.Fields{
+				"Error": fmt.Sprintf("%v", err),
+				"UserID": user.ID,
+			}).Errorf("Failed to create provider profile")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error",
 				"Failed to create new user", nil)
 			return
@@ -186,7 +196,11 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		_, _, err = ctrl.apiKeyService.GenerateAPIKey(ctx, tx, nil, provider)
 		if err != nil {
 			_ = tx.Rollback()
-			logger.Errorf("error: %v", err)
+			logger.WithFields(logger.Fields{
+				"Error": fmt.Sprintf("%v", err),
+				"UserID": user.ID,
+				"ProviderID": provider.ID,
+			}).Errorf("Failed to create API key for provider")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error",
 				"Failed to create new user", nil)
 			return
@@ -201,7 +215,10 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 			Save(ctx)
 		if err != nil {
 			_ = tx.Rollback()
-			logger.Errorf("error: %v", err)
+			logger.WithFields(logger.Fields{
+				"Error": fmt.Sprintf("%v", err),
+				"UserID": user.ID,
+			}).Errorf("Failed to create sender profile")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error",
 				"Failed to create new user", nil)
 			return
@@ -211,7 +228,11 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		_, _, err = ctrl.apiKeyService.GenerateAPIKey(ctx, tx, sender, nil)
 		if err != nil {
 			_ = tx.Rollback()
-			logger.Errorf("error: %v", err)
+			logger.WithFields(logger.Fields{
+				"Error": fmt.Sprintf("%v", err),
+				"UserID": user.ID,
+				"SenderID": sender.ID,
+			}).Errorf("Failed to create API key for sender")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error",
 				"Failed to create new user", nil)
 			return
@@ -219,7 +240,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 	}
 
 	if err := tx.Commit(); err != nil {
-		logger.Errorf("error: %v", err)
+		logger.Errorf("Error: Failed to commit transaction: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error",
 			"Failed to create new user", nil)
 		return
@@ -238,6 +259,13 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 	}
 
 	u.APIResponse(ctx, http.StatusCreated, "success", "User created successfully", response)
+
+	// Send Slack notification
+	if serverConf.Environment == "production" {
+		if err := ctrl.slackService.SendUserSignupNotification(user, scopes, providerCurrencies); err != nil {
+			logger.Errorf("Failed to send Slack notification: %v", err)
+		}
+	}
 }
 
 // Login controller validates the payload and creates a new user.
@@ -285,7 +313,7 @@ func (ctrl *AuthController) Login(ctx *gin.Context) {
 	accessToken, refreshToken, err := token.GeneratePairJWT(user.ID.String(), user.Scope)
 
 	if err != nil {
-		logger.Errorf("error: %v", err)
+		logger.Errorf("Error : Failed to create token pair during login: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error",
 			"Failed to create token pair", nil,
 		)

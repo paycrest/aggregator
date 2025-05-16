@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"net/url"
 	"reflect"
 	"regexp"
 	"sort"
@@ -108,6 +109,12 @@ func BigMin(x, y *big.Int) *big.Int {
 		return x
 	}
 	return y
+}
+
+// FormatTimestampToGMT1 formats the timestamp to GMT+1 (Africa/Lagos time zone) and returns a formatted string.
+func FormatTimestampToGMT1(timestamp time.Time) (string, error) {
+	loc := time.FixedZone("GMT+1", 1*60*60)
+	return timestamp.In(loc).Format("January 2, 2006 at 3:04 PM"), nil
 }
 
 // PersonalSign is an equivalent of ethers.personal_sign for signing ethereum messages
@@ -516,7 +523,14 @@ func GetTokenRateFromQueue(tokenSymbol string, orderAmount decimal.Decimal, fiat
 			}
 			parts := strings.Split(providerData, ":")
 			if len(parts) != 5 {
-				logger.Errorf("utils.GetTokenRateFromQueue.InvalidProviderData: %v", providerData)
+				logger.WithFields(logger.Fields{
+					"Error":        fmt.Sprintf("%v", err),
+					"ProviderData": providerData,
+					"Token":        tokenSymbol,
+					"Currency":     fiatCurrency,
+					"MinAmount":    minAmount,
+					"MaxAmount":    maxAmount,
+				}).Errorf("GetTokenRate.InvalidProviderData: %v", providerData)
 				continue
 			}
 
@@ -560,18 +574,41 @@ func GetTokenRateFromQueue(tokenSymbol string, orderAmount decimal.Decimal, fiat
 }
 
 // GetInstitutionByCode returns the institution for a given institution code
-func GetInstitutionByCode(ctx context.Context, institutionCode string) (*ent.Institution, error) {
-	institution, err := storage.Client.Institution.
+func GetInstitutionByCode(ctx context.Context, institutionCode string, enabledFiatCurrency bool) (*ent.Institution, error) {
+	institutionQuery := storage.Client.Institution.
 		Query().
-		Where(institution.CodeEQ(institutionCode)).
-		WithFiatCurrency(
+		Where(institution.CodeEQ(institutionCode))
+
+	if enabledFiatCurrency {
+		institutionQuery = institutionQuery.WithFiatCurrency(
 			func(fcq *ent.FiatCurrencyQuery) {
 				fcq.Where(fiatcurrency.IsEnabledEQ(true))
 			},
-		).
-		Only(ctx)
+		)
+	} else {
+		institutionQuery = institutionQuery.WithFiatCurrency()
+	}
+
+	institution, err := institutionQuery.Only(ctx)
 	if err != nil {
 		return nil, err
 	}
 	return institution, nil
+}
+
+// Helper function to validate HTTPS URL
+func IsValidHttpsUrl(urlStr string) bool {
+	// Check if URL starts with https://
+	if !strings.HasPrefix(strings.ToLower(urlStr), "https://") {
+		return false
+	}
+
+	// Parse URL to ensure it's valid
+	parsedUrl, err := url.Parse(urlStr)
+	if err != nil {
+		return false
+	}
+
+	// Verify scheme is https and host is present
+	return parsedUrl.Scheme == "https" && parsedUrl.Host != ""
 }
