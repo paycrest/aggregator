@@ -363,6 +363,7 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 	orderRequestData := map[string]interface{}{
 		"amount":      order.Amount.Mul(order.Rate).RoundBank(0).String(),
 		"institution": order.Institution,
+		"currency":    order.ProvisionBucket.Edges.Currency.Code,
 		"providerId":  order.ProviderID,
 	}
 
