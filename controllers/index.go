@@ -22,6 +22,7 @@ import (
 	svc "github.com/paycrest/aggregator/services"
 	kycErrors "github.com/paycrest/aggregator/services/kyc/errors"
 	"github.com/paycrest/aggregator/services/kyc/smile"
+	intentSvc "github.com/paycrest/aggregator/services"
 	orderSvc "github.com/paycrest/aggregator/services/order"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
@@ -44,16 +45,71 @@ type Controller struct {
 	priorityQueueService  *svc.PriorityQueueService
 	receiveAddressService *svc.ReceiveAddressService
 	kycService            types.KYCProvider
+	clickDefuseService    *intentSvc.ClickDefuseService
 }
 
 // NewController creates a new instance of AuthController with injected services
 func NewController() *Controller {
+	intentConfig := config.IntentConfig()
 	return &Controller{
 		orderService:          orderSvc.NewOrderEVM(),
 		priorityQueueService:  svc.NewPriorityQueueService(),
 		receiveAddressService: svc.NewReceiveAddressService(),
 		kycService:            smile.NewSmileIDService(),
+		clickDefuseService:    intentSvc.NewClickDefuseService(intentConfig.OneclickURL, intentConfig.OneclickAuth),
 	}
+}
+
+func (ctrl *Controller) GetIntentQuote(ctx *gin.Context) {
+	// Define a struct to parse the request body
+	type QuoteRequest struct {
+		NetworkIdentifierFrom string `json:"network_from" binding:"required"`
+		Recipient             string `json:"recipient" binding:"required"`
+		Refund                string `json:"refund" binding:"required"`
+		Amount                string    `json:"amount" binding:"required"`
+		Slippage              int    `json:"slippage" binding:"required"`
+	}
+	
+	
+	// Debug: Check if the clickDefuseService is initialized
+	if ctrl.clickDefuseService == nil {
+		logger.Errorf("clickDefuseService is nil service not initialized")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Service configuration error", nil)
+		return
+	}
+
+	var reqBody QuoteRequest
+	if err := ctx.ShouldBindJSON(&reqBody); err != nil {
+		logger.WithFields(logger.Fields{
+			"Error": fmt.Sprintf("%v", err),
+		}).Errorf("Failed to parse request body")
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid request body", u.GetErrorData(err))
+		return
+	}
+		
+	// Extract parameters from the parsed request body
+	networkIdentifierFrom := reqBody.NetworkIdentifierFrom
+	recipient := reqBody.Recipient
+	refund := reqBody.Refund
+	amount := reqBody.Amount
+	slippage := reqBody.Slippage
+
+	// Get intent quote
+	response, err := ctrl.clickDefuseService.GetIntentQuote(networkIdentifierFrom, recipient, refund, amount, slippage)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":                fmt.Sprintf("%v", err),
+			"NetworkIdentifierFrom": networkIdentifierFrom,
+			"Recipient":             recipient,
+			"Refund":                refund,
+			"Amount":                amount,
+			"Slippage":              slippage,
+		}).Errorf("Failed to get intent quote diffuse")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", fmt.Sprintf("Failed to get intent quote: %v", err), nil)
+		return
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Intent quote fetched successfully", response)
 }
 
 // GetFiatCurrencies controller fetches the supported fiat currencies

@@ -683,3 +683,20 @@ type SupportedTokenResponse struct {
 	BaseCurrency    string `json:"baseCurrency"`
 	Network         string `json:"network"`
 }
+
+// Intent based assets represents the structure of each asset in intent metadata
+type Asset struct {
+	AssetID           string `json:"assetId"`
+	Decimals          int    `json:"decimals"`
+	NetworkIdentifier string `json:"networkIdentifier"`
+	Symbol            string `json:"symbol"`
+	ContractAddress   string `json:"contractAddress,omitempty"`
+}
+
+type QuoteResponse struct {
+	DepositAddress string `json:"depositAddress"`
+	AmountOut      string `json:"amountOut"`
+	MinAmountOut   string `json:"minAmountOut"`
+	AmountInUsd  string `json:"amountInUsd"`
+	Deadline      string `json:"deadline"`
+}

@@ -22,7 +22,7 @@ func init() {
 	logger.Formatter = &formatter{}
 
 	config := config.ServerConfig()
-	if config.Environment == "production" || config.Environment == "staging" {
+	if config.Environment == "production" || config.Environment == "staging" || config.Environment == "local" {
 		// init sentry
 		err := sentry.Init(sentry.ClientOptions{
 			Dsn: config.SentryDSN,
