@@ -12,37 +12,42 @@ func TestGetAssetsByNetworkID(t *testing.T) {
 		name            string
 		networkID       string
 		expectedLen     int
-		expectedSymbols []string
+		expectedSymbols string
 	}{
 		{
 			name:            "Ethereum assets",
-			networkID:       "eth",
-			expectedLen:     1,
-			expectedSymbols: []string{"ETH"},
+			networkID:       "ETH",
+			expectedSymbols: "ETH",
 		},
 		{
 			name:            "Bitcoin assets",
-			networkID:       "btc",
-			expectedLen:     1,
-			expectedSymbols: []string{"BTC"},
+			networkID:       "BTC",
+			expectedSymbols: "BTC",
 		},
 		{
 			name:            "Solana assets",
-			networkID:       "sol",
-			expectedLen:     3,
-			expectedSymbols: []string{"SOL", "TRUMP", "USDC", "USDT"},
+			networkID:       "SOL",
+			expectedSymbols: "SOL",
 		},
 		{
 			name:            "Tron assets",
-			networkID:       "tron",
-			expectedLen:     1,
-			expectedSymbols: []string{"TRX", "USDT"},
+			networkID:       "TRON",
+			expectedSymbols: "TRX",
 		},
 		{
-			name:            "Non-existent network",
-			networkID:       "nonexistent",
-			expectedLen:     0,
-			expectedSymbols: []string{},
+			name:            "Tron assets",
+			networkID:       "BASE.ETH",
+			expectedSymbols: "ETH",
+		},
+		{
+			name:            "SOL assets",
+			networkID:       "SOL.USDC",
+			expectedSymbols: "USDC",
+		},
+		{
+			name:            "TRON assets",
+			networkID:       "TRON.USDT",
+			expectedSymbols: "USDT",
 		},
 	}
 
@@ -51,30 +56,10 @@ func TestGetAssetsByNetworkID(t *testing.T) {
 			// Call the function being tested
 			assets, err := GetAssetsByNetworkID(tc.networkID)
 
-			// Assert no error occurred
 			assert.NoError(t, err)
-
-			// Check the length of returned assets
-			assert.GreaterOrEqual(t, len(assets), tc.expectedLen, "Expected at least %d assets for network %s, got %d", tc.expectedLen, tc.networkID, len(assets))
-
-			// For empty result, no need to check symbols
-			if tc.expectedLen == 0 {
-				return
-			}
-
-			// Check that the assets contain the expected symbols
-			foundSymbols := make(map[string]bool)
-			for _, asset := range assets {
-				foundSymbols[asset.Symbol] = true
-			}
-
-			for _, expectedSymbol := range tc.expectedSymbols {
-				// If the expected symbol is in the test case (not all are required),
-				// verify it exists in the returned assets
-				if len(expectedSymbol) > 0 {
-					assert.True(t, foundSymbols[expectedSymbol], "Expected to find symbol %s for network %s", expectedSymbol, tc.networkID)
-				}
-			}
+			assert.Equal(t, tc.networkID, assets.NetworkIdentifier)
+			assert.Equal(t, tc.expectedSymbols, assets.Symbol)
+			assert.NotNil(t, assets.AssetID)
 		})
 	}
 }
