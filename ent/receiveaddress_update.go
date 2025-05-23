@@ -151,6 +151,26 @@ func (rau *ReceiveAddressUpdate) ClearValidUntil() *ReceiveAddressUpdate {
 	return rau
 }
 
+// SetIntentAddress sets the "intent_address" field.
+func (rau *ReceiveAddressUpdate) SetIntentAddress(s string) *ReceiveAddressUpdate {
+	rau.mutation.SetIntentAddress(s)
+	return rau
+}
+
+// SetNillableIntentAddress sets the "intent_address" field if the given value is not nil.
+func (rau *ReceiveAddressUpdate) SetNillableIntentAddress(s *string) *ReceiveAddressUpdate {
+	if s != nil {
+		rau.SetIntentAddress(*s)
+	}
+	return rau
+}
+
+// ClearIntentAddress clears the value of the "intent_address" field.
+func (rau *ReceiveAddressUpdate) ClearIntentAddress() *ReceiveAddressUpdate {
+	rau.mutation.ClearIntentAddress()
+	return rau
+}
+
 // SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID.
 func (rau *ReceiveAddressUpdate) SetPaymentOrderID(id uuid.UUID) *ReceiveAddressUpdate {
 	rau.mutation.SetPaymentOrderID(id)
@@ -279,6 +299,12 @@ func (rau *ReceiveAddressUpdate) sqlSave(ctx context.Context) (n int, err error)
 	}
 	if rau.mutation.ValidUntilCleared() {
 		_spec.ClearField(receiveaddress.FieldValidUntil, field.TypeTime)
+	}
+	if value, ok := rau.mutation.IntentAddress(); ok {
+		_spec.SetField(receiveaddress.FieldIntentAddress, field.TypeString, value)
+	}
+	if rau.mutation.IntentAddressCleared() {
+		_spec.ClearField(receiveaddress.FieldIntentAddress, field.TypeString)
 	}
 	if rau.mutation.PaymentOrderCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -450,6 +476,26 @@ func (rauo *ReceiveAddressUpdateOne) ClearValidUntil() *ReceiveAddressUpdateOne 
 	return rauo
 }
 
+// SetIntentAddress sets the "intent_address" field.
+func (rauo *ReceiveAddressUpdateOne) SetIntentAddress(s string) *ReceiveAddressUpdateOne {
+	rauo.mutation.SetIntentAddress(s)
+	return rauo
+}
+
+// SetNillableIntentAddress sets the "intent_address" field if the given value is not nil.
+func (rauo *ReceiveAddressUpdateOne) SetNillableIntentAddress(s *string) *ReceiveAddressUpdateOne {
+	if s != nil {
+		rauo.SetIntentAddress(*s)
+	}
+	return rauo
+}
+
+// ClearIntentAddress clears the value of the "intent_address" field.
+func (rauo *ReceiveAddressUpdateOne) ClearIntentAddress() *ReceiveAddressUpdateOne {
+	rauo.mutation.ClearIntentAddress()
+	return rauo
+}
+
 // SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID.
 func (rauo *ReceiveAddressUpdateOne) SetPaymentOrderID(id uuid.UUID) *ReceiveAddressUpdateOne {
 	rauo.mutation.SetPaymentOrderID(id)
@@ -608,6 +654,12 @@ func (rauo *ReceiveAddressUpdateOne) sqlSave(ctx context.Context) (_node *Receiv
 	}
 	if rauo.mutation.ValidUntilCleared() {
 		_spec.ClearField(receiveaddress.FieldValidUntil, field.TypeTime)
+	}
+	if value, ok := rauo.mutation.IntentAddress(); ok {
+		_spec.SetField(receiveaddress.FieldIntentAddress, field.TypeString, value)
+	}
+	if rauo.mutation.IntentAddressCleared() {
+		_spec.ClearField(receiveaddress.FieldIntentAddress, field.TypeString)
 	}
 	if rauo.mutation.PaymentOrderCleared() {
 		edge := &sqlgraph.EdgeSpec{

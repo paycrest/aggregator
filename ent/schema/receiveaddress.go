@@ -30,6 +30,7 @@ func (ReceiveAddress) Fields() []ent.Field {
 			MaxLen(70).
 			Optional(),
 		field.Time("valid_until").Optional(),
+        field.String("intent_address").Optional(),
 	}
 }
 

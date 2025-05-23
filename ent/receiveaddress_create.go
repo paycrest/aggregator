@@ -134,6 +134,20 @@ func (rac *ReceiveAddressCreate) SetNillableValidUntil(t *time.Time) *ReceiveAdd
 	return rac
 }
 
+// SetIntentAddress sets the "intent_address" field.
+func (rac *ReceiveAddressCreate) SetIntentAddress(s string) *ReceiveAddressCreate {
+	rac.mutation.SetIntentAddress(s)
+	return rac
+}
+
+// SetNillableIntentAddress sets the "intent_address" field if the given value is not nil.
+func (rac *ReceiveAddressCreate) SetNillableIntentAddress(s *string) *ReceiveAddressCreate {
+	if s != nil {
+		rac.SetIntentAddress(*s)
+	}
+	return rac
+}
+
 // SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID.
 func (rac *ReceiveAddressCreate) SetPaymentOrderID(id uuid.UUID) *ReceiveAddressCreate {
 	rac.mutation.SetPaymentOrderID(id)
@@ -291,6 +305,10 @@ func (rac *ReceiveAddressCreate) createSpec() (*ReceiveAddress, *sqlgraph.Create
 	if value, ok := rac.mutation.ValidUntil(); ok {
 		_spec.SetField(receiveaddress.FieldValidUntil, field.TypeTime, value)
 		_node.ValidUntil = value
+	}
+	if value, ok := rac.mutation.IntentAddress(); ok {
+		_spec.SetField(receiveaddress.FieldIntentAddress, field.TypeString, value)
+		_node.IntentAddress = value
 	}
 	if nodes := rac.mutation.PaymentOrderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -475,6 +493,24 @@ func (u *ReceiveAddressUpsert) ClearValidUntil() *ReceiveAddressUpsert {
 	return u
 }
 
+// SetIntentAddress sets the "intent_address" field.
+func (u *ReceiveAddressUpsert) SetIntentAddress(v string) *ReceiveAddressUpsert {
+	u.Set(receiveaddress.FieldIntentAddress, v)
+	return u
+}
+
+// UpdateIntentAddress sets the "intent_address" field to the value that was provided on create.
+func (u *ReceiveAddressUpsert) UpdateIntentAddress() *ReceiveAddressUpsert {
+	u.SetExcluded(receiveaddress.FieldIntentAddress)
+	return u
+}
+
+// ClearIntentAddress clears the value of the "intent_address" field.
+func (u *ReceiveAddressUpsert) ClearIntentAddress() *ReceiveAddressUpsert {
+	u.SetNull(receiveaddress.FieldIntentAddress)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create.
 // Using this option is equivalent to using:
 //
@@ -653,6 +689,27 @@ func (u *ReceiveAddressUpsertOne) UpdateValidUntil() *ReceiveAddressUpsertOne {
 func (u *ReceiveAddressUpsertOne) ClearValidUntil() *ReceiveAddressUpsertOne {
 	return u.Update(func(s *ReceiveAddressUpsert) {
 		s.ClearValidUntil()
+	})
+}
+
+// SetIntentAddress sets the "intent_address" field.
+func (u *ReceiveAddressUpsertOne) SetIntentAddress(v string) *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.SetIntentAddress(v)
+	})
+}
+
+// UpdateIntentAddress sets the "intent_address" field to the value that was provided on create.
+func (u *ReceiveAddressUpsertOne) UpdateIntentAddress() *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.UpdateIntentAddress()
+	})
+}
+
+// ClearIntentAddress clears the value of the "intent_address" field.
+func (u *ReceiveAddressUpsertOne) ClearIntentAddress() *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.ClearIntentAddress()
 	})
 }
 
@@ -1000,6 +1057,27 @@ func (u *ReceiveAddressUpsertBulk) UpdateValidUntil() *ReceiveAddressUpsertBulk 
 func (u *ReceiveAddressUpsertBulk) ClearValidUntil() *ReceiveAddressUpsertBulk {
 	return u.Update(func(s *ReceiveAddressUpsert) {
 		s.ClearValidUntil()
+	})
+}
+
+// SetIntentAddress sets the "intent_address" field.
+func (u *ReceiveAddressUpsertBulk) SetIntentAddress(v string) *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.SetIntentAddress(v)
+	})
+}
+
+// UpdateIntentAddress sets the "intent_address" field to the value that was provided on create.
+func (u *ReceiveAddressUpsertBulk) UpdateIntentAddress() *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.UpdateIntentAddress()
+	})
+}
+
+// ClearIntentAddress clears the value of the "intent_address" field.
+func (u *ReceiveAddressUpsertBulk) ClearIntentAddress() *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.ClearIntentAddress()
 	})
 }
 

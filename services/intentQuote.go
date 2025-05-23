@@ -24,7 +24,7 @@ func NewClickDefuseService(url, authorization string) *ClickDefuseService {
 	}
 }
 
-func (s *ClickDefuseService) GetIntentQuote(networkIdentifierFrom, recipient, refund, amount string, slippage int) (*types.QuoteResponse, error) {
+func (s *ClickDefuseService) GetIntentQuote(networkIdentifierFrom, recipient, refund, amount, deadline string, slippage int) (*types.QuoteResponse, error) {
 	if s.OneclickURL == "" {
 		logger.Errorf("Oneclick URL is not set")
 		return nil, fmt.Errorf("oneclick URL is not set")
@@ -42,7 +42,7 @@ func (s *ClickDefuseService) GetIntentQuote(networkIdentifierFrom, recipient, re
     // Get assets for destination network
     destinationAsset := intentUtils.GetDestinationAssetsByNetworkID()
 
-	deadline := time.Now().Add(5 * time.Minute).Format(time.RFC3339)
+	// deadline := time.Now().Add(5 * time.Minute).Format(time.RFC3339)
 
 	// Construct the JSON body
 	payload := map[string]interface{}{
@@ -79,6 +79,8 @@ func (s *ClickDefuseService) GetIntentQuote(networkIdentifierFrom, recipient, re
 		}).Error("failed to send intent quote request")
 		return nil, fmt.Errorf("failed to send intent quote request: %w", err)
 	}
+
+	fmt.Println("==========================")
 
 	quoteResponse, err := u.ParseJSONResponse(res.RawResponse)
 	if err != nil {

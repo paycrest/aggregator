@@ -38,7 +38,7 @@ var cryptoConf = config.CryptoConfig()
 
 // var serverConf = config.ServerConfig()
 var identityConf = config.IdentityConfig()
-
+var orderConf = config.OrderConfig()
 // Controller is the default controller for other endpoints
 type Controller struct {
 	orderService          types.OrderService
@@ -61,21 +61,19 @@ func NewController() *Controller {
 }
 
 func (ctrl *Controller) GetIntentQuote(ctx *gin.Context) {
-	// Define a struct to parse the request body
-	type QuoteRequest struct {
-		NetworkIdentifierFrom string `json:"network_from" binding:"required"`
-		Recipient             string `json:"recipient" binding:"required"`
-		Refund                string `json:"refund" binding:"required"`
-		Amount                string    `json:"amount" binding:"required"`
-		Slippage              int    `json:"slippage" binding:"required"`
-	}
-	
-	
 	// Debug: Check if the clickDefuseService is initialized
 	if ctrl.clickDefuseService == nil {
 		logger.Errorf("clickDefuseService is nil service not initialized")
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Service configuration error", nil)
 		return
+	}
+
+	type QuoteRequest struct {
+		NetworkIdentifierFrom string `json:"network_from" binding:"required"`
+		Recipient             string `json:"recipient" binding:"required"`
+		Refund                string `json:"refund" binding:"required"`
+		Amount                string `json:"amount" binding:"required"`
+		Slippage              int    `json:"slippage" binding:"required"`
 	}
 
 	var reqBody QuoteRequest
@@ -93,9 +91,10 @@ func (ctrl *Controller) GetIntentQuote(ctx *gin.Context) {
 	refund := reqBody.Refund
 	amount := reqBody.Amount
 	slippage := reqBody.Slippage
+	deadline := time.Now().Add(5 * time.Minute).Format(time.RFC3339)
 
 	// Get intent quote
-	response, err := ctrl.clickDefuseService.GetIntentQuote(networkIdentifierFrom, recipient, refund, amount, slippage)
+	response, err := ctrl.clickDefuseService.GetIntentQuote(networkIdentifierFrom, recipient, refund, amount, deadline, slippage)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":                fmt.Sprintf("%v", err),

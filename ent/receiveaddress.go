@@ -37,6 +37,8 @@ type ReceiveAddress struct {
 	TxHash string `json:"tx_hash,omitempty"`
 	// ValidUntil holds the value of the "valid_until" field.
 	ValidUntil time.Time `json:"valid_until,omitempty"`
+	// IntentAddress holds the value of the "intent_address" field.
+	IntentAddress string `json:"intent_address,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ReceiveAddressQuery when eager-loading is set.
 	Edges                         ReceiveAddressEdges `json:"edges"`
@@ -73,7 +75,7 @@ func (*ReceiveAddress) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case receiveaddress.FieldID, receiveaddress.FieldLastIndexedBlock:
 			values[i] = new(sql.NullInt64)
-		case receiveaddress.FieldAddress, receiveaddress.FieldStatus, receiveaddress.FieldTxHash:
+		case receiveaddress.FieldAddress, receiveaddress.FieldStatus, receiveaddress.FieldTxHash, receiveaddress.FieldIntentAddress:
 			values[i] = new(sql.NullString)
 		case receiveaddress.FieldCreatedAt, receiveaddress.FieldUpdatedAt, receiveaddress.FieldLastUsed, receiveaddress.FieldValidUntil:
 			values[i] = new(sql.NullTime)
@@ -154,6 +156,12 @@ func (ra *ReceiveAddress) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				ra.ValidUntil = value.Time
 			}
+		case receiveaddress.FieldIntentAddress:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field intent_address", values[i])
+			} else if value.Valid {
+				ra.IntentAddress = value.String
+			}
 		case receiveaddress.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field payment_order_receive_address", values[i])
@@ -228,6 +236,9 @@ func (ra *ReceiveAddress) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("valid_until=")
 	builder.WriteString(ra.ValidUntil.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("intent_address=")
+	builder.WriteString(ra.IntentAddress)
 	builder.WriteByte(')')
 	return builder.String()
 }

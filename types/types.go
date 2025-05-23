@@ -430,6 +430,8 @@ type NewPaymentOrderPayload struct {
 	ReturnAddress string                `json:"returnAddress"`
 	FeePercent    decimal.Decimal       `json:"feePercent"`
 	FeeAddress    string                `json:"feeAddress"`
+    IsIntentBased bool                  `json:"isIntentBased"`
+    Slippage      int                   `json:"slippage" binding:"required_if=IsIntentBased true"`
 }
 
 // ReceiveAddressResponse is the response type for a receive address
@@ -697,6 +699,20 @@ type QuoteResponse struct {
 	DepositAddress string `json:"depositAddress"`
 	AmountOut      string `json:"amountOut"`
 	MinAmountOut   string `json:"minAmountOut"`
-	AmountInUsd  string `json:"amountInUsd"`
-	Deadline      string `json:"deadline"`
+	AmountInUsd    string `json:"amountInUsd"`
+	Deadline       string `json:"deadline"`
+}
+
+type QuoteRequest struct {
+	NetworkIdentifierFrom string `json:"network_from" binding:"required"`
+	Recipient             string `json:"recipient" binding:"required"`
+	Refund                string `json:"refund" binding:"required"`
+	Slippage              int    `json:"slippage" binding:"required"`
+}
+
+type NewLinkedAddressIntentRequest struct {
+	Institution       string       `json:"institution" binding:"required"`
+	AccountIdentifier string       `json:"accountIdentifier" binding:"required"`
+	AccountName       string       `json:"accountName" binding:"required"`
+	QuoteRequest      QuoteRequest `json:"quoteRequest" binding:"required"`
 }

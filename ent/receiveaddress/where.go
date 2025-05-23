@@ -95,6 +95,11 @@ func ValidUntil(v time.Time) predicate.ReceiveAddress {
 	return predicate.ReceiveAddress(sql.FieldEQ(FieldValidUntil, v))
 }
 
+// IntentAddress applies equality check predicate on the "intent_address" field. It's identical to IntentAddressEQ.
+func IntentAddress(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldEQ(FieldIntentAddress, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.ReceiveAddress {
 	return predicate.ReceiveAddress(sql.FieldEQ(FieldCreatedAt, v))
@@ -523,6 +528,81 @@ func ValidUntilIsNil() predicate.ReceiveAddress {
 // ValidUntilNotNil applies the NotNil predicate on the "valid_until" field.
 func ValidUntilNotNil() predicate.ReceiveAddress {
 	return predicate.ReceiveAddress(sql.FieldNotNull(FieldValidUntil))
+}
+
+// IntentAddressEQ applies the EQ predicate on the "intent_address" field.
+func IntentAddressEQ(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldEQ(FieldIntentAddress, v))
+}
+
+// IntentAddressNEQ applies the NEQ predicate on the "intent_address" field.
+func IntentAddressNEQ(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldNEQ(FieldIntentAddress, v))
+}
+
+// IntentAddressIn applies the In predicate on the "intent_address" field.
+func IntentAddressIn(vs ...string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldIn(FieldIntentAddress, vs...))
+}
+
+// IntentAddressNotIn applies the NotIn predicate on the "intent_address" field.
+func IntentAddressNotIn(vs ...string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldNotIn(FieldIntentAddress, vs...))
+}
+
+// IntentAddressGT applies the GT predicate on the "intent_address" field.
+func IntentAddressGT(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldGT(FieldIntentAddress, v))
+}
+
+// IntentAddressGTE applies the GTE predicate on the "intent_address" field.
+func IntentAddressGTE(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldGTE(FieldIntentAddress, v))
+}
+
+// IntentAddressLT applies the LT predicate on the "intent_address" field.
+func IntentAddressLT(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldLT(FieldIntentAddress, v))
+}
+
+// IntentAddressLTE applies the LTE predicate on the "intent_address" field.
+func IntentAddressLTE(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldLTE(FieldIntentAddress, v))
+}
+
+// IntentAddressContains applies the Contains predicate on the "intent_address" field.
+func IntentAddressContains(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldContains(FieldIntentAddress, v))
+}
+
+// IntentAddressHasPrefix applies the HasPrefix predicate on the "intent_address" field.
+func IntentAddressHasPrefix(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldHasPrefix(FieldIntentAddress, v))
+}
+
+// IntentAddressHasSuffix applies the HasSuffix predicate on the "intent_address" field.
+func IntentAddressHasSuffix(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldHasSuffix(FieldIntentAddress, v))
+}
+
+// IntentAddressIsNil applies the IsNil predicate on the "intent_address" field.
+func IntentAddressIsNil() predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldIsNull(FieldIntentAddress))
+}
+
+// IntentAddressNotNil applies the NotNil predicate on the "intent_address" field.
+func IntentAddressNotNil() predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldNotNull(FieldIntentAddress))
+}
+
+// IntentAddressEqualFold applies the EqualFold predicate on the "intent_address" field.
+func IntentAddressEqualFold(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldEqualFold(FieldIntentAddress, v))
+}
+
+// IntentAddressContainsFold applies the ContainsFold predicate on the "intent_address" field.
+func IntentAddressContainsFold(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldContainsFold(FieldIntentAddress, v))
 }
 
 // HasPaymentOrder applies the HasEdge predicate on the "payment_order" edge.

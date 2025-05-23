@@ -404,6 +404,20 @@ func IsValidTronAddress(address string) bool {
 	return matched
 }
 
+// IsValidSolanaAddress checks if a string is a valid Solana address
+func IsValidSolanaAddress(address string) bool {
+	pattern := `^[1-9A-HJ-NP-Za-km-z]{32,44}$`
+	matched, _ := regexp.MatchString(pattern, address)
+	return matched
+}
+
+// IsValidBitcoinAddress checks if a string is a valid Bitcoin address (basic pattern match)
+func IsValidBitcoinAddress(address string) bool {
+	pattern := `^(1|3)[a-km-zA-HJ-NP-Z1-9]{25,34}$|^(bc1|BC1)[0-9a-zA-Z]{39,59}$`
+	matched, _ := regexp.MatchString(pattern, address)
+	return matched
+}
+
 // Retry is a function that attempts to execute a given function multiple times until it succeeds or the maximum number of attempts is reached.
 // It sleeps for a specified duration between each attempt.
 // Parameters:
