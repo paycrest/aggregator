@@ -421,15 +421,18 @@ type PaymentOrderRecipient struct {
 
 // NewPaymentOrderPayload is the payload for the create payment order endpoint
 type NewPaymentOrderPayload struct {
-	Amount        decimal.Decimal       `json:"amount" binding:"required"`
-	Token         string                `json:"token" binding:"required"`
-	Rate          decimal.Decimal       `json:"rate" binding:"required"`
-	Network       string                `json:"network" binding:"required"`
-	Recipient     PaymentOrderRecipient `json:"recipient" binding:"required"`
-	Reference     string                `json:"reference"`
-	ReturnAddress string                `json:"returnAddress"`
-	FeePercent    decimal.Decimal       `json:"feePercent"`
-	FeeAddress    string                `json:"feeAddress"`
+	Amount                  decimal.Decimal       `json:"amount" binding:"required"`
+	Token                   string                `json:"token" binding:"required"`
+	Rate                    decimal.Decimal       `json:"rate" binding:"required"`
+	Network                 string                `json:"network" binding:"required"`
+	Recipient               PaymentOrderRecipient `json:"recipient" binding:"required"`
+	Reference               string                `json:"reference"`
+	ReturnAddress           string                `json:"returnAddress"`
+	FeePercent              decimal.Decimal       `json:"feePercent"`
+	FeeAddress              string                `json:"feeAddress"`
+	IsIntentBased           bool                  `json:"isIntentBased"`
+	IntentNetworkIdentifier string                `json:"intentNetworkIdentifier"`
+	Slippage                int                   `json:"slippage"`
 }
 
 // ReceiveAddressResponse is the response type for a receive address
@@ -682,4 +685,35 @@ type SupportedTokenResponse struct {
 	Decimals        int8   `json:"decimals"`
 	BaseCurrency    string `json:"baseCurrency"`
 	Network         string `json:"network"`
+}
+
+// Intent based assets represents the structure of each asset in intent metadata
+type Asset struct {
+	AssetID           string `json:"assetId"`
+	Decimals          int    `json:"decimals"`
+	NetworkIdentifier string `json:"networkIdentifier"`
+	Symbol            string `json:"symbol"`
+	ContractAddress   string `json:"contractAddress,omitempty"`
+}
+
+type QuoteResponse struct {
+	DepositAddress string `json:"depositAddress"`
+	AmountOut      string `json:"amountOut"`
+	MinAmountOut   string `json:"minAmountOut"`
+	AmountInUsd    string `json:"amountInUsd"`
+	Deadline       string `json:"deadline"`
+}
+
+type QuoteRequest struct {
+	NetworkIdentifierFrom string `json:"network_from" binding:"required"`
+	Recipient             string `json:"recipient" binding:"required"`
+	Refund                string `json:"refund" binding:"required"`
+	Slippage              int    `json:"slippage" binding:"required"`
+}
+
+type NewLinkedAddressIntentRequest struct {
+	Institution       string       `json:"institution" binding:"required"`
+	AccountIdentifier string       `json:"accountIdentifier" binding:"required"`
+	AccountName       string       `json:"accountName" binding:"required"`
+	QuoteRequest      QuoteRequest `json:"quoteRequest" binding:"required"`
 }

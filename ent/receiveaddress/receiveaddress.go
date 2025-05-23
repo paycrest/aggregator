@@ -33,6 +33,12 @@ const (
 	FieldTxHash = "tx_hash"
 	// FieldValidUntil holds the string denoting the valid_until field in the database.
 	FieldValidUntil = "valid_until"
+	// FieldIntentAddress holds the string denoting the intent_address field in the database.
+	FieldIntentAddress = "intent_address"
+	// FieldIntentNetworkIdentifier holds the string denoting the intent_network_identifier field in the database.
+	FieldIntentNetworkIdentifier = "intent_network_identifier"
+	// FieldIntentAmountOut holds the string denoting the intent_amount_out field in the database.
+	FieldIntentAmountOut = "intent_amount_out"
 	// EdgePaymentOrder holds the string denoting the payment_order edge name in mutations.
 	EdgePaymentOrder = "payment_order"
 	// Table holds the table name of the receiveaddress in the database.
@@ -58,6 +64,9 @@ var Columns = []string{
 	FieldLastUsed,
 	FieldTxHash,
 	FieldValidUntil,
+	FieldIntentAddress,
+	FieldIntentNetworkIdentifier,
+	FieldIntentAmountOut,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "receive_addresses"
@@ -165,6 +174,21 @@ func ByTxHash(opts ...sql.OrderTermOption) OrderOption {
 // ByValidUntil orders the results by the valid_until field.
 func ByValidUntil(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldValidUntil, opts...).ToFunc()
+}
+
+// ByIntentAddress orders the results by the intent_address field.
+func ByIntentAddress(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIntentAddress, opts...).ToFunc()
+}
+
+// ByIntentNetworkIdentifier orders the results by the intent_network_identifier field.
+func ByIntentNetworkIdentifier(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIntentNetworkIdentifier, opts...).ToFunc()
+}
+
+// ByIntentAmountOut orders the results by the intent_amount_out field.
+func ByIntentAmountOut(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIntentAmountOut, opts...).ToFunc()
 }
 
 // ByPaymentOrderField orders the results by payment_order field.

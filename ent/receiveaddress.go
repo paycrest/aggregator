@@ -37,6 +37,12 @@ type ReceiveAddress struct {
 	TxHash string `json:"tx_hash,omitempty"`
 	// ValidUntil holds the value of the "valid_until" field.
 	ValidUntil time.Time `json:"valid_until,omitempty"`
+	// IntentAddress holds the value of the "intent_address" field.
+	IntentAddress string `json:"intent_address,omitempty"`
+	// IntentNetworkIdentifier holds the value of the "intent_network_identifier" field.
+	IntentNetworkIdentifier string `json:"intent_network_identifier,omitempty"`
+	// IntentAmountOut holds the value of the "intent_amount_out" field.
+	IntentAmountOut string `json:"intent_amount_out,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ReceiveAddressQuery when eager-loading is set.
 	Edges                         ReceiveAddressEdges `json:"edges"`
@@ -73,7 +79,7 @@ func (*ReceiveAddress) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case receiveaddress.FieldID, receiveaddress.FieldLastIndexedBlock:
 			values[i] = new(sql.NullInt64)
-		case receiveaddress.FieldAddress, receiveaddress.FieldStatus, receiveaddress.FieldTxHash:
+		case receiveaddress.FieldAddress, receiveaddress.FieldStatus, receiveaddress.FieldTxHash, receiveaddress.FieldIntentAddress, receiveaddress.FieldIntentNetworkIdentifier, receiveaddress.FieldIntentAmountOut:
 			values[i] = new(sql.NullString)
 		case receiveaddress.FieldCreatedAt, receiveaddress.FieldUpdatedAt, receiveaddress.FieldLastUsed, receiveaddress.FieldValidUntil:
 			values[i] = new(sql.NullTime)
@@ -154,6 +160,24 @@ func (ra *ReceiveAddress) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				ra.ValidUntil = value.Time
 			}
+		case receiveaddress.FieldIntentAddress:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field intent_address", values[i])
+			} else if value.Valid {
+				ra.IntentAddress = value.String
+			}
+		case receiveaddress.FieldIntentNetworkIdentifier:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field intent_network_identifier", values[i])
+			} else if value.Valid {
+				ra.IntentNetworkIdentifier = value.String
+			}
+		case receiveaddress.FieldIntentAmountOut:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field intent_amount_out", values[i])
+			} else if value.Valid {
+				ra.IntentAmountOut = value.String
+			}
 		case receiveaddress.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field payment_order_receive_address", values[i])
@@ -228,6 +252,15 @@ func (ra *ReceiveAddress) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("valid_until=")
 	builder.WriteString(ra.ValidUntil.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("intent_address=")
+	builder.WriteString(ra.IntentAddress)
+	builder.WriteString(", ")
+	builder.WriteString("intent_network_identifier=")
+	builder.WriteString(ra.IntentNetworkIdentifier)
+	builder.WriteString(", ")
+	builder.WriteString("intent_amount_out=")
+	builder.WriteString(ra.IntentAmountOut)
 	builder.WriteByte(')')
 	return builder.String()
 }

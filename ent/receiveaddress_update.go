@@ -151,6 +151,66 @@ func (rau *ReceiveAddressUpdate) ClearValidUntil() *ReceiveAddressUpdate {
 	return rau
 }
 
+// SetIntentAddress sets the "intent_address" field.
+func (rau *ReceiveAddressUpdate) SetIntentAddress(s string) *ReceiveAddressUpdate {
+	rau.mutation.SetIntentAddress(s)
+	return rau
+}
+
+// SetNillableIntentAddress sets the "intent_address" field if the given value is not nil.
+func (rau *ReceiveAddressUpdate) SetNillableIntentAddress(s *string) *ReceiveAddressUpdate {
+	if s != nil {
+		rau.SetIntentAddress(*s)
+	}
+	return rau
+}
+
+// ClearIntentAddress clears the value of the "intent_address" field.
+func (rau *ReceiveAddressUpdate) ClearIntentAddress() *ReceiveAddressUpdate {
+	rau.mutation.ClearIntentAddress()
+	return rau
+}
+
+// SetIntentNetworkIdentifier sets the "intent_network_identifier" field.
+func (rau *ReceiveAddressUpdate) SetIntentNetworkIdentifier(s string) *ReceiveAddressUpdate {
+	rau.mutation.SetIntentNetworkIdentifier(s)
+	return rau
+}
+
+// SetNillableIntentNetworkIdentifier sets the "intent_network_identifier" field if the given value is not nil.
+func (rau *ReceiveAddressUpdate) SetNillableIntentNetworkIdentifier(s *string) *ReceiveAddressUpdate {
+	if s != nil {
+		rau.SetIntentNetworkIdentifier(*s)
+	}
+	return rau
+}
+
+// ClearIntentNetworkIdentifier clears the value of the "intent_network_identifier" field.
+func (rau *ReceiveAddressUpdate) ClearIntentNetworkIdentifier() *ReceiveAddressUpdate {
+	rau.mutation.ClearIntentNetworkIdentifier()
+	return rau
+}
+
+// SetIntentAmountOut sets the "intent_amount_out" field.
+func (rau *ReceiveAddressUpdate) SetIntentAmountOut(s string) *ReceiveAddressUpdate {
+	rau.mutation.SetIntentAmountOut(s)
+	return rau
+}
+
+// SetNillableIntentAmountOut sets the "intent_amount_out" field if the given value is not nil.
+func (rau *ReceiveAddressUpdate) SetNillableIntentAmountOut(s *string) *ReceiveAddressUpdate {
+	if s != nil {
+		rau.SetIntentAmountOut(*s)
+	}
+	return rau
+}
+
+// ClearIntentAmountOut clears the value of the "intent_amount_out" field.
+func (rau *ReceiveAddressUpdate) ClearIntentAmountOut() *ReceiveAddressUpdate {
+	rau.mutation.ClearIntentAmountOut()
+	return rau
+}
+
 // SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID.
 func (rau *ReceiveAddressUpdate) SetPaymentOrderID(id uuid.UUID) *ReceiveAddressUpdate {
 	rau.mutation.SetPaymentOrderID(id)
@@ -279,6 +339,24 @@ func (rau *ReceiveAddressUpdate) sqlSave(ctx context.Context) (n int, err error)
 	}
 	if rau.mutation.ValidUntilCleared() {
 		_spec.ClearField(receiveaddress.FieldValidUntil, field.TypeTime)
+	}
+	if value, ok := rau.mutation.IntentAddress(); ok {
+		_spec.SetField(receiveaddress.FieldIntentAddress, field.TypeString, value)
+	}
+	if rau.mutation.IntentAddressCleared() {
+		_spec.ClearField(receiveaddress.FieldIntentAddress, field.TypeString)
+	}
+	if value, ok := rau.mutation.IntentNetworkIdentifier(); ok {
+		_spec.SetField(receiveaddress.FieldIntentNetworkIdentifier, field.TypeString, value)
+	}
+	if rau.mutation.IntentNetworkIdentifierCleared() {
+		_spec.ClearField(receiveaddress.FieldIntentNetworkIdentifier, field.TypeString)
+	}
+	if value, ok := rau.mutation.IntentAmountOut(); ok {
+		_spec.SetField(receiveaddress.FieldIntentAmountOut, field.TypeString, value)
+	}
+	if rau.mutation.IntentAmountOutCleared() {
+		_spec.ClearField(receiveaddress.FieldIntentAmountOut, field.TypeString)
 	}
 	if rau.mutation.PaymentOrderCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -450,6 +528,66 @@ func (rauo *ReceiveAddressUpdateOne) ClearValidUntil() *ReceiveAddressUpdateOne 
 	return rauo
 }
 
+// SetIntentAddress sets the "intent_address" field.
+func (rauo *ReceiveAddressUpdateOne) SetIntentAddress(s string) *ReceiveAddressUpdateOne {
+	rauo.mutation.SetIntentAddress(s)
+	return rauo
+}
+
+// SetNillableIntentAddress sets the "intent_address" field if the given value is not nil.
+func (rauo *ReceiveAddressUpdateOne) SetNillableIntentAddress(s *string) *ReceiveAddressUpdateOne {
+	if s != nil {
+		rauo.SetIntentAddress(*s)
+	}
+	return rauo
+}
+
+// ClearIntentAddress clears the value of the "intent_address" field.
+func (rauo *ReceiveAddressUpdateOne) ClearIntentAddress() *ReceiveAddressUpdateOne {
+	rauo.mutation.ClearIntentAddress()
+	return rauo
+}
+
+// SetIntentNetworkIdentifier sets the "intent_network_identifier" field.
+func (rauo *ReceiveAddressUpdateOne) SetIntentNetworkIdentifier(s string) *ReceiveAddressUpdateOne {
+	rauo.mutation.SetIntentNetworkIdentifier(s)
+	return rauo
+}
+
+// SetNillableIntentNetworkIdentifier sets the "intent_network_identifier" field if the given value is not nil.
+func (rauo *ReceiveAddressUpdateOne) SetNillableIntentNetworkIdentifier(s *string) *ReceiveAddressUpdateOne {
+	if s != nil {
+		rauo.SetIntentNetworkIdentifier(*s)
+	}
+	return rauo
+}
+
+// ClearIntentNetworkIdentifier clears the value of the "intent_network_identifier" field.
+func (rauo *ReceiveAddressUpdateOne) ClearIntentNetworkIdentifier() *ReceiveAddressUpdateOne {
+	rauo.mutation.ClearIntentNetworkIdentifier()
+	return rauo
+}
+
+// SetIntentAmountOut sets the "intent_amount_out" field.
+func (rauo *ReceiveAddressUpdateOne) SetIntentAmountOut(s string) *ReceiveAddressUpdateOne {
+	rauo.mutation.SetIntentAmountOut(s)
+	return rauo
+}
+
+// SetNillableIntentAmountOut sets the "intent_amount_out" field if the given value is not nil.
+func (rauo *ReceiveAddressUpdateOne) SetNillableIntentAmountOut(s *string) *ReceiveAddressUpdateOne {
+	if s != nil {
+		rauo.SetIntentAmountOut(*s)
+	}
+	return rauo
+}
+
+// ClearIntentAmountOut clears the value of the "intent_amount_out" field.
+func (rauo *ReceiveAddressUpdateOne) ClearIntentAmountOut() *ReceiveAddressUpdateOne {
+	rauo.mutation.ClearIntentAmountOut()
+	return rauo
+}
+
 // SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID.
 func (rauo *ReceiveAddressUpdateOne) SetPaymentOrderID(id uuid.UUID) *ReceiveAddressUpdateOne {
 	rauo.mutation.SetPaymentOrderID(id)
@@ -608,6 +746,24 @@ func (rauo *ReceiveAddressUpdateOne) sqlSave(ctx context.Context) (_node *Receiv
 	}
 	if rauo.mutation.ValidUntilCleared() {
 		_spec.ClearField(receiveaddress.FieldValidUntil, field.TypeTime)
+	}
+	if value, ok := rauo.mutation.IntentAddress(); ok {
+		_spec.SetField(receiveaddress.FieldIntentAddress, field.TypeString, value)
+	}
+	if rauo.mutation.IntentAddressCleared() {
+		_spec.ClearField(receiveaddress.FieldIntentAddress, field.TypeString)
+	}
+	if value, ok := rauo.mutation.IntentNetworkIdentifier(); ok {
+		_spec.SetField(receiveaddress.FieldIntentNetworkIdentifier, field.TypeString, value)
+	}
+	if rauo.mutation.IntentNetworkIdentifierCleared() {
+		_spec.ClearField(receiveaddress.FieldIntentNetworkIdentifier, field.TypeString)
+	}
+	if value, ok := rauo.mutation.IntentAmountOut(); ok {
+		_spec.SetField(receiveaddress.FieldIntentAmountOut, field.TypeString, value)
+	}
+	if rauo.mutation.IntentAmountOutCleared() {
+		_spec.ClearField(receiveaddress.FieldIntentAmountOut, field.TypeString)
 	}
 	if rauo.mutation.PaymentOrderCleared() {
 		edge := &sqlgraph.EdgeSpec{
