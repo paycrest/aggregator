@@ -421,17 +421,18 @@ type PaymentOrderRecipient struct {
 
 // NewPaymentOrderPayload is the payload for the create payment order endpoint
 type NewPaymentOrderPayload struct {
-	Amount        decimal.Decimal       `json:"amount" binding:"required"`
-	Token         string                `json:"token" binding:"required"`
-	Rate          decimal.Decimal       `json:"rate" binding:"required"`
-	Network       string                `json:"network" binding:"required"`
-	Recipient     PaymentOrderRecipient `json:"recipient" binding:"required"`
-	Reference     string                `json:"reference"`
-	ReturnAddress string                `json:"returnAddress"`
-	FeePercent    decimal.Decimal       `json:"feePercent"`
-	FeeAddress    string                `json:"feeAddress"`
-    IsIntentBased bool                  `json:"isIntentBased"`
-    Slippage      int                   `json:"slippage" binding:"required_if=IsIntentBased true"`
+	Amount                  decimal.Decimal       `json:"amount" binding:"required"`
+	Token                   string                `json:"token" binding:"required"`
+	Rate                    decimal.Decimal       `json:"rate" binding:"required"`
+	Network                 string                `json:"network" binding:"required"`
+	Recipient               PaymentOrderRecipient `json:"recipient" binding:"required"`
+	Reference               string                `json:"reference"`
+	ReturnAddress           string                `json:"returnAddress"`
+	FeePercent              decimal.Decimal       `json:"feePercent"`
+	FeeAddress              string                `json:"feeAddress"`
+	IsIntentBased           bool                  `json:"isIntentBased"`
+	IntentNetworkIdentifier string                `json:"intentNetworkIdentifier" binding:"required_if=IsIntentBased true"`
+	Slippage                int                   `json:"slippage" binding:"required_if=IsIntentBased true"`
 }
 
 // ReceiveAddressResponse is the response type for a receive address

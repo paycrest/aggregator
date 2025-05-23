@@ -13,72 +13,78 @@ const assetDataJSON = `[
     "assetId": "nep141:eth.omft.near",
     "decimals": 18,
     "networkIdentifier": "ETH",
-    "symbol": "ETH"
+    "symbol": "ETH",
+	"network": "ethereum"
   },
   {
     "assetId": "nep141:btc.omft.near",
     "decimals": 8,
     "networkIdentifier": "BTC",
-    "symbol": "BTC"
+    "symbol": "BTC",
+	"network": "bitcoin"
   },
   {
     "assetId": "nep141:sol.omft.near",
     "decimals": 9,
     "networkIdentifier": "SOL",
-    "symbol": "SOL"
+    "symbol": "SOL",
+	"network": "solana"
   },
   {
     "assetId": "nep141:tron.omft.near",
     "decimals": 6,
     "networkIdentifier": "TRON",
-    "symbol": "TRX"
+    "symbol": "TRX",
+	"network": "tron"
   },
   {
     "assetId": "nep141:base.omft.near",
     "decimals": 18,
     "networkIdentifier": "BASE.ETH",
-    "symbol": "ETH"
+    "symbol": "ETH",
+	"network": "base"
   },
   {
     "assetId": "nep141:sol-c58e6539c2f2e097c251f8edf11f9c03e581f8d4.omft.near",
     "decimals": 6,
     "networkIdentifier": "SOL.TRUMP",
     "symbol": "TRUMP",
-    "contractAddress": "6p6xgHyF7AeE6TZkSmFsko444wqoP15icUSqi2jfGiPN"
+    "network": "solana"
   },
   {
     "assetId": "nep141:arb.omft.near",
     "decimals": 18,
     "networkIdentifier": "ARB.ETH",
-    "symbol": "ETH"
+    "symbol": "ETH",
+    "network": "arbitrum"
   },
   {
     "assetId": "nep141:sol-5ce3bf3a31af18be40ba30f721101b4341690186.omft.near",
     "decimals": 6,
     "networkIdentifier": "SOL.USDC",
     "symbol": "USDC",
-    "contractAddress": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+    "network": "solana"
   },
   {
     "assetId": "nep141:sol-c800a4bd850783ccb82c2b2c7e84175443606352.omft.near",
     "decimals": 6,
     "networkIdentifier": "SOL.USDT",
     "symbol": "USDT",
-    "contractAddress": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
+    "network": "solana"
   },
   {
     "assetId": "nep141:tron-d28a265909efecdcee7c5028585214ea0b96f015.omft.near",
     "decimals": 6,
     "networkIdentifier": "TRON.USDT",
     "symbol": "USDT",
-    "contractAddress": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
+    "network": "tron"
   },
   {
     "assetId": "nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near",
     "decimals": 6,
     "networkIdentifier": "BASE.USDC",
     "symbol": "USDC",
-    "contractAddress": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+    "network": "base"
   }
 ]`
 
@@ -147,4 +153,9 @@ func GetAssetsByNetworkID(networkIdentifier string) (types.Asset, error) {
 
 func GetDestinationAssetsByNetworkID() (string) {
 	return "nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near"
+}
+
+func IsValidNetworkIdentifier(networkIdentifier string) bool {
+	_, err := GetAssetsByNetworkID(networkIdentifier)
+	return err == nil
 }

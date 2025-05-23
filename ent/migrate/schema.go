@@ -455,6 +455,8 @@ var (
 		{Name: "tx_hash", Type: field.TypeString, Nullable: true, Size: 70},
 		{Name: "valid_until", Type: field.TypeTime, Nullable: true},
 		{Name: "intent_address", Type: field.TypeString, Nullable: true},
+		{Name: "intent_network_identifier", Type: field.TypeString, Nullable: true},
+		{Name: "intent_amount_out", Type: field.TypeString, Nullable: true},
 		{Name: "payment_order_receive_address", Type: field.TypeUUID, Unique: true, Nullable: true},
 	}
 	// ReceiveAddressesTable holds the schema information for the "receive_addresses" table.
@@ -465,7 +467,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "receive_addresses_payment_orders_receive_address",
-				Columns:    []*schema.Column{ReceiveAddressesColumns[11]},
+				Columns:    []*schema.Column{ReceiveAddressesColumns[13]},
 				RefColumns: []*schema.Column{PaymentOrdersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},

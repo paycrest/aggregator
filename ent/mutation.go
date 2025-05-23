@@ -14958,26 +14958,28 @@ func (m *ProvisionBucketMutation) ResetEdge(name string) error {
 // ReceiveAddressMutation represents an operation that mutates the ReceiveAddress nodes in the graph.
 type ReceiveAddressMutation struct {
 	config
-	op                    Op
-	typ                   string
-	id                    *int
-	created_at            *time.Time
-	updated_at            *time.Time
-	address               *string
-	salt                  *[]byte
-	status                *receiveaddress.Status
-	last_indexed_block    *int64
-	addlast_indexed_block *int64
-	last_used             *time.Time
-	tx_hash               *string
-	valid_until           *time.Time
-	intent_address        *string
-	clearedFields         map[string]struct{}
-	payment_order         *uuid.UUID
-	clearedpayment_order  bool
-	done                  bool
-	oldValue              func(context.Context) (*ReceiveAddress, error)
-	predicates            []predicate.ReceiveAddress
+	op                        Op
+	typ                       string
+	id                        *int
+	created_at                *time.Time
+	updated_at                *time.Time
+	address                   *string
+	salt                      *[]byte
+	status                    *receiveaddress.Status
+	last_indexed_block        *int64
+	addlast_indexed_block     *int64
+	last_used                 *time.Time
+	tx_hash                   *string
+	valid_until               *time.Time
+	intent_address            *string
+	intent_network_identifier *string
+	intent_amount_out         *string
+	clearedFields             map[string]struct{}
+	payment_order             *uuid.UUID
+	clearedpayment_order      bool
+	done                      bool
+	oldValue                  func(context.Context) (*ReceiveAddress, error)
+	predicates                []predicate.ReceiveAddress
 }
 
 var _ ent.Mutation = (*ReceiveAddressMutation)(nil)
@@ -15524,6 +15526,104 @@ func (m *ReceiveAddressMutation) ResetIntentAddress() {
 	delete(m.clearedFields, receiveaddress.FieldIntentAddress)
 }
 
+// SetIntentNetworkIdentifier sets the "intent_network_identifier" field.
+func (m *ReceiveAddressMutation) SetIntentNetworkIdentifier(s string) {
+	m.intent_network_identifier = &s
+}
+
+// IntentNetworkIdentifier returns the value of the "intent_network_identifier" field in the mutation.
+func (m *ReceiveAddressMutation) IntentNetworkIdentifier() (r string, exists bool) {
+	v := m.intent_network_identifier
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIntentNetworkIdentifier returns the old "intent_network_identifier" field's value of the ReceiveAddress entity.
+// If the ReceiveAddress object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReceiveAddressMutation) OldIntentNetworkIdentifier(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIntentNetworkIdentifier is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIntentNetworkIdentifier requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIntentNetworkIdentifier: %w", err)
+	}
+	return oldValue.IntentNetworkIdentifier, nil
+}
+
+// ClearIntentNetworkIdentifier clears the value of the "intent_network_identifier" field.
+func (m *ReceiveAddressMutation) ClearIntentNetworkIdentifier() {
+	m.intent_network_identifier = nil
+	m.clearedFields[receiveaddress.FieldIntentNetworkIdentifier] = struct{}{}
+}
+
+// IntentNetworkIdentifierCleared returns if the "intent_network_identifier" field was cleared in this mutation.
+func (m *ReceiveAddressMutation) IntentNetworkIdentifierCleared() bool {
+	_, ok := m.clearedFields[receiveaddress.FieldIntentNetworkIdentifier]
+	return ok
+}
+
+// ResetIntentNetworkIdentifier resets all changes to the "intent_network_identifier" field.
+func (m *ReceiveAddressMutation) ResetIntentNetworkIdentifier() {
+	m.intent_network_identifier = nil
+	delete(m.clearedFields, receiveaddress.FieldIntentNetworkIdentifier)
+}
+
+// SetIntentAmountOut sets the "intent_amount_out" field.
+func (m *ReceiveAddressMutation) SetIntentAmountOut(s string) {
+	m.intent_amount_out = &s
+}
+
+// IntentAmountOut returns the value of the "intent_amount_out" field in the mutation.
+func (m *ReceiveAddressMutation) IntentAmountOut() (r string, exists bool) {
+	v := m.intent_amount_out
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIntentAmountOut returns the old "intent_amount_out" field's value of the ReceiveAddress entity.
+// If the ReceiveAddress object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReceiveAddressMutation) OldIntentAmountOut(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIntentAmountOut is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIntentAmountOut requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIntentAmountOut: %w", err)
+	}
+	return oldValue.IntentAmountOut, nil
+}
+
+// ClearIntentAmountOut clears the value of the "intent_amount_out" field.
+func (m *ReceiveAddressMutation) ClearIntentAmountOut() {
+	m.intent_amount_out = nil
+	m.clearedFields[receiveaddress.FieldIntentAmountOut] = struct{}{}
+}
+
+// IntentAmountOutCleared returns if the "intent_amount_out" field was cleared in this mutation.
+func (m *ReceiveAddressMutation) IntentAmountOutCleared() bool {
+	_, ok := m.clearedFields[receiveaddress.FieldIntentAmountOut]
+	return ok
+}
+
+// ResetIntentAmountOut resets all changes to the "intent_amount_out" field.
+func (m *ReceiveAddressMutation) ResetIntentAmountOut() {
+	m.intent_amount_out = nil
+	delete(m.clearedFields, receiveaddress.FieldIntentAmountOut)
+}
+
 // SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by id.
 func (m *ReceiveAddressMutation) SetPaymentOrderID(id uuid.UUID) {
 	m.payment_order = &id
@@ -15597,7 +15697,7 @@ func (m *ReceiveAddressMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ReceiveAddressMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 12)
 	if m.created_at != nil {
 		fields = append(fields, receiveaddress.FieldCreatedAt)
 	}
@@ -15628,6 +15728,12 @@ func (m *ReceiveAddressMutation) Fields() []string {
 	if m.intent_address != nil {
 		fields = append(fields, receiveaddress.FieldIntentAddress)
 	}
+	if m.intent_network_identifier != nil {
+		fields = append(fields, receiveaddress.FieldIntentNetworkIdentifier)
+	}
+	if m.intent_amount_out != nil {
+		fields = append(fields, receiveaddress.FieldIntentAmountOut)
+	}
 	return fields
 }
 
@@ -15656,6 +15762,10 @@ func (m *ReceiveAddressMutation) Field(name string) (ent.Value, bool) {
 		return m.ValidUntil()
 	case receiveaddress.FieldIntentAddress:
 		return m.IntentAddress()
+	case receiveaddress.FieldIntentNetworkIdentifier:
+		return m.IntentNetworkIdentifier()
+	case receiveaddress.FieldIntentAmountOut:
+		return m.IntentAmountOut()
 	}
 	return nil, false
 }
@@ -15685,6 +15795,10 @@ func (m *ReceiveAddressMutation) OldField(ctx context.Context, name string) (ent
 		return m.OldValidUntil(ctx)
 	case receiveaddress.FieldIntentAddress:
 		return m.OldIntentAddress(ctx)
+	case receiveaddress.FieldIntentNetworkIdentifier:
+		return m.OldIntentNetworkIdentifier(ctx)
+	case receiveaddress.FieldIntentAmountOut:
+		return m.OldIntentAmountOut(ctx)
 	}
 	return nil, fmt.Errorf("unknown ReceiveAddress field %s", name)
 }
@@ -15764,6 +15878,20 @@ func (m *ReceiveAddressMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetIntentAddress(v)
 		return nil
+	case receiveaddress.FieldIntentNetworkIdentifier:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIntentNetworkIdentifier(v)
+		return nil
+	case receiveaddress.FieldIntentAmountOut:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIntentAmountOut(v)
+		return nil
 	}
 	return fmt.Errorf("unknown ReceiveAddress field %s", name)
 }
@@ -15824,6 +15952,12 @@ func (m *ReceiveAddressMutation) ClearedFields() []string {
 	if m.FieldCleared(receiveaddress.FieldIntentAddress) {
 		fields = append(fields, receiveaddress.FieldIntentAddress)
 	}
+	if m.FieldCleared(receiveaddress.FieldIntentNetworkIdentifier) {
+		fields = append(fields, receiveaddress.FieldIntentNetworkIdentifier)
+	}
+	if m.FieldCleared(receiveaddress.FieldIntentAmountOut) {
+		fields = append(fields, receiveaddress.FieldIntentAmountOut)
+	}
 	return fields
 }
 
@@ -15852,6 +15986,12 @@ func (m *ReceiveAddressMutation) ClearField(name string) error {
 		return nil
 	case receiveaddress.FieldIntentAddress:
 		m.ClearIntentAddress()
+		return nil
+	case receiveaddress.FieldIntentNetworkIdentifier:
+		m.ClearIntentNetworkIdentifier()
+		return nil
+	case receiveaddress.FieldIntentAmountOut:
+		m.ClearIntentAmountOut()
 		return nil
 	}
 	return fmt.Errorf("unknown ReceiveAddress nullable field %s", name)
@@ -15890,6 +16030,12 @@ func (m *ReceiveAddressMutation) ResetField(name string) error {
 		return nil
 	case receiveaddress.FieldIntentAddress:
 		m.ResetIntentAddress()
+		return nil
+	case receiveaddress.FieldIntentNetworkIdentifier:
+		m.ResetIntentNetworkIdentifier()
+		return nil
+	case receiveaddress.FieldIntentAmountOut:
+		m.ResetIntentAmountOut()
 		return nil
 	}
 	return fmt.Errorf("unknown ReceiveAddress field %s", name)

@@ -24,9 +24,11 @@ import (
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	svc "github.com/paycrest/aggregator/services"
+
 	// intentSvc "github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/types"
 	u "github.com/paycrest/aggregator/utils"
+	intentUtils "github.com/paycrest/aggregator/utils/intent"
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/shopspring/decimal"
 
@@ -73,6 +75,59 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	if !sender.IsActive && !serverConf.Debug {
 		u.APIResponse(ctx, http.StatusForbidden, "error", "Your account is not active", nil)
 		return
+	}
+
+	// Validate intent-based order requirements
+	if payload.IsIntentBased {
+		payload.Token = "USDC"
+		payload.Network = "base"
+		if payload.Slippage <= 0 { // 100 for 1% slippage.
+			logger.WithFields(logger.Fields{
+				"Slippage": payload.Slippage,
+				"Sender":   sender.ID.String(),
+			}).Error("Failed to validate payload, slippage is less than or equal to 0")
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+				Field:   "Slippage",
+				Message: "Slippage must be greater than 0 for intent-based orders",
+			})
+			return
+		}
+
+		if payload.ReturnAddress == "" {
+			logger.WithFields(logger.Fields{
+				"Amount": payload.Amount,
+				"Sender": sender.ID.String(),
+			}).Error("Failed to validate payload, return address is required")
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+				Field:   "ReturnAddress",
+				Message: "Return address is required for intent-based orders",
+			})
+			return
+		}
+
+		if payload.IntentNetworkIdentifier == "" {
+			logger.WithFields(logger.Fields{
+				"Amount": payload.Amount,
+				"Sender": sender.ID.String(),
+			}).Error("Failed to validate payload, intent network identifier is required")
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+				Field:   "IntentNetworkIdentifier",
+				Message: "Intent network identifier is required for intent-based orders",
+			})
+			return
+		}
+
+		if !intentUtils.IsValidNetworkIdentifier(payload.IntentNetworkIdentifier) {
+			logger.WithFields(logger.Fields{
+				"Amount": payload.Amount,
+				"Sender": sender.ID.String(),
+			}).Error("Failed to validate payload, intent network identifier is invalid")
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+				Field:   "IntentNetworkIdentifier",
+				Message: "Intent network identifier is invalid",
+			})
+			return
+		}
 	}
 
 	// Get token from DB
@@ -126,31 +181,6 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		return
 	}
 
-	// Validate intent-based order requirements
-	if payload.IsIntentBased {
-		if payload.Slippage <= 0 {
-			logger.WithFields(logger.Fields{
-				"Slippage": payload.Slippage,
-			}).Error("Failed to validate payload, slippage is less than or equal to 0")
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
-				Field:   "Slippage",
-				Message: "Slippage must be greater than 0 for intent-based orders",
-			})
-			return
-		}
-
-		if payload.ReturnAddress == "" {
-			logger.WithFields(logger.Fields{
-				"ReturnAddress": payload.ReturnAddress,
-			}).Error("Failed to validate payload, return address is required")
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
-				Field:   "ReturnAddress",
-				Message: "Return address is required for intent-based orders",
-			})
-			return
-		}
-	}
-
 	feePercent := senderOrderToken.FeePercent
 	feeAddress := senderOrderToken.FeeAddress
 	returnAddress := senderOrderToken.RefundAddress
@@ -197,6 +227,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	network := strings.ToLower(payload.Network)
 	var networkFamily string
 
+	// This is not optimized enough, but it works for now
 	switch {
 	case strings.HasPrefix(network, "tron"):
 		networkFamily = "tron"
@@ -204,7 +235,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		networkFamily = "bitcoin"
 	case strings.HasPrefix(network, "sol"):
 		networkFamily = "solana"
-	case strings.HasPrefix(network, "base.eth"), strings.HasPrefix(network, "arb.eth"), strings.HasPrefix(network, "eth"):
+	case strings.HasPrefix(network, "base"), strings.HasPrefix(network, "arb"), strings.HasPrefix(network, "eth"), strings.HasPrefix(network, "arbitrum"), strings.HasPrefix(network, "binance"):
 		networkFamily = "ethereum"
 	default:
 		networkFamily = "unknown"
@@ -388,8 +419,9 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 			return
 		}
-		
+
 		var intentDepositAddress string
+		var intentAmountOut string
 		// if intent-based order?
 		if payload.IsIntentBased {
 			if ctrl.clickDefuseService == nil {
@@ -409,7 +441,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			)
 			if err != nil {
 				logger.WithFields(logger.Fields{
-					"Error":                fmt.Sprintf("%v", err),
+					"Error":                 fmt.Sprintf("%v", err),
 					"NetworkIdentifierFrom": payload.Network,
 					"Recipient":             address,
 					"Refund":                payload.ReturnAddress,
@@ -420,6 +452,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 				return
 			}
 			intentDepositAddress = quoteResponse.DepositAddress
+			intentAmountOut = quoteResponse.AmountOut
 		}
 
 		receiveAddress, err = storage.Client.ReceiveAddress.
@@ -438,6 +471,8 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		if payload.IsIntentBased && intentDepositAddress != "" {
 			receiveAddress, err = receiveAddress.Update().
 				SetIntentAddress(intentDepositAddress).
+				SetIntentNetworkIdentifier(payload.IntentNetworkIdentifier).
+				SetIntentAmountOut(intentAmountOut).
 				Save(ctx)
 			if err != nil {
 				logger.Errorf("error: %v", err)
@@ -473,11 +508,13 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	if payload.IsIntentBased && receiveAddress.IntentAddress != "" {
 		displayAddress = receiveAddress.IntentAddress
 		metadata = map[string]interface{}{
-			"ReceiveAddress": receiveAddress.Address, 
-			"IntentAddress":  receiveAddress.IntentAddress,
-			"SenderID":       sender.ID.String(),
-			"IsIntentBased":  true,
-			"Slippage":       payload.Slippage,
+			"ReceiveAddress":          receiveAddress.Address,
+			"IntentAddress":           receiveAddress.IntentAddress,
+			"SenderID":                sender.ID.String(),
+			"IsIntentBased":           true,
+			"IntentNetworkIdentifier": payload.IntentNetworkIdentifier,
+			"IntentAmountOut":         receiveAddress.IntentAmountOut,
+			"Slippage":                payload.Slippage,
 		}
 	} else {
 		displayAddress = receiveAddress.Address

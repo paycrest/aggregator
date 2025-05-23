@@ -100,6 +100,16 @@ func IntentAddress(v string) predicate.ReceiveAddress {
 	return predicate.ReceiveAddress(sql.FieldEQ(FieldIntentAddress, v))
 }
 
+// IntentNetworkIdentifier applies equality check predicate on the "intent_network_identifier" field. It's identical to IntentNetworkIdentifierEQ.
+func IntentNetworkIdentifier(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldEQ(FieldIntentNetworkIdentifier, v))
+}
+
+// IntentAmountOut applies equality check predicate on the "intent_amount_out" field. It's identical to IntentAmountOutEQ.
+func IntentAmountOut(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldEQ(FieldIntentAmountOut, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.ReceiveAddress {
 	return predicate.ReceiveAddress(sql.FieldEQ(FieldCreatedAt, v))
@@ -603,6 +613,156 @@ func IntentAddressEqualFold(v string) predicate.ReceiveAddress {
 // IntentAddressContainsFold applies the ContainsFold predicate on the "intent_address" field.
 func IntentAddressContainsFold(v string) predicate.ReceiveAddress {
 	return predicate.ReceiveAddress(sql.FieldContainsFold(FieldIntentAddress, v))
+}
+
+// IntentNetworkIdentifierEQ applies the EQ predicate on the "intent_network_identifier" field.
+func IntentNetworkIdentifierEQ(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldEQ(FieldIntentNetworkIdentifier, v))
+}
+
+// IntentNetworkIdentifierNEQ applies the NEQ predicate on the "intent_network_identifier" field.
+func IntentNetworkIdentifierNEQ(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldNEQ(FieldIntentNetworkIdentifier, v))
+}
+
+// IntentNetworkIdentifierIn applies the In predicate on the "intent_network_identifier" field.
+func IntentNetworkIdentifierIn(vs ...string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldIn(FieldIntentNetworkIdentifier, vs...))
+}
+
+// IntentNetworkIdentifierNotIn applies the NotIn predicate on the "intent_network_identifier" field.
+func IntentNetworkIdentifierNotIn(vs ...string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldNotIn(FieldIntentNetworkIdentifier, vs...))
+}
+
+// IntentNetworkIdentifierGT applies the GT predicate on the "intent_network_identifier" field.
+func IntentNetworkIdentifierGT(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldGT(FieldIntentNetworkIdentifier, v))
+}
+
+// IntentNetworkIdentifierGTE applies the GTE predicate on the "intent_network_identifier" field.
+func IntentNetworkIdentifierGTE(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldGTE(FieldIntentNetworkIdentifier, v))
+}
+
+// IntentNetworkIdentifierLT applies the LT predicate on the "intent_network_identifier" field.
+func IntentNetworkIdentifierLT(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldLT(FieldIntentNetworkIdentifier, v))
+}
+
+// IntentNetworkIdentifierLTE applies the LTE predicate on the "intent_network_identifier" field.
+func IntentNetworkIdentifierLTE(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldLTE(FieldIntentNetworkIdentifier, v))
+}
+
+// IntentNetworkIdentifierContains applies the Contains predicate on the "intent_network_identifier" field.
+func IntentNetworkIdentifierContains(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldContains(FieldIntentNetworkIdentifier, v))
+}
+
+// IntentNetworkIdentifierHasPrefix applies the HasPrefix predicate on the "intent_network_identifier" field.
+func IntentNetworkIdentifierHasPrefix(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldHasPrefix(FieldIntentNetworkIdentifier, v))
+}
+
+// IntentNetworkIdentifierHasSuffix applies the HasSuffix predicate on the "intent_network_identifier" field.
+func IntentNetworkIdentifierHasSuffix(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldHasSuffix(FieldIntentNetworkIdentifier, v))
+}
+
+// IntentNetworkIdentifierIsNil applies the IsNil predicate on the "intent_network_identifier" field.
+func IntentNetworkIdentifierIsNil() predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldIsNull(FieldIntentNetworkIdentifier))
+}
+
+// IntentNetworkIdentifierNotNil applies the NotNil predicate on the "intent_network_identifier" field.
+func IntentNetworkIdentifierNotNil() predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldNotNull(FieldIntentNetworkIdentifier))
+}
+
+// IntentNetworkIdentifierEqualFold applies the EqualFold predicate on the "intent_network_identifier" field.
+func IntentNetworkIdentifierEqualFold(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldEqualFold(FieldIntentNetworkIdentifier, v))
+}
+
+// IntentNetworkIdentifierContainsFold applies the ContainsFold predicate on the "intent_network_identifier" field.
+func IntentNetworkIdentifierContainsFold(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldContainsFold(FieldIntentNetworkIdentifier, v))
+}
+
+// IntentAmountOutEQ applies the EQ predicate on the "intent_amount_out" field.
+func IntentAmountOutEQ(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldEQ(FieldIntentAmountOut, v))
+}
+
+// IntentAmountOutNEQ applies the NEQ predicate on the "intent_amount_out" field.
+func IntentAmountOutNEQ(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldNEQ(FieldIntentAmountOut, v))
+}
+
+// IntentAmountOutIn applies the In predicate on the "intent_amount_out" field.
+func IntentAmountOutIn(vs ...string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldIn(FieldIntentAmountOut, vs...))
+}
+
+// IntentAmountOutNotIn applies the NotIn predicate on the "intent_amount_out" field.
+func IntentAmountOutNotIn(vs ...string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldNotIn(FieldIntentAmountOut, vs...))
+}
+
+// IntentAmountOutGT applies the GT predicate on the "intent_amount_out" field.
+func IntentAmountOutGT(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldGT(FieldIntentAmountOut, v))
+}
+
+// IntentAmountOutGTE applies the GTE predicate on the "intent_amount_out" field.
+func IntentAmountOutGTE(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldGTE(FieldIntentAmountOut, v))
+}
+
+// IntentAmountOutLT applies the LT predicate on the "intent_amount_out" field.
+func IntentAmountOutLT(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldLT(FieldIntentAmountOut, v))
+}
+
+// IntentAmountOutLTE applies the LTE predicate on the "intent_amount_out" field.
+func IntentAmountOutLTE(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldLTE(FieldIntentAmountOut, v))
+}
+
+// IntentAmountOutContains applies the Contains predicate on the "intent_amount_out" field.
+func IntentAmountOutContains(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldContains(FieldIntentAmountOut, v))
+}
+
+// IntentAmountOutHasPrefix applies the HasPrefix predicate on the "intent_amount_out" field.
+func IntentAmountOutHasPrefix(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldHasPrefix(FieldIntentAmountOut, v))
+}
+
+// IntentAmountOutHasSuffix applies the HasSuffix predicate on the "intent_amount_out" field.
+func IntentAmountOutHasSuffix(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldHasSuffix(FieldIntentAmountOut, v))
+}
+
+// IntentAmountOutIsNil applies the IsNil predicate on the "intent_amount_out" field.
+func IntentAmountOutIsNil() predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldIsNull(FieldIntentAmountOut))
+}
+
+// IntentAmountOutNotNil applies the NotNil predicate on the "intent_amount_out" field.
+func IntentAmountOutNotNil() predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldNotNull(FieldIntentAmountOut))
+}
+
+// IntentAmountOutEqualFold applies the EqualFold predicate on the "intent_amount_out" field.
+func IntentAmountOutEqualFold(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldEqualFold(FieldIntentAmountOut, v))
+}
+
+// IntentAmountOutContainsFold applies the ContainsFold predicate on the "intent_amount_out" field.
+func IntentAmountOutContainsFold(v string) predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldContainsFold(FieldIntentAmountOut, v))
 }
 
 // HasPaymentOrder applies the HasEdge predicate on the "payment_order" edge.

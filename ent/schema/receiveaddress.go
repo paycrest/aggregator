@@ -31,6 +31,8 @@ func (ReceiveAddress) Fields() []ent.Field {
 			Optional(),
 		field.Time("valid_until").Optional(),
         field.String("intent_address").Optional(),
+		field.String("intent_network_identifier").Optional(),
+		field.String("intent_amount_out").Optional(),
 	}
 }
 

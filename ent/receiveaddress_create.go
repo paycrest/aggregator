@@ -148,6 +148,34 @@ func (rac *ReceiveAddressCreate) SetNillableIntentAddress(s *string) *ReceiveAdd
 	return rac
 }
 
+// SetIntentNetworkIdentifier sets the "intent_network_identifier" field.
+func (rac *ReceiveAddressCreate) SetIntentNetworkIdentifier(s string) *ReceiveAddressCreate {
+	rac.mutation.SetIntentNetworkIdentifier(s)
+	return rac
+}
+
+// SetNillableIntentNetworkIdentifier sets the "intent_network_identifier" field if the given value is not nil.
+func (rac *ReceiveAddressCreate) SetNillableIntentNetworkIdentifier(s *string) *ReceiveAddressCreate {
+	if s != nil {
+		rac.SetIntentNetworkIdentifier(*s)
+	}
+	return rac
+}
+
+// SetIntentAmountOut sets the "intent_amount_out" field.
+func (rac *ReceiveAddressCreate) SetIntentAmountOut(s string) *ReceiveAddressCreate {
+	rac.mutation.SetIntentAmountOut(s)
+	return rac
+}
+
+// SetNillableIntentAmountOut sets the "intent_amount_out" field if the given value is not nil.
+func (rac *ReceiveAddressCreate) SetNillableIntentAmountOut(s *string) *ReceiveAddressCreate {
+	if s != nil {
+		rac.SetIntentAmountOut(*s)
+	}
+	return rac
+}
+
 // SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID.
 func (rac *ReceiveAddressCreate) SetPaymentOrderID(id uuid.UUID) *ReceiveAddressCreate {
 	rac.mutation.SetPaymentOrderID(id)
@@ -309,6 +337,14 @@ func (rac *ReceiveAddressCreate) createSpec() (*ReceiveAddress, *sqlgraph.Create
 	if value, ok := rac.mutation.IntentAddress(); ok {
 		_spec.SetField(receiveaddress.FieldIntentAddress, field.TypeString, value)
 		_node.IntentAddress = value
+	}
+	if value, ok := rac.mutation.IntentNetworkIdentifier(); ok {
+		_spec.SetField(receiveaddress.FieldIntentNetworkIdentifier, field.TypeString, value)
+		_node.IntentNetworkIdentifier = value
+	}
+	if value, ok := rac.mutation.IntentAmountOut(); ok {
+		_spec.SetField(receiveaddress.FieldIntentAmountOut, field.TypeString, value)
+		_node.IntentAmountOut = value
 	}
 	if nodes := rac.mutation.PaymentOrderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -511,6 +547,42 @@ func (u *ReceiveAddressUpsert) ClearIntentAddress() *ReceiveAddressUpsert {
 	return u
 }
 
+// SetIntentNetworkIdentifier sets the "intent_network_identifier" field.
+func (u *ReceiveAddressUpsert) SetIntentNetworkIdentifier(v string) *ReceiveAddressUpsert {
+	u.Set(receiveaddress.FieldIntentNetworkIdentifier, v)
+	return u
+}
+
+// UpdateIntentNetworkIdentifier sets the "intent_network_identifier" field to the value that was provided on create.
+func (u *ReceiveAddressUpsert) UpdateIntentNetworkIdentifier() *ReceiveAddressUpsert {
+	u.SetExcluded(receiveaddress.FieldIntentNetworkIdentifier)
+	return u
+}
+
+// ClearIntentNetworkIdentifier clears the value of the "intent_network_identifier" field.
+func (u *ReceiveAddressUpsert) ClearIntentNetworkIdentifier() *ReceiveAddressUpsert {
+	u.SetNull(receiveaddress.FieldIntentNetworkIdentifier)
+	return u
+}
+
+// SetIntentAmountOut sets the "intent_amount_out" field.
+func (u *ReceiveAddressUpsert) SetIntentAmountOut(v string) *ReceiveAddressUpsert {
+	u.Set(receiveaddress.FieldIntentAmountOut, v)
+	return u
+}
+
+// UpdateIntentAmountOut sets the "intent_amount_out" field to the value that was provided on create.
+func (u *ReceiveAddressUpsert) UpdateIntentAmountOut() *ReceiveAddressUpsert {
+	u.SetExcluded(receiveaddress.FieldIntentAmountOut)
+	return u
+}
+
+// ClearIntentAmountOut clears the value of the "intent_amount_out" field.
+func (u *ReceiveAddressUpsert) ClearIntentAmountOut() *ReceiveAddressUpsert {
+	u.SetNull(receiveaddress.FieldIntentAmountOut)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create.
 // Using this option is equivalent to using:
 //
@@ -710,6 +782,48 @@ func (u *ReceiveAddressUpsertOne) UpdateIntentAddress() *ReceiveAddressUpsertOne
 func (u *ReceiveAddressUpsertOne) ClearIntentAddress() *ReceiveAddressUpsertOne {
 	return u.Update(func(s *ReceiveAddressUpsert) {
 		s.ClearIntentAddress()
+	})
+}
+
+// SetIntentNetworkIdentifier sets the "intent_network_identifier" field.
+func (u *ReceiveAddressUpsertOne) SetIntentNetworkIdentifier(v string) *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.SetIntentNetworkIdentifier(v)
+	})
+}
+
+// UpdateIntentNetworkIdentifier sets the "intent_network_identifier" field to the value that was provided on create.
+func (u *ReceiveAddressUpsertOne) UpdateIntentNetworkIdentifier() *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.UpdateIntentNetworkIdentifier()
+	})
+}
+
+// ClearIntentNetworkIdentifier clears the value of the "intent_network_identifier" field.
+func (u *ReceiveAddressUpsertOne) ClearIntentNetworkIdentifier() *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.ClearIntentNetworkIdentifier()
+	})
+}
+
+// SetIntentAmountOut sets the "intent_amount_out" field.
+func (u *ReceiveAddressUpsertOne) SetIntentAmountOut(v string) *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.SetIntentAmountOut(v)
+	})
+}
+
+// UpdateIntentAmountOut sets the "intent_amount_out" field to the value that was provided on create.
+func (u *ReceiveAddressUpsertOne) UpdateIntentAmountOut() *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.UpdateIntentAmountOut()
+	})
+}
+
+// ClearIntentAmountOut clears the value of the "intent_amount_out" field.
+func (u *ReceiveAddressUpsertOne) ClearIntentAmountOut() *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.ClearIntentAmountOut()
 	})
 }
 
@@ -1078,6 +1192,48 @@ func (u *ReceiveAddressUpsertBulk) UpdateIntentAddress() *ReceiveAddressUpsertBu
 func (u *ReceiveAddressUpsertBulk) ClearIntentAddress() *ReceiveAddressUpsertBulk {
 	return u.Update(func(s *ReceiveAddressUpsert) {
 		s.ClearIntentAddress()
+	})
+}
+
+// SetIntentNetworkIdentifier sets the "intent_network_identifier" field.
+func (u *ReceiveAddressUpsertBulk) SetIntentNetworkIdentifier(v string) *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.SetIntentNetworkIdentifier(v)
+	})
+}
+
+// UpdateIntentNetworkIdentifier sets the "intent_network_identifier" field to the value that was provided on create.
+func (u *ReceiveAddressUpsertBulk) UpdateIntentNetworkIdentifier() *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.UpdateIntentNetworkIdentifier()
+	})
+}
+
+// ClearIntentNetworkIdentifier clears the value of the "intent_network_identifier" field.
+func (u *ReceiveAddressUpsertBulk) ClearIntentNetworkIdentifier() *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.ClearIntentNetworkIdentifier()
+	})
+}
+
+// SetIntentAmountOut sets the "intent_amount_out" field.
+func (u *ReceiveAddressUpsertBulk) SetIntentAmountOut(v string) *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.SetIntentAmountOut(v)
+	})
+}
+
+// UpdateIntentAmountOut sets the "intent_amount_out" field to the value that was provided on create.
+func (u *ReceiveAddressUpsertBulk) UpdateIntentAmountOut() *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.UpdateIntentAmountOut()
+	})
+}
+
+// ClearIntentAmountOut clears the value of the "intent_amount_out" field.
+func (u *ReceiveAddressUpsertBulk) ClearIntentAmountOut() *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.ClearIntentAmountOut()
 	})
 }
 
