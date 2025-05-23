@@ -176,7 +176,7 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, client types.RPCClient, orde
 	}
 
 	// Send webhook notifcation to sender
-	err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
+	err = utils.SendPaymentOrderWebhook(ctx, paymentOrder, false)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.webhook: %w", orderIDPrefix, err)
 	}

@@ -14,13 +14,14 @@ import (
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
+	"github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	orderService "github.com/paycrest/aggregator/services/order"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
-	"github.com/paycrest/aggregator/utils"
 	u "github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/shopspring/decimal"
@@ -351,10 +352,10 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 	// Parse the order payload
 	if err := ctx.ShouldBindJSON(&payload); err != nil {
 		logger.WithFields(logger.Fields{
-			"Error":        			fmt.Sprintf("%v", err),
-			"Trx Id": 					payload.TxID,
-			"ValidationError":        	payload.ValidationError,
-			"ValidationStatus":        	payload.ValidationStatus,
+			"Error":            fmt.Sprintf("%v", err),
+			"Trx Id":           payload.TxID,
+			"ValidationError":  payload.ValidationError,
+			"ValidationStatus": payload.ValidationStatus,
 		}).Errorf("Failed to bind payload to Json for TXID %v", payload.TxID)
 		u.APIResponse(ctx, http.StatusBadRequest, "error",
 			"Failed to validate payload", u.GetErrorData(err))
@@ -372,8 +373,8 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 	orderID, err := uuid.Parse(ctx.Param("id"))
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error":        			fmt.Sprintf("%v", err),
-			"Trx Id": 					payload.TxID,
+			"Error":  fmt.Sprintf("%v", err),
+			"Trx Id": payload.TxID,
 		}).Errorf("Error parsing order ID: %v", err)
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
 		return
@@ -409,8 +410,8 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				Save(ctx)
 			if err != nil {
 				logger.WithFields(logger.Fields{
-					"Error": 	   fmt.Sprintf("%v", err),
-					"Trx Id": 	   payload.TxID,
+					"Error":  fmt.Sprintf("%v", err),
+					"Trx Id": payload.TxID,
 				}).Errorf("Failed to create lock order fulfillment: %v", err)
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 				return
@@ -427,18 +428,18 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				Only(ctx)
 			if err != nil {
 				logger.WithFields(logger.Fields{
-					"Error": 	   fmt.Sprintf("%v", err),
-					"Trx Id": 	   payload.TxID,
-					"Network":     fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
+					"Error":   fmt.Sprintf("%v", err),
+					"Trx Id":  payload.TxID,
+					"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
 				}).Errorf("Failed to fetch lock order fulfillment: %v", err)
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 				return
 			}
 		} else {
 			logger.WithFields(logger.Fields{
-				"Error": 	   fmt.Sprintf("%v", err),
-				"Trx Id": 	   payload.TxID,
-				"Network":     fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
+				"Error":   fmt.Sprintf("%v", err),
+				"Trx Id":  payload.TxID,
+				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
 			}).Errorf("Failed to fetch lock order fulfillment when order is found: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 			return
@@ -456,9 +457,9 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			Save(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
-				"Error": 	   fmt.Sprintf("%v", err),
-				"Trx Id": 	   payload.TxID,
-				"Network":     fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
+				"Error":   fmt.Sprintf("%v", err),
+				"Trx Id":  payload.TxID,
+				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
 			}).Errorf("Failed to update lock order fulfillment: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 			return
@@ -474,9 +475,9 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			Save(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
-				"Error": 	   fmt.Sprintf("%v", err),
-				"Trx Id": 	   payload.TxID,
-				"Network":     fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
+				"Error":   fmt.Sprintf("%v", err),
+				"Trx Id":  payload.TxID,
+				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
 			}).Errorf("Failed to create transaction log: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 			return
@@ -488,12 +489,43 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			Save(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
-				"Error": 	   fmt.Sprintf("%v", err),
-				"Trx Id": 	   payload.TxID,
-				"Network":     fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
+				"Error":   fmt.Sprintf("%v", err),
+				"Trx Id":  payload.TxID,
+				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
 			}).Errorf("Failed to update lock order status: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 			return
+		}
+
+		// Send webhook notification to sender
+		paymentOrder, err := storage.Client.PaymentOrder.
+			Query().
+			Where(
+				paymentorder.GatewayIDEQ(fulfillment.Edges.Order.GatewayID),
+				paymentorder.HasTokenWith(
+					token.HasNetworkWith(
+						network.IdentifierEQ(fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier),
+					),
+				),
+			).
+			WithRecipient().
+			WithToken(func(tq *ent.TokenQuery) {
+				tq.WithNetwork()
+			}).
+			Only(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":  fmt.Sprintf("%v", err),
+				"Trx Id": payload.TxID,
+			}).Errorf("Failed to fetch payment order: %v", err)
+		} else {
+			err = u.SendPaymentOrderWebhook(ctx, paymentOrder, true)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":  fmt.Sprintf("%v", err),
+					"Trx Id": payload.TxID,
+				}).Errorf("Failed to send webhook notification to sender: %v", err)
+			}
 		}
 
 		// Settle order or fail silently
@@ -506,9 +538,9 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			}
 			if err != nil {
 				logger.WithFields(logger.Fields{
-					"Error": 	   fmt.Sprintf("%v", err),
-					"Trx Id": 	   payload.TxID,
-					"Network":     fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
+					"Error":   fmt.Sprintf("%v", err),
+					"Trx Id":  payload.TxID,
+					"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
 				}).Errorf("Failed to settle order: %v", err)
 			}
 		}()
@@ -520,9 +552,9 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			Save(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
-				"Error": 	   fmt.Sprintf("%v", err),
-				"Trx Id": 	   payload.TxID,
-				"Network":     fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
+				"Error":   fmt.Sprintf("%v", err),
+				"Trx Id":  payload.TxID,
+				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
 			}).Errorf("Failed to update lock order fulfillment: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 			return
@@ -533,9 +565,9 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			Save(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
-				"Error": 	   fmt.Sprintf("%v", err),
-				"Trx Id": 	   payload.TxID,
-				"Network":     fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
+				"Error":   fmt.Sprintf("%v", err),
+				"Trx Id":  payload.TxID,
+				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
 			}).Errorf("Failed to update lock order status: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 			return
@@ -552,9 +584,9 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			Save(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
-				"Error": 	   fmt.Sprintf("%v", err),
-				"Trx Id": 	   payload.TxID,
-				"Network":     fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
+				"Error":   fmt.Sprintf("%v", err),
+				"Trx Id":  payload.TxID,
+				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
 			}).Errorf("Failed to create transaction log: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 			return
@@ -566,9 +598,9 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			Save(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
-				"Error": 	   fmt.Sprintf("%v", err),
-				"Trx Id": 	   payload.TxID,
-				"Network":     fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
+				"Error":   fmt.Sprintf("%v", err),
+				"Trx Id":  payload.TxID,
+				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
 			}).Errorf("Failed to update lock order status: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 			return
@@ -585,8 +617,8 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 	// Parse the order payload
 	if err := ctx.ShouldBindJSON(&payload); err != nil {
 		logger.WithFields(logger.Fields{
-			"Error":         fmt.Sprintf("%v", err),
-			"Reason":        payload.Reason,
+			"Error":  fmt.Sprintf("%v", err),
+			"Reason": payload.Reason,
 		}).Errorf("Failed to validate payload: %v", err)
 		u.APIResponse(ctx, http.StatusBadRequest, "error",
 			"Failed to validate payload", u.GetErrorData(err))
@@ -605,9 +637,9 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 	orderID, err := uuid.Parse(ctx.Param("id"))
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error":         fmt.Sprintf("%v", err),
-			"Reason":        payload.Reason,
-			"Order ID":      orderID.String(),
+			"Error":    fmt.Sprintf("%v", err),
+			"Reason":   payload.Reason,
+			"Order ID": orderID.String(),
 		}).Errorf("Error parsing order ID: %v", err)
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
 		return
@@ -630,9 +662,9 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 		Only(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error":         fmt.Sprintf("%v", err),
-			"Reason":        payload.Reason,
-			"Order ID":      orderID.String(),
+			"Error":    fmt.Sprintf("%v", err),
+			"Reason":   payload.Reason,
+			"Order ID": orderID.String(),
 		}).Errorf("Failed to fetch lock payment order: %v", err)
 		u.APIResponse(ctx, http.StatusNotFound, "error", "Could not find payment order", nil)
 		return
@@ -673,7 +705,7 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 				_, err := storage.RedisClient.LSet(ctx, redisKey, int64(index), placeholder).Result()
 				if err != nil {
 					logger.WithFields(logger.Fields{
-						"Error":  fmt.Sprintf("%v", err),
+						"Error": fmt.Sprintf("%v", err),
 						"Index": index,
 					}).Errorf("Failed to set placeholder at index %d: %v", index, err)
 				}
@@ -708,9 +740,9 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 		Save(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error":         fmt.Sprintf("%v", err),
-			"Reason":        payload.Reason,
-			"Order ID":      orderID.String(),
+			"Error":    fmt.Sprintf("%v", err),
+			"Reason":   payload.Reason,
+			"Order ID": orderID.String(),
 		}).Errorf("Failed to update lock order status: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to cancel order", nil)
 		return
@@ -731,10 +763,10 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 			}
 			if err != nil {
 				logger.WithFields(logger.Fields{
-					"Error":         fmt.Sprintf("%v", err),
-					"Reason":        "CancelOrder.RefundOrder",
-					"Order ID":      orderID.String(),
-					"Network":       order.Edges.Token.Edges.Network.Identifier,
+					"Error":    fmt.Sprintf("%v", err),
+					"Reason":   "CancelOrder.RefundOrder",
+					"Order ID": orderID.String(),
+					"Network":  order.Edges.Token.Edges.Network.Identifier,
 				}).Errorf("Failed to refund order: %v", err)
 			}
 		}()
@@ -745,9 +777,9 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 	_, err = storage.RedisClient.RPush(ctx, orderKey, provider.ID).Result()
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error":         fmt.Sprintf("%v", err),
-			"Provider":       provider.ID,
-			"Order ID":      orderID.String(),
+			"Error":    fmt.Sprintf("%v", err),
+			"Provider": provider.ID,
+			"Order ID": orderID.String(),
 		}).Errorf("Failed to push provider %s to order %s exclude_list on Redis: %v", provider.ID, orderID, err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to decline order request", nil)
 		return
@@ -774,7 +806,7 @@ func (ctrl *ProviderController) GetMarketRate(ctx *gin.Context) {
 			return
 		}
 		logger.WithFields(logger.Fields{
-			"Error":         fmt.Sprintf("%v", err),
+			"Error": fmt.Sprintf("%v", err),
 		}).Errorf("Failed to get market rate: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to get market rate", nil)
 		return
@@ -789,9 +821,9 @@ func (ctrl *ProviderController) GetMarketRate(ctx *gin.Context) {
 		Only(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error":         fmt.Sprintf("%v", err),
-			"Token":         tokenObj.Symbol,
-			"Fiat":          ctx.Param("fiat"),
+			"Error": fmt.Sprintf("%v", err),
+			"Token": tokenObj.Symbol,
+			"Fiat":  ctx.Param("fiat"),
 		}).Errorf("Failed to get market rate: %v", err)
 		u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Fiat currency %s is not supported", strings.ToUpper(ctx.Param("fiat"))), nil)
 		return
@@ -840,9 +872,9 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 			Exist(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
-				"Error":         fmt.Sprintf("%v", err),
-				"Provider":      provider.ID,
-				"Currency":      currency,
+				"Error":    fmt.Sprintf("%v", err),
+				"Provider": provider.ID,
+				"Currency": currency,
 			}).Errorf("Failed to check provider currency: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to check currency", nil)
 			return
@@ -894,9 +926,9 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 		Scan(ctx, &usdVolume)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error":         fmt.Sprintf("%v", err),
-			"Provider":      provider.ID,
-			"Currency":      currency,
+			"Error":    fmt.Sprintf("%v", err),
+			"Provider": provider.ID,
+			"Currency": currency,
 		}).Errorf("Failed to fetch provider stats: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider stats", nil)
 		return
@@ -917,9 +949,9 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 		Scan(ctx, &localStablecoinVolume)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error":         fmt.Sprintf("%v", err),
-			"Provider":      provider.ID,
-			"Currency":      currency,
+			"Error":    fmt.Sprintf("%v", err),
+			"Provider": provider.ID,
+			"Currency": currency,
 		}).Errorf("Failed to fetch provider stats: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider stats", nil)
 		return
@@ -932,9 +964,9 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 			Only(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
-				"Error":         fmt.Sprintf("%v", err),
-				"Provider":      provider.ID,
-				"Currency":      currency,
+				"Error":    fmt.Sprintf("%v", err),
+				"Provider": provider.ID,
+				"Currency": currency,
 			}).Errorf("Failed to fetch provider fiat currency: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider stats", nil)
 			return
@@ -953,9 +985,9 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 		All(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error":         fmt.Sprintf("%v", err),
-			"Provider":      provider.ID,
-			"Currency":      currency,
+			"Error":    fmt.Sprintf("%v", err),
+			"Provider": provider.ID,
+			"Currency": currency,
 		}).Errorf("Failed to fetch settled orders: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider stats", nil)
 		return
@@ -973,9 +1005,9 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 		Count(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error":         fmt.Sprintf("%v", err),
-			"Provider":      provider.ID,
-			"Currency":      currency,
+			"Error":    fmt.Sprintf("%v", err),
+			"Provider": provider.ID,
+			"Currency": currency,
 		}).Errorf("Failed to fetch provider counts with institution codes: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider stats", nil)
 		return
@@ -1005,7 +1037,7 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 		Only(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error":         fmt.Sprintf("%v", err),
+			"Error": fmt.Sprintf("%v", err),
 		}).Errorf("Failed to fetch provider: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch node info", nil)
 		return
@@ -1017,9 +1049,9 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 		Send()
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error":         fmt.Sprintf("%v", err),
-			"Provider":      provider.ID,
-			"Host":          provider.HostIdentifier,
+			"Error":    fmt.Sprintf("%v", err),
+			"Provider": provider.ID,
+			"Host":     provider.HostIdentifier,
 		}).Errorf("Failed to fetch node info: %v", err)
 		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
 		return
@@ -1028,7 +1060,7 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 	data, err := u.ParseJSONResponse(res.RawResponse)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error":         fmt.Sprintf("%v", err),
+			"Error": fmt.Sprintf("%v", err),
 		}).Errorf("failed to parse node info: %v", err)
 		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
 		return
@@ -1056,7 +1088,7 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 	}
 
 	for _, currency := range provider.Edges.Currencies {
-		if !utils.ContainsString(currencyCodes, currency.Code) {
+		if !u.ContainsString(currencyCodes, currency.Code) {
 			u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
 			return
 		}
@@ -1074,8 +1106,8 @@ func (ctrl *ProviderController) GetLockPaymentOrderByID(ctx *gin.Context) {
 	id, err := uuid.Parse(orderID)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error":         fmt.Sprintf("%v", err),
-			"Order ID":      orderID,
+			"Error":    fmt.Sprintf("%v", err),
+			"Order ID": orderID,
 		}).Errorf("Failed to parse order ID: %v", err)
 		u.APIResponse(ctx, http.StatusBadRequest, "error",
 			"Invalid order ID", nil)
@@ -1106,8 +1138,8 @@ func (ctrl *ProviderController) GetLockPaymentOrderByID(ctx *gin.Context) {
 
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error":         fmt.Sprintf("%v", err),
-			"Order ID":      orderID,
+			"Error":    fmt.Sprintf("%v", err),
+			"Order ID": orderID,
 		}).Errorf("Failed to fetch locked payment order: %v", err)
 		u.APIResponse(ctx, http.StatusNotFound, "error",
 			"Payment order not found", nil)

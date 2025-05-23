@@ -1516,7 +1516,7 @@ func (s *IndexerService) UpdateOrderStatusRefunded(ctx context.Context, network 
 		paymentOrder.TxHash = log.TxHash
 
 		// Send webhook notification to sender
-		err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
+		err = utils.SendPaymentOrderWebhook(ctx, paymentOrder, false)
 		if err != nil {
 			return fmt.Errorf("UpdateOrderStatusRefunded.webhook: %v", err)
 		}
@@ -1667,7 +1667,7 @@ func (s *IndexerService) UpdateOrderStatusSettled(ctx context.Context, network *
 		paymentOrder.TxHash = event.TxHash
 
 		// Send webhook notification to sender
-		err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
+		err = utils.SendPaymentOrderWebhook(ctx, paymentOrder, false)
 		if err != nil {
 			return fmt.Errorf("UpdateOrderStatusSettled.webhook: %v", err)
 		}

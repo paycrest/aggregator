@@ -194,7 +194,7 @@ func (s *OrderTron) CreateOrder(ctx context.Context, client types.RPCClient, ord
 	}
 
 	// Send webhook notifcation to sender
-	err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
+	err = utils.SendPaymentOrderWebhook(ctx, paymentOrder, false)
 	if err != nil {
 		return fmt.Errorf("%s - Tron.CreateOrder.webhook: %w", orderIDPrefix, err)
 	}
