@@ -210,6 +210,8 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 	switch paymentOrder.Status {
 	case paymentorder.StatusPending:
 		event = "payment_order.pending"
+	case paymentorder.StatusValidated:
+		event = "payment_order.validated"
 	case paymentorder.StatusExpired:
 		event = "payment_order.expired"
 	case paymentorder.StatusSettled:
@@ -221,18 +223,24 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 	}
 
 	// Fetch the recipient
-	recipient, err := paymentOrder.QueryRecipient().Only(ctx)
-	if err != nil {
-		return err
+	recipient := paymentOrder.Edges.Recipient
+	if recipient == nil {
+		recipient, err = paymentOrder.QueryRecipient().Only(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Fetch the token
-	token, err := paymentOrder.
-		QueryToken().
-		WithNetwork().
-		Only(ctx)
-	if err != nil {
-		return err
+	token := paymentOrder.Edges.Token
+	if token == nil {
+		token, err = paymentOrder.
+			QueryToken().
+			WithNetwork().
+			Only(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	institution, err := storage.Client.Institution.
