@@ -431,8 +431,8 @@ type NewPaymentOrderPayload struct {
 	FeePercent              decimal.Decimal       `json:"feePercent"`
 	FeeAddress              string                `json:"feeAddress"`
 	IsIntentBased           bool                  `json:"isIntentBased"`
-	IntentNetworkIdentifier string                `json:"intentNetworkIdentifier" binding:"required_if=IsIntentBased true"`
-	Slippage                int                   `json:"slippage" binding:"required_if=IsIntentBased true"`
+	IntentNetworkIdentifier string                `json:"intentNetworkIdentifier"`
+	Slippage                int                   `json:"slippage"`
 }
 
 // ReceiveAddressResponse is the response type for a receive address
