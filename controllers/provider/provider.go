@@ -14,7 +14,6 @@ import (
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
-	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/token"
@@ -290,6 +289,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		AccountIdentifier: order.AccountIdentifier,
 		AccountName:       order.AccountName,
 		Memo:              order.Memo,
+		Metadata:          order.Metadata,
 	})
 }
 
@@ -497,33 +497,34 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			return
 		}
 
-		// Send webhook notification to sender
+		// Mark payment order as validated and send webhook notification to sender
 		paymentOrder, err := storage.Client.PaymentOrder.
 			Query().
-			Where(
-				paymentorder.GatewayIDEQ(fulfillment.Edges.Order.GatewayID),
-				paymentorder.HasTokenWith(
-					token.HasNetworkWith(
-						network.IdentifierEQ(fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier),
-					),
-				),
-			).
+			Where(paymentorder.GatewayIDEQ(fulfillment.Edges.Order.GatewayID)).
+			WithSenderProfile().
 			WithRecipient().
 			WithToken(func(tq *ent.TokenQuery) {
 				tq.WithNetwork()
 			}).
 			Only(ctx)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":  fmt.Sprintf("%v", err),
-				"Trx Id": payload.TxID,
-			}).Errorf("Failed to fetch payment order: %v", err)
-		} else {
-			err = u.SendPaymentOrderWebhook(ctx, paymentOrder, true)
+		if err == nil && paymentOrder != nil {
+			_, err = paymentOrder.Update().
+				SetStatus(paymentorder.StatusValidated).
+				Save(ctx)
 			if err != nil {
 				logger.WithFields(logger.Fields{
-					"Error":  fmt.Sprintf("%v", err),
-					"Trx Id": payload.TxID,
+					"Error":   fmt.Sprintf("%v", err),
+					"Trx Id":  payload.TxID,
+					"Network": paymentOrder.Edges.Token.Edges.Network.Identifier,
+				}).Errorf("Failed to update payment order status: %v", err)
+			}
+
+			err = u.SendPaymentOrderWebhook(ctx, paymentOrder)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":   fmt.Sprintf("%v", err),
+					"Trx Id":  payload.TxID,
+					"Network": paymentOrder.Edges.Token.Edges.Network.Identifier,
 				}).Errorf("Failed to send webhook notification to sender: %v", err)
 			}
 		}

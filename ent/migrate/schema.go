@@ -251,7 +251,7 @@ var (
 		{Name: "fee_address", Type: field.TypeString, Nullable: true, Size: 60},
 		{Name: "gateway_id", Type: field.TypeString, Nullable: true, Size: 70},
 		{Name: "reference", Type: field.TypeString, Nullable: true, Size: 70},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"initiated", "pending", "expired", "settled", "refunded"}, Default: "initiated"},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"initiated", "pending", "validated", "expired", "settled", "refunded"}, Default: "initiated"},
 		{Name: "api_key_payment_orders", Type: field.TypeUUID, Nullable: true},
 		{Name: "linked_address_payment_orders", Type: field.TypeInt, Nullable: true},
 		{Name: "sender_profile_payment_orders", Type: field.TypeUUID, Nullable: true},

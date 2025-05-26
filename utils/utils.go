@@ -21,7 +21,6 @@ import (
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
-	"github.com/paycrest/aggregator/ent/institution"
 	institutionEnt "github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/storage"
@@ -191,7 +190,7 @@ func AbsPercentageDeviation(trueValue, measuredValue decimal.Decimal) decimal.De
 }
 
 // SendPaymentOrderWebhook notifies a sender when the status of a payment order changes
-func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder, isValidated bool) error {
+func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder) error {
 	var err error
 
 	profile := paymentOrder.Edges.SenderProfile
@@ -209,11 +208,9 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 
 	switch paymentOrder.Status {
 	case paymentorder.StatusPending:
-		if isValidated {
-			event = "payment_order.validated"
-		} else {
-			event = "payment_order.pending"
-		}
+		event = "payment_order.pending"
+	case paymentorder.StatusValidated:
+		event = "payment_order.validated"
 	case paymentorder.StatusExpired:
 		event = "payment_order.expired"
 	case paymentorder.StatusSettled:
@@ -587,7 +584,7 @@ func GetTokenRateFromQueue(tokenSymbol string, orderAmount decimal.Decimal, fiat
 func GetInstitutionByCode(ctx context.Context, institutionCode string, enabledFiatCurrency bool) (*ent.Institution, error) {
 	institutionQuery := storage.Client.Institution.
 		Query().
-		Where(institution.CodeEQ(institutionCode))
+		Where(institutionEnt.CodeEQ(institutionCode))
 
 	if enabledFiatCurrency {
 		institutionQuery = institutionQuery.WithFiatCurrency(

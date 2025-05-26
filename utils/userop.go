@@ -235,7 +235,6 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 		userOp.VerificationGasLimit = decimal.NewFromFloat(response["verificationGasLimit"].(float64)).BigInt()
 		userOp.CallGasLimit = decimal.NewFromFloat(response["callGasLimit"].(float64)).BigInt()
 
-
 	case "thirdweb":
 		userOp.CallGasLimit, _ = new(big.Int).SetString(response["callGasLimit"].(string), 0)
 		userOp.VerificationGasLimit, _ = new(big.Int).SetString(response["verificationGasLimit"].(string), 0)
@@ -309,7 +308,6 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 		if err != nil {
 			return "", "", 0, fmt.Errorf("failed to connect to RPC client: %w", err)
 		}
-
 
 		requestParams = []interface{}{
 			userOp,
@@ -395,15 +393,19 @@ func GetUserOperationByReceipt(userOpHash string, chainId int64) (map[string]int
 	}
 
 	start := time.Now()
-	timeout := 10 * time.Minute
+	timeout := 1 * time.Minute
 
 	var response map[string]interface{}
 	for {
-		time.Sleep(10 * time.Second)
+		time.Sleep(5 * time.Second)
 		var result json.RawMessage
 		err = client.Call(&result, "eth_getUserOperationReceipt", []interface{}{userOpHash}...)
 		if err != nil {
 			return nil, fmt.Errorf("RPC error: %w", err)
+		}
+
+		if result == nil {
+			continue
 		}
 
 		err = json.Unmarshal(result, &response)
@@ -411,68 +413,78 @@ func GetUserOperationByReceipt(userOpHash string, chainId int64) (map[string]int
 			return nil, err
 		}
 
-		logs, ok := response["logs"].([]interface{})
+		// Check if operation was successful
+		var success bool
+		switch v := response["success"].(type) {
+		case bool:
+			success = v
+		case string:
+			success = v == "true"
+		default:
+			return nil, fmt.Errorf("unexpected type for success field: %T", response["success"])
+		}
+
+		if !success {
+			return nil, fmt.Errorf("user operation failed")
+		}
+
+		// Get receipt from the response
+		receipt, ok := response["receipt"].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("failed to get receipt")
+		}
+
+		// Get transaction hash and block number from receipt
+		transactionHash, ok := receipt["transactionHash"].(string)
+		if !ok {
+			return nil, fmt.Errorf("failed to get transaction hash")
+		}
+
+		blockNumber, ok := receipt["blockNumber"].(string)
+		if !ok {
+			return nil, fmt.Errorf("failed to get block number")
+		}
+
+		// Get logs from receipt
+		logs, ok := receipt["logs"].([]interface{})
 		if !ok {
 			return nil, fmt.Errorf("failed to get logs")
 		}
 
-		// Transaction hash is included in the logs
-		// based on the response, if logs is empty, then the response did not include the transaction hash
-		if response == nil || len(logs) == 0 {
+		// If logs is empty, continue waiting
+		if len(logs) == 0 {
 			elapsed := time.Since(start)
 			if elapsed >= timeout {
-				return nil, err
+				return nil, fmt.Errorf("timeout waiting for logs")
 			}
 			continue
 		}
 
-		break
-	}
-
-	userOpTransactionLogs, ok := response["logs"].([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("failed to get logs")
-	}
-	logMap, ok := userOpTransactionLogs[0].(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("failed to parse log entry")
-	}
-	transactionHash, ok := logMap["transactionHash"].(string)
-	if !ok {
-		return nil, fmt.Errorf("failed to get transaction hash from log entry")
-	}
-
-	blockNumber, ok := logMap["blockNumber"].(string)
-	if !ok {
-		return nil, fmt.Errorf("failed to get block number")
-	}
-
-	receipt := response["receipt"].(map[string]interface{})
-	var orderId string
-
-	// Iterate over logs to find the OrderCreated event
-	for _, event := range receipt["logs"].([]interface{}) {
-		eventData := event.(map[string]interface{})
-		if eventData["topics"].([]interface{})[0] == "0x40ccd1ceb111a3c186ef9911e1b876dc1f789ed331b86097b3b8851055b6a137" {
-			data := strings.TrimPrefix(eventData["data"].(string), "0x")
-			unpackedEventData, err := UnpackEventData(data, contracts.GatewayMetaData.ABI, "OrderCreated")
-			if err != nil {
-				return nil, fmt.Errorf("userop failed to unpack event data: %w %v", err, eventData)
+		var orderId string
+		// Iterate over logs to find the OrderCreated event
+		for _, event := range logs {
+			eventData := event.(map[string]interface{})
+			if eventData["topics"].([]interface{})[0] == "0x40ccd1ceb111a3c186ef9911e1b876dc1f789ed331b86097b3b8851055b6a137" {
+				data := strings.TrimPrefix(eventData["data"].(string), "0x")
+				unpackedEventData, err := UnpackEventData(data, contracts.GatewayMetaData.ABI, "OrderCreated")
+				if err != nil {
+					return nil, fmt.Errorf("userop failed to unpack event data: %w %v", err, eventData)
+				}
+				orderIdBytes := unpackedEventData[1].([32]byte)
+				orderId = "0x" + hex.EncodeToString(orderIdBytes[:])
+				if orderId == "" {
+					return nil, fmt.Errorf("failed to get order ID")
+				}
+				break
 			}
-			orderIdBytes := unpackedEventData[1].([32]byte)
-			orderId = "0x" + hex.EncodeToString(orderIdBytes[:])
-			if orderId == "" {
-				return nil, fmt.Errorf("failed to get order ID")
-			}
-			break
 		}
-	}
 
-	return map[string]interface{}{
-		"orderId":         orderId,
-		"blockNumber":     blockNumber,
-		"transactionHash": transactionHash,
-	}, nil
+		return map[string]interface{}{
+			"orderId":         orderId,
+			"blockNumber":     blockNumber,
+			"transactionHash": transactionHash,
+		}, nil
+	}
 }
 
 // GetPaymasterAccount returns the paymaster account for the given chain ID

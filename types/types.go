@@ -172,12 +172,13 @@ type LockOrderResponse struct {
 
 // AcceptOrderResponse is the response for the accept order endpoint
 type AcceptOrderResponse struct {
-	ID                uuid.UUID       `json:"id"`
-	Amount            decimal.Decimal `json:"amount"`
-	Institution       string          `json:"institution"`
-	AccountIdentifier string          `json:"accountIdentifier"`
-	AccountName       string          `json:"accountName"`
-	Memo              string          `json:"memo"`
+	ID                uuid.UUID              `json:"id"`
+	Amount            decimal.Decimal        `json:"amount"`
+	Institution       string                 `json:"institution"`
+	AccountIdentifier string                 `json:"accountIdentifier"`
+	AccountName       string                 `json:"accountName"`
+	Memo              string                 `json:"memo"`
+	Metadata          map[string]interface{} `json:"metadata"`
 }
 
 // FulfillLockOrderPayload is the payload for the fulfill order endpoint
