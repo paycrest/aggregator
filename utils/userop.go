@@ -25,6 +25,7 @@ import (
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
+	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/stackup-wallet/stackup-bundler/pkg/userop"
 )
 
@@ -404,6 +405,9 @@ func GetUserOperationByReceipt(userOpHash string, chainId int64) (map[string]int
 			return nil, fmt.Errorf("RPC error: %w", err)
 		}
 
+		op, _ := result.MarshalJSON()
+		logger.Errorf("result: %s", string(op))
+
 		err = json.Unmarshal(result, &response)
 		if err != nil {
 			return nil, err
@@ -412,7 +416,7 @@ func GetUserOperationByReceipt(userOpHash string, chainId int64) (map[string]int
 		// Check if operation was successful
 		success, ok := response["success"].(bool)
 		if !ok {
-			return nil, fmt.Errorf("failed to get success status %v", response)
+			return nil, fmt.Errorf("failed to get success status")
 		}
 
 		if !success {
