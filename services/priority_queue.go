@@ -372,7 +372,7 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 			"Error":      fmt.Sprintf("%v", err),
 			"OrderID":    order.ID.String(),
 			"ProviderID": order.ProviderID,
-			"orderKey":   orderKey,
+			"OrderKey":   orderKey,
 		}).Errorf("failed to map order to a provider in Redis")
 		return err
 	}

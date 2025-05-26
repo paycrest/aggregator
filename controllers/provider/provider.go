@@ -290,6 +290,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		AccountIdentifier: order.AccountIdentifier,
 		AccountName:       order.AccountName,
 		Memo:              order.Memo,
+		Metadata:          order.Metadata,
 	})
 }
 
