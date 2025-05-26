@@ -25,7 +25,6 @@ import (
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
-	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/stackup-wallet/stackup-bundler/pkg/userop"
 )
 
@@ -394,19 +393,20 @@ func GetUserOperationByReceipt(userOpHash string, chainId int64) (map[string]int
 	}
 
 	start := time.Now()
-	timeout := 2 * time.Minute
+	timeout := 1 * time.Minute
 
 	var response map[string]interface{}
 	for {
-		time.Sleep(10 * time.Second)
+		time.Sleep(5 * time.Second)
 		var result json.RawMessage
 		err = client.Call(&result, "eth_getUserOperationReceipt", []interface{}{userOpHash}...)
 		if err != nil {
 			return nil, fmt.Errorf("RPC error: %w", err)
 		}
 
-		op, _ := result.MarshalJSON()
-		logger.Errorf("result: %s", string(op))
+		if result == nil {
+			continue
+		}
 
 		err = json.Unmarshal(result, &response)
 		if err != nil {
@@ -414,9 +414,14 @@ func GetUserOperationByReceipt(userOpHash string, chainId int64) (map[string]int
 		}
 
 		// Check if operation was successful
-		success, ok := response["success"].(bool)
-		if !ok {
-			return nil, fmt.Errorf("failed to get success status")
+		var success bool
+		switch v := response["success"].(type) {
+		case bool:
+			success = v
+		case string:
+			success = v == "true"
+		default:
+			return nil, fmt.Errorf("unexpected type for success field: %T", response["success"])
 		}
 
 		if !success {
