@@ -412,7 +412,7 @@ func GetUserOperationByReceipt(userOpHash string, chainId int64) (map[string]int
 		// Check if operation was successful
 		success, ok := response["success"].(bool)
 		if !ok {
-			return nil, fmt.Errorf("failed to get success status")
+			return nil, fmt.Errorf("failed to get success status %v", response)
 		}
 
 		if !success {
