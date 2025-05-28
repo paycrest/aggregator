@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -46,11 +45,8 @@ var serverConf = config.ServerConfig()
 type Indexer interface {
 	IndexERC20Transfer(ctx context.Context, client types.RPCClient, order *ent.PaymentOrder, token *ent.Token, startBlock int64) error
 	IndexTRC20Transfer(ctx context.Context, order *ent.PaymentOrder) error
-	IndexOrderCreated(ctx context.Context, client types.RPCClient, network *ent.Network) error
 	IndexOrderCreatedTron(ctx context.Context, order *ent.PaymentOrder) error
-	IndexOrderSettled(ctx context.Context, client types.RPCClient, network *ent.Network) error
 	IndexOrderSettledTron(ctx context.Context, order *ent.LockPaymentOrder) error
-	IndexOrderRefunded(ctx context.Context, client types.RPCClient, network *ent.Network) error
 	IndexOrderRefundedTron(ctx context.Context, order *ent.LockPaymentOrder) error
 	HandleReceiveAddressValidity(ctx context.Context, client types.RPCClient, receiveAddress *ent.ReceiveAddress, paymentOrder *ent.PaymentOrder) error
 	CreateLockPaymentOrder(ctx context.Context, client types.RPCClient, network *ent.Network, event *types.OrderCreatedEvent) error
@@ -181,7 +177,7 @@ func (s *IndexerService) IndexERC20Transfer(ctx context.Context, client types.RP
 
 		// Create a new payment order from the transfer event to the linked address
 		if linkedAddress != nil {
-			orderAmount := utils.FromSubunit(transferEvent.Value, token.Decimals)
+			orderAmount := transferEvent.Value
 			// Check if the payment order already exists
 			paymentOrderExists := true
 			_, err := db.Client.PaymentOrder.
@@ -440,11 +436,11 @@ func (s *IndexerService) IndexTRC20Transfer(ctx context.Context, order *ent.Paym
 
 			if data["blockNumber"] != nil {
 				transferEvent := &types.TokenTransferEvent{
-					BlockNumber: uint64(data["blockNumber"].(float64)),
+					BlockNumber: int64(data["blockNumber"].(float64)),
 					TxHash:      eventData["transaction_id"].(string),
 					From:        eventData["from"].(string),
 					To:          eventData["to"].(string),
-					Value:       value.BigInt(),
+					Value:       utils.FromSubunit(value.BigInt(), order.Edges.Token.Decimals),
 				}
 
 				go func() {
@@ -457,86 +453,6 @@ func (s *IndexerService) IndexTRC20Transfer(ctx context.Context, order *ent.Paym
 					}
 				}()
 			}
-		}
-	}
-
-	return nil
-}
-
-// IndexOrderCreated indexes deposits to the order contract for an EVM network.
-func (s *IndexerService) IndexOrderCreated(ctx context.Context, client types.RPCClient, network *ent.Network) error {
-	var err error
-
-	// Connect to RPC endpoint
-	if client == nil {
-		client, err = types.NewEthClient(network.RPCEndpoint)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Initialize contract filterer
-	filterer, err := contracts.NewGatewayFilterer(common.HexToAddress(network.GatewayContractAddress), client)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error": fmt.Sprintf("%v", err),
-		}).Errorf("Failed to create gateway filterer when indexing order created events for %s", network.Identifier)
-		return err
-	}
-
-	// Fetch current block header
-	header, err := client.HeaderByNumber(ctx, nil)
-	if err != nil {
-		if err != context.Canceled {
-			logger.WithFields(logger.Fields{
-				"Error": fmt.Sprintf("%v", err),
-			}).Errorf("Failed to fetch current block header for %s when indexing order created events", network.Identifier)
-		}
-		return err
-	}
-	toBlock := header.Number.Uint64()
-
-	// Fetch logs
-	var iter *contracts.GatewayOrderCreatedIterator
-	fromBlock := int64(100000)
-	if network.Identifier == "bnb-smart-chain" {
-		fromBlock = 10000
-	}
-	iter, err = filterer.FilterOrderCreated(&bind.FilterOpts{
-		Start: uint64(int64(toBlock) - fromBlock),
-		End:   &toBlock,
-	}, nil, nil, nil)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error": fmt.Sprintf("%v", err),
-			"Start": uint64(int64(toBlock) - fromBlock),
-			"End":   toBlock,
-		}).Errorf("Failed to filter order created events for %s when indexing order created events", network.Identifier)
-		return err
-	}
-
-	// Iterate over logs
-	for iter.Next() {
-		event := &types.OrderCreatedEvent{
-			BlockNumber: iter.Event.Raw.BlockNumber,
-			TxHash:      iter.Event.Raw.TxHash.Hex(),
-			Token:       iter.Event.Token.Hex(),
-			Amount:      iter.Event.Amount,
-			ProtocolFee: iter.Event.ProtocolFee,
-			OrderId:     iter.Event.OrderId,
-			Rate:        iter.Event.Rate,
-			MessageHash: iter.Event.MessageHash,
-		}
-
-		err := s.CreateLockPaymentOrder(ctx, client, network, event)
-		if err != nil {
-			if !strings.Contains(fmt.Sprintf("%v", err), "duplicate key value violates unique constraint") {
-				logger.WithFields(logger.Fields{
-					"Error":   fmt.Sprintf("%v", err),
-					"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(event.OrderId[:])),
-				}).Errorf("Failed to create lock payment order when indexing order created events for %s", network.Identifier)
-			}
-			continue
 		}
 	}
 
@@ -593,22 +509,24 @@ func (s *IndexerService) IndexOrderCreatedTron(ctx context.Context, order *ent.P
 						return err
 					}
 
+					eventOrderId := unpackedEventData[1].([32]byte)
 					event := &types.OrderCreatedEvent{
-						BlockNumber: uint64(data["blockNumber"].(float64)),
+						BlockNumber: int64(data["blockNumber"].(float64)),
 						TxHash:      data["id"].(string),
 						Token:       utils.ParseTopicToTronAddress(eventData["topics"].([]interface{})[2].(string)),
-						Amount:      utils.ParseTopicToBigInt(eventData["topics"].([]interface{})[3].(string)),
-						ProtocolFee: unpackedEventData[0].(*big.Int),
-						OrderId:     unpackedEventData[1].([32]byte),
-						Rate:        unpackedEventData[2].(*big.Int),
+						Amount:      utils.FromSubunit(utils.ParseTopicToBigInt(eventData["topics"].([]interface{})[3].(string)), order.Edges.Token.Decimals),
+						ProtocolFee: utils.FromSubunit(unpackedEventData[0].(*big.Int), order.Edges.Token.Decimals),
+						OrderId:     fmt.Sprintf("0x%v", hex.EncodeToString(eventOrderId[:])),
+						Rate:        utils.FromSubunit(unpackedEventData[2].(*big.Int), 2),
 						MessageHash: unpackedEventData[3].(string),
+						Sender:      utils.ParseTopicToTronAddress(eventData["topics"].([]interface{})[1].(string)),
 					}
 
 					err = s.CreateLockPaymentOrder(ctx, nil, order.Edges.Token.Edges.Network, event)
 					if err != nil {
 						logger.WithFields(logger.Fields{
 							"Error":   fmt.Sprintf("%v", err),
-							"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(event.OrderId[:])),
+							"OrderID": event.OrderId,
 						}).Errorf("Failed to create lock payment order when indexing order created events for %s", order.Edges.Token.Edges.Network.Identifier)
 					}
 
@@ -617,78 +535,6 @@ func (s *IndexerService) IndexOrderCreatedTron(ctx context.Context, order *ent.P
 			}
 
 			break
-		}
-	}
-
-	return nil
-}
-
-// IndexOrderSettled indexes order settlements for an EVM network.
-func (s *IndexerService) IndexOrderSettled(ctx context.Context, client types.RPCClient, network *ent.Network) error {
-	var err error
-
-	// Connect to RPC endpoint
-	if client == nil {
-		client, err = types.NewEthClient(network.RPCEndpoint)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Initialize contract filterer
-	filterer, err := contracts.NewGatewayFilterer(common.HexToAddress(network.GatewayContractAddress), client)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error": fmt.Sprintf("%v", err),
-		}).Errorf("Failed to filterer when indexing order settled events for %s", network.Identifier)
-		return err
-	}
-
-	// Filter logs from the oldest indexed to the latest
-	header, err := client.HeaderByNumber(ctx, nil)
-	if err != nil {
-		if err != context.Canceled {
-			logger.WithFields(logger.Fields{
-				"Error": fmt.Sprintf("%v", err),
-			}).Errorf("Failed to fetch header by number when indexing order created events for %s", network.Identifier)
-		}
-		return err
-	}
-	toBlock := header.Number.Uint64()
-
-	// Fetch logs
-	var iter *contracts.GatewayOrderSettledIterator
-	iter, err = filterer.FilterOrderSettled(&bind.FilterOpts{
-		Start: uint64(int64(toBlock) - 5000),
-		End:   &toBlock,
-	}, nil, nil)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error": fmt.Sprintf("%v", err),
-			"Start": uint64(int64(toBlock) - 5000),
-			"End":   toBlock,
-		}).Errorf("Failed to filter order settled events for %s when indexing order settled events", network.Identifier)
-		return err
-	}
-
-	// Iterate over logs
-	for iter.Next() {
-		settledEvent := &types.OrderSettledEvent{
-			BlockNumber:       iter.Event.Raw.BlockNumber,
-			TxHash:            iter.Event.Raw.TxHash.Hex(),
-			SplitOrderId:      iter.Event.SplitOrderId,
-			OrderId:           iter.Event.OrderId,
-			LiquidityProvider: iter.Event.LiquidityProvider.Hex(),
-			SettlePercent:     iter.Event.SettlePercent,
-		}
-
-		err := s.UpdateOrderStatusSettled(ctx, network, settledEvent)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":   fmt.Sprintf("%v", err),
-				"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(settledEvent.OrderId[:])),
-			}).Errorf("Failed to update order status settlement when indexing order settled events for %s", network.Identifier)
-			continue
 		}
 	}
 
@@ -751,13 +597,15 @@ func (s *IndexerService) IndexOrderSettledTron(ctx context.Context, order *ent.L
 						return err
 					}
 
+					eventSplitOrderId := unpackedEventData[0].([32]byte)
+					eventOrderId := utils.ParseTopicToByte32(eventData["topics"].([]interface{})[1].(string))
 					event := &types.OrderSettledEvent{
-						BlockNumber:       uint64(data["blockNumber"].(float64)),
+						BlockNumber:       int64(data["blockNumber"].(float64)),
 						TxHash:            data["id"].(string),
-						SplitOrderId:      unpackedEventData[0].([32]byte),
-						OrderId:           utils.ParseTopicToByte32(eventData["topics"].([]interface{})[1].(string)),
-						LiquidityProvider: eventData["topics"].([]interface{})[2].(string),
-						SettlePercent:     unpackedEventData[1].(*big.Int),
+						SplitOrderId:      fmt.Sprintf("0x%v", hex.EncodeToString(eventSplitOrderId[:])),
+						OrderId:           fmt.Sprintf("0x%v", hex.EncodeToString(eventOrderId[:])),
+						LiquidityProvider: utils.ParseTopicToTronAddress(eventData["topics"].([]interface{})[2].(string)),
+						SettlePercent:     decimal.NewFromBigInt(unpackedEventData[1].(*big.Int), 0),
 					}
 
 					err = s.UpdateOrderStatusSettled(ctx, order.Edges.Token.Edges.Network, event)
@@ -773,77 +621,6 @@ func (s *IndexerService) IndexOrderSettledTron(ctx context.Context, order *ent.L
 			}
 
 			break
-		}
-	}
-
-	return nil
-}
-
-// IndexOrderRefunded indexes order refunds for an EVM network.
-func (s *IndexerService) IndexOrderRefunded(ctx context.Context, client types.RPCClient, network *ent.Network) error {
-	var err error
-
-	// Connect to RPC endpoint
-	if client == nil {
-		client, err = types.NewEthClient(network.RPCEndpoint)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Initialize contract filterer
-	filterer, err := contracts.NewGatewayFilterer(common.HexToAddress(network.GatewayContractAddress), client)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error": fmt.Sprintf("%v", err),
-		}).Errorf("Failed to filter when indexing order refunded events for %s", network.Identifier)
-		return err
-	}
-
-	// Filter logs from the oldest indexed to the latest
-	header, err := client.HeaderByNumber(ctx, nil)
-	if err != nil {
-		if err != context.Canceled {
-			logger.WithFields(logger.Fields{
-				"Error": fmt.Sprintf("%v", err),
-			}).Errorf("Failed to fetch header by number when indexing order refunded events for %s", network.Identifier)
-		}
-		return err
-	}
-	toBlock := header.Number.Uint64()
-
-	// Fetch logs
-	var iter *contracts.GatewayOrderRefundedIterator
-	iter, err = filterer.FilterOrderRefunded(&bind.FilterOpts{
-		Start: uint64(int64(toBlock) - 5000),
-		End:   &toBlock,
-	}, nil)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error": fmt.Sprintf("%v", err),
-			"Start": uint64(int64(toBlock) - 5000),
-			"End":   toBlock,
-		}).Errorf("Failed to filter order refunded events for %s when indexing order refunded events", network.Identifier)
-		return err
-	}
-
-	// Iterate over logs
-	for iter.Next() {
-		refundedEvent := &types.OrderRefundedEvent{
-			BlockNumber: iter.Event.Raw.BlockNumber,
-			TxHash:      iter.Event.Raw.TxHash.Hex(),
-			Fee:         iter.Event.Fee,
-			OrderId:     iter.Event.OrderId,
-		}
-
-		err := s.UpdateOrderStatusRefunded(ctx, network, refundedEvent)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":   fmt.Sprintf("%v", err),
-				"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(refundedEvent.OrderId[:])),
-				"TxHash":  refundedEvent.TxHash,
-			}).Errorf("Failed to update order status refund when indexing order refunded events for %s", network.Identifier)
-			continue
 		}
 	}
 
@@ -906,18 +683,19 @@ func (s *IndexerService) IndexOrderRefundedTron(ctx context.Context, order *ent.
 						return err
 					}
 
+					eventOrderId := utils.ParseTopicToByte32(eventData["topics"].([]interface{})[1].(string))
 					event := &types.OrderRefundedEvent{
-						BlockNumber: uint64(data["blockNumber"].(float64)),
+						BlockNumber: int64(data["blockNumber"].(float64)),
 						TxHash:      data["id"].(string),
-						OrderId:     eventData["topics"].([]interface{})[1].([32]byte),
-						Fee:         unpackedEventData[0].(*big.Int),
+						OrderId:     fmt.Sprintf("0x%v", hex.EncodeToString(eventOrderId[:])),
+						Fee:         utils.FromSubunit(unpackedEventData[0].(*big.Int), order.Edges.Token.Decimals),
 					}
 
 					err = s.UpdateOrderStatusRefunded(ctx, order.Edges.Token.Edges.Network, event)
 					if err != nil {
 						logger.WithFields(logger.Fields{
 							"Error":   fmt.Sprintf("%v", err),
-							"OrderID": fmt.Sprintf("0x%v", hex.EncodeToString(event.OrderId[:])),
+							"OrderID": event.OrderId,
 							"TxHash":  event.TxHash,
 						}).Errorf("Failed to update order status refund when indexing order refunded events for %s", order.Edges.Token.Edges.Network.Identifier)
 					}
@@ -977,15 +755,13 @@ func (s *IndexerService) HandleReceiveAddressValidity(ctx context.Context, clien
 
 // CreateLockPaymentOrder saves a lock payment order in the database
 func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client types.RPCClient, network *ent.Network, event *types.OrderCreatedEvent) error {
-	gatewayId := fmt.Sprintf("0x%v", hex.EncodeToString(event.OrderId[:]))
-
 	// Check for existing address with txHash
 	orderCount, err := db.Client.LockPaymentOrder.
 		Query().
 		Where(
 			lockpaymentorder.Or(
 				lockpaymentorder.TxHashEQ(event.TxHash),
-				lockpaymentorder.GatewayIDEQ(gatewayId),
+				lockpaymentorder.GatewayIDEQ(event.OrderId),
 			),
 			lockpaymentorder.HasTokenWith(
 				tokenEnt.HasNetworkWith(
@@ -1028,7 +804,7 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 				Update().
 				Where(paymentorder.IDEQ(paymentOrder.ID)).
 				SetBlockNumber(int64(event.BlockNumber)).
-				SetGatewayID(gatewayId).
+				SetGatewayID(event.OrderId).
 				Save(ctx)
 			if err != nil {
 				return fmt.Errorf("CreateLockPaymentOrder.db: %v", err)
@@ -1054,13 +830,12 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 	}
 
 	// Get order recipient from message hash
-	recipient, err := s.getOrderRecipientFromMessageHash(event.MessageHash)
+	recipient, err := cryptoUtils.GetOrderRecipientFromMessageHash(event.MessageHash)
 	if err != nil {
 		return nil
 	}
 
 	// Get provision bucket
-	amountInDecimals := utils.FromSubunit(event.Amount, token.Decimals)
 	institution, err := utils.GetInstitutionByCode(ctx, recipient.Institution, true)
 	if err != nil {
 		return nil
@@ -1077,13 +852,11 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 		return nil
 	}
 
-	rate := decimal.NewFromBigInt(event.Rate, -2)
-
-	provisionBucket, isLessThanMin, err := s.getProvisionBucket(ctx, amountInDecimals.Mul(rate), currency)
+	provisionBucket, isLessThanMin, err := s.getProvisionBucket(ctx, event.Amount.Mul(event.Rate), currency)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":    fmt.Sprintf("%v", err),
-			"Amount":   amountInDecimals,
+			"Amount":   event.Amount,
 			"Currency": currency,
 		}).Errorf("failed to fetch provision bucket when creating lock payment order")
 	}
@@ -1092,9 +865,9 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 	lockPaymentOrder := types.LockPaymentOrderFields{
 		Token:             token,
 		Network:           network,
-		GatewayID:         gatewayId,
-		Amount:            amountInDecimals,
-		Rate:              rate,
+		GatewayID:         event.OrderId,
+		Amount:            event.Amount,
+		Rate:              event.Rate,
 		BlockNumber:       int64(event.BlockNumber),
 		TxHash:            event.TxHash,
 		Institution:       recipient.Institution,
@@ -1382,15 +1155,13 @@ func (s *IndexerService) handleCancellation(ctx context.Context, client types.RP
 }
 
 // UpdateOrderStatusRefunded updates the status of a payment order to refunded
-func (s *IndexerService) UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, log *types.OrderRefundedEvent) error {
-	gatewayId := fmt.Sprintf("0x%v", hex.EncodeToString(log.OrderId[:]))
-
+func (s *IndexerService) UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event *types.OrderRefundedEvent) error {
 	// Fetch payment order
 	paymentOrderExists := true
 	paymentOrder, err := db.Client.PaymentOrder.
 		Query().
 		Where(
-			paymentorder.GatewayIDEQ(gatewayId),
+			paymentorder.GatewayIDEQ(event.OrderId),
 			paymentorder.HasTokenWith(
 				tokenEnt.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
@@ -1420,14 +1191,14 @@ func (s *IndexerService) UpdateOrderStatusRefunded(ctx context.Context, network 
 		Update().
 		Where(
 			transactionlog.StatusEQ(transactionlog.StatusOrderRefunded),
-			transactionlog.GatewayIDEQ(gatewayId),
+			transactionlog.GatewayIDEQ(event.OrderId),
 			transactionlog.NetworkEQ(network.Identifier),
 		).
-		SetTxHash(log.TxHash).
+		SetTxHash(event.TxHash).
 		SetMetadata(
 			map[string]interface{}{
-				"GatewayID":       gatewayId,
-				"TransactionData": log,
+				"GatewayID":       event.OrderId,
+				"TransactionData": event,
 			}).
 		Save(ctx)
 	if err != nil {
@@ -1439,13 +1210,13 @@ func (s *IndexerService) UpdateOrderStatusRefunded(ctx context.Context, network 
 		transactionLog, err = tx.TransactionLog.
 			Create().
 			SetStatus(transactionlog.StatusOrderRefunded).
-			SetTxHash(log.TxHash).
-			SetGatewayID(gatewayId).
+			SetTxHash(event.TxHash).
+			SetGatewayID(event.OrderId).
 			SetNetwork(network.Identifier).
 			SetMetadata(
 				map[string]interface{}{
-					"GatewayID":       gatewayId,
-					"TransactionData": log,
+					"GatewayID":       event.OrderId,
+					"TransactionData": event,
 				}).
 			Save(ctx)
 		if err != nil {
@@ -1457,15 +1228,15 @@ func (s *IndexerService) UpdateOrderStatusRefunded(ctx context.Context, network 
 	lockPaymentOrderUpdate := tx.LockPaymentOrder.
 		Update().
 		Where(
-			lockpaymentorder.GatewayIDEQ(gatewayId),
+			lockpaymentorder.GatewayIDEQ(event.OrderId),
 			lockpaymentorder.HasTokenWith(
 				tokenEnt.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
 				),
 			),
 		).
-		SetBlockNumber(int64(log.BlockNumber)).
-		SetTxHash(log.TxHash).
+		SetBlockNumber(event.BlockNumber).
+		SetTxHash(event.TxHash).
 		SetStatus(lockpaymentorder.StatusRefunded)
 
 	if transactionLog != nil {
@@ -1482,14 +1253,14 @@ func (s *IndexerService) UpdateOrderStatusRefunded(ctx context.Context, network 
 		paymentOrderUpdate := tx.PaymentOrder.
 			Update().
 			Where(
-				paymentorder.GatewayIDEQ(gatewayId),
+				paymentorder.GatewayIDEQ(event.OrderId),
 				paymentorder.HasTokenWith(
 					tokenEnt.HasNetworkWith(
 						networkent.IdentifierEQ(network.Identifier),
 					),
 				),
 			).
-			SetTxHash(log.TxHash).
+			SetTxHash(event.TxHash).
 			SetStatus(paymentorder.StatusRefunded)
 
 		if paymentOrder.Edges.LinkedAddress != nil {
@@ -1513,7 +1284,7 @@ func (s *IndexerService) UpdateOrderStatusRefunded(ctx context.Context, network 
 
 	if paymentOrderExists && paymentOrder.Status != paymentorder.StatusRefunded {
 		paymentOrder.Status = paymentorder.StatusRefunded
-		paymentOrder.TxHash = log.TxHash
+		paymentOrder.TxHash = event.TxHash
 
 		// Send webhook notification to sender
 		err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
@@ -1527,14 +1298,12 @@ func (s *IndexerService) UpdateOrderStatusRefunded(ctx context.Context, network 
 
 // UpdateOrderStatusSettled updates the status of a payment order to settled
 func (s *IndexerService) UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *types.OrderSettledEvent) error {
-	gatewayId := fmt.Sprintf("0x%v", hex.EncodeToString(event.OrderId[:]))
-
 	// Fetch payment order
 	paymentOrderExists := true
 	paymentOrder, err := db.Client.PaymentOrder.
 		Query().
 		Where(
-			paymentorder.GatewayIDEQ(gatewayId),
+			paymentorder.GatewayIDEQ(event.OrderId),
 			paymentorder.HasTokenWith(
 				tokenEnt.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
@@ -1563,12 +1332,12 @@ func (s *IndexerService) UpdateOrderStatusSettled(ctx context.Context, network *
 		Update().
 		Where(
 			transactionlog.StatusEQ(transactionlog.StatusOrderSettled),
-			transactionlog.GatewayIDEQ(gatewayId),
+			transactionlog.GatewayIDEQ(event.OrderId),
 			transactionlog.NetworkEQ(network.Identifier),
 		).
 		SetTxHash(event.TxHash).
 		SetMetadata(map[string]interface{}{
-			"GatewayID":       gatewayId,
+			"GatewayID":       event.OrderId,
 			"TransactionData": event,
 		}).
 		Save(ctx)
@@ -1582,10 +1351,10 @@ func (s *IndexerService) UpdateOrderStatusSettled(ctx context.Context, network *
 			Create().
 			SetStatus(transactionlog.StatusOrderSettled).
 			SetTxHash(event.TxHash).
-			SetGatewayID(gatewayId).
+			SetGatewayID(event.OrderId).
 			SetNetwork(network.Identifier).
 			SetMetadata(map[string]interface{}{
-				"GatewayID":       gatewayId,
+				"GatewayID":       event.OrderId,
 				"TransactionData": event,
 			}).
 			Save(ctx)
@@ -1595,7 +1364,7 @@ func (s *IndexerService) UpdateOrderStatusSettled(ctx context.Context, network *
 	}
 
 	// Aggregator side status update
-	splitOrderId, _ := uuid.Parse(utils.Byte32ToString(event.SplitOrderId))
+	splitOrderId, _ := uuid.Parse(event.SplitOrderId)
 	lockPaymentOrderUpdate := tx.LockPaymentOrder.
 		Update().
 		Where(
@@ -1625,13 +1394,13 @@ func (s *IndexerService) UpdateOrderStatusSettled(ctx context.Context, network *
 		paymentOrderUpdate := tx.PaymentOrder.
 			Update().
 			Where(
-				paymentorder.GatewayIDEQ(gatewayId),
+				paymentorder.GatewayIDEQ(event.OrderId),
 			).
 			SetBlockNumber(int64(event.BlockNumber)).
 			SetTxHash(event.TxHash)
 
 		// Convert settled percent to BPS and update
-		settledPercent = paymentOrder.PercentSettled.Add(decimal.NewFromBigInt(event.SettlePercent, 0).Div(decimal.NewFromInt(1000)))
+		settledPercent = paymentOrder.PercentSettled.Add(event.SettlePercent.Div(decimal.NewFromInt(1000)))
 
 		// If settled percent is 100%, mark order as settled
 		if settledPercent.GreaterThanOrEqual(decimal.NewFromInt(100)) {
@@ -1676,32 +1445,6 @@ func (s *IndexerService) UpdateOrderStatusSettled(ctx context.Context, network *
 	return nil
 }
 
-// getOrderRecipientFromMessageHash decrypts the message hash and returns the order recipient
-func (s *IndexerService) getOrderRecipientFromMessageHash(messageHash string) (*types.PaymentOrderRecipient, error) {
-	messageCipher, err := base64.StdEncoding.DecodeString(messageHash)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode message hash: %w", err)
-	}
-
-	// Decrypt with the private key of the aggregator
-	message, err := cryptoUtils.PublicKeyDecryptJSON(messageCipher, config.CryptoConfig().AggregatorPrivateKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt message hash: %w", err)
-	}
-
-	messageBytes, err := json.Marshal(message)
-	if err != nil {
-		return nil, err
-	}
-
-	var recipient *types.PaymentOrderRecipient
-	err = json.Unmarshal(messageBytes, &recipient)
-	if err != nil {
-		return nil, fmt.Errorf("%w", err)
-	}
-	return recipient, nil
-}
-
 // UpdateReceiveAddressStatus updates the status of a receive address. if `done` is true, the indexing process is complete for the given receive address
 func (s *IndexerService) UpdateReceiveAddressStatus(
 	ctx context.Context, client types.RPCClient, receiveAddress *ent.ReceiveAddress, paymentOrder *ent.PaymentOrder, event *types.TokenTransferEvent,
@@ -1731,8 +1474,7 @@ func (s *IndexerService) UpdateReceiveAddressStatus(
 		// Compare the transferred value with the expected order amount + fees
 		fees := paymentOrder.NetworkFee.Add(paymentOrder.SenderFee).Add(paymentOrder.ProtocolFee)
 		orderAmountWithFees := paymentOrder.Amount.Add(fees).Round(int32(paymentOrder.Edges.Token.Decimals))
-		orderAmountWithFeesInSubunit := utils.ToSubunit(orderAmountWithFees, paymentOrder.Edges.Token.Decimals)
-		comparisonResult := event.Value.Cmp(orderAmountWithFeesInSubunit)
+		transferMatchesOrderAmount := event.Value.Equal(orderAmountWithFees)
 
 		tx, err := db.Client.Tx(ctx)
 		if err != nil {
@@ -1745,9 +1487,9 @@ func (s *IndexerService) UpdateReceiveAddressStatus(
 		}
 
 		orderRecipient := paymentOrder.Edges.Recipient
-		if comparisonResult != 0 {
+		if !transferMatchesOrderAmount {
 			// Update the order amount will be updated to whatever amount was sent to the receive address
-			newOrderAmount := utils.FromSubunit(event.Value, paymentOrder.Edges.Token.Decimals).Sub(fees.Round(int32(paymentOrder.Edges.Token.Decimals)))
+			newOrderAmount := event.Value.Sub(fees.Round(int32(paymentOrder.Edges.Token.Decimals)))
 			paymentOrderUpdate = paymentOrderUpdate.SetAmount(newOrderAmount.Round(int32(paymentOrder.Edges.Token.Decimals)))
 			// Update the rate with the current rate if order is older than 30 mins for a P2P order from the sender dashboard
 			if strings.HasPrefix(orderRecipient.Memo, "P#P") && orderRecipient.ProviderID != "" && paymentOrder.CreatedAt.Before(time.Now().Add(-30*time.Minute)) {
@@ -1778,7 +1520,7 @@ func (s *IndexerService) UpdateReceiveAddressStatus(
 				}
 				paymentOrderUpdate = paymentOrderUpdate.SetRate(rate)
 			}
-			comparisonResult = 0
+			transferMatchesOrderAmount = true
 		}
 
 		if paymentOrder.AmountPaid.GreaterThanOrEqual(decimal.Zero) && paymentOrder.AmountPaid.LessThan(orderAmountWithFees) {
@@ -1801,7 +1543,7 @@ func (s *IndexerService) UpdateReceiveAddressStatus(
 				SetFromAddress(event.From).
 				SetTxHash(event.TxHash).
 				SetBlockNumber(int64(event.BlockNumber)).
-				AddAmountPaid(utils.FromSubunit(event.Value, paymentOrder.Edges.Token.Decimals)).
+				AddAmountPaid(event.Value).
 				AddTransactions(transactionLog).
 				Save(ctx)
 			if err != nil {
@@ -1814,7 +1556,7 @@ func (s *IndexerService) UpdateReceiveAddressStatus(
 			}
 		}
 
-		if comparisonResult == 0 {
+		if transferMatchesOrderAmount {
 			// Transfer value equals order amount with fees
 			_, err = receiveAddress.
 				Update().

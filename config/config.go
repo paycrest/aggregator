@@ -15,6 +15,7 @@ type Configuration struct {
 	Auth         AuthConfiguration
 	Order        OrderConfiguration
 	Notification NotificationConfiguration
+	Engine       EngineConfiguration
 }
 
 // SetupConfig configuration

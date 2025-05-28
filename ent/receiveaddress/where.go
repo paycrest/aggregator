@@ -280,6 +280,16 @@ func SaltLTE(v []byte) predicate.ReceiveAddress {
 	return predicate.ReceiveAddress(sql.FieldLTE(FieldSalt, v))
 }
 
+// SaltIsNil applies the IsNil predicate on the "salt" field.
+func SaltIsNil() predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldIsNull(FieldSalt))
+}
+
+// SaltNotNil applies the NotNil predicate on the "salt" field.
+func SaltNotNil() predicate.ReceiveAddress {
+	return predicate.ReceiveAddress(sql.FieldNotNull(FieldSalt))
+}
+
 // StatusEQ applies the EQ predicate on the "status" field.
 func StatusEQ(v Status) predicate.ReceiveAddress {
 	return predicate.ReceiveAddress(sql.FieldEQ(FieldStatus, v))
