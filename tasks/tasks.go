@@ -399,12 +399,6 @@ func IndexBlockchainEvents() error {
 						continue
 					}
 				}
-			} else {
-				indexerService := services.NewIndexerService(orderService.NewOrderEVM())
-				err = indexerService.IndexOrderCreated(ctx, rpcClients[network.Identifier], network)
-				if err != nil {
-					continue
-				}
 			}
 		}
 	}(ctx)
@@ -455,12 +449,6 @@ func IndexBlockchainEvents() error {
 					if err != nil {
 						continue
 					}
-				}
-			} else {
-				indexerService := services.NewIndexerService(orderService.NewOrderEVM())
-				err = indexerService.IndexOrderSettled(ctx, rpcClients[network.Identifier], network)
-				if err != nil {
-					continue
 				}
 			}
 		}
@@ -517,12 +505,6 @@ func IndexBlockchainEvents() error {
 							continue
 						}
 					}
-				}
-			} else {
-				indexerService := services.NewIndexerService(orderService.NewOrderEVM())
-				err = indexerService.IndexOrderRefunded(ctx, rpcClients[network.Identifier], network)
-				if err != nil {
-					continue
 				}
 			}
 		}

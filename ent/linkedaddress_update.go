@@ -50,6 +50,18 @@ func (lau *LinkedAddressUpdate) SetNillableAddress(s *string) *LinkedAddressUpda
 	return lau
 }
 
+// SetSalt sets the "salt" field.
+func (lau *LinkedAddressUpdate) SetSalt(b []byte) *LinkedAddressUpdate {
+	lau.mutation.SetSalt(b)
+	return lau
+}
+
+// ClearSalt clears the value of the "salt" field.
+func (lau *LinkedAddressUpdate) ClearSalt() *LinkedAddressUpdate {
+	lau.mutation.ClearSalt()
+	return lau
+}
+
 // SetInstitution sets the "institution" field.
 func (lau *LinkedAddressUpdate) SetInstitution(s string) *LinkedAddressUpdate {
 	lau.mutation.SetInstitution(s)
@@ -270,6 +282,12 @@ func (lau *LinkedAddressUpdate) sqlSave(ctx context.Context) (n int, err error) 
 	if value, ok := lau.mutation.Address(); ok {
 		_spec.SetField(linkedaddress.FieldAddress, field.TypeString, value)
 	}
+	if value, ok := lau.mutation.Salt(); ok {
+		_spec.SetField(linkedaddress.FieldSalt, field.TypeBytes, value)
+	}
+	if lau.mutation.SaltCleared() {
+		_spec.ClearField(linkedaddress.FieldSalt, field.TypeBytes)
+	}
 	if value, ok := lau.mutation.Institution(); ok {
 		_spec.SetField(linkedaddress.FieldInstitution, field.TypeString, value)
 	}
@@ -385,6 +403,18 @@ func (lauo *LinkedAddressUpdateOne) SetNillableAddress(s *string) *LinkedAddress
 	if s != nil {
 		lauo.SetAddress(*s)
 	}
+	return lauo
+}
+
+// SetSalt sets the "salt" field.
+func (lauo *LinkedAddressUpdateOne) SetSalt(b []byte) *LinkedAddressUpdateOne {
+	lauo.mutation.SetSalt(b)
+	return lauo
+}
+
+// ClearSalt clears the value of the "salt" field.
+func (lauo *LinkedAddressUpdateOne) ClearSalt() *LinkedAddressUpdateOne {
+	lauo.mutation.ClearSalt()
 	return lauo
 }
 
@@ -637,6 +667,12 @@ func (lauo *LinkedAddressUpdateOne) sqlSave(ctx context.Context) (_node *LinkedA
 	}
 	if value, ok := lauo.mutation.Address(); ok {
 		_spec.SetField(linkedaddress.FieldAddress, field.TypeString, value)
+	}
+	if value, ok := lauo.mutation.Salt(); ok {
+		_spec.SetField(linkedaddress.FieldSalt, field.TypeBytes, value)
+	}
+	if lauo.mutation.SaltCleared() {
+		_spec.ClearField(linkedaddress.FieldSalt, field.TypeBytes)
 	}
 	if value, ok := lauo.mutation.Institution(); ok {
 		_spec.SetField(linkedaddress.FieldInstitution, field.TypeString, value)

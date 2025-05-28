@@ -12,6 +12,7 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/storage"
 
+	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/network"
@@ -47,6 +48,7 @@ func NewSenderController() *SenderController {
 
 var serverConf = config.ServerConfig()
 var orderConf = config.OrderConfig()
+var engineConf = config.EngineConfig()
 
 // InitiatePaymentOrder controller creates a payment order
 func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
@@ -323,7 +325,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			return
 		}
 	} else {
-		address, salt, err := ctrl.receiveAddressService.CreateSmartAddress(ctx, nil, nil)
+		address, err := ctrl.receiveAddressService.CreateSmartAddress(ctx, "")
 		if err != nil {
 			logger.Errorf("error: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
@@ -333,7 +335,6 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		receiveAddress, err = storage.Client.ReceiveAddress.
 			Create().
 			SetAddress(address).
-			SetSalt(salt).
 			SetStatus(receiveaddress.StatusUnused).
 			SetValidUntil(time.Now().Add(orderConf.ReceiveAddressValidity)).
 			Save(ctx)
@@ -342,6 +343,50 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 			return
 		}
+
+		// Get Transfer event data in background
+		go func() {
+			res, err := fastshot.NewClient(engineConf.BaseURL).
+				Config().SetTimeout(15 * time.Second).
+				Auth().BearerToken(engineConf.AccessToken).
+				Header().AddAll(map[string]string{
+				"Content-Type": "application/json",
+			}).Build().POST(fmt.Sprintf("/contract/%d/%s/events/get", token.Edges.Network.ChainID, token.ContractAddress)).
+				Body().AsJSON(map[string]interface{}{
+				"eventName": "Transfer",
+				"fromBlock": "latest",
+				"toBlock":   "latest",
+				"order":     "asc",
+				"filters": map[string]interface{}{
+					"to": receiveAddress.Address,
+				},
+			}).Send()
+			if err != nil {
+				logger.Errorf("error: %v", err)
+				return
+			}
+
+			data, err := u.ParseJSONResponse(res.RawResponse)
+			if err != nil {
+				logger.Errorf("error: %v", err)
+				return
+			}
+
+			transferData := data["result"].([]interface{})[0].(map[string]interface{})["data"]
+			transferTransaction := data["result"].([]interface{})[0].(map[string]interface{})["transaction"]
+			transferValue := u.HexToDecimal(transferData.(map[string]interface{})["value"].(map[string]interface{})["hex"].(string))
+
+			transferEvent := &types.TokenTransferEvent{
+				BlockNumber: int64(transferTransaction.(map[string]interface{})["blockNumber"].(float64)),
+				TxHash:      transferTransaction.(map[string]interface{})["transactionHash"].(string),
+				From:        transferData.(map[string]interface{})["from"].(string),
+				To:          transferData.(map[string]interface{})["to"].(string),
+				Value:       transferValue.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals)))),
+			}
+
+
+
+		}()
 	}
 
 	// Prevent receive address expiry for private orders

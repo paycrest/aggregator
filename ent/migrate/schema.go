@@ -103,7 +103,7 @@ var (
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "address", Type: field.TypeString, Unique: true},
-		{Name: "salt", Type: field.TypeBytes, Unique: true},
+		{Name: "salt", Type: field.TypeBytes, Nullable: true},
 		{Name: "institution", Type: field.TypeString},
 		{Name: "account_identifier", Type: field.TypeString},
 		{Name: "account_name", Type: field.TypeString},
@@ -161,6 +161,7 @@ var (
 		{Name: "amount", Type: field.TypeFloat64},
 		{Name: "rate", Type: field.TypeFloat64},
 		{Name: "order_percent", Type: field.TypeFloat64},
+		{Name: "sender", Type: field.TypeString, Nullable: true},
 		{Name: "tx_hash", Type: field.TypeString, Nullable: true, Size: 70},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "processing", "cancelled", "fulfilled", "validated", "settled", "refunded"}, Default: "pending"},
 		{Name: "block_number", Type: field.TypeInt64},
@@ -183,19 +184,19 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "lock_payment_orders_provider_profiles_assigned_orders",
-				Columns:    []*schema.Column{LockPaymentOrdersColumns[17]},
+				Columns:    []*schema.Column{LockPaymentOrdersColumns[18]},
 				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "lock_payment_orders_provision_buckets_lock_payment_orders",
-				Columns:    []*schema.Column{LockPaymentOrdersColumns[18]},
+				Columns:    []*schema.Column{LockPaymentOrdersColumns[19]},
 				RefColumns: []*schema.Column{ProvisionBucketsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "lock_payment_orders_tokens_lock_payment_orders",
-				Columns:    []*schema.Column{LockPaymentOrdersColumns[19]},
+				Columns:    []*schema.Column{LockPaymentOrdersColumns[20]},
 				RefColumns: []*schema.Column{TokensColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -204,7 +205,7 @@ var (
 			{
 				Name:    "lockpaymentorder_gateway_id_rate_tx_hash_block_number_institution_account_identifier_account_name_memo_token_lock_payment_orders",
 				Unique:  true,
-				Columns: []*schema.Column{LockPaymentOrdersColumns[3], LockPaymentOrdersColumns[5], LockPaymentOrdersColumns[7], LockPaymentOrdersColumns[9], LockPaymentOrdersColumns[10], LockPaymentOrdersColumns[11], LockPaymentOrdersColumns[12], LockPaymentOrdersColumns[13], LockPaymentOrdersColumns[19]},
+				Columns: []*schema.Column{LockPaymentOrdersColumns[3], LockPaymentOrdersColumns[5], LockPaymentOrdersColumns[8], LockPaymentOrdersColumns[10], LockPaymentOrdersColumns[11], LockPaymentOrdersColumns[12], LockPaymentOrdersColumns[13], LockPaymentOrdersColumns[14], LockPaymentOrdersColumns[20]},
 			},
 		},
 	}
@@ -448,7 +449,7 @@ var (
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "address", Type: field.TypeString, Unique: true},
-		{Name: "salt", Type: field.TypeBytes, Unique: true},
+		{Name: "salt", Type: field.TypeBytes, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"unused", "used", "expired"}, Default: "unused"},
 		{Name: "last_indexed_block", Type: field.TypeInt64, Nullable: true},
 		{Name: "last_used", Type: field.TypeTime, Nullable: true},

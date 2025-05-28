@@ -2,14 +2,12 @@ package services
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
-	"math/big"
+	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/paycrest/aggregator/services/contracts"
-	"github.com/paycrest/aggregator/types"
+	fastshot "github.com/opus-domini/fast-shot"
+	"github.com/paycrest/aggregator/config"
+	"github.com/paycrest/aggregator/utils"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	tronWallet "github.com/paycrest/tron-wallet"
 	tronEnums "github.com/paycrest/tron-wallet/enums"
@@ -23,55 +21,32 @@ func NewReceiveAddressService() *ReceiveAddressService {
 	return &ReceiveAddressService{}
 }
 
+func (s *ReceiveAddressService) ProcessTransfer(ctx context.Context, address string) (string, error) {
+
 // CreateSmartAddress function generates and saves a new EIP-4337 smart contract account address
-func (s *ReceiveAddressService) CreateSmartAddress(ctx context.Context, client types.RPCClient, factory *common.Address) (string, []byte, error) {
+func (s *ReceiveAddressService) CreateSmartAddress(ctx context.Context, label string) (string, error) {
+	engineConf := config.EngineConfig()
 
-	// Connect to RPC endpoint
-	var err error
-	if client == nil {
-		client, err = types.NewEthClient("https://mainnet.infura.io/v3/4818dbcee84d4651a832894818bd4534")
-		if err != nil {
-			return "", nil, fmt.Errorf("failed to connect to RPC client: %w", err)
-		}
-	}
-
-	// Initialize contract factory
-	if factory == nil {
-		// https://github.com/eth-infinitism/account-abstraction/blob/develop/contracts/samples/SimpleAccountFactory.sol
-		factoryAddress := common.HexToAddress("0x9406Cc6185a346906296840746125a0E44976454")
-		factory = &factoryAddress
-	}
-
-	simpleAccountFactory, err := contracts.NewSimpleAccountFactory(*factory, client.(bind.ContractBackend))
+	res, err := fastshot.NewClient(engineConf.BaseURL).
+		Config().SetTimeout(15 * time.Second).
+		Auth().BearerToken(engineConf.AccessToken).
+		Header().AddAll(map[string]string{
+		"Content-Type": "application/json",
+	}).Build().POST("/backend-wallet/create").
+		Body().AsJSON(map[string]interface{}{
+		"label": label,
+		"type":  "smart:local",
+	}).Send()
 	if err != nil {
-		return "", nil, fmt.Errorf("failed to initialize factory contract: %w", err)
+		return "", fmt.Errorf("failed to create smart address: %w", err)
 	}
 
-	// Get master account
-	ownerAddress, _, _ := cryptoUtils.GenerateAccountFromIndex(0)
-
-	nonce := make([]byte, 32)
-	_, err = rand.Read(nonce)
+	data, err := utils.ParseJSONResponse(res.RawResponse)
 	if err != nil {
-		return "", nil, err
+		return "", fmt.Errorf("failed to parse JSON response: %w", err)
 	}
 
-	// Create a new big.Int from the hash
-	salt := new(big.Int).SetBytes(nonce)
-
-	// Generate address
-	address, err := simpleAccountFactory.GetAddress(nil, *ownerAddress, salt)
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to generate address: %w", err)
-	}
-
-	// Encrypt salt
-	saltEncrypted, err := cryptoUtils.EncryptPlain([]byte(salt.String()))
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to encrypt salt: %w", err)
-	}
-
-	return address.Hex(), saltEncrypted, nil
+	return data["result"].(map[string]interface{})["walletAddress"].(string), nil
 }
 
 // CreateTronAddress generates and saves a new Tron address
