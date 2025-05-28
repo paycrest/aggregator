@@ -68,24 +68,30 @@ func (s *OrderEVM) ProcessTransfer(ctx context.Context, receiveAddress string, t
 	timeout := orderConf.ReceiveAddressValidity
 	start := time.Now()
 	result := []interface{}{}
+	transferEvent := &types.TokenTransferEvent{}
 
 	for {
+		// TODO: Fetch latest block number
+
 		// Get transfer event data
-		res, err := fastshot.NewClient(engineConf.BaseURL).
-			Config().SetTimeout(15 * time.Second).
-			Auth().BearerToken(engineConf.AccessToken).
-			Header().AddAll(map[string]string{
-			"Content-Type": "application/json",
-		}).Build().POST(fmt.Sprintf("/contract/%d/%s/events/get", token.Edges.Network.ChainID, token.ContractAddress)).
-			Body().AsJSON(map[string]interface{}{
+		payload := map[string]interface{}{
 			"eventName": "Transfer",
 			"fromBlock": "latest",
 			"toBlock":   "latest",
 			"order":     "asc",
-			"filters": map[string]interface{}{
+		}
+		if receiveAddress != "" {
+			payload["filters"] = map[string]interface{}{
 				"to": receiveAddress,
-			},
-		}).Send()
+			}
+		}
+		res, err := fastshot.NewClient(engineConf.BaseURL).
+			Config().SetTimeout(30 * time.Second).
+			Auth().BearerToken(engineConf.AccessToken).
+			Header().AddAll(map[string]string{
+			"Content-Type": "application/json",
+		}).Build().POST(fmt.Sprintf("/contract/%d/%s/events/get", token.Edges.Network.ChainID, token.ContractAddress)).
+			Body().AsJSON(payload).Send()
 		if err != nil {
 			return fmt.Errorf("ProcessTransfer.getTransferEventData: %w", err)
 		}
@@ -108,21 +114,28 @@ func (s *OrderEVM) ProcessTransfer(ctx context.Context, receiveAddress string, t
 		break
 	}
 
-	transferData := result[0].(map[string]interface{})["data"]
-	transferTransaction := result[0].(map[string]interface{})["transaction"]
-	transferValue := utils.HexToDecimal(transferData.(map[string]interface{})["value"].(map[string]interface{})["hex"].(string))
+	// Parse transfer event data
+	for _, r := range result {
+		transferData := r.(map[string]interface{})["data"]
+		transferTransaction := r.(map[string]interface{})["transaction"]
+		transferValue := utils.HexToDecimal(transferData.(map[string]interface{})["value"].(map[string]interface{})["hex"].(string))
 
-	transferEvent := &types.TokenTransferEvent{
-		BlockNumber: int64(transferTransaction.(map[string]interface{})["blockNumber"].(float64)),
-		TxHash:      transferTransaction.(map[string]interface{})["transactionHash"].(string),
-		From:        transferData.(map[string]interface{})["from"].(string),
-		To:          transferData.(map[string]interface{})["to"].(string),
-		Value:       transferValue.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals)))),
+		transferEvent.BlockNumber = int64(transferTransaction.(map[string]interface{})["blockNumber"].(float64))
+		transferEvent.TxHash = transferTransaction.(map[string]interface{})["transactionHash"].(string)
+		transferEvent.From = transferData.(map[string]interface{})["from"].(string)
+		transferEvent.To = transferData.(map[string]interface{})["to"].(string)
+		transferEvent.Value = transferValue.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
+
+		if receiveAddress != "" && transferEvent.To == receiveAddress {
+			break
+		}
 	}
 
 	if strings.EqualFold(transferEvent.From, token.Edges.Network.GatewayContractAddress) {
 		return nil
 	}
+
+	// TODO: figure out how to handle linked address situation
 
 	linkedAddress, err := db.Client.LinkedAddress.
 		Query().
@@ -686,7 +699,7 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 
 	// Get OrderCreated event data
 	res, err = fastshot.NewClient(engineConf.BaseURL).
-		Config().SetTimeout(15 * time.Second).
+		Config().SetTimeout(30 * time.Second).
 		Auth().BearerToken(engineConf.AccessToken).
 		Header().AddAll(map[string]string{
 		"Content-Type": "application/json",
@@ -777,7 +790,7 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 }
 
 // CreateLockPaymentOrder saves a lock payment order in the database
-func (s *OrderEVM) createLockPaymentOrder(ctx context.Context, client types.RPCClient, network *ent.Network, event *types.OrderCreatedEvent) error {
+func (s *OrderEVM) createLockPaymentOrder(ctx context.Context, network *ent.Network, event *types.OrderCreatedEvent) error {
 	// Check for existing address with txHash
 	orderCount, err := db.Client.LockPaymentOrder.
 		Query().
@@ -903,7 +916,7 @@ func (s *OrderEVM) createLockPaymentOrder(ctx context.Context, client types.RPCC
 	}
 
 	if isLessThanMin {
-		err := s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Amount is less than the minimum bucket")
+		err := s.handleCancellation(ctx, nil, &lockPaymentOrder, "Amount is less than the minimum bucket")
 		if err != nil {
 			return fmt.Errorf("failed to handle cancellation: %w", err)
 		}
@@ -937,7 +950,7 @@ func (s *OrderEVM) createLockPaymentOrder(ctx context.Context, client types.RPCC
 				// 3. Provider does not support the network
 				// 4. Provider does not support the currency
 				// 5. Provider have not configured a settlement address for the network
-				_ = s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Provider not available")
+				_ = s.handleCancellation(ctx, nil, &lockPaymentOrder, "Provider not available")
 				return nil
 			} else {
 				return fmt.Errorf("%s - failed to fetch provider: %w", lockPaymentOrder.GatewayID, err)
@@ -955,13 +968,13 @@ func (s *OrderEVM) createLockPaymentOrder(ctx context.Context, client types.RPCC
 			}
 
 			if normalizedAmount.GreaterThan(orderToken.MaxOrderAmount) {
-				err := s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Amount is greater than the maximum order amount of the provider")
+				err := s.handleCancellation(ctx, nil, &lockPaymentOrder, "Amount is greater than the maximum order amount of the provider")
 				if err != nil {
 					return fmt.Errorf("%s - failed to cancel order: %w", lockPaymentOrder.GatewayID, err)
 				}
 				return nil
 			} else if normalizedAmount.LessThan(orderToken.MinOrderAmount) {
-				err := s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Amount is less than the minimum order amount of the provider")
+				err := s.handleCancellation(ctx, nil, &lockPaymentOrder, "Amount is less than the minimum order amount of the provider")
 				if err != nil {
 					return fmt.Errorf("%s - failed to cancel order: %w", lockPaymentOrder.GatewayID, err)
 				}
@@ -980,7 +993,7 @@ func (s *OrderEVM) createLockPaymentOrder(ctx context.Context, client types.RPCC
 		// 	return fmt.Errorf("%s - failed to split lock payment order: %w", lockPaymentOrder.GatewayID, err)
 		// }
 
-		err = s.handleCancellation(ctx, client, nil, &lockPaymentOrder, "Amount is larger than the maximum bucket")
+		err = s.handleCancellation(ctx, nil, &lockPaymentOrder, "Amount is larger than the maximum bucket")
 		if err != nil {
 			return fmt.Errorf("failed to handle cancellation: %w", err)
 		}
@@ -1076,7 +1089,7 @@ func (s *OrderEVM) createLockPaymentOrder(ctx context.Context, client types.RPCC
 			}
 
 			if !ok && err == nil {
-				err := s.handleCancellation(ctx, client, orderCreated, nil, "AML compliance check failed")
+				err := s.handleCancellation(ctx, orderCreated, nil, "AML compliance check failed")
 				if err != nil {
 					return fmt.Errorf("checkAMLCompliance.RefundOrder: %w", err)
 				}
@@ -1131,7 +1144,7 @@ func (s *OrderEVM) getProvisionBucket(ctx context.Context, amount decimal.Decima
 }
 
 // handleCancellation handles the cancellation of a lock payment order
-func (s *OrderEVM) handleCancellation(ctx context.Context, client types.RPCClient, createdLockPaymentOrder *ent.LockPaymentOrder, lockPaymentOrder *types.LockPaymentOrderFields, cancellationReason string) error {
+func (s *OrderEVM) handleCancellation(ctx context.Context, createdLockPaymentOrder *ent.LockPaymentOrder, lockPaymentOrder *types.LockPaymentOrderFields, cancellationReason string) error {
 	// lockPaymentOrder and createdLockPaymentOrder are mutually exclusive
 	if (createdLockPaymentOrder == nil && lockPaymentOrder == nil) || (createdLockPaymentOrder != nil && lockPaymentOrder != nil) {
 		return nil
@@ -1201,7 +1214,7 @@ func (s *OrderEVM) handleCancellation(ctx context.Context, client types.RPCClien
 			return fmt.Errorf("%s - failed to fetch network: %w", createdLockPaymentOrder.GatewayID, err)
 		}
 
-		err = s.RefundOrder(ctx, client, network, createdLockPaymentOrder.GatewayID)
+		err = s.RefundOrder(ctx, network, createdLockPaymentOrder.GatewayID)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":        fmt.Sprintf("%v", err),
@@ -1353,7 +1366,7 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 
 	// Get OrderRefunded event data
 	res, err = fastshot.NewClient(engineConf.BaseURL).
-		Config().SetTimeout(15 * time.Second).
+		Config().SetTimeout(30 * time.Second).
 		Auth().BearerToken(engineConf.AccessToken).
 		Header().AddAll(map[string]string{
 		"Content-Type": "application/json",
@@ -1644,7 +1657,7 @@ func (s *OrderEVM) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 
 	// Get OrderSettled event data
 	res, err = fastshot.NewClient(engineConf.BaseURL).
-		Config().SetTimeout(15 * time.Second).
+		Config().SetTimeout(30 * time.Second).
 		Auth().BearerToken(engineConf.AccessToken).
 		Header().AddAll(map[string]string{
 		"Content-Type": "application/json",

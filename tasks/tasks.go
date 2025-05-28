@@ -136,7 +136,7 @@ func RetryStaleUserOperations() error {
 				} else {
 					service = orderService.NewOrderEVM()
 				}
-				err := service.CreateOrder(ctx, rpcClients[order.Edges.Token.Edges.Network.Identifier], order.ID)
+				err := service.CreateOrder(ctx, order.ID)
 				if err != nil {
 					logger.WithFields(logger.Fields{
 						"Error":             fmt.Sprintf("%v", err),
@@ -180,7 +180,7 @@ func RetryStaleUserOperations() error {
 			} else {
 				service = orderService.NewOrderEVM()
 			}
-			err := service.SettleOrder(ctx, rpcClients[order.Edges.Token.Edges.Network.Identifier], order.ID)
+			err := service.SettleOrder(ctx, order.ID)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":             fmt.Sprintf("%v", err),
@@ -245,7 +245,7 @@ func RetryStaleUserOperations() error {
 			} else {
 				service = orderService.NewOrderEVM()
 			}
-			err := service.RefundOrder(ctx, rpcClients[order.Edges.Token.Edges.Network.Identifier], order.Edges.Token.Edges.Network, order.GatewayID)
+			err := service.RefundOrder(ctx, order.Edges.Token.Edges.Network, order.GatewayID)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":             fmt.Sprintf("%v", err),
@@ -278,7 +278,7 @@ func RetryStaleUserOperations() error {
 		defer wg.Done()
 		for _, order := range orders {
 			service := orderService.NewOrderEVM()
-			err = service.CreateOrder(ctx, rpcClients[order.Edges.Token.Edges.Network.Identifier], order.ID)
+			err = service.CreateOrder(ctx, order.ID)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":             fmt.Sprintf("%v", err),
@@ -340,12 +340,6 @@ func IndexBlockchainEvents() error {
 			if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {
 				indexerService := services.NewIndexerService(orderService.NewOrderTron())
 				err := indexerService.IndexTRC20Transfer(ctx, order)
-				if err != nil {
-					continue
-				}
-			} else {
-				indexerService := services.NewIndexerService(orderService.NewOrderEVM())
-				err := indexerService.IndexERC20Transfer(ctx, rpcClients[order.Edges.Token.Edges.Network.Identifier], order, nil, 0)
 				if err != nil {
 					continue
 				}
@@ -519,12 +513,6 @@ func IndexLinkedAddresses() error {
 	// defer cancel()
 	ctx := context.Background()
 
-	// Establish RPC connections
-	_, err := setRPCClients(ctx)
-	if err != nil {
-		return fmt.Errorf("IndexLinkedAddresses: %w", err)
-	}
-
 	go func(ctx context.Context) {
 		time.Sleep(250 * time.Millisecond)
 		tokens, err := storage.Client.Token.
@@ -534,18 +522,17 @@ func IndexLinkedAddresses() error {
 			).
 			WithNetwork().
 			All(ctx)
-		if err != nil && err != context.Canceled {
+		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":  fmt.Sprintf("%v", err),
 				"Status": tokenent.IsEnabled(true),
-				"Reason": "db:No tokens found",
 			}).Errorf("Failed to index blockchain events for linked addresses")
 			return
 		}
 
 		for _, token := range tokens {
-			indexerService := services.NewIndexerService(orderService.NewOrderEVM())
-			err = indexerService.IndexERC20Transfer(ctx, rpcClients[token.Edges.Network.Identifier], nil, token, 0)
+			orderService := orderService.NewOrderEVM()
+			err = orderService.ProcessTransfer(ctx, "", token)
 			if err != nil {
 				continue
 			}

@@ -21,8 +21,6 @@ func NewReceiveAddressService() *ReceiveAddressService {
 	return &ReceiveAddressService{}
 }
 
-func (s *ReceiveAddressService) ProcessTransfer(ctx context.Context, address string) (string, error) {
-
 // CreateSmartAddress function generates and saves a new EIP-4337 smart contract account address
 func (s *ReceiveAddressService) CreateSmartAddress(ctx context.Context, label string) (string, error) {
 	engineConf := config.EngineConfig()
