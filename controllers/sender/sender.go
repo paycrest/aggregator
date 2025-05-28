@@ -1,6 +1,7 @@
 package sender
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -12,7 +13,6 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/storage"
 
-	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/network"
@@ -25,6 +25,7 @@ import (
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	svc "github.com/paycrest/aggregator/services"
+	orderSvc "github.com/paycrest/aggregator/services/order"
 	"github.com/paycrest/aggregator/types"
 	u "github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
@@ -36,6 +37,7 @@ import (
 // SenderController is a controller type for sender endpoints
 type SenderController struct {
 	receiveAddressService *svc.ReceiveAddressService
+	orderService          types.OrderService
 }
 
 // NewSenderController creates a new instance of SenderController
@@ -43,12 +45,12 @@ func NewSenderController() *SenderController {
 
 	return &SenderController{
 		receiveAddressService: svc.NewReceiveAddressService(),
+		orderService:          orderSvc.NewOrderEVM(),
 	}
 }
 
 var serverConf = config.ServerConfig()
 var orderConf = config.OrderConfig()
-var engineConf = config.EngineConfig()
 
 // InitiatePaymentOrder controller creates a payment order
 func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
@@ -343,50 +345,6 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 			return
 		}
-
-		// Get Transfer event data in background
-		go func() {
-			res, err := fastshot.NewClient(engineConf.BaseURL).
-				Config().SetTimeout(15 * time.Second).
-				Auth().BearerToken(engineConf.AccessToken).
-				Header().AddAll(map[string]string{
-				"Content-Type": "application/json",
-			}).Build().POST(fmt.Sprintf("/contract/%d/%s/events/get", token.Edges.Network.ChainID, token.ContractAddress)).
-				Body().AsJSON(map[string]interface{}{
-				"eventName": "Transfer",
-				"fromBlock": "latest",
-				"toBlock":   "latest",
-				"order":     "asc",
-				"filters": map[string]interface{}{
-					"to": receiveAddress.Address,
-				},
-			}).Send()
-			if err != nil {
-				logger.Errorf("error: %v", err)
-				return
-			}
-
-			data, err := u.ParseJSONResponse(res.RawResponse)
-			if err != nil {
-				logger.Errorf("error: %v", err)
-				return
-			}
-
-			transferData := data["result"].([]interface{})[0].(map[string]interface{})["data"]
-			transferTransaction := data["result"].([]interface{})[0].(map[string]interface{})["transaction"]
-			transferValue := u.HexToDecimal(transferData.(map[string]interface{})["value"].(map[string]interface{})["hex"].(string))
-
-			transferEvent := &types.TokenTransferEvent{
-				BlockNumber: int64(transferTransaction.(map[string]interface{})["blockNumber"].(float64)),
-				TxHash:      transferTransaction.(map[string]interface{})["transactionHash"].(string),
-				From:        transferData.(map[string]interface{})["from"].(string),
-				To:          transferData.(map[string]interface{})["to"].(string),
-				Value:       transferValue.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals)))),
-			}
-
-
-
-		}()
 	}
 
 	// Prevent receive address expiry for private orders
@@ -475,6 +433,25 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 		return
 	}
+
+	// Process Transfer event in background
+	go func() {
+		// Create a new context with timeout for the goroutine
+		timeoutCtx, cancel := context.WithTimeout(context.Background(), orderConf.ReceiveAddressValidity)
+		defer cancel()
+
+		err := ctrl.orderService.ProcessTransfer(timeoutCtx, receiveAddress.Address, token)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"error":          err,
+				"receiveAddress": receiveAddress.Address,
+				"amount":         paymentOrder.Amount,
+				"token":          token.Symbol,
+				"network":        token.Edges.Network.Identifier,
+				"paymentOrder":   paymentOrder.ID,
+			}).Errorf("Failed to process transfer event")
+		}
+	}()
 
 	u.APIResponse(ctx, http.StatusCreated, "success", "Payment order initiated successfully",
 		&types.ReceiveAddressResponse{
