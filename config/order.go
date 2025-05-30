@@ -21,7 +21,6 @@ type OrderConfiguration struct {
 	RefundCancellationCount          int
 	PercentDeviationFromExternalRate decimal.Decimal
 	PercentDeviationFromMarketRate   decimal.Decimal
-	ThirdwebSecretKey                string
 }
 
 // OrderConfig sets the order configuration
@@ -47,7 +46,6 @@ func OrderConfig() *OrderConfiguration {
 		RefundCancellationCount:          viper.GetInt("REFUND_CANCELLATION_COUNT"),
 		PercentDeviationFromExternalRate: decimal.NewFromFloat(viper.GetFloat64("PERCENT_DEVIATION_FROM_EXTERNAL_RATE")),
 		PercentDeviationFromMarketRate:   decimal.NewFromFloat(viper.GetFloat64("PERCENT_DEVIATION_FROM_MARKET_RATE")),
-		ThirdwebSecretKey:                viper.GetString("THIRDWEB_SECRET_KEY"),
 	}
 }
 

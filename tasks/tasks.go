@@ -509,12 +509,10 @@ func IndexBlockchainEvents() error {
 
 // IndexLinkAddresses indexes ERC20 transfer events to linked addresses
 func IndexLinkedAddresses() error {
-	// ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	// defer cancel()
-	ctx := context.Background()
-
-	go func(ctx context.Context) {
+	go func() {
+		ctx := context.Background()
 		time.Sleep(250 * time.Millisecond)
+
 		tokens, err := storage.Client.Token.
 			Query().
 			Where(
@@ -537,7 +535,7 @@ func IndexLinkedAddresses() error {
 				continue
 			}
 		}
-	}(ctx)
+	}()
 
 	return nil
 }

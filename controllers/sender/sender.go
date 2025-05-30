@@ -436,11 +436,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 
 	// Process Transfer event in background
 	go func() {
-		// Create a new context with timeout for the goroutine
-		timeoutCtx, cancel := context.WithTimeout(context.Background(), orderConf.ReceiveAddressValidity)
-		defer cancel()
-
-		err := ctrl.orderService.ProcessTransfer(timeoutCtx, receiveAddress.Address, token)
+		err := ctrl.orderService.ProcessTransfer(context.Background(), receiveAddress.Address, token)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"error":          err,
