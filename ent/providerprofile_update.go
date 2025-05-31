@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/apikey"
@@ -99,20 +100,6 @@ func (ppu *ProviderProfileUpdate) SetIsActive(b bool) *ProviderProfileUpdate {
 func (ppu *ProviderProfileUpdate) SetNillableIsActive(b *bool) *ProviderProfileUpdate {
 	if b != nil {
 		ppu.SetIsActive(*b)
-	}
-	return ppu
-}
-
-// SetIsAvailable sets the "is_available" field.
-func (ppu *ProviderProfileUpdate) SetIsAvailable(b bool) *ProviderProfileUpdate {
-	ppu.mutation.SetIsAvailable(b)
-	return ppu
-}
-
-// SetNillableIsAvailable sets the "is_available" field if the given value is not nil.
-func (ppu *ProviderProfileUpdate) SetNillableIsAvailable(b *bool) *ProviderProfileUpdate {
-	if b != nil {
-		ppu.SetIsAvailable(*b)
 	}
 	return ppu
 }
@@ -288,6 +275,24 @@ func (ppu *ProviderProfileUpdate) SetNillableIsKybVerified(b *bool) *ProviderPro
 	if b != nil {
 		ppu.SetIsKybVerified(*b)
 	}
+	return ppu
+}
+
+// SetAvailableFor sets the "available_for" field.
+func (ppu *ProviderProfileUpdate) SetAvailableFor(s []string) *ProviderProfileUpdate {
+	ppu.mutation.SetAvailableFor(s)
+	return ppu
+}
+
+// AppendAvailableFor appends s to the "available_for" field.
+func (ppu *ProviderProfileUpdate) AppendAvailableFor(s []string) *ProviderProfileUpdate {
+	ppu.mutation.AppendAvailableFor(s)
+	return ppu
+}
+
+// ClearAvailableFor clears the value of the "available_for" field.
+func (ppu *ProviderProfileUpdate) ClearAvailableFor() *ProviderProfileUpdate {
+	ppu.mutation.ClearAvailableFor()
 	return ppu
 }
 
@@ -584,9 +589,6 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 	if value, ok := ppu.mutation.IsActive(); ok {
 		_spec.SetField(providerprofile.FieldIsActive, field.TypeBool, value)
 	}
-	if value, ok := ppu.mutation.IsAvailable(); ok {
-		_spec.SetField(providerprofile.FieldIsAvailable, field.TypeBool, value)
-	}
 	if value, ok := ppu.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerprofile.FieldUpdatedAt, field.TypeTime, value)
 	}
@@ -637,6 +639,17 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 	}
 	if value, ok := ppu.mutation.IsKybVerified(); ok {
 		_spec.SetField(providerprofile.FieldIsKybVerified, field.TypeBool, value)
+	}
+	if value, ok := ppu.mutation.AvailableFor(); ok {
+		_spec.SetField(providerprofile.FieldAvailableFor, field.TypeJSON, value)
+	}
+	if value, ok := ppu.mutation.AppendedAvailableFor(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, providerprofile.FieldAvailableFor, value)
+		})
+	}
+	if ppu.mutation.AvailableForCleared() {
+		_spec.ClearField(providerprofile.FieldAvailableFor, field.TypeJSON)
 	}
 	if ppu.mutation.APIKeyCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -964,20 +977,6 @@ func (ppuo *ProviderProfileUpdateOne) SetNillableIsActive(b *bool) *ProviderProf
 	return ppuo
 }
 
-// SetIsAvailable sets the "is_available" field.
-func (ppuo *ProviderProfileUpdateOne) SetIsAvailable(b bool) *ProviderProfileUpdateOne {
-	ppuo.mutation.SetIsAvailable(b)
-	return ppuo
-}
-
-// SetNillableIsAvailable sets the "is_available" field if the given value is not nil.
-func (ppuo *ProviderProfileUpdateOne) SetNillableIsAvailable(b *bool) *ProviderProfileUpdateOne {
-	if b != nil {
-		ppuo.SetIsAvailable(*b)
-	}
-	return ppuo
-}
-
 // SetUpdatedAt sets the "updated_at" field.
 func (ppuo *ProviderProfileUpdateOne) SetUpdatedAt(t time.Time) *ProviderProfileUpdateOne {
 	ppuo.mutation.SetUpdatedAt(t)
@@ -1149,6 +1148,24 @@ func (ppuo *ProviderProfileUpdateOne) SetNillableIsKybVerified(b *bool) *Provide
 	if b != nil {
 		ppuo.SetIsKybVerified(*b)
 	}
+	return ppuo
+}
+
+// SetAvailableFor sets the "available_for" field.
+func (ppuo *ProviderProfileUpdateOne) SetAvailableFor(s []string) *ProviderProfileUpdateOne {
+	ppuo.mutation.SetAvailableFor(s)
+	return ppuo
+}
+
+// AppendAvailableFor appends s to the "available_for" field.
+func (ppuo *ProviderProfileUpdateOne) AppendAvailableFor(s []string) *ProviderProfileUpdateOne {
+	ppuo.mutation.AppendAvailableFor(s)
+	return ppuo
+}
+
+// ClearAvailableFor clears the value of the "available_for" field.
+func (ppuo *ProviderProfileUpdateOne) ClearAvailableFor() *ProviderProfileUpdateOne {
+	ppuo.mutation.ClearAvailableFor()
 	return ppuo
 }
 
@@ -1475,9 +1492,6 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 	if value, ok := ppuo.mutation.IsActive(); ok {
 		_spec.SetField(providerprofile.FieldIsActive, field.TypeBool, value)
 	}
-	if value, ok := ppuo.mutation.IsAvailable(); ok {
-		_spec.SetField(providerprofile.FieldIsAvailable, field.TypeBool, value)
-	}
 	if value, ok := ppuo.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerprofile.FieldUpdatedAt, field.TypeTime, value)
 	}
@@ -1528,6 +1542,17 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 	}
 	if value, ok := ppuo.mutation.IsKybVerified(); ok {
 		_spec.SetField(providerprofile.FieldIsKybVerified, field.TypeBool, value)
+	}
+	if value, ok := ppuo.mutation.AvailableFor(); ok {
+		_spec.SetField(providerprofile.FieldAvailableFor, field.TypeJSON, value)
+	}
+	if value, ok := ppuo.mutation.AppendedAvailableFor(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, providerprofile.FieldAvailableFor, value)
+		})
+	}
+	if ppuo.mutation.AvailableForCleared() {
+		_spec.ClearField(providerprofile.FieldAvailableFor, field.TypeJSON)
 	}
 	if ppuo.mutation.APIKeyCleared() {
 		edge := &sqlgraph.EdgeSpec{

@@ -364,8 +364,10 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 			),
 			providerprofile.HostIdentifierNotNil(),
 			providerprofile.IsActiveEQ(true),
-			providerprofile.IsAvailableEQ(true),
+			// Remove: providerprofile.IsAvailableEQ(true),
 			providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
+			// Add: provider is available for the institution's currency
+			providerprofile.AvailableForContains(accountInstitution.Edges.FiatCurrency.Code),
 		).
 		All(ctx)
 	if err != nil {

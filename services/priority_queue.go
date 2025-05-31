@@ -56,17 +56,14 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 		Query().
 		Select(provisionbucket.FieldMinAmount, provisionbucket.FieldMaxAmount).
 		WithProviderProfiles(func(ppq *ent.ProviderProfileQuery) {
-			// ppq.WithProviderRating(func(prq *ent.ProviderRatingQuery) {
-			// 	prq.Select(providerrating.FieldTrustScore)
-			// })
 			ppq.Select(providerprofile.FieldID)
-
-			// Filter only providers that are always available
+			// Filter only providers that are active, KYB verified, public, and available for the bucket's currency
 			ppq.Where(
-				providerprofile.IsAvailable(true),
 				providerprofile.IsActive(true),
 				providerprofile.IsKybVerified(true),
 				providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
+				// Remove: providerprofile.IsAvailable(true),
+				// The currency filter will be handled in CreatePriorityQueueForBucket
 			)
 		}).
 		WithCurrency().
@@ -191,12 +188,18 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 	// TODO: add also the checks for all the currencies that a provider has
 
 	for _, provider := range providers {
+		// Check if provider supports the bucket currency and is available for it
 		exists, err := provider.QueryCurrencies().
 			Where(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)).
 			Exist(ctx)
 		if err != nil || !exists {
 			continue
 		}
+		// NEW: Check if provider is available for this currency
+		if !utils.ContainsString(provider.AvailableFor, bucket.Edges.Currency.Code) {
+			continue
+		}
+
 		orderTokens, err := storage.Client.ProviderOrderToken.
 			Query().
 			Where(
@@ -461,21 +464,6 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 			return err
 		}
 
-		// if providerData == "" {
-		// 	// Reached the end of the queue
-		// 	logger.Errorf("%s - rate didn't match a provider, finding a partner provider", orderIDPrefix)
-
-		// 	if len(partnerProviders) == 0 {
-		// 		logger.Errorf("%s - no partner providers found", orderIDPrefix)
-		// 		return nil
-		// 	}
-
-		// 	// Pick a random partner provider
-		// 	randomIndex := rand.New(rand.NewSource(time.Now().UnixNano())).Intn(len(partnerProviders))
-		// 	providerData = partnerProviders[randomIndex]
-		// }
-
-		// Extract the rate from the data (assuming it's in the format "providerID:token:rate:minAmount:maxAmount")
 		parts := strings.Split(providerData, ":")
 		if len(parts) != 5 {
 			logger.WithFields(logger.Fields{
@@ -549,7 +537,9 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 				providerordertoken.NetworkEQ(network.Identifier),
 				providerordertoken.HasProviderWith(
 					providerprofile.IDEQ(order.ProviderID),
-					providerprofile.IsAvailableEQ(true),
+					// Remove: providerprofile.IsAvailableEQ(true),
+					// Add: providerprofile.AvailableForContains(bucketCurrency.Code),
+					providerprofile.AvailableForContains(bucketCurrency.Code),
 				),
 				providerordertoken.HasTokenWith(token.IDEQ(order.Token.ID)),
 				providerordertoken.HasCurrencyWith(

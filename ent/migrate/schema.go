@@ -371,7 +371,6 @@ var (
 		{Name: "host_identifier", Type: field.TypeString, Nullable: true},
 		{Name: "provision_mode", Type: field.TypeEnum, Enums: []string{"manual", "auto"}, Default: "auto"},
 		{Name: "is_active", Type: field.TypeBool, Default: false},
-		{Name: "is_available", Type: field.TypeBool, Default: false},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "visibility_mode", Type: field.TypeEnum, Enums: []string{"private", "public"}, Default: "public"},
 		{Name: "address", Type: field.TypeString, Nullable: true, Size: 2147483647},
@@ -382,6 +381,7 @@ var (
 		{Name: "identity_document", Type: field.TypeString, Nullable: true},
 		{Name: "business_document", Type: field.TypeString, Nullable: true},
 		{Name: "is_kyb_verified", Type: field.TypeBool, Default: false},
+		{Name: "available_for", Type: field.TypeJSON, Nullable: true},
 		{Name: "user_provider_profile", Type: field.TypeUUID, Unique: true},
 	}
 	// ProviderProfilesTable holds the schema information for the "provider_profiles" table.

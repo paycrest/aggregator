@@ -30,8 +30,6 @@ func (ProviderProfile) Fields() []ent.Field {
 			Default("auto"),
 		field.Bool("is_active").
 			Default(false),
-		field.Bool("is_available").
-			Default(false),
 		field.Time("updated_at").
 			Default(time.Now).
 			UpdateDefault(time.Now),
@@ -50,6 +48,10 @@ func (ProviderProfile) Fields() []ent.Field {
 		field.String("identity_document").Optional(),
 		field.String("business_document").Optional(),
 		field.Bool("is_kyb_verified").Default(false),
+		field.
+			Strings("available_for").
+			Optional().
+			Comment("List of ISO currency codes the provider is available for"),
 	}
 }
 

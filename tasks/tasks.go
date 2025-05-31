@@ -1342,7 +1342,8 @@ func ComputeMarketRate() error {
 				),
 				providerordertoken.ConversionRateTypeEQ(providerordertoken.ConversionRateTypeFixed),
 				providerordertoken.HasProviderWith(
-					providerprofile.IsAvailableEQ(true),
+					// providerprofile.IsAvailableEQ(true), // REMOVE this line
+					providerprofile.AvailableForContains(currency.Code), // ADD this line
 				),
 			).
 			Select(providerordertoken.FieldFixedConversionRate).

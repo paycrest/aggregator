@@ -87,20 +87,6 @@ func (ppc *ProviderProfileCreate) SetNillableIsActive(b *bool) *ProviderProfileC
 	return ppc
 }
 
-// SetIsAvailable sets the "is_available" field.
-func (ppc *ProviderProfileCreate) SetIsAvailable(b bool) *ProviderProfileCreate {
-	ppc.mutation.SetIsAvailable(b)
-	return ppc
-}
-
-// SetNillableIsAvailable sets the "is_available" field if the given value is not nil.
-func (ppc *ProviderProfileCreate) SetNillableIsAvailable(b *bool) *ProviderProfileCreate {
-	if b != nil {
-		ppc.SetIsAvailable(*b)
-	}
-	return ppc
-}
-
 // SetUpdatedAt sets the "updated_at" field.
 func (ppc *ProviderProfileCreate) SetUpdatedAt(t time.Time) *ProviderProfileCreate {
 	ppc.mutation.SetUpdatedAt(t)
@@ -238,6 +224,12 @@ func (ppc *ProviderProfileCreate) SetNillableIsKybVerified(b *bool) *ProviderPro
 	if b != nil {
 		ppc.SetIsKybVerified(*b)
 	}
+	return ppc
+}
+
+// SetAvailableFor sets the "available_for" field.
+func (ppc *ProviderProfileCreate) SetAvailableFor(s []string) *ProviderProfileCreate {
+	ppc.mutation.SetAvailableFor(s)
 	return ppc
 }
 
@@ -407,10 +399,6 @@ func (ppc *ProviderProfileCreate) defaults() {
 		v := providerprofile.DefaultIsActive
 		ppc.mutation.SetIsActive(v)
 	}
-	if _, ok := ppc.mutation.IsAvailable(); !ok {
-		v := providerprofile.DefaultIsAvailable
-		ppc.mutation.SetIsAvailable(v)
-	}
 	if _, ok := ppc.mutation.UpdatedAt(); !ok {
 		v := providerprofile.DefaultUpdatedAt()
 		ppc.mutation.SetUpdatedAt(v)
@@ -446,9 +434,6 @@ func (ppc *ProviderProfileCreate) check() error {
 	}
 	if _, ok := ppc.mutation.IsActive(); !ok {
 		return &ValidationError{Name: "is_active", err: errors.New(`ent: missing required field "ProviderProfile.is_active"`)}
-	}
-	if _, ok := ppc.mutation.IsAvailable(); !ok {
-		return &ValidationError{Name: "is_available", err: errors.New(`ent: missing required field "ProviderProfile.is_available"`)}
 	}
 	if _, ok := ppc.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ProviderProfile.updated_at"`)}
@@ -527,10 +512,6 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 		_spec.SetField(providerprofile.FieldIsActive, field.TypeBool, value)
 		_node.IsActive = value
 	}
-	if value, ok := ppc.mutation.IsAvailable(); ok {
-		_spec.SetField(providerprofile.FieldIsAvailable, field.TypeBool, value)
-		_node.IsAvailable = value
-	}
 	if value, ok := ppc.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerprofile.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
@@ -570,6 +551,10 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 	if value, ok := ppc.mutation.IsKybVerified(); ok {
 		_spec.SetField(providerprofile.FieldIsKybVerified, field.TypeBool, value)
 		_node.IsKybVerified = value
+	}
+	if value, ok := ppc.mutation.AvailableFor(); ok {
+		_spec.SetField(providerprofile.FieldAvailableFor, field.TypeJSON, value)
+		_node.AvailableFor = value
 	}
 	if nodes := ppc.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -796,18 +781,6 @@ func (u *ProviderProfileUpsert) UpdateIsActive() *ProviderProfileUpsert {
 	return u
 }
 
-// SetIsAvailable sets the "is_available" field.
-func (u *ProviderProfileUpsert) SetIsAvailable(v bool) *ProviderProfileUpsert {
-	u.Set(providerprofile.FieldIsAvailable, v)
-	return u
-}
-
-// UpdateIsAvailable sets the "is_available" field to the value that was provided on create.
-func (u *ProviderProfileUpsert) UpdateIsAvailable() *ProviderProfileUpsert {
-	u.SetExcluded(providerprofile.FieldIsAvailable)
-	return u
-}
-
 // SetUpdatedAt sets the "updated_at" field.
 func (u *ProviderProfileUpsert) SetUpdatedAt(v time.Time) *ProviderProfileUpsert {
 	u.Set(providerprofile.FieldUpdatedAt, v)
@@ -970,6 +943,24 @@ func (u *ProviderProfileUpsert) UpdateIsKybVerified() *ProviderProfileUpsert {
 	return u
 }
 
+// SetAvailableFor sets the "available_for" field.
+func (u *ProviderProfileUpsert) SetAvailableFor(v []string) *ProviderProfileUpsert {
+	u.Set(providerprofile.FieldAvailableFor, v)
+	return u
+}
+
+// UpdateAvailableFor sets the "available_for" field to the value that was provided on create.
+func (u *ProviderProfileUpsert) UpdateAvailableFor() *ProviderProfileUpsert {
+	u.SetExcluded(providerprofile.FieldAvailableFor)
+	return u
+}
+
+// ClearAvailableFor clears the value of the "available_for" field.
+func (u *ProviderProfileUpsert) ClearAvailableFor() *ProviderProfileUpsert {
+	u.SetNull(providerprofile.FieldAvailableFor)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
@@ -1085,20 +1076,6 @@ func (u *ProviderProfileUpsertOne) SetIsActive(v bool) *ProviderProfileUpsertOne
 func (u *ProviderProfileUpsertOne) UpdateIsActive() *ProviderProfileUpsertOne {
 	return u.Update(func(s *ProviderProfileUpsert) {
 		s.UpdateIsActive()
-	})
-}
-
-// SetIsAvailable sets the "is_available" field.
-func (u *ProviderProfileUpsertOne) SetIsAvailable(v bool) *ProviderProfileUpsertOne {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.SetIsAvailable(v)
-	})
-}
-
-// UpdateIsAvailable sets the "is_available" field to the value that was provided on create.
-func (u *ProviderProfileUpsertOne) UpdateIsAvailable() *ProviderProfileUpsertOne {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.UpdateIsAvailable()
 	})
 }
 
@@ -1288,6 +1265,27 @@ func (u *ProviderProfileUpsertOne) SetIsKybVerified(v bool) *ProviderProfileUpse
 func (u *ProviderProfileUpsertOne) UpdateIsKybVerified() *ProviderProfileUpsertOne {
 	return u.Update(func(s *ProviderProfileUpsert) {
 		s.UpdateIsKybVerified()
+	})
+}
+
+// SetAvailableFor sets the "available_for" field.
+func (u *ProviderProfileUpsertOne) SetAvailableFor(v []string) *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetAvailableFor(v)
+	})
+}
+
+// UpdateAvailableFor sets the "available_for" field to the value that was provided on create.
+func (u *ProviderProfileUpsertOne) UpdateAvailableFor() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateAvailableFor()
+	})
+}
+
+// ClearAvailableFor clears the value of the "available_for" field.
+func (u *ProviderProfileUpsertOne) ClearAvailableFor() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.ClearAvailableFor()
 	})
 }
 
@@ -1576,20 +1574,6 @@ func (u *ProviderProfileUpsertBulk) UpdateIsActive() *ProviderProfileUpsertBulk 
 	})
 }
 
-// SetIsAvailable sets the "is_available" field.
-func (u *ProviderProfileUpsertBulk) SetIsAvailable(v bool) *ProviderProfileUpsertBulk {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.SetIsAvailable(v)
-	})
-}
-
-// UpdateIsAvailable sets the "is_available" field to the value that was provided on create.
-func (u *ProviderProfileUpsertBulk) UpdateIsAvailable() *ProviderProfileUpsertBulk {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.UpdateIsAvailable()
-	})
-}
-
 // SetUpdatedAt sets the "updated_at" field.
 func (u *ProviderProfileUpsertBulk) SetUpdatedAt(v time.Time) *ProviderProfileUpsertBulk {
 	return u.Update(func(s *ProviderProfileUpsert) {
@@ -1776,6 +1760,27 @@ func (u *ProviderProfileUpsertBulk) SetIsKybVerified(v bool) *ProviderProfileUps
 func (u *ProviderProfileUpsertBulk) UpdateIsKybVerified() *ProviderProfileUpsertBulk {
 	return u.Update(func(s *ProviderProfileUpsert) {
 		s.UpdateIsKybVerified()
+	})
+}
+
+// SetAvailableFor sets the "available_for" field.
+func (u *ProviderProfileUpsertBulk) SetAvailableFor(v []string) *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetAvailableFor(v)
+	})
+}
+
+// UpdateAvailableFor sets the "available_for" field to the value that was provided on create.
+func (u *ProviderProfileUpsertBulk) UpdateAvailableFor() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateAvailableFor()
+	})
+}
+
+// ClearAvailableFor clears the value of the "available_for" field.
+func (u *ProviderProfileUpsertBulk) ClearAvailableFor() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.ClearAvailableFor()
 	})
 }
 

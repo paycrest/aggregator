@@ -369,7 +369,7 @@ func TestProfile(t *testing.T) {
 				HostIdentifier:   "https://example.com",
 				BusinessDocument: "https://example.com/business_doc.png",
 				IdentityDocument: "https://example.com/national_id.png",
-				IsAvailable:      true,
+				AvailableFor:     []string{"KES", "USD"},
 			}
 
 			res := profileUpdateRequest(payload)
@@ -398,6 +398,7 @@ func TestProfile(t *testing.T) {
 			// assert for currencies
 			assert.Equal(t, len(providerProfile.Edges.Currencies), 1)
 			assert.Equal(t, providerProfile.Edges.Currencies[0].Code, payload.Currencies[0])
+			assert.ElementsMatch(t, payload.AvailableFor, providerProfile.AvailableFor) // <-- Assert AvailableFor
 		})
 
 		t.Run("with token rate slippage", func(t *testing.T) {
