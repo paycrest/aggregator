@@ -103,6 +103,14 @@ type OrderService interface {
 	SettleOrder(ctx context.Context, orderID uuid.UUID) error
 }
 
+// Indexer provides an interface for indexing blockchain data to the database.
+type Indexer interface {
+	IndexTransfer(ctx context.Context, rpcClient RPCClient, order *ent.PaymentOrder) error
+	IndexOrderCreated(ctx context.Context, rpcClient RPCClient, order *ent.PaymentOrder) error
+	IndexOrderSettled(ctx context.Context, rpcClient RPCClient, order *ent.LockPaymentOrder) error
+	IndexOrderRefunded(ctx context.Context, rpcClient RPCClient, order *ent.LockPaymentOrder) error
+}
+
 // KYCProvider defines the interface for KYC verification providers
 type KYCProvider interface {
 	RequestVerification(ctx context.Context, req VerificationRequest) (*VerificationResponse, error)

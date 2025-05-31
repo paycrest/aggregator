@@ -77,23 +77,38 @@ func (s *EngineService) GetLatestBlock(ctx context.Context, chainID int64) (stri
 
 // GetContractEvents fetches contract events
 func (s *EngineService) GetContractEvents(ctx context.Context, chainID int64, contractAddress string, payload map[string]interface{}) ([]interface{}, error) {
-	res, err := fastshot.NewClient(s.config.BaseURL).
-		Config().SetTimeout(30 * time.Second).
-		Auth().BearerToken(s.config.AccessToken).
-		Header().AddAll(map[string]string{
-		"Content-Type": "application/json",
-	}).Build().POST(fmt.Sprintf("/contract/%d/%s/events/get", chainID, contractAddress)).
-		Body().AsJSON(payload).Send()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get contract events: %w", err)
-	}
+	start := time.Now()
+	timeout := 1 * time.Minute
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
-	}
+	for {
+		res, err := fastshot.NewClient(s.config.BaseURL).
+			Config().SetTimeout(30 * time.Second).
+			Auth().BearerToken(s.config.AccessToken).
+			Header().AddAll(map[string]string{
+			"Content-Type": "application/json",
+		}).Build().POST(fmt.Sprintf("/contract/%d/%s/events/get", chainID, contractAddress)).
+			Body().AsJSON(payload).Send()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get contract events: %w", err)
+		}
 
-	return data["result"].([]interface{}), nil
+		data, err := utils.ParseJSONResponse(res.RawResponse)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse JSON response: %w", err)
+		}
+
+		result := data["result"].([]interface{})
+		if len(result) > 0 {
+			return result, nil
+		}
+
+		elapsed := time.Since(start)
+		if elapsed >= timeout {
+			return nil, fmt.Errorf("contract events timeout after %v", timeout)
+		}
+
+		time.Sleep(1 * time.Second)
+	}
 }
 
 // SendTransactionBatch sends a batch of transactions
@@ -152,8 +167,10 @@ func (s *EngineService) WaitForTransactionMined(ctx context.Context, queueId str
 			return nil, err
 		}
 
-		if result["status"] == "mined" {
+		if result["status"] == "mined" && result["transactionHash"] != nil {
 			return result, nil
+		} else if result["status"] == "errored" {
+			return nil, fmt.Errorf("transaction failed: %v", result["errorMessage"])
 		}
 
 		elapsed := time.Since(start)
@@ -161,6 +178,6 @@ func (s *EngineService) WaitForTransactionMined(ctx context.Context, queueId str
 			return nil, fmt.Errorf("transaction mining timeout after %v", timeout)
 		}
 
-		time.Sleep(2 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 }

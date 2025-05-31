@@ -29,6 +29,8 @@ import (
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/webhookretryattempt"
 	"github.com/paycrest/aggregator/services"
+	"github.com/paycrest/aggregator/services/common"
+	"github.com/paycrest/aggregator/services/indexer"
 	orderService "github.com/paycrest/aggregator/services/order"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
@@ -97,8 +99,43 @@ func RetryStaleUserOperations() error {
 		return fmt.Errorf("RetryStaleUserOperations: %w", err)
 	}
 
-	// Process initiated orders
+	// Process transfers
 	orders, err := storage.Client.PaymentOrder.
+		Query().
+		Where(
+			paymentorder.StatusEQ(paymentorder.StatusInitiated),
+			paymentorder.AmountPaidEQ(decimal.Zero),
+			paymentorder.UpdatedAtGTE(time.Now().Add(-1*time.Hour)),
+		).
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
+		WithReceiveAddress().
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("RetryStaleUserOperations: %w", err)
+	}
+
+	wg.Add(1)
+	go func(ctx context.Context) {
+		defer wg.Done()
+		for _, order := range orders {
+			service := orderService.NewOrderEVM()
+			err := service.ProcessTransfer(ctx, order.Edges.ReceiveAddress.Address, order.Edges.Token)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":          fmt.Sprintf("%v", err),
+					"OrderID":        order.ID.String(),
+					"ReceiveAddress": order.Edges.ReceiveAddress.Address,
+					"Token":          order.Edges.Token.Symbol,
+					"Network":        order.Edges.Token.Edges.Network.Identifier,
+				}).Errorf("RetryStaleUserOperations.ProcessTransfer")
+			}
+		}
+	}(ctx)
+
+	// Create initiated orders
+	orders, err = storage.Client.PaymentOrder.
 		Query().
 		Where(func(s *sql.Selector) {
 			ra := sql.Table(receiveaddress.Table)
@@ -111,7 +148,7 @@ func RetryStaleUserOperations() error {
 		}).
 		Where(
 			paymentorder.Or(
-				paymentorder.UpdatedAtGTE(time.Now().Add(-10*time.Minute)),
+				paymentorder.UpdatedAtGTE(time.Now().Add(-1*time.Hour)),
 				paymentorder.HasRecipientWith(
 					paymentorderrecipient.MemoHasPrefix("P#P"),
 				),
@@ -310,7 +347,7 @@ func IndexBlockchainEvents() error {
 		return fmt.Errorf("IndexBlockchainEvents: %w", err)
 	}
 
-	// Index ERC20 transfer events
+	// Index token transfer events
 	wg.Add(1)
 	go func(ctx context.Context) {
 		defer wg.Done()
@@ -338,8 +375,8 @@ func IndexBlockchainEvents() error {
 
 		for _, order := range orders {
 			if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {
-				indexerService := services.NewIndexerService(orderService.NewOrderTron())
-				err := indexerService.IndexTRC20Transfer(ctx, order)
+				tronIndexer := indexer.NewIndexerTron()
+				err := tronIndexer.IndexTransfer(ctx, nil, order)
 				if err != nil {
 					continue
 				}
@@ -387,8 +424,8 @@ func IndexBlockchainEvents() error {
 				}
 
 				for _, order := range orders {
-					indexerService := services.NewIndexerService(orderService.NewOrderTron())
-					err := indexerService.IndexOrderCreatedTron(ctx, order)
+					indexerService := indexer.NewIndexerTron()
+					err := indexerService.IndexOrderCreated(ctx, nil, order)
 					if err != nil {
 						continue
 					}
@@ -438,8 +475,8 @@ func IndexBlockchainEvents() error {
 				}
 
 				for _, order := range lockOrders {
-					indexerService := services.NewIndexerService(orderService.NewOrderTron())
-					err := indexerService.IndexOrderSettledTron(ctx, order)
+					tronIndexer := indexer.NewIndexerTron()
+					err := tronIndexer.IndexOrderSettled(ctx, nil, order)
 					if err != nil {
 						continue
 					}
@@ -493,8 +530,8 @@ func IndexBlockchainEvents() error {
 
 				if len(lockOrders) > 0 {
 					for _, order := range lockOrders {
-						indexerService := services.NewIndexerService(orderService.NewOrderTron())
-						err := indexerService.IndexOrderRefundedTron(ctx, order)
+						tronIndexer := indexer.NewIndexerTron()
+						err := tronIndexer.IndexOrderRefunded(ctx, nil, order)
 						if err != nil {
 							continue
 						}
@@ -1156,15 +1193,8 @@ func HandleReceiveAddressValidity() error {
 		return fmt.Errorf("HandleReceiveAddressValidity: %w", err)
 	}
 
-	var indexerService services.Indexer
 	for _, address := range addresses {
-		if strings.HasPrefix(address.Edges.PaymentOrder.Edges.Token.Edges.Network.Identifier, "tron") {
-			indexerService = services.NewIndexerService(orderService.NewOrderTron())
-		} else {
-			indexerService = services.NewIndexerService(orderService.NewOrderEVM())
-		}
-
-		err := indexerService.HandleReceiveAddressValidity(ctx, rpcClients[address.Edges.PaymentOrder.Edges.Token.Edges.Network.Identifier], address, address.Edges.PaymentOrder)
+		err := common.HandleReceiveAddressValidity(ctx, address, address.Edges.PaymentOrder)
 		if err != nil {
 			continue
 		}
@@ -1493,11 +1523,11 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for HandleReceiveAddressValidity: %v", err)
 	}
 
-	// Retry stale user operations every 2 minutes
-	_, err = scheduler.Every(2).Minutes().Do(RetryStaleUserOperations)
-	if err != nil {
-		logger.Errorf("StartCronJobs for RetryStaleUserOperations: %v", err)
-	}
+	// // Retry stale user operations every 2 minutes
+	// _, err = scheduler.Every(1).Minutes().Do(RetryStaleUserOperations)
+	// if err != nil {
+	// 	logger.Errorf("StartCronJobs for RetryStaleUserOperations: %v", err)
+	// }
 
 	// Index blockchain events every 10 seconds
 	_, err = scheduler.Every(10).Seconds().Do(IndexBlockchainEvents)
@@ -1506,10 +1536,10 @@ func StartCronJobs() {
 	}
 
 	// Index linked addresses every 1 minute
-	_, err = scheduler.Every(1).Minute().Do(IndexLinkedAddresses)
-	if err != nil {
-		logger.Errorf("StartCronJobs for IndexLinkedAddresses: %v", err)
-	}
+	// _, err = scheduler.Every(1).Minute().Do(IndexLinkedAddresses)
+	// if err != nil {
+	// 	logger.Errorf("StartCronJobs for IndexLinkedAddresses: %v", err)
+	// }
 
 	// Start scheduler
 	scheduler.StartAsync()
