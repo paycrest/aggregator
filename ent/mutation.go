@@ -11909,7 +11909,6 @@ type ProviderProfileMutation struct {
 	host_identifier          *string
 	provision_mode           *providerprofile.ProvisionMode
 	is_active                *bool
-	is_available             *bool
 	updated_at               *time.Time
 	visibility_mode          *providerprofile.VisibilityMode
 	address                  *string
@@ -11920,6 +11919,8 @@ type ProviderProfileMutation struct {
 	identity_document        *string
 	business_document        *string
 	is_kyb_verified          *bool
+	available_for            *[]string
+	appendavailable_for      []string
 	clearedFields            map[string]struct{}
 	user                     *uuid.UUID
 	cleareduser              bool
@@ -12216,42 +12217,6 @@ func (m *ProviderProfileMutation) OldIsActive(ctx context.Context) (v bool, err 
 // ResetIsActive resets all changes to the "is_active" field.
 func (m *ProviderProfileMutation) ResetIsActive() {
 	m.is_active = nil
-}
-
-// SetIsAvailable sets the "is_available" field.
-func (m *ProviderProfileMutation) SetIsAvailable(b bool) {
-	m.is_available = &b
-}
-
-// IsAvailable returns the value of the "is_available" field in the mutation.
-func (m *ProviderProfileMutation) IsAvailable() (r bool, exists bool) {
-	v := m.is_available
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldIsAvailable returns the old "is_available" field's value of the ProviderProfile entity.
-// If the ProviderProfile object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProviderProfileMutation) OldIsAvailable(ctx context.Context) (v bool, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldIsAvailable is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldIsAvailable requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldIsAvailable: %w", err)
-	}
-	return oldValue.IsAvailable, nil
-}
-
-// ResetIsAvailable resets all changes to the "is_available" field.
-func (m *ProviderProfileMutation) ResetIsAvailable() {
-	m.is_available = nil
 }
 
 // SetUpdatedAt sets the "updated_at" field.
@@ -12705,6 +12670,71 @@ func (m *ProviderProfileMutation) ResetIsKybVerified() {
 	m.is_kyb_verified = nil
 }
 
+// SetAvailableFor sets the "available_for" field.
+func (m *ProviderProfileMutation) SetAvailableFor(s []string) {
+	m.available_for = &s
+	m.appendavailable_for = nil
+}
+
+// AvailableFor returns the value of the "available_for" field in the mutation.
+func (m *ProviderProfileMutation) AvailableFor() (r []string, exists bool) {
+	v := m.available_for
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAvailableFor returns the old "available_for" field's value of the ProviderProfile entity.
+// If the ProviderProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderProfileMutation) OldAvailableFor(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAvailableFor is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAvailableFor requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAvailableFor: %w", err)
+	}
+	return oldValue.AvailableFor, nil
+}
+
+// AppendAvailableFor adds s to the "available_for" field.
+func (m *ProviderProfileMutation) AppendAvailableFor(s []string) {
+	m.appendavailable_for = append(m.appendavailable_for, s...)
+}
+
+// AppendedAvailableFor returns the list of values that were appended to the "available_for" field in this mutation.
+func (m *ProviderProfileMutation) AppendedAvailableFor() ([]string, bool) {
+	if len(m.appendavailable_for) == 0 {
+		return nil, false
+	}
+	return m.appendavailable_for, true
+}
+
+// ClearAvailableFor clears the value of the "available_for" field.
+func (m *ProviderProfileMutation) ClearAvailableFor() {
+	m.available_for = nil
+	m.appendavailable_for = nil
+	m.clearedFields[providerprofile.FieldAvailableFor] = struct{}{}
+}
+
+// AvailableForCleared returns if the "available_for" field was cleared in this mutation.
+func (m *ProviderProfileMutation) AvailableForCleared() bool {
+	_, ok := m.clearedFields[providerprofile.FieldAvailableFor]
+	return ok
+}
+
+// ResetAvailableFor resets all changes to the "available_for" field.
+func (m *ProviderProfileMutation) ResetAvailableFor() {
+	m.available_for = nil
+	m.appendavailable_for = nil
+	delete(m.clearedFields, providerprofile.FieldAvailableFor)
+}
+
 // SetUserID sets the "user" edge to the User entity by id.
 func (m *ProviderProfileMutation) SetUserID(id uuid.UUID) {
 	m.user = &id
@@ -13085,9 +13115,6 @@ func (m *ProviderProfileMutation) Fields() []string {
 	if m.is_active != nil {
 		fields = append(fields, providerprofile.FieldIsActive)
 	}
-	if m.is_available != nil {
-		fields = append(fields, providerprofile.FieldIsAvailable)
-	}
 	if m.updated_at != nil {
 		fields = append(fields, providerprofile.FieldUpdatedAt)
 	}
@@ -13118,6 +13145,9 @@ func (m *ProviderProfileMutation) Fields() []string {
 	if m.is_kyb_verified != nil {
 		fields = append(fields, providerprofile.FieldIsKybVerified)
 	}
+	if m.available_for != nil {
+		fields = append(fields, providerprofile.FieldAvailableFor)
+	}
 	return fields
 }
 
@@ -13134,8 +13164,6 @@ func (m *ProviderProfileMutation) Field(name string) (ent.Value, bool) {
 		return m.ProvisionMode()
 	case providerprofile.FieldIsActive:
 		return m.IsActive()
-	case providerprofile.FieldIsAvailable:
-		return m.IsAvailable()
 	case providerprofile.FieldUpdatedAt:
 		return m.UpdatedAt()
 	case providerprofile.FieldVisibilityMode:
@@ -13156,6 +13184,8 @@ func (m *ProviderProfileMutation) Field(name string) (ent.Value, bool) {
 		return m.BusinessDocument()
 	case providerprofile.FieldIsKybVerified:
 		return m.IsKybVerified()
+	case providerprofile.FieldAvailableFor:
+		return m.AvailableFor()
 	}
 	return nil, false
 }
@@ -13173,8 +13203,6 @@ func (m *ProviderProfileMutation) OldField(ctx context.Context, name string) (en
 		return m.OldProvisionMode(ctx)
 	case providerprofile.FieldIsActive:
 		return m.OldIsActive(ctx)
-	case providerprofile.FieldIsAvailable:
-		return m.OldIsAvailable(ctx)
 	case providerprofile.FieldUpdatedAt:
 		return m.OldUpdatedAt(ctx)
 	case providerprofile.FieldVisibilityMode:
@@ -13195,6 +13223,8 @@ func (m *ProviderProfileMutation) OldField(ctx context.Context, name string) (en
 		return m.OldBusinessDocument(ctx)
 	case providerprofile.FieldIsKybVerified:
 		return m.OldIsKybVerified(ctx)
+	case providerprofile.FieldAvailableFor:
+		return m.OldAvailableFor(ctx)
 	}
 	return nil, fmt.Errorf("unknown ProviderProfile field %s", name)
 }
@@ -13231,13 +13261,6 @@ func (m *ProviderProfileMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetIsActive(v)
-		return nil
-	case providerprofile.FieldIsAvailable:
-		v, ok := value.(bool)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetIsAvailable(v)
 		return nil
 	case providerprofile.FieldUpdatedAt:
 		v, ok := value.(time.Time)
@@ -13309,6 +13332,13 @@ func (m *ProviderProfileMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetIsKybVerified(v)
 		return nil
+	case providerprofile.FieldAvailableFor:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAvailableFor(v)
+		return nil
 	}
 	return fmt.Errorf("unknown ProviderProfile field %s", name)
 }
@@ -13366,6 +13396,9 @@ func (m *ProviderProfileMutation) ClearedFields() []string {
 	if m.FieldCleared(providerprofile.FieldBusinessDocument) {
 		fields = append(fields, providerprofile.FieldBusinessDocument)
 	}
+	if m.FieldCleared(providerprofile.FieldAvailableFor) {
+		fields = append(fields, providerprofile.FieldAvailableFor)
+	}
 	return fields
 }
 
@@ -13407,6 +13440,9 @@ func (m *ProviderProfileMutation) ClearField(name string) error {
 	case providerprofile.FieldBusinessDocument:
 		m.ClearBusinessDocument()
 		return nil
+	case providerprofile.FieldAvailableFor:
+		m.ClearAvailableFor()
+		return nil
 	}
 	return fmt.Errorf("unknown ProviderProfile nullable field %s", name)
 }
@@ -13426,9 +13462,6 @@ func (m *ProviderProfileMutation) ResetField(name string) error {
 		return nil
 	case providerprofile.FieldIsActive:
 		m.ResetIsActive()
-		return nil
-	case providerprofile.FieldIsAvailable:
-		m.ResetIsAvailable()
 		return nil
 	case providerprofile.FieldUpdatedAt:
 		m.ResetUpdatedAt()
@@ -13459,6 +13492,9 @@ func (m *ProviderProfileMutation) ResetField(name string) error {
 		return nil
 	case providerprofile.FieldIsKybVerified:
 		m.ResetIsKybVerified()
+		return nil
+	case providerprofile.FieldAvailableFor:
+		m.ResetAvailableFor()
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderProfile field %s", name)

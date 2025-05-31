@@ -80,11 +80,6 @@ func IsActive(v bool) predicate.ProviderProfile {
 	return predicate.ProviderProfile(sql.FieldEQ(FieldIsActive, v))
 }
 
-// IsAvailable applies equality check predicate on the "is_available" field. It's identical to IsAvailableEQ.
-func IsAvailable(v bool) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldEQ(FieldIsAvailable, v))
-}
-
 // UpdatedAt applies equality check predicate on the "updated_at" field. It's identical to UpdatedAtEQ.
 func UpdatedAt(v time.Time) predicate.ProviderProfile {
 	return predicate.ProviderProfile(sql.FieldEQ(FieldUpdatedAt, v))
@@ -303,16 +298,6 @@ func IsActiveEQ(v bool) predicate.ProviderProfile {
 // IsActiveNEQ applies the NEQ predicate on the "is_active" field.
 func IsActiveNEQ(v bool) predicate.ProviderProfile {
 	return predicate.ProviderProfile(sql.FieldNEQ(FieldIsActive, v))
-}
-
-// IsAvailableEQ applies the EQ predicate on the "is_available" field.
-func IsAvailableEQ(v bool) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldEQ(FieldIsAvailable, v))
-}
-
-// IsAvailableNEQ applies the NEQ predicate on the "is_available" field.
-func IsAvailableNEQ(v bool) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldNEQ(FieldIsAvailable, v))
 }
 
 // UpdatedAtEQ applies the EQ predicate on the "updated_at" field.
@@ -838,6 +823,26 @@ func IsKybVerifiedEQ(v bool) predicate.ProviderProfile {
 // IsKybVerifiedNEQ applies the NEQ predicate on the "is_kyb_verified" field.
 func IsKybVerifiedNEQ(v bool) predicate.ProviderProfile {
 	return predicate.ProviderProfile(sql.FieldNEQ(FieldIsKybVerified, v))
+}
+
+// AvailableForIsNil applies the IsNil predicate on the "available_for" field.
+func AvailableForIsNil() predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldIsNull(FieldAvailableFor))
+}
+
+// AvailableForNotNil applies the NotNil predicate on the "available_for" field.
+func AvailableForNotNil() predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldNotNull(FieldAvailableFor))
+}
+
+// AvailableForContains applies the Contains predicate on the "available_for" field (Postgres array contains).
+func AvailableForContains(v string) predicate.ProviderProfile {
+    return predicate.ProviderProfile(func(s *sql.Selector) {
+        // For Postgres, use the @> operator for array contains
+		s.Where(sql.P(func(b *sql.Builder) {
+			b.WriteString(FieldAvailableFor + " @> ARRAY[?]::varchar[]").Arg(v)
+		}))
+    })
 }
 
 // HasUser applies the HasEdge predicate on the "user" edge.

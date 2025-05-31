@@ -23,8 +23,6 @@ const (
 	FieldProvisionMode = "provision_mode"
 	// FieldIsActive holds the string denoting the is_active field in the database.
 	FieldIsActive = "is_active"
-	// FieldIsAvailable holds the string denoting the is_available field in the database.
-	FieldIsAvailable = "is_available"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
 	// FieldVisibilityMode holds the string denoting the visibility_mode field in the database.
@@ -45,6 +43,8 @@ const (
 	FieldBusinessDocument = "business_document"
 	// FieldIsKybVerified holds the string denoting the is_kyb_verified field in the database.
 	FieldIsKybVerified = "is_kyb_verified"
+	// FieldAvailableFor holds the string denoting the available_for field in the database.
+	FieldAvailableFor = "available_for"
 	// EdgeUser holds the string denoting the user edge name in mutations.
 	EdgeUser = "user"
 	// EdgeAPIKey holds the string denoting the api_key edge name in mutations.
@@ -115,7 +115,6 @@ var Columns = []string{
 	FieldHostIdentifier,
 	FieldProvisionMode,
 	FieldIsActive,
-	FieldIsAvailable,
 	FieldUpdatedAt,
 	FieldVisibilityMode,
 	FieldAddress,
@@ -126,6 +125,7 @@ var Columns = []string{
 	FieldIdentityDocument,
 	FieldBusinessDocument,
 	FieldIsKybVerified,
+	FieldAvailableFor,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "provider_profiles"
@@ -163,8 +163,6 @@ var (
 	TradingNameValidator func(string) error
 	// DefaultIsActive holds the default value on creation for the "is_active" field.
 	DefaultIsActive bool
-	// DefaultIsAvailable holds the default value on creation for the "is_available" field.
-	DefaultIsAvailable bool
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
 	DefaultUpdatedAt func() time.Time
 	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
@@ -277,11 +275,6 @@ func ByProvisionMode(opts ...sql.OrderTermOption) OrderOption {
 // ByIsActive orders the results by the is_active field.
 func ByIsActive(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldIsActive, opts...).ToFunc()
-}
-
-// ByIsAvailable orders the results by the is_available field.
-func ByIsAvailable(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldIsAvailable, opts...).ToFunc()
 }
 
 // ByUpdatedAt orders the results by the updated_at field.

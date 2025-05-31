@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -29,8 +30,6 @@ type ProviderProfile struct {
 	ProvisionMode providerprofile.ProvisionMode `json:"provision_mode,omitempty"`
 	// IsActive holds the value of the "is_active" field.
 	IsActive bool `json:"is_active,omitempty"`
-	// IsAvailable holds the value of the "is_available" field.
-	IsAvailable bool `json:"is_available,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// VisibilityMode holds the value of the "visibility_mode" field.
@@ -51,6 +50,8 @@ type ProviderProfile struct {
 	BusinessDocument string `json:"business_document,omitempty"`
 	// IsKybVerified holds the value of the "is_kyb_verified" field.
 	IsKybVerified bool `json:"is_kyb_verified,omitempty"`
+	// List of ISO currency codes the provider is available for
+	AvailableFor []string `json:"available_for,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ProviderProfileQuery when eager-loading is set.
 	Edges                 ProviderProfileEdges `json:"edges"`
@@ -153,7 +154,9 @@ func (*ProviderProfile) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case providerprofile.FieldIsActive, providerprofile.FieldIsAvailable, providerprofile.FieldIsKybVerified:
+		case providerprofile.FieldAvailableFor:
+			values[i] = new([]byte)
+		case providerprofile.FieldIsActive, providerprofile.FieldIsKybVerified:
 			values[i] = new(sql.NullBool)
 		case providerprofile.FieldID, providerprofile.FieldTradingName, providerprofile.FieldHostIdentifier, providerprofile.FieldProvisionMode, providerprofile.FieldVisibilityMode, providerprofile.FieldAddress, providerprofile.FieldMobileNumber, providerprofile.FieldBusinessName, providerprofile.FieldIdentityDocumentType, providerprofile.FieldIdentityDocument, providerprofile.FieldBusinessDocument:
 			values[i] = new(sql.NullString)
@@ -205,12 +208,6 @@ func (pp *ProviderProfile) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field is_active", values[i])
 			} else if value.Valid {
 				pp.IsActive = value.Bool
-			}
-		case providerprofile.FieldIsAvailable:
-			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field is_available", values[i])
-			} else if value.Valid {
-				pp.IsAvailable = value.Bool
 			}
 		case providerprofile.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -271,6 +268,14 @@ func (pp *ProviderProfile) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field is_kyb_verified", values[i])
 			} else if value.Valid {
 				pp.IsKybVerified = value.Bool
+			}
+		case providerprofile.FieldAvailableFor:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field available_for", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &pp.AvailableFor); err != nil {
+					return fmt.Errorf("unmarshal field available_for: %w", err)
+				}
 			}
 		case providerprofile.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -362,9 +367,6 @@ func (pp *ProviderProfile) String() string {
 	builder.WriteString("is_active=")
 	builder.WriteString(fmt.Sprintf("%v", pp.IsActive))
 	builder.WriteString(", ")
-	builder.WriteString("is_available=")
-	builder.WriteString(fmt.Sprintf("%v", pp.IsAvailable))
-	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
 	builder.WriteString(pp.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
@@ -394,6 +396,9 @@ func (pp *ProviderProfile) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("is_kyb_verified=")
 	builder.WriteString(fmt.Sprintf("%v", pp.IsKybVerified))
+	builder.WriteString(", ")
+	builder.WriteString("available_for=")
+	builder.WriteString(fmt.Sprintf("%v", pp.AvailableFor))
 	builder.WriteByte(')')
 	return builder.String()
 }

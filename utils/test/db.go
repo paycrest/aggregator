@@ -457,7 +457,7 @@ func CreateTestProviderProfile(overrides map[string]interface{}) (*ent.ProviderP
 		"provision_mode":  "auto",
 		"is_partner":      false,
 		"visibility_mode": "public",
-		"is_available":    true,
+		"available_for":   []string{"USD"}, // <-- Use available_for instead of is_available
 	}
 
 	// Apply overrides
@@ -474,7 +474,8 @@ func CreateTestProviderProfile(overrides map[string]interface{}) (*ent.ProviderP
 		SetUserID(payload["user_id"].(uuid.UUID)).
 		AddCurrencyIDs(payload["currency_id"].(uuid.UUID)).
 		SetVisibilityMode(providerprofile.VisibilityMode(payload["visibility_mode"].(string))).
-		SetIsAvailable(payload["is_available"].(bool)).
+		// .SetIsAvailable(payload["is_available"].(bool)). // REMOVE this line
+		SetAvailableFor(payload["available_for"].([]string)). // ADD this line
 		Save(context.Background())
 
 	return profile, err

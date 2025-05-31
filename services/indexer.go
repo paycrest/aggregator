@@ -876,7 +876,7 @@ func (s *IndexerService) IndexOrderRefundedTron(ctx context.Context, order *ent.
 				logger.WithFields(logger.Fields{
 					"Error":  fmt.Sprintf("%v", err),
 					"TxHash": order.TxHash,
-				}).Errorf("Failed to fetch event logs for %s", order.Edges.Token.Edges.Network.Identifier)
+				}).Errorf("Failed to fetch trx info by id for %s", order.Edges.Token.Edges.Network.Identifier)
 				return err
 			}
 
@@ -885,7 +885,7 @@ func (s *IndexerService) IndexOrderRefundedTron(ctx context.Context, order *ent.
 				logger.WithFields(logger.Fields{
 					"Error":    fmt.Sprintf("%v", err),
 					"Response": data,
-				}).Errorf("Failed to parse JSON response for %s after fetching event logs", order.Edges.Token.Edges.Network.Identifier)
+				}).Errorf("Failed to parse JSON response for %s", order.Edges.Token.Edges.Network.Identifier)
 				return err
 			}
 
@@ -1123,7 +1123,9 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 				providerordertoken.NetworkEQ(token.Edges.Network.Identifier),
 				providerordertoken.HasProviderWith(
 					providerprofile.IDEQ(lockPaymentOrder.ProviderID),
-					providerprofile.IsAvailableEQ(true),
+					// Remove: providerprofile.IsAvailableEQ(true),
+					// Add: providerprofile.AvailableForContains(institution.Edges.FiatCurrency.Code),
+					providerprofile.AvailableForContains(institution.Edges.FiatCurrency.Code),
 				),
 				providerordertoken.HasTokenWith(tokenEnt.IDEQ(token.ID)),
 				providerordertoken.HasCurrencyWith(
@@ -1136,7 +1138,7 @@ func (s *IndexerService) CreateLockPaymentOrder(ctx context.Context, client type
 		if err != nil {
 			if ent.IsNotFound(err) {
 				// Provider could not be available for several reasons
-				// 1. Provider is not available
+				// 1. Provider is not available for the currency
 				// 2. Provider does not support the token
 				// 3. Provider does not support the network
 				// 4. Provider does not support the currency

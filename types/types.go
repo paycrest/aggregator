@@ -252,7 +252,7 @@ type ProviderProfilePayload struct {
 	TradingName          string                      `json:"tradingName"`
 	Currencies           []string                    `json:"currencies"`
 	HostIdentifier       string                      `json:"hostIdentifier"`
-	IsAvailable          bool                        `json:"isAvailable"`
+	AvailableFor         []string                    `json:"availableFor"` // ISO currency codes
 	Tokens               []ProviderOrderTokenPayload `json:"tokens"`
 	VisibilityMode       string                      `json:"visibilityMode"`
 	Address              string                      `json:"address"`
@@ -273,7 +273,7 @@ type ProviderProfileResponse struct {
 	TradingName          string                               `json:"tradingName"`
 	Currencies           []string                             `json:"currencies"`
 	HostIdentifier       string                               `json:"hostIdentifier"`
-	IsAvailable          bool                                 `json:"isAvailable"`
+	AvailableFor         []string                             `json:"availableFor"` // ISO currency codes
 	Tokens               []ProviderOrderTokenPayload          `json:"tokens"`
 	APIKey               APIKeyResponse                       `json:"apiKey"`
 	IsActive             bool                                 `json:"isActive"`

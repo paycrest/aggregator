@@ -250,10 +250,9 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		update.SetHostIdentifier(payload.HostIdentifier)
 	}
 
-	if payload.IsAvailable {
-		update.SetIsAvailable(true)
-	} else {
-		update.SetIsAvailable(false)
+	// --- Replace is_available with available_for ---
+	if len(payload.AvailableFor) > 0 {
+		update.SetAvailableFor(payload.AvailableFor)
 	}
 
 	if len(payload.Currencies) > 0 {
@@ -748,7 +747,7 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 		TradingName:          provider.TradingName,
 		Currencies:           currencyCodes,
 		HostIdentifier:       provider.HostIdentifier,
-		IsAvailable:          provider.IsAvailable,
+		AvailableFor:         provider.AvailableFor,
 		Tokens:               tokensPayload,
 		APIKey:               *apiKey,
 		IsActive:             provider.IsActive,

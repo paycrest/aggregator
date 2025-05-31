@@ -218,7 +218,7 @@ func seedProvider(ctx context.Context, client *ent.Client, bucket *ent.Provision
 		SetHostIdentifier("http://localhost:8001").
 		SetUser(user).
 		SetIsActive(true).
-		SetIsAvailable(true).
+		SetAvailableFor([]string{currency.Code}). // ADD this line: set available currencies
 		SetAddress("123 Main St").
 		SetMobileNumber("+2348063000000").
 		SetDateOfBirth(time.Date(1990, time.January, 1, 0, 0, 0, 0, time.UTC)).
