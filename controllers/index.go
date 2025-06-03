@@ -893,13 +893,11 @@ func (ctrl *Controller) WelcomeEmailWebhook(ctx *gin.Context) {
 
 	var submission FormSubmission
 	if err := ctx.ShouldBindJSON(&submission); err != nil {
-		logger.Errorf("Webhook log: Error parsing JSON: %v", err)
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Error parsing JSON", nil)
 		return
 	}
 
 	rawPayload, _ := json.Marshal(submission)
-	logger.Infof("Webhook payload: %s", string(rawPayload))
 
 	// Initialize fields (optional)
 	var name, email, scope string
