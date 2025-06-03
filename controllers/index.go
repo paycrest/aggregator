@@ -1,8 +1,11 @@
 package controllers
 
 import (
+	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"slices"
 	"strconv"
@@ -19,6 +22,7 @@ import (
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
+	"github.com/paycrest/aggregator/ent/user"
 	svc "github.com/paycrest/aggregator/services"
 	kycErrors "github.com/paycrest/aggregator/services/kyc/errors"
 	"github.com/paycrest/aggregator/services/kyc/smile"
@@ -35,7 +39,7 @@ import (
 
 var cryptoConf = config.CryptoConfig()
 
-// var serverConf = config.ServerConfig()
+var serverConf = config.ServerConfig()
 var identityConf = config.IdentityConfig()
 
 // Controller is the default controller for other endpoints
@@ -44,6 +48,8 @@ type Controller struct {
 	priorityQueueService  *svc.PriorityQueueService
 	receiveAddressService *svc.ReceiveAddressService
 	kycService            types.KYCProvider
+	slackService          *svc.SlackService
+	emailService          *svc.EmailService
 }
 
 // NewController creates a new instance of AuthController with injected services
@@ -53,7 +59,14 @@ func NewController() *Controller {
 		priorityQueueService:  svc.NewPriorityQueueService(),
 		receiveAddressService: svc.NewReceiveAddressService(),
 		kycService:            smile.NewSmileIDService(),
+		slackService:          svc.NewSlackService(serverConf.SlackWebhookURL),
+		emailService:          svc.NewEmailService(svc.SENDGRID_MAIL_PROVIDER),
 	}
+}
+
+type FormSubmission struct {
+	SubmissionID string                 `json:"submissionID"`
+	Answers      map[string]interface{} `json:"answers"`
 }
 
 // GetFiatCurrencies controller fetches the supported fiat currencies
@@ -873,4 +886,516 @@ func (ctrl *Controller) KYCWebhook(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "Webhook processed successfully"})
+}
+
+// WebhookHandler processes incoming Google Forms webhook requests, validates the payload and triggers a Slack notification with submission details.
+func (ctrl *Controller) WelcomeEmailWebhook(ctx *gin.Context) {
+
+	var submission FormSubmission
+	if err := ctx.ShouldBindJSON(&submission); err != nil {
+		logger.Errorf("Webhook log: Error parsing JSON: %v", err)
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Error parsing JSON", nil)
+		return
+	}
+
+	rawPayload, _ := json.Marshal(submission)
+	logger.Infof("Webhook payload: %s", string(rawPayload))
+
+	// Initialize fields (optional)
+	var name, email, scope string
+	scope = "sender" // Default if scope is missing
+
+	// Search for Name, Email, and Scope in answers
+	for _, value := range submission.Answers {
+		if valueMap, ok := value.(map[string]interface{}); ok {
+			answer, answerOk := valueMap["answer"].(string)
+			question, questionOk := valueMap["question"].(string)
+			if answerOk && answer != "" && questionOk {
+				questionLower := strings.ToLower(question)
+				if (questionLower == "name" || strings.Contains(questionLower, "full name")) && name == "" {
+					name = answer
+				} else if (questionLower == "email" || strings.Contains(questionLower, "email address")) && email == "" {
+					email = answer
+				} else if (questionLower == "scopes" || questionLower == "scope") && scope == "sender" {
+					scope = answer
+				}
+			}
+		}
+	}
+
+	// Log missing fields as warnings
+	if name == "" {
+		logger.Warnf("Webhook log: 'name' field missing in payload: %s", string(rawPayload))
+	}
+	if email == "" {
+		logger.Warnf("Webhook log: 'email' field missing in payload: %s", string(rawPayload))
+	}
+	if scope == "sender" {
+		logger.Warnf("Webhook log: 'scope' field missing, using default 'sender' in payload: %s", string(rawPayload))
+	}
+
+	// Send Slack notification
+	err := ctrl.slackService.SendSubmissionNotification(name, email, scope, submission.SubmissionID)
+	if err != nil {
+		logger.Errorf("Webhook log: Error sending Slack notification: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Error sending Slack notification", nil)
+		return
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Webhook received and processed", nil)
+}
+
+func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
+	startTime := time.Now()
+
+	// Parse form-encoded payload
+	payloadStr := ctx.PostForm("payload")
+	if payloadStr == "" {
+		body, err := ctx.GetRawData()
+		if err != nil {
+			logger.Errorf("Missing payload and failed to read raw body: %v", err)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing payload"})
+			return
+		}
+		payloadStr = string(body)
+	}
+
+	// Parse JSON payload
+	var payload map[string]interface{}
+	if err := json.Unmarshal([]byte(payloadStr), &payload); err != nil {
+		logger.Errorf("Error parsing Slack interaction payload: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Error parsing payload"})
+		return
+	}
+
+	// Handle modal trigger (button clicks)
+	if payload["type"] == "block_actions" {
+		actions, ok := payload["actions"].([]interface{})
+		if !ok || len(actions) == 0 {
+			logger.Errorf("Invalid or empty actions in Slack payload: %v", payload)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid actions"})
+			return
+		}
+
+		action, ok := actions[0].(map[string]interface{})
+		if !ok {
+			logger.Errorf("Invalid action format: %v", actions[0])
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action format"})
+			return
+		}
+
+		actionID, ok := action["action_id"].(string)
+		if !ok {
+			logger.Errorf("Missing or invalid action_id")
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing action_id"})
+			return
+		}
+
+		var submissionID string
+		if strings.Contains(actionID, "_") {
+			submissionID = actionID[strings.Index(actionID, "_")+1:]
+		} else {
+			logger.Errorf("Invalid action_id format: %s", actionID)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action_id format"})
+			return
+		}
+
+		// Extract firstName and email from message blocks
+		var firstName, email string
+		message, ok := payload["message"].(map[string]interface{})
+		if ok {
+			blocks, ok := message["blocks"].([]interface{})
+			if ok && len(blocks) >= 3 {
+				nameBlock, ok := blocks[1].(map[string]interface{})
+				if ok {
+					text, ok := nameBlock["text"].(map[string]interface{})
+					if ok {
+						nameText, ok := text["text"].(string)
+						if ok && strings.HasPrefix(nameText, "First Name: ") {
+							firstName = strings.TrimPrefix(nameText, "First Name: ")
+						}
+					}
+				}
+				emailBlock, ok := blocks[2].(map[string]interface{})
+				if ok {
+					text, ok := emailBlock["text"].(map[string]interface{})
+					if ok {
+						emailText, ok := text["text"].(string)
+						if ok && strings.HasPrefix(emailText, "Email: ") {
+							email = strings.TrimPrefix(emailText, "Email: ")
+						}
+					}
+				}
+			}
+		}
+
+		if email == "" {
+			logger.Errorf("Failed to extract email for action, submissionID: %s", submissionID)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing email"})
+			return
+		}
+		if firstName == "" {
+			logger.Warnf("Failed to extract firstName for submission %s; querying database", submissionID)
+			user, err := storage.Client.User.
+				Query().
+				Where(user.EmailEQ(email)).
+				Select(user.FieldFirstName).
+				Only(ctx)
+			if err != nil {
+				logger.Warnf("Failed to fetch first_name for email %s: %v", email, err)
+				firstName = "User"
+			} else {
+				firstName = user.FirstName
+			}
+		}
+
+		if strings.HasPrefix(actionID, "reject_") {
+			// Open modal
+			triggerID, ok := payload["trigger_id"].(string)
+			if !ok {
+				logger.Errorf("Missing trigger_id for modal")
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing trigger_id"})
+				return
+			}
+
+			modal := map[string]interface{}{
+				"trigger_id": triggerID,
+				"view": map[string]interface{}{
+					"type":             "modal",
+					"callback_id":      "reject_modal_" + submissionID,
+					"private_metadata": fmt.Sprintf(`{"email":"%s","submission_id":"%s","firstName":"%s"}`, email, submissionID, firstName),
+					"title": map[string]interface{}{
+						"type": "plain_text",
+						"text": "Reject KYB Submission",
+					},
+					"submit": map[string]interface{}{
+						"type": "plain_text",
+						"text": "Submit",
+					},
+					"blocks": []map[string]interface{}{
+						{
+							"type":     "input",
+							"block_id": "reason_block",
+							"element": map[string]interface{}{
+								"type":      "static_select",
+								"action_id": "reason_select",
+								"placeholder": map[string]interface{}{
+									"type": "plain_text",
+									"text": "Select a reason",
+								},
+								"options": []map[string]interface{}{
+									{
+										"text": map[string]interface{}{
+											"type": "plain_text",
+											"text": "Incomplete or falsified documentation",
+										},
+										"value": "Incomplete or falsified documentation",
+									},
+									{
+										"text": map[string]interface{}{
+											"type": "plain_text",
+											"text": "Unverifiable business identity",
+										},
+										"value": "Unverifiable business identity",
+									},
+									{
+										"text": map[string]interface{}{
+											"type": "plain_text",
+											"text": "Sanctions or watchlist hits",
+										},
+										"value": "Sanctions or watchlist hits",
+									},
+									{
+										"text": map[string]interface{}{
+											"type": "plain_text",
+											"text": "Inability to identify beneficial owners (UBOs)",
+										},
+										"value": "Inability to identify beneficial owners (UBOs)",
+									},
+									{
+										"text": map[string]interface{}{
+											"type": "plain_text",
+											"text": "Inconsistent business details across documents",
+										},
+										"value": "Inconsistent business details across documents",
+									},
+								},
+							},
+							"label": map[string]interface{}{
+								"type": "plain_text",
+								"text": "Reason for Rejection",
+							},
+						},
+					},
+				},
+			}
+
+			jsonPayload, err := json.Marshal(modal)
+			if err != nil {
+				logger.Errorf("Failed to marshal modal payload: %v", err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create modal"})
+				return
+			}
+
+			client := &http.Client{}
+			req, err := http.NewRequest("POST", "https://slack.com/api/views.open", bytes.NewBuffer(jsonPayload))
+			if err != nil {
+				logger.Errorf("Failed to create Slack API request: %v", err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create modal request"})
+				return
+			}
+			req.Header.Set("Content-Type", "application/json")
+			slackBotToken := config.NotificationConfig().SlackBotToken
+			if slackBotToken == "" {
+				logger.Errorf("Slack bot token not configured")
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Slack bot token not configured"})
+				return
+			}
+			req.Header.Set("Authorization", "Bearer "+slackBotToken)
+
+			resp, err := client.Do(req)
+			if err != nil {
+				logger.Errorf("Failed to open Slack modal: %v", err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open modal"})
+				return
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode != http.StatusOK {
+				body, _ := io.ReadAll(resp.Body)
+				logger.Errorf("Slack API responded with status %d: %s", resp.StatusCode, string(body))
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open modal"})
+				return
+			}
+
+			ctx.JSON(http.StatusOK, gin.H{})
+			return
+		}
+
+		// Handle approve button
+		actionValueStr, ok := action["value"].(string)
+		if !ok {
+			logger.Errorf("Missing or invalid action value")
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action value"})
+			return
+		}
+		var actionValue map[string]interface{}
+		if err := json.Unmarshal([]byte(actionValueStr), &actionValue); err != nil {
+			logger.Errorf("Error parsing action value JSON: %s, error: %v", actionValueStr, err)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action value JSON"})
+			return
+		}
+		actionType, ok := actionValue["action"].(string)
+		if !ok {
+			logger.Errorf("Missing action type in action value")
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing action type"})
+			return
+		}
+		email, ok = actionValue["email"].(string)
+		if !ok {
+			logger.Errorf("Missing email in action value")
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing email"})
+			return
+		}
+
+		if firstName == "" {
+			logger.Warnf("FirstName not extracted from blocks for submission %s; querying database", submissionID)
+			user, err := storage.Client.User.
+				Query().
+				Where(user.EmailEQ(email)).
+				Select(user.FieldFirstName).
+				Only(ctx)
+			if err != nil {
+				logger.Warnf("Failed to fetch first_name for email %s: %v", email, err)
+				firstName = "User"
+			} else {
+				firstName = user.FirstName
+			}
+		}
+
+		if actionType == "approve" {
+			responseText := fmt.Sprintf("User %s has been Approved for submission %s", firstName, submissionID)
+
+			if email != "" {
+				_, err := storage.Client.ProviderProfile.
+					Update().
+					Where(
+						providerprofile.HasUserWith(user.EmailEQ(email)),
+					).
+					SetIsKybVerified(true).
+					Save(ctx)
+				if err != nil {
+					logger.Errorf("Failed to approve KYB for user %s: %v", email, err)
+					ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update provider profile"})
+					return
+				}
+
+				logger.Infof("Attempting to send KYB approval email to %s with firstName %s", email, firstName)
+				resp, err := ctrl.emailService.SendKYBApprovalEmail(email, firstName)
+				if err != nil {
+					logger.Errorf("Failed to send KYB approval email to %s: %v, response: %+v", email, err, resp)
+				} else {
+					logger.Infof("KYB approval email sent successfully to %s, message ID: %s", email, resp.Id)
+				}
+			}
+
+			ctx.JSON(http.StatusOK, map[string]interface{}{
+				"text":             responseText,
+				"replace_original": true,
+			})
+
+			// Post feedback to Slack channel
+			err := ctrl.slackService.SendActionFeedbackNotification(firstName, email, submissionID, "approve", "")
+			if err != nil {
+				logger.Warnf("Failed to send Slack feedback notification: %v", err)
+			}
+
+			logger.Infof("Processed Slack interaction in %v", time.Since(startTime))
+			return
+		}
+
+		logger.Errorf("Unknown action type: %s", actionType)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Unknown action type"})
+		return
+	}
+
+	// Handle modal submission
+	if payload["type"] == "view_submission" {
+		view, ok := payload["view"].(map[string]interface{})
+		if !ok {
+			logger.Errorf("Invalid view format in payload")
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid view format"})
+			return
+		}
+		callbackID, ok := view["callback_id"].(string)
+		if !ok {
+			logger.Errorf("Missing callback_id in view")
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing callback_id"})
+			return
+		}
+
+		if strings.HasPrefix(callbackID, "reject_modal_") {
+			var submissionID string = callbackID[len("reject_modal_"):]
+
+			// Extract selected reason
+			state, ok := view["state"].(map[string]interface{})
+			if !ok {
+				logger.Errorf("Invalid state in view")
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid state"})
+				return
+			}
+			values, ok := state["values"].(map[string]interface{})
+			if !ok {
+				logger.Errorf("Invalid values in state")
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid values"})
+				return
+			}
+			reasonBlock, ok := values["reason_block"].(map[string]interface{})
+			if !ok {
+				logger.Errorf("Invalid reason_block in values")
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid reason_block"})
+				return
+			}
+			reasonSelect, ok := reasonBlock["reason_select"].(map[string]interface{})
+			if !ok {
+				logger.Errorf("Invalid reason_select in reason_block")
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid reason_select"})
+				return
+			}
+			selectedReason, ok := reasonSelect["selected_option"].(map[string]interface{})
+			if !ok {
+				logger.Errorf("No reason selected")
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "No reason selected"})
+				return
+			}
+			reasonForDecline, ok := selectedReason["value"].(string)
+			if !ok {
+				logger.Errorf("Invalid reason value")
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid reason value"})
+				return
+			}
+
+			// Extract email and firstName from private_metadata
+			privateMetadata, ok := view["private_metadata"].(string)
+			if !ok {
+				logger.Errorf("Missing private_metadata in view")
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing private_metadata"})
+				return
+			}
+			var metadata map[string]interface{}
+			if err := json.Unmarshal([]byte(privateMetadata), &metadata); err != nil {
+				logger.Errorf("Error parsing private_metadata: %v", err)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid metadata"})
+				return
+			}
+			email, ok := metadata["email"].(string)
+			if !ok {
+				logger.Errorf("Missing email in private_metadata")
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing email in metadata"})
+				return
+			}
+			firstName, ok := metadata["firstName"].(string)
+			if !ok {
+				logger.Warnf("Missing firstName in private_metadata for submission %s; using default", submissionID)
+				firstName = "User"
+			}
+
+			// Update ProviderProfile
+			if email != "" {
+				_, err := storage.Client.ProviderProfile.
+					Update().
+					Where(
+						providerprofile.HasUserWith(user.EmailEQ(email)),
+					).
+					SetIsKybVerified(false).
+					Save(ctx)
+				if err != nil {
+					logger.Errorf("Failed to reject KYB for user %s: %v", email, err)
+					ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update provider profile"})
+					return
+				}
+
+				logger.Infof("Attempting to send KYB rejection email to %s with firstName %s, reason: %s", email, firstName, reasonForDecline)
+				resp, err := ctrl.emailService.SendKYBRejectionEmail(email, firstName, reasonForDecline)
+				if err != nil {
+					logger.Errorf("Failed to send KYB rejection email to %s: %v, response: %+v", email, err, resp)
+				} else {
+					logger.Infof("KYB rejection email sent successfully to %s, message ID: %s", email, resp.Id)
+				}
+			}
+
+			responseText := fmt.Sprintf("User %s has been Declined for submission %s", firstName, submissionID)
+			ctx.JSON(http.StatusOK, map[string]interface{}{
+				"response_action": "update",
+				"view": map[string]interface{}{
+					"type": "modal",
+					"title": map[string]interface{}{
+						"type": "plain_text",
+						"text": "Rejection Submitted",
+					},
+					"blocks": []map[string]interface{}{
+						{
+							"type": "section",
+							"text": map[string]interface{}{
+								"type": "mrkdwn",
+								"text": responseText + "\nReason: " + reasonForDecline,
+							},
+						},
+					},
+				},
+			})
+
+			// Post feedback to Slack channel
+			err := ctrl.slackService.SendActionFeedbackNotification(firstName, email, submissionID, "reject", reasonForDecline)
+			if err != nil {
+				logger.Warnf("Failed to send Slack feedback notification: %v", err)
+			}
+
+			logger.Infof("Processed Slack modal submission in %v", time.Since(startTime))
+			return
+		}
+	}
+
+	logger.Errorf("Unknown payload type: %v", payload["type"])
+	ctx.JSON(http.StatusBadRequest, gin.H{"error": "Unknown payload type"})
 }

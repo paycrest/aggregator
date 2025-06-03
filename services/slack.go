@@ -115,3 +115,145 @@ func (s *SlackService) SendUserSignupNotification(user *ent.User, scopes []strin
 
 	return nil
 }
+
+func (s *SlackService) SendActionFeedbackNotification(firstName, email, submissionID, actionType, reasonForDecline string) error {
+	if s.SlackWebhookURL == "" {
+		logger.Warnf("Slack webhook URL not set, skipping feedback notification")
+		return nil
+	}
+
+	var actionText string
+	if actionType == "approve" {
+		actionText = "Approved"
+	} else if actionType == "reject" {
+		actionText = "Declined"
+	} else {
+		return fmt.Errorf("invalid action type: %s", actionType)
+	}
+
+	var reasonText string
+	if reasonForDecline != "" {
+		reasonText = fmt.Sprintf("\nReason: %s", reasonForDecline)
+	}
+
+	message := map[string]interface{}{
+		"blocks": []map[string]interface{}{
+			{
+				"type": "section",
+				"text": map[string]interface{}{
+					"type": "mrkdwn",
+					"text": fmt.Sprintf("*KYB Action Taken*\nUser: %s\nEmail: %s\nSubmission ID: %s\nAction: %s%s", firstName, email, submissionID, actionText, reasonText),
+				},
+			},
+		},
+	}
+
+	jsonPayload, err := json.Marshal(message)
+	if err != nil {
+		logger.Errorf("Failed to marshal Slack feedback notification: %v", err)
+		return fmt.Errorf("failed to marshal payload: %v", err)
+	}
+
+	resp, err := http.Post(s.SlackWebhookURL, "application/json", bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		logger.Errorf("Failed to send Slack feedback notification: %v", err)
+		return fmt.Errorf("failed to send notification: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		logger.Errorf("Slack feedback notification failed with status: %d", resp.StatusCode)
+		return fmt.Errorf("notification failed with status: %d", resp.StatusCode)
+	}
+	return nil
+}
+
+func (s *SlackService) SendSubmissionNotification(firstName, email, scope, submissionID string) error {
+	if s.SlackWebhookURL == "" {
+		logger.Warnf("Slack webhook URL not set, skipping notification")
+		return nil
+	}
+
+	message := map[string]interface{}{
+		"blocks": []map[string]interface{}{
+			{
+				"type": "section",
+				"text": map[string]interface{}{
+					"type": "mrkdwn",
+					"text": "*New KYB Submission*",
+				},
+			},
+			{
+				"type": "section",
+				"text": map[string]interface{}{
+					"type": "mrkdwn",
+					"text": fmt.Sprintf("First Name: %s", firstName),
+				},
+			},
+			{
+				"type": "section",
+				"text": map[string]interface{}{
+					"type": "mrkdwn",
+					"text": fmt.Sprintf("Email: %s", email),
+				},
+			},
+			{
+				"type": "section",
+				"text": map[string]interface{}{
+					"type": "mrkdwn",
+					"text": fmt.Sprintf("Scope: %s", scope),
+				},
+			},
+			{
+				"type": "section",
+				"text": map[string]interface{}{
+					"type": "mrkdwn",
+					"text": fmt.Sprintf("Submission ID: %s", submissionID),
+				},
+			},
+			{
+				"type": "actions",
+				"elements": []map[string]interface{}{
+					{
+						"type": "button",
+						"text": map[string]interface{}{
+							"type": "plain_text",
+							"text": "Approve",
+						},
+						"action_id": "approve_" + submissionID,
+						"style":     "primary",
+						"value":     fmt.Sprintf(`{"submission_id":"%s","email":"%s","action":"approve"}`, submissionID, email),
+					},
+					{
+						"type": "button",
+						"text": map[string]interface{}{
+							"type": "plain_text",
+							"text": "Reject",
+						},
+						"action_id": "reject_" + submissionID,
+						"style":     "danger",
+					},
+				},
+			},
+		},
+	}
+
+	jsonPayload, err := json.Marshal(message)
+	if err != nil {
+		logger.Errorf("Failed to marshal Slack notification: %v", err)
+		return fmt.Errorf("failed to marshal payload: %v", err)
+	}
+
+	resp, err := http.Post(s.SlackWebhookURL, "application/json", bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		logger.Errorf("Failed to send Slack notification: %v", err)
+		return fmt.Errorf("failed to send Slack notification: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		logger.Errorf("Slack notification failed with status: %d", resp.StatusCode)
+		return fmt.Errorf("slack notification failed with status: %d", resp.StatusCode)
+	}
+	return nil
+}
