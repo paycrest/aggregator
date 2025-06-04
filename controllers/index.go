@@ -50,6 +50,7 @@ type Controller struct {
 	kycService            types.KYCProvider
 	slackService          *svc.SlackService
 	emailService          *svc.EmailService
+	cache                 map[string]bool
 }
 
 // NewController creates a new instance of AuthController with injected services
@@ -61,6 +62,7 @@ func NewController() *Controller {
 		kycService:            smile.NewSmileIDService(),
 		slackService:          svc.NewSlackService(serverConf.SlackWebhookURL),
 		emailService:          svc.NewEmailService(svc.SENDGRID_MAIL_PROVIDER),
+		cache:                 make(map[string]bool),
 	}
 }
 
@@ -890,20 +892,31 @@ func (ctrl *Controller) KYCWebhook(ctx *gin.Context) {
 
 // WebhookHandler processes incoming Google Forms webhook requests, validates the payload and triggers a Slack notification with submission details.
 func (ctrl *Controller) WelcomeEmailWebhook(ctx *gin.Context) {
-
 	var submission FormSubmission
 	if err := ctx.ShouldBindJSON(&submission); err != nil {
+		logger.Errorf("Error parsing JSON: %v", err)
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Error parsing JSON", nil)
 		return
 	}
 
 	rawPayload, _ := json.Marshal(submission)
 
-	// Initialize fields (optional)
-	var name, email, scope string
-	scope = "sender" // Default if scope is missing
+	// Idempotency check using in-memory cache (adjust to Redis or DB if needed)
+	if submission.SubmissionID != "" {
+		cacheKey := fmt.Sprintf("webhook_submission:%s", submission.SubmissionID)
+		// Assuming a simple in-memory cache for this example
+		if _, exists := ctrl.cache[cacheKey]; exists {
+			logger.Infof("Duplicate webhook for submission %s, ignoring", submission.SubmissionID)
+			u.APIResponse(ctx, http.StatusOK, "success", "Webhook already processed", nil)
+			return
+		}
+		ctrl.cache[cacheKey] = true // Mark as processed
+	}
 
-	// Search for Name, Email, and Scope in answers
+	// Initialize fields
+	var name, email string
+
+	// Search for Name and Email in answers
 	for _, value := range submission.Answers {
 		if valueMap, ok := value.(map[string]interface{}); ok {
 			answer, answerOk := valueMap["answer"].(string)
@@ -914,8 +927,6 @@ func (ctrl *Controller) WelcomeEmailWebhook(ctx *gin.Context) {
 					name = answer
 				} else if (questionLower == "email" || strings.Contains(questionLower, "email address")) && email == "" {
 					email = answer
-				} else if (questionLower == "scopes" || questionLower == "scope") && scope == "sender" {
-					scope = answer
 				}
 			}
 		}
@@ -928,18 +939,16 @@ func (ctrl *Controller) WelcomeEmailWebhook(ctx *gin.Context) {
 	if email == "" {
 		logger.Warnf("Webhook log: 'email' field missing in payload: %s", string(rawPayload))
 	}
-	if scope == "sender" {
-		logger.Warnf("Webhook log: 'scope' field missing, using default 'sender' in payload: %s", string(rawPayload))
-	}
 
 	// Send Slack notification
-	err := ctrl.slackService.SendSubmissionNotification(name, email, scope, submission.SubmissionID)
+	err := ctrl.slackService.SendSubmissionNotification(name, email, "", submission.SubmissionID)
 	if err != nil {
-		logger.Errorf("Webhook log: Error sending Slack notification: %v", err)
+		logger.Errorf("Webhook log: Error sending Slack notification for submission %s: %v", submission.SubmissionID, err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Error sending Slack notification", nil)
 		return
 	}
 
+	logger.Infof("Webhook processed successfully for submission %s", submission.SubmissionID)
 	u.APIResponse(ctx, http.StatusOK, "success", "Webhook received and processed", nil)
 }
 
@@ -1020,7 +1029,12 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 					if ok {
 						emailText, ok := text["text"].(string)
 						if ok && strings.HasPrefix(emailText, "Email: ") {
-							email = strings.TrimPrefix(emailText, "Email: ")
+							emailText = strings.TrimPrefix(emailText, "Email: ")
+							if strings.HasPrefix(emailText, "<mailto:") {
+								emailText = strings.TrimPrefix(emailText, "<mailto:")
+								emailText = strings.Split(emailText, "|")[0]
+							}
+							email = emailText
 						}
 					}
 				}
@@ -1047,11 +1061,12 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			}
 		}
 
+		// Handle reject button - only open modal
 		if strings.HasPrefix(actionID, "reject_") {
-			// Open modal
+			logger.Infof("Reject button clicked for submission %s, action: %+v", submissionID, action)
 			triggerID, ok := payload["trigger_id"].(string)
 			if !ok {
-				logger.Errorf("Missing trigger_id for modal")
+				logger.Errorf("Missing trigger_id for modal, submissionID: %s", submissionID)
 				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing trigger_id"})
 				return
 			}
@@ -1130,7 +1145,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 
 			jsonPayload, err := json.Marshal(modal)
 			if err != nil {
-				logger.Errorf("Failed to marshal modal payload: %v", err)
+				logger.Errorf("Failed to marshal modal payload for submission %s: %v", submissionID, err)
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create modal"})
 				return
 			}
@@ -1138,14 +1153,14 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			client := &http.Client{}
 			req, err := http.NewRequest("POST", "https://slack.com/api/views.open", bytes.NewBuffer(jsonPayload))
 			if err != nil {
-				logger.Errorf("Failed to create Slack API request: %v", err)
+				logger.Errorf("Failed to create Slack API request for submission %s: %v", submissionID, err)
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create modal request"})
 				return
 			}
 			req.Header.Set("Content-Type", "application/json")
 			slackBotToken := config.NotificationConfig().SlackBotToken
 			if slackBotToken == "" {
-				logger.Errorf("Slack bot token not configured")
+				logger.Errorf("Slack bot token not configured for submission %s", submissionID)
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Slack bot token not configured"})
 				return
 			}
@@ -1153,7 +1168,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 
 			resp, err := client.Do(req)
 			if err != nil {
-				logger.Errorf("Failed to open Slack modal: %v", err)
+				logger.Errorf("Failed to open Slack modal for submission %s: %v", submissionID, err)
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open modal"})
 				return
 			}
@@ -1161,7 +1176,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 
 			if resp.StatusCode != http.StatusOK {
 				body, _ := io.ReadAll(resp.Body)
-				logger.Errorf("Slack API responded with status %d: %s", resp.StatusCode, string(body))
+				logger.Errorf("Slack API responded with status %d for submission %s: %s", resp.StatusCode, submissionID, string(body))
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open modal"})
 				return
 			}
@@ -1171,47 +1186,48 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 		}
 
 		// Handle approve button
-		actionValueStr, ok := action["value"].(string)
-		if !ok {
-			logger.Errorf("Missing or invalid action value")
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action value"})
-			return
-		}
-		var actionValue map[string]interface{}
-		if err := json.Unmarshal([]byte(actionValueStr), &actionValue); err != nil {
-			logger.Errorf("Error parsing action value JSON: %s, error: %v", actionValueStr, err)
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action value JSON"})
-			return
-		}
-		actionType, ok := actionValue["action"].(string)
-		if !ok {
-			logger.Errorf("Missing action type in action value")
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing action type"})
-			return
-		}
-		email, ok = actionValue["email"].(string)
-		if !ok {
-			logger.Errorf("Missing email in action value")
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing email"})
-			return
-		}
-
-		if firstName == "" {
-			logger.Warnf("FirstName not extracted from blocks for submission %s; querying database", submissionID)
-			user, err := storage.Client.User.
-				Query().
-				Where(user.EmailEQ(email)).
-				Select(user.FieldFirstName).
-				Only(ctx)
-			if err != nil {
-				logger.Warnf("Failed to fetch first_name for email %s: %v", email, err)
-				firstName = "User"
-			} else {
-				firstName = user.FirstName
+		if strings.HasPrefix(actionID, "approve_") {
+			actionValueStr, ok := action["value"].(string)
+			if !ok {
+				logger.Errorf("Missing or invalid action value for approve, submissionID: %s", submissionID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action value"})
+				return
 			}
-		}
 
-		if actionType == "approve" {
+			var actionValue map[string]interface{}
+			if err := json.Unmarshal([]byte(actionValueStr), &actionValue); err != nil {
+				logger.Errorf("Error parsing action value JSON for submission %s: %s, error: %v", submissionID, actionValueStr, err)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action value JSON"})
+				return
+			}
+
+			actionType, ok := actionValue["action"].(string)
+			if !ok || actionType != "approve" {
+				logger.Errorf("Invalid or missing action type for submission %s", submissionID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action type"})
+				return
+			}
+
+			emailFromAction, ok := actionValue["email"].(string)
+			if ok && emailFromAction != "" {
+				email = emailFromAction
+			}
+
+			if firstName == "" {
+				logger.Warnf("FirstName not extracted from blocks for submission %s; querying database", submissionID)
+				user, err := storage.Client.User.
+					Query().
+					Where(user.EmailEQ(email)).
+					Select(user.FieldFirstName).
+					Only(ctx)
+				if err != nil {
+					logger.Warnf("Failed to fetch first_name for email %s: %v", email, err)
+					firstName = "User"
+				} else {
+					firstName = user.FirstName
+				}
+			}
+
 			responseText := fmt.Sprintf("User %s has been Approved for submission %s", firstName, submissionID)
 
 			if email != "" {
@@ -1223,17 +1239,16 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 					SetIsKybVerified(true).
 					Save(ctx)
 				if err != nil {
-					logger.Errorf("Failed to approve KYB for user %s: %v", email, err)
+					logger.Errorf("Failed to approve KYB for user %s (submission %s): %v", email, submissionID, err)
 					ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update provider profile"})
 					return
 				}
 
-				logger.Infof("Attempting to send KYB approval email to %s with firstName %s", email, firstName)
 				resp, err := ctrl.emailService.SendKYBApprovalEmail(email, firstName)
 				if err != nil {
-					logger.Errorf("Failed to send KYB approval email to %s: %v, response: %+v", email, err, resp)
+					logger.Errorf("Failed to send KYB approval email to %s (submission %s): %v, response: %+v", email, submissionID, err, resp)
 				} else {
-					logger.Infof("KYB approval email sent successfully to %s, message ID: %s", email, resp.Id)
+					logger.Infof("KYB approval email sent successfully to %s (submission %s), message ID: %s", email, submissionID, resp.Id)
 				}
 			}
 
@@ -1242,18 +1257,16 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				"replace_original": true,
 			})
 
-			// Post feedback to Slack channel
 			err := ctrl.slackService.SendActionFeedbackNotification(firstName, email, submissionID, "approve", "")
 			if err != nil {
-				logger.Warnf("Failed to send Slack feedback notification: %v", err)
+				logger.Warnf("Failed to send Slack feedback notification for submission %s: %v", submissionID, err)
 			}
 
-			logger.Infof("Processed Slack interaction in %v", time.Since(startTime))
+			logger.Infof("Processed Slack approve interaction in %v", time.Since(startTime))
 			return
 		}
 
-		logger.Errorf("Unknown action type: %s", actionType)
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Unknown action type"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Unknown action"})
 		return
 	}
 
@@ -1273,42 +1286,42 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 		}
 
 		if strings.HasPrefix(callbackID, "reject_modal_") {
-			var submissionID string = callbackID[len("reject_modal_"):]
+			submissionID := callbackID[len("reject_modal_"):]
 
 			// Extract selected reason
 			state, ok := view["state"].(map[string]interface{})
 			if !ok {
-				logger.Errorf("Invalid state in view")
+				logger.Errorf("Invalid state in view for submission %s", submissionID)
 				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid state"})
 				return
 			}
 			values, ok := state["values"].(map[string]interface{})
 			if !ok {
-				logger.Errorf("Invalid values in state")
+				logger.Errorf("Invalid values in state for submission %s", submissionID)
 				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid values"})
 				return
 			}
 			reasonBlock, ok := values["reason_block"].(map[string]interface{})
 			if !ok {
-				logger.Errorf("Invalid reason_block in values")
+				logger.Errorf("Invalid reason_block in values for submission %s", submissionID)
 				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid reason_block"})
 				return
 			}
 			reasonSelect, ok := reasonBlock["reason_select"].(map[string]interface{})
 			if !ok {
-				logger.Errorf("Invalid reason_select in reason_block")
+				logger.Errorf("Invalid reason_select in reason_block for submission %s", submissionID)
 				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid reason_select"})
 				return
 			}
 			selectedReason, ok := reasonSelect["selected_option"].(map[string]interface{})
 			if !ok {
-				logger.Errorf("No reason selected")
+				logger.Errorf("No reason selected for submission %s", submissionID)
 				ctx.JSON(http.StatusBadRequest, gin.H{"error": "No reason selected"})
 				return
 			}
 			reasonForDecline, ok := selectedReason["value"].(string)
 			if !ok {
-				logger.Errorf("Invalid reason value")
+				logger.Errorf("Invalid reason value for submission %s", submissionID)
 				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid reason value"})
 				return
 			}
@@ -1316,19 +1329,19 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			// Extract email and firstName from private_metadata
 			privateMetadata, ok := view["private_metadata"].(string)
 			if !ok {
-				logger.Errorf("Missing private_metadata in view")
+				logger.Errorf("Missing private_metadata in view for submission %s", submissionID)
 				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing private_metadata"})
 				return
 			}
 			var metadata map[string]interface{}
 			if err := json.Unmarshal([]byte(privateMetadata), &metadata); err != nil {
-				logger.Errorf("Error parsing private_metadata: %v", err)
+				logger.Errorf("Error parsing private_metadata for submission %s: %v", submissionID, err)
 				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid metadata"})
 				return
 			}
 			email, ok := metadata["email"].(string)
-			if !ok {
-				logger.Errorf("Missing email in private_metadata")
+			if !ok || email == "" {
+				logger.Errorf("Missing email in private_metadata for submission %s", submissionID)
 				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing email in metadata"})
 				return
 			}
@@ -1339,30 +1352,29 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			}
 
 			// Update ProviderProfile
-			if email != "" {
-				_, err := storage.Client.ProviderProfile.
-					Update().
-					Where(
-						providerprofile.HasUserWith(user.EmailEQ(email)),
-					).
-					SetIsKybVerified(false).
-					Save(ctx)
-				if err != nil {
-					logger.Errorf("Failed to reject KYB for user %s: %v", email, err)
-					ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update provider profile"})
-					return
-				}
+			_, err := storage.Client.ProviderProfile.
+				Update().
+				Where(
+					providerprofile.HasUserWith(user.EmailEQ(email)),
+				).
+				SetIsKybVerified(false).
+				Save(ctx)
+			if err != nil {
+				logger.Errorf("Failed to reject KYB for user %s (submission %s): %v", email, submissionID, err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update provider profile"})
+				return
+			}
 
-				logger.Infof("Attempting to send KYB rejection email to %s with firstName %s, reason: %s", email, firstName, reasonForDecline)
-				resp, err := ctrl.emailService.SendKYBRejectionEmail(email, firstName, reasonForDecline)
-				if err != nil {
-					logger.Errorf("Failed to send KYB rejection email to %s: %v, response: %+v", email, err, resp)
-				} else {
-					logger.Infof("KYB rejection email sent successfully to %s, message ID: %s", email, resp.Id)
-				}
+			// Send rejection email
+			resp, err := ctrl.emailService.SendKYBRejectionEmail(email, firstName, reasonForDecline)
+			if err != nil {
+				logger.Errorf("Failed to send KYB rejection email to %s (submission %s): %v, response: %+v", email, submissionID, err, resp)
+			} else {
+				logger.Infof("KYB rejection email sent successfully to %s (submission %s), message ID: %s", email, submissionID, resp.Id)
 			}
 
 			responseText := fmt.Sprintf("User %s has been Declined for submission %s", firstName, submissionID)
+
 			ctx.JSON(http.StatusOK, map[string]interface{}{
 				"response_action": "update",
 				"view": map[string]interface{}{
@@ -1383,17 +1395,17 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				},
 			})
 
-			// Post feedback to Slack channel
-			err := ctrl.slackService.SendActionFeedbackNotification(firstName, email, submissionID, "reject", reasonForDecline)
+			err = ctrl.slackService.SendActionFeedbackNotification(firstName, email, submissionID, "reject", reasonForDecline)
 			if err != nil {
-				logger.Warnf("Failed to send Slack feedback notification: %v", err)
+				logger.Warnf("Failed to send Slack feedback notification for submission %s: %v", submissionID, err)
 			}
 
-			logger.Infof("Processed Slack modal submission in %v", time.Since(startTime))
+			logger.Infof("Processed Slack modal submission for rejection in %v", time.Since(startTime))
 			return
 		}
-	}
 
-	logger.Errorf("Unknown payload type: %v", payload["type"])
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Unknown callback_id"})
+		return
+	}
 	ctx.JSON(http.StatusBadRequest, gin.H{"error": "Unknown payload type"})
 }

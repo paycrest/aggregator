@@ -22,6 +22,7 @@ func NewSlackService(webhookURL string) *SlackService {
 	}
 }
 
+// SendUserSignupNotification sends a Slack notification when a new user signs up
 func (s *SlackService) SendUserSignupNotification(user *ent.User, scopes []string, providerCurrencies []string) error {
 	if s.SlackWebhookURL == "" {
 		return nil
@@ -116,6 +117,7 @@ func (s *SlackService) SendUserSignupNotification(user *ent.User, scopes []strin
 	return nil
 }
 
+// SendActionFeedbackNotification sends a Slack notification for an action taken on a KYB submission
 func (s *SlackService) SendActionFeedbackNotification(firstName, email, submissionID, actionType, reasonForDecline string) error {
 	if s.SlackWebhookURL == "" {
 		logger.Warnf("Slack webhook URL not set, skipping feedback notification")
@@ -168,6 +170,7 @@ func (s *SlackService) SendActionFeedbackNotification(firstName, email, submissi
 	return nil
 }
 
+// SendSubmissionNotification sends a Slack notification for a new KYB submission
 func (s *SlackService) SendSubmissionNotification(firstName, email, scope, submissionID string) error {
 	if s.SlackWebhookURL == "" {
 		logger.Warnf("Slack webhook URL not set, skipping notification")

@@ -246,7 +246,7 @@ func (m *EmailService) SendWelcomeEmail(ctx context.Context, email, firstName st
 	if err != nil {
 		logger.Errorf("Failed to send welcome email to %s: %v", email, err)
 	} else {
-		logger.Infof("Welcome email sent successfully to %s", email)
+		logger.Infof("Welcome email sent successfully.")
 	}
 	return resp, err
 }
@@ -281,9 +281,9 @@ func (m *EmailService) SendKYBRejectionEmail(email, firstName, reasonForDecline 
 	}
 	resp, err := SendTemplateEmail(payload, "d-6917f9c32105467b8dd806a5a3dd32dc")
 	if err != nil {
-		logger.Errorf("Failed to send KYB rejection email to %s: %v", email, err)
-	} else {
-		logger.Infof("KYB rejection email sent to %s, message ID: %s", email, resp.Id)
+		logger.Errorf("Failed to send KYB rejection email to %s: %v, response: %+v", email, err, resp)
+		return resp, fmt.Errorf("failed to send rejection email: %v", err)
 	}
-	return resp, err
+	logger.Infof("KYB rejection email sent to %s, message ID: %s, response: %+v", email, resp.Id, resp)
+	return resp, nil
 }
