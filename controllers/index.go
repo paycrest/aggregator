@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	fastshot "github.com/opus-domini/fast-shot"
@@ -51,6 +52,8 @@ type Controller struct {
 	slackService          *svc.SlackService
 	emailService          *svc.EmailService
 	cache                 map[string]bool
+	processedActions      map[string]bool
+	actionMutex           sync.RWMutex
 }
 
 // NewController creates a new instance of AuthController with injected services
@@ -63,6 +66,7 @@ func NewController() *Controller {
 		slackService:          svc.NewSlackService(serverConf.SlackWebhookURL),
 		emailService:          svc.NewEmailService(svc.SENDGRID_MAIL_PROVIDER),
 		cache:                 make(map[string]bool),
+		processedActions:      make(map[string]bool),
 	}
 }
 
@@ -1187,6 +1191,33 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 
 		// Handle approve button
 		if strings.HasPrefix(actionID, "approve_") {
+
+			if ctrl.isActionProcessed(submissionID, "approve") {
+				logger.Warnf("Approve action already processed for submission %s", submissionID)
+				ctx.JSON(http.StatusOK, gin.H{"text": "This submission has already been approved."})
+				return
+			}
+
+			// Mark as processed immediately
+			ctrl.markActionProcessed(submissionID, "approve")
+
+			// Respond immediately to Slack to remove loading state
+			responseURL, _ := payload["response_url"].(string)
+			if responseURL != "" {
+				go func() {
+					// Update message in background
+					message := map[string]interface{}{
+						"replace_original": true,
+						"text":             fmt.Sprintf("✅ *APPROVED* - KYB submission for %s (%s) has been approved.", firstName, email),
+					}
+					jsonPayload, _ := json.Marshal(message)
+					http.Post(responseURL, "application/json", bytes.NewBuffer(jsonPayload))
+				}()
+			}
+
+			// Send immediate response to Slack
+			ctx.JSON(http.StatusOK, gin.H{"text": "Approving submission..."})
+
 			actionValueStr, ok := action["value"].(string)
 			if !ok {
 				logger.Errorf("Missing or invalid action value for approve, submissionID: %s", submissionID)
@@ -1265,6 +1296,15 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 
 		if strings.HasPrefix(callbackID, "reject_modal_") {
 			submissionID := callbackID[len("reject_modal_"):]
+
+			if ctrl.isActionProcessed(submissionID, "reject") {
+				logger.Warnf("Reject action already processed for submission %s", submissionID)
+				ctx.JSON(http.StatusOK, gin.H{})
+				return
+			}
+
+			// Mark as processed immediately
+			ctrl.markActionProcessed(submissionID, "reject")
 
 			// Extract selected reason
 			state, ok := view["state"].(map[string]interface{})
@@ -1363,4 +1403,18 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusBadRequest, gin.H{"error": "Unknown payload type"})
+}
+
+func (ctrl *Controller) isActionProcessed(submissionID, actionType string) bool {
+	ctrl.actionMutex.RLock()
+	defer ctrl.actionMutex.RUnlock()
+	key := fmt.Sprintf("%s_%s", submissionID, actionType)
+	return ctrl.processedActions[key]
+}
+
+func (ctrl *Controller) markActionProcessed(submissionID, actionType string) {
+	ctrl.actionMutex.Lock()
+	defer ctrl.actionMutex.Unlock()
+	key := fmt.Sprintf("%s_%s", submissionID, actionType)
+	ctrl.processedActions[key] = true
 }
