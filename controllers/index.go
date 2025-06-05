@@ -904,13 +904,13 @@ func (ctrl *Controller) WelcomeEmailWebhook(ctx *gin.Context) {
 	// Idempotency check using in-memory cache (adjust to Redis or DB if needed)
 	if submission.SubmissionID != "" {
 		cacheKey := fmt.Sprintf("webhook_submission:%s", submission.SubmissionID)
-		// Assuming a simple in-memory cache for this example
+		// Assuming a simple in-memory cache
 		if _, exists := ctrl.cache[cacheKey]; exists {
 			logger.Infof("Duplicate webhook for submission %s, ignoring", submission.SubmissionID)
 			u.APIResponse(ctx, http.StatusOK, "success", "Webhook already processed", nil)
 			return
 		}
-		ctrl.cache[cacheKey] = true // Mark as processed
+		ctrl.cache[cacheKey] = true
 	}
 
 	// Initialize fields
@@ -941,7 +941,7 @@ func (ctrl *Controller) WelcomeEmailWebhook(ctx *gin.Context) {
 	}
 
 	// Send Slack notification
-	err := ctrl.slackService.SendSubmissionNotification(name, email, "", submission.SubmissionID)
+	err := ctrl.slackService.SendSubmissionNotification(name, email, submission.SubmissionID)
 	if err != nil {
 		logger.Errorf("Webhook log: Error sending Slack notification for submission %s: %v", submission.SubmissionID, err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Error sending Slack notification", nil)
@@ -1213,23 +1213,6 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				email = emailFromAction
 			}
 
-			if firstName == "" {
-				logger.Warnf("FirstName not extracted from blocks for submission %s; querying database", submissionID)
-				user, err := storage.Client.User.
-					Query().
-					Where(user.EmailEQ(email)).
-					Select(user.FieldFirstName).
-					Only(ctx)
-				if err != nil {
-					logger.Warnf("Failed to fetch first_name for email %s: %v", email, err)
-					firstName = "User"
-				} else {
-					firstName = user.FirstName
-				}
-			}
-
-			responseText := fmt.Sprintf("User %s has been Approved for submission %s", firstName, submissionID)
-
 			if email != "" {
 				_, err := storage.Client.ProviderProfile.
 					Update().
@@ -1251,11 +1234,6 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 					logger.Infof("KYB approval email sent successfully to %s (submission %s), message ID: %s", email, submissionID, resp.Id)
 				}
 			}
-
-			ctx.JSON(http.StatusOK, map[string]interface{}{
-				"text":             responseText,
-				"replace_original": true,
-			})
 
 			err := ctrl.slackService.SendActionFeedbackNotification(firstName, email, submissionID, "approve", "")
 			if err != nil {
@@ -1372,29 +1350,6 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			} else {
 				logger.Infof("KYB rejection email sent successfully to %s (submission %s), message ID: %s", email, submissionID, resp.Id)
 			}
-
-			responseText := fmt.Sprintf("User %s has been Declined for submission %s", firstName, submissionID)
-
-			ctx.JSON(http.StatusOK, map[string]interface{}{
-				"response_action": "update",
-				"view": map[string]interface{}{
-					"type": "modal",
-					"title": map[string]interface{}{
-						"type": "plain_text",
-						"text": "Rejection Submitted",
-					},
-					"blocks": []map[string]interface{}{
-						{
-							"type": "section",
-							"text": map[string]interface{}{
-								"type": "mrkdwn",
-								"text": responseText + "\nReason: " + reasonForDecline,
-							},
-						},
-					},
-				},
-			})
-
 			err = ctrl.slackService.SendActionFeedbackNotification(firstName, email, submissionID, "reject", reasonForDecline)
 			if err != nil {
 				logger.Warnf("Failed to send Slack feedback notification for submission %s: %v", submissionID, err)

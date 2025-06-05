@@ -171,7 +171,7 @@ func (s *SlackService) SendActionFeedbackNotification(firstName, email, submissi
 }
 
 // SendSubmissionNotification sends a Slack notification for a new KYB submission
-func (s *SlackService) SendSubmissionNotification(firstName, email, scope, submissionID string) error {
+func (s *SlackService) SendSubmissionNotification(firstName, email, submissionID string) error {
 	if s.SlackWebhookURL == "" {
 		logger.Warnf("Slack webhook URL not set, skipping notification")
 		return nil
@@ -198,13 +198,6 @@ func (s *SlackService) SendSubmissionNotification(firstName, email, scope, submi
 				"text": map[string]interface{}{
 					"type": "mrkdwn",
 					"text": fmt.Sprintf("Email: %s", email),
-				},
-			},
-			{
-				"type": "section",
-				"text": map[string]interface{}{
-					"type": "mrkdwn",
-					"text": fmt.Sprintf("Scope: %s", scope),
 				},
 			},
 			{
