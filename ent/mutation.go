@@ -6788,10 +6788,11 @@ type NetworkMutation struct {
 	updated_at               *time.Time
 	chain_id                 *int64
 	addchain_id              *int64
-	chain_id_hex             *string
 	identifier               *string
 	rpc_endpoint             *string
 	gateway_contract_address *string
+	block_time               *decimal.Decimal
+	addblock_time            *decimal.Decimal
 	is_testnet               *bool
 	bundler_url              *string
 	paymaster_url            *string
@@ -7032,55 +7033,6 @@ func (m *NetworkMutation) ResetChainID() {
 	m.addchain_id = nil
 }
 
-// SetChainIDHex sets the "chain_id_hex" field.
-func (m *NetworkMutation) SetChainIDHex(s string) {
-	m.chain_id_hex = &s
-}
-
-// ChainIDHex returns the value of the "chain_id_hex" field in the mutation.
-func (m *NetworkMutation) ChainIDHex() (r string, exists bool) {
-	v := m.chain_id_hex
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldChainIDHex returns the old "chain_id_hex" field's value of the Network entity.
-// If the Network object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *NetworkMutation) OldChainIDHex(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldChainIDHex is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldChainIDHex requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldChainIDHex: %w", err)
-	}
-	return oldValue.ChainIDHex, nil
-}
-
-// ClearChainIDHex clears the value of the "chain_id_hex" field.
-func (m *NetworkMutation) ClearChainIDHex() {
-	m.chain_id_hex = nil
-	m.clearedFields[network.FieldChainIDHex] = struct{}{}
-}
-
-// ChainIDHexCleared returns if the "chain_id_hex" field was cleared in this mutation.
-func (m *NetworkMutation) ChainIDHexCleared() bool {
-	_, ok := m.clearedFields[network.FieldChainIDHex]
-	return ok
-}
-
-// ResetChainIDHex resets all changes to the "chain_id_hex" field.
-func (m *NetworkMutation) ResetChainIDHex() {
-	m.chain_id_hex = nil
-	delete(m.clearedFields, network.FieldChainIDHex)
-}
-
 // SetIdentifier sets the "identifier" field.
 func (m *NetworkMutation) SetIdentifier(s string) {
 	m.identifier = &s
@@ -7187,6 +7139,62 @@ func (m *NetworkMutation) OldGatewayContractAddress(ctx context.Context) (v stri
 // ResetGatewayContractAddress resets all changes to the "gateway_contract_address" field.
 func (m *NetworkMutation) ResetGatewayContractAddress() {
 	m.gateway_contract_address = nil
+}
+
+// SetBlockTime sets the "block_time" field.
+func (m *NetworkMutation) SetBlockTime(d decimal.Decimal) {
+	m.block_time = &d
+	m.addblock_time = nil
+}
+
+// BlockTime returns the value of the "block_time" field in the mutation.
+func (m *NetworkMutation) BlockTime() (r decimal.Decimal, exists bool) {
+	v := m.block_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBlockTime returns the old "block_time" field's value of the Network entity.
+// If the Network object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *NetworkMutation) OldBlockTime(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBlockTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBlockTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBlockTime: %w", err)
+	}
+	return oldValue.BlockTime, nil
+}
+
+// AddBlockTime adds d to the "block_time" field.
+func (m *NetworkMutation) AddBlockTime(d decimal.Decimal) {
+	if m.addblock_time != nil {
+		*m.addblock_time = m.addblock_time.Add(d)
+	} else {
+		m.addblock_time = &d
+	}
+}
+
+// AddedBlockTime returns the value that was added to the "block_time" field in this mutation.
+func (m *NetworkMutation) AddedBlockTime() (r decimal.Decimal, exists bool) {
+	v := m.addblock_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBlockTime resets all changes to the "block_time" field.
+func (m *NetworkMutation) ResetBlockTime() {
+	m.block_time = nil
+	m.addblock_time = nil
 }
 
 // SetIsTestnet sets the "is_testnet" field.
@@ -7477,9 +7485,6 @@ func (m *NetworkMutation) Fields() []string {
 	if m.chain_id != nil {
 		fields = append(fields, network.FieldChainID)
 	}
-	if m.chain_id_hex != nil {
-		fields = append(fields, network.FieldChainIDHex)
-	}
 	if m.identifier != nil {
 		fields = append(fields, network.FieldIdentifier)
 	}
@@ -7488,6 +7493,9 @@ func (m *NetworkMutation) Fields() []string {
 	}
 	if m.gateway_contract_address != nil {
 		fields = append(fields, network.FieldGatewayContractAddress)
+	}
+	if m.block_time != nil {
+		fields = append(fields, network.FieldBlockTime)
 	}
 	if m.is_testnet != nil {
 		fields = append(fields, network.FieldIsTestnet)
@@ -7515,14 +7523,14 @@ func (m *NetworkMutation) Field(name string) (ent.Value, bool) {
 		return m.UpdatedAt()
 	case network.FieldChainID:
 		return m.ChainID()
-	case network.FieldChainIDHex:
-		return m.ChainIDHex()
 	case network.FieldIdentifier:
 		return m.Identifier()
 	case network.FieldRPCEndpoint:
 		return m.RPCEndpoint()
 	case network.FieldGatewayContractAddress:
 		return m.GatewayContractAddress()
+	case network.FieldBlockTime:
+		return m.BlockTime()
 	case network.FieldIsTestnet:
 		return m.IsTestnet()
 	case network.FieldBundlerURL:
@@ -7546,14 +7554,14 @@ func (m *NetworkMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldUpdatedAt(ctx)
 	case network.FieldChainID:
 		return m.OldChainID(ctx)
-	case network.FieldChainIDHex:
-		return m.OldChainIDHex(ctx)
 	case network.FieldIdentifier:
 		return m.OldIdentifier(ctx)
 	case network.FieldRPCEndpoint:
 		return m.OldRPCEndpoint(ctx)
 	case network.FieldGatewayContractAddress:
 		return m.OldGatewayContractAddress(ctx)
+	case network.FieldBlockTime:
+		return m.OldBlockTime(ctx)
 	case network.FieldIsTestnet:
 		return m.OldIsTestnet(ctx)
 	case network.FieldBundlerURL:
@@ -7592,13 +7600,6 @@ func (m *NetworkMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetChainID(v)
 		return nil
-	case network.FieldChainIDHex:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetChainIDHex(v)
-		return nil
 	case network.FieldIdentifier:
 		v, ok := value.(string)
 		if !ok {
@@ -7619,6 +7620,13 @@ func (m *NetworkMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetGatewayContractAddress(v)
+		return nil
+	case network.FieldBlockTime:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBlockTime(v)
 		return nil
 	case network.FieldIsTestnet:
 		v, ok := value.(bool)
@@ -7659,6 +7667,9 @@ func (m *NetworkMutation) AddedFields() []string {
 	if m.addchain_id != nil {
 		fields = append(fields, network.FieldChainID)
 	}
+	if m.addblock_time != nil {
+		fields = append(fields, network.FieldBlockTime)
+	}
 	if m.addfee != nil {
 		fields = append(fields, network.FieldFee)
 	}
@@ -7672,6 +7683,8 @@ func (m *NetworkMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case network.FieldChainID:
 		return m.AddedChainID()
+	case network.FieldBlockTime:
+		return m.AddedBlockTime()
 	case network.FieldFee:
 		return m.AddedFee()
 	}
@@ -7690,6 +7703,13 @@ func (m *NetworkMutation) AddField(name string, value ent.Value) error {
 		}
 		m.AddChainID(v)
 		return nil
+	case network.FieldBlockTime:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBlockTime(v)
+		return nil
 	case network.FieldFee:
 		v, ok := value.(decimal.Decimal)
 		if !ok {
@@ -7705,9 +7725,6 @@ func (m *NetworkMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *NetworkMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(network.FieldChainIDHex) {
-		fields = append(fields, network.FieldChainIDHex)
-	}
 	if m.FieldCleared(network.FieldBundlerURL) {
 		fields = append(fields, network.FieldBundlerURL)
 	}
@@ -7728,9 +7745,6 @@ func (m *NetworkMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *NetworkMutation) ClearField(name string) error {
 	switch name {
-	case network.FieldChainIDHex:
-		m.ClearChainIDHex()
-		return nil
 	case network.FieldBundlerURL:
 		m.ClearBundlerURL()
 		return nil
@@ -7754,9 +7768,6 @@ func (m *NetworkMutation) ResetField(name string) error {
 	case network.FieldChainID:
 		m.ResetChainID()
 		return nil
-	case network.FieldChainIDHex:
-		m.ResetChainIDHex()
-		return nil
 	case network.FieldIdentifier:
 		m.ResetIdentifier()
 		return nil
@@ -7765,6 +7776,9 @@ func (m *NetworkMutation) ResetField(name string) error {
 		return nil
 	case network.FieldGatewayContractAddress:
 		m.ResetGatewayContractAddress()
+		return nil
+	case network.FieldBlockTime:
+		m.ResetBlockTime()
 		return nil
 	case network.FieldIsTestnet:
 		m.ResetIsTestnet()

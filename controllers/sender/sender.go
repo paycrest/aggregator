@@ -1,7 +1,6 @@
 package sender
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -433,21 +432,6 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 		return
 	}
-
-	// Process Transfer event in background
-	go func() {
-		err := ctrl.orderService.ProcessTransfer(context.Background(), receiveAddress.Address, token)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"error":          err,
-				"receiveAddress": receiveAddress.Address,
-				"amount":         paymentOrder.Amount,
-				"token":          token.Symbol,
-				"network":        token.Edges.Network.Identifier,
-				"paymentOrder":   paymentOrder.ID,
-			}).Errorf("Failed to process transfer event")
-		}
-	}()
 
 	u.APIResponse(ctx, http.StatusCreated, "success", "Payment order initiated successfully",
 		&types.ReceiveAddressResponse{

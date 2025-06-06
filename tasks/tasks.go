@@ -86,6 +86,7 @@ func setRPCClients(ctx context.Context) ([]*ent.Network, error) {
 }
 
 // RetryStaleUserOperations retries stale user operations
+// TODO: Fetch failed orders from a separate db table and process them
 func RetryStaleUserOperations() error {
 	// ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
 	// defer cancel()
@@ -99,43 +100,8 @@ func RetryStaleUserOperations() error {
 		return fmt.Errorf("RetryStaleUserOperations: %w", err)
 	}
 
-	// Process transfers
-	orders, err := storage.Client.PaymentOrder.
-		Query().
-		Where(
-			paymentorder.StatusEQ(paymentorder.StatusInitiated),
-			paymentorder.AmountPaidEQ(decimal.Zero),
-			paymentorder.UpdatedAtGTE(time.Now().Add(-1*time.Hour)),
-		).
-		WithToken(func(tq *ent.TokenQuery) {
-			tq.WithNetwork()
-		}).
-		WithReceiveAddress().
-		All(ctx)
-	if err != nil {
-		return fmt.Errorf("RetryStaleUserOperations: %w", err)
-	}
-
-	wg.Add(1)
-	go func(ctx context.Context) {
-		defer wg.Done()
-		for _, order := range orders {
-			service := orderService.NewOrderEVM()
-			err := service.ProcessTransfer(ctx, order.Edges.ReceiveAddress.Address, order.Edges.Token)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":          fmt.Sprintf("%v", err),
-					"OrderID":        order.ID.String(),
-					"ReceiveAddress": order.Edges.ReceiveAddress.Address,
-					"Token":          order.Edges.Token.Symbol,
-					"Network":        order.Edges.Token.Edges.Network.Identifier,
-				}).Errorf("RetryStaleUserOperations.ProcessTransfer")
-			}
-		}
-	}(ctx)
-
 	// Create initiated orders
-	orders, err = storage.Client.PaymentOrder.
+	orders, err := storage.Client.PaymentOrder.
 		Query().
 		Where(func(s *sql.Selector) {
 			ra := sql.Table(receiveaddress.Table)
@@ -331,345 +297,134 @@ func RetryStaleUserOperations() error {
 	return nil
 }
 
-// IndexBlockchainEvents indexes missed blocks
-func IndexBlockchainEvents() error {
-	var wg sync.WaitGroup
-
-	time.Sleep(100 * time.Millisecond) // to keep out of sync with other tasks
-
-	// ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
-	// defer cancel()
-	ctx := context.Background()
-
-	// Establish RPC connections
-	networks, err := setRPCClients(ctx)
+// GetTronLatestBlock fetches the latest block from a Tron endpoint
+func GetTronLatestBlock(endpoint string) (int64, error) {
+	res, err := fastshot.NewClient(endpoint).
+		Config().SetTimeout(15 * time.Second).
+		Build().POST("/wallet/getblockbylatestnum").
+		Body().AsJSON(map[string]interface{}{
+		"num": 1,
+	}).
+		Send()
 	if err != nil {
-		return fmt.Errorf("IndexBlockchainEvents: %w", err)
+		return 0, fmt.Errorf("failed to get latest block: %w", err)
 	}
 
-	// Index token transfer events
-	wg.Add(1)
-	go func(ctx context.Context) {
-		defer wg.Done()
-		orders, err := storage.Client.PaymentOrder.
-			Query().
-			Where(
-				paymentorder.StatusEQ(paymentorder.StatusInitiated),
-				paymentorder.HasReceiveAddressWith(
-					receiveaddress.StatusEQ(receiveaddress.StatusUnused),
-					receiveaddress.ValidUntilGT(time.Now()),
-				),
-			).
-			WithToken(func(tq *ent.TokenQuery) {
-				tq.WithNetwork()
-			}).
-			WithReceiveAddress().
-			WithRecipient().
-			All(ctx)
-		if err != nil && err != context.Canceled {
-			logger.WithFields(logger.Fields{
-				"Error":  fmt.Sprintf("%v", err),
-				"Status": paymentorder.StatusInitiated,
-			}).Errorf("Failed to index blockchain events for unused receive addresses")
-		}
-
-		for _, order := range orders {
-			if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {
-				tronIndexer := indexer.NewIndexerTron()
-				err := tronIndexer.IndexTransfer(ctx, nil, order)
-				if err != nil {
-					continue
-				}
-			}
-		}
-	}(ctx)
-
-	// Index OrderCreated events
-	wg.Add(1)
-	go func(ctx context.Context) {
-		defer wg.Done()
-		time.Sleep(200 * time.Millisecond)
-		for _, network := range networks {
-			if strings.HasPrefix(network.Identifier, "tron") {
-				orders, err := storage.Client.PaymentOrder.
-					Query().
-					Where(func(s *sql.Selector) {
-						lpo := sql.Table(lockpaymentorder.Table)
-						s.Where(sql.And(
-							sql.EQ(s.C(paymentorder.FieldStatus), paymentorder.StatusPending),
-							sql.Or(
-								sql.NotExists(
-									sql.Select().
-										From(lpo).
-										Where(sql.ColumnsEQ(s.C(paymentorder.FieldGatewayID), lpo.C(lockpaymentorder.FieldGatewayID))),
-								),
-								sql.IsNull(s.C(paymentorder.FieldGatewayID)),
-							),
-							sql.GT(s.C(paymentorder.FieldBlockNumber), 0),
-						))
-					}).
-					Where(
-						paymentorder.HasTokenWith(
-							tokenent.HasNetworkWith(networkent.IDEQ(network.ID)),
-						),
-					).
-					WithReceiveAddress().
-					WithToken(func(tq *ent.TokenQuery) {
-						tq.WithNetwork()
-					}).
-					Order(ent.Asc(paymentorder.FieldBlockNumber)).
-					All(ctx)
-				if err != nil {
-					continue
-				}
-
-				for _, order := range orders {
-					indexerService := indexer.NewIndexerTron()
-					err := indexerService.IndexOrderCreated(ctx, nil, order)
-					if err != nil {
-						continue
-					}
-				}
-			}
-		}
-	}(ctx)
-
-	// Index OrderSettled events
-	wg.Add(1)
-	go func(ctx context.Context) {
-		defer wg.Done()
-		time.Sleep(400 * time.Millisecond)
-		for _, network := range networks {
-			if strings.HasPrefix(network.Identifier, "tron") {
-				lockOrders, err := storage.Client.LockPaymentOrder.
-					Query().
-					Where(func(s *sql.Selector) {
-						po := sql.Table(paymentorder.Table)
-						s.LeftJoin(po).On(s.C(lockpaymentorder.FieldGatewayID), po.C(paymentorder.FieldGatewayID)).
-							Where(sql.Or(
-								sql.EQ(s.C(lockpaymentorder.FieldStatus), lockpaymentorder.StatusValidated),
-								sql.And(
-									sql.EQ(po.C(paymentorder.FieldStatus), paymentorder.StatusPending),
-									sql.EQ(s.C(lockpaymentorder.FieldStatus), lockpaymentorder.StatusSettled),
-								)),
-							)
-					}).
-					Where(
-						lockpaymentorder.HasTokenWith(
-							tokenent.HasNetworkWith(networkent.IDEQ(network.ID)),
-						),
-					).
-					WithToken(func(tq *ent.TokenQuery) {
-						tq.WithNetwork()
-					}).
-					Order(ent.Asc(lockpaymentorder.FieldBlockNumber)).
-					All(ctx)
-				if err != nil && err != context.Canceled {
-					logger.WithFields(logger.Fields{
-						"Error":          fmt.Sprintf("%v", err),
-						"Status":         lockpaymentorder.StatusValidated,
-						"Network":        network.Identifier,
-						"NetworkID":      network.ID,
-						"FieldGatewayID": lockpaymentorder.FieldGatewayID,
-					}).Errorf("Failed to index blockchain events for unused receive addresses")
-				}
-
-				for _, order := range lockOrders {
-					tronIndexer := indexer.NewIndexerTron()
-					err := tronIndexer.IndexOrderSettled(ctx, nil, order)
-					if err != nil {
-						continue
-					}
-				}
-			}
-		}
-	}(ctx)
-
-	// Index OrderRefunded events
-	wg.Add(1)
-	go func(ctx context.Context) {
-		defer wg.Done()
-		time.Sleep(500 * time.Millisecond)
-		for _, network := range networks {
-			if strings.HasPrefix(network.Identifier, "tron") {
-				lockOrders, err := storage.Client.LockPaymentOrder.
-					Query().
-					Where(func(s *sql.Selector) {
-						po := sql.Table(paymentorder.Table)
-						s.LeftJoin(po).On(s.C(lockpaymentorder.FieldGatewayID), po.C(paymentorder.FieldGatewayID)).
-							Where(sql.Or(
-								sql.And(
-									sql.EQ(s.C(lockpaymentorder.FieldStatus), lockpaymentorder.StatusPending),
-									sql.LT(s.C(lockpaymentorder.FieldCreatedAt), time.Now().Add(-35*time.Minute)),
-								),
-								sql.And(
-									sql.EQ(po.C(paymentorder.FieldStatus), paymentorder.StatusPending),
-									sql.EQ(s.C(lockpaymentorder.FieldStatus), lockpaymentorder.StatusRefunded),
-								),
-							))
-					}).
-					Where(
-						lockpaymentorder.HasTokenWith(
-							tokenent.HasNetworkWith(networkent.IDEQ(network.ID)),
-						),
-					).
-					WithToken(func(tq *ent.TokenQuery) {
-						tq.WithNetwork()
-					}).
-					Order(ent.Asc(lockpaymentorder.FieldBlockNumber)).
-					All(ctx)
-				if err != nil && err != context.Canceled {
-					logger.WithFields(logger.Fields{
-						"Error":          fmt.Sprintf("%v", err),
-						"Status":         lockpaymentorder.StatusPending,
-						"Network":        network.Identifier,
-						"NetworkID":      network.ID,
-						"FieldGatewayID": lockpaymentorder.FieldGatewayID,
-					}).Errorf("Failed to index blockchain events for unused receive addresses")
-				}
-
-				if len(lockOrders) > 0 {
-					for _, order := range lockOrders {
-						tronIndexer := indexer.NewIndexerTron()
-						err := tronIndexer.IndexOrderRefunded(ctx, nil, order)
-						if err != nil {
-							continue
-						}
-					}
-				}
-			}
-		}
-	}(ctx)
-
-	return nil
-}
-
-// IndexLinkAddresses indexes ERC20 transfer events to linked addresses
-func IndexLinkedAddresses() error {
-	go func() {
-		ctx := context.Background()
-		time.Sleep(250 * time.Millisecond)
-
-		tokens, err := storage.Client.Token.
-			Query().
-			Where(
-				tokenent.IsEnabled(true),
-			).
-			WithNetwork().
-			All(ctx)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":  fmt.Sprintf("%v", err),
-				"Status": tokenent.IsEnabled(true),
-			}).Errorf("Failed to index blockchain events for linked addresses")
-			return
-		}
-
-		for _, token := range tokens {
-			orderService := orderService.NewOrderEVM()
-			err = orderService.ProcessTransfer(ctx, "", token)
-			if err != nil {
-				continue
-			}
-		}
-	}()
-
-	return nil
-}
-
-// ReassignPendingOrders reassigns declined order requests to providers
-func ReassignPendingOrders() {
-	// ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	// defer cancel()
-	ctx := context.Background()
-
-	// Remove provider id from pending lock orders
-	_, err := storage.Client.LockPaymentOrder.
-		Update().
-		Where(
-			lockpaymentorder.StatusEQ(lockpaymentorder.StatusPending),
-			lockpaymentorder.Not(lockpaymentorder.HasFulfillments()),
-		).
-		ClearProvider().
-		Save(ctx)
+	data, err := utils.ParseJSONResponse(res.RawResponse)
 	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":  fmt.Sprintf("%v", err),
-			"Status": lockpaymentorder.StatusPending,
-			"Reason": "db: No pending orders found",
-		}).Errorf("Failed to reassign pending orders")
-		return
+		return 0, fmt.Errorf("failed to parse JSON response: %w", err)
 	}
 
-	// Query pending lock orders
-	lockOrders, err := storage.Client.LockPaymentOrder.
+	return int64(data["block"].([]interface{})[0].(map[string]interface{})["block_header"].(map[string]interface{})["raw_data"].(map[string]interface{})["number"].(float64)), nil
+}
+
+// TaskIndexBlockchainEvents indexes transfer events for all enabled tokens
+func TaskIndexBlockchainEvents() error {
+	ctx := context.Background()
+	var indexerInstance types.Indexer
+	engineService := services.NewEngineService()
+
+	// Fetch networks
+	isTestnet := false
+	if serverConf.Environment != "production" {
+		isTestnet = true
+	}
+
+	networks, err := storage.Client.Network.
 		Query().
-		Where(
-			lockpaymentorder.StatusEQ(lockpaymentorder.StatusPending),
-			lockpaymentorder.Not(lockpaymentorder.HasFulfillments()),
-		).
-		WithToken().
-		WithProvider().
-		WithProvisionBucket(
-			func(pbq *ent.ProvisionBucketQuery) {
-				pbq.WithCurrency()
-			},
-		).
+		Where(networkent.IsTestnetEQ(isTestnet)).
 		All(ctx)
 	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":  fmt.Sprintf("%v", err),
-			"Status": lockpaymentorder.StatusPending,
-			"Reason": "db: No pending orders found",
-		}).Errorf("Failed to reassign pending orders")
-		return
+		return fmt.Errorf("TaskIndexBlockchainEvents.fetchNetworks: %w", err)
 	}
 
-	// Check if order_request_<order_id> exists in Redis
-	for _, order := range lockOrders {
-		orderKey := fmt.Sprintf("order_request_%s", order.ID)
-		exists, err := storage.RedisClient.Exists(ctx, orderKey).Result()
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":    fmt.Sprintf("%v", err),
-				"OrderID":  order.ID.String(),
-				"OrderKey": orderKey,
-				"Reason":   "redis: No pending orders found",
-			}).Errorf("Redis: Failed to reassign pending orders")
-			continue
-		}
-
-		if exists == 0 {
-			// Order request doesn't exist in Redis, reassign the order
-			lockPaymentOrder := types.LockPaymentOrderFields{
-				ID:                order.ID,
-				Token:             order.Edges.Token,
-				GatewayID:         order.GatewayID,
-				Amount:            order.Amount,
-				Rate:              order.Rate,
-				BlockNumber:       order.BlockNumber,
-				Institution:       order.Institution,
-				AccountIdentifier: order.AccountIdentifier,
-				AccountName:       order.AccountName,
-				Memo:              order.Memo,
-				ProvisionBucket:   order.Edges.ProvisionBucket,
-			}
-
-			if order.Edges.Provider != nil {
-				lockPaymentOrder.ProviderID = order.Edges.Provider.ID
-			}
-
-			err := services.NewPriorityQueueService().AssignLockPaymentOrder(ctx, lockPaymentOrder)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":     fmt.Sprintf("%v", err),
-					"OrderID":   order.ID.String(),
-					"OrderKey":  orderKey,
-					"GatewayID": order.GatewayID,
-				}).Errorf("Redis: Failed to reassign declined order request")
-			}
-		}
+	// Fetch enabled tokens
+	tokens, err := storage.Client.Token.
+		Query().
+		Where(tokenent.IsEnabled(true)).
+		WithNetwork().
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("TaskIndexBlockchainEvents.fetchTokens: %w", err)
 	}
+
+	// Process each network in parallel
+	for _, network := range networks {
+		go func(network *ent.Network) {
+			// Create a new context for this network's operations
+			ctx := context.Background()
+			duration := 10 * time.Second
+			latestBlock := int64(0)
+			blocksPerSecond := decimal.NewFromFloat(1.0).Div(decimal.NewFromFloat(2))
+			blocksPerDuration := blocksPerSecond.Mul(decimal.NewFromFloat(duration.Seconds()))
+
+			if strings.HasPrefix(network.Identifier, "tron") {
+				indexerInstance = indexer.NewIndexerTron()
+				latestBlock, err = GetTronLatestBlock(network.RPCEndpoint)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":             fmt.Sprintf("%v", err),
+						"NetworkIdentifier": network.Identifier,
+					}).Errorf("TaskIndexBlockchainEvents.getLatestBlock")
+					return
+				}
+			} else {
+				indexerInstance = indexer.NewIndexerEVM()
+				latestBlock, err = engineService.GetLatestBlock(ctx, network.ChainID)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":             fmt.Sprintf("%v", err),
+						"NetworkIdentifier": network.Identifier,
+					}).Errorf("TaskIndexBlockchainEvents.getLatestBlock")
+					return
+				}
+			}
+
+			startBlock := latestBlock - blocksPerDuration.IntPart()
+			const maxChunkSize int64 = 1000
+
+			// Process blocks in chunks
+			for currentBlock := startBlock; currentBlock < latestBlock; currentBlock += maxChunkSize {
+				chunkEnd := currentBlock + maxChunkSize - 1
+				if chunkEnd > latestBlock {
+					chunkEnd = latestBlock
+				}
+
+				// Index Gateway events
+				// Index OrderCreated events
+				go func(network *ent.Network, indexer types.Indexer, start, end int64) {
+					ctx := context.Background()
+					_ = indexer.IndexOrderCreated(ctx, nil, nil, network, start, end)
+				}(network, indexerInstance, currentBlock, chunkEnd)
+
+				// Index OrderSettled events
+				go func(network *ent.Network, indexer types.Indexer, start, end int64) {
+					ctx := context.Background()
+					_ = indexer.IndexOrderSettled(ctx, nil, nil, network, start, end)
+				}(network, indexerInstance, currentBlock, chunkEnd)
+
+				// Index OrderRefunded events
+				go func(network *ent.Network, indexer types.Indexer, start, end int64) {
+					ctx := context.Background()
+					_ = indexer.IndexOrderRefunded(ctx, nil, nil, network, start, end)
+				}(network, indexerInstance, currentBlock, chunkEnd)
+
+				// Index transfer events for tokens in this network
+				for _, token := range tokens {
+					if token.Edges.Network.ID != network.ID {
+						continue
+					}
+
+					go func(token *ent.Token, indexer types.Indexer, start, end int64) {
+						ctx := context.Background()
+						_ = indexer.IndexTransfer(ctx, nil, nil, token, start, end)
+					}(token, indexerInstance, currentBlock, chunkEnd)
+				}
+			}
+		}(network)
+	}
+
+	return nil
 }
 
 // reassignCancelledOrder reassigns cancelled orders to providers
@@ -1505,12 +1260,6 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for RetryFailedWebhookNotifications: %v", err)
 	}
 
-	// Reassign pending order requests every 13 minutes
-	// _, err = scheduler.Cron("*/13 * * * *").Do(ReassignPendingOrders)
-	// if err != nil {
-	// 	logger.Errorf("StartCronJobs: %v", err)
-	// }
-
 	// Sync lock order fulfillments every 1 minute
 	_, err = scheduler.Every(1).Minute().Do(SyncLockOrderFulfillments)
 	if err != nil {
@@ -1523,23 +1272,17 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for HandleReceiveAddressValidity: %v", err)
 	}
 
-	// // Retry stale user operations every 2 minutes
-	// _, err = scheduler.Every(1).Minutes().Do(RetryStaleUserOperations)
-	// if err != nil {
-	// 	logger.Errorf("StartCronJobs for RetryStaleUserOperations: %v", err)
-	// }
+	// Retry stale user operations every 2 minutes
+	_, err = scheduler.Every(2).Minutes().Do(RetryStaleUserOperations)
+	if err != nil {
+		logger.Errorf("StartCronJobs for RetryStaleUserOperations: %v", err)
+	}
 
-	// Index blockchain events every 10 seconds
-	_, err = scheduler.Every(10).Seconds().Do(IndexBlockchainEvents)
+	// Index blockchain events every 2 seconds
+	_, err = scheduler.Every(2).Seconds().Do(TaskIndexBlockchainEvents)
 	if err != nil {
 		logger.Errorf("StartCronJobs for IndexBlockchainEvents: %v", err)
 	}
-
-	// Index linked addresses every 1 minute
-	// _, err = scheduler.Every(1).Minute().Do(IndexLinkedAddresses)
-	// if err != nil {
-	// 	logger.Errorf("StartCronJobs for IndexLinkedAddresses: %v", err)
-	// }
 
 	// Start scheduler
 	scheduler.StartAsync()

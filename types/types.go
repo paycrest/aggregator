@@ -97,7 +97,6 @@ type OrderRefundedEvent struct {
 
 // OrderService provides an interface for the OrderService
 type OrderService interface {
-	ProcessTransfer(ctx context.Context, receiveAddress string, token *ent.Token) error
 	CreateOrder(ctx context.Context, orderID uuid.UUID) error
 	RefundOrder(ctx context.Context, network *ent.Network, orderID string) error
 	SettleOrder(ctx context.Context, orderID uuid.UUID) error
@@ -105,10 +104,10 @@ type OrderService interface {
 
 // Indexer provides an interface for indexing blockchain data to the database.
 type Indexer interface {
-	IndexTransfer(ctx context.Context, rpcClient RPCClient, order *ent.PaymentOrder) error
-	IndexOrderCreated(ctx context.Context, rpcClient RPCClient, order *ent.PaymentOrder) error
-	IndexOrderSettled(ctx context.Context, rpcClient RPCClient, order *ent.LockPaymentOrder) error
-	IndexOrderRefunded(ctx context.Context, rpcClient RPCClient, order *ent.LockPaymentOrder) error
+	IndexTransfer(ctx context.Context, rpcClient RPCClient, order *ent.PaymentOrder, token *ent.Token, fromBlock int64, toBlock int64) error
+	IndexOrderCreated(ctx context.Context, rpcClient RPCClient, order *ent.PaymentOrder, network *ent.Network, fromBlock int64, toBlock int64) error
+	IndexOrderSettled(ctx context.Context, rpcClient RPCClient, order *ent.LockPaymentOrder, network *ent.Network, fromBlock int64, toBlock int64) error
+	IndexOrderRefunded(ctx context.Context, rpcClient RPCClient, order *ent.LockPaymentOrder, network *ent.Network, fromBlock int64, toBlock int64) error
 }
 
 // KYCProvider defines the interface for KYC verification providers

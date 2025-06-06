@@ -15,26 +15,22 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/services"
-	"github.com/paycrest/aggregator/services/common"
 	"github.com/paycrest/aggregator/services/contracts"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/shopspring/decimal"
 
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
-	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
-	"github.com/paycrest/aggregator/ent/receiveaddress"
 	tokenent "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
-	"github.com/paycrest/aggregator/utils/logger"
 )
 
 // OrderEVM provides functionality related to onchain interactions for payment orders
@@ -56,297 +52,6 @@ func NewOrderEVM() types.OrderService {
 var orderConf = config.OrderConfig()
 var serverConf = config.ServerConfig()
 var cryptoConf = config.CryptoConfig()
-
-// ProcessTransfer processes a transfer event for a receive address.
-func (s *OrderEVM) ProcessTransfer(ctx context.Context, receiveAddress string, token *ent.Token) error {
-	// Wait for transfer event to be received
-	timeout := 50 * time.Second
-	if receiveAddress != "" {
-		timeout = orderConf.ReceiveAddressValidity
-	}
-	start := time.Now()
-	result := []interface{}{}
-	transferEvent := &types.TokenTransferEvent{}
-
-	// Fetch latest block number
-	fromBlock, err := s.engineService.GetLatestBlock(ctx, token.Edges.Network.ChainID)
-	if err != nil {
-		return fmt.Errorf("ProcessTransfer.getLatestBlock: %w", err)
-	}
-
-	for {
-		// Get transfer event data
-		payload := map[string]interface{}{
-			"eventName": "Transfer",
-			"fromBlock": fromBlock,
-			"toBlock":   "latest",
-			"order":     "asc",
-		}
-		if receiveAddress != "" {
-			payload["filters"] = map[string]interface{}{
-				"to": receiveAddress,
-			}
-		}
-
-		result, err = s.engineService.GetContractEvents(ctx, token.Edges.Network.ChainID, token.ContractAddress, payload)
-		if err != nil {
-			return fmt.Errorf("ProcessTransfer.getTransferEventData: %w", err)
-		}
-
-		if len(result) == 0 {
-			elapsed := time.Since(start)
-			if elapsed >= timeout {
-				return fmt.Errorf("ProcessTransfer.timeout: %w", err)
-			}
-			time.Sleep(2 * time.Second)
-			continue
-		}
-
-		break
-	}
-
-	unknownAddresses := []string{}
-
-	// Parse transfer event data
-	for _, r := range result {
-		transferData := r.(map[string]interface{})["data"]
-		transferTransaction := r.(map[string]interface{})["transaction"]
-		transferValue := utils.HexToDecimal(transferData.(map[string]interface{})["value"].(map[string]interface{})["hex"].(string))
-
-		transferEvent.BlockNumber = int64(transferTransaction.(map[string]interface{})["blockNumber"].(float64))
-		transferEvent.TxHash = transferTransaction.(map[string]interface{})["transactionHash"].(string)
-		transferEvent.From = transferData.(map[string]interface{})["from"].(string)
-		transferEvent.To = transferData.(map[string]interface{})["to"].(string)
-		transferEvent.Value = transferValue.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
-
-		if receiveAddress != "" {
-			if transferEvent.To == receiveAddress {
-				break
-			}
-		} else {
-			unknownAddresses = append(unknownAddresses, transferEvent.To)
-		}
-
-	}
-
-	if strings.EqualFold(transferEvent.From, token.Edges.Network.GatewayContractAddress) {
-		return nil
-	}
-
-	// Process transfer event for receive address
-	if receiveAddress != "" {
-		order, err := db.Client.PaymentOrder.
-			Query().
-			Where(
-				paymentorder.HasReceiveAddressWith(
-					receiveaddress.StatusEQ(receiveaddress.StatusUnused),
-					receiveaddress.ValidUntilGT(time.Now()),
-					receiveaddress.AddressEQ(receiveAddress),
-				),
-				paymentorder.StatusEQ(paymentorder.StatusInitiated),
-			).
-			WithToken(func(tq *ent.TokenQuery) {
-				tq.WithNetwork()
-			}).
-			WithReceiveAddress().
-			WithRecipient().
-			Only(ctx)
-		if err != nil {
-			return fmt.Errorf("ProcessTransfer.fetchOrders: %w", err)
-		}
-
-		done, err := common.UpdateReceiveAddressStatus(ctx, order.Edges.ReceiveAddress, order, transferEvent, s.CreateOrder, s.priorityQueue.GetProviderRate)
-		if err != nil {
-			if !strings.Contains(fmt.Sprintf("%v", err), "Duplicate payment order") {
-				logger.WithFields(logger.Fields{
-					"Error":   fmt.Sprintf("%v", err),
-					"OrderID": order.ID.String(),
-				}).Errorf("Failed to update receive address status when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
-			}
-			return nil
-		}
-		if done {
-			return nil
-		}
-	}
-
-	if len(unknownAddresses) == 0 {
-		return nil
-	}
-
-	// Check for linked addresses
-	linkedAddresses, err := db.Client.LinkedAddress.
-		Query().
-		Where(
-			linkedaddress.AddressIn(unknownAddresses...),
-		).
-		All(ctx)
-	if err != nil {
-		if !ent.IsNotFound(err) {
-			logger.WithFields(logger.Fields{
-				"Error":     fmt.Sprintf("%v", err),
-				"Addresses": unknownAddresses,
-			}).Errorf("Failed to query linked addresses when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
-		}
-	}
-
-	// Create a new payment order from the transfer event to the linked address
-	for _, linkedAddress := range linkedAddresses {
-		go func(linkedAddress *ent.LinkedAddress) {
-			ctx := context.Background()
-			orderAmount := transferEvent.Value
-
-			// Check if the payment order already exists
-			paymentOrderExists := true
-			_, err := db.Client.PaymentOrder.
-				Query().
-				Where(
-					paymentorder.FromAddress(transferEvent.From),
-					paymentorder.AmountEQ(orderAmount),
-					paymentorder.HasLinkedAddressWith(
-						linkedaddress.AddressEQ(linkedAddress.Address),
-						linkedaddress.LastIndexedBlockEQ(int64(transferEvent.BlockNumber)),
-					),
-				).
-				WithSenderProfile().
-				Only(ctx)
-			if err != nil {
-				if ent.IsNotFound(err) {
-					// Payment order does not exist, no need to update
-					paymentOrderExists = false
-				} else {
-					logger.WithFields(logger.Fields{
-						"Error":         fmt.Sprintf("%v", err),
-						"LinkedAddress": linkedAddress.Address,
-					}).Errorf("Failed to fetch payment order when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
-					return
-				}
-			}
-
-			if paymentOrderExists {
-				return
-			}
-
-			// Create payment order
-			institution, err := utils.GetInstitutionByCode(ctx, linkedAddress.Institution, true)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":                    fmt.Sprintf("%v", err),
-					"LinkedAddress":            linkedAddress.Address,
-					"LinkedAddressInstitution": linkedAddress.Institution,
-				}).Errorf("Failed to get institution when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
-				return
-			}
-
-			// Get rate from priority queue
-			if !strings.EqualFold(token.BaseCurrency, institution.Edges.FiatCurrency.Code) && !strings.EqualFold(token.BaseCurrency, "USD") {
-				return
-			}
-			var rateResponse decimal.Decimal
-			if !strings.EqualFold(token.BaseCurrency, institution.Edges.FiatCurrency.Code) {
-				rateResponse, err = utils.GetTokenRateFromQueue(token.Symbol, orderAmount, institution.Edges.FiatCurrency.Code, institution.Edges.FiatCurrency.MarketRate)
-				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":                    fmt.Sprintf("%v", err),
-						"Token":                    token.Symbol,
-						"LinkedAddressInstitution": linkedAddress.Institution,
-						"Code":                     institution.Edges.FiatCurrency.Code,
-					}).Errorf("Failed to get token rate when indexing ERC20 transfers for %s from queue", token.Edges.Network.Identifier)
-					return
-				}
-			} else {
-				rateResponse = decimal.NewFromInt(1)
-			}
-
-			tx, err := db.Client.Tx(ctx)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":         fmt.Sprintf("%v", err),
-					"LinkedAddress": linkedAddress.Address,
-				}).Errorf("Failed to create transaction when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
-				return
-			}
-
-			order, err := db.Client.PaymentOrder.
-				Create().
-				SetAmount(orderAmount).
-				SetAmountPaid(orderAmount).
-				SetAmountReturned(decimal.NewFromInt(0)).
-				SetPercentSettled(decimal.NewFromInt(0)).
-				SetNetworkFee(token.Edges.Network.Fee).
-				SetProtocolFee(decimal.NewFromInt(0)).
-				SetSenderFee(decimal.NewFromInt(0)).
-				SetToken(token).
-				SetRate(rateResponse).
-				SetTxHash(transferEvent.TxHash).
-				SetBlockNumber(int64(transferEvent.BlockNumber)).
-				SetFromAddress(transferEvent.From).
-				SetLinkedAddress(linkedAddress).
-				SetReceiveAddressText(linkedAddress.Address).
-				SetFeePercent(decimal.NewFromInt(0)).
-				SetReturnAddress(linkedAddress.Address).
-				Save(ctx)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":         fmt.Sprintf("%v", err),
-					"LinkedAddress": linkedAddress.Address,
-				}).Errorf("Failed to create payment order when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
-				_ = tx.Rollback()
-				return
-			}
-
-			_, err = tx.PaymentOrderRecipient.
-				Create().
-				SetInstitution(linkedAddress.Institution).
-				SetAccountIdentifier(linkedAddress.AccountIdentifier).
-				SetAccountName(linkedAddress.AccountName).
-				SetMetadata(linkedAddress.Metadata).
-				SetPaymentOrder(order).
-				Save(ctx)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":         fmt.Sprintf("%v", err),
-					"LinkedAddress": linkedAddress.Address,
-				}).Errorf("Failed to create payment order recipient when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
-				_ = tx.Rollback()
-				return
-			}
-
-			_, err = tx.LinkedAddress.
-				UpdateOneID(linkedAddress.ID).
-				SetTxHash(transferEvent.TxHash).
-				SetLastIndexedBlock(int64(transferEvent.BlockNumber)).
-				Save(ctx)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":         fmt.Sprintf("%v", err),
-					"LinkedAddress": linkedAddress.Address,
-				}).Errorf("Failed to update linked address when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
-				_ = tx.Rollback()
-				return
-			}
-
-			if err := tx.Commit(); err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":         fmt.Sprintf("%v", err),
-					"LinkedAddress": linkedAddress.Address,
-				}).Errorf("Failed to commit transaction when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
-				return
-			}
-
-			err = s.CreateOrder(ctx, order.ID)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":   fmt.Sprintf("%v", err),
-					"OrderID": order.ID.String(),
-				}).Errorf("Failed to create order when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
-				return
-			}
-		}(linkedAddress)
-	}
-
-	return nil
-}
 
 // CreateOrder creates a new payment order on-chain.
 func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
@@ -460,82 +165,21 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 	txHash := result["transactionHash"].(string)
 	blockNumber := result["blockNumber"].(float64)
 
-	// Get OrderCreated event data
-	eventPayload := map[string]interface{}{
-		"eventName": "OrderCreated",
-		"fromBlock": blockNumber,
-		"toBlock":   blockNumber,
-		"order":     "desc",
-	}
-
-	events, err := s.engineService.GetContractEvents(ctx, order.Edges.Token.Edges.Network.ChainID, order.Edges.Token.Edges.Network.GatewayContractAddress, eventPayload)
-	if err != nil {
-		return fmt.Errorf("CreateOrder.getEvents: %w", err)
-	}
-
-	fmt.Println(events)
-	for _, r := range events {
-		result = r.(map[string]interface{})["data"].(map[string]interface{})
-		messageHash := result["messageHash"].(string)
-		rTxHash := r.(map[string]interface{})["transaction"].(map[string]interface{})["transactionHash"].(string)
-		if messageHash != encryptedOrderRecipient || rTxHash != txHash {
-			continue
-		}
-
-		break
-	}
-
-	orderAmount := utils.HexToDecimal(result["amount"].(map[string]interface{})["hex"].(string))
-	protocolFee := utils.HexToDecimal(result["protocolFee"].(map[string]interface{})["hex"].(string))
-	createdEvent := &types.OrderCreatedEvent{
-		BlockNumber: int64(blockNumber),
-		TxHash:      txHash,
-		Token:       result["token"].(string),
-		Amount:      orderAmount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(order.Edges.Token.Decimals)))),
-		ProtocolFee: protocolFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(order.Edges.Token.Decimals)))),
-		OrderId:     result["orderId"].(string),
-		Rate:        utils.HexToDecimal(result["rate"].(map[string]interface{})["hex"].(string)).Div(decimal.NewFromInt(100)),
-		MessageHash: result["messageHash"].(string),
-		Sender:      result["sender"].(string),
-	}
-
-	err = common.CreateLockPaymentOrder(ctx, order.Edges.Token.Edges.Network, createdEvent, s.RefundOrder, s.priorityQueue.AssignLockPaymentOrder)
-	if err != nil {
-		if !strings.Contains(fmt.Sprintf("%v", err), "duplicate key value violates unique constraint") {
-			logger.WithFields(logger.Fields{
-				"Error":   fmt.Sprintf("%v", err),
-				"OrderID": createdEvent.OrderId,
-			}).Errorf("Failed to create lock payment order when indexing order created events for %s", order.Edges.Token.Edges.Network.Identifier)
-		}
-		return fmt.Errorf("CreateOrder.createLockPaymentOrder: %w", err)
-	}
-
-	// Update payment order with txHash
+	// Update payment order with tx hash and block number
 	_, err = order.Update().
 		SetTxHash(txHash).
 		SetBlockNumber(int64(blockNumber)).
-		SetGatewayID(result["orderId"].(string)).
-		SetRate(order.Rate).
-		SetStatus(paymentorder.StatusPending).
+		SetStatus(paymentorder.StatusProcessing).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.updateTxHash: %w", orderIDPrefix, err)
 	}
 
-	// Refetch payment order
-	paymentOrder, err := db.Client.PaymentOrder.
-		Query().
-		Where(paymentorder.IDEQ(orderID)).
-		WithSenderProfile().
-		Only(ctx)
+	_, err = order.Update().
+		SetStatus(paymentorder.StatusInitiated).
+		Save(ctx)
 	if err != nil {
-		return fmt.Errorf("%s - CreateOrder.refetchOrder: %w", orderIDPrefix, err)
-	}
-
-	// Send webhook notifcation to sender
-	err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
-	if err != nil {
-		return fmt.Errorf("%s - CreateOrder.webhook: %w", orderIDPrefix, err)
+		return fmt.Errorf("%s - CreateOrder.updateTxHash: %w", orderIDPrefix, err)
 	}
 
 	return nil
@@ -592,47 +236,13 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 	txHash := result["transactionHash"].(string)
 	blockNumber := result["blockNumber"].(float64)
 
-	// Get OrderRefunded event data
-	eventPayload := map[string]interface{}{
-		"eventName": "OrderRefunded",
-		"fromBlock": blockNumber,
-		"toBlock":   blockNumber,
-		"order":     "desc",
-		"filters": map[string]interface{}{
-			"orderId": lockOrder.GatewayID,
-		},
-	}
-
-	events, err := s.engineService.GetContractEvents(ctx, lockOrder.Edges.Token.Edges.Network.ChainID, lockOrder.Edges.Token.Edges.Network.GatewayContractAddress, eventPayload)
+	// Update lock order with tx hash and block number
+	_, err = lockOrder.Update().
+		SetTxHash(txHash).
+		SetBlockNumber(int64(blockNumber)).
+		Save(ctx)
 	if err != nil {
-		return fmt.Errorf("RefundOrder.getEvents: %w", err)
-	}
-
-	for _, r := range events {
-		result = r.(map[string]interface{})["data"].(map[string]interface{})
-		rTxHash := r.(map[string]interface{})["transaction"].(map[string]interface{})["transactionHash"].(string)
-		if rTxHash != txHash {
-			continue
-		}
-
-		break
-	}
-
-	refundFee := utils.HexToDecimal(result["fee"].(map[string]interface{})["hex"].(string))
-	refundedEvent := &types.OrderRefundedEvent{
-		BlockNumber: int64(blockNumber),
-		TxHash:      txHash,
-		Fee:         refundFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(lockOrder.Edges.Token.Decimals)))),
-		OrderId:     lockOrder.GatewayID,
-	}
-
-	err = UpdateOrderStatusRefunded(ctx, lockOrder.Edges.Token.Edges.Network, refundedEvent)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":   fmt.Sprintf("%v", err),
-			"OrderID": refundedEvent.OrderId,
-			"TxHash":  refundedEvent.TxHash,
-		}).Errorf("Failed to update order status refund when indexing order refunded events for %s", lockOrder.Edges.Token.Edges.Network.Identifier)
+		return fmt.Errorf("%s - RefundOrder.updateTxHash: %w", orderIDPrefix, err)
 	}
 
 	return nil
@@ -687,56 +297,16 @@ func (s *OrderEVM) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 		return fmt.Errorf("SettleOrder.waitForTransactionMined: %w", err)
 	}
 
-	fmt.Println(result)
-
 	txHash := result["transactionHash"].(string)
 	blockNumber := result["blockNumber"].(float64)
 
-	// Get OrderSettled event data
-	eventPayload := map[string]interface{}{
-		"eventName": "OrderSettled",
-		"fromBlock": blockNumber,
-		"toBlock":   blockNumber,
-		"order":     "desc",
-		"filters": map[string]interface{}{
-			"orderId": order.GatewayID,
-		},
-	}
-
-	events, err := s.engineService.GetContractEvents(ctx, order.Edges.Token.Edges.Network.ChainID, order.Edges.Token.Edges.Network.GatewayContractAddress, eventPayload)
+	// Update lock order with tx hash and block number
+	_, err = order.Update().
+		SetTxHash(txHash).
+		SetBlockNumber(int64(blockNumber)).
+		Save(ctx)
 	if err != nil {
-		return fmt.Errorf("SettleOrder.getEvents: %w", err)
-	}
-
-	for _, r := range events {
-		result = r.(map[string]interface{})["data"].(map[string]interface{})
-		splitOrderId := result["splitOrderId"].(string)
-		rTxHash := r.(map[string]interface{})["transaction"].(map[string]interface{})["transactionHash"].(string)
-
-		if splitOrderId != strings.ReplaceAll(order.ID.String(), "-", "") || rTxHash != txHash {
-			continue
-		}
-
-		break
-	}
-
-	settledEvent := &types.OrderSettledEvent{
-		BlockNumber:       int64(blockNumber),
-		TxHash:            txHash,
-		SplitOrderId:      result["splitOrderId"].(string),
-		OrderId:           result["orderId"].(string),
-		LiquidityProvider: result["liquidityProvider"].(string),
-		SettlePercent:     utils.HexToDecimal(result["settlePercent"].(map[string]interface{})["hex"].(string)),
-	}
-
-	// Update order status
-	err = UpdateOrderStatusSettled(ctx, order.Edges.Token.Edges.Network, settledEvent)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":   fmt.Sprintf("%v", err),
-			"OrderID": settledEvent.OrderId,
-		}).Errorf("Failed to update order status settlement when indexing order settled events for %s", order.Edges.Token.Edges.Network.Identifier)
-		return fmt.Errorf("SettleOrder.updateOrderStatusSettled: %w", err)
+		return fmt.Errorf("%s - SettleOrder.updateTxHash: %w", orderIDPrefix, err)
 	}
 
 	return nil

@@ -41,7 +41,7 @@ func NewIndexerTron() types.Indexer {
 }
 
 // IndexTransfer indexes transfers to the receive address for Tron network.
-func (s *IndexerTron) IndexTransfer(ctx context.Context, rpcClient types.RPCClient, order *ent.PaymentOrder) error {
+func (s *IndexerTron) IndexTransfer(ctx context.Context, rpcClient types.RPCClient, order *ent.PaymentOrder, token *ent.Token, fromBlock int64, toBlock int64) error {
 	var err error
 
 	if !strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {
@@ -141,7 +141,7 @@ func (s *IndexerTron) IndexTransfer(ctx context.Context, rpcClient types.RPCClie
 }
 
 // IndexOrderCreated indexes orders created in the Gateway contract for the Tron network.
-func (s *IndexerTron) IndexOrderCreated(ctx context.Context, rpcClient types.RPCClient, order *ent.PaymentOrder) error {
+func (s *IndexerTron) IndexOrderCreated(ctx context.Context, rpcClient types.RPCClient, order *ent.PaymentOrder, network *ent.Network, fromBlock int64, toBlock int64) error {
 	events, err := s.fetchLatestOrderEvents(
 		order.Edges.Token.Edges.Network.RPCEndpoint,
 		order.Edges.Token.Edges.Network.Identifier,
@@ -223,7 +223,7 @@ func (s *IndexerTron) IndexOrderCreated(ctx context.Context, rpcClient types.RPC
 }
 
 // IndexOrderSettled indexes orders settled in the Gateway contract for the Tron network.
-func (s *IndexerTron) IndexOrderSettled(ctx context.Context, rpcClient types.RPCClient, order *ent.LockPaymentOrder) error {
+func (s *IndexerTron) IndexOrderSettled(ctx context.Context, rpcClient types.RPCClient, order *ent.LockPaymentOrder, network *ent.Network, fromBlock int64, toBlock int64) error {
 	events, err := s.fetchLatestOrderEvents(
 		order.Edges.Token.Edges.Network.RPCEndpoint,
 		order.Edges.Token.Edges.Network.Identifier,
@@ -309,7 +309,7 @@ func (s *IndexerTron) IndexOrderSettled(ctx context.Context, rpcClient types.RPC
 }
 
 // IndexOrderRefunded indexes orders settled in the Gateway contract for the Tron network.
-func (s *IndexerTron) IndexOrderRefunded(ctx context.Context, rpcClient types.RPCClient, order *ent.LockPaymentOrder) error {
+func (s *IndexerTron) IndexOrderRefunded(ctx context.Context, rpcClient types.RPCClient, order *ent.LockPaymentOrder, network *ent.Network, fromBlock int64, toBlock int64) error {
 	events, err := s.fetchLatestOrderEvents(
 		order.Edges.Token.Edges.Network.RPCEndpoint,
 		order.Edges.Token.Edges.Network.Identifier,
