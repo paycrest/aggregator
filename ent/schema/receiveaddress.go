@@ -22,7 +22,7 @@ func (ReceiveAddress) Mixin() []ent.Mixin {
 func (ReceiveAddress) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("address").Unique(),
-		field.Bytes("salt").Unique().Immutable(),
+		field.Bytes("salt").Optional(),
 		field.Enum("status").Values("unused", "used", "expired").Default("unused"),
 		field.Int64("last_indexed_block").Optional(),
 		field.Time("last_used").Optional(),

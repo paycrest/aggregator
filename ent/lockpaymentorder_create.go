@@ -82,6 +82,20 @@ func (lpoc *LockPaymentOrderCreate) SetOrderPercent(d decimal.Decimal) *LockPaym
 	return lpoc
 }
 
+// SetSender sets the "sender" field.
+func (lpoc *LockPaymentOrderCreate) SetSender(s string) *LockPaymentOrderCreate {
+	lpoc.mutation.SetSender(s)
+	return lpoc
+}
+
+// SetNillableSender sets the "sender" field if the given value is not nil.
+func (lpoc *LockPaymentOrderCreate) SetNillableSender(s *string) *LockPaymentOrderCreate {
+	if s != nil {
+		lpoc.SetSender(*s)
+	}
+	return lpoc
+}
+
 // SetTxHash sets the "tx_hash" field.
 func (lpoc *LockPaymentOrderCreate) SetTxHash(s string) *LockPaymentOrderCreate {
 	lpoc.mutation.SetTxHash(s)
@@ -442,6 +456,10 @@ func (lpoc *LockPaymentOrderCreate) createSpec() (*LockPaymentOrder, *sqlgraph.C
 		_spec.SetField(lockpaymentorder.FieldOrderPercent, field.TypeFloat64, value)
 		_node.OrderPercent = value
 	}
+	if value, ok := lpoc.mutation.Sender(); ok {
+		_spec.SetField(lockpaymentorder.FieldSender, field.TypeString, value)
+		_node.Sender = value
+	}
 	if value, ok := lpoc.mutation.TxHash(); ok {
 		_spec.SetField(lockpaymentorder.FieldTxHash, field.TypeString, value)
 		_node.TxHash = value
@@ -692,6 +710,24 @@ func (u *LockPaymentOrderUpsert) UpdateOrderPercent() *LockPaymentOrderUpsert {
 // AddOrderPercent adds v to the "order_percent" field.
 func (u *LockPaymentOrderUpsert) AddOrderPercent(v decimal.Decimal) *LockPaymentOrderUpsert {
 	u.Add(lockpaymentorder.FieldOrderPercent, v)
+	return u
+}
+
+// SetSender sets the "sender" field.
+func (u *LockPaymentOrderUpsert) SetSender(v string) *LockPaymentOrderUpsert {
+	u.Set(lockpaymentorder.FieldSender, v)
+	return u
+}
+
+// UpdateSender sets the "sender" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsert) UpdateSender() *LockPaymentOrderUpsert {
+	u.SetExcluded(lockpaymentorder.FieldSender)
+	return u
+}
+
+// ClearSender clears the value of the "sender" field.
+func (u *LockPaymentOrderUpsert) ClearSender() *LockPaymentOrderUpsert {
+	u.SetNull(lockpaymentorder.FieldSender)
 	return u
 }
 
@@ -984,6 +1020,27 @@ func (u *LockPaymentOrderUpsertOne) AddOrderPercent(v decimal.Decimal) *LockPaym
 func (u *LockPaymentOrderUpsertOne) UpdateOrderPercent() *LockPaymentOrderUpsertOne {
 	return u.Update(func(s *LockPaymentOrderUpsert) {
 		s.UpdateOrderPercent()
+	})
+}
+
+// SetSender sets the "sender" field.
+func (u *LockPaymentOrderUpsertOne) SetSender(v string) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetSender(v)
+	})
+}
+
+// UpdateSender sets the "sender" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertOne) UpdateSender() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateSender()
+	})
+}
+
+// ClearSender clears the value of the "sender" field.
+func (u *LockPaymentOrderUpsertOne) ClearSender() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.ClearSender()
 	})
 }
 
@@ -1468,6 +1525,27 @@ func (u *LockPaymentOrderUpsertBulk) AddOrderPercent(v decimal.Decimal) *LockPay
 func (u *LockPaymentOrderUpsertBulk) UpdateOrderPercent() *LockPaymentOrderUpsertBulk {
 	return u.Update(func(s *LockPaymentOrderUpsert) {
 		s.UpdateOrderPercent()
+	})
+}
+
+// SetSender sets the "sender" field.
+func (u *LockPaymentOrderUpsertBulk) SetSender(v string) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetSender(v)
+	})
+}
+
+// UpdateSender sets the "sender" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertBulk) UpdateSender() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateSender()
+	})
+}
+
+// ClearSender clears the value of the "sender" field.
+func (u *LockPaymentOrderUpsertBulk) ClearSender() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.ClearSender()
 	})
 }
 

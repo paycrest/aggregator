@@ -57,26 +57,6 @@ func (nu *NetworkUpdate) AddChainID(i int64) *NetworkUpdate {
 	return nu
 }
 
-// SetChainIDHex sets the "chain_id_hex" field.
-func (nu *NetworkUpdate) SetChainIDHex(s string) *NetworkUpdate {
-	nu.mutation.SetChainIDHex(s)
-	return nu
-}
-
-// SetNillableChainIDHex sets the "chain_id_hex" field if the given value is not nil.
-func (nu *NetworkUpdate) SetNillableChainIDHex(s *string) *NetworkUpdate {
-	if s != nil {
-		nu.SetChainIDHex(*s)
-	}
-	return nu
-}
-
-// ClearChainIDHex clears the value of the "chain_id_hex" field.
-func (nu *NetworkUpdate) ClearChainIDHex() *NetworkUpdate {
-	nu.mutation.ClearChainIDHex()
-	return nu
-}
-
 // SetIdentifier sets the "identifier" field.
 func (nu *NetworkUpdate) SetIdentifier(s string) *NetworkUpdate {
 	nu.mutation.SetIdentifier(s)
@@ -116,6 +96,27 @@ func (nu *NetworkUpdate) SetNillableGatewayContractAddress(s *string) *NetworkUp
 	if s != nil {
 		nu.SetGatewayContractAddress(*s)
 	}
+	return nu
+}
+
+// SetBlockTime sets the "block_time" field.
+func (nu *NetworkUpdate) SetBlockTime(d decimal.Decimal) *NetworkUpdate {
+	nu.mutation.ResetBlockTime()
+	nu.mutation.SetBlockTime(d)
+	return nu
+}
+
+// SetNillableBlockTime sets the "block_time" field if the given value is not nil.
+func (nu *NetworkUpdate) SetNillableBlockTime(d *decimal.Decimal) *NetworkUpdate {
+	if d != nil {
+		nu.SetBlockTime(*d)
+	}
+	return nu
+}
+
+// AddBlockTime adds d to the "block_time" field.
+func (nu *NetworkUpdate) AddBlockTime(d decimal.Decimal) *NetworkUpdate {
+	nu.mutation.AddBlockTime(d)
 	return nu
 }
 
@@ -289,12 +290,6 @@ func (nu *NetworkUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if value, ok := nu.mutation.AddedChainID(); ok {
 		_spec.AddField(network.FieldChainID, field.TypeInt64, value)
 	}
-	if value, ok := nu.mutation.ChainIDHex(); ok {
-		_spec.SetField(network.FieldChainIDHex, field.TypeString, value)
-	}
-	if nu.mutation.ChainIDHexCleared() {
-		_spec.ClearField(network.FieldChainIDHex, field.TypeString)
-	}
 	if value, ok := nu.mutation.Identifier(); ok {
 		_spec.SetField(network.FieldIdentifier, field.TypeString, value)
 	}
@@ -303,6 +298,12 @@ func (nu *NetworkUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := nu.mutation.GatewayContractAddress(); ok {
 		_spec.SetField(network.FieldGatewayContractAddress, field.TypeString, value)
+	}
+	if value, ok := nu.mutation.BlockTime(); ok {
+		_spec.SetField(network.FieldBlockTime, field.TypeFloat64, value)
+	}
+	if value, ok := nu.mutation.AddedBlockTime(); ok {
+		_spec.AddField(network.FieldBlockTime, field.TypeFloat64, value)
 	}
 	if value, ok := nu.mutation.IsTestnet(); ok {
 		_spec.SetField(network.FieldIsTestnet, field.TypeBool, value)
@@ -417,26 +418,6 @@ func (nuo *NetworkUpdateOne) AddChainID(i int64) *NetworkUpdateOne {
 	return nuo
 }
 
-// SetChainIDHex sets the "chain_id_hex" field.
-func (nuo *NetworkUpdateOne) SetChainIDHex(s string) *NetworkUpdateOne {
-	nuo.mutation.SetChainIDHex(s)
-	return nuo
-}
-
-// SetNillableChainIDHex sets the "chain_id_hex" field if the given value is not nil.
-func (nuo *NetworkUpdateOne) SetNillableChainIDHex(s *string) *NetworkUpdateOne {
-	if s != nil {
-		nuo.SetChainIDHex(*s)
-	}
-	return nuo
-}
-
-// ClearChainIDHex clears the value of the "chain_id_hex" field.
-func (nuo *NetworkUpdateOne) ClearChainIDHex() *NetworkUpdateOne {
-	nuo.mutation.ClearChainIDHex()
-	return nuo
-}
-
 // SetIdentifier sets the "identifier" field.
 func (nuo *NetworkUpdateOne) SetIdentifier(s string) *NetworkUpdateOne {
 	nuo.mutation.SetIdentifier(s)
@@ -476,6 +457,27 @@ func (nuo *NetworkUpdateOne) SetNillableGatewayContractAddress(s *string) *Netwo
 	if s != nil {
 		nuo.SetGatewayContractAddress(*s)
 	}
+	return nuo
+}
+
+// SetBlockTime sets the "block_time" field.
+func (nuo *NetworkUpdateOne) SetBlockTime(d decimal.Decimal) *NetworkUpdateOne {
+	nuo.mutation.ResetBlockTime()
+	nuo.mutation.SetBlockTime(d)
+	return nuo
+}
+
+// SetNillableBlockTime sets the "block_time" field if the given value is not nil.
+func (nuo *NetworkUpdateOne) SetNillableBlockTime(d *decimal.Decimal) *NetworkUpdateOne {
+	if d != nil {
+		nuo.SetBlockTime(*d)
+	}
+	return nuo
+}
+
+// AddBlockTime adds d to the "block_time" field.
+func (nuo *NetworkUpdateOne) AddBlockTime(d decimal.Decimal) *NetworkUpdateOne {
+	nuo.mutation.AddBlockTime(d)
 	return nuo
 }
 
@@ -679,12 +681,6 @@ func (nuo *NetworkUpdateOne) sqlSave(ctx context.Context) (_node *Network, err e
 	if value, ok := nuo.mutation.AddedChainID(); ok {
 		_spec.AddField(network.FieldChainID, field.TypeInt64, value)
 	}
-	if value, ok := nuo.mutation.ChainIDHex(); ok {
-		_spec.SetField(network.FieldChainIDHex, field.TypeString, value)
-	}
-	if nuo.mutation.ChainIDHexCleared() {
-		_spec.ClearField(network.FieldChainIDHex, field.TypeString)
-	}
 	if value, ok := nuo.mutation.Identifier(); ok {
 		_spec.SetField(network.FieldIdentifier, field.TypeString, value)
 	}
@@ -693,6 +689,12 @@ func (nuo *NetworkUpdateOne) sqlSave(ctx context.Context) (_node *Network, err e
 	}
 	if value, ok := nuo.mutation.GatewayContractAddress(); ok {
 		_spec.SetField(network.FieldGatewayContractAddress, field.TypeString, value)
+	}
+	if value, ok := nuo.mutation.BlockTime(); ok {
+		_spec.SetField(network.FieldBlockTime, field.TypeFloat64, value)
+	}
+	if value, ok := nuo.mutation.AddedBlockTime(); ok {
+		_spec.AddField(network.FieldBlockTime, field.TypeFloat64, value)
 	}
 	if value, ok := nuo.mutation.IsTestnet(); ok {
 		_spec.SetField(network.FieldIsTestnet, field.TypeBool, value)

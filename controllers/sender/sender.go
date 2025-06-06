@@ -24,6 +24,7 @@ import (
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	svc "github.com/paycrest/aggregator/services"
+	orderSvc "github.com/paycrest/aggregator/services/order"
 	"github.com/paycrest/aggregator/types"
 	u "github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
@@ -35,6 +36,7 @@ import (
 // SenderController is a controller type for sender endpoints
 type SenderController struct {
 	receiveAddressService *svc.ReceiveAddressService
+	orderService          types.OrderService
 }
 
 // NewSenderController creates a new instance of SenderController
@@ -42,6 +44,7 @@ func NewSenderController() *SenderController {
 
 	return &SenderController{
 		receiveAddressService: svc.NewReceiveAddressService(),
+		orderService:          orderSvc.NewOrderEVM(),
 	}
 }
 
@@ -323,7 +326,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			return
 		}
 	} else {
-		address, salt, err := ctrl.receiveAddressService.CreateSmartAddress(ctx, nil, nil)
+		address, err := ctrl.receiveAddressService.CreateSmartAddress(ctx, "")
 		if err != nil {
 			logger.Errorf("error: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
@@ -333,7 +336,6 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		receiveAddress, err = storage.Client.ReceiveAddress.
 			Create().
 			SetAddress(address).
-			SetSalt(salt).
 			SetStatus(receiveaddress.StatusUnused).
 			SetValidUntil(time.Now().Add(orderConf.ReceiveAddressValidity)).
 			Save(ctx)

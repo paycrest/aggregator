@@ -24,9 +24,7 @@ func (LinkedAddress) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("address").
 			Unique(),
-		field.Bytes("salt").
-			Unique().
-			Immutable(),
+		field.Bytes("salt").Optional(),
 		field.String("institution"),
 		field.String("account_identifier"),
 		field.String("account_name"),

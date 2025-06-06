@@ -213,9 +213,6 @@ func (rac *ReceiveAddressCreate) check() error {
 	if _, ok := rac.mutation.Address(); !ok {
 		return &ValidationError{Name: "address", err: errors.New(`ent: missing required field "ReceiveAddress.address"`)}
 	}
-	if _, ok := rac.mutation.Salt(); !ok {
-		return &ValidationError{Name: "salt", err: errors.New(`ent: missing required field "ReceiveAddress.salt"`)}
-	}
 	if _, ok := rac.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "ReceiveAddress.status"`)}
 	}
@@ -385,6 +382,24 @@ func (u *ReceiveAddressUpsert) UpdateAddress() *ReceiveAddressUpsert {
 	return u
 }
 
+// SetSalt sets the "salt" field.
+func (u *ReceiveAddressUpsert) SetSalt(v []byte) *ReceiveAddressUpsert {
+	u.Set(receiveaddress.FieldSalt, v)
+	return u
+}
+
+// UpdateSalt sets the "salt" field to the value that was provided on create.
+func (u *ReceiveAddressUpsert) UpdateSalt() *ReceiveAddressUpsert {
+	u.SetExcluded(receiveaddress.FieldSalt)
+	return u
+}
+
+// ClearSalt clears the value of the "salt" field.
+func (u *ReceiveAddressUpsert) ClearSalt() *ReceiveAddressUpsert {
+	u.SetNull(receiveaddress.FieldSalt)
+	return u
+}
+
 // SetStatus sets the "status" field.
 func (u *ReceiveAddressUpsert) SetStatus(v receiveaddress.Status) *ReceiveAddressUpsert {
 	u.Set(receiveaddress.FieldStatus, v)
@@ -489,9 +504,6 @@ func (u *ReceiveAddressUpsertOne) UpdateNewValues() *ReceiveAddressUpsertOne {
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(receiveaddress.FieldCreatedAt)
 		}
-		if _, exists := u.create.mutation.Salt(); exists {
-			s.SetIgnore(receiveaddress.FieldSalt)
-		}
 	}))
 	return u
 }
@@ -548,6 +560,27 @@ func (u *ReceiveAddressUpsertOne) SetAddress(v string) *ReceiveAddressUpsertOne 
 func (u *ReceiveAddressUpsertOne) UpdateAddress() *ReceiveAddressUpsertOne {
 	return u.Update(func(s *ReceiveAddressUpsert) {
 		s.UpdateAddress()
+	})
+}
+
+// SetSalt sets the "salt" field.
+func (u *ReceiveAddressUpsertOne) SetSalt(v []byte) *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.SetSalt(v)
+	})
+}
+
+// UpdateSalt sets the "salt" field to the value that was provided on create.
+func (u *ReceiveAddressUpsertOne) UpdateSalt() *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.UpdateSalt()
+	})
+}
+
+// ClearSalt clears the value of the "salt" field.
+func (u *ReceiveAddressUpsertOne) ClearSalt() *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.ClearSalt()
 	})
 }
 
@@ -835,9 +868,6 @@ func (u *ReceiveAddressUpsertBulk) UpdateNewValues() *ReceiveAddressUpsertBulk {
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(receiveaddress.FieldCreatedAt)
 			}
-			if _, exists := b.mutation.Salt(); exists {
-				s.SetIgnore(receiveaddress.FieldSalt)
-			}
 		}
 	}))
 	return u
@@ -895,6 +925,27 @@ func (u *ReceiveAddressUpsertBulk) SetAddress(v string) *ReceiveAddressUpsertBul
 func (u *ReceiveAddressUpsertBulk) UpdateAddress() *ReceiveAddressUpsertBulk {
 	return u.Update(func(s *ReceiveAddressUpsert) {
 		s.UpdateAddress()
+	})
+}
+
+// SetSalt sets the "salt" field.
+func (u *ReceiveAddressUpsertBulk) SetSalt(v []byte) *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.SetSalt(v)
+	})
+}
+
+// UpdateSalt sets the "salt" field to the value that was provided on create.
+func (u *ReceiveAddressUpsertBulk) UpdateSalt() *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.UpdateSalt()
+	})
+}
+
+// ClearSalt clears the value of the "salt" field.
+func (u *ReceiveAddressUpsertBulk) ClearSalt() *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.ClearSalt()
 	})
 }
 

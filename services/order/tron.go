@@ -61,8 +61,13 @@ func (s *OrderTron) getNode() enums.Node {
 	}
 }
 
+// ProcessTransfer processes a transfer event for a given receive address and token.
+func (s *OrderTron) ProcessTransfer(ctx context.Context, receiveAddress string, token *ent.Token) error {
+	return nil
+}
+
 // CreateOrder creates a new payment order on-chain.
-func (s *OrderTron) CreateOrder(ctx context.Context, client types.RPCClient, orderID uuid.UUID) error {
+func (s *OrderTron) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 	var err error
 	orderIDPrefix := strings.Split(orderID.String(), "-")[0]
 
@@ -203,7 +208,7 @@ func (s *OrderTron) CreateOrder(ctx context.Context, client types.RPCClient, ord
 }
 
 // RefundOrder refunds sender on canceled lock order
-func (s *OrderTron) RefundOrder(ctx context.Context, client types.RPCClient, network *ent.Network, orderID string) error {
+func (s *OrderTron) RefundOrder(ctx context.Context, network *ent.Network, orderID string) error {
 	orderIDPrefix := strings.Split(orderID, "-")[0]
 
 	// Fetch lock order from db
@@ -303,7 +308,7 @@ func (s *OrderTron) RefundOrder(ctx context.Context, client types.RPCClient, net
 }
 
 // SettleOrder settles a payment order on-chain.
-func (s *OrderTron) SettleOrder(ctx context.Context, client types.RPCClient, orderID uuid.UUID) error {
+func (s *OrderTron) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 	var err error
 
 	orderIDPrefix := strings.Split(orderID.String(), "-")[0]

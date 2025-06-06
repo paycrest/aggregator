@@ -8,22 +8,20 @@ import (
 
 // CryptoConfiguration type defines crypto configurations
 type CryptoConfiguration struct {
-	HDWalletMnemonic           string
-	AggregatorPublicKey        string
-	AggregatorPrivateKey       string
-	AggregatorSmartAccount     string
-	AggregatorSmartAccountSalt string
+	HDWalletMnemonic       string
+	AggregatorPublicKey    string
+	AggregatorPrivateKey   string
+	AggregatorSmartAccount string
 }
 
 // CryptoConfig sets the crypto configuration
 func CryptoConfig() *CryptoConfiguration {
 
 	return &CryptoConfiguration{
-		HDWalletMnemonic:           viper.GetString("HD_WALLET_MNEMONIC"),
-		AggregatorPublicKey:        viper.GetString("AGGREGATOR_PUBLIC_KEY"),
-		AggregatorPrivateKey:       viper.GetString("AGGREGATOR_PRIVATE_KEY"),
-		AggregatorSmartAccount:     viper.GetString("AGGREGATOR_SMART_ACCOUNT"),
-		AggregatorSmartAccountSalt: viper.GetString("AGGREGATOR_SMART_ACCOUNT_SALT"),
+		HDWalletMnemonic:       viper.GetString("HD_WALLET_MNEMONIC"),
+		AggregatorPublicKey:    viper.GetString("AGGREGATOR_PUBLIC_KEY"),
+		AggregatorPrivateKey:   viper.GetString("AGGREGATOR_PRIVATE_KEY"),
+		AggregatorSmartAccount: viper.GetString("AGGREGATOR_SMART_ACCOUNT"),
 	}
 }
 

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	fastshot "github.com/opus-domini/fast-shot"
+	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/paymentorder"
@@ -23,6 +24,11 @@ import (
 	"github.com/paycrest/aggregator/utils/logger"
 	tokenUtils "github.com/paycrest/aggregator/utils/token"
 	"github.com/shopspring/decimal"
+)
+
+var (
+	serverConf = config.ServerConfig()
+	orderConf  = config.OrderConfig()
 )
 
 type PriorityQueueService struct{}

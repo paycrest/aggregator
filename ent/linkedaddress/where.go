@@ -290,6 +290,16 @@ func SaltLTE(v []byte) predicate.LinkedAddress {
 	return predicate.LinkedAddress(sql.FieldLTE(FieldSalt, v))
 }
 
+// SaltIsNil applies the IsNil predicate on the "salt" field.
+func SaltIsNil() predicate.LinkedAddress {
+	return predicate.LinkedAddress(sql.FieldIsNull(FieldSalt))
+}
+
+// SaltNotNil applies the NotNil predicate on the "salt" field.
+func SaltNotNil() predicate.LinkedAddress {
+	return predicate.LinkedAddress(sql.FieldNotNull(FieldSalt))
+}
+
 // InstitutionEQ applies the EQ predicate on the "institution" field.
 func InstitutionEQ(v string) predicate.LinkedAddress {
 	return predicate.LinkedAddress(sql.FieldEQ(FieldInstitution, v))

@@ -3426,9 +3426,22 @@ func (m *LinkedAddressMutation) OldSalt(ctx context.Context) (v []byte, err erro
 	return oldValue.Salt, nil
 }
 
+// ClearSalt clears the value of the "salt" field.
+func (m *LinkedAddressMutation) ClearSalt() {
+	m.salt = nil
+	m.clearedFields[linkedaddress.FieldSalt] = struct{}{}
+}
+
+// SaltCleared returns if the "salt" field was cleared in this mutation.
+func (m *LinkedAddressMutation) SaltCleared() bool {
+	_, ok := m.clearedFields[linkedaddress.FieldSalt]
+	return ok
+}
+
 // ResetSalt resets all changes to the "salt" field.
 func (m *LinkedAddressMutation) ResetSalt() {
 	m.salt = nil
+	delete(m.clearedFields, linkedaddress.FieldSalt)
 }
 
 // SetInstitution sets the "institution" field.
@@ -4057,6 +4070,9 @@ func (m *LinkedAddressMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *LinkedAddressMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(linkedaddress.FieldSalt) {
+		fields = append(fields, linkedaddress.FieldSalt)
+	}
 	if m.FieldCleared(linkedaddress.FieldMetadata) {
 		fields = append(fields, linkedaddress.FieldMetadata)
 	}
@@ -4080,6 +4096,9 @@ func (m *LinkedAddressMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *LinkedAddressMutation) ClearField(name string) error {
 	switch name {
+	case linkedaddress.FieldSalt:
+		m.ClearSalt()
+		return nil
 	case linkedaddress.FieldMetadata:
 		m.ClearMetadata()
 		return nil
@@ -4962,6 +4981,7 @@ type LockPaymentOrderMutation struct {
 	addrate                    *decimal.Decimal
 	order_percent              *decimal.Decimal
 	addorder_percent           *decimal.Decimal
+	sender                     *string
 	tx_hash                    *string
 	status                     *lockpaymentorder.Status
 	block_number               *int64
@@ -5371,6 +5391,55 @@ func (m *LockPaymentOrderMutation) AddedOrderPercent() (r decimal.Decimal, exist
 func (m *LockPaymentOrderMutation) ResetOrderPercent() {
 	m.order_percent = nil
 	m.addorder_percent = nil
+}
+
+// SetSender sets the "sender" field.
+func (m *LockPaymentOrderMutation) SetSender(s string) {
+	m.sender = &s
+}
+
+// Sender returns the value of the "sender" field in the mutation.
+func (m *LockPaymentOrderMutation) Sender() (r string, exists bool) {
+	v := m.sender
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSender returns the old "sender" field's value of the LockPaymentOrder entity.
+// If the LockPaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LockPaymentOrderMutation) OldSender(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSender is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSender requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSender: %w", err)
+	}
+	return oldValue.Sender, nil
+}
+
+// ClearSender clears the value of the "sender" field.
+func (m *LockPaymentOrderMutation) ClearSender() {
+	m.sender = nil
+	m.clearedFields[lockpaymentorder.FieldSender] = struct{}{}
+}
+
+// SenderCleared returns if the "sender" field was cleared in this mutation.
+func (m *LockPaymentOrderMutation) SenderCleared() bool {
+	_, ok := m.clearedFields[lockpaymentorder.FieldSender]
+	return ok
+}
+
+// ResetSender resets all changes to the "sender" field.
+func (m *LockPaymentOrderMutation) ResetSender() {
+	m.sender = nil
+	delete(m.clearedFields, lockpaymentorder.FieldSender)
 }
 
 // SetTxHash sets the "tx_hash" field.
@@ -6086,7 +6155,7 @@ func (m *LockPaymentOrderMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *LockPaymentOrderMutation) Fields() []string {
-	fields := make([]string, 0, 16)
+	fields := make([]string, 0, 17)
 	if m.created_at != nil {
 		fields = append(fields, lockpaymentorder.FieldCreatedAt)
 	}
@@ -6104,6 +6173,9 @@ func (m *LockPaymentOrderMutation) Fields() []string {
 	}
 	if m.order_percent != nil {
 		fields = append(fields, lockpaymentorder.FieldOrderPercent)
+	}
+	if m.sender != nil {
+		fields = append(fields, lockpaymentorder.FieldSender)
 	}
 	if m.tx_hash != nil {
 		fields = append(fields, lockpaymentorder.FieldTxHash)
@@ -6155,6 +6227,8 @@ func (m *LockPaymentOrderMutation) Field(name string) (ent.Value, bool) {
 		return m.Rate()
 	case lockpaymentorder.FieldOrderPercent:
 		return m.OrderPercent()
+	case lockpaymentorder.FieldSender:
+		return m.Sender()
 	case lockpaymentorder.FieldTxHash:
 		return m.TxHash()
 	case lockpaymentorder.FieldStatus:
@@ -6196,6 +6270,8 @@ func (m *LockPaymentOrderMutation) OldField(ctx context.Context, name string) (e
 		return m.OldRate(ctx)
 	case lockpaymentorder.FieldOrderPercent:
 		return m.OldOrderPercent(ctx)
+	case lockpaymentorder.FieldSender:
+		return m.OldSender(ctx)
 	case lockpaymentorder.FieldTxHash:
 		return m.OldTxHash(ctx)
 	case lockpaymentorder.FieldStatus:
@@ -6266,6 +6342,13 @@ func (m *LockPaymentOrderMutation) SetField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetOrderPercent(v)
+		return nil
+	case lockpaymentorder.FieldSender:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSender(v)
 		return nil
 	case lockpaymentorder.FieldTxHash:
 		v, ok := value.(string)
@@ -6430,6 +6513,9 @@ func (m *LockPaymentOrderMutation) AddField(name string, value ent.Value) error 
 // mutation.
 func (m *LockPaymentOrderMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(lockpaymentorder.FieldSender) {
+		fields = append(fields, lockpaymentorder.FieldSender)
+	}
 	if m.FieldCleared(lockpaymentorder.FieldTxHash) {
 		fields = append(fields, lockpaymentorder.FieldTxHash)
 	}
@@ -6453,6 +6539,9 @@ func (m *LockPaymentOrderMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *LockPaymentOrderMutation) ClearField(name string) error {
 	switch name {
+	case lockpaymentorder.FieldSender:
+		m.ClearSender()
+		return nil
 	case lockpaymentorder.FieldTxHash:
 		m.ClearTxHash()
 		return nil
@@ -6487,6 +6576,9 @@ func (m *LockPaymentOrderMutation) ResetField(name string) error {
 		return nil
 	case lockpaymentorder.FieldOrderPercent:
 		m.ResetOrderPercent()
+		return nil
+	case lockpaymentorder.FieldSender:
+		m.ResetSender()
 		return nil
 	case lockpaymentorder.FieldTxHash:
 		m.ResetTxHash()
@@ -6696,10 +6788,11 @@ type NetworkMutation struct {
 	updated_at               *time.Time
 	chain_id                 *int64
 	addchain_id              *int64
-	chain_id_hex             *string
 	identifier               *string
 	rpc_endpoint             *string
 	gateway_contract_address *string
+	block_time               *decimal.Decimal
+	addblock_time            *decimal.Decimal
 	is_testnet               *bool
 	bundler_url              *string
 	paymaster_url            *string
@@ -6940,55 +7033,6 @@ func (m *NetworkMutation) ResetChainID() {
 	m.addchain_id = nil
 }
 
-// SetChainIDHex sets the "chain_id_hex" field.
-func (m *NetworkMutation) SetChainIDHex(s string) {
-	m.chain_id_hex = &s
-}
-
-// ChainIDHex returns the value of the "chain_id_hex" field in the mutation.
-func (m *NetworkMutation) ChainIDHex() (r string, exists bool) {
-	v := m.chain_id_hex
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldChainIDHex returns the old "chain_id_hex" field's value of the Network entity.
-// If the Network object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *NetworkMutation) OldChainIDHex(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldChainIDHex is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldChainIDHex requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldChainIDHex: %w", err)
-	}
-	return oldValue.ChainIDHex, nil
-}
-
-// ClearChainIDHex clears the value of the "chain_id_hex" field.
-func (m *NetworkMutation) ClearChainIDHex() {
-	m.chain_id_hex = nil
-	m.clearedFields[network.FieldChainIDHex] = struct{}{}
-}
-
-// ChainIDHexCleared returns if the "chain_id_hex" field was cleared in this mutation.
-func (m *NetworkMutation) ChainIDHexCleared() bool {
-	_, ok := m.clearedFields[network.FieldChainIDHex]
-	return ok
-}
-
-// ResetChainIDHex resets all changes to the "chain_id_hex" field.
-func (m *NetworkMutation) ResetChainIDHex() {
-	m.chain_id_hex = nil
-	delete(m.clearedFields, network.FieldChainIDHex)
-}
-
 // SetIdentifier sets the "identifier" field.
 func (m *NetworkMutation) SetIdentifier(s string) {
 	m.identifier = &s
@@ -7095,6 +7139,62 @@ func (m *NetworkMutation) OldGatewayContractAddress(ctx context.Context) (v stri
 // ResetGatewayContractAddress resets all changes to the "gateway_contract_address" field.
 func (m *NetworkMutation) ResetGatewayContractAddress() {
 	m.gateway_contract_address = nil
+}
+
+// SetBlockTime sets the "block_time" field.
+func (m *NetworkMutation) SetBlockTime(d decimal.Decimal) {
+	m.block_time = &d
+	m.addblock_time = nil
+}
+
+// BlockTime returns the value of the "block_time" field in the mutation.
+func (m *NetworkMutation) BlockTime() (r decimal.Decimal, exists bool) {
+	v := m.block_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBlockTime returns the old "block_time" field's value of the Network entity.
+// If the Network object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *NetworkMutation) OldBlockTime(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBlockTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBlockTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBlockTime: %w", err)
+	}
+	return oldValue.BlockTime, nil
+}
+
+// AddBlockTime adds d to the "block_time" field.
+func (m *NetworkMutation) AddBlockTime(d decimal.Decimal) {
+	if m.addblock_time != nil {
+		*m.addblock_time = m.addblock_time.Add(d)
+	} else {
+		m.addblock_time = &d
+	}
+}
+
+// AddedBlockTime returns the value that was added to the "block_time" field in this mutation.
+func (m *NetworkMutation) AddedBlockTime() (r decimal.Decimal, exists bool) {
+	v := m.addblock_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBlockTime resets all changes to the "block_time" field.
+func (m *NetworkMutation) ResetBlockTime() {
+	m.block_time = nil
+	m.addblock_time = nil
 }
 
 // SetIsTestnet sets the "is_testnet" field.
@@ -7385,9 +7485,6 @@ func (m *NetworkMutation) Fields() []string {
 	if m.chain_id != nil {
 		fields = append(fields, network.FieldChainID)
 	}
-	if m.chain_id_hex != nil {
-		fields = append(fields, network.FieldChainIDHex)
-	}
 	if m.identifier != nil {
 		fields = append(fields, network.FieldIdentifier)
 	}
@@ -7396,6 +7493,9 @@ func (m *NetworkMutation) Fields() []string {
 	}
 	if m.gateway_contract_address != nil {
 		fields = append(fields, network.FieldGatewayContractAddress)
+	}
+	if m.block_time != nil {
+		fields = append(fields, network.FieldBlockTime)
 	}
 	if m.is_testnet != nil {
 		fields = append(fields, network.FieldIsTestnet)
@@ -7423,14 +7523,14 @@ func (m *NetworkMutation) Field(name string) (ent.Value, bool) {
 		return m.UpdatedAt()
 	case network.FieldChainID:
 		return m.ChainID()
-	case network.FieldChainIDHex:
-		return m.ChainIDHex()
 	case network.FieldIdentifier:
 		return m.Identifier()
 	case network.FieldRPCEndpoint:
 		return m.RPCEndpoint()
 	case network.FieldGatewayContractAddress:
 		return m.GatewayContractAddress()
+	case network.FieldBlockTime:
+		return m.BlockTime()
 	case network.FieldIsTestnet:
 		return m.IsTestnet()
 	case network.FieldBundlerURL:
@@ -7454,14 +7554,14 @@ func (m *NetworkMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldUpdatedAt(ctx)
 	case network.FieldChainID:
 		return m.OldChainID(ctx)
-	case network.FieldChainIDHex:
-		return m.OldChainIDHex(ctx)
 	case network.FieldIdentifier:
 		return m.OldIdentifier(ctx)
 	case network.FieldRPCEndpoint:
 		return m.OldRPCEndpoint(ctx)
 	case network.FieldGatewayContractAddress:
 		return m.OldGatewayContractAddress(ctx)
+	case network.FieldBlockTime:
+		return m.OldBlockTime(ctx)
 	case network.FieldIsTestnet:
 		return m.OldIsTestnet(ctx)
 	case network.FieldBundlerURL:
@@ -7500,13 +7600,6 @@ func (m *NetworkMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetChainID(v)
 		return nil
-	case network.FieldChainIDHex:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetChainIDHex(v)
-		return nil
 	case network.FieldIdentifier:
 		v, ok := value.(string)
 		if !ok {
@@ -7527,6 +7620,13 @@ func (m *NetworkMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetGatewayContractAddress(v)
+		return nil
+	case network.FieldBlockTime:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBlockTime(v)
 		return nil
 	case network.FieldIsTestnet:
 		v, ok := value.(bool)
@@ -7567,6 +7667,9 @@ func (m *NetworkMutation) AddedFields() []string {
 	if m.addchain_id != nil {
 		fields = append(fields, network.FieldChainID)
 	}
+	if m.addblock_time != nil {
+		fields = append(fields, network.FieldBlockTime)
+	}
 	if m.addfee != nil {
 		fields = append(fields, network.FieldFee)
 	}
@@ -7580,6 +7683,8 @@ func (m *NetworkMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case network.FieldChainID:
 		return m.AddedChainID()
+	case network.FieldBlockTime:
+		return m.AddedBlockTime()
 	case network.FieldFee:
 		return m.AddedFee()
 	}
@@ -7598,6 +7703,13 @@ func (m *NetworkMutation) AddField(name string, value ent.Value) error {
 		}
 		m.AddChainID(v)
 		return nil
+	case network.FieldBlockTime:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBlockTime(v)
+		return nil
 	case network.FieldFee:
 		v, ok := value.(decimal.Decimal)
 		if !ok {
@@ -7613,9 +7725,6 @@ func (m *NetworkMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *NetworkMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(network.FieldChainIDHex) {
-		fields = append(fields, network.FieldChainIDHex)
-	}
 	if m.FieldCleared(network.FieldBundlerURL) {
 		fields = append(fields, network.FieldBundlerURL)
 	}
@@ -7636,9 +7745,6 @@ func (m *NetworkMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *NetworkMutation) ClearField(name string) error {
 	switch name {
-	case network.FieldChainIDHex:
-		m.ClearChainIDHex()
-		return nil
 	case network.FieldBundlerURL:
 		m.ClearBundlerURL()
 		return nil
@@ -7662,9 +7768,6 @@ func (m *NetworkMutation) ResetField(name string) error {
 	case network.FieldChainID:
 		m.ResetChainID()
 		return nil
-	case network.FieldChainIDHex:
-		m.ResetChainIDHex()
-		return nil
 	case network.FieldIdentifier:
 		m.ResetIdentifier()
 		return nil
@@ -7673,6 +7776,9 @@ func (m *NetworkMutation) ResetField(name string) error {
 		return nil
 	case network.FieldGatewayContractAddress:
 		m.ResetGatewayContractAddress()
+		return nil
+	case network.FieldBlockTime:
+		m.ResetBlockTime()
 		return nil
 	case network.FieldIsTestnet:
 		m.ResetIsTestnet()
@@ -15216,9 +15322,22 @@ func (m *ReceiveAddressMutation) OldSalt(ctx context.Context) (v []byte, err err
 	return oldValue.Salt, nil
 }
 
+// ClearSalt clears the value of the "salt" field.
+func (m *ReceiveAddressMutation) ClearSalt() {
+	m.salt = nil
+	m.clearedFields[receiveaddress.FieldSalt] = struct{}{}
+}
+
+// SaltCleared returns if the "salt" field was cleared in this mutation.
+func (m *ReceiveAddressMutation) SaltCleared() bool {
+	_, ok := m.clearedFields[receiveaddress.FieldSalt]
+	return ok
+}
+
 // ResetSalt resets all changes to the "salt" field.
 func (m *ReceiveAddressMutation) ResetSalt() {
 	m.salt = nil
+	delete(m.clearedFields, receiveaddress.FieldSalt)
 }
 
 // SetStatus sets the "status" field.
@@ -15745,6 +15864,9 @@ func (m *ReceiveAddressMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *ReceiveAddressMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(receiveaddress.FieldSalt) {
+		fields = append(fields, receiveaddress.FieldSalt)
+	}
 	if m.FieldCleared(receiveaddress.FieldLastIndexedBlock) {
 		fields = append(fields, receiveaddress.FieldLastIndexedBlock)
 	}
@@ -15771,6 +15893,9 @@ func (m *ReceiveAddressMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *ReceiveAddressMutation) ClearField(name string) error {
 	switch name {
+	case receiveaddress.FieldSalt:
+		m.ClearSalt()
+		return nil
 	case receiveaddress.FieldLastIndexedBlock:
 		m.ClearLastIndexedBlock()
 		return nil

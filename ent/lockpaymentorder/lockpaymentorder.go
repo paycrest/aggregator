@@ -28,6 +28,8 @@ const (
 	FieldRate = "rate"
 	// FieldOrderPercent holds the string denoting the order_percent field in the database.
 	FieldOrderPercent = "order_percent"
+	// FieldSender holds the string denoting the sender field in the database.
+	FieldSender = "sender"
 	// FieldTxHash holds the string denoting the tx_hash field in the database.
 	FieldTxHash = "tx_hash"
 	// FieldStatus holds the string denoting the status field in the database.
@@ -106,6 +108,7 @@ var Columns = []string{
 	FieldAmount,
 	FieldRate,
 	FieldOrderPercent,
+	FieldSender,
 	FieldTxHash,
 	FieldStatus,
 	FieldBlockNumber,
@@ -225,6 +228,11 @@ func ByRate(opts ...sql.OrderTermOption) OrderOption {
 // ByOrderPercent orders the results by the order_percent field.
 func ByOrderPercent(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldOrderPercent, opts...).ToFunc()
+}
+
+// BySender orders the results by the sender field.
+func BySender(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSender, opts...).ToFunc()
 }
 
 // ByTxHash orders the results by the tx_hash field.

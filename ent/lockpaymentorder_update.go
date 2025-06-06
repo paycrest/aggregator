@@ -119,6 +119,26 @@ func (lpou *LockPaymentOrderUpdate) AddOrderPercent(d decimal.Decimal) *LockPaym
 	return lpou
 }
 
+// SetSender sets the "sender" field.
+func (lpou *LockPaymentOrderUpdate) SetSender(s string) *LockPaymentOrderUpdate {
+	lpou.mutation.SetSender(s)
+	return lpou
+}
+
+// SetNillableSender sets the "sender" field if the given value is not nil.
+func (lpou *LockPaymentOrderUpdate) SetNillableSender(s *string) *LockPaymentOrderUpdate {
+	if s != nil {
+		lpou.SetSender(*s)
+	}
+	return lpou
+}
+
+// ClearSender clears the value of the "sender" field.
+func (lpou *LockPaymentOrderUpdate) ClearSender() *LockPaymentOrderUpdate {
+	lpou.mutation.ClearSender()
+	return lpou
+}
+
 // SetTxHash sets the "tx_hash" field.
 func (lpou *LockPaymentOrderUpdate) SetTxHash(s string) *LockPaymentOrderUpdate {
 	lpou.mutation.SetTxHash(s)
@@ -515,6 +535,12 @@ func (lpou *LockPaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err err
 	if value, ok := lpou.mutation.AddedOrderPercent(); ok {
 		_spec.AddField(lockpaymentorder.FieldOrderPercent, field.TypeFloat64, value)
 	}
+	if value, ok := lpou.mutation.Sender(); ok {
+		_spec.SetField(lockpaymentorder.FieldSender, field.TypeString, value)
+	}
+	if lpou.mutation.SenderCleared() {
+		_spec.ClearField(lockpaymentorder.FieldSender, field.TypeString)
+	}
 	if value, ok := lpou.mutation.TxHash(); ok {
 		_spec.SetField(lockpaymentorder.FieldTxHash, field.TypeString, value)
 	}
@@ -842,6 +868,26 @@ func (lpouo *LockPaymentOrderUpdateOne) SetNillableOrderPercent(d *decimal.Decim
 // AddOrderPercent adds d to the "order_percent" field.
 func (lpouo *LockPaymentOrderUpdateOne) AddOrderPercent(d decimal.Decimal) *LockPaymentOrderUpdateOne {
 	lpouo.mutation.AddOrderPercent(d)
+	return lpouo
+}
+
+// SetSender sets the "sender" field.
+func (lpouo *LockPaymentOrderUpdateOne) SetSender(s string) *LockPaymentOrderUpdateOne {
+	lpouo.mutation.SetSender(s)
+	return lpouo
+}
+
+// SetNillableSender sets the "sender" field if the given value is not nil.
+func (lpouo *LockPaymentOrderUpdateOne) SetNillableSender(s *string) *LockPaymentOrderUpdateOne {
+	if s != nil {
+		lpouo.SetSender(*s)
+	}
+	return lpouo
+}
+
+// ClearSender clears the value of the "sender" field.
+func (lpouo *LockPaymentOrderUpdateOne) ClearSender() *LockPaymentOrderUpdateOne {
+	lpouo.mutation.ClearSender()
 	return lpouo
 }
 
@@ -1270,6 +1316,12 @@ func (lpouo *LockPaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *Loc
 	}
 	if value, ok := lpouo.mutation.AddedOrderPercent(); ok {
 		_spec.AddField(lockpaymentorder.FieldOrderPercent, field.TypeFloat64, value)
+	}
+	if value, ok := lpouo.mutation.Sender(); ok {
+		_spec.SetField(lockpaymentorder.FieldSender, field.TypeString, value)
+	}
+	if lpouo.mutation.SenderCleared() {
+		_spec.ClearField(lockpaymentorder.FieldSender, field.TypeString)
 	}
 	if value, ok := lpouo.mutation.TxHash(); ok {
 		_spec.SetField(lockpaymentorder.FieldTxHash, field.TypeString, value)

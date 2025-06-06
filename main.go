@@ -13,6 +13,34 @@ import (
 )
 
 func main() {
+	// Use uint64 for block numbers to avoid floating point issues
+	latestBlock := uint64(26412000)
+
+	// Constants
+	const (
+		blockTimeSeconds = 2
+		maxChunkSize     = 1000
+	)
+
+	// Calculate blocks in given duration
+	duration := 2 * time.Hour
+	blocksPerSecond := float64(1) / blockTimeSeconds
+	blocksInDuration := uint64(blocksPerSecond * float64(duration.Seconds()))
+
+	// Calculate start block
+	startBlock := latestBlock - blocksInDuration
+	endBlock := latestBlock
+
+	// Process blocks in chunks
+	for currentBlock := startBlock; currentBlock < endBlock; currentBlock += maxChunkSize {
+		chunkEnd := currentBlock + maxChunkSize - 1
+		if chunkEnd > endBlock {
+			chunkEnd = endBlock
+		}
+
+		fmt.Printf("Processing blocks %d to %d\n", currentBlock, chunkEnd)
+	}
+
 	// Set timezone
 	conf := config.ServerConfig()
 	loc, _ := time.LoadLocation(conf.Timezone)

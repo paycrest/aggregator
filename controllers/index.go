@@ -523,7 +523,7 @@ func (ctrl *Controller) CreateLinkedAddress(ctx *gin.Context) {
 	ownerAddress, _ := ctx.Get("owner_address")
 
 	// Generate smart account
-	address, salt, err := ctrl.receiveAddressService.CreateSmartAddress(ctx, nil, nil)
+	address, err := ctrl.receiveAddressService.CreateSmartAddress(ctx, "")
 	if err != nil {
 		logger.Errorf("Error: Failed to create linked address: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create linked address", nil)
@@ -534,7 +534,6 @@ func (ctrl *Controller) CreateLinkedAddress(ctx *gin.Context) {
 	linkedAddress, err := storage.Client.LinkedAddress.
 		Create().
 		SetAddress(address).
-		SetSalt(salt).
 		SetInstitution(payload.Institution).
 		SetAccountIdentifier(payload.AccountIdentifier).
 		SetAccountName(payload.AccountName).

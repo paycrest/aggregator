@@ -31,6 +31,7 @@ import (
 var (
 	fromAddress, privateKey, _ = cryptoUtils.GenerateAccountFromIndex(0)
 	orderConf                  = config.OrderConfig()
+	engineConf                 = config.EngineConfig()
 )
 
 // Initialize user operation with defaults
@@ -195,7 +196,7 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 			Transport: &http.Transport{},
 		}
 		header := http.Header{}
-		header.Set("x-secret-key", orderConf.ThirdwebSecretKey)
+		header.Set("x-secret-key", engineConf.ThirdwebSecretKey)
 
 		client, err = rpc.DialOptions(
 			context.Background(),
@@ -297,7 +298,7 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 			Transport: &http.Transport{},
 		}
 		header := http.Header{}
-		header.Set("x-secret-key", orderConf.ThirdwebSecretKey)
+		header.Set("x-secret-key", engineConf.ThirdwebSecretKey)
 
 		client, err = rpc.DialOptions(
 			context.Background(),
@@ -377,7 +378,7 @@ func GetUserOperationByReceipt(userOpHash string, chainId int64) (map[string]int
 			Transport: &http.Transport{},
 		}
 		header := http.Header{}
-		header.Set("x-secret-key", orderConf.ThirdwebSecretKey)
+		header.Set("x-secret-key", engineConf.ThirdwebSecretKey)
 
 		client, err = rpc.DialOptions(
 			context.Background(),
@@ -547,7 +548,7 @@ func GetUserOperationStatus(userOpHash string, chainId int64) (bool, error) {
 			Transport: &http.Transport{},
 		}
 		header := http.Header{}
-		header.Set("x-secret-key", orderConf.ThirdwebSecretKey)
+		header.Set("x-secret-key", engineConf.ThirdwebSecretKey)
 
 		client, err = rpc.DialOptions(
 			context.Background(),
@@ -648,7 +649,7 @@ func getStandardGasPrices(chainId int64) (*big.Int, *big.Int, error) {
 		Transport: &http.Transport{},
 	}
 	header := http.Header{}
-	header.Set("x-secret-key", orderConf.ThirdwebSecretKey)
+	header.Set("x-secret-key", engineConf.ThirdwebSecretKey)
 
 	client, err := rpc.DialOptions(
 		context.Background(),

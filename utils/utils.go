@@ -103,6 +103,20 @@ func Byte32ToString(b [32]byte) string {
 	}
 }
 
+// HexToDecimal converts a hex string to a decimal.Decimal
+func HexToDecimal(hexStr string) decimal.Decimal {
+	// Remove "0x" prefix if present
+	hexStr = strings.TrimPrefix(hexStr, "0x")
+
+	// Convert hex string to big.Int
+	n := new(big.Int)
+	n.SetString(hexStr, 16)
+
+	// Convert to decimal
+	dec := decimal.NewFromBigInt(n, 0)
+	return dec
+}
+
 // BigMin returns the minimum value between two big numbers
 func BigMin(x, y *big.Int) *big.Int {
 	if x.Cmp(y) < 0 {
