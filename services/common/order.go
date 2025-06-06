@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/config"
@@ -571,7 +572,11 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 	}
 
 	// Aggregator side status update
-	splitOrderId, _ := uuid.Parse(event.SplitOrderId)
+	splitOrderId, err := uuid.Parse(string(ethcommon.FromHex(event.SplitOrderId)))
+	if err != nil {
+		return fmt.Errorf("UpdateOrderStatusSettled.splitOrderId: %v", err)
+	}
+
 	lockPaymentOrderUpdate := tx.LockPaymentOrder.
 		Update().
 		Where(

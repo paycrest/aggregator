@@ -191,7 +191,7 @@ func init() {
 	// network.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	network.UpdateDefaultUpdatedAt = networkDescUpdatedAt.UpdateDefault.(func() time.Time)
 	// networkDescGatewayContractAddress is the schema descriptor for gateway_contract_address field.
-	networkDescGatewayContractAddress := networkFields[4].Descriptor()
+	networkDescGatewayContractAddress := networkFields[3].Descriptor()
 	// network.DefaultGatewayContractAddress holds the default value on creation for the gateway_contract_address field.
 	network.DefaultGatewayContractAddress = networkDescGatewayContractAddress.Default.(string)
 	paymentorderMixin := schema.PaymentOrder{}.Mixin()
