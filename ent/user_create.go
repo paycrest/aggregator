@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/paycrest/aggregator/ent/kybformsubmission"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/user"
@@ -178,6 +179,25 @@ func (uc *UserCreate) AddVerificationToken(v ...*VerificationToken) *UserCreate 
 		ids[i] = v[i].ID
 	}
 	return uc.AddVerificationTokenIDs(ids...)
+}
+
+// SetKybFormSubmissionID sets the "kyb_form_submission" edge to the KYBFormSubmission entity by ID.
+func (uc *UserCreate) SetKybFormSubmissionID(id uuid.UUID) *UserCreate {
+	uc.mutation.SetKybFormSubmissionID(id)
+	return uc
+}
+
+// SetNillableKybFormSubmissionID sets the "kyb_form_submission" edge to the KYBFormSubmission entity by ID if the given value is not nil.
+func (uc *UserCreate) SetNillableKybFormSubmissionID(id *uuid.UUID) *UserCreate {
+	if id != nil {
+		uc = uc.SetKybFormSubmissionID(*id)
+	}
+	return uc
+}
+
+// SetKybFormSubmission sets the "kyb_form_submission" edge to the KYBFormSubmission entity.
+func (uc *UserCreate) SetKybFormSubmission(k *KYBFormSubmission) *UserCreate {
+	return uc.SetKybFormSubmissionID(k.ID)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -406,6 +426,23 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := uc.mutation.KybFormSubmissionIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   user.KybFormSubmissionTable,
+			Columns: []string{user.KybFormSubmissionColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(kybformsubmission.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.user_kyb_form_submission = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

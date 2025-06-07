@@ -21,6 +21,18 @@ func (f APIKeyFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, erro
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.APIKeyMutation", m)
 }
 
+// The BeneficialOwnerFunc type is an adapter to allow the use of ordinary
+// function as BeneficialOwner mutator.
+type BeneficialOwnerFunc func(context.Context, *ent.BeneficialOwnerMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f BeneficialOwnerFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.BeneficialOwnerMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BeneficialOwnerMutation", m)
+}
+
 // The FiatCurrencyFunc type is an adapter to allow the use of ordinary
 // function as FiatCurrency mutator.
 type FiatCurrencyFunc func(context.Context, *ent.FiatCurrencyMutation) (ent.Value, error)
@@ -55,6 +67,18 @@ func (f InstitutionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value,
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.InstitutionMutation", m)
+}
+
+// The KYBFormSubmissionFunc type is an adapter to allow the use of ordinary
+// function as KYBFormSubmission mutator.
+type KYBFormSubmissionFunc func(context.Context, *ent.KYBFormSubmissionMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f KYBFormSubmissionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.KYBFormSubmissionMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.KYBFormSubmissionMutation", m)
 }
 
 // The LinkedAddressFunc type is an adapter to allow the use of ordinary

@@ -13,9 +13,11 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/paycrest/aggregator/ent/apikey"
+	"github.com/paycrest/aggregator/ent/beneficialowner"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
 	"github.com/paycrest/aggregator/ent/institution"
+	"github.com/paycrest/aggregator/ent/kybformsubmission"
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
@@ -95,9 +97,11 @@ func checkColumn(table, column string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
 			apikey.Table:                      apikey.ValidColumn,
+			beneficialowner.Table:             beneficialowner.ValidColumn,
 			fiatcurrency.Table:                fiatcurrency.ValidColumn,
 			identityverificationrequest.Table: identityverificationrequest.ValidColumn,
 			institution.Table:                 institution.ValidColumn,
+			kybformsubmission.Table:           kybformsubmission.ValidColumn,
 			linkedaddress.Table:               linkedaddress.ValidColumn,
 			lockorderfulfillment.Table:        lockorderfulfillment.ValidColumn,
 			lockpaymentorder.Table:            lockpaymentorder.ValidColumn,

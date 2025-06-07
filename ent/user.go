@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
+	"github.com/paycrest/aggregator/ent/kybformsubmission"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/user"
@@ -40,8 +41,9 @@ type User struct {
 	HasEarlyAccess bool `json:"has_early_access,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the UserQuery when eager-loading is set.
-	Edges        UserEdges `json:"edges"`
-	selectValues sql.SelectValues
+	Edges                    UserEdges `json:"edges"`
+	user_kyb_form_submission *uuid.UUID
+	selectValues             sql.SelectValues
 }
 
 // UserEdges holds the relations/edges for other nodes in the graph.
@@ -52,9 +54,11 @@ type UserEdges struct {
 	ProviderProfile *ProviderProfile `json:"provider_profile,omitempty"`
 	// VerificationToken holds the value of the verification_token edge.
 	VerificationToken []*VerificationToken `json:"verification_token,omitempty"`
+	// KybFormSubmission holds the value of the kyb_form_submission edge.
+	KybFormSubmission *KYBFormSubmission `json:"kyb_form_submission,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 }
 
 // SenderProfileOrErr returns the SenderProfile value or an error if the edge
@@ -88,6 +92,17 @@ func (e UserEdges) VerificationTokenOrErr() ([]*VerificationToken, error) {
 	return nil, &NotLoadedError{edge: "verification_token"}
 }
 
+// KybFormSubmissionOrErr returns the KybFormSubmission value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e UserEdges) KybFormSubmissionOrErr() (*KYBFormSubmission, error) {
+	if e.KybFormSubmission != nil {
+		return e.KybFormSubmission, nil
+	} else if e.loadedTypes[3] {
+		return nil, &NotFoundError{label: kybformsubmission.Label}
+	}
+	return nil, &NotLoadedError{edge: "kyb_form_submission"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*User) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -101,6 +116,8 @@ func (*User) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullTime)
 		case user.FieldID:
 			values[i] = new(uuid.UUID)
+		case user.ForeignKeys[0]: // user_kyb_form_submission
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -176,6 +193,13 @@ func (u *User) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				u.HasEarlyAccess = value.Bool
 			}
+		case user.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field user_kyb_form_submission", values[i])
+			} else if value.Valid {
+				u.user_kyb_form_submission = new(uuid.UUID)
+				*u.user_kyb_form_submission = *value.S.(*uuid.UUID)
+			}
 		default:
 			u.selectValues.Set(columns[i], values[i])
 		}
@@ -202,6 +226,11 @@ func (u *User) QueryProviderProfile() *ProviderProfileQuery {
 // QueryVerificationToken queries the "verification_token" edge of the User entity.
 func (u *User) QueryVerificationToken() *VerificationTokenQuery {
 	return NewUserClient(u.config).QueryVerificationToken(u)
+}
+
+// QueryKybFormSubmission queries the "kyb_form_submission" edge of the User entity.
+func (u *User) QueryKybFormSubmission() *KYBFormSubmissionQuery {
+	return NewUserClient(u.config).QueryKybFormSubmission(u)
 }
 
 // Update returns a builder for updating this User.

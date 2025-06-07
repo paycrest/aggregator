@@ -595,6 +595,29 @@ func HasVerificationTokenWith(preds ...predicate.VerificationToken) predicate.Us
 	})
 }
 
+// HasKybFormSubmission applies the HasEdge predicate on the "kyb_form_submission" edge.
+func HasKybFormSubmission() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, KybFormSubmissionTable, KybFormSubmissionColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasKybFormSubmissionWith applies the HasEdge predicate on the "kyb_form_submission" edge with a given conditions (other predicates).
+func HasKybFormSubmissionWith(preds ...predicate.KYBFormSubmission) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newKybFormSubmissionStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.User) predicate.User {
 	return predicate.User(sql.AndPredicates(predicates...))

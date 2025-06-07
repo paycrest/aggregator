@@ -40,6 +40,8 @@ const (
 	EdgeProviderProfile = "provider_profile"
 	// EdgeVerificationToken holds the string denoting the verification_token edge name in mutations.
 	EdgeVerificationToken = "verification_token"
+	// EdgeKybFormSubmission holds the string denoting the kyb_form_submission edge name in mutations.
+	EdgeKybFormSubmission = "kyb_form_submission"
 	// Table holds the table name of the user in the database.
 	Table = "users"
 	// SenderProfileTable is the table that holds the sender_profile relation/edge.
@@ -63,6 +65,13 @@ const (
 	VerificationTokenInverseTable = "verification_tokens"
 	// VerificationTokenColumn is the table column denoting the verification_token relation/edge.
 	VerificationTokenColumn = "user_verification_token"
+	// KybFormSubmissionTable is the table that holds the kyb_form_submission relation/edge.
+	KybFormSubmissionTable = "users"
+	// KybFormSubmissionInverseTable is the table name for the KYBFormSubmission entity.
+	// It exists in this package in order to avoid circular dependency with the "kybformsubmission" package.
+	KybFormSubmissionInverseTable = "kyb_form_submissions"
+	// KybFormSubmissionColumn is the table column denoting the kyb_form_submission relation/edge.
+	KybFormSubmissionColumn = "user_kyb_form_submission"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -79,10 +88,21 @@ var Columns = []string{
 	FieldHasEarlyAccess,
 }
 
+// ForeignKeys holds the SQL foreign-keys that are owned by the "users"
+// table and are not defined as standalone fields in the schema.
+var ForeignKeys = []string{
+	"user_kyb_form_submission",
+}
+
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
+			return true
+		}
+	}
+	for i := range ForeignKeys {
+		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -194,6 +214,13 @@ func ByVerificationToken(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption
 		sqlgraph.OrderByNeighborTerms(s, newVerificationTokenStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByKybFormSubmissionField orders the results by kyb_form_submission field.
+func ByKybFormSubmissionField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newKybFormSubmissionStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newSenderProfileStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -213,5 +240,12 @@ func newVerificationTokenStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(VerificationTokenInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, VerificationTokenTable, VerificationTokenColumn),
+	)
+}
+func newKybFormSubmissionStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(KybFormSubmissionInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, KybFormSubmissionTable, KybFormSubmissionColumn),
 	)
 }
