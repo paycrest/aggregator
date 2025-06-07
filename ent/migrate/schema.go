@@ -35,6 +35,31 @@ var (
 			},
 		},
 	}
+	// BeneficialOwnersColumns holds the columns for the "beneficial_owners" table.
+	BeneficialOwnersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "full_name", Type: field.TypeString, Size: 160},
+		{Name: "residential_address", Type: field.TypeString},
+		{Name: "proof_of_residential_address_url", Type: field.TypeString},
+		{Name: "government_issued_id_url", Type: field.TypeString},
+		{Name: "date_of_birth", Type: field.TypeString},
+		{Name: "ownership_percentage", Type: field.TypeFloat64},
+		{Name: "kyb_form_submission_beneficial_owners", Type: field.TypeUUID, Nullable: true},
+	}
+	// BeneficialOwnersTable holds the schema information for the "beneficial_owners" table.
+	BeneficialOwnersTable = &schema.Table{
+		Name:       "beneficial_owners",
+		Columns:    BeneficialOwnersColumns,
+		PrimaryKey: []*schema.Column{BeneficialOwnersColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "beneficial_owners_kyb_form_submissions_beneficial_owners",
+				Columns:    []*schema.Column{BeneficialOwnersColumns[7]},
+				RefColumns: []*schema.Column{KybFormSubmissionsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
 	// FiatCurrenciesColumns holds the columns for the "fiat_currencies" table.
 	FiatCurrenciesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -94,6 +119,37 @@ var (
 				Columns:    []*schema.Column{InstitutionsColumns[6]},
 				RefColumns: []*schema.Column{FiatCurrenciesColumns[0]},
 				OnDelete:   schema.SetNull,
+			},
+		},
+	}
+	// KybFormSubmissionsColumns holds the columns for the "kyb_form_submissions" table.
+	KybFormSubmissionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "email", Type: field.TypeString},
+		{Name: "company_name", Type: field.TypeString},
+		{Name: "registered_business_address", Type: field.TypeString},
+		{Name: "certificate_of_incorporation_url", Type: field.TypeString},
+		{Name: "articles_of_incorporation_url", Type: field.TypeString},
+		{Name: "business_license_url", Type: field.TypeString, Nullable: true},
+		{Name: "proof_of_business_address_url", Type: field.TypeString},
+		{Name: "proof_of_residential_address_url", Type: field.TypeString},
+		{Name: "aml_policy_url", Type: field.TypeString, Nullable: true},
+		{Name: "kyc_policy_url", Type: field.TypeString, Nullable: true},
+		{Name: "kyb_form_submission_user", Type: field.TypeUUID, Nullable: true},
+	}
+	// KybFormSubmissionsTable holds the schema information for the "kyb_form_submissions" table.
+	KybFormSubmissionsTable = &schema.Table{
+		Name:       "kyb_form_submissions",
+		Columns:    KybFormSubmissionsColumns,
+		PrimaryKey: []*schema.Column{KybFormSubmissionsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "kyb_form_submissions_users_user",
+				Columns:    []*schema.Column{KybFormSubmissionsColumns[13]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.Cascade,
 			},
 		},
 	}
@@ -603,12 +659,21 @@ var (
 		{Name: "scope", Type: field.TypeString},
 		{Name: "is_email_verified", Type: field.TypeBool, Default: false},
 		{Name: "has_early_access", Type: field.TypeBool, Default: false},
+		{Name: "user_kyb_form_submission", Type: field.TypeUUID, Nullable: true},
 	}
 	// UsersTable holds the schema information for the "users" table.
 	UsersTable = &schema.Table{
 		Name:       "users",
 		Columns:    UsersColumns,
 		PrimaryKey: []*schema.Column{UsersColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "users_kyb_form_submissions_kyb_form_submission",
+				Columns:    []*schema.Column{UsersColumns[10]},
+				RefColumns: []*schema.Column{KybFormSubmissionsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "user_email_scope",
@@ -712,9 +777,11 @@ var (
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		APIKeysTable,
+		BeneficialOwnersTable,
 		FiatCurrenciesTable,
 		IdentityVerificationRequestsTable,
 		InstitutionsTable,
+		KybFormSubmissionsTable,
 		LinkedAddressesTable,
 		LockOrderFulfillmentsTable,
 		LockPaymentOrdersTable,
@@ -741,7 +808,9 @@ var (
 func init() {
 	APIKeysTable.ForeignKeys[0].RefTable = ProviderProfilesTable
 	APIKeysTable.ForeignKeys[1].RefTable = SenderProfilesTable
+	BeneficialOwnersTable.ForeignKeys[0].RefTable = KybFormSubmissionsTable
 	InstitutionsTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
+	KybFormSubmissionsTable.ForeignKeys[0].RefTable = UsersTable
 	LinkedAddressesTable.ForeignKeys[0].RefTable = SenderProfilesTable
 	LockOrderFulfillmentsTable.ForeignKeys[0].RefTable = LockPaymentOrdersTable
 	LockPaymentOrdersTable.ForeignKeys[0].RefTable = ProviderProfilesTable
@@ -765,6 +834,7 @@ func init() {
 	TokensTable.ForeignKeys[0].RefTable = NetworksTable
 	TransactionLogsTable.ForeignKeys[0].RefTable = LockPaymentOrdersTable
 	TransactionLogsTable.ForeignKeys[1].RefTable = PaymentOrdersTable
+	UsersTable.ForeignKeys[0].RefTable = KybFormSubmissionsTable
 	VerificationTokensTable.ForeignKeys[0].RefTable = UsersTable
 	FiatCurrencyProvidersTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
 	FiatCurrencyProvidersTable.ForeignKeys[1].RefTable = ProviderProfilesTable

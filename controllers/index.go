@@ -18,6 +18,7 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
+	"github.com/paycrest/aggregator/ent/kybformsubmission"
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/network"
@@ -1405,6 +1406,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 	ctx.JSON(http.StatusBadRequest, gin.H{"error": "Unknown payload type"})
 }
 
+// isActionProcessed checks if an action has already been processed
 func (ctrl *Controller) isActionProcessed(submissionID, actionType string) bool {
 	ctrl.actionMutex.RLock()
 	defer ctrl.actionMutex.RUnlock()
@@ -1412,9 +1414,108 @@ func (ctrl *Controller) isActionProcessed(submissionID, actionType string) bool 
 	return ctrl.processedActions[key]
 }
 
+// markActionProcessed marks an action as processed
 func (ctrl *Controller) markActionProcessed(submissionID, actionType string) {
 	ctrl.actionMutex.Lock()
 	defer ctrl.actionMutex.Unlock()
 	key := fmt.Sprintf("%s_%s", submissionID, actionType)
 	ctrl.processedActions[key] = true
+}
+
+// SubmitKYBForm handles the POST request for KYB form submission
+func (ctrl *Controller) SubmitKYBForm(ctx *gin.Context) {
+	var input types.KYBFormSubmissionInput
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		logger.Errorf("Error: Failed to bind KYB form input: %v", err)
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid input", err.Error())
+		return
+	}
+
+	// Verify user exists
+	userRecord, err := storage.Client.User.
+		Query().
+		Where(user.EmailEQ(input.Email)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			logger.Errorf("Error: User not found for email: %s", input.Email)
+			u.APIResponse(ctx, http.StatusNotFound, "error", "User not found", nil)
+			return
+		}
+		logger.Errorf("Error: Failed to query user: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to process request", nil)
+		return
+	}
+
+	// Check if user already has a KYB submission
+	existingSubmission, err := storage.Client.KYBFormSubmission.
+		Query().
+		Where(kybformsubmission.HasUserWith(user.IDEQ(userRecord.ID))).
+		Exist(ctx)
+	if err != nil {
+		logger.Errorf("Error: Failed to check existing KYB submission: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to process request", nil)
+		return
+	}
+	if existingSubmission {
+		logger.Infof("KYB form submission already exists for user: %s", input.Email)
+		u.APIResponse(ctx, http.StatusConflict, "error", "KYB form already submitted for this user", nil)
+		return
+	}
+
+	// Create KYB form submission
+	kybBuilder := storage.Client.KYBFormSubmission.
+		Create().
+		SetEmail(input.Email).
+		SetCompanyName(input.CompanyName).
+		SetRegisteredBusinessAddress(input.RegisteredBusinessAddress).
+		SetCertificateOfIncorporationURL(input.CertificateOfIncorporationUrl).
+		SetArticlesOfIncorporationURL(input.ArticlesOfIncorporationUrl).
+		SetProofOfBusinessAddressURL(input.ProofOfBusinessAddressUrl).
+		SetProofOfResidentialAddressURL(input.ProofOfResidentialAddressUrl).
+		SetUserID(userRecord.ID)
+
+	if input.BusinessLicenseUrl != nil {
+		kybBuilder.SetBusinessLicenseURL(*input.BusinessLicenseUrl)
+	}
+	if input.AmlPolicyUrl != nil {
+		kybBuilder.SetAmlPolicyURL(*input.AmlPolicyUrl)
+	}
+	if input.KycPolicyUrl != nil {
+		kybBuilder.SetKycPolicyURL(*input.KycPolicyUrl)
+	}
+
+	// Create beneficial owners and save them
+	var beneficialOwners []*ent.BeneficialOwner
+	for _, owner := range input.BeneficialOwners {
+		bo, err := storage.Client.BeneficialOwner.
+			Create().
+			SetFullName(owner.FullName).
+			SetResidentialAddress(owner.ResidentialAddress).
+			SetProofOfResidentialAddressURL(owner.ProofOfResidentialAddressUrl).
+			SetGovernmentIssuedIDURL(owner.GovernmentIssuedIdUrl).
+			SetDateOfBirth(owner.DateOfBirth).
+			SetOwnershipPercentage(owner.OwnershipPercentage).
+			Save(ctx)
+		if err != nil {
+			logger.Errorf("Error: Failed to save beneficial owner: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to save beneficial owner", nil)
+			return
+		}
+		beneficialOwners = append(beneficialOwners, bo)
+	}
+
+	// Save KYB form submission with beneficial owners
+	kybSubmission, err := kybBuilder.
+		AddBeneficialOwners(beneficialOwners...).
+		Save(ctx)
+	if err != nil {
+		logger.Errorf("Error: Failed to save KYB form submission: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to save KYB form submission", nil)
+		return
+	}
+
+	u.APIResponse(ctx, http.StatusCreated, "success", "KYB form submitted successfully", gin.H{
+		"submission_id": kybSubmission.ID,
+	})
 }

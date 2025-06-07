@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/paycrest/aggregator/ent/kybformsubmission"
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/senderprofile"
@@ -189,6 +190,25 @@ func (uu *UserUpdate) AddVerificationToken(v ...*VerificationToken) *UserUpdate 
 	return uu.AddVerificationTokenIDs(ids...)
 }
 
+// SetKybFormSubmissionID sets the "kyb_form_submission" edge to the KYBFormSubmission entity by ID.
+func (uu *UserUpdate) SetKybFormSubmissionID(id uuid.UUID) *UserUpdate {
+	uu.mutation.SetKybFormSubmissionID(id)
+	return uu
+}
+
+// SetNillableKybFormSubmissionID sets the "kyb_form_submission" edge to the KYBFormSubmission entity by ID if the given value is not nil.
+func (uu *UserUpdate) SetNillableKybFormSubmissionID(id *uuid.UUID) *UserUpdate {
+	if id != nil {
+		uu = uu.SetKybFormSubmissionID(*id)
+	}
+	return uu
+}
+
+// SetKybFormSubmission sets the "kyb_form_submission" edge to the KYBFormSubmission entity.
+func (uu *UserUpdate) SetKybFormSubmission(k *KYBFormSubmission) *UserUpdate {
+	return uu.SetKybFormSubmissionID(k.ID)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uu *UserUpdate) Mutation() *UserMutation {
 	return uu.mutation
@@ -225,6 +245,12 @@ func (uu *UserUpdate) RemoveVerificationToken(v ...*VerificationToken) *UserUpda
 		ids[i] = v[i].ID
 	}
 	return uu.RemoveVerificationTokenIDs(ids...)
+}
+
+// ClearKybFormSubmission clears the "kyb_form_submission" edge to the KYBFormSubmission entity.
+func (uu *UserUpdate) ClearKybFormSubmission() *UserUpdate {
+	uu.mutation.ClearKybFormSubmission()
+	return uu
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -423,6 +449,35 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if uu.mutation.KybFormSubmissionCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   user.KybFormSubmissionTable,
+			Columns: []string{user.KybFormSubmissionColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(kybformsubmission.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.KybFormSubmissionIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   user.KybFormSubmissionTable,
+			Columns: []string{user.KybFormSubmissionColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(kybformsubmission.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, uu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{user.Label}
@@ -600,6 +655,25 @@ func (uuo *UserUpdateOne) AddVerificationToken(v ...*VerificationToken) *UserUpd
 	return uuo.AddVerificationTokenIDs(ids...)
 }
 
+// SetKybFormSubmissionID sets the "kyb_form_submission" edge to the KYBFormSubmission entity by ID.
+func (uuo *UserUpdateOne) SetKybFormSubmissionID(id uuid.UUID) *UserUpdateOne {
+	uuo.mutation.SetKybFormSubmissionID(id)
+	return uuo
+}
+
+// SetNillableKybFormSubmissionID sets the "kyb_form_submission" edge to the KYBFormSubmission entity by ID if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableKybFormSubmissionID(id *uuid.UUID) *UserUpdateOne {
+	if id != nil {
+		uuo = uuo.SetKybFormSubmissionID(*id)
+	}
+	return uuo
+}
+
+// SetKybFormSubmission sets the "kyb_form_submission" edge to the KYBFormSubmission entity.
+func (uuo *UserUpdateOne) SetKybFormSubmission(k *KYBFormSubmission) *UserUpdateOne {
+	return uuo.SetKybFormSubmissionID(k.ID)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uuo *UserUpdateOne) Mutation() *UserMutation {
 	return uuo.mutation
@@ -636,6 +710,12 @@ func (uuo *UserUpdateOne) RemoveVerificationToken(v ...*VerificationToken) *User
 		ids[i] = v[i].ID
 	}
 	return uuo.RemoveVerificationTokenIDs(ids...)
+}
+
+// ClearKybFormSubmission clears the "kyb_form_submission" edge to the KYBFormSubmission entity.
+func (uuo *UserUpdateOne) ClearKybFormSubmission() *UserUpdateOne {
+	uuo.mutation.ClearKybFormSubmission()
+	return uuo
 }
 
 // Where appends a list predicates to the UserUpdate builder.
@@ -857,6 +937,35 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(verificationtoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uuo.mutation.KybFormSubmissionCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   user.KybFormSubmissionTable,
+			Columns: []string{user.KybFormSubmissionColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(kybformsubmission.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.KybFormSubmissionIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   user.KybFormSubmissionTable,
+			Columns: []string{user.KybFormSubmissionColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(kybformsubmission.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

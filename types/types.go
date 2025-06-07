@@ -683,3 +683,29 @@ type SupportedTokenResponse struct {
 	BaseCurrency    string `json:"baseCurrency"`
 	Network         string `json:"network"`
 }
+
+
+// KYBFormSubmissionInput represents the input structure for KYB form submission
+type KYBFormSubmissionInput struct {
+    Email                        string                   `json:"email" binding:"required,email"`
+    CompanyName                  string                   `json:"companyName" binding:"required"`
+    RegisteredBusinessAddress    string                   `json:"registeredBusinessAddress" binding:"required"`
+    CertificateOfIncorporationUrl string                  `json:"certificateOfIncorporationUrl" binding:"required"`
+    ArticlesOfIncorporationUrl   string                   `json:"articlesOfIncorporationUrl" binding:"required"`
+    BusinessLicenseUrl           *string                  `json:"businessLicenseUrl"`
+    ProofOfBusinessAddressUrl    string                   `json:"proofOfBusinessAddressUrl" binding:"required"`
+    ProofOfResidentialAddressUrl string                   `json:"proofOfResidentialAddressUrl" binding:"required"`
+    AmlPolicyUrl                 *string                  `json:"amlPolicyUrl"`
+    KycPolicyUrl                 *string                  `json:"kycPolicyUrl"`
+    BeneficialOwners             []BeneficialOwnerInput   `json:"beneficialOwners" binding:"required,dive"`
+}
+
+// BeneficialOwnerInput represents the input structure for a beneficial owner
+type BeneficialOwnerInput struct {
+    FullName                     string  `json:"fullName" binding:"required"`
+    ResidentialAddress           string  `json:"residentialAddress" binding:"required"`
+    ProofOfResidentialAddressUrl string  `json:"proofOfResidentialAddressUrl" binding:"required"`
+    GovernmentIssuedIdUrl        string  `json:"governmentIssuedIdUrl" binding:"required"`
+    DateOfBirth                  string  `json:"dateOfBirth" binding:"required"`
+    OwnershipPercentage          float64 `json:"ownershipPercentage" binding:"required,gt=0,lte=100"`
+}

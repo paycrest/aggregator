@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/paycrest/aggregator/ent/kybformsubmission"
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/senderprofile"
@@ -30,6 +31,8 @@ type UserQuery struct {
 	withSenderProfile     *SenderProfileQuery
 	withProviderProfile   *ProviderProfileQuery
 	withVerificationToken *VerificationTokenQuery
+	withKybFormSubmission *KYBFormSubmissionQuery
+	withFKs               bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -125,6 +128,28 @@ func (uq *UserQuery) QueryVerificationToken() *VerificationTokenQuery {
 			sqlgraph.From(user.Table, user.FieldID, selector),
 			sqlgraph.To(verificationtoken.Table, verificationtoken.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, user.VerificationTokenTable, user.VerificationTokenColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryKybFormSubmission chains the current query on the "kyb_form_submission" edge.
+func (uq *UserQuery) QueryKybFormSubmission() *KYBFormSubmissionQuery {
+	query := (&KYBFormSubmissionClient{config: uq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := uq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := uq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(kybformsubmission.Table, kybformsubmission.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, user.KybFormSubmissionTable, user.KybFormSubmissionColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
 		return fromU, nil
@@ -327,6 +352,7 @@ func (uq *UserQuery) Clone() *UserQuery {
 		withSenderProfile:     uq.withSenderProfile.Clone(),
 		withProviderProfile:   uq.withProviderProfile.Clone(),
 		withVerificationToken: uq.withVerificationToken.Clone(),
+		withKybFormSubmission: uq.withKybFormSubmission.Clone(),
 		// clone intermediate query.
 		sql:  uq.sql.Clone(),
 		path: uq.path,
@@ -363,6 +389,17 @@ func (uq *UserQuery) WithVerificationToken(opts ...func(*VerificationTokenQuery)
 		opt(query)
 	}
 	uq.withVerificationToken = query
+	return uq
+}
+
+// WithKybFormSubmission tells the query-builder to eager-load the nodes that are connected to
+// the "kyb_form_submission" edge. The optional arguments are used to configure the query builder of the edge.
+func (uq *UserQuery) WithKybFormSubmission(opts ...func(*KYBFormSubmissionQuery)) *UserQuery {
+	query := (&KYBFormSubmissionClient{config: uq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	uq.withKybFormSubmission = query
 	return uq
 }
 
@@ -443,13 +480,21 @@ func (uq *UserQuery) prepareQuery(ctx context.Context) error {
 func (uq *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, error) {
 	var (
 		nodes       = []*User{}
+		withFKs     = uq.withFKs
 		_spec       = uq.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [4]bool{
 			uq.withSenderProfile != nil,
 			uq.withProviderProfile != nil,
 			uq.withVerificationToken != nil,
+			uq.withKybFormSubmission != nil,
 		}
 	)
+	if uq.withKybFormSubmission != nil {
+		withFKs = true
+	}
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, user.ForeignKeys...)
+	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*User).scanValues(nil, columns)
 	}
@@ -484,6 +529,12 @@ func (uq *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 		if err := uq.loadVerificationToken(ctx, query, nodes,
 			func(n *User) { n.Edges.VerificationToken = []*VerificationToken{} },
 			func(n *User, e *VerificationToken) { n.Edges.VerificationToken = append(n.Edges.VerificationToken, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := uq.withKybFormSubmission; query != nil {
+		if err := uq.loadKybFormSubmission(ctx, query, nodes, nil,
+			func(n *User, e *KYBFormSubmission) { n.Edges.KybFormSubmission = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -574,6 +625,38 @@ func (uq *UserQuery) loadVerificationToken(ctx context.Context, query *Verificat
 			return fmt.Errorf(`unexpected referenced foreign-key "user_verification_token" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
+	}
+	return nil
+}
+func (uq *UserQuery) loadKybFormSubmission(ctx context.Context, query *KYBFormSubmissionQuery, nodes []*User, init func(*User), assign func(*User, *KYBFormSubmission)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*User)
+	for i := range nodes {
+		if nodes[i].user_kyb_form_submission == nil {
+			continue
+		}
+		fk := *nodes[i].user_kyb_form_submission
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(kybformsubmission.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "user_kyb_form_submission" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
 	}
 	return nil
 }

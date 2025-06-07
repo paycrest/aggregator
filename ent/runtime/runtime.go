@@ -7,9 +7,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/apikey"
+	"github.com/paycrest/aggregator/ent/beneficialowner"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
 	"github.com/paycrest/aggregator/ent/institution"
+	"github.com/paycrest/aggregator/ent/kybformsubmission"
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
@@ -44,6 +46,16 @@ func init() {
 	apikeyDescID := apikeyFields[0].Descriptor()
 	// apikey.DefaultID holds the default value on creation for the id field.
 	apikey.DefaultID = apikeyDescID.Default.(func() uuid.UUID)
+	beneficialownerFields := schema.BeneficialOwner{}.Fields()
+	_ = beneficialownerFields
+	// beneficialownerDescFullName is the schema descriptor for full_name field.
+	beneficialownerDescFullName := beneficialownerFields[1].Descriptor()
+	// beneficialowner.FullNameValidator is a validator for the "full_name" field. It is called by the builders before save.
+	beneficialowner.FullNameValidator = beneficialownerDescFullName.Validators[0].(func(string) error)
+	// beneficialownerDescID is the schema descriptor for id field.
+	beneficialownerDescID := beneficialownerFields[0].Descriptor()
+	// beneficialowner.DefaultID holds the default value on creation for the id field.
+	beneficialowner.DefaultID = beneficialownerDescID.Default.(func() uuid.UUID)
 	fiatcurrencyMixin := schema.FiatCurrency{}.Mixin()
 	fiatcurrencyMixinFields0 := fiatcurrencyMixin[0].Fields()
 	_ = fiatcurrencyMixinFields0
@@ -106,6 +118,25 @@ func init() {
 	institution.DefaultUpdatedAt = institutionDescUpdatedAt.Default.(func() time.Time)
 	// institution.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	institution.UpdateDefaultUpdatedAt = institutionDescUpdatedAt.UpdateDefault.(func() time.Time)
+	kybformsubmissionMixin := schema.KYBFormSubmission{}.Mixin()
+	kybformsubmissionMixinFields0 := kybformsubmissionMixin[0].Fields()
+	_ = kybformsubmissionMixinFields0
+	kybformsubmissionFields := schema.KYBFormSubmission{}.Fields()
+	_ = kybformsubmissionFields
+	// kybformsubmissionDescCreatedAt is the schema descriptor for created_at field.
+	kybformsubmissionDescCreatedAt := kybformsubmissionMixinFields0[0].Descriptor()
+	// kybformsubmission.DefaultCreatedAt holds the default value on creation for the created_at field.
+	kybformsubmission.DefaultCreatedAt = kybformsubmissionDescCreatedAt.Default.(func() time.Time)
+	// kybformsubmissionDescUpdatedAt is the schema descriptor for updated_at field.
+	kybformsubmissionDescUpdatedAt := kybformsubmissionMixinFields0[1].Descriptor()
+	// kybformsubmission.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	kybformsubmission.DefaultUpdatedAt = kybformsubmissionDescUpdatedAt.Default.(func() time.Time)
+	// kybformsubmission.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	kybformsubmission.UpdateDefaultUpdatedAt = kybformsubmissionDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// kybformsubmissionDescID is the schema descriptor for id field.
+	kybformsubmissionDescID := kybformsubmissionFields[0].Descriptor()
+	// kybformsubmission.DefaultID holds the default value on creation for the id field.
+	kybformsubmission.DefaultID = kybformsubmissionDescID.Default.(func() uuid.UUID)
 	linkedaddressMixin := schema.LinkedAddress{}.Mixin()
 	linkedaddressMixinFields0 := linkedaddressMixin[0].Fields()
 	_ = linkedaddressMixinFields0
@@ -500,6 +531,6 @@ func init() {
 }
 
 const (
-	Version = "v0.14.3"                                         // Version of ent codegen.
-	Sum     = "h1:wokAV/kIlH9TeklJWGGS7AYJdVckr0DloWjIcO9iIIQ=" // Sum of ent codegen.
+	Version = "v0.14.4"                                         // Version of ent codegen.
+	Sum     = "h1:/DhDraSLXIkBhyiVoJeSshr4ZYi7femzhj6/TckzZuI=" // Sum of ent codegen.
 )

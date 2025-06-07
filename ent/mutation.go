@@ -13,9 +13,11 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/apikey"
+	"github.com/paycrest/aggregator/ent/beneficialowner"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
 	"github.com/paycrest/aggregator/ent/institution"
+	"github.com/paycrest/aggregator/ent/kybformsubmission"
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
@@ -48,9 +50,11 @@ const (
 
 	// Node types.
 	TypeAPIKey                      = "APIKey"
+	TypeBeneficialOwner             = "BeneficialOwner"
 	TypeFiatCurrency                = "FiatCurrency"
 	TypeIdentityVerificationRequest = "IdentityVerificationRequest"
 	TypeInstitution                 = "Institution"
+	TypeKYBFormSubmission           = "KYBFormSubmission"
 	TypeLinkedAddress               = "LinkedAddress"
 	TypeLockOrderFulfillment        = "LockOrderFulfillment"
 	TypeLockPaymentOrder            = "LockPaymentOrder"
@@ -612,6 +616,711 @@ func (m *APIKeyMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown APIKey edge %s", name)
+}
+
+// BeneficialOwnerMutation represents an operation that mutates the BeneficialOwner nodes in the graph.
+type BeneficialOwnerMutation struct {
+	config
+	op                               Op
+	typ                              string
+	id                               *uuid.UUID
+	full_name                        *string
+	residential_address              *string
+	proof_of_residential_address_url *string
+	government_issued_id_url         *string
+	date_of_birth                    *string
+	ownership_percentage             *float64
+	addownership_percentage          *float64
+	clearedFields                    map[string]struct{}
+	kyb_form_submission              *uuid.UUID
+	clearedkyb_form_submission       bool
+	done                             bool
+	oldValue                         func(context.Context) (*BeneficialOwner, error)
+	predicates                       []predicate.BeneficialOwner
+}
+
+var _ ent.Mutation = (*BeneficialOwnerMutation)(nil)
+
+// beneficialownerOption allows management of the mutation configuration using functional options.
+type beneficialownerOption func(*BeneficialOwnerMutation)
+
+// newBeneficialOwnerMutation creates new mutation for the BeneficialOwner entity.
+func newBeneficialOwnerMutation(c config, op Op, opts ...beneficialownerOption) *BeneficialOwnerMutation {
+	m := &BeneficialOwnerMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeBeneficialOwner,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withBeneficialOwnerID sets the ID field of the mutation.
+func withBeneficialOwnerID(id uuid.UUID) beneficialownerOption {
+	return func(m *BeneficialOwnerMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *BeneficialOwner
+		)
+		m.oldValue = func(ctx context.Context) (*BeneficialOwner, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().BeneficialOwner.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withBeneficialOwner sets the old BeneficialOwner of the mutation.
+func withBeneficialOwner(node *BeneficialOwner) beneficialownerOption {
+	return func(m *BeneficialOwnerMutation) {
+		m.oldValue = func(context.Context) (*BeneficialOwner, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m BeneficialOwnerMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m BeneficialOwnerMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of BeneficialOwner entities.
+func (m *BeneficialOwnerMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *BeneficialOwnerMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *BeneficialOwnerMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().BeneficialOwner.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetFullName sets the "full_name" field.
+func (m *BeneficialOwnerMutation) SetFullName(s string) {
+	m.full_name = &s
+}
+
+// FullName returns the value of the "full_name" field in the mutation.
+func (m *BeneficialOwnerMutation) FullName() (r string, exists bool) {
+	v := m.full_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFullName returns the old "full_name" field's value of the BeneficialOwner entity.
+// If the BeneficialOwner object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BeneficialOwnerMutation) OldFullName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFullName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFullName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFullName: %w", err)
+	}
+	return oldValue.FullName, nil
+}
+
+// ResetFullName resets all changes to the "full_name" field.
+func (m *BeneficialOwnerMutation) ResetFullName() {
+	m.full_name = nil
+}
+
+// SetResidentialAddress sets the "residential_address" field.
+func (m *BeneficialOwnerMutation) SetResidentialAddress(s string) {
+	m.residential_address = &s
+}
+
+// ResidentialAddress returns the value of the "residential_address" field in the mutation.
+func (m *BeneficialOwnerMutation) ResidentialAddress() (r string, exists bool) {
+	v := m.residential_address
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldResidentialAddress returns the old "residential_address" field's value of the BeneficialOwner entity.
+// If the BeneficialOwner object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BeneficialOwnerMutation) OldResidentialAddress(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldResidentialAddress is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldResidentialAddress requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldResidentialAddress: %w", err)
+	}
+	return oldValue.ResidentialAddress, nil
+}
+
+// ResetResidentialAddress resets all changes to the "residential_address" field.
+func (m *BeneficialOwnerMutation) ResetResidentialAddress() {
+	m.residential_address = nil
+}
+
+// SetProofOfResidentialAddressURL sets the "proof_of_residential_address_url" field.
+func (m *BeneficialOwnerMutation) SetProofOfResidentialAddressURL(s string) {
+	m.proof_of_residential_address_url = &s
+}
+
+// ProofOfResidentialAddressURL returns the value of the "proof_of_residential_address_url" field in the mutation.
+func (m *BeneficialOwnerMutation) ProofOfResidentialAddressURL() (r string, exists bool) {
+	v := m.proof_of_residential_address_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProofOfResidentialAddressURL returns the old "proof_of_residential_address_url" field's value of the BeneficialOwner entity.
+// If the BeneficialOwner object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BeneficialOwnerMutation) OldProofOfResidentialAddressURL(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProofOfResidentialAddressURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProofOfResidentialAddressURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProofOfResidentialAddressURL: %w", err)
+	}
+	return oldValue.ProofOfResidentialAddressURL, nil
+}
+
+// ResetProofOfResidentialAddressURL resets all changes to the "proof_of_residential_address_url" field.
+func (m *BeneficialOwnerMutation) ResetProofOfResidentialAddressURL() {
+	m.proof_of_residential_address_url = nil
+}
+
+// SetGovernmentIssuedIDURL sets the "government_issued_id_url" field.
+func (m *BeneficialOwnerMutation) SetGovernmentIssuedIDURL(s string) {
+	m.government_issued_id_url = &s
+}
+
+// GovernmentIssuedIDURL returns the value of the "government_issued_id_url" field in the mutation.
+func (m *BeneficialOwnerMutation) GovernmentIssuedIDURL() (r string, exists bool) {
+	v := m.government_issued_id_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldGovernmentIssuedIDURL returns the old "government_issued_id_url" field's value of the BeneficialOwner entity.
+// If the BeneficialOwner object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BeneficialOwnerMutation) OldGovernmentIssuedIDURL(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldGovernmentIssuedIDURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldGovernmentIssuedIDURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldGovernmentIssuedIDURL: %w", err)
+	}
+	return oldValue.GovernmentIssuedIDURL, nil
+}
+
+// ResetGovernmentIssuedIDURL resets all changes to the "government_issued_id_url" field.
+func (m *BeneficialOwnerMutation) ResetGovernmentIssuedIDURL() {
+	m.government_issued_id_url = nil
+}
+
+// SetDateOfBirth sets the "date_of_birth" field.
+func (m *BeneficialOwnerMutation) SetDateOfBirth(s string) {
+	m.date_of_birth = &s
+}
+
+// DateOfBirth returns the value of the "date_of_birth" field in the mutation.
+func (m *BeneficialOwnerMutation) DateOfBirth() (r string, exists bool) {
+	v := m.date_of_birth
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDateOfBirth returns the old "date_of_birth" field's value of the BeneficialOwner entity.
+// If the BeneficialOwner object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BeneficialOwnerMutation) OldDateOfBirth(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDateOfBirth is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDateOfBirth requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDateOfBirth: %w", err)
+	}
+	return oldValue.DateOfBirth, nil
+}
+
+// ResetDateOfBirth resets all changes to the "date_of_birth" field.
+func (m *BeneficialOwnerMutation) ResetDateOfBirth() {
+	m.date_of_birth = nil
+}
+
+// SetOwnershipPercentage sets the "ownership_percentage" field.
+func (m *BeneficialOwnerMutation) SetOwnershipPercentage(f float64) {
+	m.ownership_percentage = &f
+	m.addownership_percentage = nil
+}
+
+// OwnershipPercentage returns the value of the "ownership_percentage" field in the mutation.
+func (m *BeneficialOwnerMutation) OwnershipPercentage() (r float64, exists bool) {
+	v := m.ownership_percentage
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOwnershipPercentage returns the old "ownership_percentage" field's value of the BeneficialOwner entity.
+// If the BeneficialOwner object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BeneficialOwnerMutation) OldOwnershipPercentage(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOwnershipPercentage is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOwnershipPercentage requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOwnershipPercentage: %w", err)
+	}
+	return oldValue.OwnershipPercentage, nil
+}
+
+// AddOwnershipPercentage adds f to the "ownership_percentage" field.
+func (m *BeneficialOwnerMutation) AddOwnershipPercentage(f float64) {
+	if m.addownership_percentage != nil {
+		*m.addownership_percentage += f
+	} else {
+		m.addownership_percentage = &f
+	}
+}
+
+// AddedOwnershipPercentage returns the value that was added to the "ownership_percentage" field in this mutation.
+func (m *BeneficialOwnerMutation) AddedOwnershipPercentage() (r float64, exists bool) {
+	v := m.addownership_percentage
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetOwnershipPercentage resets all changes to the "ownership_percentage" field.
+func (m *BeneficialOwnerMutation) ResetOwnershipPercentage() {
+	m.ownership_percentage = nil
+	m.addownership_percentage = nil
+}
+
+// SetKybFormSubmissionID sets the "kyb_form_submission" edge to the KYBFormSubmission entity by id.
+func (m *BeneficialOwnerMutation) SetKybFormSubmissionID(id uuid.UUID) {
+	m.kyb_form_submission = &id
+}
+
+// ClearKybFormSubmission clears the "kyb_form_submission" edge to the KYBFormSubmission entity.
+func (m *BeneficialOwnerMutation) ClearKybFormSubmission() {
+	m.clearedkyb_form_submission = true
+}
+
+// KybFormSubmissionCleared reports if the "kyb_form_submission" edge to the KYBFormSubmission entity was cleared.
+func (m *BeneficialOwnerMutation) KybFormSubmissionCleared() bool {
+	return m.clearedkyb_form_submission
+}
+
+// KybFormSubmissionID returns the "kyb_form_submission" edge ID in the mutation.
+func (m *BeneficialOwnerMutation) KybFormSubmissionID() (id uuid.UUID, exists bool) {
+	if m.kyb_form_submission != nil {
+		return *m.kyb_form_submission, true
+	}
+	return
+}
+
+// KybFormSubmissionIDs returns the "kyb_form_submission" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// KybFormSubmissionID instead. It exists only for internal usage by the builders.
+func (m *BeneficialOwnerMutation) KybFormSubmissionIDs() (ids []uuid.UUID) {
+	if id := m.kyb_form_submission; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetKybFormSubmission resets all changes to the "kyb_form_submission" edge.
+func (m *BeneficialOwnerMutation) ResetKybFormSubmission() {
+	m.kyb_form_submission = nil
+	m.clearedkyb_form_submission = false
+}
+
+// Where appends a list predicates to the BeneficialOwnerMutation builder.
+func (m *BeneficialOwnerMutation) Where(ps ...predicate.BeneficialOwner) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the BeneficialOwnerMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *BeneficialOwnerMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.BeneficialOwner, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *BeneficialOwnerMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *BeneficialOwnerMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (BeneficialOwner).
+func (m *BeneficialOwnerMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *BeneficialOwnerMutation) Fields() []string {
+	fields := make([]string, 0, 6)
+	if m.full_name != nil {
+		fields = append(fields, beneficialowner.FieldFullName)
+	}
+	if m.residential_address != nil {
+		fields = append(fields, beneficialowner.FieldResidentialAddress)
+	}
+	if m.proof_of_residential_address_url != nil {
+		fields = append(fields, beneficialowner.FieldProofOfResidentialAddressURL)
+	}
+	if m.government_issued_id_url != nil {
+		fields = append(fields, beneficialowner.FieldGovernmentIssuedIDURL)
+	}
+	if m.date_of_birth != nil {
+		fields = append(fields, beneficialowner.FieldDateOfBirth)
+	}
+	if m.ownership_percentage != nil {
+		fields = append(fields, beneficialowner.FieldOwnershipPercentage)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *BeneficialOwnerMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case beneficialowner.FieldFullName:
+		return m.FullName()
+	case beneficialowner.FieldResidentialAddress:
+		return m.ResidentialAddress()
+	case beneficialowner.FieldProofOfResidentialAddressURL:
+		return m.ProofOfResidentialAddressURL()
+	case beneficialowner.FieldGovernmentIssuedIDURL:
+		return m.GovernmentIssuedIDURL()
+	case beneficialowner.FieldDateOfBirth:
+		return m.DateOfBirth()
+	case beneficialowner.FieldOwnershipPercentage:
+		return m.OwnershipPercentage()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *BeneficialOwnerMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case beneficialowner.FieldFullName:
+		return m.OldFullName(ctx)
+	case beneficialowner.FieldResidentialAddress:
+		return m.OldResidentialAddress(ctx)
+	case beneficialowner.FieldProofOfResidentialAddressURL:
+		return m.OldProofOfResidentialAddressURL(ctx)
+	case beneficialowner.FieldGovernmentIssuedIDURL:
+		return m.OldGovernmentIssuedIDURL(ctx)
+	case beneficialowner.FieldDateOfBirth:
+		return m.OldDateOfBirth(ctx)
+	case beneficialowner.FieldOwnershipPercentage:
+		return m.OldOwnershipPercentage(ctx)
+	}
+	return nil, fmt.Errorf("unknown BeneficialOwner field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *BeneficialOwnerMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case beneficialowner.FieldFullName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFullName(v)
+		return nil
+	case beneficialowner.FieldResidentialAddress:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetResidentialAddress(v)
+		return nil
+	case beneficialowner.FieldProofOfResidentialAddressURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProofOfResidentialAddressURL(v)
+		return nil
+	case beneficialowner.FieldGovernmentIssuedIDURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetGovernmentIssuedIDURL(v)
+		return nil
+	case beneficialowner.FieldDateOfBirth:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDateOfBirth(v)
+		return nil
+	case beneficialowner.FieldOwnershipPercentage:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOwnershipPercentage(v)
+		return nil
+	}
+	return fmt.Errorf("unknown BeneficialOwner field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *BeneficialOwnerMutation) AddedFields() []string {
+	var fields []string
+	if m.addownership_percentage != nil {
+		fields = append(fields, beneficialowner.FieldOwnershipPercentage)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *BeneficialOwnerMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case beneficialowner.FieldOwnershipPercentage:
+		return m.AddedOwnershipPercentage()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *BeneficialOwnerMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case beneficialowner.FieldOwnershipPercentage:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddOwnershipPercentage(v)
+		return nil
+	}
+	return fmt.Errorf("unknown BeneficialOwner numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *BeneficialOwnerMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *BeneficialOwnerMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *BeneficialOwnerMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown BeneficialOwner nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *BeneficialOwnerMutation) ResetField(name string) error {
+	switch name {
+	case beneficialowner.FieldFullName:
+		m.ResetFullName()
+		return nil
+	case beneficialowner.FieldResidentialAddress:
+		m.ResetResidentialAddress()
+		return nil
+	case beneficialowner.FieldProofOfResidentialAddressURL:
+		m.ResetProofOfResidentialAddressURL()
+		return nil
+	case beneficialowner.FieldGovernmentIssuedIDURL:
+		m.ResetGovernmentIssuedIDURL()
+		return nil
+	case beneficialowner.FieldDateOfBirth:
+		m.ResetDateOfBirth()
+		return nil
+	case beneficialowner.FieldOwnershipPercentage:
+		m.ResetOwnershipPercentage()
+		return nil
+	}
+	return fmt.Errorf("unknown BeneficialOwner field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *BeneficialOwnerMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.kyb_form_submission != nil {
+		edges = append(edges, beneficialowner.EdgeKybFormSubmission)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *BeneficialOwnerMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case beneficialowner.EdgeKybFormSubmission:
+		if id := m.kyb_form_submission; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *BeneficialOwnerMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *BeneficialOwnerMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *BeneficialOwnerMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedkyb_form_submission {
+		edges = append(edges, beneficialowner.EdgeKybFormSubmission)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *BeneficialOwnerMutation) EdgeCleared(name string) bool {
+	switch name {
+	case beneficialowner.EdgeKybFormSubmission:
+		return m.clearedkyb_form_submission
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *BeneficialOwnerMutation) ClearEdge(name string) error {
+	switch name {
+	case beneficialowner.EdgeKybFormSubmission:
+		m.ClearKybFormSubmission()
+		return nil
+	}
+	return fmt.Errorf("unknown BeneficialOwner unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *BeneficialOwnerMutation) ResetEdge(name string) error {
+	switch name {
+	case beneficialowner.EdgeKybFormSubmission:
+		m.ResetKybFormSubmission()
+		return nil
+	}
+	return fmt.Errorf("unknown BeneficialOwner edge %s", name)
 }
 
 // FiatCurrencyMutation represents an operation that mutates the FiatCurrency nodes in the graph.
@@ -3160,6 +3869,1144 @@ func (m *InstitutionMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown Institution edge %s", name)
+}
+
+// KYBFormSubmissionMutation represents an operation that mutates the KYBFormSubmission nodes in the graph.
+type KYBFormSubmissionMutation struct {
+	config
+	op                               Op
+	typ                              string
+	id                               *uuid.UUID
+	created_at                       *time.Time
+	updated_at                       *time.Time
+	email                            *string
+	company_name                     *string
+	registered_business_address      *string
+	certificate_of_incorporation_url *string
+	articles_of_incorporation_url    *string
+	business_license_url             *string
+	proof_of_business_address_url    *string
+	proof_of_residential_address_url *string
+	aml_policy_url                   *string
+	kyc_policy_url                   *string
+	clearedFields                    map[string]struct{}
+	beneficial_owners                map[uuid.UUID]struct{}
+	removedbeneficial_owners         map[uuid.UUID]struct{}
+	clearedbeneficial_owners         bool
+	user                             *uuid.UUID
+	cleareduser                      bool
+	done                             bool
+	oldValue                         func(context.Context) (*KYBFormSubmission, error)
+	predicates                       []predicate.KYBFormSubmission
+}
+
+var _ ent.Mutation = (*KYBFormSubmissionMutation)(nil)
+
+// kybformsubmissionOption allows management of the mutation configuration using functional options.
+type kybformsubmissionOption func(*KYBFormSubmissionMutation)
+
+// newKYBFormSubmissionMutation creates new mutation for the KYBFormSubmission entity.
+func newKYBFormSubmissionMutation(c config, op Op, opts ...kybformsubmissionOption) *KYBFormSubmissionMutation {
+	m := &KYBFormSubmissionMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeKYBFormSubmission,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withKYBFormSubmissionID sets the ID field of the mutation.
+func withKYBFormSubmissionID(id uuid.UUID) kybformsubmissionOption {
+	return func(m *KYBFormSubmissionMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *KYBFormSubmission
+		)
+		m.oldValue = func(ctx context.Context) (*KYBFormSubmission, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().KYBFormSubmission.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withKYBFormSubmission sets the old KYBFormSubmission of the mutation.
+func withKYBFormSubmission(node *KYBFormSubmission) kybformsubmissionOption {
+	return func(m *KYBFormSubmissionMutation) {
+		m.oldValue = func(context.Context) (*KYBFormSubmission, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m KYBFormSubmissionMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m KYBFormSubmissionMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of KYBFormSubmission entities.
+func (m *KYBFormSubmissionMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *KYBFormSubmissionMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *KYBFormSubmissionMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().KYBFormSubmission.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *KYBFormSubmissionMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *KYBFormSubmissionMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the KYBFormSubmission entity.
+// If the KYBFormSubmission object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *KYBFormSubmissionMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *KYBFormSubmissionMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *KYBFormSubmissionMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *KYBFormSubmissionMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the KYBFormSubmission entity.
+// If the KYBFormSubmission object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *KYBFormSubmissionMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *KYBFormSubmissionMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetEmail sets the "email" field.
+func (m *KYBFormSubmissionMutation) SetEmail(s string) {
+	m.email = &s
+}
+
+// Email returns the value of the "email" field in the mutation.
+func (m *KYBFormSubmissionMutation) Email() (r string, exists bool) {
+	v := m.email
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEmail returns the old "email" field's value of the KYBFormSubmission entity.
+// If the KYBFormSubmission object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *KYBFormSubmissionMutation) OldEmail(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEmail is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEmail requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEmail: %w", err)
+	}
+	return oldValue.Email, nil
+}
+
+// ResetEmail resets all changes to the "email" field.
+func (m *KYBFormSubmissionMutation) ResetEmail() {
+	m.email = nil
+}
+
+// SetCompanyName sets the "company_name" field.
+func (m *KYBFormSubmissionMutation) SetCompanyName(s string) {
+	m.company_name = &s
+}
+
+// CompanyName returns the value of the "company_name" field in the mutation.
+func (m *KYBFormSubmissionMutation) CompanyName() (r string, exists bool) {
+	v := m.company_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCompanyName returns the old "company_name" field's value of the KYBFormSubmission entity.
+// If the KYBFormSubmission object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *KYBFormSubmissionMutation) OldCompanyName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCompanyName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCompanyName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCompanyName: %w", err)
+	}
+	return oldValue.CompanyName, nil
+}
+
+// ResetCompanyName resets all changes to the "company_name" field.
+func (m *KYBFormSubmissionMutation) ResetCompanyName() {
+	m.company_name = nil
+}
+
+// SetRegisteredBusinessAddress sets the "registered_business_address" field.
+func (m *KYBFormSubmissionMutation) SetRegisteredBusinessAddress(s string) {
+	m.registered_business_address = &s
+}
+
+// RegisteredBusinessAddress returns the value of the "registered_business_address" field in the mutation.
+func (m *KYBFormSubmissionMutation) RegisteredBusinessAddress() (r string, exists bool) {
+	v := m.registered_business_address
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRegisteredBusinessAddress returns the old "registered_business_address" field's value of the KYBFormSubmission entity.
+// If the KYBFormSubmission object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *KYBFormSubmissionMutation) OldRegisteredBusinessAddress(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRegisteredBusinessAddress is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRegisteredBusinessAddress requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRegisteredBusinessAddress: %w", err)
+	}
+	return oldValue.RegisteredBusinessAddress, nil
+}
+
+// ResetRegisteredBusinessAddress resets all changes to the "registered_business_address" field.
+func (m *KYBFormSubmissionMutation) ResetRegisteredBusinessAddress() {
+	m.registered_business_address = nil
+}
+
+// SetCertificateOfIncorporationURL sets the "certificate_of_incorporation_url" field.
+func (m *KYBFormSubmissionMutation) SetCertificateOfIncorporationURL(s string) {
+	m.certificate_of_incorporation_url = &s
+}
+
+// CertificateOfIncorporationURL returns the value of the "certificate_of_incorporation_url" field in the mutation.
+func (m *KYBFormSubmissionMutation) CertificateOfIncorporationURL() (r string, exists bool) {
+	v := m.certificate_of_incorporation_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCertificateOfIncorporationURL returns the old "certificate_of_incorporation_url" field's value of the KYBFormSubmission entity.
+// If the KYBFormSubmission object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *KYBFormSubmissionMutation) OldCertificateOfIncorporationURL(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCertificateOfIncorporationURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCertificateOfIncorporationURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCertificateOfIncorporationURL: %w", err)
+	}
+	return oldValue.CertificateOfIncorporationURL, nil
+}
+
+// ResetCertificateOfIncorporationURL resets all changes to the "certificate_of_incorporation_url" field.
+func (m *KYBFormSubmissionMutation) ResetCertificateOfIncorporationURL() {
+	m.certificate_of_incorporation_url = nil
+}
+
+// SetArticlesOfIncorporationURL sets the "articles_of_incorporation_url" field.
+func (m *KYBFormSubmissionMutation) SetArticlesOfIncorporationURL(s string) {
+	m.articles_of_incorporation_url = &s
+}
+
+// ArticlesOfIncorporationURL returns the value of the "articles_of_incorporation_url" field in the mutation.
+func (m *KYBFormSubmissionMutation) ArticlesOfIncorporationURL() (r string, exists bool) {
+	v := m.articles_of_incorporation_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldArticlesOfIncorporationURL returns the old "articles_of_incorporation_url" field's value of the KYBFormSubmission entity.
+// If the KYBFormSubmission object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *KYBFormSubmissionMutation) OldArticlesOfIncorporationURL(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldArticlesOfIncorporationURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldArticlesOfIncorporationURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldArticlesOfIncorporationURL: %w", err)
+	}
+	return oldValue.ArticlesOfIncorporationURL, nil
+}
+
+// ResetArticlesOfIncorporationURL resets all changes to the "articles_of_incorporation_url" field.
+func (m *KYBFormSubmissionMutation) ResetArticlesOfIncorporationURL() {
+	m.articles_of_incorporation_url = nil
+}
+
+// SetBusinessLicenseURL sets the "business_license_url" field.
+func (m *KYBFormSubmissionMutation) SetBusinessLicenseURL(s string) {
+	m.business_license_url = &s
+}
+
+// BusinessLicenseURL returns the value of the "business_license_url" field in the mutation.
+func (m *KYBFormSubmissionMutation) BusinessLicenseURL() (r string, exists bool) {
+	v := m.business_license_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBusinessLicenseURL returns the old "business_license_url" field's value of the KYBFormSubmission entity.
+// If the KYBFormSubmission object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *KYBFormSubmissionMutation) OldBusinessLicenseURL(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBusinessLicenseURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBusinessLicenseURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBusinessLicenseURL: %w", err)
+	}
+	return oldValue.BusinessLicenseURL, nil
+}
+
+// ClearBusinessLicenseURL clears the value of the "business_license_url" field.
+func (m *KYBFormSubmissionMutation) ClearBusinessLicenseURL() {
+	m.business_license_url = nil
+	m.clearedFields[kybformsubmission.FieldBusinessLicenseURL] = struct{}{}
+}
+
+// BusinessLicenseURLCleared returns if the "business_license_url" field was cleared in this mutation.
+func (m *KYBFormSubmissionMutation) BusinessLicenseURLCleared() bool {
+	_, ok := m.clearedFields[kybformsubmission.FieldBusinessLicenseURL]
+	return ok
+}
+
+// ResetBusinessLicenseURL resets all changes to the "business_license_url" field.
+func (m *KYBFormSubmissionMutation) ResetBusinessLicenseURL() {
+	m.business_license_url = nil
+	delete(m.clearedFields, kybformsubmission.FieldBusinessLicenseURL)
+}
+
+// SetProofOfBusinessAddressURL sets the "proof_of_business_address_url" field.
+func (m *KYBFormSubmissionMutation) SetProofOfBusinessAddressURL(s string) {
+	m.proof_of_business_address_url = &s
+}
+
+// ProofOfBusinessAddressURL returns the value of the "proof_of_business_address_url" field in the mutation.
+func (m *KYBFormSubmissionMutation) ProofOfBusinessAddressURL() (r string, exists bool) {
+	v := m.proof_of_business_address_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProofOfBusinessAddressURL returns the old "proof_of_business_address_url" field's value of the KYBFormSubmission entity.
+// If the KYBFormSubmission object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *KYBFormSubmissionMutation) OldProofOfBusinessAddressURL(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProofOfBusinessAddressURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProofOfBusinessAddressURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProofOfBusinessAddressURL: %w", err)
+	}
+	return oldValue.ProofOfBusinessAddressURL, nil
+}
+
+// ResetProofOfBusinessAddressURL resets all changes to the "proof_of_business_address_url" field.
+func (m *KYBFormSubmissionMutation) ResetProofOfBusinessAddressURL() {
+	m.proof_of_business_address_url = nil
+}
+
+// SetProofOfResidentialAddressURL sets the "proof_of_residential_address_url" field.
+func (m *KYBFormSubmissionMutation) SetProofOfResidentialAddressURL(s string) {
+	m.proof_of_residential_address_url = &s
+}
+
+// ProofOfResidentialAddressURL returns the value of the "proof_of_residential_address_url" field in the mutation.
+func (m *KYBFormSubmissionMutation) ProofOfResidentialAddressURL() (r string, exists bool) {
+	v := m.proof_of_residential_address_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProofOfResidentialAddressURL returns the old "proof_of_residential_address_url" field's value of the KYBFormSubmission entity.
+// If the KYBFormSubmission object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *KYBFormSubmissionMutation) OldProofOfResidentialAddressURL(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProofOfResidentialAddressURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProofOfResidentialAddressURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProofOfResidentialAddressURL: %w", err)
+	}
+	return oldValue.ProofOfResidentialAddressURL, nil
+}
+
+// ResetProofOfResidentialAddressURL resets all changes to the "proof_of_residential_address_url" field.
+func (m *KYBFormSubmissionMutation) ResetProofOfResidentialAddressURL() {
+	m.proof_of_residential_address_url = nil
+}
+
+// SetAmlPolicyURL sets the "aml_policy_url" field.
+func (m *KYBFormSubmissionMutation) SetAmlPolicyURL(s string) {
+	m.aml_policy_url = &s
+}
+
+// AmlPolicyURL returns the value of the "aml_policy_url" field in the mutation.
+func (m *KYBFormSubmissionMutation) AmlPolicyURL() (r string, exists bool) {
+	v := m.aml_policy_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAmlPolicyURL returns the old "aml_policy_url" field's value of the KYBFormSubmission entity.
+// If the KYBFormSubmission object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *KYBFormSubmissionMutation) OldAmlPolicyURL(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAmlPolicyURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAmlPolicyURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAmlPolicyURL: %w", err)
+	}
+	return oldValue.AmlPolicyURL, nil
+}
+
+// ClearAmlPolicyURL clears the value of the "aml_policy_url" field.
+func (m *KYBFormSubmissionMutation) ClearAmlPolicyURL() {
+	m.aml_policy_url = nil
+	m.clearedFields[kybformsubmission.FieldAmlPolicyURL] = struct{}{}
+}
+
+// AmlPolicyURLCleared returns if the "aml_policy_url" field was cleared in this mutation.
+func (m *KYBFormSubmissionMutation) AmlPolicyURLCleared() bool {
+	_, ok := m.clearedFields[kybformsubmission.FieldAmlPolicyURL]
+	return ok
+}
+
+// ResetAmlPolicyURL resets all changes to the "aml_policy_url" field.
+func (m *KYBFormSubmissionMutation) ResetAmlPolicyURL() {
+	m.aml_policy_url = nil
+	delete(m.clearedFields, kybformsubmission.FieldAmlPolicyURL)
+}
+
+// SetKycPolicyURL sets the "kyc_policy_url" field.
+func (m *KYBFormSubmissionMutation) SetKycPolicyURL(s string) {
+	m.kyc_policy_url = &s
+}
+
+// KycPolicyURL returns the value of the "kyc_policy_url" field in the mutation.
+func (m *KYBFormSubmissionMutation) KycPolicyURL() (r string, exists bool) {
+	v := m.kyc_policy_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldKycPolicyURL returns the old "kyc_policy_url" field's value of the KYBFormSubmission entity.
+// If the KYBFormSubmission object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *KYBFormSubmissionMutation) OldKycPolicyURL(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKycPolicyURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKycPolicyURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKycPolicyURL: %w", err)
+	}
+	return oldValue.KycPolicyURL, nil
+}
+
+// ClearKycPolicyURL clears the value of the "kyc_policy_url" field.
+func (m *KYBFormSubmissionMutation) ClearKycPolicyURL() {
+	m.kyc_policy_url = nil
+	m.clearedFields[kybformsubmission.FieldKycPolicyURL] = struct{}{}
+}
+
+// KycPolicyURLCleared returns if the "kyc_policy_url" field was cleared in this mutation.
+func (m *KYBFormSubmissionMutation) KycPolicyURLCleared() bool {
+	_, ok := m.clearedFields[kybformsubmission.FieldKycPolicyURL]
+	return ok
+}
+
+// ResetKycPolicyURL resets all changes to the "kyc_policy_url" field.
+func (m *KYBFormSubmissionMutation) ResetKycPolicyURL() {
+	m.kyc_policy_url = nil
+	delete(m.clearedFields, kybformsubmission.FieldKycPolicyURL)
+}
+
+// AddBeneficialOwnerIDs adds the "beneficial_owners" edge to the BeneficialOwner entity by ids.
+func (m *KYBFormSubmissionMutation) AddBeneficialOwnerIDs(ids ...uuid.UUID) {
+	if m.beneficial_owners == nil {
+		m.beneficial_owners = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.beneficial_owners[ids[i]] = struct{}{}
+	}
+}
+
+// ClearBeneficialOwners clears the "beneficial_owners" edge to the BeneficialOwner entity.
+func (m *KYBFormSubmissionMutation) ClearBeneficialOwners() {
+	m.clearedbeneficial_owners = true
+}
+
+// BeneficialOwnersCleared reports if the "beneficial_owners" edge to the BeneficialOwner entity was cleared.
+func (m *KYBFormSubmissionMutation) BeneficialOwnersCleared() bool {
+	return m.clearedbeneficial_owners
+}
+
+// RemoveBeneficialOwnerIDs removes the "beneficial_owners" edge to the BeneficialOwner entity by IDs.
+func (m *KYBFormSubmissionMutation) RemoveBeneficialOwnerIDs(ids ...uuid.UUID) {
+	if m.removedbeneficial_owners == nil {
+		m.removedbeneficial_owners = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.beneficial_owners, ids[i])
+		m.removedbeneficial_owners[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedBeneficialOwners returns the removed IDs of the "beneficial_owners" edge to the BeneficialOwner entity.
+func (m *KYBFormSubmissionMutation) RemovedBeneficialOwnersIDs() (ids []uuid.UUID) {
+	for id := range m.removedbeneficial_owners {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// BeneficialOwnersIDs returns the "beneficial_owners" edge IDs in the mutation.
+func (m *KYBFormSubmissionMutation) BeneficialOwnersIDs() (ids []uuid.UUID) {
+	for id := range m.beneficial_owners {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetBeneficialOwners resets all changes to the "beneficial_owners" edge.
+func (m *KYBFormSubmissionMutation) ResetBeneficialOwners() {
+	m.beneficial_owners = nil
+	m.clearedbeneficial_owners = false
+	m.removedbeneficial_owners = nil
+}
+
+// SetUserID sets the "user" edge to the User entity by id.
+func (m *KYBFormSubmissionMutation) SetUserID(id uuid.UUID) {
+	m.user = &id
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (m *KYBFormSubmissionMutation) ClearUser() {
+	m.cleareduser = true
+}
+
+// UserCleared reports if the "user" edge to the User entity was cleared.
+func (m *KYBFormSubmissionMutation) UserCleared() bool {
+	return m.cleareduser
+}
+
+// UserID returns the "user" edge ID in the mutation.
+func (m *KYBFormSubmissionMutation) UserID() (id uuid.UUID, exists bool) {
+	if m.user != nil {
+		return *m.user, true
+	}
+	return
+}
+
+// UserIDs returns the "user" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// UserID instead. It exists only for internal usage by the builders.
+func (m *KYBFormSubmissionMutation) UserIDs() (ids []uuid.UUID) {
+	if id := m.user; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetUser resets all changes to the "user" edge.
+func (m *KYBFormSubmissionMutation) ResetUser() {
+	m.user = nil
+	m.cleareduser = false
+}
+
+// Where appends a list predicates to the KYBFormSubmissionMutation builder.
+func (m *KYBFormSubmissionMutation) Where(ps ...predicate.KYBFormSubmission) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the KYBFormSubmissionMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *KYBFormSubmissionMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.KYBFormSubmission, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *KYBFormSubmissionMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *KYBFormSubmissionMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (KYBFormSubmission).
+func (m *KYBFormSubmissionMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *KYBFormSubmissionMutation) Fields() []string {
+	fields := make([]string, 0, 12)
+	if m.created_at != nil {
+		fields = append(fields, kybformsubmission.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, kybformsubmission.FieldUpdatedAt)
+	}
+	if m.email != nil {
+		fields = append(fields, kybformsubmission.FieldEmail)
+	}
+	if m.company_name != nil {
+		fields = append(fields, kybformsubmission.FieldCompanyName)
+	}
+	if m.registered_business_address != nil {
+		fields = append(fields, kybformsubmission.FieldRegisteredBusinessAddress)
+	}
+	if m.certificate_of_incorporation_url != nil {
+		fields = append(fields, kybformsubmission.FieldCertificateOfIncorporationURL)
+	}
+	if m.articles_of_incorporation_url != nil {
+		fields = append(fields, kybformsubmission.FieldArticlesOfIncorporationURL)
+	}
+	if m.business_license_url != nil {
+		fields = append(fields, kybformsubmission.FieldBusinessLicenseURL)
+	}
+	if m.proof_of_business_address_url != nil {
+		fields = append(fields, kybformsubmission.FieldProofOfBusinessAddressURL)
+	}
+	if m.proof_of_residential_address_url != nil {
+		fields = append(fields, kybformsubmission.FieldProofOfResidentialAddressURL)
+	}
+	if m.aml_policy_url != nil {
+		fields = append(fields, kybformsubmission.FieldAmlPolicyURL)
+	}
+	if m.kyc_policy_url != nil {
+		fields = append(fields, kybformsubmission.FieldKycPolicyURL)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *KYBFormSubmissionMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case kybformsubmission.FieldCreatedAt:
+		return m.CreatedAt()
+	case kybformsubmission.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case kybformsubmission.FieldEmail:
+		return m.Email()
+	case kybformsubmission.FieldCompanyName:
+		return m.CompanyName()
+	case kybformsubmission.FieldRegisteredBusinessAddress:
+		return m.RegisteredBusinessAddress()
+	case kybformsubmission.FieldCertificateOfIncorporationURL:
+		return m.CertificateOfIncorporationURL()
+	case kybformsubmission.FieldArticlesOfIncorporationURL:
+		return m.ArticlesOfIncorporationURL()
+	case kybformsubmission.FieldBusinessLicenseURL:
+		return m.BusinessLicenseURL()
+	case kybformsubmission.FieldProofOfBusinessAddressURL:
+		return m.ProofOfBusinessAddressURL()
+	case kybformsubmission.FieldProofOfResidentialAddressURL:
+		return m.ProofOfResidentialAddressURL()
+	case kybformsubmission.FieldAmlPolicyURL:
+		return m.AmlPolicyURL()
+	case kybformsubmission.FieldKycPolicyURL:
+		return m.KycPolicyURL()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *KYBFormSubmissionMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case kybformsubmission.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case kybformsubmission.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case kybformsubmission.FieldEmail:
+		return m.OldEmail(ctx)
+	case kybformsubmission.FieldCompanyName:
+		return m.OldCompanyName(ctx)
+	case kybformsubmission.FieldRegisteredBusinessAddress:
+		return m.OldRegisteredBusinessAddress(ctx)
+	case kybformsubmission.FieldCertificateOfIncorporationURL:
+		return m.OldCertificateOfIncorporationURL(ctx)
+	case kybformsubmission.FieldArticlesOfIncorporationURL:
+		return m.OldArticlesOfIncorporationURL(ctx)
+	case kybformsubmission.FieldBusinessLicenseURL:
+		return m.OldBusinessLicenseURL(ctx)
+	case kybformsubmission.FieldProofOfBusinessAddressURL:
+		return m.OldProofOfBusinessAddressURL(ctx)
+	case kybformsubmission.FieldProofOfResidentialAddressURL:
+		return m.OldProofOfResidentialAddressURL(ctx)
+	case kybformsubmission.FieldAmlPolicyURL:
+		return m.OldAmlPolicyURL(ctx)
+	case kybformsubmission.FieldKycPolicyURL:
+		return m.OldKycPolicyURL(ctx)
+	}
+	return nil, fmt.Errorf("unknown KYBFormSubmission field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *KYBFormSubmissionMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case kybformsubmission.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case kybformsubmission.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case kybformsubmission.FieldEmail:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEmail(v)
+		return nil
+	case kybformsubmission.FieldCompanyName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCompanyName(v)
+		return nil
+	case kybformsubmission.FieldRegisteredBusinessAddress:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRegisteredBusinessAddress(v)
+		return nil
+	case kybformsubmission.FieldCertificateOfIncorporationURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCertificateOfIncorporationURL(v)
+		return nil
+	case kybformsubmission.FieldArticlesOfIncorporationURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetArticlesOfIncorporationURL(v)
+		return nil
+	case kybformsubmission.FieldBusinessLicenseURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBusinessLicenseURL(v)
+		return nil
+	case kybformsubmission.FieldProofOfBusinessAddressURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProofOfBusinessAddressURL(v)
+		return nil
+	case kybformsubmission.FieldProofOfResidentialAddressURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProofOfResidentialAddressURL(v)
+		return nil
+	case kybformsubmission.FieldAmlPolicyURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAmlPolicyURL(v)
+		return nil
+	case kybformsubmission.FieldKycPolicyURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetKycPolicyURL(v)
+		return nil
+	}
+	return fmt.Errorf("unknown KYBFormSubmission field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *KYBFormSubmissionMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *KYBFormSubmissionMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *KYBFormSubmissionMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown KYBFormSubmission numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *KYBFormSubmissionMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(kybformsubmission.FieldBusinessLicenseURL) {
+		fields = append(fields, kybformsubmission.FieldBusinessLicenseURL)
+	}
+	if m.FieldCleared(kybformsubmission.FieldAmlPolicyURL) {
+		fields = append(fields, kybformsubmission.FieldAmlPolicyURL)
+	}
+	if m.FieldCleared(kybformsubmission.FieldKycPolicyURL) {
+		fields = append(fields, kybformsubmission.FieldKycPolicyURL)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *KYBFormSubmissionMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *KYBFormSubmissionMutation) ClearField(name string) error {
+	switch name {
+	case kybformsubmission.FieldBusinessLicenseURL:
+		m.ClearBusinessLicenseURL()
+		return nil
+	case kybformsubmission.FieldAmlPolicyURL:
+		m.ClearAmlPolicyURL()
+		return nil
+	case kybformsubmission.FieldKycPolicyURL:
+		m.ClearKycPolicyURL()
+		return nil
+	}
+	return fmt.Errorf("unknown KYBFormSubmission nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *KYBFormSubmissionMutation) ResetField(name string) error {
+	switch name {
+	case kybformsubmission.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case kybformsubmission.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case kybformsubmission.FieldEmail:
+		m.ResetEmail()
+		return nil
+	case kybformsubmission.FieldCompanyName:
+		m.ResetCompanyName()
+		return nil
+	case kybformsubmission.FieldRegisteredBusinessAddress:
+		m.ResetRegisteredBusinessAddress()
+		return nil
+	case kybformsubmission.FieldCertificateOfIncorporationURL:
+		m.ResetCertificateOfIncorporationURL()
+		return nil
+	case kybformsubmission.FieldArticlesOfIncorporationURL:
+		m.ResetArticlesOfIncorporationURL()
+		return nil
+	case kybformsubmission.FieldBusinessLicenseURL:
+		m.ResetBusinessLicenseURL()
+		return nil
+	case kybformsubmission.FieldProofOfBusinessAddressURL:
+		m.ResetProofOfBusinessAddressURL()
+		return nil
+	case kybformsubmission.FieldProofOfResidentialAddressURL:
+		m.ResetProofOfResidentialAddressURL()
+		return nil
+	case kybformsubmission.FieldAmlPolicyURL:
+		m.ResetAmlPolicyURL()
+		return nil
+	case kybformsubmission.FieldKycPolicyURL:
+		m.ResetKycPolicyURL()
+		return nil
+	}
+	return fmt.Errorf("unknown KYBFormSubmission field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *KYBFormSubmissionMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.beneficial_owners != nil {
+		edges = append(edges, kybformsubmission.EdgeBeneficialOwners)
+	}
+	if m.user != nil {
+		edges = append(edges, kybformsubmission.EdgeUser)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *KYBFormSubmissionMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case kybformsubmission.EdgeBeneficialOwners:
+		ids := make([]ent.Value, 0, len(m.beneficial_owners))
+		for id := range m.beneficial_owners {
+			ids = append(ids, id)
+		}
+		return ids
+	case kybformsubmission.EdgeUser:
+		if id := m.user; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *KYBFormSubmissionMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.removedbeneficial_owners != nil {
+		edges = append(edges, kybformsubmission.EdgeBeneficialOwners)
+	}
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *KYBFormSubmissionMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case kybformsubmission.EdgeBeneficialOwners:
+		ids := make([]ent.Value, 0, len(m.removedbeneficial_owners))
+		for id := range m.removedbeneficial_owners {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *KYBFormSubmissionMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedbeneficial_owners {
+		edges = append(edges, kybformsubmission.EdgeBeneficialOwners)
+	}
+	if m.cleareduser {
+		edges = append(edges, kybformsubmission.EdgeUser)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *KYBFormSubmissionMutation) EdgeCleared(name string) bool {
+	switch name {
+	case kybformsubmission.EdgeBeneficialOwners:
+		return m.clearedbeneficial_owners
+	case kybformsubmission.EdgeUser:
+		return m.cleareduser
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *KYBFormSubmissionMutation) ClearEdge(name string) error {
+	switch name {
+	case kybformsubmission.EdgeUser:
+		m.ClearUser()
+		return nil
+	}
+	return fmt.Errorf("unknown KYBFormSubmission unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *KYBFormSubmissionMutation) ResetEdge(name string) error {
+	switch name {
+	case kybformsubmission.EdgeBeneficialOwners:
+		m.ResetBeneficialOwners()
+		return nil
+	case kybformsubmission.EdgeUser:
+		m.ResetUser()
+		return nil
+	}
+	return fmt.Errorf("unknown KYBFormSubmission edge %s", name)
 }
 
 // LinkedAddressMutation represents an operation that mutates the LinkedAddress nodes in the graph.
@@ -19388,29 +21235,31 @@ func (m *TransactionLogMutation) ResetEdge(name string) error {
 // UserMutation represents an operation that mutates the User nodes in the graph.
 type UserMutation struct {
 	config
-	op                        Op
-	typ                       string
-	id                        *uuid.UUID
-	created_at                *time.Time
-	updated_at                *time.Time
-	first_name                *string
-	last_name                 *string
-	email                     *string
-	password                  *string
-	scope                     *string
-	is_email_verified         *bool
-	has_early_access          *bool
-	clearedFields             map[string]struct{}
-	sender_profile            *uuid.UUID
-	clearedsender_profile     bool
-	provider_profile          *string
-	clearedprovider_profile   bool
-	verification_token        map[uuid.UUID]struct{}
-	removedverification_token map[uuid.UUID]struct{}
-	clearedverification_token bool
-	done                      bool
-	oldValue                  func(context.Context) (*User, error)
-	predicates                []predicate.User
+	op                         Op
+	typ                        string
+	id                         *uuid.UUID
+	created_at                 *time.Time
+	updated_at                 *time.Time
+	first_name                 *string
+	last_name                  *string
+	email                      *string
+	password                   *string
+	scope                      *string
+	is_email_verified          *bool
+	has_early_access           *bool
+	clearedFields              map[string]struct{}
+	sender_profile             *uuid.UUID
+	clearedsender_profile      bool
+	provider_profile           *string
+	clearedprovider_profile    bool
+	verification_token         map[uuid.UUID]struct{}
+	removedverification_token  map[uuid.UUID]struct{}
+	clearedverification_token  bool
+	kyb_form_submission        *uuid.UUID
+	clearedkyb_form_submission bool
+	done                       bool
+	oldValue                   func(context.Context) (*User, error)
+	predicates                 []predicate.User
 }
 
 var _ ent.Mutation = (*UserMutation)(nil)
@@ -19973,6 +21822,45 @@ func (m *UserMutation) ResetVerificationToken() {
 	m.removedverification_token = nil
 }
 
+// SetKybFormSubmissionID sets the "kyb_form_submission" edge to the KYBFormSubmission entity by id.
+func (m *UserMutation) SetKybFormSubmissionID(id uuid.UUID) {
+	m.kyb_form_submission = &id
+}
+
+// ClearKybFormSubmission clears the "kyb_form_submission" edge to the KYBFormSubmission entity.
+func (m *UserMutation) ClearKybFormSubmission() {
+	m.clearedkyb_form_submission = true
+}
+
+// KybFormSubmissionCleared reports if the "kyb_form_submission" edge to the KYBFormSubmission entity was cleared.
+func (m *UserMutation) KybFormSubmissionCleared() bool {
+	return m.clearedkyb_form_submission
+}
+
+// KybFormSubmissionID returns the "kyb_form_submission" edge ID in the mutation.
+func (m *UserMutation) KybFormSubmissionID() (id uuid.UUID, exists bool) {
+	if m.kyb_form_submission != nil {
+		return *m.kyb_form_submission, true
+	}
+	return
+}
+
+// KybFormSubmissionIDs returns the "kyb_form_submission" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// KybFormSubmissionID instead. It exists only for internal usage by the builders.
+func (m *UserMutation) KybFormSubmissionIDs() (ids []uuid.UUID) {
+	if id := m.kyb_form_submission; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetKybFormSubmission resets all changes to the "kyb_form_submission" edge.
+func (m *UserMutation) ResetKybFormSubmission() {
+	m.kyb_form_submission = nil
+	m.clearedkyb_form_submission = false
+}
+
 // Where appends a list predicates to the UserMutation builder.
 func (m *UserMutation) Where(ps ...predicate.User) {
 	m.predicates = append(m.predicates, ps...)
@@ -20242,7 +22130,7 @@ func (m *UserMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.sender_profile != nil {
 		edges = append(edges, user.EdgeSenderProfile)
 	}
@@ -20251,6 +22139,9 @@ func (m *UserMutation) AddedEdges() []string {
 	}
 	if m.verification_token != nil {
 		edges = append(edges, user.EdgeVerificationToken)
+	}
+	if m.kyb_form_submission != nil {
+		edges = append(edges, user.EdgeKybFormSubmission)
 	}
 	return edges
 }
@@ -20273,13 +22164,17 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case user.EdgeKybFormSubmission:
+		if id := m.kyb_form_submission; id != nil {
+			return []ent.Value{*id}
+		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.removedverification_token != nil {
 		edges = append(edges, user.EdgeVerificationToken)
 	}
@@ -20302,7 +22197,7 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.clearedsender_profile {
 		edges = append(edges, user.EdgeSenderProfile)
 	}
@@ -20311,6 +22206,9 @@ func (m *UserMutation) ClearedEdges() []string {
 	}
 	if m.clearedverification_token {
 		edges = append(edges, user.EdgeVerificationToken)
+	}
+	if m.clearedkyb_form_submission {
+		edges = append(edges, user.EdgeKybFormSubmission)
 	}
 	return edges
 }
@@ -20325,6 +22223,8 @@ func (m *UserMutation) EdgeCleared(name string) bool {
 		return m.clearedprovider_profile
 	case user.EdgeVerificationToken:
 		return m.clearedverification_token
+	case user.EdgeKybFormSubmission:
+		return m.clearedkyb_form_submission
 	}
 	return false
 }
@@ -20338,6 +22238,9 @@ func (m *UserMutation) ClearEdge(name string) error {
 		return nil
 	case user.EdgeProviderProfile:
 		m.ClearProviderProfile()
+		return nil
+	case user.EdgeKybFormSubmission:
+		m.ClearKybFormSubmission()
 		return nil
 	}
 	return fmt.Errorf("unknown User unique edge %s", name)
@@ -20355,6 +22258,9 @@ func (m *UserMutation) ResetEdge(name string) error {
 		return nil
 	case user.EdgeVerificationToken:
 		m.ResetVerificationToken()
+		return nil
+	case user.EdgeKybFormSubmission:
+		m.ResetKybFormSubmission()
 		return nil
 	}
 	return fmt.Errorf("unknown User edge %s", name)
