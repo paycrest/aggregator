@@ -40,7 +40,7 @@ func NewIndexerEVM() types.Indexer {
 }
 
 // IndexTransfer indexes transfers to the receive address for EVM networks.
-func (s *IndexerEVM) IndexTransfer(ctx context.Context, rpcClient types.RPCClient, order *ent.PaymentOrder, token *ent.Token, fromBlock int64, toBlock int64) error {
+func (s *IndexerEVM) IndexTransfer(ctx context.Context, rpcClient types.RPCClient, token *ent.Token, fromBlock int64, toBlock int64) error {
 	// Get Transfer event data
 	payload := map[string]interface{}{
 		"eventName": "Transfer",
@@ -100,7 +100,7 @@ func (s *IndexerEVM) IndexTransfer(ctx context.Context, rpcClient types.RPCClien
 }
 
 // IndexOrderCreated indexes orders created in the Gateway contract for EVM networks.
-func (s *IndexerEVM) IndexOrderCreated(ctx context.Context, rpcClient types.RPCClient, order *ent.PaymentOrder, network *ent.Network, fromBlock int64, toBlock int64) error {
+func (s *IndexerEVM) IndexOrderCreated(ctx context.Context, rpcClient types.RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error {
 	// Get OrderCreated event data
 	eventPayload := map[string]interface{}{
 		"eventName": "OrderCreated",
@@ -170,13 +170,15 @@ func (s *IndexerEVM) IndexOrderCreated(ctx context.Context, rpcClient types.RPCC
 			createdEvent.Amount = createdEvent.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(order.Edges.Token.Decimals))))
 			createdEvent.ProtocolFee = createdEvent.ProtocolFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(order.Edges.Token.Decimals))))
 
-			err := common.CreateLockPaymentOrder(ctx, order.Edges.Token.Edges.Network, createdEvent, s.order.RefundOrder, s.priorityQueue.AssignLockPaymentOrder)
+			err := common.CreateLockPaymentOrder(ctx, network, createdEvent, s.order.RefundOrder, s.priorityQueue.AssignLockPaymentOrder)
 			if err != nil {
 				if !strings.Contains(fmt.Sprintf("%v", err), "duplicate key value violates unique constraint") {
 					logger.WithFields(logger.Fields{
 						"Error":   fmt.Sprintf("%v", err),
 						"OrderID": createdEvent.OrderId,
-					}).Errorf("Failed to create lock payment order when indexing order created events for %s", order.Edges.Token.Edges.Network.Identifier)
+						"TxHash":  createdEvent.TxHash,
+						"Network": network.Identifier,
+					}).Errorf("Failed to create lock payment order when indexing order created events for %s", network.Identifier)
 				}
 				return
 			}
@@ -214,7 +216,7 @@ func (s *IndexerEVM) IndexOrderCreated(ctx context.Context, rpcClient types.RPCC
 }
 
 // IndexOrderSettled indexes orders settled in the Gateway contract for EVM networks.
-func (s *IndexerEVM) IndexOrderSettled(ctx context.Context, rpcClient types.RPCClient, order *ent.LockPaymentOrder, network *ent.Network, fromBlock int64, toBlock int64) error {
+func (s *IndexerEVM) IndexOrderSettled(ctx context.Context, rpcClient types.RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error {
 	// Get OrderSettled event data
 	eventPayload := map[string]interface{}{
 		"eventName": "OrderSettled",
@@ -277,12 +279,14 @@ func (s *IndexerEVM) IndexOrderSettled(ctx context.Context, rpcClient types.RPCC
 			defer wg.Done()
 
 			// Update order status
-			err := common.UpdateOrderStatusSettled(ctx, lo.Edges.Token.Edges.Network, se)
+			err := common.UpdateOrderStatusSettled(ctx, network, se)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":   fmt.Sprintf("%v", err),
 					"OrderID": se.OrderId,
-				}).Errorf("Failed to update order status settlement when indexing order settled events for %s", order.Edges.Token.Edges.Network.Identifier)
+					"TxHash":  se.TxHash,
+					"Network": network.Identifier,
+				}).Errorf("Failed to update order status settlement when indexing order settled events for %s", network.Identifier)
 			}
 		}(lockOrder, settledEvent)
 	}
@@ -292,7 +296,7 @@ func (s *IndexerEVM) IndexOrderSettled(ctx context.Context, rpcClient types.RPCC
 }
 
 // IndexOrderRefunded indexes orders settled in the Gateway contract for EVM networks.
-func (s *IndexerEVM) IndexOrderRefunded(ctx context.Context, rpcClient types.RPCClient, order *ent.LockPaymentOrder, network *ent.Network, fromBlock int64, toBlock int64) error {
+func (s *IndexerEVM) IndexOrderRefunded(ctx context.Context, rpcClient types.RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error {
 	// Get OrderRefunded event data
 	eventPayload := map[string]interface{}{
 		"eventName": "OrderRefunded",

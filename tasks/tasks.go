@@ -323,17 +323,17 @@ func runIndexers(network *ent.Network, indexer types.Indexer, tokens []*ent.Toke
 	// Index Gateway events
 	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
 		ctx := context.Background()
-		_ = indexer.IndexOrderCreated(ctx, nil, nil, network, start, end)
+		_ = indexer.IndexOrderCreated(ctx, nil, network, start, end)
 	}(network, indexer, startBlock, latestBlock)
 
 	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
 		ctx := context.Background()
-		_ = indexer.IndexOrderSettled(ctx, nil, nil, network, start, end)
+		_ = indexer.IndexOrderSettled(ctx, nil, network, start, end)
 	}(network, indexer, startBlock, latestBlock)
 
 	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
 		ctx := context.Background()
-		_ = indexer.IndexOrderRefunded(ctx, nil, nil, network, start, end)
+		_ = indexer.IndexOrderRefunded(ctx, nil, network, start, end)
 	}(network, indexer, startBlock, latestBlock)
 
 	// Index transfer events for tokens in this network
@@ -344,7 +344,7 @@ func runIndexers(network *ent.Network, indexer types.Indexer, tokens []*ent.Toke
 
 		go func(token *ent.Token, indexer types.Indexer, start, end int64) {
 			ctx := context.Background()
-			_ = indexer.IndexTransfer(ctx, nil, nil, token, start, end)
+			_ = indexer.IndexTransfer(ctx, nil, token, start, end)
 		}(token, indexer, startBlock, latestBlock)
 	}
 }
