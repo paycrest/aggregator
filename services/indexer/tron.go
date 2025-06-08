@@ -5,16 +5,20 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/common"
 	"github.com/paycrest/aggregator/services/contracts"
 	"github.com/paycrest/aggregator/services/order"
+	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
@@ -42,99 +46,70 @@ func NewIndexerTron() types.Indexer {
 
 // IndexTransfer indexes transfers to the receive address for Tron network.
 func (s *IndexerTron) IndexTransfer(ctx context.Context, rpcClient types.RPCClient, order *ent.PaymentOrder, token *ent.Token, fromBlock int64, toBlock int64) error {
-	var err error
-
-	if !strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {
-		return fmt.Errorf("IndexTransfer: invalid network identifier: %s", order.Edges.Token.Edges.Network.Identifier)
-	}
-
-	client := fastshot.NewClient(order.Edges.Token.Edges.Network.RPCEndpoint).
-		Config().SetTimeout(30*time.Second).
-		Header().Add("TRON_PRO_API_KEY", orderConf.TronProApiKey)
-
-	// TODO: should we include '?only_confirmed=true' in the URL?
-	res, err := client.Build().
-		GET(fmt.Sprintf("/v1/accounts/%s/transactions/trc20", order.Edges.ReceiveAddress.Address)).
-		Retry().Set(3, 1*time.Second).
+	res, err := fastshot.NewClient(token.Edges.Network.RPCEndpoint).
+		Config().SetTimeout(15 * time.Second).
+		Build().GET(fmt.Sprintf("/v1/contracts/%s/events", token.ContractAddress)).
+		Query().AddParams(map[string]string{
+		"only_confirmed":      "true",
+		"min_block_timestamp": strconv.FormatInt(fromBlock, 10),
+		"max_block_timestamp": strconv.FormatInt(toBlock, 10),
+		"order_by":            "block_timestamp,asc",
+		"limit":               "200",
+	}).
 		Send()
 	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":   fmt.Sprintf("%v", err),
-			"OrderID": order.ID.String(),
-		}).Errorf("Failed to fetch TRC20 transfer for %s", order.Edges.Token.Edges.Network.Identifier)
-		return err
+		return fmt.Errorf("IndexTransfer.getTransferEventData: %w", err)
 	}
 
 	data, err := utils.ParseJSONResponse(res.RawResponse)
 	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":    fmt.Sprintf("%v", err),
-			"Response": data,
-		}).Errorf("Failed to parse JSON response for TRC20 transfer for %s", order.Edges.Token.Edges.Network.Identifier)
+		return fmt.Errorf("IndexTransfer.parseJSONResponse: %w", err)
+	}
+
+	unknownAddresses := []string{}
+	addressToEvent := make(map[string]*types.TokenTransferEvent)
+
+	for _, r := range data["data"].([]interface{}) {
+		if r.(map[string]interface{})["event_name"].(string) == "Transfer" {
+			fmt.Println(r.(map[string]interface{})["result"].(map[string]interface{})["to"].(string))
+			fmt.Println(r.(map[string]interface{})["result"].(map[string]interface{}))
+
+			fromAddress := r.(map[string]interface{})["result"].(map[string]interface{})["from"].(string)
+
+			if strings.EqualFold(fromAddress, token.Edges.Network.GatewayContractAddress) {
+				continue
+			}
+
+			transferValue, err := decimal.NewFromString(r.(map[string]interface{})["result"].(map[string]interface{})["value"].(string))
+			if err != nil {
+				return fmt.Errorf("IndexTransfer.decimal.NewFromString: %w", err)
+			}
+
+			transferEvent := &types.TokenTransferEvent{
+				BlockNumber: int64(r.(map[string]interface{})["block_number"].(float64)),
+				TxHash:      r.(map[string]interface{})["transaction_id"].(string),
+				From:        fromAddress,
+				To:          r.(map[string]interface{})["result"].(map[string]interface{})["to"].(string),
+				Value:       transferValue.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals)))),
+			}
+
+			unknownAddresses = append(unknownAddresses, transferEvent.To)
+			addressToEvent[transferEvent.To] = transferEvent
+		}
+	}
+
+	if len(unknownAddresses) == 0 {
+		return nil
+	}
+
+	// Process receive addresses and update their status
+	if err := common.ProcessReceiveAddresses(ctx, s.order, s.priorityQueue, unknownAddresses, addressToEvent); err != nil {
 		return err
 	}
 
-	if data["success"].(bool) {
-		for _, event := range data["data"].([]interface{}) {
-			eventData := event.(map[string]interface{})
-
-			value, err := decimal.NewFromString(eventData["value"].(string))
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error": fmt.Sprintf("%v", err),
-					"Value": eventData["value"],
-				}).Errorf("Failed to parse decimal value from TRC20 transfer for %s", order.Edges.Token.Edges.Network.Identifier)
-				return err
-			}
-
-			amountPaid := utils.FromSubunit(value.BigInt(), order.Edges.Token.Decimals)
-			amountToBePaid := order.Amount.Add(order.ProtocolFee).Add(order.SenderFee).Add(order.NetworkFee)
-
-			if eventData["type"].(string) != "Transfer" && eventData["to"].(string) != order.Edges.ReceiveAddress.Address && amountPaid != amountToBePaid {
-				return nil
-			}
-
-			res, err = client.Build().POST("/wallet/gettransactioninfobyid").
-				Body().AsJSON(map[string]interface{}{"value": eventData["transaction_id"].(string)}).
-				Retry().Set(3, 1*time.Second).
-				Send()
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":         fmt.Sprintf("%v", err),
-					"TransactionID": eventData["transaction_id"],
-				}).Errorf("Failed to fetch block number for TRC20 transfer for %s", order.Edges.Token.Edges.Network.Identifier)
-				return err
-			}
-
-			data, err = utils.ParseJSONResponse(res.RawResponse)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":    fmt.Sprintf("%v", err),
-					"Response": data,
-				}).Errorf("Failed to parse JSON response for TRC20 transfer for %s", order.Edges.Token.Edges.Network.Identifier)
-				return err
-			}
-
-			if data["blockNumber"] != nil {
-				transferEvent := &types.TokenTransferEvent{
-					BlockNumber: int64(data["blockNumber"].(float64)),
-					TxHash:      eventData["transaction_id"].(string),
-					From:        eventData["from"].(string),
-					To:          eventData["to"].(string),
-					Value:       utils.FromSubunit(value.BigInt(), order.Edges.Token.Decimals),
-				}
-
-				go func() {
-					_, err := common.UpdateReceiveAddressStatus(ctx, order.Edges.ReceiveAddress, order, transferEvent, s.order.CreateOrder, s.priorityQueue.GetProviderRate)
-					if err != nil {
-						logger.WithFields(logger.Fields{
-							"Error":   fmt.Sprintf("%v", err),
-							"OrderID": order.ID.String(),
-						}).Errorf("Failed to update receive address status when indexing TRC20 transfers for %s", order.Edges.Token.Edges.Network.Identifier)
-					}
-				}()
-			}
-		}
+	// Process linked addresses and create payment orders
+	if err := common.ProcessLinkedAddresses(ctx, s.order, unknownAddresses, addressToEvent, token); err != nil {
+		return err
 	}
 
 	return nil
@@ -142,40 +117,45 @@ func (s *IndexerTron) IndexTransfer(ctx context.Context, rpcClient types.RPCClie
 
 // IndexOrderCreated indexes orders created in the Gateway contract for the Tron network.
 func (s *IndexerTron) IndexOrderCreated(ctx context.Context, rpcClient types.RPCClient, order *ent.PaymentOrder, network *ent.Network, fromBlock int64, toBlock int64) error {
-	events, err := s.fetchLatestOrderEvents(
-		order.Edges.Token.Edges.Network.RPCEndpoint,
-		order.Edges.Token.Edges.Network.Identifier,
-		order.TxHash,
-	)
+	res, err := fastshot.NewClient(network.RPCEndpoint).
+		Config().SetTimeout(15 * time.Second).
+		Build().GET(fmt.Sprintf("/v1/contracts/%s/events", network.GatewayContractAddress)).
+		Query().AddParams(map[string]string{
+		"min_block_timestamp": strconv.FormatInt(fromBlock, 10),
+		"max_block_timestamp": strconv.FormatInt(toBlock, 10),
+		"order_by":            "block_timestamp,asc",
+		"limit":               "200",
+	}).
+		Send()
 	if err != nil {
-		return fmt.Errorf("IndexOrderCreated.fetchLatestOrderEvents: %v", err)
+		return fmt.Errorf("IndexOrderCreated.getEvents: %w", err)
 	}
 
-	for _, event := range events {
-		eventData := event.(map[string]interface{})
-		if eventData["event_name"] == "OrderCreated" && eventData["contract_address"] == order.Edges.Token.Edges.Network.GatewayContractAddress {
-			client := fastshot.NewClient(order.Edges.Token.Edges.Network.RPCEndpoint).
-				Config().SetTimeout(30*time.Second).
-				Header().Add("TRON_PRO_API_KEY", orderConf.TronProApiKey)
+	data, err := utils.ParseJSONResponse(res.RawResponse)
+	if err != nil {
+		return fmt.Errorf("IndexOrderCreated.parseJSONResponse: %w", err)
+	}
 
-			res, err := client.Build().POST("/wallet/gettransactioninfobyid").
-				Body().AsJSON(map[string]interface{}{"value": order.TxHash}).
-				Retry().Set(3, 1*time.Second).
+	txHashes := []string{}
+	hashToEvent := make(map[string]*types.OrderCreatedEvent)
+
+	for _, r := range data["data"].([]interface{}) {
+		if r.(map[string]interface{})["event_name"].(string) == "OrderCreated" {
+			// fetch the transaction
+			res, err = fastshot.NewClient(network.RPCEndpoint).
+				Config().SetTimeout(15 * time.Second).
+				Build().POST("/wallet/gettransactioninfobyid").
+				Body().AsJSON(map[string]interface{}{
+				"value": r.(map[string]interface{})["transaction_id"].(string),
+			}).
 				Send()
 			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":  fmt.Sprintf("%v", err),
-					"TxHash": order.TxHash,
-				}).Errorf("Failed to fetch trx info by id for %s", order.Edges.Token.Edges.Network.Identifier)
-				return err
+				return fmt.Errorf("IndexOrderCreated.getTransaction: %w", err)
 			}
 
 			data, err := utils.ParseJSONResponse(res.RawResponse)
 			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error": fmt.Sprintf("%v", err),
-				}).Errorf("Failed to parse JSON response for %s", order.Edges.Token.Edges.Network.Identifier)
-				return err
+				return fmt.Errorf("IndexOrderCreated.parseJSONResponse: %w", err)
 			}
 
 			// Parse event data
@@ -191,7 +171,7 @@ func (s *IndexerTron) IndexOrderCreated(ctx context.Context, rpcClient types.RPC
 					}
 
 					eventOrderId := unpackedEventData[1].([32]byte)
-					event := &types.OrderCreatedEvent{
+					createdEvent := &types.OrderCreatedEvent{
 						BlockNumber: int64(data["blockNumber"].(float64)),
 						TxHash:      data["id"].(string),
 						Token:       utils.ParseTopicToTronAddress(eventData["topics"].([]interface{})[2].(string)),
@@ -203,21 +183,85 @@ func (s *IndexerTron) IndexOrderCreated(ctx context.Context, rpcClient types.RPC
 						Sender:      utils.ParseTopicToTronAddress(eventData["topics"].([]interface{})[1].(string)),
 					}
 
-					err = common.CreateLockPaymentOrder(ctx, order.Edges.Token.Edges.Network, event, s.order.RefundOrder, s.priorityQueue.AssignLockPaymentOrder)
-					if err != nil {
-						logger.WithFields(logger.Fields{
-							"Error":   fmt.Sprintf("%v", err),
-							"OrderID": event.OrderId,
-						}).Errorf("Failed to create lock payment order when indexing order created events for %s", order.Edges.Token.Edges.Network.Identifier)
-					}
+					txHashes = append(txHashes, createdEvent.TxHash)
+					hashToEvent[createdEvent.TxHash] = createdEvent
 
 					break
 				}
 			}
-
-			break
 		}
 	}
+
+	if len(txHashes) == 0 {
+		return nil
+	}
+
+	orders, err := storage.Client.PaymentOrder.
+		Query().
+		Where(paymentorder.TxHashIn(txHashes...)).
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
+		WithRecipient().
+		All(ctx)
+	if err != nil {
+		logger.Infof("IndexOrderCreated.fetchOrders: %v", err)
+		return fmt.Errorf("IndexOrderCreated.fetchOrders: %w", err)
+	}
+
+	var wg sync.WaitGroup
+	for _, order := range orders {
+		createdEvent, ok := hashToEvent[order.TxHash]
+		if !ok {
+			continue
+		}
+
+		wg.Add(1)
+		go func(order *ent.PaymentOrder, createdEvent *types.OrderCreatedEvent) {
+			defer wg.Done()
+
+			createdEvent.Amount = createdEvent.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(order.Edges.Token.Decimals))))
+			createdEvent.ProtocolFee = createdEvent.ProtocolFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(order.Edges.Token.Decimals))))
+
+			err := common.CreateLockPaymentOrder(ctx, order.Edges.Token.Edges.Network, createdEvent, s.order.RefundOrder, s.priorityQueue.AssignLockPaymentOrder)
+			if err != nil {
+				if !strings.Contains(fmt.Sprintf("%v", err), "duplicate key value violates unique constraint") {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"OrderID": createdEvent.OrderId,
+					}).Errorf("Failed to create lock payment order when indexing order created events for %s", order.Edges.Token.Edges.Network.Identifier)
+				}
+				return
+			}
+
+			// Update payment order with txHash
+			_, err = order.Update().
+				SetGatewayID(createdEvent.OrderId).
+				SetRate(order.Rate).
+				SetStatus(paymentorder.StatusPending).
+				Save(ctx)
+			if err != nil {
+				return
+			}
+
+			// Refetch payment order
+			paymentOrder, err := storage.Client.PaymentOrder.
+				Query().
+				Where(paymentorder.IDEQ(order.ID)).
+				WithSenderProfile().
+				Only(ctx)
+			if err != nil {
+				return
+			}
+
+			// Send webhook notifcation to sender
+			err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
+			if err != nil {
+				return
+			}
+		}(order, createdEvent)
+	}
+	wg.Wait()
 
 	return nil
 }

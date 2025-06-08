@@ -5,13 +5,10 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/paycrest/aggregator/ent"
-	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorder"
-	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/common"
 	"github.com/paycrest/aggregator/services/order"
@@ -90,12 +87,12 @@ func (s *IndexerEVM) IndexTransfer(ctx context.Context, rpcClient types.RPCClien
 	}
 
 	// Process receive addresses and update their status
-	if err := s.processReceiveAddresses(ctx, unknownAddresses, addressToEvent); err != nil {
+	if err := common.ProcessReceiveAddresses(ctx, s.order, s.priorityQueue, unknownAddresses, addressToEvent); err != nil {
 		return err
 	}
 
 	// Process linked addresses and create payment orders
-	if err := s.processLinkedAddresses(ctx, unknownAddresses, addressToEvent, token); err != nil {
+	if err := common.ProcessLinkedAddresses(ctx, s.order, unknownAddresses, addressToEvent, token); err != nil {
 		return err
 	}
 
@@ -166,17 +163,6 @@ func (s *IndexerEVM) IndexOrderCreated(ctx context.Context, rpcClient types.RPCC
 			continue
 		}
 
-		// logger.Infof("IndexOrderCreated.order 2: %v", order)
-		// encryptedOrderRecipient, err := cryptoUtils.EncryptOrderRecipient(order.Edges.Recipient)
-		// if err != nil {
-		// 	continue
-		// }
-
-		// if createdEvent.MessageHash != encryptedOrderRecipient {
-		// 	logger.Infof("IndexOrderCreated.order 2.1: %v", order)
-		// 	continue
-		// }
-
 		wg.Add(1)
 		go func(order *ent.PaymentOrder, createdEvent *types.OrderCreatedEvent) {
 			defer wg.Done()
@@ -197,7 +183,7 @@ func (s *IndexerEVM) IndexOrderCreated(ctx context.Context, rpcClient types.RPCC
 
 			// Update payment order with txHash
 			_, err = order.Update().
-				SetGatewayID(result["orderId"].(string)).
+				SetGatewayID(createdEvent.OrderId).
 				SetRate(order.Rate).
 				SetStatus(paymentorder.StatusPending).
 				Save(ctx)
@@ -381,239 +367,6 @@ func (s *IndexerEVM) IndexOrderRefunded(ctx context.Context, rpcClient types.RPC
 				}).Errorf("Failed to update order status refund when indexing order refunded events for %s", lockOrder.Edges.Token.Edges.Network.Identifier)
 			}
 		}(lockOrder)
-	}
-	wg.Wait()
-
-	return nil
-}
-
-// processReceiveAddresses processes transfers to receive addresses and updates their status
-func (s *IndexerEVM) processReceiveAddresses(ctx context.Context, unknownAddresses []string, addressToEvent map[string]*types.TokenTransferEvent) error {
-	orders, err := storage.Client.PaymentOrder.
-		Query().
-		Where(
-			paymentorder.HasReceiveAddressWith(
-				receiveaddress.StatusEQ(receiveaddress.StatusUnused),
-				receiveaddress.ValidUntilGT(time.Now()),
-				receiveaddress.AddressIn(unknownAddresses...),
-			),
-			paymentorder.StatusEQ(paymentorder.StatusInitiated),
-		).
-		WithToken(func(tq *ent.TokenQuery) {
-			tq.WithNetwork()
-		}).
-		WithReceiveAddress().
-		WithRecipient().
-		All(ctx)
-	if err != nil {
-		return fmt.Errorf("processReceiveAddresses.fetchOrders: %w", err)
-	}
-
-	var wg sync.WaitGroup
-	for _, order := range orders {
-		receiveAddress := order.Edges.ReceiveAddress
-		wg.Add(1)
-		go func(receiveAddress *ent.ReceiveAddress) {
-			defer wg.Done()
-			transferEvent, ok := addressToEvent[receiveAddress.Address]
-			if !ok {
-				return
-			}
-
-			_, err := common.UpdateReceiveAddressStatus(ctx, order.Edges.ReceiveAddress, order, transferEvent, s.order.CreateOrder, s.priorityQueue.GetProviderRate)
-			if err != nil {
-				if !strings.Contains(fmt.Sprintf("%v", err), "Duplicate payment order") && !strings.Contains(fmt.Sprintf("%v", err), "Receive address not found") {
-					logger.WithFields(logger.Fields{
-						"Error":   fmt.Sprintf("%v", err),
-						"OrderID": order.ID.String(),
-					}).Errorf("Failed to update receive address status when indexing ERC20 transfers for %s", order.Edges.Token.Edges.Network.Identifier)
-				}
-				return
-			}
-		}(receiveAddress)
-	}
-	wg.Wait()
-	return nil
-}
-
-// processLinkedAddresses processes transfers to linked addresses and creates payment orders
-func (s *IndexerEVM) processLinkedAddresses(ctx context.Context, unknownAddresses []string, addressToEvent map[string]*types.TokenTransferEvent, token *ent.Token) error {
-	linkedAddresses, err := storage.Client.LinkedAddress.
-		Query().
-		Where(
-			linkedaddress.AddressIn(unknownAddresses...),
-		).
-		All(ctx)
-	if err != nil {
-		if !ent.IsNotFound(err) {
-			logger.WithFields(logger.Fields{
-				"Error":     fmt.Sprintf("%v", err),
-				"Addresses": unknownAddresses,
-			}).Errorf("Failed to query linked addresses when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
-		}
-		return nil
-	}
-
-	var wg sync.WaitGroup
-	for _, linkedAddress := range linkedAddresses {
-		wg.Add(1)
-		go func(linkedAddress *ent.LinkedAddress) {
-			defer wg.Done()
-			ctx := context.Background()
-			transferEvent, ok := addressToEvent[linkedAddress.Address]
-			if !ok {
-				return
-			}
-
-			orderAmount := transferEvent.Value
-
-			// Check if the payment order already exists
-			paymentOrderExists := true
-			_, err := storage.Client.PaymentOrder.
-				Query().
-				Where(
-					paymentorder.FromAddress(transferEvent.From),
-					paymentorder.AmountEQ(orderAmount),
-					paymentorder.HasLinkedAddressWith(
-						linkedaddress.AddressEQ(linkedAddress.Address),
-						linkedaddress.LastIndexedBlockEQ(int64(transferEvent.BlockNumber)),
-					),
-				).
-				WithSenderProfile().
-				Only(ctx)
-			if err != nil {
-				if ent.IsNotFound(err) {
-					// Payment order does not exist, no need to update
-					paymentOrderExists = false
-				} else {
-					logger.WithFields(logger.Fields{
-						"Error":         fmt.Sprintf("%v", err),
-						"LinkedAddress": linkedAddress.Address,
-					}).Errorf("Failed to fetch payment order when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
-					return
-				}
-			}
-
-			if paymentOrderExists {
-				return
-			}
-
-			// Create payment order
-			institution, err := utils.GetInstitutionByCode(ctx, linkedAddress.Institution, true)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":                    fmt.Sprintf("%v", err),
-					"LinkedAddress":            linkedAddress.Address,
-					"LinkedAddressInstitution": linkedAddress.Institution,
-				}).Errorf("Failed to get institution when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
-				return
-			}
-
-			// Get rate from priority queue
-			if !strings.EqualFold(token.BaseCurrency, institution.Edges.FiatCurrency.Code) && !strings.EqualFold(token.BaseCurrency, "USD") {
-				return
-			}
-			var rateResponse decimal.Decimal
-			if !strings.EqualFold(token.BaseCurrency, institution.Edges.FiatCurrency.Code) {
-				rateResponse, err = utils.GetTokenRateFromQueue(token.Symbol, orderAmount, institution.Edges.FiatCurrency.Code, institution.Edges.FiatCurrency.MarketRate)
-				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":                    fmt.Sprintf("%v", err),
-						"Token":                    token.Symbol,
-						"LinkedAddressInstitution": linkedAddress.Institution,
-						"Code":                     institution.Edges.FiatCurrency.Code,
-					}).Errorf("Failed to get token rate when indexing ERC20 transfers for %s from queue", token.Edges.Network.Identifier)
-					return
-				}
-			} else {
-				rateResponse = decimal.NewFromInt(1)
-			}
-
-			tx, err := storage.Client.Tx(ctx)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":         fmt.Sprintf("%v", err),
-					"LinkedAddress": linkedAddress.Address,
-				}).Errorf("Failed to create transaction when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
-				return
-			}
-
-			order, err := storage.Client.PaymentOrder.
-				Create().
-				SetAmount(orderAmount).
-				SetAmountPaid(orderAmount).
-				SetAmountReturned(decimal.NewFromInt(0)).
-				SetPercentSettled(decimal.NewFromInt(0)).
-				SetNetworkFee(token.Edges.Network.Fee).
-				SetProtocolFee(decimal.NewFromInt(0)).
-				SetSenderFee(decimal.NewFromInt(0)).
-				SetToken(token).
-				SetRate(rateResponse).
-				SetTxHash(transferEvent.TxHash).
-				SetBlockNumber(int64(transferEvent.BlockNumber)).
-				SetFromAddress(transferEvent.From).
-				SetLinkedAddress(linkedAddress).
-				SetReceiveAddressText(linkedAddress.Address).
-				SetFeePercent(decimal.NewFromInt(0)).
-				SetReturnAddress(linkedAddress.Address).
-				Save(ctx)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":         fmt.Sprintf("%v", err),
-					"LinkedAddress": linkedAddress.Address,
-				}).Errorf("Failed to create payment order when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
-				_ = tx.Rollback()
-				return
-			}
-
-			_, err = tx.PaymentOrderRecipient.
-				Create().
-				SetInstitution(linkedAddress.Institution).
-				SetAccountIdentifier(linkedAddress.AccountIdentifier).
-				SetAccountName(linkedAddress.AccountName).
-				SetMetadata(linkedAddress.Metadata).
-				SetPaymentOrder(order).
-				Save(ctx)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":         fmt.Sprintf("%v", err),
-					"LinkedAddress": linkedAddress.Address,
-				}).Errorf("Failed to create payment order recipient when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
-				_ = tx.Rollback()
-				return
-			}
-
-			_, err = tx.LinkedAddress.
-				UpdateOneID(linkedAddress.ID).
-				SetTxHash(transferEvent.TxHash).
-				SetLastIndexedBlock(int64(transferEvent.BlockNumber)).
-				Save(ctx)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":         fmt.Sprintf("%v", err),
-					"LinkedAddress": linkedAddress.Address,
-				}).Errorf("Failed to update linked address when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
-				_ = tx.Rollback()
-				return
-			}
-
-			if err := tx.Commit(); err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":         fmt.Sprintf("%v", err),
-					"LinkedAddress": linkedAddress.Address,
-				}).Errorf("Failed to commit transaction when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
-				return
-			}
-
-			err = s.order.CreateOrder(ctx, order.ID)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":   fmt.Sprintf("%v", err),
-					"OrderID": order.ID.String(),
-				}).Errorf("Failed to create order when indexing ERC20 transfers for %s", token.Edges.Network.Identifier)
-				return
-			}
-		}(linkedAddress)
 	}
 	wg.Wait()
 
