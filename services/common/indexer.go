@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/linkedaddress"
+	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
@@ -258,6 +259,199 @@ func ProcessLinkedAddresses(ctx context.Context, orderService types.OrderService
 				return
 			}
 		}(linkedAddress)
+	}
+	wg.Wait()
+
+	return nil
+}
+
+// ProcessTransfers processes transfers for a network
+func ProcessTransfers(
+	ctx context.Context,
+	orderService types.OrderService,
+	priorityQueueService *services.PriorityQueueService,
+	unknownAddresses []string,
+	addressToEvent map[string]*types.TokenTransferEvent,
+	token *ent.Token,
+) error {
+	// Process receive addresses and update their status
+	if err := ProcessReceiveAddresses(ctx, orderService, priorityQueueService, unknownAddresses, addressToEvent); err != nil {
+		return err
+	}
+
+	// Process linked addresses and create payment orders
+	if err := ProcessLinkedAddresses(ctx, orderService, unknownAddresses, addressToEvent, token); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ProcessCreatedOrders processes created orders for a network
+func ProcessCreatedOrders(
+	ctx context.Context,
+	network *ent.Network,
+	txHashes []string,
+	hashToEvent map[string]*types.OrderCreatedEvent,
+	orderService types.OrderService,
+	priorityQueueService *services.PriorityQueueService,
+) error {
+	orders, err := storage.Client.PaymentOrder.
+		Query().
+		Where(paymentorder.TxHashIn(txHashes...)).
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
+		WithRecipient().
+		All(ctx)
+	if err != nil {
+		logger.Infof("IndexOrderCreated.fetchOrders: %v", err)
+		return fmt.Errorf("IndexOrderCreated.fetchOrders: %w", err)
+	}
+
+	var wg sync.WaitGroup
+	for _, order := range orders {
+		createdEvent, ok := hashToEvent[order.TxHash]
+		if !ok {
+			continue
+		}
+
+		wg.Add(1)
+		go func(order *ent.PaymentOrder, createdEvent *types.OrderCreatedEvent) {
+			defer wg.Done()
+
+			createdEvent.Amount = createdEvent.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(order.Edges.Token.Decimals))))
+			createdEvent.ProtocolFee = createdEvent.ProtocolFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(order.Edges.Token.Decimals))))
+
+			err := CreateLockPaymentOrder(ctx, network, createdEvent, orderService.RefundOrder, priorityQueueService.AssignLockPaymentOrder)
+			if err != nil {
+				if !strings.Contains(fmt.Sprintf("%v", err), "duplicate key value violates unique constraint") {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"OrderID": createdEvent.OrderId,
+						"TxHash":  createdEvent.TxHash,
+						"Network": network.Identifier,
+					}).Errorf("Failed to create lock payment order when indexing order created events for %s", network.Identifier)
+				}
+				return
+			}
+
+			// Update payment order with txHash
+			_, err = order.Update().
+				SetGatewayID(createdEvent.OrderId).
+				SetRate(order.Rate).
+				SetStatus(paymentorder.StatusPending).
+				Save(ctx)
+			if err != nil {
+				return
+			}
+
+			// Refetch payment order
+			paymentOrder, err := storage.Client.PaymentOrder.
+				Query().
+				Where(paymentorder.IDEQ(order.ID)).
+				WithSenderProfile().
+				Only(ctx)
+			if err != nil {
+				return
+			}
+
+			// Send webhook notifcation to sender
+			err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
+			if err != nil {
+				return
+			}
+		}(order, createdEvent)
+	}
+	wg.Wait()
+
+	return nil
+}
+
+// ProcessSettledOrders processes settled orders for a network
+func ProcessSettledOrders(ctx context.Context, network *ent.Network, txHashes []string, hashToEvent map[string]*types.OrderSettledEvent) error {
+	lockOrders, err := storage.Client.LockPaymentOrder.
+		Query().
+		Where(
+			lockpaymentorder.TxHashIn(txHashes...),
+			lockpaymentorder.StatusEQ(lockpaymentorder.StatusValidated),
+		).
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("IndexOrderSettled.fetchLockOrders: %w", err)
+	}
+
+	var wg sync.WaitGroup
+	for _, lockOrder := range lockOrders {
+		settledEvent, ok := hashToEvent[lockOrder.TxHash]
+		if !ok {
+			continue
+		}
+
+		wg.Add(1)
+		go func(lo *ent.LockPaymentOrder, se *types.OrderSettledEvent) {
+			defer wg.Done()
+
+			// Update order status
+			err := UpdateOrderStatusSettled(ctx, network, se)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":   fmt.Sprintf("%v", err),
+					"OrderID": se.OrderId,
+					"TxHash":  se.TxHash,
+					"Network": network.Identifier,
+				}).Errorf("Failed to update order status settlement when indexing order settled events for %s", network.Identifier)
+			}
+		}(lockOrder, settledEvent)
+	}
+	wg.Wait()
+
+	return nil
+}
+
+// ProcessRefundedOrders processes refunded orders for a network
+func ProcessRefundedOrders(ctx context.Context, network *ent.Network, txHashes []string, hashToEvent map[string]*types.OrderRefundedEvent) error {
+	lockOrders, err := storage.Client.LockPaymentOrder.
+		Query().
+		Where(
+			lockpaymentorder.TxHashIn(txHashes...),
+			lockpaymentorder.Or(
+				lockpaymentorder.StatusEQ(lockpaymentorder.StatusPending),
+				lockpaymentorder.StatusEQ(lockpaymentorder.StatusCancelled),
+			),
+		).
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("IndexOrderRefunded.fetchLockOrders: %w", err)
+	}
+
+	var wg sync.WaitGroup
+	for _, lockOrder := range lockOrders {
+		wg.Add(1)
+		go func(lockOrder *ent.LockPaymentOrder) {
+			defer wg.Done()
+			refundedEvent, ok := hashToEvent[lockOrder.TxHash]
+			if !ok {
+				return
+			}
+
+			refundedEvent.Fee = refundedEvent.Fee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(lockOrder.Edges.Token.Decimals))))
+
+			err := UpdateOrderStatusRefunded(ctx, lockOrder.Edges.Token.Edges.Network, refundedEvent)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":   fmt.Sprintf("%v", err),
+					"OrderID": refundedEvent.OrderId,
+					"TxHash":  refundedEvent.TxHash,
+				}).Errorf("Failed to update order status refund when indexing order refunded events for %s", lockOrder.Edges.Token.Edges.Network.Identifier)
+			}
+		}(lockOrder)
 	}
 	wg.Wait()
 
