@@ -104,10 +104,10 @@ type OrderService interface {
 
 // Indexer provides an interface for indexing blockchain data to the database.
 type Indexer interface {
-	IndexTransfer(ctx context.Context, rpcClient RPCClient, order *ent.PaymentOrder, token *ent.Token, fromBlock int64, toBlock int64) error
-	IndexOrderCreated(ctx context.Context, rpcClient RPCClient, order *ent.PaymentOrder, network *ent.Network, fromBlock int64, toBlock int64) error
-	IndexOrderSettled(ctx context.Context, rpcClient RPCClient, order *ent.LockPaymentOrder, network *ent.Network, fromBlock int64, toBlock int64) error
-	IndexOrderRefunded(ctx context.Context, rpcClient RPCClient, order *ent.LockPaymentOrder, network *ent.Network, fromBlock int64, toBlock int64) error
+	IndexTransfer(ctx context.Context, rpcClient RPCClient, token *ent.Token, fromBlock int64, toBlock int64) error
+	IndexOrderCreated(ctx context.Context, rpcClient RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error
+	IndexOrderSettled(ctx context.Context, rpcClient RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error
+	IndexOrderRefunded(ctx context.Context, rpcClient RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error
 }
 
 // KYCProvider defines the interface for KYC verification providers
