@@ -38,6 +38,7 @@ func TestUserOp(t *testing.T) {
 		SetBundlerURL("http://bundler.biconomy.io").
 		SetPaymasterURL("http://paymaster.biconomy.io").
 		SetFee(decimal.NewFromInt(1)).
+		SetBlockTime(decimal.NewFromFloat(2)).
 		Save(ctx)
 	assert.NoError(t, err)
 
@@ -116,6 +117,7 @@ func TestUserOp(t *testing.T) {
 						"jsonrpc": "2.0",
 						"id":      1,
 						"result": map[string]interface{}{
+							"success": true,
 							"logs": []interface{}{
 								map[string]interface{}{
 									"topics": []interface{}{
@@ -148,6 +150,7 @@ func TestUserOp(t *testing.T) {
 								"to":               "0x5ff137d4b0fdcd49dca30c7cf57e578a026d2789",
 								"transactionIndex": "0x68",
 								"type":             "0x2",
+								"transactionHash":  "0xd4c6ca8929833176505e4a1ee5693a5f5116415414ab672d0949bbd82df4ff54",
 							},
 						},
 					})

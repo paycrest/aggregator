@@ -7,19 +7,15 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
-	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/common"
 	"github.com/paycrest/aggregator/services/contracts"
 	"github.com/paycrest/aggregator/services/order"
-	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
@@ -103,14 +99,9 @@ func (s *IndexerTron) IndexTransfer(ctx context.Context, rpcClient types.RPCClie
 		return nil
 	}
 
-	// Process receive addresses and update their status
-	if err := common.ProcessReceiveAddresses(ctx, s.order, s.priorityQueue, unknownAddresses, addressToEvent); err != nil {
-		return err
-	}
-
-	// Process linked addresses and create payment orders
-	if err := common.ProcessLinkedAddresses(ctx, s.order, unknownAddresses, addressToEvent, token); err != nil {
-		return err
+	err = common.ProcessTransfers(ctx, s.order, s.priorityQueue, unknownAddresses, addressToEvent, token)
+	if err != nil {
+		return fmt.Errorf("IndexTransfer.processTransfers: %w", err)
 	}
 
 	return nil
@@ -199,69 +190,10 @@ func (s *IndexerTron) IndexOrderCreated(ctx context.Context, rpcClient types.RPC
 		return nil
 	}
 
-	orders, err := storage.Client.PaymentOrder.
-		Query().
-		Where(paymentorder.TxHashIn(txHashes...)).
-		WithToken().
-		WithRecipient().
-		All(ctx)
+	err = common.ProcessCreatedOrders(ctx, network, txHashes, hashToEvent, s.order, s.priorityQueue)
 	if err != nil {
-		return fmt.Errorf("IndexOrderCreated.fetchOrders: %w", err)
+		return fmt.Errorf("IndexOrderCreated.processCreatedOrders: %w", err)
 	}
-
-	var wg sync.WaitGroup
-	for _, order := range orders {
-		createdEvent, ok := hashToEvent[order.TxHash]
-		if !ok {
-			continue
-		}
-
-		wg.Add(1)
-		go func(order *ent.PaymentOrder, createdEvent *types.OrderCreatedEvent) {
-			defer wg.Done()
-
-			createdEvent.Amount = createdEvent.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(order.Edges.Token.Decimals))))
-			createdEvent.ProtocolFee = createdEvent.ProtocolFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(order.Edges.Token.Decimals))))
-
-			err := common.CreateLockPaymentOrder(ctx, network, createdEvent, s.order.RefundOrder, s.priorityQueue.AssignLockPaymentOrder)
-			if err != nil {
-				if !strings.Contains(fmt.Sprintf("%v", err), "duplicate key value violates unique constraint") {
-					logger.WithFields(logger.Fields{
-						"Error":   fmt.Sprintf("%v", err),
-						"OrderID": createdEvent.OrderId,
-					}).Errorf("Failed to create lock payment order when indexing order created events for %s", network.Identifier)
-				}
-				return
-			}
-
-			// Update payment order with txHash
-			_, err = order.Update().
-				SetGatewayID(createdEvent.OrderId).
-				SetRate(order.Rate).
-				SetStatus(paymentorder.StatusPending).
-				Save(ctx)
-			if err != nil {
-				return
-			}
-
-			// Refetch payment order
-			paymentOrder, err := storage.Client.PaymentOrder.
-				Query().
-				Where(paymentorder.IDEQ(order.ID)).
-				WithSenderProfile().
-				Only(ctx)
-			if err != nil {
-				return
-			}
-
-			// Send webhook notifcation to sender
-			err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
-			if err != nil {
-				return
-			}
-		}(order, createdEvent)
-	}
-	wg.Wait()
 
 	return nil
 }
@@ -347,39 +279,10 @@ func (s *IndexerTron) IndexOrderSettled(ctx context.Context, rpcClient types.RPC
 		return nil
 	}
 
-	lockOrders, err := storage.Client.LockPaymentOrder.
-		Query().
-		Where(
-			lockpaymentorder.TxHashIn(txHashes...),
-			lockpaymentorder.StatusEQ(lockpaymentorder.StatusValidated),
-		).
-		All(ctx)
+	err = common.ProcessSettledOrders(ctx, network, txHashes, hashToEvent)
 	if err != nil {
-		return fmt.Errorf("IndexOrderSettled.fetchLockOrders: %w", err)
+		return fmt.Errorf("IndexOrderSettled.processSettledOrders: %w", err)
 	}
-
-	var wg sync.WaitGroup
-	for _, lockOrder := range lockOrders {
-		settledEvent, ok := hashToEvent[lockOrder.TxHash]
-		if !ok {
-			continue
-		}
-
-		wg.Add(1)
-		go func(lo *ent.LockPaymentOrder, se *types.OrderSettledEvent) {
-			defer wg.Done()
-
-			// Update order status
-			err := common.UpdateOrderStatusSettled(ctx, network, se)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":   fmt.Sprintf("%v", err),
-					"OrderID": se.OrderId,
-				}).Errorf("Failed to update order status settlement when indexing order settled events for %s", network.Identifier)
-			}
-		}(lockOrder, settledEvent)
-	}
-	wg.Wait()
 
 	return nil
 }
@@ -462,44 +365,10 @@ func (s *IndexerTron) IndexOrderRefunded(ctx context.Context, rpcClient types.RP
 		return nil
 	}
 
-	lockOrders, err := storage.Client.LockPaymentOrder.
-		Query().
-		Where(
-			lockpaymentorder.TxHashIn(txHashes...),
-			lockpaymentorder.Or(
-				lockpaymentorder.StatusEQ(lockpaymentorder.StatusPending),
-				lockpaymentorder.StatusEQ(lockpaymentorder.StatusCancelled),
-			),
-		).
-		WithToken().
-		All(ctx)
+	err = common.ProcessRefundedOrders(ctx, network, txHashes, hashToEvent)
 	if err != nil {
-		return fmt.Errorf("IndexOrderRefunded.fetchLockOrders: %w", err)
+		return fmt.Errorf("IndexOrderRefunded.processRefundedOrders: %w", err)
 	}
-
-	var wg sync.WaitGroup
-	for _, lockOrder := range lockOrders {
-		wg.Add(1)
-		go func(lockOrder *ent.LockPaymentOrder) {
-			defer wg.Done()
-			refundedEvent, ok := hashToEvent[lockOrder.TxHash]
-			if !ok {
-				return
-			}
-
-			refundedEvent.Fee = refundedEvent.Fee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(lockOrder.Edges.Token.Decimals))))
-
-			err := common.UpdateOrderStatusRefunded(ctx, network, refundedEvent)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":   fmt.Sprintf("%v", err),
-					"OrderID": refundedEvent.OrderId,
-					"TxHash":  refundedEvent.TxHash,
-				}).Errorf("Failed to update order status refund when indexing order refunded events for %s", network.Identifier)
-			}
-		}(lockOrder)
-	}
-	wg.Wait()
 
 	return nil
 }
