@@ -297,7 +297,7 @@ func RetryStaleUserOperations() error {
 	return nil
 }
 
-// GetTronLatestBlock fetches the latest block from a Tron endpoint
+// GetTronLatestBlock fetches the latest block (timestamp in milliseconds) for Tron
 func GetTronLatestBlock(endpoint string) (int64, error) {
 	res, err := fastshot.NewClient(endpoint).
 		Config().SetTimeout(15 * time.Second).
@@ -315,7 +315,38 @@ func GetTronLatestBlock(endpoint string) (int64, error) {
 		return 0, fmt.Errorf("failed to parse JSON response: %w", err)
 	}
 
-	return int64(data["block"].([]interface{})[0].(map[string]interface{})["block_header"].(map[string]interface{})["raw_data"].(map[string]interface{})["number"].(float64)), nil
+	return int64(data["block"].([]interface{})[0].(map[string]interface{})["block_header"].(map[string]interface{})["raw_data"].(map[string]interface{})["timestamp"].(float64)), nil
+}
+
+// runIndexers runs the indexers for the given network, indexer, tokens, startBlock, and latestBlock
+func runIndexers(network *ent.Network, indexer types.Indexer, tokens []*ent.Token, startBlock int64, latestBlock int64) {
+	// Index Gateway events
+	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
+		ctx := context.Background()
+		_ = indexer.IndexOrderCreated(ctx, nil, nil, network, start, end)
+	}(network, indexer, startBlock, latestBlock)
+
+	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
+		ctx := context.Background()
+		_ = indexer.IndexOrderSettled(ctx, nil, nil, network, start, end)
+	}(network, indexer, startBlock, latestBlock)
+
+	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
+		ctx := context.Background()
+		_ = indexer.IndexOrderRefunded(ctx, nil, nil, network, start, end)
+	}(network, indexer, startBlock, latestBlock)
+
+	// Index transfer events for tokens in this network
+	for _, token := range tokens {
+		if token.Edges.Network.ID != network.ID {
+			continue
+		}
+
+		go func(token *ent.Token, indexer types.Indexer, start, end int64) {
+			ctx := context.Background()
+			_ = indexer.IndexTransfer(ctx, nil, nil, token, start, end)
+		}(token, indexer, startBlock, latestBlock)
+	}
 }
 
 // TaskIndexBlockchainEvents indexes transfer events for all enabled tokens
@@ -353,10 +384,9 @@ func TaskIndexBlockchainEvents() error {
 		go func(network *ent.Network) {
 			// Create a new context for this network's operations
 			ctx := context.Background()
-			duration := 10 * time.Second
-			latestBlock := int64(0)
-			blocksPerSecond := decimal.NewFromFloat(1.0).Div(decimal.NewFromFloat(2))
-			blocksPerDuration := blocksPerSecond.Mul(decimal.NewFromFloat(duration.Seconds()))
+			var startBlock int64
+			var latestBlock int64
+			var duration time.Duration
 
 			if strings.HasPrefix(network.Identifier, "tron") {
 				indexerInstance = indexer.NewIndexerTron()
@@ -368,6 +398,10 @@ func TaskIndexBlockchainEvents() error {
 					}).Errorf("TaskIndexBlockchainEvents.getLatestBlock")
 					return
 				}
+				duration = 60 * time.Second
+				startBlock = latestBlock - duration.Milliseconds()
+
+				runIndexers(network, indexerInstance, tokens, startBlock, latestBlock)
 			} else {
 				indexerInstance = indexer.NewIndexerEVM()
 				latestBlock, err = engineService.GetLatestBlock(ctx, network.ChainID)
@@ -378,49 +412,23 @@ func TaskIndexBlockchainEvents() error {
 					}).Errorf("TaskIndexBlockchainEvents.getLatestBlock")
 					return
 				}
-			}
+				duration = 10 * time.Second
+				blocksPerSecond := decimal.NewFromFloat(1.0).Div(decimal.NewFromFloat(2))
+				blocksPerDuration := blocksPerSecond.Mul(decimal.NewFromFloat(duration.Seconds()))
+				startBlock = latestBlock - blocksPerDuration.IntPart()
 
-			startBlock := latestBlock - blocksPerDuration.IntPart()
-			const maxChunkSize int64 = 1000
-
-			// Process blocks in chunks
-			for currentBlock := startBlock; currentBlock < latestBlock; currentBlock += maxChunkSize {
-				chunkEnd := currentBlock + maxChunkSize - 1
-				if chunkEnd > latestBlock {
-					chunkEnd = latestBlock
-				}
-
-				// Index Gateway events
-				// Index OrderCreated events
-				go func(network *ent.Network, indexer types.Indexer, start, end int64) {
-					ctx := context.Background()
-					_ = indexer.IndexOrderCreated(ctx, nil, nil, network, start, end)
-				}(network, indexerInstance, currentBlock, chunkEnd)
-
-				// Index OrderSettled events
-				go func(network *ent.Network, indexer types.Indexer, start, end int64) {
-					ctx := context.Background()
-					_ = indexer.IndexOrderSettled(ctx, nil, nil, network, start, end)
-				}(network, indexerInstance, currentBlock, chunkEnd)
-
-				// Index OrderRefunded events
-				go func(network *ent.Network, indexer types.Indexer, start, end int64) {
-					ctx := context.Background()
-					_ = indexer.IndexOrderRefunded(ctx, nil, nil, network, start, end)
-				}(network, indexerInstance, currentBlock, chunkEnd)
-
-				// Index transfer events for tokens in this network
-				for _, token := range tokens {
-					if token.Edges.Network.ID != network.ID {
-						continue
+				// Process blocks in chunks
+				const maxChunkSize int64 = 1000
+				for currentBlock := startBlock; currentBlock < latestBlock; currentBlock += maxChunkSize {
+					chunkEnd := currentBlock + maxChunkSize - 1
+					if chunkEnd > latestBlock {
+						chunkEnd = latestBlock
 					}
 
-					go func(token *ent.Token, indexer types.Indexer, start, end int64) {
-						ctx := context.Background()
-						_ = indexer.IndexTransfer(ctx, nil, nil, token, start, end)
-					}(token, indexerInstance, currentBlock, chunkEnd)
+					runIndexers(network, indexerInstance, tokens, currentBlock, chunkEnd)
 				}
 			}
+
 		}(network)
 	}
 
