@@ -534,9 +534,9 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		go func() {
 			var err error
 			if strings.HasPrefix(fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier, "tron") {
-				err = orderService.NewOrderTron().SettleOrder(ctx, nil, orderID)
+				err = orderService.NewOrderTron().SettleOrder(ctx, orderID)
 			} else {
-				err = orderService.NewOrderEVM().SettleOrder(ctx, nil, orderID)
+				err = orderService.NewOrderEVM().SettleOrder(ctx, orderID)
 			}
 			if err != nil {
 				logger.WithFields(logger.Fields{
@@ -759,9 +759,9 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 		go func() {
 			var err error
 			if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {
-				err = orderService.NewOrderTron().RefundOrder(ctx, nil, order.Edges.Token.Edges.Network, order.GatewayID)
+				err = orderService.NewOrderTron().RefundOrder(ctx, order.Edges.Token.Edges.Network, order.GatewayID)
 			} else {
-				err = orderService.NewOrderEVM().RefundOrder(ctx, nil, order.Edges.Token.Edges.Network, order.GatewayID)
+				err = orderService.NewOrderEVM().RefundOrder(ctx, order.Edges.Token.Edges.Network, order.GatewayID)
 			}
 			if err != nil {
 				logger.WithFields(logger.Fields{
