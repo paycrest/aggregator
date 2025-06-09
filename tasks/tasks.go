@@ -392,13 +392,17 @@ func TaskIndexBlockchainEvents() error {
 				indexerInstance = indexer.NewIndexerTron()
 				latestBlock, err = GetTronLatestBlock(network.RPCEndpoint)
 				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":             fmt.Sprintf("%v", err),
-						"NetworkIdentifier": network.Identifier,
-					}).Errorf("TaskIndexBlockchainEvents.getLatestBlock")
+					// logger.WithFields(logger.Fields{
+					// 	"Error":             fmt.Sprintf("%v", err),
+					// 	"NetworkIdentifier": network.Identifier,
+					// }).Errorf("TaskIndexBlockchainEvents.getLatestBlock")
 					return
 				}
-				duration = 60 * time.Second
+				duration = orderConf.IndexingDuration
+				// Ensure minimum duration for Tron
+				if duration < 60*time.Second {
+					duration = 60 * time.Second
+				}
 				startBlock = latestBlock - duration.Milliseconds()
 
 				runIndexers(network, indexerInstance, tokens, startBlock, latestBlock)
@@ -406,13 +410,13 @@ func TaskIndexBlockchainEvents() error {
 				indexerInstance = indexer.NewIndexerEVM()
 				latestBlock, err = engineService.GetLatestBlock(ctx, network.ChainID)
 				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":             fmt.Sprintf("%v", err),
-						"NetworkIdentifier": network.Identifier,
-					}).Errorf("TaskIndexBlockchainEvents.getLatestBlock")
+					// logger.WithFields(logger.Fields{
+					// 	"Error":             fmt.Sprintf("%v", err),
+					// 	"NetworkIdentifier": network.Identifier,
+					// }).Errorf("TaskIndexBlockchainEvents.getLatestBlock")
 					return
 				}
-				duration = 10 * time.Second
+				duration = orderConf.IndexingDuration
 				blocksPerSecond := decimal.NewFromFloat(1.0).Div(decimal.NewFromFloat(2))
 				blocksPerDuration := blocksPerSecond.Mul(decimal.NewFromFloat(duration.Seconds()))
 				startBlock = latestBlock - blocksPerDuration.IntPart()
