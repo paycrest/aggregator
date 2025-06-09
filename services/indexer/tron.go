@@ -68,9 +68,6 @@ func (s *IndexerTron) IndexTransfer(ctx context.Context, rpcClient types.RPCClie
 
 	for _, r := range data["data"].([]interface{}) {
 		if r.(map[string]interface{})["event_name"].(string) == "Transfer" {
-			fmt.Println(r.(map[string]interface{})["result"].(map[string]interface{})["to"].(string))
-			fmt.Println(r.(map[string]interface{})["result"].(map[string]interface{}))
-
 			fromAddress := r.(map[string]interface{})["result"].(map[string]interface{})["from"].(string)
 
 			if strings.EqualFold(fromAddress, token.Edges.Network.GatewayContractAddress) {
