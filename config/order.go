@@ -21,6 +21,7 @@ type OrderConfiguration struct {
 	RefundCancellationCount          int
 	PercentDeviationFromExternalRate decimal.Decimal
 	PercentDeviationFromMarketRate   decimal.Decimal
+	IndexingDuration                 time.Duration
 }
 
 // OrderConfig sets the order configuration
@@ -34,6 +35,7 @@ func OrderConfig() *OrderConfiguration {
 	viper.SetDefault("NETWORK_FEE", 0.05)
 	viper.SetDefault("PERCENT_DEVIATION_FROM_EXTERNAL_RATE", 0.01)
 	viper.SetDefault("PERCENT_DEVIATION_FROM_MARKET_RATE", 0.1)
+	viper.SetDefault("INDEXING_DURATION", 10)
 
 	return &OrderConfiguration{
 		OrderFulfillmentValidity:         time.Duration(viper.GetInt("ORDER_FULFILLMENT_VALIDITY")) * time.Minute,
@@ -46,6 +48,7 @@ func OrderConfig() *OrderConfiguration {
 		RefundCancellationCount:          viper.GetInt("REFUND_CANCELLATION_COUNT"),
 		PercentDeviationFromExternalRate: decimal.NewFromFloat(viper.GetFloat64("PERCENT_DEVIATION_FROM_EXTERNAL_RATE")),
 		PercentDeviationFromMarketRate:   decimal.NewFromFloat(viper.GetFloat64("PERCENT_DEVIATION_FROM_MARKET_RATE")),
+		IndexingDuration:                 time.Duration(viper.GetInt("INDEXING_DURATION")) * time.Second,
 	}
 }
 
