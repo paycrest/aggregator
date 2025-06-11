@@ -40,7 +40,9 @@ func (User) Fields() []ent.Field {
 		field.Bool("is_email_verified").
 			Default(false),
 		field.Bool("has_early_access"). // has_early_access is "false" by default
-						Default(false),
+			Default(false),
+		field.Bool("isKYBVerified").
+			Default(false),
 	}
 }
 
@@ -55,7 +57,7 @@ func (User) Edges() []ent.Edge {
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("verification_token", VerificationToken.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
-		edge.To("kyb_form_submission", KYBFormSubmission.Type).
+		edge.To("kyb_profile", KYBProfile.Type).
 			Unique().
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}

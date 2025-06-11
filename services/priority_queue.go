@@ -64,7 +64,7 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 			ppq.Where(
 				providerprofile.IsAvailable(true),
 				providerprofile.IsActive(true),
-				providerprofile.IsKybVerified(true),
+				// providerprofile.IsKybVerified(true),
 				providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
 			)
 		}).

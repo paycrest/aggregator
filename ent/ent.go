@@ -17,7 +17,7 @@ import (
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
 	"github.com/paycrest/aggregator/ent/institution"
-	"github.com/paycrest/aggregator/ent/kybformsubmission"
+	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
@@ -101,7 +101,7 @@ func checkColumn(table, column string) error {
 			fiatcurrency.Table:                fiatcurrency.ValidColumn,
 			identityverificationrequest.Table: identityverificationrequest.ValidColumn,
 			institution.Table:                 institution.ValidColumn,
-			kybformsubmission.Table:           kybformsubmission.ValidColumn,
+			kybprofile.Table:                  kybprofile.ValidColumn,
 			linkedaddress.Table:               linkedaddress.ValidColumn,
 			lockorderfulfillment.Table:        lockorderfulfillment.ValidColumn,
 			lockpaymentorder.Table:            lockpaymentorder.ValidColumn,

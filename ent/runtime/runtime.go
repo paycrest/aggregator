@@ -11,7 +11,7 @@ import (
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
 	"github.com/paycrest/aggregator/ent/institution"
-	"github.com/paycrest/aggregator/ent/kybformsubmission"
+	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
@@ -118,25 +118,25 @@ func init() {
 	institution.DefaultUpdatedAt = institutionDescUpdatedAt.Default.(func() time.Time)
 	// institution.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	institution.UpdateDefaultUpdatedAt = institutionDescUpdatedAt.UpdateDefault.(func() time.Time)
-	kybformsubmissionMixin := schema.KYBFormSubmission{}.Mixin()
-	kybformsubmissionMixinFields0 := kybformsubmissionMixin[0].Fields()
-	_ = kybformsubmissionMixinFields0
-	kybformsubmissionFields := schema.KYBFormSubmission{}.Fields()
-	_ = kybformsubmissionFields
-	// kybformsubmissionDescCreatedAt is the schema descriptor for created_at field.
-	kybformsubmissionDescCreatedAt := kybformsubmissionMixinFields0[0].Descriptor()
-	// kybformsubmission.DefaultCreatedAt holds the default value on creation for the created_at field.
-	kybformsubmission.DefaultCreatedAt = kybformsubmissionDescCreatedAt.Default.(func() time.Time)
-	// kybformsubmissionDescUpdatedAt is the schema descriptor for updated_at field.
-	kybformsubmissionDescUpdatedAt := kybformsubmissionMixinFields0[1].Descriptor()
-	// kybformsubmission.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	kybformsubmission.DefaultUpdatedAt = kybformsubmissionDescUpdatedAt.Default.(func() time.Time)
-	// kybformsubmission.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	kybformsubmission.UpdateDefaultUpdatedAt = kybformsubmissionDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// kybformsubmissionDescID is the schema descriptor for id field.
-	kybformsubmissionDescID := kybformsubmissionFields[0].Descriptor()
-	// kybformsubmission.DefaultID holds the default value on creation for the id field.
-	kybformsubmission.DefaultID = kybformsubmissionDescID.Default.(func() uuid.UUID)
+	kybprofileMixin := schema.KYBProfile{}.Mixin()
+	kybprofileMixinFields0 := kybprofileMixin[0].Fields()
+	_ = kybprofileMixinFields0
+	kybprofileFields := schema.KYBProfile{}.Fields()
+	_ = kybprofileFields
+	// kybprofileDescCreatedAt is the schema descriptor for created_at field.
+	kybprofileDescCreatedAt := kybprofileMixinFields0[0].Descriptor()
+	// kybprofile.DefaultCreatedAt holds the default value on creation for the created_at field.
+	kybprofile.DefaultCreatedAt = kybprofileDescCreatedAt.Default.(func() time.Time)
+	// kybprofileDescUpdatedAt is the schema descriptor for updated_at field.
+	kybprofileDescUpdatedAt := kybprofileMixinFields0[1].Descriptor()
+	// kybprofile.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	kybprofile.DefaultUpdatedAt = kybprofileDescUpdatedAt.Default.(func() time.Time)
+	// kybprofile.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	kybprofile.UpdateDefaultUpdatedAt = kybprofileDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// kybprofileDescID is the schema descriptor for id field.
+	kybprofileDescID := kybprofileFields[0].Descriptor()
+	// kybprofile.DefaultID holds the default value on creation for the id field.
+	kybprofile.DefaultID = kybprofileDescID.Default.(func() uuid.UUID)
 	linkedaddressMixin := schema.LinkedAddress{}.Mixin()
 	linkedaddressMixinFields0 := linkedaddressMixin[0].Fields()
 	_ = linkedaddressMixinFields0
@@ -311,10 +311,6 @@ func init() {
 	providerprofile.DefaultUpdatedAt = providerprofileDescUpdatedAt.Default.(func() time.Time)
 	// providerprofile.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	providerprofile.UpdateDefaultUpdatedAt = providerprofileDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// providerprofileDescIsKybVerified is the schema descriptor for is_kyb_verified field.
-	providerprofileDescIsKybVerified := providerprofileFields[15].Descriptor()
-	// providerprofile.DefaultIsKybVerified holds the default value on creation for the is_kyb_verified field.
-	providerprofile.DefaultIsKybVerified = providerprofileDescIsKybVerified.Default.(bool)
 	// providerprofileDescID is the schema descriptor for id field.
 	providerprofileDescID := providerprofileFields[0].Descriptor()
 	// providerprofile.DefaultID holds the default value on creation for the id field.
@@ -480,6 +476,10 @@ func init() {
 	userDescHasEarlyAccess := userFields[7].Descriptor()
 	// user.DefaultHasEarlyAccess holds the default value on creation for the has_early_access field.
 	user.DefaultHasEarlyAccess = userDescHasEarlyAccess.Default.(bool)
+	// userDescIsKYBVerified is the schema descriptor for isKYBVerified  field.
+	userDescIsKYBVerified := userFields[8].Descriptor()
+	// user.DefaultIsKYBVerified holds the default value on creation for the isKYBVerified  field.
+	user.DefaultIsKYBVerified = userDescIsKYBVerified.Default.(bool)
 	// userDescID is the schema descriptor for id field.
 	userDescID := userFields[0].Descriptor()
 	// user.DefaultID holds the default value on creation for the id field.

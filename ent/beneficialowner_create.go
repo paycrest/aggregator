@@ -13,7 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/beneficialowner"
-	"github.com/paycrest/aggregator/ent/kybformsubmission"
+	"github.com/paycrest/aggregator/ent/kybprofile"
 )
 
 // BeneficialOwnerCreate is the builder for creating a BeneficialOwner entity.
@@ -60,6 +60,20 @@ func (boc *BeneficialOwnerCreate) SetOwnershipPercentage(f float64) *BeneficialO
 	return boc
 }
 
+// SetGovernmentIssuedIDType sets the "government_issued_id_type" field.
+func (boc *BeneficialOwnerCreate) SetGovernmentIssuedIDType(biit beneficialowner.GovernmentIssuedIDType) *BeneficialOwnerCreate {
+	boc.mutation.SetGovernmentIssuedIDType(biit)
+	return boc
+}
+
+// SetNillableGovernmentIssuedIDType sets the "government_issued_id_type" field if the given value is not nil.
+func (boc *BeneficialOwnerCreate) SetNillableGovernmentIssuedIDType(biit *beneficialowner.GovernmentIssuedIDType) *BeneficialOwnerCreate {
+	if biit != nil {
+		boc.SetGovernmentIssuedIDType(*biit)
+	}
+	return boc
+}
+
 // SetID sets the "id" field.
 func (boc *BeneficialOwnerCreate) SetID(u uuid.UUID) *BeneficialOwnerCreate {
 	boc.mutation.SetID(u)
@@ -74,23 +88,15 @@ func (boc *BeneficialOwnerCreate) SetNillableID(u *uuid.UUID) *BeneficialOwnerCr
 	return boc
 }
 
-// SetKybFormSubmissionID sets the "kyb_form_submission" edge to the KYBFormSubmission entity by ID.
-func (boc *BeneficialOwnerCreate) SetKybFormSubmissionID(id uuid.UUID) *BeneficialOwnerCreate {
-	boc.mutation.SetKybFormSubmissionID(id)
+// SetKybProfileID sets the "kyb_profile" edge to the KYBProfile entity by ID.
+func (boc *BeneficialOwnerCreate) SetKybProfileID(id uuid.UUID) *BeneficialOwnerCreate {
+	boc.mutation.SetKybProfileID(id)
 	return boc
 }
 
-// SetNillableKybFormSubmissionID sets the "kyb_form_submission" edge to the KYBFormSubmission entity by ID if the given value is not nil.
-func (boc *BeneficialOwnerCreate) SetNillableKybFormSubmissionID(id *uuid.UUID) *BeneficialOwnerCreate {
-	if id != nil {
-		boc = boc.SetKybFormSubmissionID(*id)
-	}
-	return boc
-}
-
-// SetKybFormSubmission sets the "kyb_form_submission" edge to the KYBFormSubmission entity.
-func (boc *BeneficialOwnerCreate) SetKybFormSubmission(k *KYBFormSubmission) *BeneficialOwnerCreate {
-	return boc.SetKybFormSubmissionID(k.ID)
+// SetKybProfile sets the "kyb_profile" edge to the KYBProfile entity.
+func (boc *BeneficialOwnerCreate) SetKybProfile(k *KYBProfile) *BeneficialOwnerCreate {
+	return boc.SetKybProfileID(k.ID)
 }
 
 // Mutation returns the BeneficialOwnerMutation object of the builder.
@@ -159,6 +165,14 @@ func (boc *BeneficialOwnerCreate) check() error {
 	if _, ok := boc.mutation.OwnershipPercentage(); !ok {
 		return &ValidationError{Name: "ownership_percentage", err: errors.New(`ent: missing required field "BeneficialOwner.ownership_percentage"`)}
 	}
+	if v, ok := boc.mutation.GovernmentIssuedIDType(); ok {
+		if err := beneficialowner.GovernmentIssuedIDTypeValidator(v); err != nil {
+			return &ValidationError{Name: "government_issued_id_type", err: fmt.Errorf(`ent: validator failed for field "BeneficialOwner.government_issued_id_type": %w`, err)}
+		}
+	}
+	if len(boc.mutation.KybProfileIDs()) == 0 {
+		return &ValidationError{Name: "kyb_profile", err: errors.New(`ent: missing required edge "BeneficialOwner.kyb_profile"`)}
+	}
 	return nil
 }
 
@@ -219,21 +233,25 @@ func (boc *BeneficialOwnerCreate) createSpec() (*BeneficialOwner, *sqlgraph.Crea
 		_spec.SetField(beneficialowner.FieldOwnershipPercentage, field.TypeFloat64, value)
 		_node.OwnershipPercentage = value
 	}
-	if nodes := boc.mutation.KybFormSubmissionIDs(); len(nodes) > 0 {
+	if value, ok := boc.mutation.GovernmentIssuedIDType(); ok {
+		_spec.SetField(beneficialowner.FieldGovernmentIssuedIDType, field.TypeEnum, value)
+		_node.GovernmentIssuedIDType = value
+	}
+	if nodes := boc.mutation.KybProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   beneficialowner.KybFormSubmissionTable,
-			Columns: []string{beneficialowner.KybFormSubmissionColumn},
+			Table:   beneficialowner.KybProfileTable,
+			Columns: []string{beneficialowner.KybProfileColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(kybformsubmission.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(kybprofile.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.kyb_form_submission_beneficial_owners = &nodes[0]
+		_node.kyb_profile_beneficial_owners = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
@@ -363,6 +381,24 @@ func (u *BeneficialOwnerUpsert) UpdateOwnershipPercentage() *BeneficialOwnerUpse
 // AddOwnershipPercentage adds v to the "ownership_percentage" field.
 func (u *BeneficialOwnerUpsert) AddOwnershipPercentage(v float64) *BeneficialOwnerUpsert {
 	u.Add(beneficialowner.FieldOwnershipPercentage, v)
+	return u
+}
+
+// SetGovernmentIssuedIDType sets the "government_issued_id_type" field.
+func (u *BeneficialOwnerUpsert) SetGovernmentIssuedIDType(v beneficialowner.GovernmentIssuedIDType) *BeneficialOwnerUpsert {
+	u.Set(beneficialowner.FieldGovernmentIssuedIDType, v)
+	return u
+}
+
+// UpdateGovernmentIssuedIDType sets the "government_issued_id_type" field to the value that was provided on create.
+func (u *BeneficialOwnerUpsert) UpdateGovernmentIssuedIDType() *BeneficialOwnerUpsert {
+	u.SetExcluded(beneficialowner.FieldGovernmentIssuedIDType)
+	return u
+}
+
+// ClearGovernmentIssuedIDType clears the value of the "government_issued_id_type" field.
+func (u *BeneficialOwnerUpsert) ClearGovernmentIssuedIDType() *BeneficialOwnerUpsert {
+	u.SetNull(beneficialowner.FieldGovernmentIssuedIDType)
 	return u
 }
 
@@ -502,6 +538,27 @@ func (u *BeneficialOwnerUpsertOne) AddOwnershipPercentage(v float64) *Beneficial
 func (u *BeneficialOwnerUpsertOne) UpdateOwnershipPercentage() *BeneficialOwnerUpsertOne {
 	return u.Update(func(s *BeneficialOwnerUpsert) {
 		s.UpdateOwnershipPercentage()
+	})
+}
+
+// SetGovernmentIssuedIDType sets the "government_issued_id_type" field.
+func (u *BeneficialOwnerUpsertOne) SetGovernmentIssuedIDType(v beneficialowner.GovernmentIssuedIDType) *BeneficialOwnerUpsertOne {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.SetGovernmentIssuedIDType(v)
+	})
+}
+
+// UpdateGovernmentIssuedIDType sets the "government_issued_id_type" field to the value that was provided on create.
+func (u *BeneficialOwnerUpsertOne) UpdateGovernmentIssuedIDType() *BeneficialOwnerUpsertOne {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.UpdateGovernmentIssuedIDType()
+	})
+}
+
+// ClearGovernmentIssuedIDType clears the value of the "government_issued_id_type" field.
+func (u *BeneficialOwnerUpsertOne) ClearGovernmentIssuedIDType() *BeneficialOwnerUpsertOne {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.ClearGovernmentIssuedIDType()
 	})
 }
 
@@ -808,6 +865,27 @@ func (u *BeneficialOwnerUpsertBulk) AddOwnershipPercentage(v float64) *Beneficia
 func (u *BeneficialOwnerUpsertBulk) UpdateOwnershipPercentage() *BeneficialOwnerUpsertBulk {
 	return u.Update(func(s *BeneficialOwnerUpsert) {
 		s.UpdateOwnershipPercentage()
+	})
+}
+
+// SetGovernmentIssuedIDType sets the "government_issued_id_type" field.
+func (u *BeneficialOwnerUpsertBulk) SetGovernmentIssuedIDType(v beneficialowner.GovernmentIssuedIDType) *BeneficialOwnerUpsertBulk {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.SetGovernmentIssuedIDType(v)
+	})
+}
+
+// UpdateGovernmentIssuedIDType sets the "government_issued_id_type" field to the value that was provided on create.
+func (u *BeneficialOwnerUpsertBulk) UpdateGovernmentIssuedIDType() *BeneficialOwnerUpsertBulk {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.UpdateGovernmentIssuedIDType()
+	})
+}
+
+// ClearGovernmentIssuedIDType clears the value of the "government_issued_id_type" field.
+func (u *BeneficialOwnerUpsertBulk) ClearGovernmentIssuedIDType() *BeneficialOwnerUpsertBulk {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.ClearGovernmentIssuedIDType()
 	})
 }
 

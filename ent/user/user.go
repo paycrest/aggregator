@@ -34,14 +34,16 @@ const (
 	FieldIsEmailVerified = "is_email_verified"
 	// FieldHasEarlyAccess holds the string denoting the has_early_access field in the database.
 	FieldHasEarlyAccess = "has_early_access"
+	// FieldIsKYBVerified holds the string denoting the iskybverified  field in the database.
+	FieldIsKYBVerified = "is_kyb_verified "
 	// EdgeSenderProfile holds the string denoting the sender_profile edge name in mutations.
 	EdgeSenderProfile = "sender_profile"
 	// EdgeProviderProfile holds the string denoting the provider_profile edge name in mutations.
 	EdgeProviderProfile = "provider_profile"
 	// EdgeVerificationToken holds the string denoting the verification_token edge name in mutations.
 	EdgeVerificationToken = "verification_token"
-	// EdgeKybFormSubmission holds the string denoting the kyb_form_submission edge name in mutations.
-	EdgeKybFormSubmission = "kyb_form_submission"
+	// EdgeKybProfile holds the string denoting the kyb_profile edge name in mutations.
+	EdgeKybProfile = "kyb_profile"
 	// Table holds the table name of the user in the database.
 	Table = "users"
 	// SenderProfileTable is the table that holds the sender_profile relation/edge.
@@ -65,13 +67,13 @@ const (
 	VerificationTokenInverseTable = "verification_tokens"
 	// VerificationTokenColumn is the table column denoting the verification_token relation/edge.
 	VerificationTokenColumn = "user_verification_token"
-	// KybFormSubmissionTable is the table that holds the kyb_form_submission relation/edge.
-	KybFormSubmissionTable = "users"
-	// KybFormSubmissionInverseTable is the table name for the KYBFormSubmission entity.
-	// It exists in this package in order to avoid circular dependency with the "kybformsubmission" package.
-	KybFormSubmissionInverseTable = "kyb_form_submissions"
-	// KybFormSubmissionColumn is the table column denoting the kyb_form_submission relation/edge.
-	KybFormSubmissionColumn = "user_kyb_form_submission"
+	// KybProfileTable is the table that holds the kyb_profile relation/edge.
+	KybProfileTable = "kyb_profiles"
+	// KybProfileInverseTable is the table name for the KYBProfile entity.
+	// It exists in this package in order to avoid circular dependency with the "kybprofile" package.
+	KybProfileInverseTable = "kyb_profiles"
+	// KybProfileColumn is the table column denoting the kyb_profile relation/edge.
+	KybProfileColumn = "user_kyb_profile"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -86,23 +88,13 @@ var Columns = []string{
 	FieldScope,
 	FieldIsEmailVerified,
 	FieldHasEarlyAccess,
-}
-
-// ForeignKeys holds the SQL foreign-keys that are owned by the "users"
-// table and are not defined as standalone fields in the schema.
-var ForeignKeys = []string{
-	"user_kyb_form_submission",
+	FieldIsKYBVerified,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
-			return true
-		}
-	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -130,6 +122,8 @@ var (
 	DefaultIsEmailVerified bool
 	// DefaultHasEarlyAccess holds the default value on creation for the "has_early_access" field.
 	DefaultHasEarlyAccess bool
+	// DefaultIsKYBVerified holds the default value on creation for the "isKYBVerified " field.
+	DefaultIsKYBVerified bool
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -187,6 +181,11 @@ func ByHasEarlyAccess(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldHasEarlyAccess, opts...).ToFunc()
 }
 
+// ByIsKYBVerified orders the results by the isKYBVerified  field.
+func ByIsKYBVerified(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIsKYBVerified, opts...).ToFunc()
+}
+
 // BySenderProfileField orders the results by sender_profile field.
 func BySenderProfileField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -215,10 +214,10 @@ func ByVerificationToken(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption
 	}
 }
 
-// ByKybFormSubmissionField orders the results by kyb_form_submission field.
-func ByKybFormSubmissionField(field string, opts ...sql.OrderTermOption) OrderOption {
+// ByKybProfileField orders the results by kyb_profile field.
+func ByKybProfileField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newKybFormSubmissionStep(), sql.OrderByField(field, opts...))
+		sqlgraph.OrderByNeighborTerms(s, newKybProfileStep(), sql.OrderByField(field, opts...))
 	}
 }
 func newSenderProfileStep() *sqlgraph.Step {
@@ -242,10 +241,10 @@ func newVerificationTokenStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.O2M, false, VerificationTokenTable, VerificationTokenColumn),
 	)
 }
-func newKybFormSubmissionStep() *sqlgraph.Step {
+func newKybProfileStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(KybFormSubmissionInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, false, KybFormSubmissionTable, KybFormSubmissionColumn),
+		sqlgraph.To(KybProfileInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, false, KybProfileTable, KybProfileColumn),
 	)
 }

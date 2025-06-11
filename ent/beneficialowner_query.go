@@ -13,19 +13,19 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/beneficialowner"
-	"github.com/paycrest/aggregator/ent/kybformsubmission"
+	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/predicate"
 )
 
 // BeneficialOwnerQuery is the builder for querying BeneficialOwner entities.
 type BeneficialOwnerQuery struct {
 	config
-	ctx                   *QueryContext
-	order                 []beneficialowner.OrderOption
-	inters                []Interceptor
-	predicates            []predicate.BeneficialOwner
-	withKybFormSubmission *KYBFormSubmissionQuery
-	withFKs               bool
+	ctx            *QueryContext
+	order          []beneficialowner.OrderOption
+	inters         []Interceptor
+	predicates     []predicate.BeneficialOwner
+	withKybProfile *KYBProfileQuery
+	withFKs        bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -62,9 +62,9 @@ func (boq *BeneficialOwnerQuery) Order(o ...beneficialowner.OrderOption) *Benefi
 	return boq
 }
 
-// QueryKybFormSubmission chains the current query on the "kyb_form_submission" edge.
-func (boq *BeneficialOwnerQuery) QueryKybFormSubmission() *KYBFormSubmissionQuery {
-	query := (&KYBFormSubmissionClient{config: boq.config}).Query()
+// QueryKybProfile chains the current query on the "kyb_profile" edge.
+func (boq *BeneficialOwnerQuery) QueryKybProfile() *KYBProfileQuery {
+	query := (&KYBProfileClient{config: boq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := boq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -75,8 +75,8 @@ func (boq *BeneficialOwnerQuery) QueryKybFormSubmission() *KYBFormSubmissionQuer
 		}
 		step := sqlgraph.NewStep(
 			sqlgraph.From(beneficialowner.Table, beneficialowner.FieldID, selector),
-			sqlgraph.To(kybformsubmission.Table, kybformsubmission.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, beneficialowner.KybFormSubmissionTable, beneficialowner.KybFormSubmissionColumn),
+			sqlgraph.To(kybprofile.Table, kybprofile.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, beneficialowner.KybProfileTable, beneficialowner.KybProfileColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(boq.driver.Dialect(), step)
 		return fromU, nil
@@ -271,26 +271,26 @@ func (boq *BeneficialOwnerQuery) Clone() *BeneficialOwnerQuery {
 		return nil
 	}
 	return &BeneficialOwnerQuery{
-		config:                boq.config,
-		ctx:                   boq.ctx.Clone(),
-		order:                 append([]beneficialowner.OrderOption{}, boq.order...),
-		inters:                append([]Interceptor{}, boq.inters...),
-		predicates:            append([]predicate.BeneficialOwner{}, boq.predicates...),
-		withKybFormSubmission: boq.withKybFormSubmission.Clone(),
+		config:         boq.config,
+		ctx:            boq.ctx.Clone(),
+		order:          append([]beneficialowner.OrderOption{}, boq.order...),
+		inters:         append([]Interceptor{}, boq.inters...),
+		predicates:     append([]predicate.BeneficialOwner{}, boq.predicates...),
+		withKybProfile: boq.withKybProfile.Clone(),
 		// clone intermediate query.
 		sql:  boq.sql.Clone(),
 		path: boq.path,
 	}
 }
 
-// WithKybFormSubmission tells the query-builder to eager-load the nodes that are connected to
-// the "kyb_form_submission" edge. The optional arguments are used to configure the query builder of the edge.
-func (boq *BeneficialOwnerQuery) WithKybFormSubmission(opts ...func(*KYBFormSubmissionQuery)) *BeneficialOwnerQuery {
-	query := (&KYBFormSubmissionClient{config: boq.config}).Query()
+// WithKybProfile tells the query-builder to eager-load the nodes that are connected to
+// the "kyb_profile" edge. The optional arguments are used to configure the query builder of the edge.
+func (boq *BeneficialOwnerQuery) WithKybProfile(opts ...func(*KYBProfileQuery)) *BeneficialOwnerQuery {
+	query := (&KYBProfileClient{config: boq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	boq.withKybFormSubmission = query
+	boq.withKybProfile = query
 	return boq
 }
 
@@ -374,10 +374,10 @@ func (boq *BeneficialOwnerQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 		withFKs     = boq.withFKs
 		_spec       = boq.querySpec()
 		loadedTypes = [1]bool{
-			boq.withKybFormSubmission != nil,
+			boq.withKybProfile != nil,
 		}
 	)
-	if boq.withKybFormSubmission != nil {
+	if boq.withKybProfile != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -401,23 +401,23 @@ func (boq *BeneficialOwnerQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := boq.withKybFormSubmission; query != nil {
-		if err := boq.loadKybFormSubmission(ctx, query, nodes, nil,
-			func(n *BeneficialOwner, e *KYBFormSubmission) { n.Edges.KybFormSubmission = e }); err != nil {
+	if query := boq.withKybProfile; query != nil {
+		if err := boq.loadKybProfile(ctx, query, nodes, nil,
+			func(n *BeneficialOwner, e *KYBProfile) { n.Edges.KybProfile = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (boq *BeneficialOwnerQuery) loadKybFormSubmission(ctx context.Context, query *KYBFormSubmissionQuery, nodes []*BeneficialOwner, init func(*BeneficialOwner), assign func(*BeneficialOwner, *KYBFormSubmission)) error {
+func (boq *BeneficialOwnerQuery) loadKybProfile(ctx context.Context, query *KYBProfileQuery, nodes []*BeneficialOwner, init func(*BeneficialOwner), assign func(*BeneficialOwner, *KYBProfile)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*BeneficialOwner)
 	for i := range nodes {
-		if nodes[i].kyb_form_submission_beneficial_owners == nil {
+		if nodes[i].kyb_profile_beneficial_owners == nil {
 			continue
 		}
-		fk := *nodes[i].kyb_form_submission_beneficial_owners
+		fk := *nodes[i].kyb_profile_beneficial_owners
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -426,7 +426,7 @@ func (boq *BeneficialOwnerQuery) loadKybFormSubmission(ctx context.Context, quer
 	if len(ids) == 0 {
 		return nil
 	}
-	query.Where(kybformsubmission.IDIn(ids...))
+	query.Where(kybprofile.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
@@ -434,7 +434,7 @@ func (boq *BeneficialOwnerQuery) loadKybFormSubmission(ctx context.Context, quer
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "kyb_form_submission_beneficial_owners" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "kyb_profile_beneficial_owners" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

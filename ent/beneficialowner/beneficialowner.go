@@ -3,6 +3,8 @@
 package beneficialowner
 
 import (
+	"fmt"
+
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
@@ -25,17 +27,19 @@ const (
 	FieldDateOfBirth = "date_of_birth"
 	// FieldOwnershipPercentage holds the string denoting the ownership_percentage field in the database.
 	FieldOwnershipPercentage = "ownership_percentage"
-	// EdgeKybFormSubmission holds the string denoting the kyb_form_submission edge name in mutations.
-	EdgeKybFormSubmission = "kyb_form_submission"
+	// FieldGovernmentIssuedIDType holds the string denoting the government_issued_id_type field in the database.
+	FieldGovernmentIssuedIDType = "government_issued_id_type"
+	// EdgeKybProfile holds the string denoting the kyb_profile edge name in mutations.
+	EdgeKybProfile = "kyb_profile"
 	// Table holds the table name of the beneficialowner in the database.
 	Table = "beneficial_owners"
-	// KybFormSubmissionTable is the table that holds the kyb_form_submission relation/edge.
-	KybFormSubmissionTable = "beneficial_owners"
-	// KybFormSubmissionInverseTable is the table name for the KYBFormSubmission entity.
-	// It exists in this package in order to avoid circular dependency with the "kybformsubmission" package.
-	KybFormSubmissionInverseTable = "kyb_form_submissions"
-	// KybFormSubmissionColumn is the table column denoting the kyb_form_submission relation/edge.
-	KybFormSubmissionColumn = "kyb_form_submission_beneficial_owners"
+	// KybProfileTable is the table that holds the kyb_profile relation/edge.
+	KybProfileTable = "beneficial_owners"
+	// KybProfileInverseTable is the table name for the KYBProfile entity.
+	// It exists in this package in order to avoid circular dependency with the "kybprofile" package.
+	KybProfileInverseTable = "kyb_profiles"
+	// KybProfileColumn is the table column denoting the kyb_profile relation/edge.
+	KybProfileColumn = "kyb_profile_beneficial_owners"
 )
 
 // Columns holds all SQL columns for beneficialowner fields.
@@ -47,12 +51,13 @@ var Columns = []string{
 	FieldGovernmentIssuedIDURL,
 	FieldDateOfBirth,
 	FieldOwnershipPercentage,
+	FieldGovernmentIssuedIDType,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "beneficial_owners"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"kyb_form_submission_beneficial_owners",
+	"kyb_profile_beneficial_owners",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -76,6 +81,30 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// GovernmentIssuedIDType defines the type for the "government_issued_id_type" enum field.
+type GovernmentIssuedIDType string
+
+// GovernmentIssuedIDType values.
+const (
+	GovernmentIssuedIDTypePassport       GovernmentIssuedIDType = "passport"
+	GovernmentIssuedIDTypeDriversLicense GovernmentIssuedIDType = "drivers_license"
+	GovernmentIssuedIDTypeNationalID     GovernmentIssuedIDType = "national_id"
+)
+
+func (giit GovernmentIssuedIDType) String() string {
+	return string(giit)
+}
+
+// GovernmentIssuedIDTypeValidator is a validator for the "government_issued_id_type" field enum values. It is called by the builders before save.
+func GovernmentIssuedIDTypeValidator(giit GovernmentIssuedIDType) error {
+	switch giit {
+	case GovernmentIssuedIDTypePassport, GovernmentIssuedIDTypeDriversLicense, GovernmentIssuedIDTypeNationalID:
+		return nil
+	default:
+		return fmt.Errorf("beneficialowner: invalid enum value for government_issued_id_type field: %q", giit)
+	}
+}
 
 // OrderOption defines the ordering options for the BeneficialOwner queries.
 type OrderOption func(*sql.Selector)
@@ -115,16 +144,21 @@ func ByOwnershipPercentage(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldOwnershipPercentage, opts...).ToFunc()
 }
 
-// ByKybFormSubmissionField orders the results by kyb_form_submission field.
-func ByKybFormSubmissionField(field string, opts ...sql.OrderTermOption) OrderOption {
+// ByGovernmentIssuedIDType orders the results by the government_issued_id_type field.
+func ByGovernmentIssuedIDType(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldGovernmentIssuedIDType, opts...).ToFunc()
+}
+
+// ByKybProfileField orders the results by kyb_profile field.
+func ByKybProfileField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newKybFormSubmissionStep(), sql.OrderByField(field, opts...))
+		sqlgraph.OrderByNeighborTerms(s, newKybProfileStep(), sql.OrderByField(field, opts...))
 	}
 }
-func newKybFormSubmissionStep() *sqlgraph.Step {
+func newKybProfileStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(KybFormSubmissionInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, true, KybFormSubmissionTable, KybFormSubmissionColumn),
+		sqlgraph.To(KybProfileInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, KybProfileTable, KybProfileColumn),
 	)
 }

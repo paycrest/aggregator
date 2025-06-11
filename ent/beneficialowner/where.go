@@ -449,21 +449,51 @@ func OwnershipPercentageLTE(v float64) predicate.BeneficialOwner {
 	return predicate.BeneficialOwner(sql.FieldLTE(FieldOwnershipPercentage, v))
 }
 
-// HasKybFormSubmission applies the HasEdge predicate on the "kyb_form_submission" edge.
-func HasKybFormSubmission() predicate.BeneficialOwner {
+// GovernmentIssuedIDTypeEQ applies the EQ predicate on the "government_issued_id_type" field.
+func GovernmentIssuedIDTypeEQ(v GovernmentIssuedIDType) predicate.BeneficialOwner {
+	return predicate.BeneficialOwner(sql.FieldEQ(FieldGovernmentIssuedIDType, v))
+}
+
+// GovernmentIssuedIDTypeNEQ applies the NEQ predicate on the "government_issued_id_type" field.
+func GovernmentIssuedIDTypeNEQ(v GovernmentIssuedIDType) predicate.BeneficialOwner {
+	return predicate.BeneficialOwner(sql.FieldNEQ(FieldGovernmentIssuedIDType, v))
+}
+
+// GovernmentIssuedIDTypeIn applies the In predicate on the "government_issued_id_type" field.
+func GovernmentIssuedIDTypeIn(vs ...GovernmentIssuedIDType) predicate.BeneficialOwner {
+	return predicate.BeneficialOwner(sql.FieldIn(FieldGovernmentIssuedIDType, vs...))
+}
+
+// GovernmentIssuedIDTypeNotIn applies the NotIn predicate on the "government_issued_id_type" field.
+func GovernmentIssuedIDTypeNotIn(vs ...GovernmentIssuedIDType) predicate.BeneficialOwner {
+	return predicate.BeneficialOwner(sql.FieldNotIn(FieldGovernmentIssuedIDType, vs...))
+}
+
+// GovernmentIssuedIDTypeIsNil applies the IsNil predicate on the "government_issued_id_type" field.
+func GovernmentIssuedIDTypeIsNil() predicate.BeneficialOwner {
+	return predicate.BeneficialOwner(sql.FieldIsNull(FieldGovernmentIssuedIDType))
+}
+
+// GovernmentIssuedIDTypeNotNil applies the NotNil predicate on the "government_issued_id_type" field.
+func GovernmentIssuedIDTypeNotNil() predicate.BeneficialOwner {
+	return predicate.BeneficialOwner(sql.FieldNotNull(FieldGovernmentIssuedIDType))
+}
+
+// HasKybProfile applies the HasEdge predicate on the "kyb_profile" edge.
+func HasKybProfile() predicate.BeneficialOwner {
 	return predicate.BeneficialOwner(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, KybFormSubmissionTable, KybFormSubmissionColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, KybProfileTable, KybProfileColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasKybFormSubmissionWith applies the HasEdge predicate on the "kyb_form_submission" edge with a given conditions (other predicates).
-func HasKybFormSubmissionWith(preds ...predicate.KYBFormSubmission) predicate.BeneficialOwner {
+// HasKybProfileWith applies the HasEdge predicate on the "kyb_profile" edge with a given conditions (other predicates).
+func HasKybProfileWith(preds ...predicate.KYBProfile) predicate.BeneficialOwner {
 	return predicate.BeneficialOwner(func(s *sql.Selector) {
-		step := newKybFormSubmissionStep()
+		step := newKybProfileStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

@@ -21,8 +21,8 @@ type IdentityVerificationRequest func(*sql.Selector)
 // Institution is the predicate function for institution builders.
 type Institution func(*sql.Selector)
 
-// KYBFormSubmission is the predicate function for kybformsubmission builders.
-type KYBFormSubmission func(*sql.Selector)
+// KYBProfile is the predicate function for kybprofile builders.
+type KYBProfile func(*sql.Selector)
 
 // LinkedAddress is the predicate function for linkedaddress builders.
 type LinkedAddress func(*sql.Selector)

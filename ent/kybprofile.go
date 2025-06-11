@@ -10,12 +10,12 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
-	"github.com/paycrest/aggregator/ent/kybformsubmission"
+	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/user"
 )
 
-// KYBFormSubmission is the model entity for the KYBFormSubmission schema.
-type KYBFormSubmission struct {
+// KYBProfile is the model entity for the KYBProfile schema.
+type KYBProfile struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
@@ -23,8 +23,8 @@ type KYBFormSubmission struct {
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
-	// Email holds the value of the "email" field.
-	Email string `json:"email,omitempty"`
+	// MobileNumber holds the value of the "mobile_number" field.
+	MobileNumber string `json:"mobile_number,omitempty"`
 	// CompanyName holds the value of the "company_name" field.
 	CompanyName string `json:"company_name,omitempty"`
 	// RegisteredBusinessAddress holds the value of the "registered_business_address" field.
@@ -40,18 +40,18 @@ type KYBFormSubmission struct {
 	// ProofOfResidentialAddressURL holds the value of the "proof_of_residential_address_url" field.
 	ProofOfResidentialAddressURL string `json:"proof_of_residential_address_url,omitempty"`
 	// AmlPolicyURL holds the value of the "aml_policy_url" field.
-	AmlPolicyURL *string `json:"aml_policy_url,omitempty"`
+	AmlPolicyURL string `json:"aml_policy_url,omitempty"`
 	// KycPolicyURL holds the value of the "kyc_policy_url" field.
 	KycPolicyURL *string `json:"kyc_policy_url,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
-	// The values are being populated by the KYBFormSubmissionQuery when eager-loading is set.
-	Edges                    KYBFormSubmissionEdges `json:"edges"`
-	kyb_form_submission_user *uuid.UUID
-	selectValues             sql.SelectValues
+	// The values are being populated by the KYBProfileQuery when eager-loading is set.
+	Edges            KYBProfileEdges `json:"edges"`
+	user_kyb_profile *uuid.UUID
+	selectValues     sql.SelectValues
 }
 
-// KYBFormSubmissionEdges holds the relations/edges for other nodes in the graph.
-type KYBFormSubmissionEdges struct {
+// KYBProfileEdges holds the relations/edges for other nodes in the graph.
+type KYBProfileEdges struct {
 	// BeneficialOwners holds the value of the beneficial_owners edge.
 	BeneficialOwners []*BeneficialOwner `json:"beneficial_owners,omitempty"`
 	// User holds the value of the user edge.
@@ -63,7 +63,7 @@ type KYBFormSubmissionEdges struct {
 
 // BeneficialOwnersOrErr returns the BeneficialOwners value or an error if the edge
 // was not loaded in eager-loading.
-func (e KYBFormSubmissionEdges) BeneficialOwnersOrErr() ([]*BeneficialOwner, error) {
+func (e KYBProfileEdges) BeneficialOwnersOrErr() ([]*BeneficialOwner, error) {
 	if e.loadedTypes[0] {
 		return e.BeneficialOwners, nil
 	}
@@ -72,7 +72,7 @@ func (e KYBFormSubmissionEdges) BeneficialOwnersOrErr() ([]*BeneficialOwner, err
 
 // UserOrErr returns the User value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e KYBFormSubmissionEdges) UserOrErr() (*User, error) {
+func (e KYBProfileEdges) UserOrErr() (*User, error) {
 	if e.User != nil {
 		return e.User, nil
 	} else if e.loadedTypes[1] {
@@ -82,17 +82,17 @@ func (e KYBFormSubmissionEdges) UserOrErr() (*User, error) {
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*KYBFormSubmission) scanValues(columns []string) ([]any, error) {
+func (*KYBProfile) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case kybformsubmission.FieldEmail, kybformsubmission.FieldCompanyName, kybformsubmission.FieldRegisteredBusinessAddress, kybformsubmission.FieldCertificateOfIncorporationURL, kybformsubmission.FieldArticlesOfIncorporationURL, kybformsubmission.FieldBusinessLicenseURL, kybformsubmission.FieldProofOfBusinessAddressURL, kybformsubmission.FieldProofOfResidentialAddressURL, kybformsubmission.FieldAmlPolicyURL, kybformsubmission.FieldKycPolicyURL:
+		case kybprofile.FieldMobileNumber, kybprofile.FieldCompanyName, kybprofile.FieldRegisteredBusinessAddress, kybprofile.FieldCertificateOfIncorporationURL, kybprofile.FieldArticlesOfIncorporationURL, kybprofile.FieldBusinessLicenseURL, kybprofile.FieldProofOfBusinessAddressURL, kybprofile.FieldProofOfResidentialAddressURL, kybprofile.FieldAmlPolicyURL, kybprofile.FieldKycPolicyURL:
 			values[i] = new(sql.NullString)
-		case kybformsubmission.FieldCreatedAt, kybformsubmission.FieldUpdatedAt:
+		case kybprofile.FieldCreatedAt, kybprofile.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
-		case kybformsubmission.FieldID:
+		case kybprofile.FieldID:
 			values[i] = new(uuid.UUID)
-		case kybformsubmission.ForeignKeys[0]: // kyb_form_submission_user
+		case kybprofile.ForeignKeys[0]: // user_kyb_profile
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
@@ -102,185 +102,182 @@ func (*KYBFormSubmission) scanValues(columns []string) ([]any, error) {
 }
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
-// to the KYBFormSubmission fields.
-func (kfs *KYBFormSubmission) assignValues(columns []string, values []any) error {
+// to the KYBProfile fields.
+func (kp *KYBProfile) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
 	for i := range columns {
 		switch columns[i] {
-		case kybformsubmission.FieldID:
+		case kybprofile.FieldID:
 			if value, ok := values[i].(*uuid.UUID); !ok {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
-				kfs.ID = *value
+				kp.ID = *value
 			}
-		case kybformsubmission.FieldCreatedAt:
+		case kybprofile.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
-				kfs.CreatedAt = value.Time
+				kp.CreatedAt = value.Time
 			}
-		case kybformsubmission.FieldUpdatedAt:
+		case kybprofile.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
-				kfs.UpdatedAt = value.Time
+				kp.UpdatedAt = value.Time
 			}
-		case kybformsubmission.FieldEmail:
+		case kybprofile.FieldMobileNumber:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field email", values[i])
+				return fmt.Errorf("unexpected type %T for field mobile_number", values[i])
 			} else if value.Valid {
-				kfs.Email = value.String
+				kp.MobileNumber = value.String
 			}
-		case kybformsubmission.FieldCompanyName:
+		case kybprofile.FieldCompanyName:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field company_name", values[i])
 			} else if value.Valid {
-				kfs.CompanyName = value.String
+				kp.CompanyName = value.String
 			}
-		case kybformsubmission.FieldRegisteredBusinessAddress:
+		case kybprofile.FieldRegisteredBusinessAddress:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field registered_business_address", values[i])
 			} else if value.Valid {
-				kfs.RegisteredBusinessAddress = value.String
+				kp.RegisteredBusinessAddress = value.String
 			}
-		case kybformsubmission.FieldCertificateOfIncorporationURL:
+		case kybprofile.FieldCertificateOfIncorporationURL:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field certificate_of_incorporation_url", values[i])
 			} else if value.Valid {
-				kfs.CertificateOfIncorporationURL = value.String
+				kp.CertificateOfIncorporationURL = value.String
 			}
-		case kybformsubmission.FieldArticlesOfIncorporationURL:
+		case kybprofile.FieldArticlesOfIncorporationURL:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field articles_of_incorporation_url", values[i])
 			} else if value.Valid {
-				kfs.ArticlesOfIncorporationURL = value.String
+				kp.ArticlesOfIncorporationURL = value.String
 			}
-		case kybformsubmission.FieldBusinessLicenseURL:
+		case kybprofile.FieldBusinessLicenseURL:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field business_license_url", values[i])
 			} else if value.Valid {
-				kfs.BusinessLicenseURL = new(string)
-				*kfs.BusinessLicenseURL = value.String
+				kp.BusinessLicenseURL = new(string)
+				*kp.BusinessLicenseURL = value.String
 			}
-		case kybformsubmission.FieldProofOfBusinessAddressURL:
+		case kybprofile.FieldProofOfBusinessAddressURL:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field proof_of_business_address_url", values[i])
 			} else if value.Valid {
-				kfs.ProofOfBusinessAddressURL = value.String
+				kp.ProofOfBusinessAddressURL = value.String
 			}
-		case kybformsubmission.FieldProofOfResidentialAddressURL:
+		case kybprofile.FieldProofOfResidentialAddressURL:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field proof_of_residential_address_url", values[i])
 			} else if value.Valid {
-				kfs.ProofOfResidentialAddressURL = value.String
+				kp.ProofOfResidentialAddressURL = value.String
 			}
-		case kybformsubmission.FieldAmlPolicyURL:
+		case kybprofile.FieldAmlPolicyURL:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field aml_policy_url", values[i])
 			} else if value.Valid {
-				kfs.AmlPolicyURL = new(string)
-				*kfs.AmlPolicyURL = value.String
+				kp.AmlPolicyURL = value.String
 			}
-		case kybformsubmission.FieldKycPolicyURL:
+		case kybprofile.FieldKycPolicyURL:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field kyc_policy_url", values[i])
 			} else if value.Valid {
-				kfs.KycPolicyURL = new(string)
-				*kfs.KycPolicyURL = value.String
+				kp.KycPolicyURL = new(string)
+				*kp.KycPolicyURL = value.String
 			}
-		case kybformsubmission.ForeignKeys[0]:
+		case kybprofile.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field kyb_form_submission_user", values[i])
+				return fmt.Errorf("unexpected type %T for field user_kyb_profile", values[i])
 			} else if value.Valid {
-				kfs.kyb_form_submission_user = new(uuid.UUID)
-				*kfs.kyb_form_submission_user = *value.S.(*uuid.UUID)
+				kp.user_kyb_profile = new(uuid.UUID)
+				*kp.user_kyb_profile = *value.S.(*uuid.UUID)
 			}
 		default:
-			kfs.selectValues.Set(columns[i], values[i])
+			kp.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
-// Value returns the ent.Value that was dynamically selected and assigned to the KYBFormSubmission.
+// Value returns the ent.Value that was dynamically selected and assigned to the KYBProfile.
 // This includes values selected through modifiers, order, etc.
-func (kfs *KYBFormSubmission) Value(name string) (ent.Value, error) {
-	return kfs.selectValues.Get(name)
+func (kp *KYBProfile) Value(name string) (ent.Value, error) {
+	return kp.selectValues.Get(name)
 }
 
-// QueryBeneficialOwners queries the "beneficial_owners" edge of the KYBFormSubmission entity.
-func (kfs *KYBFormSubmission) QueryBeneficialOwners() *BeneficialOwnerQuery {
-	return NewKYBFormSubmissionClient(kfs.config).QueryBeneficialOwners(kfs)
+// QueryBeneficialOwners queries the "beneficial_owners" edge of the KYBProfile entity.
+func (kp *KYBProfile) QueryBeneficialOwners() *BeneficialOwnerQuery {
+	return NewKYBProfileClient(kp.config).QueryBeneficialOwners(kp)
 }
 
-// QueryUser queries the "user" edge of the KYBFormSubmission entity.
-func (kfs *KYBFormSubmission) QueryUser() *UserQuery {
-	return NewKYBFormSubmissionClient(kfs.config).QueryUser(kfs)
+// QueryUser queries the "user" edge of the KYBProfile entity.
+func (kp *KYBProfile) QueryUser() *UserQuery {
+	return NewKYBProfileClient(kp.config).QueryUser(kp)
 }
 
-// Update returns a builder for updating this KYBFormSubmission.
-// Note that you need to call KYBFormSubmission.Unwrap() before calling this method if this KYBFormSubmission
+// Update returns a builder for updating this KYBProfile.
+// Note that you need to call KYBProfile.Unwrap() before calling this method if this KYBProfile
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (kfs *KYBFormSubmission) Update() *KYBFormSubmissionUpdateOne {
-	return NewKYBFormSubmissionClient(kfs.config).UpdateOne(kfs)
+func (kp *KYBProfile) Update() *KYBProfileUpdateOne {
+	return NewKYBProfileClient(kp.config).UpdateOne(kp)
 }
 
-// Unwrap unwraps the KYBFormSubmission entity that was returned from a transaction after it was closed,
+// Unwrap unwraps the KYBProfile entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (kfs *KYBFormSubmission) Unwrap() *KYBFormSubmission {
-	_tx, ok := kfs.config.driver.(*txDriver)
+func (kp *KYBProfile) Unwrap() *KYBProfile {
+	_tx, ok := kp.config.driver.(*txDriver)
 	if !ok {
-		panic("ent: KYBFormSubmission is not a transactional entity")
+		panic("ent: KYBProfile is not a transactional entity")
 	}
-	kfs.config.driver = _tx.drv
-	return kfs
+	kp.config.driver = _tx.drv
+	return kp
 }
 
 // String implements the fmt.Stringer.
-func (kfs *KYBFormSubmission) String() string {
+func (kp *KYBProfile) String() string {
 	var builder strings.Builder
-	builder.WriteString("KYBFormSubmission(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", kfs.ID))
+	builder.WriteString("KYBProfile(")
+	builder.WriteString(fmt.Sprintf("id=%v, ", kp.ID))
 	builder.WriteString("created_at=")
-	builder.WriteString(kfs.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(kp.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
-	builder.WriteString(kfs.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(kp.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
-	builder.WriteString("email=")
-	builder.WriteString(kfs.Email)
+	builder.WriteString("mobile_number=")
+	builder.WriteString(kp.MobileNumber)
 	builder.WriteString(", ")
 	builder.WriteString("company_name=")
-	builder.WriteString(kfs.CompanyName)
+	builder.WriteString(kp.CompanyName)
 	builder.WriteString(", ")
 	builder.WriteString("registered_business_address=")
-	builder.WriteString(kfs.RegisteredBusinessAddress)
+	builder.WriteString(kp.RegisteredBusinessAddress)
 	builder.WriteString(", ")
 	builder.WriteString("certificate_of_incorporation_url=")
-	builder.WriteString(kfs.CertificateOfIncorporationURL)
+	builder.WriteString(kp.CertificateOfIncorporationURL)
 	builder.WriteString(", ")
 	builder.WriteString("articles_of_incorporation_url=")
-	builder.WriteString(kfs.ArticlesOfIncorporationURL)
+	builder.WriteString(kp.ArticlesOfIncorporationURL)
 	builder.WriteString(", ")
-	if v := kfs.BusinessLicenseURL; v != nil {
+	if v := kp.BusinessLicenseURL; v != nil {
 		builder.WriteString("business_license_url=")
 		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")
 	builder.WriteString("proof_of_business_address_url=")
-	builder.WriteString(kfs.ProofOfBusinessAddressURL)
+	builder.WriteString(kp.ProofOfBusinessAddressURL)
 	builder.WriteString(", ")
 	builder.WriteString("proof_of_residential_address_url=")
-	builder.WriteString(kfs.ProofOfResidentialAddressURL)
+	builder.WriteString(kp.ProofOfResidentialAddressURL)
 	builder.WriteString(", ")
-	if v := kfs.AmlPolicyURL; v != nil {
-		builder.WriteString("aml_policy_url=")
-		builder.WriteString(*v)
-	}
+	builder.WriteString("aml_policy_url=")
+	builder.WriteString(kp.AmlPolicyURL)
 	builder.WriteString(", ")
-	if v := kfs.KycPolicyURL; v != nil {
+	if v := kp.KycPolicyURL; v != nil {
 		builder.WriteString("kyc_policy_url=")
 		builder.WriteString(*v)
 	}
@@ -288,5 +285,5 @@ func (kfs *KYBFormSubmission) String() string {
 	return builder.String()
 }
 
-// KYBFormSubmissions is a parsable slice of KYBFormSubmission.
-type KYBFormSubmissions []*KYBFormSubmission
+// KYBProfiles is a parsable slice of KYBProfile.
+type KYBProfiles []*KYBProfile

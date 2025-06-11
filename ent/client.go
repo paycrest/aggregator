@@ -21,7 +21,7 @@ import (
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
 	"github.com/paycrest/aggregator/ent/institution"
-	"github.com/paycrest/aggregator/ent/kybformsubmission"
+	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
@@ -57,8 +57,8 @@ type Client struct {
 	IdentityVerificationRequest *IdentityVerificationRequestClient
 	// Institution is the client for interacting with the Institution builders.
 	Institution *InstitutionClient
-	// KYBFormSubmission is the client for interacting with the KYBFormSubmission builders.
-	KYBFormSubmission *KYBFormSubmissionClient
+	// KYBProfile is the client for interacting with the KYBProfile builders.
+	KYBProfile *KYBProfileClient
 	// LinkedAddress is the client for interacting with the LinkedAddress builders.
 	LinkedAddress *LinkedAddressClient
 	// LockOrderFulfillment is the client for interacting with the LockOrderFulfillment builders.
@@ -111,7 +111,7 @@ func (c *Client) init() {
 	c.FiatCurrency = NewFiatCurrencyClient(c.config)
 	c.IdentityVerificationRequest = NewIdentityVerificationRequestClient(c.config)
 	c.Institution = NewInstitutionClient(c.config)
-	c.KYBFormSubmission = NewKYBFormSubmissionClient(c.config)
+	c.KYBProfile = NewKYBProfileClient(c.config)
 	c.LinkedAddress = NewLinkedAddressClient(c.config)
 	c.LockOrderFulfillment = NewLockOrderFulfillmentClient(c.config)
 	c.LockPaymentOrder = NewLockPaymentOrderClient(c.config)
@@ -227,7 +227,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		FiatCurrency:                NewFiatCurrencyClient(cfg),
 		IdentityVerificationRequest: NewIdentityVerificationRequestClient(cfg),
 		Institution:                 NewInstitutionClient(cfg),
-		KYBFormSubmission:           NewKYBFormSubmissionClient(cfg),
+		KYBProfile:                  NewKYBProfileClient(cfg),
 		LinkedAddress:               NewLinkedAddressClient(cfg),
 		LockOrderFulfillment:        NewLockOrderFulfillmentClient(cfg),
 		LockPaymentOrder:            NewLockPaymentOrderClient(cfg),
@@ -270,7 +270,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		FiatCurrency:                NewFiatCurrencyClient(cfg),
 		IdentityVerificationRequest: NewIdentityVerificationRequestClient(cfg),
 		Institution:                 NewInstitutionClient(cfg),
-		KYBFormSubmission:           NewKYBFormSubmissionClient(cfg),
+		KYBProfile:                  NewKYBProfileClient(cfg),
 		LinkedAddress:               NewLinkedAddressClient(cfg),
 		LockOrderFulfillment:        NewLockOrderFulfillmentClient(cfg),
 		LockPaymentOrder:            NewLockPaymentOrderClient(cfg),
@@ -319,7 +319,7 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.APIKey, c.BeneficialOwner, c.FiatCurrency, c.IdentityVerificationRequest,
-		c.Institution, c.KYBFormSubmission, c.LinkedAddress, c.LockOrderFulfillment,
+		c.Institution, c.KYBProfile, c.LinkedAddress, c.LockOrderFulfillment,
 		c.LockPaymentOrder, c.Network, c.PaymentOrder, c.PaymentOrderRecipient,
 		c.ProviderOrderToken, c.ProviderProfile, c.ProviderRating, c.ProvisionBucket,
 		c.ReceiveAddress, c.SenderOrderToken, c.SenderProfile, c.Token,
@@ -334,7 +334,7 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.APIKey, c.BeneficialOwner, c.FiatCurrency, c.IdentityVerificationRequest,
-		c.Institution, c.KYBFormSubmission, c.LinkedAddress, c.LockOrderFulfillment,
+		c.Institution, c.KYBProfile, c.LinkedAddress, c.LockOrderFulfillment,
 		c.LockPaymentOrder, c.Network, c.PaymentOrder, c.PaymentOrderRecipient,
 		c.ProviderOrderToken, c.ProviderProfile, c.ProviderRating, c.ProvisionBucket,
 		c.ReceiveAddress, c.SenderOrderToken, c.SenderProfile, c.Token,
@@ -357,8 +357,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.IdentityVerificationRequest.mutate(ctx, m)
 	case *InstitutionMutation:
 		return c.Institution.mutate(ctx, m)
-	case *KYBFormSubmissionMutation:
-		return c.KYBFormSubmission.mutate(ctx, m)
+	case *KYBProfileMutation:
+		return c.KYBProfile.mutate(ctx, m)
 	case *LinkedAddressMutation:
 		return c.LinkedAddress.mutate(ctx, m)
 	case *LockOrderFulfillmentMutation:
@@ -689,15 +689,15 @@ func (c *BeneficialOwnerClient) GetX(ctx context.Context, id uuid.UUID) *Benefic
 	return obj
 }
 
-// QueryKybFormSubmission queries the kyb_form_submission edge of a BeneficialOwner.
-func (c *BeneficialOwnerClient) QueryKybFormSubmission(bo *BeneficialOwner) *KYBFormSubmissionQuery {
-	query := (&KYBFormSubmissionClient{config: c.config}).Query()
+// QueryKybProfile queries the kyb_profile edge of a BeneficialOwner.
+func (c *BeneficialOwnerClient) QueryKybProfile(bo *BeneficialOwner) *KYBProfileQuery {
+	query := (&KYBProfileClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := bo.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(beneficialowner.Table, beneficialowner.FieldID, id),
-			sqlgraph.To(kybformsubmission.Table, kybformsubmission.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, beneficialowner.KybFormSubmissionTable, beneficialowner.KybFormSubmissionColumn),
+			sqlgraph.To(kybprofile.Table, kybprofile.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, beneficialowner.KybProfileTable, beneficialowner.KybProfileColumn),
 		)
 		fromV = sqlgraph.Neighbors(bo.driver.Dialect(), step)
 		return fromV, nil
@@ -1209,107 +1209,107 @@ func (c *InstitutionClient) mutate(ctx context.Context, m *InstitutionMutation) 
 	}
 }
 
-// KYBFormSubmissionClient is a client for the KYBFormSubmission schema.
-type KYBFormSubmissionClient struct {
+// KYBProfileClient is a client for the KYBProfile schema.
+type KYBProfileClient struct {
 	config
 }
 
-// NewKYBFormSubmissionClient returns a client for the KYBFormSubmission from the given config.
-func NewKYBFormSubmissionClient(c config) *KYBFormSubmissionClient {
-	return &KYBFormSubmissionClient{config: c}
+// NewKYBProfileClient returns a client for the KYBProfile from the given config.
+func NewKYBProfileClient(c config) *KYBProfileClient {
+	return &KYBProfileClient{config: c}
 }
 
 // Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `kybformsubmission.Hooks(f(g(h())))`.
-func (c *KYBFormSubmissionClient) Use(hooks ...Hook) {
-	c.hooks.KYBFormSubmission = append(c.hooks.KYBFormSubmission, hooks...)
+// A call to `Use(f, g, h)` equals to `kybprofile.Hooks(f(g(h())))`.
+func (c *KYBProfileClient) Use(hooks ...Hook) {
+	c.hooks.KYBProfile = append(c.hooks.KYBProfile, hooks...)
 }
 
 // Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `kybformsubmission.Intercept(f(g(h())))`.
-func (c *KYBFormSubmissionClient) Intercept(interceptors ...Interceptor) {
-	c.inters.KYBFormSubmission = append(c.inters.KYBFormSubmission, interceptors...)
+// A call to `Intercept(f, g, h)` equals to `kybprofile.Intercept(f(g(h())))`.
+func (c *KYBProfileClient) Intercept(interceptors ...Interceptor) {
+	c.inters.KYBProfile = append(c.inters.KYBProfile, interceptors...)
 }
 
-// Create returns a builder for creating a KYBFormSubmission entity.
-func (c *KYBFormSubmissionClient) Create() *KYBFormSubmissionCreate {
-	mutation := newKYBFormSubmissionMutation(c.config, OpCreate)
-	return &KYBFormSubmissionCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Create returns a builder for creating a KYBProfile entity.
+func (c *KYBProfileClient) Create() *KYBProfileCreate {
+	mutation := newKYBProfileMutation(c.config, OpCreate)
+	return &KYBProfileCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// CreateBulk returns a builder for creating a bulk of KYBFormSubmission entities.
-func (c *KYBFormSubmissionClient) CreateBulk(builders ...*KYBFormSubmissionCreate) *KYBFormSubmissionCreateBulk {
-	return &KYBFormSubmissionCreateBulk{config: c.config, builders: builders}
+// CreateBulk returns a builder for creating a bulk of KYBProfile entities.
+func (c *KYBProfileClient) CreateBulk(builders ...*KYBProfileCreate) *KYBProfileCreateBulk {
+	return &KYBProfileCreateBulk{config: c.config, builders: builders}
 }
 
 // MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
 // a builder and applies setFunc on it.
-func (c *KYBFormSubmissionClient) MapCreateBulk(slice any, setFunc func(*KYBFormSubmissionCreate, int)) *KYBFormSubmissionCreateBulk {
+func (c *KYBProfileClient) MapCreateBulk(slice any, setFunc func(*KYBProfileCreate, int)) *KYBProfileCreateBulk {
 	rv := reflect.ValueOf(slice)
 	if rv.Kind() != reflect.Slice {
-		return &KYBFormSubmissionCreateBulk{err: fmt.Errorf("calling to KYBFormSubmissionClient.MapCreateBulk with wrong type %T, need slice", slice)}
+		return &KYBProfileCreateBulk{err: fmt.Errorf("calling to KYBProfileClient.MapCreateBulk with wrong type %T, need slice", slice)}
 	}
-	builders := make([]*KYBFormSubmissionCreate, rv.Len())
+	builders := make([]*KYBProfileCreate, rv.Len())
 	for i := 0; i < rv.Len(); i++ {
 		builders[i] = c.Create()
 		setFunc(builders[i], i)
 	}
-	return &KYBFormSubmissionCreateBulk{config: c.config, builders: builders}
+	return &KYBProfileCreateBulk{config: c.config, builders: builders}
 }
 
-// Update returns an update builder for KYBFormSubmission.
-func (c *KYBFormSubmissionClient) Update() *KYBFormSubmissionUpdate {
-	mutation := newKYBFormSubmissionMutation(c.config, OpUpdate)
-	return &KYBFormSubmissionUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Update returns an update builder for KYBProfile.
+func (c *KYBProfileClient) Update() *KYBProfileUpdate {
+	mutation := newKYBProfileMutation(c.config, OpUpdate)
+	return &KYBProfileUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOne returns an update builder for the given entity.
-func (c *KYBFormSubmissionClient) UpdateOne(kfs *KYBFormSubmission) *KYBFormSubmissionUpdateOne {
-	mutation := newKYBFormSubmissionMutation(c.config, OpUpdateOne, withKYBFormSubmission(kfs))
-	return &KYBFormSubmissionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+func (c *KYBProfileClient) UpdateOne(kp *KYBProfile) *KYBProfileUpdateOne {
+	mutation := newKYBProfileMutation(c.config, OpUpdateOne, withKYBProfile(kp))
+	return &KYBProfileUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *KYBFormSubmissionClient) UpdateOneID(id uuid.UUID) *KYBFormSubmissionUpdateOne {
-	mutation := newKYBFormSubmissionMutation(c.config, OpUpdateOne, withKYBFormSubmissionID(id))
-	return &KYBFormSubmissionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+func (c *KYBProfileClient) UpdateOneID(id uuid.UUID) *KYBProfileUpdateOne {
+	mutation := newKYBProfileMutation(c.config, OpUpdateOne, withKYBProfileID(id))
+	return &KYBProfileUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// Delete returns a delete builder for KYBFormSubmission.
-func (c *KYBFormSubmissionClient) Delete() *KYBFormSubmissionDelete {
-	mutation := newKYBFormSubmissionMutation(c.config, OpDelete)
-	return &KYBFormSubmissionDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Delete returns a delete builder for KYBProfile.
+func (c *KYBProfileClient) Delete() *KYBProfileDelete {
+	mutation := newKYBProfileMutation(c.config, OpDelete)
+	return &KYBProfileDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // DeleteOne returns a builder for deleting the given entity.
-func (c *KYBFormSubmissionClient) DeleteOne(kfs *KYBFormSubmission) *KYBFormSubmissionDeleteOne {
-	return c.DeleteOneID(kfs.ID)
+func (c *KYBProfileClient) DeleteOne(kp *KYBProfile) *KYBProfileDeleteOne {
+	return c.DeleteOneID(kp.ID)
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *KYBFormSubmissionClient) DeleteOneID(id uuid.UUID) *KYBFormSubmissionDeleteOne {
-	builder := c.Delete().Where(kybformsubmission.ID(id))
+func (c *KYBProfileClient) DeleteOneID(id uuid.UUID) *KYBProfileDeleteOne {
+	builder := c.Delete().Where(kybprofile.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
-	return &KYBFormSubmissionDeleteOne{builder}
+	return &KYBProfileDeleteOne{builder}
 }
 
-// Query returns a query builder for KYBFormSubmission.
-func (c *KYBFormSubmissionClient) Query() *KYBFormSubmissionQuery {
-	return &KYBFormSubmissionQuery{
+// Query returns a query builder for KYBProfile.
+func (c *KYBProfileClient) Query() *KYBProfileQuery {
+	return &KYBProfileQuery{
 		config: c.config,
-		ctx:    &QueryContext{Type: TypeKYBFormSubmission},
+		ctx:    &QueryContext{Type: TypeKYBProfile},
 		inters: c.Interceptors(),
 	}
 }
 
-// Get returns a KYBFormSubmission entity by its id.
-func (c *KYBFormSubmissionClient) Get(ctx context.Context, id uuid.UUID) (*KYBFormSubmission, error) {
-	return c.Query().Where(kybformsubmission.ID(id)).Only(ctx)
+// Get returns a KYBProfile entity by its id.
+func (c *KYBProfileClient) Get(ctx context.Context, id uuid.UUID) (*KYBProfile, error) {
+	return c.Query().Where(kybprofile.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *KYBFormSubmissionClient) GetX(ctx context.Context, id uuid.UUID) *KYBFormSubmission {
+func (c *KYBProfileClient) GetX(ctx context.Context, id uuid.UUID) *KYBProfile {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
@@ -1317,60 +1317,60 @@ func (c *KYBFormSubmissionClient) GetX(ctx context.Context, id uuid.UUID) *KYBFo
 	return obj
 }
 
-// QueryBeneficialOwners queries the beneficial_owners edge of a KYBFormSubmission.
-func (c *KYBFormSubmissionClient) QueryBeneficialOwners(kfs *KYBFormSubmission) *BeneficialOwnerQuery {
+// QueryBeneficialOwners queries the beneficial_owners edge of a KYBProfile.
+func (c *KYBProfileClient) QueryBeneficialOwners(kp *KYBProfile) *BeneficialOwnerQuery {
 	query := (&BeneficialOwnerClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := kfs.ID
+		id := kp.ID
 		step := sqlgraph.NewStep(
-			sqlgraph.From(kybformsubmission.Table, kybformsubmission.FieldID, id),
+			sqlgraph.From(kybprofile.Table, kybprofile.FieldID, id),
 			sqlgraph.To(beneficialowner.Table, beneficialowner.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, kybformsubmission.BeneficialOwnersTable, kybformsubmission.BeneficialOwnersColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, kybprofile.BeneficialOwnersTable, kybprofile.BeneficialOwnersColumn),
 		)
-		fromV = sqlgraph.Neighbors(kfs.driver.Dialect(), step)
+		fromV = sqlgraph.Neighbors(kp.driver.Dialect(), step)
 		return fromV, nil
 	}
 	return query
 }
 
-// QueryUser queries the user edge of a KYBFormSubmission.
-func (c *KYBFormSubmissionClient) QueryUser(kfs *KYBFormSubmission) *UserQuery {
+// QueryUser queries the user edge of a KYBProfile.
+func (c *KYBProfileClient) QueryUser(kp *KYBProfile) *UserQuery {
 	query := (&UserClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := kfs.ID
+		id := kp.ID
 		step := sqlgraph.NewStep(
-			sqlgraph.From(kybformsubmission.Table, kybformsubmission.FieldID, id),
+			sqlgraph.From(kybprofile.Table, kybprofile.FieldID, id),
 			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, kybformsubmission.UserTable, kybformsubmission.UserColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, kybprofile.UserTable, kybprofile.UserColumn),
 		)
-		fromV = sqlgraph.Neighbors(kfs.driver.Dialect(), step)
+		fromV = sqlgraph.Neighbors(kp.driver.Dialect(), step)
 		return fromV, nil
 	}
 	return query
 }
 
 // Hooks returns the client hooks.
-func (c *KYBFormSubmissionClient) Hooks() []Hook {
-	return c.hooks.KYBFormSubmission
+func (c *KYBProfileClient) Hooks() []Hook {
+	return c.hooks.KYBProfile
 }
 
 // Interceptors returns the client interceptors.
-func (c *KYBFormSubmissionClient) Interceptors() []Interceptor {
-	return c.inters.KYBFormSubmission
+func (c *KYBProfileClient) Interceptors() []Interceptor {
+	return c.inters.KYBProfile
 }
 
-func (c *KYBFormSubmissionClient) mutate(ctx context.Context, m *KYBFormSubmissionMutation) (Value, error) {
+func (c *KYBProfileClient) mutate(ctx context.Context, m *KYBProfileMutation) (Value, error) {
 	switch m.Op() {
 	case OpCreate:
-		return (&KYBFormSubmissionCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+		return (&KYBProfileCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
 	case OpUpdate:
-		return (&KYBFormSubmissionUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+		return (&KYBProfileUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
 	case OpUpdateOne:
-		return (&KYBFormSubmissionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+		return (&KYBProfileUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
 	case OpDelete, OpDeleteOne:
-		return (&KYBFormSubmissionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+		return (&KYBProfileDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
-		return nil, fmt.Errorf("ent: unknown KYBFormSubmission mutation op: %q", m.Op())
+		return nil, fmt.Errorf("ent: unknown KYBProfile mutation op: %q", m.Op())
 	}
 }
 
@@ -4197,15 +4197,15 @@ func (c *UserClient) QueryVerificationToken(u *User) *VerificationTokenQuery {
 	return query
 }
 
-// QueryKybFormSubmission queries the kyb_form_submission edge of a User.
-func (c *UserClient) QueryKybFormSubmission(u *User) *KYBFormSubmissionQuery {
-	query := (&KYBFormSubmissionClient{config: c.config}).Query()
+// QueryKybProfile queries the kyb_profile edge of a User.
+func (c *UserClient) QueryKybProfile(u *User) *KYBProfileQuery {
+	query := (&KYBProfileClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := u.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(user.Table, user.FieldID, id),
-			sqlgraph.To(kybformsubmission.Table, kybformsubmission.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, user.KybFormSubmissionTable, user.KybFormSubmissionColumn),
+			sqlgraph.To(kybprofile.Table, kybprofile.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, user.KybProfileTable, user.KybProfileColumn),
 		)
 		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
 		return fromV, nil
@@ -4526,18 +4526,18 @@ func (c *WebhookRetryAttemptClient) mutate(ctx context.Context, m *WebhookRetryA
 type (
 	hooks struct {
 		APIKey, BeneficialOwner, FiatCurrency, IdentityVerificationRequest, Institution,
-		KYBFormSubmission, LinkedAddress, LockOrderFulfillment, LockPaymentOrder,
-		Network, PaymentOrder, PaymentOrderRecipient, ProviderOrderToken,
-		ProviderProfile, ProviderRating, ProvisionBucket, ReceiveAddress,
-		SenderOrderToken, SenderProfile, Token, TransactionLog, User,
-		VerificationToken, WebhookRetryAttempt []ent.Hook
+		KYBProfile, LinkedAddress, LockOrderFulfillment, LockPaymentOrder, Network,
+		PaymentOrder, PaymentOrderRecipient, ProviderOrderToken, ProviderProfile,
+		ProviderRating, ProvisionBucket, ReceiveAddress, SenderOrderToken,
+		SenderProfile, Token, TransactionLog, User, VerificationToken,
+		WebhookRetryAttempt []ent.Hook
 	}
 	inters struct {
 		APIKey, BeneficialOwner, FiatCurrency, IdentityVerificationRequest, Institution,
-		KYBFormSubmission, LinkedAddress, LockOrderFulfillment, LockPaymentOrder,
-		Network, PaymentOrder, PaymentOrderRecipient, ProviderOrderToken,
-		ProviderProfile, ProviderRating, ProvisionBucket, ReceiveAddress,
-		SenderOrderToken, SenderProfile, Token, TransactionLog, User,
-		VerificationToken, WebhookRetryAttempt []ent.Interceptor
+		KYBProfile, LinkedAddress, LockOrderFulfillment, LockPaymentOrder, Network,
+		PaymentOrder, PaymentOrderRecipient, ProviderOrderToken, ProviderProfile,
+		ProviderRating, ProvisionBucket, ReceiveAddress, SenderOrderToken,
+		SenderProfile, Token, TransactionLog, User, VerificationToken,
+		WebhookRetryAttempt []ent.Interceptor
 	}
 )

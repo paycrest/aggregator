@@ -12,7 +12,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/beneficialowner"
-	"github.com/paycrest/aggregator/ent/kybformsubmission"
+	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/predicate"
 )
 
@@ -120,23 +120,35 @@ func (bou *BeneficialOwnerUpdate) AddOwnershipPercentage(f float64) *BeneficialO
 	return bou
 }
 
-// SetKybFormSubmissionID sets the "kyb_form_submission" edge to the KYBFormSubmission entity by ID.
-func (bou *BeneficialOwnerUpdate) SetKybFormSubmissionID(id uuid.UUID) *BeneficialOwnerUpdate {
-	bou.mutation.SetKybFormSubmissionID(id)
+// SetGovernmentIssuedIDType sets the "government_issued_id_type" field.
+func (bou *BeneficialOwnerUpdate) SetGovernmentIssuedIDType(biit beneficialowner.GovernmentIssuedIDType) *BeneficialOwnerUpdate {
+	bou.mutation.SetGovernmentIssuedIDType(biit)
 	return bou
 }
 
-// SetNillableKybFormSubmissionID sets the "kyb_form_submission" edge to the KYBFormSubmission entity by ID if the given value is not nil.
-func (bou *BeneficialOwnerUpdate) SetNillableKybFormSubmissionID(id *uuid.UUID) *BeneficialOwnerUpdate {
-	if id != nil {
-		bou = bou.SetKybFormSubmissionID(*id)
+// SetNillableGovernmentIssuedIDType sets the "government_issued_id_type" field if the given value is not nil.
+func (bou *BeneficialOwnerUpdate) SetNillableGovernmentIssuedIDType(biit *beneficialowner.GovernmentIssuedIDType) *BeneficialOwnerUpdate {
+	if biit != nil {
+		bou.SetGovernmentIssuedIDType(*biit)
 	}
 	return bou
 }
 
-// SetKybFormSubmission sets the "kyb_form_submission" edge to the KYBFormSubmission entity.
-func (bou *BeneficialOwnerUpdate) SetKybFormSubmission(k *KYBFormSubmission) *BeneficialOwnerUpdate {
-	return bou.SetKybFormSubmissionID(k.ID)
+// ClearGovernmentIssuedIDType clears the value of the "government_issued_id_type" field.
+func (bou *BeneficialOwnerUpdate) ClearGovernmentIssuedIDType() *BeneficialOwnerUpdate {
+	bou.mutation.ClearGovernmentIssuedIDType()
+	return bou
+}
+
+// SetKybProfileID sets the "kyb_profile" edge to the KYBProfile entity by ID.
+func (bou *BeneficialOwnerUpdate) SetKybProfileID(id uuid.UUID) *BeneficialOwnerUpdate {
+	bou.mutation.SetKybProfileID(id)
+	return bou
+}
+
+// SetKybProfile sets the "kyb_profile" edge to the KYBProfile entity.
+func (bou *BeneficialOwnerUpdate) SetKybProfile(k *KYBProfile) *BeneficialOwnerUpdate {
+	return bou.SetKybProfileID(k.ID)
 }
 
 // Mutation returns the BeneficialOwnerMutation object of the builder.
@@ -144,9 +156,9 @@ func (bou *BeneficialOwnerUpdate) Mutation() *BeneficialOwnerMutation {
 	return bou.mutation
 }
 
-// ClearKybFormSubmission clears the "kyb_form_submission" edge to the KYBFormSubmission entity.
-func (bou *BeneficialOwnerUpdate) ClearKybFormSubmission() *BeneficialOwnerUpdate {
-	bou.mutation.ClearKybFormSubmission()
+// ClearKybProfile clears the "kyb_profile" edge to the KYBProfile entity.
+func (bou *BeneficialOwnerUpdate) ClearKybProfile() *BeneficialOwnerUpdate {
+	bou.mutation.ClearKybProfile()
 	return bou
 }
 
@@ -184,6 +196,14 @@ func (bou *BeneficialOwnerUpdate) check() error {
 			return &ValidationError{Name: "full_name", err: fmt.Errorf(`ent: validator failed for field "BeneficialOwner.full_name": %w`, err)}
 		}
 	}
+	if v, ok := bou.mutation.GovernmentIssuedIDType(); ok {
+		if err := beneficialowner.GovernmentIssuedIDTypeValidator(v); err != nil {
+			return &ValidationError{Name: "government_issued_id_type", err: fmt.Errorf(`ent: validator failed for field "BeneficialOwner.government_issued_id_type": %w`, err)}
+		}
+	}
+	if bou.mutation.KybProfileCleared() && len(bou.mutation.KybProfileIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "BeneficialOwner.kyb_profile"`)
+	}
 	return nil
 }
 
@@ -220,28 +240,34 @@ func (bou *BeneficialOwnerUpdate) sqlSave(ctx context.Context) (n int, err error
 	if value, ok := bou.mutation.AddedOwnershipPercentage(); ok {
 		_spec.AddField(beneficialowner.FieldOwnershipPercentage, field.TypeFloat64, value)
 	}
-	if bou.mutation.KybFormSubmissionCleared() {
+	if value, ok := bou.mutation.GovernmentIssuedIDType(); ok {
+		_spec.SetField(beneficialowner.FieldGovernmentIssuedIDType, field.TypeEnum, value)
+	}
+	if bou.mutation.GovernmentIssuedIDTypeCleared() {
+		_spec.ClearField(beneficialowner.FieldGovernmentIssuedIDType, field.TypeEnum)
+	}
+	if bou.mutation.KybProfileCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   beneficialowner.KybFormSubmissionTable,
-			Columns: []string{beneficialowner.KybFormSubmissionColumn},
+			Table:   beneficialowner.KybProfileTable,
+			Columns: []string{beneficialowner.KybProfileColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(kybformsubmission.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(kybprofile.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := bou.mutation.KybFormSubmissionIDs(); len(nodes) > 0 {
+	if nodes := bou.mutation.KybProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   beneficialowner.KybFormSubmissionTable,
-			Columns: []string{beneficialowner.KybFormSubmissionColumn},
+			Table:   beneficialowner.KybProfileTable,
+			Columns: []string{beneficialowner.KybProfileColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(kybformsubmission.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(kybprofile.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -360,23 +386,35 @@ func (bouo *BeneficialOwnerUpdateOne) AddOwnershipPercentage(f float64) *Benefic
 	return bouo
 }
 
-// SetKybFormSubmissionID sets the "kyb_form_submission" edge to the KYBFormSubmission entity by ID.
-func (bouo *BeneficialOwnerUpdateOne) SetKybFormSubmissionID(id uuid.UUID) *BeneficialOwnerUpdateOne {
-	bouo.mutation.SetKybFormSubmissionID(id)
+// SetGovernmentIssuedIDType sets the "government_issued_id_type" field.
+func (bouo *BeneficialOwnerUpdateOne) SetGovernmentIssuedIDType(biit beneficialowner.GovernmentIssuedIDType) *BeneficialOwnerUpdateOne {
+	bouo.mutation.SetGovernmentIssuedIDType(biit)
 	return bouo
 }
 
-// SetNillableKybFormSubmissionID sets the "kyb_form_submission" edge to the KYBFormSubmission entity by ID if the given value is not nil.
-func (bouo *BeneficialOwnerUpdateOne) SetNillableKybFormSubmissionID(id *uuid.UUID) *BeneficialOwnerUpdateOne {
-	if id != nil {
-		bouo = bouo.SetKybFormSubmissionID(*id)
+// SetNillableGovernmentIssuedIDType sets the "government_issued_id_type" field if the given value is not nil.
+func (bouo *BeneficialOwnerUpdateOne) SetNillableGovernmentIssuedIDType(biit *beneficialowner.GovernmentIssuedIDType) *BeneficialOwnerUpdateOne {
+	if biit != nil {
+		bouo.SetGovernmentIssuedIDType(*biit)
 	}
 	return bouo
 }
 
-// SetKybFormSubmission sets the "kyb_form_submission" edge to the KYBFormSubmission entity.
-func (bouo *BeneficialOwnerUpdateOne) SetKybFormSubmission(k *KYBFormSubmission) *BeneficialOwnerUpdateOne {
-	return bouo.SetKybFormSubmissionID(k.ID)
+// ClearGovernmentIssuedIDType clears the value of the "government_issued_id_type" field.
+func (bouo *BeneficialOwnerUpdateOne) ClearGovernmentIssuedIDType() *BeneficialOwnerUpdateOne {
+	bouo.mutation.ClearGovernmentIssuedIDType()
+	return bouo
+}
+
+// SetKybProfileID sets the "kyb_profile" edge to the KYBProfile entity by ID.
+func (bouo *BeneficialOwnerUpdateOne) SetKybProfileID(id uuid.UUID) *BeneficialOwnerUpdateOne {
+	bouo.mutation.SetKybProfileID(id)
+	return bouo
+}
+
+// SetKybProfile sets the "kyb_profile" edge to the KYBProfile entity.
+func (bouo *BeneficialOwnerUpdateOne) SetKybProfile(k *KYBProfile) *BeneficialOwnerUpdateOne {
+	return bouo.SetKybProfileID(k.ID)
 }
 
 // Mutation returns the BeneficialOwnerMutation object of the builder.
@@ -384,9 +422,9 @@ func (bouo *BeneficialOwnerUpdateOne) Mutation() *BeneficialOwnerMutation {
 	return bouo.mutation
 }
 
-// ClearKybFormSubmission clears the "kyb_form_submission" edge to the KYBFormSubmission entity.
-func (bouo *BeneficialOwnerUpdateOne) ClearKybFormSubmission() *BeneficialOwnerUpdateOne {
-	bouo.mutation.ClearKybFormSubmission()
+// ClearKybProfile clears the "kyb_profile" edge to the KYBProfile entity.
+func (bouo *BeneficialOwnerUpdateOne) ClearKybProfile() *BeneficialOwnerUpdateOne {
+	bouo.mutation.ClearKybProfile()
 	return bouo
 }
 
@@ -436,6 +474,14 @@ func (bouo *BeneficialOwnerUpdateOne) check() error {
 		if err := beneficialowner.FullNameValidator(v); err != nil {
 			return &ValidationError{Name: "full_name", err: fmt.Errorf(`ent: validator failed for field "BeneficialOwner.full_name": %w`, err)}
 		}
+	}
+	if v, ok := bouo.mutation.GovernmentIssuedIDType(); ok {
+		if err := beneficialowner.GovernmentIssuedIDTypeValidator(v); err != nil {
+			return &ValidationError{Name: "government_issued_id_type", err: fmt.Errorf(`ent: validator failed for field "BeneficialOwner.government_issued_id_type": %w`, err)}
+		}
+	}
+	if bouo.mutation.KybProfileCleared() && len(bouo.mutation.KybProfileIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "BeneficialOwner.kyb_profile"`)
 	}
 	return nil
 }
@@ -490,28 +536,34 @@ func (bouo *BeneficialOwnerUpdateOne) sqlSave(ctx context.Context) (_node *Benef
 	if value, ok := bouo.mutation.AddedOwnershipPercentage(); ok {
 		_spec.AddField(beneficialowner.FieldOwnershipPercentage, field.TypeFloat64, value)
 	}
-	if bouo.mutation.KybFormSubmissionCleared() {
+	if value, ok := bouo.mutation.GovernmentIssuedIDType(); ok {
+		_spec.SetField(beneficialowner.FieldGovernmentIssuedIDType, field.TypeEnum, value)
+	}
+	if bouo.mutation.GovernmentIssuedIDTypeCleared() {
+		_spec.ClearField(beneficialowner.FieldGovernmentIssuedIDType, field.TypeEnum)
+	}
+	if bouo.mutation.KybProfileCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   beneficialowner.KybFormSubmissionTable,
-			Columns: []string{beneficialowner.KybFormSubmissionColumn},
+			Table:   beneficialowner.KybProfileTable,
+			Columns: []string{beneficialowner.KybProfileColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(kybformsubmission.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(kybprofile.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := bouo.mutation.KybFormSubmissionIDs(); len(nodes) > 0 {
+	if nodes := bouo.mutation.KybProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   beneficialowner.KybFormSubmissionTable,
-			Columns: []string{beneficialowner.KybFormSubmissionColumn},
+			Table:   beneficialowner.KybProfileTable,
+			Columns: []string{beneficialowner.KybProfileColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(kybformsubmission.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(kybprofile.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

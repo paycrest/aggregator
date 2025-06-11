@@ -10,7 +10,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/beneficialowner"
-	"github.com/paycrest/aggregator/ent/kybformsubmission"
+	"github.com/paycrest/aggregator/ent/kybprofile"
 )
 
 // BeneficialOwner is the model entity for the BeneficialOwner schema.
@@ -30,31 +30,33 @@ type BeneficialOwner struct {
 	DateOfBirth string `json:"date_of_birth,omitempty"`
 	// OwnershipPercentage holds the value of the "ownership_percentage" field.
 	OwnershipPercentage float64 `json:"ownership_percentage,omitempty"`
+	// GovernmentIssuedIDType holds the value of the "government_issued_id_type" field.
+	GovernmentIssuedIDType beneficialowner.GovernmentIssuedIDType `json:"government_issued_id_type,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the BeneficialOwnerQuery when eager-loading is set.
-	Edges                                 BeneficialOwnerEdges `json:"edges"`
-	kyb_form_submission_beneficial_owners *uuid.UUID
-	selectValues                          sql.SelectValues
+	Edges                         BeneficialOwnerEdges `json:"edges"`
+	kyb_profile_beneficial_owners *uuid.UUID
+	selectValues                  sql.SelectValues
 }
 
 // BeneficialOwnerEdges holds the relations/edges for other nodes in the graph.
 type BeneficialOwnerEdges struct {
-	// KybFormSubmission holds the value of the kyb_form_submission edge.
-	KybFormSubmission *KYBFormSubmission `json:"kyb_form_submission,omitempty"`
+	// KybProfile holds the value of the kyb_profile edge.
+	KybProfile *KYBProfile `json:"kyb_profile,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [1]bool
 }
 
-// KybFormSubmissionOrErr returns the KybFormSubmission value or an error if the edge
+// KybProfileOrErr returns the KybProfile value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e BeneficialOwnerEdges) KybFormSubmissionOrErr() (*KYBFormSubmission, error) {
-	if e.KybFormSubmission != nil {
-		return e.KybFormSubmission, nil
+func (e BeneficialOwnerEdges) KybProfileOrErr() (*KYBProfile, error) {
+	if e.KybProfile != nil {
+		return e.KybProfile, nil
 	} else if e.loadedTypes[0] {
-		return nil, &NotFoundError{label: kybformsubmission.Label}
+		return nil, &NotFoundError{label: kybprofile.Label}
 	}
-	return nil, &NotLoadedError{edge: "kyb_form_submission"}
+	return nil, &NotLoadedError{edge: "kyb_profile"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -64,11 +66,11 @@ func (*BeneficialOwner) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case beneficialowner.FieldOwnershipPercentage:
 			values[i] = new(sql.NullFloat64)
-		case beneficialowner.FieldFullName, beneficialowner.FieldResidentialAddress, beneficialowner.FieldProofOfResidentialAddressURL, beneficialowner.FieldGovernmentIssuedIDURL, beneficialowner.FieldDateOfBirth:
+		case beneficialowner.FieldFullName, beneficialowner.FieldResidentialAddress, beneficialowner.FieldProofOfResidentialAddressURL, beneficialowner.FieldGovernmentIssuedIDURL, beneficialowner.FieldDateOfBirth, beneficialowner.FieldGovernmentIssuedIDType:
 			values[i] = new(sql.NullString)
 		case beneficialowner.FieldID:
 			values[i] = new(uuid.UUID)
-		case beneficialowner.ForeignKeys[0]: // kyb_form_submission_beneficial_owners
+		case beneficialowner.ForeignKeys[0]: // kyb_profile_beneficial_owners
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
@@ -127,12 +129,18 @@ func (bo *BeneficialOwner) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				bo.OwnershipPercentage = value.Float64
 			}
+		case beneficialowner.FieldGovernmentIssuedIDType:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field government_issued_id_type", values[i])
+			} else if value.Valid {
+				bo.GovernmentIssuedIDType = beneficialowner.GovernmentIssuedIDType(value.String)
+			}
 		case beneficialowner.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field kyb_form_submission_beneficial_owners", values[i])
+				return fmt.Errorf("unexpected type %T for field kyb_profile_beneficial_owners", values[i])
 			} else if value.Valid {
-				bo.kyb_form_submission_beneficial_owners = new(uuid.UUID)
-				*bo.kyb_form_submission_beneficial_owners = *value.S.(*uuid.UUID)
+				bo.kyb_profile_beneficial_owners = new(uuid.UUID)
+				*bo.kyb_profile_beneficial_owners = *value.S.(*uuid.UUID)
 			}
 		default:
 			bo.selectValues.Set(columns[i], values[i])
@@ -147,9 +155,9 @@ func (bo *BeneficialOwner) Value(name string) (ent.Value, error) {
 	return bo.selectValues.Get(name)
 }
 
-// QueryKybFormSubmission queries the "kyb_form_submission" edge of the BeneficialOwner entity.
-func (bo *BeneficialOwner) QueryKybFormSubmission() *KYBFormSubmissionQuery {
-	return NewBeneficialOwnerClient(bo.config).QueryKybFormSubmission(bo)
+// QueryKybProfile queries the "kyb_profile" edge of the BeneficialOwner entity.
+func (bo *BeneficialOwner) QueryKybProfile() *KYBProfileQuery {
+	return NewBeneficialOwnerClient(bo.config).QueryKybProfile(bo)
 }
 
 // Update returns a builder for updating this BeneficialOwner.
@@ -192,6 +200,9 @@ func (bo *BeneficialOwner) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("ownership_percentage=")
 	builder.WriteString(fmt.Sprintf("%v", bo.OwnershipPercentage))
+	builder.WriteString(", ")
+	builder.WriteString("government_issued_id_type=")
+	builder.WriteString(fmt.Sprintf("%v", bo.GovernmentIssuedIDType))
 	builder.WriteByte(')')
 	return builder.String()
 }

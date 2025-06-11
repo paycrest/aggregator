@@ -69,16 +69,16 @@ func (f InstitutionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value,
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.InstitutionMutation", m)
 }
 
-// The KYBFormSubmissionFunc type is an adapter to allow the use of ordinary
-// function as KYBFormSubmission mutator.
-type KYBFormSubmissionFunc func(context.Context, *ent.KYBFormSubmissionMutation) (ent.Value, error)
+// The KYBProfileFunc type is an adapter to allow the use of ordinary
+// function as KYBProfile mutator.
+type KYBProfileFunc func(context.Context, *ent.KYBProfileMutation) (ent.Value, error)
 
 // Mutate calls f(ctx, m).
-func (f KYBFormSubmissionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.KYBFormSubmissionMutation); ok {
+func (f KYBProfileFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.KYBProfileMutation); ok {
 		return f(ctx, mv)
 	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.KYBFormSubmissionMutation", m)
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.KYBProfileMutation", m)
 }
 
 // The LinkedAddressFunc type is an adapter to allow the use of ordinary

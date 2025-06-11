@@ -48,7 +48,7 @@ func RegisterRoutes(route *gin.Engine) {
 	v1.POST("slack-interaction", ctrl.SlackInteractionHandler)
 
 	// KYB route
-	v1.POST("kyb-submission", ctrl.SubmitKYBForm)
+	v1.POST("kyb-submission", ctrl.HandleKYBSubmission)
 
 	// KYC routes
 	v1.POST("kyc", ctrl.RequestIDVerification)

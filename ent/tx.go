@@ -22,8 +22,8 @@ type Tx struct {
 	IdentityVerificationRequest *IdentityVerificationRequestClient
 	// Institution is the client for interacting with the Institution builders.
 	Institution *InstitutionClient
-	// KYBFormSubmission is the client for interacting with the KYBFormSubmission builders.
-	KYBFormSubmission *KYBFormSubmissionClient
+	// KYBProfile is the client for interacting with the KYBProfile builders.
+	KYBProfile *KYBProfileClient
 	// LinkedAddress is the client for interacting with the LinkedAddress builders.
 	LinkedAddress *LinkedAddressClient
 	// LockOrderFulfillment is the client for interacting with the LockOrderFulfillment builders.
@@ -196,7 +196,7 @@ func (tx *Tx) init() {
 	tx.FiatCurrency = NewFiatCurrencyClient(tx.config)
 	tx.IdentityVerificationRequest = NewIdentityVerificationRequestClient(tx.config)
 	tx.Institution = NewInstitutionClient(tx.config)
-	tx.KYBFormSubmission = NewKYBFormSubmissionClient(tx.config)
+	tx.KYBProfile = NewKYBProfileClient(tx.config)
 	tx.LinkedAddress = NewLinkedAddressClient(tx.config)
 	tx.LockOrderFulfillment = NewLockOrderFulfillmentClient(tx.config)
 	tx.LockPaymentOrder = NewLockPaymentOrderClient(tx.config)

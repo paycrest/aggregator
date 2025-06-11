@@ -244,9 +244,10 @@ func (m *EmailService) SendWelcomeEmail(ctx context.Context, email, firstName st
 	}
 	resp, err := SendTemplateEmail(payload, "d-b425f024e6554c5ba2b4d03ab0a8b25d")
 	if err != nil {
-		logger.Errorf("Failed to send welcome email to %s: %v", email, err)
-	} else {
-		logger.Infof("Welcome email sent successfully.")
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": email,
+		}).Errorf("Failed to send welcome email")
 	}
 	return resp, err
 }
@@ -262,9 +263,10 @@ func (m *EmailService) SendKYBApprovalEmail(email, firstName string) (types.Send
 	}
 	resp, err := SendTemplateEmail(payload, "d-5ebb862274214ba79eae226c09300aa7")
 	if err != nil {
-		logger.Errorf("Failed to send KYB approval email to %s: %v", email, err)
-	} else {
-		logger.Infof("KYB approval email sent to %s, message ID: %s", email, resp.Id)
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": email,
+		}).Errorf("Failed to send KYB approval")
 	}
 	return resp, err
 }
@@ -281,9 +283,10 @@ func (m *EmailService) SendKYBRejectionEmail(email, firstName, reasonForDecline 
 	}
 	resp, err := SendTemplateEmail(payload, "d-6917f9c32105467b8dd806a5a3dd32dc")
 	if err != nil {
-		logger.Errorf("Failed to send KYB rejection email to %s: %v, response: %+v", email, err, resp)
-		return resp, fmt.Errorf("failed to send rejection email: %v", err)
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": email,
+		}).Errorf("Failed to send KYB rejection")
 	}
-	logger.Infof("KYB rejection email sent to %s, message ID: %s, response: %+v", email, resp.Id, resp)
 	return resp, nil
 }
