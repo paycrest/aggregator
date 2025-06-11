@@ -38,18 +38,6 @@ func (ProviderProfile) Fields() []ent.Field {
 		field.Enum("visibility_mode").
 			Values("private", "public").
 			Default("public"),
-
-		// // KYB fields
-		// field.Text("address").Optional(),
-		// field.String("mobile_number").Optional(),
-		// field.Time("date_of_birth").Optional(),
-		// field.String("business_name").Optional(),
-		// field.Enum("identity_document_type").
-		// 	Values("passport", "drivers_license", "national_id").
-		// 	Optional(),
-		// field.String("identity_document").Optional(),
-		// field.String("business_document").Optional(),
-		// field.Bool("is_kyb_verified").Default(false),
 	}
 }
 
