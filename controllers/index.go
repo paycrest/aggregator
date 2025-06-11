@@ -1,24 +1,32 @@
 package controllers
 
 import (
+	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/ent/beneficialowner"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
+	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
+	"github.com/paycrest/aggregator/ent/user"
 	svc "github.com/paycrest/aggregator/services"
 	kycErrors "github.com/paycrest/aggregator/services/kyc/errors"
 	"github.com/paycrest/aggregator/services/kyc/smile"
@@ -35,7 +43,7 @@ import (
 
 var cryptoConf = config.CryptoConfig()
 
-// var serverConf = config.ServerConfig()
+var serverConf = config.ServerConfig()
 var identityConf = config.IdentityConfig()
 
 // Controller is the default controller for other endpoints
@@ -44,6 +52,11 @@ type Controller struct {
 	priorityQueueService  *svc.PriorityQueueService
 	receiveAddressService *svc.ReceiveAddressService
 	kycService            types.KYCProvider
+	slackService          *svc.SlackService
+	emailService          *svc.EmailService
+	cache                 map[string]bool
+	processedActions      map[string]bool
+	actionMutex           sync.RWMutex
 }
 
 // NewController creates a new instance of AuthController with injected services
@@ -53,7 +66,16 @@ func NewController() *Controller {
 		priorityQueueService:  svc.NewPriorityQueueService(),
 		receiveAddressService: svc.NewReceiveAddressService(),
 		kycService:            smile.NewSmileIDService(),
+		slackService:          svc.NewSlackService(serverConf.SlackWebhookURL),
+		emailService:          svc.NewEmailService(svc.SENDGRID_MAIL_PROVIDER),
+		cache:                 make(map[string]bool),
+		processedActions:      make(map[string]bool),
 	}
+}
+
+type FormSubmission struct {
+	SubmissionID string                 `json:"submissionID"`
+	Answers      map[string]interface{} `json:"answers"`
 }
 
 // GetFiatCurrencies controller fetches the supported fiat currencies
@@ -874,4 +896,651 @@ func (ctrl *Controller) KYCWebhook(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "Webhook processed successfully"})
+}
+
+// WebhookHandler processes incoming Google Forms webhook requests, validates the payload and triggers a Slack notification with submission details.
+func (ctrl *Controller) WelcomeEmailWebhook(ctx *gin.Context) {
+	var submission FormSubmission
+	if err := ctx.ShouldBindJSON(&submission); err != nil {
+		logger.Errorf("Error parsing JSON: %v", err)
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Error parsing JSON", nil)
+		return
+	}
+
+	rawPayload, _ := json.Marshal(submission)
+
+	// Idempotency check using in-memory cache (adjust to Redis or DB if needed)
+	if submission.SubmissionID != "" {
+		cacheKey := fmt.Sprintf("webhook_submission:%s", submission.SubmissionID)
+		// Assuming a simple in-memory cache
+		if _, exists := ctrl.cache[cacheKey]; exists {
+			logger.Infof("Duplicate webhook for submission %s, ignoring", submission.SubmissionID)
+			u.APIResponse(ctx, http.StatusOK, "success", "Webhook already processed", nil)
+			return
+		}
+		ctrl.cache[cacheKey] = true
+	}
+
+	// Initialize fields
+	var name, email string
+
+	// Search for Name and Email in answers
+	for _, value := range submission.Answers {
+		if valueMap, ok := value.(map[string]interface{}); ok {
+			answer, answerOk := valueMap["answer"].(string)
+			question, questionOk := valueMap["question"].(string)
+			if answerOk && answer != "" && questionOk {
+				questionLower := strings.ToLower(question)
+				if (questionLower == "name" || strings.Contains(questionLower, "full name")) && name == "" {
+					name = answer
+				} else if (questionLower == "email" || strings.Contains(questionLower, "email address")) && email == "" {
+					email = answer
+				}
+			}
+		}
+	}
+
+	// Log missing fields as warnings
+	if name == "" {
+		logger.Warnf("Webhook log: 'name' field missing in payload: %s", string(rawPayload))
+	}
+	if email == "" {
+		logger.Warnf("Webhook log: 'email' field missing in payload: %s", string(rawPayload))
+	}
+
+	// Send Slack notification
+	err := ctrl.slackService.SendSubmissionNotification(name, email, submission.SubmissionID)
+	if err != nil {
+		logger.Errorf("Webhook log: Error sending Slack notification for submission %s: %v", submission.SubmissionID, err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Error sending Slack notification", nil)
+		return
+	}
+
+	logger.Infof("Webhook processed successfully for submission %s", submission.SubmissionID)
+	u.APIResponse(ctx, http.StatusOK, "success", "Webhook received and processed", nil)
+}
+
+func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
+	startTime := time.Now()
+
+	// Parse form-encoded payload
+	payloadStr := ctx.PostForm("payload")
+	if payloadStr == "" {
+		body, err := ctx.GetRawData()
+		if err != nil {
+			logger.Errorf("Missing payload and failed to read raw body: %v", err)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing payload"})
+			return
+		}
+		payloadStr = string(body)
+	}
+
+	// Parse JSON payload
+	var payload map[string]interface{}
+	if err := json.Unmarshal([]byte(payloadStr), &payload); err != nil {
+		logger.Errorf("Error parsing Slack interaction payload: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Error parsing payload"})
+		return
+	}
+
+	// Handle modal trigger (button clicks)
+	if payload["type"] == "block_actions" {
+		actions, ok := payload["actions"].([]interface{})
+		if !ok || len(actions) == 0 {
+			logger.Errorf("Invalid or empty actions in Slack payload: %v", payload)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid actions"})
+			return
+		}
+
+		action, ok := actions[0].(map[string]interface{})
+		if !ok {
+			logger.Errorf("Invalid action format: %v", actions[0])
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action format"})
+			return
+		}
+
+		actionID, ok := action["action_id"].(string)
+		if !ok {
+			logger.Errorf("Missing or invalid action_id")
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing action_id"})
+			return
+		}
+
+		var submissionID string
+		if strings.Contains(actionID, "_") {
+			submissionID = actionID[strings.Index(actionID, "_")+1:]
+		} else {
+			logger.Errorf("Invalid action_id format: %s", actionID)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action_id format"})
+			return
+		}
+
+		// Extract firstName and email from message blocks
+		var firstName, email string
+		message, ok := payload["message"].(map[string]interface{})
+		if ok {
+			blocks, ok := message["blocks"].([]interface{})
+			if ok && len(blocks) >= 3 {
+				nameBlock, ok := blocks[1].(map[string]interface{})
+				if ok {
+					text, ok := nameBlock["text"].(map[string]interface{})
+					if ok {
+						nameText, ok := text["text"].(string)
+						if ok && strings.HasPrefix(nameText, "First Name: ") {
+							firstName = strings.TrimPrefix(nameText, "First Name: ")
+						}
+					}
+				}
+				emailBlock, ok := blocks[2].(map[string]interface{})
+				if ok {
+					text, ok := emailBlock["text"].(map[string]interface{})
+					if ok {
+						emailText, ok := text["text"].(string)
+						if ok && strings.HasPrefix(emailText, "Email: ") {
+							emailText = strings.TrimPrefix(emailText, "Email: ")
+							if strings.HasPrefix(emailText, "<mailto:") {
+								emailText = strings.TrimPrefix(emailText, "<mailto:")
+								emailText = strings.Split(emailText, "|")[0]
+							}
+							email = emailText
+						}
+					}
+				}
+			}
+		}
+
+		if email == "" {
+			logger.Errorf("Failed to extract email for action, submissionID: %s", submissionID)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing email"})
+			return
+		}
+		if firstName == "" {
+			logger.Warnf("Failed to extract firstName for submission %s; querying database", submissionID)
+			user, err := storage.Client.User.
+				Query().
+				Where(user.EmailEQ(email)).
+				Select(user.FieldFirstName).
+				Only(ctx)
+			if err != nil {
+				logger.Warnf("Failed to fetch first_name for email %s: %v", email, err)
+				firstName = "User"
+			} else {
+				firstName = user.FirstName
+			}
+		}
+
+		// Handle reject button - only open modal
+		if strings.HasPrefix(actionID, "reject_") {
+			logger.Infof("Reject button clicked for submission %s, action: %+v", submissionID, action)
+			triggerID, ok := payload["trigger_id"].(string)
+			if !ok {
+				logger.Errorf("Missing trigger_id for modal, submissionID: %s", submissionID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing trigger_id"})
+				return
+			}
+
+			modal := map[string]interface{}{
+				"trigger_id": triggerID,
+				"view": map[string]interface{}{
+					"type":             "modal",
+					"callback_id":      "reject_modal_" + submissionID,
+					"private_metadata": fmt.Sprintf(`{"email":"%s","submission_id":"%s","firstName":"%s"}`, email, submissionID, firstName),
+					"title": map[string]interface{}{
+						"type": "plain_text",
+						"text": "Reject KYB Submission",
+					},
+					"submit": map[string]interface{}{
+						"type": "plain_text",
+						"text": "Submit",
+					},
+					"blocks": []map[string]interface{}{
+						{
+							"type":     "input",
+							"block_id": "reason_block",
+							"element": map[string]interface{}{
+								"type":      "static_select",
+								"action_id": "reason_select",
+								"placeholder": map[string]interface{}{
+									"type": "plain_text",
+									"text": "Select a reason",
+								},
+								"options": []map[string]interface{}{
+									{
+										"text": map[string]interface{}{
+											"type": "plain_text",
+											"text": "Incomplete or falsified documentation",
+										},
+										"value": "Incomplete or falsified documentation",
+									},
+									{
+										"text": map[string]interface{}{
+											"type": "plain_text",
+											"text": "Unverifiable business identity",
+										},
+										"value": "Unverifiable business identity",
+									},
+									{
+										"text": map[string]interface{}{
+											"type": "plain_text",
+											"text": "Sanctions or watchlist hits",
+										},
+										"value": "Sanctions or watchlist hits",
+									},
+									{
+										"text": map[string]interface{}{
+											"type": "plain_text",
+											"text": "Inability to identify beneficial owners (UBOs)",
+										},
+										"value": "Inability to identify beneficial owners (UBOs)",
+									},
+									{
+										"text": map[string]interface{}{
+											"type": "plain_text",
+											"text": "Inconsistent business details across documents",
+										},
+										"value": "Inconsistent business details across documents",
+									},
+								},
+							},
+							"label": map[string]interface{}{
+								"type": "plain_text",
+								"text": "Reason for Rejection",
+							},
+						},
+					},
+				},
+			}
+
+			jsonPayload, err := json.Marshal(modal)
+			if err != nil {
+				logger.Errorf("Failed to marshal modal payload for submission %s: %v", submissionID, err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create modal"})
+				return
+			}
+
+			client := &http.Client{}
+			req, err := http.NewRequest("POST", "https://slack.com/api/views.open", bytes.NewBuffer(jsonPayload))
+			if err != nil {
+				logger.Errorf("Failed to create Slack API request for submission %s: %v", submissionID, err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create modal request"})
+				return
+			}
+			req.Header.Set("Content-Type", "application/json")
+			slackBotToken := config.NotificationConfig().SlackBotToken
+			if slackBotToken == "" {
+				logger.Errorf("Slack bot token not configured for submission %s", submissionID)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Slack bot token not configured"})
+				return
+			}
+			req.Header.Set("Authorization", "Bearer "+slackBotToken)
+
+			resp, err := client.Do(req)
+			if err != nil {
+				logger.Errorf("Failed to open Slack modal for submission %s: %v", submissionID, err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open modal"})
+				return
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode != http.StatusOK {
+				body, _ := io.ReadAll(resp.Body)
+				logger.Errorf("Slack API responded with status %d for submission %s: %s", resp.StatusCode, submissionID, string(body))
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open modal"})
+				return
+			}
+
+			ctx.JSON(http.StatusOK, gin.H{})
+			return
+		}
+
+		// Handle approve button
+		if strings.HasPrefix(actionID, "approve_") {
+
+			if ctrl.isActionProcessed(submissionID, "approve") {
+				logger.Warnf("Approve action already processed for submission %s", submissionID)
+				ctx.JSON(http.StatusOK, gin.H{"text": "This submission has already been approved."})
+				return
+			}
+
+			// Mark as processed immediately
+			ctrl.markActionProcessed(submissionID, "approve")
+
+			// Respond immediately to Slack to remove loading state
+			responseURL, _ := payload["response_url"].(string)
+			if responseURL != "" {
+				go func() {
+					// Update message in background
+					message := map[string]interface{}{
+						"replace_original": true,
+						"text":             fmt.Sprintf("✅ *APPROVED* - KYB submission for %s (%s) has been approved.", firstName, email),
+					}
+					jsonPayload, _ := json.Marshal(message)
+					http.Post(responseURL, "application/json", bytes.NewBuffer(jsonPayload))
+				}()
+			}
+
+			// Send immediate response to Slack
+			ctx.JSON(http.StatusOK, gin.H{"text": "Approving submission..."})
+
+			actionValueStr, ok := action["value"].(string)
+			if !ok {
+				logger.Errorf("Missing or invalid action value for approve, submissionID: %s", submissionID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action value"})
+				return
+			}
+
+			var actionValue map[string]interface{}
+			if err := json.Unmarshal([]byte(actionValueStr), &actionValue); err != nil {
+				logger.Errorf("Error parsing action value JSON for submission %s: %s, error: %v", submissionID, actionValueStr, err)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action value JSON"})
+				return
+			}
+
+			actionType, ok := actionValue["action"].(string)
+			if !ok || actionType != "approve" {
+				logger.Errorf("Invalid or missing action type for submission %s", submissionID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action type"})
+				return
+			}
+
+			emailFromAction, ok := actionValue["email"].(string)
+			if ok && emailFromAction != "" {
+				email = emailFromAction
+			}
+
+			if email != "" {
+				_, err := storage.Client.User.
+					Update().
+					Where(user.EmailEQ(email)).
+					SetIsKYBVerified(true).
+					Save(ctx)
+				if err != nil {
+					logger.Errorf("Failed to approve KYB for user %s (submission %s): %v", email, submissionID, err)
+					ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update provider profile"})
+					return
+				}
+
+				resp, err := ctrl.emailService.SendKYBApprovalEmail(email, firstName)
+				if err != nil {
+					logger.Errorf("Failed to send KYB approval email to %s (submission %s): %v, response: %+v", email, submissionID, err, resp)
+				} else {
+					logger.Infof("KYB approval email sent successfully to %s (submission %s), message ID: %s", email, submissionID, resp.Id)
+				}
+			}
+
+			err := ctrl.slackService.SendActionFeedbackNotification(firstName, email, submissionID, "approve", "")
+			if err != nil {
+				logger.Warnf("Failed to send Slack feedback notification for submission %s: %v", submissionID, err)
+			}
+
+			logger.Infof("Processed Slack approve interaction in %v", time.Since(startTime))
+			return
+		}
+
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Unknown action"})
+		return
+	}
+
+	// Handle modal submission
+	if payload["type"] == "view_submission" {
+		view, ok := payload["view"].(map[string]interface{})
+		if !ok {
+			logger.Errorf("Invalid view format in payload")
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid view format"})
+			return
+		}
+		callbackID, ok := view["callback_id"].(string)
+		if !ok {
+			logger.Errorf("Missing callback_id in view")
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing callback_id"})
+			return
+		}
+
+		if strings.HasPrefix(callbackID, "reject_modal_") {
+			submissionID := callbackID[len("reject_modal_"):]
+
+			if ctrl.isActionProcessed(submissionID, "reject") {
+				logger.Warnf("Reject action already processed for submission %s", submissionID)
+				ctx.JSON(http.StatusOK, gin.H{})
+				return
+			}
+
+			// Mark as processed immediately
+			ctrl.markActionProcessed(submissionID, "reject")
+
+			// Extract selected reason
+			state, ok := view["state"].(map[string]interface{})
+			if !ok {
+				logger.Errorf("Invalid state in view for submission %s", submissionID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid state"})
+				return
+			}
+			values, ok := state["values"].(map[string]interface{})
+			if !ok {
+				logger.Errorf("Invalid values in state for submission %s", submissionID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid values"})
+				return
+			}
+			reasonBlock, ok := values["reason_block"].(map[string]interface{})
+			if !ok {
+				logger.Errorf("Invalid reason_block in values for submission %s", submissionID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid reason_block"})
+				return
+			}
+			reasonSelect, ok := reasonBlock["reason_select"].(map[string]interface{})
+			if !ok {
+				logger.Errorf("Invalid reason_select in reason_block for submission %s", submissionID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid reason_select"})
+				return
+			}
+			selectedReason, ok := reasonSelect["selected_option"].(map[string]interface{})
+			if !ok {
+				logger.Errorf("No reason selected for submission %s", submissionID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "No reason selected"})
+				return
+			}
+			reasonForDecline, ok := selectedReason["value"].(string)
+			if !ok {
+				logger.Errorf("Invalid reason value for submission %s", submissionID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid reason value"})
+				return
+			}
+
+			// Extract email and firstName from private_metadata
+			privateMetadata, ok := view["private_metadata"].(string)
+			if !ok {
+				logger.Errorf("Missing private_metadata in view for submission %s", submissionID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing private_metadata"})
+				return
+			}
+			var metadata map[string]interface{}
+			if err := json.Unmarshal([]byte(privateMetadata), &metadata); err != nil {
+				logger.Errorf("Error parsing private_metadata for submission %s: %v", submissionID, err)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid metadata"})
+				return
+			}
+			email, ok := metadata["email"].(string)
+			if !ok || email == "" {
+				logger.Errorf("Missing email in private_metadata for submission %s", submissionID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing email in metadata"})
+				return
+			}
+			firstName, ok := metadata["firstName"].(string)
+			if !ok {
+				logger.Warnf("Missing firstName in private_metadata for submission %s; using default", submissionID)
+				firstName = "User"
+			}
+
+			// Update User
+			_, err := storage.Client.User.
+				Update().
+				Where(user.EmailEQ(email)).
+				SetIsKYBVerified(false).
+				Save(ctx)
+			if err != nil {
+				logger.Errorf("Failed to reject KYB for user %s (submission %s): %v", email, submissionID, err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update provider profile"})
+				return
+			}
+
+			// Send rejection email
+			resp, err := ctrl.emailService.SendKYBRejectionEmail(email, firstName, reasonForDecline)
+			if err != nil {
+				logger.Errorf("Failed to send KYB rejection email to %s (submission %s): %v, response: %+v", email, submissionID, err, resp)
+			} else {
+				logger.Infof("KYB rejection email sent successfully to %s (submission %s), message ID: %s", email, submissionID, resp.Id)
+			}
+			err = ctrl.slackService.SendActionFeedbackNotification(firstName, email, submissionID, "reject", reasonForDecline)
+			if err != nil {
+				logger.Warnf("Failed to send Slack feedback notification for submission %s: %v", submissionID, err)
+			}
+
+			logger.Infof("Processed Slack modal submission for rejection in %v", time.Since(startTime))
+			return
+		}
+
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Unknown callback_id"})
+		return
+	}
+	ctx.JSON(http.StatusBadRequest, gin.H{"error": "Unknown payload type"})
+}
+
+// isActionProcessed checks if an action has already been processed
+func (ctrl *Controller) isActionProcessed(submissionID, actionType string) bool {
+	ctrl.actionMutex.RLock()
+	defer ctrl.actionMutex.RUnlock()
+	key := fmt.Sprintf("%s_%s", submissionID, actionType)
+	return ctrl.processedActions[key]
+}
+
+// markActionProcessed marks an action as processed
+func (ctrl *Controller) markActionProcessed(submissionID, actionType string) {
+	ctrl.actionMutex.Lock()
+	defer ctrl.actionMutex.Unlock()
+	key := fmt.Sprintf("%s_%s", submissionID, actionType)
+	ctrl.processedActions[key] = true
+}
+
+// HandleKYBSubmission handles the POST request for KYB submission
+func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
+	var input types.KYBSubmissionInput
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		logger.WithFields(logger.Fields{
+			"Error": fmt.Sprintf("%v", err),
+		}).Errorf("Error: Failed to bind KYB submission input")
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid input", err.Error())
+		return
+	}
+
+	// Verify user is authenticated
+	userIDValue, exists := ctx.Get("user_id")
+	if !exists {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "User not authenticated", nil)
+		return
+	}
+	userID, err := uuid.Parse(userIDValue.(string))
+	if err != nil {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid user ID", nil)
+		return
+	}
+
+	// Verify user exists
+	userRecord, err := storage.Client.User.
+		Query().
+		Where(user.IDEQ(userID)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusNotFound, "error", "User not found", nil)
+			return
+		}
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": userID,
+		}).
+			Error("Error: Failed to query user")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to process request", nil)
+		return
+	}
+
+	// Check if user already has a KYB submission
+	existingSubmission, err := storage.Client.KYBProfile.
+		Query().
+		Where(kybprofile.HasUserWith(user.IDEQ(userRecord.ID))).
+		Exist(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": userID,
+		}).Errorf("Error: Failed to check existing KYB submission")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to process request", nil)
+		return
+	}
+	if existingSubmission {
+		u.APIResponse(ctx, http.StatusConflict, "error", "KYB submission already submitted for this user", nil)
+		return
+	}
+
+	// Create KYB submission
+	kybBuilder := storage.Client.KYBProfile.
+		Create().
+		SetMobileNumber(input.MobileNumber).
+		SetCompanyName(input.CompanyName).
+		SetRegisteredBusinessAddress(input.RegisteredBusinessAddress).
+		SetCertificateOfIncorporationURL(input.CertificateOfIncorporationUrl).
+		SetArticlesOfIncorporationURL(input.ArticlesOfIncorporationUrl).
+		SetProofOfBusinessAddressURL(input.ProofOfBusinessAddressUrl).
+		SetProofOfResidentialAddressURL(input.ProofOfResidentialAddressUrl).
+		SetUserID(userRecord.ID)
+
+	if input.BusinessLicenseUrl != nil {
+		kybBuilder.SetBusinessLicenseURL(*input.BusinessLicenseUrl)
+	}
+	if input.AmlPolicyUrl != nil {
+		kybBuilder.SetAmlPolicyURL(*input.AmlPolicyUrl)
+	}
+	if input.KycPolicyUrl != nil {
+		kybBuilder.SetKycPolicyURL(*input.KycPolicyUrl)
+	}
+
+	// Create beneficial owners and save them
+	var beneficialOwners []*ent.BeneficialOwner
+	for _, owner := range input.BeneficialOwners {
+		bo, err := storage.Client.BeneficialOwner.
+			Create().
+			SetFullName(owner.FullName).
+			SetResidentialAddress(owner.ResidentialAddress).
+			SetProofOfResidentialAddressURL(owner.ProofOfResidentialAddressUrl).
+			SetGovernmentIssuedIDURL(owner.GovernmentIssuedIdUrl).
+			SetDateOfBirth(owner.DateOfBirth).
+			SetOwnershipPercentage(owner.OwnershipPercentage).
+			SetGovernmentIssuedIDType(beneficialowner.GovernmentIssuedIDType(owner.GovernmentIssuedIdType)).
+			Save(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":  fmt.Sprintf("%v", err),
+				"UserID": userID,
+			}).Errorf("Error: Failed to save beneficial owner")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to save beneficial owner", nil)
+			return
+		}
+		beneficialOwners = append(beneficialOwners, bo)
+	}
+
+	// Save KYB submission with beneficial owners
+	kybSubmission, err := kybBuilder.
+		AddBeneficialOwners(beneficialOwners...).
+		Save(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": userID,
+		}).Errorf("Error: Failed to save KYB submission: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to save KYB submission", nil)
+		return
+	}
+
+	u.APIResponse(ctx, http.StatusCreated, "success", "KYB submission submitted successfully", gin.H{
+		"submission_id": kybSubmission.ID,
+	})
 }

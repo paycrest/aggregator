@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/user"
@@ -113,6 +114,20 @@ func (uc *UserCreate) SetNillableHasEarlyAccess(b *bool) *UserCreate {
 	return uc
 }
 
+// SetIsKYBVerified sets the "isKYBVerified " field.
+func (uc *UserCreate) SetIsKYBVerified(b bool) *UserCreate {
+	uc.mutation.SetIsKYBVerified(b)
+	return uc
+}
+
+// SetNillableIsKYBVerified sets the "isKYBVerified " field if the given value is not nil.
+func (uc *UserCreate) SetNillableIsKYBVerified(b *bool) *UserCreate {
+	if b != nil {
+		uc.SetIsKYBVerified(*b)
+	}
+	return uc
+}
+
 // SetID sets the "id" field.
 func (uc *UserCreate) SetID(u uuid.UUID) *UserCreate {
 	uc.mutation.SetID(u)
@@ -180,6 +195,25 @@ func (uc *UserCreate) AddVerificationToken(v ...*VerificationToken) *UserCreate 
 	return uc.AddVerificationTokenIDs(ids...)
 }
 
+// SetKybProfileID sets the "kyb_profile" edge to the KYBProfile entity by ID.
+func (uc *UserCreate) SetKybProfileID(id uuid.UUID) *UserCreate {
+	uc.mutation.SetKybProfileID(id)
+	return uc
+}
+
+// SetNillableKybProfileID sets the "kyb_profile" edge to the KYBProfile entity by ID if the given value is not nil.
+func (uc *UserCreate) SetNillableKybProfileID(id *uuid.UUID) *UserCreate {
+	if id != nil {
+		uc = uc.SetKybProfileID(*id)
+	}
+	return uc
+}
+
+// SetKybProfile sets the "kyb_profile" edge to the KYBProfile entity.
+func (uc *UserCreate) SetKybProfile(k *KYBProfile) *UserCreate {
+	return uc.SetKybProfileID(k.ID)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uc *UserCreate) Mutation() *UserMutation {
 	return uc.mutation
@@ -239,6 +273,10 @@ func (uc *UserCreate) defaults() error {
 		v := user.DefaultHasEarlyAccess
 		uc.mutation.SetHasEarlyAccess(v)
 	}
+	if _, ok := uc.mutation.IsKYBVerified(); !ok {
+		v := user.DefaultIsKYBVerified
+		uc.mutation.SetIsKYBVerified(v)
+	}
 	if _, ok := uc.mutation.ID(); !ok {
 		if user.DefaultID == nil {
 			return fmt.Errorf("ent: uninitialized user.DefaultID (forgotten import ent/runtime?)")
@@ -287,6 +325,9 @@ func (uc *UserCreate) check() error {
 	}
 	if _, ok := uc.mutation.HasEarlyAccess(); !ok {
 		return &ValidationError{Name: "has_early_access", err: errors.New(`ent: missing required field "User.has_early_access"`)}
+	}
+	if _, ok := uc.mutation.IsKYBVerified(); !ok {
+		return &ValidationError{Name: "isKYBVerified ", err: errors.New(`ent: missing required field "User.isKYBVerified "`)}
 	}
 	return nil
 }
@@ -360,6 +401,10 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		_spec.SetField(user.FieldHasEarlyAccess, field.TypeBool, value)
 		_node.HasEarlyAccess = value
 	}
+	if value, ok := uc.mutation.IsKYBVerified(); ok {
+		_spec.SetField(user.FieldIsKYBVerified, field.TypeBool, value)
+		_node.IsKYBVerified = value
+	}
 	if nodes := uc.mutation.SenderProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
@@ -401,6 +446,22 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(verificationtoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := uc.mutation.KybProfileIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.KybProfileTable,
+			Columns: []string{user.KybProfileColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(kybprofile.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -553,6 +614,18 @@ func (u *UserUpsert) SetHasEarlyAccess(v bool) *UserUpsert {
 // UpdateHasEarlyAccess sets the "has_early_access" field to the value that was provided on create.
 func (u *UserUpsert) UpdateHasEarlyAccess() *UserUpsert {
 	u.SetExcluded(user.FieldHasEarlyAccess)
+	return u
+}
+
+// SetIsKYBVerified sets the "isKYBVerified " field.
+func (u *UserUpsert) SetIsKYBVerified(v bool) *UserUpsert {
+	u.Set(user.FieldIsKYBVerified, v)
+	return u
+}
+
+// UpdateIsKYBVerified sets the "isKYBVerified " field to the value that was provided on create.
+func (u *UserUpsert) UpdateIsKYBVerified() *UserUpsert {
+	u.SetExcluded(user.FieldIsKYBVerified)
 	return u
 }
 
@@ -716,6 +789,20 @@ func (u *UserUpsertOne) SetHasEarlyAccess(v bool) *UserUpsertOne {
 func (u *UserUpsertOne) UpdateHasEarlyAccess() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateHasEarlyAccess()
+	})
+}
+
+// SetIsKYBVerified sets the "isKYBVerified " field.
+func (u *UserUpsertOne) SetIsKYBVerified(v bool) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetIsKYBVerified(v)
+	})
+}
+
+// UpdateIsKYBVerified sets the "isKYBVerified " field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateIsKYBVerified() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateIsKYBVerified()
 	})
 }
 
@@ -1046,6 +1133,20 @@ func (u *UserUpsertBulk) SetHasEarlyAccess(v bool) *UserUpsertBulk {
 func (u *UserUpsertBulk) UpdateHasEarlyAccess() *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateHasEarlyAccess()
+	})
+}
+
+// SetIsKYBVerified sets the "isKYBVerified " field.
+func (u *UserUpsertBulk) SetIsKYBVerified(v bool) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetIsKYBVerified(v)
+	})
+}
+
+// UpdateIsKYBVerified sets the "isKYBVerified " field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateIsKYBVerified() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateIsKYBVerified()
 	})
 }
 
