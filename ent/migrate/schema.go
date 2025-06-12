@@ -652,7 +652,7 @@ var (
 		{Name: "scope", Type: field.TypeString},
 		{Name: "is_email_verified", Type: field.TypeBool, Default: false},
 		{Name: "has_early_access", Type: field.TypeBool, Default: false},
-		{Name: "is_kyb_verified ", Type: field.TypeBool, Default: false},
+		{Name: "is_kyb_verified", Type: field.TypeBool, Default: false},
 	}
 	// UsersTable holds the schema information for the "users" table.
 	UsersTable = &schema.Table{

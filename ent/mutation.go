@@ -21202,12 +21202,12 @@ func (m *UserMutation) ResetHasEarlyAccess() {
 	m.has_early_access = nil
 }
 
-// SetIsKYBVerified sets the "isKYBVerified " field.
+// SetIsKYBVerified sets the "isKYBVerified" field.
 func (m *UserMutation) SetIsKYBVerified(b bool) {
 	m.isKYBVerified = &b
 }
 
-// IsKYBVerified returns the value of the "isKYBVerified " field in the mutation.
+// IsKYBVerified returns the value of the "isKYBVerified" field in the mutation.
 func (m *UserMutation) IsKYBVerified() (r bool, exists bool) {
 	v := m.isKYBVerified
 	if v == nil {
@@ -21216,7 +21216,7 @@ func (m *UserMutation) IsKYBVerified() (r bool, exists bool) {
 	return *v, true
 }
 
-// OldIsKYBVerified returns the old "isKYBVerified " field's value of the User entity.
+// OldIsKYBVerified returns the old "isKYBVerified" field's value of the User entity.
 // If the User object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
 func (m *UserMutation) OldIsKYBVerified(ctx context.Context) (v bool, err error) {
@@ -21233,7 +21233,7 @@ func (m *UserMutation) OldIsKYBVerified(ctx context.Context) (v bool, err error)
 	return oldValue.IsKYBVerified, nil
 }
 
-// ResetIsKYBVerified resets all changes to the "isKYBVerified " field.
+// ResetIsKYBVerified resets all changes to the "isKYBVerified" field.
 func (m *UserMutation) ResetIsKYBVerified() {
 	m.isKYBVerified = nil
 }

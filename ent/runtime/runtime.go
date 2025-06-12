@@ -476,9 +476,9 @@ func init() {
 	userDescHasEarlyAccess := userFields[7].Descriptor()
 	// user.DefaultHasEarlyAccess holds the default value on creation for the has_early_access field.
 	user.DefaultHasEarlyAccess = userDescHasEarlyAccess.Default.(bool)
-	// userDescIsKYBVerified is the schema descriptor for isKYBVerified  field.
+	// userDescIsKYBVerified is the schema descriptor for isKYBVerified field.
 	userDescIsKYBVerified := userFields[8].Descriptor()
-	// user.DefaultIsKYBVerified holds the default value on creation for the isKYBVerified  field.
+	// user.DefaultIsKYBVerified holds the default value on creation for the isKYBVerified field.
 	user.DefaultIsKYBVerified = userDescIsKYBVerified.Default.(bool)
 	// userDescID is the schema descriptor for id field.
 	userDescID := userFields[0].Descriptor()

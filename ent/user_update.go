@@ -137,13 +137,13 @@ func (uu *UserUpdate) SetNillableHasEarlyAccess(b *bool) *UserUpdate {
 	return uu
 }
 
-// SetIsKYBVerified sets the "isKYBVerified " field.
+// SetIsKYBVerified sets the "isKYBVerified" field.
 func (uu *UserUpdate) SetIsKYBVerified(b bool) *UserUpdate {
 	uu.mutation.SetIsKYBVerified(b)
 	return uu
 }
 
-// SetNillableIsKYBVerified sets the "isKYBVerified " field if the given value is not nil.
+// SetNillableIsKYBVerified sets the "isKYBVerified" field if the given value is not nil.
 func (uu *UserUpdate) SetNillableIsKYBVerified(b *bool) *UserUpdate {
 	if b != nil {
 		uu.SetIsKYBVerified(*b)
@@ -619,13 +619,13 @@ func (uuo *UserUpdateOne) SetNillableHasEarlyAccess(b *bool) *UserUpdateOne {
 	return uuo
 }
 
-// SetIsKYBVerified sets the "isKYBVerified " field.
+// SetIsKYBVerified sets the "isKYBVerified" field.
 func (uuo *UserUpdateOne) SetIsKYBVerified(b bool) *UserUpdateOne {
 	uuo.mutation.SetIsKYBVerified(b)
 	return uuo
 }
 
-// SetNillableIsKYBVerified sets the "isKYBVerified " field if the given value is not nil.
+// SetNillableIsKYBVerified sets the "isKYBVerified" field if the given value is not nil.
 func (uuo *UserUpdateOne) SetNillableIsKYBVerified(b *bool) *UserUpdateOne {
 	if b != nil {
 		uuo.SetIsKYBVerified(*b)

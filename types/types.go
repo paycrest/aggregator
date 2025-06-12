@@ -253,13 +253,13 @@ type ProviderProfilePayload struct {
 	IsAvailable          bool                        `json:"isAvailable"`
 	Tokens               []ProviderOrderTokenPayload `json:"tokens"`
 	VisibilityMode       string                      `json:"visibilityMode"`
-	Address              string                      `json:"address"`
-	MobileNumber         string                      `json:"mobileNumber"`
-	DateOfBirth          time.Time                   `json:"dateOfBirth"`
-	BusinessName         string                      `json:"businessName"`
-	IdentityDocumentType string                      `json:"identityType"`
-	IdentityDocument     string                      `json:"identityDocument"`
-	BusinessDocument     string                      `json:"businessDocument"`
+	// Address              string                      `json:"address"`
+	// MobileNumber         string                      `json:"mobileNumber"`
+	// DateOfBirth          time.Time                   `json:"dateOfBirth"`
+	// BusinessName         string                      `json:"businessName"`
+	// IdentityDocumentType string                      `json:"identityType"`
+	// IdentityDocument     string                      `json:"identityDocument"`
+	// BusinessDocument     string                      `json:"businessDocument"`
 }
 
 // ProviderProfileResponse is the response for the provider profile endpoint

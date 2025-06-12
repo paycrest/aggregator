@@ -39,8 +39,8 @@ type User struct {
 	IsEmailVerified bool `json:"is_email_verified,omitempty"`
 	// HasEarlyAccess holds the value of the "has_early_access" field.
 	HasEarlyAccess bool `json:"has_early_access,omitempty"`
-	// IsKYBVerified holds the value of the "isKYBVerified " field.
-	IsKYBVerified bool `json:"isKYBVerified ,omitempty"`
+	// IsKYBVerified holds the value of the "isKYBVerified" field.
+	IsKYBVerified bool `json:"isKYBVerified,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the UserQuery when eager-loading is set.
 	Edges        UserEdges `json:"edges"`
@@ -194,7 +194,7 @@ func (u *User) assignValues(columns []string, values []any) error {
 			}
 		case user.FieldIsKYBVerified:
 			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field isKYBVerified ", values[i])
+				return fmt.Errorf("unexpected type %T for field isKYBVerified", values[i])
 			} else if value.Valid {
 				u.IsKYBVerified = value.Bool
 			}
@@ -280,7 +280,7 @@ func (u *User) String() string {
 	builder.WriteString("has_early_access=")
 	builder.WriteString(fmt.Sprintf("%v", u.HasEarlyAccess))
 	builder.WriteString(", ")
-	builder.WriteString("isKYBVerified =")
+	builder.WriteString("isKYBVerified=")
 	builder.WriteString(fmt.Sprintf("%v", u.IsKYBVerified))
 	builder.WriteByte(')')
 	return builder.String()

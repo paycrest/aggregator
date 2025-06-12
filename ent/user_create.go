@@ -114,13 +114,13 @@ func (uc *UserCreate) SetNillableHasEarlyAccess(b *bool) *UserCreate {
 	return uc
 }
 
-// SetIsKYBVerified sets the "isKYBVerified " field.
+// SetIsKYBVerified sets the "isKYBVerified" field.
 func (uc *UserCreate) SetIsKYBVerified(b bool) *UserCreate {
 	uc.mutation.SetIsKYBVerified(b)
 	return uc
 }
 
-// SetNillableIsKYBVerified sets the "isKYBVerified " field if the given value is not nil.
+// SetNillableIsKYBVerified sets the "isKYBVerified" field if the given value is not nil.
 func (uc *UserCreate) SetNillableIsKYBVerified(b *bool) *UserCreate {
 	if b != nil {
 		uc.SetIsKYBVerified(*b)
@@ -327,7 +327,7 @@ func (uc *UserCreate) check() error {
 		return &ValidationError{Name: "has_early_access", err: errors.New(`ent: missing required field "User.has_early_access"`)}
 	}
 	if _, ok := uc.mutation.IsKYBVerified(); !ok {
-		return &ValidationError{Name: "isKYBVerified ", err: errors.New(`ent: missing required field "User.isKYBVerified "`)}
+		return &ValidationError{Name: "isKYBVerified", err: errors.New(`ent: missing required field "User.isKYBVerified"`)}
 	}
 	return nil
 }
@@ -617,13 +617,13 @@ func (u *UserUpsert) UpdateHasEarlyAccess() *UserUpsert {
 	return u
 }
 
-// SetIsKYBVerified sets the "isKYBVerified " field.
+// SetIsKYBVerified sets the "isKYBVerified" field.
 func (u *UserUpsert) SetIsKYBVerified(v bool) *UserUpsert {
 	u.Set(user.FieldIsKYBVerified, v)
 	return u
 }
 
-// UpdateIsKYBVerified sets the "isKYBVerified " field to the value that was provided on create.
+// UpdateIsKYBVerified sets the "isKYBVerified" field to the value that was provided on create.
 func (u *UserUpsert) UpdateIsKYBVerified() *UserUpsert {
 	u.SetExcluded(user.FieldIsKYBVerified)
 	return u
@@ -792,14 +792,14 @@ func (u *UserUpsertOne) UpdateHasEarlyAccess() *UserUpsertOne {
 	})
 }
 
-// SetIsKYBVerified sets the "isKYBVerified " field.
+// SetIsKYBVerified sets the "isKYBVerified" field.
 func (u *UserUpsertOne) SetIsKYBVerified(v bool) *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
 		s.SetIsKYBVerified(v)
 	})
 }
 
-// UpdateIsKYBVerified sets the "isKYBVerified " field to the value that was provided on create.
+// UpdateIsKYBVerified sets the "isKYBVerified" field to the value that was provided on create.
 func (u *UserUpsertOne) UpdateIsKYBVerified() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateIsKYBVerified()
@@ -1136,14 +1136,14 @@ func (u *UserUpsertBulk) UpdateHasEarlyAccess() *UserUpsertBulk {
 	})
 }
 
-// SetIsKYBVerified sets the "isKYBVerified " field.
+// SetIsKYBVerified sets the "isKYBVerified" field.
 func (u *UserUpsertBulk) SetIsKYBVerified(v bool) *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
 		s.SetIsKYBVerified(v)
 	})
 }
 
-// UpdateIsKYBVerified sets the "isKYBVerified " field to the value that was provided on create.
+// UpdateIsKYBVerified sets the "isKYBVerified" field to the value that was provided on create.
 func (u *UserUpsertBulk) UpdateIsKYBVerified() *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateIsKYBVerified()

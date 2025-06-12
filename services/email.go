@@ -231,15 +231,15 @@ func SendTemplateEmailWithJsonAttachment(content types.SendEmailPayload, templat
 
 // SendWelcomeEmail sends a welcome email to the user
 func (m *EmailService) SendWelcomeEmail(ctx context.Context, email, firstName string, scopes []string) (types.SendEmailResponse, error) {
-	verificationLink := notificationConf.VerificationLink
+	// verificationLink := notificationConf.VerificationLink
 	payload := types.SendEmailPayload{
 		FromAddress: _DefaultFromAddress,
 		ToAddress:   email,
 		DynamicData: map[string]interface{}{
-			"first_name":        firstName,
-			"email":             email,
-			"scopes":            strings.Join(scopes, ", "),
-			"verification_link": verificationLink,
+			"first_name": firstName,
+			"email":      email,
+			"scopes":     strings.Join(scopes, ", "),
+			// "verification_link": verificationLink,
 		},
 	}
 	resp, err := SendTemplateEmail(payload, "d-b425f024e6554c5ba2b4d03ab0a8b25d")

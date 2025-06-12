@@ -542,10 +542,10 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		}
 	}
 
-	// Activate profile
-	if payload.BusinessDocument != "" && payload.IdentityDocument != "" {
-		update.SetIsActive(true)
-	}
+	// // Activate profile
+	// if payload.BusinessDocument != "" && payload.IdentityDocument != "" {
+	// 	update.SetIsActive(true)
+	// }
 
 	_, err := update.Save(ctx)
 	if err != nil {

@@ -34,8 +34,8 @@ const (
 	FieldIsEmailVerified = "is_email_verified"
 	// FieldHasEarlyAccess holds the string denoting the has_early_access field in the database.
 	FieldHasEarlyAccess = "has_early_access"
-	// FieldIsKYBVerified holds the string denoting the iskybverified  field in the database.
-	FieldIsKYBVerified = "is_kyb_verified "
+	// FieldIsKYBVerified holds the string denoting the iskybverified field in the database.
+	FieldIsKYBVerified = "is_kyb_verified"
 	// EdgeSenderProfile holds the string denoting the sender_profile edge name in mutations.
 	EdgeSenderProfile = "sender_profile"
 	// EdgeProviderProfile holds the string denoting the provider_profile edge name in mutations.
@@ -122,7 +122,7 @@ var (
 	DefaultIsEmailVerified bool
 	// DefaultHasEarlyAccess holds the default value on creation for the "has_early_access" field.
 	DefaultHasEarlyAccess bool
-	// DefaultIsKYBVerified holds the default value on creation for the "isKYBVerified " field.
+	// DefaultIsKYBVerified holds the default value on creation for the "isKYBVerified" field.
 	DefaultIsKYBVerified bool
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
@@ -181,7 +181,7 @@ func ByHasEarlyAccess(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldHasEarlyAccess, opts...).ToFunc()
 }
 
-// ByIsKYBVerified orders the results by the isKYBVerified  field.
+// ByIsKYBVerified orders the results by the isKYBVerified field.
 func ByIsKYBVerified(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldIsKYBVerified, opts...).ToFunc()
 }

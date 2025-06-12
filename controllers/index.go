@@ -959,6 +959,7 @@ func (ctrl *Controller) WelcomeEmailWebhook(ctx *gin.Context) {
 	u.APIResponse(ctx, http.StatusOK, "success", "Webhook received and processed", nil)
 }
 
+// SlackInteractionHandler handles Slack interaction requests
 func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 	startTime := time.Now()
 

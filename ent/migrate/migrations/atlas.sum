@@ -1,4 +1,4 @@
-h1:mbjYUn+9Ft6WqrWeZurNpG+pt3iyhucaGjJHe2+C+uI=
+h1:1usFxLONzk360Jg1Xw0hKqLSfw9mCWgvzICr9mUayU8=
 20240118234246_initial.sql h1:dYuYBqns33WT+3p8VQvbKUP62k3k6w6h8S+FqNqgSvU=
 20240130122324_order_from_address.sql h1:mMVI2iBUd1roIYLUqu0d2jZ7+B6exppRN8qqn+aIHx4=
 20240202010744_fees_on_order.sql h1:P7ngxZKqDKefBM5vk6M3kbWeMPVwbZ4MZVcLBjEfS34=
@@ -53,3 +53,4 @@ h1:mbjYUn+9Ft6WqrWeZurNpG+pt3iyhucaGjJHe2+C+uI=
 20250505033200_tzs_bank_institutions.sql h1:kQHdkewxxx63Z5dMQJYsq5LPL1SaeBv8hGv84fpsLCQ=
 20250505033210_ugx_bank_institutions.sql h1:8ex3xOuruqqPQJbcR9rUNpPDHU4n8Q3URvUIXQ6oDDE=
 20250510231545_order_metadata.sql h1:BrHlYt3LvuYcnsw7b9xfzjg5U4D1RfPy+RusxRDj66k=
+20250611095232_check_provider_scope.sql h1:LasoMXaej7qsIRMoQXHgMa+ESsCwR7cXTq28cdAufzw=

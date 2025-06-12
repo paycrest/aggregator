@@ -101,7 +101,7 @@ func HasEarlyAccess(v bool) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldHasEarlyAccess, v))
 }
 
-// IsKYBVerified applies equality check predicate on the "isKYBVerified " field. It's identical to IsKYBVerifiedEQ.
+// IsKYBVerified applies equality check predicate on the "isKYBVerified" field. It's identical to IsKYBVerifiedEQ.
 func IsKYBVerified(v bool) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldIsKYBVerified, v))
 }
@@ -531,12 +531,12 @@ func HasEarlyAccessNEQ(v bool) predicate.User {
 	return predicate.User(sql.FieldNEQ(FieldHasEarlyAccess, v))
 }
 
-// IsKYBVerifiedEQ applies the EQ predicate on the "isKYBVerified " field.
+// IsKYBVerifiedEQ applies the EQ predicate on the "isKYBVerified" field.
 func IsKYBVerifiedEQ(v bool) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldIsKYBVerified, v))
 }
 
-// IsKYBVerifiedNEQ applies the NEQ predicate on the "isKYBVerified " field.
+// IsKYBVerifiedNEQ applies the NEQ predicate on the "isKYBVerified" field.
 func IsKYBVerifiedNEQ(v bool) predicate.User {
 	return predicate.User(sql.FieldNEQ(FieldIsKYBVerified, v))
 }
