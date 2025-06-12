@@ -25,7 +25,7 @@ BEGIN
             ('CDHIMWMW', 'CDH Investment Bank', 'bank', now(), now()),
             ('FRCGMWMW', 'First Capital Limited', 'bank', now(), now()),
             ('NBSTMWMW','NBS Bank Limited', 'bank', now(), now()),
-            ('MBBCMWMW','Centenary Bank', 'mobile_money', now(), now()),
+            ('MBBCMWMW','Centenary Bank', 'bank', now(), now()),
             ('TNMPMWPC', 'TNM Mpamba', 'mobile_money', now(), now())
     )
     INSERT INTO "institutions" ("code", "name", "fiat_currency_institutions", "type", "updated_at", "created_at")
