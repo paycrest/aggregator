@@ -158,6 +158,7 @@ func CreateTRC20Token(client types.RPCClient, overrides map[string]interface{}) 
 		SetChainID(payload["chainID"].(int64)).
 		SetRPCEndpoint(payload["networkRPC"].(string)).
 		SetFee(decimal.NewFromFloat(0.1)).
+		SetBlockTime(decimal.NewFromFloat(2)).
 		SetIsTestnet(true).
 		OnConflict().
 		UpdateNewValues().
@@ -662,6 +663,7 @@ func CreateTestTokenData(t *testing.T, client *ent.Client) ([]*ent.Network, []*e
 		SetChainID(42161).
 		SetRPCEndpoint("https://arb1.arbitrum.io/rpc").
 		SetGatewayContractAddress("0x123").
+		SetBlockTime(decimal.NewFromFloat(2)).
 		SetIsTestnet(false).
 		SetFee(decimal.NewFromFloat(0.01)).
 		Save(ctx)
@@ -672,6 +674,7 @@ func CreateTestTokenData(t *testing.T, client *ent.Client) ([]*ent.Network, []*e
 		SetChainID(137).
 		SetRPCEndpoint("https://polygon-rpc.com").
 		SetGatewayContractAddress("0x456").
+		SetBlockTime(decimal.NewFromFloat(2)).
 		SetIsTestnet(false).
 		SetFee(decimal.NewFromFloat(0.02)).
 		Save(ctx)
