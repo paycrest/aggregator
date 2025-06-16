@@ -252,7 +252,7 @@ func GenerateTronAccountFromIndex(accountIndex int) (wallet *tronWallet.TronWall
 // EncryptOrderRecipient encrypts the recipient details using the aggregator's public key
 func EncryptOrderRecipient(recipient *ent.PaymentOrderRecipient) (string, error) {
 	// Generate a cryptographically secure random nonce
-	nonce := make([]byte, 32)
+	nonce := make([]byte, 12)
 	if _, err := rand.Read(nonce); err != nil {
 		return "", fmt.Errorf("failed to generate nonce: %w", err)
 	}
