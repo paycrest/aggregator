@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jarcoal/httpmock"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/routers/middleware"
@@ -108,6 +109,23 @@ func setup() error {
 }
 
 func TestSender(t *testing.T) {
+	// Activate httpmock
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	// Mock the /backend-wallet/create endpoint
+	httpmock.RegisterResponder("POST", "https://engine.thirdweb.com/backend-wallet/create",
+		func(req *http.Request) (*http.Response, error) {
+			mockAddress := fmt.Sprintf("0x%040x", rand.Uint64())
+			resp := map[string]interface{}{
+				"result": map[string]interface{}{
+					"walletAddress": mockAddress,
+				},
+			}
+			respBytes, _ := json.Marshal(resp)
+			return httpmock.NewBytesResponse(200, respBytes), nil
+		},
+	)
 
 	// Set up test database client
 	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
