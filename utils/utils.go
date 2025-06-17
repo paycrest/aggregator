@@ -21,7 +21,6 @@ import (
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
-	"github.com/paycrest/aggregator/ent/institution"
 	institutionEnt "github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/storage"
@@ -599,7 +598,7 @@ func GetTokenRateFromQueue(tokenSymbol string, orderAmount decimal.Decimal, fiat
 func GetInstitutionByCode(ctx context.Context, institutionCode string, enabledFiatCurrency bool) (*ent.Institution, error) {
 	institutionQuery := storage.Client.Institution.
 		Query().
-		Where(institution.CodeEQ(institutionCode))
+		Where(institutionEnt.CodeEQ(institutionCode))
 
 	if enabledFiatCurrency {
 		institutionQuery = institutionQuery.WithFiatCurrency(

@@ -21,7 +21,6 @@ import (
 	orderService "github.com/paycrest/aggregator/services/order"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
-	"github.com/paycrest/aggregator/utils"
 	u "github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/shopspring/decimal"
@@ -520,7 +519,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				}).Errorf("Failed to update payment order status: %v", err)
 			}
 
-			err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
+			err = u.SendPaymentOrderWebhook(ctx, paymentOrder)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":   fmt.Sprintf("%v", err),
@@ -1090,7 +1089,7 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 	}
 
 	for _, currency := range provider.Edges.Currencies {
-		if !utils.ContainsString(currencyCodes, currency.Code) {
+		if !u.ContainsString(currencyCodes, currency.Code) {
 			u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
 			return
 		}
