@@ -56,48 +56,57 @@ func NewEthClient(endpoint string) (RPCClient, error) {
 
 // TokenTransferEvent represents a token transfer event.
 type TokenTransferEvent struct {
-	BlockNumber uint64
+	BlockNumber int64
 	TxHash      string
 	From        string
 	To          string
-	Value       *big.Int
+	Value       decimal.Decimal
 }
 
 // OrderCreatedEvent represents an order created event.
 type OrderCreatedEvent struct {
-	BlockNumber uint64
+	BlockNumber int64
 	TxHash      string
 	Token       string
-	Amount      *big.Int
-	ProtocolFee *big.Int
-	OrderId     [32]byte
-	Rate        *big.Int
+	Amount      decimal.Decimal
+	ProtocolFee decimal.Decimal
+	OrderId     string
+	Rate        decimal.Decimal
 	MessageHash string
+	Sender      string
 }
 
 // OrderSettledEvent represents a order settled event.
 type OrderSettledEvent struct {
-	BlockNumber       uint64
+	BlockNumber       int64
 	TxHash            string
-	SplitOrderId      [32]byte
-	OrderId           [32]byte
+	SplitOrderId      string
+	OrderId           string
 	LiquidityProvider string
-	SettlePercent     *big.Int
+	SettlePercent     decimal.Decimal
 }
 
 // OrderRefundedEvent represents a order refunded event.
 type OrderRefundedEvent struct {
-	BlockNumber uint64
+	BlockNumber int64
 	TxHash      string
-	Fee         *big.Int
-	OrderId     [32]byte
+	Fee         decimal.Decimal
+	OrderId     string
 }
 
 // OrderService provides an interface for the OrderService
 type OrderService interface {
-	CreateOrder(ctx context.Context, client RPCClient, orderID uuid.UUID) error
-	RefundOrder(ctx context.Context, client RPCClient, network *ent.Network, orderID string) error
-	SettleOrder(ctx context.Context, client RPCClient, orderID uuid.UUID) error
+	CreateOrder(ctx context.Context, orderID uuid.UUID) error
+	RefundOrder(ctx context.Context, network *ent.Network, orderID string) error
+	SettleOrder(ctx context.Context, orderID uuid.UUID) error
+}
+
+// Indexer provides an interface for indexing blockchain data to the database.
+type Indexer interface {
+	IndexTransfer(ctx context.Context, rpcClient RPCClient, token *ent.Token, fromBlock int64, toBlock int64) error
+	IndexOrderCreated(ctx context.Context, rpcClient RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error
+	IndexOrderSettled(ctx context.Context, rpcClient RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error
+	IndexOrderRefunded(ctx context.Context, rpcClient RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error
 }
 
 // KYCProvider defines the interface for KYC verification providers
@@ -171,12 +180,13 @@ type LockOrderResponse struct {
 
 // AcceptOrderResponse is the response for the accept order endpoint
 type AcceptOrderResponse struct {
-	ID                uuid.UUID       `json:"id"`
-	Amount            decimal.Decimal `json:"amount"`
-	Institution       string          `json:"institution"`
-	AccountIdentifier string          `json:"accountIdentifier"`
-	AccountName       string          `json:"accountName"`
-	Memo              string          `json:"memo"`
+	ID                uuid.UUID              `json:"id"`
+	Amount            decimal.Decimal        `json:"amount"`
+	Institution       string                 `json:"institution"`
+	AccountIdentifier string                 `json:"accountIdentifier"`
+	AccountName       string                 `json:"accountName"`
+	Memo              string                 `json:"memo"`
+	Metadata          map[string]interface{} `json:"metadata"`
 }
 
 // FulfillLockOrderPayload is the payload for the fulfill order endpoint

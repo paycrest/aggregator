@@ -18,6 +18,7 @@ import (
 	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/types"
 	tronWallet "github.com/paycrest/tron-wallet"
 	tronEnums "github.com/paycrest/tron-wallet/enums"
 	"golang.org/x/crypto/bcrypt"
@@ -252,7 +253,7 @@ func GenerateTronAccountFromIndex(accountIndex int) (wallet *tronWallet.TronWall
 // EncryptOrderRecipient encrypts the recipient details using the aggregator's public key
 func EncryptOrderRecipient(recipient *ent.PaymentOrderRecipient) (string, error) {
 	// Generate a cryptographically secure random nonce
-	nonce := make([]byte, 32)
+	nonce := make([]byte, 12)
 	if _, err := rand.Read(nonce); err != nil {
 		return "", fmt.Errorf("failed to generate nonce: %w", err)
 	}
@@ -275,4 +276,30 @@ func EncryptOrderRecipient(recipient *ent.PaymentOrderRecipient) (string, error)
 	}
 
 	return base64.StdEncoding.EncodeToString(messageCipher), nil
+}
+
+// GetOrderRecipientFromMessageHash decrypts the message hash and returns the order recipient
+func GetOrderRecipientFromMessageHash(messageHash string) (*types.PaymentOrderRecipient, error) {
+	messageCipher, err := base64.StdEncoding.DecodeString(messageHash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode message hash: %w", err)
+	}
+
+	// Decrypt with the private key of the aggregator
+	message, err := PublicKeyDecryptJSON(messageCipher, config.CryptoConfig().AggregatorPrivateKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt message hash: %w", err)
+	}
+
+	messageBytes, err := json.Marshal(message)
+	if err != nil {
+		return nil, err
+	}
+
+	var recipient *types.PaymentOrderRecipient
+	err = json.Unmarshal(messageBytes, &recipient)
+	if err != nil {
+		return nil, fmt.Errorf("%w", err)
+	}
+	return recipient, nil
 }

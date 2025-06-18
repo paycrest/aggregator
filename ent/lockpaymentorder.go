@@ -35,6 +35,8 @@ type LockPaymentOrder struct {
 	Rate decimal.Decimal `json:"rate,omitempty"`
 	// OrderPercent holds the value of the "order_percent" field.
 	OrderPercent decimal.Decimal `json:"order_percent,omitempty"`
+	// Sender holds the value of the "sender" field.
+	Sender string `json:"sender,omitempty"`
 	// TxHash holds the value of the "tx_hash" field.
 	TxHash string `json:"tx_hash,omitempty"`
 	// Status holds the value of the "status" field.
@@ -143,7 +145,7 @@ func (*LockPaymentOrder) scanValues(columns []string) ([]any, error) {
 			values[i] = new(decimal.Decimal)
 		case lockpaymentorder.FieldBlockNumber, lockpaymentorder.FieldCancellationCount:
 			values[i] = new(sql.NullInt64)
-		case lockpaymentorder.FieldGatewayID, lockpaymentorder.FieldTxHash, lockpaymentorder.FieldStatus, lockpaymentorder.FieldInstitution, lockpaymentorder.FieldAccountIdentifier, lockpaymentorder.FieldAccountName, lockpaymentorder.FieldMemo:
+		case lockpaymentorder.FieldGatewayID, lockpaymentorder.FieldSender, lockpaymentorder.FieldTxHash, lockpaymentorder.FieldStatus, lockpaymentorder.FieldInstitution, lockpaymentorder.FieldAccountIdentifier, lockpaymentorder.FieldAccountName, lockpaymentorder.FieldMemo:
 			values[i] = new(sql.NullString)
 		case lockpaymentorder.FieldCreatedAt, lockpaymentorder.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -211,6 +213,12 @@ func (lpo *LockPaymentOrder) assignValues(columns []string, values []any) error 
 				return fmt.Errorf("unexpected type %T for field order_percent", values[i])
 			} else if value != nil {
 				lpo.OrderPercent = *value
+			}
+		case lockpaymentorder.FieldSender:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field sender", values[i])
+			} else if value.Valid {
+				lpo.Sender = value.String
 			}
 		case lockpaymentorder.FieldTxHash:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -375,6 +383,9 @@ func (lpo *LockPaymentOrder) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("order_percent=")
 	builder.WriteString(fmt.Sprintf("%v", lpo.OrderPercent))
+	builder.WriteString(", ")
+	builder.WriteString("sender=")
+	builder.WriteString(lpo.Sender)
 	builder.WriteString(", ")
 	builder.WriteString("tx_hash=")
 	builder.WriteString(lpo.TxHash)

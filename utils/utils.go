@@ -21,7 +21,6 @@ import (
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
-	"github.com/paycrest/aggregator/ent/institution"
 	institutionEnt "github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/storage"
@@ -101,6 +100,20 @@ func Byte32ToString(b [32]byte) string {
 	} else {
 		return string(b[:])
 	}
+}
+
+// HexToDecimal converts a hex string to a decimal.Decimal
+func HexToDecimal(hexStr string) decimal.Decimal {
+	// Remove "0x" prefix if present
+	hexStr = strings.TrimPrefix(hexStr, "0x")
+
+	// Convert hex string to big.Int
+	n := new(big.Int)
+	n.SetString(hexStr, 16)
+
+	// Convert to decimal
+	dec := decimal.NewFromBigInt(n, 0)
+	return dec
 }
 
 // BigMin returns the minimum value between two big numbers
@@ -210,6 +223,8 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 	switch paymentOrder.Status {
 	case paymentorder.StatusPending:
 		event = "payment_order.pending"
+	case paymentorder.StatusValidated:
+		event = "payment_order.validated"
 	case paymentorder.StatusExpired:
 		event = "payment_order.expired"
 	case paymentorder.StatusSettled:
@@ -221,18 +236,24 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 	}
 
 	// Fetch the recipient
-	recipient, err := paymentOrder.QueryRecipient().Only(ctx)
-	if err != nil {
-		return err
+	recipient := paymentOrder.Edges.Recipient
+	if recipient == nil {
+		recipient, err = paymentOrder.QueryRecipient().Only(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Fetch the token
-	token, err := paymentOrder.
-		QueryToken().
-		WithNetwork().
-		Only(ctx)
-	if err != nil {
-		return err
+	token := paymentOrder.Edges.Token
+	if token == nil {
+		token, err = paymentOrder.
+			QueryToken().
+			WithNetwork().
+			Only(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	institution, err := storage.Client.Institution.
@@ -577,7 +598,7 @@ func GetTokenRateFromQueue(tokenSymbol string, orderAmount decimal.Decimal, fiat
 func GetInstitutionByCode(ctx context.Context, institutionCode string, enabledFiatCurrency bool) (*ent.Institution, error) {
 	institutionQuery := storage.Client.Institution.
 		Query().
-		Where(institution.CodeEQ(institutionCode))
+		Where(institutionEnt.CodeEQ(institutionCode))
 
 	if enabledFiatCurrency {
 		institutionQuery = institutionQuery.WithFiatCurrency(

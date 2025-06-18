@@ -24,14 +24,14 @@ type Network struct {
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// ChainID holds the value of the "chain_id" field.
 	ChainID int64 `json:"chain_id,omitempty"`
-	// ChainIDHex holds the value of the "chain_id_hex" field.
-	ChainIDHex string `json:"chain_id_hex,omitempty"`
 	// Identifier holds the value of the "identifier" field.
 	Identifier string `json:"identifier,omitempty"`
 	// RPCEndpoint holds the value of the "rpc_endpoint" field.
 	RPCEndpoint string `json:"rpc_endpoint,omitempty"`
 	// GatewayContractAddress holds the value of the "gateway_contract_address" field.
 	GatewayContractAddress string `json:"gateway_contract_address,omitempty"`
+	// BlockTime holds the value of the "block_time" field.
+	BlockTime decimal.Decimal `json:"block_time,omitempty"`
 	// IsTestnet holds the value of the "is_testnet" field.
 	IsTestnet bool `json:"is_testnet,omitempty"`
 	// BundlerURL holds the value of the "bundler_url" field.
@@ -69,13 +69,13 @@ func (*Network) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case network.FieldFee:
+		case network.FieldBlockTime, network.FieldFee:
 			values[i] = new(decimal.Decimal)
 		case network.FieldIsTestnet:
 			values[i] = new(sql.NullBool)
 		case network.FieldID, network.FieldChainID:
 			values[i] = new(sql.NullInt64)
-		case network.FieldChainIDHex, network.FieldIdentifier, network.FieldRPCEndpoint, network.FieldGatewayContractAddress, network.FieldBundlerURL, network.FieldPaymasterURL:
+		case network.FieldIdentifier, network.FieldRPCEndpoint, network.FieldGatewayContractAddress, network.FieldBundlerURL, network.FieldPaymasterURL:
 			values[i] = new(sql.NullString)
 		case network.FieldCreatedAt, network.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -118,12 +118,6 @@ func (n *Network) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				n.ChainID = value.Int64
 			}
-		case network.FieldChainIDHex:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field chain_id_hex", values[i])
-			} else if value.Valid {
-				n.ChainIDHex = value.String
-			}
 		case network.FieldIdentifier:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field identifier", values[i])
@@ -141,6 +135,12 @@ func (n *Network) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field gateway_contract_address", values[i])
 			} else if value.Valid {
 				n.GatewayContractAddress = value.String
+			}
+		case network.FieldBlockTime:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field block_time", values[i])
+			} else if value != nil {
+				n.BlockTime = *value
 			}
 		case network.FieldIsTestnet:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -216,9 +216,6 @@ func (n *Network) String() string {
 	builder.WriteString("chain_id=")
 	builder.WriteString(fmt.Sprintf("%v", n.ChainID))
 	builder.WriteString(", ")
-	builder.WriteString("chain_id_hex=")
-	builder.WriteString(n.ChainIDHex)
-	builder.WriteString(", ")
 	builder.WriteString("identifier=")
 	builder.WriteString(n.Identifier)
 	builder.WriteString(", ")
@@ -227,6 +224,9 @@ func (n *Network) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("gateway_contract_address=")
 	builder.WriteString(n.GatewayContractAddress)
+	builder.WriteString(", ")
+	builder.WriteString("block_time=")
+	builder.WriteString(fmt.Sprintf("%v", n.BlockTime))
 	builder.WriteString(", ")
 	builder.WriteString("is_testnet=")
 	builder.WriteString(fmt.Sprintf("%v", n.IsTestnet))

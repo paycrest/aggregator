@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent"
-	"github.com/paycrest/aggregator/types"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -14,17 +13,22 @@ type MockOrderService struct {
 	mock.Mock
 }
 
+// ProcessTransfer mocks the ProcessTransfer method
+func (m *MockOrderService) ProcessTransfer(ctx context.Context, receiveAddress string, token *ent.Token) error {
+	return nil
+}
+
 // CreateOrder mocks the CreateOrder method
-func (m *MockOrderService) CreateOrder(ctx context.Context, client types.RPCClient, orderID uuid.UUID) error {
+func (m *MockOrderService) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 	return nil
 }
 
 // RefundOrder mocks the RefundOrder method
-func (m *MockOrderService) RefundOrder(ctx context.Context, client types.RPCClient, network *ent.Network, orderID string) error {
+func (m *MockOrderService) RefundOrder(ctx context.Context, network *ent.Network, orderID string) error {
 	return nil
 }
 
 // SettleOrder mocks the SettleOrder method
-func (m *MockOrderService) SettleOrder(ctx context.Context, client types.RPCClient, orderID uuid.UUID) error {
+func (m *MockOrderService) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 	return nil
 }

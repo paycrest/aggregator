@@ -20,14 +20,14 @@ const (
 	FieldUpdatedAt = "updated_at"
 	// FieldChainID holds the string denoting the chain_id field in the database.
 	FieldChainID = "chain_id"
-	// FieldChainIDHex holds the string denoting the chain_id_hex field in the database.
-	FieldChainIDHex = "chain_id_hex"
 	// FieldIdentifier holds the string denoting the identifier field in the database.
 	FieldIdentifier = "identifier"
 	// FieldRPCEndpoint holds the string denoting the rpc_endpoint field in the database.
 	FieldRPCEndpoint = "rpc_endpoint"
 	// FieldGatewayContractAddress holds the string denoting the gateway_contract_address field in the database.
 	FieldGatewayContractAddress = "gateway_contract_address"
+	// FieldBlockTime holds the string denoting the block_time field in the database.
+	FieldBlockTime = "block_time"
 	// FieldIsTestnet holds the string denoting the is_testnet field in the database.
 	FieldIsTestnet = "is_testnet"
 	// FieldBundlerURL holds the string denoting the bundler_url field in the database.
@@ -55,10 +55,10 @@ var Columns = []string{
 	FieldCreatedAt,
 	FieldUpdatedAt,
 	FieldChainID,
-	FieldChainIDHex,
 	FieldIdentifier,
 	FieldRPCEndpoint,
 	FieldGatewayContractAddress,
+	FieldBlockTime,
 	FieldIsTestnet,
 	FieldBundlerURL,
 	FieldPaymasterURL,
@@ -109,11 +109,6 @@ func ByChainID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldChainID, opts...).ToFunc()
 }
 
-// ByChainIDHex orders the results by the chain_id_hex field.
-func ByChainIDHex(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldChainIDHex, opts...).ToFunc()
-}
-
 // ByIdentifier orders the results by the identifier field.
 func ByIdentifier(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldIdentifier, opts...).ToFunc()
@@ -127,6 +122,11 @@ func ByRPCEndpoint(opts ...sql.OrderTermOption) OrderOption {
 // ByGatewayContractAddress orders the results by the gateway_contract_address field.
 func ByGatewayContractAddress(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldGatewayContractAddress, opts...).ToFunc()
+}
+
+// ByBlockTime orders the results by the block_time field.
+func ByBlockTime(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBlockTime, opts...).ToFunc()
 }
 
 // ByIsTestnet orders the results by the is_testnet field.

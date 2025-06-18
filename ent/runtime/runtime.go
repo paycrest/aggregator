@@ -191,15 +191,15 @@ func init() {
 	// lockpaymentorder.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	lockpaymentorder.UpdateDefaultUpdatedAt = lockpaymentorderDescUpdatedAt.UpdateDefault.(func() time.Time)
 	// lockpaymentorderDescTxHash is the schema descriptor for tx_hash field.
-	lockpaymentorderDescTxHash := lockpaymentorderFields[5].Descriptor()
+	lockpaymentorderDescTxHash := lockpaymentorderFields[6].Descriptor()
 	// lockpaymentorder.TxHashValidator is a validator for the "tx_hash" field. It is called by the builders before save.
 	lockpaymentorder.TxHashValidator = lockpaymentorderDescTxHash.Validators[0].(func(string) error)
 	// lockpaymentorderDescCancellationCount is the schema descriptor for cancellation_count field.
-	lockpaymentorderDescCancellationCount := lockpaymentorderFields[13].Descriptor()
+	lockpaymentorderDescCancellationCount := lockpaymentorderFields[14].Descriptor()
 	// lockpaymentorder.DefaultCancellationCount holds the default value on creation for the cancellation_count field.
 	lockpaymentorder.DefaultCancellationCount = lockpaymentorderDescCancellationCount.Default.(int)
 	// lockpaymentorderDescCancellationReasons is the schema descriptor for cancellation_reasons field.
-	lockpaymentorderDescCancellationReasons := lockpaymentorderFields[14].Descriptor()
+	lockpaymentorderDescCancellationReasons := lockpaymentorderFields[15].Descriptor()
 	// lockpaymentorder.DefaultCancellationReasons holds the default value on creation for the cancellation_reasons field.
 	lockpaymentorder.DefaultCancellationReasons = lockpaymentorderDescCancellationReasons.Default.([]string)
 	// lockpaymentorderDescID is the schema descriptor for id field.
@@ -222,7 +222,7 @@ func init() {
 	// network.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	network.UpdateDefaultUpdatedAt = networkDescUpdatedAt.UpdateDefault.(func() time.Time)
 	// networkDescGatewayContractAddress is the schema descriptor for gateway_contract_address field.
-	networkDescGatewayContractAddress := networkFields[4].Descriptor()
+	networkDescGatewayContractAddress := networkFields[3].Descriptor()
 	// network.DefaultGatewayContractAddress holds the default value on creation for the gateway_contract_address field.
 	network.DefaultGatewayContractAddress = networkDescGatewayContractAddress.Default.(string)
 	paymentorderMixin := schema.PaymentOrder{}.Mixin()

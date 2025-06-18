@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"math/rand"
 	"strings"
 	"time"
 
 	fastshot "github.com/opus-domini/fast-shot"
+	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/paymentorder"
@@ -22,6 +24,11 @@ import (
 	"github.com/paycrest/aggregator/utils/logger"
 	tokenUtils "github.com/paycrest/aggregator/utils/token"
 	"github.com/shopspring/decimal"
+)
+
+var (
+	serverConf = config.ServerConfig()
+	orderConf  = config.OrderConfig()
 )
 
 type PriorityQueueService struct{}
@@ -133,6 +140,11 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 	// 	trustScoreJ, _ := providers[j].Edges.ProviderRating.TrustScore.Float64()
 	// 	return trustScoreI > trustScoreJ // Sort in descending order
 	// })
+
+	// Randomize the order of providers
+	rand.Shuffle(len(providers), func(i, j int) {
+		providers[i], providers[j] = providers[j], providers[i]
+	})
 
 	redisKey := fmt.Sprintf("bucket_%s_%s_%s", bucket.Edges.Currency.Code, bucket.MinAmount, bucket.MaxAmount)
 	prevRedisKey := redisKey + "_prev"
@@ -357,6 +369,7 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 	orderRequestData := map[string]interface{}{
 		"amount":      order.Amount.Mul(order.Rate).RoundBank(0).String(),
 		"institution": order.Institution,
+		"currency":    order.ProvisionBucket.Edges.Currency.Code,
 		"providerId":  order.ProviderID,
 	}
 
@@ -365,7 +378,7 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 			"Error":      fmt.Sprintf("%v", err),
 			"OrderID":    order.ID.String(),
 			"ProviderID": order.ProviderID,
-			"orderKey":   orderKey,
+			"OrderKey":   orderKey,
 		}).Errorf("failed to map order to a provider in Redis")
 		return err
 	}

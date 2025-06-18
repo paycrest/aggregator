@@ -545,7 +545,7 @@ func (ctrl *Controller) CreateLinkedAddress(ctx *gin.Context) {
 	ownerAddress, _ := ctx.Get("owner_address")
 
 	// Generate smart account
-	address, salt, err := ctrl.receiveAddressService.CreateSmartAddress(ctx, nil, nil)
+	address, err := ctrl.receiveAddressService.CreateSmartAddress(ctx, "")
 	if err != nil {
 		logger.Errorf("Error: Failed to create linked address: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create linked address", nil)
@@ -556,7 +556,6 @@ func (ctrl *Controller) CreateLinkedAddress(ctx *gin.Context) {
 	linkedAddress, err := storage.Client.LinkedAddress.
 		Create().
 		SetAddress(address).
-		SetSalt(salt).
 		SetInstitution(payload.Institution).
 		SetAccountIdentifier(payload.AccountIdentifier).
 		SetAccountName(payload.AccountName).
@@ -852,16 +851,18 @@ func (ctrl *Controller) GetIDVerificationStatus(ctx *gin.Context) {
 
 	response, err := ctrl.kycService.CheckStatus(ctx, walletAddress)
 	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":         fmt.Sprintf("%v", err),
-			"WalletAddress": walletAddress,
-		}).Errorf("Failed to fetch identity verification status")
-		if fmt.Sprintf("%v", err) == "no verification request found for this wallet address" {
+		switch err.(type) {
+		case kycErrors.ErrNotFound:
 			u.APIResponse(ctx, http.StatusNotFound, "error", "No verification request found for this wallet address", nil)
 			return
+		default:
+			logger.WithFields(logger.Fields{
+				"Error":         fmt.Sprintf("%v", err),
+				"WalletAddress": walletAddress,
+			}).Errorf("Failed to fetch identity verification status")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch identity verification status", nil)
+			return
 		}
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch identity verification status", nil)
-		return
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Identity verification status fetched successfully", response)

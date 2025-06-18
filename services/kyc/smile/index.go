@@ -150,7 +150,7 @@ func (s *SmileIDService) CheckStatus(ctx context.Context, walletAddress string) 
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf("no verification request found for this wallet address")
+			return nil, kycErrors.ErrNotFound{}
 		}
 		return nil, kycErrors.ErrDatabase{Err: err}
 	}
