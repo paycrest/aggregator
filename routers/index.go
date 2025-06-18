@@ -43,11 +43,8 @@ func RegisterRoutes(route *gin.Engine) {
 	v1.POST("verify-account", ctrl.VerifyAccount)
 	v1.GET("orders/:chain_id/:id", ctrl.GetLockPaymentOrderStatus)
 
-	// Google Forms routes
-	v1.POST("email-webhook", ctrl.WelcomeEmailWebhook)
-	v1.POST("slack-interaction", ctrl.SlackInteractionHandler)
-
 	// KYB route
+	v1.POST("slack-interaction", ctrl.SlackInteractionHandler)
 	v1.POST("kyb-submission", middleware.JWTMiddleware, ctrl.HandleKYBSubmission)
 
 	// KYC routes
