@@ -7,19 +7,24 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/jarcoal/httpmock"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/routers/middleware"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/shopspring/decimal"
 
 	"github.com/gin-gonic/gin"
+	"github.com/paycrest/aggregator/ent/beneficialowner"
 	"github.com/paycrest/aggregator/ent/enttest"
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
+	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/utils/test"
+	tokenUtils "github.com/paycrest/aggregator/utils/token"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -61,6 +66,7 @@ func TestIndex(t *testing.T) {
 	router.GET("kyc/:wallet_address", ctrl.GetIDVerificationStatus)
 	router.POST("kyc/webhook", ctrl.KYCWebhook)
 	router.GET("/v1/tokens", ctrl.GetSupportedTokens)
+	router.POST("/v1/kyb-submission", middleware.JWTMiddleware, ctrl.HandleKYBSubmission)
 
 	t.Run("GetInstitutions By Currency", func(t *testing.T) {
 
@@ -347,6 +353,213 @@ func TestIndex(t *testing.T) {
 			assert.Equal(t, "success", response.Status)
 			assert.Equal(t, "Tokens retrieved successfully", response.Message)
 			assert.Equal(t, 0, len(response.Data)) // No enabled tokens
+		})
+	})
+
+	t.Run("HandleKYBSubmission", func(t *testing.T) {
+		// Create a test user first
+		testUser, err := test.CreateTestUser(map[string]interface{}{
+			"firstName": "Test",
+			"lastName":  "User",
+			"email":     "testuser@example.com",
+			"scope":     "sender",
+		})
+		assert.NoError(t, err)
+
+		// Generate JWT token for the test user
+		token, err := tokenUtils.GenerateAccessJWT(testUser.ID.String(), "sender")
+		assert.NoError(t, err)
+
+		// Test data for KYB submission
+		validKYBSubmission := types.KYBSubmissionInput{
+			MobileNumber:                  "+1234567890",
+			CompanyName:                   "Test Company Ltd",
+			RegisteredBusinessAddress:     "123 Business St, Test City, TC 12345",
+			CertificateOfIncorporationUrl: "https://example.com/cert.pdf",
+			ArticlesOfIncorporationUrl:    "https://example.com/articles.pdf",
+			BusinessLicenseUrl:            nil, // Optional field
+			ProofOfBusinessAddressUrl:     "https://example.com/business-address.pdf",
+			ProofOfResidentialAddressUrl:  "https://example.com/residential-address.pdf",
+			AmlPolicyUrl:                  nil, // Optional field
+			KycPolicyUrl:                  nil, // Optional field
+			BeneficialOwners: []types.BeneficialOwnerInput{
+				{
+					FullName:                     "John Doe",
+					ResidentialAddress:           "456 Residential Ave, Test City, TC 12345",
+					ProofOfResidentialAddressUrl: "https://example.com/john-residential.pdf",
+					GovernmentIssuedIdUrl:        "https://example.com/john-id.pdf",
+					DateOfBirth:                  "1990-01-01",
+					OwnershipPercentage:          60.0,
+					GovernmentIssuedIdType:       "passport",
+				},
+				{
+					FullName:                     "Jane Smith",
+					ResidentialAddress:           "789 Residential Blvd, Test City, TC 12345",
+					ProofOfResidentialAddressUrl: "https://example.com/jane-residential.pdf",
+					GovernmentIssuedIdUrl:        "https://example.com/jane-id.pdf",
+					DateOfBirth:                  "1985-05-15",
+					OwnershipPercentage:          40.0,
+					GovernmentIssuedIdType:       "drivers_license",
+				},
+			},
+		}
+
+		t.Run("successful KYB submission", func(t *testing.T) {
+			headers := map[string]string{
+				"Authorization": "Bearer " + token,
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/v1/kyb-submission", validKYBSubmission, headers, router)
+			assert.NoError(t, err)
+
+			assert.Equal(t, http.StatusCreated, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "success", response.Status)
+			assert.Equal(t, "KYB submission submitted successfully", response.Message)
+
+			// Verify the response data contains submission_id
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok, "response.Data should be map[string]interface{}")
+			assert.Contains(t, data, "submission_id")
+
+			// Verify KYB profile was created in database
+			submissionID, ok := data["submission_id"].(string)
+			assert.True(t, ok, "submission_id should be a string")
+
+			kybProfileUUID, err := uuid.Parse(submissionID)
+			assert.NoError(t, err)
+
+			kybProfile, err := db.Client.KYBProfile.
+				Query().
+				Where(kybprofile.IDEQ(kybProfileUUID)).
+				WithUser().
+				WithBeneficialOwners().
+				Only(context.Background())
+			assert.NoError(t, err)
+
+			// Verify KYB profile details
+			assert.Equal(t, validKYBSubmission.MobileNumber, kybProfile.MobileNumber)
+			assert.Equal(t, validKYBSubmission.CompanyName, kybProfile.CompanyName)
+			assert.Equal(t, validKYBSubmission.RegisteredBusinessAddress, kybProfile.RegisteredBusinessAddress)
+			assert.Equal(t, validKYBSubmission.CertificateOfIncorporationUrl, kybProfile.CertificateOfIncorporationURL)
+			assert.Equal(t, validKYBSubmission.ArticlesOfIncorporationUrl, kybProfile.ArticlesOfIncorporationURL)
+			assert.Equal(t, validKYBSubmission.ProofOfBusinessAddressUrl, kybProfile.ProofOfBusinessAddressURL)
+			assert.Equal(t, validKYBSubmission.ProofOfResidentialAddressUrl, kybProfile.ProofOfResidentialAddressURL)
+			assert.Equal(t, testUser.ID, kybProfile.Edges.User.ID)
+
+			// Verify beneficial owners were created
+			assert.Equal(t, 2, len(kybProfile.Edges.BeneficialOwners))
+
+			// Check first beneficial owner
+			owner1 := kybProfile.Edges.BeneficialOwners[0]
+			assert.Equal(t, validKYBSubmission.BeneficialOwners[0].FullName, owner1.FullName)
+			assert.Equal(t, validKYBSubmission.BeneficialOwners[0].ResidentialAddress, owner1.ResidentialAddress)
+			assert.Equal(t, validKYBSubmission.BeneficialOwners[0].ProofOfResidentialAddressUrl, owner1.ProofOfResidentialAddressURL)
+			assert.Equal(t, validKYBSubmission.BeneficialOwners[0].GovernmentIssuedIdUrl, owner1.GovernmentIssuedIDURL)
+			assert.Equal(t, validKYBSubmission.BeneficialOwners[0].DateOfBirth, owner1.DateOfBirth)
+			assert.Equal(t, validKYBSubmission.BeneficialOwners[0].OwnershipPercentage, owner1.OwnershipPercentage)
+			assert.Equal(t, beneficialowner.GovernmentIssuedIDType(validKYBSubmission.BeneficialOwners[0].GovernmentIssuedIdType), owner1.GovernmentIssuedIDType)
+		})
+
+		t.Run("duplicate KYB submission", func(t *testing.T) {
+			headers := map[string]string{
+				"Authorization": "Bearer " + token,
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/v1/kyb-submission", validKYBSubmission, headers, router)
+			assert.NoError(t, err)
+
+			assert.Equal(t, http.StatusConflict, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Equal(t, "KYB submission already submitted for this user", response.Message)
+		})
+
+		t.Run("missing authorization header", func(t *testing.T) {
+			res, err := test.PerformRequest(t, "POST", "/v1/kyb-submission", validKYBSubmission, nil, router)
+			assert.NoError(t, err)
+
+			assert.Equal(t, http.StatusUnauthorized, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Equal(t, "Authorization header is missing", response.Message)
+		})
+
+		t.Run("invalid JWT token", func(t *testing.T) {
+			headers := map[string]string{
+				"Authorization": "Bearer invalid-token",
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/v1/kyb-submission", validKYBSubmission, headers, router)
+			assert.NoError(t, err)
+
+			assert.Equal(t, http.StatusUnauthorized, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+		})
+
+		t.Run("invalid input - missing required fields", func(t *testing.T) {
+			invalidSubmission := types.KYBSubmissionInput{
+				MobileNumber: "+1234567890",
+				// Missing other required fields
+			}
+
+			headers := map[string]string{
+				"Authorization": "Bearer " + token,
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/v1/kyb-submission", invalidSubmission, headers, router)
+			assert.NoError(t, err)
+
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Equal(t, "Invalid input", response.Message)
+		})
+
+		t.Run("invalid input - invalid beneficial owner data", func(t *testing.T) {
+			invalidSubmission := validKYBSubmission
+			invalidSubmission.BeneficialOwners = []types.BeneficialOwnerInput{
+				{
+					FullName:                     "John Doe",
+					ResidentialAddress:           "456 Residential Ave, Test City, TC 12345",
+					ProofOfResidentialAddressUrl: "https://example.com/john-residential.pdf",
+					GovernmentIssuedIdUrl:        "https://example.com/john-id.pdf",
+					DateOfBirth:                  "1990-01-01",
+					OwnershipPercentage:          150.0, // Invalid: > 100%
+					GovernmentIssuedIdType:       "passport",
+				},
+			}
+
+			headers := map[string]string{
+				"Authorization": "Bearer " + token,
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/v1/kyb-submission", invalidSubmission, headers, router)
+			assert.NoError(t, err)
+
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Equal(t, "Invalid input", response.Message)
 		})
 	})
 }
