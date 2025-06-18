@@ -371,7 +371,7 @@ func TestSender(t *testing.T) {
 
 			assert.Equal(t, int(data["page"].(float64)), page)
 			assert.Equal(t, int(data["pageSize"].(float64)), pageSize)
-			// Check that we have orders returned (don't hardcode the number)
+			// Check that we have orders returned
 			orders := data["orders"].([]interface{})
 			assert.Greater(t, len(orders), 0, "Should have at least one order")
 			assert.LessOrEqual(t, len(orders), pageSize, "Should not exceed pageSize")
