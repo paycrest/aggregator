@@ -99,27 +99,6 @@ func (nu *NetworkUpdate) SetNillableGatewayContractAddress(s *string) *NetworkUp
 	return nu
 }
 
-// SetBlockTime sets the "block_time" field.
-func (nu *NetworkUpdate) SetBlockTime(d decimal.Decimal) *NetworkUpdate {
-	nu.mutation.ResetBlockTime()
-	nu.mutation.SetBlockTime(d)
-	return nu
-}
-
-// SetNillableBlockTime sets the "block_time" field if the given value is not nil.
-func (nu *NetworkUpdate) SetNillableBlockTime(d *decimal.Decimal) *NetworkUpdate {
-	if d != nil {
-		nu.SetBlockTime(*d)
-	}
-	return nu
-}
-
-// AddBlockTime adds d to the "block_time" field.
-func (nu *NetworkUpdate) AddBlockTime(d decimal.Decimal) *NetworkUpdate {
-	nu.mutation.AddBlockTime(d)
-	return nu
-}
-
 // SetIsTestnet sets the "is_testnet" field.
 func (nu *NetworkUpdate) SetIsTestnet(b bool) *NetworkUpdate {
 	nu.mutation.SetIsTestnet(b)
@@ -299,12 +278,6 @@ func (nu *NetworkUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if value, ok := nu.mutation.GatewayContractAddress(); ok {
 		_spec.SetField(network.FieldGatewayContractAddress, field.TypeString, value)
 	}
-	if value, ok := nu.mutation.BlockTime(); ok {
-		_spec.SetField(network.FieldBlockTime, field.TypeFloat64, value)
-	}
-	if value, ok := nu.mutation.AddedBlockTime(); ok {
-		_spec.AddField(network.FieldBlockTime, field.TypeFloat64, value)
-	}
 	if value, ok := nu.mutation.IsTestnet(); ok {
 		_spec.SetField(network.FieldIsTestnet, field.TypeBool, value)
 	}
@@ -457,27 +430,6 @@ func (nuo *NetworkUpdateOne) SetNillableGatewayContractAddress(s *string) *Netwo
 	if s != nil {
 		nuo.SetGatewayContractAddress(*s)
 	}
-	return nuo
-}
-
-// SetBlockTime sets the "block_time" field.
-func (nuo *NetworkUpdateOne) SetBlockTime(d decimal.Decimal) *NetworkUpdateOne {
-	nuo.mutation.ResetBlockTime()
-	nuo.mutation.SetBlockTime(d)
-	return nuo
-}
-
-// SetNillableBlockTime sets the "block_time" field if the given value is not nil.
-func (nuo *NetworkUpdateOne) SetNillableBlockTime(d *decimal.Decimal) *NetworkUpdateOne {
-	if d != nil {
-		nuo.SetBlockTime(*d)
-	}
-	return nuo
-}
-
-// AddBlockTime adds d to the "block_time" field.
-func (nuo *NetworkUpdateOne) AddBlockTime(d decimal.Decimal) *NetworkUpdateOne {
-	nuo.mutation.AddBlockTime(d)
 	return nuo
 }
 
@@ -689,12 +641,6 @@ func (nuo *NetworkUpdateOne) sqlSave(ctx context.Context) (_node *Network, err e
 	}
 	if value, ok := nuo.mutation.GatewayContractAddress(); ok {
 		_spec.SetField(network.FieldGatewayContractAddress, field.TypeString, value)
-	}
-	if value, ok := nuo.mutation.BlockTime(); ok {
-		_spec.SetField(network.FieldBlockTime, field.TypeFloat64, value)
-	}
-	if value, ok := nuo.mutation.AddedBlockTime(); ok {
-		_spec.AddField(network.FieldBlockTime, field.TypeFloat64, value)
 	}
 	if value, ok := nuo.mutation.IsTestnet(); ok {
 		_spec.SetField(network.FieldIsTestnet, field.TypeBool, value)

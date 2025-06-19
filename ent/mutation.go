@@ -8714,8 +8714,6 @@ type NetworkMutation struct {
 	identifier               *string
 	rpc_endpoint             *string
 	gateway_contract_address *string
-	block_time               *decimal.Decimal
-	addblock_time            *decimal.Decimal
 	is_testnet               *bool
 	bundler_url              *string
 	paymaster_url            *string
@@ -9064,62 +9062,6 @@ func (m *NetworkMutation) ResetGatewayContractAddress() {
 	m.gateway_contract_address = nil
 }
 
-// SetBlockTime sets the "block_time" field.
-func (m *NetworkMutation) SetBlockTime(d decimal.Decimal) {
-	m.block_time = &d
-	m.addblock_time = nil
-}
-
-// BlockTime returns the value of the "block_time" field in the mutation.
-func (m *NetworkMutation) BlockTime() (r decimal.Decimal, exists bool) {
-	v := m.block_time
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldBlockTime returns the old "block_time" field's value of the Network entity.
-// If the Network object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *NetworkMutation) OldBlockTime(ctx context.Context) (v decimal.Decimal, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldBlockTime is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldBlockTime requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldBlockTime: %w", err)
-	}
-	return oldValue.BlockTime, nil
-}
-
-// AddBlockTime adds d to the "block_time" field.
-func (m *NetworkMutation) AddBlockTime(d decimal.Decimal) {
-	if m.addblock_time != nil {
-		*m.addblock_time = m.addblock_time.Add(d)
-	} else {
-		m.addblock_time = &d
-	}
-}
-
-// AddedBlockTime returns the value that was added to the "block_time" field in this mutation.
-func (m *NetworkMutation) AddedBlockTime() (r decimal.Decimal, exists bool) {
-	v := m.addblock_time
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ResetBlockTime resets all changes to the "block_time" field.
-func (m *NetworkMutation) ResetBlockTime() {
-	m.block_time = nil
-	m.addblock_time = nil
-}
-
 // SetIsTestnet sets the "is_testnet" field.
 func (m *NetworkMutation) SetIsTestnet(b bool) {
 	m.is_testnet = &b
@@ -9398,7 +9340,7 @@ func (m *NetworkMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *NetworkMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 10)
 	if m.created_at != nil {
 		fields = append(fields, network.FieldCreatedAt)
 	}
@@ -9416,9 +9358,6 @@ func (m *NetworkMutation) Fields() []string {
 	}
 	if m.gateway_contract_address != nil {
 		fields = append(fields, network.FieldGatewayContractAddress)
-	}
-	if m.block_time != nil {
-		fields = append(fields, network.FieldBlockTime)
 	}
 	if m.is_testnet != nil {
 		fields = append(fields, network.FieldIsTestnet)
@@ -9452,8 +9391,6 @@ func (m *NetworkMutation) Field(name string) (ent.Value, bool) {
 		return m.RPCEndpoint()
 	case network.FieldGatewayContractAddress:
 		return m.GatewayContractAddress()
-	case network.FieldBlockTime:
-		return m.BlockTime()
 	case network.FieldIsTestnet:
 		return m.IsTestnet()
 	case network.FieldBundlerURL:
@@ -9483,8 +9420,6 @@ func (m *NetworkMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldRPCEndpoint(ctx)
 	case network.FieldGatewayContractAddress:
 		return m.OldGatewayContractAddress(ctx)
-	case network.FieldBlockTime:
-		return m.OldBlockTime(ctx)
 	case network.FieldIsTestnet:
 		return m.OldIsTestnet(ctx)
 	case network.FieldBundlerURL:
@@ -9544,13 +9479,6 @@ func (m *NetworkMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetGatewayContractAddress(v)
 		return nil
-	case network.FieldBlockTime:
-		v, ok := value.(decimal.Decimal)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetBlockTime(v)
-		return nil
 	case network.FieldIsTestnet:
 		v, ok := value.(bool)
 		if !ok {
@@ -9590,9 +9518,6 @@ func (m *NetworkMutation) AddedFields() []string {
 	if m.addchain_id != nil {
 		fields = append(fields, network.FieldChainID)
 	}
-	if m.addblock_time != nil {
-		fields = append(fields, network.FieldBlockTime)
-	}
 	if m.addfee != nil {
 		fields = append(fields, network.FieldFee)
 	}
@@ -9606,8 +9531,6 @@ func (m *NetworkMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case network.FieldChainID:
 		return m.AddedChainID()
-	case network.FieldBlockTime:
-		return m.AddedBlockTime()
 	case network.FieldFee:
 		return m.AddedFee()
 	}
@@ -9625,13 +9548,6 @@ func (m *NetworkMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddChainID(v)
-		return nil
-	case network.FieldBlockTime:
-		v, ok := value.(decimal.Decimal)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddBlockTime(v)
 		return nil
 	case network.FieldFee:
 		v, ok := value.(decimal.Decimal)
@@ -9699,9 +9615,6 @@ func (m *NetworkMutation) ResetField(name string) error {
 		return nil
 	case network.FieldGatewayContractAddress:
 		m.ResetGatewayContractAddress()
-		return nil
-	case network.FieldBlockTime:
-		m.ResetBlockTime()
 		return nil
 	case network.FieldIsTestnet:
 		m.ResetIsTestnet()

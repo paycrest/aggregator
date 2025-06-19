@@ -1470,8 +1470,6 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		}
 	}
 
-	fmt.Println("KYB submission saved successfully")
-
 	// ✅ Send Slack notification
 	err = ctrl.slackService.SendSubmissionNotification(userRecord.FirstName, userRecord.Email, kybSubmission.ID.String())
 	if err != nil {
@@ -1479,7 +1477,6 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Error sending Slack notification", nil)
 		return
 	}
-	fmt.Println("Slack notification sent successfully")
 
 	u.APIResponse(ctx, http.StatusCreated, "success", "KYB submission submitted successfully", gin.H{
 		"submission_id": kybSubmission.ID,

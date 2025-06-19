@@ -275,7 +275,6 @@ var (
 		{Name: "identifier", Type: field.TypeString, Unique: true},
 		{Name: "rpc_endpoint", Type: field.TypeString},
 		{Name: "gateway_contract_address", Type: field.TypeString, Default: ""},
-		{Name: "block_time", Type: field.TypeFloat64},
 		{Name: "is_testnet", Type: field.TypeBool},
 		{Name: "bundler_url", Type: field.TypeString, Nullable: true},
 		{Name: "paymaster_url", Type: field.TypeString, Nullable: true},

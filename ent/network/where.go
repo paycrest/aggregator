@@ -86,11 +86,6 @@ func GatewayContractAddress(v string) predicate.Network {
 	return predicate.Network(sql.FieldEQ(FieldGatewayContractAddress, v))
 }
 
-// BlockTime applies equality check predicate on the "block_time" field. It's identical to BlockTimeEQ.
-func BlockTime(v decimal.Decimal) predicate.Network {
-	return predicate.Network(sql.FieldEQ(FieldBlockTime, v))
-}
-
 // IsTestnet applies equality check predicate on the "is_testnet" field. It's identical to IsTestnetEQ.
 func IsTestnet(v bool) predicate.Network {
 	return predicate.Network(sql.FieldEQ(FieldIsTestnet, v))
@@ -424,46 +419,6 @@ func GatewayContractAddressEqualFold(v string) predicate.Network {
 // GatewayContractAddressContainsFold applies the ContainsFold predicate on the "gateway_contract_address" field.
 func GatewayContractAddressContainsFold(v string) predicate.Network {
 	return predicate.Network(sql.FieldContainsFold(FieldGatewayContractAddress, v))
-}
-
-// BlockTimeEQ applies the EQ predicate on the "block_time" field.
-func BlockTimeEQ(v decimal.Decimal) predicate.Network {
-	return predicate.Network(sql.FieldEQ(FieldBlockTime, v))
-}
-
-// BlockTimeNEQ applies the NEQ predicate on the "block_time" field.
-func BlockTimeNEQ(v decimal.Decimal) predicate.Network {
-	return predicate.Network(sql.FieldNEQ(FieldBlockTime, v))
-}
-
-// BlockTimeIn applies the In predicate on the "block_time" field.
-func BlockTimeIn(vs ...decimal.Decimal) predicate.Network {
-	return predicate.Network(sql.FieldIn(FieldBlockTime, vs...))
-}
-
-// BlockTimeNotIn applies the NotIn predicate on the "block_time" field.
-func BlockTimeNotIn(vs ...decimal.Decimal) predicate.Network {
-	return predicate.Network(sql.FieldNotIn(FieldBlockTime, vs...))
-}
-
-// BlockTimeGT applies the GT predicate on the "block_time" field.
-func BlockTimeGT(v decimal.Decimal) predicate.Network {
-	return predicate.Network(sql.FieldGT(FieldBlockTime, v))
-}
-
-// BlockTimeGTE applies the GTE predicate on the "block_time" field.
-func BlockTimeGTE(v decimal.Decimal) predicate.Network {
-	return predicate.Network(sql.FieldGTE(FieldBlockTime, v))
-}
-
-// BlockTimeLT applies the LT predicate on the "block_time" field.
-func BlockTimeLT(v decimal.Decimal) predicate.Network {
-	return predicate.Network(sql.FieldLT(FieldBlockTime, v))
-}
-
-// BlockTimeLTE applies the LTE predicate on the "block_time" field.
-func BlockTimeLTE(v decimal.Decimal) predicate.Network {
-	return predicate.Network(sql.FieldLTE(FieldBlockTime, v))
 }
 
 // IsTestnetEQ applies the EQ predicate on the "is_testnet" field.
