@@ -257,19 +257,12 @@ type ProviderOrderTokenPayload struct {
 
 // ProviderProfilePayload is the payload for the provider profile endpoint
 type ProviderProfilePayload struct {
-	TradingName          string                      `json:"tradingName"`
-	Currencies           []string                    `json:"currencies"`
-	HostIdentifier       string                      `json:"hostIdentifier"`
-	IsAvailable          bool                        `json:"isAvailable"`
-	Tokens               []ProviderOrderTokenPayload `json:"tokens"`
-	VisibilityMode       string                      `json:"visibilityMode"`
-	// Address              string                      `json:"address"`
-	// MobileNumber         string                      `json:"mobileNumber"`
-	// DateOfBirth          time.Time                   `json:"dateOfBirth"`
-	// BusinessName         string                      `json:"businessName"`
-	// IdentityDocumentType string                      `json:"identityType"`
-	// IdentityDocument     string                      `json:"identityDocument"`
-	// BusinessDocument     string                      `json:"businessDocument"`
+	TradingName    string                      `json:"tradingName"`
+	Currencies     []string                    `json:"currencies"`
+	HostIdentifier string                      `json:"hostIdentifier"`
+	IsAvailable    bool                        `json:"isAvailable"`
+	Tokens         []ProviderOrderTokenPayload `json:"tokens"`
+	VisibilityMode string                      `json:"visibilityMode"`
 }
 
 // ProviderProfileResponse is the response for the provider profile endpoint
@@ -285,15 +278,6 @@ type ProviderProfileResponse struct {
 	Tokens         []ProviderOrderTokenPayload `json:"tokens"`
 	APIKey         APIKeyResponse              `json:"apiKey"`
 	IsActive       bool                        `json:"isActive"`
-	// Address              string                               `json:"address"`
-	// MobileNumber         string                               `json:"mobileNumber"`
-	// VisibilityMode       providerprofile.VisibilityMode       `json:"visibilityMode"`
-	// DateOfBirth          time.Time                            `json:"dateOfBirth"`
-	// BusinessName         string                               `json:"businessName"`
-	// IdentityDocumentType providerprofile.IdentityDocumentType `json:"identityType"`
-	// IdentityDocument     string                               `json:"identityDocument"`
-	// BusinessDocument     string                               `json:"businessDocument"`
-	// IsKybVerified        bool                                 `json:"isKybVerified"`
 }
 
 // SenderOrderTokenResponse defines the provider setting for a token
@@ -318,6 +302,7 @@ type SenderProfileResponse struct {
 	ProviderID         string                     `json:"providerId"`
 	ProviderCurrencies []string                   `json:"providerCurrencies"`
 	IsActive           bool                       `json:"isActive"`
+	IsKYCVerified      bool                       `json:"isKYCVerified"`
 }
 
 // RefreshResponse is the response for the refresh endpoint
