@@ -13854,6 +13854,7 @@ type ProviderProfileMutation struct {
 	is_available             *bool
 	updated_at               *time.Time
 	visibility_mode          *providerprofile.VisibilityMode
+	kyb_verification_status  *providerprofile.KybVerificationStatus
 	clearedFields            map[string]struct{}
 	user                     *uuid.UUID
 	cleareduser              bool
@@ -14260,6 +14261,42 @@ func (m *ProviderProfileMutation) ResetVisibilityMode() {
 	m.visibility_mode = nil
 }
 
+// SetKybVerificationStatus sets the "kyb_verification_status" field.
+func (m *ProviderProfileMutation) SetKybVerificationStatus(pvs providerprofile.KybVerificationStatus) {
+	m.kyb_verification_status = &pvs
+}
+
+// KybVerificationStatus returns the value of the "kyb_verification_status" field in the mutation.
+func (m *ProviderProfileMutation) KybVerificationStatus() (r providerprofile.KybVerificationStatus, exists bool) {
+	v := m.kyb_verification_status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldKybVerificationStatus returns the old "kyb_verification_status" field's value of the ProviderProfile entity.
+// If the ProviderProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderProfileMutation) OldKybVerificationStatus(ctx context.Context) (v providerprofile.KybVerificationStatus, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKybVerificationStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKybVerificationStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKybVerificationStatus: %w", err)
+	}
+	return oldValue.KybVerificationStatus, nil
+}
+
+// ResetKybVerificationStatus resets all changes to the "kyb_verification_status" field.
+func (m *ProviderProfileMutation) ResetKybVerificationStatus() {
+	m.kyb_verification_status = nil
+}
+
 // SetUserID sets the "user" edge to the User entity by id.
 func (m *ProviderProfileMutation) SetUserID(id uuid.UUID) {
 	m.user = &id
@@ -14627,7 +14664,7 @@ func (m *ProviderProfileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProviderProfileMutation) Fields() []string {
-	fields := make([]string, 0, 7)
+	fields := make([]string, 0, 8)
 	if m.trading_name != nil {
 		fields = append(fields, providerprofile.FieldTradingName)
 	}
@@ -14648,6 +14685,9 @@ func (m *ProviderProfileMutation) Fields() []string {
 	}
 	if m.visibility_mode != nil {
 		fields = append(fields, providerprofile.FieldVisibilityMode)
+	}
+	if m.kyb_verification_status != nil {
+		fields = append(fields, providerprofile.FieldKybVerificationStatus)
 	}
 	return fields
 }
@@ -14671,6 +14711,8 @@ func (m *ProviderProfileMutation) Field(name string) (ent.Value, bool) {
 		return m.UpdatedAt()
 	case providerprofile.FieldVisibilityMode:
 		return m.VisibilityMode()
+	case providerprofile.FieldKybVerificationStatus:
+		return m.KybVerificationStatus()
 	}
 	return nil, false
 }
@@ -14694,6 +14736,8 @@ func (m *ProviderProfileMutation) OldField(ctx context.Context, name string) (en
 		return m.OldUpdatedAt(ctx)
 	case providerprofile.FieldVisibilityMode:
 		return m.OldVisibilityMode(ctx)
+	case providerprofile.FieldKybVerificationStatus:
+		return m.OldKybVerificationStatus(ctx)
 	}
 	return nil, fmt.Errorf("unknown ProviderProfile field %s", name)
 }
@@ -14751,6 +14795,13 @@ func (m *ProviderProfileMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetVisibilityMode(v)
+		return nil
+	case providerprofile.FieldKybVerificationStatus:
+		v, ok := value.(providerprofile.KybVerificationStatus)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetKybVerificationStatus(v)
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderProfile field %s", name)
@@ -14836,6 +14887,9 @@ func (m *ProviderProfileMutation) ResetField(name string) error {
 		return nil
 	case providerprofile.FieldVisibilityMode:
 		m.ResetVisibilityMode()
+		return nil
+	case providerprofile.FieldKybVerificationStatus:
+		m.ResetKybVerificationStatus()
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderProfile field %s", name)
@@ -17999,33 +18053,34 @@ func (m *SenderOrderTokenMutation) ResetEdge(name string) error {
 // SenderProfileMutation represents an operation that mutates the SenderProfile nodes in the graph.
 type SenderProfileMutation struct {
 	config
-	op                     Op
-	typ                    string
-	id                     *uuid.UUID
-	webhook_url            *string
-	domain_whitelist       *[]string
-	appenddomain_whitelist []string
-	provider_id            *string
-	is_partner             *bool
-	is_active              *bool
-	updated_at             *time.Time
-	clearedFields          map[string]struct{}
-	user                   *uuid.UUID
-	cleareduser            bool
-	api_key                *uuid.UUID
-	clearedapi_key         bool
-	payment_orders         map[uuid.UUID]struct{}
-	removedpayment_orders  map[uuid.UUID]struct{}
-	clearedpayment_orders  bool
-	order_tokens           map[int]struct{}
-	removedorder_tokens    map[int]struct{}
-	clearedorder_tokens    bool
-	linked_address         map[int]struct{}
-	removedlinked_address  map[int]struct{}
-	clearedlinked_address  bool
-	done                   bool
-	oldValue               func(context.Context) (*SenderProfile, error)
-	predicates             []predicate.SenderProfile
+	op                      Op
+	typ                     string
+	id                      *uuid.UUID
+	webhook_url             *string
+	domain_whitelist        *[]string
+	appenddomain_whitelist  []string
+	provider_id             *string
+	is_partner              *bool
+	is_active               *bool
+	kyb_verification_status *senderprofile.KybVerificationStatus
+	updated_at              *time.Time
+	clearedFields           map[string]struct{}
+	user                    *uuid.UUID
+	cleareduser             bool
+	api_key                 *uuid.UUID
+	clearedapi_key          bool
+	payment_orders          map[uuid.UUID]struct{}
+	removedpayment_orders   map[uuid.UUID]struct{}
+	clearedpayment_orders   bool
+	order_tokens            map[int]struct{}
+	removedorder_tokens     map[int]struct{}
+	clearedorder_tokens     bool
+	linked_address          map[int]struct{}
+	removedlinked_address   map[int]struct{}
+	clearedlinked_address   bool
+	done                    bool
+	oldValue                func(context.Context) (*SenderProfile, error)
+	predicates              []predicate.SenderProfile
 }
 
 var _ ent.Mutation = (*SenderProfileMutation)(nil)
@@ -18353,6 +18408,42 @@ func (m *SenderProfileMutation) ResetIsActive() {
 	m.is_active = nil
 }
 
+// SetKybVerificationStatus sets the "kyb_verification_status" field.
+func (m *SenderProfileMutation) SetKybVerificationStatus(svs senderprofile.KybVerificationStatus) {
+	m.kyb_verification_status = &svs
+}
+
+// KybVerificationStatus returns the value of the "kyb_verification_status" field in the mutation.
+func (m *SenderProfileMutation) KybVerificationStatus() (r senderprofile.KybVerificationStatus, exists bool) {
+	v := m.kyb_verification_status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldKybVerificationStatus returns the old "kyb_verification_status" field's value of the SenderProfile entity.
+// If the SenderProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SenderProfileMutation) OldKybVerificationStatus(ctx context.Context) (v senderprofile.KybVerificationStatus, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKybVerificationStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKybVerificationStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKybVerificationStatus: %w", err)
+	}
+	return oldValue.KybVerificationStatus, nil
+}
+
+// ResetKybVerificationStatus resets all changes to the "kyb_verification_status" field.
+func (m *SenderProfileMutation) ResetKybVerificationStatus() {
+	m.kyb_verification_status = nil
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (m *SenderProfileMutation) SetUpdatedAt(t time.Time) {
 	m.updated_at = &t
@@ -18663,7 +18754,7 @@ func (m *SenderProfileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *SenderProfileMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 7)
 	if m.webhook_url != nil {
 		fields = append(fields, senderprofile.FieldWebhookURL)
 	}
@@ -18678,6 +18769,9 @@ func (m *SenderProfileMutation) Fields() []string {
 	}
 	if m.is_active != nil {
 		fields = append(fields, senderprofile.FieldIsActive)
+	}
+	if m.kyb_verification_status != nil {
+		fields = append(fields, senderprofile.FieldKybVerificationStatus)
 	}
 	if m.updated_at != nil {
 		fields = append(fields, senderprofile.FieldUpdatedAt)
@@ -18700,6 +18794,8 @@ func (m *SenderProfileMutation) Field(name string) (ent.Value, bool) {
 		return m.IsPartner()
 	case senderprofile.FieldIsActive:
 		return m.IsActive()
+	case senderprofile.FieldKybVerificationStatus:
+		return m.KybVerificationStatus()
 	case senderprofile.FieldUpdatedAt:
 		return m.UpdatedAt()
 	}
@@ -18721,6 +18817,8 @@ func (m *SenderProfileMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldIsPartner(ctx)
 	case senderprofile.FieldIsActive:
 		return m.OldIsActive(ctx)
+	case senderprofile.FieldKybVerificationStatus:
+		return m.OldKybVerificationStatus(ctx)
 	case senderprofile.FieldUpdatedAt:
 		return m.OldUpdatedAt(ctx)
 	}
@@ -18766,6 +18864,13 @@ func (m *SenderProfileMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetIsActive(v)
+		return nil
+	case senderprofile.FieldKybVerificationStatus:
+		v, ok := value.(senderprofile.KybVerificationStatus)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetKybVerificationStatus(v)
 		return nil
 	case senderprofile.FieldUpdatedAt:
 		v, ok := value.(time.Time)
@@ -18852,6 +18957,9 @@ func (m *SenderProfileMutation) ResetField(name string) error {
 		return nil
 	case senderprofile.FieldIsActive:
 		m.ResetIsActive()
+		return nil
+	case senderprofile.FieldKybVerificationStatus:
+		m.ResetKybVerificationStatus()
 		return nil
 	case senderprofile.FieldUpdatedAt:
 		m.ResetUpdatedAt()

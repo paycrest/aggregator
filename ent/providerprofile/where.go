@@ -340,6 +340,26 @@ func VisibilityModeNotIn(vs ...VisibilityMode) predicate.ProviderProfile {
 	return predicate.ProviderProfile(sql.FieldNotIn(FieldVisibilityMode, vs...))
 }
 
+// KybVerificationStatusEQ applies the EQ predicate on the "kyb_verification_status" field.
+func KybVerificationStatusEQ(v KybVerificationStatus) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldEQ(FieldKybVerificationStatus, v))
+}
+
+// KybVerificationStatusNEQ applies the NEQ predicate on the "kyb_verification_status" field.
+func KybVerificationStatusNEQ(v KybVerificationStatus) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldNEQ(FieldKybVerificationStatus, v))
+}
+
+// KybVerificationStatusIn applies the In predicate on the "kyb_verification_status" field.
+func KybVerificationStatusIn(vs ...KybVerificationStatus) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldIn(FieldKybVerificationStatus, vs...))
+}
+
+// KybVerificationStatusNotIn applies the NotIn predicate on the "kyb_verification_status" field.
+func KybVerificationStatusNotIn(vs ...KybVerificationStatus) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldNotIn(FieldKybVerificationStatus, vs...))
+}
+
 // HasUser applies the HasEdge predicate on the "user" edge.
 func HasUser() predicate.ProviderProfile {
 	return predicate.ProviderProfile(func(s *sql.Selector) {

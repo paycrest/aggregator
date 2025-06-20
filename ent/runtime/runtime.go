@@ -393,7 +393,7 @@ func init() {
 	// senderprofile.DefaultIsActive holds the default value on creation for the is_active field.
 	senderprofile.DefaultIsActive = senderprofileDescIsActive.Default.(bool)
 	// senderprofileDescUpdatedAt is the schema descriptor for updated_at field.
-	senderprofileDescUpdatedAt := senderprofileFields[6].Descriptor()
+	senderprofileDescUpdatedAt := senderprofileFields[7].Descriptor()
 	// senderprofile.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	senderprofile.DefaultUpdatedAt = senderprofileDescUpdatedAt.Default.(func() time.Time)
 	// senderprofile.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

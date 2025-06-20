@@ -3,6 +3,7 @@
 package senderprofile
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -25,6 +26,8 @@ const (
 	FieldIsPartner = "is_partner"
 	// FieldIsActive holds the string denoting the is_active field in the database.
 	FieldIsActive = "is_active"
+	// FieldKybVerificationStatus holds the string denoting the kyb_verification_status field in the database.
+	FieldKybVerificationStatus = "kyb_verification_status"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
 	// EdgeUser holds the string denoting the user edge name in mutations.
@@ -84,6 +87,7 @@ var Columns = []string{
 	FieldProviderID,
 	FieldIsPartner,
 	FieldIsActive,
+	FieldKybVerificationStatus,
 	FieldUpdatedAt,
 }
 
@@ -123,6 +127,34 @@ var (
 	DefaultID func() uuid.UUID
 )
 
+// KybVerificationStatus defines the type for the "kyb_verification_status" enum field.
+type KybVerificationStatus string
+
+// KybVerificationStatusNotStarted is the default value of the KybVerificationStatus enum.
+const DefaultKybVerificationStatus = KybVerificationStatusNotStarted
+
+// KybVerificationStatus values.
+const (
+	KybVerificationStatusNotStarted KybVerificationStatus = "not_started"
+	KybVerificationStatusPending    KybVerificationStatus = "pending"
+	KybVerificationStatusApproved   KybVerificationStatus = "approved"
+	KybVerificationStatusDeclined   KybVerificationStatus = "declined"
+)
+
+func (kvs KybVerificationStatus) String() string {
+	return string(kvs)
+}
+
+// KybVerificationStatusValidator is a validator for the "kyb_verification_status" field enum values. It is called by the builders before save.
+func KybVerificationStatusValidator(kvs KybVerificationStatus) error {
+	switch kvs {
+	case KybVerificationStatusNotStarted, KybVerificationStatusPending, KybVerificationStatusApproved, KybVerificationStatusDeclined:
+		return nil
+	default:
+		return fmt.Errorf("senderprofile: invalid enum value for kyb_verification_status field: %q", kvs)
+	}
+}
+
 // OrderOption defines the ordering options for the SenderProfile queries.
 type OrderOption func(*sql.Selector)
 
@@ -149,6 +181,11 @@ func ByIsPartner(opts ...sql.OrderTermOption) OrderOption {
 // ByIsActive orders the results by the is_active field.
 func ByIsActive(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldIsActive, opts...).ToFunc()
+}
+
+// ByKybVerificationStatus orders the results by the kyb_verification_status field.
+func ByKybVerificationStatus(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldKybVerificationStatus, opts...).ToFunc()
 }
 
 // ByUpdatedAt orders the results by the updated_at field.

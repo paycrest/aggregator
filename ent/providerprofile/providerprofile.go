@@ -29,6 +29,8 @@ const (
 	FieldUpdatedAt = "updated_at"
 	// FieldVisibilityMode holds the string denoting the visibility_mode field in the database.
 	FieldVisibilityMode = "visibility_mode"
+	// FieldKybVerificationStatus holds the string denoting the kyb_verification_status field in the database.
+	FieldKybVerificationStatus = "kyb_verification_status"
 	// EdgeUser holds the string denoting the user edge name in mutations.
 	EdgeUser = "user"
 	// EdgeAPIKey holds the string denoting the api_key edge name in mutations.
@@ -102,6 +104,7 @@ var Columns = []string{
 	FieldIsAvailable,
 	FieldUpdatedAt,
 	FieldVisibilityMode,
+	FieldKybVerificationStatus,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "provider_profiles"
@@ -201,6 +204,34 @@ func VisibilityModeValidator(vm VisibilityMode) error {
 	}
 }
 
+// KybVerificationStatus defines the type for the "kyb_verification_status" enum field.
+type KybVerificationStatus string
+
+// KybVerificationStatusNotStarted is the default value of the KybVerificationStatus enum.
+const DefaultKybVerificationStatus = KybVerificationStatusNotStarted
+
+// KybVerificationStatus values.
+const (
+	KybVerificationStatusNotStarted KybVerificationStatus = "not_started"
+	KybVerificationStatusPending    KybVerificationStatus = "pending"
+	KybVerificationStatusApproved   KybVerificationStatus = "approved"
+	KybVerificationStatusDeclined   KybVerificationStatus = "declined"
+)
+
+func (kvs KybVerificationStatus) String() string {
+	return string(kvs)
+}
+
+// KybVerificationStatusValidator is a validator for the "kyb_verification_status" field enum values. It is called by the builders before save.
+func KybVerificationStatusValidator(kvs KybVerificationStatus) error {
+	switch kvs {
+	case KybVerificationStatusNotStarted, KybVerificationStatusPending, KybVerificationStatusApproved, KybVerificationStatusDeclined:
+		return nil
+	default:
+		return fmt.Errorf("providerprofile: invalid enum value for kyb_verification_status field: %q", kvs)
+	}
+}
+
 // OrderOption defines the ordering options for the ProviderProfile queries.
 type OrderOption func(*sql.Selector)
 
@@ -242,6 +273,11 @@ func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByVisibilityMode orders the results by the visibility_mode field.
 func ByVisibilityMode(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldVisibilityMode, opts...).ToFunc()
+}
+
+// ByKybVerificationStatus orders the results by the kyb_verification_status field.
+func ByKybVerificationStatus(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldKybVerificationStatus, opts...).ToFunc()
 }
 
 // ByUserField orders the results by user field.

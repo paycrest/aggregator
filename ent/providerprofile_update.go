@@ -137,6 +137,20 @@ func (ppu *ProviderProfileUpdate) SetNillableVisibilityMode(pm *providerprofile.
 	return ppu
 }
 
+// SetKybVerificationStatus sets the "kyb_verification_status" field.
+func (ppu *ProviderProfileUpdate) SetKybVerificationStatus(pvs providerprofile.KybVerificationStatus) *ProviderProfileUpdate {
+	ppu.mutation.SetKybVerificationStatus(pvs)
+	return ppu
+}
+
+// SetNillableKybVerificationStatus sets the "kyb_verification_status" field if the given value is not nil.
+func (ppu *ProviderProfileUpdate) SetNillableKybVerificationStatus(pvs *providerprofile.KybVerificationStatus) *ProviderProfileUpdate {
+	if pvs != nil {
+		ppu.SetKybVerificationStatus(*pvs)
+	}
+	return ppu
+}
+
 // SetAPIKeyID sets the "api_key" edge to the APIKey entity by ID.
 func (ppu *ProviderProfileUpdate) SetAPIKeyID(id uuid.UUID) *ProviderProfileUpdate {
 	ppu.mutation.SetAPIKeyID(id)
@@ -389,6 +403,11 @@ func (ppu *ProviderProfileUpdate) check() error {
 			return &ValidationError{Name: "visibility_mode", err: fmt.Errorf(`ent: validator failed for field "ProviderProfile.visibility_mode": %w`, err)}
 		}
 	}
+	if v, ok := ppu.mutation.KybVerificationStatus(); ok {
+		if err := providerprofile.KybVerificationStatusValidator(v); err != nil {
+			return &ValidationError{Name: "kyb_verification_status", err: fmt.Errorf(`ent: validator failed for field "ProviderProfile.kyb_verification_status": %w`, err)}
+		}
+	}
 	if ppu.mutation.UserCleared() && len(ppu.mutation.UserIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ProviderProfile.user"`)
 	}
@@ -433,6 +452,9 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 	}
 	if value, ok := ppu.mutation.VisibilityMode(); ok {
 		_spec.SetField(providerprofile.FieldVisibilityMode, field.TypeEnum, value)
+	}
+	if value, ok := ppu.mutation.KybVerificationStatus(); ok {
+		_spec.SetField(providerprofile.FieldKybVerificationStatus, field.TypeEnum, value)
 	}
 	if ppu.mutation.APIKeyCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -794,6 +816,20 @@ func (ppuo *ProviderProfileUpdateOne) SetNillableVisibilityMode(pm *providerprof
 	return ppuo
 }
 
+// SetKybVerificationStatus sets the "kyb_verification_status" field.
+func (ppuo *ProviderProfileUpdateOne) SetKybVerificationStatus(pvs providerprofile.KybVerificationStatus) *ProviderProfileUpdateOne {
+	ppuo.mutation.SetKybVerificationStatus(pvs)
+	return ppuo
+}
+
+// SetNillableKybVerificationStatus sets the "kyb_verification_status" field if the given value is not nil.
+func (ppuo *ProviderProfileUpdateOne) SetNillableKybVerificationStatus(pvs *providerprofile.KybVerificationStatus) *ProviderProfileUpdateOne {
+	if pvs != nil {
+		ppuo.SetKybVerificationStatus(*pvs)
+	}
+	return ppuo
+}
+
 // SetAPIKeyID sets the "api_key" edge to the APIKey entity by ID.
 func (ppuo *ProviderProfileUpdateOne) SetAPIKeyID(id uuid.UUID) *ProviderProfileUpdateOne {
 	ppuo.mutation.SetAPIKeyID(id)
@@ -1059,6 +1095,11 @@ func (ppuo *ProviderProfileUpdateOne) check() error {
 			return &ValidationError{Name: "visibility_mode", err: fmt.Errorf(`ent: validator failed for field "ProviderProfile.visibility_mode": %w`, err)}
 		}
 	}
+	if v, ok := ppuo.mutation.KybVerificationStatus(); ok {
+		if err := providerprofile.KybVerificationStatusValidator(v); err != nil {
+			return &ValidationError{Name: "kyb_verification_status", err: fmt.Errorf(`ent: validator failed for field "ProviderProfile.kyb_verification_status": %w`, err)}
+		}
+	}
 	if ppuo.mutation.UserCleared() && len(ppuo.mutation.UserIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ProviderProfile.user"`)
 	}
@@ -1120,6 +1161,9 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 	}
 	if value, ok := ppuo.mutation.VisibilityMode(); ok {
 		_spec.SetField(providerprofile.FieldVisibilityMode, field.TypeEnum, value)
+	}
+	if value, ok := ppuo.mutation.KybVerificationStatus(); ok {
+		_spec.SetField(providerprofile.FieldKybVerificationStatus, field.TypeEnum, value)
 	}
 	if ppuo.mutation.APIKeyCleared() {
 		edge := &sqlgraph.EdgeSpec{
