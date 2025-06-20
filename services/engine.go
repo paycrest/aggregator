@@ -48,14 +48,13 @@ func (s *EngineService) CreateServerWallet(ctx context.Context, label string) (s
 
 // GetLatestBlock fetches the latest block number for a given chain ID
 func (s *EngineService) GetLatestBlock(ctx context.Context, chainID int64) (int64, error) {
-	res, err := fastshot.NewClient("https://insight.thirdweb.com").
+	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
 		Config().SetTimeout(30 * time.Second).
 		Header().AddAll(map[string]string{
 		"Content-Type": "application/json",
 		"X-Secret-Key": s.config.ThirdwebSecretKey,
 	}).Build().GET("/v1/blocks").
 		Query().AddParams(map[string]string{
-		"chain_id":   fmt.Sprintf("%d", chainID),
 		"sort_order": "desc",
 		"limit":      "1",
 	}).Send()
@@ -77,24 +76,28 @@ func (s *EngineService) GetLatestBlock(ctx context.Context, chainID int64) (int6
 }
 
 // GetContractEvents fetches contract events
-func (s *EngineService) GetContractEvents(ctx context.Context, chainID int64, contractAddress string, payload map[string]interface{}) ([]interface{}, error) {
-	res, err := fastshot.NewClient(s.config.BaseURL).
+func (s *EngineService) GetContractEvents(ctx context.Context, chainID int64, contractAddress string, payload map[string]string) ([]interface{}, error) {
+	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
 		Config().SetTimeout(30 * time.Second).
-		Auth().BearerToken(s.config.AccessToken).
 		Header().AddAll(map[string]string{
 		"Content-Type": "application/json",
-	}).Build().POST(fmt.Sprintf("/contract/%d/%s/events/get", chainID, contractAddress)).
-		Body().AsJSON(payload).Send()
+		"X-Secret-Key": s.config.ThirdwebSecretKey,
+	}).Build().GET(fmt.Sprintf("/v1/events/%s", contractAddress)).
+		Query().AddParams(payload).Send()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get contract events: %w", err)
 	}
 
 	data, err := utils.ParseJSONResponse(res.RawResponse)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse JSON response: %w %v", err, data)
+		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
 	}
 
-	return data["result"].([]interface{}), nil
+	if data["meta"].(map[string]interface{})["total_items"].(float64) == 0 {
+		return nil, fmt.Errorf("no events found")
+	}
+
+	return data["data"].([]interface{}), nil
 }
 
 // SendTransactionBatch sends a batch of transactions

@@ -10,7 +10,6 @@ import (
 	"github.com/paycrest/aggregator/services/common"
 	"github.com/paycrest/aggregator/services/order"
 	"github.com/paycrest/aggregator/types"
-	"github.com/paycrest/aggregator/utils"
 	"github.com/shopspring/decimal"
 )
 
@@ -37,14 +36,16 @@ func NewIndexerEVM() types.Indexer {
 // IndexTransfer indexes transfers to the receive address for EVM networks.
 func (s *IndexerEVM) IndexTransfer(ctx context.Context, rpcClient types.RPCClient, token *ent.Token, fromBlock int64, toBlock int64) error {
 	// Get Transfer event data
-	payload := map[string]interface{}{
-		"eventName": "Transfer",
-		"fromBlock": fromBlock,
-		"toBlock":   toBlock,
-		"order":     "asc",
+	payload := map[string]string{
+		"filter_block_number_gte": fmt.Sprintf("%d", fromBlock),
+		"filter_block_number_lte": fmt.Sprintf("%d", toBlock),
+		"filter_topic_0":          "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef", // Transfer
+		"sort_by":                 "block_number",
+		"sort_order":              "asc",
+		"decode":                  "true",
 	}
 
-	result, err := s.engineService.GetContractEvents(ctx, token.Edges.Network.ChainID, token.ContractAddress, payload)
+	events, err := s.engineService.GetContractEvents(ctx, token.Edges.Network.ChainID, token.ContractAddress, payload)
 	if err != nil {
 		return fmt.Errorf("ProcessTransfer.getTransferEventData: %w", err)
 	}
@@ -53,21 +54,19 @@ func (s *IndexerEVM) IndexTransfer(ctx context.Context, rpcClient types.RPCClien
 	addressToEvent := make(map[string]*types.TokenTransferEvent)
 
 	// Parse transfer event data
-	for _, r := range result {
-		transferData := r.(map[string]interface{})["data"]
-		transferTransaction := r.(map[string]interface{})["transaction"]
-		transferValue := utils.HexToDecimal(transferData.(map[string]interface{})["value"].(map[string]interface{})["hex"].(string))
-
-		toAddress := transferData.(map[string]interface{})["to"].(string)
-		fromAddress := transferData.(map[string]interface{})["from"].(string)
+	for _, event := range events {
+		eventParams := event.(map[string]interface{})["decoded"].(map[string]interface{})
+		transferValue, _ := decimal.NewFromString(eventParams["non_indexed_params"].(map[string]interface{})["value"].(string))
+		toAddress := eventParams["indexed_params"].(map[string]interface{})["to"].(string)
+		fromAddress := eventParams["indexed_params"].(map[string]interface{})["from"].(string)
 
 		if strings.EqualFold(fromAddress, token.Edges.Network.GatewayContractAddress) {
 			continue
 		}
 
 		transferEvent := &types.TokenTransferEvent{
-			BlockNumber: int64(transferTransaction.(map[string]interface{})["blockNumber"].(float64)),
-			TxHash:      transferTransaction.(map[string]interface{})["transactionHash"].(string),
+			BlockNumber: int64(event.(map[string]interface{})["block_number"].(float64)),
+			TxHash:      event.(map[string]interface{})["transaction_hash"].(string),
 			From:        fromAddress,
 			To:          toAddress,
 			Value:       transferValue.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals)))),
@@ -92,11 +91,13 @@ func (s *IndexerEVM) IndexTransfer(ctx context.Context, rpcClient types.RPCClien
 // IndexOrderCreated indexes orders created in the Gateway contract for EVM networks.
 func (s *IndexerEVM) IndexOrderCreated(ctx context.Context, rpcClient types.RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error {
 	// Get OrderCreated event data
-	eventPayload := map[string]interface{}{
-		"eventName": "OrderCreated",
-		"fromBlock": fromBlock,
-		"toBlock":   toBlock,
-		"order":     "desc",
+	eventPayload := map[string]string{
+		"filter_block_number_gte": fmt.Sprintf("%d", fromBlock),
+		"filter_block_number_lte": fmt.Sprintf("%d", toBlock),
+		"filter_topic_0":          "0x40ccd1ceb111a3c186ef9911e1b876dc1f789ed331b86097b3b8851055b6a137", // OrderCreated
+		"sort_by":                 "block_number",
+		"sort_order":              "desc",
+		"decode":                  "true",
 	}
 
 	events, err := s.engineService.GetContractEvents(ctx, network.ChainID, network.GatewayContractAddress, eventPayload)
@@ -104,25 +105,25 @@ func (s *IndexerEVM) IndexOrderCreated(ctx context.Context, rpcClient types.RPCC
 		return fmt.Errorf("IndexOrderCreated.getEvents: %w", err)
 	}
 
-	result := map[string]interface{}{}
 	txHashes := []string{}
 	hashToEvent := make(map[string]*types.OrderCreatedEvent)
 
-	for _, r := range events {
-		result = r.(map[string]interface{})["data"].(map[string]interface{})
+	for _, event := range events {
+		eventParams := event.(map[string]interface{})["decoded"].(map[string]interface{})
 
-		orderAmount := utils.HexToDecimal(result["amount"].(map[string]interface{})["hex"].(string))
-		protocolFee := utils.HexToDecimal(result["protocolFee"].(map[string]interface{})["hex"].(string))
+		orderAmount, _ := decimal.NewFromString(eventParams["indexed_params"].(map[string]interface{})["amount"].(string))
+		protocolFee, _ := decimal.NewFromString(eventParams["non_indexed_params"].(map[string]interface{})["protocolFee"].(string))
+		rate, _ := decimal.NewFromString(eventParams["non_indexed_params"].(map[string]interface{})["rate"].(string))
 		createdEvent := &types.OrderCreatedEvent{
-			BlockNumber: int64(r.(map[string]interface{})["transaction"].(map[string]interface{})["blockNumber"].(float64)),
-			TxHash:      r.(map[string]interface{})["transaction"].(map[string]interface{})["transactionHash"].(string),
-			Token:       result["token"].(string),
+			BlockNumber: int64(event.(map[string]interface{})["block_number"].(float64)),
+			TxHash:      event.(map[string]interface{})["transaction_hash"].(string),
+			Token:       eventParams["indexed_params"].(map[string]interface{})["token"].(string),
 			Amount:      orderAmount,
 			ProtocolFee: protocolFee,
-			OrderId:     result["orderId"].(string),
-			Rate:        utils.HexToDecimal(result["rate"].(map[string]interface{})["hex"].(string)).Div(decimal.NewFromInt(100)),
-			MessageHash: result["messageHash"].(string),
-			Sender:      result["sender"].(string),
+			OrderId:     eventParams["non_indexed_params"].(map[string]interface{})["orderId"].(string),
+			Rate:        rate.Div(decimal.NewFromInt(100)),
+			MessageHash: eventParams["non_indexed_params"].(map[string]interface{})["messageHash"].(string),
+			Sender:      eventParams["indexed_params"].(map[string]interface{})["sender"].(string),
 		}
 
 		txHashes = append(txHashes, createdEvent.TxHash)
@@ -144,11 +145,13 @@ func (s *IndexerEVM) IndexOrderCreated(ctx context.Context, rpcClient types.RPCC
 // IndexOrderSettled indexes orders settled in the Gateway contract for EVM networks.
 func (s *IndexerEVM) IndexOrderSettled(ctx context.Context, rpcClient types.RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error {
 	// Get OrderSettled event data
-	eventPayload := map[string]interface{}{
-		"eventName": "OrderSettled",
-		"fromBlock": fromBlock,
-		"toBlock":   toBlock,
-		"order":     "desc",
+	eventPayload := map[string]string{
+		"filter_block_number_gte": fmt.Sprintf("%d", fromBlock),
+		"filter_block_number_lte": fmt.Sprintf("%d", toBlock),
+		"filter_topic_0":          "0x98ece21e01a01cbe1d1c0dad3b053c8fbd368f99be78be958fcf1d1d13fd249a", // OrderSettled
+		"sort_by":                 "block_number",
+		"sort_order":              "desc",
+		"decode":                  "true",
 	}
 
 	events, err := s.engineService.GetContractEvents(ctx, network.ChainID, network.GatewayContractAddress, eventPayload)
@@ -156,19 +159,20 @@ func (s *IndexerEVM) IndexOrderSettled(ctx context.Context, rpcClient types.RPCC
 		return fmt.Errorf("IndexOrderSettled.getEvents: %w", err)
 	}
 
-	result := map[string]interface{}{}
 	txHashes := []string{}
 	hashToEvent := make(map[string]*types.OrderSettledEvent)
 
-	for _, r := range events {
-		result = r.(map[string]interface{})["data"].(map[string]interface{})
+	for _, event := range events {
+		eventParams := event.(map[string]interface{})["decoded"].(map[string]interface{})
+
+		settlePercent, _ := decimal.NewFromString(eventParams["non_indexed_params"].(map[string]interface{})["settlePercent"].(string))
 		settledEvent := &types.OrderSettledEvent{
-			BlockNumber:       int64(r.(map[string]interface{})["transaction"].(map[string]interface{})["blockNumber"].(float64)),
-			TxHash:            r.(map[string]interface{})["transaction"].(map[string]interface{})["transactionHash"].(string),
-			SplitOrderId:      result["splitOrderId"].(string),
-			OrderId:           result["orderId"].(string),
-			LiquidityProvider: result["liquidityProvider"].(string),
-			SettlePercent:     utils.HexToDecimal(result["settlePercent"].(map[string]interface{})["hex"].(string)),
+			BlockNumber:       int64(event.(map[string]interface{})["block_number"].(float64)),
+			TxHash:            event.(map[string]interface{})["transaction_hash"].(string),
+			SplitOrderId:      eventParams["non_indexed_params"].(map[string]interface{})["splitOrderId"].(string),
+			OrderId:           eventParams["indexed_params"].(map[string]interface{})["orderId"].(string),
+			LiquidityProvider: eventParams["indexed_params"].(map[string]interface{})["liquidityProvider"].(string),
+			SettlePercent:     settlePercent,
 		}
 
 		txHashes = append(txHashes, settledEvent.TxHash)
@@ -190,11 +194,13 @@ func (s *IndexerEVM) IndexOrderSettled(ctx context.Context, rpcClient types.RPCC
 // IndexOrderRefunded indexes orders settled in the Gateway contract for EVM networks.
 func (s *IndexerEVM) IndexOrderRefunded(ctx context.Context, rpcClient types.RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error {
 	// Get OrderRefunded event data
-	eventPayload := map[string]interface{}{
-		"eventName": "OrderRefunded",
-		"fromBlock": fromBlock,
-		"toBlock":   toBlock,
-		"order":     "desc",
+	eventPayload := map[string]string{
+		"filter_block_number_gte": fmt.Sprintf("%d", fromBlock),
+		"filter_block_number_lte": fmt.Sprintf("%d", toBlock),
+		"filter_topic_0":          "0x0736fe428e1747ca8d387c2e6fa1a31a0cde62d3a167c40a46ade59a3cdc828e", // OrderRefunded
+		"sort_by":                 "block_number",
+		"sort_order":              "desc",
+		"decode":                  "true",
 	}
 
 	events, err := s.engineService.GetContractEvents(ctx, network.ChainID, network.GatewayContractAddress, eventPayload)
@@ -202,19 +208,18 @@ func (s *IndexerEVM) IndexOrderRefunded(ctx context.Context, rpcClient types.RPC
 		return fmt.Errorf("IndexOrderRefunded.getEvents: %w", err)
 	}
 
-	result := map[string]interface{}{}
 	txHashes := []string{}
 	hashToEvent := make(map[string]*types.OrderRefundedEvent)
 
-	for _, r := range events {
-		result = r.(map[string]interface{})["data"].(map[string]interface{})
-		refundFee := utils.HexToDecimal(result["fee"].(map[string]interface{})["hex"].(string))
+	for _, event := range events {
+		eventParams := event.(map[string]interface{})["decoded"].(map[string]interface{})
+		refundFee, _ := decimal.NewFromString(eventParams["non_indexed_params"].(map[string]interface{})["fee"].(string))
 
 		refundedEvent := &types.OrderRefundedEvent{
-			BlockNumber: int64(r.(map[string]interface{})["transaction"].(map[string]interface{})["blockNumber"].(float64)),
-			TxHash:      r.(map[string]interface{})["transaction"].(map[string]interface{})["transactionHash"].(string),
+			BlockNumber: int64(event.(map[string]interface{})["block_number"].(float64)),
+			TxHash:      event.(map[string]interface{})["transaction_hash"].(string),
+			OrderId:     eventParams["indexed_params"].(map[string]interface{})["orderId"].(string),
 			Fee:         refundFee,
-			OrderId:     result["orderId"].(string),
 		}
 
 		txHashes = append(txHashes, refundedEvent.TxHash)
