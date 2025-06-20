@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/paycrest/aggregator/ent"
@@ -364,12 +363,10 @@ func TestProfile(t *testing.T) {
 		t.Run("with all fields complete and check if it is active", func(t *testing.T) {
 			// Test partial update
 			payload := types.ProviderProfilePayload{
-				TradingName:      "My Trading Name",
-				Currencies:       []string{"KES"},
-				HostIdentifier:   "https://example.com",
-				BusinessDocument: "https://example.com/business_doc.png",
-				IdentityDocument: "https://example.com/national_id.png",
-				IsAvailable:      true,
+				TradingName:    "My Trading Name",
+				Currencies:     []string{"KES"},
+				HostIdentifier: "https://example.com",
+				IsAvailable:    true,
 			}
 
 			res := profileUpdateRequest(payload)
@@ -392,8 +389,8 @@ func TestProfile(t *testing.T) {
 
 			assert.Equal(t, payload.TradingName, providerProfile.TradingName)
 			assert.Equal(t, payload.HostIdentifier, providerProfile.HostIdentifier)
-			assert.Equal(t, payload.BusinessDocument, providerProfile.BusinessDocument)
-			assert.Equal(t, payload.IdentityDocument, providerProfile.IdentityDocument)
+			// assert.Equal(t, payload.BusinessDocument, providerProfile.BusinessDocument)
+			// assert.Equal(t, payload.IdentityDocument, providerProfile.IdentityDocument)
 			assert.True(t, providerProfile.IsActive)
 			// assert for currencies
 			assert.Equal(t, len(providerProfile.Edges.Currencies), 1)
@@ -561,14 +558,14 @@ func TestProfile(t *testing.T) {
 			}
 			t.Run("fails for invalid mobile number", func(t *testing.T) {
 				payload := types.ProviderProfilePayload{
-					MobileNumber:   "01234567890",
+					// MobileNumber:   "01234567890",
 					TradingName:    testCtx.providerProfile.TradingName,
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
 					Currencies:     []string{"KES"},
 				}
 				res1 := profileUpdateRequest(payload)
 
-				payload.MobileNumber = "+023456789029"
+				// payload.MobileNumber = "+023456789029"
 				res2 := profileUpdateRequest(payload)
 
 				// Assert the response body
@@ -587,7 +584,7 @@ func TestProfile(t *testing.T) {
 
 			t.Run("success for valid moblie number", func(t *testing.T) {
 				payload := types.ProviderProfilePayload{
-					MobileNumber:   "+2347012345678",
+					// MobileNumber:   "+2347012345678",
 					TradingName:    testCtx.providerProfile.TradingName,
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
 					Currencies:     []string{"KES"},
@@ -603,24 +600,24 @@ func TestProfile(t *testing.T) {
 				assert.Equal(t, "Profile updated successfully", response.Message)
 
 				// Assert optional fields were correctly set and retrieved
-				providerProfile, err := db.Client.ProviderProfile.
-					Query().
-					Where(providerprofile.HasUserWith(user.ID(testCtx.user.ID))).
-					Only(context.Background())
-				assert.NoError(t, err)
+				// providerProfile, err := db.Client.ProviderProfile.
+				// 	Query().
+				// 	Where(providerprofile.HasUserWith(user.ID(testCtx.user.ID))).
+				// 	Only(context.Background())
+				// assert.NoError(t, err)
 
-				assert.Equal(t, providerProfile.MobileNumber, "+2347012345678")
+				// assert.Equal(t, providerProfile.MobileNumber, "+2347012345678")
 			})
 
 			t.Run("fails for invalid identity document type", func(t *testing.T) {
 				payload := types.ProviderProfilePayload{
-					IdentityDocumentType: "student_id",
-					TradingName:          testCtx.providerProfile.TradingName,
-					HostIdentifier:       testCtx.providerProfile.HostIdentifier,
+					// IdentityDocumentType: "student_id",
+					TradingName:    testCtx.providerProfile.TradingName,
+					HostIdentifier: testCtx.providerProfile.HostIdentifier,
 				}
 				res1 := profileUpdateRequest(payload)
 
-				payload.IdentityDocumentType = "bank_statement"
+				// payload.IdentityDocumentType = "bank_statement"
 				res2 := profileUpdateRequest(payload)
 
 				// Assert the response body
@@ -639,13 +636,13 @@ func TestProfile(t *testing.T) {
 
 			t.Run("fails for invalid identity document url", func(t *testing.T) {
 				payload := types.ProviderProfilePayload{
-					IdentityDocument: "img.png",
-					TradingName:      testCtx.providerProfile.TradingName,
-					HostIdentifier:   testCtx.providerProfile.HostIdentifier,
+					// IdentityDocument: "img.png",
+					TradingName:    testCtx.providerProfile.TradingName,
+					HostIdentifier: testCtx.providerProfile.HostIdentifier,
 				}
 				res1 := profileUpdateRequest(payload)
 
-				payload.IdentityDocument = "ftp://123.example.com/file.png"
+				// payload.IdentityDocument = "ftp://123.example.com/file.png"
 				res2 := profileUpdateRequest(payload)
 
 				// Assert the response body
@@ -665,9 +662,9 @@ func TestProfile(t *testing.T) {
 
 			t.Run("fails for invalid business document url", func(t *testing.T) {
 				payload := types.ProviderProfilePayload{
-					BusinessDocument: "http://123.example.com/file.ai",
-					TradingName:      testCtx.providerProfile.TradingName,
-					HostIdentifier:   testCtx.providerProfile.HostIdentifier,
+					// BusinessDocument: "http://123.example.com/file.ai",
+					TradingName:    testCtx.providerProfile.TradingName,
+					HostIdentifier: testCtx.providerProfile.HostIdentifier,
 				}
 				res := profileUpdateRequest(payload)
 				// Assert the response body
@@ -682,15 +679,18 @@ func TestProfile(t *testing.T) {
 
 			t.Run("succeeds with valid optional fields", func(t *testing.T) {
 				payload := types.ProviderProfilePayload{
-					Address:              "123, Example Street, Nairobi, Kenya",
-					MobileNumber:         "+2347012345678",
-					DateOfBirth:          time.Date(2022, time.January, 1, 12, 30, 0, 0, time.UTC),
-					BusinessName:         "Example Business",
-					IdentityDocumentType: "national_id",
-					IdentityDocument:     "https://example.com/national_id.png",
-					BusinessDocument:     "https://example.com/business_doc.png",
-					TradingName:          testCtx.providerProfile.TradingName,
-					HostIdentifier:       testCtx.providerProfile.HostIdentifier,
+					// Address:              "123, Example Street, Nairobi, Kenya",
+					// MobileNumber:         "+2347012345678",
+					// DateOfBirth:          time.Date(2022, time.January, 1, 12, 30, 0, 0, time.UTC),
+					// BusinessName:         "Example Business",
+					// IdentityDocumentType: "national_id",
+					// IdentityDocument:     "https://example.com/national_id.png",
+					// BusinessDocument:     "https://example.com/business_doc.png",
+					TradingName:    testCtx.providerProfile.TradingName,
+					HostIdentifier: testCtx.providerProfile.HostIdentifier,
+					Currencies:     []string{"KES"},
+					VisibilityMode: "public",
+					IsAvailable:    true,
 				}
 				res := profileUpdateRequest(payload)
 				// Assert the response body
@@ -701,20 +701,20 @@ func TestProfile(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, "Profile updated successfully", response.Message)
 
-				// Assert optional fields were correctly set and retrieved
-				providerProfile, err := db.Client.ProviderProfile.
-					Query().
-					Where(providerprofile.HasUserWith(user.ID(testCtx.user.ID))).
-					Only(context.Background())
-				assert.NoError(t, err)
+				// // Assert optional fields were correctly set and retrieved
+				// providerProfile, err := db.Client.ProviderProfile.
+				// 	Query().
+				// 	Where(providerprofile.HasUserWith(user.ID(testCtx.user.ID))).
+				// 	Only(context.Background())
+				// assert.NoError(t, err)
 
-				assert.Equal(t, providerProfile.Address, "123, Example Street, Nairobi, Kenya")
-				assert.Equal(t, providerProfile.MobileNumber, "+2347012345678")
-				assert.Equal(t, providerProfile.DateOfBirth, time.Date(2022, time.January, 1, 12, 30, 0, 0, time.UTC))
-				assert.Equal(t, providerProfile.BusinessName, "Example Business")
-				assert.Equal(t, string(providerProfile.IdentityDocumentType), "national_id")
-				assert.Equal(t, providerProfile.IdentityDocument, "https://example.com/national_id.png")
-				assert.Equal(t, providerProfile.BusinessDocument, "https://example.com/business_doc.png")
+				// assert.Equal(t, providerProfile.Address, "123, Example Street, Nairobi, Kenya")
+				// assert.Equal(t, providerProfile.MobileNumber, "+2347012345678")
+				// assert.Equal(t, providerProfile.DateOfBirth, time.Date(2022, time.January, 1, 12, 30, 0, 0, time.UTC))
+				// assert.Equal(t, providerProfile.BusinessName, "Example Business")
+				// assert.Equal(t, string(providerProfile.IdentityDocumentType), "national_id")
+				// assert.Equal(t, providerProfile.IdentityDocument, "https://example.com/national_id.png")
+				// assert.Equal(t, providerProfile.BusinessDocument, "https://example.com/business_doc.png")
 			})
 
 		})

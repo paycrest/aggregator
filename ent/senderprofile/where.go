@@ -251,6 +251,26 @@ func IsActiveNEQ(v bool) predicate.SenderProfile {
 	return predicate.SenderProfile(sql.FieldNEQ(FieldIsActive, v))
 }
 
+// KybVerificationStatusEQ applies the EQ predicate on the "kyb_verification_status" field.
+func KybVerificationStatusEQ(v KybVerificationStatus) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldEQ(FieldKybVerificationStatus, v))
+}
+
+// KybVerificationStatusNEQ applies the NEQ predicate on the "kyb_verification_status" field.
+func KybVerificationStatusNEQ(v KybVerificationStatus) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldNEQ(FieldKybVerificationStatus, v))
+}
+
+// KybVerificationStatusIn applies the In predicate on the "kyb_verification_status" field.
+func KybVerificationStatusIn(vs ...KybVerificationStatus) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldIn(FieldKybVerificationStatus, vs...))
+}
+
+// KybVerificationStatusNotIn applies the NotIn predicate on the "kyb_verification_status" field.
+func KybVerificationStatusNotIn(vs ...KybVerificationStatus) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldNotIn(FieldKybVerificationStatus, vs...))
+}
+
 // UpdatedAtEQ applies the EQ predicate on the "updated_at" field.
 func UpdatedAtEQ(v time.Time) predicate.SenderProfile {
 	return predicate.SenderProfile(sql.FieldEQ(FieldUpdatedAt, v))

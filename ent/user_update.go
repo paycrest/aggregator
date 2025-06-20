@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/senderprofile"
@@ -136,6 +137,20 @@ func (uu *UserUpdate) SetNillableHasEarlyAccess(b *bool) *UserUpdate {
 	return uu
 }
 
+// SetIsKYBVerified sets the "isKYBVerified" field.
+func (uu *UserUpdate) SetIsKYBVerified(b bool) *UserUpdate {
+	uu.mutation.SetIsKYBVerified(b)
+	return uu
+}
+
+// SetNillableIsKYBVerified sets the "isKYBVerified" field if the given value is not nil.
+func (uu *UserUpdate) SetNillableIsKYBVerified(b *bool) *UserUpdate {
+	if b != nil {
+		uu.SetIsKYBVerified(*b)
+	}
+	return uu
+}
+
 // SetSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by ID.
 func (uu *UserUpdate) SetSenderProfileID(id uuid.UUID) *UserUpdate {
 	uu.mutation.SetSenderProfileID(id)
@@ -189,6 +204,25 @@ func (uu *UserUpdate) AddVerificationToken(v ...*VerificationToken) *UserUpdate 
 	return uu.AddVerificationTokenIDs(ids...)
 }
 
+// SetKybProfileID sets the "kyb_profile" edge to the KYBProfile entity by ID.
+func (uu *UserUpdate) SetKybProfileID(id uuid.UUID) *UserUpdate {
+	uu.mutation.SetKybProfileID(id)
+	return uu
+}
+
+// SetNillableKybProfileID sets the "kyb_profile" edge to the KYBProfile entity by ID if the given value is not nil.
+func (uu *UserUpdate) SetNillableKybProfileID(id *uuid.UUID) *UserUpdate {
+	if id != nil {
+		uu = uu.SetKybProfileID(*id)
+	}
+	return uu
+}
+
+// SetKybProfile sets the "kyb_profile" edge to the KYBProfile entity.
+func (uu *UserUpdate) SetKybProfile(k *KYBProfile) *UserUpdate {
+	return uu.SetKybProfileID(k.ID)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uu *UserUpdate) Mutation() *UserMutation {
 	return uu.mutation
@@ -225,6 +259,12 @@ func (uu *UserUpdate) RemoveVerificationToken(v ...*VerificationToken) *UserUpda
 		ids[i] = v[i].ID
 	}
 	return uu.RemoveVerificationTokenIDs(ids...)
+}
+
+// ClearKybProfile clears the "kyb_profile" edge to the KYBProfile entity.
+func (uu *UserUpdate) ClearKybProfile() *UserUpdate {
+	uu.mutation.ClearKybProfile()
+	return uu
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -319,6 +359,9 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := uu.mutation.HasEarlyAccess(); ok {
 		_spec.SetField(user.FieldHasEarlyAccess, field.TypeBool, value)
+	}
+	if value, ok := uu.mutation.IsKYBVerified(); ok {
+		_spec.SetField(user.FieldIsKYBVerified, field.TypeBool, value)
 	}
 	if uu.mutation.SenderProfileCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -416,6 +459,35 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(verificationtoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uu.mutation.KybProfileCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.KybProfileTable,
+			Columns: []string{user.KybProfileColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(kybprofile.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.KybProfileIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.KybProfileTable,
+			Columns: []string{user.KybProfileColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(kybprofile.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -547,6 +619,20 @@ func (uuo *UserUpdateOne) SetNillableHasEarlyAccess(b *bool) *UserUpdateOne {
 	return uuo
 }
 
+// SetIsKYBVerified sets the "isKYBVerified" field.
+func (uuo *UserUpdateOne) SetIsKYBVerified(b bool) *UserUpdateOne {
+	uuo.mutation.SetIsKYBVerified(b)
+	return uuo
+}
+
+// SetNillableIsKYBVerified sets the "isKYBVerified" field if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableIsKYBVerified(b *bool) *UserUpdateOne {
+	if b != nil {
+		uuo.SetIsKYBVerified(*b)
+	}
+	return uuo
+}
+
 // SetSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by ID.
 func (uuo *UserUpdateOne) SetSenderProfileID(id uuid.UUID) *UserUpdateOne {
 	uuo.mutation.SetSenderProfileID(id)
@@ -600,6 +686,25 @@ func (uuo *UserUpdateOne) AddVerificationToken(v ...*VerificationToken) *UserUpd
 	return uuo.AddVerificationTokenIDs(ids...)
 }
 
+// SetKybProfileID sets the "kyb_profile" edge to the KYBProfile entity by ID.
+func (uuo *UserUpdateOne) SetKybProfileID(id uuid.UUID) *UserUpdateOne {
+	uuo.mutation.SetKybProfileID(id)
+	return uuo
+}
+
+// SetNillableKybProfileID sets the "kyb_profile" edge to the KYBProfile entity by ID if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableKybProfileID(id *uuid.UUID) *UserUpdateOne {
+	if id != nil {
+		uuo = uuo.SetKybProfileID(*id)
+	}
+	return uuo
+}
+
+// SetKybProfile sets the "kyb_profile" edge to the KYBProfile entity.
+func (uuo *UserUpdateOne) SetKybProfile(k *KYBProfile) *UserUpdateOne {
+	return uuo.SetKybProfileID(k.ID)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uuo *UserUpdateOne) Mutation() *UserMutation {
 	return uuo.mutation
@@ -636,6 +741,12 @@ func (uuo *UserUpdateOne) RemoveVerificationToken(v ...*VerificationToken) *User
 		ids[i] = v[i].ID
 	}
 	return uuo.RemoveVerificationTokenIDs(ids...)
+}
+
+// ClearKybProfile clears the "kyb_profile" edge to the KYBProfile entity.
+func (uuo *UserUpdateOne) ClearKybProfile() *UserUpdateOne {
+	uuo.mutation.ClearKybProfile()
+	return uuo
 }
 
 // Where appends a list predicates to the UserUpdate builder.
@@ -761,6 +872,9 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 	if value, ok := uuo.mutation.HasEarlyAccess(); ok {
 		_spec.SetField(user.FieldHasEarlyAccess, field.TypeBool, value)
 	}
+	if value, ok := uuo.mutation.IsKYBVerified(); ok {
+		_spec.SetField(user.FieldIsKYBVerified, field.TypeBool, value)
+	}
 	if uuo.mutation.SenderProfileCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
@@ -857,6 +971,35 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(verificationtoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uuo.mutation.KybProfileCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.KybProfileTable,
+			Columns: []string{user.KybProfileColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(kybprofile.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.KybProfileIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.KybProfileTable,
+			Columns: []string{user.KybProfileColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(kybprofile.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

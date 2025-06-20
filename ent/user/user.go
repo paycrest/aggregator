@@ -34,12 +34,16 @@ const (
 	FieldIsEmailVerified = "is_email_verified"
 	// FieldHasEarlyAccess holds the string denoting the has_early_access field in the database.
 	FieldHasEarlyAccess = "has_early_access"
+	// FieldIsKYBVerified holds the string denoting the iskybverified field in the database.
+	FieldIsKYBVerified = "is_kyb_verified"
 	// EdgeSenderProfile holds the string denoting the sender_profile edge name in mutations.
 	EdgeSenderProfile = "sender_profile"
 	// EdgeProviderProfile holds the string denoting the provider_profile edge name in mutations.
 	EdgeProviderProfile = "provider_profile"
 	// EdgeVerificationToken holds the string denoting the verification_token edge name in mutations.
 	EdgeVerificationToken = "verification_token"
+	// EdgeKybProfile holds the string denoting the kyb_profile edge name in mutations.
+	EdgeKybProfile = "kyb_profile"
 	// Table holds the table name of the user in the database.
 	Table = "users"
 	// SenderProfileTable is the table that holds the sender_profile relation/edge.
@@ -63,6 +67,13 @@ const (
 	VerificationTokenInverseTable = "verification_tokens"
 	// VerificationTokenColumn is the table column denoting the verification_token relation/edge.
 	VerificationTokenColumn = "user_verification_token"
+	// KybProfileTable is the table that holds the kyb_profile relation/edge.
+	KybProfileTable = "kyb_profiles"
+	// KybProfileInverseTable is the table name for the KYBProfile entity.
+	// It exists in this package in order to avoid circular dependency with the "kybprofile" package.
+	KybProfileInverseTable = "kyb_profiles"
+	// KybProfileColumn is the table column denoting the kyb_profile relation/edge.
+	KybProfileColumn = "user_kyb_profile"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -77,6 +88,7 @@ var Columns = []string{
 	FieldScope,
 	FieldIsEmailVerified,
 	FieldHasEarlyAccess,
+	FieldIsKYBVerified,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -110,6 +122,8 @@ var (
 	DefaultIsEmailVerified bool
 	// DefaultHasEarlyAccess holds the default value on creation for the "has_early_access" field.
 	DefaultHasEarlyAccess bool
+	// DefaultIsKYBVerified holds the default value on creation for the "isKYBVerified" field.
+	DefaultIsKYBVerified bool
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -167,6 +181,11 @@ func ByHasEarlyAccess(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldHasEarlyAccess, opts...).ToFunc()
 }
 
+// ByIsKYBVerified orders the results by the isKYBVerified field.
+func ByIsKYBVerified(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIsKYBVerified, opts...).ToFunc()
+}
+
 // BySenderProfileField orders the results by sender_profile field.
 func BySenderProfileField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -194,6 +213,13 @@ func ByVerificationToken(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption
 		sqlgraph.OrderByNeighborTerms(s, newVerificationTokenStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByKybProfileField orders the results by kyb_profile field.
+func ByKybProfileField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newKybProfileStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newSenderProfileStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -213,5 +239,12 @@ func newVerificationTokenStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(VerificationTokenInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, VerificationTokenTable, VerificationTokenColumn),
+	)
+}
+func newKybProfileStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(KybProfileInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, false, KybProfileTable, KybProfileColumn),
 	)
 }
