@@ -114,6 +114,20 @@ func (spu *SenderProfileUpdate) SetNillableIsActive(b *bool) *SenderProfileUpdat
 	return spu
 }
 
+// SetIsKYBVerified sets the "isKYBVerified" field.
+func (spu *SenderProfileUpdate) SetIsKYBVerified(b bool) *SenderProfileUpdate {
+	spu.mutation.SetIsKYBVerified(b)
+	return spu
+}
+
+// SetNillableIsKYBVerified sets the "isKYBVerified" field if the given value is not nil.
+func (spu *SenderProfileUpdate) SetNillableIsKYBVerified(b *bool) *SenderProfileUpdate {
+	if b != nil {
+		spu.SetIsKYBVerified(*b)
+	}
+	return spu
+}
+
 // SetKybVerificationStatus sets the "kyb_verification_status" field.
 func (spu *SenderProfileUpdate) SetKybVerificationStatus(svs senderprofile.KybVerificationStatus) *SenderProfileUpdate {
 	spu.mutation.SetKybVerificationStatus(svs)
@@ -358,6 +372,9 @@ func (spu *SenderProfileUpdate) sqlSave(ctx context.Context) (n int, err error) 
 	}
 	if value, ok := spu.mutation.IsActive(); ok {
 		_spec.SetField(senderprofile.FieldIsActive, field.TypeBool, value)
+	}
+	if value, ok := spu.mutation.IsKYBVerified(); ok {
+		_spec.SetField(senderprofile.FieldIsKYBVerified, field.TypeBool, value)
 	}
 	if value, ok := spu.mutation.KybVerificationStatus(); ok {
 		_spec.SetField(senderprofile.FieldKybVerificationStatus, field.TypeEnum, value)
@@ -625,6 +642,20 @@ func (spuo *SenderProfileUpdateOne) SetIsActive(b bool) *SenderProfileUpdateOne 
 func (spuo *SenderProfileUpdateOne) SetNillableIsActive(b *bool) *SenderProfileUpdateOne {
 	if b != nil {
 		spuo.SetIsActive(*b)
+	}
+	return spuo
+}
+
+// SetIsKYBVerified sets the "isKYBVerified" field.
+func (spuo *SenderProfileUpdateOne) SetIsKYBVerified(b bool) *SenderProfileUpdateOne {
+	spuo.mutation.SetIsKYBVerified(b)
+	return spuo
+}
+
+// SetNillableIsKYBVerified sets the "isKYBVerified" field if the given value is not nil.
+func (spuo *SenderProfileUpdateOne) SetNillableIsKYBVerified(b *bool) *SenderProfileUpdateOne {
+	if b != nil {
+		spuo.SetIsKYBVerified(*b)
 	}
 	return spuo
 }
@@ -903,6 +934,9 @@ func (spuo *SenderProfileUpdateOne) sqlSave(ctx context.Context) (_node *SenderP
 	}
 	if value, ok := spuo.mutation.IsActive(); ok {
 		_spec.SetField(senderprofile.FieldIsActive, field.TypeBool, value)
+	}
+	if value, ok := spuo.mutation.IsKYBVerified(); ok {
+		_spec.SetField(senderprofile.FieldIsKYBVerified, field.TypeBool, value)
 	}
 	if value, ok := spuo.mutation.KybVerificationStatus(); ok {
 		_spec.SetField(senderprofile.FieldKybVerificationStatus, field.TypeEnum, value)

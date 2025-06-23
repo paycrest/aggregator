@@ -31,6 +31,8 @@ type ProviderProfile struct {
 	IsActive bool `json:"is_active,omitempty"`
 	// IsAvailable holds the value of the "is_available" field.
 	IsAvailable bool `json:"is_available,omitempty"`
+	// IsKYBVerified holds the value of the "isKYBVerified" field.
+	IsKYBVerified bool `json:"isKYBVerified,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// VisibilityMode holds the value of the "visibility_mode" field.
@@ -139,7 +141,7 @@ func (*ProviderProfile) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case providerprofile.FieldIsActive, providerprofile.FieldIsAvailable:
+		case providerprofile.FieldIsActive, providerprofile.FieldIsAvailable, providerprofile.FieldIsKYBVerified:
 			values[i] = new(sql.NullBool)
 		case providerprofile.FieldID, providerprofile.FieldTradingName, providerprofile.FieldHostIdentifier, providerprofile.FieldProvisionMode, providerprofile.FieldVisibilityMode, providerprofile.FieldKybVerificationStatus:
 			values[i] = new(sql.NullString)
@@ -197,6 +199,12 @@ func (pp *ProviderProfile) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field is_available", values[i])
 			} else if value.Valid {
 				pp.IsAvailable = value.Bool
+			}
+		case providerprofile.FieldIsKYBVerified:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field isKYBVerified", values[i])
+			} else if value.Valid {
+				pp.IsKYBVerified = value.Bool
 			}
 		case providerprofile.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -308,6 +316,9 @@ func (pp *ProviderProfile) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("is_available=")
 	builder.WriteString(fmt.Sprintf("%v", pp.IsAvailable))
+	builder.WriteString(", ")
+	builder.WriteString("isKYBVerified=")
+	builder.WriteString(fmt.Sprintf("%v", pp.IsKYBVerified))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
 	builder.WriteString(pp.UpdatedAt.Format(time.ANSIC))

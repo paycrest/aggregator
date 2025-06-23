@@ -32,6 +32,8 @@ func (ProviderProfile) Fields() []ent.Field {
 			Default(false),
 		field.Bool("is_available").
 			Default(false),
+		field.Bool("isKYBVerified").
+			Default(false),
 		field.Time("updated_at").
 			Default(time.Now).
 			UpdateDefault(time.Now),

@@ -267,17 +267,20 @@ type ProviderProfilePayload struct {
 
 // ProviderProfileResponse is the response for the provider profile endpoint
 type ProviderProfileResponse struct {
-	ID             string                      `json:"id"`
-	FirstName      string                      `json:"firstName"`
-	LastName       string                      `json:"lastName"`
-	Email          string                      `json:"email"`
-	TradingName    string                      `json:"tradingName"`
-	Currencies     []string                    `json:"currencies"`
-	HostIdentifier string                      `json:"hostIdentifier"`
-	IsAvailable    bool                        `json:"isAvailable"`
-	Tokens         []ProviderOrderTokenPayload `json:"tokens"`
-	APIKey         APIKeyResponse              `json:"apiKey"`
-	IsActive       bool                        `json:"isActive"`
+	ID                    string                      `json:"id"`
+	FirstName             string                      `json:"firstName"`
+	LastName              string                      `json:"lastName"`
+	Email                 string                      `json:"email"`
+	TradingName           string                      `json:"tradingName"`
+	Currencies            []string                    `json:"currencies"`
+	HostIdentifier        string                      `json:"hostIdentifier"`
+	IsAvailable           bool                        `json:"isAvailable"`
+	Tokens                []ProviderOrderTokenPayload `json:"tokens"`
+	APIKey                APIKeyResponse              `json:"apiKey"`
+	IsActive              bool                        `json:"isActive"`
+	VisibilityMode        string                      `json:"visibilityMode"`
+	IsKYBVerified         bool                        `json:"isKYBVerified"`
+	KYBVerificationStatus string                      `json:"kybVerificationStatus"`
 }
 
 // SenderOrderTokenResponse defines the provider setting for a token
@@ -302,7 +305,9 @@ type SenderProfileResponse struct {
 	ProviderID         string                     `json:"providerId"`
 	ProviderCurrencies []string                   `json:"providerCurrencies"`
 	IsActive           bool                       `json:"isActive"`
-	IsKYCVerified      bool                       `json:"isKYCVerified"`
+	// IsKYCVerified         bool                       `json:"isKYCVerified"`
+	IsKYBVerified         bool   `json:"isKYBVerified"`
+	KYBVerificationStatus string `json:"kybVerificationStatus"`
 }
 
 // RefreshResponse is the response for the refresh endpoint

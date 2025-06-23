@@ -26,6 +26,8 @@ const (
 	FieldIsPartner = "is_partner"
 	// FieldIsActive holds the string denoting the is_active field in the database.
 	FieldIsActive = "is_active"
+	// FieldIsKYBVerified holds the string denoting the iskybverified field in the database.
+	FieldIsKYBVerified = "is_kyb_verified"
 	// FieldKybVerificationStatus holds the string denoting the kyb_verification_status field in the database.
 	FieldKybVerificationStatus = "kyb_verification_status"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -87,6 +89,7 @@ var Columns = []string{
 	FieldProviderID,
 	FieldIsPartner,
 	FieldIsActive,
+	FieldIsKYBVerified,
 	FieldKybVerificationStatus,
 	FieldUpdatedAt,
 }
@@ -119,6 +122,8 @@ var (
 	DefaultIsPartner bool
 	// DefaultIsActive holds the default value on creation for the "is_active" field.
 	DefaultIsActive bool
+	// DefaultIsKYBVerified holds the default value on creation for the "isKYBVerified" field.
+	DefaultIsKYBVerified bool
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
 	DefaultUpdatedAt func() time.Time
 	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
@@ -181,6 +186,11 @@ func ByIsPartner(opts ...sql.OrderTermOption) OrderOption {
 // ByIsActive orders the results by the is_active field.
 func ByIsActive(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldIsActive, opts...).ToFunc()
+}
+
+// ByIsKYBVerified orders the results by the isKYBVerified field.
+func ByIsKYBVerified(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIsKYBVerified, opts...).ToFunc()
 }
 
 // ByKybVerificationStatus orders the results by the kyb_verification_status field.

@@ -429,6 +429,7 @@ var (
 		{Name: "provision_mode", Type: field.TypeEnum, Enums: []string{"manual", "auto"}, Default: "auto"},
 		{Name: "is_active", Type: field.TypeBool, Default: false},
 		{Name: "is_available", Type: field.TypeBool, Default: false},
+		{Name: "is_kyb_verified", Type: field.TypeBool, Default: false},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "visibility_mode", Type: field.TypeEnum, Enums: []string{"private", "public"}, Default: "public"},
 		{Name: "kyb_verification_status", Type: field.TypeEnum, Enums: []string{"not_started", "pending", "approved", "declined"}, Default: "not_started"},
@@ -442,7 +443,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "provider_profiles_users_provider_profile",
-				Columns:    []*schema.Column{ProviderProfilesColumns[9]},
+				Columns:    []*schema.Column{ProviderProfilesColumns[10]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -566,6 +567,7 @@ var (
 		{Name: "provider_id", Type: field.TypeString, Nullable: true},
 		{Name: "is_partner", Type: field.TypeBool, Default: false},
 		{Name: "is_active", Type: field.TypeBool, Default: false},
+		{Name: "is_kyb_verified", Type: field.TypeBool, Default: false},
 		{Name: "kyb_verification_status", Type: field.TypeEnum, Enums: []string{"not_started", "pending", "approved", "declined"}, Default: "not_started"},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "user_sender_profile", Type: field.TypeUUID, Unique: true},
@@ -578,7 +580,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "sender_profiles_users_sender_profile",
-				Columns:    []*schema.Column{SenderProfilesColumns[8]},
+				Columns:    []*schema.Column{SenderProfilesColumns[9]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Cascade,
 			},

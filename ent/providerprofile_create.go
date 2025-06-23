@@ -101,6 +101,20 @@ func (ppc *ProviderProfileCreate) SetNillableIsAvailable(b *bool) *ProviderProfi
 	return ppc
 }
 
+// SetIsKYBVerified sets the "isKYBVerified" field.
+func (ppc *ProviderProfileCreate) SetIsKYBVerified(b bool) *ProviderProfileCreate {
+	ppc.mutation.SetIsKYBVerified(b)
+	return ppc
+}
+
+// SetNillableIsKYBVerified sets the "isKYBVerified" field if the given value is not nil.
+func (ppc *ProviderProfileCreate) SetNillableIsKYBVerified(b *bool) *ProviderProfileCreate {
+	if b != nil {
+		ppc.SetIsKYBVerified(*b)
+	}
+	return ppc
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (ppc *ProviderProfileCreate) SetUpdatedAt(t time.Time) *ProviderProfileCreate {
 	ppc.mutation.SetUpdatedAt(t)
@@ -313,6 +327,10 @@ func (ppc *ProviderProfileCreate) defaults() {
 		v := providerprofile.DefaultIsAvailable
 		ppc.mutation.SetIsAvailable(v)
 	}
+	if _, ok := ppc.mutation.IsKYBVerified(); !ok {
+		v := providerprofile.DefaultIsKYBVerified
+		ppc.mutation.SetIsKYBVerified(v)
+	}
 	if _, ok := ppc.mutation.UpdatedAt(); !ok {
 		v := providerprofile.DefaultUpdatedAt()
 		ppc.mutation.SetUpdatedAt(v)
@@ -351,6 +369,9 @@ func (ppc *ProviderProfileCreate) check() error {
 	}
 	if _, ok := ppc.mutation.IsAvailable(); !ok {
 		return &ValidationError{Name: "is_available", err: errors.New(`ent: missing required field "ProviderProfile.is_available"`)}
+	}
+	if _, ok := ppc.mutation.IsKYBVerified(); !ok {
+		return &ValidationError{Name: "isKYBVerified", err: errors.New(`ent: missing required field "ProviderProfile.isKYBVerified"`)}
 	}
 	if _, ok := ppc.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ProviderProfile.updated_at"`)}
@@ -432,6 +453,10 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 	if value, ok := ppc.mutation.IsAvailable(); ok {
 		_spec.SetField(providerprofile.FieldIsAvailable, field.TypeBool, value)
 		_node.IsAvailable = value
+	}
+	if value, ok := ppc.mutation.IsKYBVerified(); ok {
+		_spec.SetField(providerprofile.FieldIsKYBVerified, field.TypeBool, value)
+		_node.IsKYBVerified = value
 	}
 	if value, ok := ppc.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerprofile.FieldUpdatedAt, field.TypeTime, value)
@@ -682,6 +707,18 @@ func (u *ProviderProfileUpsert) UpdateIsAvailable() *ProviderProfileUpsert {
 	return u
 }
 
+// SetIsKYBVerified sets the "isKYBVerified" field.
+func (u *ProviderProfileUpsert) SetIsKYBVerified(v bool) *ProviderProfileUpsert {
+	u.Set(providerprofile.FieldIsKYBVerified, v)
+	return u
+}
+
+// UpdateIsKYBVerified sets the "isKYBVerified" field to the value that was provided on create.
+func (u *ProviderProfileUpsert) UpdateIsKYBVerified() *ProviderProfileUpsert {
+	u.SetExcluded(providerprofile.FieldIsKYBVerified)
+	return u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (u *ProviderProfileUpsert) SetUpdatedAt(v time.Time) *ProviderProfileUpsert {
 	u.Set(providerprofile.FieldUpdatedAt, v)
@@ -847,6 +884,20 @@ func (u *ProviderProfileUpsertOne) SetIsAvailable(v bool) *ProviderProfileUpsert
 func (u *ProviderProfileUpsertOne) UpdateIsAvailable() *ProviderProfileUpsertOne {
 	return u.Update(func(s *ProviderProfileUpsert) {
 		s.UpdateIsAvailable()
+	})
+}
+
+// SetIsKYBVerified sets the "isKYBVerified" field.
+func (u *ProviderProfileUpsertOne) SetIsKYBVerified(v bool) *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetIsKYBVerified(v)
+	})
+}
+
+// UpdateIsKYBVerified sets the "isKYBVerified" field to the value that was provided on create.
+func (u *ProviderProfileUpsertOne) UpdateIsKYBVerified() *ProviderProfileUpsertOne {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateIsKYBVerified()
 	})
 }
 
@@ -1188,6 +1239,20 @@ func (u *ProviderProfileUpsertBulk) SetIsAvailable(v bool) *ProviderProfileUpser
 func (u *ProviderProfileUpsertBulk) UpdateIsAvailable() *ProviderProfileUpsertBulk {
 	return u.Update(func(s *ProviderProfileUpsert) {
 		s.UpdateIsAvailable()
+	})
+}
+
+// SetIsKYBVerified sets the "isKYBVerified" field.
+func (u *ProviderProfileUpsertBulk) SetIsKYBVerified(v bool) *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.SetIsKYBVerified(v)
+	})
+}
+
+// UpdateIsKYBVerified sets the "isKYBVerified" field to the value that was provided on create.
+func (u *ProviderProfileUpsertBulk) UpdateIsKYBVerified() *ProviderProfileUpsertBulk {
+	return u.Update(func(s *ProviderProfileUpsert) {
+		s.UpdateIsKYBVerified()
 	})
 }
 

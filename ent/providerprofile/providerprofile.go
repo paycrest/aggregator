@@ -25,6 +25,8 @@ const (
 	FieldIsActive = "is_active"
 	// FieldIsAvailable holds the string denoting the is_available field in the database.
 	FieldIsAvailable = "is_available"
+	// FieldIsKYBVerified holds the string denoting the iskybverified field in the database.
+	FieldIsKYBVerified = "is_kyb_verified"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
 	// FieldVisibilityMode holds the string denoting the visibility_mode field in the database.
@@ -102,6 +104,7 @@ var Columns = []string{
 	FieldProvisionMode,
 	FieldIsActive,
 	FieldIsAvailable,
+	FieldIsKYBVerified,
 	FieldUpdatedAt,
 	FieldVisibilityMode,
 	FieldKybVerificationStatus,
@@ -144,6 +147,8 @@ var (
 	DefaultIsActive bool
 	// DefaultIsAvailable holds the default value on creation for the "is_available" field.
 	DefaultIsAvailable bool
+	// DefaultIsKYBVerified holds the default value on creation for the "isKYBVerified" field.
+	DefaultIsKYBVerified bool
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
 	DefaultUpdatedAt func() time.Time
 	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
@@ -263,6 +268,11 @@ func ByIsActive(opts ...sql.OrderTermOption) OrderOption {
 // ByIsAvailable orders the results by the is_available field.
 func ByIsAvailable(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldIsAvailable, opts...).ToFunc()
+}
+
+// ByIsKYBVerified orders the results by the isKYBVerified field.
+func ByIsKYBVerified(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIsKYBVerified, opts...).ToFunc()
 }
 
 // ByUpdatedAt orders the results by the updated_at field.

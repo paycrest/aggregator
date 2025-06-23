@@ -117,6 +117,20 @@ func (ppu *ProviderProfileUpdate) SetNillableIsAvailable(b *bool) *ProviderProfi
 	return ppu
 }
 
+// SetIsKYBVerified sets the "isKYBVerified" field.
+func (ppu *ProviderProfileUpdate) SetIsKYBVerified(b bool) *ProviderProfileUpdate {
+	ppu.mutation.SetIsKYBVerified(b)
+	return ppu
+}
+
+// SetNillableIsKYBVerified sets the "isKYBVerified" field if the given value is not nil.
+func (ppu *ProviderProfileUpdate) SetNillableIsKYBVerified(b *bool) *ProviderProfileUpdate {
+	if b != nil {
+		ppu.SetIsKYBVerified(*b)
+	}
+	return ppu
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (ppu *ProviderProfileUpdate) SetUpdatedAt(t time.Time) *ProviderProfileUpdate {
 	ppu.mutation.SetUpdatedAt(t)
@@ -446,6 +460,9 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 	}
 	if value, ok := ppu.mutation.IsAvailable(); ok {
 		_spec.SetField(providerprofile.FieldIsAvailable, field.TypeBool, value)
+	}
+	if value, ok := ppu.mutation.IsKYBVerified(); ok {
+		_spec.SetField(providerprofile.FieldIsKYBVerified, field.TypeBool, value)
 	}
 	if value, ok := ppu.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerprofile.FieldUpdatedAt, field.TypeTime, value)
@@ -792,6 +809,20 @@ func (ppuo *ProviderProfileUpdateOne) SetIsAvailable(b bool) *ProviderProfileUpd
 func (ppuo *ProviderProfileUpdateOne) SetNillableIsAvailable(b *bool) *ProviderProfileUpdateOne {
 	if b != nil {
 		ppuo.SetIsAvailable(*b)
+	}
+	return ppuo
+}
+
+// SetIsKYBVerified sets the "isKYBVerified" field.
+func (ppuo *ProviderProfileUpdateOne) SetIsKYBVerified(b bool) *ProviderProfileUpdateOne {
+	ppuo.mutation.SetIsKYBVerified(b)
+	return ppuo
+}
+
+// SetNillableIsKYBVerified sets the "isKYBVerified" field if the given value is not nil.
+func (ppuo *ProviderProfileUpdateOne) SetNillableIsKYBVerified(b *bool) *ProviderProfileUpdateOne {
+	if b != nil {
+		ppuo.SetIsKYBVerified(*b)
 	}
 	return ppuo
 }
@@ -1155,6 +1186,9 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 	}
 	if value, ok := ppuo.mutation.IsAvailable(); ok {
 		_spec.SetField(providerprofile.FieldIsAvailable, field.TypeBool, value)
+	}
+	if value, ok := ppuo.mutation.IsKYBVerified(); ok {
+		_spec.SetField(providerprofile.FieldIsKYBVerified, field.TypeBool, value)
 	}
 	if value, ok := ppuo.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerprofile.FieldUpdatedAt, field.TypeTime, value)

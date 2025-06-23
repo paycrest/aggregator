@@ -305,8 +305,12 @@ func init() {
 	providerprofileDescIsAvailable := providerprofileFields[5].Descriptor()
 	// providerprofile.DefaultIsAvailable holds the default value on creation for the is_available field.
 	providerprofile.DefaultIsAvailable = providerprofileDescIsAvailable.Default.(bool)
+	// providerprofileDescIsKYBVerified is the schema descriptor for isKYBVerified field.
+	providerprofileDescIsKYBVerified := providerprofileFields[6].Descriptor()
+	// providerprofile.DefaultIsKYBVerified holds the default value on creation for the isKYBVerified field.
+	providerprofile.DefaultIsKYBVerified = providerprofileDescIsKYBVerified.Default.(bool)
 	// providerprofileDescUpdatedAt is the schema descriptor for updated_at field.
-	providerprofileDescUpdatedAt := providerprofileFields[6].Descriptor()
+	providerprofileDescUpdatedAt := providerprofileFields[7].Descriptor()
 	// providerprofile.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	providerprofile.DefaultUpdatedAt = providerprofileDescUpdatedAt.Default.(func() time.Time)
 	// providerprofile.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -392,8 +396,12 @@ func init() {
 	senderprofileDescIsActive := senderprofileFields[5].Descriptor()
 	// senderprofile.DefaultIsActive holds the default value on creation for the is_active field.
 	senderprofile.DefaultIsActive = senderprofileDescIsActive.Default.(bool)
+	// senderprofileDescIsKYBVerified is the schema descriptor for isKYBVerified field.
+	senderprofileDescIsKYBVerified := senderprofileFields[6].Descriptor()
+	// senderprofile.DefaultIsKYBVerified holds the default value on creation for the isKYBVerified field.
+	senderprofile.DefaultIsKYBVerified = senderprofileDescIsKYBVerified.Default.(bool)
 	// senderprofileDescUpdatedAt is the schema descriptor for updated_at field.
-	senderprofileDescUpdatedAt := senderprofileFields[7].Descriptor()
+	senderprofileDescUpdatedAt := senderprofileFields[8].Descriptor()
 	// senderprofile.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	senderprofile.DefaultUpdatedAt = senderprofileDescUpdatedAt.Default.(func() time.Time)
 	// senderprofile.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

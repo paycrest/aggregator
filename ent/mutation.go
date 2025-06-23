@@ -13852,6 +13852,7 @@ type ProviderProfileMutation struct {
 	provision_mode           *providerprofile.ProvisionMode
 	is_active                *bool
 	is_available             *bool
+	isKYBVerified            *bool
 	updated_at               *time.Time
 	visibility_mode          *providerprofile.VisibilityMode
 	kyb_verification_status  *providerprofile.KybVerificationStatus
@@ -14187,6 +14188,42 @@ func (m *ProviderProfileMutation) OldIsAvailable(ctx context.Context) (v bool, e
 // ResetIsAvailable resets all changes to the "is_available" field.
 func (m *ProviderProfileMutation) ResetIsAvailable() {
 	m.is_available = nil
+}
+
+// SetIsKYBVerified sets the "isKYBVerified" field.
+func (m *ProviderProfileMutation) SetIsKYBVerified(b bool) {
+	m.isKYBVerified = &b
+}
+
+// IsKYBVerified returns the value of the "isKYBVerified" field in the mutation.
+func (m *ProviderProfileMutation) IsKYBVerified() (r bool, exists bool) {
+	v := m.isKYBVerified
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsKYBVerified returns the old "isKYBVerified" field's value of the ProviderProfile entity.
+// If the ProviderProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderProfileMutation) OldIsKYBVerified(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsKYBVerified is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsKYBVerified requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsKYBVerified: %w", err)
+	}
+	return oldValue.IsKYBVerified, nil
+}
+
+// ResetIsKYBVerified resets all changes to the "isKYBVerified" field.
+func (m *ProviderProfileMutation) ResetIsKYBVerified() {
+	m.isKYBVerified = nil
 }
 
 // SetUpdatedAt sets the "updated_at" field.
@@ -14664,7 +14701,7 @@ func (m *ProviderProfileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProviderProfileMutation) Fields() []string {
-	fields := make([]string, 0, 8)
+	fields := make([]string, 0, 9)
 	if m.trading_name != nil {
 		fields = append(fields, providerprofile.FieldTradingName)
 	}
@@ -14679,6 +14716,9 @@ func (m *ProviderProfileMutation) Fields() []string {
 	}
 	if m.is_available != nil {
 		fields = append(fields, providerprofile.FieldIsAvailable)
+	}
+	if m.isKYBVerified != nil {
+		fields = append(fields, providerprofile.FieldIsKYBVerified)
 	}
 	if m.updated_at != nil {
 		fields = append(fields, providerprofile.FieldUpdatedAt)
@@ -14707,6 +14747,8 @@ func (m *ProviderProfileMutation) Field(name string) (ent.Value, bool) {
 		return m.IsActive()
 	case providerprofile.FieldIsAvailable:
 		return m.IsAvailable()
+	case providerprofile.FieldIsKYBVerified:
+		return m.IsKYBVerified()
 	case providerprofile.FieldUpdatedAt:
 		return m.UpdatedAt()
 	case providerprofile.FieldVisibilityMode:
@@ -14732,6 +14774,8 @@ func (m *ProviderProfileMutation) OldField(ctx context.Context, name string) (en
 		return m.OldIsActive(ctx)
 	case providerprofile.FieldIsAvailable:
 		return m.OldIsAvailable(ctx)
+	case providerprofile.FieldIsKYBVerified:
+		return m.OldIsKYBVerified(ctx)
 	case providerprofile.FieldUpdatedAt:
 		return m.OldUpdatedAt(ctx)
 	case providerprofile.FieldVisibilityMode:
@@ -14781,6 +14825,13 @@ func (m *ProviderProfileMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetIsAvailable(v)
+		return nil
+	case providerprofile.FieldIsKYBVerified:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsKYBVerified(v)
 		return nil
 	case providerprofile.FieldUpdatedAt:
 		v, ok := value.(time.Time)
@@ -14881,6 +14932,9 @@ func (m *ProviderProfileMutation) ResetField(name string) error {
 		return nil
 	case providerprofile.FieldIsAvailable:
 		m.ResetIsAvailable()
+		return nil
+	case providerprofile.FieldIsKYBVerified:
+		m.ResetIsKYBVerified()
 		return nil
 	case providerprofile.FieldUpdatedAt:
 		m.ResetUpdatedAt()
@@ -18062,6 +18116,7 @@ type SenderProfileMutation struct {
 	provider_id             *string
 	is_partner              *bool
 	is_active               *bool
+	isKYBVerified           *bool
 	kyb_verification_status *senderprofile.KybVerificationStatus
 	updated_at              *time.Time
 	clearedFields           map[string]struct{}
@@ -18406,6 +18461,42 @@ func (m *SenderProfileMutation) OldIsActive(ctx context.Context) (v bool, err er
 // ResetIsActive resets all changes to the "is_active" field.
 func (m *SenderProfileMutation) ResetIsActive() {
 	m.is_active = nil
+}
+
+// SetIsKYBVerified sets the "isKYBVerified" field.
+func (m *SenderProfileMutation) SetIsKYBVerified(b bool) {
+	m.isKYBVerified = &b
+}
+
+// IsKYBVerified returns the value of the "isKYBVerified" field in the mutation.
+func (m *SenderProfileMutation) IsKYBVerified() (r bool, exists bool) {
+	v := m.isKYBVerified
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsKYBVerified returns the old "isKYBVerified" field's value of the SenderProfile entity.
+// If the SenderProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SenderProfileMutation) OldIsKYBVerified(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsKYBVerified is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsKYBVerified requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsKYBVerified: %w", err)
+	}
+	return oldValue.IsKYBVerified, nil
+}
+
+// ResetIsKYBVerified resets all changes to the "isKYBVerified" field.
+func (m *SenderProfileMutation) ResetIsKYBVerified() {
+	m.isKYBVerified = nil
 }
 
 // SetKybVerificationStatus sets the "kyb_verification_status" field.
@@ -18754,7 +18845,7 @@ func (m *SenderProfileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *SenderProfileMutation) Fields() []string {
-	fields := make([]string, 0, 7)
+	fields := make([]string, 0, 8)
 	if m.webhook_url != nil {
 		fields = append(fields, senderprofile.FieldWebhookURL)
 	}
@@ -18769,6 +18860,9 @@ func (m *SenderProfileMutation) Fields() []string {
 	}
 	if m.is_active != nil {
 		fields = append(fields, senderprofile.FieldIsActive)
+	}
+	if m.isKYBVerified != nil {
+		fields = append(fields, senderprofile.FieldIsKYBVerified)
 	}
 	if m.kyb_verification_status != nil {
 		fields = append(fields, senderprofile.FieldKybVerificationStatus)
@@ -18794,6 +18888,8 @@ func (m *SenderProfileMutation) Field(name string) (ent.Value, bool) {
 		return m.IsPartner()
 	case senderprofile.FieldIsActive:
 		return m.IsActive()
+	case senderprofile.FieldIsKYBVerified:
+		return m.IsKYBVerified()
 	case senderprofile.FieldKybVerificationStatus:
 		return m.KybVerificationStatus()
 	case senderprofile.FieldUpdatedAt:
@@ -18817,6 +18913,8 @@ func (m *SenderProfileMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldIsPartner(ctx)
 	case senderprofile.FieldIsActive:
 		return m.OldIsActive(ctx)
+	case senderprofile.FieldIsKYBVerified:
+		return m.OldIsKYBVerified(ctx)
 	case senderprofile.FieldKybVerificationStatus:
 		return m.OldKybVerificationStatus(ctx)
 	case senderprofile.FieldUpdatedAt:
@@ -18864,6 +18962,13 @@ func (m *SenderProfileMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetIsActive(v)
+		return nil
+	case senderprofile.FieldIsKYBVerified:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsKYBVerified(v)
 		return nil
 	case senderprofile.FieldKybVerificationStatus:
 		v, ok := value.(senderprofile.KybVerificationStatus)
@@ -18957,6 +19062,9 @@ func (m *SenderProfileMutation) ResetField(name string) error {
 		return nil
 	case senderprofile.FieldIsActive:
 		m.ResetIsActive()
+		return nil
+	case senderprofile.FieldIsKYBVerified:
+		m.ResetIsKYBVerified()
 		return nil
 	case senderprofile.FieldKybVerificationStatus:
 		m.ResetKybVerificationStatus()
