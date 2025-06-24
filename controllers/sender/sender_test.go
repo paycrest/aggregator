@@ -2,6 +2,7 @@ package sender
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -120,6 +121,24 @@ func TestSender(t *testing.T) {
 			resp := map[string]interface{}{
 				"result": map[string]interface{}{
 					"walletAddress": mockAddress,
+				},
+			}
+			respBytes, _ := json.Marshal(resp)
+			return httpmock.NewBytesResponse(200, respBytes), nil
+		},
+	)
+
+	httpmock.RegisterResponder("POST", "https://engine.thirdweb.com/v1/accounts",
+		func(req *http.Request) (*http.Response, error) {
+			// Generate a random 20-byte address
+			b := make([]byte, 20)
+			rand.Read(b)
+			mockAddress := "0x" + hex.EncodeToString(b)
+			resp := map[string]interface{}{
+				"result": map[string]interface{}{
+					"address":             mockAddress,
+					"label":               "test",
+					"smartAccountAddress": mockAddress,
 				},
 			}
 			respBytes, _ := json.Marshal(resp)

@@ -3,7 +3,9 @@ package test
 import (
 	"bufio"
 	"context"
+	"crypto/rand"
 	"fmt"
+	"math/big"
 	"os"
 	"strings"
 	"testing"
@@ -285,12 +287,24 @@ func CreateTestPaymentOrder(client types.RPCClient, token *ent.Token, overrides 
 	}
 
 	// Create smart address
-	address, salt, err := CreateSmartAddress(
-		context.Background(), client)
+	// address, salt, err := CreateSmartAddress(
+	// 	context.Background(), client)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	nonce := make([]byte, 32)
+	_, err := rand.Read(nonce)
 	if err != nil {
 		return nil, err
 	}
+	salt := new(big.Int).SetBytes(nonce).Bytes()
 
+	// Create thirdweb account
+	address, err := CreateThirdAccount()
+	if err != nil {
+		return nil, err
+	}
 	// Create receive address
 	receiveAddress, err := db.Client.ReceiveAddress.
 		Create().
