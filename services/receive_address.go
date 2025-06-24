@@ -31,7 +31,7 @@ func (s *ReceiveAddressService) CreateTronAddress(ctx context.Context) (string, 
 	var nodeUrl tronEnums.Node
 	if serverConf.Environment == "production" {
 		nodeUrl = tronEnums.MAIN_NODE
-	} else {
+} else {
 		nodeUrl = tronEnums.SHASTA_NODE
 	}
 
