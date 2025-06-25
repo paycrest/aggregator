@@ -870,7 +870,7 @@ func FixDatabaseMisHap() error {
 		Where(networkent.ChainIDEQ(42161)).
 		Only(ctx)
 	if err != nil {
-		return fmt.Errorf("TaskIndexBlockchainEvents.fetchNetworks: %w", err)
+		return fmt.Errorf("FixDatabaseMisHap.fetchNetworks: %w", err)
 	}
 	_ = indexer.IndexOrderCreated(ctx, nil, network, 351176402, 351176402)
 	_ = indexer.IndexOrderCreated(ctx, nil, network, 351175222, 351175222)
