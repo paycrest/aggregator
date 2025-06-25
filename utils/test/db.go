@@ -3,7 +3,9 @@ package test
 import (
 	"bufio"
 	"context"
+	"crypto/rand"
 	"fmt"
+	"math/big"
 	"os"
 	"strings"
 	"testing"
@@ -158,6 +160,7 @@ func CreateTRC20Token(client types.RPCClient, overrides map[string]interface{}) 
 		SetChainID(payload["chainID"].(int64)).
 		SetRPCEndpoint(payload["networkRPC"].(string)).
 		SetFee(decimal.NewFromFloat(0.1)).
+		SetBlockTime(decimal.NewFromFloat(2)).
 		SetIsTestnet(true).
 		OnConflict().
 		UpdateNewValues().
@@ -284,12 +287,24 @@ func CreateTestPaymentOrder(client types.RPCClient, token *ent.Token, overrides 
 	}
 
 	// Create smart address
-	address, salt, err := CreateSmartAddress(
-		context.Background(), client)
+	// address, salt, err := CreateSmartAddress(
+	// 	context.Background(), client)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	nonce := make([]byte, 32)
+	_, err := rand.Read(nonce)
 	if err != nil {
 		return nil, err
 	}
+	salt := new(big.Int).SetBytes(nonce).Bytes()
 
+	// Create thirdweb account
+	address, err := CreateThirdAccount()
+	if err != nil {
+		return nil, err
+	}
 	// Create receive address
 	receiveAddress, err := db.Client.ReceiveAddress.
 		Create().
@@ -662,6 +677,7 @@ func CreateTestTokenData(t *testing.T, client *ent.Client) ([]*ent.Network, []*e
 		SetChainID(42161).
 		SetRPCEndpoint("https://arb1.arbitrum.io/rpc").
 		SetGatewayContractAddress("0x123").
+		SetBlockTime(decimal.NewFromFloat(2)).
 		SetIsTestnet(false).
 		SetFee(decimal.NewFromFloat(0.01)).
 		Save(ctx)
@@ -672,6 +688,7 @@ func CreateTestTokenData(t *testing.T, client *ent.Client) ([]*ent.Network, []*e
 		SetChainID(137).
 		SetRPCEndpoint("https://polygon-rpc.com").
 		SetGatewayContractAddress("0x456").
+		SetBlockTime(decimal.NewFromFloat(2)).
 		SetIsTestnet(false).
 		SetFee(decimal.NewFromFloat(0.02)).
 		Save(ctx)
