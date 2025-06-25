@@ -310,7 +310,6 @@ func runIndexers(network *ent.Network, indexer types.Indexer, tokens []*ent.Toke
 // TaskIndexBlockchainEvents indexes transfer events for all enabled tokens
 func TaskIndexBlockchainEvents() error {
 	ctx := context.Background()
-	var indexerInstance types.Indexer
 	engineService := services.NewEngineService()
 
 	// Fetch networks
@@ -345,6 +344,7 @@ func TaskIndexBlockchainEvents() error {
 			var startBlock int64
 			var latestBlock int64
 			var duration time.Duration
+			var indexerInstance types.Indexer
 
 			if strings.HasPrefix(network.Identifier, "tron") {
 				indexerInstance = indexer.NewIndexerTron()
