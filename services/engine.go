@@ -139,10 +139,10 @@ func (s *EngineService) GetTransactionStatus(ctx context.Context, queueId string
 	res, err := fastshot.NewClient(s.config.BaseURL).
 		Config().SetTimeout(30 * time.Second).
 		Header().AddAll(map[string]string{
-		"Accept":       "application/json",
-		"Content-Type": "application/json",
+		"Accept":               "application/json",
+		"Content-Type":         "application/json",
 		"x-vault-access-token": s.config.AccessToken,
-		"X-Secret-Key": s.config.ThirdwebSecretKey,
+		"X-Secret-Key":         s.config.ThirdwebSecretKey,
 	}).
 		Build().POST("/v1/transactions/search").
 		Body().AsJSON(map[string]interface{}{
@@ -163,7 +163,13 @@ func (s *EngineService) GetTransactionStatus(ctx context.Context, queueId string
 		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
 	}
 
-	result = data["result"].(map[string]interface{})["transactions"].([]interface{})[0].(map[string]interface{})
+	if data["result"].(map[string]interface{})["transactions"] == nil {
+		return nil, fmt.Errorf("no transactions found")
+	}
+
+	if len(data["result"].(map[string]interface{})["transactions"].([]interface{})) > 0 {
+		result = data["result"].(map[string]interface{})["transactions"].([]interface{})[0].(map[string]interface{})
+	}
 
 	return
 }
