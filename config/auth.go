@@ -14,6 +14,7 @@ type AuthConfiguration struct {
 	JwtRefreshLifespan    time.Duration
 	HmacTimestampAge      time.Duration
 	PasswordResetLifespan time.Duration
+	SlackSigningSecret    string
 }
 
 // AuthConfig sets the authentication & authorization configurations
@@ -25,6 +26,7 @@ func AuthConfig() (config *AuthConfiguration) {
 
 	return &AuthConfiguration{
 		Secret:                viper.GetString("SECRET"),
+		SlackSigningSecret:    viper.GetString("SLACK_SIGNING_SECRET"),
 		JwtAccessLifespan:     time.Duration(viper.GetInt("JWT_ACCESS_LIFESPAN")) * time.Minute,
 		JwtRefreshLifespan:    time.Duration(viper.GetInt("JWT_REFRESH_LIFESPAN")) * time.Minute,
 		HmacTimestampAge:      time.Duration(viper.GetInt("HMAC_TIMESTAMP_AGE")) * time.Minute,
