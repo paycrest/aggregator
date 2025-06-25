@@ -237,12 +237,15 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 	}
 
 	txHash := result["transactionHash"].(string)
-	blockNumber := result["blockNumber"].(float64)
+	blockNumber, err := strconv.ParseInt(result["confirmedAtBlockNumber"].(string), 10, 64)
+	if err != nil {
+		return fmt.Errorf("%s - RefundOrder.parseBlockNumber: %w", orderIDPrefix, err)
+	}
 
 	// Update lock order with tx hash and block number
 	_, err = lockOrder.Update().
 		SetTxHash(txHash).
-		SetBlockNumber(int64(blockNumber)).
+		SetBlockNumber(blockNumber).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("%s - RefundOrder.updateTxHash: %w", orderIDPrefix, err)
@@ -301,12 +304,15 @@ func (s *OrderEVM) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 	}
 
 	txHash := result["transactionHash"].(string)
-	blockNumber := result["blockNumber"].(float64)
+	blockNumber, err := strconv.ParseInt(result["confirmedAtBlockNumber"].(string), 10, 64)
+	if err != nil {
+		return fmt.Errorf("%s - SettleOrder.parseBlockNumber: %w", orderIDPrefix, err)
+	}
 
 	// Update lock order with tx hash and block number
 	_, err = order.Update().
 		SetTxHash(txHash).
-		SetBlockNumber(int64(blockNumber)).
+		SetBlockNumber(blockNumber).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("%s - SettleOrder.updateTxHash: %w", orderIDPrefix, err)
