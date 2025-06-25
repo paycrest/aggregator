@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
 	"time"
 
@@ -49,7 +50,6 @@ func NewOrderEVM() types.OrderService {
 	}
 }
 
-var orderConf = config.OrderConfig()
 var serverConf = config.ServerConfig()
 var cryptoConf = config.CryptoConfig()
 
@@ -140,14 +140,14 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 	// Create order
 	txPayload := []map[string]interface{}{
 		{
-			"toAddress": order.Edges.Token.ContractAddress,
-			"data":      fmt.Sprintf("0x%x", approveGatewayData),
-			"value":     "0",
+			"to":    order.Edges.Token.ContractAddress,
+			"data":  fmt.Sprintf("0x%x", approveGatewayData),
+			"value": "0",
 		},
 		{
-			"toAddress": order.Edges.Token.Edges.Network.GatewayContractAddress,
-			"data":      fmt.Sprintf("0x%x", createOrderData),
-			"value":     "0",
+			"to":    order.Edges.Token.Edges.Network.GatewayContractAddress,
+			"data":  fmt.Sprintf("0x%x", createOrderData),
+			"value": "0",
 		},
 	}
 
@@ -163,12 +163,15 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 	}
 
 	txHash := result["transactionHash"].(string)
-	blockNumber := result["blockNumber"].(float64)
+	blockNumber, err := strconv.ParseInt(result["confirmedAtBlockNumber"].(string), 10, 64)
+	if err != nil {
+		return fmt.Errorf("%s - CreateOrder.parseBlockNumber: %w", orderIDPrefix, err)
+	}
 
 	// Update payment order with tx hash and block number
 	_, err = order.Update().
 		SetTxHash(txHash).
-		SetBlockNumber(int64(blockNumber)).
+		SetBlockNumber(blockNumber).
 		SetStatus(paymentorder.StatusProcessing).
 		Save(ctx)
 	if err != nil {
@@ -217,9 +220,9 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 
 	// Refund order
 	txPayload := map[string]interface{}{
-		"toAddress": lockOrder.Edges.Token.Edges.Network.GatewayContractAddress,
-		"data":      fmt.Sprintf("0x%x", refundOrderData),
-		"value":     "0",
+		"to":    lockOrder.Edges.Token.Edges.Network.GatewayContractAddress,
+		"data":  fmt.Sprintf("0x%x", refundOrderData),
+		"value": "0",
 	}
 
 	queueId, err := s.engineService.SendTransactionBatch(ctx, lockOrder.Edges.Token.Edges.Network.ChainID, cryptoConf.AggregatorSmartAccount, []map[string]interface{}{txPayload})
@@ -281,9 +284,9 @@ func (s *OrderEVM) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 
 	// Settle order
 	txPayload := map[string]interface{}{
-		"toAddress": order.Edges.Token.Edges.Network.GatewayContractAddress,
-		"data":      fmt.Sprintf("0x%x", settleOrderData),
-		"value":     "0",
+		"to":    order.Edges.Token.Edges.Network.GatewayContractAddress,
+		"data":  fmt.Sprintf("0x%x", settleOrderData),
+		"value": "0",
 	}
 
 	queueId, err := s.engineService.SendTransactionBatch(ctx, order.Edges.Token.Edges.Network.ChainID, cryptoConf.AggregatorSmartAccount, []map[string]interface{}{txPayload})

@@ -27,7 +27,6 @@ func NewEngineService() *EngineService {
 func (s *EngineService) CreateServerWallet(ctx context.Context, label string) (string, error) {
 	res, err := fastshot.NewClient(s.config.BaseURL).
 		Config().SetTimeout(30 * time.Second).
-		Auth().BearerToken(s.config.AccessToken).
 		Header().AddAll(map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/json",
@@ -107,7 +106,6 @@ func (s *EngineService) GetContractEvents(ctx context.Context, chainID int64, co
 func (s *EngineService) SendTransactionBatch(ctx context.Context, chainID int64, address string, txPayload []map[string]interface{}) (queueID string, err error) {
 	res, err := fastshot.NewClient(s.config.BaseURL).
 		Config().SetTimeout(30 * time.Second).
-		Auth().BearerToken(s.config.AccessToken).
 		Header().AddAll(map[string]string{
 		"Accept":               "application/json",
 		"Content-Type":         "application/json",
@@ -140,13 +138,13 @@ func (s *EngineService) SendTransactionBatch(ctx context.Context, chainID int64,
 func (s *EngineService) GetTransactionStatus(ctx context.Context, queueId string) (result map[string]interface{}, err error) {
 	res, err := fastshot.NewClient(s.config.BaseURL).
 		Config().SetTimeout(30 * time.Second).
-		Auth().BearerToken(s.config.AccessToken).
 		Header().AddAll(map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/json",
+		"x-vault-access-token": s.config.AccessToken,
 		"X-Secret-Key": s.config.ThirdwebSecretKey,
 	}).
-		Build().POST("/v1/write/transaction").
+		Build().POST("/v1/transactions/search").
 		Body().AsJSON(map[string]interface{}{
 		"filters": []map[string]interface{}{
 			{
@@ -179,14 +177,9 @@ func (s *EngineService) WaitForTransactionMined(ctx context.Context, queueId str
 			return nil, err
 		}
 
-		isMined := result["executionResult"].(map[string]interface{})["onchainStatus"] == "SUCCESS" && result["executionResult"].(map[string]interface{})["status"] == "CONFIRMED"
-
-		if isMined && result["transactionHash"] != nil {
-			result["transactionHash"] = result["executionResult"].(map[string]interface{})["transactionHash"]
-			result["blockNumber"] = result["executionResult"].(map[string]interface{})["confirmedAtBlockNumber"]
-
+		if result["executionResult"].(map[string]interface{})["status"].(string) == "CONFIRMED" && result["transactionHash"] != nil {
 			return result, nil
-		} else if result["executionResult"].(map[string]interface{})["status"] == "FAILED" {
+		} else if result["executionResult"].(map[string]interface{})["status"].(string) == "FAILED" {
 			logger.WithFields(logger.Fields{
 				"QueueId": queueId,
 				"From":    result["from"].(string),
