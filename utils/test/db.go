@@ -100,7 +100,6 @@ func CreateERC20Token(client types.RPCClient, overrides map[string]interface{}) 
 		SetChainID(payload["chainID"].(int64)).
 		SetRPCEndpoint(payload["networkRPC"].(string)).
 		SetFee(decimal.NewFromFloat(0.1)).
-		SetBlockTime(decimal.NewFromFloat(2)).
 		SetIsTestnet(true).
 		OnConflict().
 		UpdateNewValues().
