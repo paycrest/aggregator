@@ -183,6 +183,10 @@ func (s *EngineService) WaitForTransactionMined(ctx context.Context, queueId str
 			return nil, err
 		}
 
+		if result["executionResult"] == nil {
+			continue
+		}
+
 		if result["executionResult"].(map[string]interface{})["status"].(string) == "CONFIRMED" && result["transactionHash"] != nil {
 			return result, nil
 		} else if result["executionResult"].(map[string]interface{})["status"].(string) == "FAILED" {
