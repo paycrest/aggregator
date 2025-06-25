@@ -193,9 +193,6 @@ func (lac *LinkedAddressCreate) check() error {
 	if _, ok := lac.mutation.Address(); !ok {
 		return &ValidationError{Name: "address", err: errors.New(`ent: missing required field "LinkedAddress.address"`)}
 	}
-	if _, ok := lac.mutation.Salt(); !ok {
-		return &ValidationError{Name: "salt", err: errors.New(`ent: missing required field "LinkedAddress.salt"`)}
-	}
 	if _, ok := lac.mutation.Institution(); !ok {
 		return &ValidationError{Name: "institution", err: errors.New(`ent: missing required field "LinkedAddress.institution"`)}
 	}
@@ -376,6 +373,24 @@ func (u *LinkedAddressUpsert) UpdateAddress() *LinkedAddressUpsert {
 	return u
 }
 
+// SetSalt sets the "salt" field.
+func (u *LinkedAddressUpsert) SetSalt(v []byte) *LinkedAddressUpsert {
+	u.Set(linkedaddress.FieldSalt, v)
+	return u
+}
+
+// UpdateSalt sets the "salt" field to the value that was provided on create.
+func (u *LinkedAddressUpsert) UpdateSalt() *LinkedAddressUpsert {
+	u.SetExcluded(linkedaddress.FieldSalt)
+	return u
+}
+
+// ClearSalt clears the value of the "salt" field.
+func (u *LinkedAddressUpsert) ClearSalt() *LinkedAddressUpsert {
+	u.SetNull(linkedaddress.FieldSalt)
+	return u
+}
+
 // SetInstitution sets the "institution" field.
 func (u *LinkedAddressUpsert) SetInstitution(v string) *LinkedAddressUpsert {
 	u.Set(linkedaddress.FieldInstitution, v)
@@ -498,9 +513,6 @@ func (u *LinkedAddressUpsertOne) UpdateNewValues() *LinkedAddressUpsertOne {
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(linkedaddress.FieldCreatedAt)
 		}
-		if _, exists := u.create.mutation.Salt(); exists {
-			s.SetIgnore(linkedaddress.FieldSalt)
-		}
 	}))
 	return u
 }
@@ -557,6 +569,27 @@ func (u *LinkedAddressUpsertOne) SetAddress(v string) *LinkedAddressUpsertOne {
 func (u *LinkedAddressUpsertOne) UpdateAddress() *LinkedAddressUpsertOne {
 	return u.Update(func(s *LinkedAddressUpsert) {
 		s.UpdateAddress()
+	})
+}
+
+// SetSalt sets the "salt" field.
+func (u *LinkedAddressUpsertOne) SetSalt(v []byte) *LinkedAddressUpsertOne {
+	return u.Update(func(s *LinkedAddressUpsert) {
+		s.SetSalt(v)
+	})
+}
+
+// UpdateSalt sets the "salt" field to the value that was provided on create.
+func (u *LinkedAddressUpsertOne) UpdateSalt() *LinkedAddressUpsertOne {
+	return u.Update(func(s *LinkedAddressUpsert) {
+		s.UpdateSalt()
+	})
+}
+
+// ClearSalt clears the value of the "salt" field.
+func (u *LinkedAddressUpsertOne) ClearSalt() *LinkedAddressUpsertOne {
+	return u.Update(func(s *LinkedAddressUpsert) {
+		s.ClearSalt()
 	})
 }
 
@@ -865,9 +898,6 @@ func (u *LinkedAddressUpsertBulk) UpdateNewValues() *LinkedAddressUpsertBulk {
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(linkedaddress.FieldCreatedAt)
 			}
-			if _, exists := b.mutation.Salt(); exists {
-				s.SetIgnore(linkedaddress.FieldSalt)
-			}
 		}
 	}))
 	return u
@@ -925,6 +955,27 @@ func (u *LinkedAddressUpsertBulk) SetAddress(v string) *LinkedAddressUpsertBulk 
 func (u *LinkedAddressUpsertBulk) UpdateAddress() *LinkedAddressUpsertBulk {
 	return u.Update(func(s *LinkedAddressUpsert) {
 		s.UpdateAddress()
+	})
+}
+
+// SetSalt sets the "salt" field.
+func (u *LinkedAddressUpsertBulk) SetSalt(v []byte) *LinkedAddressUpsertBulk {
+	return u.Update(func(s *LinkedAddressUpsert) {
+		s.SetSalt(v)
+	})
+}
+
+// UpdateSalt sets the "salt" field to the value that was provided on create.
+func (u *LinkedAddressUpsertBulk) UpdateSalt() *LinkedAddressUpsertBulk {
+	return u.Update(func(s *LinkedAddressUpsert) {
+		s.UpdateSalt()
+	})
+}
+
+// ClearSalt clears the value of the "salt" field.
+func (u *LinkedAddressUpsertBulk) ClearSalt() *LinkedAddressUpsertBulk {
+	return u.Update(func(s *LinkedAddressUpsert) {
+		s.ClearSalt()
 	})
 }
 

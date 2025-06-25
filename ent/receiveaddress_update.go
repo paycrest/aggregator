@@ -50,6 +50,18 @@ func (rau *ReceiveAddressUpdate) SetNillableAddress(s *string) *ReceiveAddressUp
 	return rau
 }
 
+// SetSalt sets the "salt" field.
+func (rau *ReceiveAddressUpdate) SetSalt(b []byte) *ReceiveAddressUpdate {
+	rau.mutation.SetSalt(b)
+	return rau
+}
+
+// ClearSalt clears the value of the "salt" field.
+func (rau *ReceiveAddressUpdate) ClearSalt() *ReceiveAddressUpdate {
+	rau.mutation.ClearSalt()
+	return rau
+}
+
 // SetStatus sets the "status" field.
 func (rau *ReceiveAddressUpdate) SetStatus(r receiveaddress.Status) *ReceiveAddressUpdate {
 	rau.mutation.SetStatus(r)
@@ -250,6 +262,12 @@ func (rau *ReceiveAddressUpdate) sqlSave(ctx context.Context) (n int, err error)
 	if value, ok := rau.mutation.Address(); ok {
 		_spec.SetField(receiveaddress.FieldAddress, field.TypeString, value)
 	}
+	if value, ok := rau.mutation.Salt(); ok {
+		_spec.SetField(receiveaddress.FieldSalt, field.TypeBytes, value)
+	}
+	if rau.mutation.SaltCleared() {
+		_spec.ClearField(receiveaddress.FieldSalt, field.TypeBytes)
+	}
 	if value, ok := rau.mutation.Status(); ok {
 		_spec.SetField(receiveaddress.FieldStatus, field.TypeEnum, value)
 	}
@@ -346,6 +364,18 @@ func (rauo *ReceiveAddressUpdateOne) SetNillableAddress(s *string) *ReceiveAddre
 	if s != nil {
 		rauo.SetAddress(*s)
 	}
+	return rauo
+}
+
+// SetSalt sets the "salt" field.
+func (rauo *ReceiveAddressUpdateOne) SetSalt(b []byte) *ReceiveAddressUpdateOne {
+	rauo.mutation.SetSalt(b)
+	return rauo
+}
+
+// ClearSalt clears the value of the "salt" field.
+func (rauo *ReceiveAddressUpdateOne) ClearSalt() *ReceiveAddressUpdateOne {
+	rauo.mutation.ClearSalt()
 	return rauo
 }
 
@@ -578,6 +608,12 @@ func (rauo *ReceiveAddressUpdateOne) sqlSave(ctx context.Context) (_node *Receiv
 	}
 	if value, ok := rauo.mutation.Address(); ok {
 		_spec.SetField(receiveaddress.FieldAddress, field.TypeString, value)
+	}
+	if value, ok := rauo.mutation.Salt(); ok {
+		_spec.SetField(receiveaddress.FieldSalt, field.TypeBytes, value)
+	}
+	if rauo.mutation.SaltCleared() {
+		_spec.ClearField(receiveaddress.FieldSalt, field.TypeBytes)
 	}
 	if value, ok := rauo.mutation.Status(); ok {
 		_spec.SetField(receiveaddress.FieldStatus, field.TypeEnum, value)

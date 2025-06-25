@@ -5,15 +5,17 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/contracts"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/shopspring/decimal"
@@ -32,19 +34,27 @@ import (
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 )
 
-// OrderEVM provides functionality related to on-chain interactions for payment orders
-type OrderEVM struct{}
+// OrderEVM provides functionality related to onchain interactions for payment orders
+type OrderEVM struct {
+	priorityQueue *services.PriorityQueueService
+	engineService *services.EngineService
+}
 
 // NewOrderEVM creates a new instance of OrderEVM.
 func NewOrderEVM() types.OrderService {
-	return &OrderEVM{}
+	priorityQueue := services.NewPriorityQueueService()
+
+	return &OrderEVM{
+		priorityQueue: priorityQueue,
+		engineService: services.NewEngineService(),
+	}
 }
 
 var serverConf = config.ServerConfig()
 var cryptoConf = config.CryptoConfig()
 
 // CreateOrder creates a new payment order on-chain.
-func (s *OrderEVM) CreateOrder(ctx context.Context, client types.RPCClient, orderID uuid.UUID) error {
+func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 	var err error
 	orderIDPrefix := strings.Split(orderID.String(), "-")[0]
 
@@ -64,13 +74,10 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, client types.RPCClient, orde
 		return fmt.Errorf("%s - CreateOrder.fetchOrder: %w", orderIDPrefix, err)
 	}
 
-	var salt []byte
 	var address string
 	if order.Edges.ReceiveAddress != nil {
-		salt = order.Edges.ReceiveAddress.Salt
 		address = order.Edges.ReceiveAddress.Address
 	} else if order.Edges.LinkedAddress != nil {
-		salt = order.Edges.LinkedAddress.Salt
 		address = order.Edges.LinkedAddress.Address
 
 		// Update the rate
@@ -110,82 +117,79 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, client types.RPCClient, orde
 		}
 	}
 
-	saltDecrypted, err := cryptoUtils.DecryptPlain(salt)
+	// Create createOrder data
+	encryptedOrderRecipient, err := cryptoUtils.EncryptOrderRecipient(order.Edges.Recipient)
 	if err != nil {
-		return fmt.Errorf("%s - CreateOrder.DecryptPlain: %w", orderIDPrefix, err)
+		return fmt.Errorf("%s - CreateOrder.encryptOrderRecipient: %w", orderIDPrefix, err)
 	}
 
-	// Initialize user operation with defaults
-	userOperation, err := utils.InitializeUserOperation(
-		ctx, nil, order.Edges.Token.Edges.Network.RPCEndpoint, address, string(saltDecrypted),
+	createOrderData, err := s.createOrderCallData(order, encryptedOrderRecipient)
+	if err != nil {
+		return fmt.Errorf("%s - CreateOrder.createOrderCallData: %w", orderIDPrefix, err)
+	}
+
+	// Create approve data for gateway contract
+	approveGatewayData, err := s.approveCallData(
+		ethcommon.HexToAddress(order.Edges.Token.Edges.Network.GatewayContractAddress),
+		utils.ToSubunit(order.Amount.Add(order.ProtocolFee).Add(order.SenderFee), order.Edges.Token.Decimals),
 	)
 	if err != nil {
-		return fmt.Errorf("%s - CreateOrder.InitializeUserOperation: %w", orderIDPrefix, err)
+		return fmt.Errorf("%s - CreateOrder.approveCallData: %w", orderIDPrefix, err)
 	}
 
-	// Create calldata
-	calldata, err := s.executeBatchCreateOrderCallData(order)
+	// Create order
+	txPayload := []map[string]interface{}{
+		{
+			"to":    order.Edges.Token.ContractAddress,
+			"data":  fmt.Sprintf("0x%x", approveGatewayData),
+			"value": "0",
+		},
+		{
+			"to":    order.Edges.Token.Edges.Network.GatewayContractAddress,
+			"data":  fmt.Sprintf("0x%x", createOrderData),
+			"value": "0",
+		},
+	}
+
+	queueId, err := s.engineService.SendTransactionBatch(ctx, order.Edges.Token.Edges.Network.ChainID, address, txPayload)
 	if err != nil {
-		return fmt.Errorf("%s - CreateOrder.executeBatchCreateOrderCallData: %w", orderIDPrefix, err)
+		return fmt.Errorf("%s - CreateOrder.sendTransactionBatch: %w", orderIDPrefix, err)
 	}
-	userOperation.CallData = calldata
 
-	// Sponsor user operation.
-	// This will populate the following fields in userOperation: PaymasterAndData, PreVerificationGas, VerificationGasLimit, CallGasLimit
-	// if serverConf.Environment != "production" {
-	// 	err = utils.SponsorUserOperation(userOperation, "erc20", order.Edges.Token.ContractAddress, order.Edges.Token.Edges.Network.ChainID)
-	// } else {
-	err = utils.SponsorUserOperation(userOperation, "sponsored", "", order.Edges.Token.Edges.Network.ChainID)
-	// }
+	// Wait for createOrder tx to be mined
+	result, err := s.engineService.WaitForTransactionMined(ctx, queueId, 5*time.Minute)
 	if err != nil {
-		return fmt.Errorf("%s - CreateOrder.SponsorUserOperation: %w", orderIDPrefix, err)
+		return fmt.Errorf("CreateOrder.waitForTransactionMined: %w", err)
 	}
 
-	// Sign user operation
-	err = utils.SignUserOperation(userOperation, order.Edges.Token.Edges.Network.ChainID)
+	txHash := result["transactionHash"].(string)
+	blockNumber, err := strconv.ParseInt(result["confirmedAtBlockNumber"].(string), 10, 64)
 	if err != nil {
-		return fmt.Errorf("%s - CreateOrder.SignUserOperation: %w", orderIDPrefix, err)
+		return fmt.Errorf("%s - CreateOrder.parseBlockNumber: %w", orderIDPrefix, err)
 	}
 
-	// Send user operation
-	txHash, gatewayOrderId, blockNumber, err := utils.SendUserOperation(userOperation, order.Edges.Token.Edges.Network.ChainID)
-	if err != nil {
-		return fmt.Errorf("%s - CreateOrder.SendUserOperation: %w", orderIDPrefix, err)
-	}
-
-	// Update payment order with txHash
+	// Update payment order with tx hash and block number
 	_, err = order.Update().
 		SetTxHash(txHash).
 		SetBlockNumber(blockNumber).
-		SetGatewayID(gatewayOrderId).
-		SetRate(order.Rate).
-		SetStatus(paymentorder.StatusPending).
+		SetStatus(paymentorder.StatusProcessing).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.updateTxHash: %w", orderIDPrefix, err)
 	}
 
-	// Refetch payment order
-	paymentOrder, err := db.Client.PaymentOrder.
-		Query().
-		Where(paymentorder.IDEQ(orderID)).
-		WithSenderProfile().
-		Only(ctx)
+	_, err = order.Update().
+		SetStatus(paymentorder.StatusInitiated).
+		Save(ctx)
 	if err != nil {
-		return fmt.Errorf("%s - CreateOrder.refetchOrder: %w", orderIDPrefix, err)
-	}
-
-	// Send webhook notifcation to sender
-	err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
-	if err != nil {
-		return fmt.Errorf("%s - CreateOrder.webhook: %w", orderIDPrefix, err)
+		return fmt.Errorf("%s - CreateOrder.updateTxHash: %w", orderIDPrefix, err)
 	}
 
 	return nil
 }
 
 // RefundOrder refunds sender on canceled lock order
-func (s *OrderEVM) RefundOrder(ctx context.Context, client types.RPCClient, network *ent.Network, orderID string) error {
+func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderID string) error {
 	orderIDPrefix := strings.Split(orderID, "-")[0]
 
 	// Fetch lock order from db
@@ -207,58 +211,48 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, client types.RPCClient, netw
 		return fmt.Errorf("%s - RefundOrder.fetchLockOrder: %w", orderIDPrefix, err)
 	}
 
-	// Get default userOperation
-	userOperation, err := utils.InitializeUserOperation(
-		ctx, nil, lockOrder.Edges.Token.Edges.Network.RPCEndpoint, cryptoConf.AggregatorSmartAccount, cryptoConf.AggregatorSmartAccountSalt,
-	)
+	// Create refundOrder data
+	fee := utils.ToSubunit(decimal.NewFromInt(0), lockOrder.Edges.Token.Decimals)
+	refundOrderData, err := s.refundCallData(fee, lockOrder.GatewayID)
 	if err != nil {
-		return fmt.Errorf("%s - RefundOrder.initializeUserOperation: %w", orderIDPrefix, err)
+		return fmt.Errorf("%s - RefundOrder.refundCallData: %w", orderIDPrefix, err)
 	}
 
-	// Create calldata
-	calldata, err := s.executeBatchRefundCallData(lockOrder)
-	if err != nil {
-		return fmt.Errorf("%s - RefundOrder.executeBatchRefundCallData: %w", orderIDPrefix, err)
-	}
-	userOperation.CallData = calldata
-
-	// Sponsor user operation.
-	// This will populate the following fields in userOperation: PaymasterAndData, PreVerificationGas, VerificationGasLimit, CallGasLimit
-	// if serverConf.Environment != "production" {
-	// 	err = utils.SponsorUserOperation(userOperation, "erc20", lockOrder.Edges.Token.ContractAddress, lockOrder.Edges.Token.Edges.Network.ChainID)
-	// } else {
-	err = utils.SponsorUserOperation(userOperation, "sponsored", "", lockOrder.Edges.Token.Edges.Network.ChainID)
-	// }
-	if err != nil {
-		return fmt.Errorf("%s - RefundOrder.sponsorUserOperation: %w", orderIDPrefix, err)
+	// Refund order
+	txPayload := map[string]interface{}{
+		"to":    lockOrder.Edges.Token.Edges.Network.GatewayContractAddress,
+		"data":  fmt.Sprintf("0x%x", refundOrderData),
+		"value": "0",
 	}
 
-	// Sign user operation
-	_ = utils.SignUserOperation(userOperation, lockOrder.Edges.Token.Edges.Network.ChainID)
-
-	// Send user operation
-	txHash, _, blockNumber, err := utils.SendUserOperation(userOperation, lockOrder.Edges.Token.Edges.Network.ChainID)
+	queueId, err := s.engineService.SendTransactionBatch(ctx, lockOrder.Edges.Token.Edges.Network.ChainID, cryptoConf.AggregatorSmartAccount, []map[string]interface{}{txPayload})
 	if err != nil {
-		return fmt.Errorf("%s - RefundOrder.sendUserOperation: %w", orderIDPrefix, err)
+		return fmt.Errorf("%s - RefundOrder.sendTransaction: %w", orderIDPrefix, err)
 	}
 
-	// Update status of all lock orders with same order_id
-	_, err = db.Client.LockPaymentOrder.
-		Update().
-		Where(lockpaymentorder.GatewayIDEQ(lockOrder.GatewayID)).
+	// Wait for refundOrder tx to be mined
+	result, err := s.engineService.WaitForTransactionMined(ctx, queueId, 5*time.Minute)
+	if err != nil {
+		return fmt.Errorf("RefundOrder.waitForTransactionMined: %w", err)
+	}
+
+	txHash := result["transactionHash"].(string)
+	blockNumber := result["blockNumber"].(float64)
+
+	// Update lock order with tx hash and block number
+	_, err = lockOrder.Update().
 		SetTxHash(txHash).
-		SetBlockNumber(blockNumber).
-		SetStatus(lockpaymentorder.StatusRefunded).
+		SetBlockNumber(int64(blockNumber)).
 		Save(ctx)
 	if err != nil {
-		return fmt.Errorf("%s - RefundOrder.updateTxHash(%v): %w", orderIDPrefix, txHash, err)
+		return fmt.Errorf("%s - RefundOrder.updateTxHash: %w", orderIDPrefix, err)
 	}
 
 	return nil
 }
 
 // SettleOrder settles a payment order on-chain.
-func (s *OrderEVM) SettleOrder(ctx context.Context, client types.RPCClient, orderID uuid.UUID) error {
+func (s *OrderEVM) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 	var err error
 
 	orderIDPrefix := strings.Split(orderID.String(), "-")[0]
@@ -282,46 +276,37 @@ func (s *OrderEVM) SettleOrder(ctx context.Context, client types.RPCClient, orde
 		return fmt.Errorf("%s - SettleOrder.fetchOrder: %w", orderIDPrefix, err)
 	}
 
-	// Get default userOperation
-	userOperation, err := utils.InitializeUserOperation(
-		ctx, nil, order.Edges.Token.Edges.Network.RPCEndpoint, cryptoConf.AggregatorSmartAccount, cryptoConf.AggregatorSmartAccountSalt,
-	)
+	// Create settleOrder data
+	settleOrderData, err := s.settleCallData(ctx, order)
 	if err != nil {
-		return fmt.Errorf("%s - SettleOrder.initializeUserOperation: %w", orderIDPrefix, err)
+		return fmt.Errorf("%s - SettleOrder.settleCallData: %w", orderIDPrefix, err)
 	}
 
-	// Create calldata
-	calldata, err := s.executeBatchSettleCallData(ctx, order)
-	if err != nil {
-		return fmt.Errorf("%s - SettleOrder.executeBatchSettleCallData: %w", orderIDPrefix, err)
-	}
-	userOperation.CallData = calldata
-
-	// Sponsor user operation.
-	// This will populate the following fields in userOperation: PaymasterAndData, PreVerificationGas, VerificationGasLimit, CallGasLimit
-	// if serverConf.Environment != "production" {
-	// 	err = utils.SponsorUserOperation(userOperation, "erc20", order.Edges.Token.ContractAddress, order.Edges.Token.Edges.Network.ChainID)
-	// } else {
-	err = utils.SponsorUserOperation(userOperation, "sponsored", "", order.Edges.Token.Edges.Network.ChainID)
-	// }
-	if err != nil {
-		return fmt.Errorf("%s - SettleOrder.sponsorUserOperation: %w", orderIDPrefix, err)
+	// Settle order
+	txPayload := map[string]interface{}{
+		"to":    order.Edges.Token.Edges.Network.GatewayContractAddress,
+		"data":  fmt.Sprintf("0x%x", settleOrderData),
+		"value": "0",
 	}
 
-	// Sign user operation
-	_ = utils.SignUserOperation(userOperation, order.Edges.Token.Edges.Network.ChainID)
-
-	// Send user operation
-	txHash, _, blockNumber, err := utils.SendUserOperation(userOperation, order.Edges.Token.Edges.Network.ChainID)
+	queueId, err := s.engineService.SendTransactionBatch(ctx, order.Edges.Token.Edges.Network.ChainID, cryptoConf.AggregatorSmartAccount, []map[string]interface{}{txPayload})
 	if err != nil {
-		return fmt.Errorf("%s - SettleOrder.sendUserOperation: %w", orderIDPrefix, err)
+		return fmt.Errorf("%s - SettleOrder.sendTransaction: %w", orderIDPrefix, err)
 	}
 
-	// Update status of lock order
+	// Wait for settleOrder tx to be mined
+	result, err := s.engineService.WaitForTransactionMined(ctx, queueId, 5*time.Minute)
+	if err != nil {
+		return fmt.Errorf("SettleOrder.waitForTransactionMined: %w", err)
+	}
+
+	txHash := result["transactionHash"].(string)
+	blockNumber := result["blockNumber"].(float64)
+
+	// Update lock order with tx hash and block number
 	_, err = order.Update().
 		SetTxHash(txHash).
-		SetBlockNumber(blockNumber).
-		SetStatus(lockpaymentorder.StatusSettled).
+		SetBlockNumber(int64(blockNumber)).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("%s - SettleOrder.updateTxHash: %w", orderIDPrefix, err)
@@ -330,123 +315,8 @@ func (s *OrderEVM) SettleOrder(ctx context.Context, client types.RPCClient, orde
 	return nil
 }
 
-// executeBatchTransferCallData creates the transfer calldata for the execute batch method in the smart account.
-func (s *OrderEVM) executeBatchTransferCallData(order *ent.PaymentOrder, to common.Address, amount *big.Int) ([]byte, error) {
-	// Fetch paymaster account
-	paymasterAccount, err := utils.GetPaymasterAccount(order.Edges.Token.Edges.Network.ChainID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get paymaster account: %w", err)
-	}
-
-	if serverConf.Environment != "staging" && serverConf.Environment != "production" {
-		time.Sleep(5 * time.Second)
-	}
-
-	// Create approve data for paymaster contract
-	approvePaymasterData, err := s.approveCallData(
-		common.HexToAddress(paymasterAccount),
-		big.NewInt(0).Add(amount, order.Edges.Token.Edges.Network.Fee.BigInt()),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create paymaster approve calldata : %w", err)
-	}
-
-	// Create transfer data
-	transferData, err := s.transferCallData(to, amount)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create transfer calldata: %w", err)
-	}
-
-	simpleAccountABI, err := abi.JSON(strings.NewReader(contracts.SimpleAccountMetaData.ABI))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse smart account ABI: %w", err)
-	}
-
-	executeBatchCallData, err := simpleAccountABI.Pack(
-		"executeBatch",
-		[]common.Address{
-			common.HexToAddress(order.Edges.Token.ContractAddress),
-			common.HexToAddress(order.Edges.Token.ContractAddress),
-		},
-		[][]byte{approvePaymasterData, transferData},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to pack execute ABI: %w", err)
-	}
-
-	return executeBatchCallData, nil
-}
-
-// executeBatchCreateOrderCallData creates the calldata for the execute batch method in the smart account.
-func (s *OrderEVM) executeBatchCreateOrderCallData(order *ent.PaymentOrder) ([]byte, error) {
-	orderAmountWithFees := order.Amount.Add(order.ProtocolFee).Add(order.SenderFee)
-
-	// Create approve data for gateway contract
-	approveGatewayData, err := s.approveCallData(
-		common.HexToAddress(order.Edges.Token.Edges.Network.GatewayContractAddress),
-		utils.ToSubunit(orderAmountWithFees.Mul(decimal.NewFromInt(2)), order.Edges.Token.Decimals),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create gateway approve calldata: %w", err)
-	}
-
-	// Create createOrder data
-	createOrderData, err := s.createOrderCallData(order)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create createOrder calldata: %w", err)
-	}
-
-	// Initialize calls array with gateway approve and create order
-	addresses := []common.Address{
-		common.HexToAddress(order.Edges.Token.ContractAddress),
-		common.HexToAddress(order.Edges.Token.Edges.Network.GatewayContractAddress),
-	}
-	calls := [][]byte{approveGatewayData, createOrderData}
-
-	// if order.Edges.Token.Edges.Network.IsTestnet {
-	// 	// Fetch paymaster account
-	// 	paymasterAccount, err := utils.GetPaymasterAccount(order.Edges.Token.Edges.Network.ChainID)
-	// 	if err != nil {
-	// 		return nil, fmt.Errorf("failed to get paymaster account: %w", err)
-	// 	}
-
-	// 	if serverConf.Environment != "production" {
-	// 		time.Sleep(5 * time.Second)
-	// 	}
-
-	// 	// Create approve data for paymaster contract
-	// 	approvePaymasterData, err := s.approveCallData(
-	// 		common.HexToAddress(paymasterAccount),
-	// 		utils.ToSubunit(orderAmountWithFees.Add(order.Edges.Token.Edges.Network.Fee), order.Edges.Token.Decimals),
-	// 	)
-	// 	if err != nil {
-	// 		return nil, fmt.Errorf("failed to create paymaster approve calldata : %w", err)
-	// 	}
-
-	// 	// Add paymaster approve call if fee is greater than 0
-	// 	calls = append([][]byte{approvePaymasterData}, calls...)
-	// 	addresses = append(addresses, common.HexToAddress(order.Edges.Token.ContractAddress))
-	// }
-
-	simpleAccountABI, err := abi.JSON(strings.NewReader(contracts.SimpleAccountMetaData.ABI))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse smart account ABI: %w", err)
-	}
-
-	executeBatchCreateOrderCallData, err := simpleAccountABI.Pack(
-		"executeBatch",
-		addresses,
-		calls,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to pack execute ABI: %w", err)
-	}
-
-	return executeBatchCreateOrderCallData, nil
-}
-
 // approveCallData creates the data for the ERC20 approve method
-func (s *OrderEVM) approveCallData(spender common.Address, amount *big.Int) ([]byte, error) {
+func (s *OrderEVM) approveCallData(spender ethcommon.Address, amount *big.Int) ([]byte, error) {
 	// Create ABI
 	erc20ABI, err := abi.JSON(strings.NewReader(contracts.ERC20TokenMetaData.ABI))
 	if err != nil {
@@ -463,7 +333,7 @@ func (s *OrderEVM) approveCallData(spender common.Address, amount *big.Int) ([]b
 }
 
 // transferCallData creates the data for the ERC20 token transfer method
-func (s *OrderEVM) transferCallData(recipient common.Address, amount *big.Int) ([]byte, error) {
+func (s *OrderEVM) transferCallData(recipient ethcommon.Address, amount *big.Int) ([]byte, error) {
 	// Create ABI
 	erc20ABI, err := abi.JSON(strings.NewReader(contracts.ERC20TokenMetaData.ABI))
 	if err != nil {
@@ -479,44 +349,18 @@ func (s *OrderEVM) transferCallData(recipient common.Address, amount *big.Int) (
 	return calldata, nil
 }
 
-// // executeCallData creates the data for the execute method in the smart account.
-// func (s *OrderEVM) executeCallData(dest common.Address, value *big.Int, data []byte) ([]byte, error) {
-// 	simpleAccountABI, err := abi.JSON(strings.NewReader(contracts.SimpleAccountMetaData.ABI))
-// 	if err != nil {
-// 		return nil, fmt.Errorf("failed to parse smart account ABI: %w", err)
-// 	}
-
-// 	executeCallData, err := simpleAccountABI.Pack(
-// 		"execute",
-// 		dest,
-// 		value,
-// 		data,
-// 	)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("failed to pack execute ABI: %w", err)
-// 	}
-
-// 	return executeCallData, nil
-// }
-
 // createOrderCallData creates the data for the createOrder method
-func (s *OrderEVM) createOrderCallData(order *ent.PaymentOrder) ([]byte, error) {
-	// Encrypt recipient details
-	encryptedOrderRecipient, err := cryptoUtils.EncryptOrderRecipient(order.Edges.Recipient)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encrypt recipient details: %w", err)
-	}
-
+func (s *OrderEVM) createOrderCallData(order *ent.PaymentOrder, encryptedOrderRecipient string) ([]byte, error) {
 	amountWithProtocolFee := order.Amount.Add(order.ProtocolFee)
 
 	// Define params
 	params := &types.CreateOrderParams{
-		Token:              common.HexToAddress(order.Edges.Token.ContractAddress),
+		Token:              ethcommon.HexToAddress(order.Edges.Token.ContractAddress),
 		Amount:             utils.ToSubunit(amountWithProtocolFee, order.Edges.Token.Decimals),
 		Rate:               order.Rate.Mul(decimal.NewFromInt(100)).BigInt(),
-		SenderFeeRecipient: common.HexToAddress(order.FeeAddress),
+		SenderFeeRecipient: ethcommon.HexToAddress(order.FeeAddress),
 		SenderFee:          utils.ToSubunit(order.SenderFee, order.Edges.Token.Decimals),
-		RefundAddress:      common.HexToAddress(order.ReturnAddress),
+		RefundAddress:      ethcommon.HexToAddress(order.ReturnAddress),
 		MessageHash:        encryptedOrderRecipient,
 	}
 
@@ -542,200 +386,6 @@ func (s *OrderEVM) createOrderCallData(order *ent.PaymentOrder) ([]byte, error) 
 	}
 
 	return data, nil
-}
-
-// executeBatchRefundCallData creates the refund calldata for the execute batch method in the smart account.
-func (s *OrderEVM) executeBatchRefundCallData(order *ent.LockPaymentOrder) ([]byte, error) {
-	var err error
-	var client types.RPCClient
-
-	// Connect to RPC endpoint
-	retryErr := utils.Retry(3, 1*time.Second, func() error {
-		client, err = types.NewEthClient(order.Edges.Token.Edges.Network.RPCEndpoint)
-		return err
-	})
-	if retryErr != nil {
-		return nil, retryErr
-	}
-
-	// Fetch onchain order details
-	instance, err := contracts.NewGateway(common.HexToAddress(order.Edges.Token.Edges.Network.GatewayContractAddress), client.(bind.ContractBackend))
-	if err != nil {
-		return nil, err
-	}
-
-	orderID, err := hex.DecodeString(order.GatewayID[2:])
-	if err != nil {
-		return nil, err
-	}
-
-	orderInfo, err := instance.GetOrderInfo(nil, utils.StringToByte32(string(orderID)))
-	if err != nil {
-		return nil, err
-	}
-
-	// Create approve data for gateway contract
-	approveGatewayData, err := s.approveCallData(
-		common.HexToAddress(order.Edges.Token.Edges.Network.GatewayContractAddress),
-		orderInfo.Amount,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("executeBatchRefundCallData.approveOrderContract: %w", err)
-	}
-
-	// Create refund data
-	fee := utils.ToSubunit(decimal.NewFromInt(0), order.Edges.Token.Decimals)
-	refundData, err := s.refundCallData(fee, order.GatewayID)
-	if err != nil {
-		return nil, fmt.Errorf("executeBatchRefundCallData.refundData: %w", err)
-	}
-
-	simpleAccountABI, err := abi.JSON(strings.NewReader(contracts.SimpleAccountMetaData.ABI))
-	if err != nil {
-		return nil, fmt.Errorf("executeBatchRefundCallData.simpleAccountABI: %w", err)
-	}
-
-	contractAddresses := []common.Address{
-		common.HexToAddress(order.Edges.Token.ContractAddress),
-		common.HexToAddress(order.Edges.Token.Edges.Network.GatewayContractAddress),
-	}
-
-	data := [][]byte{approveGatewayData, refundData}
-
-	// if order.Edges.Token.Edges.Network.IsTestnet {
-	// 	paymasterAccount, err := utils.GetPaymasterAccount(order.Edges.Token.Edges.Network.ChainID)
-	// 	if err != nil {
-	// 		return nil, fmt.Errorf("failed to get paymaster account: %w", err)
-	// 	}
-	// 	time.Sleep(5 * time.Second)
-
-	// 	refundAmount := utils.FromSubunit(orderInfo.Amount, order.Edges.Token.Decimals).Add(order.Edges.Token.Edges.Network.Fee)
-
-	// 	// Create approve data for paymaster contract
-	// 	approvePaymasterData, err := s.approveCallData(
-	// 		common.HexToAddress(paymasterAccount),
-	// 		utils.ToSubunit(refundAmount, order.Edges.Token.Decimals),
-	// 	)
-	// 	if err != nil {
-	// 		return nil, fmt.Errorf("failed to create paymaster approve calldata : %w", err)
-	// 	}
-
-	// 	contractAddresses = append(
-	// 		[]common.Address{common.HexToAddress(order.Edges.Token.ContractAddress)},
-	// 		contractAddresses...,
-	// 	)
-	// 	data = append(
-	// 		[][]byte{approvePaymasterData},
-	// 		data...,
-	// 	)
-	// }
-
-	executeBatchRefundCallData, err := simpleAccountABI.Pack(
-		"executeBatch",
-		contractAddresses,
-		data,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("executeBatchRefundCallData: %w", err)
-	}
-
-	return executeBatchRefundCallData, nil
-}
-
-// refundCallData creates the data for the refund method
-func (s *OrderEVM) refundCallData(fee *big.Int, orderId string) ([]byte, error) {
-	gatewayABI, err := abi.JSON(strings.NewReader(contracts.GatewayMetaData.ABI))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse GatewayOrder ABI: %w", err)
-	}
-
-	decodedOrderID, err := hex.DecodeString(orderId[2:])
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode orderId: %w", err)
-	}
-
-	// Generate calldata for refund, orderID, and label should be byte32
-	data, err := gatewayABI.Pack(
-		"refund",
-		fee,
-		utils.StringToByte32(string(decodedOrderID)),
-	)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to pack refund ABI: %w", err)
-	}
-
-	return data, nil
-}
-
-// executeBatchSettleCallData creates the settle calldata for the execute batch method in the smart account.
-func (s *OrderEVM) executeBatchSettleCallData(ctx context.Context, order *ent.LockPaymentOrder) ([]byte, error) {
-	// Create approve data for gateway contract
-	approveGatewayData, err := s.approveCallData(
-		common.HexToAddress(order.Edges.Token.Edges.Network.GatewayContractAddress),
-		utils.ToSubunit(order.Amount, order.Edges.Token.Decimals),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("approveOrderContract: %w", err)
-	}
-
-	contractAddresses := []common.Address{
-		common.HexToAddress(order.Edges.Token.ContractAddress),
-	}
-
-	data := [][]byte{approveGatewayData}
-
-	// if order.Edges.Token.Edges.Network.IsTestnet {
-	// 	// Fetch paymaster account
-	// 	paymasterAccount, err := utils.GetPaymasterAccount(order.Edges.Token.Edges.Network.ChainID)
-	// 	if err != nil {
-	// 		return nil, fmt.Errorf("failed to get paymaster account: %w", err)
-	// 	}
-	// 	time.Sleep(5 * time.Second)
-
-	// 	// Create approve data for paymaster contract
-	// 	approvePaymasterData, err := s.approveCallData(
-	// 		common.HexToAddress(paymasterAccount),
-	// 		utils.ToSubunit(order.Amount.Add(order.Edges.Token.Edges.Network.Fee), order.Edges.Token.Decimals),
-	// 	)
-	// 	if err != nil {
-	// 		return nil, fmt.Errorf("failed to create paymaster approve calldata : %w", err)
-	// 	}
-
-	// 	contractAddresses = append(
-	// 		contractAddresses,
-	// 		common.HexToAddress(order.Edges.Token.ContractAddress),
-	// 	)
-	// 	data = append(data, approvePaymasterData)
-	// }
-
-	// Create settle data
-	settleData, err := s.settleCallData(ctx, order)
-	if err != nil {
-		return nil, fmt.Errorf("settleData: %w", err)
-	}
-
-	simpleAccountABI, err := abi.JSON(strings.NewReader(contracts.SimpleAccountMetaData.ABI))
-	if err != nil {
-		return nil, fmt.Errorf("simpleAccountABI: %w", err)
-	}
-
-	contractAddresses = append(
-		contractAddresses,
-		common.HexToAddress(order.Edges.Token.Edges.Network.GatewayContractAddress),
-	)
-	data = append(data, settleData)
-
-	executeBatchSettleCallData, err := simpleAccountABI.Pack(
-		"executeBatch",
-		contractAddresses,
-		data,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("executeBatchSettledCallData: %w", err)
-	}
-
-	return executeBatchSettleCallData, nil
 }
 
 // settleCallData creates the data for the settle method in the gateway contract
@@ -787,7 +437,7 @@ func (s *OrderEVM) settleCallData(ctx context.Context, order *ent.LockPaymentOrd
 		"settle",
 		utils.StringToByte32(splitOrderID),
 		utils.StringToByte32(string(orderID)),
-		common.HexToAddress(token.Address),
+		ethcommon.HexToAddress(token.Address),
 		uint64(orderPercent),
 	)
 	if err != nil {
@@ -795,4 +445,241 @@ func (s *OrderEVM) settleCallData(ctx context.Context, order *ent.LockPaymentOrd
 	}
 
 	return data, nil
+}
+
+// refundCallData creates the data for the refund method
+func (s *OrderEVM) refundCallData(fee *big.Int, orderId string) ([]byte, error) {
+	gatewayABI, err := abi.JSON(strings.NewReader(contracts.GatewayMetaData.ABI))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse GatewayOrder ABI: %w", err)
+	}
+
+	decodedOrderID, err := hex.DecodeString(orderId[2:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode orderId: %w", err)
+	}
+
+	// Generate calldata for refund, orderID, and label should be byte32
+	data, err := gatewayABI.Pack(
+		"refund",
+		fee,
+		utils.StringToByte32(string(decodedOrderID)),
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to pack refund ABI: %w", err)
+	}
+
+	return data, nil
+}
+
+// executeBatchRefundCallData creates the refund calldata for the execute batch method in the smart account.
+func (s *OrderEVM) executeBatchRefundCallData(order *ent.LockPaymentOrder) ([]byte, error) {
+	var err error
+	var client types.RPCClient
+
+	// Connect to RPC endpoint
+	retryErr := utils.Retry(3, 1*time.Second, func() error {
+		client, err = types.NewEthClient(order.Edges.Token.Edges.Network.RPCEndpoint)
+		return err
+	})
+	if retryErr != nil {
+		return nil, retryErr
+	}
+
+	// Fetch onchain order details
+	instance, err := contracts.NewGateway(ethcommon.HexToAddress(order.Edges.Token.Edges.Network.GatewayContractAddress), client.(bind.ContractBackend))
+	if err != nil {
+		return nil, err
+	}
+
+	orderID, err := hex.DecodeString(order.GatewayID[2:])
+	if err != nil {
+		return nil, err
+	}
+
+	orderInfo, err := instance.GetOrderInfo(nil, utils.StringToByte32(string(orderID)))
+	if err != nil {
+		return nil, err
+	}
+
+	// Create approve data for gateway contract
+	approveGatewayData, err := s.approveCallData(
+		ethcommon.HexToAddress(order.Edges.Token.Edges.Network.GatewayContractAddress),
+		orderInfo.Amount,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("executeBatchRefundCallData.approveOrderContract: %w", err)
+	}
+
+	// Create refund data
+	fee := utils.ToSubunit(decimal.NewFromInt(0), order.Edges.Token.Decimals)
+	refundData, err := s.refundCallData(fee, order.GatewayID)
+	if err != nil {
+		return nil, fmt.Errorf("executeBatchRefundCallData.refundData: %w", err)
+	}
+
+	simpleAccountABI, err := abi.JSON(strings.NewReader(contracts.SimpleAccountMetaData.ABI))
+	if err != nil {
+		return nil, fmt.Errorf("executeBatchRefundCallData.simpleAccountABI: %w", err)
+	}
+
+	contractAddresses := []ethcommon.Address{
+		ethcommon.HexToAddress(order.Edges.Token.ContractAddress),
+		ethcommon.HexToAddress(order.Edges.Token.Edges.Network.GatewayContractAddress),
+	}
+
+	data := [][]byte{approveGatewayData, refundData}
+
+	executeBatchRefundCallData, err := simpleAccountABI.Pack(
+		"executeBatch",
+		contractAddresses,
+		data,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("executeBatchRefundCallData: %w", err)
+	}
+
+	return executeBatchRefundCallData, nil
+}
+
+// executeBatchSettleCallData creates the settle calldata for the execute batch method in the smart account.
+func (s *OrderEVM) executeBatchSettleCallData(ctx context.Context, order *ent.LockPaymentOrder) ([]byte, error) {
+	// Create approve data for gateway contract
+	approveGatewayData, err := s.approveCallData(
+		ethcommon.HexToAddress(order.Edges.Token.Edges.Network.GatewayContractAddress),
+		utils.ToSubunit(order.Amount, order.Edges.Token.Decimals),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("approveOrderContract: %w", err)
+	}
+
+	contractAddresses := []ethcommon.Address{
+		ethcommon.HexToAddress(order.Edges.Token.ContractAddress),
+	}
+
+	data := [][]byte{approveGatewayData}
+
+	// Create settle data
+	settleData, err := s.settleCallData(ctx, order)
+	if err != nil {
+		return nil, fmt.Errorf("settleData: %w", err)
+	}
+
+	simpleAccountABI, err := abi.JSON(strings.NewReader(contracts.SimpleAccountMetaData.ABI))
+	if err != nil {
+		return nil, fmt.Errorf("simpleAccountABI: %w", err)
+	}
+
+	contractAddresses = append(
+		contractAddresses,
+		ethcommon.HexToAddress(order.Edges.Token.Edges.Network.GatewayContractAddress),
+	)
+	data = append(data, settleData)
+
+	executeBatchSettleCallData, err := simpleAccountABI.Pack(
+		"executeBatch",
+		contractAddresses,
+		data,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("executeBatchSettledCallData: %w", err)
+	}
+
+	return executeBatchSettleCallData, nil
+}
+
+// executeBatchTransferCallData creates the transfer calldata for the execute batch method in the smart account.
+func (s *OrderEVM) executeBatchTransferCallData(order *ent.PaymentOrder, to ethcommon.Address, amount *big.Int) ([]byte, error) {
+	// Fetch paymaster account
+	paymasterAccount, err := utils.GetPaymasterAccount(order.Edges.Token.Edges.Network.ChainID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get paymaster account: %w", err)
+	}
+
+	if serverConf.Environment != "staging" && serverConf.Environment != "production" {
+		time.Sleep(5 * time.Second)
+	}
+
+	// Create approve data for paymaster contract
+	approvePaymasterData, err := s.approveCallData(
+		ethcommon.HexToAddress(paymasterAccount),
+		big.NewInt(0).Add(amount, order.Edges.Token.Edges.Network.Fee.BigInt()),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create paymaster approve calldata : %w", err)
+	}
+
+	// Create transfer data
+	transferData, err := s.transferCallData(to, amount)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create transfer calldata: %w", err)
+	}
+
+	simpleAccountABI, err := abi.JSON(strings.NewReader(contracts.SimpleAccountMetaData.ABI))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse smart account ABI: %w", err)
+	}
+
+	executeBatchCallData, err := simpleAccountABI.Pack(
+		"executeBatch",
+		[]ethcommon.Address{
+			ethcommon.HexToAddress(order.Edges.Token.ContractAddress),
+			ethcommon.HexToAddress(order.Edges.Token.ContractAddress),
+		},
+		[][]byte{approvePaymasterData, transferData},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to pack execute ABI: %w", err)
+	}
+
+	return executeBatchCallData, nil
+}
+
+// executeBatchCreateOrderCallData creates the calldata for the execute batch method in the smart account.
+func (s *OrderEVM) executeBatchCreateOrderCallData(order *ent.PaymentOrder) ([]byte, error) {
+	orderAmountWithFees := order.Amount.Add(order.ProtocolFee).Add(order.SenderFee)
+
+	// Create approve data for gateway contract
+	approveGatewayData, err := s.approveCallData(
+		ethcommon.HexToAddress(order.Edges.Token.Edges.Network.GatewayContractAddress),
+		utils.ToSubunit(orderAmountWithFees.Mul(decimal.NewFromInt(2)), order.Edges.Token.Decimals),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create gateway approve calldata: %w", err)
+	}
+
+	// Create createOrder data
+	encryptedOrderRecipient, err := cryptoUtils.EncryptOrderRecipient(order.Edges.Recipient)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encrypt order recipient: %w", err)
+	}
+
+	createOrderData, err := s.createOrderCallData(order, encryptedOrderRecipient)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create createOrder calldata: %w", err)
+	}
+
+	// Initialize calls array with gateway approve and create order
+	addresses := []ethcommon.Address{
+		ethcommon.HexToAddress(order.Edges.Token.ContractAddress),
+		ethcommon.HexToAddress(order.Edges.Token.Edges.Network.GatewayContractAddress),
+	}
+	calls := [][]byte{approveGatewayData, createOrderData}
+
+	simpleAccountABI, err := abi.JSON(strings.NewReader(contracts.SimpleAccountMetaData.ABI))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse smart account ABI: %w", err)
+	}
+
+	executeBatchCreateOrderCallData, err := simpleAccountABI.Pack(
+		"executeBatch",
+		addresses,
+		calls,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to pack execute ABI: %w", err)
+	}
+
+	return executeBatchCreateOrderCallData, nil
 }
