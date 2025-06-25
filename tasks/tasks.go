@@ -864,9 +864,21 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 }
 
 func FixDatabaseMisHap() error {
-	// ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	// defer cancel()
 	ctx := context.Background()
+	network, err := storage.Client.Network.
+		Query().
+		Where(networkent.ChainIDEQ(42161)).
+		Only(ctx)
+	if err != nil {
+		return fmt.Errorf("TaskIndexBlockchainEvents.fetchNetworks: %w", err)
+	}
+	_ = indexer.IndexOrderCreated(ctx, nil, network, 351176402, 351176402)
+	_ = indexer.IndexOrderCreated(ctx, nil, network, 351175222, 351175222)
+	_ = indexer.IndexOrderCreated(ctx, nil, network, 351153491, 351153491)
+	_ = indexer.IndexOrderCreated(ctx, nil, network, 351124939, 351124939)
+	_ = indexer.IndexOrderCreated(ctx, nil, network, 351089803, 351089803)
+	_ = indexer.IndexOrderCreated(ctx, nil, network, 351009696, 351009696)
+	_ = indexer.IndexOrderCreated(ctx, nil, network, 350973008, 350973008)
 
 	logger.Infof("FixDatabaseMisHap: %v", ctx)
 
