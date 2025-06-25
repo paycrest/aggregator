@@ -863,24 +863,27 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 	}
 }
 
-func FixDatabaseMisHap() error {
+func FixDatabaseMishap() error {
 	ctx := context.Background()
 	network, err := storage.Client.Network.
 		Query().
 		Where(networkent.ChainIDEQ(42161)).
 		Only(ctx)
 	if err != nil {
-		return fmt.Errorf("FixDatabaseMisHap.fetchNetworks: %w", err)
+		return fmt.Errorf("FixDatabaseMishap.fetchNetworks: %w", err)
 	}
-	_ = indexer.IndexOrderCreated(ctx, nil, network, 351176402, 351176402)
-	_ = indexer.IndexOrderCreated(ctx, nil, network, 351175222, 351175222)
-	_ = indexer.IndexOrderCreated(ctx, nil, network, 351153491, 351153491)
-	_ = indexer.IndexOrderCreated(ctx, nil, network, 351124939, 351124939)
-	_ = indexer.IndexOrderCreated(ctx, nil, network, 351089803, 351089803)
-	_ = indexer.IndexOrderCreated(ctx, nil, network, 351009696, 351009696)
-	_ = indexer.IndexOrderCreated(ctx, nil, network, 350973008, 350973008)
 
-	logger.Infof("FixDatabaseMisHap: %v", ctx)
+	indexerInstance := indexer.NewIndexerEVM()
+
+	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 351176402, 351176402)
+	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 351175222, 351175222)
+	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 351153491, 351153491)
+	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 351124939, 351124939)
+	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 351089803, 351089803)
+	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 351009696, 351009696)
+	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 350973008, 350973008)
+
+	logger.Infof("FixDatabaseMishap: %v", ctx)
 
 	return nil
 }
