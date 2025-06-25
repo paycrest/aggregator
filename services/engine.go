@@ -183,7 +183,7 @@ func (s *EngineService) WaitForTransactionMined(ctx context.Context, queueId str
 			return nil, err
 		}
 
-		if result["executionResult"] == nil || result["from"] == nil {
+		if result["executionResult"] == nil {
 			continue
 		}
 
