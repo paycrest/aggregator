@@ -174,7 +174,7 @@ func (s *IndexerEVM) IndexOrderSettled(ctx context.Context, rpcClient types.RPCC
 
 	events, err := s.engineService.GetContractEvents(ctx, network.ChainID, network.GatewayContractAddress, eventPayload)
 	if err != nil {
-		return fmt.Errorf("IndexOrderSettled.getEvents: %w", err)
+		return fmt.Errorf("IndexOrderSettled.getEvents: %w %v", err, events)
 	}
 
 	txHashes := []string{}
