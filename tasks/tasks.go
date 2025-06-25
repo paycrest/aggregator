@@ -1234,8 +1234,8 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for RetryStaleUserOperations: %v", err)
 	}
 
-	// Index blockchain events every 10 seconds
-	_, err = scheduler.Every(10).Seconds().Do(TaskIndexBlockchainEvents)
+	// Index blockchain events every 5 seconds
+	_, err = scheduler.Every(5).Seconds().Do(TaskIndexBlockchainEvents)
 	if err != nil {
 		logger.Errorf("StartCronJobs for IndexBlockchainEvents: %v", err)
 	}
