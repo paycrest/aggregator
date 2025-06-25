@@ -92,7 +92,7 @@ func (s *EngineService) GetContractEvents(ctx context.Context, chainID int64, co
 
 	data, err := utils.ParseJSONResponse(res.RawResponse)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse JSON response: %w %v", err, data)
+		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
 	}
 
 	if data["meta"].(map[string]interface{})["total_items"].(float64) == 0 {

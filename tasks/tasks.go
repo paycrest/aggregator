@@ -280,13 +280,7 @@ func runIndexers(network *ent.Network, indexer types.Indexer, tokens []*ent.Toke
 
 	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
 		ctx := context.Background()
-		err := indexer.IndexOrderSettled(ctx, nil, network, start, end)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":             fmt.Sprintf("%v", err),
-				"NetworkIdentifier": network.Identifier,
-			}).Errorf("TaskIndexBlockchainEvents.IndexOrderSettled")
-		}
+		_ = indexer.IndexOrderSettled(ctx, nil, network, start, end)
 	}(network, indexer, startBlock, latestBlock)
 
 	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
