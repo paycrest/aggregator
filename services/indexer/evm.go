@@ -59,6 +59,10 @@ func (s *IndexerEVM) IndexTransfer(ctx context.Context, rpcClient types.RPCClien
 	// Parse transfer event data
 	for _, event := range events {
 		eventParams := event.(map[string]interface{})["decoded"].(map[string]interface{})
+		if eventParams["non_indexed_params"] == nil {
+			continue
+		}
+
 		transferValue, err := decimal.NewFromString(eventParams["non_indexed_params"].(map[string]interface{})["value"].(string))
 		if err != nil {
 			logger.Errorf("Error parsing transfer value: %v %v", err, eventParams["non_indexed_params"].(map[string]interface{}))
@@ -118,6 +122,10 @@ func (s *IndexerEVM) IndexOrderCreated(ctx context.Context, rpcClient types.RPCC
 
 	for _, event := range events {
 		eventParams := event.(map[string]interface{})["decoded"].(map[string]interface{})
+
+		if eventParams["non_indexed_params"] == nil {
+			continue
+		}
 
 		orderAmount, err := decimal.NewFromString(eventParams["indexed_params"].(map[string]interface{})["amount"].(string))
 		if err != nil {
@@ -183,6 +191,10 @@ func (s *IndexerEVM) IndexOrderSettled(ctx context.Context, rpcClient types.RPCC
 	for _, event := range events {
 		eventParams := event.(map[string]interface{})["decoded"].(map[string]interface{})
 
+		if eventParams["non_indexed_params"] == nil {
+			continue
+		}
+
 		settlePercent, err := decimal.NewFromString(eventParams["non_indexed_params"].(map[string]interface{})["settlePercent"].(string))
 		if err != nil {
 			continue
@@ -235,6 +247,10 @@ func (s *IndexerEVM) IndexOrderRefunded(ctx context.Context, rpcClient types.RPC
 
 	for _, event := range events {
 		eventParams := event.(map[string]interface{})["decoded"].(map[string]interface{})
+		if eventParams["non_indexed_params"] == nil {
+			continue
+		}
+
 		refundFee, err := decimal.NewFromString(eventParams["non_indexed_params"].(map[string]interface{})["fee"].(string))
 		if err != nil {
 			continue
