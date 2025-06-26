@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 package types
 
 import (
@@ -696,23 +695,6 @@ type SupportedTokenResponse struct {
 	Decimals        int8   `json:"decimals"`
 	BaseCurrency    string `json:"baseCurrency"`
 	Network         string `json:"network"`
-}
-
-// IndexTransactionRequest represents the request payload for indexing a specific transaction
-type IndexTransactionRequest struct {
-	TxHash  string `json:"txHash" binding:"required"`
-	ChainID int64  `json:"chainId" binding:"required"`
-}
-
-// IndexTransactionResponse represents the response for the index transaction endpoint
-type IndexTransactionResponse struct {
-	Message string `json:"message"`
-	Events  struct {
-		Transfer      int `json:"Transfer"`
-		OrderCreated  int `json:"OrderCreated"`
-		OrderSettled  int `json:"OrderSettled"`
-		OrderRefunded int `json:"OrderRefunded"`
-	} `json:"events"`
 }
 
 // IndexTransactionRequest represents the request payload for indexing a specific transaction
