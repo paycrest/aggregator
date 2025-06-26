@@ -262,6 +262,7 @@ type ProviderProfilePayload struct {
 	Currencies     []string                    `json:"currencies"`
 	HostIdentifier string                      `json:"hostIdentifier"`
 	IsAvailable    bool                        `json:"isAvailable"`
+	IsActive       bool                        `json:"isActive"`
 	Tokens         []ProviderOrderTokenPayload `json:"tokens"`
 	VisibilityMode string                      `json:"visibilityMode"`
 }

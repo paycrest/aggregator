@@ -99,6 +99,7 @@ func CreateERC20Token(client types.RPCClient, overrides map[string]interface{}) 
 		SetIdentifier(payload["identifier"].(string)).
 		SetChainID(payload["chainID"].(int64)).
 		SetRPCEndpoint(payload["networkRPC"].(string)).
+		SetBlockTime(decimal.NewFromFloat(3.0)).
 		SetFee(decimal.NewFromFloat(0.1)).
 		SetIsTestnet(true).
 		OnConflict().
@@ -156,6 +157,7 @@ func CreateTRC20Token(client types.RPCClient, overrides map[string]interface{}) 
 		SetIdentifier(payload["identifier"].(string)).
 		SetChainID(payload["chainID"].(int64)).
 		SetRPCEndpoint(payload["networkRPC"].(string)).
+		SetBlockTime(decimal.NewFromFloat(3.0)).
 		SetFee(decimal.NewFromFloat(0.1)).
 		SetIsTestnet(true).
 		OnConflict().
@@ -662,6 +664,7 @@ func CreateTestTokenData(t *testing.T, client *ent.Client) ([]*ent.Network, []*e
 		SetRPCEndpoint("https://arb1.arbitrum.io/rpc").
 		SetGatewayContractAddress("0x123").
 		SetIsTestnet(false).
+		SetBlockTime(decimal.NewFromFloat(3.0)).
 		SetFee(decimal.NewFromFloat(0.01)).
 		Save(ctx)
 	assert.NoError(t, err)
@@ -672,6 +675,7 @@ func CreateTestTokenData(t *testing.T, client *ent.Client) ([]*ent.Network, []*e
 		SetRPCEndpoint("https://polygon-rpc.com").
 		SetGatewayContractAddress("0x456").
 		SetIsTestnet(false).
+		SetBlockTime(decimal.NewFromFloat(3.0)).
 		SetFee(decimal.NewFromFloat(0.02)).
 		Save(ctx)
 	assert.NoError(t, err)
