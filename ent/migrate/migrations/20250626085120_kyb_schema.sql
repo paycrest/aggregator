@@ -1,9 +1,17 @@
 -- Modify "networks" table
 ALTER TABLE "networks" ALTER COLUMN "block_time" DROP DEFAULT;
--- Modify "provider_profiles" table
-ALTER TABLE "provider_profiles" DROP COLUMN "address", DROP COLUMN "mobile_number", DROP COLUMN "date_of_birth", DROP COLUMN "business_name", DROP COLUMN "identity_document_type", DROP COLUMN "identity_document", DROP COLUMN "business_document";
 -- Modify "users" table
 ALTER TABLE "users" ADD COLUMN "kyb_verification_status" character varying NOT NULL DEFAULT 'not_started';
+-- Migrate existing KYB verification status from provider_profiles to users
+UPDATE "users" 
+SET "kyb_verification_status" = 'approved' 
+WHERE "id" IN (
+    SELECT "user_provider_profile" 
+    FROM "provider_profiles" 
+    WHERE "isKYBVerified" = true
+);
+-- Modify "provider_profiles" table
+ALTER TABLE "provider_profiles" DROP COLUMN "address", DROP COLUMN "mobile_number", DROP COLUMN "date_of_birth", DROP COLUMN "business_name", DROP COLUMN "identity_document_type", DROP COLUMN "identity_document", DROP COLUMN "business_document";
 -- Create "kyb_profiles" table
 CREATE TABLE "kyb_profiles" ("id" uuid NOT NULL, "created_at" timestamptz NOT NULL, "updated_at" timestamptz NOT NULL, "mobile_number" character varying NOT NULL, "company_name" character varying NOT NULL, "registered_business_address" character varying NOT NULL, "certificate_of_incorporation_url" character varying NOT NULL, "articles_of_incorporation_url" character varying NOT NULL, "business_license_url" character varying NULL, "proof_of_business_address_url" character varying NOT NULL, "proof_of_residential_address_url" character varying NOT NULL, "aml_policy_url" character varying NULL, "kyc_policy_url" character varying NULL, "user_kyb_profile" uuid NULL, PRIMARY KEY ("id"), CONSTRAINT "kyb_profiles_users_kyb_profile" FOREIGN KEY ("user_kyb_profile") REFERENCES "users" ("id") ON UPDATE NO ACTION ON DELETE CASCADE);
 -- Create index "kyb_profiles_user_kyb_profile_key" to table: "kyb_profiles"

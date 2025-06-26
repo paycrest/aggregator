@@ -17,6 +17,7 @@ import (
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/token"
+	"github.com/paycrest/aggregator/ent/user"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
@@ -71,7 +72,7 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 			ppq.Where(
 				providerprofile.IsAvailable(true),
 				providerprofile.IsActive(true),
-				// providerprofile.IsKybVerified(true),
+				providerprofile.HasUserWith(user.KybVerificationStatusEQ(user.KybVerificationStatusApproved)),
 				providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
 			)
 		}).
