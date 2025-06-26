@@ -17,6 +17,7 @@ import (
 	"github.com/jarcoal/httpmock"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/paycrest/aggregator/config"
+	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/enttest"
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
 	kycErrors "github.com/paycrest/aggregator/services/kyc/errors"
@@ -70,6 +71,7 @@ func TestSmileIDService(t *testing.T) {
 			SmileIdentityBaseUrl:   "https://testapi.smileidentity.com",
 			SmileIdentityPartnerId: "1234",
 			SmileIdentityApiKey:    "test_api_key",
+			KYCSecretKey:           "test-secret-key",
 		},
 		serverConf: &config.ServerConfiguration{
 			ServerURL: "https://api.example.com",
@@ -451,6 +453,129 @@ func TestSmileIDService(t *testing.T) {
 			err := service.HandleWebhook(context.Background(), jsonData)
 			assert.Error(t, err)
 			assert.Equal(t, "invalid signature", err.Error())
+		})
+	})
+
+	// ==================== UpdateKYCWalletAddress Tests ====================
+	t.Run("UpdateKYCWalletAddress", func(t *testing.T) {
+		oldAddress := "0xOldWalletAddress"
+		newAddress := "0xNewWalletAddress"
+		secretKey := service.identityConf.KYCSecretKey
+
+		t.Run("Successful update", func(t *testing.T) {
+			// Clean and seed database
+			client.IdentityVerificationRequest.Delete().ExecX(context.Background())
+			_, err := client.IdentityVerificationRequest.Create().
+				SetWalletAddress(oldAddress).
+				SetWalletSignature("sig").
+				SetPlatform("smile_id").
+				SetPlatformRef("ref").
+				SetVerificationURL("url").
+				SetStatus(identityverificationrequest.StatusSuccess).
+				SetLastURLCreatedAt(time.Now()).
+				Save(context.Background())
+			require.NoError(t, err)
+
+			req := types.UpdateKYCWalletAddressRequest{
+				OldWalletAddress: oldAddress,
+				NewWalletAddress: newAddress,
+				SecretKey:        secretKey,
+			}
+
+			resp, err := service.UpdateKYCWalletAddress(context.Background(), req)
+			require.NoError(t, err)
+			assert.NotNil(t, resp)
+			assert.Equal(t, oldAddress, resp.OldWalletAddress)
+			assert.Equal(t, newAddress, resp.NewWalletAddress)
+
+			// Verify db update
+			_, err = client.IdentityVerificationRequest.Query().Where(identityverificationrequest.WalletAddressEQ(oldAddress)).Only(context.Background())
+			assert.True(t, ent.IsNotFound(err), "Old address should not be found")
+
+			updatedIvr, err := client.IdentityVerificationRequest.Query().Where(identityverificationrequest.WalletAddressEQ(newAddress)).Only(context.Background())
+			require.NoError(t, err)
+			assert.Equal(t, newAddress, updatedIvr.WalletAddress)
+		})
+
+		t.Run("Invalid secret key", func(t *testing.T) {
+			req := types.UpdateKYCWalletAddressRequest{
+				SecretKey: "invalid-secret",
+			}
+			_, err := service.UpdateKYCWalletAddress(context.Background(), req)
+			assert.Error(t, err)
+			assert.IsType(t, kycErrors.ErrInvalidSecretKey{}, err)
+		})
+
+		t.Run("KYC not found for old address", func(t *testing.T) {
+			client.IdentityVerificationRequest.Delete().ExecX(context.Background())
+			req := types.UpdateKYCWalletAddressRequest{
+				OldWalletAddress: "0xNotFoundAddress",
+				NewWalletAddress: newAddress,
+				SecretKey:        secretKey,
+			}
+			_, err := service.UpdateKYCWalletAddress(context.Background(), req)
+			assert.Error(t, err)
+			assert.IsType(t, kycErrors.ErrKYCNotFound{}, err)
+		})
+
+		t.Run("KYC not verified", func(t *testing.T) {
+			client.IdentityVerificationRequest.Delete().ExecX(context.Background())
+			_, err := client.IdentityVerificationRequest.Create().
+				SetWalletAddress(oldAddress).
+				SetWalletSignature("sig").
+				SetPlatform("smile_id").
+				SetPlatformRef("ref").
+				SetVerificationURL("url").
+				SetStatus(identityverificationrequest.StatusPending). // Not 'success'
+				SetLastURLCreatedAt(time.Now()).
+				Save(context.Background())
+			require.NoError(t, err)
+
+			req := types.UpdateKYCWalletAddressRequest{
+				OldWalletAddress: oldAddress,
+				NewWalletAddress: newAddress,
+				SecretKey:        secretKey,
+			}
+			_, err = service.UpdateKYCWalletAddress(context.Background(), req)
+			assert.Error(t, err)
+			assert.IsType(t, kycErrors.ErrNotVerified{}, err)
+		})
+
+		t.Run("New wallet address already verified", func(t *testing.T) {
+			client.IdentityVerificationRequest.Delete().ExecX(context.Background())
+
+			// Old address (verified)
+			_, err := client.IdentityVerificationRequest.Create().
+				SetWalletAddress(oldAddress).
+				SetWalletSignature("sig1").
+				SetPlatform("smile_id").
+				SetPlatformRef("ref1").
+				SetVerificationURL("url1").
+				SetStatus(identityverificationrequest.StatusSuccess).
+				SetLastURLCreatedAt(time.Now()).
+				Save(context.Background())
+			require.NoError(t, err)
+
+			// New address (also verified)
+			_, err = client.IdentityVerificationRequest.Create().
+				SetWalletAddress(newAddress).
+				SetWalletSignature("sig2").
+				SetPlatform("smile_id").
+				SetPlatformRef("ref2").
+				SetVerificationURL("url2").
+				SetStatus(identityverificationrequest.StatusSuccess).
+				SetLastURLCreatedAt(time.Now()).
+				Save(context.Background())
+			require.NoError(t, err)
+
+			req := types.UpdateKYCWalletAddressRequest{
+				OldWalletAddress: oldAddress,
+				NewWalletAddress: newAddress,
+				SecretKey:        secretKey,
+			}
+			_, err = service.UpdateKYCWalletAddress(context.Background(), req)
+			assert.Error(t, err)
+			assert.IsType(t, kycErrors.ErrAlreadyVerified{}, err)
 		})
 	})
 }
