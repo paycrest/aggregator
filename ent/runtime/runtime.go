@@ -396,12 +396,8 @@ func init() {
 	senderprofileDescIsActive := senderprofileFields[5].Descriptor()
 	// senderprofile.DefaultIsActive holds the default value on creation for the is_active field.
 	senderprofile.DefaultIsActive = senderprofileDescIsActive.Default.(bool)
-	// senderprofileDescIsKYBVerified is the schema descriptor for isKYBVerified field.
-	senderprofileDescIsKYBVerified := senderprofileFields[6].Descriptor()
-	// senderprofile.DefaultIsKYBVerified holds the default value on creation for the isKYBVerified field.
-	senderprofile.DefaultIsKYBVerified = senderprofileDescIsKYBVerified.Default.(bool)
 	// senderprofileDescUpdatedAt is the schema descriptor for updated_at field.
-	senderprofileDescUpdatedAt := senderprofileFields[8].Descriptor()
+	senderprofileDescUpdatedAt := senderprofileFields[6].Descriptor()
 	// senderprofile.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	senderprofile.DefaultUpdatedAt = senderprofileDescUpdatedAt.Default.(func() time.Time)
 	// senderprofile.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -484,10 +480,6 @@ func init() {
 	userDescHasEarlyAccess := userFields[7].Descriptor()
 	// user.DefaultHasEarlyAccess holds the default value on creation for the has_early_access field.
 	user.DefaultHasEarlyAccess = userDescHasEarlyAccess.Default.(bool)
-	// userDescIsKYBVerified is the schema descriptor for isKYBVerified field.
-	userDescIsKYBVerified := userFields[8].Descriptor()
-	// user.DefaultIsKYBVerified holds the default value on creation for the isKYBVerified field.
-	user.DefaultIsKYBVerified = userDescIsKYBVerified.Default.(bool)
 	// userDescID is the schema descriptor for id field.
 	userDescID := userFields[0].Descriptor()
 	// user.DefaultID holds the default value on creation for the id field.

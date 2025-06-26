@@ -143,20 +143,6 @@ func (ppc *ProviderProfileCreate) SetNillableVisibilityMode(pm *providerprofile.
 	return ppc
 }
 
-// SetKybVerificationStatus sets the "kyb_verification_status" field.
-func (ppc *ProviderProfileCreate) SetKybVerificationStatus(pvs providerprofile.KybVerificationStatus) *ProviderProfileCreate {
-	ppc.mutation.SetKybVerificationStatus(pvs)
-	return ppc
-}
-
-// SetNillableKybVerificationStatus sets the "kyb_verification_status" field if the given value is not nil.
-func (ppc *ProviderProfileCreate) SetNillableKybVerificationStatus(pvs *providerprofile.KybVerificationStatus) *ProviderProfileCreate {
-	if pvs != nil {
-		ppc.SetKybVerificationStatus(*pvs)
-	}
-	return ppc
-}
-
 // SetID sets the "id" field.
 func (ppc *ProviderProfileCreate) SetID(s string) *ProviderProfileCreate {
 	ppc.mutation.SetID(s)
@@ -339,10 +325,6 @@ func (ppc *ProviderProfileCreate) defaults() {
 		v := providerprofile.DefaultVisibilityMode
 		ppc.mutation.SetVisibilityMode(v)
 	}
-	if _, ok := ppc.mutation.KybVerificationStatus(); !ok {
-		v := providerprofile.DefaultKybVerificationStatus
-		ppc.mutation.SetKybVerificationStatus(v)
-	}
 	if _, ok := ppc.mutation.ID(); !ok {
 		v := providerprofile.DefaultID()
 		ppc.mutation.SetID(v)
@@ -382,14 +364,6 @@ func (ppc *ProviderProfileCreate) check() error {
 	if v, ok := ppc.mutation.VisibilityMode(); ok {
 		if err := providerprofile.VisibilityModeValidator(v); err != nil {
 			return &ValidationError{Name: "visibility_mode", err: fmt.Errorf(`ent: validator failed for field "ProviderProfile.visibility_mode": %w`, err)}
-		}
-	}
-	if _, ok := ppc.mutation.KybVerificationStatus(); !ok {
-		return &ValidationError{Name: "kyb_verification_status", err: errors.New(`ent: missing required field "ProviderProfile.kyb_verification_status"`)}
-	}
-	if v, ok := ppc.mutation.KybVerificationStatus(); ok {
-		if err := providerprofile.KybVerificationStatusValidator(v); err != nil {
-			return &ValidationError{Name: "kyb_verification_status", err: fmt.Errorf(`ent: validator failed for field "ProviderProfile.kyb_verification_status": %w`, err)}
 		}
 	}
 	if len(ppc.mutation.UserIDs()) == 0 {
@@ -465,10 +439,6 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 	if value, ok := ppc.mutation.VisibilityMode(); ok {
 		_spec.SetField(providerprofile.FieldVisibilityMode, field.TypeEnum, value)
 		_node.VisibilityMode = value
-	}
-	if value, ok := ppc.mutation.KybVerificationStatus(); ok {
-		_spec.SetField(providerprofile.FieldKybVerificationStatus, field.TypeEnum, value)
-		_node.KybVerificationStatus = value
 	}
 	if nodes := ppc.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -743,18 +713,6 @@ func (u *ProviderProfileUpsert) UpdateVisibilityMode() *ProviderProfileUpsert {
 	return u
 }
 
-// SetKybVerificationStatus sets the "kyb_verification_status" field.
-func (u *ProviderProfileUpsert) SetKybVerificationStatus(v providerprofile.KybVerificationStatus) *ProviderProfileUpsert {
-	u.Set(providerprofile.FieldKybVerificationStatus, v)
-	return u
-}
-
-// UpdateKybVerificationStatus sets the "kyb_verification_status" field to the value that was provided on create.
-func (u *ProviderProfileUpsert) UpdateKybVerificationStatus() *ProviderProfileUpsert {
-	u.SetExcluded(providerprofile.FieldKybVerificationStatus)
-	return u
-}
-
 // UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
@@ -926,20 +884,6 @@ func (u *ProviderProfileUpsertOne) SetVisibilityMode(v providerprofile.Visibilit
 func (u *ProviderProfileUpsertOne) UpdateVisibilityMode() *ProviderProfileUpsertOne {
 	return u.Update(func(s *ProviderProfileUpsert) {
 		s.UpdateVisibilityMode()
-	})
-}
-
-// SetKybVerificationStatus sets the "kyb_verification_status" field.
-func (u *ProviderProfileUpsertOne) SetKybVerificationStatus(v providerprofile.KybVerificationStatus) *ProviderProfileUpsertOne {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.SetKybVerificationStatus(v)
-	})
-}
-
-// UpdateKybVerificationStatus sets the "kyb_verification_status" field to the value that was provided on create.
-func (u *ProviderProfileUpsertOne) UpdateKybVerificationStatus() *ProviderProfileUpsertOne {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.UpdateKybVerificationStatus()
 	})
 }
 
@@ -1281,20 +1225,6 @@ func (u *ProviderProfileUpsertBulk) SetVisibilityMode(v providerprofile.Visibili
 func (u *ProviderProfileUpsertBulk) UpdateVisibilityMode() *ProviderProfileUpsertBulk {
 	return u.Update(func(s *ProviderProfileUpsert) {
 		s.UpdateVisibilityMode()
-	})
-}
-
-// SetKybVerificationStatus sets the "kyb_verification_status" field.
-func (u *ProviderProfileUpsertBulk) SetKybVerificationStatus(v providerprofile.KybVerificationStatus) *ProviderProfileUpsertBulk {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.SetKybVerificationStatus(v)
-	})
-}
-
-// UpdateKybVerificationStatus sets the "kyb_verification_status" field to the value that was provided on create.
-func (u *ProviderProfileUpsertBulk) UpdateKybVerificationStatus() *ProviderProfileUpsertBulk {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.UpdateKybVerificationStatus()
 	})
 }
 

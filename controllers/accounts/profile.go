@@ -620,15 +620,16 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 	}
 
 	response := &types.SenderProfileResponse{
-		ID:              sender.ID,
-		FirstName:       user.FirstName,
-		LastName:        user.LastName,
-		Email:           user.Email,
-		WebhookURL:      sender.WebhookURL,
-		DomainWhitelist: sender.DomainWhitelist,
-		Tokens:          tokensPayload,
-		APIKey:          *apiKey,
-		IsActive:        sender.IsActive,
+		ID:                    sender.ID,
+		FirstName:             user.FirstName,
+		LastName:              user.LastName,
+		Email:                 user.Email,
+		WebhookURL:            sender.WebhookURL,
+		DomainWhitelist:       sender.DomainWhitelist,
+		Tokens:                tokensPayload,
+		APIKey:                *apiKey,
+		IsActive:              sender.IsActive,
+		KYBVerificationStatus: user.KybVerificationStatus,
 	}
 
 	linkedProvider, err := storage.Client.ProviderProfile.
@@ -741,25 +742,17 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Profile retrieved successfully", &types.ProviderProfileResponse{
-		ID:             provider.ID,
-		FirstName:      user.FirstName,
-		LastName:       user.LastName,
-		Email:          user.Email,
-		TradingName:    provider.TradingName,
-		Currencies:     currencyCodes,
-		HostIdentifier: provider.HostIdentifier,
-		IsAvailable:    provider.IsAvailable,
-		Tokens:         tokensPayload,
-		APIKey:         *apiKey,
-		IsActive:       provider.IsActive,
-		// Address:              provider.Address,
-		// MobileNumber:         provider.MobileNumber,
-		// DateOfBirth:          provider.DateOfBirth,
-		// BusinessName:         provider.BusinessName,
-		// VisibilityMode:       provider.VisibilityMode,
-		// IdentityDocumentType: provider.IdentityDocumentType,
-		// IdentityDocument:     provider.IdentityDocument,
-		// BusinessDocument:     provider.BusinessDocument,
-		// IsKybVerified:        provider.IsKybVerified,
+		ID:                    provider.ID,
+		FirstName:             user.FirstName,
+		LastName:              user.LastName,
+		Email:                 user.Email,
+		TradingName:           provider.TradingName,
+		Currencies:            currencyCodes,
+		HostIdentifier:        provider.HostIdentifier,
+		IsAvailable:           provider.IsAvailable,
+		Tokens:                tokensPayload,
+		APIKey:                *apiKey,
+		IsActive:              provider.IsActive,
+		KYBVerificationStatus: user.KybVerificationStatus,
 	})
 }

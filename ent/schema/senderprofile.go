@@ -27,11 +27,6 @@ func (SenderProfile) Fields() []ent.Field {
 		field.Bool("is_partner").Default(false),
 		field.Bool("is_active").
 			Default(false),
-			field.Bool("isKYBVerified").
-			Default(false),
-		field.Enum("kyb_verification_status").
-			Values("not_started", "pending", "approved", "declined").
-			Default("not_started"),
 		field.Time("updated_at").
 			Default(time.Now).
 			UpdateDefault(time.Now),

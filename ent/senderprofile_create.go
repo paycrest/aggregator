@@ -91,34 +91,6 @@ func (spc *SenderProfileCreate) SetNillableIsActive(b *bool) *SenderProfileCreat
 	return spc
 }
 
-// SetIsKYBVerified sets the "isKYBVerified" field.
-func (spc *SenderProfileCreate) SetIsKYBVerified(b bool) *SenderProfileCreate {
-	spc.mutation.SetIsKYBVerified(b)
-	return spc
-}
-
-// SetNillableIsKYBVerified sets the "isKYBVerified" field if the given value is not nil.
-func (spc *SenderProfileCreate) SetNillableIsKYBVerified(b *bool) *SenderProfileCreate {
-	if b != nil {
-		spc.SetIsKYBVerified(*b)
-	}
-	return spc
-}
-
-// SetKybVerificationStatus sets the "kyb_verification_status" field.
-func (spc *SenderProfileCreate) SetKybVerificationStatus(svs senderprofile.KybVerificationStatus) *SenderProfileCreate {
-	spc.mutation.SetKybVerificationStatus(svs)
-	return spc
-}
-
-// SetNillableKybVerificationStatus sets the "kyb_verification_status" field if the given value is not nil.
-func (spc *SenderProfileCreate) SetNillableKybVerificationStatus(svs *senderprofile.KybVerificationStatus) *SenderProfileCreate {
-	if svs != nil {
-		spc.SetKybVerificationStatus(*svs)
-	}
-	return spc
-}
-
 // SetUpdatedAt sets the "updated_at" field.
 func (spc *SenderProfileCreate) SetUpdatedAt(t time.Time) *SenderProfileCreate {
 	spc.mutation.SetUpdatedAt(t)
@@ -269,14 +241,6 @@ func (spc *SenderProfileCreate) defaults() {
 		v := senderprofile.DefaultIsActive
 		spc.mutation.SetIsActive(v)
 	}
-	if _, ok := spc.mutation.IsKYBVerified(); !ok {
-		v := senderprofile.DefaultIsKYBVerified
-		spc.mutation.SetIsKYBVerified(v)
-	}
-	if _, ok := spc.mutation.KybVerificationStatus(); !ok {
-		v := senderprofile.DefaultKybVerificationStatus
-		spc.mutation.SetKybVerificationStatus(v)
-	}
 	if _, ok := spc.mutation.UpdatedAt(); !ok {
 		v := senderprofile.DefaultUpdatedAt()
 		spc.mutation.SetUpdatedAt(v)
@@ -297,17 +261,6 @@ func (spc *SenderProfileCreate) check() error {
 	}
 	if _, ok := spc.mutation.IsActive(); !ok {
 		return &ValidationError{Name: "is_active", err: errors.New(`ent: missing required field "SenderProfile.is_active"`)}
-	}
-	if _, ok := spc.mutation.IsKYBVerified(); !ok {
-		return &ValidationError{Name: "isKYBVerified", err: errors.New(`ent: missing required field "SenderProfile.isKYBVerified"`)}
-	}
-	if _, ok := spc.mutation.KybVerificationStatus(); !ok {
-		return &ValidationError{Name: "kyb_verification_status", err: errors.New(`ent: missing required field "SenderProfile.kyb_verification_status"`)}
-	}
-	if v, ok := spc.mutation.KybVerificationStatus(); ok {
-		if err := senderprofile.KybVerificationStatusValidator(v); err != nil {
-			return &ValidationError{Name: "kyb_verification_status", err: fmt.Errorf(`ent: validator failed for field "SenderProfile.kyb_verification_status": %w`, err)}
-		}
 	}
 	if _, ok := spc.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "SenderProfile.updated_at"`)}
@@ -370,14 +323,6 @@ func (spc *SenderProfileCreate) createSpec() (*SenderProfile, *sqlgraph.CreateSp
 	if value, ok := spc.mutation.IsActive(); ok {
 		_spec.SetField(senderprofile.FieldIsActive, field.TypeBool, value)
 		_node.IsActive = value
-	}
-	if value, ok := spc.mutation.IsKYBVerified(); ok {
-		_spec.SetField(senderprofile.FieldIsKYBVerified, field.TypeBool, value)
-		_node.IsKYBVerified = value
-	}
-	if value, ok := spc.mutation.KybVerificationStatus(); ok {
-		_spec.SetField(senderprofile.FieldKybVerificationStatus, field.TypeEnum, value)
-		_node.KybVerificationStatus = value
 	}
 	if value, ok := spc.mutation.UpdatedAt(); ok {
 		_spec.SetField(senderprofile.FieldUpdatedAt, field.TypeTime, value)
@@ -588,30 +533,6 @@ func (u *SenderProfileUpsert) UpdateIsActive() *SenderProfileUpsert {
 	return u
 }
 
-// SetIsKYBVerified sets the "isKYBVerified" field.
-func (u *SenderProfileUpsert) SetIsKYBVerified(v bool) *SenderProfileUpsert {
-	u.Set(senderprofile.FieldIsKYBVerified, v)
-	return u
-}
-
-// UpdateIsKYBVerified sets the "isKYBVerified" field to the value that was provided on create.
-func (u *SenderProfileUpsert) UpdateIsKYBVerified() *SenderProfileUpsert {
-	u.SetExcluded(senderprofile.FieldIsKYBVerified)
-	return u
-}
-
-// SetKybVerificationStatus sets the "kyb_verification_status" field.
-func (u *SenderProfileUpsert) SetKybVerificationStatus(v senderprofile.KybVerificationStatus) *SenderProfileUpsert {
-	u.Set(senderprofile.FieldKybVerificationStatus, v)
-	return u
-}
-
-// UpdateKybVerificationStatus sets the "kyb_verification_status" field to the value that was provided on create.
-func (u *SenderProfileUpsert) UpdateKybVerificationStatus() *SenderProfileUpsert {
-	u.SetExcluded(senderprofile.FieldKybVerificationStatus)
-	return u
-}
-
 // SetUpdatedAt sets the "updated_at" field.
 func (u *SenderProfileUpsert) SetUpdatedAt(v time.Time) *SenderProfileUpsert {
 	u.Set(senderprofile.FieldUpdatedAt, v)
@@ -753,34 +674,6 @@ func (u *SenderProfileUpsertOne) SetIsActive(v bool) *SenderProfileUpsertOne {
 func (u *SenderProfileUpsertOne) UpdateIsActive() *SenderProfileUpsertOne {
 	return u.Update(func(s *SenderProfileUpsert) {
 		s.UpdateIsActive()
-	})
-}
-
-// SetIsKYBVerified sets the "isKYBVerified" field.
-func (u *SenderProfileUpsertOne) SetIsKYBVerified(v bool) *SenderProfileUpsertOne {
-	return u.Update(func(s *SenderProfileUpsert) {
-		s.SetIsKYBVerified(v)
-	})
-}
-
-// UpdateIsKYBVerified sets the "isKYBVerified" field to the value that was provided on create.
-func (u *SenderProfileUpsertOne) UpdateIsKYBVerified() *SenderProfileUpsertOne {
-	return u.Update(func(s *SenderProfileUpsert) {
-		s.UpdateIsKYBVerified()
-	})
-}
-
-// SetKybVerificationStatus sets the "kyb_verification_status" field.
-func (u *SenderProfileUpsertOne) SetKybVerificationStatus(v senderprofile.KybVerificationStatus) *SenderProfileUpsertOne {
-	return u.Update(func(s *SenderProfileUpsert) {
-		s.SetKybVerificationStatus(v)
-	})
-}
-
-// UpdateKybVerificationStatus sets the "kyb_verification_status" field to the value that was provided on create.
-func (u *SenderProfileUpsertOne) UpdateKybVerificationStatus() *SenderProfileUpsertOne {
-	return u.Update(func(s *SenderProfileUpsert) {
-		s.UpdateKybVerificationStatus()
 	})
 }
 
@@ -1094,34 +987,6 @@ func (u *SenderProfileUpsertBulk) SetIsActive(v bool) *SenderProfileUpsertBulk {
 func (u *SenderProfileUpsertBulk) UpdateIsActive() *SenderProfileUpsertBulk {
 	return u.Update(func(s *SenderProfileUpsert) {
 		s.UpdateIsActive()
-	})
-}
-
-// SetIsKYBVerified sets the "isKYBVerified" field.
-func (u *SenderProfileUpsertBulk) SetIsKYBVerified(v bool) *SenderProfileUpsertBulk {
-	return u.Update(func(s *SenderProfileUpsert) {
-		s.SetIsKYBVerified(v)
-	})
-}
-
-// UpdateIsKYBVerified sets the "isKYBVerified" field to the value that was provided on create.
-func (u *SenderProfileUpsertBulk) UpdateIsKYBVerified() *SenderProfileUpsertBulk {
-	return u.Update(func(s *SenderProfileUpsert) {
-		s.UpdateIsKYBVerified()
-	})
-}
-
-// SetKybVerificationStatus sets the "kyb_verification_status" field.
-func (u *SenderProfileUpsertBulk) SetKybVerificationStatus(v senderprofile.KybVerificationStatus) *SenderProfileUpsertBulk {
-	return u.Update(func(s *SenderProfileUpsert) {
-		s.SetKybVerificationStatus(v)
-	})
-}
-
-// UpdateKybVerificationStatus sets the "kyb_verification_status" field to the value that was provided on create.
-func (u *SenderProfileUpsertBulk) UpdateKybVerificationStatus() *SenderProfileUpsertBulk {
-	return u.Update(func(s *SenderProfileUpsert) {
-		s.UpdateKybVerificationStatus()
 	})
 }
 

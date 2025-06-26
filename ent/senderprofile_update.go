@@ -114,34 +114,6 @@ func (spu *SenderProfileUpdate) SetNillableIsActive(b *bool) *SenderProfileUpdat
 	return spu
 }
 
-// SetIsKYBVerified sets the "isKYBVerified" field.
-func (spu *SenderProfileUpdate) SetIsKYBVerified(b bool) *SenderProfileUpdate {
-	spu.mutation.SetIsKYBVerified(b)
-	return spu
-}
-
-// SetNillableIsKYBVerified sets the "isKYBVerified" field if the given value is not nil.
-func (spu *SenderProfileUpdate) SetNillableIsKYBVerified(b *bool) *SenderProfileUpdate {
-	if b != nil {
-		spu.SetIsKYBVerified(*b)
-	}
-	return spu
-}
-
-// SetKybVerificationStatus sets the "kyb_verification_status" field.
-func (spu *SenderProfileUpdate) SetKybVerificationStatus(svs senderprofile.KybVerificationStatus) *SenderProfileUpdate {
-	spu.mutation.SetKybVerificationStatus(svs)
-	return spu
-}
-
-// SetNillableKybVerificationStatus sets the "kyb_verification_status" field if the given value is not nil.
-func (spu *SenderProfileUpdate) SetNillableKybVerificationStatus(svs *senderprofile.KybVerificationStatus) *SenderProfileUpdate {
-	if svs != nil {
-		spu.SetKybVerificationStatus(*svs)
-	}
-	return spu
-}
-
 // SetUpdatedAt sets the "updated_at" field.
 func (spu *SenderProfileUpdate) SetUpdatedAt(t time.Time) *SenderProfileUpdate {
 	spu.mutation.SetUpdatedAt(t)
@@ -324,11 +296,6 @@ func (spu *SenderProfileUpdate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (spu *SenderProfileUpdate) check() error {
-	if v, ok := spu.mutation.KybVerificationStatus(); ok {
-		if err := senderprofile.KybVerificationStatusValidator(v); err != nil {
-			return &ValidationError{Name: "kyb_verification_status", err: fmt.Errorf(`ent: validator failed for field "SenderProfile.kyb_verification_status": %w`, err)}
-		}
-	}
 	if spu.mutation.UserCleared() && len(spu.mutation.UserIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "SenderProfile.user"`)
 	}
@@ -372,12 +339,6 @@ func (spu *SenderProfileUpdate) sqlSave(ctx context.Context) (n int, err error) 
 	}
 	if value, ok := spu.mutation.IsActive(); ok {
 		_spec.SetField(senderprofile.FieldIsActive, field.TypeBool, value)
-	}
-	if value, ok := spu.mutation.IsKYBVerified(); ok {
-		_spec.SetField(senderprofile.FieldIsKYBVerified, field.TypeBool, value)
-	}
-	if value, ok := spu.mutation.KybVerificationStatus(); ok {
-		_spec.SetField(senderprofile.FieldKybVerificationStatus, field.TypeEnum, value)
 	}
 	if value, ok := spu.mutation.UpdatedAt(); ok {
 		_spec.SetField(senderprofile.FieldUpdatedAt, field.TypeTime, value)
@@ -646,34 +607,6 @@ func (spuo *SenderProfileUpdateOne) SetNillableIsActive(b *bool) *SenderProfileU
 	return spuo
 }
 
-// SetIsKYBVerified sets the "isKYBVerified" field.
-func (spuo *SenderProfileUpdateOne) SetIsKYBVerified(b bool) *SenderProfileUpdateOne {
-	spuo.mutation.SetIsKYBVerified(b)
-	return spuo
-}
-
-// SetNillableIsKYBVerified sets the "isKYBVerified" field if the given value is not nil.
-func (spuo *SenderProfileUpdateOne) SetNillableIsKYBVerified(b *bool) *SenderProfileUpdateOne {
-	if b != nil {
-		spuo.SetIsKYBVerified(*b)
-	}
-	return spuo
-}
-
-// SetKybVerificationStatus sets the "kyb_verification_status" field.
-func (spuo *SenderProfileUpdateOne) SetKybVerificationStatus(svs senderprofile.KybVerificationStatus) *SenderProfileUpdateOne {
-	spuo.mutation.SetKybVerificationStatus(svs)
-	return spuo
-}
-
-// SetNillableKybVerificationStatus sets the "kyb_verification_status" field if the given value is not nil.
-func (spuo *SenderProfileUpdateOne) SetNillableKybVerificationStatus(svs *senderprofile.KybVerificationStatus) *SenderProfileUpdateOne {
-	if svs != nil {
-		spuo.SetKybVerificationStatus(*svs)
-	}
-	return spuo
-}
-
 // SetUpdatedAt sets the "updated_at" field.
 func (spuo *SenderProfileUpdateOne) SetUpdatedAt(t time.Time) *SenderProfileUpdateOne {
 	spuo.mutation.SetUpdatedAt(t)
@@ -869,11 +802,6 @@ func (spuo *SenderProfileUpdateOne) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (spuo *SenderProfileUpdateOne) check() error {
-	if v, ok := spuo.mutation.KybVerificationStatus(); ok {
-		if err := senderprofile.KybVerificationStatusValidator(v); err != nil {
-			return &ValidationError{Name: "kyb_verification_status", err: fmt.Errorf(`ent: validator failed for field "SenderProfile.kyb_verification_status": %w`, err)}
-		}
-	}
 	if spuo.mutation.UserCleared() && len(spuo.mutation.UserIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "SenderProfile.user"`)
 	}
@@ -934,12 +862,6 @@ func (spuo *SenderProfileUpdateOne) sqlSave(ctx context.Context) (_node *SenderP
 	}
 	if value, ok := spuo.mutation.IsActive(); ok {
 		_spec.SetField(senderprofile.FieldIsActive, field.TypeBool, value)
-	}
-	if value, ok := spuo.mutation.IsKYBVerified(); ok {
-		_spec.SetField(senderprofile.FieldIsKYBVerified, field.TypeBool, value)
-	}
-	if value, ok := spuo.mutation.KybVerificationStatus(); ok {
-		_spec.SetField(senderprofile.FieldKybVerificationStatus, field.TypeEnum, value)
 	}
 	if value, ok := spuo.mutation.UpdatedAt(); ok {
 		_spec.SetField(senderprofile.FieldUpdatedAt, field.TypeTime, value)

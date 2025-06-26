@@ -114,16 +114,16 @@ func (uc *UserCreate) SetNillableHasEarlyAccess(b *bool) *UserCreate {
 	return uc
 }
 
-// SetIsKYBVerified sets the "isKYBVerified" field.
-func (uc *UserCreate) SetIsKYBVerified(b bool) *UserCreate {
-	uc.mutation.SetIsKYBVerified(b)
+// SetKybVerificationStatus sets the "kyb_verification_status" field.
+func (uc *UserCreate) SetKybVerificationStatus(uvs user.KybVerificationStatus) *UserCreate {
+	uc.mutation.SetKybVerificationStatus(uvs)
 	return uc
 }
 
-// SetNillableIsKYBVerified sets the "isKYBVerified" field if the given value is not nil.
-func (uc *UserCreate) SetNillableIsKYBVerified(b *bool) *UserCreate {
-	if b != nil {
-		uc.SetIsKYBVerified(*b)
+// SetNillableKybVerificationStatus sets the "kyb_verification_status" field if the given value is not nil.
+func (uc *UserCreate) SetNillableKybVerificationStatus(uvs *user.KybVerificationStatus) *UserCreate {
+	if uvs != nil {
+		uc.SetKybVerificationStatus(*uvs)
 	}
 	return uc
 }
@@ -273,9 +273,9 @@ func (uc *UserCreate) defaults() error {
 		v := user.DefaultHasEarlyAccess
 		uc.mutation.SetHasEarlyAccess(v)
 	}
-	if _, ok := uc.mutation.IsKYBVerified(); !ok {
-		v := user.DefaultIsKYBVerified
-		uc.mutation.SetIsKYBVerified(v)
+	if _, ok := uc.mutation.KybVerificationStatus(); !ok {
+		v := user.DefaultKybVerificationStatus
+		uc.mutation.SetKybVerificationStatus(v)
 	}
 	if _, ok := uc.mutation.ID(); !ok {
 		if user.DefaultID == nil {
@@ -326,8 +326,13 @@ func (uc *UserCreate) check() error {
 	if _, ok := uc.mutation.HasEarlyAccess(); !ok {
 		return &ValidationError{Name: "has_early_access", err: errors.New(`ent: missing required field "User.has_early_access"`)}
 	}
-	if _, ok := uc.mutation.IsKYBVerified(); !ok {
-		return &ValidationError{Name: "isKYBVerified", err: errors.New(`ent: missing required field "User.isKYBVerified"`)}
+	if _, ok := uc.mutation.KybVerificationStatus(); !ok {
+		return &ValidationError{Name: "kyb_verification_status", err: errors.New(`ent: missing required field "User.kyb_verification_status"`)}
+	}
+	if v, ok := uc.mutation.KybVerificationStatus(); ok {
+		if err := user.KybVerificationStatusValidator(v); err != nil {
+			return &ValidationError{Name: "kyb_verification_status", err: fmt.Errorf(`ent: validator failed for field "User.kyb_verification_status": %w`, err)}
+		}
 	}
 	return nil
 }
@@ -401,9 +406,9 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		_spec.SetField(user.FieldHasEarlyAccess, field.TypeBool, value)
 		_node.HasEarlyAccess = value
 	}
-	if value, ok := uc.mutation.IsKYBVerified(); ok {
-		_spec.SetField(user.FieldIsKYBVerified, field.TypeBool, value)
-		_node.IsKYBVerified = value
+	if value, ok := uc.mutation.KybVerificationStatus(); ok {
+		_spec.SetField(user.FieldKybVerificationStatus, field.TypeEnum, value)
+		_node.KybVerificationStatus = value
 	}
 	if nodes := uc.mutation.SenderProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -617,15 +622,15 @@ func (u *UserUpsert) UpdateHasEarlyAccess() *UserUpsert {
 	return u
 }
 
-// SetIsKYBVerified sets the "isKYBVerified" field.
-func (u *UserUpsert) SetIsKYBVerified(v bool) *UserUpsert {
-	u.Set(user.FieldIsKYBVerified, v)
+// SetKybVerificationStatus sets the "kyb_verification_status" field.
+func (u *UserUpsert) SetKybVerificationStatus(v user.KybVerificationStatus) *UserUpsert {
+	u.Set(user.FieldKybVerificationStatus, v)
 	return u
 }
 
-// UpdateIsKYBVerified sets the "isKYBVerified" field to the value that was provided on create.
-func (u *UserUpsert) UpdateIsKYBVerified() *UserUpsert {
-	u.SetExcluded(user.FieldIsKYBVerified)
+// UpdateKybVerificationStatus sets the "kyb_verification_status" field to the value that was provided on create.
+func (u *UserUpsert) UpdateKybVerificationStatus() *UserUpsert {
+	u.SetExcluded(user.FieldKybVerificationStatus)
 	return u
 }
 
@@ -792,17 +797,17 @@ func (u *UserUpsertOne) UpdateHasEarlyAccess() *UserUpsertOne {
 	})
 }
 
-// SetIsKYBVerified sets the "isKYBVerified" field.
-func (u *UserUpsertOne) SetIsKYBVerified(v bool) *UserUpsertOne {
+// SetKybVerificationStatus sets the "kyb_verification_status" field.
+func (u *UserUpsertOne) SetKybVerificationStatus(v user.KybVerificationStatus) *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
-		s.SetIsKYBVerified(v)
+		s.SetKybVerificationStatus(v)
 	})
 }
 
-// UpdateIsKYBVerified sets the "isKYBVerified" field to the value that was provided on create.
-func (u *UserUpsertOne) UpdateIsKYBVerified() *UserUpsertOne {
+// UpdateKybVerificationStatus sets the "kyb_verification_status" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateKybVerificationStatus() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
-		s.UpdateIsKYBVerified()
+		s.UpdateKybVerificationStatus()
 	})
 }
 
@@ -1136,17 +1141,17 @@ func (u *UserUpsertBulk) UpdateHasEarlyAccess() *UserUpsertBulk {
 	})
 }
 
-// SetIsKYBVerified sets the "isKYBVerified" field.
-func (u *UserUpsertBulk) SetIsKYBVerified(v bool) *UserUpsertBulk {
+// SetKybVerificationStatus sets the "kyb_verification_status" field.
+func (u *UserUpsertBulk) SetKybVerificationStatus(v user.KybVerificationStatus) *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
-		s.SetIsKYBVerified(v)
+		s.SetKybVerificationStatus(v)
 	})
 }
 
-// UpdateIsKYBVerified sets the "isKYBVerified" field to the value that was provided on create.
-func (u *UserUpsertBulk) UpdateIsKYBVerified() *UserUpsertBulk {
+// UpdateKybVerificationStatus sets the "kyb_verification_status" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateKybVerificationStatus() *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
-		s.UpdateIsKYBVerified()
+		s.UpdateKybVerificationStatus()
 	})
 }
 

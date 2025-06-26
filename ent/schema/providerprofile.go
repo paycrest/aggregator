@@ -40,9 +40,6 @@ func (ProviderProfile) Fields() []ent.Field {
 		field.Enum("visibility_mode").
 			Values("private", "public").
 			Default("public"),
-		field.Enum("kyb_verification_status").
-			Values("not_started", "pending", "approved", "declined").
-			Default("not_started"),
 	}
 }
 

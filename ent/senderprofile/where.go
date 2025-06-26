@@ -76,11 +76,6 @@ func IsActive(v bool) predicate.SenderProfile {
 	return predicate.SenderProfile(sql.FieldEQ(FieldIsActive, v))
 }
 
-// IsKYBVerified applies equality check predicate on the "isKYBVerified" field. It's identical to IsKYBVerifiedEQ.
-func IsKYBVerified(v bool) predicate.SenderProfile {
-	return predicate.SenderProfile(sql.FieldEQ(FieldIsKYBVerified, v))
-}
-
 // UpdatedAt applies equality check predicate on the "updated_at" field. It's identical to UpdatedAtEQ.
 func UpdatedAt(v time.Time) predicate.SenderProfile {
 	return predicate.SenderProfile(sql.FieldEQ(FieldUpdatedAt, v))
@@ -254,36 +249,6 @@ func IsActiveEQ(v bool) predicate.SenderProfile {
 // IsActiveNEQ applies the NEQ predicate on the "is_active" field.
 func IsActiveNEQ(v bool) predicate.SenderProfile {
 	return predicate.SenderProfile(sql.FieldNEQ(FieldIsActive, v))
-}
-
-// IsKYBVerifiedEQ applies the EQ predicate on the "isKYBVerified" field.
-func IsKYBVerifiedEQ(v bool) predicate.SenderProfile {
-	return predicate.SenderProfile(sql.FieldEQ(FieldIsKYBVerified, v))
-}
-
-// IsKYBVerifiedNEQ applies the NEQ predicate on the "isKYBVerified" field.
-func IsKYBVerifiedNEQ(v bool) predicate.SenderProfile {
-	return predicate.SenderProfile(sql.FieldNEQ(FieldIsKYBVerified, v))
-}
-
-// KybVerificationStatusEQ applies the EQ predicate on the "kyb_verification_status" field.
-func KybVerificationStatusEQ(v KybVerificationStatus) predicate.SenderProfile {
-	return predicate.SenderProfile(sql.FieldEQ(FieldKybVerificationStatus, v))
-}
-
-// KybVerificationStatusNEQ applies the NEQ predicate on the "kyb_verification_status" field.
-func KybVerificationStatusNEQ(v KybVerificationStatus) predicate.SenderProfile {
-	return predicate.SenderProfile(sql.FieldNEQ(FieldKybVerificationStatus, v))
-}
-
-// KybVerificationStatusIn applies the In predicate on the "kyb_verification_status" field.
-func KybVerificationStatusIn(vs ...KybVerificationStatus) predicate.SenderProfile {
-	return predicate.SenderProfile(sql.FieldIn(FieldKybVerificationStatus, vs...))
-}
-
-// KybVerificationStatusNotIn applies the NotIn predicate on the "kyb_verification_status" field.
-func KybVerificationStatusNotIn(vs ...KybVerificationStatus) predicate.SenderProfile {
-	return predicate.SenderProfile(sql.FieldNotIn(FieldKybVerificationStatus, vs...))
 }
 
 // UpdatedAtEQ applies the EQ predicate on the "updated_at" field.

@@ -37,8 +37,6 @@ type ProviderProfile struct {
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// VisibilityMode holds the value of the "visibility_mode" field.
 	VisibilityMode providerprofile.VisibilityMode `json:"visibility_mode,omitempty"`
-	// KybVerificationStatus holds the value of the "kyb_verification_status" field.
-	KybVerificationStatus providerprofile.KybVerificationStatus `json:"kyb_verification_status,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ProviderProfileQuery when eager-loading is set.
 	Edges                 ProviderProfileEdges `json:"edges"`
@@ -143,7 +141,7 @@ func (*ProviderProfile) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case providerprofile.FieldIsActive, providerprofile.FieldIsAvailable, providerprofile.FieldIsKYBVerified:
 			values[i] = new(sql.NullBool)
-		case providerprofile.FieldID, providerprofile.FieldTradingName, providerprofile.FieldHostIdentifier, providerprofile.FieldProvisionMode, providerprofile.FieldVisibilityMode, providerprofile.FieldKybVerificationStatus:
+		case providerprofile.FieldID, providerprofile.FieldTradingName, providerprofile.FieldHostIdentifier, providerprofile.FieldProvisionMode, providerprofile.FieldVisibilityMode:
 			values[i] = new(sql.NullString)
 		case providerprofile.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -217,12 +215,6 @@ func (pp *ProviderProfile) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field visibility_mode", values[i])
 			} else if value.Valid {
 				pp.VisibilityMode = providerprofile.VisibilityMode(value.String)
-			}
-		case providerprofile.FieldKybVerificationStatus:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field kyb_verification_status", values[i])
-			} else if value.Valid {
-				pp.KybVerificationStatus = providerprofile.KybVerificationStatus(value.String)
 			}
 		case providerprofile.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -325,9 +317,6 @@ func (pp *ProviderProfile) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("visibility_mode=")
 	builder.WriteString(fmt.Sprintf("%v", pp.VisibilityMode))
-	builder.WriteString(", ")
-	builder.WriteString("kyb_verification_status=")
-	builder.WriteString(fmt.Sprintf("%v", pp.KybVerificationStatus))
 	builder.WriteByte(')')
 	return builder.String()
 }

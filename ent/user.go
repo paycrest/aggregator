@@ -39,8 +39,8 @@ type User struct {
 	IsEmailVerified bool `json:"is_email_verified,omitempty"`
 	// HasEarlyAccess holds the value of the "has_early_access" field.
 	HasEarlyAccess bool `json:"has_early_access,omitempty"`
-	// IsKYBVerified holds the value of the "isKYBVerified" field.
-	IsKYBVerified bool `json:"isKYBVerified,omitempty"`
+	// KybVerificationStatus holds the value of the "kyb_verification_status" field.
+	KybVerificationStatus user.KybVerificationStatus `json:"kyb_verification_status,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the UserQuery when eager-loading is set.
 	Edges        UserEdges `json:"edges"`
@@ -109,9 +109,9 @@ func (*User) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case user.FieldIsEmailVerified, user.FieldHasEarlyAccess, user.FieldIsKYBVerified:
+		case user.FieldIsEmailVerified, user.FieldHasEarlyAccess:
 			values[i] = new(sql.NullBool)
-		case user.FieldFirstName, user.FieldLastName, user.FieldEmail, user.FieldPassword, user.FieldScope:
+		case user.FieldFirstName, user.FieldLastName, user.FieldEmail, user.FieldPassword, user.FieldScope, user.FieldKybVerificationStatus:
 			values[i] = new(sql.NullString)
 		case user.FieldCreatedAt, user.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -192,11 +192,11 @@ func (u *User) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				u.HasEarlyAccess = value.Bool
 			}
-		case user.FieldIsKYBVerified:
-			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field isKYBVerified", values[i])
+		case user.FieldKybVerificationStatus:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field kyb_verification_status", values[i])
 			} else if value.Valid {
-				u.IsKYBVerified = value.Bool
+				u.KybVerificationStatus = user.KybVerificationStatus(value.String)
 			}
 		default:
 			u.selectValues.Set(columns[i], values[i])
@@ -280,8 +280,8 @@ func (u *User) String() string {
 	builder.WriteString("has_early_access=")
 	builder.WriteString(fmt.Sprintf("%v", u.HasEarlyAccess))
 	builder.WriteString(", ")
-	builder.WriteString("isKYBVerified=")
-	builder.WriteString(fmt.Sprintf("%v", u.IsKYBVerified))
+	builder.WriteString("kyb_verification_status=")
+	builder.WriteString(fmt.Sprintf("%v", u.KybVerificationStatus))
 	builder.WriteByte(')')
 	return builder.String()
 }

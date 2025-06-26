@@ -433,7 +433,6 @@ var (
 		{Name: "is_kyb_verified", Type: field.TypeBool, Default: false},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "visibility_mode", Type: field.TypeEnum, Enums: []string{"private", "public"}, Default: "public"},
-		{Name: "kyb_verification_status", Type: field.TypeEnum, Enums: []string{"not_started", "pending", "approved", "declined"}, Default: "not_started"},
 		{Name: "user_provider_profile", Type: field.TypeUUID, Unique: true},
 	}
 	// ProviderProfilesTable holds the schema information for the "provider_profiles" table.
@@ -444,7 +443,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "provider_profiles_users_provider_profile",
-				Columns:    []*schema.Column{ProviderProfilesColumns[10]},
+				Columns:    []*schema.Column{ProviderProfilesColumns[9]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -568,8 +567,6 @@ var (
 		{Name: "provider_id", Type: field.TypeString, Nullable: true},
 		{Name: "is_partner", Type: field.TypeBool, Default: false},
 		{Name: "is_active", Type: field.TypeBool, Default: false},
-		{Name: "is_kyb_verified", Type: field.TypeBool, Default: false},
-		{Name: "kyb_verification_status", Type: field.TypeEnum, Enums: []string{"not_started", "pending", "approved", "declined"}, Default: "not_started"},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "user_sender_profile", Type: field.TypeUUID, Unique: true},
 	}
@@ -581,7 +578,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "sender_profiles_users_sender_profile",
-				Columns:    []*schema.Column{SenderProfilesColumns[9]},
+				Columns:    []*schema.Column{SenderProfilesColumns[7]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -657,7 +654,7 @@ var (
 		{Name: "scope", Type: field.TypeString},
 		{Name: "is_email_verified", Type: field.TypeBool, Default: false},
 		{Name: "has_early_access", Type: field.TypeBool, Default: false},
-		{Name: "is_kyb_verified", Type: field.TypeBool, Default: false},
+		{Name: "kyb_verification_status", Type: field.TypeEnum, Enums: []string{"not_started", "pending", "approved", "rejected"}, Default: "not_started"},
 	}
 	// UsersTable holds the schema information for the "users" table.
 	UsersTable = &schema.Table{

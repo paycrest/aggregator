@@ -137,16 +137,16 @@ func (uu *UserUpdate) SetNillableHasEarlyAccess(b *bool) *UserUpdate {
 	return uu
 }
 
-// SetIsKYBVerified sets the "isKYBVerified" field.
-func (uu *UserUpdate) SetIsKYBVerified(b bool) *UserUpdate {
-	uu.mutation.SetIsKYBVerified(b)
+// SetKybVerificationStatus sets the "kyb_verification_status" field.
+func (uu *UserUpdate) SetKybVerificationStatus(uvs user.KybVerificationStatus) *UserUpdate {
+	uu.mutation.SetKybVerificationStatus(uvs)
 	return uu
 }
 
-// SetNillableIsKYBVerified sets the "isKYBVerified" field if the given value is not nil.
-func (uu *UserUpdate) SetNillableIsKYBVerified(b *bool) *UserUpdate {
-	if b != nil {
-		uu.SetIsKYBVerified(*b)
+// SetNillableKybVerificationStatus sets the "kyb_verification_status" field if the given value is not nil.
+func (uu *UserUpdate) SetNillableKybVerificationStatus(uvs *user.KybVerificationStatus) *UserUpdate {
+	if uvs != nil {
+		uu.SetKybVerificationStatus(*uvs)
 	}
 	return uu
 }
@@ -321,6 +321,11 @@ func (uu *UserUpdate) check() error {
 			return &ValidationError{Name: "last_name", err: fmt.Errorf(`ent: validator failed for field "User.last_name": %w`, err)}
 		}
 	}
+	if v, ok := uu.mutation.KybVerificationStatus(); ok {
+		if err := user.KybVerificationStatusValidator(v); err != nil {
+			return &ValidationError{Name: "kyb_verification_status", err: fmt.Errorf(`ent: validator failed for field "User.kyb_verification_status": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -360,8 +365,8 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if value, ok := uu.mutation.HasEarlyAccess(); ok {
 		_spec.SetField(user.FieldHasEarlyAccess, field.TypeBool, value)
 	}
-	if value, ok := uu.mutation.IsKYBVerified(); ok {
-		_spec.SetField(user.FieldIsKYBVerified, field.TypeBool, value)
+	if value, ok := uu.mutation.KybVerificationStatus(); ok {
+		_spec.SetField(user.FieldKybVerificationStatus, field.TypeEnum, value)
 	}
 	if uu.mutation.SenderProfileCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -619,16 +624,16 @@ func (uuo *UserUpdateOne) SetNillableHasEarlyAccess(b *bool) *UserUpdateOne {
 	return uuo
 }
 
-// SetIsKYBVerified sets the "isKYBVerified" field.
-func (uuo *UserUpdateOne) SetIsKYBVerified(b bool) *UserUpdateOne {
-	uuo.mutation.SetIsKYBVerified(b)
+// SetKybVerificationStatus sets the "kyb_verification_status" field.
+func (uuo *UserUpdateOne) SetKybVerificationStatus(uvs user.KybVerificationStatus) *UserUpdateOne {
+	uuo.mutation.SetKybVerificationStatus(uvs)
 	return uuo
 }
 
-// SetNillableIsKYBVerified sets the "isKYBVerified" field if the given value is not nil.
-func (uuo *UserUpdateOne) SetNillableIsKYBVerified(b *bool) *UserUpdateOne {
-	if b != nil {
-		uuo.SetIsKYBVerified(*b)
+// SetNillableKybVerificationStatus sets the "kyb_verification_status" field if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableKybVerificationStatus(uvs *user.KybVerificationStatus) *UserUpdateOne {
+	if uvs != nil {
+		uuo.SetKybVerificationStatus(*uvs)
 	}
 	return uuo
 }
@@ -816,6 +821,11 @@ func (uuo *UserUpdateOne) check() error {
 			return &ValidationError{Name: "last_name", err: fmt.Errorf(`ent: validator failed for field "User.last_name": %w`, err)}
 		}
 	}
+	if v, ok := uuo.mutation.KybVerificationStatus(); ok {
+		if err := user.KybVerificationStatusValidator(v); err != nil {
+			return &ValidationError{Name: "kyb_verification_status", err: fmt.Errorf(`ent: validator failed for field "User.kyb_verification_status": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -872,8 +882,8 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 	if value, ok := uuo.mutation.HasEarlyAccess(); ok {
 		_spec.SetField(user.FieldHasEarlyAccess, field.TypeBool, value)
 	}
-	if value, ok := uuo.mutation.IsKYBVerified(); ok {
-		_spec.SetField(user.FieldIsKYBVerified, field.TypeBool, value)
+	if value, ok := uuo.mutation.KybVerificationStatus(); ok {
+		_spec.SetField(user.FieldKybVerificationStatus, field.TypeEnum, value)
 	}
 	if uuo.mutation.SenderProfileCleared() {
 		edge := &sqlgraph.EdgeSpec{

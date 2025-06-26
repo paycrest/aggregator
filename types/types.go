@@ -17,6 +17,7 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/transactionlog"
+	"github.com/paycrest/aggregator/ent/user"
 	"github.com/shopspring/decimal"
 )
 
@@ -279,8 +280,7 @@ type ProviderProfileResponse struct {
 	APIKey                APIKeyResponse              `json:"apiKey"`
 	IsActive              bool                        `json:"isActive"`
 	VisibilityMode        string                      `json:"visibilityMode"`
-	IsKYBVerified         bool                        `json:"isKYBVerified"`
-	KYBVerificationStatus string                      `json:"kybVerificationStatus"`
+	KYBVerificationStatus user.KybVerificationStatus  `json:"kybVerificationStatus"`
 }
 
 // SenderOrderTokenResponse defines the provider setting for a token
@@ -294,20 +294,18 @@ type SenderOrderTokenResponse struct {
 
 // SenderProfileResponse is the response for the sender profile endpoint
 type SenderProfileResponse struct {
-	ID                 uuid.UUID                  `json:"id"`
-	FirstName          string                     `json:"firstName"`
-	LastName           string                     `json:"lastName"`
-	Email              string                     `json:"email"`
-	WebhookURL         string                     `json:"webhookUrl"`
-	DomainWhitelist    []string                   `json:"domainWhitelist"`
-	Tokens             []SenderOrderTokenResponse `json:"tokens"`
-	APIKey             APIKeyResponse             `json:"apiKey"`
-	ProviderID         string                     `json:"providerId"`
-	ProviderCurrencies []string                   `json:"providerCurrencies"`
-	IsActive           bool                       `json:"isActive"`
-	// IsKYCVerified         bool                       `json:"isKYCVerified"`
-	IsKYBVerified         bool   `json:"isKYBVerified"`
-	KYBVerificationStatus string `json:"kybVerificationStatus"`
+	ID                    uuid.UUID                  `json:"id"`
+	FirstName             string                     `json:"firstName"`
+	LastName              string                     `json:"lastName"`
+	Email                 string                     `json:"email"`
+	WebhookURL            string                     `json:"webhookUrl"`
+	DomainWhitelist       []string                   `json:"domainWhitelist"`
+	Tokens                []SenderOrderTokenResponse `json:"tokens"`
+	APIKey                APIKeyResponse             `json:"apiKey"`
+	ProviderID            string                     `json:"providerId"`
+	ProviderCurrencies    []string                   `json:"providerCurrencies"`
+	IsActive              bool                       `json:"isActive"`
+	KYBVerificationStatus user.KybVerificationStatus `json:"kybVerificationStatus"`
 }
 
 // RefreshResponse is the response for the refresh endpoint

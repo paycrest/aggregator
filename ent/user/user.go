@@ -3,6 +3,7 @@
 package user
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent"
@@ -34,8 +35,8 @@ const (
 	FieldIsEmailVerified = "is_email_verified"
 	// FieldHasEarlyAccess holds the string denoting the has_early_access field in the database.
 	FieldHasEarlyAccess = "has_early_access"
-	// FieldIsKYBVerified holds the string denoting the iskybverified field in the database.
-	FieldIsKYBVerified = "is_kyb_verified"
+	// FieldKybVerificationStatus holds the string denoting the kyb_verification_status field in the database.
+	FieldKybVerificationStatus = "kyb_verification_status"
 	// EdgeSenderProfile holds the string denoting the sender_profile edge name in mutations.
 	EdgeSenderProfile = "sender_profile"
 	// EdgeProviderProfile holds the string denoting the provider_profile edge name in mutations.
@@ -88,7 +89,7 @@ var Columns = []string{
 	FieldScope,
 	FieldIsEmailVerified,
 	FieldHasEarlyAccess,
-	FieldIsKYBVerified,
+	FieldKybVerificationStatus,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -122,11 +123,37 @@ var (
 	DefaultIsEmailVerified bool
 	// DefaultHasEarlyAccess holds the default value on creation for the "has_early_access" field.
 	DefaultHasEarlyAccess bool
-	// DefaultIsKYBVerified holds the default value on creation for the "isKYBVerified" field.
-	DefaultIsKYBVerified bool
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// KybVerificationStatus defines the type for the "kyb_verification_status" enum field.
+type KybVerificationStatus string
+
+// KybVerificationStatusNotStarted is the default value of the KybVerificationStatus enum.
+const DefaultKybVerificationStatus = KybVerificationStatusNotStarted
+
+// KybVerificationStatus values.
+const (
+	KybVerificationStatusNotStarted KybVerificationStatus = "not_started"
+	KybVerificationStatusPending    KybVerificationStatus = "pending"
+	KybVerificationStatusApproved   KybVerificationStatus = "approved"
+	KybVerificationStatusRejected   KybVerificationStatus = "rejected"
+)
+
+func (kvs KybVerificationStatus) String() string {
+	return string(kvs)
+}
+
+// KybVerificationStatusValidator is a validator for the "kyb_verification_status" field enum values. It is called by the builders before save.
+func KybVerificationStatusValidator(kvs KybVerificationStatus) error {
+	switch kvs {
+	case KybVerificationStatusNotStarted, KybVerificationStatusPending, KybVerificationStatusApproved, KybVerificationStatusRejected:
+		return nil
+	default:
+		return fmt.Errorf("user: invalid enum value for kyb_verification_status field: %q", kvs)
+	}
+}
 
 // OrderOption defines the ordering options for the User queries.
 type OrderOption func(*sql.Selector)
@@ -181,9 +208,9 @@ func ByHasEarlyAccess(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldHasEarlyAccess, opts...).ToFunc()
 }
 
-// ByIsKYBVerified orders the results by the isKYBVerified field.
-func ByIsKYBVerified(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldIsKYBVerified, opts...).ToFunc()
+// ByKybVerificationStatus orders the results by the kyb_verification_status field.
+func ByKybVerificationStatus(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldKybVerificationStatus, opts...).ToFunc()
 }
 
 // BySenderProfileField orders the results by sender_profile field.

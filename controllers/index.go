@@ -1155,7 +1155,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			_, err := storage.Client.User.
 				Update().
 				Where(user.IDEQ(kybProfile.Edges.User.ID)).
-				SetIsKYBVerified(true).
+				SetKybVerificationStatus(user.KybVerificationStatusApproved).
 				Save(ctx)
 			if err != nil {
 				logger.Errorf("Failed to approve KYB for user %s (KYB Profile %s): %v", email, kybProfileID, err)
@@ -1296,7 +1296,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			_, err = storage.Client.User.
 				Update().
 				Where(user.EmailEQ(email)).
-				SetIsKYBVerified(false).
+				SetKybVerificationStatus(user.KybVerificationStatusRejected).
 				Save(ctx)
 			if err != nil {
 				logger.Errorf("Failed to reject KYB for user %s (KYB Profile %s): %v", email, kybProfileID, err)

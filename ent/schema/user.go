@@ -40,9 +40,10 @@ func (User) Fields() []ent.Field {
 		field.Bool("is_email_verified").
 			Default(false),
 		field.Bool("has_early_access"). // has_early_access is "false" by default
-			Default(false),
-		field.Bool("isKYBVerified").
-			Default(false),
+						Default(false),
+		field.Enum("kyb_verification_status").
+			Values("not_started", "pending", "approved", "rejected").
+			Default("not_started"),
 	}
 }
 

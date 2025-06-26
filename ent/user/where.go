@@ -101,11 +101,6 @@ func HasEarlyAccess(v bool) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldHasEarlyAccess, v))
 }
 
-// IsKYBVerified applies equality check predicate on the "isKYBVerified" field. It's identical to IsKYBVerifiedEQ.
-func IsKYBVerified(v bool) predicate.User {
-	return predicate.User(sql.FieldEQ(FieldIsKYBVerified, v))
-}
-
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldCreatedAt, v))
@@ -531,14 +526,24 @@ func HasEarlyAccessNEQ(v bool) predicate.User {
 	return predicate.User(sql.FieldNEQ(FieldHasEarlyAccess, v))
 }
 
-// IsKYBVerifiedEQ applies the EQ predicate on the "isKYBVerified" field.
-func IsKYBVerifiedEQ(v bool) predicate.User {
-	return predicate.User(sql.FieldEQ(FieldIsKYBVerified, v))
+// KybVerificationStatusEQ applies the EQ predicate on the "kyb_verification_status" field.
+func KybVerificationStatusEQ(v KybVerificationStatus) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldKybVerificationStatus, v))
 }
 
-// IsKYBVerifiedNEQ applies the NEQ predicate on the "isKYBVerified" field.
-func IsKYBVerifiedNEQ(v bool) predicate.User {
-	return predicate.User(sql.FieldNEQ(FieldIsKYBVerified, v))
+// KybVerificationStatusNEQ applies the NEQ predicate on the "kyb_verification_status" field.
+func KybVerificationStatusNEQ(v KybVerificationStatus) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldKybVerificationStatus, v))
+}
+
+// KybVerificationStatusIn applies the In predicate on the "kyb_verification_status" field.
+func KybVerificationStatusIn(vs ...KybVerificationStatus) predicate.User {
+	return predicate.User(sql.FieldIn(FieldKybVerificationStatus, vs...))
+}
+
+// KybVerificationStatusNotIn applies the NotIn predicate on the "kyb_verification_status" field.
+func KybVerificationStatusNotIn(vs ...KybVerificationStatus) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldKybVerificationStatus, vs...))
 }
 
 // HasSenderProfile applies the HasEdge predicate on the "sender_profile" edge.

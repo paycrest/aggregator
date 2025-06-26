@@ -31,10 +31,6 @@ type SenderProfile struct {
 	IsPartner bool `json:"is_partner,omitempty"`
 	// IsActive holds the value of the "is_active" field.
 	IsActive bool `json:"is_active,omitempty"`
-	// IsKYBVerified holds the value of the "isKYBVerified" field.
-	IsKYBVerified bool `json:"isKYBVerified,omitempty"`
-	// KybVerificationStatus holds the value of the "kyb_verification_status" field.
-	KybVerificationStatus senderprofile.KybVerificationStatus `json:"kyb_verification_status,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -117,9 +113,9 @@ func (*SenderProfile) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case senderprofile.FieldDomainWhitelist:
 			values[i] = new([]byte)
-		case senderprofile.FieldIsPartner, senderprofile.FieldIsActive, senderprofile.FieldIsKYBVerified:
+		case senderprofile.FieldIsPartner, senderprofile.FieldIsActive:
 			values[i] = new(sql.NullBool)
-		case senderprofile.FieldWebhookURL, senderprofile.FieldProviderID, senderprofile.FieldKybVerificationStatus:
+		case senderprofile.FieldWebhookURL, senderprofile.FieldProviderID:
 			values[i] = new(sql.NullString)
 		case senderprofile.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -179,18 +175,6 @@ func (sp *SenderProfile) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field is_active", values[i])
 			} else if value.Valid {
 				sp.IsActive = value.Bool
-			}
-		case senderprofile.FieldIsKYBVerified:
-			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field isKYBVerified", values[i])
-			} else if value.Valid {
-				sp.IsKYBVerified = value.Bool
-			}
-		case senderprofile.FieldKybVerificationStatus:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field kyb_verification_status", values[i])
-			} else if value.Valid {
-				sp.KybVerificationStatus = senderprofile.KybVerificationStatus(value.String)
 			}
 		case senderprofile.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -280,12 +264,6 @@ func (sp *SenderProfile) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("is_active=")
 	builder.WriteString(fmt.Sprintf("%v", sp.IsActive))
-	builder.WriteString(", ")
-	builder.WriteString("isKYBVerified=")
-	builder.WriteString(fmt.Sprintf("%v", sp.IsKYBVerified))
-	builder.WriteString(", ")
-	builder.WriteString("kyb_verification_status=")
-	builder.WriteString(fmt.Sprintf("%v", sp.KybVerificationStatus))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
 	builder.WriteString(sp.UpdatedAt.Format(time.ANSIC))
