@@ -1415,8 +1415,24 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		return
 	}
 
-	// Create KYB submission
-	kybBuilder := storage.Client.KYBProfile.
+	// --- Begin Transaction ---
+	tx, err := storage.Client.Tx(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": userID,
+		}).Errorf("Error: Failed to start transaction")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to process request", nil)
+		return
+	}
+	defer func() {
+		if p := recover(); p != nil {
+			tx.Rollback()
+			panic(p)
+		}
+	}()
+
+	kybBuilder := tx.KYBProfile.
 		Create().
 		SetMobileNumber(input.MobileNumber).
 		SetCompanyName(input.CompanyName).
@@ -1438,6 +1454,7 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 
 	kybSubmission, err := kybBuilder.Save(ctx)
 	if err != nil {
+		tx.Rollback()
 		logger.WithFields(logger.Fields{
 			"Error":  fmt.Sprintf("%v", err),
 			"UserID": userID,
@@ -1446,9 +1463,8 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		return
 	}
 
-	// Create beneficial owners
 	for _, owner := range input.BeneficialOwners {
-		_, err := storage.Client.BeneficialOwner.
+		_, err := tx.BeneficialOwner.
 			Create().
 			SetFullName(owner.FullName).
 			SetResidentialAddress(owner.ResidentialAddress).
@@ -1460,6 +1476,7 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 			SetKybProfileID(kybSubmission.ID).
 			Save(ctx)
 		if err != nil {
+			tx.Rollback()
 			logger.WithFields(logger.Fields{
 				"Error":  fmt.Sprintf("%v", err),
 				"UserID": userID,
@@ -1469,7 +1486,17 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		}
 	}
 
-	// ✅ Send Slack notification
+	// Commit transaction
+	if err := tx.Commit(); err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": userID,
+		}).Errorf("Error: Failed to commit transaction")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to process request", nil)
+		return
+	}
+
+	// ✅ Send Slack notification (outside transaction)
 	err = ctrl.slackService.SendSubmissionNotification(userRecord.FirstName, userRecord.Email, kybSubmission.ID.String())
 	if err != nil {
 		logger.Errorf("Webhook log: Error sending Slack notification for submission %s: %v", kybSubmission.ID, err)
