@@ -334,3 +334,57 @@ type SmileIDWebhookPayload struct {
 	Timestamp string `json:"timestamp"`
 	// Add other fields as needed
 }
+
+// UpdateKYCWalletAddress moves the KYC record to a new wallet address in the database
+func (s *SmileIDService) UpdateKYCWalletAddress(ctx context.Context, req types.UpdateKYCWalletAddressRequest) (*types.UpdateKYCWalletAddressResponse, error) {
+	// Validate secret key from header
+	if req.SecretKey != s.identityConf.KYCSecretKey {
+		return nil, kycErrors.ErrInvalidSecretKey{}
+	}
+
+	// Query existing KYC record for old wallet address
+	ivr, err := s.db.IdentityVerificationRequest.
+		Query().
+		Where(identityverificationrequest.WalletAddressEQ(req.OldWalletAddress)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, kycErrors.ErrKYCNotFound{}
+		}
+		return nil, kycErrors.ErrDatabase{Err: err}
+	}
+
+	// Verify KYC status
+	if ivr.Status != identityverificationrequest.StatusSuccess {
+		return nil, kycErrors.ErrNotVerified{}
+	}
+
+	// Check if new wallet address is already associated with a KYC record
+	exists, err := s.db.IdentityVerificationRequest.
+		Query().
+		Where(identityverificationrequest.WalletAddressEQ(req.NewWalletAddress)).
+		Exist(ctx)
+	if err != nil {
+		return nil, kycErrors.ErrDatabase{Err: err}
+	}
+	if exists {
+		return nil, kycErrors.ErrAlreadyVerified{}
+	}
+
+	// Update database with new wallet address
+	timestamp := time.Now()
+	_, err = ivr.
+		Update().
+		SetWalletAddress(req.NewWalletAddress).
+		SetUpdatedAt(timestamp).
+		Save(ctx)
+	if err != nil {
+		return nil, kycErrors.ErrDatabase{Err: err}
+	}
+
+	return &types.UpdateKYCWalletAddressResponse{
+		OldWalletAddress: req.OldWalletAddress,
+		NewWalletAddress: req.NewWalletAddress,
+		UpdatedAt:        timestamp,
+	}, nil
+}
