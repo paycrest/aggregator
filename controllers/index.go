@@ -1743,7 +1743,6 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 	u.APIResponse(ctx, http.StatusOK, "success", "Transaction indexing completed", response)
 }
 
-
 // UpdateKYCWalletAddress moves the KYC record to a new wallet address
 func (ctrl *Controller) UpdateKYCWalletAddress(ctx *gin.Context) {
 	var payload types.UpdateKYCWalletAddressRequest
@@ -1770,7 +1769,7 @@ func (ctrl *Controller) UpdateKYCWalletAddress(ctx *gin.Context) {
 	// Call service with request context
 	response, err := ctrl.kycService.UpdateKYCWalletAddress(ctx.Request.Context(), payload)
 	if err != nil {
-		switch err {
+		switch err.(type) {
 		case kycErrors.ErrInvalidSecretKey:
 			u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid secret key", nil)
 		case kycErrors.ErrKYCNotFound:
@@ -1780,14 +1779,14 @@ func (ctrl *Controller) UpdateKYCWalletAddress(ctx *gin.Context) {
 		case kycErrors.ErrAlreadyVerified:
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "New wallet address is already verified", nil)
 		case kycErrors.ErrDatabase:
-			loger.WithFields(loger.Fields{
+			logger.WithFields(logger.Fields{
 				"Error":            fmt.Sprintf("%v", err),
 				"OldWalletAddress": payload.OldWalletAddress,
 				"NewWalletAddress": payload.NewWalletAddress,
 			}).Error("Database error during KYC wallet address update")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update KYC wallet address", nil)
 		default:
-			loger.WithFields(loger.Fields{
+			logger.WithFields(logger.Fields{
 				"Error":            fmt.Sprintf("%v", err),
 				"OldWalletAddress": payload.OldWalletAddress,
 				"NewWalletAddress": payload.NewWalletAddress,
@@ -1799,3 +1798,4 @@ func (ctrl *Controller) UpdateKYCWalletAddress(ctx *gin.Context) {
 
 	u.APIResponse(ctx, http.StatusOK, "success", "KYC wallet address updated successfully", response)
 }
+
