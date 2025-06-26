@@ -45,60 +45,12 @@ import (
 var orderConf = config.OrderConfig()
 var serverConf = config.ServerConfig()
 
-var rpcClients = map[string]types.RPCClient{}
-
-// setRPCClients connects to the RPC endpoints of all networks
-func setRPCClients(ctx context.Context) ([]*ent.Network, error) {
-	isTestnet := false
-	if serverConf.Environment != "production" {
-		isTestnet = true
-	}
-
-	networks, err := storage.Client.Network.
-		Query().
-		Where(networkent.IsTestnetEQ(isTestnet)).
-		All(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("setRPCClients.fetchNetworks: %w", err)
-	}
-
-	// Connect to RPC endpoint
-	var client types.RPCClient
-	for _, network := range networks {
-		if rpcClients[network.Identifier] == nil && !strings.HasPrefix(network.Identifier, "tron") {
-			retryErr := utils.Retry(3, 1*time.Second, func() error {
-				client, err = types.NewEthClient(network.RPCEndpoint)
-				return err
-			})
-			if retryErr != nil {
-				logger.WithFields(logger.Fields{
-					"Error":   fmt.Sprintf("%v", err),
-					"Network": network.Identifier,
-				}).Errorf("failed to connect to RPC client")
-				continue
-			}
-
-			rpcClients[network.Identifier] = client
-		}
-	}
-
-	return networks, nil
-}
-
 // RetryStaleUserOperations retries stale user operations
 // TODO: Fetch failed orders from a separate db table and process them
 func RetryStaleUserOperations() error {
-	// ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
-	// defer cancel()
 	ctx := context.Background()
 
 	var wg sync.WaitGroup
-
-	// Establish RPC connections
-	_, err := setRPCClients(ctx)
-	if err != nil {
-		return fmt.Errorf("RetryStaleUserOperations: %w", err)
-	}
 
 	// Create initiated orders
 	orders, err := storage.Client.PaymentOrder.
@@ -923,15 +875,7 @@ func FixDatabaseMisHap() error {
 
 // HandleReceiveAddressValidity handles receive address validity
 func HandleReceiveAddressValidity() error {
-	// ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	// defer cancel()
 	ctx := context.Background()
-
-	// Establish RPC connections
-	_, err := setRPCClients(ctx)
-	if err != nil {
-		return fmt.Errorf("HandleReceiveAddressValidity: %w", err)
-	}
 
 	// Fetch expired receive addresses that are due for validity check
 	addresses, err := storage.Client.ReceiveAddress.
@@ -1290,8 +1234,8 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for RetryStaleUserOperations: %v", err)
 	}
 
-	// Index blockchain events every 2 seconds
-	_, err = scheduler.Every(2).Seconds().Do(TaskIndexBlockchainEvents)
+	// Index blockchain events every 5 seconds
+	_, err = scheduler.Every(5).Seconds().Do(TaskIndexBlockchainEvents)
 	if err != nil {
 		logger.Errorf("StartCronJobs for IndexBlockchainEvents: %v", err)
 	}

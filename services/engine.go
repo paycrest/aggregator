@@ -8,6 +8,7 @@ import (
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/utils"
+	"github.com/paycrest/aggregator/utils/logger"
 )
 
 // EngineService provides functionality for interacting with the engine/thirdweb API
@@ -26,13 +27,13 @@ func NewEngineService() *EngineService {
 func (s *EngineService) CreateServerWallet(ctx context.Context, label string) (string, error) {
 	res, err := fastshot.NewClient(s.config.BaseURL).
 		Config().SetTimeout(30 * time.Second).
-		Auth().BearerToken(s.config.AccessToken).
 		Header().AddAll(map[string]string{
+		"Accept":       "application/json",
 		"Content-Type": "application/json",
-	}).Build().POST("/backend-wallet/create").
+		"X-Secret-Key": s.config.ThirdwebSecretKey,
+	}).Build().POST("/v1/accounts").
 		Body().AsJSON(map[string]interface{}{
 		"label": label,
-		"type":  "smart:local",
 	}).Send()
 	if err != nil {
 		return "", fmt.Errorf("failed to create smart address: %w", err)
@@ -43,19 +44,18 @@ func (s *EngineService) CreateServerWallet(ctx context.Context, label string) (s
 		return "", fmt.Errorf("failed to parse JSON response: %w", err)
 	}
 
-	return data["result"].(map[string]interface{})["walletAddress"].(string), nil
+	return data["result"].(map[string]interface{})["smartAccountAddress"].(string), nil
 }
 
 // GetLatestBlock fetches the latest block number for a given chain ID
 func (s *EngineService) GetLatestBlock(ctx context.Context, chainID int64) (int64, error) {
-	res, err := fastshot.NewClient("https://insight.thirdweb.com").
+	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
 		Config().SetTimeout(30 * time.Second).
 		Header().AddAll(map[string]string{
 		"Content-Type": "application/json",
 		"X-Secret-Key": s.config.ThirdwebSecretKey,
 	}).Build().GET("/v1/blocks").
 		Query().AddParams(map[string]string{
-		"chain_id":   fmt.Sprintf("%d", chainID),
 		"sort_order": "desc",
 		"limit":      "1",
 	}).Send()
@@ -77,37 +77,48 @@ func (s *EngineService) GetLatestBlock(ctx context.Context, chainID int64) (int6
 }
 
 // GetContractEvents fetches contract events
-func (s *EngineService) GetContractEvents(ctx context.Context, chainID int64, contractAddress string, payload map[string]interface{}) ([]interface{}, error) {
-	res, err := fastshot.NewClient(s.config.BaseURL).
+func (s *EngineService) GetContractEvents(ctx context.Context, chainID int64, contractAddress string, payload map[string]string) ([]interface{}, error) {
+	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
 		Config().SetTimeout(30 * time.Second).
-		Auth().BearerToken(s.config.AccessToken).
 		Header().AddAll(map[string]string{
+		"Accept":       "application/json",
 		"Content-Type": "application/json",
-	}).Build().POST(fmt.Sprintf("/contract/%d/%s/events/get", chainID, contractAddress)).
-		Body().AsJSON(payload).Send()
+		"X-Secret-Key": s.config.ThirdwebSecretKey,
+	}).Build().GET(fmt.Sprintf("/v1/events/%s", contractAddress)).
+		Query().AddParams(payload).Send()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get contract events: %w", err)
 	}
 
 	data, err := utils.ParseJSONResponse(res.RawResponse)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse JSON response: %w %v", err, data)
+		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
 	}
 
-	return data["result"].([]interface{}), nil
+	if data["meta"].(map[string]interface{})["total_items"].(float64) == 0 {
+		return nil, fmt.Errorf("no events found")
+	}
+
+	return data["data"].([]interface{}), nil
 }
 
 // SendTransactionBatch sends a batch of transactions
 func (s *EngineService) SendTransactionBatch(ctx context.Context, chainID int64, address string, txPayload []map[string]interface{}) (queueID string, err error) {
 	res, err := fastshot.NewClient(s.config.BaseURL).
-		Config().SetTimeout(30*time.Second).
-		Auth().BearerToken(s.config.AccessToken).
-		Header().Add("Accept", "application/json").
-		Header().Add("Content-Type", "application/json").
-		Header().Add("x-backend-wallet-address", address).
-		Build().POST(fmt.Sprintf("/backend-wallet/%d/send-transaction-batch-atomic", chainID)).
+		Config().SetTimeout(30 * time.Second).
+		Header().AddAll(map[string]string{
+		"Accept":               "application/json",
+		"Content-Type":         "application/json",
+		"x-vault-access-token": s.config.AccessToken,
+		"X-Secret-Key":         s.config.ThirdwebSecretKey,
+	}).
+		Build().POST("/v1/write/transaction").
 		Body().AsJSON(map[string]interface{}{
-		"transactions": txPayload,
+		"params": txPayload,
+		"executionOptions": map[string]string{
+			"chainId": fmt.Sprintf("%d", chainID),
+			"from":    address,
+		},
 	}).Send()
 	if err != nil {
 		return "", fmt.Errorf("failed to send transaction batch: %w", err)
@@ -118,7 +129,7 @@ func (s *EngineService) SendTransactionBatch(ctx context.Context, chainID int64,
 		return "", fmt.Errorf("failed to parse JSON response: %w", err)
 	}
 
-	queueID = data["result"].(map[string]interface{})["queueId"].(string)
+	queueID = data["result"].(map[string]interface{})["transactions"].([]interface{})[0].(map[string]interface{})["id"].(string)
 
 	return
 }
@@ -126,10 +137,23 @@ func (s *EngineService) SendTransactionBatch(ctx context.Context, chainID int64,
 // GetTransactionStatus gets the status of a transaction
 func (s *EngineService) GetTransactionStatus(ctx context.Context, queueId string) (result map[string]interface{}, err error) {
 	res, err := fastshot.NewClient(s.config.BaseURL).
-		Config().SetTimeout(30*time.Second).
-		Auth().BearerToken(s.config.AccessToken).
-		Header().Add("Content-Type", "application/json").
-		Build().GET(fmt.Sprintf("/transaction/status/%s", queueId)).Send()
+		Config().SetTimeout(30 * time.Second).
+		Header().AddAll(map[string]string{
+		"Accept":       "application/json",
+		"Content-Type": "application/json",
+		"x-vault-access-token": s.config.AccessToken,
+		"X-Secret-Key": s.config.ThirdwebSecretKey,
+	}).
+		Build().POST("/v1/transactions/search").
+		Body().AsJSON(map[string]interface{}{
+		"filters": []map[string]interface{}{
+			{
+				"field":     "id",
+				"values":    []string{queueId},
+				"operation": "OR",
+			},
+		},
+	}).Send()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get transaction status: %w", err)
 	}
@@ -139,7 +163,7 @@ func (s *EngineService) GetTransactionStatus(ctx context.Context, queueId string
 		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
 	}
 
-	result = data["result"].(map[string]interface{})
+	result = data["result"].(map[string]interface{})["transactions"].([]interface{})[0].(map[string]interface{})
 
 	return
 }
@@ -153,10 +177,15 @@ func (s *EngineService) WaitForTransactionMined(ctx context.Context, queueId str
 			return nil, err
 		}
 
-		if result["status"] == "mined" && result["transactionHash"] != nil {
+		if result["executionResult"].(map[string]interface{})["status"].(string) == "CONFIRMED" && result["transactionHash"] != nil {
 			return result, nil
-		} else if result["status"] == "errored" {
-			return nil, fmt.Errorf("transaction failed: %v", result["errorMessage"])
+		} else if result["executionResult"].(map[string]interface{})["status"].(string) == "FAILED" {
+			logger.WithFields(logger.Fields{
+				"QueueId": queueId,
+				"From":    result["from"].(string),
+				"Error":   result["executionResult"].(map[string]interface{})["error"],
+			}).Errorf("Transaction failed: %v", result["executionResult"].(map[string]interface{})["error"])
+			return nil, fmt.Errorf("transaction failed: %v", result["executionResult"].(map[string]interface{})["error"])
 		}
 
 		elapsed := time.Since(start)
