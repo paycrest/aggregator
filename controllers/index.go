@@ -1510,62 +1510,6 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 	})
 }
 
-// UpdateKYCWalletAddress moves the KYC record to a new wallet address
-func (ctrl *Controller) HandleWalletAddressUpdateForKYC(ctx *gin.Context) {
-	var payload types.UpdateKYCWalletAddressRequest
-
-	// Extract secret key from header
-	payload.SecretKey = ctx.GetHeader("X-Secret-Key")
-	if payload.SecretKey == "" {
-		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Missing secret key", nil)
-		return
-	}
-
-	// Bind and validate JSON payload
-	if err := ctx.ShouldBindJSON(&payload); err != nil {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", u.GetErrorData(err))
-		return
-	}
-
-	// Basic payload validation
-	if payload.OldWalletAddress == "" || payload.NewWalletAddress == "" {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "OldWalletAddress and NewWalletAddress are required", nil)
-		return
-	}
-
-	// Call service with request context
-	response, err := ctrl.kycService.UpdateKYCWalletAddress(ctx.Request.Context(), payload)
-	if err != nil {
-		switch err.(type) {
-		case kycErrors.ErrInvalidSecretKey:
-			u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid secret key", nil)
-		case kycErrors.ErrKYCNotFound:
-			u.APIResponse(ctx, http.StatusNotFound, "error", "No verification request found for this wallet address", nil)
-		case kycErrors.ErrNotVerified:
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "This account has not been verified", nil)
-		case kycErrors.ErrAlreadyVerified:
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "New wallet address is already verified", nil)
-		case kycErrors.ErrDatabase:
-			logger.WithFields(logger.Fields{
-				"Error":            fmt.Sprintf("%v", err),
-				"OldWalletAddress": payload.OldWalletAddress,
-				"NewWalletAddress": payload.NewWalletAddress,
-			}).Error("Database error during KYC wallet address update")
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update KYC wallet address", nil)
-		default:
-			logger.WithFields(logger.Fields{
-				"Error":            fmt.Sprintf("%v", err),
-				"OldWalletAddress": payload.OldWalletAddress,
-				"NewWalletAddress": payload.NewWalletAddress,
-			}).Error("Failed to update KYC wallet address")
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update KYC wallet address", nil)
-		}
-		return
-	}
-
-	u.APIResponse(ctx, http.StatusOK, "success", "KYC wallet address updated successfully", response)
-}
-
 // IndexTransaction controller indexes a specific transaction for blockchain events
 func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 	// Get network and txHash from URL parameters
@@ -1769,7 +1713,7 @@ func (ctrl *Controller) HandleWalletAddressUpdateForKYC(ctx *gin.Context) {
 	// Call service with request context
 	response, err := ctrl.kycService.UpdateKYCWalletAddress(ctx.Request.Context(), payload)
 	if err != nil {
-		switch err {
+		switch err.(type) {
 		case kycErrors.ErrInvalidSecretKey:
 			u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid secret key", nil)
 		case kycErrors.ErrKYCNotFound:
@@ -1779,14 +1723,14 @@ func (ctrl *Controller) HandleWalletAddressUpdateForKYC(ctx *gin.Context) {
 		case kycErrors.ErrAlreadyVerified:
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "New wallet address is already verified", nil)
 		case kycErrors.ErrDatabase:
-			loger.WithFields(loger.Fields{
+			logger.WithFields(logger.Fields{
 				"Error":            fmt.Sprintf("%v", err),
 				"OldWalletAddress": payload.OldWalletAddress,
 				"NewWalletAddress": payload.NewWalletAddress,
 			}).Error("Database error during KYC wallet address update")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update KYC wallet address", nil)
 		default:
-			loger.WithFields(loger.Fields{
+			logger.WithFields(logger.Fields{
 				"Error":            fmt.Sprintf("%v", err),
 				"OldWalletAddress": payload.OldWalletAddress,
 				"NewWalletAddress": payload.NewWalletAddress,
