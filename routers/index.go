@@ -52,6 +52,7 @@ func RegisterRoutes(route *gin.Engine) {
 	v1.GET("kyc/:wallet_address", ctrl.GetIDVerificationStatus)
 	v1.PUT("kyc/move-wallet-address", ctrl.UpdateKYCWalletAddress)
 	v1.POST("kyc/webhook", ctrl.KYCWebhook)
+	v1.PUT("kyc/move-wallet-address", ctrl.UpdateKYCWalletAddress)
 
 	// Linked address routes
 	v1.POST("linked-addresses", middleware.PrivyMiddleware, ctrl.CreateLinkedAddress)
