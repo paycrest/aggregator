@@ -11,7 +11,6 @@ type NotificationConfiguration struct {
 	EmailDomain        string
 	EmailAPIKey        string
 	EmailFromAddress   string
-	VerificationLink   string
 	SlackBotToken      string
 	SlackSigningSecret string
 }
@@ -25,7 +24,6 @@ func NotificationConfig() (config *NotificationConfiguration) {
 		EmailDomain:        viper.GetString("EMAIL_DOMAIN"),
 		EmailAPIKey:        viper.GetString("EMAIL_API_KEY"),
 		EmailFromAddress:   viper.GetString("EMAIL_FROM_ADDRESS"),
-		VerificationLink:   viper.GetString("VERIFICATION_LINK"),
 		SlackBotToken:      viper.GetString("SLACK_BOT_TOKEN"),
 		SlackSigningSecret: viper.GetString("SLACK_SIGNING_SECRET"),
 	}
