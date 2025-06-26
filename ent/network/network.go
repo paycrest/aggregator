@@ -26,6 +26,8 @@ const (
 	FieldRPCEndpoint = "rpc_endpoint"
 	// FieldGatewayContractAddress holds the string denoting the gateway_contract_address field in the database.
 	FieldGatewayContractAddress = "gateway_contract_address"
+	// FieldBlockTime holds the string denoting the block_time field in the database.
+	FieldBlockTime = "block_time"
 	// FieldIsTestnet holds the string denoting the is_testnet field in the database.
 	FieldIsTestnet = "is_testnet"
 	// FieldBundlerURL holds the string denoting the bundler_url field in the database.
@@ -56,6 +58,7 @@ var Columns = []string{
 	FieldIdentifier,
 	FieldRPCEndpoint,
 	FieldGatewayContractAddress,
+	FieldBlockTime,
 	FieldIsTestnet,
 	FieldBundlerURL,
 	FieldPaymasterURL,
@@ -119,6 +122,11 @@ func ByRPCEndpoint(opts ...sql.OrderTermOption) OrderOption {
 // ByGatewayContractAddress orders the results by the gateway_contract_address field.
 func ByGatewayContractAddress(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldGatewayContractAddress, opts...).ToFunc()
+}
+
+// ByBlockTime orders the results by the block_time field.
+func ByBlockTime(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBlockTime, opts...).ToFunc()
 }
 
 // ByIsTestnet orders the results by the is_testnet field.

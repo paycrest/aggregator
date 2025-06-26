@@ -84,6 +84,12 @@ func (nc *NetworkCreate) SetNillableGatewayContractAddress(s *string) *NetworkCr
 	return nc
 }
 
+// SetBlockTime sets the "block_time" field.
+func (nc *NetworkCreate) SetBlockTime(d decimal.Decimal) *NetworkCreate {
+	nc.mutation.SetBlockTime(d)
+	return nc
+}
+
 // SetIsTestnet sets the "is_testnet" field.
 func (nc *NetworkCreate) SetIsTestnet(b bool) *NetworkCreate {
 	nc.mutation.SetIsTestnet(b)
@@ -208,6 +214,9 @@ func (nc *NetworkCreate) check() error {
 	if _, ok := nc.mutation.GatewayContractAddress(); !ok {
 		return &ValidationError{Name: "gateway_contract_address", err: errors.New(`ent: missing required field "Network.gateway_contract_address"`)}
 	}
+	if _, ok := nc.mutation.BlockTime(); !ok {
+		return &ValidationError{Name: "block_time", err: errors.New(`ent: missing required field "Network.block_time"`)}
+	}
 	if _, ok := nc.mutation.IsTestnet(); !ok {
 		return &ValidationError{Name: "is_testnet", err: errors.New(`ent: missing required field "Network.is_testnet"`)}
 	}
@@ -264,6 +273,10 @@ func (nc *NetworkCreate) createSpec() (*Network, *sqlgraph.CreateSpec) {
 	if value, ok := nc.mutation.GatewayContractAddress(); ok {
 		_spec.SetField(network.FieldGatewayContractAddress, field.TypeString, value)
 		_node.GatewayContractAddress = value
+	}
+	if value, ok := nc.mutation.BlockTime(); ok {
+		_spec.SetField(network.FieldBlockTime, field.TypeFloat64, value)
+		_node.BlockTime = value
 	}
 	if value, ok := nc.mutation.IsTestnet(); ok {
 		_spec.SetField(network.FieldIsTestnet, field.TypeBool, value)
@@ -412,6 +425,24 @@ func (u *NetworkUpsert) SetGatewayContractAddress(v string) *NetworkUpsert {
 // UpdateGatewayContractAddress sets the "gateway_contract_address" field to the value that was provided on create.
 func (u *NetworkUpsert) UpdateGatewayContractAddress() *NetworkUpsert {
 	u.SetExcluded(network.FieldGatewayContractAddress)
+	return u
+}
+
+// SetBlockTime sets the "block_time" field.
+func (u *NetworkUpsert) SetBlockTime(v decimal.Decimal) *NetworkUpsert {
+	u.Set(network.FieldBlockTime, v)
+	return u
+}
+
+// UpdateBlockTime sets the "block_time" field to the value that was provided on create.
+func (u *NetworkUpsert) UpdateBlockTime() *NetworkUpsert {
+	u.SetExcluded(network.FieldBlockTime)
+	return u
+}
+
+// AddBlockTime adds v to the "block_time" field.
+func (u *NetworkUpsert) AddBlockTime(v decimal.Decimal) *NetworkUpsert {
+	u.Add(network.FieldBlockTime, v)
 	return u
 }
 
@@ -600,6 +631,27 @@ func (u *NetworkUpsertOne) SetGatewayContractAddress(v string) *NetworkUpsertOne
 func (u *NetworkUpsertOne) UpdateGatewayContractAddress() *NetworkUpsertOne {
 	return u.Update(func(s *NetworkUpsert) {
 		s.UpdateGatewayContractAddress()
+	})
+}
+
+// SetBlockTime sets the "block_time" field.
+func (u *NetworkUpsertOne) SetBlockTime(v decimal.Decimal) *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetBlockTime(v)
+	})
+}
+
+// AddBlockTime adds v to the "block_time" field.
+func (u *NetworkUpsertOne) AddBlockTime(v decimal.Decimal) *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.AddBlockTime(v)
+	})
+}
+
+// UpdateBlockTime sets the "block_time" field to the value that was provided on create.
+func (u *NetworkUpsertOne) UpdateBlockTime() *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateBlockTime()
 	})
 }
 
@@ -965,6 +1017,27 @@ func (u *NetworkUpsertBulk) SetGatewayContractAddress(v string) *NetworkUpsertBu
 func (u *NetworkUpsertBulk) UpdateGatewayContractAddress() *NetworkUpsertBulk {
 	return u.Update(func(s *NetworkUpsert) {
 		s.UpdateGatewayContractAddress()
+	})
+}
+
+// SetBlockTime sets the "block_time" field.
+func (u *NetworkUpsertBulk) SetBlockTime(v decimal.Decimal) *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetBlockTime(v)
+	})
+}
+
+// AddBlockTime adds v to the "block_time" field.
+func (u *NetworkUpsertBulk) AddBlockTime(v decimal.Decimal) *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.AddBlockTime(v)
+	})
+}
+
+// UpdateBlockTime sets the "block_time" field to the value that was provided on create.
+func (u *NetworkUpsertBulk) UpdateBlockTime() *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateBlockTime()
 	})
 }
 
