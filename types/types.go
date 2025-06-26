@@ -162,10 +162,6 @@ type UpdateKYCWalletAddressResponse struct {
 	UpdatedAt        time.Time `json:"updatedAt"`
 }
 
-<<<<<<< HEAD
-=======
-
->>>>>>> ce21aff8 (feat: implement KYC wallet address update functionality)
 // RegisterPayload is the payload for the register endpoint
 type RegisterPayload struct {
 	FirstName  string   `json:"firstName" binding:"required"`
