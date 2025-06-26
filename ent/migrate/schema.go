@@ -135,7 +135,6 @@ var (
 		{Name: "articles_of_incorporation_url", Type: field.TypeString},
 		{Name: "business_license_url", Type: field.TypeString, Nullable: true},
 		{Name: "proof_of_business_address_url", Type: field.TypeString},
-		{Name: "proof_of_residential_address_url", Type: field.TypeString},
 		{Name: "aml_policy_url", Type: field.TypeString, Nullable: true},
 		{Name: "kyc_policy_url", Type: field.TypeString, Nullable: true},
 		{Name: "user_kyb_profile", Type: field.TypeUUID, Unique: true, Nullable: true},
@@ -148,7 +147,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "kyb_profiles_users_kyb_profile",
-				Columns:    []*schema.Column{KybProfilesColumns[13]},
+				Columns:    []*schema.Column{KybProfilesColumns[12]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Cascade,
 			},

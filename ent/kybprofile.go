@@ -37,8 +37,6 @@ type KYBProfile struct {
 	BusinessLicenseURL *string `json:"business_license_url,omitempty"`
 	// ProofOfBusinessAddressURL holds the value of the "proof_of_business_address_url" field.
 	ProofOfBusinessAddressURL string `json:"proof_of_business_address_url,omitempty"`
-	// ProofOfResidentialAddressURL holds the value of the "proof_of_residential_address_url" field.
-	ProofOfResidentialAddressURL string `json:"proof_of_residential_address_url,omitempty"`
 	// AmlPolicyURL holds the value of the "aml_policy_url" field.
 	AmlPolicyURL string `json:"aml_policy_url,omitempty"`
 	// KycPolicyURL holds the value of the "kyc_policy_url" field.
@@ -86,7 +84,7 @@ func (*KYBProfile) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case kybprofile.FieldMobileNumber, kybprofile.FieldCompanyName, kybprofile.FieldRegisteredBusinessAddress, kybprofile.FieldCertificateOfIncorporationURL, kybprofile.FieldArticlesOfIncorporationURL, kybprofile.FieldBusinessLicenseURL, kybprofile.FieldProofOfBusinessAddressURL, kybprofile.FieldProofOfResidentialAddressURL, kybprofile.FieldAmlPolicyURL, kybprofile.FieldKycPolicyURL:
+		case kybprofile.FieldMobileNumber, kybprofile.FieldCompanyName, kybprofile.FieldRegisteredBusinessAddress, kybprofile.FieldCertificateOfIncorporationURL, kybprofile.FieldArticlesOfIncorporationURL, kybprofile.FieldBusinessLicenseURL, kybprofile.FieldProofOfBusinessAddressURL, kybprofile.FieldAmlPolicyURL, kybprofile.FieldKycPolicyURL:
 			values[i] = new(sql.NullString)
 		case kybprofile.FieldCreatedAt, kybprofile.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -169,12 +167,6 @@ func (kp *KYBProfile) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field proof_of_business_address_url", values[i])
 			} else if value.Valid {
 				kp.ProofOfBusinessAddressURL = value.String
-			}
-		case kybprofile.FieldProofOfResidentialAddressURL:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field proof_of_residential_address_url", values[i])
-			} else if value.Valid {
-				kp.ProofOfResidentialAddressURL = value.String
 			}
 		case kybprofile.FieldAmlPolicyURL:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -270,9 +262,6 @@ func (kp *KYBProfile) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("proof_of_business_address_url=")
 	builder.WriteString(kp.ProofOfBusinessAddressURL)
-	builder.WriteString(", ")
-	builder.WriteString("proof_of_residential_address_url=")
-	builder.WriteString(kp.ProofOfResidentialAddressURL)
 	builder.WriteString(", ")
 	builder.WriteString("aml_policy_url=")
 	builder.WriteString(kp.AmlPolicyURL)

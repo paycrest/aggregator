@@ -101,11 +101,6 @@ func ProofOfBusinessAddressURL(v string) predicate.KYBProfile {
 	return predicate.KYBProfile(sql.FieldEQ(FieldProofOfBusinessAddressURL, v))
 }
 
-// ProofOfResidentialAddressURL applies equality check predicate on the "proof_of_residential_address_url" field. It's identical to ProofOfResidentialAddressURLEQ.
-func ProofOfResidentialAddressURL(v string) predicate.KYBProfile {
-	return predicate.KYBProfile(sql.FieldEQ(FieldProofOfResidentialAddressURL, v))
-}
-
 // AmlPolicyURL applies equality check predicate on the "aml_policy_url" field. It's identical to AmlPolicyURLEQ.
 func AmlPolicyURL(v string) predicate.KYBProfile {
 	return predicate.KYBProfile(sql.FieldEQ(FieldAmlPolicyURL, v))
@@ -659,71 +654,6 @@ func ProofOfBusinessAddressURLEqualFold(v string) predicate.KYBProfile {
 // ProofOfBusinessAddressURLContainsFold applies the ContainsFold predicate on the "proof_of_business_address_url" field.
 func ProofOfBusinessAddressURLContainsFold(v string) predicate.KYBProfile {
 	return predicate.KYBProfile(sql.FieldContainsFold(FieldProofOfBusinessAddressURL, v))
-}
-
-// ProofOfResidentialAddressURLEQ applies the EQ predicate on the "proof_of_residential_address_url" field.
-func ProofOfResidentialAddressURLEQ(v string) predicate.KYBProfile {
-	return predicate.KYBProfile(sql.FieldEQ(FieldProofOfResidentialAddressURL, v))
-}
-
-// ProofOfResidentialAddressURLNEQ applies the NEQ predicate on the "proof_of_residential_address_url" field.
-func ProofOfResidentialAddressURLNEQ(v string) predicate.KYBProfile {
-	return predicate.KYBProfile(sql.FieldNEQ(FieldProofOfResidentialAddressURL, v))
-}
-
-// ProofOfResidentialAddressURLIn applies the In predicate on the "proof_of_residential_address_url" field.
-func ProofOfResidentialAddressURLIn(vs ...string) predicate.KYBProfile {
-	return predicate.KYBProfile(sql.FieldIn(FieldProofOfResidentialAddressURL, vs...))
-}
-
-// ProofOfResidentialAddressURLNotIn applies the NotIn predicate on the "proof_of_residential_address_url" field.
-func ProofOfResidentialAddressURLNotIn(vs ...string) predicate.KYBProfile {
-	return predicate.KYBProfile(sql.FieldNotIn(FieldProofOfResidentialAddressURL, vs...))
-}
-
-// ProofOfResidentialAddressURLGT applies the GT predicate on the "proof_of_residential_address_url" field.
-func ProofOfResidentialAddressURLGT(v string) predicate.KYBProfile {
-	return predicate.KYBProfile(sql.FieldGT(FieldProofOfResidentialAddressURL, v))
-}
-
-// ProofOfResidentialAddressURLGTE applies the GTE predicate on the "proof_of_residential_address_url" field.
-func ProofOfResidentialAddressURLGTE(v string) predicate.KYBProfile {
-	return predicate.KYBProfile(sql.FieldGTE(FieldProofOfResidentialAddressURL, v))
-}
-
-// ProofOfResidentialAddressURLLT applies the LT predicate on the "proof_of_residential_address_url" field.
-func ProofOfResidentialAddressURLLT(v string) predicate.KYBProfile {
-	return predicate.KYBProfile(sql.FieldLT(FieldProofOfResidentialAddressURL, v))
-}
-
-// ProofOfResidentialAddressURLLTE applies the LTE predicate on the "proof_of_residential_address_url" field.
-func ProofOfResidentialAddressURLLTE(v string) predicate.KYBProfile {
-	return predicate.KYBProfile(sql.FieldLTE(FieldProofOfResidentialAddressURL, v))
-}
-
-// ProofOfResidentialAddressURLContains applies the Contains predicate on the "proof_of_residential_address_url" field.
-func ProofOfResidentialAddressURLContains(v string) predicate.KYBProfile {
-	return predicate.KYBProfile(sql.FieldContains(FieldProofOfResidentialAddressURL, v))
-}
-
-// ProofOfResidentialAddressURLHasPrefix applies the HasPrefix predicate on the "proof_of_residential_address_url" field.
-func ProofOfResidentialAddressURLHasPrefix(v string) predicate.KYBProfile {
-	return predicate.KYBProfile(sql.FieldHasPrefix(FieldProofOfResidentialAddressURL, v))
-}
-
-// ProofOfResidentialAddressURLHasSuffix applies the HasSuffix predicate on the "proof_of_residential_address_url" field.
-func ProofOfResidentialAddressURLHasSuffix(v string) predicate.KYBProfile {
-	return predicate.KYBProfile(sql.FieldHasSuffix(FieldProofOfResidentialAddressURL, v))
-}
-
-// ProofOfResidentialAddressURLEqualFold applies the EqualFold predicate on the "proof_of_residential_address_url" field.
-func ProofOfResidentialAddressURLEqualFold(v string) predicate.KYBProfile {
-	return predicate.KYBProfile(sql.FieldEqualFold(FieldProofOfResidentialAddressURL, v))
-}
-
-// ProofOfResidentialAddressURLContainsFold applies the ContainsFold predicate on the "proof_of_residential_address_url" field.
-func ProofOfResidentialAddressURLContainsFold(v string) predicate.KYBProfile {
-	return predicate.KYBProfile(sql.FieldContainsFold(FieldProofOfResidentialAddressURL, v))
 }
 
 // AmlPolicyURLEQ applies the EQ predicate on the "aml_policy_url" field.

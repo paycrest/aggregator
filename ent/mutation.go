@@ -3962,7 +3962,6 @@ type KYBProfileMutation struct {
 	articles_of_incorporation_url    *string
 	business_license_url             *string
 	proof_of_business_address_url    *string
-	proof_of_residential_address_url *string
 	aml_policy_url                   *string
 	kyc_policy_url                   *string
 	clearedFields                    map[string]struct{}
@@ -4417,42 +4416,6 @@ func (m *KYBProfileMutation) ResetProofOfBusinessAddressURL() {
 	m.proof_of_business_address_url = nil
 }
 
-// SetProofOfResidentialAddressURL sets the "proof_of_residential_address_url" field.
-func (m *KYBProfileMutation) SetProofOfResidentialAddressURL(s string) {
-	m.proof_of_residential_address_url = &s
-}
-
-// ProofOfResidentialAddressURL returns the value of the "proof_of_residential_address_url" field in the mutation.
-func (m *KYBProfileMutation) ProofOfResidentialAddressURL() (r string, exists bool) {
-	v := m.proof_of_residential_address_url
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldProofOfResidentialAddressURL returns the old "proof_of_residential_address_url" field's value of the KYBProfile entity.
-// If the KYBProfile object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *KYBProfileMutation) OldProofOfResidentialAddressURL(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldProofOfResidentialAddressURL is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldProofOfResidentialAddressURL requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldProofOfResidentialAddressURL: %w", err)
-	}
-	return oldValue.ProofOfResidentialAddressURL, nil
-}
-
-// ResetProofOfResidentialAddressURL resets all changes to the "proof_of_residential_address_url" field.
-func (m *KYBProfileMutation) ResetProofOfResidentialAddressURL() {
-	m.proof_of_residential_address_url = nil
-}
-
 // SetAmlPolicyURL sets the "aml_policy_url" field.
 func (m *KYBProfileMutation) SetAmlPolicyURL(s string) {
 	m.aml_policy_url = &s
@@ -4678,7 +4641,7 @@ func (m *KYBProfileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *KYBProfileMutation) Fields() []string {
-	fields := make([]string, 0, 12)
+	fields := make([]string, 0, 11)
 	if m.created_at != nil {
 		fields = append(fields, kybprofile.FieldCreatedAt)
 	}
@@ -4705,9 +4668,6 @@ func (m *KYBProfileMutation) Fields() []string {
 	}
 	if m.proof_of_business_address_url != nil {
 		fields = append(fields, kybprofile.FieldProofOfBusinessAddressURL)
-	}
-	if m.proof_of_residential_address_url != nil {
-		fields = append(fields, kybprofile.FieldProofOfResidentialAddressURL)
 	}
 	if m.aml_policy_url != nil {
 		fields = append(fields, kybprofile.FieldAmlPolicyURL)
@@ -4741,8 +4701,6 @@ func (m *KYBProfileMutation) Field(name string) (ent.Value, bool) {
 		return m.BusinessLicenseURL()
 	case kybprofile.FieldProofOfBusinessAddressURL:
 		return m.ProofOfBusinessAddressURL()
-	case kybprofile.FieldProofOfResidentialAddressURL:
-		return m.ProofOfResidentialAddressURL()
 	case kybprofile.FieldAmlPolicyURL:
 		return m.AmlPolicyURL()
 	case kybprofile.FieldKycPolicyURL:
@@ -4774,8 +4732,6 @@ func (m *KYBProfileMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldBusinessLicenseURL(ctx)
 	case kybprofile.FieldProofOfBusinessAddressURL:
 		return m.OldProofOfBusinessAddressURL(ctx)
-	case kybprofile.FieldProofOfResidentialAddressURL:
-		return m.OldProofOfResidentialAddressURL(ctx)
 	case kybprofile.FieldAmlPolicyURL:
 		return m.OldAmlPolicyURL(ctx)
 	case kybprofile.FieldKycPolicyURL:
@@ -4851,13 +4807,6 @@ func (m *KYBProfileMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetProofOfBusinessAddressURL(v)
-		return nil
-	case kybprofile.FieldProofOfResidentialAddressURL:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetProofOfResidentialAddressURL(v)
 		return nil
 	case kybprofile.FieldAmlPolicyURL:
 		v, ok := value.(string)
@@ -4969,9 +4918,6 @@ func (m *KYBProfileMutation) ResetField(name string) error {
 		return nil
 	case kybprofile.FieldProofOfBusinessAddressURL:
 		m.ResetProofOfBusinessAddressURL()
-		return nil
-	case kybprofile.FieldProofOfResidentialAddressURL:
-		m.ResetProofOfResidentialAddressURL()
 		return nil
 	case kybprofile.FieldAmlPolicyURL:
 		m.ResetAmlPolicyURL()

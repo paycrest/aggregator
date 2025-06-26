@@ -104,12 +104,6 @@ func (kpc *KYBProfileCreate) SetProofOfBusinessAddressURL(s string) *KYBProfileC
 	return kpc
 }
 
-// SetProofOfResidentialAddressURL sets the "proof_of_residential_address_url" field.
-func (kpc *KYBProfileCreate) SetProofOfResidentialAddressURL(s string) *KYBProfileCreate {
-	kpc.mutation.SetProofOfResidentialAddressURL(s)
-	return kpc
-}
-
 // SetAmlPolicyURL sets the "aml_policy_url" field.
 func (kpc *KYBProfileCreate) SetAmlPolicyURL(s string) *KYBProfileCreate {
 	kpc.mutation.SetAmlPolicyURL(s)
@@ -261,9 +255,6 @@ func (kpc *KYBProfileCreate) check() error {
 	if _, ok := kpc.mutation.ProofOfBusinessAddressURL(); !ok {
 		return &ValidationError{Name: "proof_of_business_address_url", err: errors.New(`ent: missing required field "KYBProfile.proof_of_business_address_url"`)}
 	}
-	if _, ok := kpc.mutation.ProofOfResidentialAddressURL(); !ok {
-		return &ValidationError{Name: "proof_of_residential_address_url", err: errors.New(`ent: missing required field "KYBProfile.proof_of_residential_address_url"`)}
-	}
 	return nil
 }
 
@@ -335,10 +326,6 @@ func (kpc *KYBProfileCreate) createSpec() (*KYBProfile, *sqlgraph.CreateSpec) {
 	if value, ok := kpc.mutation.ProofOfBusinessAddressURL(); ok {
 		_spec.SetField(kybprofile.FieldProofOfBusinessAddressURL, field.TypeString, value)
 		_node.ProofOfBusinessAddressURL = value
-	}
-	if value, ok := kpc.mutation.ProofOfResidentialAddressURL(); ok {
-		_spec.SetField(kybprofile.FieldProofOfResidentialAddressURL, field.TypeString, value)
-		_node.ProofOfResidentialAddressURL = value
 	}
 	if value, ok := kpc.mutation.AmlPolicyURL(); ok {
 		_spec.SetField(kybprofile.FieldAmlPolicyURL, field.TypeString, value)
@@ -532,18 +519,6 @@ func (u *KYBProfileUpsert) SetProofOfBusinessAddressURL(v string) *KYBProfileUps
 // UpdateProofOfBusinessAddressURL sets the "proof_of_business_address_url" field to the value that was provided on create.
 func (u *KYBProfileUpsert) UpdateProofOfBusinessAddressURL() *KYBProfileUpsert {
 	u.SetExcluded(kybprofile.FieldProofOfBusinessAddressURL)
-	return u
-}
-
-// SetProofOfResidentialAddressURL sets the "proof_of_residential_address_url" field.
-func (u *KYBProfileUpsert) SetProofOfResidentialAddressURL(v string) *KYBProfileUpsert {
-	u.Set(kybprofile.FieldProofOfResidentialAddressURL, v)
-	return u
-}
-
-// UpdateProofOfResidentialAddressURL sets the "proof_of_residential_address_url" field to the value that was provided on create.
-func (u *KYBProfileUpsert) UpdateProofOfResidentialAddressURL() *KYBProfileUpsert {
-	u.SetExcluded(kybprofile.FieldProofOfResidentialAddressURL)
 	return u
 }
 
@@ -750,20 +725,6 @@ func (u *KYBProfileUpsertOne) SetProofOfBusinessAddressURL(v string) *KYBProfile
 func (u *KYBProfileUpsertOne) UpdateProofOfBusinessAddressURL() *KYBProfileUpsertOne {
 	return u.Update(func(s *KYBProfileUpsert) {
 		s.UpdateProofOfBusinessAddressURL()
-	})
-}
-
-// SetProofOfResidentialAddressURL sets the "proof_of_residential_address_url" field.
-func (u *KYBProfileUpsertOne) SetProofOfResidentialAddressURL(v string) *KYBProfileUpsertOne {
-	return u.Update(func(s *KYBProfileUpsert) {
-		s.SetProofOfResidentialAddressURL(v)
-	})
-}
-
-// UpdateProofOfResidentialAddressURL sets the "proof_of_residential_address_url" field to the value that was provided on create.
-func (u *KYBProfileUpsertOne) UpdateProofOfResidentialAddressURL() *KYBProfileUpsertOne {
-	return u.Update(func(s *KYBProfileUpsert) {
-		s.UpdateProofOfResidentialAddressURL()
 	})
 }
 
@@ -1143,20 +1104,6 @@ func (u *KYBProfileUpsertBulk) SetProofOfBusinessAddressURL(v string) *KYBProfil
 func (u *KYBProfileUpsertBulk) UpdateProofOfBusinessAddressURL() *KYBProfileUpsertBulk {
 	return u.Update(func(s *KYBProfileUpsert) {
 		s.UpdateProofOfBusinessAddressURL()
-	})
-}
-
-// SetProofOfResidentialAddressURL sets the "proof_of_residential_address_url" field.
-func (u *KYBProfileUpsertBulk) SetProofOfResidentialAddressURL(v string) *KYBProfileUpsertBulk {
-	return u.Update(func(s *KYBProfileUpsert) {
-		s.SetProofOfResidentialAddressURL(v)
-	})
-}
-
-// UpdateProofOfResidentialAddressURL sets the "proof_of_residential_address_url" field to the value that was provided on create.
-func (u *KYBProfileUpsertBulk) UpdateProofOfResidentialAddressURL() *KYBProfileUpsertBulk {
-	return u.Update(func(s *KYBProfileUpsert) {
-		s.UpdateProofOfResidentialAddressURL()
 	})
 }
 

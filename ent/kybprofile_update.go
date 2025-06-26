@@ -141,20 +141,6 @@ func (kpu *KYBProfileUpdate) SetNillableProofOfBusinessAddressURL(s *string) *KY
 	return kpu
 }
 
-// SetProofOfResidentialAddressURL sets the "proof_of_residential_address_url" field.
-func (kpu *KYBProfileUpdate) SetProofOfResidentialAddressURL(s string) *KYBProfileUpdate {
-	kpu.mutation.SetProofOfResidentialAddressURL(s)
-	return kpu
-}
-
-// SetNillableProofOfResidentialAddressURL sets the "proof_of_residential_address_url" field if the given value is not nil.
-func (kpu *KYBProfileUpdate) SetNillableProofOfResidentialAddressURL(s *string) *KYBProfileUpdate {
-	if s != nil {
-		kpu.SetProofOfResidentialAddressURL(*s)
-	}
-	return kpu
-}
-
 // SetAmlPolicyURL sets the "aml_policy_url" field.
 func (kpu *KYBProfileUpdate) SetAmlPolicyURL(s string) *KYBProfileUpdate {
 	kpu.mutation.SetAmlPolicyURL(s)
@@ -332,9 +318,6 @@ func (kpu *KYBProfileUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := kpu.mutation.ProofOfBusinessAddressURL(); ok {
 		_spec.SetField(kybprofile.FieldProofOfBusinessAddressURL, field.TypeString, value)
-	}
-	if value, ok := kpu.mutation.ProofOfResidentialAddressURL(); ok {
-		_spec.SetField(kybprofile.FieldProofOfResidentialAddressURL, field.TypeString, value)
 	}
 	if value, ok := kpu.mutation.AmlPolicyURL(); ok {
 		_spec.SetField(kybprofile.FieldAmlPolicyURL, field.TypeString, value)
@@ -552,20 +535,6 @@ func (kpuo *KYBProfileUpdateOne) SetNillableProofOfBusinessAddressURL(s *string)
 	return kpuo
 }
 
-// SetProofOfResidentialAddressURL sets the "proof_of_residential_address_url" field.
-func (kpuo *KYBProfileUpdateOne) SetProofOfResidentialAddressURL(s string) *KYBProfileUpdateOne {
-	kpuo.mutation.SetProofOfResidentialAddressURL(s)
-	return kpuo
-}
-
-// SetNillableProofOfResidentialAddressURL sets the "proof_of_residential_address_url" field if the given value is not nil.
-func (kpuo *KYBProfileUpdateOne) SetNillableProofOfResidentialAddressURL(s *string) *KYBProfileUpdateOne {
-	if s != nil {
-		kpuo.SetProofOfResidentialAddressURL(*s)
-	}
-	return kpuo
-}
-
 // SetAmlPolicyURL sets the "aml_policy_url" field.
 func (kpuo *KYBProfileUpdateOne) SetAmlPolicyURL(s string) *KYBProfileUpdateOne {
 	kpuo.mutation.SetAmlPolicyURL(s)
@@ -773,9 +742,6 @@ func (kpuo *KYBProfileUpdateOne) sqlSave(ctx context.Context) (_node *KYBProfile
 	}
 	if value, ok := kpuo.mutation.ProofOfBusinessAddressURL(); ok {
 		_spec.SetField(kybprofile.FieldProofOfBusinessAddressURL, field.TypeString, value)
-	}
-	if value, ok := kpuo.mutation.ProofOfResidentialAddressURL(); ok {
-		_spec.SetField(kybprofile.FieldProofOfResidentialAddressURL, field.TypeString, value)
 	}
 	if value, ok := kpuo.mutation.AmlPolicyURL(); ok {
 		_spec.SetField(kybprofile.FieldAmlPolicyURL, field.TypeString, value)

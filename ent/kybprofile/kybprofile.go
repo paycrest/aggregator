@@ -33,8 +33,6 @@ const (
 	FieldBusinessLicenseURL = "business_license_url"
 	// FieldProofOfBusinessAddressURL holds the string denoting the proof_of_business_address_url field in the database.
 	FieldProofOfBusinessAddressURL = "proof_of_business_address_url"
-	// FieldProofOfResidentialAddressURL holds the string denoting the proof_of_residential_address_url field in the database.
-	FieldProofOfResidentialAddressURL = "proof_of_residential_address_url"
 	// FieldAmlPolicyURL holds the string denoting the aml_policy_url field in the database.
 	FieldAmlPolicyURL = "aml_policy_url"
 	// FieldKycPolicyURL holds the string denoting the kyc_policy_url field in the database.
@@ -73,7 +71,6 @@ var Columns = []string{
 	FieldArticlesOfIncorporationURL,
 	FieldBusinessLicenseURL,
 	FieldProofOfBusinessAddressURL,
-	FieldProofOfResidentialAddressURL,
 	FieldAmlPolicyURL,
 	FieldKycPolicyURL,
 }
@@ -161,11 +158,6 @@ func ByBusinessLicenseURL(opts ...sql.OrderTermOption) OrderOption {
 // ByProofOfBusinessAddressURL orders the results by the proof_of_business_address_url field.
 func ByProofOfBusinessAddressURL(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldProofOfBusinessAddressURL, opts...).ToFunc()
-}
-
-// ByProofOfResidentialAddressURL orders the results by the proof_of_residential_address_url field.
-func ByProofOfResidentialAddressURL(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldProofOfResidentialAddressURL, opts...).ToFunc()
 }
 
 // ByAmlPolicyURL orders the results by the aml_policy_url field.

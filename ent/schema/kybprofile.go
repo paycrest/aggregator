@@ -33,7 +33,6 @@ func (KYBProfile) Fields() []ent.Field {
 			Optional().
 			Nillable(),
 		field.String("proof_of_business_address_url"),
-		field.String("proof_of_residential_address_url"),
 		field.String("aml_policy_url").
 			Optional(),
 		field.String("kyc_policy_url").
