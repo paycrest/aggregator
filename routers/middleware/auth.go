@@ -535,7 +535,7 @@ func determineOwnerAddress(accounts []LinkedAccount) string {
 func SlackVerificationMiddleware(c *gin.Context) {
 
 	// Load config on each request
-	conf := config.NotificationConfig()
+	conf := config.AuthConfig()
 
 	slackSig := c.GetHeader("X-Slack-Signature")
 	slackTimestamp := c.GetHeader("X-Slack-Request-Timestamp")

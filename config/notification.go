@@ -8,11 +8,9 @@ import (
 
 // NotificationConfiguration defines the email service configurations
 type NotificationConfiguration struct {
-	EmailDomain        string
-	EmailAPIKey        string
-	EmailFromAddress   string
-	SlackBotToken      string
-	SlackSigningSecret string
+	EmailDomain      string
+	EmailAPIKey      string
+	EmailFromAddress string
 }
 
 // NotificationConfig sets the email configurations
@@ -21,11 +19,9 @@ func NotificationConfig() (config *NotificationConfiguration) {
 	viper.SetDefault("EMAIL_FROM_ADDRESS", "Paycrest <no-reply@paycrest.io>")
 
 	return &NotificationConfiguration{
-		EmailDomain:        viper.GetString("EMAIL_DOMAIN"),
-		EmailAPIKey:        viper.GetString("EMAIL_API_KEY"),
-		EmailFromAddress:   viper.GetString("EMAIL_FROM_ADDRESS"),
-		SlackBotToken:      viper.GetString("SLACK_BOT_TOKEN"),
-		SlackSigningSecret: viper.GetString("SLACK_SIGNING_SECRET"),
+		EmailDomain:      viper.GetString("EMAIL_DOMAIN"),
+		EmailAPIKey:      viper.GetString("EMAIL_API_KEY"),
+		EmailFromAddress: viper.GetString("EMAIL_FROM_ADDRESS"),
 	}
 }
 

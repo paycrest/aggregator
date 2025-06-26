@@ -1098,13 +1098,13 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				return
 			}
 			req.Header.Set("Content-Type", "application/json")
-			slackBotToken := config.NotificationConfig().SlackBotToken
-			if slackBotToken == "" {
+			cnfg := config.AuthConfig()
+			if cnfg.SlackBotToken == "" {
 				logger.Errorf("Slack bot token not configured for KYB Profile %s", kybProfileID)
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Slack bot token not configured"})
 				return
 			}
-			req.Header.Set("Authorization", "Bearer "+slackBotToken)
+			req.Header.Set("Authorization", "Bearer "+cnfg.SlackBotToken)
 
 			resp, err := client.Do(req)
 			if err != nil {
@@ -1424,7 +1424,6 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		SetCertificateOfIncorporationURL(input.CertificateOfIncorporationUrl).
 		SetArticlesOfIncorporationURL(input.ArticlesOfIncorporationUrl).
 		SetProofOfBusinessAddressURL(input.ProofOfBusinessAddressUrl).
-		SetProofOfResidentialAddressURL(input.ProofOfResidentialAddressUrl).
 		SetUserID(userRecord.ID)
 
 	if input.BusinessLicenseUrl != nil {

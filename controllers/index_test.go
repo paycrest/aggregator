@@ -447,7 +447,6 @@ func TestIndex(t *testing.T) {
 			assert.Equal(t, validKYBSubmission.CertificateOfIncorporationUrl, kybProfile.CertificateOfIncorporationURL)
 			assert.Equal(t, validKYBSubmission.ArticlesOfIncorporationUrl, kybProfile.ArticlesOfIncorporationURL)
 			assert.Equal(t, validKYBSubmission.ProofOfBusinessAddressUrl, kybProfile.ProofOfBusinessAddressURL)
-			assert.Equal(t, validKYBSubmission.ProofOfResidentialAddressUrl, kybProfile.ProofOfResidentialAddressURL)
 			assert.Equal(t, testUser.ID, kybProfile.Edges.User.ID)
 
 			// Verify beneficial owners were created
