@@ -871,7 +871,7 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 // 	ctx := context.Background()
 // 	network, err := storage.Client.Network.
 // 		Query().
-// 		Where(networkent.ChainIDEQ(1135)).
+// 		Where(networkent.ChainIDEQ(42161)).
 // 		Only(ctx)
 // 	if err != nil {
 // 		return fmt.Errorf("FixDatabaseMishap.fetchNetworks: %w", err)
