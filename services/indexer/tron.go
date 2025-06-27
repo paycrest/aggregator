@@ -220,7 +220,7 @@ func (s *IndexerTron) IndexOrderSettled(ctx context.Context, rpcClient types.RPC
 	hashToEvent := make(map[string]*types.OrderSettledEvent)
 
 	for _, r := range data["data"].([]interface{}) {
-		if r.(map[string]interface{})["event_name"].(string) == "OrderCreated" {
+		if r.(map[string]interface{})["event_name"].(string) == "OrderSettled" {
 			// fetch the transaction
 			res, err = fastshot.NewClient(network.RPCEndpoint).
 				Config().SetTimeout(15 * time.Second).

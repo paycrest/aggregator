@@ -15,6 +15,7 @@ import (
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/senderprofile"
+	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/user"
 	"github.com/paycrest/aggregator/services"
@@ -296,34 +297,47 @@ func ProcessCreatedOrders(
 	orderService types.OrderService,
 	priorityQueueService *services.PriorityQueueService,
 ) error {
-	orders, err := storage.Client.PaymentOrder.
-		Query().
-		Where(paymentorder.TxHashIn(txHashes...)).
-		WithToken(func(tq *ent.TokenQuery) {
-			tq.WithNetwork()
-		}).
-		WithRecipient().
-		All(ctx)
-	if err != nil {
-		logger.Infof("IndexOrderCreated.fetchOrders: %v", err)
-		return fmt.Errorf("IndexOrderCreated.fetchOrders: %w", err)
-	}
-
 	var wg sync.WaitGroup
-	for _, order := range orders {
-		createdEvent, ok := hashToEvent[order.TxHash]
+
+	for _, txHash := range txHashes {
+		createdEvent, ok := hashToEvent[txHash]
 		if !ok {
 			continue
 		}
 
 		wg.Add(1)
-		go func(order *ent.PaymentOrder, createdEvent *types.OrderCreatedEvent) {
+		go func(createdEvent *types.OrderCreatedEvent) {
 			defer wg.Done()
 
-			createdEvent.Amount = createdEvent.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(order.Edges.Token.Decimals))))
-			createdEvent.ProtocolFee = createdEvent.ProtocolFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(order.Edges.Token.Decimals))))
+			paymentOrderExists := true
+			order, err := storage.Client.PaymentOrder.
+				Query().
+				Where(paymentorder.TxHashEqualFold(createdEvent.TxHash)).
+				WithToken().
+				Only(ctx)
+			if err != nil {
+				if ent.IsNotFound(err) {
+					paymentOrderExists = false
+				}
+			}
 
-			err := CreateLockPaymentOrder(ctx, network, createdEvent, orderService.RefundOrder, priorityQueueService.AssignLockPaymentOrder)
+			if paymentOrderExists {
+				createdEvent.Amount = createdEvent.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(order.Edges.Token.Decimals))))
+				createdEvent.ProtocolFee = createdEvent.ProtocolFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(order.Edges.Token.Decimals))))
+			} else {
+				token, err := storage.Client.Token.
+					Query().
+					Where(token.ContractAddressEqualFold(createdEvent.Token)).
+					Only(ctx)
+				if err != nil {
+					return
+				}
+
+				createdEvent.Amount = createdEvent.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
+				createdEvent.ProtocolFee = createdEvent.ProtocolFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
+			}
+
+			err = CreateLockPaymentOrder(ctx, network, createdEvent, orderService.RefundOrder, priorityQueueService.AssignLockPaymentOrder)
 			if err != nil {
 				if !strings.Contains(fmt.Sprintf("%v", err), "duplicate key value violates unique constraint") {
 					logger.WithFields(logger.Fields{
@@ -336,32 +350,35 @@ func ProcessCreatedOrders(
 				return
 			}
 
-			// Update payment order with txHash
-			_, err = order.Update().
-				SetGatewayID(createdEvent.OrderId).
-				SetRate(order.Rate).
-				SetStatus(paymentorder.StatusPending).
-				Save(ctx)
-			if err != nil {
-				return
-			}
+			if paymentOrderExists {
+				// Update payment order with txHash
+				_, err = order.Update().
+					SetGatewayID(createdEvent.OrderId).
+					SetRate(order.Rate).
+					SetStatus(paymentorder.StatusPending).
+					Save(ctx)
+				if err != nil {
+					return
+				}
 
-			// Refetch payment order
-			paymentOrder, err := storage.Client.PaymentOrder.
-				Query().
-				Where(paymentorder.IDEQ(order.ID)).
-				WithSenderProfile().
-				Only(ctx)
-			if err != nil {
-				return
-			}
+				// Refetch payment order
+				paymentOrder, err := storage.Client.PaymentOrder.
+					Query().
+					Where(paymentorder.IDEQ(order.ID)).
+					WithSenderProfile().
+					Only(ctx)
+				if err != nil {
+					return
+				}
 
-			// Send webhook notifcation to sender
-			err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
-			if err != nil {
-				return
+				// Send webhook notifcation to sender
+				err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
+				if err != nil {
+					return
+				}
 			}
-		}(order, createdEvent)
+		}(createdEvent)
+
 	}
 	wg.Wait()
 
