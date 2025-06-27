@@ -23,6 +23,7 @@ import (
 	"github.com/paycrest/aggregator/ent/receiveaddress"
 	tokenent "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
+	"github.com/paycrest/aggregator/ent/user"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
@@ -188,6 +189,7 @@ func CreateLockPaymentOrder(
 				providerordertoken.HasProviderWith(
 					providerprofile.IDEQ(lockPaymentOrder.ProviderID),
 					providerprofile.IsAvailableEQ(true),
+					providerprofile.HasUserWith(user.KybVerificationStatusEQ(user.KybVerificationStatusApproved)),
 				),
 				providerordertoken.HasTokenWith(tokenent.IDEQ(token.ID)),
 				providerordertoken.HasCurrencyWith(
