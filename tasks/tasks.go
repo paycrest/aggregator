@@ -279,7 +279,12 @@ func runIndexers(network *ent.Network, indexer types.Indexer, tokens []*ent.Toke
 	// Index Gateway events
 	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
 		ctx := context.Background()
-		_ = indexer.IndexOrderCreated(ctx, nil, network, start, end)
+		err := indexer.IndexOrderCreated(ctx, nil, network, start, end)
+		if err != nil && network.ChainID == 42161 {
+			logger.WithFields(logger.Fields{
+				"Error": fmt.Sprintf("%v", err),
+			}).Errorf("runIndexers.IndexOrderCreated")
+		}
 	}(network, indexer, startBlock, latestBlock)
 
 	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
@@ -884,9 +889,7 @@ func FixDatabaseMishap() error {
 
 	indexerInstance := indexer.NewIndexerEVM()
 
-	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 351483492, 351483492)
-	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 351089803, 351089803)
-	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 350973008, 350973008)
+	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 351736689, 351736689)
 
 	logger.Infof("FixDatabaseMishap: %v", ctx)
 
