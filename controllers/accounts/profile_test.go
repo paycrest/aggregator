@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/paycrest/aggregator/ent"
@@ -364,12 +363,11 @@ func TestProfile(t *testing.T) {
 		t.Run("with all fields complete and check if it is active", func(t *testing.T) {
 			// Test partial update
 			payload := types.ProviderProfilePayload{
-				TradingName:      "My Trading Name",
-				Currencies:       []string{"KES"},
-				HostIdentifier:   "https://example.com",
-				BusinessDocument: "https://example.com/business_doc.png",
-				IdentityDocument: "https://example.com/national_id.png",
-				IsAvailable:      true,
+				TradingName:    "My Trading Name",
+				Currencies:     []string{"KES"},
+				HostIdentifier: "https://example.com",
+				IsActive:       true,
+				IsAvailable:    true,
 			}
 
 			res := profileUpdateRequest(payload)
@@ -392,9 +390,7 @@ func TestProfile(t *testing.T) {
 
 			assert.Equal(t, payload.TradingName, providerProfile.TradingName)
 			assert.Equal(t, payload.HostIdentifier, providerProfile.HostIdentifier)
-			assert.Equal(t, payload.BusinessDocument, providerProfile.BusinessDocument)
-			assert.Equal(t, payload.IdentityDocument, providerProfile.IdentityDocument)
-			assert.True(t, providerProfile.IsActive)
+			assert.True(t, providerProfile.IsAvailable)
 			// assert for currencies
 			assert.Equal(t, len(providerProfile.Edges.Currencies), 1)
 			assert.Equal(t, providerProfile.Edges.Currencies[0].Code, payload.Currencies[0])
@@ -553,170 +549,42 @@ func TestProfile(t *testing.T) {
 				headers := map[string]string{
 					"Authorization": "Bearer " + accessToken,
 				}
-
+		
 				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
 				assert.NoError(t, err)
-
+		
 				return res
 			}
-			t.Run("fails for invalid mobile number", func(t *testing.T) {
+		
+			t.Run("success for valid provider profile fields", func(t *testing.T) {
 				payload := types.ProviderProfilePayload{
-					MobileNumber:   "01234567890",
-					TradingName:    testCtx.providerProfile.TradingName,
+					TradingName:    "Updated Trading Name",
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
-					Currencies:     []string{"KES"},
-				}
-				res1 := profileUpdateRequest(payload)
-
-				payload.MobileNumber = "+023456789029"
-				res2 := profileUpdateRequest(payload)
-
-				// Assert the response body
-				assert.Equal(t, http.StatusBadRequest, res1.Code)
-				assert.Equal(t, http.StatusBadRequest, res2.Code)
-
-				var response types.Response
-				err = json.Unmarshal(res1.Body.Bytes(), &response)
-				assert.NoError(t, err)
-				assert.Equal(t, "Invalid mobile number", response.Message)
-
-				err = json.Unmarshal(res2.Body.Bytes(), &response)
-				assert.NoError(t, err)
-				assert.Equal(t, "Invalid mobile number", response.Message)
-			})
-
-			t.Run("success for valid moblie number", func(t *testing.T) {
-				payload := types.ProviderProfilePayload{
-					MobileNumber:   "+2347012345678",
-					TradingName:    testCtx.providerProfile.TradingName,
-					HostIdentifier: testCtx.providerProfile.HostIdentifier,
-					Currencies:     []string{"KES"},
+					Currencies:     []string{"KES", "USD"},
+					VisibilityMode: "public",
+					IsAvailable:    true,
 				}
 				res := profileUpdateRequest(payload)
-
+		
 				// Assert the response body
 				assert.Equal(t, http.StatusOK, res.Code)
-
+		
 				var response types.Response
 				err = json.Unmarshal(res.Body.Bytes(), &response)
 				assert.NoError(t, err)
 				assert.Equal(t, "Profile updated successfully", response.Message)
-
-				// Assert optional fields were correctly set and retrieved
+		
+				// Assert fields were correctly updated
 				providerProfile, err := db.Client.ProviderProfile.
 					Query().
 					Where(providerprofile.HasUserWith(user.ID(testCtx.user.ID))).
 					Only(context.Background())
 				assert.NoError(t, err)
-
-				assert.Equal(t, providerProfile.MobileNumber, "+2347012345678")
+		
+				assert.Equal(t, "Updated Trading Name", providerProfile.TradingName)
+				assert.Equal(t, "public", string(providerProfile.VisibilityMode))
+				assert.True(t, providerProfile.IsAvailable)
 			})
-
-			t.Run("fails for invalid identity document type", func(t *testing.T) {
-				payload := types.ProviderProfilePayload{
-					IdentityDocumentType: "student_id",
-					TradingName:          testCtx.providerProfile.TradingName,
-					HostIdentifier:       testCtx.providerProfile.HostIdentifier,
-				}
-				res1 := profileUpdateRequest(payload)
-
-				payload.IdentityDocumentType = "bank_statement"
-				res2 := profileUpdateRequest(payload)
-
-				// Assert the response body
-				assert.Equal(t, http.StatusBadRequest, res1.Code)
-				assert.Equal(t, http.StatusBadRequest, res2.Code)
-
-				var response types.Response
-				err = json.Unmarshal(res1.Body.Bytes(), &response)
-				assert.NoError(t, err)
-				assert.Equal(t, "Invalid identity document type", response.Message)
-
-				err = json.Unmarshal(res2.Body.Bytes(), &response)
-				assert.NoError(t, err)
-				assert.Equal(t, "Invalid identity document type", response.Message)
-			})
-
-			t.Run("fails for invalid identity document url", func(t *testing.T) {
-				payload := types.ProviderProfilePayload{
-					IdentityDocument: "img.png",
-					TradingName:      testCtx.providerProfile.TradingName,
-					HostIdentifier:   testCtx.providerProfile.HostIdentifier,
-				}
-				res1 := profileUpdateRequest(payload)
-
-				payload.IdentityDocument = "ftp://123.example.com/file.png"
-				res2 := profileUpdateRequest(payload)
-
-				// Assert the response body
-				assert.Equal(t, http.StatusBadRequest, res1.Code)
-				assert.Equal(t, http.StatusBadRequest, res2.Code)
-
-				var response types.Response
-				err = json.Unmarshal(res1.Body.Bytes(), &response)
-				assert.NoError(t, err)
-				assert.Equal(t, "Invalid identity document URL", response.Message)
-
-				err = json.Unmarshal(res2.Body.Bytes(), &response)
-				assert.NoError(t, err)
-				assert.Equal(t, "Invalid identity document URL", response.Message)
-				// assert.Nil(t, response.Data, "response.Data is not nil")
-			})
-
-			t.Run("fails for invalid business document url", func(t *testing.T) {
-				payload := types.ProviderProfilePayload{
-					BusinessDocument: "http://123.example.com/file.ai",
-					TradingName:      testCtx.providerProfile.TradingName,
-					HostIdentifier:   testCtx.providerProfile.HostIdentifier,
-				}
-				res := profileUpdateRequest(payload)
-				// Assert the response body
-				assert.Equal(t, http.StatusBadRequest, res.Code)
-
-				var response types.Response
-				err = json.Unmarshal(res.Body.Bytes(), &response)
-				assert.NoError(t, err)
-				assert.Equal(t, "Invalid business document URL", response.Message)
-				// assert.Nil(t, response.Data, "response.Data is not nil")
-			})
-
-			t.Run("succeeds with valid optional fields", func(t *testing.T) {
-				payload := types.ProviderProfilePayload{
-					Address:              "123, Example Street, Nairobi, Kenya",
-					MobileNumber:         "+2347012345678",
-					DateOfBirth:          time.Date(2022, time.January, 1, 12, 30, 0, 0, time.UTC),
-					BusinessName:         "Example Business",
-					IdentityDocumentType: "national_id",
-					IdentityDocument:     "https://example.com/national_id.png",
-					BusinessDocument:     "https://example.com/business_doc.png",
-					TradingName:          testCtx.providerProfile.TradingName,
-					HostIdentifier:       testCtx.providerProfile.HostIdentifier,
-				}
-				res := profileUpdateRequest(payload)
-				// Assert the response body
-				assert.Equal(t, http.StatusOK, res.Code)
-
-				var response types.Response
-				err = json.Unmarshal(res.Body.Bytes(), &response)
-				assert.NoError(t, err)
-				assert.Equal(t, "Profile updated successfully", response.Message)
-
-				// Assert optional fields were correctly set and retrieved
-				providerProfile, err := db.Client.ProviderProfile.
-					Query().
-					Where(providerprofile.HasUserWith(user.ID(testCtx.user.ID))).
-					Only(context.Background())
-				assert.NoError(t, err)
-
-				assert.Equal(t, providerProfile.Address, "123, Example Street, Nairobi, Kenya")
-				assert.Equal(t, providerProfile.MobileNumber, "+2347012345678")
-				assert.Equal(t, providerProfile.DateOfBirth, time.Date(2022, time.January, 1, 12, 30, 0, 0, time.UTC))
-				assert.Equal(t, providerProfile.BusinessName, "Example Business")
-				assert.Equal(t, string(providerProfile.IdentityDocumentType), "national_id")
-				assert.Equal(t, providerProfile.IdentityDocument, "https://example.com/national_id.png")
-				assert.Equal(t, providerProfile.BusinessDocument, "https://example.com/business_doc.png")
-			})
-
 		})
 
 		t.Run("HostIdentifier URL validation", func(t *testing.T) {
@@ -796,50 +664,6 @@ func TestProfile(t *testing.T) {
 				assert.Equal(t, "https://example.com", providerProfile.HostIdentifier)
 			})
 		})
-	})
-
-	t.Run("GetSenderProfile", func(t *testing.T) {
-		testUser, err := test.CreateTestUser(map[string]interface{}{
-			"email": "hello2@test.com",
-			"scope": "sender",
-		})
-		assert.NoError(t, err)
-
-		sender, err := test.CreateTestSenderProfile(map[string]interface{}{
-			"domain_whitelist": []string{"mydomain.com"},
-			"user_id":          testUser.ID,
-		})
-		assert.NoError(t, err)
-
-		apiKeyService := services.NewAPIKeyService()
-		_, _, err = apiKeyService.GenerateAPIKey(
-			context.Background(),
-			nil,
-			sender,
-			nil,
-		)
-		assert.NoError(t, err)
-
-		accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
-		headers := map[string]string{
-			"Authorization": "Bearer " + accessToken,
-		}
-		res, err := test.PerformRequest(t, "GET", "/settings/sender", nil, headers, router)
-		assert.NoError(t, err)
-
-		// Assert the response body
-		assert.Equal(t, http.StatusOK, res.Code)
-		var response struct {
-			Data    types.SenderProfileResponse
-			Message string
-		}
-		err = json.Unmarshal(res.Body.Bytes(), &response)
-		assert.NoError(t, err)
-		assert.Equal(t, "Profile retrieved successfully", response.Message)
-		assert.NotNil(t, response.Data, "response.Data is nil")
-		assert.Greater(t, len(response.Data.Tokens), 0)
-		assert.Contains(t, response.Data.WebhookURL, "https://example.com")
-
 	})
 
 	t.Run("GetSenderProfile", func(t *testing.T) {
@@ -973,5 +797,4 @@ func TestProfile(t *testing.T) {
 
 		})
 	})
-
 }

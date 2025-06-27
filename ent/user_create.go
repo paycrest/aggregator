@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/user"
@@ -113,6 +114,20 @@ func (uc *UserCreate) SetNillableHasEarlyAccess(b *bool) *UserCreate {
 	return uc
 }
 
+// SetKybVerificationStatus sets the "kyb_verification_status" field.
+func (uc *UserCreate) SetKybVerificationStatus(uvs user.KybVerificationStatus) *UserCreate {
+	uc.mutation.SetKybVerificationStatus(uvs)
+	return uc
+}
+
+// SetNillableKybVerificationStatus sets the "kyb_verification_status" field if the given value is not nil.
+func (uc *UserCreate) SetNillableKybVerificationStatus(uvs *user.KybVerificationStatus) *UserCreate {
+	if uvs != nil {
+		uc.SetKybVerificationStatus(*uvs)
+	}
+	return uc
+}
+
 // SetID sets the "id" field.
 func (uc *UserCreate) SetID(u uuid.UUID) *UserCreate {
 	uc.mutation.SetID(u)
@@ -180,6 +195,25 @@ func (uc *UserCreate) AddVerificationToken(v ...*VerificationToken) *UserCreate 
 	return uc.AddVerificationTokenIDs(ids...)
 }
 
+// SetKybProfileID sets the "kyb_profile" edge to the KYBProfile entity by ID.
+func (uc *UserCreate) SetKybProfileID(id uuid.UUID) *UserCreate {
+	uc.mutation.SetKybProfileID(id)
+	return uc
+}
+
+// SetNillableKybProfileID sets the "kyb_profile" edge to the KYBProfile entity by ID if the given value is not nil.
+func (uc *UserCreate) SetNillableKybProfileID(id *uuid.UUID) *UserCreate {
+	if id != nil {
+		uc = uc.SetKybProfileID(*id)
+	}
+	return uc
+}
+
+// SetKybProfile sets the "kyb_profile" edge to the KYBProfile entity.
+func (uc *UserCreate) SetKybProfile(k *KYBProfile) *UserCreate {
+	return uc.SetKybProfileID(k.ID)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uc *UserCreate) Mutation() *UserMutation {
 	return uc.mutation
@@ -239,6 +273,10 @@ func (uc *UserCreate) defaults() error {
 		v := user.DefaultHasEarlyAccess
 		uc.mutation.SetHasEarlyAccess(v)
 	}
+	if _, ok := uc.mutation.KybVerificationStatus(); !ok {
+		v := user.DefaultKybVerificationStatus
+		uc.mutation.SetKybVerificationStatus(v)
+	}
 	if _, ok := uc.mutation.ID(); !ok {
 		if user.DefaultID == nil {
 			return fmt.Errorf("ent: uninitialized user.DefaultID (forgotten import ent/runtime?)")
@@ -287,6 +325,14 @@ func (uc *UserCreate) check() error {
 	}
 	if _, ok := uc.mutation.HasEarlyAccess(); !ok {
 		return &ValidationError{Name: "has_early_access", err: errors.New(`ent: missing required field "User.has_early_access"`)}
+	}
+	if _, ok := uc.mutation.KybVerificationStatus(); !ok {
+		return &ValidationError{Name: "kyb_verification_status", err: errors.New(`ent: missing required field "User.kyb_verification_status"`)}
+	}
+	if v, ok := uc.mutation.KybVerificationStatus(); ok {
+		if err := user.KybVerificationStatusValidator(v); err != nil {
+			return &ValidationError{Name: "kyb_verification_status", err: fmt.Errorf(`ent: validator failed for field "User.kyb_verification_status": %w`, err)}
+		}
 	}
 	return nil
 }
@@ -360,6 +406,10 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		_spec.SetField(user.FieldHasEarlyAccess, field.TypeBool, value)
 		_node.HasEarlyAccess = value
 	}
+	if value, ok := uc.mutation.KybVerificationStatus(); ok {
+		_spec.SetField(user.FieldKybVerificationStatus, field.TypeEnum, value)
+		_node.KybVerificationStatus = value
+	}
 	if nodes := uc.mutation.SenderProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
@@ -401,6 +451,22 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(verificationtoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := uc.mutation.KybProfileIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.KybProfileTable,
+			Columns: []string{user.KybProfileColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(kybprofile.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -553,6 +619,18 @@ func (u *UserUpsert) SetHasEarlyAccess(v bool) *UserUpsert {
 // UpdateHasEarlyAccess sets the "has_early_access" field to the value that was provided on create.
 func (u *UserUpsert) UpdateHasEarlyAccess() *UserUpsert {
 	u.SetExcluded(user.FieldHasEarlyAccess)
+	return u
+}
+
+// SetKybVerificationStatus sets the "kyb_verification_status" field.
+func (u *UserUpsert) SetKybVerificationStatus(v user.KybVerificationStatus) *UserUpsert {
+	u.Set(user.FieldKybVerificationStatus, v)
+	return u
+}
+
+// UpdateKybVerificationStatus sets the "kyb_verification_status" field to the value that was provided on create.
+func (u *UserUpsert) UpdateKybVerificationStatus() *UserUpsert {
+	u.SetExcluded(user.FieldKybVerificationStatus)
 	return u
 }
 
@@ -716,6 +794,20 @@ func (u *UserUpsertOne) SetHasEarlyAccess(v bool) *UserUpsertOne {
 func (u *UserUpsertOne) UpdateHasEarlyAccess() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateHasEarlyAccess()
+	})
+}
+
+// SetKybVerificationStatus sets the "kyb_verification_status" field.
+func (u *UserUpsertOne) SetKybVerificationStatus(v user.KybVerificationStatus) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetKybVerificationStatus(v)
+	})
+}
+
+// UpdateKybVerificationStatus sets the "kyb_verification_status" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateKybVerificationStatus() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateKybVerificationStatus()
 	})
 }
 
@@ -1046,6 +1138,20 @@ func (u *UserUpsertBulk) SetHasEarlyAccess(v bool) *UserUpsertBulk {
 func (u *UserUpsertBulk) UpdateHasEarlyAccess() *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateHasEarlyAccess()
+	})
+}
+
+// SetKybVerificationStatus sets the "kyb_verification_status" field.
+func (u *UserUpsertBulk) SetKybVerificationStatus(v user.KybVerificationStatus) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetKybVerificationStatus(v)
+	})
+}
+
+// UpdateKybVerificationStatus sets the "kyb_verification_status" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateKybVerificationStatus() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateKybVerificationStatus()
 	})
 }
 

@@ -2,7 +2,10 @@ package middleware
 
 import (
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -526,4 +529,50 @@ func determineOwnerAddress(accounts []LinkedAccount) string {
 	}
 
 	return ""
+}
+
+// SlackVerificationMiddleware verifies incoming requests from Slack using the signing secret.
+func SlackVerificationMiddleware(c *gin.Context) {
+
+	// Load config on each request
+	conf := config.AuthConfig()
+
+	slackSig := c.GetHeader("X-Slack-Signature")
+	slackTimestamp := c.GetHeader("X-Slack-Request-Timestamp")
+
+	if slackSig == "" || slackTimestamp == "" {
+		logger.Warnf("Missing Slack signature or timestamp")
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Missing Slack headers"})
+		return
+	}
+
+	// Prevent replay attacks (5 min window)
+	ts, err := strconv.ParseInt(slackTimestamp, 10, 64)
+	if err != nil || time.Now().Unix()-ts > 60*5 {
+		logger.Warnf("Invalid or expired timestamp: %s", slackTimestamp)
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid timestamp"})
+		return
+	}
+
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		logger.Errorf("Could not read request body: %v", err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Could not read body"})
+		return
+	}
+	// Restore body for downstream handlers
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
+
+	basestring := "v0:" + slackTimestamp + ":" + string(body)
+	mac := hmac.New(sha256.New, []byte(conf.SlackSigningSecret))
+	mac.Write([]byte(basestring))
+	expectedSig := "v0=" + hex.EncodeToString(mac.Sum(nil))
+
+	if !hmac.Equal([]byte(expectedSig), []byte(slackSig)) {
+		logger.Warnf("Invalid Slack signature. Expected: %s, Received: %s", expectedSig, slackSig)
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid Slack signature"})
+		return
+	}
+
+	c.Next()
 }
