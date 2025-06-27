@@ -279,12 +279,7 @@ func runIndexers(network *ent.Network, indexer types.Indexer, tokens []*ent.Toke
 	// Index Gateway events
 	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
 		ctx := context.Background()
-		err := indexer.IndexOrderCreated(ctx, nil, network, start, end)
-		if err != nil && network.ChainID == 42161 {
-			logger.WithFields(logger.Fields{
-				"Error": fmt.Sprintf("%v", err),
-			}).Errorf("runIndexers.IndexOrderCreated")
-		}
+		_ = indexer.IndexOrderCreated(ctx, nil, network, start, end)
 	}(network, indexer, startBlock, latestBlock)
 
 	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
@@ -876,7 +871,7 @@ func FixDatabaseMishap() error {
 	ctx := context.Background()
 	network, err := storage.Client.Network.
 		Query().
-		Where(networkent.ChainIDEQ(42161)).
+		Where(networkent.ChainIDEQ(1135)).
 		Only(ctx)
 	if err != nil {
 		return fmt.Errorf("FixDatabaseMishap.fetchNetworks: %w", err)
@@ -884,7 +879,8 @@ func FixDatabaseMishap() error {
 
 	indexerInstance := indexer.NewIndexerEVM()
 
-	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 351753343, 351753343)
+	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 18052684, 18052684)
+	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 18056857, 18056857)
 
 	logger.Infof("FixDatabaseMishap: %v", ctx)
 
