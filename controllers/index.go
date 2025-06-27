@@ -23,7 +23,7 @@ import (
 	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
-	networkent "github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/user"
@@ -304,7 +304,7 @@ func (ctrl *Controller) GetSupportedTokens(ctx *gin.Context) {
 	// Apply network filter if provided
 	if networkFilter != "" {
 		query = query.Where(tokenEnt.HasNetworkWith(
-			networkent.Identifier(strings.ToLower(networkFilter)),
+			network.Identifier(strings.ToLower(networkFilter)),
 		))
 	}
 
@@ -445,7 +445,7 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 			lockpaymentorder.GatewayIDEQ(orderID),
 			lockpaymentorder.HasTokenWith(
 				tokenEnt.HasNetworkWith(
-					networkent.ChainIDEQ(chainID),
+					network.ChainIDEQ(chainID),
 				),
 			),
 		).
@@ -1771,8 +1771,8 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 		network, err = storage.Client.Network.
 			Query().
 			Where(
-				networkent.ChainIDEQ(chainID),
-				networkent.IsTestnetEQ(isTestnet),
+				network.ChainIDEQ(chainID),
+				network.IsTestnetEQ(isTestnet),
 			).
 			Only(ctx)
 	} else {
@@ -1780,8 +1780,8 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 		network, err = storage.Client.Network.
 			Query().
 			Where(
-				networkent.IdentifierEqualFold(networkParam),
-				networkent.IsTestnetEQ(isTestnet),
+				network.IdentifierEqualFold(networkParam),
+				network.IsTestnetEQ(isTestnet),
 			).
 			Only(ctx)
 	}
@@ -1805,7 +1805,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 		Where(
 			tokenEnt.IsEnabled(true),
 			tokenEnt.HasNetworkWith(
-				networkent.IDEQ(network.ID),
+				network.IDEQ(network.ID),
 			),
 		).
 		WithNetwork().

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 package types
 
 import (
