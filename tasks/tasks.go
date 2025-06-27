@@ -884,7 +884,7 @@ func FixDatabaseMishap() error {
 
 	indexerInstance := indexer.NewIndexerEVM()
 
-	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 351736689, 351736689)
+	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 351753343, 351753343)
 
 	logger.Infof("FixDatabaseMishap: %v", ctx)
 
