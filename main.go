@@ -25,9 +25,10 @@ func main() {
 	}
 	defer storage.GetClient().Close()
 
-	err := tasks.FixDatabaseMisHap()
+	// Fix database mishap
+	err := tasks.FixDatabaseMishap()
 	if err != nil {
-		logger.Errorf("FixDatabaseMisHap: %v", err)
+		logger.Errorf("FixDatabaseMishap: %v", err)
 	}
 
 	// Initialize Redis
