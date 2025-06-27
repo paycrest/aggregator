@@ -875,13 +875,12 @@ func FixDatabaseMishap() error {
 
 	indexerInstance := indexer.NewIndexerEVM()
 
-	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 351176402, 351176402)
-	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 351175222, 351175222)
+	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 351718282, 351718282)
 	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 351153491, 351153491)
 	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 351124939, 351124939)
+	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 351482294, 351482294)
+	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 351483492, 351483492)
 	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 351089803, 351089803)
-	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 351009696, 351009696)
-	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 350973008, 350973008)
 
 	logger.Infof("FixDatabaseMishap: %v", ctx)
 
