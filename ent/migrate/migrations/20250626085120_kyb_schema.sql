@@ -1,3 +1,4 @@
+
 -- Modify "networks" table
 ALTER TABLE "networks" ALTER COLUMN "block_time" DROP DEFAULT;
 -- Modify "users" table
@@ -8,7 +9,7 @@ SET "kyb_verification_status" = 'approved'
 WHERE "id" IN (
     SELECT "user_provider_profile" 
     FROM "provider_profiles" 
-    WHERE "isKYBVerified" = true
+    WHERE "is_kyb_verified" = true
 );
 -- Create "kyb_profiles" table
 CREATE TABLE "kyb_profiles" ("id" uuid NOT NULL, "created_at" timestamptz NOT NULL, "updated_at" timestamptz NOT NULL, "mobile_number" character varying NOT NULL, "company_name" character varying NOT NULL, "registered_business_address" character varying NOT NULL, "certificate_of_incorporation_url" character varying NOT NULL, "articles_of_incorporation_url" character varying NOT NULL, "business_license_url" character varying NULL, "proof_of_business_address_url" character varying NOT NULL, "aml_policy_url" character varying NULL, "kyc_policy_url" character varying NULL, "user_kyb_profile" uuid NULL, PRIMARY KEY ("id"), CONSTRAINT "kyb_profiles_users_kyb_profile" FOREIGN KEY ("user_kyb_profile") REFERENCES "users" ("id") ON UPDATE NO ACTION ON DELETE CASCADE);
@@ -37,8 +38,8 @@ SELECT
     COALESCE("business_name", '') as "company_name",
     COALESCE("address", '') as "registered_business_address",
     COALESCE("business_document", '') as "certificate_of_incorporation_url",
-    "N/A" as "articles_of_incorporation_url",
-    "N/A" as "proof_of_business_address_url",
+    COALESCE("business_document", 'N/A') as "articles_of_incorporation_url",
+    COALESCE("address", 'N/A') as "proof_of_business_address_url",
     NULL as "aml_policy_url",
     NULL as "kyc_policy_url",
     "user_provider_profile" as "user_kyb_profile"
