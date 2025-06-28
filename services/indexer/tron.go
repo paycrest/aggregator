@@ -42,7 +42,7 @@ func NewIndexerTron() types.Indexer {
 }
 
 // IndexTransfer indexes transfers to the receive address for Tron network.
-func (s *IndexerTron) IndexTransfer(ctx context.Context, rpcClient types.RPCClient, token *ent.Token, fromBlock int64, toBlock int64) error {
+func (s *IndexerTron) IndexTransfer(ctx context.Context, token *ent.Token, address string, fromBlock int64, toBlock int64) error {
 	res, err := fastshot.NewClient(token.Edges.Network.RPCEndpoint).
 		Config().SetTimeout(15 * time.Second).
 		Build().GET(fmt.Sprintf("/v1/contracts/%s/events", token.ContractAddress)).
@@ -105,7 +105,7 @@ func (s *IndexerTron) IndexTransfer(ctx context.Context, rpcClient types.RPCClie
 }
 
 // IndexOrderCreated indexes orders created in the Gateway contract for the Tron network.
-func (s *IndexerTron) IndexOrderCreated(ctx context.Context, rpcClient types.RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error {
+func (s *IndexerTron) IndexOrderCreated(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64) error {
 	res, err := fastshot.NewClient(network.RPCEndpoint).
 		Config().SetTimeout(15 * time.Second).
 		Build().GET(fmt.Sprintf("/v1/contracts/%s/events", network.GatewayContractAddress)).
@@ -196,7 +196,7 @@ func (s *IndexerTron) IndexOrderCreated(ctx context.Context, rpcClient types.RPC
 }
 
 // IndexOrderSettled indexes orders settled in the Gateway contract for the Tron network.
-func (s *IndexerTron) IndexOrderSettled(ctx context.Context, rpcClient types.RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error {
+func (s *IndexerTron) IndexOrderSettled(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64) error {
 	res, err := fastshot.NewClient(network.RPCEndpoint).
 		Config().SetTimeout(15 * time.Second).
 		Build().GET(fmt.Sprintf("/v1/contracts/%s/events", network.GatewayContractAddress)).
@@ -285,7 +285,7 @@ func (s *IndexerTron) IndexOrderSettled(ctx context.Context, rpcClient types.RPC
 }
 
 // IndexOrderRefunded indexes orders settled in the Gateway contract for the Tron network.
-func (s *IndexerTron) IndexOrderRefunded(ctx context.Context, rpcClient types.RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error {
+func (s *IndexerTron) IndexOrderRefunded(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64) error {
 	res, err := fastshot.NewClient(network.RPCEndpoint).
 		Config().SetTimeout(15 * time.Second).
 		Build().GET(fmt.Sprintf("/v1/contracts/%s/events", network.GatewayContractAddress)).
