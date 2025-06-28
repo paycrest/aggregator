@@ -104,10 +104,10 @@ type OrderService interface {
 
 // Indexer provides an interface for indexing blockchain data to the database.
 type Indexer interface {
-	IndexTransfer(ctx context.Context, rpcClient RPCClient, token *ent.Token, fromBlock int64, toBlock int64) error
-	IndexOrderCreated(ctx context.Context, rpcClient RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error
-	IndexOrderSettled(ctx context.Context, rpcClient RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error
-	IndexOrderRefunded(ctx context.Context, rpcClient RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error
+	IndexTransfer(ctx context.Context, token *ent.Token, address string, fromBlock int64, toBlock int64) error
+	IndexOrderCreated(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64) error
+	IndexOrderSettled(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64) error
+	IndexOrderRefunded(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64) error
 }
 
 // KYCProvider defines the interface for KYC verification providers
@@ -695,6 +695,25 @@ type SupportedTokenResponse struct {
 	Decimals        int8   `json:"decimals"`
 	BaseCurrency    string `json:"baseCurrency"`
 	Network         string `json:"network"`
+}
+
+// IndexBlockRangeRequest represents the request payload for indexing a specific block range
+type IndexBlockRangeRequest struct {
+	FromBlock int64  `json:"fromBlock" binding:"required,min=0"`
+	ToBlock   int64  `json:"toBlock" binding:"required,min=0"`
+	Network   string `json:"network" binding:"required"`
+	Address   string `json:"address"` // Optional, only required for Transfer indexing if available
+}
+
+// IndexBlockRangeResponse represents the response for the index block range endpoint
+type IndexBlockRangeResponse struct {
+	Message string `json:"message"`
+	Events  struct {
+		Transfer      int `json:"Transfer"`
+		OrderCreated  int `json:"OrderCreated"`
+		OrderSettled  int `json:"OrderSettled"`
+		OrderRefunded int `json:"OrderRefunded"`
+	} `json:"events"`
 }
 
 // KYBSubmissionInput represents the input structure for KYB form submission
