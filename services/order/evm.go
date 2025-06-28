@@ -243,6 +243,16 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 			return nil
 		}
 
+		if strings.Contains(err.Error(), "OrderRefunded") {
+			_, err = lockOrder.Update().
+				SetStatus(lockpaymentorder.StatusRefunded).
+				Save(ctx)
+			if err != nil {
+				return fmt.Errorf("%s - RefundOrder.updateStatus: %w", orderIDPrefix, err)
+			}
+			return nil
+		}
+
 		return fmt.Errorf("RefundOrder.waitForTransactionMined: %w", err)
 	}
 
@@ -310,7 +320,7 @@ func (s *OrderEVM) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 	// Wait for settleOrder tx to be mined
 	result, err := s.engineService.WaitForTransactionMined(ctx, queueId, 5*time.Minute)
 	if err != nil {
-		if strings.Contains(err.Error(), "OrderFulfilled") {
+		if strings.Contains(err.Error(), "OrderSettled") {
 			_, err = order.Update().
 				SetStatus(lockpaymentorder.StatusSettled).
 				Save(ctx)
