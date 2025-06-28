@@ -163,7 +163,7 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 	}
 
 	txHash := result["transactionHash"].(string)
-	blockNumber, err := strconv.ParseInt(result["confirmedAtBlockNumber"].(string), 10, 64)
+	blockNumber, err := strconv.ParseInt(result["confirmedAtBlockNumber"].(string), 0, 64)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.parseBlockNumber: %w", orderIDPrefix, err)
 	}
@@ -247,7 +247,7 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 	}
 
 	txHash := result["transactionHash"].(string)
-	blockNumber, err := strconv.ParseInt(result["confirmedAtBlockNumber"].(string), 10, 64)
+	blockNumber, err := strconv.ParseInt(result["confirmedAtBlockNumber"].(string), 0, 64)
 	if err != nil {
 		return fmt.Errorf("%s - RefundOrder.parseBlockNumber: %w", orderIDPrefix, err)
 	}
@@ -319,7 +319,7 @@ func (s *OrderEVM) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 	}
 
 	txHash := result["transactionHash"].(string)
-	blockNumber, err := strconv.ParseInt(result["confirmedAtBlockNumber"].(string), 10, 64)
+	blockNumber, err := strconv.ParseInt(result["confirmedAtBlockNumber"].(string), 0, 64)
 	if err != nil {
 		return fmt.Errorf("%s - SettleOrder.parseBlockNumber: %w", orderIDPrefix, err)
 	}
