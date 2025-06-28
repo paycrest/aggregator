@@ -887,8 +887,6 @@ func FixDatabaseMishap() error {
 	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 18052684, 18052684)
 	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 18056857, 18056857)
 
-	logger.Infof("FixDatabaseMishap: %v", ctx)
-
 	return nil
 }
 
