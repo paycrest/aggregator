@@ -36,7 +36,7 @@ func NewIndexerEVM() types.Indexer {
 }
 
 // IndexTransfer indexes transfers to the receive address for EVM networks.
-func (s *IndexerEVM) IndexTransfer(ctx context.Context, rpcClient types.RPCClient, token *ent.Token, fromBlock int64, toBlock int64) error {
+func (s *IndexerEVM) IndexTransfer(ctx context.Context, token *ent.Token, address string, fromBlock int64, toBlock int64) error {
 	// Get Transfer event data
 	payload := map[string]string{
 		"filter_block_number_gte": fmt.Sprintf("%d", fromBlock),
@@ -46,6 +46,10 @@ func (s *IndexerEVM) IndexTransfer(ctx context.Context, rpcClient types.RPCClien
 		"sort_order":              "desc",
 		"decode":                  "true",
 		"limit":                   "500",
+	}
+
+	if address != "" {
+		payload["filter_topic_2"] = address
 	}
 
 	events, err := s.engineService.GetContractEvents(ctx, token.Edges.Network.ChainID, token.ContractAddress, payload)
@@ -100,7 +104,7 @@ func (s *IndexerEVM) IndexTransfer(ctx context.Context, rpcClient types.RPCClien
 }
 
 // IndexOrderCreated indexes orders created in the Gateway contract for EVM networks.
-func (s *IndexerEVM) IndexOrderCreated(ctx context.Context, rpcClient types.RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error {
+func (s *IndexerEVM) IndexOrderCreated(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64) error {
 	// Get OrderCreated event data
 	eventPayload := map[string]string{
 		"filter_block_number_gte": fmt.Sprintf("%d", fromBlock),
@@ -168,7 +172,7 @@ func (s *IndexerEVM) IndexOrderCreated(ctx context.Context, rpcClient types.RPCC
 }
 
 // IndexOrderSettled indexes orders settled in the Gateway contract for EVM networks.
-func (s *IndexerEVM) IndexOrderSettled(ctx context.Context, rpcClient types.RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error {
+func (s *IndexerEVM) IndexOrderSettled(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64) error {
 	// Get OrderSettled event data
 	eventPayload := map[string]string{
 		"filter_block_number_gte": fmt.Sprintf("%d", fromBlock),
@@ -225,7 +229,7 @@ func (s *IndexerEVM) IndexOrderSettled(ctx context.Context, rpcClient types.RPCC
 }
 
 // IndexOrderRefunded indexes orders settled in the Gateway contract for EVM networks.
-func (s *IndexerEVM) IndexOrderRefunded(ctx context.Context, rpcClient types.RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error {
+func (s *IndexerEVM) IndexOrderRefunded(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64) error {
 	// Get OrderRefunded event data
 	eventPayload := map[string]string{
 		"filter_block_number_gte": fmt.Sprintf("%d", fromBlock),

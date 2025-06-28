@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	fastshot "github.com/opus-domini/fast-shot"
@@ -16,10 +17,11 @@ import (
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
-	"github.com/paycrest/aggregator/ent/network"
+	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	svc "github.com/paycrest/aggregator/services"
+	"github.com/paycrest/aggregator/services/indexer"
 	kycErrors "github.com/paycrest/aggregator/services/kyc/errors"
 	"github.com/paycrest/aggregator/services/kyc/smile"
 	orderSvc "github.com/paycrest/aggregator/services/order"
@@ -35,7 +37,7 @@ import (
 
 var cryptoConf = config.CryptoConfig()
 
-// var serverConf = config.ServerConfig()
+var serverConf = config.ServerConfig()
 var identityConf = config.IdentityConfig()
 
 // Controller is the default controller for other endpoints
@@ -281,7 +283,7 @@ func (ctrl *Controller) GetSupportedTokens(ctx *gin.Context) {
 	// Apply network filter if provided
 	if networkFilter != "" {
 		query = query.Where(tokenEnt.HasNetworkWith(
-			network.Identifier(strings.ToLower(networkFilter)),
+			networkent.Identifier(strings.ToLower(networkFilter)),
 		))
 	}
 
@@ -422,7 +424,7 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 			lockpaymentorder.GatewayIDEQ(orderID),
 			lockpaymentorder.HasTokenWith(
 				tokenEnt.HasNetworkWith(
-					network.ChainIDEQ(chainID),
+					networkent.ChainIDEQ(chainID),
 				),
 			),
 		).
@@ -874,4 +876,177 @@ func (ctrl *Controller) KYCWebhook(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "Webhook processed successfully"})
+}
+
+// IndexBlockRange controller indexes a specific block range for blockchain events
+func (ctrl *Controller) IndexBlockRange(ctx *gin.Context) {
+	var payload types.IndexBlockRangeRequest
+
+	if err := ctx.ShouldBindJSON(&payload); err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error",
+			"Failed to validate payload", u.GetErrorData(err))
+		return
+	}
+
+	// Validate block range doesn't exceed 1000 blocks
+	if payload.ToBlock-payload.FromBlock > 1000 {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Block range cannot exceed 1000 blocks", nil)
+		return
+	}
+
+	// Validate fromBlock is less than toBlock
+	if payload.FromBlock >= payload.ToBlock {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "fromBlock must be less than toBlock", nil)
+		return
+	}
+
+	// Validate network based on server environment
+	isTestnet := false
+	if serverConf.Environment != "production" {
+		isTestnet = true
+	}
+
+	network, err := storage.Client.Network.
+		Query().
+		Where(
+			networkent.IdentifierEqualFold(payload.Network),
+			networkent.IsTestnetEQ(isTestnet),
+		).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Network not found or not supported for current environment", nil)
+			return
+		}
+		logger.WithFields(logger.Fields{
+			"Error":   fmt.Sprintf("%v", err),
+			"Network": payload.Network,
+		}).Errorf("Failed to fetch network")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to validate network", nil)
+		return
+	}
+
+	// Fetch enabled tokens for the network
+	tokens, err := storage.Client.Token.
+		Query().
+		Where(
+			tokenEnt.IsEnabled(true),
+			tokenEnt.HasNetworkWith(
+				networkent.IDEQ(network.ID),
+			),
+		).
+		WithNetwork().
+		All(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":   fmt.Sprintf("%v", err),
+			"Network": payload.Network,
+		}).Errorf("Failed to fetch tokens for network")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch tokens", nil)
+		return
+	}
+
+	// Create indexer instance based on network type
+	var indexerInstance types.Indexer
+	if strings.HasPrefix(network.Identifier, "tron") {
+		indexerInstance = indexer.NewIndexerTron()
+	} else {
+		indexerInstance = indexer.NewIndexerEVM()
+	}
+
+	// Track event counts
+	eventCounts := struct {
+		Transfer      int `json:"Transfer"`
+		OrderCreated  int `json:"OrderCreated"`
+		OrderSettled  int `json:"OrderSettled"`
+		OrderRefunded int `json:"OrderRefunded"`
+	}{}
+
+	// Run each event type in separate goroutines
+	var wg sync.WaitGroup
+
+	// Index OrderCreated events
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := indexerInstance.IndexOrderCreated(ctx, network, payload.FromBlock, payload.ToBlock)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":     fmt.Sprintf("%v", err),
+				"Network":   payload.Network,
+				"FromBlock": payload.FromBlock,
+				"ToBlock":   payload.ToBlock,
+				"EventType": "OrderCreated",
+			}).Errorf("Failed to index OrderCreated events")
+		} else {
+			eventCounts.OrderCreated++
+		}
+	}()
+
+	// Index OrderSettled events
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := indexerInstance.IndexOrderSettled(ctx, network, payload.FromBlock, payload.ToBlock)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":     fmt.Sprintf("%v", err),
+				"Network":   payload.Network,
+				"FromBlock": payload.FromBlock,
+				"ToBlock":   payload.ToBlock,
+				"EventType": "OrderSettled",
+			}).Errorf("Failed to index OrderSettled events")
+		} else {
+			eventCounts.OrderSettled++
+		}
+	}()
+
+	// Index OrderRefunded events
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := indexerInstance.IndexOrderRefunded(ctx, network, payload.FromBlock, payload.ToBlock)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":     fmt.Sprintf("%v", err),
+				"Network":   payload.Network,
+				"FromBlock": payload.FromBlock,
+				"ToBlock":   payload.ToBlock,
+				"EventType": "OrderRefunded",
+			}).Errorf("Failed to index OrderRefunded events")
+		} else {
+			eventCounts.OrderRefunded++
+		}
+	}()
+
+	// Index Transfer events for each token
+	for _, token := range tokens {
+		wg.Add(1)
+		go func(token *ent.Token) {
+			defer wg.Done()
+			err := indexerInstance.IndexTransfer(ctx, token, payload.Address, payload.FromBlock, payload.ToBlock)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":     fmt.Sprintf("%v", err),
+					"Network":   payload.Network,
+					"Token":     token.Symbol,
+					"FromBlock": payload.FromBlock,
+					"ToBlock":   payload.ToBlock,
+					"EventType": "Transfer",
+				}).Errorf("Failed to index Transfer events")
+			} else {
+				eventCounts.Transfer++
+			}
+		}(token)
+	}
+
+	// Wait for all indexing operations to complete
+	wg.Wait()
+
+	response := types.IndexBlockRangeResponse{
+		Message: fmt.Sprintf("Successfully indexed block range %d to %d for network %s", payload.FromBlock, payload.ToBlock, payload.Network),
+		Events:  eventCounts,
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Block range indexing completed", response)
 }
