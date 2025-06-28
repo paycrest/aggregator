@@ -310,7 +310,7 @@ func (s *OrderEVM) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 	// Wait for settleOrder tx to be mined
 	result, err := s.engineService.WaitForTransactionMined(ctx, queueId, 5*time.Minute)
 	if err != nil {
-		if strings.Contains(err.Error(), "OrderSettled") {
+		if strings.Contains(err.Error(), "OrderFulfilled") {
 			_, err = order.Update().
 				SetStatus(lockpaymentorder.StatusSettled).
 				Save(ctx)
