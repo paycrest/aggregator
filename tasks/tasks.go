@@ -213,38 +213,38 @@ func RetryStaleUserOperations() error {
 		}
 	}(ctx)
 
-	// Retry refunded linked address deposits
-	orders, err = storage.Client.PaymentOrder.
-		Query().
-		Where(
-			paymentorder.StatusEQ(paymentorder.StatusRefunded),
-			paymentorder.HasLinkedAddress(),
-		).
-		WithToken(func(tq *ent.TokenQuery) {
-			tq.WithNetwork()
-		}).
-		All(ctx)
-	if err != nil {
-		return fmt.Errorf("RetryStaleUserOperations: %w", err)
-	}
+	// // Retry refunded linked address deposits
+	// orders, err = storage.Client.PaymentOrder.
+	// 	Query().
+	// 	Where(
+	// 		paymentorder.StatusEQ(paymentorder.StatusRefunded),
+	// 		paymentorder.HasLinkedAddress(),
+	// 	).
+	// 	WithToken(func(tq *ent.TokenQuery) {
+	// 		tq.WithNetwork()
+	// 	}).
+	// 	All(ctx)
+	// if err != nil {
+	// 	return fmt.Errorf("RetryStaleUserOperations: %w", err)
+	// }
 
-	wg.Add(1)
-	go func(ctx context.Context) {
-		defer wg.Done()
-		for _, order := range orders {
-			service := orderService.NewOrderEVM()
-			err = service.CreateOrder(ctx, order.ID)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":             fmt.Sprintf("%v", err),
-					"OrderID":           order.ID.String(),
-					"Amount":            order.Amount,
-					"GatewayID":         order.GatewayID,
-					"NetworkIdentifier": order.Edges.Token.Edges.Network.Identifier,
-				}).Errorf("RetryStaleUserOperations.RetryLinkedAddress")
-			}
-		}
-	}(ctx)
+	// wg.Add(1)
+	// go func(ctx context.Context) {
+	// 	defer wg.Done()
+	// 	for _, order := range orders {
+	// 		service := orderService.NewOrderEVM()
+	// 		err = service.CreateOrder(ctx, order.ID)
+	// 		if err != nil {
+	// 			logger.WithFields(logger.Fields{
+	// 				"Error":             fmt.Sprintf("%v", err),
+	// 				"OrderID":           order.ID.String(),
+	// 				"Amount":            order.Amount,
+	// 				"GatewayID":         order.GatewayID,
+	// 				"NetworkIdentifier": order.Edges.Token.Edges.Network.Identifier,
+	// 			}).Errorf("RetryStaleUserOperations.RetryLinkedAddress")
+	// 		}
+	// 	}
+	// }(ctx)
 
 	return nil
 }
@@ -272,6 +272,10 @@ func GetTronLatestBlock(endpoint string) (int64, error) {
 
 // runIndexers runs the indexers for the given network, indexer, tokens, startBlock, and latestBlock
 func runIndexers(network *ent.Network, indexer types.Indexer, tokens []*ent.Token, startBlock int64, latestBlock int64) {
+	if network.ChainID == 42161 {
+		startBlock = startBlock - 5
+	}
+
 	// Index Gateway events
 	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
 		ctx := context.Background()
@@ -280,7 +284,12 @@ func runIndexers(network *ent.Network, indexer types.Indexer, tokens []*ent.Toke
 
 	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
 		ctx := context.Background()
-		_ = indexer.IndexOrderSettled(ctx, nil, network, start, end)
+		err := indexer.IndexOrderSettled(ctx, nil, network, start, end)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error": fmt.Sprintf("%v", err),
+			}).Errorf("runIndexers.IndexOrderSettled")
+		}
 	}(network, indexer, startBlock, latestBlock)
 
 	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
@@ -863,12 +872,20 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 	}
 }
 
-func FixDatabaseMisHap() error {
-	// ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	// defer cancel()
+func FixDatabaseMishap() error {
 	ctx := context.Background()
+	network, err := storage.Client.Network.
+		Query().
+		Where(networkent.ChainIDEQ(1135)).
+		Only(ctx)
+	if err != nil {
+		return fmt.Errorf("FixDatabaseMishap.fetchNetworks: %w", err)
+	}
 
-	logger.Infof("FixDatabaseMisHap: %v", ctx)
+	indexerInstance := indexer.NewIndexerEVM()
+
+	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 18052684, 18052684)
+	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 18056857, 18056857)
 
 	return nil
 }
