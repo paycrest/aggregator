@@ -1744,7 +1744,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 }
 
 // UpdateKYCWalletAddress moves the KYC record to a new wallet address
-func (ctrl *Controller) UpdateKYCWalletAddress(ctx *gin.Context) {
+func (ctrl *Controller) HandleWalletAddressUpdateForKYC(ctx *gin.Context) {
 	var payload types.UpdateKYCWalletAddressRequest
 
 	// Extract secret key from header
