@@ -213,38 +213,38 @@ func RetryStaleUserOperations() error {
 		}
 	}(ctx)
 
-	// Retry refunded linked address deposits
-	orders, err = storage.Client.PaymentOrder.
-		Query().
-		Where(
-			paymentorder.StatusEQ(paymentorder.StatusRefunded),
-			paymentorder.HasLinkedAddress(),
-		).
-		WithToken(func(tq *ent.TokenQuery) {
-			tq.WithNetwork()
-		}).
-		All(ctx)
-	if err != nil {
-		return fmt.Errorf("RetryStaleUserOperations: %w", err)
-	}
+	// // Retry refunded linked address deposits
+	// orders, err = storage.Client.PaymentOrder.
+	// 	Query().
+	// 	Where(
+	// 		paymentorder.StatusEQ(paymentorder.StatusRefunded),
+	// 		paymentorder.HasLinkedAddress(),
+	// 	).
+	// 	WithToken(func(tq *ent.TokenQuery) {
+	// 		tq.WithNetwork()
+	// 	}).
+	// 	All(ctx)
+	// if err != nil {
+	// 	return fmt.Errorf("RetryStaleUserOperations: %w", err)
+	// }
 
-	wg.Add(1)
-	go func(ctx context.Context) {
-		defer wg.Done()
-		for _, order := range orders {
-			service := orderService.NewOrderEVM()
-			err = service.CreateOrder(ctx, order.ID)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":             fmt.Sprintf("%v", err),
-					"OrderID":           order.ID.String(),
-					"Amount":            order.Amount,
-					"GatewayID":         order.GatewayID,
-					"NetworkIdentifier": order.Edges.Token.Edges.Network.Identifier,
-				}).Errorf("RetryStaleUserOperations.RetryLinkedAddress")
-			}
-		}
-	}(ctx)
+	// wg.Add(1)
+	// go func(ctx context.Context) {
+	// 	defer wg.Done()
+	// 	for _, order := range orders {
+	// 		service := orderService.NewOrderEVM()
+	// 		err = service.CreateOrder(ctx, order.ID)
+	// 		if err != nil {
+	// 			logger.WithFields(logger.Fields{
+	// 				"Error":             fmt.Sprintf("%v", err),
+	// 				"OrderID":           order.ID.String(),
+	// 				"Amount":            order.Amount,
+	// 				"GatewayID":         order.GatewayID,
+	// 				"NetworkIdentifier": order.Edges.Token.Edges.Network.Identifier,
+	// 			}).Errorf("RetryStaleUserOperations.RetryLinkedAddress")
+	// 		}
+	// 	}
+	// }(ctx)
 
 	return nil
 }
