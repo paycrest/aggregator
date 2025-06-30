@@ -872,23 +872,23 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 	}
 }
 
-func FixDatabaseMishap() error {
-	ctx := context.Background()
-	network, err := storage.Client.Network.
-		Query().
-		Where(networkent.ChainIDEQ(1135)).
-		Only(ctx)
-	if err != nil {
-		return fmt.Errorf("FixDatabaseMishap.fetchNetworks: %w", err)
-	}
+// func FixDatabaseMishap() error {
+// 	ctx := context.Background()
+// 	network, err := storage.Client.Network.
+// 		Query().
+// 		Where(networkent.ChainIDEQ(1135)).
+// 		Only(ctx)
+// 	if err != nil {
+// 		return fmt.Errorf("FixDatabaseMishap.fetchNetworks: %w", err)
+// 	}
 
-	indexerInstance := indexer.NewIndexerEVM()
+// 	indexerInstance := indexer.NewIndexerEVM()
 
-	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 18052684, 18052684)
-	_ = indexerInstance.IndexOrderCreated(ctx, nil, network, 18056857, 18056857)
+// 	_ = indexerInstance.IndexOrderCreated(ctx, network, 18052684, 18052684)
+// 	_ = indexerInstance.IndexOrderCreated(ctx, network, 18056857, 18056857)
 
-	return nil
-}
+// 	return nil
+// }
 
 // HandleReceiveAddressValidity handles receive address validity
 func HandleReceiveAddressValidity() error {
