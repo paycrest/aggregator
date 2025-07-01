@@ -43,8 +43,8 @@ func RegisterRoutes(route *gin.Engine) {
 	v1.POST("verify-account", ctrl.VerifyAccount)
 	v1.GET("orders/:chain_id/:id", ctrl.GetLockPaymentOrderStatus)
 
-	// Index block range endpoint
-	v1.POST("index-block-range", ctrl.IndexBlockRange)
+	// Reindex transaction endpoint
+	v1.GET("reindex/:network/:tx_hash", ctrl.IndexTransaction)
 
 	// KYC routes
 	v1.POST("kyc", ctrl.RequestIDVerification)
