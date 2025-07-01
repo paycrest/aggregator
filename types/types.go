@@ -707,3 +707,11 @@ type BeneficialOwnerInput struct {
 	OwnershipPercentage          float64 `json:"ownershipPercentage" binding:"required,gt=0,lte=100"`
 	GovernmentIssuedIdType       string  `json:"governmentIssuedIdType" binding:"required,oneof=passport drivers_license national_id"`
 }
+
+type ThirdWebResponse struct {
+	Result struct {
+		Address             string `json:"address"`
+		Label               string `json:"label"`
+		SmartAccountAddress string `json:"smartAccountAddress"`
+	} `json:"result"`
+}

@@ -3,14 +3,19 @@ package test
 import (
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
+	"strings"
 
 	"math/big"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils/crypto"
 
@@ -202,4 +207,36 @@ func CreateSmartAddress(ctx context.Context, client types.RPCClient) (string, []
 	}
 
 	return smartAccountAddress.Hex(), saltEncrypted, nil
+}
+
+// CreateThirdAccount creates a new account via thirdweb and returns the address
+func CreateThirdAccount() (string, error) {
+	cnfg := config.EngineConfig()
+	url := "https://engine.thirdweb.com/v1/accounts"
+
+	payload := strings.NewReader("{\"label\": \"\"}")
+
+	req, _ := http.NewRequest("POST", url, payload)
+
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("X-Secret-Key", cnfg.ThirdwebSecretKey)
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to make request: %w", err)
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response: %w", err)
+	}
+
+	var response types.ThirdWebResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		return "", err
+	}
+
+	address := response.Result.Address
+	return address, nil
 }
