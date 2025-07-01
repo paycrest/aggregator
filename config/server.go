@@ -30,8 +30,8 @@ func ServerConfig() *ServerConfiguration {
 	viper.SetDefault("ALLOWED_HOSTS", "*")
 	viper.SetDefault("ENVIRONMENT", "local")
 	viper.SetDefault("SENTRY_DSN", "")
-	viper.SetDefault("RATE_LIMIT_UNAUTHENTICATED", 5)
-	viper.SetDefault("RATE_LIMIT_AUTHENTICATED", 100)
+	viper.SetDefault("RATE_LIMIT_UNAUTHENTICATED", 20)
+	viper.SetDefault("RATE_LIMIT_AUTHENTICATED", 500)
 	viper.SetDefault("SLACK_WEBHOOK_URL", "")
 	viper.SetDefault("SERVER_URL", "")
 
