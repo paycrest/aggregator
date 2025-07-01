@@ -27,7 +27,7 @@ func Routes() *gin.Engine {
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 	router.Use(middleware.CORSMiddleware())
-	// router.Use(middleware.RateLimitMiddleware())
+	router.Use(middleware.RateLimitMiddleware())
 
 	RegisterRoutes(router) //routes register
 
