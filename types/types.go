@@ -698,16 +698,14 @@ type SupportedTokenResponse struct {
 	Network         string `json:"network"`
 }
 
-// IndexBlockRangeRequest represents the request payload for indexing a specific block range
-type IndexBlockRangeRequest struct {
-	FromBlock int64  `json:"fromBlock" binding:"required,min=0"`
-	ToBlock   int64  `json:"toBlock" binding:"required,min=0"`
-	Network   string `json:"network" binding:"required"`
-	Address   string `json:"address"` // Optional, only required for Transfer indexing if available
+// IndexTransactionRequest represents the request payload for indexing a specific transaction
+type IndexTransactionRequest struct {
+	TxHash  string `json:"txHash" binding:"required"`
+	ChainID int64  `json:"chainId" binding:"required"`
 }
 
-// IndexBlockRangeResponse represents the response for the index block range endpoint
-type IndexBlockRangeResponse struct {
+// IndexTransactionResponse represents the response for the index transaction endpoint
+type IndexTransactionResponse struct {
 	Message string `json:"message"`
 	Events  struct {
 		Transfer      int `json:"Transfer"`

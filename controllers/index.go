@@ -1594,8 +1594,8 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 		network, err = storage.Client.Network.
 			Query().
 			Where(
-				network.ChainIDEQ(chainID),
-				network.IsTestnetEQ(isTestnet),
+				networkent.ChainIDEQ(chainID),
+				networkent.IsTestnetEQ(isTestnet),
 			).
 			Only(ctx)
 	} else {
@@ -1603,8 +1603,8 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 		network, err = storage.Client.Network.
 			Query().
 			Where(
-				network.IdentifierEqualFold(networkParam),
-				network.IsTestnetEQ(isTestnet),
+				networkent.IdentifierEqualFold(networkParam),
+				networkent.IsTestnetEQ(isTestnet),
 			).
 			Only(ctx)
 	}
@@ -1628,7 +1628,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 		Where(
 			tokenEnt.IsEnabled(true),
 			tokenEnt.HasNetworkWith(
-				network.IDEQ(network.ID),
+				networkent.IDEQ(network.ID),
 			),
 		).
 		WithNetwork().
@@ -1799,3 +1799,179 @@ func (ctrl *Controller) HandleWalletAddressUpdateForKYC(ctx *gin.Context) {
 	u.APIResponse(ctx, http.StatusOK, "success", "KYC wallet address updated successfully", response)
 }
 
+// IndexTransaction controller indexes a specific transaction for blockchain events
+func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
+	// Get network and txHash from URL parameters
+	networkParam := ctx.Param("network")
+	txHash := ctx.Param("tx_hash")
+
+	// Validate txHash format (basic hex validation)
+	if !strings.HasPrefix(txHash, "0x") || len(txHash) != 66 {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid transaction hash format", nil)
+		return
+	}
+
+	// Validate network based on server environment
+	isTestnet := false
+	if serverConf.Environment != "production" {
+		isTestnet = true
+	}
+
+	// Try to parse as chain ID first, then fall back to identifier
+	var network *ent.Network
+	var err error
+
+	chainID, parseErr := strconv.ParseInt(networkParam, 10, 64)
+	if parseErr == nil {
+		// networkParam is a chain ID
+		network, err = storage.Client.Network.
+			Query().
+			Where(
+				networkent.ChainIDEQ(chainID),
+				networkent.IsTestnetEQ(isTestnet),
+			).
+			Only(ctx)
+	} else {
+		// networkParam is an identifier (e.g., "base", "ethereum")
+		network, err = storage.Client.Network.
+			Query().
+			Where(
+				networkent.IdentifierEqualFold(networkParam),
+				networkent.IsTestnetEQ(isTestnet),
+			).
+			Only(ctx)
+	}
+
+	if err != nil {
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Network not found or not supported for current environment", nil)
+			return
+		}
+		logger.WithFields(logger.Fields{
+			"Error":        fmt.Sprintf("%v", err),
+			"NetworkParam": networkParam,
+		}).Errorf("Failed to fetch network")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to validate network", nil)
+		return
+	}
+
+	// Fetch enabled tokens for the network
+	tokens, err := storage.Client.Token.
+		Query().
+		Where(
+			tokenEnt.IsEnabled(true),
+			tokenEnt.HasNetworkWith(
+				networkent.IDEQ(network.ID),
+			),
+		).
+		WithNetwork().
+		All(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":        fmt.Sprintf("%v", err),
+			"NetworkParam": networkParam,
+		}).Errorf("Failed to fetch tokens for network")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch tokens", nil)
+		return
+	}
+
+	// Create indexer instance based on network type
+	var indexerInstance types.Indexer
+	if strings.HasPrefix(network.Identifier, "tron") {
+		indexerInstance = indexer.NewIndexerTron()
+	} else {
+		indexerInstance = indexer.NewIndexerEVM()
+	}
+
+	// Track event counts
+	eventCounts := struct {
+		Transfer      int `json:"Transfer"`
+		OrderCreated  int `json:"OrderCreated"`
+		OrderSettled  int `json:"OrderSettled"`
+		OrderRefunded int `json:"OrderRefunded"`
+	}{}
+
+	// Run each event type in separate goroutines
+	var wg sync.WaitGroup
+
+	// Index OrderCreated events
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := indexerInstance.IndexOrderCreated(ctx, network, 0, 0, txHash)
+		if err != nil && err.Error() != "no events found" {
+			logger.WithFields(logger.Fields{
+				"Error":        fmt.Sprintf("%v", err),
+				"NetworkParam": networkParam,
+				"TxHash":       txHash,
+				"EventType":    "OrderCreated",
+			}).Errorf("Failed to index OrderCreated events")
+		} else {
+			eventCounts.OrderCreated++
+		}
+	}()
+
+	// Index OrderSettled events
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := indexerInstance.IndexOrderSettled(ctx, network, 0, 0, txHash)
+		if err != nil && err.Error() != "no events found" {
+			logger.WithFields(logger.Fields{
+				"Error":        fmt.Sprintf("%v", err),
+				"NetworkParam": networkParam,
+				"TxHash":       txHash,
+				"EventType":    "OrderSettled",
+			}).Errorf("Failed to index OrderSettled events")
+		} else {
+			eventCounts.OrderSettled++
+		}
+	}()
+
+	// Index OrderRefunded events
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := indexerInstance.IndexOrderRefunded(ctx, network, 0, 0, txHash)
+		if err != nil && err.Error() != "no events found" {
+			logger.WithFields(logger.Fields{
+				"Error":        fmt.Sprintf("%v", err),
+				"NetworkParam": networkParam,
+				"TxHash":       txHash,
+				"EventType":    "OrderRefunded",
+			}).Errorf("Failed to index OrderRefunded events")
+		} else {
+			eventCounts.OrderRefunded++
+		}
+	}()
+
+	// Index Transfer events for each token
+	for _, token := range tokens {
+		wg.Add(1)
+		go func(token *ent.Token) {
+			defer wg.Done()
+			err := indexerInstance.IndexTransfer(ctx, token, "", 0, 0, txHash)
+			if err != nil && err.Error() != "no events found" {
+				logger.WithFields(logger.Fields{
+					"Error":        fmt.Sprintf("%v", err),
+					"NetworkParam": networkParam,
+					"Token":        token.Symbol,
+					"TxHash":       txHash,
+					"EventType":    "Transfer",
+				}).Errorf("Failed to index Transfer events")
+			} else {
+				eventCounts.Transfer++
+			}
+		}(token)
+	}
+
+	// Wait for all indexing operations to complete
+	wg.Wait()
+
+	response := types.IndexTransactionResponse{
+		Message: fmt.Sprintf("Successfully indexed transaction %s for network %s", txHash, networkParam),
+		Events:  eventCounts,
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Transaction indexing completed", response)
+}
