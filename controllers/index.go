@@ -1743,25 +1743,15 @@ func (ctrl *Controller) HandleWalletAddressUpdateForKYC(ctx *gin.Context) {
 	u.APIResponse(ctx, http.StatusOK, "success", "KYC wallet address updated successfully", response)
 }
 
-// IndexBlockRange controller indexes a specific block range for blockchain events
-func (ctrl *Controller) IndexBlockRange(ctx *gin.Context) {
-	var payload types.IndexBlockRangeRequest
+// IndexTransaction controller indexes a specific transaction for blockchain events
+func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
+	// Get network and txHash from URL parameters
+	networkParam := ctx.Param("network")
+	txHash := ctx.Param("tx_hash")
 
-	if err := ctx.ShouldBindJSON(&payload); err != nil {
-		u.APIResponse(ctx, http.StatusBadRequest, "error",
-			"Failed to validate payload", u.GetErrorData(err))
-		return
-	}
-
-	// Validate block range doesn't exceed 1000 blocks
-	if payload.ToBlock-payload.FromBlock > 1000 {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Block range cannot exceed 1000 blocks", nil)
-		return
-	}
-
-	// Validate fromBlock is less than toBlock
-	if payload.FromBlock >= payload.ToBlock {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "fromBlock must be less than toBlock", nil)
+	// Validate txHash format (basic hex validation)
+	if !strings.HasPrefix(txHash, "0x") || len(txHash) != 66 {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid transaction hash format", nil)
 		return
 	}
 
@@ -1771,21 +1761,39 @@ func (ctrl *Controller) IndexBlockRange(ctx *gin.Context) {
 		isTestnet = true
 	}
 
-	network, err := storage.Client.Network.
-		Query().
-		Where(
-			networkent.IdentifierEqualFold(payload.Network),
-			networkent.IsTestnetEQ(isTestnet),
-		).
-		Only(ctx)
+	// Try to parse as chain ID first, then fall back to identifier
+	var network *ent.Network
+	var err error
+
+	chainID, parseErr := strconv.ParseInt(networkParam, 10, 64)
+	if parseErr == nil {
+		// networkParam is a chain ID
+		network, err = storage.Client.Network.
+			Query().
+			Where(
+				networkent.ChainIDEQ(chainID),
+				networkent.IsTestnetEQ(isTestnet),
+			).
+			Only(ctx)
+	} else {
+		// networkParam is an identifier (e.g., "base", "ethereum")
+		network, err = storage.Client.Network.
+			Query().
+			Where(
+				networkent.IdentifierEqualFold(networkParam),
+				networkent.IsTestnetEQ(isTestnet),
+			).
+			Only(ctx)
+	}
+
 	if err != nil {
 		if ent.IsNotFound(err) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Network not found or not supported for current environment", nil)
 			return
 		}
 		logger.WithFields(logger.Fields{
-			"Error":   fmt.Sprintf("%v", err),
-			"Network": payload.Network,
+			"Error":        fmt.Sprintf("%v", err),
+			"NetworkParam": networkParam,
 		}).Errorf("Failed to fetch network")
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to validate network", nil)
 		return
@@ -1804,8 +1812,8 @@ func (ctrl *Controller) IndexBlockRange(ctx *gin.Context) {
 		All(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error":   fmt.Sprintf("%v", err),
-			"Network": payload.Network,
+			"Error":        fmt.Sprintf("%v", err),
+			"NetworkParam": networkParam,
 		}).Errorf("Failed to fetch tokens for network")
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch tokens", nil)
 		return
@@ -1834,14 +1842,13 @@ func (ctrl *Controller) IndexBlockRange(ctx *gin.Context) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := indexerInstance.IndexOrderCreated(ctx, network, payload.FromBlock, payload.ToBlock)
-		if err != nil {
+		err := indexerInstance.IndexOrderCreated(ctx, network, 0, 0, txHash)
+		if err != nil && err.Error() != "no events found" {
 			logger.WithFields(logger.Fields{
-				"Error":     fmt.Sprintf("%v", err),
-				"Network":   payload.Network,
-				"FromBlock": payload.FromBlock,
-				"ToBlock":   payload.ToBlock,
-				"EventType": "OrderCreated",
+				"Error":        fmt.Sprintf("%v", err),
+				"NetworkParam": networkParam,
+				"TxHash":       txHash,
+				"EventType":    "OrderCreated",
 			}).Errorf("Failed to index OrderCreated events")
 		} else {
 			eventCounts.OrderCreated++
@@ -1852,14 +1859,13 @@ func (ctrl *Controller) IndexBlockRange(ctx *gin.Context) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := indexerInstance.IndexOrderSettled(ctx, network, payload.FromBlock, payload.ToBlock)
-		if err != nil {
+		err := indexerInstance.IndexOrderSettled(ctx, network, 0, 0, txHash)
+		if err != nil && err.Error() != "no events found" {
 			logger.WithFields(logger.Fields{
-				"Error":     fmt.Sprintf("%v", err),
-				"Network":   payload.Network,
-				"FromBlock": payload.FromBlock,
-				"ToBlock":   payload.ToBlock,
-				"EventType": "OrderSettled",
+				"Error":        fmt.Sprintf("%v", err),
+				"NetworkParam": networkParam,
+				"TxHash":       txHash,
+				"EventType":    "OrderSettled",
 			}).Errorf("Failed to index OrderSettled events")
 		} else {
 			eventCounts.OrderSettled++
@@ -1870,14 +1876,13 @@ func (ctrl *Controller) IndexBlockRange(ctx *gin.Context) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := indexerInstance.IndexOrderRefunded(ctx, network, payload.FromBlock, payload.ToBlock)
-		if err != nil {
+		err := indexerInstance.IndexOrderRefunded(ctx, network, 0, 0, txHash)
+		if err != nil && err.Error() != "no events found" {
 			logger.WithFields(logger.Fields{
-				"Error":     fmt.Sprintf("%v", err),
-				"Network":   payload.Network,
-				"FromBlock": payload.FromBlock,
-				"ToBlock":   payload.ToBlock,
-				"EventType": "OrderRefunded",
+				"Error":        fmt.Sprintf("%v", err),
+				"NetworkParam": networkParam,
+				"TxHash":       txHash,
+				"EventType":    "OrderRefunded",
 			}).Errorf("Failed to index OrderRefunded events")
 		} else {
 			eventCounts.OrderRefunded++
@@ -1889,15 +1894,14 @@ func (ctrl *Controller) IndexBlockRange(ctx *gin.Context) {
 		wg.Add(1)
 		go func(token *ent.Token) {
 			defer wg.Done()
-			err := indexerInstance.IndexTransfer(ctx, token, payload.Address, payload.FromBlock, payload.ToBlock)
-			if err != nil {
+			err := indexerInstance.IndexTransfer(ctx, token, "", 0, 0, txHash)
+			if err != nil && err.Error() != "no events found" {
 				logger.WithFields(logger.Fields{
-					"Error":     fmt.Sprintf("%v", err),
-					"Network":   payload.Network,
-					"Token":     token.Symbol,
-					"FromBlock": payload.FromBlock,
-					"ToBlock":   payload.ToBlock,
-					"EventType": "Transfer",
+					"Error":        fmt.Sprintf("%v", err),
+					"NetworkParam": networkParam,
+					"Token":        token.Symbol,
+					"TxHash":       txHash,
+					"EventType":    "Transfer",
 				}).Errorf("Failed to index Transfer events")
 			} else {
 				eventCounts.Transfer++
@@ -1908,10 +1912,10 @@ func (ctrl *Controller) IndexBlockRange(ctx *gin.Context) {
 	// Wait for all indexing operations to complete
 	wg.Wait()
 
-	response := types.IndexBlockRangeResponse{
-		Message: fmt.Sprintf("Successfully indexed block range %d to %d for network %s", payload.FromBlock, payload.ToBlock, payload.Network),
+	response := types.IndexTransactionResponse{
+		Message: fmt.Sprintf("Successfully indexed transaction %s for network %s", txHash, networkParam),
 		Events:  eventCounts,
 	}
 
-	u.APIResponse(ctx, http.StatusOK, "success", "Block range indexing completed", response)
+	u.APIResponse(ctx, http.StatusOK, "success", "Transaction indexing completed", response)
 }
