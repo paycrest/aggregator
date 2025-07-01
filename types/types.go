@@ -104,10 +104,10 @@ type OrderService interface {
 
 // Indexer provides an interface for indexing blockchain data to the database.
 type Indexer interface {
-	IndexTransfer(ctx context.Context, rpcClient RPCClient, token *ent.Token, fromBlock int64, toBlock int64) error
-	IndexOrderCreated(ctx context.Context, rpcClient RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error
-	IndexOrderSettled(ctx context.Context, rpcClient RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error
-	IndexOrderRefunded(ctx context.Context, rpcClient RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error
+	IndexTransfer(ctx context.Context, token *ent.Token, address string, fromBlock int64, toBlock int64, txHash string) error
+	IndexOrderCreated(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error
+	IndexOrderSettled(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error
+	IndexOrderRefunded(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error
 }
 
 // KYCProvider defines the interface for KYC verification providers
@@ -258,13 +258,19 @@ type ProviderOrderTokenPayload struct {
 
 // ProviderProfilePayload is the payload for the provider profile endpoint
 type ProviderProfilePayload struct {
-	TradingName    string                      `json:"tradingName"`
-	Currencies     []string                    `json:"currencies"`
-	HostIdentifier string                      `json:"hostIdentifier"`
-	IsAvailable    bool                        `json:"isAvailable"`
-	IsActive       bool                        `json:"isActive"`
-	Tokens         []ProviderOrderTokenPayload `json:"tokens"`
-	VisibilityMode string                      `json:"visibilityMode"`
+	TradingName          string                      `json:"tradingName"`
+	Currencies           []string                    `json:"currencies"`
+	HostIdentifier       string                      `json:"hostIdentifier"`
+	IsAvailable          bool                        `json:"isAvailable"`
+	Tokens               []ProviderOrderTokenPayload `json:"tokens"`
+	VisibilityMode       string                      `json:"visibilityMode"`
+	Address              string                      `json:"address"`
+	MobileNumber         string                      `json:"mobileNumber"`
+	DateOfBirth          time.Time                   `json:"dateOfBirth"`
+	BusinessName         string                      `json:"businessName"`
+	IdentityDocumentType string                      `json:"identityType"`
+	IdentityDocument     string                      `json:"identityDocument"`
+	BusinessDocument     string                      `json:"businessDocument"`
 }
 
 // ProviderProfileResponse is the response for the provider profile endpoint
@@ -706,4 +712,21 @@ type BeneficialOwnerInput struct {
 	DateOfBirth                  string  `json:"dateOfBirth" binding:"required"`
 	OwnershipPercentage          float64 `json:"ownershipPercentage" binding:"required,gt=0,lte=100"`
 	GovernmentIssuedIdType       string  `json:"governmentIssuedIdType" binding:"required,oneof=passport drivers_license national_id"`
+}
+
+// IndexTransactionRequest represents the request payload for indexing a specific transaction
+type IndexTransactionRequest struct {
+	TxHash  string `json:"txHash" binding:"required"`
+	ChainID int64  `json:"chainId" binding:"required"`
+}
+
+// IndexTransactionResponse represents the response for the index transaction endpoint
+type IndexTransactionResponse struct {
+	Message string `json:"message"`
+	Events  struct {
+		Transfer      int `json:"Transfer"`
+		OrderCreated  int `json:"OrderCreated"`
+		OrderSettled  int `json:"OrderSettled"`
+		OrderRefunded int `json:"OrderRefunded"`
+	} `json:"events"`
 }

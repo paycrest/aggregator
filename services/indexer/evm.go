@@ -36,19 +36,31 @@ func NewIndexerEVM() types.Indexer {
 }
 
 // IndexTransfer indexes transfers to the receive address for EVM networks.
-func (s *IndexerEVM) IndexTransfer(ctx context.Context, rpcClient types.RPCClient, token *ent.Token, fromBlock int64, toBlock int64) error {
+func (s *IndexerEVM) IndexTransfer(ctx context.Context, token *ent.Token, address string, fromBlock int64, toBlock int64, txHash string) error {
 	// Get Transfer event data
-	payload := map[string]string{
-		"filter_block_number_gte": fmt.Sprintf("%d", fromBlock),
-		"filter_block_number_lte": fmt.Sprintf("%d", toBlock),
-		"filter_topic_0":          "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef", // Transfer
-		"sort_by":                 "block_number",
-		"sort_order":              "desc",
-		"decode":                  "true",
-		"limit":                   "500",
+	eventPayload := map[string]string{}
+	if txHash != "" {
+		eventPayload = map[string]string{
+			"filter_topic_0":          "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef", // Transfer
+			"filter_transaction_hash": txHash,
+			"decode":                  "true",
+		}
+	} else {
+		eventPayload = map[string]string{
+			"filter_block_number_gte": fmt.Sprintf("%d", fromBlock),
+			"filter_block_number_lte": fmt.Sprintf("%d", toBlock),
+			"filter_topic_0":          "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef", // Transfer
+			"sort_by":                 "block_number",
+			"sort_order":              "desc",
+			"decode":                  "true",
+			"limit":                   "500",
+		}
+		if address != "" {
+			eventPayload["filter_topic_2"] = address
+		}
 	}
 
-	events, err := s.engineService.GetContractEvents(ctx, token.Edges.Network.ChainID, token.ContractAddress, payload)
+	events, err := s.engineService.GetContractEvents(ctx, token.Edges.Network.ChainID, token.ContractAddress, eventPayload)
 	if err != nil {
 		return fmt.Errorf("ProcessTransfer.getTransferEventData: %w", err)
 	}
@@ -100,16 +112,25 @@ func (s *IndexerEVM) IndexTransfer(ctx context.Context, rpcClient types.RPCClien
 }
 
 // IndexOrderCreated indexes orders created in the Gateway contract for EVM networks.
-func (s *IndexerEVM) IndexOrderCreated(ctx context.Context, rpcClient types.RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error {
+func (s *IndexerEVM) IndexOrderCreated(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error {
 	// Get OrderCreated event data
-	eventPayload := map[string]string{
-		"filter_block_number_gte": fmt.Sprintf("%d", fromBlock),
-		"filter_block_number_lte": fmt.Sprintf("%d", toBlock),
-		"filter_topic_0":          "0x40ccd1ceb111a3c186ef9911e1b876dc1f789ed331b86097b3b8851055b6a137", // OrderCreated
-		"sort_by":                 "block_number",
-		"sort_order":              "desc",
-		"decode":                  "true",
-		"limit":                   "500",
+	eventPayload := map[string]string{}
+	if txHash != "" {
+		eventPayload = map[string]string{
+			"filter_topic_0":          "0x40ccd1ceb111a3c186ef9911e1b876dc1f789ed331b86097b3b8851055b6a137", // OrderCreated
+			"filter_transaction_hash": txHash,
+			"decode":                  "true",
+		}
+	} else {
+		eventPayload = map[string]string{
+			"filter_block_number_gte": fmt.Sprintf("%d", fromBlock),
+			"filter_block_number_lte": fmt.Sprintf("%d", toBlock),
+			"filter_topic_0":          "0x40ccd1ceb111a3c186ef9911e1b876dc1f789ed331b86097b3b8851055b6a137", // OrderCreated
+			"sort_by":                 "block_number",
+			"sort_order":              "desc",
+			"decode":                  "true",
+			"limit":                   "500",
+		}
 	}
 
 	events, err := s.engineService.GetContractEvents(ctx, network.ChainID, network.GatewayContractAddress, eventPayload)
@@ -168,16 +189,25 @@ func (s *IndexerEVM) IndexOrderCreated(ctx context.Context, rpcClient types.RPCC
 }
 
 // IndexOrderSettled indexes orders settled in the Gateway contract for EVM networks.
-func (s *IndexerEVM) IndexOrderSettled(ctx context.Context, rpcClient types.RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error {
+func (s *IndexerEVM) IndexOrderSettled(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error {
 	// Get OrderSettled event data
-	eventPayload := map[string]string{
-		"filter_block_number_gte": fmt.Sprintf("%d", fromBlock),
-		"filter_block_number_lte": fmt.Sprintf("%d", toBlock),
-		"filter_topic_0":          "0x98ece21e01a01cbe1d1c0dad3b053c8fbd368f99be78be958fcf1d1d13fd249a", // OrderSettled
-		"sort_by":                 "block_number",
-		"sort_order":              "desc",
-		"decode":                  "true",
-		"limit":                   "500",
+	eventPayload := map[string]string{}
+	if txHash != "" {
+		eventPayload = map[string]string{
+			"filter_topic_0":          "0x98ece21e01a01cbe1d1c0dad3b053c8fbd368f99be78be958fcf1d1d13fd249a", // OrderSettled
+			"filter_transaction_hash": txHash,
+			"decode":                  "true",
+		}
+	} else {
+		eventPayload = map[string]string{
+			"filter_block_number_gte": fmt.Sprintf("%d", fromBlock),
+			"filter_block_number_lte": fmt.Sprintf("%d", toBlock),
+			"filter_topic_0":          "0x98ece21e01a01cbe1d1c0dad3b053c8fbd368f99be78be958fcf1d1d13fd249a", // OrderSettled
+			"sort_by":                 "block_number",
+			"sort_order":              "desc",
+			"decode":                  "true",
+			"limit":                   "500",
+		}
 	}
 
 	events, err := s.engineService.GetContractEvents(ctx, network.ChainID, network.GatewayContractAddress, eventPayload)
@@ -225,16 +255,25 @@ func (s *IndexerEVM) IndexOrderSettled(ctx context.Context, rpcClient types.RPCC
 }
 
 // IndexOrderRefunded indexes orders settled in the Gateway contract for EVM networks.
-func (s *IndexerEVM) IndexOrderRefunded(ctx context.Context, rpcClient types.RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error {
+func (s *IndexerEVM) IndexOrderRefunded(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error {
 	// Get OrderRefunded event data
-	eventPayload := map[string]string{
-		"filter_block_number_gte": fmt.Sprintf("%d", fromBlock),
-		"filter_block_number_lte": fmt.Sprintf("%d", toBlock),
-		"filter_topic_0":          "0x0736fe428e1747ca8d387c2e6fa1a31a0cde62d3a167c40a46ade59a3cdc828e", // OrderRefunded
-		"sort_by":                 "block_number",
-		"sort_order":              "desc",
-		"decode":                  "true",
-		"limit":                   "500",
+	eventPayload := map[string]string{}
+	if txHash != "" {
+		eventPayload = map[string]string{
+			"filter_topic_0":          "0x0736fe428e1747ca8d387c2e6fa1a31a0cde62d3a167c40a46ade59a3cdc828e", // OrderRefunded
+			"filter_transaction_hash": txHash,
+			"decode":                  "true",
+		}
+	} else {
+		eventPayload = map[string]string{
+			"filter_block_number_gte": fmt.Sprintf("%d", fromBlock),
+			"filter_block_number_lte": fmt.Sprintf("%d", toBlock),
+			"filter_topic_0":          "0x0736fe428e1747ca8d387c2e6fa1a31a0cde62d3a167c40a46ade59a3cdc828e", // OrderRefunded
+			"sort_by":                 "block_number",
+			"sort_order":              "desc",
+			"decode":                  "true",
+			"limit":                   "500",
+		}
 	}
 
 	events, err := s.engineService.GetContractEvents(ctx, network.ChainID, network.GatewayContractAddress, eventPayload)

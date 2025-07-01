@@ -279,22 +279,17 @@ func runIndexers(network *ent.Network, indexer types.Indexer, tokens []*ent.Toke
 	// Index Gateway events
 	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
 		ctx := context.Background()
-		_ = indexer.IndexOrderCreated(ctx, nil, network, start, end)
+		_ = indexer.IndexOrderCreated(ctx, network, start, end, "")
 	}(network, indexer, startBlock, latestBlock)
 
 	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
 		ctx := context.Background()
-		err := indexer.IndexOrderSettled(ctx, nil, network, start, end)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error": fmt.Sprintf("%v", err),
-			}).Errorf("runIndexers.IndexOrderSettled")
-		}
+		_ = indexer.IndexOrderSettled(ctx, network, start, end, "")
 	}(network, indexer, startBlock, latestBlock)
 
 	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
 		ctx := context.Background()
-		_ = indexer.IndexOrderRefunded(ctx, nil, network, start, end)
+		_ = indexer.IndexOrderRefunded(ctx, network, start, end, "")
 	}(network, indexer, startBlock, latestBlock)
 
 	// Index transfer events for tokens in this network
@@ -305,7 +300,7 @@ func runIndexers(network *ent.Network, indexer types.Indexer, tokens []*ent.Toke
 
 		go func(token *ent.Token, indexer types.Indexer, start, end int64) {
 			ctx := context.Background()
-			_ = indexer.IndexTransfer(ctx, nil, token, start, end)
+			_ = indexer.IndexTransfer(ctx, token, "", start, end, "")
 		}(token, indexer, startBlock, latestBlock)
 	}
 }
@@ -884,8 +879,8 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 
 // 	indexerInstance := indexer.NewIndexerEVM()
 
-// 	_ = indexerInstance.IndexOrderCreated(ctx, network, 18052684, 18052684)
-// 	_ = indexerInstance.IndexOrderCreated(ctx, network, 18056857, 18056857)
+// 	_ = indexerInstance.IndexOrderCreated(ctx, network, 18052684, 18052684, "")
+// 	_ = indexerInstance.IndexOrderCreated(ctx, network, 18056857, 18056857, "")
 
 // 	return nil
 // }

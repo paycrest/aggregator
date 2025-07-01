@@ -163,7 +163,7 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 	}
 
 	txHash := result["transactionHash"].(string)
-	blockNumber, err := strconv.ParseInt(result["confirmedAtBlockNumber"].(string), 10, 64)
+	blockNumber, err := strconv.ParseInt(result["confirmedAtBlockNumber"].(string), 0, 64)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.parseBlockNumber: %w", orderIDPrefix, err)
 	}
@@ -233,7 +233,7 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 	// Wait for refundOrder tx to be mined
 	result, err := s.engineService.WaitForTransactionMined(ctx, queueId, 5*time.Minute)
 	if err != nil {
-		if strings.Contains(err.Error(), "OrderRefunded") {
+		if strings.Contains(err.Error(), "OrderRefunded") || strings.Contains(err.Error(), "UserOperation reverted during simulation") {
 			_, err = lockOrder.Update().
 				SetStatus(lockpaymentorder.StatusRefunded).
 				Save(ctx)
@@ -247,7 +247,7 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 	}
 
 	txHash := result["transactionHash"].(string)
-	blockNumber, err := strconv.ParseInt(result["confirmedAtBlockNumber"].(string), 10, 64)
+	blockNumber, err := strconv.ParseInt(result["confirmedAtBlockNumber"].(string), 0, 64)
 	if err != nil {
 		return fmt.Errorf("%s - RefundOrder.parseBlockNumber: %w", orderIDPrefix, err)
 	}
@@ -310,7 +310,7 @@ func (s *OrderEVM) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 	// Wait for settleOrder tx to be mined
 	result, err := s.engineService.WaitForTransactionMined(ctx, queueId, 5*time.Minute)
 	if err != nil {
-		if strings.Contains(err.Error(), "OrderFulfilled") {
+		if strings.Contains(err.Error(), "OrderFulfilled") || strings.Contains(err.Error(), "UserOperation reverted during simulation") {
 			_, err = order.Update().
 				SetStatus(lockpaymentorder.StatusSettled).
 				Save(ctx)
@@ -319,7 +319,7 @@ func (s *OrderEVM) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 	}
 
 	txHash := result["transactionHash"].(string)
-	blockNumber, err := strconv.ParseInt(result["confirmedAtBlockNumber"].(string), 10, 64)
+	blockNumber, err := strconv.ParseInt(result["confirmedAtBlockNumber"].(string), 0, 64)
 	if err != nil {
 		return fmt.Errorf("%s - SettleOrder.parseBlockNumber: %w", orderIDPrefix, err)
 	}
