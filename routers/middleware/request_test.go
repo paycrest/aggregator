@@ -42,7 +42,7 @@ func TestRateLimit(t *testing.T) {
 			{
 				name:           "Unauthenticated Over Limit",
 				authenticated:  false,
-				numRequests:    6,
+				numRequests:    25,
 				expectedStatus: http.StatusTooManyRequests,
 			},
 			{
@@ -55,7 +55,7 @@ func TestRateLimit(t *testing.T) {
 			{
 				name:           "Authenticated Over Limit",
 				authenticated:  true,
-				numRequests:    55,
+				numRequests:    550,
 				expectedStatus: http.StatusTooManyRequests,
 				token:          "test-token",
 			},
@@ -87,7 +87,7 @@ func TestRateLimit(t *testing.T) {
 		headers := map[string]string{}
 		var response map[string]interface{}
 
-		for i := 0; i < 6; i++ {
+		for i := 0; i < 25; i++ {
 			w, _ := test.PerformRequest(t, "GET", "/test", nil, headers, router)
 			if w.Code == http.StatusTooManyRequests {
 				response = decodeResponseBody(t, w)
@@ -107,13 +107,13 @@ func TestRateLimit(t *testing.T) {
 
 		// Verify values
 		assert.Greater(t, data["retry_after"].(float64), 0.0)
-		assert.Equal(t, 5, int(data["limit"].(float64)))
+		assert.Equal(t, 20, int(data["limit"].(float64)))
 
 		// Test authenticated rate limit error response
 		time.Sleep(1 * time.Second) // Wait for rate limit to reset
 		headers["Authorization"] = "test-token"
 
-		for i := 0; i < 55; i++ {
+		for i := 0; i < 550; i++ {
 			w, _ := test.PerformRequest(t, "GET", "/test", nil, headers, router)
 			if w.Code == http.StatusTooManyRequests {
 				response = decodeResponseBody(t, w)
@@ -123,7 +123,7 @@ func TestRateLimit(t *testing.T) {
 
 		// Verify authenticated rate limit response
 		data = response["data"].(map[string]interface{})
-		assert.Equal(t, 50, int(data["limit"].(float64)))
+		assert.Equal(t, 500, int(data["limit"].(float64)))
 	})
 }
 
