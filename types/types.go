@@ -104,10 +104,10 @@ type OrderService interface {
 
 // Indexer provides an interface for indexing blockchain data to the database.
 type Indexer interface {
-	IndexTransfer(ctx context.Context, rpcClient RPCClient, token *ent.Token, fromBlock int64, toBlock int64) error
-	IndexOrderCreated(ctx context.Context, rpcClient RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error
-	IndexOrderSettled(ctx context.Context, rpcClient RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error
-	IndexOrderRefunded(ctx context.Context, rpcClient RPCClient, network *ent.Network, fromBlock int64, toBlock int64) error
+	IndexTransfer(ctx context.Context, token *ent.Token, address string, fromBlock int64, toBlock int64, txHash string) error
+	IndexOrderCreated(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error
+	IndexOrderSettled(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error
+	IndexOrderRefunded(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error
 }
 
 // KYCProvider defines the interface for KYC verification providers
@@ -708,12 +708,6 @@ type BeneficialOwnerInput struct {
 	GovernmentIssuedIdType       string  `json:"governmentIssuedIdType" binding:"required,oneof=passport drivers_license national_id"`
 }
 
-type ThirdWebResponse struct {
-	Result struct {
-		Address             string `json:"address"`
-		Label               string `json:"label"`
-		SmartAccountAddress string `json:"smartAccountAddress"`
-	} `json:"result"`
 type ThirdWebResponse struct {
 	Result struct {
 		Address             string `json:"address"`
