@@ -15,6 +15,7 @@ import (
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/senderprofile"
@@ -502,6 +503,25 @@ func (pou *PaymentOrderUpdate) AddTransactions(t ...*TransactionLog) *PaymentOrd
 	return pou.AddTransactionIDs(ids...)
 }
 
+// SetPaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID.
+func (pou *PaymentOrderUpdate) SetPaymentWebhookID(id uuid.UUID) *PaymentOrderUpdate {
+	pou.mutation.SetPaymentWebhookID(id)
+	return pou
+}
+
+// SetNillablePaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID if the given value is not nil.
+func (pou *PaymentOrderUpdate) SetNillablePaymentWebhookID(id *uuid.UUID) *PaymentOrderUpdate {
+	if id != nil {
+		pou = pou.SetPaymentWebhookID(*id)
+	}
+	return pou
+}
+
+// SetPaymentWebhook sets the "payment_webhook" edge to the PaymentWebhook entity.
+func (pou *PaymentOrderUpdate) SetPaymentWebhook(p *PaymentWebhook) *PaymentOrderUpdate {
+	return pou.SetPaymentWebhookID(p.ID)
+}
+
 // Mutation returns the PaymentOrderMutation object of the builder.
 func (pou *PaymentOrderUpdate) Mutation() *PaymentOrderMutation {
 	return pou.mutation
@@ -556,6 +576,12 @@ func (pou *PaymentOrderUpdate) RemoveTransactions(t ...*TransactionLog) *Payment
 		ids[i] = t[i].ID
 	}
 	return pou.RemoveTransactionIDs(ids...)
+}
+
+// ClearPaymentWebhook clears the "payment_webhook" edge to the PaymentWebhook entity.
+func (pou *PaymentOrderUpdate) ClearPaymentWebhook() *PaymentOrderUpdate {
+	pou.mutation.ClearPaymentWebhook()
+	return pou
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -942,6 +968,35 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(transactionlog.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if pou.mutation.PaymentWebhookCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   paymentorder.PaymentWebhookTable,
+			Columns: []string{paymentorder.PaymentWebhookColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := pou.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   paymentorder.PaymentWebhookTable,
+			Columns: []string{paymentorder.PaymentWebhookColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1435,6 +1490,25 @@ func (pouo *PaymentOrderUpdateOne) AddTransactions(t ...*TransactionLog) *Paymen
 	return pouo.AddTransactionIDs(ids...)
 }
 
+// SetPaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID.
+func (pouo *PaymentOrderUpdateOne) SetPaymentWebhookID(id uuid.UUID) *PaymentOrderUpdateOne {
+	pouo.mutation.SetPaymentWebhookID(id)
+	return pouo
+}
+
+// SetNillablePaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID if the given value is not nil.
+func (pouo *PaymentOrderUpdateOne) SetNillablePaymentWebhookID(id *uuid.UUID) *PaymentOrderUpdateOne {
+	if id != nil {
+		pouo = pouo.SetPaymentWebhookID(*id)
+	}
+	return pouo
+}
+
+// SetPaymentWebhook sets the "payment_webhook" edge to the PaymentWebhook entity.
+func (pouo *PaymentOrderUpdateOne) SetPaymentWebhook(p *PaymentWebhook) *PaymentOrderUpdateOne {
+	return pouo.SetPaymentWebhookID(p.ID)
+}
+
 // Mutation returns the PaymentOrderMutation object of the builder.
 func (pouo *PaymentOrderUpdateOne) Mutation() *PaymentOrderMutation {
 	return pouo.mutation
@@ -1489,6 +1563,12 @@ func (pouo *PaymentOrderUpdateOne) RemoveTransactions(t ...*TransactionLog) *Pay
 		ids[i] = t[i].ID
 	}
 	return pouo.RemoveTransactionIDs(ids...)
+}
+
+// ClearPaymentWebhook clears the "payment_webhook" edge to the PaymentWebhook entity.
+func (pouo *PaymentOrderUpdateOne) ClearPaymentWebhook() *PaymentOrderUpdateOne {
+	pouo.mutation.ClearPaymentWebhook()
+	return pouo
 }
 
 // Where appends a list predicates to the PaymentOrderUpdate builder.
@@ -1905,6 +1985,35 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(transactionlog.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if pouo.mutation.PaymentWebhookCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   paymentorder.PaymentWebhookTable,
+			Columns: []string{paymentorder.PaymentWebhookColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := pouo.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   paymentorder.PaymentWebhookTable,
+			Columns: []string{paymentorder.PaymentWebhookColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

@@ -16,6 +16,7 @@ import (
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
@@ -345,6 +346,25 @@ func (poc *PaymentOrderCreate) AddTransactions(t ...*TransactionLog) *PaymentOrd
 		ids[i] = t[i].ID
 	}
 	return poc.AddTransactionIDs(ids...)
+}
+
+// SetPaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID.
+func (poc *PaymentOrderCreate) SetPaymentWebhookID(id uuid.UUID) *PaymentOrderCreate {
+	poc.mutation.SetPaymentWebhookID(id)
+	return poc
+}
+
+// SetNillablePaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID if the given value is not nil.
+func (poc *PaymentOrderCreate) SetNillablePaymentWebhookID(id *uuid.UUID) *PaymentOrderCreate {
+	if id != nil {
+		poc = poc.SetPaymentWebhookID(*id)
+	}
+	return poc
+}
+
+// SetPaymentWebhook sets the "payment_webhook" edge to the PaymentWebhook entity.
+func (poc *PaymentOrderCreate) SetPaymentWebhook(p *PaymentWebhook) *PaymentOrderCreate {
+	return poc.SetPaymentWebhookID(p.ID)
 }
 
 // Mutation returns the PaymentOrderMutation object of the builder.
@@ -699,6 +719,22 @@ func (poc *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(transactionlog.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := poc.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   paymentorder.PaymentWebhookTable,
+			Columns: []string{paymentorder.PaymentWebhookColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

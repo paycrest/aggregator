@@ -315,6 +315,30 @@ var (
 			},
 		},
 	}
+	// PaymentWebhooksColumns holds the columns for the "payment_webhooks" table.
+	PaymentWebhooksColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "webhook_id", Type: field.TypeString, Size: 100},
+		{Name: "webhook_secret", Type: field.TypeString, Size: 100},
+		{Name: "callback_url", Type: field.TypeString, Size: 255},
+		{Name: "payment_order_payment_webhook", Type: field.TypeUUID, Unique: true, Nullable: true},
+	}
+	// PaymentWebhooksTable holds the schema information for the "payment_webhooks" table.
+	PaymentWebhooksTable = &schema.Table{
+		Name:       "payment_webhooks",
+		Columns:    PaymentWebhooksColumns,
+		PrimaryKey: []*schema.Column{PaymentWebhooksColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "payment_webhooks_payment_orders_payment_webhook",
+				Columns:    []*schema.Column{PaymentWebhooksColumns[6]},
+				RefColumns: []*schema.Column{PaymentOrdersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+	}
 	// ProviderOrderTokensColumns holds the columns for the "provider_order_tokens" table.
 	ProviderOrderTokensColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -722,6 +746,7 @@ var (
 		NetworksTable,
 		PaymentOrdersTable,
 		PaymentOrderRecipientsTable,
+		PaymentWebhooksTable,
 		ProviderOrderTokensTable,
 		ProviderProfilesTable,
 		ProviderRatingsTable,
@@ -753,6 +778,7 @@ func init() {
 	PaymentOrdersTable.ForeignKeys[2].RefTable = SenderProfilesTable
 	PaymentOrdersTable.ForeignKeys[3].RefTable = TokensTable
 	PaymentOrderRecipientsTable.ForeignKeys[0].RefTable = PaymentOrdersTable
+	PaymentWebhooksTable.ForeignKeys[0].RefTable = PaymentOrdersTable
 	ProviderOrderTokensTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
 	ProviderOrderTokensTable.ForeignKeys[1].RefTable = ProviderProfilesTable
 	ProviderOrderTokensTable.ForeignKeys[2].RefTable = TokensTable

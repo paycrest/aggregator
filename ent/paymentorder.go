@@ -13,6 +13,7 @@ import (
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
@@ -88,9 +89,11 @@ type PaymentOrderEdges struct {
 	Recipient *PaymentOrderRecipient `json:"recipient,omitempty"`
 	// Transactions holds the value of the transactions edge.
 	Transactions []*TransactionLog `json:"transactions,omitempty"`
+	// PaymentWebhook holds the value of the payment_webhook edge.
+	PaymentWebhook *PaymentWebhook `json:"payment_webhook,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [6]bool
+	loadedTypes [7]bool
 }
 
 // SenderProfileOrErr returns the SenderProfile value or an error if the edge
@@ -155,6 +158,17 @@ func (e PaymentOrderEdges) TransactionsOrErr() ([]*TransactionLog, error) {
 		return e.Transactions, nil
 	}
 	return nil, &NotLoadedError{edge: "transactions"}
+}
+
+// PaymentWebhookOrErr returns the PaymentWebhook value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e PaymentOrderEdges) PaymentWebhookOrErr() (*PaymentWebhook, error) {
+	if e.PaymentWebhook != nil {
+		return e.PaymentWebhook, nil
+	} else if e.loadedTypes[6] {
+		return nil, &NotFoundError{label: paymentwebhook.Label}
+	}
+	return nil, &NotLoadedError{edge: "payment_webhook"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -390,6 +404,11 @@ func (po *PaymentOrder) QueryRecipient() *PaymentOrderRecipientQuery {
 // QueryTransactions queries the "transactions" edge of the PaymentOrder entity.
 func (po *PaymentOrder) QueryTransactions() *TransactionLogQuery {
 	return NewPaymentOrderClient(po.config).QueryTransactions(po)
+}
+
+// QueryPaymentWebhook queries the "payment_webhook" edge of the PaymentOrder entity.
+func (po *PaymentOrder) QueryPaymentWebhook() *PaymentWebhookQuery {
+	return NewPaymentOrderClient(po.config).QueryPaymentWebhook(po)
 }
 
 // Update returns a builder for updating this PaymentOrder.

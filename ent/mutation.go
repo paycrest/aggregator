@@ -22,6 +22,7 @@ import (
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -57,6 +58,7 @@ const (
 	TypeNetwork                     = "Network"
 	TypePaymentOrder                = "PaymentOrder"
 	TypePaymentOrderRecipient       = "PaymentOrderRecipient"
+	TypePaymentWebhook              = "PaymentWebhook"
 	TypeProviderOrderToken          = "ProviderOrderToken"
 	TypeProviderProfile             = "ProviderProfile"
 	TypeProviderRating              = "ProviderRating"
@@ -7930,6 +7932,8 @@ type PaymentOrderMutation struct {
 	transactions           map[uuid.UUID]struct{}
 	removedtransactions    map[uuid.UUID]struct{}
 	clearedtransactions    bool
+	payment_webhook        *uuid.UUID
+	clearedpayment_webhook bool
 	done                   bool
 	oldValue               func(context.Context) (*PaymentOrder, error)
 	predicates             []predicate.PaymentOrder
@@ -9286,6 +9290,45 @@ func (m *PaymentOrderMutation) ResetTransactions() {
 	m.removedtransactions = nil
 }
 
+// SetPaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by id.
+func (m *PaymentOrderMutation) SetPaymentWebhookID(id uuid.UUID) {
+	m.payment_webhook = &id
+}
+
+// ClearPaymentWebhook clears the "payment_webhook" edge to the PaymentWebhook entity.
+func (m *PaymentOrderMutation) ClearPaymentWebhook() {
+	m.clearedpayment_webhook = true
+}
+
+// PaymentWebhookCleared reports if the "payment_webhook" edge to the PaymentWebhook entity was cleared.
+func (m *PaymentOrderMutation) PaymentWebhookCleared() bool {
+	return m.clearedpayment_webhook
+}
+
+// PaymentWebhookID returns the "payment_webhook" edge ID in the mutation.
+func (m *PaymentOrderMutation) PaymentWebhookID() (id uuid.UUID, exists bool) {
+	if m.payment_webhook != nil {
+		return *m.payment_webhook, true
+	}
+	return
+}
+
+// PaymentWebhookIDs returns the "payment_webhook" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// PaymentWebhookID instead. It exists only for internal usage by the builders.
+func (m *PaymentOrderMutation) PaymentWebhookIDs() (ids []uuid.UUID) {
+	if id := m.payment_webhook; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetPaymentWebhook resets all changes to the "payment_webhook" edge.
+func (m *PaymentOrderMutation) ResetPaymentWebhook() {
+	m.payment_webhook = nil
+	m.clearedpayment_webhook = false
+}
+
 // Where appends a list predicates to the PaymentOrderMutation builder.
 func (m *PaymentOrderMutation) Where(ps ...predicate.PaymentOrder) {
 	m.predicates = append(m.predicates, ps...)
@@ -9904,7 +9947,7 @@ func (m *PaymentOrderMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *PaymentOrderMutation) AddedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 7)
 	if m.sender_profile != nil {
 		edges = append(edges, paymentorder.EdgeSenderProfile)
 	}
@@ -9922,6 +9965,9 @@ func (m *PaymentOrderMutation) AddedEdges() []string {
 	}
 	if m.transactions != nil {
 		edges = append(edges, paymentorder.EdgeTransactions)
+	}
+	if m.payment_webhook != nil {
+		edges = append(edges, paymentorder.EdgePaymentWebhook)
 	}
 	return edges
 }
@@ -9956,13 +10002,17 @@ func (m *PaymentOrderMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case paymentorder.EdgePaymentWebhook:
+		if id := m.payment_webhook; id != nil {
+			return []ent.Value{*id}
+		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *PaymentOrderMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 7)
 	if m.removedtransactions != nil {
 		edges = append(edges, paymentorder.EdgeTransactions)
 	}
@@ -9985,7 +10035,7 @@ func (m *PaymentOrderMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *PaymentOrderMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 7)
 	if m.clearedsender_profile {
 		edges = append(edges, paymentorder.EdgeSenderProfile)
 	}
@@ -10003,6 +10053,9 @@ func (m *PaymentOrderMutation) ClearedEdges() []string {
 	}
 	if m.clearedtransactions {
 		edges = append(edges, paymentorder.EdgeTransactions)
+	}
+	if m.clearedpayment_webhook {
+		edges = append(edges, paymentorder.EdgePaymentWebhook)
 	}
 	return edges
 }
@@ -10023,6 +10076,8 @@ func (m *PaymentOrderMutation) EdgeCleared(name string) bool {
 		return m.clearedrecipient
 	case paymentorder.EdgeTransactions:
 		return m.clearedtransactions
+	case paymentorder.EdgePaymentWebhook:
+		return m.clearedpayment_webhook
 	}
 	return false
 }
@@ -10045,6 +10100,9 @@ func (m *PaymentOrderMutation) ClearEdge(name string) error {
 		return nil
 	case paymentorder.EdgeRecipient:
 		m.ClearRecipient()
+		return nil
+	case paymentorder.EdgePaymentWebhook:
+		m.ClearPaymentWebhook()
 		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder unique edge %s", name)
@@ -10071,6 +10129,9 @@ func (m *PaymentOrderMutation) ResetEdge(name string) error {
 		return nil
 	case paymentorder.EdgeTransactions:
 		m.ResetTransactions()
+		return nil
+	case paymentorder.EdgePaymentWebhook:
+		m.ResetPaymentWebhook()
 		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder edge %s", name)
@@ -10797,6 +10858,621 @@ func (m *PaymentOrderRecipientMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrderRecipient edge %s", name)
+}
+
+// PaymentWebhookMutation represents an operation that mutates the PaymentWebhook nodes in the graph.
+type PaymentWebhookMutation struct {
+	config
+	op                   Op
+	typ                  string
+	id                   *uuid.UUID
+	created_at           *time.Time
+	updated_at           *time.Time
+	webhook_id           *string
+	webhook_secret       *string
+	callback_url         *string
+	clearedFields        map[string]struct{}
+	payment_order        *uuid.UUID
+	clearedpayment_order bool
+	done                 bool
+	oldValue             func(context.Context) (*PaymentWebhook, error)
+	predicates           []predicate.PaymentWebhook
+}
+
+var _ ent.Mutation = (*PaymentWebhookMutation)(nil)
+
+// paymentwebhookOption allows management of the mutation configuration using functional options.
+type paymentwebhookOption func(*PaymentWebhookMutation)
+
+// newPaymentWebhookMutation creates new mutation for the PaymentWebhook entity.
+func newPaymentWebhookMutation(c config, op Op, opts ...paymentwebhookOption) *PaymentWebhookMutation {
+	m := &PaymentWebhookMutation{
+		config:        c,
+		op:            op,
+		typ:           TypePaymentWebhook,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withPaymentWebhookID sets the ID field of the mutation.
+func withPaymentWebhookID(id uuid.UUID) paymentwebhookOption {
+	return func(m *PaymentWebhookMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *PaymentWebhook
+		)
+		m.oldValue = func(ctx context.Context) (*PaymentWebhook, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().PaymentWebhook.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withPaymentWebhook sets the old PaymentWebhook of the mutation.
+func withPaymentWebhook(node *PaymentWebhook) paymentwebhookOption {
+	return func(m *PaymentWebhookMutation) {
+		m.oldValue = func(context.Context) (*PaymentWebhook, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m PaymentWebhookMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m PaymentWebhookMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of PaymentWebhook entities.
+func (m *PaymentWebhookMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *PaymentWebhookMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *PaymentWebhookMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().PaymentWebhook.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *PaymentWebhookMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *PaymentWebhookMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the PaymentWebhook entity.
+// If the PaymentWebhook object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentWebhookMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *PaymentWebhookMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *PaymentWebhookMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *PaymentWebhookMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the PaymentWebhook entity.
+// If the PaymentWebhook object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentWebhookMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *PaymentWebhookMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetWebhookID sets the "webhook_id" field.
+func (m *PaymentWebhookMutation) SetWebhookID(s string) {
+	m.webhook_id = &s
+}
+
+// WebhookID returns the value of the "webhook_id" field in the mutation.
+func (m *PaymentWebhookMutation) WebhookID() (r string, exists bool) {
+	v := m.webhook_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWebhookID returns the old "webhook_id" field's value of the PaymentWebhook entity.
+// If the PaymentWebhook object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentWebhookMutation) OldWebhookID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWebhookID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWebhookID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWebhookID: %w", err)
+	}
+	return oldValue.WebhookID, nil
+}
+
+// ResetWebhookID resets all changes to the "webhook_id" field.
+func (m *PaymentWebhookMutation) ResetWebhookID() {
+	m.webhook_id = nil
+}
+
+// SetWebhookSecret sets the "webhook_secret" field.
+func (m *PaymentWebhookMutation) SetWebhookSecret(s string) {
+	m.webhook_secret = &s
+}
+
+// WebhookSecret returns the value of the "webhook_secret" field in the mutation.
+func (m *PaymentWebhookMutation) WebhookSecret() (r string, exists bool) {
+	v := m.webhook_secret
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWebhookSecret returns the old "webhook_secret" field's value of the PaymentWebhook entity.
+// If the PaymentWebhook object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentWebhookMutation) OldWebhookSecret(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWebhookSecret is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWebhookSecret requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWebhookSecret: %w", err)
+	}
+	return oldValue.WebhookSecret, nil
+}
+
+// ResetWebhookSecret resets all changes to the "webhook_secret" field.
+func (m *PaymentWebhookMutation) ResetWebhookSecret() {
+	m.webhook_secret = nil
+}
+
+// SetCallbackURL sets the "callback_url" field.
+func (m *PaymentWebhookMutation) SetCallbackURL(s string) {
+	m.callback_url = &s
+}
+
+// CallbackURL returns the value of the "callback_url" field in the mutation.
+func (m *PaymentWebhookMutation) CallbackURL() (r string, exists bool) {
+	v := m.callback_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCallbackURL returns the old "callback_url" field's value of the PaymentWebhook entity.
+// If the PaymentWebhook object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentWebhookMutation) OldCallbackURL(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCallbackURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCallbackURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCallbackURL: %w", err)
+	}
+	return oldValue.CallbackURL, nil
+}
+
+// ResetCallbackURL resets all changes to the "callback_url" field.
+func (m *PaymentWebhookMutation) ResetCallbackURL() {
+	m.callback_url = nil
+}
+
+// SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by id.
+func (m *PaymentWebhookMutation) SetPaymentOrderID(id uuid.UUID) {
+	m.payment_order = &id
+}
+
+// ClearPaymentOrder clears the "payment_order" edge to the PaymentOrder entity.
+func (m *PaymentWebhookMutation) ClearPaymentOrder() {
+	m.clearedpayment_order = true
+}
+
+// PaymentOrderCleared reports if the "payment_order" edge to the PaymentOrder entity was cleared.
+func (m *PaymentWebhookMutation) PaymentOrderCleared() bool {
+	return m.clearedpayment_order
+}
+
+// PaymentOrderID returns the "payment_order" edge ID in the mutation.
+func (m *PaymentWebhookMutation) PaymentOrderID() (id uuid.UUID, exists bool) {
+	if m.payment_order != nil {
+		return *m.payment_order, true
+	}
+	return
+}
+
+// PaymentOrderIDs returns the "payment_order" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// PaymentOrderID instead. It exists only for internal usage by the builders.
+func (m *PaymentWebhookMutation) PaymentOrderIDs() (ids []uuid.UUID) {
+	if id := m.payment_order; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetPaymentOrder resets all changes to the "payment_order" edge.
+func (m *PaymentWebhookMutation) ResetPaymentOrder() {
+	m.payment_order = nil
+	m.clearedpayment_order = false
+}
+
+// Where appends a list predicates to the PaymentWebhookMutation builder.
+func (m *PaymentWebhookMutation) Where(ps ...predicate.PaymentWebhook) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the PaymentWebhookMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *PaymentWebhookMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.PaymentWebhook, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *PaymentWebhookMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *PaymentWebhookMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (PaymentWebhook).
+func (m *PaymentWebhookMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *PaymentWebhookMutation) Fields() []string {
+	fields := make([]string, 0, 5)
+	if m.created_at != nil {
+		fields = append(fields, paymentwebhook.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, paymentwebhook.FieldUpdatedAt)
+	}
+	if m.webhook_id != nil {
+		fields = append(fields, paymentwebhook.FieldWebhookID)
+	}
+	if m.webhook_secret != nil {
+		fields = append(fields, paymentwebhook.FieldWebhookSecret)
+	}
+	if m.callback_url != nil {
+		fields = append(fields, paymentwebhook.FieldCallbackURL)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *PaymentWebhookMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case paymentwebhook.FieldCreatedAt:
+		return m.CreatedAt()
+	case paymentwebhook.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case paymentwebhook.FieldWebhookID:
+		return m.WebhookID()
+	case paymentwebhook.FieldWebhookSecret:
+		return m.WebhookSecret()
+	case paymentwebhook.FieldCallbackURL:
+		return m.CallbackURL()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *PaymentWebhookMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case paymentwebhook.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case paymentwebhook.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case paymentwebhook.FieldWebhookID:
+		return m.OldWebhookID(ctx)
+	case paymentwebhook.FieldWebhookSecret:
+		return m.OldWebhookSecret(ctx)
+	case paymentwebhook.FieldCallbackURL:
+		return m.OldCallbackURL(ctx)
+	}
+	return nil, fmt.Errorf("unknown PaymentWebhook field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *PaymentWebhookMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case paymentwebhook.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case paymentwebhook.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case paymentwebhook.FieldWebhookID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWebhookID(v)
+		return nil
+	case paymentwebhook.FieldWebhookSecret:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWebhookSecret(v)
+		return nil
+	case paymentwebhook.FieldCallbackURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCallbackURL(v)
+		return nil
+	}
+	return fmt.Errorf("unknown PaymentWebhook field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *PaymentWebhookMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *PaymentWebhookMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *PaymentWebhookMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown PaymentWebhook numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *PaymentWebhookMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *PaymentWebhookMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *PaymentWebhookMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown PaymentWebhook nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *PaymentWebhookMutation) ResetField(name string) error {
+	switch name {
+	case paymentwebhook.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case paymentwebhook.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case paymentwebhook.FieldWebhookID:
+		m.ResetWebhookID()
+		return nil
+	case paymentwebhook.FieldWebhookSecret:
+		m.ResetWebhookSecret()
+		return nil
+	case paymentwebhook.FieldCallbackURL:
+		m.ResetCallbackURL()
+		return nil
+	}
+	return fmt.Errorf("unknown PaymentWebhook field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *PaymentWebhookMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.payment_order != nil {
+		edges = append(edges, paymentwebhook.EdgePaymentOrder)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *PaymentWebhookMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case paymentwebhook.EdgePaymentOrder:
+		if id := m.payment_order; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *PaymentWebhookMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *PaymentWebhookMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *PaymentWebhookMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedpayment_order {
+		edges = append(edges, paymentwebhook.EdgePaymentOrder)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *PaymentWebhookMutation) EdgeCleared(name string) bool {
+	switch name {
+	case paymentwebhook.EdgePaymentOrder:
+		return m.clearedpayment_order
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *PaymentWebhookMutation) ClearEdge(name string) error {
+	switch name {
+	case paymentwebhook.EdgePaymentOrder:
+		m.ClearPaymentOrder()
+		return nil
+	}
+	return fmt.Errorf("unknown PaymentWebhook unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *PaymentWebhookMutation) ResetEdge(name string) error {
+	switch name {
+	case paymentwebhook.EdgePaymentOrder:
+		m.ResetPaymentOrder()
+		return nil
+	}
+	return fmt.Errorf("unknown PaymentWebhook edge %s", name)
 }
 
 // ProviderOrderTokenMutation represents an operation that mutates the ProviderOrderToken nodes in the graph.

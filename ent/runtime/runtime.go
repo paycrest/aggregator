@@ -15,6 +15,7 @@ import (
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -245,6 +246,79 @@ func init() {
 	paymentorderDescID := paymentorderFields[0].Descriptor()
 	// paymentorder.DefaultID holds the default value on creation for the id field.
 	paymentorder.DefaultID = paymentorderDescID.Default.(func() uuid.UUID)
+	paymentwebhookMixin := schema.PaymentWebhook{}.Mixin()
+	paymentwebhookMixinFields0 := paymentwebhookMixin[0].Fields()
+	_ = paymentwebhookMixinFields0
+	paymentwebhookFields := schema.PaymentWebhook{}.Fields()
+	_ = paymentwebhookFields
+	// paymentwebhookDescCreatedAt is the schema descriptor for created_at field.
+	paymentwebhookDescCreatedAt := paymentwebhookMixinFields0[0].Descriptor()
+	// paymentwebhook.DefaultCreatedAt holds the default value on creation for the created_at field.
+	paymentwebhook.DefaultCreatedAt = paymentwebhookDescCreatedAt.Default.(func() time.Time)
+	// paymentwebhookDescUpdatedAt is the schema descriptor for updated_at field.
+	paymentwebhookDescUpdatedAt := paymentwebhookMixinFields0[1].Descriptor()
+	// paymentwebhook.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	paymentwebhook.DefaultUpdatedAt = paymentwebhookDescUpdatedAt.Default.(func() time.Time)
+	// paymentwebhook.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	paymentwebhook.UpdateDefaultUpdatedAt = paymentwebhookDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// paymentwebhookDescWebhookID is the schema descriptor for webhook_id field.
+	paymentwebhookDescWebhookID := paymentwebhookFields[1].Descriptor()
+	// paymentwebhook.WebhookIDValidator is a validator for the "webhook_id" field. It is called by the builders before save.
+	paymentwebhook.WebhookIDValidator = func() func(string) error {
+		validators := paymentwebhookDescWebhookID.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(webhook_id string) error {
+			for _, fn := range fns {
+				if err := fn(webhook_id); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// paymentwebhookDescWebhookSecret is the schema descriptor for webhook_secret field.
+	paymentwebhookDescWebhookSecret := paymentwebhookFields[2].Descriptor()
+	// paymentwebhook.WebhookSecretValidator is a validator for the "webhook_secret" field. It is called by the builders before save.
+	paymentwebhook.WebhookSecretValidator = func() func(string) error {
+		validators := paymentwebhookDescWebhookSecret.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(webhook_secret string) error {
+			for _, fn := range fns {
+				if err := fn(webhook_secret); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// paymentwebhookDescCallbackURL is the schema descriptor for callback_url field.
+	paymentwebhookDescCallbackURL := paymentwebhookFields[3].Descriptor()
+	// paymentwebhook.CallbackURLValidator is a validator for the "callback_url" field. It is called by the builders before save.
+	paymentwebhook.CallbackURLValidator = func() func(string) error {
+		validators := paymentwebhookDescCallbackURL.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(callback_url string) error {
+			for _, fn := range fns {
+				if err := fn(callback_url); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// paymentwebhookDescID is the schema descriptor for id field.
+	paymentwebhookDescID := paymentwebhookFields[0].Descriptor()
+	// paymentwebhook.DefaultID holds the default value on creation for the id field.
+	paymentwebhook.DefaultID = paymentwebhookDescID.Default.(func() uuid.UUID)
 	providerordertokenMixin := schema.ProviderOrderToken{}.Mixin()
 	providerordertokenMixinFields0 := providerordertokenMixin[0].Fields()
 	_ = providerordertokenMixinFields0

@@ -81,5 +81,7 @@ func (PaymentOrder) Edges() []ent.Edge {
 			Unique().
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("transactions", TransactionLog.Type),
+		edge.To("payment_webhook", PaymentWebhook.Type).
+			Unique(),
 	}
 }

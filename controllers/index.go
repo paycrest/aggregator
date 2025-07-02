@@ -1,7 +1,11 @@
 package controllers
 
 import (
+	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"slices"
@@ -18,9 +22,11 @@ import (
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	networkent "github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	svc "github.com/paycrest/aggregator/services"
+	"github.com/paycrest/aggregator/services/common"
 	"github.com/paycrest/aggregator/services/indexer"
 	kycErrors "github.com/paycrest/aggregator/services/kyc/errors"
 	"github.com/paycrest/aggregator/services/kyc/smile"
@@ -31,6 +37,7 @@ import (
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/shopspring/decimal"
 
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gin-gonic/gin"
 )
@@ -1053,4 +1060,366 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Transaction indexing completed", response)
+}
+
+// InsightWebhook handles the webhook callback from thirdweb insight, including signature verification and event processing
+func (ctrl *Controller) InsightWebhook(ctx *gin.Context) {
+	// Get raw body for signature verification
+	rawBody, err := ctx.GetRawData()
+	if err != nil {
+		logger.Errorf("Error: InsightWebhook: Failed to read webhook payload: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
+		return
+	}
+
+	// Get webhook signature from headers
+	signature := ctx.GetHeader("x-webhook-signature")
+	webhookID := ctx.GetHeader("x-webhook-id")
+
+	if signature == "" || webhookID == "" {
+		logger.Errorf("Error: InsightWebhook: Missing required headers - signature: %s, webhookID: %s", signature, webhookID)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing required headers"})
+		return
+	}
+
+	// Verify webhook signature
+	verification, err := ctrl.verifyWebhookSignature(string(rawBody), signature, webhookID)
+	if err != nil {
+		logger.Errorf("Error: InsightWebhook: Failed to verify signature: %v", err)
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid signature"})
+		return
+	}
+
+	if !verification.IsValid {
+		logger.Errorf("Error: InsightWebhook: Invalid signature for webhook ID: %s", webhookID)
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid signature"})
+		return
+	}
+
+	// Parse webhook payload
+	var webhookPayload types.ThirdwebWebhookPayload
+	if err := json.Unmarshal(rawBody, &webhookPayload); err != nil {
+		logger.Errorf("Error: InsightWebhook: Failed to parse webhook payload: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload format"})
+		return
+	}
+
+	// Verify payload age (optional - 5 minutes)
+	if ctrl.isWebhookPayloadExpired(webhookPayload.Timestamp, 300) {
+		logger.Errorf("Error: InsightWebhook: Webhook payload expired - timestamp: %d", webhookPayload.Timestamp)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Payload expired"})
+		return
+	}
+
+	// Process webhook events
+	err = ctrl.processWebhookEvents(ctx, webhookPayload)
+	if err != nil {
+		logger.Errorf("Error: InsightWebhook: Failed to process webhook events: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process events"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "Webhook processed successfully"})
+}
+
+// verifyWebhookSignature verifies the webhook signature using the stored secret
+func (ctrl *Controller) verifyWebhookSignature(rawBody, signature, webhookID string) (*types.WebhookSignatureVerification, error) {
+	// Get webhook from database
+	webhook, err := storage.Client.PaymentWebhook.
+		Query().
+		Where(paymentwebhook.WebhookIDEQ(webhookID)).
+		Only(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("webhook not found: %w", err)
+	}
+
+	// Generate expected signature
+	expectedSignature := ctrl.generateWebhookSignature(rawBody, webhook.WebhookSecret)
+
+	// Compare signatures using timing-safe comparison
+	isValid := hmac.Equal([]byte(expectedSignature), []byte(signature))
+
+	return &types.WebhookSignatureVerification{
+		IsValid:   isValid,
+		WebhookID: webhookID,
+		Secret:    webhook.WebhookSecret,
+	}, nil
+}
+
+// generateWebhookSignature generates HMAC-SHA256 signature for webhook verification
+func (ctrl *Controller) generateWebhookSignature(rawBody, secret string) string {
+	h := hmac.New(sha256.New, []byte(secret))
+	h.Write([]byte(rawBody))
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+// isWebhookPayloadExpired checks if the webhook payload is older than the specified expiration time
+func (ctrl *Controller) isWebhookPayloadExpired(timestamp int64, expirationInSeconds int64) bool {
+	currentTime := time.Now().Unix()
+	return currentTime-timestamp > expirationInSeconds
+}
+
+// processWebhookEvents processes the webhook events based on their type
+func (ctrl *Controller) processWebhookEvents(ctx *gin.Context, payload types.ThirdwebWebhookPayload) error {
+	for _, event := range payload.Data {
+		// Handle reverted events (blockchain reorganization)
+		if event.Status == "reverted" {
+			logger.Infof("Processing reverted event: %s", event.ID)
+			if err := ctrl.handleRevertedEvent(ctx, event); err != nil {
+				logger.Errorf("Error handling reverted event: %v", err)
+				continue
+			}
+			continue
+		}
+
+		// Process new events
+		if event.Status == "new" {
+			logger.Infof("Processing new event: %s", event.ID)
+			if err := ctrl.handleNewEvent(ctx, event); err != nil {
+				logger.Errorf("Error handling new event: %v", err)
+				continue
+			}
+		}
+	}
+
+	return nil
+}
+
+// handleNewEvent processes a new webhook event
+func (ctrl *Controller) handleNewEvent(ctx *gin.Context, event types.ThirdwebWebhookEvent) error {
+	// Determine event type based on decoded event name
+	switch event.Data.Decoded.Name {
+	case "Transfer":
+		return ctrl.handleTransferEvent(ctx, event)
+	case "OrderCreated":
+		return ctrl.handleOrderCreatedEvent(ctx, event)
+	case "OrderSettled":
+		return ctrl.handleOrderSettledEvent(ctx, event)
+	case "OrderRefunded":
+		return ctrl.handleOrderRefundedEvent(ctx, event)
+	default:
+		logger.Infof("Unknown event type: %s", event.Data.Decoded.Name)
+		return nil
+	}
+}
+
+// handleRevertedEvent handles reverted events by reverting any actions taken
+func (ctrl *Controller) handleRevertedEvent(ctx *gin.Context, event types.ThirdwebWebhookEvent) error {
+	// For now, just log the reverted event
+	// In the future, this could implement rollback logic
+	logger.Infof("Event reverted - txHash: %s, eventID: %s", event.Data.TransactionHash, event.ID)
+	return nil
+}
+
+// handleTransferEvent processes Transfer events from webhook
+func (ctrl *Controller) handleTransferEvent(ctx *gin.Context, event types.ThirdwebWebhookEvent) error {
+	// Convert chain ID from string to int64
+	chainID, err := strconv.ParseInt(event.Data.ChainID, 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid chain ID: %w", err)
+	}
+
+	// Get token from database
+	token, err := storage.Client.Token.
+		Query().
+		Where(
+			tokenEnt.ContractAddressEQ(event.Data.Address),
+			tokenEnt.HasNetworkWith(
+				networkent.ChainIDEQ(chainID),
+			),
+		).
+		WithNetwork().
+		Only(ctx)
+	if err != nil {
+		return fmt.Errorf("token not found: %w", err)
+	}
+
+	// Extract transfer data from decoded event
+	indexedParams := event.Data.Decoded.IndexedParams
+	nonIndexedParams := event.Data.Decoded.NonIndexedParams
+
+	toAddress := ethcommon.HexToAddress(indexedParams["to"].(string)).Hex()
+	fromAddress := ethcommon.HexToAddress(indexedParams["from"].(string)).Hex()
+	valueStr := nonIndexedParams["value"].(string)
+
+	// Skip if transfer is from gateway contract
+	if strings.EqualFold(fromAddress, token.Edges.Network.GatewayContractAddress) {
+		return nil
+	}
+
+	// Parse transfer value
+	transferValue, err := decimal.NewFromString(valueStr)
+	if err != nil {
+		return fmt.Errorf("invalid transfer value: %w", err)
+	}
+
+	// Create transfer event
+	transferEvent := &types.TokenTransferEvent{
+		BlockNumber: event.Data.BlockNumber,
+		TxHash:      event.Data.TransactionHash,
+		From:        fromAddress,
+		To:          toAddress,
+		Value:       transferValue.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals)))),
+	}
+
+	// Process transfer using existing logic
+	addressToEvent := map[string]*types.TokenTransferEvent{
+		toAddress: transferEvent,
+	}
+
+	err = common.ProcessTransfers(ctx, ctrl.orderService, ctrl.priorityQueueService, []string{toAddress}, addressToEvent, token)
+	if err != nil {
+		return fmt.Errorf("failed to process transfer: %w", err)
+	}
+
+	return nil
+}
+
+// handleOrderCreatedEvent processes OrderCreated events from webhook
+func (ctrl *Controller) handleOrderCreatedEvent(ctx *gin.Context, event types.ThirdwebWebhookEvent) error {
+	// Convert chain ID from string to int64
+	chainID, err := strconv.ParseInt(event.Data.ChainID, 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid chain ID: %w", err)
+	}
+
+	// Get network from database
+	network, err := storage.Client.Network.
+		Query().
+		Where(networkent.ChainIDEQ(chainID)).
+		Only(ctx)
+	if err != nil {
+		return fmt.Errorf("network not found: %w", err)
+	}
+
+	// Extract order data from decoded event
+	indexedParams := event.Data.Decoded.IndexedParams
+	nonIndexedParams := event.Data.Decoded.NonIndexedParams
+
+	amount, err := decimal.NewFromString(indexedParams["amount"].(string))
+	if err != nil {
+		return fmt.Errorf("invalid amount: %w", err)
+	}
+
+	protocolFee, err := decimal.NewFromString(nonIndexedParams["protocolFee"].(string))
+	if err != nil {
+		return fmt.Errorf("invalid protocol fee: %w", err)
+	}
+
+	rate, err := decimal.NewFromString(nonIndexedParams["rate"].(string))
+	if err != nil {
+		return fmt.Errorf("invalid rate: %w", err)
+	}
+
+	// Create order created event
+	orderEvent := &types.OrderCreatedEvent{
+		BlockNumber: event.Data.BlockNumber,
+		TxHash:      event.Data.TransactionHash,
+		Token:       ethcommon.HexToAddress(indexedParams["token"].(string)).Hex(),
+		Amount:      amount,
+		ProtocolFee: protocolFee,
+		OrderId:     nonIndexedParams["orderId"].(string),
+		Rate:        rate.Div(decimal.NewFromInt(100)),
+		MessageHash: nonIndexedParams["messageHash"].(string),
+		Sender:      ethcommon.HexToAddress(indexedParams["sender"].(string)).Hex(),
+	}
+
+	// Process order using existing logic
+	txHashes := []string{orderEvent.TxHash}
+	hashToEvent := map[string]*types.OrderCreatedEvent{
+		orderEvent.TxHash: orderEvent,
+	}
+
+	err = common.ProcessCreatedOrders(ctx, network, txHashes, hashToEvent, ctrl.orderService, ctrl.priorityQueueService)
+	if err != nil {
+		return fmt.Errorf("failed to process order: %w", err)
+	}
+
+	return nil
+}
+
+// handleOrderSettledEvent processes OrderSettled events from webhook
+func (ctrl *Controller) handleOrderSettledEvent(ctx *gin.Context, event types.ThirdwebWebhookEvent) error {
+	// Convert chain ID from string to int64
+	chainID, err := strconv.ParseInt(event.Data.ChainID, 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid chain ID: %w", err)
+	}
+
+	// Get network from database
+	network, err := storage.Client.Network.
+		Query().
+		Where(networkent.ChainIDEQ(chainID)).
+		Only(ctx)
+	if err != nil {
+		return fmt.Errorf("network not found: %w", err)
+	}
+
+	// Extract order settled data from decoded event
+	nonIndexedParams := event.Data.Decoded.NonIndexedParams
+
+	settlePercent, err := decimal.NewFromString(nonIndexedParams["settlePercent"].(string))
+	if err != nil {
+		return fmt.Errorf("invalid settle percent: %w", err)
+	}
+
+	// Create order settled event
+	settledEvent := &types.OrderSettledEvent{
+		BlockNumber:       event.Data.BlockNumber,
+		TxHash:            event.Data.TransactionHash,
+		SplitOrderId:      nonIndexedParams["splitOrderId"].(string),
+		OrderId:           nonIndexedParams["orderId"].(string),
+		LiquidityProvider: ethcommon.HexToAddress(nonIndexedParams["liquidityProvider"].(string)).Hex(),
+		SettlePercent:     settlePercent,
+	}
+
+	// Process settled order using existing logic
+	err = common.UpdateOrderStatusSettled(ctx, network, settledEvent)
+	if err != nil {
+		return fmt.Errorf("failed to process settled order: %w", err)
+	}
+
+	return nil
+}
+
+// handleOrderRefundedEvent processes OrderRefunded events from webhook
+func (ctrl *Controller) handleOrderRefundedEvent(ctx *gin.Context, event types.ThirdwebWebhookEvent) error {
+	// Convert chain ID from string to int64
+	chainID, err := strconv.ParseInt(event.Data.ChainID, 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid chain ID: %w", err)
+	}
+
+	// Get network from database
+	network, err := storage.Client.Network.
+		Query().
+		Where(networkent.ChainIDEQ(chainID)).
+		Only(ctx)
+	if err != nil {
+		return fmt.Errorf("network not found: %w", err)
+	}
+
+	// Extract order refunded data from decoded event
+	nonIndexedParams := event.Data.Decoded.NonIndexedParams
+
+	fee, err := decimal.NewFromString(nonIndexedParams["fee"].(string))
+	if err != nil {
+		return fmt.Errorf("invalid fee: %w", err)
+	}
+
+	// Create order refunded event
+	refundedEvent := &types.OrderRefundedEvent{
+		BlockNumber: event.Data.BlockNumber,
+		TxHash:      event.Data.TransactionHash,
+		Fee:         fee,
+		OrderId:     nonIndexedParams["orderId"].(string),
+	}
+
+	// Process refunded order using existing logic
+	err = common.UpdateOrderStatusRefunded(ctx, network, refundedEvent)
+	if err != nil {
+		return fmt.Errorf("failed to process refunded order: %w", err)
+	}
+
+	return nil
 }

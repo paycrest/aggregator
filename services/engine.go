@@ -3,10 +3,13 @@ package services
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
+	networkent "github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 )
@@ -205,4 +208,189 @@ func (s *EngineService) WaitForTransactionMined(ctx context.Context, queueId str
 
 		time.Sleep(time.Second)
 	}
+}
+
+// Example usage:
+//
+// 1. Create a transfer webhook for a specific token contract:
+//    webhookID, webhookSecret, err := engineService.CreateTransferWebhook(
+//        ctx,
+//        137, // Polygon chain ID
+//        "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619", // WETH contract address
+//        "0x1234567890123456789012345678901234567890"  // To address to monitor
+//    )
+//
+// 2. Create gateway webhooks for all supported chains:
+//    webhookID, webhookSecret, err := engineService.CreateGatewayWebhook(ctx)
+//
+// 3. Set up all webhooks for the environment:
+//    err := engineService.SetupWebhooksForEnvironment(ctx)
+
+// CreateTransferWebhook creates a webhook to listen to transfer events to a specific address on a specific chain
+func (s *EngineService) CreateTransferWebhook(ctx context.Context, chainID int64, contractAddress string, toAddress string) (string, string, error) {
+	webhookCallbackURL := fmt.Sprintf("%s/v1/insight/webhook", config.ServerConfig().ServerURL)
+
+	webhookPayload := map[string]interface{}{
+		"name":         fmt.Sprintf("Transfer Webhook - %s", contractAddress),
+		"endpoint_url": webhookCallbackURL,
+		"filters": map[string]interface{}{
+			"v1.events": map[string]interface{}{
+				"chain_ids":        []int64{chainID},
+				"addresses":        []string{contractAddress},
+				"event_signatures": []string{"0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"}, // Transfer event signature
+				"params": map[string]interface{}{
+					"to": toAddress, // Filter for transfers to the specific address
+				},
+			},
+		},
+	}
+
+	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
+		Config().SetTimeout(30 * time.Second).
+		Header().AddAll(map[string]string{
+		"Accept":       "application/json",
+		"Content-Type": "application/json",
+		"X-Secret-Key": s.config.ThirdwebSecretKey,
+	}).Build().POST("/v1/webhooks").
+		Body().AsJSON(webhookPayload).Send()
+
+	if err != nil {
+		return "", "", fmt.Errorf("failed to create transfer webhook: %w", err)
+	}
+
+	data, err := utils.ParseJSONResponse(res.RawResponse)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to parse JSON response: %w", err)
+	}
+
+	webhookID := data["id"].(string)
+	webhookSecret := data["webhook_secret"].(string)
+
+	return webhookID, webhookSecret, nil
+}
+
+// CreateGatewayWebhook creates webhooks for gateway contract events across all supported chains for the environment
+func (s *EngineService) CreateGatewayWebhook(ctx context.Context) (string, string, error) {
+	serverConf := config.ServerConfig()
+
+	// Check if server URL is configured
+	if serverConf.ServerURL == "" {
+		logger.WithFields(logger.Fields{
+			"Environment": serverConf.Environment,
+		}).Errorf("SERVER_URL not configured in environment")
+		return "", "", fmt.Errorf("SERVER_URL not configured in environment")
+	}
+
+	// Determine if we're in testnet or mainnet
+	isTestnet := false
+	if serverConf.Environment != "production" {
+		isTestnet = true
+	}
+
+	// Fetch networks for the current environment
+	networks, err := storage.Client.Network.
+		Query().
+		Where(networkent.IsTestnet(isTestnet)).
+		All(ctx)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to fetch networks: %w", err)
+	}
+
+	// Event signatures for gateway contract events (using hash-like signatures from EVM indexer)
+	eventSignatures := []string{
+		"0x40ccd1ceb111a3c186ef9911e1b876dc1f789ed331b86097b3b8851055b6a137", // OrderCreated
+		"0x98ece21e01a01cbe1d1c0dad3b053c8fbd368f99be78be958fcf1d1d13fd249a", // OrderSettled
+		"0x0736fe428e1747ca8d387c2e6fa1a31a0cde62d3a167c40a46ade59a3cdc828e", // OrderRefunded
+	}
+
+	// Collect all chain IDs and gateway addresses
+	var chainIDs []int64
+	var gatewayAddresses []string
+
+	for _, network := range networks {
+		// Skip Tron networks as they don't use EVM webhooks
+		if strings.HasPrefix(network.Identifier, "tron") {
+			continue
+		}
+		chainIDs = append(chainIDs, network.ChainID)
+		gatewayAddresses = append(gatewayAddresses, network.GatewayContractAddress)
+	}
+
+	if len(chainIDs) == 0 {
+		logger.Infof("No EVM networks found for webhook creation")
+		return "", "", nil
+	}
+
+	// Create callback URL for gateway events
+	webhookCallbackURL := fmt.Sprintf("%s/v1/insight/webhook", serverConf.ServerURL)
+
+	// Use the first chain ID for the base URL (since we need a specific chain URL)
+	baseChainID := chainIDs[0]
+
+	webhookPayload := map[string]interface{}{
+		"name":         "Gateway Contract Events Webhook",
+		"endpoint_url": webhookCallbackURL,
+		"filters": map[string]interface{}{
+			"v1.events": map[string]interface{}{
+				"chain_ids":        chainIDs,
+				"addresses":        gatewayAddresses,
+				"event_signatures": eventSignatures,
+			},
+		},
+	}
+
+	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", baseChainID)).
+		Config().SetTimeout(30 * time.Second).
+		Header().AddAll(map[string]string{
+		"Accept":       "application/json",
+		"Content-Type": "application/json",
+		"X-Secret-Key": s.config.ThirdwebSecretKey,
+	}).Build().POST("/v1/webhooks").
+		Body().AsJSON(webhookPayload).Send()
+
+	if err != nil {
+		return "", "", fmt.Errorf("failed to create gateway webhooks: %w", err)
+	}
+
+	data, err := utils.ParseJSONResponse(res.RawResponse)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to parse JSON response: %w", err)
+	}
+
+	webhookID := data["id"].(string)
+	webhookSecret := data["webhook_secret"].(string)
+
+	logger.WithFields(logger.Fields{
+		"WebhookID":        webhookID,
+		"ChainIDs":         chainIDs,
+		"GatewayAddresses": gatewayAddresses,
+		"EventSignatures":  eventSignatures,
+		"CallbackURL":      webhookCallbackURL,
+	}).Infof("Created gateway webhooks successfully")
+
+	return webhookID, webhookSecret, nil
+}
+
+// SetupWebhooksForEnvironment sets up all necessary webhooks for the current environment
+// This function demonstrates how to use the webhook creation functions
+func (s *EngineService) SetupWebhooksForEnvironment(ctx context.Context) error {
+	// Check if server URL is configured
+	if config.ServerConfig().ServerURL == "" {
+		return fmt.Errorf("SERVER_URL not configured in environment")
+	}
+
+	// Create gateway webhooks for all supported chains
+	webhookID, webhookSecret, err := s.CreateGatewayWebhook(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to create gateway webhooks: %w", err)
+	}
+
+	logger.WithFields(logger.Fields{
+		"Environment":        config.ServerConfig().Environment,
+		"WebhookCallbackURL": fmt.Sprintf("%s/v1/insight/webhook", config.ServerConfig().ServerURL),
+		"WebhookID":          webhookID,
+		"WebhookSecret":      webhookSecret,
+	}).Infof("Successfully set up webhooks for environment")
+
+	return nil
 }
