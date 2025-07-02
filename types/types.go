@@ -724,3 +724,11 @@ type IndexTransactionResponse struct {
 		OrderRefunded int `json:"OrderRefunded"`
 	} `json:"events"`
 }
+
+type ThirdWebResponse struct {
+	Result struct {
+		Address             string `json:"address"`
+		Label               string `json:"label"`
+		SmartAccountAddress string `json:"smartAccountAddress"`
+	} `json:"result"`
+}
