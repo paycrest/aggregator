@@ -301,7 +301,7 @@ func CreateTestPaymentOrder(client types.RPCClient, token *ent.Token, overrides 
 	salt := new(big.Int).SetBytes(nonce).Bytes()
 
 	// Create thirdweb account
-	address, err := CreateThirdAccount()
+	address, err := CreateSmartAddress()
 	if err != nil {
 		return nil, err
 	}

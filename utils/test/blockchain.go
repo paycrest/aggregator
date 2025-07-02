@@ -2,24 +2,18 @@ package test
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
-	"strings"
 
 	"math/big"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/paycrest/aggregator/config"
+	ethcrypto "github.com/ethereum/go-ethereum/crypto"
+	"github.com/paycrest/aggregator/services/contracts"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils/crypto"
-
-	"github.com/paycrest/aggregator/services/contracts"
 )
 
 // SetUpTestBlockchain sets up a connection to a local Ethereum blockchain.
@@ -155,88 +149,13 @@ func prepareDeployment(client types.RPCClient) (*bind.TransactOpts, error) {
 }
 
 // CreateSmartAddress function generates and saves a new EIP-4337 smart contract account address
-func CreateSmartAddress(ctx context.Context, client types.RPCClient) (string, []byte, error) {
-
-	// Initialize contract factory
-	factory, err := DeployEIP4337FactoryContract(client)
+func CreateSmartAddress() (string, error) {
+	// Generate a new random ECDSA private key
+	privateKey, err := ethcrypto.GenerateKey()
 	if err != nil {
-		return "", nil, err
+		return "", fmt.Errorf("failed to generate private key: %w", err)
 	}
-
-	factoryInstance, err := contracts.NewSimpleAccountFactory(factory, client.(bind.ContractBackend))
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to initialize factory contract: %w", err)
-	}
-
-	// Get master account
-	ownerAddress, privateKey, _ := crypto.GenerateAccountFromIndex(0)
-	auth, _ := bind.NewKeyedTransactorWithChainID(privateKey, big.NewInt(1337))
-
-	nonce := make([]byte, 32)
-	_, err = rand.Read(nonce)
-	if err != nil {
-		return "", nil, err
-	}
-
-	// Create a new big.Int from the hash
-	salt := new(big.Int).SetBytes(nonce)
-	callOpts := &bind.CallOpts{
-		Pending: true,
-		From:    auth.From,
-		Context: context.Background(),
-	}
-
-	// Generate address
-	smartAccountAddress, err := factoryInstance.GetAddress(callOpts, *ownerAddress, salt)
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to generate address: %w", err)
-	}
-
-	// Deploy smart account
-	createTx, err := factoryInstance.CreateAccount(auth, *ownerAddress, salt)
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to generate address: %w", err)
-	}
-	_, err = bind.WaitMined(context.Background(), client.(bind.DeployBackend), createTx)
-	if err != nil {
-		log.Fatalf("createTx receipt failed: %v", err)
-	}
-	saltEncrypted, err := crypto.EncryptPlain([]byte(salt.String()))
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to encrypt salt: %w", err)
-	}
-
-	return smartAccountAddress.Hex(), saltEncrypted, nil
-}
-
-// CreateThirdAccount creates a new account via thirdweb and returns the address
-func CreateThirdAccount() (string, error) {
-	cnfg := config.EngineConfig()
-	url := "https://engine.thirdweb.com/v1/accounts"
-
-	payload := strings.NewReader("{\"label\": \"\"}")
-
-	req, _ := http.NewRequest("POST", url, payload)
-
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("X-Secret-Key", cnfg.ThirdwebSecretKey)
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("failed to make request: %w", err)
-	}
-	defer res.Body.Close()
-
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read response: %w", err)
-	}
-
-	var response types.ThirdWebResponse
-	if err := json.Unmarshal(body, &response); err != nil {
-		return "", err
-	}
-
-	address := response.Result.Address
-	return address, nil
+	// Derive the Ethereum address from the private key
+	address := ethcrypto.PubkeyToAddress(privateKey.PublicKey)
+	return address.Hex(), nil
 }
