@@ -52,6 +52,9 @@ func (PaymentOrder) Fields() []ent.Field {
 		field.String("gateway_id").
 			MaxLen(70).
 			Optional(),
+		field.String("message_hash").
+			MaxLen(400).
+			Optional(),
 		field.String("reference").
 			MaxLen(70).
 			Optional(),
@@ -81,5 +84,7 @@ func (PaymentOrder) Edges() []ent.Edge {
 			Unique().
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("transactions", TransactionLog.Type),
+		edge.To("payment_webhook", PaymentWebhook.Type).
+			Unique(),
 	}
 }
