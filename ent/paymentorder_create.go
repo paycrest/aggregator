@@ -204,6 +204,12 @@ func (poc *PaymentOrderCreate) SetNillableGatewayID(s *string) *PaymentOrderCrea
 	return poc
 }
 
+// SetMessageHash sets the "message_hash" field.
+func (poc *PaymentOrderCreate) SetMessageHash(s string) *PaymentOrderCreate {
+	poc.mutation.SetMessageHash(s)
+	return poc
+}
+
 // SetReference sets the "reference" field.
 func (poc *PaymentOrderCreate) SetReference(s string) *PaymentOrderCreate {
 	poc.mutation.SetReference(s)
@@ -495,6 +501,14 @@ func (poc *PaymentOrderCreate) check() error {
 			return &ValidationError{Name: "gateway_id", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.gateway_id": %w`, err)}
 		}
 	}
+	if _, ok := poc.mutation.MessageHash(); !ok {
+		return &ValidationError{Name: "message_hash", err: errors.New(`ent: missing required field "PaymentOrder.message_hash"`)}
+	}
+	if v, ok := poc.mutation.MessageHash(); ok {
+		if err := paymentorder.MessageHashValidator(v); err != nil {
+			return &ValidationError{Name: "message_hash", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.message_hash": %w`, err)}
+		}
+	}
 	if v, ok := poc.mutation.Reference(); ok {
 		if err := paymentorder.ReferenceValidator(v); err != nil {
 			return &ValidationError{Name: "reference", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.reference": %w`, err)}
@@ -618,6 +632,10 @@ func (poc *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec
 	if value, ok := poc.mutation.GatewayID(); ok {
 		_spec.SetField(paymentorder.FieldGatewayID, field.TypeString, value)
 		_node.GatewayID = value
+	}
+	if value, ok := poc.mutation.MessageHash(); ok {
+		_spec.SetField(paymentorder.FieldMessageHash, field.TypeString, value)
+		_node.MessageHash = value
 	}
 	if value, ok := poc.mutation.Reference(); ok {
 		_spec.SetField(paymentorder.FieldReference, field.TypeString, value)
@@ -1088,6 +1106,18 @@ func (u *PaymentOrderUpsert) ClearGatewayID() *PaymentOrderUpsert {
 	return u
 }
 
+// SetMessageHash sets the "message_hash" field.
+func (u *PaymentOrderUpsert) SetMessageHash(v string) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldMessageHash, v)
+	return u
+}
+
+// UpdateMessageHash sets the "message_hash" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateMessageHash() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldMessageHash)
+	return u
+}
+
 // SetReference sets the "reference" field.
 func (u *PaymentOrderUpsert) SetReference(v string) *PaymentOrderUpsert {
 	u.Set(paymentorder.FieldReference, v)
@@ -1509,6 +1539,20 @@ func (u *PaymentOrderUpsertOne) UpdateGatewayID() *PaymentOrderUpsertOne {
 func (u *PaymentOrderUpsertOne) ClearGatewayID() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.ClearGatewayID()
+	})
+}
+
+// SetMessageHash sets the "message_hash" field.
+func (u *PaymentOrderUpsertOne) SetMessageHash(v string) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetMessageHash(v)
+	})
+}
+
+// UpdateMessageHash sets the "message_hash" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateMessageHash() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateMessageHash()
 	})
 }
 
@@ -2105,6 +2149,20 @@ func (u *PaymentOrderUpsertBulk) UpdateGatewayID() *PaymentOrderUpsertBulk {
 func (u *PaymentOrderUpsertBulk) ClearGatewayID() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.ClearGatewayID()
+	})
+}
+
+// SetMessageHash sets the "message_hash" field.
+func (u *PaymentOrderUpsertBulk) SetMessageHash(v string) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetMessageHash(v)
+	})
+}
+
+// UpdateMessageHash sets the "message_hash" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateMessageHash() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateMessageHash()
 	})
 }
 

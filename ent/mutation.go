@@ -6804,6 +6804,8 @@ type NetworkMutation struct {
 	tokens                   map[int]struct{}
 	removedtokens            map[int]struct{}
 	clearedtokens            bool
+	payment_webhook          *uuid.UUID
+	clearedpayment_webhook   bool
 	done                     bool
 	oldValue                 func(context.Context) (*Network, error)
 	predicates               []predicate.Network
@@ -7443,6 +7445,45 @@ func (m *NetworkMutation) ResetTokens() {
 	m.removedtokens = nil
 }
 
+// SetPaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by id.
+func (m *NetworkMutation) SetPaymentWebhookID(id uuid.UUID) {
+	m.payment_webhook = &id
+}
+
+// ClearPaymentWebhook clears the "payment_webhook" edge to the PaymentWebhook entity.
+func (m *NetworkMutation) ClearPaymentWebhook() {
+	m.clearedpayment_webhook = true
+}
+
+// PaymentWebhookCleared reports if the "payment_webhook" edge to the PaymentWebhook entity was cleared.
+func (m *NetworkMutation) PaymentWebhookCleared() bool {
+	return m.clearedpayment_webhook
+}
+
+// PaymentWebhookID returns the "payment_webhook" edge ID in the mutation.
+func (m *NetworkMutation) PaymentWebhookID() (id uuid.UUID, exists bool) {
+	if m.payment_webhook != nil {
+		return *m.payment_webhook, true
+	}
+	return
+}
+
+// PaymentWebhookIDs returns the "payment_webhook" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// PaymentWebhookID instead. It exists only for internal usage by the builders.
+func (m *NetworkMutation) PaymentWebhookIDs() (ids []uuid.UUID) {
+	if id := m.payment_webhook; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetPaymentWebhook resets all changes to the "payment_webhook" edge.
+func (m *NetworkMutation) ResetPaymentWebhook() {
+	m.payment_webhook = nil
+	m.clearedpayment_webhook = false
+}
+
 // Where appends a list predicates to the NetworkMutation builder.
 func (m *NetworkMutation) Where(ps ...predicate.Network) {
 	m.predicates = append(m.predicates, ps...)
@@ -7800,9 +7841,12 @@ func (m *NetworkMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *NetworkMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.tokens != nil {
 		edges = append(edges, network.EdgeTokens)
+	}
+	if m.payment_webhook != nil {
+		edges = append(edges, network.EdgePaymentWebhook)
 	}
 	return edges
 }
@@ -7817,13 +7861,17 @@ func (m *NetworkMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case network.EdgePaymentWebhook:
+		if id := m.payment_webhook; id != nil {
+			return []ent.Value{*id}
+		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *NetworkMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.removedtokens != nil {
 		edges = append(edges, network.EdgeTokens)
 	}
@@ -7846,9 +7894,12 @@ func (m *NetworkMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *NetworkMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.clearedtokens {
 		edges = append(edges, network.EdgeTokens)
+	}
+	if m.clearedpayment_webhook {
+		edges = append(edges, network.EdgePaymentWebhook)
 	}
 	return edges
 }
@@ -7859,6 +7910,8 @@ func (m *NetworkMutation) EdgeCleared(name string) bool {
 	switch name {
 	case network.EdgeTokens:
 		return m.clearedtokens
+	case network.EdgePaymentWebhook:
+		return m.clearedpayment_webhook
 	}
 	return false
 }
@@ -7867,6 +7920,9 @@ func (m *NetworkMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *NetworkMutation) ClearEdge(name string) error {
 	switch name {
+	case network.EdgePaymentWebhook:
+		m.ClearPaymentWebhook()
+		return nil
 	}
 	return fmt.Errorf("unknown Network unique edge %s", name)
 }
@@ -7877,6 +7933,9 @@ func (m *NetworkMutation) ResetEdge(name string) error {
 	switch name {
 	case network.EdgeTokens:
 		m.ResetTokens()
+		return nil
+	case network.EdgePaymentWebhook:
+		m.ResetPaymentWebhook()
 		return nil
 	}
 	return fmt.Errorf("unknown Network edge %s", name)
@@ -7916,6 +7975,7 @@ type PaymentOrderMutation struct {
 	addfee_percent         *decimal.Decimal
 	fee_address            *string
 	gateway_id             *string
+	message_hash           *string
 	reference              *string
 	status                 *paymentorder.Status
 	clearedFields          map[string]struct{}
@@ -8956,6 +9016,42 @@ func (m *PaymentOrderMutation) ResetGatewayID() {
 	delete(m.clearedFields, paymentorder.FieldGatewayID)
 }
 
+// SetMessageHash sets the "message_hash" field.
+func (m *PaymentOrderMutation) SetMessageHash(s string) {
+	m.message_hash = &s
+}
+
+// MessageHash returns the value of the "message_hash" field in the mutation.
+func (m *PaymentOrderMutation) MessageHash() (r string, exists bool) {
+	v := m.message_hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMessageHash returns the old "message_hash" field's value of the PaymentOrder entity.
+// If the PaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentOrderMutation) OldMessageHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMessageHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMessageHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMessageHash: %w", err)
+	}
+	return oldValue.MessageHash, nil
+}
+
+// ResetMessageHash resets all changes to the "message_hash" field.
+func (m *PaymentOrderMutation) ResetMessageHash() {
+	m.message_hash = nil
+}
+
 // SetReference sets the "reference" field.
 func (m *PaymentOrderMutation) SetReference(s string) {
 	m.reference = &s
@@ -9363,7 +9459,7 @@ func (m *PaymentOrderMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PaymentOrderMutation) Fields() []string {
-	fields := make([]string, 0, 20)
+	fields := make([]string, 0, 21)
 	if m.created_at != nil {
 		fields = append(fields, paymentorder.FieldCreatedAt)
 	}
@@ -9418,6 +9514,9 @@ func (m *PaymentOrderMutation) Fields() []string {
 	if m.gateway_id != nil {
 		fields = append(fields, paymentorder.FieldGatewayID)
 	}
+	if m.message_hash != nil {
+		fields = append(fields, paymentorder.FieldMessageHash)
+	}
 	if m.reference != nil {
 		fields = append(fields, paymentorder.FieldReference)
 	}
@@ -9468,6 +9567,8 @@ func (m *PaymentOrderMutation) Field(name string) (ent.Value, bool) {
 		return m.FeeAddress()
 	case paymentorder.FieldGatewayID:
 		return m.GatewayID()
+	case paymentorder.FieldMessageHash:
+		return m.MessageHash()
 	case paymentorder.FieldReference:
 		return m.Reference()
 	case paymentorder.FieldStatus:
@@ -9517,6 +9618,8 @@ func (m *PaymentOrderMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldFeeAddress(ctx)
 	case paymentorder.FieldGatewayID:
 		return m.OldGatewayID(ctx)
+	case paymentorder.FieldMessageHash:
+		return m.OldMessageHash(ctx)
 	case paymentorder.FieldReference:
 		return m.OldReference(ctx)
 	case paymentorder.FieldStatus:
@@ -9655,6 +9758,13 @@ func (m *PaymentOrderMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetGatewayID(v)
+		return nil
+	case paymentorder.FieldMessageHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMessageHash(v)
 		return nil
 	case paymentorder.FieldReference:
 		v, ok := value.(string)
@@ -9934,6 +10044,9 @@ func (m *PaymentOrderMutation) ResetField(name string) error {
 		return nil
 	case paymentorder.FieldGatewayID:
 		m.ResetGatewayID()
+		return nil
+	case paymentorder.FieldMessageHash:
+		m.ResetMessageHash()
 		return nil
 	case paymentorder.FieldReference:
 		m.ResetReference()
@@ -10874,6 +10987,8 @@ type PaymentWebhookMutation struct {
 	clearedFields        map[string]struct{}
 	payment_order        *uuid.UUID
 	clearedpayment_order bool
+	network              *int
+	clearednetwork       bool
 	done                 bool
 	oldValue             func(context.Context) (*PaymentWebhook, error)
 	predicates           []predicate.PaymentWebhook
@@ -11202,6 +11317,45 @@ func (m *PaymentWebhookMutation) ResetPaymentOrder() {
 	m.clearedpayment_order = false
 }
 
+// SetNetworkID sets the "network" edge to the Network entity by id.
+func (m *PaymentWebhookMutation) SetNetworkID(id int) {
+	m.network = &id
+}
+
+// ClearNetwork clears the "network" edge to the Network entity.
+func (m *PaymentWebhookMutation) ClearNetwork() {
+	m.clearednetwork = true
+}
+
+// NetworkCleared reports if the "network" edge to the Network entity was cleared.
+func (m *PaymentWebhookMutation) NetworkCleared() bool {
+	return m.clearednetwork
+}
+
+// NetworkID returns the "network" edge ID in the mutation.
+func (m *PaymentWebhookMutation) NetworkID() (id int, exists bool) {
+	if m.network != nil {
+		return *m.network, true
+	}
+	return
+}
+
+// NetworkIDs returns the "network" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// NetworkID instead. It exists only for internal usage by the builders.
+func (m *PaymentWebhookMutation) NetworkIDs() (ids []int) {
+	if id := m.network; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetNetwork resets all changes to the "network" edge.
+func (m *PaymentWebhookMutation) ResetNetwork() {
+	m.network = nil
+	m.clearednetwork = false
+}
+
 // Where appends a list predicates to the PaymentWebhookMutation builder.
 func (m *PaymentWebhookMutation) Where(ps ...predicate.PaymentWebhook) {
 	m.predicates = append(m.predicates, ps...)
@@ -11403,9 +11557,12 @@ func (m *PaymentWebhookMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *PaymentWebhookMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.payment_order != nil {
 		edges = append(edges, paymentwebhook.EdgePaymentOrder)
+	}
+	if m.network != nil {
+		edges = append(edges, paymentwebhook.EdgeNetwork)
 	}
 	return edges
 }
@@ -11418,13 +11575,17 @@ func (m *PaymentWebhookMutation) AddedIDs(name string) []ent.Value {
 		if id := m.payment_order; id != nil {
 			return []ent.Value{*id}
 		}
+	case paymentwebhook.EdgeNetwork:
+		if id := m.network; id != nil {
+			return []ent.Value{*id}
+		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *PaymentWebhookMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	return edges
 }
 
@@ -11436,9 +11597,12 @@ func (m *PaymentWebhookMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *PaymentWebhookMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.clearedpayment_order {
 		edges = append(edges, paymentwebhook.EdgePaymentOrder)
+	}
+	if m.clearednetwork {
+		edges = append(edges, paymentwebhook.EdgeNetwork)
 	}
 	return edges
 }
@@ -11449,6 +11613,8 @@ func (m *PaymentWebhookMutation) EdgeCleared(name string) bool {
 	switch name {
 	case paymentwebhook.EdgePaymentOrder:
 		return m.clearedpayment_order
+	case paymentwebhook.EdgeNetwork:
+		return m.clearednetwork
 	}
 	return false
 }
@@ -11460,6 +11626,9 @@ func (m *PaymentWebhookMutation) ClearEdge(name string) error {
 	case paymentwebhook.EdgePaymentOrder:
 		m.ClearPaymentOrder()
 		return nil
+	case paymentwebhook.EdgeNetwork:
+		m.ClearNetwork()
+		return nil
 	}
 	return fmt.Errorf("unknown PaymentWebhook unique edge %s", name)
 }
@@ -11470,6 +11639,9 @@ func (m *PaymentWebhookMutation) ResetEdge(name string) error {
 	switch name {
 	case paymentwebhook.EdgePaymentOrder:
 		m.ResetPaymentOrder()
+		return nil
+	case paymentwebhook.EdgeNetwork:
+		m.ResetNetwork()
 		return nil
 	}
 	return fmt.Errorf("unknown PaymentWebhook edge %s", name)

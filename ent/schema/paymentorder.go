@@ -52,6 +52,9 @@ func (PaymentOrder) Fields() []ent.Field {
 		field.String("gateway_id").
 			MaxLen(70).
 			Optional(),
+		field.String("message_hash").
+			MaxLen(400).
+			NotEmpty(),
 		field.String("reference").
 			MaxLen(70).
 			Optional(),

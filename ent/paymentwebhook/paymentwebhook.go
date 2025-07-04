@@ -27,6 +27,8 @@ const (
 	FieldCallbackURL = "callback_url"
 	// EdgePaymentOrder holds the string denoting the payment_order edge name in mutations.
 	EdgePaymentOrder = "payment_order"
+	// EdgeNetwork holds the string denoting the network edge name in mutations.
+	EdgeNetwork = "network"
 	// Table holds the table name of the paymentwebhook in the database.
 	Table = "payment_webhooks"
 	// PaymentOrderTable is the table that holds the payment_order relation/edge.
@@ -36,6 +38,13 @@ const (
 	PaymentOrderInverseTable = "payment_orders"
 	// PaymentOrderColumn is the table column denoting the payment_order relation/edge.
 	PaymentOrderColumn = "payment_order_payment_webhook"
+	// NetworkTable is the table that holds the network relation/edge.
+	NetworkTable = "payment_webhooks"
+	// NetworkInverseTable is the table name for the Network entity.
+	// It exists in this package in order to avoid circular dependency with the "network" package.
+	NetworkInverseTable = "networks"
+	// NetworkColumn is the table column denoting the network relation/edge.
+	NetworkColumn = "network_payment_webhook"
 )
 
 // Columns holds all SQL columns for paymentwebhook fields.
@@ -51,6 +60,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "payment_webhooks"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
+	"network_payment_webhook",
 	"payment_order_payment_webhook",
 }
 
@@ -125,10 +135,24 @@ func ByPaymentOrderField(field string, opts ...sql.OrderTermOption) OrderOption 
 		sqlgraph.OrderByNeighborTerms(s, newPaymentOrderStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByNetworkField orders the results by network field.
+func ByNetworkField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newNetworkStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newPaymentOrderStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(PaymentOrderInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2O, true, PaymentOrderTable, PaymentOrderColumn),
+	)
+}
+func newNetworkStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(NetworkInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, true, NetworkTable, NetworkColumn),
 	)
 }

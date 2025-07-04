@@ -379,6 +379,29 @@ func HasPaymentOrderWith(preds ...predicate.PaymentOrder) predicate.PaymentWebho
 	})
 }
 
+// HasNetwork applies the HasEdge predicate on the "network" edge.
+func HasNetwork() predicate.PaymentWebhook {
+	return predicate.PaymentWebhook(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, NetworkTable, NetworkColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasNetworkWith applies the HasEdge predicate on the "network" edge with a given conditions (other predicates).
+func HasNetworkWith(preds ...predicate.Network) predicate.PaymentWebhook {
+	return predicate.PaymentWebhook(func(s *sql.Selector) {
+		step := newNetworkStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.PaymentWebhook) predicate.PaymentWebhook {
 	return predicate.PaymentWebhook(sql.AndPredicates(predicates...))

@@ -7,6 +7,7 @@ import (
 
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/routers"
+	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/tasks"
 	"github.com/paycrest/aggregator/utils/logger"
@@ -35,6 +36,13 @@ func main() {
 	if err := storage.InitializeRedis(); err != nil {
 		log.Println(err)
 		logger.Fatalf("Redis initialization: %v", err)
+	}
+
+	// Setup gateway webhooks for all EVM networks
+	engineService := services.NewEngineService()
+	err := engineService.CreateGatewayWebhook()
+	if err != nil {
+		logger.Errorf("Failed to create gateway webhooks: %v", err)
 	}
 
 	// Subscribe to Redis keyspace events

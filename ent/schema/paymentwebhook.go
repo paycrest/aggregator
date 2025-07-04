@@ -41,5 +41,8 @@ func (PaymentWebhook) Edges() []ent.Edge {
 		edge.From("payment_order", PaymentOrder.Type).
 			Ref("payment_webhook").
 			Unique(),
+		edge.From("network", Network.Type).
+			Ref("payment_webhook").
+			Unique(),
 	}
 }

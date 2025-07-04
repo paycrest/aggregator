@@ -312,12 +312,12 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.APIKey, c.BeneficialOwner, c.FiatCurrency, c.IdentityVerificationRequest,
-		c.Institution, c.KYBProfile, c.LinkedAddress, c.LockOrderFulfillment,
-		c.LockPaymentOrder, c.Network, c.PaymentOrder, c.PaymentOrderRecipient,
-		c.PaymentWebhook, c.ProviderOrderToken, c.ProviderProfile, c.ProviderRating,
-		c.ProvisionBucket, c.ReceiveAddress, c.SenderOrderToken, c.SenderProfile,
-		c.Token, c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
+		c.APIKey, c.FiatCurrency, c.IdentityVerificationRequest, c.Institution,
+		c.LinkedAddress, c.LockOrderFulfillment, c.LockPaymentOrder, c.Network,
+		c.PaymentOrder, c.PaymentOrderRecipient, c.PaymentWebhook,
+		c.ProviderOrderToken, c.ProviderProfile, c.ProviderRating, c.ProvisionBucket,
+		c.ReceiveAddress, c.SenderOrderToken, c.SenderProfile, c.Token,
+		c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
 	} {
 		n.Use(hooks...)
 	}
@@ -327,12 +327,12 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.APIKey, c.BeneficialOwner, c.FiatCurrency, c.IdentityVerificationRequest,
-		c.Institution, c.KYBProfile, c.LinkedAddress, c.LockOrderFulfillment,
-		c.LockPaymentOrder, c.Network, c.PaymentOrder, c.PaymentOrderRecipient,
-		c.PaymentWebhook, c.ProviderOrderToken, c.ProviderProfile, c.ProviderRating,
-		c.ProvisionBucket, c.ReceiveAddress, c.SenderOrderToken, c.SenderProfile,
-		c.Token, c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
+		c.APIKey, c.FiatCurrency, c.IdentityVerificationRequest, c.Institution,
+		c.LinkedAddress, c.LockOrderFulfillment, c.LockPaymentOrder, c.Network,
+		c.PaymentOrder, c.PaymentOrderRecipient, c.PaymentWebhook,
+		c.ProviderOrderToken, c.ProviderProfile, c.ProviderRating, c.ProvisionBucket,
+		c.ReceiveAddress, c.SenderOrderToken, c.SenderProfile, c.Token,
+		c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -1687,6 +1687,22 @@ func (c *NetworkClient) QueryTokens(n *Network) *TokenQuery {
 	return query
 }
 
+// QueryPaymentWebhook queries the payment_webhook edge of a Network.
+func (c *NetworkClient) QueryPaymentWebhook(n *Network) *PaymentWebhookQuery {
+	query := (&PaymentWebhookClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := n.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(network.Table, network.FieldID, id),
+			sqlgraph.To(paymentwebhook.Table, paymentwebhook.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, network.PaymentWebhookTable, network.PaymentWebhookColumn),
+		)
+		fromV = sqlgraph.Neighbors(n.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *NetworkClient) Hooks() []Hook {
 	return c.hooks.Network
@@ -2223,6 +2239,22 @@ func (c *PaymentWebhookClient) QueryPaymentOrder(pw *PaymentWebhook) *PaymentOrd
 			sqlgraph.From(paymentwebhook.Table, paymentwebhook.FieldID, id),
 			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, paymentwebhook.PaymentOrderTable, paymentwebhook.PaymentOrderColumn),
+		)
+		fromV = sqlgraph.Neighbors(pw.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryNetwork queries the network edge of a PaymentWebhook.
+func (c *PaymentWebhookClient) QueryNetwork(pw *PaymentWebhook) *NetworkQuery {
+	query := (&NetworkClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := pw.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(paymentwebhook.Table, paymentwebhook.FieldID, id),
+			sqlgraph.To(network.Table, network.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, paymentwebhook.NetworkTable, paymentwebhook.NetworkColumn),
 		)
 		fromV = sqlgraph.Neighbors(pw.driver.Dialect(), step)
 		return fromV, nil
@@ -4352,19 +4384,19 @@ func (c *WebhookRetryAttemptClient) mutate(ctx context.Context, m *WebhookRetryA
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		APIKey, BeneficialOwner, FiatCurrency, IdentityVerificationRequest, Institution,
-		KYBProfile, LinkedAddress, LockOrderFulfillment, LockPaymentOrder, Network,
-		PaymentOrder, PaymentOrderRecipient, PaymentWebhook, ProviderOrderToken,
-		ProviderProfile, ProviderRating, ProvisionBucket, ReceiveAddress,
-		SenderOrderToken, SenderProfile, Token, TransactionLog, User,
-		VerificationToken, WebhookRetryAttempt []ent.Hook
+		APIKey, FiatCurrency, IdentityVerificationRequest, Institution, LinkedAddress,
+		LockOrderFulfillment, LockPaymentOrder, Network, PaymentOrder,
+		PaymentOrderRecipient, PaymentWebhook, ProviderOrderToken, ProviderProfile,
+		ProviderRating, ProvisionBucket, ReceiveAddress, SenderOrderToken,
+		SenderProfile, Token, TransactionLog, User, VerificationToken,
+		WebhookRetryAttempt []ent.Hook
 	}
 	inters struct {
-		APIKey, BeneficialOwner, FiatCurrency, IdentityVerificationRequest, Institution,
-		KYBProfile, LinkedAddress, LockOrderFulfillment, LockPaymentOrder, Network,
-		PaymentOrder, PaymentOrderRecipient, PaymentWebhook, ProviderOrderToken,
-		ProviderProfile, ProviderRating, ProvisionBucket, ReceiveAddress,
-		SenderOrderToken, SenderProfile, Token, TransactionLog, User,
-		VerificationToken, WebhookRetryAttempt []ent.Interceptor
+		APIKey, FiatCurrency, IdentityVerificationRequest, Institution, LinkedAddress,
+		LockOrderFulfillment, LockPaymentOrder, Network, PaymentOrder,
+		PaymentOrderRecipient, PaymentWebhook, ProviderOrderToken, ProviderProfile,
+		ProviderRating, ProvisionBucket, ReceiveAddress, SenderOrderToken,
+		SenderProfile, Token, TransactionLog, User, VerificationToken,
+		WebhookRetryAttempt []ent.Interceptor
 	}
 )

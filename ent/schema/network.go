@@ -46,5 +46,7 @@ func (Network) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("tokens", Token.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("payment_webhook", PaymentWebhook.Type).
+			Unique(),
 	}
 }

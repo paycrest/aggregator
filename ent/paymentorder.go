@@ -61,6 +61,8 @@ type PaymentOrder struct {
 	FeeAddress string `json:"fee_address,omitempty"`
 	// GatewayID holds the value of the "gateway_id" field.
 	GatewayID string `json:"gateway_id,omitempty"`
+	// MessageHash holds the value of the "message_hash" field.
+	MessageHash string `json:"message_hash,omitempty"`
 	// Reference holds the value of the "reference" field.
 	Reference string `json:"reference,omitempty"`
 	// Status holds the value of the "status" field.
@@ -180,7 +182,7 @@ func (*PaymentOrder) scanValues(columns []string) ([]any, error) {
 			values[i] = new(decimal.Decimal)
 		case paymentorder.FieldBlockNumber:
 			values[i] = new(sql.NullInt64)
-		case paymentorder.FieldTxHash, paymentorder.FieldFromAddress, paymentorder.FieldReturnAddress, paymentorder.FieldReceiveAddressText, paymentorder.FieldFeeAddress, paymentorder.FieldGatewayID, paymentorder.FieldReference, paymentorder.FieldStatus:
+		case paymentorder.FieldTxHash, paymentorder.FieldFromAddress, paymentorder.FieldReturnAddress, paymentorder.FieldReceiveAddressText, paymentorder.FieldFeeAddress, paymentorder.FieldGatewayID, paymentorder.FieldMessageHash, paymentorder.FieldReference, paymentorder.FieldStatus:
 			values[i] = new(sql.NullString)
 		case paymentorder.FieldCreatedAt, paymentorder.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -322,6 +324,12 @@ func (po *PaymentOrder) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field gateway_id", values[i])
 			} else if value.Valid {
 				po.GatewayID = value.String
+			}
+		case paymentorder.FieldMessageHash:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field message_hash", values[i])
+			} else if value.Valid {
+				po.MessageHash = value.String
 			}
 		case paymentorder.FieldReference:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -487,6 +495,9 @@ func (po *PaymentOrder) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("gateway_id=")
 	builder.WriteString(po.GatewayID)
+	builder.WriteString(", ")
+	builder.WriteString("message_hash=")
+	builder.WriteString(po.MessageHash)
 	builder.WriteString(", ")
 	builder.WriteString("reference=")
 	builder.WriteString(po.Reference)

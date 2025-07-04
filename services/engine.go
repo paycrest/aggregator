@@ -8,7 +8,9 @@ import (
 
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
+	"github.com/paycrest/aggregator/ent"
 	networkent "github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
@@ -217,7 +219,8 @@ func (s *EngineService) WaitForTransactionMined(ctx context.Context, queueId str
 //        ctx,
 //        137, // Polygon chain ID
 //        "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619", // WETH contract address
-//        "0x1234567890123456789012345678901234567890"  // To address to monitor
+//        "0x1234567890123456789012345678901234567890", // To address to monitor
+//        "order-uuid-here" // Order ID for webhook name
 //    )
 //
 // 2. Create gateway webhooks for all supported chains:
@@ -225,13 +228,19 @@ func (s *EngineService) WaitForTransactionMined(ctx context.Context, queueId str
 //
 // 3. Set up all webhooks for the environment:
 //    err := engineService.SetupWebhooksForEnvironment(ctx)
+//
+// 4. Delete a webhook from thirdweb:
+//    err := engineService.DeleteWebhook(ctx, "webhook_id_here")
+//
+// 5. Delete a webhook from thirdweb and remove the record from database:
+//    err := engineService.DeleteWebhookAndRecord(ctx, "webhook_id_here")
 
 // CreateTransferWebhook creates a webhook to listen to transfer events to a specific address on a specific chain
-func (s *EngineService) CreateTransferWebhook(ctx context.Context, chainID int64, contractAddress string, toAddress string) (string, string, error) {
+func (s *EngineService) CreateTransferWebhook(ctx context.Context, chainID int64, contractAddress string, toAddress string, orderID string) (string, string, error) {
 	webhookCallbackURL := fmt.Sprintf("%s/v1/insight/webhook", config.ServerConfig().ServerURL)
 
 	webhookPayload := map[string]interface{}{
-		"name":         fmt.Sprintf("Transfer Webhook - %s", contractAddress),
+		"name":         orderID,
 		"endpoint_url": webhookCallbackURL,
 		"filters": map[string]interface{}{
 			"v1.events": map[string]interface{}{
@@ -269,8 +278,147 @@ func (s *EngineService) CreateTransferWebhook(ctx context.Context, chainID int64
 	return webhookID, webhookSecret, nil
 }
 
+// DeleteWebhook deletes a webhook by its ID
+func (s *EngineService) DeleteWebhook(ctx context.Context, webhookID string) error {
+	res, err := fastshot.NewClient("https://insight.thirdweb.com").
+		Config().SetTimeout(30 * time.Second).
+		Header().AddAll(map[string]string{
+		"Accept":       "application/json",
+		"Content-Type": "application/json",
+		"X-Secret-Key": s.config.ThirdwebSecretKey,
+	}).Build().DELETE(fmt.Sprintf("/v1/webhooks/%s", webhookID)).
+		Send()
+
+	if err != nil {
+		return fmt.Errorf("failed to delete webhook: %w", err)
+	}
+
+	// Check if the response indicates success
+	if res.StatusCode() != 200 && res.StatusCode() != 204 {
+		return fmt.Errorf("failed to delete webhook: HTTP %d", res.StatusCode())
+	}
+
+	return nil
+}
+
+// DeleteWebhookAndRecord deletes a webhook from thirdweb and removes the PaymentWebhook record from our database
+func (s *EngineService) DeleteWebhookAndRecord(ctx context.Context, webhookID string) error {
+	// First, delete the webhook from thirdweb
+	err := s.DeleteWebhook(ctx, webhookID)
+	if err != nil {
+		return fmt.Errorf("failed to delete webhook from thirdweb: %w", err)
+	}
+
+	// Then, delete the PaymentWebhook record from our database
+	_, err = storage.Client.PaymentWebhook.
+		Delete().
+		Where(paymentwebhook.WebhookIDEQ(webhookID)).
+		Exec(ctx)
+	if err != nil {
+		logger.Errorf("Failed to delete PaymentWebhook record from database: %v", err)
+		// Don't fail the entire operation if database deletion fails
+		// The webhook is already deleted from thirdweb
+	}
+
+	return nil
+}
+
+// WebhookInfo represents a webhook from thirdweb API
+type WebhookInfo struct {
+	ID            string                 `json:"id"`
+	Name          string                 `json:"name"`
+	EndpointURL   string                 `json:"endpoint_url"`
+	WebhookSecret string                 `json:"webhook_secret"`
+	Enabled       bool                   `json:"enabled"`
+	CreatedAt     string                 `json:"created_at"`
+	UpdatedAt     string                 `json:"updated_at"`
+	ProjectID     string                 `json:"project_id"`
+	Filters       map[string]interface{} `json:"filters"`
+}
+
+// WebhookListResponse represents the response from GET /v1/webhooks
+type WebhookListResponse struct {
+	Data []WebhookInfo `json:"data"`
+	Meta struct {
+		Page       int `json:"page"`
+		Limit      int `json:"limit"`
+		TotalItems int `json:"total_items"`
+		TotalPages int `json:"total_pages"`
+	} `json:"meta"`
+}
+
+// GetWebhookByID fetches a webhook by its ID from thirdweb
+func (s *EngineService) GetWebhookByID(ctx context.Context, webhookID string) (*WebhookInfo, error) {
+	res, err := fastshot.NewClient("https://insight.thirdweb.com").
+		Config().SetTimeout(30 * time.Second).
+		Header().AddAll(map[string]string{
+		"Accept":       "application/json",
+		"Content-Type": "application/json",
+		"X-Secret-Key": s.config.ThirdwebSecretKey,
+	}).Build().GET(fmt.Sprintf("/v1/webhooks?webhook_id=%s", webhookID)).
+		Send()
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch webhook: %w", err)
+	}
+
+	if res.StatusCode() != 200 {
+		return nil, fmt.Errorf("failed to fetch webhook: HTTP %d", res.StatusCode())
+	}
+
+	data, err := utils.ParseJSONResponse(res.RawResponse)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse webhook response: %w", err)
+	}
+
+	// Parse the response data
+	responseData := data["data"].([]interface{})
+	if len(responseData) == 0 {
+		return nil, fmt.Errorf("webhook not found")
+	}
+
+	// Convert the first webhook data to WebhookInfo
+	webhookData := responseData[0].(map[string]interface{})
+	webhookInfo := &WebhookInfo{
+		ID:            webhookData["id"].(string),
+		Name:          webhookData["name"].(string),
+		EndpointURL:   webhookData["endpoint_url"].(string),
+		WebhookSecret: webhookData["webhook_secret"].(string),
+		Enabled:       webhookData["enabled"].(bool),
+		CreatedAt:     webhookData["created_at"].(string),
+		UpdatedAt:     webhookData["updated_at"].(string),
+		ProjectID:     webhookData["project_id"].(string),
+		Filters:       webhookData["filters"].(map[string]interface{}),
+	}
+
+	return webhookInfo, nil
+}
+
+// UpdateWebhook updates an existing webhook with new filters
+func (s *EngineService) UpdateWebhook(ctx context.Context, webhookID string, webhookPayload map[string]interface{}) error {
+	res, err := fastshot.NewClient("https://insight.thirdweb.com").
+		Config().SetTimeout(30 * time.Second).
+		Header().AddAll(map[string]string{
+		"Accept":       "application/json",
+		"Content-Type": "application/json",
+		"X-Secret-Key": s.config.ThirdwebSecretKey,
+	}).Build().PATCH(fmt.Sprintf("/v1/webhooks/%s", webhookID)).
+		Body().AsJSON(webhookPayload).Send()
+
+	if err != nil {
+		return fmt.Errorf("failed to update webhook: %w", err)
+	}
+
+	if res.StatusCode() != 200 {
+		return fmt.Errorf("failed to update webhook: HTTP %d", res.StatusCode())
+	}
+
+	return nil
+}
+
 // CreateGatewayWebhook creates webhooks for gateway contract events across all supported chains for the environment
-func (s *EngineService) CreateGatewayWebhook(ctx context.Context) (string, string, error) {
+func (s *EngineService) CreateGatewayWebhook() error {
+	ctx := context.Background()
 	serverConf := config.ServerConfig()
 
 	// Check if server URL is configured
@@ -278,7 +426,7 @@ func (s *EngineService) CreateGatewayWebhook(ctx context.Context) (string, strin
 		logger.WithFields(logger.Fields{
 			"Environment": serverConf.Environment,
 		}).Errorf("SERVER_URL not configured in environment")
-		return "", "", fmt.Errorf("SERVER_URL not configured in environment")
+		return fmt.Errorf("SERVER_URL not configured in environment")
 	}
 
 	// Determine if we're in testnet or mainnet
@@ -293,7 +441,7 @@ func (s *EngineService) CreateGatewayWebhook(ctx context.Context) (string, strin
 		Where(networkent.IsTestnet(isTestnet)).
 		All(ctx)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to fetch networks: %w", err)
+		return fmt.Errorf("failed to fetch networks: %w", err)
 	}
 
 	// Event signatures for gateway contract events (using hash-like signatures from EVM indexer)
@@ -306,6 +454,7 @@ func (s *EngineService) CreateGatewayWebhook(ctx context.Context) (string, strin
 	// Collect all chain IDs and gateway addresses
 	var chainIDs []int64
 	var gatewayAddresses []string
+	var evmNetworks []*ent.Network
 
 	for _, network := range networks {
 		// Skip Tron networks as they don't use EVM webhooks
@@ -314,19 +463,136 @@ func (s *EngineService) CreateGatewayWebhook(ctx context.Context) (string, strin
 		}
 		chainIDs = append(chainIDs, network.ChainID)
 		gatewayAddresses = append(gatewayAddresses, network.GatewayContractAddress)
+		evmNetworks = append(evmNetworks, network)
 	}
 
 	if len(chainIDs) == 0 {
 		logger.Infof("No EVM networks found for webhook creation")
-		return "", "", nil
+		return nil
+	}
+
+	// Check if any EVM network has an associated PaymentWebhook
+	var existingWebhookID string
+	var existingWebhookSecret string
+
+	for _, network := range evmNetworks {
+		paymentWebhook, err := storage.Client.PaymentWebhook.
+			Query().
+			Where(paymentwebhook.HasNetworkWith(networkent.IDEQ(network.ID))).
+			Only(ctx)
+		if err == nil {
+			// Found an existing webhook for this network
+			existingWebhookID = paymentWebhook.WebhookID
+			existingWebhookSecret = paymentWebhook.WebhookSecret
+			break
+		}
 	}
 
 	// Create callback URL for gateway events
 	webhookCallbackURL := fmt.Sprintf("%s/v1/insight/webhook", serverConf.ServerURL)
 
-	// Use the first chain ID for the base URL (since we need a specific chain URL)
-	baseChainID := chainIDs[0]
+	if existingWebhookID != "" {
+		// Fetch the existing webhook from thirdweb
+		webhookInfo, err := s.GetWebhookByID(ctx, existingWebhookID)
+		if err != nil {
+			logger.Errorf("Failed to fetch existing webhook %s: %v", existingWebhookID, err)
+			// Continue with creating a new webhook
+		} else {
+			// Check if the webhook filters match our current chain IDs
+			filters, ok := webhookInfo.Filters["v1.events"].(map[string]interface{})
+			if ok {
+				existingChainIDs, ok := filters["chain_ids"].([]interface{})
+				if ok {
+					// Convert existing chain IDs to int64 for comparison
+					var existingChainIDsInt64 []int64
+					for _, chainID := range existingChainIDs {
+						if chainIDFloat, ok := chainID.(float64); ok {
+							existingChainIDsInt64 = append(existingChainIDsInt64, int64(chainIDFloat))
+						}
+					}
 
+					// Check if all our chain IDs are in the existing webhook
+					allChainsIncluded := true
+					for _, chainID := range chainIDs {
+						found := false
+						for _, existingChainID := range existingChainIDsInt64 {
+							if chainID == existingChainID {
+								found = true
+								break
+							}
+						}
+						if !found {
+							allChainsIncluded = false
+							break
+						}
+					}
+
+					if allChainsIncluded {
+						// Perfect match - no update needed
+						logger.WithFields(logger.Fields{
+							"WebhookID": existingWebhookID,
+							"ChainIDs":  chainIDs,
+						}).Infof("Gateway webhook already exists and includes all required chains")
+						return nil
+					}
+				}
+			}
+
+			// Update the webhook with new chain IDs
+			webhookPayload := map[string]interface{}{
+				"filters": map[string]interface{}{
+					"v1.events": map[string]interface{}{
+						"chain_ids":        chainIDs,
+						"addresses":        gatewayAddresses,
+						"event_signatures": eventSignatures,
+					},
+				},
+			}
+
+			err = s.UpdateWebhook(ctx, existingWebhookID, webhookPayload)
+			if err != nil {
+				logger.Errorf("Failed to update webhook %s: %v", existingWebhookID, err)
+				// Continue with creating a new webhook
+			} else {
+				// Update successful, now update all PaymentWebhook records
+				for _, network := range evmNetworks {
+					// Delete existing PaymentWebhook for this network, if any
+					_, err = storage.Client.PaymentWebhook.Delete().
+						Where(paymentwebhook.HasNetworkWith(networkent.IDEQ(network.ID))).
+						Exec(ctx)
+					if err != nil {
+						logger.Errorf("Failed to delete existing PaymentWebhook for network %s: %v", network.Identifier, err)
+						continue
+					}
+
+					// Create new PaymentWebhook with updated webhook info
+					_, err = storage.Client.PaymentWebhook.Create().
+						SetWebhookID(existingWebhookID).
+						SetWebhookSecret(existingWebhookSecret).
+						SetCallbackURL(webhookCallbackURL).
+						SetNetwork(network).
+						Save(ctx)
+					if err != nil {
+						logger.Errorf("Failed to create PaymentWebhook for network %s: %v", network.Identifier, err)
+						continue
+					}
+				}
+
+				logger.WithFields(logger.Fields{
+					"WebhookID":        existingWebhookID,
+					"ChainIDs":         chainIDs,
+					"GatewayAddresses": gatewayAddresses,
+					"EventSignatures":  eventSignatures,
+					"CallbackURL":      webhookCallbackURL,
+					"NetworksCount":    len(chainIDs),
+				}).Infof("Updated gateway webhook successfully")
+
+				return nil
+			}
+		}
+	}
+
+	// No existing webhook found or update failed, create a new one
 	webhookPayload := map[string]interface{}{
 		"name":         "Gateway Contract Events Webhook",
 		"endpoint_url": webhookCallbackURL,
@@ -339,7 +605,7 @@ func (s *EngineService) CreateGatewayWebhook(ctx context.Context) (string, strin
 		},
 	}
 
-	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", baseChainID)).
+	res, err := fastshot.NewClient("https://insight.thirdweb.com").
 		Config().SetTimeout(30 * time.Second).
 		Header().AddAll(map[string]string{
 		"Accept":       "application/json",
@@ -349,16 +615,40 @@ func (s *EngineService) CreateGatewayWebhook(ctx context.Context) (string, strin
 		Body().AsJSON(webhookPayload).Send()
 
 	if err != nil {
-		return "", "", fmt.Errorf("failed to create gateway webhooks: %w", err)
+		return fmt.Errorf("failed to create gateway webhooks: %w", err)
 	}
 
 	data, err := utils.ParseJSONResponse(res.RawResponse)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to parse JSON response: %w", err)
+		return fmt.Errorf("failed to parse JSON response: %w", err)
 	}
 
 	webhookID := data["id"].(string)
 	webhookSecret := data["webhook_secret"].(string)
+
+	// Create PaymentWebhook records for all EVM networks
+	for _, network := range evmNetworks {
+		// Delete existing PaymentWebhook for this network, if any
+		_, err = storage.Client.PaymentWebhook.Delete().
+			Where(paymentwebhook.HasNetworkWith(networkent.IDEQ(network.ID))).
+			Exec(ctx)
+		if err != nil {
+			logger.Errorf("Failed to delete existing PaymentWebhook for network %s: %v", network.Identifier, err)
+			continue
+		}
+
+		// Create new PaymentWebhook
+		_, err = storage.Client.PaymentWebhook.Create().
+			SetWebhookID(webhookID).
+			SetWebhookSecret(webhookSecret).
+			SetCallbackURL(webhookCallbackURL).
+			SetNetwork(network).
+			Save(ctx)
+		if err != nil {
+			logger.Errorf("Failed to create PaymentWebhook for network %s: %v", network.Identifier, err)
+			continue
+		}
+	}
 
 	logger.WithFields(logger.Fields{
 		"WebhookID":        webhookID,
@@ -366,31 +656,8 @@ func (s *EngineService) CreateGatewayWebhook(ctx context.Context) (string, strin
 		"GatewayAddresses": gatewayAddresses,
 		"EventSignatures":  eventSignatures,
 		"CallbackURL":      webhookCallbackURL,
+		"NetworksCount":    len(chainIDs),
 	}).Infof("Created gateway webhooks successfully")
-
-	return webhookID, webhookSecret, nil
-}
-
-// SetupWebhooksForEnvironment sets up all necessary webhooks for the current environment
-// This function demonstrates how to use the webhook creation functions
-func (s *EngineService) SetupWebhooksForEnvironment(ctx context.Context) error {
-	// Check if server URL is configured
-	if config.ServerConfig().ServerURL == "" {
-		return fmt.Errorf("SERVER_URL not configured in environment")
-	}
-
-	// Create gateway webhooks for all supported chains
-	webhookID, webhookSecret, err := s.CreateGatewayWebhook(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to create gateway webhooks: %w", err)
-	}
-
-	logger.WithFields(logger.Fields{
-		"Environment":        config.ServerConfig().Environment,
-		"WebhookCallbackURL": fmt.Sprintf("%s/v1/insight/webhook", config.ServerConfig().ServerURL),
-		"WebhookID":          webhookID,
-		"WebhookSecret":      webhookSecret,
-	}).Infof("Successfully set up webhooks for environment")
 
 	return nil
 }

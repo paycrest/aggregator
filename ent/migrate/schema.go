@@ -251,6 +251,7 @@ var (
 		{Name: "fee_percent", Type: field.TypeFloat64},
 		{Name: "fee_address", Type: field.TypeString, Nullable: true, Size: 60},
 		{Name: "gateway_id", Type: field.TypeString, Nullable: true, Size: 70},
+		{Name: "message_hash", Type: field.TypeString, Size: 400},
 		{Name: "reference", Type: field.TypeString, Nullable: true, Size: 70},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"initiated", "processing", "pending", "validated", "expired", "settled", "refunded"}, Default: "initiated"},
 		{Name: "api_key_payment_orders", Type: field.TypeUUID, Nullable: true},
@@ -266,25 +267,25 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "payment_orders_api_keys_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[21]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[22]},
 				RefColumns: []*schema.Column{APIKeysColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "payment_orders_linked_addresses_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[22]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[23]},
 				RefColumns: []*schema.Column{LinkedAddressesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "payment_orders_sender_profiles_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[23]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[24]},
 				RefColumns: []*schema.Column{SenderProfilesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "payment_orders_tokens_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[24]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[25]},
 				RefColumns: []*schema.Column{TokensColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -323,6 +324,7 @@ var (
 		{Name: "webhook_id", Type: field.TypeString, Size: 100},
 		{Name: "webhook_secret", Type: field.TypeString, Size: 100},
 		{Name: "callback_url", Type: field.TypeString, Size: 255},
+		{Name: "network_payment_webhook", Type: field.TypeInt, Unique: true, Nullable: true},
 		{Name: "payment_order_payment_webhook", Type: field.TypeUUID, Unique: true, Nullable: true},
 	}
 	// PaymentWebhooksTable holds the schema information for the "payment_webhooks" table.
@@ -332,8 +334,14 @@ var (
 		PrimaryKey: []*schema.Column{PaymentWebhooksColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "payment_webhooks_payment_orders_payment_webhook",
+				Symbol:     "payment_webhooks_networks_payment_webhook",
 				Columns:    []*schema.Column{PaymentWebhooksColumns[6]},
+				RefColumns: []*schema.Column{NetworksColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "payment_webhooks_payment_orders_payment_webhook",
+				Columns:    []*schema.Column{PaymentWebhooksColumns[7]},
 				RefColumns: []*schema.Column{PaymentOrdersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -778,7 +786,8 @@ func init() {
 	PaymentOrdersTable.ForeignKeys[2].RefTable = SenderProfilesTable
 	PaymentOrdersTable.ForeignKeys[3].RefTable = TokensTable
 	PaymentOrderRecipientsTable.ForeignKeys[0].RefTable = PaymentOrdersTable
-	PaymentWebhooksTable.ForeignKeys[0].RefTable = PaymentOrdersTable
+	PaymentWebhooksTable.ForeignKeys[0].RefTable = NetworksTable
+	PaymentWebhooksTable.ForeignKeys[1].RefTable = PaymentOrdersTable
 	ProviderOrderTokensTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
 	ProviderOrderTokensTable.ForeignKeys[1].RefTable = ProviderProfilesTable
 	ProviderOrderTokensTable.ForeignKeys[2].RefTable = TokensTable

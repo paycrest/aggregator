@@ -52,6 +52,8 @@ const (
 	FieldFeeAddress = "fee_address"
 	// FieldGatewayID holds the string denoting the gateway_id field in the database.
 	FieldGatewayID = "gateway_id"
+	// FieldMessageHash holds the string denoting the message_hash field in the database.
+	FieldMessageHash = "message_hash"
 	// FieldReference holds the string denoting the reference field in the database.
 	FieldReference = "reference"
 	// FieldStatus holds the string denoting the status field in the database.
@@ -144,6 +146,7 @@ var Columns = []string{
 	FieldFeePercent,
 	FieldFeeAddress,
 	FieldGatewayID,
+	FieldMessageHash,
 	FieldReference,
 	FieldStatus,
 }
@@ -193,6 +196,8 @@ var (
 	FeeAddressValidator func(string) error
 	// GatewayIDValidator is a validator for the "gateway_id" field. It is called by the builders before save.
 	GatewayIDValidator func(string) error
+	// MessageHashValidator is a validator for the "message_hash" field. It is called by the builders before save.
+	MessageHashValidator func(string) error
 	// ReferenceValidator is a validator for the "reference" field. It is called by the builders before save.
 	ReferenceValidator func(string) error
 	// DefaultID holds the default value on creation for the "id" field.
@@ -326,6 +331,11 @@ func ByFeeAddress(opts ...sql.OrderTermOption) OrderOption {
 // ByGatewayID orders the results by the gateway_id field.
 func ByGatewayID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldGatewayID, opts...).ToFunc()
+}
+
+// ByMessageHash orders the results by the message_hash field.
+func ByMessageHash(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMessageHash, opts...).ToFunc()
 }
 
 // ByReference orders the results by the reference field.

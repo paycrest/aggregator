@@ -1077,7 +1077,6 @@ func (ctrl *Controller) InsightWebhook(ctx *gin.Context) {
 	webhookID := ctx.GetHeader("x-webhook-id")
 
 	if signature == "" || webhookID == "" {
-		logger.Errorf("Error: InsightWebhook: Missing required headers - signature: %s, webhookID: %s", signature, webhookID)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing required headers"})
 		return
 	}
@@ -1104,8 +1103,9 @@ func (ctrl *Controller) InsightWebhook(ctx *gin.Context) {
 		return
 	}
 
-	// Verify payload age (optional - 5 minutes)
-	if ctrl.isWebhookPayloadExpired(webhookPayload.Timestamp, 300) {
+	// Verify payload age (optional - 10 minutes)
+	// TODO: get this from config for priority queue refresh period
+	if ctrl.isWebhookPayloadExpired(webhookPayload.Timestamp, 600) {
 		logger.Errorf("Error: InsightWebhook: Webhook payload expired - timestamp: %d", webhookPayload.Timestamp)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Payload expired"})
 		return

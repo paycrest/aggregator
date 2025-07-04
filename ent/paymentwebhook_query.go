@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/predicate"
@@ -25,6 +26,7 @@ type PaymentWebhookQuery struct {
 	inters           []Interceptor
 	predicates       []predicate.PaymentWebhook
 	withPaymentOrder *PaymentOrderQuery
+	withNetwork      *NetworkQuery
 	withFKs          bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -77,6 +79,28 @@ func (pwq *PaymentWebhookQuery) QueryPaymentOrder() *PaymentOrderQuery {
 			sqlgraph.From(paymentwebhook.Table, paymentwebhook.FieldID, selector),
 			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, paymentwebhook.PaymentOrderTable, paymentwebhook.PaymentOrderColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(pwq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryNetwork chains the current query on the "network" edge.
+func (pwq *PaymentWebhookQuery) QueryNetwork() *NetworkQuery {
+	query := (&NetworkClient{config: pwq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := pwq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := pwq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(paymentwebhook.Table, paymentwebhook.FieldID, selector),
+			sqlgraph.To(network.Table, network.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, paymentwebhook.NetworkTable, paymentwebhook.NetworkColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(pwq.driver.Dialect(), step)
 		return fromU, nil
@@ -277,6 +301,7 @@ func (pwq *PaymentWebhookQuery) Clone() *PaymentWebhookQuery {
 		inters:           append([]Interceptor{}, pwq.inters...),
 		predicates:       append([]predicate.PaymentWebhook{}, pwq.predicates...),
 		withPaymentOrder: pwq.withPaymentOrder.Clone(),
+		withNetwork:      pwq.withNetwork.Clone(),
 		// clone intermediate query.
 		sql:  pwq.sql.Clone(),
 		path: pwq.path,
@@ -291,6 +316,17 @@ func (pwq *PaymentWebhookQuery) WithPaymentOrder(opts ...func(*PaymentOrderQuery
 		opt(query)
 	}
 	pwq.withPaymentOrder = query
+	return pwq
+}
+
+// WithNetwork tells the query-builder to eager-load the nodes that are connected to
+// the "network" edge. The optional arguments are used to configure the query builder of the edge.
+func (pwq *PaymentWebhookQuery) WithNetwork(opts ...func(*NetworkQuery)) *PaymentWebhookQuery {
+	query := (&NetworkClient{config: pwq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	pwq.withNetwork = query
 	return pwq
 }
 
@@ -373,11 +409,12 @@ func (pwq *PaymentWebhookQuery) sqlAll(ctx context.Context, hooks ...queryHook) 
 		nodes       = []*PaymentWebhook{}
 		withFKs     = pwq.withFKs
 		_spec       = pwq.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [2]bool{
 			pwq.withPaymentOrder != nil,
+			pwq.withNetwork != nil,
 		}
 	)
-	if pwq.withPaymentOrder != nil {
+	if pwq.withPaymentOrder != nil || pwq.withNetwork != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -404,6 +441,12 @@ func (pwq *PaymentWebhookQuery) sqlAll(ctx context.Context, hooks ...queryHook) 
 	if query := pwq.withPaymentOrder; query != nil {
 		if err := pwq.loadPaymentOrder(ctx, query, nodes, nil,
 			func(n *PaymentWebhook, e *PaymentOrder) { n.Edges.PaymentOrder = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := pwq.withNetwork; query != nil {
+		if err := pwq.loadNetwork(ctx, query, nodes, nil,
+			func(n *PaymentWebhook, e *Network) { n.Edges.Network = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -435,6 +478,38 @@ func (pwq *PaymentWebhookQuery) loadPaymentOrder(ctx context.Context, query *Pay
 		nodes, ok := nodeids[n.ID]
 		if !ok {
 			return fmt.Errorf(`unexpected foreign-key "payment_order_payment_webhook" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (pwq *PaymentWebhookQuery) loadNetwork(ctx context.Context, query *NetworkQuery, nodes []*PaymentWebhook, init func(*PaymentWebhook), assign func(*PaymentWebhook, *Network)) error {
+	ids := make([]int, 0, len(nodes))
+	nodeids := make(map[int][]*PaymentWebhook)
+	for i := range nodes {
+		if nodes[i].network_payment_webhook == nil {
+			continue
+		}
+		fk := *nodes[i].network_payment_webhook
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(network.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "network_payment_webhook" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/predicate"
@@ -97,6 +98,25 @@ func (pwu *PaymentWebhookUpdate) SetPaymentOrder(p *PaymentOrder) *PaymentWebhoo
 	return pwu.SetPaymentOrderID(p.ID)
 }
 
+// SetNetworkID sets the "network" edge to the Network entity by ID.
+func (pwu *PaymentWebhookUpdate) SetNetworkID(id int) *PaymentWebhookUpdate {
+	pwu.mutation.SetNetworkID(id)
+	return pwu
+}
+
+// SetNillableNetworkID sets the "network" edge to the Network entity by ID if the given value is not nil.
+func (pwu *PaymentWebhookUpdate) SetNillableNetworkID(id *int) *PaymentWebhookUpdate {
+	if id != nil {
+		pwu = pwu.SetNetworkID(*id)
+	}
+	return pwu
+}
+
+// SetNetwork sets the "network" edge to the Network entity.
+func (pwu *PaymentWebhookUpdate) SetNetwork(n *Network) *PaymentWebhookUpdate {
+	return pwu.SetNetworkID(n.ID)
+}
+
 // Mutation returns the PaymentWebhookMutation object of the builder.
 func (pwu *PaymentWebhookUpdate) Mutation() *PaymentWebhookMutation {
 	return pwu.mutation
@@ -105,6 +125,12 @@ func (pwu *PaymentWebhookUpdate) Mutation() *PaymentWebhookMutation {
 // ClearPaymentOrder clears the "payment_order" edge to the PaymentOrder entity.
 func (pwu *PaymentWebhookUpdate) ClearPaymentOrder() *PaymentWebhookUpdate {
 	pwu.mutation.ClearPaymentOrder()
+	return pwu
+}
+
+// ClearNetwork clears the "network" edge to the Network entity.
+func (pwu *PaymentWebhookUpdate) ClearNetwork() *PaymentWebhookUpdate {
+	pwu.mutation.ClearNetwork()
 	return pwu
 }
 
@@ -217,6 +243,35 @@ func (pwu *PaymentWebhookUpdate) sqlSave(ctx context.Context) (n int, err error)
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if pwu.mutation.NetworkCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   paymentwebhook.NetworkTable,
+			Columns: []string{paymentwebhook.NetworkColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(network.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := pwu.mutation.NetworkIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   paymentwebhook.NetworkTable,
+			Columns: []string{paymentwebhook.NetworkColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(network.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, pwu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{paymentwebhook.Label}
@@ -304,6 +359,25 @@ func (pwuo *PaymentWebhookUpdateOne) SetPaymentOrder(p *PaymentOrder) *PaymentWe
 	return pwuo.SetPaymentOrderID(p.ID)
 }
 
+// SetNetworkID sets the "network" edge to the Network entity by ID.
+func (pwuo *PaymentWebhookUpdateOne) SetNetworkID(id int) *PaymentWebhookUpdateOne {
+	pwuo.mutation.SetNetworkID(id)
+	return pwuo
+}
+
+// SetNillableNetworkID sets the "network" edge to the Network entity by ID if the given value is not nil.
+func (pwuo *PaymentWebhookUpdateOne) SetNillableNetworkID(id *int) *PaymentWebhookUpdateOne {
+	if id != nil {
+		pwuo = pwuo.SetNetworkID(*id)
+	}
+	return pwuo
+}
+
+// SetNetwork sets the "network" edge to the Network entity.
+func (pwuo *PaymentWebhookUpdateOne) SetNetwork(n *Network) *PaymentWebhookUpdateOne {
+	return pwuo.SetNetworkID(n.ID)
+}
+
 // Mutation returns the PaymentWebhookMutation object of the builder.
 func (pwuo *PaymentWebhookUpdateOne) Mutation() *PaymentWebhookMutation {
 	return pwuo.mutation
@@ -312,6 +386,12 @@ func (pwuo *PaymentWebhookUpdateOne) Mutation() *PaymentWebhookMutation {
 // ClearPaymentOrder clears the "payment_order" edge to the PaymentOrder entity.
 func (pwuo *PaymentWebhookUpdateOne) ClearPaymentOrder() *PaymentWebhookUpdateOne {
 	pwuo.mutation.ClearPaymentOrder()
+	return pwuo
+}
+
+// ClearNetwork clears the "network" edge to the Network entity.
+func (pwuo *PaymentWebhookUpdateOne) ClearNetwork() *PaymentWebhookUpdateOne {
+	pwuo.mutation.ClearNetwork()
 	return pwuo
 }
 
@@ -447,6 +527,35 @@ func (pwuo *PaymentWebhookUpdateOne) sqlSave(ctx context.Context) (_node *Paymen
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if pwuo.mutation.NetworkCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   paymentwebhook.NetworkTable,
+			Columns: []string{paymentwebhook.NetworkColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(network.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := pwuo.mutation.NetworkIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   paymentwebhook.NetworkTable,
+			Columns: []string{paymentwebhook.NetworkColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(network.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

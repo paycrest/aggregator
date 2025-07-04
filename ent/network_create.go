@@ -11,7 +11,9 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/shopspring/decimal"
 )
@@ -143,6 +145,25 @@ func (nc *NetworkCreate) AddTokens(t ...*Token) *NetworkCreate {
 		ids[i] = t[i].ID
 	}
 	return nc.AddTokenIDs(ids...)
+}
+
+// SetPaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID.
+func (nc *NetworkCreate) SetPaymentWebhookID(id uuid.UUID) *NetworkCreate {
+	nc.mutation.SetPaymentWebhookID(id)
+	return nc
+}
+
+// SetNillablePaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID if the given value is not nil.
+func (nc *NetworkCreate) SetNillablePaymentWebhookID(id *uuid.UUID) *NetworkCreate {
+	if id != nil {
+		nc = nc.SetPaymentWebhookID(*id)
+	}
+	return nc
+}
+
+// SetPaymentWebhook sets the "payment_webhook" edge to the PaymentWebhook entity.
+func (nc *NetworkCreate) SetPaymentWebhook(p *PaymentWebhook) *NetworkCreate {
+	return nc.SetPaymentWebhookID(p.ID)
 }
 
 // Mutation returns the NetworkMutation object of the builder.
@@ -303,6 +324,22 @@ func (nc *NetworkCreate) createSpec() (*Network, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(token.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := nc.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   network.PaymentWebhookTable,
+			Columns: []string{network.PaymentWebhookColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

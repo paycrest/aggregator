@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
+	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 )
@@ -32,6 +33,7 @@ type PaymentWebhook struct {
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the PaymentWebhookQuery when eager-loading is set.
 	Edges                         PaymentWebhookEdges `json:"edges"`
+	network_payment_webhook       *int
 	payment_order_payment_webhook *uuid.UUID
 	selectValues                  sql.SelectValues
 }
@@ -40,9 +42,11 @@ type PaymentWebhook struct {
 type PaymentWebhookEdges struct {
 	// PaymentOrder holds the value of the payment_order edge.
 	PaymentOrder *PaymentOrder `json:"payment_order,omitempty"`
+	// Network holds the value of the network edge.
+	Network *Network `json:"network,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // PaymentOrderOrErr returns the PaymentOrder value or an error if the edge
@@ -56,6 +60,17 @@ func (e PaymentWebhookEdges) PaymentOrderOrErr() (*PaymentOrder, error) {
 	return nil, &NotLoadedError{edge: "payment_order"}
 }
 
+// NetworkOrErr returns the Network value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e PaymentWebhookEdges) NetworkOrErr() (*Network, error) {
+	if e.Network != nil {
+		return e.Network, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: network.Label}
+	}
+	return nil, &NotLoadedError{edge: "network"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*PaymentWebhook) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -67,7 +82,9 @@ func (*PaymentWebhook) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullTime)
 		case paymentwebhook.FieldID:
 			values[i] = new(uuid.UUID)
-		case paymentwebhook.ForeignKeys[0]: // payment_order_payment_webhook
+		case paymentwebhook.ForeignKeys[0]: // network_payment_webhook
+			values[i] = new(sql.NullInt64)
+		case paymentwebhook.ForeignKeys[1]: // payment_order_payment_webhook
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
@@ -121,6 +138,13 @@ func (pw *PaymentWebhook) assignValues(columns []string, values []any) error {
 				pw.CallbackURL = value.String
 			}
 		case paymentwebhook.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field network_payment_webhook", value)
+			} else if value.Valid {
+				pw.network_payment_webhook = new(int)
+				*pw.network_payment_webhook = int(value.Int64)
+			}
+		case paymentwebhook.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field payment_order_payment_webhook", values[i])
 			} else if value.Valid {
@@ -143,6 +167,11 @@ func (pw *PaymentWebhook) Value(name string) (ent.Value, error) {
 // QueryPaymentOrder queries the "payment_order" edge of the PaymentWebhook entity.
 func (pw *PaymentWebhook) QueryPaymentOrder() *PaymentOrderQuery {
 	return NewPaymentWebhookClient(pw.config).QueryPaymentOrder(pw)
+}
+
+// QueryNetwork queries the "network" edge of the PaymentWebhook entity.
+func (pw *PaymentWebhook) QueryNetwork() *NetworkQuery {
+	return NewPaymentWebhookClient(pw.config).QueryNetwork(pw)
 }
 
 // Update returns a builder for updating this PaymentWebhook.

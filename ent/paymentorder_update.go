@@ -367,6 +367,20 @@ func (pou *PaymentOrderUpdate) ClearGatewayID() *PaymentOrderUpdate {
 	return pou
 }
 
+// SetMessageHash sets the "message_hash" field.
+func (pou *PaymentOrderUpdate) SetMessageHash(s string) *PaymentOrderUpdate {
+	pou.mutation.SetMessageHash(s)
+	return pou
+}
+
+// SetNillableMessageHash sets the "message_hash" field if the given value is not nil.
+func (pou *PaymentOrderUpdate) SetNillableMessageHash(s *string) *PaymentOrderUpdate {
+	if s != nil {
+		pou.SetMessageHash(*s)
+	}
+	return pou
+}
+
 // SetReference sets the "reference" field.
 func (pou *PaymentOrderUpdate) SetReference(s string) *PaymentOrderUpdate {
 	pou.mutation.SetReference(s)
@@ -652,6 +666,11 @@ func (pou *PaymentOrderUpdate) check() error {
 			return &ValidationError{Name: "gateway_id", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.gateway_id": %w`, err)}
 		}
 	}
+	if v, ok := pou.mutation.MessageHash(); ok {
+		if err := paymentorder.MessageHashValidator(v); err != nil {
+			return &ValidationError{Name: "message_hash", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.message_hash": %w`, err)}
+		}
+	}
 	if v, ok := pou.mutation.Reference(); ok {
 		if err := paymentorder.ReferenceValidator(v); err != nil {
 			return &ValidationError{Name: "reference", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.reference": %w`, err)}
@@ -775,6 +794,9 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if pou.mutation.GatewayIDCleared() {
 		_spec.ClearField(paymentorder.FieldGatewayID, field.TypeString)
+	}
+	if value, ok := pou.mutation.MessageHash(); ok {
+		_spec.SetField(paymentorder.FieldMessageHash, field.TypeString, value)
 	}
 	if value, ok := pou.mutation.Reference(); ok {
 		_spec.SetField(paymentorder.FieldReference, field.TypeString, value)
@@ -1354,6 +1376,20 @@ func (pouo *PaymentOrderUpdateOne) ClearGatewayID() *PaymentOrderUpdateOne {
 	return pouo
 }
 
+// SetMessageHash sets the "message_hash" field.
+func (pouo *PaymentOrderUpdateOne) SetMessageHash(s string) *PaymentOrderUpdateOne {
+	pouo.mutation.SetMessageHash(s)
+	return pouo
+}
+
+// SetNillableMessageHash sets the "message_hash" field if the given value is not nil.
+func (pouo *PaymentOrderUpdateOne) SetNillableMessageHash(s *string) *PaymentOrderUpdateOne {
+	if s != nil {
+		pouo.SetMessageHash(*s)
+	}
+	return pouo
+}
+
 // SetReference sets the "reference" field.
 func (pouo *PaymentOrderUpdateOne) SetReference(s string) *PaymentOrderUpdateOne {
 	pouo.mutation.SetReference(s)
@@ -1652,6 +1688,11 @@ func (pouo *PaymentOrderUpdateOne) check() error {
 			return &ValidationError{Name: "gateway_id", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.gateway_id": %w`, err)}
 		}
 	}
+	if v, ok := pouo.mutation.MessageHash(); ok {
+		if err := paymentorder.MessageHashValidator(v); err != nil {
+			return &ValidationError{Name: "message_hash", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.message_hash": %w`, err)}
+		}
+	}
 	if v, ok := pouo.mutation.Reference(); ok {
 		if err := paymentorder.ReferenceValidator(v); err != nil {
 			return &ValidationError{Name: "reference", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.reference": %w`, err)}
@@ -1792,6 +1833,9 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 	}
 	if pouo.mutation.GatewayIDCleared() {
 		_spec.ClearField(paymentorder.FieldGatewayID, field.TypeString)
+	}
+	if value, ok := pouo.mutation.MessageHash(); ok {
+		_spec.SetField(paymentorder.FieldMessageHash, field.TypeString, value)
 	}
 	if value, ok := pouo.mutation.Reference(); ok {
 		_spec.SetField(paymentorder.FieldReference, field.TypeString, value)

@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 )
@@ -102,6 +103,25 @@ func (pwc *PaymentWebhookCreate) SetNillablePaymentOrderID(id *uuid.UUID) *Payme
 // SetPaymentOrder sets the "payment_order" edge to the PaymentOrder entity.
 func (pwc *PaymentWebhookCreate) SetPaymentOrder(p *PaymentOrder) *PaymentWebhookCreate {
 	return pwc.SetPaymentOrderID(p.ID)
+}
+
+// SetNetworkID sets the "network" edge to the Network entity by ID.
+func (pwc *PaymentWebhookCreate) SetNetworkID(id int) *PaymentWebhookCreate {
+	pwc.mutation.SetNetworkID(id)
+	return pwc
+}
+
+// SetNillableNetworkID sets the "network" edge to the Network entity by ID if the given value is not nil.
+func (pwc *PaymentWebhookCreate) SetNillableNetworkID(id *int) *PaymentWebhookCreate {
+	if id != nil {
+		pwc = pwc.SetNetworkID(*id)
+	}
+	return pwc
+}
+
+// SetNetwork sets the "network" edge to the Network entity.
+func (pwc *PaymentWebhookCreate) SetNetwork(n *Network) *PaymentWebhookCreate {
+	return pwc.SetNetworkID(n.ID)
 }
 
 // Mutation returns the PaymentWebhookMutation object of the builder.
@@ -256,6 +276,23 @@ func (pwc *PaymentWebhookCreate) createSpec() (*PaymentWebhook, *sqlgraph.Create
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.payment_order_payment_webhook = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := pwc.mutation.NetworkIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   paymentwebhook.NetworkTable,
+			Columns: []string{paymentwebhook.NetworkColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(network.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.network_payment_webhook = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

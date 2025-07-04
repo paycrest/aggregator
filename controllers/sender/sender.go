@@ -415,8 +415,9 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		webhookID, webhookSecret, err := engineService.CreateTransferWebhook(
 			ctx,
 			token.Edges.Network.ChainID,
-			token.ContractAddress,  // Token contract address
-			receiveAddress.Address, // Smart address to monitor
+			token.ContractAddress,    // Token contract address
+			receiveAddress.Address,   // Smart address to monitor
+			paymentOrder.ID.String(), // Order ID for webhook name
 		)
 		if err != nil {
 			logger.Errorf("Failed to create transfer webhook: %v", err)
