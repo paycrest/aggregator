@@ -11,6 +11,8 @@ import (
 	types "github.com/ethereum/go-ethereum/core/types"
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
+	networkent "github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/storage"
 	aggregatortypes "github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
@@ -54,6 +56,32 @@ func (s *EngineService) CreateServerWallet(ctx context.Context, label string) (s
 
 // GetLatestBlock fetches the latest block number for a given chain ID
 func (s *EngineService) GetLatestBlock(ctx context.Context, chainID int64) (int64, error) {
+	// Check if this is BNB Smart Chain (chain ID 56) - use RPC instead of Thirdweb Insight
+	if chainID == 56 {
+		// Fetch network from database to get RPC endpoint
+		network, err := storage.Client.Network.
+			Query().
+			Where(networkent.ChainIDEQ(chainID)).
+			Only(ctx)
+		if err != nil {
+			return 0, fmt.Errorf("failed to fetch network from database: %w", err)
+		}
+
+		// Use RPC for BNB Smart Chain
+		client, err := aggregatortypes.NewEthClient(network.RPCEndpoint)
+		if err != nil {
+			return 0, fmt.Errorf("failed to create RPC client: %w", err)
+		}
+
+		header, err := client.HeaderByNumber(ctx, nil) // nil means latest block
+		if err != nil {
+			return 0, fmt.Errorf("failed to get latest block: %w", err)
+		}
+
+		return header.Number.Int64(), nil
+	}
+
+	// Use Thirdweb Insight for other networks
 	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
 		Config().SetTimeout(30 * time.Second).
 		Header().AddAll(map[string]string{
