@@ -381,6 +381,12 @@ func (pou *PaymentOrderUpdate) SetNillableMessageHash(s *string) *PaymentOrderUp
 	return pou
 }
 
+// ClearMessageHash clears the value of the "message_hash" field.
+func (pou *PaymentOrderUpdate) ClearMessageHash() *PaymentOrderUpdate {
+	pou.mutation.ClearMessageHash()
+	return pou
+}
+
 // SetReference sets the "reference" field.
 func (pou *PaymentOrderUpdate) SetReference(s string) *PaymentOrderUpdate {
 	pou.mutation.SetReference(s)
@@ -797,6 +803,9 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := pou.mutation.MessageHash(); ok {
 		_spec.SetField(paymentorder.FieldMessageHash, field.TypeString, value)
+	}
+	if pou.mutation.MessageHashCleared() {
+		_spec.ClearField(paymentorder.FieldMessageHash, field.TypeString)
 	}
 	if value, ok := pou.mutation.Reference(); ok {
 		_spec.SetField(paymentorder.FieldReference, field.TypeString, value)
@@ -1390,6 +1399,12 @@ func (pouo *PaymentOrderUpdateOne) SetNillableMessageHash(s *string) *PaymentOrd
 	return pouo
 }
 
+// ClearMessageHash clears the value of the "message_hash" field.
+func (pouo *PaymentOrderUpdateOne) ClearMessageHash() *PaymentOrderUpdateOne {
+	pouo.mutation.ClearMessageHash()
+	return pouo
+}
+
 // SetReference sets the "reference" field.
 func (pouo *PaymentOrderUpdateOne) SetReference(s string) *PaymentOrderUpdateOne {
 	pouo.mutation.SetReference(s)
@@ -1836,6 +1851,9 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 	}
 	if value, ok := pouo.mutation.MessageHash(); ok {
 		_spec.SetField(paymentorder.FieldMessageHash, field.TypeString, value)
+	}
+	if pouo.mutation.MessageHashCleared() {
+		_spec.ClearField(paymentorder.FieldMessageHash, field.TypeString)
 	}
 	if value, ok := pouo.mutation.Reference(); ok {
 		_spec.SetField(paymentorder.FieldReference, field.TypeString, value)

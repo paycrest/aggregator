@@ -1132,6 +1132,16 @@ func MessageHashHasSuffix(v string) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldHasSuffix(FieldMessageHash, v))
 }
 
+// MessageHashIsNil applies the IsNil predicate on the "message_hash" field.
+func MessageHashIsNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIsNull(FieldMessageHash))
+}
+
+// MessageHashNotNil applies the NotNil predicate on the "message_hash" field.
+func MessageHashNotNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotNull(FieldMessageHash))
+}
+
 // MessageHashEqualFold applies the EqualFold predicate on the "message_hash" field.
 func MessageHashEqualFold(v string) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldEqualFold(FieldMessageHash, v))

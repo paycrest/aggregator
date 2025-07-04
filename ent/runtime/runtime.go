@@ -241,21 +241,7 @@ func init() {
 	// paymentorderDescMessageHash is the schema descriptor for message_hash field.
 	paymentorderDescMessageHash := paymentorderFields[17].Descriptor()
 	// paymentorder.MessageHashValidator is a validator for the "message_hash" field. It is called by the builders before save.
-	paymentorder.MessageHashValidator = func() func(string) error {
-		validators := paymentorderDescMessageHash.Validators
-		fns := [...]func(string) error{
-			validators[0].(func(string) error),
-			validators[1].(func(string) error),
-		}
-		return func(message_hash string) error {
-			for _, fn := range fns {
-				if err := fn(message_hash); err != nil {
-					return err
-				}
-			}
-			return nil
-		}
-	}()
+	paymentorder.MessageHashValidator = paymentorderDescMessageHash.Validators[0].(func(string) error)
 	// paymentorderDescReference is the schema descriptor for reference field.
 	paymentorderDescReference := paymentorderFields[18].Descriptor()
 	// paymentorder.ReferenceValidator is a validator for the "reference" field. It is called by the builders before save.

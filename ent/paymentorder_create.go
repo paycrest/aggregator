@@ -210,6 +210,14 @@ func (poc *PaymentOrderCreate) SetMessageHash(s string) *PaymentOrderCreate {
 	return poc
 }
 
+// SetNillableMessageHash sets the "message_hash" field if the given value is not nil.
+func (poc *PaymentOrderCreate) SetNillableMessageHash(s *string) *PaymentOrderCreate {
+	if s != nil {
+		poc.SetMessageHash(*s)
+	}
+	return poc
+}
+
 // SetReference sets the "reference" field.
 func (poc *PaymentOrderCreate) SetReference(s string) *PaymentOrderCreate {
 	poc.mutation.SetReference(s)
@@ -500,9 +508,6 @@ func (poc *PaymentOrderCreate) check() error {
 		if err := paymentorder.GatewayIDValidator(v); err != nil {
 			return &ValidationError{Name: "gateway_id", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.gateway_id": %w`, err)}
 		}
-	}
-	if _, ok := poc.mutation.MessageHash(); !ok {
-		return &ValidationError{Name: "message_hash", err: errors.New(`ent: missing required field "PaymentOrder.message_hash"`)}
 	}
 	if v, ok := poc.mutation.MessageHash(); ok {
 		if err := paymentorder.MessageHashValidator(v); err != nil {
@@ -1118,6 +1123,12 @@ func (u *PaymentOrderUpsert) UpdateMessageHash() *PaymentOrderUpsert {
 	return u
 }
 
+// ClearMessageHash clears the value of the "message_hash" field.
+func (u *PaymentOrderUpsert) ClearMessageHash() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldMessageHash)
+	return u
+}
+
 // SetReference sets the "reference" field.
 func (u *PaymentOrderUpsert) SetReference(v string) *PaymentOrderUpsert {
 	u.Set(paymentorder.FieldReference, v)
@@ -1553,6 +1564,13 @@ func (u *PaymentOrderUpsertOne) SetMessageHash(v string) *PaymentOrderUpsertOne 
 func (u *PaymentOrderUpsertOne) UpdateMessageHash() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.UpdateMessageHash()
+	})
+}
+
+// ClearMessageHash clears the value of the "message_hash" field.
+func (u *PaymentOrderUpsertOne) ClearMessageHash() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearMessageHash()
 	})
 }
 
@@ -2163,6 +2181,13 @@ func (u *PaymentOrderUpsertBulk) SetMessageHash(v string) *PaymentOrderUpsertBul
 func (u *PaymentOrderUpsertBulk) UpdateMessageHash() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.UpdateMessageHash()
+	})
+}
+
+// ClearMessageHash clears the value of the "message_hash" field.
+func (u *PaymentOrderUpsertBulk) ClearMessageHash() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearMessageHash()
 	})
 }
 

@@ -251,7 +251,7 @@ var (
 		{Name: "fee_percent", Type: field.TypeFloat64},
 		{Name: "fee_address", Type: field.TypeString, Nullable: true, Size: 60},
 		{Name: "gateway_id", Type: field.TypeString, Nullable: true, Size: 70},
-		{Name: "message_hash", Type: field.TypeString, Size: 400},
+		{Name: "message_hash", Type: field.TypeString, Nullable: true, Size: 400},
 		{Name: "reference", Type: field.TypeString, Nullable: true, Size: 70},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"initiated", "processing", "pending", "validated", "expired", "settled", "refunded"}, Default: "initiated"},
 		{Name: "api_key_payment_orders", Type: field.TypeUUID, Nullable: true},

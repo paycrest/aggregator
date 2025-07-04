@@ -9047,9 +9047,22 @@ func (m *PaymentOrderMutation) OldMessageHash(ctx context.Context) (v string, er
 	return oldValue.MessageHash, nil
 }
 
+// ClearMessageHash clears the value of the "message_hash" field.
+func (m *PaymentOrderMutation) ClearMessageHash() {
+	m.message_hash = nil
+	m.clearedFields[paymentorder.FieldMessageHash] = struct{}{}
+}
+
+// MessageHashCleared returns if the "message_hash" field was cleared in this mutation.
+func (m *PaymentOrderMutation) MessageHashCleared() bool {
+	_, ok := m.clearedFields[paymentorder.FieldMessageHash]
+	return ok
+}
+
 // ResetMessageHash resets all changes to the "message_hash" field.
 func (m *PaymentOrderMutation) ResetMessageHash() {
 	m.message_hash = nil
+	delete(m.clearedFields, paymentorder.FieldMessageHash)
 }
 
 // SetReference sets the "reference" field.
@@ -9948,6 +9961,9 @@ func (m *PaymentOrderMutation) ClearedFields() []string {
 	if m.FieldCleared(paymentorder.FieldGatewayID) {
 		fields = append(fields, paymentorder.FieldGatewayID)
 	}
+	if m.FieldCleared(paymentorder.FieldMessageHash) {
+		fields = append(fields, paymentorder.FieldMessageHash)
+	}
 	if m.FieldCleared(paymentorder.FieldReference) {
 		fields = append(fields, paymentorder.FieldReference)
 	}
@@ -9979,6 +9995,9 @@ func (m *PaymentOrderMutation) ClearField(name string) error {
 		return nil
 	case paymentorder.FieldGatewayID:
 		m.ClearGatewayID()
+		return nil
+	case paymentorder.FieldMessageHash:
+		m.ClearMessageHash()
 		return nil
 	case paymentorder.FieldReference:
 		m.ClearReference()
