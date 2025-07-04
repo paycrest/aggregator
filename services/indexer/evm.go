@@ -142,14 +142,6 @@ func (s *IndexerEVM) IndexOrderCreated(ctx context.Context, network *ent.Network
 
 	// Check if this is BNB Smart Chain (chain ID 56) - use RPC instead of Thirdweb Insight
 	if network.ChainID == 56 {
-		// Use RPC for BNB Smart Chain
-		logger.WithFields(logger.Fields{
-			"ChainID":         network.ChainID,
-			"ContractAddress": network.GatewayContractAddress,
-			"FromBlock":       fromBlock,
-			"ToBlock":         toBlock,
-		}).Info("Using RPC for BNB Smart Chain OrderCreated indexing")
-
 		eventSignature := "0x40ccd1ceb111a3c186ef9911e1b876dc1f789ed331b86097b3b8851055b6a137" // OrderCreated
 		var topics []string
 
