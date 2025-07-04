@@ -57,6 +57,7 @@ func (s *IndexerEVM) IndexTransfer(ctx context.Context, token *ent.Token, addres
 			toBlock,
 			eventSignature,
 			topics,
+			txHash,
 		)
 	} else {
 		// Use Thirdweb Insight for other networks
@@ -153,6 +154,7 @@ func (s *IndexerEVM) IndexOrderCreated(ctx context.Context, network *ent.Network
 			toBlock,
 			eventSignature,
 			topics,
+			txHash,
 		)
 	} else {
 		// Use Thirdweb Insight for other networks
@@ -251,6 +253,7 @@ func (s *IndexerEVM) IndexOrderSettled(ctx context.Context, network *ent.Network
 			toBlock,
 			eventSignature,
 			topics,
+			txHash,
 		)
 	} else {
 		// Use Thirdweb Insight for other networks
@@ -338,6 +341,7 @@ func (s *IndexerEVM) IndexOrderRefunded(ctx context.Context, network *ent.Networ
 			toBlock,
 			eventSignature,
 			topics,
+			txHash,
 		)
 	} else {
 		// Use Thirdweb Insight for other networks

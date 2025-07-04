@@ -8,6 +8,7 @@ import (
 
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
+	types "github.com/ethereum/go-ethereum/core/types"
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
 	aggregatortypes "github.com/paycrest/aggregator/types"
@@ -212,37 +213,69 @@ func (s *EngineService) WaitForTransactionMined(ctx context.Context, queueId str
 }
 
 // GetContractEventsRPC fetches contract events using RPC for networks not supported by Thirdweb Insight
-func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint string, contractAddress string, fromBlock int64, toBlock int64, eventSignature string, topics []string) ([]interface{}, error) {
+func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint string, contractAddress string, fromBlock int64, toBlock int64, eventSignature string, topics []string, txHash string) ([]interface{}, error) {
 	// Create RPC client
 	client, err := aggregatortypes.NewEthClient(rpcEndpoint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create RPC client: %w", err)
 	}
 
-	// Build filter query
-	filterQuery := ethereum.FilterQuery{
-		FromBlock: big.NewInt(fromBlock),
-		ToBlock:   big.NewInt(toBlock),
-		Addresses: []common.Address{common.HexToAddress(contractAddress)},
-		Topics:    [][]common.Hash{},
-	}
+	var logs []types.Log
+	var err2 error
 
-	// Add event signature as first topic
-	if eventSignature != "" {
-		filterQuery.Topics = append(filterQuery.Topics, []common.Hash{common.HexToHash(eventSignature)})
-	}
-
-	// Add additional topics if provided
-	for _, topic := range topics {
-		if topic != "" {
-			filterQuery.Topics = append(filterQuery.Topics, []common.Hash{common.HexToHash(topic)})
+	if txHash != "" {
+		// If transaction hash is provided, get the specific transaction receipt
+		receipt, err := client.TransactionReceipt(ctx, common.HexToHash(txHash))
+		if err != nil {
+			return nil, fmt.Errorf("failed to get transaction receipt: %w", err)
 		}
-	}
 
-	// Get logs
-	logs, err := client.FilterLogs(ctx, filterQuery)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get logs: %w", err)
+		// Filter logs from the receipt that match our criteria
+		for _, log := range receipt.Logs {
+			if log.Address == common.HexToAddress(contractAddress) {
+				// Check if this log matches our event signature
+				if len(log.Topics) > 0 && log.Topics[0].Hex() == eventSignature {
+					// Check additional topics if provided
+					matches := true
+					for i, topic := range topics {
+						if topic != "" && (i+1 >= len(log.Topics) || log.Topics[i+1].Hex() != topic) {
+							matches = false
+							break
+						}
+					}
+					if matches {
+						logs = append(logs, *log)
+					}
+				}
+			}
+		}
+	} else {
+		// Use block range filtering (existing logic)
+		// Build filter query
+		filterQuery := ethereum.FilterQuery{
+			FromBlock: big.NewInt(fromBlock),
+			ToBlock:   big.NewInt(toBlock),
+			Addresses: []common.Address{common.HexToAddress(contractAddress)},
+			Topics:    [][]common.Hash{},
+		}
+
+		// Add event signature as first topic
+		if eventSignature != "" {
+			filterQuery.Topics = append(filterQuery.Topics, []common.Hash{common.HexToHash(eventSignature)})
+		}
+
+		// Add additional topics if provided
+		for _, topic := range topics {
+			if topic != "" {
+				filterQuery.Topics = append(filterQuery.Topics, []common.Hash{common.HexToHash(topic)})
+			}
+		}
+
+		// Get logs
+		logs, err2 = client.FilterLogs(ctx, filterQuery)
+		if err2 != nil {
+			return nil, fmt.Errorf("failed to get logs: %w", err2)
+		}
 	}
 
 	// Convert logs to the same format as Thirdweb Insight
