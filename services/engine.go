@@ -3,10 +3,14 @@ package services
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"time"
 
+	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/common"
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
+	aggregatortypes "github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 )
@@ -205,4 +209,67 @@ func (s *EngineService) WaitForTransactionMined(ctx context.Context, queueId str
 
 		time.Sleep(time.Second)
 	}
+}
+
+// GetContractEventsRPC fetches contract events using RPC for networks not supported by Thirdweb Insight
+func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint string, contractAddress string, fromBlock int64, toBlock int64, eventSignature string, topics []string) ([]interface{}, error) {
+	// Create RPC client
+	client, err := aggregatortypes.NewEthClient(rpcEndpoint)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create RPC client: %w", err)
+	}
+
+	// Build filter query
+	filterQuery := ethereum.FilterQuery{
+		FromBlock: big.NewInt(fromBlock),
+		ToBlock:   big.NewInt(toBlock),
+		Addresses: []common.Address{common.HexToAddress(contractAddress)},
+		Topics:    [][]common.Hash{},
+	}
+
+	// Add event signature as first topic
+	if eventSignature != "" {
+		filterQuery.Topics = append(filterQuery.Topics, []common.Hash{common.HexToHash(eventSignature)})
+	}
+
+	// Add additional topics if provided
+	for _, topic := range topics {
+		if topic != "" {
+			filterQuery.Topics = append(filterQuery.Topics, []common.Hash{common.HexToHash(topic)})
+		}
+	}
+
+	// Get logs
+	logs, err := client.FilterLogs(ctx, filterQuery)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get logs: %w", err)
+	}
+
+	// Convert logs to the same format as Thirdweb Insight
+	var events []interface{}
+	for _, log := range logs {
+		event := map[string]interface{}{
+			"block_number":     float64(log.BlockNumber),
+			"transaction_hash": log.TxHash.Hex(),
+			"log_index":        float64(log.Index),
+			"address":          log.Address.Hex(),
+			"topics":           log.Topics,
+			"data":             log.Data,
+			"decoded": map[string]interface{}{
+				"indexed_params":     make(map[string]interface{}),
+				"non_indexed_params": make(map[string]interface{}),
+			},
+		}
+		events = append(events, event)
+	}
+
+	// Decode events based on signature
+	if len(events) > 0 {
+		err = utils.ProcessRPCEvents(events, eventSignature)
+		if err != nil {
+			return nil, fmt.Errorf("failed to process RPC events: %w", err)
+		}
+	}
+
+	return events, nil
 }
