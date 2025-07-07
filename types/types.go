@@ -115,7 +115,6 @@ type KYCProvider interface {
 	RequestVerification(ctx context.Context, req VerificationRequest) (*VerificationResponse, error)
 	CheckStatus(ctx context.Context, walletAddress string) (*VerificationStatus, error)
 	HandleWebhook(ctx context.Context, payload []byte) error
-	UpdateKYCWalletAddress(ctx context.Context, req UpdateKYCWalletAddressRequest) (*UpdateKYCWalletAddressResponse, error)
 }
 
 // CreateOrderParams is the parameters for the create order payload
@@ -152,7 +151,8 @@ type VerificationStatus struct {
 type UpdateKYCWalletAddressRequest struct {
 	OldWalletAddress string `json:"oldWalletAddress"`
 	NewWalletAddress string `json:"newWalletAddress"`
-	SecretKey        string `json:"secretKey"`
+	Signature        string `json:"signature"`
+	Nonce            string `json:"nonce"`
 }
 
 // UpdateKYCWalletAddressResponse represents the response for moving a KYC record

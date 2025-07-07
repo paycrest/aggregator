@@ -13,7 +13,6 @@ type IdentityConfiguration struct {
 	SmileIdentityApiKey    string
 	PrivyAppID             string
 	PrivyVerificationKey   string
-	KYCSecretKey           string
 }
 
 // IdentityConfig sets the identity provider configurations
@@ -25,7 +24,6 @@ func IdentityConfig() (config *IdentityConfiguration) {
 		SmileIdentityApiKey:    viper.GetString("SMILE_IDENTITY_API_KEY"),
 		PrivyAppID:             viper.GetString("PRIVY_APP_ID"),
 		PrivyVerificationKey:   viper.GetString("PRIVY_VERIFICATION_KEY"),
-		KYCSecretKey:           viper.GetString("KYC_SECRET_KEY"),
 	}
 }
 

@@ -67,6 +67,7 @@ func TestIndex(t *testing.T) {
 	router.POST("kyc/webhook", ctrl.KYCWebhook)
 	router.GET("/v1/tokens", ctrl.GetSupportedTokens)
 	router.POST("/v1/kyb-submission", middleware.JWTMiddleware, ctrl.HandleKYBSubmission)
+	router.PUT("/v1/kyc/update_kyc_wallet_address", ctrl.HandleWalletAddressUpdateForKYC)
 
 	t.Run("GetInstitutions By Currency", func(t *testing.T) {
 
