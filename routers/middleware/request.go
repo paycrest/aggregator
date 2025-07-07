@@ -15,11 +15,45 @@ var (
 	unauthenticatedLimiter gin.HandlerFunc
 	authenticatedLimiter   gin.HandlerFunc
 	initOnce               sync.Once
+	blacklistedIPs         = make(map[string]time.Time)
+	blacklistMutex         = sync.RWMutex{}
 )
+
+// addToBlacklist adds an IP to the blacklist with timestamp
+func addToBlacklist(ip string) {
+	blacklistMutex.Lock()
+	defer blacklistMutex.Unlock()
+	blacklistedIPs[ip] = time.Now()
+}
+
+// isBlacklisted checks if an IP is blacklisted
+func isBlacklisted(ip string) bool {
+	blacklistMutex.RLock()
+	defer blacklistMutex.RUnlock()
+	_, exists := blacklistedIPs[ip]
+	return exists
+}
 
 // RateLimitMiddleware applies rate limiting based on the request type (authenticated/unauthenticated)
 func RateLimitMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		clientIP := c.ClientIP()
+		
+		// Check if IP is blacklisted
+		if isBlacklisted(clientIP) {
+			u.APIResponse(
+				c,
+				http.StatusForbidden,
+				"error",
+				"IP address is temporarily blocked due to rate limit violations",
+				map[string]interface{}{
+					"blocked_until": "server restart",
+				},
+			)
+			c.Abort()
+			return
+		}
+
 		initOnce.Do(func() {
 			conf := config.ServerConfig()
 
@@ -30,14 +64,19 @@ func RateLimitMiddleware() gin.HandlerFunc {
 			})
 			unauthenticatedLimiter = ratelimit.RateLimiter(unauthenticatedStore, &ratelimit.Options{
 				ErrorHandler: func(c *gin.Context, info ratelimit.Info) {
+					ip := c.ClientIP()
+					// Add IP to blacklist when rate limited
+					addToBlacklist(ip)
+					
 					u.APIResponse(
 						c,
 						http.StatusTooManyRequests,
 						"error",
-						"Too many requests from this IP address",
+						"Too many requests from this IP address. IP has been temporarily blocked.",
 						map[string]interface{}{
 							"retry_after": time.Until(info.ResetTime).Seconds(),
 							"limit":       info.Limit,
+							"blocked_until": "server restart",
 						},
 					)
 					c.Abort()
@@ -54,14 +93,19 @@ func RateLimitMiddleware() gin.HandlerFunc {
 			})
 			authenticatedLimiter = ratelimit.RateLimiter(authenticatedStore, &ratelimit.Options{
 				ErrorHandler: func(c *gin.Context, info ratelimit.Info) {
+					ip := c.ClientIP()
+					// Add IP to blacklist when rate limited
+					addToBlacklist(ip)
+					
 					u.APIResponse(
 						c,
 						http.StatusTooManyRequests,
 						"error",
-						"Too many requests for this API key",
+						"Too many requests for this API key. IP has been temporarily blocked.",
 						map[string]interface{}{
 							"retry_after": time.Until(info.ResetTime).Seconds(),
 							"limit":       info.Limit,
+							"blocked_until": "server restart",
 						},
 					)
 					c.Abort()
