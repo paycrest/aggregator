@@ -280,18 +280,15 @@ func runIndexers(network *ent.Network, indexer types.Indexer, tokens []*ent.Toke
 	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
 		ctx := context.Background()
 		_ = indexer.IndexOrderCreated(ctx, network, start, end, "")
-		_ = indexer.IndexOrderCreated(ctx, network, start, end, "")
 	}(network, indexer, startBlock, latestBlock)
 
 	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
 		ctx := context.Background()
 		_ = indexer.IndexOrderSettled(ctx, network, start, end, "")
-		_ = indexer.IndexOrderSettled(ctx, network, start, end, "")
 	}(network, indexer, startBlock, latestBlock)
 
 	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
 		ctx := context.Background()
-		_ = indexer.IndexOrderRefunded(ctx, network, start, end, "")
 		_ = indexer.IndexOrderRefunded(ctx, network, start, end, "")
 	}(network, indexer, startBlock, latestBlock)
 
@@ -303,7 +300,6 @@ func runIndexers(network *ent.Network, indexer types.Indexer, tokens []*ent.Toke
 
 		go func(token *ent.Token, indexer types.Indexer, start, end int64) {
 			ctx := context.Background()
-			_ = indexer.IndexTransfer(ctx, token, "", start, end, "")
 			_ = indexer.IndexTransfer(ctx, token, "", start, end, "")
 		}(token, indexer, startBlock, latestBlock)
 	}
@@ -880,25 +876,12 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 // 	if err != nil {
 // 		return fmt.Errorf("FixDatabaseMishap.fetchNetworks: %w", err)
 // 	}
-// func FixDatabaseMishap() error {
-// 	ctx := context.Background()
-// 	network, err := storage.Client.Network.
-// 		Query().
-// 		Where(networkent.ChainIDEQ(1135)).
-// 		Only(ctx)
-// 	if err != nil {
-// 		return fmt.Errorf("FixDatabaseMishap.fetchNetworks: %w", err)
-// 	}
 
 // 	indexerInstance := indexer.NewIndexerEVM()
 
 // 	_ = indexerInstance.IndexOrderCreated(ctx, network, 18052684, 18052684, "")
 // 	_ = indexerInstance.IndexOrderCreated(ctx, network, 18056857, 18056857, "")
-// 	_ = indexerInstance.IndexOrderCreated(ctx, network, 18052684, 18052684, "")
-// 	_ = indexerInstance.IndexOrderCreated(ctx, network, 18056857, 18056857, "")
 
-// 	return nil
-// }
 // 	return nil
 // }
 

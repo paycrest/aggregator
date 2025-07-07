@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 package types
 
 import (
@@ -698,40 +697,6 @@ type SupportedTokenResponse struct {
 	Network         string `json:"network"`
 }
 
-// IndexTransactionRequest represents the request payload for indexing a specific transaction
-type IndexTransactionRequest struct {
-	TxHash  string `json:"txHash" binding:"required"`
-	ChainID int64  `json:"chainId" binding:"required"`
-}
-
-// IndexTransactionResponse represents the response for the index transaction endpoint
-type IndexTransactionResponse struct {
-	Message string `json:"message"`
-	Events  struct {
-		Transfer      int `json:"Transfer"`
-		OrderCreated  int `json:"OrderCreated"`
-		OrderSettled  int `json:"OrderSettled"`
-		OrderRefunded int `json:"OrderRefunded"`
-	} `json:"events"`
-}
-
-// IndexTransactionRequest represents the request payload for indexing a specific transaction
-type IndexTransactionRequest struct {
-	TxHash  string `json:"txHash" binding:"required"`
-	ChainID int64  `json:"chainId" binding:"required"`
-}
-
-// IndexTransactionResponse represents the response for the index transaction endpoint
-type IndexTransactionResponse struct {
-	Message string `json:"message"`
-	Events  struct {
-		Transfer      int `json:"Transfer"`
-		OrderCreated  int `json:"OrderCreated"`
-		OrderSettled  int `json:"OrderSettled"`
-		OrderRefunded int `json:"OrderRefunded"`
-	} `json:"events"`
-}
-
 // KYBSubmissionInput represents the input structure for KYB form submission
 type KYBSubmissionInput struct {
 	MobileNumber                  string                 `json:"mobileNumber" binding:"required"`
@@ -756,4 +721,21 @@ type BeneficialOwnerInput struct {
 	DateOfBirth                  string  `json:"dateOfBirth" binding:"required"`
 	OwnershipPercentage          float64 `json:"ownershipPercentage" binding:"required,gt=0,lte=100"`
 	GovernmentIssuedIdType       string  `json:"governmentIssuedIdType" binding:"required,oneof=passport drivers_license national_id"`
+}
+
+// IndexTransactionRequest represents the request payload for indexing a specific transaction
+type IndexTransactionRequest struct {
+	TxHash  string `json:"txHash" binding:"required"`
+	ChainID int64  `json:"chainId" binding:"required"`
+}
+
+// IndexTransactionResponse represents the response for the index transaction endpoint
+type IndexTransactionResponse struct {
+	Message string `json:"message"`
+	Events  struct {
+		Transfer      int `json:"Transfer"`
+		OrderCreated  int `json:"OrderCreated"`
+		OrderSettled  int `json:"OrderSettled"`
+		OrderRefunded int `json:"OrderRefunded"`
+	} `json:"events"`
 }

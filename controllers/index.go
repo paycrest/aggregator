@@ -23,7 +23,7 @@ import (
 	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
-	"github.com/paycrest/aggregator/ent/network"
+	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/user"
@@ -72,11 +72,6 @@ func NewController() *Controller {
 		cache:                 make(map[string]bool),
 		processedActions:      make(map[string]bool),
 	}
-}
-
-type FormSubmission struct {
-	SubmissionID string                 `json:"submissionID"`
-	Answers      map[string]interface{} `json:"answers"`
 }
 
 // GetFiatCurrencies controller fetches the supported fiat currencies
@@ -304,7 +299,7 @@ func (ctrl *Controller) GetSupportedTokens(ctx *gin.Context) {
 	// Apply network filter if provided
 	if networkFilter != "" {
 		query = query.Where(tokenEnt.HasNetworkWith(
-			network.Identifier(strings.ToLower(networkFilter)),
+			networkent.Identifier(strings.ToLower(networkFilter)),
 		))
 	}
 
@@ -445,7 +440,7 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 			lockpaymentorder.GatewayIDEQ(orderID),
 			lockpaymentorder.HasTokenWith(
 				tokenEnt.HasNetworkWith(
-					network.ChainIDEQ(chainID),
+					networkent.ChainIDEQ(chainID),
 				),
 			),
 		).
