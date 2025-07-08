@@ -63,8 +63,8 @@ func authRoutes(route *gin.Engine) {
 	var profileCtrl accounts.ProfileController
 
 	v1 := route.Group("/v1/")
-	v1.POST("auth/register", middleware.OnlyWebMiddleware, authCtrl.Register)
-	v1.POST("auth/login", middleware.OnlyWebMiddleware, authCtrl.Login)
+	v1.POST("auth/register", middleware.OnlyWebMiddleware, middleware.TurnstileMiddleware(), authCtrl.Register)
+	v1.POST("auth/login", middleware.OnlyWebMiddleware, middleware.TurnstileMiddleware(), authCtrl.Login)
 	v1.POST("auth/confirm-account", middleware.OnlyWebMiddleware, authCtrl.ConfirmEmail)
 	v1.POST("auth/resend-token", middleware.OnlyWebMiddleware, authCtrl.ResendVerificationToken)
 	v1.POST("auth/refresh", middleware.OnlyWebMiddleware, authCtrl.RefreshJWT)
