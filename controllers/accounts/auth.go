@@ -28,17 +28,19 @@ var serverConf = config.ServerConfig()
 
 // AuthController is the controller type for the auth endpoints
 type AuthController struct {
-	apiKeyService *svc.APIKeyService
-	emailService  *svc.EmailService
-	slackService  *svc.SlackService
+	apiKeyService    *svc.APIKeyService
+	emailService     *svc.EmailService
+	slackService     *svc.SlackService
+	turnstileService *svc.TurnstileService
 }
 
 // NewAuthController creates a new instance of AuthController with injected services
 func NewAuthController() *AuthController {
 	return &AuthController{
-		apiKeyService: svc.NewAPIKeyService(),
-		emailService:  svc.NewEmailService(svc.SENDGRID_MAIL_PROVIDER),
-		slackService:  svc.NewSlackService(serverConf.SlackWebhookURL),
+		apiKeyService:    svc.NewAPIKeyService(),
+		emailService:     svc.NewEmailService(svc.SENDGRID_MAIL_PROVIDER),
+		slackService:     svc.NewSlackService(serverConf.SlackWebhookURL),
+		turnstileService: svc.NewTurnstileService(),
 	}
 }
 
@@ -53,6 +55,13 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 	if err := ctx.ShouldBindJSON(&payload); err != nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error",
 			"Failed to validate payload", u.GetErrorData(err))
+		return
+	}
+
+	// Verify Turnstile token
+	if err := ctrl.turnstileService.VerifyToken(payload.TurnstileToken, ctx.ClientIP()); err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error",
+			"Security check verification failed", nil)
 		return
 	}
 
@@ -120,7 +129,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		if verificationToken != nil {
 			if _, err := ctrl.emailService.SendVerificationEmail(ctx, verificationToken.Token, user.Email, user.FirstName); err != nil {
 				logger.WithFields(logger.Fields{
-					"Error": fmt.Sprintf("%v", err),
+					"Error":  fmt.Sprintf("%v", err),
 					"UserID": user.ID,
 				}).Errorf("Failed to send verification email")
 			}
@@ -184,7 +193,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		if err != nil {
 			_ = tx.Rollback()
 			logger.WithFields(logger.Fields{
-				"Error": fmt.Sprintf("%v", err),
+				"Error":  fmt.Sprintf("%v", err),
 				"UserID": user.ID,
 			}).Errorf("Failed to create provider profile")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error",
@@ -197,8 +206,8 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		if err != nil {
 			_ = tx.Rollback()
 			logger.WithFields(logger.Fields{
-				"Error": fmt.Sprintf("%v", err),
-				"UserID": user.ID,
+				"Error":      fmt.Sprintf("%v", err),
+				"UserID":     user.ID,
 				"ProviderID": provider.ID,
 			}).Errorf("Failed to create API key for provider")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error",
@@ -216,7 +225,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		if err != nil {
 			_ = tx.Rollback()
 			logger.WithFields(logger.Fields{
-				"Error": fmt.Sprintf("%v", err),
+				"Error":  fmt.Sprintf("%v", err),
 				"UserID": user.ID,
 			}).Errorf("Failed to create sender profile")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error",
@@ -229,8 +238,8 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		if err != nil {
 			_ = tx.Rollback()
 			logger.WithFields(logger.Fields{
-				"Error": fmt.Sprintf("%v", err),
-				"UserID": user.ID,
+				"Error":    fmt.Sprintf("%v", err),
+				"UserID":   user.ID,
 				"SenderID": sender.ID,
 			}).Errorf("Failed to create API key for sender")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error",
@@ -275,6 +284,13 @@ func (ctrl *AuthController) Login(ctx *gin.Context) {
 	if err := ctx.ShouldBindJSON(&payload); err != nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error",
 			"Failed to validate payload", u.GetErrorData(err))
+		return
+	}
+
+	// Verify Turnstile token
+	if err := ctrl.turnstileService.VerifyToken(payload.TurnstileToken, ctx.ClientIP()); err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error",
+			"Security check verification failed", nil)
 		return
 	}
 
