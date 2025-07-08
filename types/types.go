@@ -150,12 +150,13 @@ type VerificationStatus struct {
 
 // RegisterPayload is the payload for the register endpoint
 type RegisterPayload struct {
-	FirstName  string   `json:"firstName" binding:"required"`
-	LastName   string   `json:"lastName" binding:"required"`
-	Email      string   `json:"email" binding:"required,email"`
-	Password   string   `json:"password" binding:"required,min=6,max=20"`
-	Currencies []string `json:"currencies"`
-	Scopes     []string `json:"scopes" binding:"required,dive,oneof=sender provider"`
+	FirstName      string   `json:"firstName" binding:"required"`
+	LastName       string   `json:"lastName" binding:"required"`
+	Email          string   `json:"email" binding:"required,email"`
+	Password       string   `json:"password" binding:"required,min=6,max=20"`
+	Currencies     []string `json:"currencies"`
+	Scopes         []string `json:"scopes" binding:"required,dive,oneof=sender provider"`
+	TurnstileToken string   `json:"turnstileToken"`
 }
 
 // RegisterResponse is the response for the register endpoint
@@ -206,8 +207,9 @@ type CancelLockOrderPayload struct {
 
 // LoginPayload is the payload for the login endpoint
 type LoginPayload struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=6,max=20"`
+	Email          string `json:"email" binding:"required,email"`
+	Password       string `json:"password" binding:"required,min=6,max=20"`
+	TurnstileToken string `json:"turnstileToken"`
 }
 
 // LoginResponse is the response for the login endpoint
