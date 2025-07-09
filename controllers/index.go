@@ -18,6 +18,7 @@ import (
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	networkent "github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	svc "github.com/paycrest/aggregator/services"
@@ -129,13 +130,12 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 		).
 		First(ctx)
 	if err != nil {
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Token %s is not supported", strings.ToUpper(ctx.Param("token"))), nil)
+			return
+		}
 		logger.Errorf("Error: Failed to fetch token rate: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch token rate", nil)
-		return
-	}
-
-	if token == nil {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Token %s is not supported", strings.ToUpper(ctx.Param("token"))), nil)
 		return
 	}
 
@@ -147,8 +147,12 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 		).
 		Only(ctx)
 	if err != nil {
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Fiat currency %s is not supported", strings.ToUpper(ctx.Param("fiat"))), nil)
+			return
+		}
 		logger.Errorf("Error: Failed to fetch token rate: %v", err)
-		u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Fiat currency %s is not supported", strings.ToUpper(ctx.Param("fiat"))), nil)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch token rate", nil)
 		return
 	}
 
@@ -185,6 +189,30 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 				}
 			}
 
+			// Get the provider's order token configuration to validate min/max amounts
+			providerOrderToken, err := storage.Client.ProviderOrderToken.
+				Query().
+				Where(
+					providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+					providerordertoken.HasTokenWith(tokenEnt.SymbolEQ(token.Symbol)),
+					providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(currency.Code)),
+				).
+				Only(ctx)
+			if err != nil {
+				if ent.IsNotFound(err) {
+					u.APIResponse(ctx, http.StatusBadRequest, "error", "Provider does not support this token/currency combination", nil)
+					return
+				}
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider configuration", nil)
+				return
+			}
+
+			// Validate that the token amount is within the provider's min/max limits
+			if tokenAmount.LessThan(providerOrderToken.MinOrderAmount) || tokenAmount.GreaterThan(providerOrderToken.MaxOrderAmount) {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Amount must be between %s and %s for this provider", providerOrderToken.MinOrderAmount, providerOrderToken.MaxOrderAmount), nil)
+				return
+			}
+
 			rateResponse, err = ctrl.priorityQueueService.GetProviderRate(ctx, provider, token.Symbol, currency.Code)
 			if err != nil {
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider rate", nil)
@@ -204,25 +232,41 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 			// Scan through the buckets to find a matching rate
 			for _, key := range keys {
 				bucketData := strings.Split(key, "_")
-				minAmount, _ := decimal.NewFromString(bucketData[2])
-				maxAmount, _ := decimal.NewFromString(bucketData[3])
+				if len(bucketData) < 4 {
+					continue
+				}
 
-				for index := 0; ; index++ {
-					// Get the topmost provider in the priority queue of the bucket
-					providerData, err := storage.RedisClient.LIndex(ctx, key, int64(index)).Result()
-					if err != nil {
-						break
-					}
+				minAmount, err := decimal.NewFromString(bucketData[2])
+				if err != nil {
+					continue
+				}
+
+				maxAmount, err := decimal.NewFromString(bucketData[3])
+				if err != nil {
+					continue
+				}
+
+				// Get all providers in this bucket to find the first suitable one (priority queue order)
+				providers, err := storage.RedisClient.LRange(ctx, key, 0, -1).Result()
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Key":   key,
+						"Error": err,
+					}).Errorf("GetTokenRate.FailedToGetProviders: failed to get providers from bucket")
+					continue
+				}
+
+				// Find the first provider at the top of the queue that matches our criteria
+				for _, providerData := range providers {
 					parts := strings.Split(providerData, ":")
 					if len(parts) != 5 {
 						logger.WithFields(logger.Fields{
-							"Error":        fmt.Sprintf("%v", err),
 							"ProviderData": providerData,
 							"Token":        token.Symbol,
 							"Currency":     currency.Code,
 							"MinAmount":    minAmount,
 							"MaxAmount":    maxAmount,
-						}).Errorf("GetTokenRate.InvalidProviderData: %v", providerData)
+						}).Errorf("GetTokenRate.InvalidProviderData: provider data format is invalid")
 						continue
 					}
 
@@ -247,18 +291,27 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 					}
 
 					// Get fiat equivalent of the token amount
-					rate, _ := decimal.NewFromString(parts[2])
+					rate, err := decimal.NewFromString(parts[2])
+					if err != nil {
+						continue
+					}
+
 					fiatAmount := tokenAmount.Mul(rate)
 
 					// Check if fiat amount is within the bucket range and set the rate
 					if fiatAmount.GreaterThanOrEqual(minAmount) && fiatAmount.LessThanOrEqual(maxAmount) {
 						rateResponse = rate
-						break
+						break // Found the first suitable provider, exit inner loop
 					} else if maxAmount.GreaterThan(highestMaxAmount) {
-						// Get the highest max amount
+						// Track the highest max amount bucket as fallback
 						highestMaxAmount = maxAmount
 						rateResponse = rate
 					}
+				}
+
+				// If we found a rate in this bucket, we can stop searching
+				if rateResponse != currency.MarketRate {
+					break
 				}
 			}
 		}
