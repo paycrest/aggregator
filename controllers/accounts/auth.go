@@ -58,13 +58,6 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		return
 	}
 
-	// Verify Turnstile token
-	if err := ctrl.turnstileService.VerifyToken(payload.TurnstileToken, ctx.ClientIP()); err != nil {
-		u.APIResponse(ctx, http.StatusBadRequest, "error",
-			"Security check verification failed", nil)
-		return
-	}
-
 	tx, err := db.Client.Tx(ctx)
 	if err != nil {
 		logger.Errorf("Error: Failed to create new user: %v", err)
@@ -284,13 +277,6 @@ func (ctrl *AuthController) Login(ctx *gin.Context) {
 	if err := ctx.ShouldBindJSON(&payload); err != nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error",
 			"Failed to validate payload", u.GetErrorData(err))
-		return
-	}
-
-	// Verify Turnstile token
-	if err := ctrl.turnstileService.VerifyToken(payload.TurnstileToken, ctx.ClientIP()); err != nil {
-		u.APIResponse(ctx, http.StatusBadRequest, "error",
-			"Security check verification failed", nil)
 		return
 	}
 

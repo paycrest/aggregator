@@ -13,10 +13,19 @@ func TurnstileMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		turnstileService := services.NewTurnstileService()
 
-		// Get token from header or query parameter
+		// Get token from header, query parameter, or request body
 		token := c.GetHeader("X-Turnstile-Token")
 		if token == "" {
 			token = c.Query("turnstile_token")
+		}
+		if token == "" {
+			// Try to get from request body as fallback
+			var payload struct {
+				TurnstileToken string `json:"turnstileToken"`
+			}
+			if err := c.ShouldBindJSON(&payload); err == nil {
+				token = payload.TurnstileToken
+			}
 		}
 
 		// Verify the token
