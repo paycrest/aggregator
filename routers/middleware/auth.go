@@ -546,8 +546,14 @@ func TurnstileMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		// Get client IP safely
+		clientIP := c.ClientIP()
+		if clientIP == "" {
+			clientIP = "127.0.0.1" // fallback
+		}
+
 		// Verify the token
-		if err := turnstileService.VerifyToken(token, c.ClientIP()); err != nil {
+		if err := turnstileService.VerifyToken(token, clientIP); err != nil {
 			u.APIResponse(c, http.StatusBadRequest, "error",
 				"Security check verification failed", nil)
 			c.Abort()

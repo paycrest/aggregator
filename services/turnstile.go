@@ -46,19 +46,36 @@ func (s *TurnstileService) VerifyToken(token, remoteIP string) error {
 		return fmt.Errorf("Turnstile secret key not configured")
 	}
 
+	// Ensure remoteIP is a valid string
+	if remoteIP == "" {
+		remoteIP = "127.0.0.1"
+	}
+
 	// Prepare the verification request
 	data := url.Values{}
-	data.Set("secret", authConf.TurnstileSecretKey)
-	data.Set("response", token)
-	if remoteIP != "" {
-		data.Set("remoteip", remoteIP)
+
+	// Ensure all values are strings
+	secretKey := fmt.Sprintf("%s", authConf.TurnstileSecretKey)
+	tokenStr := fmt.Sprintf("%s", token)
+	remoteIPStr := fmt.Sprintf("%s", remoteIP)
+
+	data.Set("secret", secretKey)
+	data.Set("response", tokenStr)
+	if remoteIPStr != "" && remoteIPStr != "127.0.0.1" {
+		data.Set("remoteip", remoteIPStr)
+	}
+
+	// Encode the data and ensure it's a string
+	encodedData := data.Encode()
+	if encodedData == "" {
+		return fmt.Errorf("failed to encode request data")
 	}
 
 	// Make the verification request
 	resp, err := http.Post(
 		"https://challenges.cloudflare.com/turnstile/v0/siteverify",
 		"application/x-www-form-urlencoded",
-		strings.NewReader(data.Encode()),
+		strings.NewReader(encodedData),
 	)
 	if err != nil {
 		logger.Errorf("Failed to verify Turnstile token: %v", err)
