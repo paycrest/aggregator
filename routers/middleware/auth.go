@@ -21,6 +21,7 @@ import (
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/user"
+	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/storage"
 	u "github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/crypto"
@@ -526,4 +527,33 @@ func determineOwnerAddress(accounts []LinkedAccount) string {
 	}
 
 	return ""
+}
+
+// TurnstileMiddleware is a middleware that verifies Turnstile tokens
+func TurnstileMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		turnstileService := services.NewTurnstileService()
+
+		// Get token from header, query parameter, or request body
+		token := c.GetHeader("X-Turnstile-Token")
+		if token == "" {
+			token = c.Query("turnstile_token")
+		}
+
+		// If no token is found, allow the request to pass through
+		if token == "" {
+			c.Next()
+			return
+		}
+
+		// Verify the token
+		if err := turnstileService.VerifyToken(token, c.ClientIP()); err != nil {
+			u.APIResponse(c, http.StatusBadRequest, "error",
+				"Security check verification failed", nil)
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
 }

@@ -28,19 +28,17 @@ var serverConf = config.ServerConfig()
 
 // AuthController is the controller type for the auth endpoints
 type AuthController struct {
-	apiKeyService    *svc.APIKeyService
-	emailService     *svc.EmailService
-	slackService     *svc.SlackService
-	turnstileService *svc.TurnstileService
+	apiKeyService *svc.APIKeyService
+	emailService  *svc.EmailService
+	slackService  *svc.SlackService
 }
 
 // NewAuthController creates a new instance of AuthController with injected services
 func NewAuthController() *AuthController {
 	return &AuthController{
-		apiKeyService:    svc.NewAPIKeyService(),
-		emailService:     svc.NewEmailService(svc.SENDGRID_MAIL_PROVIDER),
-		slackService:     svc.NewSlackService(serverConf.SlackWebhookURL),
-		turnstileService: svc.NewTurnstileService(),
+		apiKeyService: svc.NewAPIKeyService(),
+		emailService:  svc.NewEmailService(svc.SENDGRID_MAIL_PROVIDER),
+		slackService:  svc.NewSlackService(serverConf.SlackWebhookURL),
 	}
 }
 

@@ -139,7 +139,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			return
 		}
 
-		if payload.FeePercent.IsZero() {
+	if payload.FeePercent.IsZero() {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 				Field:   "FeePercent",
 				Message: "FeePercent must be greater than zero",
