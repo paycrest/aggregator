@@ -32,6 +32,7 @@ import (
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
+	"github.com/paycrest/aggregator/utils/logger"
 )
 
 // OrderEVM provides functionality related to onchain interactions for payment orders
@@ -233,6 +234,10 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 	// Wait for refundOrder tx to be mined
 	result, err := s.engineService.WaitForTransactionMined(ctx, queueId, 5*time.Minute)
 	if err != nil {
+		logger.WithFields(logger.Fields{
+			"OrderID": orderID,
+			"Error":   err,
+		}).Errorf("RefundOrder.waitForTransactionMined")
 		if strings.Contains(err.Error(), "OrderRefunded") || strings.Contains(err.Error(), "UserOperation reverted during simulation") {
 			_, err = lockOrder.Update().
 				SetStatus(lockpaymentorder.StatusRefunded).
@@ -310,6 +315,10 @@ func (s *OrderEVM) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 	// Wait for settleOrder tx to be mined
 	result, err := s.engineService.WaitForTransactionMined(ctx, queueId, 5*time.Minute)
 	if err != nil {
+		logger.WithFields(logger.Fields{
+			"OrderID": orderID,
+			"Error":   err,
+		}).Errorf("SettleOrder.waitForTransactionMined")
 		if strings.Contains(err.Error(), "OrderFulfilled") || strings.Contains(err.Error(), "UserOperation reverted during simulation") {
 			_, err = order.Update().
 				SetStatus(lockpaymentorder.StatusSettled).
