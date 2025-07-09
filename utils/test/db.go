@@ -664,6 +664,7 @@ func CreateTestTokenData(t *testing.T, client *ent.Client) ([]*ent.Network, []*e
 		SetGatewayContractAddress("0x123").
 		SetIsTestnet(false).
 		SetFee(decimal.NewFromFloat(0.01)).
+		SetBlockTime(decimal.NewFromFloat(2)).
 		Save(ctx)
 	assert.NoError(t, err)
 
@@ -674,6 +675,7 @@ func CreateTestTokenData(t *testing.T, client *ent.Client) ([]*ent.Network, []*e
 		SetGatewayContractAddress("0x456").
 		SetIsTestnet(false).
 		SetFee(decimal.NewFromFloat(0.02)).
+		SetBlockTime(decimal.NewFromFloat(2)).
 		Save(ctx)
 	assert.NoError(t, err)
 

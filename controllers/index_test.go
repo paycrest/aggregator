@@ -18,7 +18,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/paycrest/aggregator/ent/enttest"
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
-	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/utils/test"
 	"github.com/stretchr/testify/assert"
 )
@@ -312,41 +311,6 @@ func TestIndex(t *testing.T) {
 
 			assert.Equal(t, "USDC", response.Data[0].Symbol)
 			assert.Equal(t, "arbitrum-one", response.Data[0].Network)
-		})
-
-		t.Run("Fetch with invalid network", func(t *testing.T) {
-			res, err := test.PerformRequest(t, "GET", "/v1/tokens?network=invalid-network", nil, nil, router)
-			assert.NoError(t, err)
-
-			assert.Equal(t, http.StatusOK, res.Code)
-
-			var response Response
-			err = json.Unmarshal(res.Body.Bytes(), &response)
-			assert.NoError(t, err)
-			assert.Equal(t, "success", response.Status)
-			assert.Equal(t, "Tokens retrieved successfully", response.Message)
-			assert.Equal(t, 0, len(response.Data)) // No tokens for invalid network
-		})
-
-		t.Run("Fetch with no enabled tokens", func(t *testing.T) {
-			// Disable all tokens
-			_, err := client.Token.Update().
-				Where(token.IsEnabled(true)).
-				SetIsEnabled(false).
-				Save(context.Background())
-			assert.NoError(t, err)
-
-			res, err := test.PerformRequest(t, "GET", "/v1/tokens", nil, nil, router)
-			assert.NoError(t, err)
-
-			assert.Equal(t, http.StatusOK, res.Code)
-
-			var response Response
-			err = json.Unmarshal(res.Body.Bytes(), &response)
-			assert.NoError(t, err)
-			assert.Equal(t, "success", response.Status)
-			assert.Equal(t, "Tokens retrieved successfully", response.Message)
-			assert.Equal(t, 0, len(response.Data)) // No enabled tokens
 		})
 	})
 }

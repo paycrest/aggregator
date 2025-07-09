@@ -122,16 +122,32 @@ func (ctrl *Controller) GetInstitutionsByCurrency(ctx *gin.Context) {
 // GetTokenRate controller fetches the current rate of the cryptocurrency token against the fiat currency
 func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 	// Parse path parameters
-	token, err := storage.Client.Token.
+	tokenSymbol := strings.ToUpper(ctx.Param("token"))
+	networkFilter := ctx.Query("network")
+
+	// Build token query
+	tokenQuery := storage.Client.Token.
 		Query().
 		Where(
-			tokenEnt.SymbolEQ(strings.ToUpper(ctx.Param("token"))),
+			tokenEnt.SymbolEQ(tokenSymbol),
 			tokenEnt.IsEnabledEQ(true),
-		).
-		First(ctx)
+		)
+
+	// Apply network filter if provided
+	if networkFilter != "" {
+		tokenQuery = tokenQuery.Where(tokenEnt.HasNetworkWith(
+			networkent.Identifier(strings.ToLower(networkFilter)),
+		))
+	}
+
+	token, err := tokenQuery.First(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Token %s is not supported", strings.ToUpper(ctx.Param("token"))), nil)
+			errorMsg := fmt.Sprintf("Token %s is not supported", tokenSymbol)
+			if networkFilter != "" {
+				errorMsg = fmt.Sprintf("Token %s is not supported on network %s", tokenSymbol, networkFilter)
+			}
+			u.APIResponse(ctx, http.StatusBadRequest, "error", errorMsg, nil)
 			return
 		}
 		logger.Errorf("Error: Failed to fetch token rate: %v", err)
@@ -190,14 +206,22 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 			}
 
 			// Get the provider's order token configuration to validate min/max amounts
-			providerOrderToken, err := storage.Client.ProviderOrderToken.
+			providerOrderTokenQuery := storage.Client.ProviderOrderToken.
 				Query().
 				Where(
 					providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
-					providerordertoken.HasTokenWith(tokenEnt.SymbolEQ(token.Symbol)),
+					providerordertoken.HasTokenWith(tokenEnt.IDEQ(token.ID)),
 					providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(currency.Code)),
-				).
-				Only(ctx)
+				)
+
+			// Filter by network if provided
+			if networkFilter != "" {
+				providerOrderTokenQuery = providerOrderTokenQuery.Where(
+					providerordertoken.NetworkEQ(networkFilter),
+				)
+			}
+
+			providerOrderToken, err := providerOrderTokenQuery.First(ctx)
 			if err != nil {
 				if ent.IsNotFound(err) {
 					u.APIResponse(ctx, http.StatusBadRequest, "error", "Provider does not support this token/currency combination", nil)
