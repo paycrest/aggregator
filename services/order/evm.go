@@ -247,7 +247,6 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 			}
 			return nil
 		}
-
 		return fmt.Errorf("RefundOrder.waitForTransactionMined: %w", err)
 	}
 
@@ -260,6 +259,7 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 	// Update lock order with tx hash and block number
 	_, err = lockOrder.Update().
 		SetTxHash(txHash).
+		SetBlockNumber(blockNumber).
 		SetBlockNumber(blockNumber).
 		Save(ctx)
 	if err != nil {
@@ -336,6 +336,7 @@ func (s *OrderEVM) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 	// Update lock order with tx hash and block number
 	_, err = order.Update().
 		SetTxHash(txHash).
+		SetBlockNumber(blockNumber).
 		SetBlockNumber(blockNumber).
 		Save(ctx)
 	if err != nil {

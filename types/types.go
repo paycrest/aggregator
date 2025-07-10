@@ -148,6 +148,21 @@ type VerificationStatus struct {
 	Status string `json:"status"`
 }
 
+// UpdateKYCWalletAddressRequest represents a request to move a KYC record to a new wallet address
+type UpdateKYCWalletAddressRequest struct {
+	OldWalletAddress string `json:"oldWalletAddress"`
+	NewWalletAddress string `json:"newWalletAddress"`
+	Signature        string `json:"signature"`
+	Nonce            string `json:"nonce"`
+}
+
+// UpdateKYCWalletAddressResponse represents the response for moving a KYC record
+type UpdateKYCWalletAddressResponse struct {
+	OldWalletAddress string    `json:"oldWalletAddress"`
+	NewWalletAddress string    `json:"newWalletAddress"`
+	UpdatedAt        time.Time `json:"updatedAt"`
+}
+
 // RegisterPayload is the payload for the register endpoint
 type RegisterPayload struct {
 	FirstName  string   `json:"firstName" binding:"required"`
