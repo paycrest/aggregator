@@ -331,9 +331,15 @@ func (ctrl *Controller) resolveBucketRate(ctx *gin.Context, token *ent.Token, cu
 			"BestRateReason": bestRateReason,
 		}).Warnf("GetTokenRate.NoSuitableProvider: no provider found for the given parameters")
 
+		// Handle empty network identifier in error message
+		networkMsg := "any network"
+		if networkIdentifier != "" {
+			networkMsg = networkIdentifier + " network"
+		}
+
 		u.APIResponse(ctx, http.StatusNotFound, "error",
-			fmt.Sprintf("No provider available for %s %s to %s swap on %s network",
-				amount, token.Symbol, currency.Code, networkIdentifier), nil)
+			fmt.Sprintf("No provider available for %s %s to %s swap on %s",
+				amount, token.Symbol, currency.Code, networkMsg), nil)
 		return decimal.Zero, fmt.Errorf("no suitable provider found")
 	}
 
