@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"net/http"
@@ -135,8 +136,9 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 
 	// Apply network filter if provided
 	if networkFilter != "" {
+		networkFilter = strings.ToLower(networkFilter)
 		tokenQuery = tokenQuery.Where(tokenEnt.HasNetworkWith(
-			networkent.Identifier(strings.ToLower(networkFilter)),
+			networkent.Identifier(networkFilter),
 		))
 	}
 
@@ -268,7 +270,7 @@ func (ctrl *Controller) resolveProviderRate(ctx *gin.Context, token *ent.Token, 
 }
 
 // resolveBucketRate handles bucket-based rate resolution
-func (ctrl *Controller) resolveBucketRate(ctx *gin.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, networkFilter string) (decimal.Decimal, error) {
+func (ctrl *Controller) resolveBucketRate(ctx *gin.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, networkIdentifier string) (decimal.Decimal, error) {
 	// Get redis keys for provision buckets
 	keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currency.Code+"_*_*", 100).Result()
 	if err != nil {
@@ -303,7 +305,7 @@ func (ctrl *Controller) resolveBucketRate(ctx *gin.Context, token *ent.Token, cu
 		}
 
 		// Find the first provider at the top of the queue that matches our criteria
-		rate, found := ctrl.findSuitableProviderRate(providers, token.Symbol, amount, bucketData)
+		rate, found := ctrl.findSuitableProviderRate(providers, token.Symbol, networkIdentifier, amount, bucketData)
 		if found {
 			foundExactMatch = true
 			bestRate = rate
@@ -324,7 +326,7 @@ func (ctrl *Controller) resolveBucketRate(ctx *gin.Context, token *ent.Token, cu
 			"Token":          token.Symbol,
 			"Currency":       currency.Code,
 			"Amount":         amount,
-			"NetworkFilter":  networkFilter,
+			"NetworkFilter":  networkIdentifier,
 			"BestRate":       bestRate,
 			"BestRateReason": bestRateReason,
 		}).Warnf("GetTokenRate.NoSuitableProvider: no provider found for the given parameters")
@@ -383,7 +385,7 @@ func parseBucketKey(key string) (*BucketData, error) {
 }
 
 // findSuitableProviderRate finds the first suitable provider rate from the provider list
-func (ctrl *Controller) findSuitableProviderRate(providers []string, tokenSymbol string, tokenAmount decimal.Decimal, bucketData *BucketData) (decimal.Decimal, bool) {
+func (ctrl *Controller) findSuitableProviderRate(providers []string, tokenSymbol string, networkIdentifier string, tokenAmount decimal.Decimal, bucketData *BucketData) (decimal.Decimal, bool) {
 	var bestRate decimal.Decimal
 	var foundExactMatch bool
 
@@ -402,6 +404,27 @@ func (ctrl *Controller) findSuitableProviderRate(providers []string, tokenSymbol
 
 		// Skip entry if token doesn't match
 		if parts[1] != tokenSymbol {
+			continue
+		}
+
+		// Skip entry if provider doesn't not have a token configured for the network
+		// TODO: Move this to redis cache. Provider's network should be in the key.
+		_, err := storage.Client.ProviderOrderToken.
+			Query().
+			Where(
+				providerordertoken.HasProviderWith(providerprofile.IDEQ(parts[0])),
+				providerordertoken.HasTokenWith(tokenEnt.SymbolEQ(parts[1])),
+				providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
+				providerordertoken.NetworkEQ(networkIdentifier),
+			).Only(context.Background())
+		if err != nil {
+			if ent.IsNotFound(err) {
+				continue
+			}
+			logger.WithFields(logger.Fields{
+				"ProviderData": providerData,
+				"Error":        err,
+			}).Errorf("GetTokenRate.InvalidProviderData: failed to fetch provider configuration")
 			continue
 		}
 
