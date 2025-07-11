@@ -329,7 +329,7 @@ func (ctrl *Controller) resolveBucketRate(ctx *gin.Context, token *ent.Token, cu
 			"BestRateReason": bestRateReason,
 		}).Warnf("GetTokenRate.NoSuitableProvider: no provider found for the given parameters")
 
-		u.APIResponse(ctx, http.StatusServiceUnavailable, "error",
+		u.APIResponse(ctx, http.StatusNotFound, "error",
 			fmt.Sprintf("No provider available for %s to %s conversion with amount %s",
 				token.Symbol, currency.Code, amount), nil)
 		return decimal.Zero, fmt.Errorf("no suitable provider found")
@@ -565,6 +565,16 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 		return
 	}
 
+	if len(providers) == 0 {
+		logger.WithFields(logger.Fields{
+			"Institution":       payload.Institution,
+			"AccountIdentifier": payload.AccountIdentifier,
+			"Currency":          accountInstitution.Edges.FiatCurrency.Code,
+		}).Errorf("No providers available for account verification")
+		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "No providers available for account verification", nil)
+		return
+	}
+
 	var res fastshot.Response
 	var data map[string]interface{}
 	for _, provider := range providers {
@@ -581,6 +591,9 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 		if err != nil {
 			continue
 		}
+
+		// Success - break out of loop
+		break
 	}
 
 	if err != nil {
@@ -589,7 +602,7 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 			"Institution":       payload.Institution,
 			"AccountIdentifier": payload.AccountIdentifier,
 		}).Errorf("Failed to verify account")
-		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to verify account", nil)
+		u.APIResponse(ctx, http.StatusBadGateway, "error", "Failed to verify account", nil)
 		return
 	}
 
@@ -981,7 +994,7 @@ func (ctrl *Controller) RequestIDVerification(ctx *gin.Context) {
 				"WalletAddress": payload.WalletAddress,
 				"Nonce":         payload.Nonce,
 			}).Errorf("Failed to reach identity provider")
-			u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to request identity verification", "Couldn't reach identity provider")
+			u.APIResponse(ctx, http.StatusBadGateway, "error", "Failed to request identity verification", "Couldn't reach identity provider")
 			return
 		case kycErrors.ErrProviderResponse:
 			logger.WithFields(logger.Fields{
