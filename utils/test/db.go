@@ -131,7 +131,7 @@ func CreateERC20Token(client types.RPCClient, overrides map[string]interface{}) 
 	return token, err
 }
 
-// CreateERC20Token creates a test token with default or custom values
+// CreateTRC20Token creates a test token with default or custom values
 func CreateTRC20Token(client types.RPCClient, overrides map[string]interface{}) (*ent.Token, error) {
 
 	// Default payload
@@ -548,7 +548,7 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 	return orderToken, err
 }
 
-// CreateTestProviderProfile creates a test ProviderProfile with defaults or custom values
+// CreateTestProvisionBucket creates a test ProvisionBucket with defaults or custom values
 func CreateTestProvisionBucket(overrides map[string]interface{}) (*ent.ProvisionBucket, error) {
 	ctx := context.Background()
 
