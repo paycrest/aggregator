@@ -348,7 +348,7 @@ type BucketData struct {
 func parseBucketKey(key string) (*BucketData, error) {
 	// Expected format: "bucket_{currency}_{minAmount}_{maxAmount}"
 	parts := strings.Split(key, "_")
-	if len(parts) != 4 {
+	if len(parts) != 4 && len(parts) != 5 {
 		return nil, fmt.Errorf("invalid bucket key format: expected 4 parts, got %d", len(parts))
 	}
 
