@@ -47,6 +47,7 @@ var cryptoConf = config.CryptoConfig()
 
 var serverConf = config.ServerConfig()
 var identityConf = config.IdentityConfig()
+var orderConf = config.OrderConfig()
 
 // Controller is the default controller for other endpoints
 type Controller struct {
@@ -1340,7 +1341,7 @@ func (ctrl *Controller) InsightWebhook(ctx *gin.Context) {
 
 	// Verify payload age (optional - 10 minutes)
 	// TODO: get this from config for priority queue refresh period
-	if ctrl.isWebhookPayloadExpired(webhookPayload.Timestamp, 600) {
+	if ctrl.isWebhookPayloadExpired(webhookPayload.Timestamp, int64(orderConf.ReceiveAddressValidity.Seconds())) {
 		logger.Errorf("Error: InsightWebhook: Webhook payload expired - timestamp: %d", webhookPayload.Timestamp)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Payload expired"})
 		return
