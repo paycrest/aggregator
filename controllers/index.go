@@ -415,27 +415,29 @@ func (ctrl *Controller) findSuitableProviderRate(providers []string, tokenSymbol
 
 		// Skip entry if provider doesn't not have a token configured for the network
 		// TODO: Move this to redis cache. Provider's network should be in the key.
-		_, err := storage.Client.ProviderOrderToken.
-			Query().
-			Where(
-				providerordertoken.HasProviderWith(
-					providerprofile.IDEQ(parts[0]),
-					providerprofile.IsAvailableEQ(true),
-				),
-				providerordertoken.HasTokenWith(tokenEnt.SymbolEQ(parts[1])),
-				providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
-				providerordertoken.NetworkEQ(networkIdentifier),
-				providerordertoken.AddressNEQ(""),
-			).Only(context.Background())
-		if err != nil {
-			if ent.IsNotFound(err) {
+		if networkIdentifier != "" {
+			_, err := storage.Client.ProviderOrderToken.
+				Query().
+				Where(
+					providerordertoken.HasProviderWith(
+						providerprofile.IDEQ(parts[0]),
+						providerprofile.IsAvailableEQ(true),
+					),
+					providerordertoken.HasTokenWith(tokenEnt.SymbolEQ(parts[1])),
+					providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
+					providerordertoken.NetworkEQ(networkIdentifier),
+					providerordertoken.AddressNEQ(""),
+				).Only(context.Background())
+			if err != nil {
+				if ent.IsNotFound(err) {
+					continue
+				}
+				logger.WithFields(logger.Fields{
+					"ProviderData": providerData,
+					"Error":        err,
+				}).Errorf("GetTokenRate.InvalidProviderData: failed to fetch provider configuration")
 				continue
 			}
-			logger.WithFields(logger.Fields{
-				"ProviderData": providerData,
-				"Error":        err,
-			}).Errorf("GetTokenRate.InvalidProviderData: failed to fetch provider configuration")
-			continue
 		}
 
 		// Parse provider order amounts
@@ -1283,9 +1285,8 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 	wg.Wait()
 
 	response := types.IndexTransactionResponse{
-		Message: fmt.Sprintf("Successfully indexed transaction %s for network %s", txHash, networkParam),
-		Events:  eventCounts,
+		Events: eventCounts,
 	}
 
-	u.APIResponse(ctx, http.StatusOK, "success", "Transaction indexing completed", response)
+	u.APIResponse(ctx, http.StatusOK, "success", fmt.Sprintf("Successfully indexed transaction %s for network %s", txHash, network.Identifier), response)
 }

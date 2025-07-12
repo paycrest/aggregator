@@ -703,7 +703,6 @@ type IndexTransactionRequest struct {
 
 // IndexTransactionResponse represents the response for the index transaction endpoint
 type IndexTransactionResponse struct {
-	Message string `json:"message"`
 	Events  struct {
 		Transfer      int `json:"Transfer"`
 		OrderCreated  int `json:"OrderCreated"`
