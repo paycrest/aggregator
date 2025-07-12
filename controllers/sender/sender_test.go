@@ -10,21 +10,20 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/ent/enttest"
+	"github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/routers/middleware"
 	"github.com/paycrest/aggregator/services"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
-	"github.com/shopspring/decimal"
-
-	"github.com/gin-gonic/gin"
-	"github.com/paycrest/aggregator/ent/enttest"
-	"github.com/paycrest/aggregator/ent/network"
-	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/utils/test"
 	"github.com/paycrest/aggregator/utils/token"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 )
 

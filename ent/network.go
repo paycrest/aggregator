@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/shopspring/decimal"
 )
 
@@ -50,9 +51,11 @@ type Network struct {
 type NetworkEdges struct {
 	// Tokens holds the value of the tokens edge.
 	Tokens []*Token `json:"tokens,omitempty"`
+	// PaymentWebhook holds the value of the payment_webhook edge.
+	PaymentWebhook *PaymentWebhook `json:"payment_webhook,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // TokensOrErr returns the Tokens value or an error if the edge
@@ -62,6 +65,17 @@ func (e NetworkEdges) TokensOrErr() ([]*Token, error) {
 		return e.Tokens, nil
 	}
 	return nil, &NotLoadedError{edge: "tokens"}
+}
+
+// PaymentWebhookOrErr returns the PaymentWebhook value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e NetworkEdges) PaymentWebhookOrErr() (*PaymentWebhook, error) {
+	if e.PaymentWebhook != nil {
+		return e.PaymentWebhook, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: paymentwebhook.Label}
+	}
+	return nil, &NotLoadedError{edge: "payment_webhook"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -182,6 +196,11 @@ func (n *Network) Value(name string) (ent.Value, error) {
 // QueryTokens queries the "tokens" edge of the Network entity.
 func (n *Network) QueryTokens() *TokenQuery {
 	return NewNetworkClient(n.config).QueryTokens(n)
+}
+
+// QueryPaymentWebhook queries the "payment_webhook" edge of the Network entity.
+func (n *Network) QueryPaymentWebhook() *PaymentWebhookQuery {
+	return NewNetworkClient(n.config).QueryPaymentWebhook(n)
 }
 
 // Update returns a builder for updating this Network.

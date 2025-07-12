@@ -40,6 +40,8 @@ func TestEmailService(t *testing.T) {
 			return resp, nil
 		},
 	)
+	srv := NewEmailService(SENDGRID_MAIL_PROVIDER)
+	ctx := context.Background()
 
 	// t.Run("Mailgun", func(t *testing.T) {
 
@@ -59,9 +61,8 @@ func TestEmailService(t *testing.T) {
 	t.Run("SendGrid", func(t *testing.T) {
 
 		t.Run("SendVerificationEmail should work properly and return a response payload", func(t *testing.T) {
-			srv := NewEmailService(SENDGRID_MAIL_PROVIDER)
 
-			response, err := srv.SendVerificationEmail(context.Background(), testToken, testEmail, testFirstName)
+			response, err := srv.SendVerificationEmail(ctx, testToken, testEmail, testFirstName)
 
 			// error checker.
 			assert.NoError(t, err, "unexpected error")
@@ -83,5 +84,44 @@ func TestEmailService(t *testing.T) {
 				}, "d-f26d853bbb884c0c856f0bbda894032c")
 				assert.NoError(t, err)
 			})
+
+		t.Run("SendWelcomeEmail should work properly and return a response payload", func(t *testing.T) {
+
+			scopes := []string{"sender", "provider"}
+			response, err := srv.SendWelcomeEmail(ctx, testEmail, testFirstName, scopes)
+
+			// error checker
+			assert.NoError(t, err, "unexpected error")
+
+			// assert the response
+			assert.NotEmpty(t, response.Id, "response ID should not be empty")
+			assert.Equal(t, "thisisatestid", response.Id, "response ID should be equal to thisisatestid")
+		})
+
+		t.Run("SendWelcomeEmail with single scope", func(t *testing.T) {
+
+			scopes := []string{"sender"}
+			response, err := srv.SendWelcomeEmail(ctx, testEmail, testFirstName, scopes)
+
+			// error checker
+			assert.NoError(t, err, "unexpected error")
+
+			// assert the response
+			assert.NotEmpty(t, response.Id, "response ID should not be empty")
+			assert.Equal(t, "thisisatestid", response.Id, "response ID should be equal to thisisatestid")
+		})
+
+		t.Run("SendWelcomeEmail with empty scopes", func(t *testing.T) {
+
+			scopes := []string{}
+			response, err := srv.SendWelcomeEmail(ctx, testEmail, testFirstName, scopes)
+
+			// error checker
+			assert.NoError(t, err, "unexpected error")
+
+			// assert the response
+			assert.NotEmpty(t, response.Id, "response ID should not be empty")
+			assert.Equal(t, "thisisatestid", response.Id, "response ID should be equal to thisisatestid")
+		})
 	})
 }

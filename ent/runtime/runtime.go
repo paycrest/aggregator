@@ -7,14 +7,17 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/apikey"
+	"github.com/paycrest/aggregator/ent/beneficialowner"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
 	"github.com/paycrest/aggregator/ent/institution"
+	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -44,6 +47,16 @@ func init() {
 	apikeyDescID := apikeyFields[0].Descriptor()
 	// apikey.DefaultID holds the default value on creation for the id field.
 	apikey.DefaultID = apikeyDescID.Default.(func() uuid.UUID)
+	beneficialownerFields := schema.BeneficialOwner{}.Fields()
+	_ = beneficialownerFields
+	// beneficialownerDescFullName is the schema descriptor for full_name field.
+	beneficialownerDescFullName := beneficialownerFields[1].Descriptor()
+	// beneficialowner.FullNameValidator is a validator for the "full_name" field. It is called by the builders before save.
+	beneficialowner.FullNameValidator = beneficialownerDescFullName.Validators[0].(func(string) error)
+	// beneficialownerDescID is the schema descriptor for id field.
+	beneficialownerDescID := beneficialownerFields[0].Descriptor()
+	// beneficialowner.DefaultID holds the default value on creation for the id field.
+	beneficialowner.DefaultID = beneficialownerDescID.Default.(func() uuid.UUID)
 	fiatcurrencyMixin := schema.FiatCurrency{}.Mixin()
 	fiatcurrencyMixinFields0 := fiatcurrencyMixin[0].Fields()
 	_ = fiatcurrencyMixinFields0
@@ -106,6 +119,25 @@ func init() {
 	institution.DefaultUpdatedAt = institutionDescUpdatedAt.Default.(func() time.Time)
 	// institution.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	institution.UpdateDefaultUpdatedAt = institutionDescUpdatedAt.UpdateDefault.(func() time.Time)
+	kybprofileMixin := schema.KYBProfile{}.Mixin()
+	kybprofileMixinFields0 := kybprofileMixin[0].Fields()
+	_ = kybprofileMixinFields0
+	kybprofileFields := schema.KYBProfile{}.Fields()
+	_ = kybprofileFields
+	// kybprofileDescCreatedAt is the schema descriptor for created_at field.
+	kybprofileDescCreatedAt := kybprofileMixinFields0[0].Descriptor()
+	// kybprofile.DefaultCreatedAt holds the default value on creation for the created_at field.
+	kybprofile.DefaultCreatedAt = kybprofileDescCreatedAt.Default.(func() time.Time)
+	// kybprofileDescUpdatedAt is the schema descriptor for updated_at field.
+	kybprofileDescUpdatedAt := kybprofileMixinFields0[1].Descriptor()
+	// kybprofile.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	kybprofile.DefaultUpdatedAt = kybprofileDescUpdatedAt.Default.(func() time.Time)
+	// kybprofile.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	kybprofile.UpdateDefaultUpdatedAt = kybprofileDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// kybprofileDescID is the schema descriptor for id field.
+	kybprofileDescID := kybprofileFields[0].Descriptor()
+	// kybprofile.DefaultID holds the default value on creation for the id field.
+	kybprofile.DefaultID = kybprofileDescID.Default.(func() uuid.UUID)
 	linkedaddressMixin := schema.LinkedAddress{}.Mixin()
 	linkedaddressMixinFields0 := linkedaddressMixin[0].Fields()
 	_ = linkedaddressMixinFields0
@@ -237,14 +269,91 @@ func init() {
 	paymentorderDescGatewayID := paymentorderFields[16].Descriptor()
 	// paymentorder.GatewayIDValidator is a validator for the "gateway_id" field. It is called by the builders before save.
 	paymentorder.GatewayIDValidator = paymentorderDescGatewayID.Validators[0].(func(string) error)
+	// paymentorderDescMessageHash is the schema descriptor for message_hash field.
+	paymentorderDescMessageHash := paymentorderFields[17].Descriptor()
+	// paymentorder.MessageHashValidator is a validator for the "message_hash" field. It is called by the builders before save.
+	paymentorder.MessageHashValidator = paymentorderDescMessageHash.Validators[0].(func(string) error)
 	// paymentorderDescReference is the schema descriptor for reference field.
-	paymentorderDescReference := paymentorderFields[17].Descriptor()
+	paymentorderDescReference := paymentorderFields[18].Descriptor()
 	// paymentorder.ReferenceValidator is a validator for the "reference" field. It is called by the builders before save.
 	paymentorder.ReferenceValidator = paymentorderDescReference.Validators[0].(func(string) error)
 	// paymentorderDescID is the schema descriptor for id field.
 	paymentorderDescID := paymentorderFields[0].Descriptor()
 	// paymentorder.DefaultID holds the default value on creation for the id field.
 	paymentorder.DefaultID = paymentorderDescID.Default.(func() uuid.UUID)
+	paymentwebhookMixin := schema.PaymentWebhook{}.Mixin()
+	paymentwebhookMixinFields0 := paymentwebhookMixin[0].Fields()
+	_ = paymentwebhookMixinFields0
+	paymentwebhookFields := schema.PaymentWebhook{}.Fields()
+	_ = paymentwebhookFields
+	// paymentwebhookDescCreatedAt is the schema descriptor for created_at field.
+	paymentwebhookDescCreatedAt := paymentwebhookMixinFields0[0].Descriptor()
+	// paymentwebhook.DefaultCreatedAt holds the default value on creation for the created_at field.
+	paymentwebhook.DefaultCreatedAt = paymentwebhookDescCreatedAt.Default.(func() time.Time)
+	// paymentwebhookDescUpdatedAt is the schema descriptor for updated_at field.
+	paymentwebhookDescUpdatedAt := paymentwebhookMixinFields0[1].Descriptor()
+	// paymentwebhook.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	paymentwebhook.DefaultUpdatedAt = paymentwebhookDescUpdatedAt.Default.(func() time.Time)
+	// paymentwebhook.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	paymentwebhook.UpdateDefaultUpdatedAt = paymentwebhookDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// paymentwebhookDescWebhookID is the schema descriptor for webhook_id field.
+	paymentwebhookDescWebhookID := paymentwebhookFields[1].Descriptor()
+	// paymentwebhook.WebhookIDValidator is a validator for the "webhook_id" field. It is called by the builders before save.
+	paymentwebhook.WebhookIDValidator = func() func(string) error {
+		validators := paymentwebhookDescWebhookID.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(webhook_id string) error {
+			for _, fn := range fns {
+				if err := fn(webhook_id); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// paymentwebhookDescWebhookSecret is the schema descriptor for webhook_secret field.
+	paymentwebhookDescWebhookSecret := paymentwebhookFields[2].Descriptor()
+	// paymentwebhook.WebhookSecretValidator is a validator for the "webhook_secret" field. It is called by the builders before save.
+	paymentwebhook.WebhookSecretValidator = func() func(string) error {
+		validators := paymentwebhookDescWebhookSecret.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(webhook_secret string) error {
+			for _, fn := range fns {
+				if err := fn(webhook_secret); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// paymentwebhookDescCallbackURL is the schema descriptor for callback_url field.
+	paymentwebhookDescCallbackURL := paymentwebhookFields[3].Descriptor()
+	// paymentwebhook.CallbackURLValidator is a validator for the "callback_url" field. It is called by the builders before save.
+	paymentwebhook.CallbackURLValidator = func() func(string) error {
+		validators := paymentwebhookDescCallbackURL.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(callback_url string) error {
+			for _, fn := range fns {
+				if err := fn(callback_url); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// paymentwebhookDescID is the schema descriptor for id field.
+	paymentwebhookDescID := paymentwebhookFields[0].Descriptor()
+	// paymentwebhook.DefaultID holds the default value on creation for the id field.
+	paymentwebhook.DefaultID = paymentwebhookDescID.Default.(func() uuid.UUID)
 	providerordertokenMixin := schema.ProviderOrderToken{}.Mixin()
 	providerordertokenMixinFields0 := providerordertokenMixin[0].Fields()
 	_ = providerordertokenMixinFields0
@@ -274,16 +383,16 @@ func init() {
 	providerprofileDescIsAvailable := providerprofileFields[5].Descriptor()
 	// providerprofile.DefaultIsAvailable holds the default value on creation for the is_available field.
 	providerprofile.DefaultIsAvailable = providerprofileDescIsAvailable.Default.(bool)
+	// providerprofileDescIsKYBVerified is the schema descriptor for isKYBVerified field.
+	providerprofileDescIsKYBVerified := providerprofileFields[6].Descriptor()
+	// providerprofile.DefaultIsKYBVerified holds the default value on creation for the isKYBVerified field.
+	providerprofile.DefaultIsKYBVerified = providerprofileDescIsKYBVerified.Default.(bool)
 	// providerprofileDescUpdatedAt is the schema descriptor for updated_at field.
-	providerprofileDescUpdatedAt := providerprofileFields[6].Descriptor()
+	providerprofileDescUpdatedAt := providerprofileFields[7].Descriptor()
 	// providerprofile.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	providerprofile.DefaultUpdatedAt = providerprofileDescUpdatedAt.Default.(func() time.Time)
 	// providerprofile.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	providerprofile.UpdateDefaultUpdatedAt = providerprofileDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// providerprofileDescIsKybVerified is the schema descriptor for is_kyb_verified field.
-	providerprofileDescIsKybVerified := providerprofileFields[15].Descriptor()
-	// providerprofile.DefaultIsKybVerified holds the default value on creation for the is_kyb_verified field.
-	providerprofile.DefaultIsKybVerified = providerprofileDescIsKybVerified.Default.(bool)
 	// providerprofileDescID is the schema descriptor for id field.
 	providerprofileDescID := providerprofileFields[0].Descriptor()
 	// providerprofile.DefaultID holds the default value on creation for the id field.
@@ -500,6 +609,6 @@ func init() {
 }
 
 const (
-	Version = "v0.14.3"                                         // Version of ent codegen.
-	Sum     = "h1:wokAV/kIlH9TeklJWGGS7AYJdVckr0DloWjIcO9iIIQ=" // Sum of ent codegen.
+	Version = "v0.14.4"                                         // Version of ent codegen.
+	Sum     = "h1:/DhDraSLXIkBhyiVoJeSshr4ZYi7femzhj6/TckzZuI=" // Sum of ent codegen.
 )

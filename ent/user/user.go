@@ -3,6 +3,7 @@
 package user
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent"
@@ -34,12 +35,16 @@ const (
 	FieldIsEmailVerified = "is_email_verified"
 	// FieldHasEarlyAccess holds the string denoting the has_early_access field in the database.
 	FieldHasEarlyAccess = "has_early_access"
+	// FieldKybVerificationStatus holds the string denoting the kyb_verification_status field in the database.
+	FieldKybVerificationStatus = "kyb_verification_status"
 	// EdgeSenderProfile holds the string denoting the sender_profile edge name in mutations.
 	EdgeSenderProfile = "sender_profile"
 	// EdgeProviderProfile holds the string denoting the provider_profile edge name in mutations.
 	EdgeProviderProfile = "provider_profile"
 	// EdgeVerificationToken holds the string denoting the verification_token edge name in mutations.
 	EdgeVerificationToken = "verification_token"
+	// EdgeKybProfile holds the string denoting the kyb_profile edge name in mutations.
+	EdgeKybProfile = "kyb_profile"
 	// Table holds the table name of the user in the database.
 	Table = "users"
 	// SenderProfileTable is the table that holds the sender_profile relation/edge.
@@ -63,6 +68,13 @@ const (
 	VerificationTokenInverseTable = "verification_tokens"
 	// VerificationTokenColumn is the table column denoting the verification_token relation/edge.
 	VerificationTokenColumn = "user_verification_token"
+	// KybProfileTable is the table that holds the kyb_profile relation/edge.
+	KybProfileTable = "kyb_profiles"
+	// KybProfileInverseTable is the table name for the KYBProfile entity.
+	// It exists in this package in order to avoid circular dependency with the "kybprofile" package.
+	KybProfileInverseTable = "kyb_profiles"
+	// KybProfileColumn is the table column denoting the kyb_profile relation/edge.
+	KybProfileColumn = "user_kyb_profile"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -77,6 +89,7 @@ var Columns = []string{
 	FieldScope,
 	FieldIsEmailVerified,
 	FieldHasEarlyAccess,
+	FieldKybVerificationStatus,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -113,6 +126,34 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// KybVerificationStatus defines the type for the "kyb_verification_status" enum field.
+type KybVerificationStatus string
+
+// KybVerificationStatusNotStarted is the default value of the KybVerificationStatus enum.
+const DefaultKybVerificationStatus = KybVerificationStatusNotStarted
+
+// KybVerificationStatus values.
+const (
+	KybVerificationStatusNotStarted KybVerificationStatus = "not_started"
+	KybVerificationStatusPending    KybVerificationStatus = "pending"
+	KybVerificationStatusApproved   KybVerificationStatus = "approved"
+	KybVerificationStatusRejected   KybVerificationStatus = "rejected"
+)
+
+func (kvs KybVerificationStatus) String() string {
+	return string(kvs)
+}
+
+// KybVerificationStatusValidator is a validator for the "kyb_verification_status" field enum values. It is called by the builders before save.
+func KybVerificationStatusValidator(kvs KybVerificationStatus) error {
+	switch kvs {
+	case KybVerificationStatusNotStarted, KybVerificationStatusPending, KybVerificationStatusApproved, KybVerificationStatusRejected:
+		return nil
+	default:
+		return fmt.Errorf("user: invalid enum value for kyb_verification_status field: %q", kvs)
+	}
+}
 
 // OrderOption defines the ordering options for the User queries.
 type OrderOption func(*sql.Selector)
@@ -167,6 +208,11 @@ func ByHasEarlyAccess(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldHasEarlyAccess, opts...).ToFunc()
 }
 
+// ByKybVerificationStatus orders the results by the kyb_verification_status field.
+func ByKybVerificationStatus(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldKybVerificationStatus, opts...).ToFunc()
+}
+
 // BySenderProfileField orders the results by sender_profile field.
 func BySenderProfileField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -194,6 +240,13 @@ func ByVerificationToken(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption
 		sqlgraph.OrderByNeighborTerms(s, newVerificationTokenStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByKybProfileField orders the results by kyb_profile field.
+func ByKybProfileField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newKybProfileStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newSenderProfileStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -213,5 +266,12 @@ func newVerificationTokenStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(VerificationTokenInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, VerificationTokenTable, VerificationTokenColumn),
+	)
+}
+func newKybProfileStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(KybProfileInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, false, KybProfileTable, KybProfileColumn),
 	)
 }

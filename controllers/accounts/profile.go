@@ -299,52 +299,6 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		update.SetVisibilityMode(providerprofile.VisibilityMode(payload.VisibilityMode))
 	}
 
-	if payload.Address != "" {
-		update.SetAddress(payload.Address)
-	}
-
-	if payload.MobileNumber != "" {
-		if !u.IsValidMobileNumber(payload.MobileNumber) {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid mobile number", nil)
-			return
-		}
-		update.SetMobileNumber(payload.MobileNumber)
-	}
-
-	if !payload.DateOfBirth.IsZero() {
-		update.SetDateOfBirth(payload.DateOfBirth)
-	}
-
-	if payload.BusinessName != "" {
-		update.SetBusinessName(payload.BusinessName)
-	}
-
-	if payload.IdentityDocumentType != "" {
-		if providerprofile.IdentityDocumentType(payload.IdentityDocumentType) != providerprofile.IdentityDocumentTypePassport &&
-			providerprofile.IdentityDocumentType(payload.IdentityDocumentType) != providerprofile.IdentityDocumentTypeDriversLicense &&
-			providerprofile.IdentityDocumentType(payload.IdentityDocumentType) != providerprofile.IdentityDocumentTypeNationalID {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid identity document type", nil)
-			return
-		}
-		update.SetIdentityDocumentType(providerprofile.IdentityDocumentType(payload.IdentityDocumentType))
-	}
-
-	if payload.IdentityDocument != "" {
-		if !u.IsValidFileURL(payload.IdentityDocument) {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid identity document URL", nil)
-			return
-		}
-		update.SetIdentityDocument(payload.IdentityDocument)
-	}
-
-	if payload.BusinessDocument != "" {
-		if !u.IsValidFileURL(payload.BusinessDocument) {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid business document URL", nil)
-			return
-		}
-		update.SetBusinessDocument(payload.BusinessDocument)
-	}
-
 	// Update tokens
 	for _, tokenPayload := range payload.Tokens {
 		// Check if token is supported
@@ -542,11 +496,6 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		}
 	}
 
-	// Activate profile
-	if payload.BusinessDocument != "" && payload.IdentityDocument != "" {
-		update.SetIsActive(true)
-	}
-
 	_, err := update.Save(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
@@ -620,15 +569,16 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 	}
 
 	response := &types.SenderProfileResponse{
-		ID:              sender.ID,
-		FirstName:       user.FirstName,
-		LastName:        user.LastName,
-		Email:           user.Email,
-		WebhookURL:      sender.WebhookURL,
-		DomainWhitelist: sender.DomainWhitelist,
-		Tokens:          tokensPayload,
-		APIKey:          *apiKey,
-		IsActive:        sender.IsActive,
+		ID:                    sender.ID,
+		FirstName:             user.FirstName,
+		LastName:              user.LastName,
+		Email:                 user.Email,
+		WebhookURL:            sender.WebhookURL,
+		DomainWhitelist:       sender.DomainWhitelist,
+		Tokens:                tokensPayload,
+		APIKey:                *apiKey,
+		IsActive:              sender.IsActive,
+		KYBVerificationStatus: user.KybVerificationStatus,
 	}
 
 	linkedProvider, err := storage.Client.ProviderProfile.
@@ -741,25 +691,17 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Profile retrieved successfully", &types.ProviderProfileResponse{
-		ID:                   provider.ID,
-		FirstName:            user.FirstName,
-		LastName:             user.LastName,
-		Email:                user.Email,
-		TradingName:          provider.TradingName,
-		Currencies:           currencyCodes,
-		HostIdentifier:       provider.HostIdentifier,
-		IsAvailable:          provider.IsAvailable,
-		Tokens:               tokensPayload,
-		APIKey:               *apiKey,
-		IsActive:             provider.IsActive,
-		Address:              provider.Address,
-		MobileNumber:         provider.MobileNumber,
-		DateOfBirth:          provider.DateOfBirth,
-		BusinessName:         provider.BusinessName,
-		VisibilityMode:       provider.VisibilityMode,
-		IdentityDocumentType: provider.IdentityDocumentType,
-		IdentityDocument:     provider.IdentityDocument,
-		BusinessDocument:     provider.BusinessDocument,
-		IsKybVerified:        provider.IsKybVerified,
+		ID:                    provider.ID,
+		FirstName:             user.FirstName,
+		LastName:              user.LastName,
+		Email:                 user.Email,
+		TradingName:           provider.TradingName,
+		Currencies:            currencyCodes,
+		HostIdentifier:        provider.HostIdentifier,
+		IsAvailable:           provider.IsAvailable,
+		Tokens:                tokensPayload,
+		APIKey:                *apiKey,
+		IsActive:              provider.IsActive,
+		KYBVerificationStatus: user.KybVerificationStatus,
 	})
 }

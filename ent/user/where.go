@@ -526,6 +526,26 @@ func HasEarlyAccessNEQ(v bool) predicate.User {
 	return predicate.User(sql.FieldNEQ(FieldHasEarlyAccess, v))
 }
 
+// KybVerificationStatusEQ applies the EQ predicate on the "kyb_verification_status" field.
+func KybVerificationStatusEQ(v KybVerificationStatus) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldKybVerificationStatus, v))
+}
+
+// KybVerificationStatusNEQ applies the NEQ predicate on the "kyb_verification_status" field.
+func KybVerificationStatusNEQ(v KybVerificationStatus) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldKybVerificationStatus, v))
+}
+
+// KybVerificationStatusIn applies the In predicate on the "kyb_verification_status" field.
+func KybVerificationStatusIn(vs ...KybVerificationStatus) predicate.User {
+	return predicate.User(sql.FieldIn(FieldKybVerificationStatus, vs...))
+}
+
+// KybVerificationStatusNotIn applies the NotIn predicate on the "kyb_verification_status" field.
+func KybVerificationStatusNotIn(vs ...KybVerificationStatus) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldKybVerificationStatus, vs...))
+}
+
 // HasSenderProfile applies the HasEdge predicate on the "sender_profile" edge.
 func HasSenderProfile() predicate.User {
 	return predicate.User(func(s *sql.Selector) {
@@ -587,6 +607,29 @@ func HasVerificationToken() predicate.User {
 func HasVerificationTokenWith(preds ...predicate.VerificationToken) predicate.User {
 	return predicate.User(func(s *sql.Selector) {
 		step := newVerificationTokenStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasKybProfile applies the HasEdge predicate on the "kyb_profile" edge.
+func HasKybProfile() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, KybProfileTable, KybProfileColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasKybProfileWith applies the HasEdge predicate on the "kyb_profile" edge with a given conditions (other predicates).
+func HasKybProfileWith(preds ...predicate.KYBProfile) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newKybProfileStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
