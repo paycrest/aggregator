@@ -3,15 +3,20 @@ package services
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"strings"
 	"time"
 
+	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/common"
+	types "github.com/ethereum/go-ethereum/core/types"
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/storage"
+	aggregatortypes "github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 )
@@ -54,6 +59,32 @@ func (s *EngineService) CreateServerWallet(ctx context.Context, label string) (s
 
 // GetLatestBlock fetches the latest block number for a given chain ID
 func (s *EngineService) GetLatestBlock(ctx context.Context, chainID int64) (int64, error) {
+	// Check if this is BNB Smart Chain (chain ID 56) - use RPC instead of Thirdweb Insight
+	if chainID == 56 {
+		// Fetch network from database to get RPC endpoint
+		network, err := storage.Client.Network.
+			Query().
+			Where(networkent.ChainIDEQ(chainID)).
+			Only(ctx)
+		if err != nil {
+			return 0, fmt.Errorf("failed to fetch network from database: %w", err)
+		}
+
+		// Use RPC for BNB Smart Chain
+		client, err := aggregatortypes.NewEthClient(network.RPCEndpoint)
+		if err != nil {
+			return 0, fmt.Errorf("failed to create RPC client: %w", err)
+		}
+
+		header, err := client.HeaderByNumber(ctx, nil) // nil means latest block
+		if err != nil {
+			return 0, fmt.Errorf("failed to get latest block: %w", err)
+		}
+
+		return header.Number.Int64(), nil
+	}
+
+	// Use Thirdweb Insight for other networks
 	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
 		Config().SetTimeout(30 * time.Second).
 		Header().AddAll(map[string]string{
@@ -235,7 +266,7 @@ func (s *EngineService) WaitForTransactionMined(ctx context.Context, queueId str
 // 5. Delete a webhook from thirdweb and remove the record from database:
 //    err := engineService.DeleteWebhookAndRecord(ctx, "webhook_id_here")
 
-// CreateTransferWebhook creates a webhook to listen to transfer events to a specific address on a specific chain
+// CreateTransferWebhook creates webhooks to listen to transfer events to a specific address on a specific chain
 func (s *EngineService) CreateTransferWebhook(ctx context.Context, chainID int64, contractAddress string, toAddress string, orderID string) (string, string, error) {
 	webhookCallbackURL := fmt.Sprintf("%s/v1/insight/webhook", config.ServerConfig().ServerURL)
 
@@ -660,4 +691,99 @@ func (s *EngineService) CreateGatewayWebhook() error {
 	}).Infof("Created gateway webhooks successfully")
 
 	return nil
+}
+
+// GetContractEventsRPC fetches contract events using RPC for networks not supported by Thirdweb Insight
+func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint string, contractAddress string, fromBlock int64, toBlock int64, eventSignature string, topics []string, txHash string) ([]interface{}, error) {
+	// Create RPC client
+	client, err := aggregatortypes.NewEthClient(rpcEndpoint)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create RPC client: %w", err)
+	}
+
+	var logs []types.Log
+	var err2 error
+
+	if txHash != "" {
+		// If transaction hash is provided, get the specific transaction receipt
+		receipt, err := client.TransactionReceipt(ctx, common.HexToHash(txHash))
+		if err != nil {
+			return nil, fmt.Errorf("failed to get transaction receipt: %w", err)
+		}
+
+		// Filter logs from the receipt that match our criteria
+		for _, log := range receipt.Logs {
+			if log.Address == common.HexToAddress(contractAddress) {
+				// Check if this log matches our event signature
+				if len(log.Topics) > 0 && log.Topics[0].Hex() == eventSignature {
+					// Check additional topics if provided
+					matches := true
+					for i, topic := range topics {
+						if topic != "" && (i+1 >= len(log.Topics) || log.Topics[i+1].Hex() != topic) {
+							matches = false
+							break
+						}
+					}
+					if matches {
+						logs = append(logs, *log)
+					}
+				}
+			}
+		}
+	} else {
+		// Use block range filtering (existing logic)
+		// Build filter query
+		filterQuery := ethereum.FilterQuery{
+			FromBlock: big.NewInt(fromBlock),
+			ToBlock:   big.NewInt(toBlock),
+			Addresses: []common.Address{common.HexToAddress(contractAddress)},
+			Topics:    [][]common.Hash{},
+		}
+
+		// Add event signature as first topic
+		if eventSignature != "" {
+			filterQuery.Topics = append(filterQuery.Topics, []common.Hash{common.HexToHash(eventSignature)})
+		}
+
+		// Add additional topics if provided
+		for _, topic := range topics {
+			if topic != "" {
+				filterQuery.Topics = append(filterQuery.Topics, []common.Hash{common.HexToHash(topic)})
+			}
+		}
+
+		// Get logs
+		logs, err2 = client.FilterLogs(ctx, filterQuery)
+		if err2 != nil {
+			return nil, fmt.Errorf("failed to get logs: %w", err2)
+		}
+	}
+
+	// Convert logs to the same format as Thirdweb Insight
+	var events []interface{}
+	for _, log := range logs {
+		event := map[string]interface{}{
+			"block_number":     float64(log.BlockNumber),
+			"transaction_hash": log.TxHash.Hex(),
+			"log_index":        float64(log.Index),
+			"address":          log.Address.Hex(),
+			"topics":           log.Topics,
+			"data":             log.Data,
+			"decoded": map[string]interface{}{
+				"indexed_params":     make(map[string]interface{}),
+				"non_indexed_params": make(map[string]interface{}),
+			},
+		}
+		events = append(events, event)
+	}
+
+	// Decode events based on signature
+	if len(events) > 0 {
+		err = utils.ProcessRPCEvents(events, eventSignature)
+		if err != nil {
+			return nil, fmt.Errorf("failed to process RPC events: %w", err)
+		}
+	}
+
+	return events, nil
 }

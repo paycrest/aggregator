@@ -31,6 +31,7 @@ import (
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
+	"github.com/paycrest/aggregator/utils/logger"
 )
 
 // OrderEVM provides functionality related to onchain interactions for payment orders

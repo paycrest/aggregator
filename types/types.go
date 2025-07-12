@@ -31,6 +31,7 @@ type RPCClient interface {
 	EstimateGas(ctx context.Context, call ethereum.CallMsg) (gas uint64, err error)
 	SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- types.Log) (ethereum.Subscription, error)
 	CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error)
+	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
 	Commit() common.Hash
 }
 
@@ -702,7 +703,6 @@ type IndexTransactionRequest struct {
 
 // IndexTransactionResponse represents the response for the index transaction endpoint
 type IndexTransactionResponse struct {
-	Message string `json:"message"`
 	Events  struct {
 		Transfer      int `json:"Transfer"`
 		OrderCreated  int `json:"OrderCreated"`

@@ -599,6 +599,13 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 	settledPercent := decimal.NewFromInt(0)
 	// Sender side status update
 	if paymentOrderExists && paymentOrder.Status != paymentorder.StatusSettled {
+		logger.WithFields(logger.Fields{
+			"OrderID": event.OrderId,
+			"TxHash":  event.TxHash,
+			"BlockNumber": event.BlockNumber,
+			"SettlePercent": event.SettlePercent,
+			"PaymentOrder": paymentOrder,
+		}).Errorf("UpdateOrderStatusSettled.sender")
 		paymentOrderUpdate := tx.PaymentOrder.
 			Update().
 			Where(
