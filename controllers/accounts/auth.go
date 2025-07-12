@@ -105,6 +105,14 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		return
 	}
 
+	// Send welcome email after user creation
+	if _, err := ctrl.emailService.SendWelcomeEmail(ctx, user.Email, user.FirstName, payload.Scopes); err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": user.ID,
+		}).Errorf("Failed to send welcome email")
+	}
+
 	// Send verification email
 	verificationToken, err := tx.VerificationToken.
 		Create().
@@ -296,15 +304,6 @@ func (ctrl *AuthController) Login(ctx *gin.Context) {
 	if !passwordMatch {
 		u.APIResponse(ctx, http.StatusUnauthorized, "error",
 			"Email and password do not match any user", nil,
-		)
-		return
-	}
-
-	// Check if user has early access
-	environment := serverConf.Environment
-	if !user.HasEarlyAccess && (environment == "production") {
-		u.APIResponse(ctx, http.StatusUnauthorized, "error",
-			"Your early access request is still pending", nil,
 		)
 		return
 	}

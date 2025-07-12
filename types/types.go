@@ -16,8 +16,8 @@ import (
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
-	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/transactionlog"
+	"github.com/paycrest/aggregator/ent/user"
 	"github.com/shopspring/decimal"
 )
 
@@ -259,43 +259,30 @@ type ProviderOrderTokenPayload struct {
 
 // ProviderProfilePayload is the payload for the provider profile endpoint
 type ProviderProfilePayload struct {
-	TradingName          string                      `json:"tradingName"`
-	Currencies           []string                    `json:"currencies"`
-	HostIdentifier       string                      `json:"hostIdentifier"`
-	IsAvailable          bool                        `json:"isAvailable"`
-	Tokens               []ProviderOrderTokenPayload `json:"tokens"`
-	VisibilityMode       string                      `json:"visibilityMode"`
-	Address              string                      `json:"address"`
-	MobileNumber         string                      `json:"mobileNumber"`
-	DateOfBirth          time.Time                   `json:"dateOfBirth"`
-	BusinessName         string                      `json:"businessName"`
-	IdentityDocumentType string                      `json:"identityType"`
-	IdentityDocument     string                      `json:"identityDocument"`
-	BusinessDocument     string                      `json:"businessDocument"`
+	TradingName    string                      `json:"tradingName"`
+	Currencies     []string                    `json:"currencies"`
+	HostIdentifier string                      `json:"hostIdentifier"`
+	IsAvailable    bool                        `json:"isAvailable"`
+	IsActive       bool                        `json:"isActive"`
+	Tokens         []ProviderOrderTokenPayload `json:"tokens"`
+	VisibilityMode string                      `json:"visibilityMode"`
 }
 
 // ProviderProfileResponse is the response for the provider profile endpoint
 type ProviderProfileResponse struct {
-	ID                   string                               `json:"id"`
-	FirstName            string                               `json:"firstName"`
-	LastName             string                               `json:"lastName"`
-	Email                string                               `json:"email"`
-	TradingName          string                               `json:"tradingName"`
-	Currencies           []string                             `json:"currencies"`
-	HostIdentifier       string                               `json:"hostIdentifier"`
-	IsAvailable          bool                                 `json:"isAvailable"`
-	Tokens               []ProviderOrderTokenPayload          `json:"tokens"`
-	APIKey               APIKeyResponse                       `json:"apiKey"`
-	IsActive             bool                                 `json:"isActive"`
-	Address              string                               `json:"address"`
-	MobileNumber         string                               `json:"mobileNumber"`
-	VisibilityMode       providerprofile.VisibilityMode       `json:"visibilityMode"`
-	DateOfBirth          time.Time                            `json:"dateOfBirth"`
-	BusinessName         string                               `json:"businessName"`
-	IdentityDocumentType providerprofile.IdentityDocumentType `json:"identityType"`
-	IdentityDocument     string                               `json:"identityDocument"`
-	BusinessDocument     string                               `json:"businessDocument"`
-	IsKybVerified        bool                                 `json:"isKybVerified"`
+	ID                    string                      `json:"id"`
+	FirstName             string                      `json:"firstName"`
+	LastName              string                      `json:"lastName"`
+	Email                 string                      `json:"email"`
+	TradingName           string                      `json:"tradingName"`
+	Currencies            []string                    `json:"currencies"`
+	HostIdentifier        string                      `json:"hostIdentifier"`
+	IsAvailable           bool                        `json:"isAvailable"`
+	Tokens                []ProviderOrderTokenPayload `json:"tokens"`
+	APIKey                APIKeyResponse              `json:"apiKey"`
+	IsActive              bool                        `json:"isActive"`
+	VisibilityMode        string                      `json:"visibilityMode"`
+	KYBVerificationStatus user.KybVerificationStatus  `json:"kybVerificationStatus"`
 }
 
 // SenderOrderTokenResponse defines the provider setting for a token
@@ -309,17 +296,18 @@ type SenderOrderTokenResponse struct {
 
 // SenderProfileResponse is the response for the sender profile endpoint
 type SenderProfileResponse struct {
-	ID                 uuid.UUID                  `json:"id"`
-	FirstName          string                     `json:"firstName"`
-	LastName           string                     `json:"lastName"`
-	Email              string                     `json:"email"`
-	WebhookURL         string                     `json:"webhookUrl"`
-	DomainWhitelist    []string                   `json:"domainWhitelist"`
-	Tokens             []SenderOrderTokenResponse `json:"tokens"`
-	APIKey             APIKeyResponse             `json:"apiKey"`
-	ProviderID         string                     `json:"providerId"`
-	ProviderCurrencies []string                   `json:"providerCurrencies"`
-	IsActive           bool                       `json:"isActive"`
+	ID                    uuid.UUID                  `json:"id"`
+	FirstName             string                     `json:"firstName"`
+	LastName              string                     `json:"lastName"`
+	Email                 string                     `json:"email"`
+	WebhookURL            string                     `json:"webhookUrl"`
+	DomainWhitelist       []string                   `json:"domainWhitelist"`
+	Tokens                []SenderOrderTokenResponse `json:"tokens"`
+	APIKey                APIKeyResponse             `json:"apiKey"`
+	ProviderID            string                     `json:"providerId"`
+	ProviderCurrencies    []string                   `json:"providerCurrencies"`
+	IsActive              bool                       `json:"isActive"`
+	KYBVerificationStatus user.KybVerificationStatus `json:"kybVerificationStatus"`
 }
 
 // RefreshResponse is the response for the refresh endpoint
@@ -693,6 +681,32 @@ type SupportedTokenResponse struct {
 	Decimals        int8   `json:"decimals"`
 	BaseCurrency    string `json:"baseCurrency"`
 	Network         string `json:"network"`
+}
+
+// KYBSubmissionInput represents the input structure for KYB form submission
+type KYBSubmissionInput struct {
+	MobileNumber                  string                 `json:"mobileNumber" binding:"required"`
+	CompanyName                   string                 `json:"companyName" binding:"required"`
+	RegisteredBusinessAddress     string                 `json:"registeredBusinessAddress" binding:"required"`
+	CertificateOfIncorporationUrl string                 `json:"certificateOfIncorporationUrl" binding:"required"`
+	ArticlesOfIncorporationUrl    string                 `json:"articlesOfIncorporationUrl" binding:"required"`
+	BusinessLicenseUrl            *string                `json:"businessLicenseUrl"`
+	ProofOfBusinessAddressUrl     string                 `json:"proofOfBusinessAddressUrl" binding:"required"`
+	ProofOfResidentialAddressUrl  string                 `json:"proofOfResidentialAddressUrl" binding:"required"`
+	AmlPolicyUrl                  *string                `json:"amlPolicyUrl"`
+	KycPolicyUrl                  *string                `json:"kycPolicyUrl"`
+	BeneficialOwners              []BeneficialOwnerInput `json:"beneficialOwners" binding:"required,dive"`
+}
+
+// BeneficialOwnerInput represents the input structure for a beneficial owner
+type BeneficialOwnerInput struct {
+	FullName                     string  `json:"fullName" binding:"required"`
+	ResidentialAddress           string  `json:"residentialAddress" binding:"required"`
+	ProofOfResidentialAddressUrl string  `json:"proofOfResidentialAddressUrl" binding:"required"`
+	GovernmentIssuedIdUrl        string  `json:"governmentIssuedIdUrl" binding:"required"`
+	DateOfBirth                  string  `json:"dateOfBirth" binding:"required"`
+	OwnershipPercentage          float64 `json:"ownershipPercentage" binding:"required,gt=0,lte=100"`
+	GovernmentIssuedIdType       string  `json:"governmentIssuedIdType" binding:"required,oneof=passport drivers_license national_id"`
 }
 
 // IndexTransactionRequest represents the request payload for indexing a specific transaction

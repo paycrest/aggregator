@@ -99,8 +99,8 @@ func CreateERC20Token(client types.RPCClient, overrides map[string]interface{}) 
 		SetIdentifier(payload["identifier"].(string)).
 		SetChainID(payload["chainID"].(int64)).
 		SetRPCEndpoint(payload["networkRPC"].(string)).
+		SetBlockTime(decimal.NewFromFloat(3.0)).
 		SetFee(decimal.NewFromFloat(0.1)).
-		SetBlockTime(decimal.NewFromFloat(2)).
 		SetIsTestnet(true).
 		OnConflict().
 		UpdateNewValues().
@@ -131,7 +131,7 @@ func CreateERC20Token(client types.RPCClient, overrides map[string]interface{}) 
 	return token, err
 }
 
-// CreateERC20Token creates a test token with default or custom values
+// CreateTRC20Token creates a test token with default or custom values
 func CreateTRC20Token(client types.RPCClient, overrides map[string]interface{}) (*ent.Token, error) {
 
 	// Default payload
@@ -157,6 +157,7 @@ func CreateTRC20Token(client types.RPCClient, overrides map[string]interface{}) 
 		SetIdentifier(payload["identifier"].(string)).
 		SetChainID(payload["chainID"].(int64)).
 		SetRPCEndpoint(payload["networkRPC"].(string)).
+		SetBlockTime(decimal.NewFromFloat(3.0)).
 		SetFee(decimal.NewFromFloat(0.1)).
 		SetIsTestnet(true).
 		OnConflict().
@@ -547,7 +548,7 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 	return orderToken, err
 }
 
-// CreateTestProviderProfile creates a test ProviderProfile with defaults or custom values
+// CreateTestProvisionBucket creates a test ProvisionBucket with defaults or custom values
 func CreateTestProvisionBucket(overrides map[string]interface{}) (*ent.ProvisionBucket, error) {
 	ctx := context.Background()
 
@@ -663,8 +664,8 @@ func CreateTestTokenData(t *testing.T, client *ent.Client) ([]*ent.Network, []*e
 		SetRPCEndpoint("https://arb1.arbitrum.io/rpc").
 		SetGatewayContractAddress("0x123").
 		SetIsTestnet(false).
+		SetBlockTime(decimal.NewFromFloat(3.0)).
 		SetFee(decimal.NewFromFloat(0.01)).
-		SetBlockTime(decimal.NewFromFloat(2)).
 		Save(ctx)
 	assert.NoError(t, err)
 
@@ -674,8 +675,8 @@ func CreateTestTokenData(t *testing.T, client *ent.Client) ([]*ent.Network, []*e
 		SetRPCEndpoint("https://polygon-rpc.com").
 		SetGatewayContractAddress("0x456").
 		SetIsTestnet(false).
+		SetBlockTime(decimal.NewFromFloat(3.0)).
 		SetFee(decimal.NewFromFloat(0.02)).
-		SetBlockTime(decimal.NewFromFloat(2)).
 		Save(ctx)
 	assert.NoError(t, err)
 

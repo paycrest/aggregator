@@ -7,9 +7,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/apikey"
+	"github.com/paycrest/aggregator/ent/beneficialowner"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
 	"github.com/paycrest/aggregator/ent/institution"
+	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
@@ -45,6 +47,16 @@ func init() {
 	apikeyDescID := apikeyFields[0].Descriptor()
 	// apikey.DefaultID holds the default value on creation for the id field.
 	apikey.DefaultID = apikeyDescID.Default.(func() uuid.UUID)
+	beneficialownerFields := schema.BeneficialOwner{}.Fields()
+	_ = beneficialownerFields
+	// beneficialownerDescFullName is the schema descriptor for full_name field.
+	beneficialownerDescFullName := beneficialownerFields[1].Descriptor()
+	// beneficialowner.FullNameValidator is a validator for the "full_name" field. It is called by the builders before save.
+	beneficialowner.FullNameValidator = beneficialownerDescFullName.Validators[0].(func(string) error)
+	// beneficialownerDescID is the schema descriptor for id field.
+	beneficialownerDescID := beneficialownerFields[0].Descriptor()
+	// beneficialowner.DefaultID holds the default value on creation for the id field.
+	beneficialowner.DefaultID = beneficialownerDescID.Default.(func() uuid.UUID)
 	fiatcurrencyMixin := schema.FiatCurrency{}.Mixin()
 	fiatcurrencyMixinFields0 := fiatcurrencyMixin[0].Fields()
 	_ = fiatcurrencyMixinFields0
@@ -107,6 +119,25 @@ func init() {
 	institution.DefaultUpdatedAt = institutionDescUpdatedAt.Default.(func() time.Time)
 	// institution.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	institution.UpdateDefaultUpdatedAt = institutionDescUpdatedAt.UpdateDefault.(func() time.Time)
+	kybprofileMixin := schema.KYBProfile{}.Mixin()
+	kybprofileMixinFields0 := kybprofileMixin[0].Fields()
+	_ = kybprofileMixinFields0
+	kybprofileFields := schema.KYBProfile{}.Fields()
+	_ = kybprofileFields
+	// kybprofileDescCreatedAt is the schema descriptor for created_at field.
+	kybprofileDescCreatedAt := kybprofileMixinFields0[0].Descriptor()
+	// kybprofile.DefaultCreatedAt holds the default value on creation for the created_at field.
+	kybprofile.DefaultCreatedAt = kybprofileDescCreatedAt.Default.(func() time.Time)
+	// kybprofileDescUpdatedAt is the schema descriptor for updated_at field.
+	kybprofileDescUpdatedAt := kybprofileMixinFields0[1].Descriptor()
+	// kybprofile.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	kybprofile.DefaultUpdatedAt = kybprofileDescUpdatedAt.Default.(func() time.Time)
+	// kybprofile.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	kybprofile.UpdateDefaultUpdatedAt = kybprofileDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// kybprofileDescID is the schema descriptor for id field.
+	kybprofileDescID := kybprofileFields[0].Descriptor()
+	// kybprofile.DefaultID holds the default value on creation for the id field.
+	kybprofile.DefaultID = kybprofileDescID.Default.(func() uuid.UUID)
 	linkedaddressMixin := schema.LinkedAddress{}.Mixin()
 	linkedaddressMixinFields0 := linkedaddressMixin[0].Fields()
 	_ = linkedaddressMixinFields0
@@ -352,16 +383,16 @@ func init() {
 	providerprofileDescIsAvailable := providerprofileFields[5].Descriptor()
 	// providerprofile.DefaultIsAvailable holds the default value on creation for the is_available field.
 	providerprofile.DefaultIsAvailable = providerprofileDescIsAvailable.Default.(bool)
+	// providerprofileDescIsKYBVerified is the schema descriptor for isKYBVerified field.
+	providerprofileDescIsKYBVerified := providerprofileFields[6].Descriptor()
+	// providerprofile.DefaultIsKYBVerified holds the default value on creation for the isKYBVerified field.
+	providerprofile.DefaultIsKYBVerified = providerprofileDescIsKYBVerified.Default.(bool)
 	// providerprofileDescUpdatedAt is the schema descriptor for updated_at field.
-	providerprofileDescUpdatedAt := providerprofileFields[6].Descriptor()
+	providerprofileDescUpdatedAt := providerprofileFields[7].Descriptor()
 	// providerprofile.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	providerprofile.DefaultUpdatedAt = providerprofileDescUpdatedAt.Default.(func() time.Time)
 	// providerprofile.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	providerprofile.UpdateDefaultUpdatedAt = providerprofileDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// providerprofileDescIsKybVerified is the schema descriptor for is_kyb_verified field.
-	providerprofileDescIsKybVerified := providerprofileFields[15].Descriptor()
-	// providerprofile.DefaultIsKybVerified holds the default value on creation for the is_kyb_verified field.
-	providerprofile.DefaultIsKybVerified = providerprofileDescIsKybVerified.Default.(bool)
 	// providerprofileDescID is the schema descriptor for id field.
 	providerprofileDescID := providerprofileFields[0].Descriptor()
 	// providerprofile.DefaultID holds the default value on creation for the id field.
@@ -578,6 +609,6 @@ func init() {
 }
 
 const (
-	Version = "v0.14.3"                                         // Version of ent codegen.
-	Sum     = "h1:wokAV/kIlH9TeklJWGGS7AYJdVckr0DloWjIcO9iIIQ=" // Sum of ent codegen.
+	Version = "v0.14.4"                                         // Version of ent codegen.
+	Sum     = "h1:/DhDraSLXIkBhyiVoJeSshr4ZYi7femzhj6/TckzZuI=" // Sum of ent codegen.
 )
