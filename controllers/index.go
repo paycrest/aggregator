@@ -449,16 +449,6 @@ func (ctrl *Controller) findSuitableProviderRate(providers []string, tokenSymbol
 				continue
 			}
 		}
-		if err != nil {
-			if ent.IsNotFound(err) {
-				continue
-			}
-			logger.WithFields(logger.Fields{
-				"ProviderData": providerData,
-				"Error":        err,
-			}).Errorf("GetTokenRate.InvalidProviderData: failed to fetch provider configuration")
-			continue
-		}
 
 		// Parse provider order amounts
 		minOrderAmount, err := decimal.NewFromString(parts[3])
