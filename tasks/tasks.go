@@ -1243,10 +1243,10 @@ func StartCronJobs() {
 	}
 
 	// Index blockchain events every 5 seconds
-	_, err = scheduler.Every(5).Seconds().Do(TaskIndexBlockchainEvents)
-	if err != nil {
-		logger.Errorf("StartCronJobs for IndexBlockchainEvents: %v", err)
-	}
+	// _, err = scheduler.Every(5).Seconds().Do(TaskIndexBlockchainEvents)
+	// if err != nil {
+	// 	logger.Errorf("StartCronJobs for IndexBlockchainEvents: %v", err)
+	// }
 
 	// Start scheduler
 	scheduler.StartAsync()

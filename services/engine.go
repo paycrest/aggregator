@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
 	"time"
 
@@ -271,15 +272,20 @@ func (s *EngineService) CreateTransferWebhook(ctx context.Context, chainID int64
 	webhookCallbackURL := fmt.Sprintf("%s/v1/insight/webhook", config.ServerConfig().ServerURL)
 
 	webhookPayload := map[string]interface{}{
-		"name":         orderID,
-		"endpoint_url": webhookCallbackURL,
+		"name":        orderID,
+		"webhook_url": webhookCallbackURL,
 		"filters": map[string]interface{}{
 			"v1.events": map[string]interface{}{
-				"chain_ids":        []int64{chainID},
-				"addresses":        []string{contractAddress},
-				"event_signatures": []string{"0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"}, // Transfer event signature
-				"params": map[string]interface{}{
-					"to": toAddress, // Filter for transfers to the specific address
+				"chain_ids": []string{strconv.FormatInt(chainID, 10)},
+				"addresses": []string{contractAddress},
+				"signatures": []map[string]interface{}{
+					{
+						"sig_hash": "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef", // Transfer event signature
+						"abi":      "{\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"}",
+						"params": map[string]interface{}{
+							"to": toAddress, // Filter for transfers to the specific address
+						},
+					},
 				},
 			},
 		},
@@ -293,7 +299,6 @@ func (s *EngineService) CreateTransferWebhook(ctx context.Context, chainID int64
 		"X-Secret-Key": s.config.ThirdwebSecretKey,
 	}).Build().POST("/v1/webhooks").
 		Body().AsJSON(webhookPayload).Send()
-
 	if err != nil {
 		return "", "", fmt.Errorf("failed to create transfer webhook: %w", err)
 	}
@@ -303,8 +308,21 @@ func (s *EngineService) CreateTransferWebhook(ctx context.Context, chainID int64
 		return "", "", fmt.Errorf("failed to parse JSON response: %w", err)
 	}
 
-	webhookID := data["id"].(string)
-	webhookSecret := data["webhook_secret"].(string)
+	// Handle nested data structure
+	responseData, ok := data["data"].(map[string]interface{})
+	if !ok {
+		return "", "", fmt.Errorf("invalid response structure: missing 'data' field")
+	}
+
+	webhookID, ok := responseData["id"].(string)
+	if !ok {
+		return "", "", fmt.Errorf("invalid response structure: missing or invalid 'id' field")
+	}
+
+	webhookSecret, ok := responseData["webhook_secret"].(string)
+	if !ok {
+		return "", "", fmt.Errorf("invalid response structure: missing or invalid 'webhook_secret' field")
+	}
 
 	return webhookID, webhookSecret, nil
 }
@@ -319,7 +337,6 @@ func (s *EngineService) DeleteWebhook(ctx context.Context, webhookID string) err
 		"X-Secret-Key": s.config.ThirdwebSecretKey,
 	}).Build().DELETE(fmt.Sprintf("/v1/webhooks/%s", webhookID)).
 		Send()
-
 	if err != nil {
 		return fmt.Errorf("failed to delete webhook: %w", err)
 	}
@@ -358,9 +375,9 @@ func (s *EngineService) DeleteWebhookAndRecord(ctx context.Context, webhookID st
 type WebhookInfo struct {
 	ID            string                 `json:"id"`
 	Name          string                 `json:"name"`
-	EndpointURL   string                 `json:"endpoint_url"`
+	WebhookURL    string                 `json:"webhook_url"`
 	WebhookSecret string                 `json:"webhook_secret"`
-	Enabled       bool                   `json:"enabled"`
+	Disabled      bool                   `json:"disabled"`
 	CreatedAt     string                 `json:"created_at"`
 	UpdatedAt     string                 `json:"updated_at"`
 	ProjectID     string                 `json:"project_id"`
@@ -379,22 +396,19 @@ type WebhookListResponse struct {
 }
 
 // GetWebhookByID fetches a webhook by its ID from thirdweb
-func (s *EngineService) GetWebhookByID(ctx context.Context, webhookID string) (*WebhookInfo, error) {
-	res, err := fastshot.NewClient("https://insight.thirdweb.com").
+func (s *EngineService) GetWebhookByID(ctx context.Context, webhookID string, chainID int64) (*WebhookInfo, error) {
+	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
 		Config().SetTimeout(30 * time.Second).
 		Header().AddAll(map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/json",
 		"X-Secret-Key": s.config.ThirdwebSecretKey,
-	}).Build().GET(fmt.Sprintf("/v1/webhooks?webhook_id=%s", webhookID)).
-		Send()
-
+	}).Build().GET("/v1/webhooks").
+		Query().AddParams(map[string]string{
+		"webhook_id": webhookID,
+	}).Send()
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch webhook: %w", err)
-	}
-
-	if res.StatusCode() != 200 {
-		return nil, fmt.Errorf("failed to fetch webhook: HTTP %d", res.StatusCode())
 	}
 
 	data, err := utils.ParseJSONResponse(res.RawResponse)
@@ -408,14 +422,13 @@ func (s *EngineService) GetWebhookByID(ctx context.Context, webhookID string) (*
 		return nil, fmt.Errorf("webhook not found")
 	}
 
-	// Convert the first webhook data to WebhookInfo
 	webhookData := responseData[0].(map[string]interface{})
 	webhookInfo := &WebhookInfo{
 		ID:            webhookData["id"].(string),
 		Name:          webhookData["name"].(string),
-		EndpointURL:   webhookData["endpoint_url"].(string),
+		WebhookURL:    webhookData["webhook_url"].(string),
 		WebhookSecret: webhookData["webhook_secret"].(string),
-		Enabled:       webhookData["enabled"].(bool),
+		Disabled:      webhookData["disabled"].(bool),
 		CreatedAt:     webhookData["created_at"].(string),
 		UpdatedAt:     webhookData["updated_at"].(string),
 		ProjectID:     webhookData["project_id"].(string),
@@ -435,13 +448,17 @@ func (s *EngineService) UpdateWebhook(ctx context.Context, webhookID string, web
 		"X-Secret-Key": s.config.ThirdwebSecretKey,
 	}).Build().PATCH(fmt.Sprintf("/v1/webhooks/%s", webhookID)).
 		Body().AsJSON(webhookPayload).Send()
-
 	if err != nil {
 		return fmt.Errorf("failed to update webhook: %w", err)
 	}
 
-	if res.StatusCode() != 200 {
-		return fmt.Errorf("failed to update webhook: HTTP %d", res.StatusCode())
+	data, err := utils.ParseJSONResponse(res.RawResponse)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Data":       data,
+			"StatusCode": res.RawResponse.StatusCode,
+		}).Errorf("failed to parse JSON response: %v", err)
+		return fmt.Errorf("failed to parse JSON response: %v", err)
 	}
 
 	return nil
@@ -461,29 +478,39 @@ func (s *EngineService) CreateGatewayWebhook() error {
 	}
 
 	// Determine if we're in testnet or mainnet
-	isTestnet := false
-	if serverConf.Environment != "production" {
-		isTestnet = true
-	}
+	// isTestnet := false
+	// if serverConf.Environment != "production" {
+	// 	isTestnet = true
+	// }
 
 	// Fetch networks for the current environment
 	networks, err := storage.Client.Network.
 		Query().
-		Where(networkent.IsTestnet(isTestnet)).
+		// Where(networkent.IsTestnet(isTestnet)).
 		All(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to fetch networks: %w", err)
 	}
 
 	// Event signatures for gateway contract events (using hash-like signatures from EVM indexer)
-	eventSignatures := []string{
-		"0x40ccd1ceb111a3c186ef9911e1b876dc1f789ed331b86097b3b8851055b6a137", // OrderCreated
-		"0x98ece21e01a01cbe1d1c0dad3b053c8fbd368f99be78be958fcf1d1d13fd249a", // OrderSettled
-		"0x0736fe428e1747ca8d387c2e6fa1a31a0cde62d3a167c40a46ade59a3cdc828e", // OrderRefunded
+	eventSignatures := []map[string]interface{}{
+		{
+			"sig_hash": "0x40ccd1ceb111a3c186ef9911e1b876dc1f789ed331b86097b3b8851055b6a137", // OrderCreated event signature
+			"abi":      "{\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"protocolFee\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"orderId\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"rate\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"messageHash\",\"type\":\"string\"}],\"name\":\"OrderCreated\",\"type\":\"event\"}",
+		},
+		{
+			"sig_hash": "0x98ece21e01a01cbe1d1c0dad3b053c8fbd368f99be78be958fcf1d1d13fd249a", // OrderSettled event signature
+			"abi":      "{\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"splitOrderId\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"orderId\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"liquidityProvider\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint96\",\"name\":\"settlePercent\",\"type\":\"uint96\"}],\"name\":\"OrderSettled\",\"type\":\"event\"}",
+		},
+		{
+			"sig_hash": "0x0736fe428e1747ca8d387c2e6fa1a31a0cde62d3a167c40a46ade59a3cdc828e", // OrderRefunded event signature
+			"abi":      "{\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"fee\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"orderId\",\"type\":\"bytes32\"}],\"name\":\"OrderRefunded\",\"type\":\"event\"}",
+		},
 	}
 
 	// Collect all chain IDs and gateway addresses
 	var chainIDs []int64
+	var chainIDsStrings []string
 	var gatewayAddresses []string
 	var evmNetworks []*ent.Network
 
@@ -493,6 +520,7 @@ func (s *EngineService) CreateGatewayWebhook() error {
 			continue
 		}
 		chainIDs = append(chainIDs, network.ChainID)
+		chainIDsStrings = append(chainIDsStrings, strconv.FormatInt(network.ChainID, 10))
 		gatewayAddresses = append(gatewayAddresses, network.GatewayContractAddress)
 		evmNetworks = append(evmNetworks, network)
 	}
@@ -511,12 +539,21 @@ func (s *EngineService) CreateGatewayWebhook() error {
 			Query().
 			Where(paymentwebhook.HasNetworkWith(networkent.IDEQ(network.ID))).
 			Only(ctx)
-		if err == nil {
-			// Found an existing webhook for this network
-			existingWebhookID = paymentWebhook.WebhookID
-			existingWebhookSecret = paymentWebhook.WebhookSecret
-			break
+		if err != nil {
+			if ent.IsNotFound(err) {
+				// No webhook for this network - continue checking others
+				continue
+			} else {
+				// Real database error - log and return
+				logger.Errorf("Database error checking webhook for network %s: %v", network.Identifier, err)
+				return fmt.Errorf("failed to check existing webhooks: %w", err)
+			}
 		}
+
+		// Found an existing webhook
+		existingWebhookID = paymentWebhook.WebhookID
+		existingWebhookSecret = paymentWebhook.WebhookSecret
+		break
 	}
 
 	// Create callback URL for gateway events
@@ -524,9 +561,12 @@ func (s *EngineService) CreateGatewayWebhook() error {
 
 	if existingWebhookID != "" {
 		// Fetch the existing webhook from thirdweb
-		webhookInfo, err := s.GetWebhookByID(ctx, existingWebhookID)
+		webhookInfo, err := s.GetWebhookByID(ctx, existingWebhookID, evmNetworks[0].ChainID)
 		if err != nil {
-			logger.Errorf("Failed to fetch existing webhook %s: %v", existingWebhookID, err)
+			logger.WithFields(logger.Fields{
+				"WebhookID": existingWebhookID,
+				"ChainID":   evmNetworks[0].ChainID,
+			}).Errorf("Failed to fetch existing webhook: %v", err)
 			// Continue with creating a new webhook
 		} else {
 			// Check if the webhook filters match our current chain IDs
@@ -571,11 +611,12 @@ func (s *EngineService) CreateGatewayWebhook() error {
 
 			// Update the webhook with new chain IDs
 			webhookPayload := map[string]interface{}{
+				"webhook_url": webhookCallbackURL,
 				"filters": map[string]interface{}{
 					"v1.events": map[string]interface{}{
-						"chain_ids":        chainIDs,
-						"addresses":        gatewayAddresses,
-						"event_signatures": eventSignatures,
+						"chain_ids":  chainIDsStrings,
+						"addresses":  gatewayAddresses,
+						"signatures": eventSignatures,
 					},
 				},
 			}
@@ -625,13 +666,13 @@ func (s *EngineService) CreateGatewayWebhook() error {
 
 	// No existing webhook found or update failed, create a new one
 	webhookPayload := map[string]interface{}{
-		"name":         "Gateway Contract Events Webhook",
-		"endpoint_url": webhookCallbackURL,
+		"name":        "Gateway Contract Events Webhook",
+		"webhook_url": webhookCallbackURL,
 		"filters": map[string]interface{}{
 			"v1.events": map[string]interface{}{
-				"chain_ids":        chainIDs,
-				"addresses":        gatewayAddresses,
-				"event_signatures": eventSignatures,
+				"chain_ids":  chainIDsStrings,
+				"addresses":  gatewayAddresses,
+				"signatures": eventSignatures,
 			},
 		},
 	}
@@ -651,11 +692,28 @@ func (s *EngineService) CreateGatewayWebhook() error {
 
 	data, err := utils.ParseJSONResponse(res.RawResponse)
 	if err != nil {
-		return fmt.Errorf("failed to parse JSON response: %w", err)
+		logger.WithFields(logger.Fields{
+			"Data":       data,
+			"StatusCode": res.RawResponse.StatusCode,
+		}).Errorf("failed to parse JSON response: %v", err)
+		return fmt.Errorf("failed to parse JSON response: %v", err)
 	}
 
-	webhookID := data["id"].(string)
-	webhookSecret := data["webhook_secret"].(string)
+	// Parse webhook data from response - handle nested data structure
+	responseData, ok := data["data"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("invalid response structure: missing 'data' field")
+	}
+
+	webhookID, ok := responseData["id"].(string)
+	if !ok {
+		return fmt.Errorf("invalid response structure: missing or invalid 'id' field")
+	}
+
+	webhookSecret, ok := responseData["webhook_secret"].(string)
+	if !ok {
+		return fmt.Errorf("invalid response structure: missing or invalid 'webhook_secret' field")
+	}
 
 	// Create PaymentWebhook records for all EVM networks
 	for _, network := range evmNetworks {

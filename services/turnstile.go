@@ -105,6 +105,5 @@ func (s *TurnstileService) VerifyToken(token, remoteIP string) error {
 		return fmt.Errorf("security check verification failed")
 	}
 
-	logger.Infof("Turnstile verification successful for hostname: %s", turnstileResp.Hostname)
 	return nil
 }

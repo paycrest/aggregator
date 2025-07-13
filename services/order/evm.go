@@ -125,9 +125,17 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 	// Save the encrypted order recipient to the message hash field
 	_, err = order.Update().
 		SetMessageHash(encryptedOrderRecipient).
+		SetStatus(paymentorder.StatusPending).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.updateMessageHash: %w", orderIDPrefix, err)
+	}
+
+	_, err = order.Update().
+		SetStatus(paymentorder.StatusInitiated).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("%s - CreateOrder.updateStatus: %w", orderIDPrefix, err)
 	}
 
 	createOrderData, err := s.createOrderCallData(order, encryptedOrderRecipient)

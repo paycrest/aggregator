@@ -90,6 +90,7 @@ func CreateLockPaymentOrder(
 			Where(paymentorder.IDEQ(paymentOrder.ID)).
 			SetBlockNumber(int64(event.BlockNumber)).
 			SetGatewayID(event.OrderId).
+			SetStatus(paymentorder.StatusPending).
 			Save(ctx)
 		if err != nil {
 			logger.Errorf("Failed to update payment order: %v", err)

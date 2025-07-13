@@ -431,7 +431,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			Create().
 			SetWebhookID(webhookID).
 			SetWebhookSecret(webhookSecret).
-			SetCallbackURL(fmt.Sprintf("%s/v1/insight/webhook", config.ServerConfig().ServerURL)).
+			SetCallbackURL(fmt.Sprintf("%s/v1/insight/webhook", serverConf.ServerURL)).
 			SetPaymentOrder(paymentOrder).
 			Save(ctx)
 		if err != nil {

@@ -1739,10 +1739,9 @@ func (ctrl *Controller) InsightWebhook(ctx *gin.Context) {
 		return
 	}
 
-	// Get webhook signature from headers
+	// Get webhook signature and webhook ID from headers
 	signature := ctx.GetHeader("x-webhook-signature")
 	webhookID := ctx.GetHeader("x-webhook-id")
-
 	if signature == "" || webhookID == "" {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing required headers"})
 		return
@@ -1751,13 +1750,20 @@ func (ctrl *Controller) InsightWebhook(ctx *gin.Context) {
 	// Verify webhook signature
 	verification, err := ctrl.verifyWebhookSignature(string(rawBody), signature, webhookID)
 	if err != nil {
-		logger.Errorf("Error: InsightWebhook: Failed to verify signature: %v", err)
+		logger.WithFields(logger.Fields{
+			"Error":     err,
+			"Signature": signature,
+			"WebhookID": webhookID,
+		}).Errorf("Error: InsightWebhook: Failed to verify signature")
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid signature"})
 		return
 	}
 
 	if !verification.IsValid {
-		logger.Errorf("Error: InsightWebhook: Invalid signature for webhook ID: %s", webhookID)
+		logger.WithFields(logger.Fields{
+			"WebhookID": webhookID,
+			"Signature": signature,
+		}).Errorf("Error: InsightWebhook: Invalid signature")
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid signature"})
 		return
 	}
@@ -1771,9 +1777,12 @@ func (ctrl *Controller) InsightWebhook(ctx *gin.Context) {
 	}
 
 	// Verify payload age (optional - 10 minutes)
-	// TODO: get this from config for priority queue refresh period
 	if ctrl.isWebhookPayloadExpired(webhookPayload.Timestamp, int64(orderConf.ReceiveAddressValidity.Seconds())) {
-		logger.Errorf("Error: InsightWebhook: Webhook payload expired - timestamp: %d", webhookPayload.Timestamp)
+		logger.WithFields(logger.Fields{
+			"Timestamp":      webhookPayload.Timestamp,
+			"Payload":        webhookPayload,
+			"ValidityConfig": orderConf.ReceiveAddressValidity.Seconds(),
+		}).Errorf("Error: InsightWebhook: Webhook payload expired")
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Payload expired"})
 		return
 	}
@@ -1781,7 +1790,10 @@ func (ctrl *Controller) InsightWebhook(ctx *gin.Context) {
 	// Process webhook events
 	err = ctrl.processWebhookEvents(ctx, webhookPayload)
 	if err != nil {
-		logger.Errorf("Error: InsightWebhook: Failed to process webhook events: %v", err)
+		logger.WithFields(logger.Fields{
+			"Error":   err,
+			"Payload": webhookPayload,
+		}).Errorf("Error: InsightWebhook: Failed to process webhook events")
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process events"})
 		return
 	}
@@ -1791,6 +1803,7 @@ func (ctrl *Controller) InsightWebhook(ctx *gin.Context) {
 
 // verifyWebhookSignature verifies the webhook signature using the stored secret
 func (ctrl *Controller) verifyWebhookSignature(rawBody, signature, webhookID string) (*types.WebhookSignatureVerification, error) {
+	logger.Infof("Verifying webhook signature for webhook ID: %s", webhookID)
 	// Get webhook from database
 	webhook, err := storage.Client.PaymentWebhook.
 		Query().
@@ -1831,9 +1844,11 @@ func (ctrl *Controller) processWebhookEvents(ctx *gin.Context, payload types.Thi
 	for _, event := range payload.Data {
 		// Handle reverted events (blockchain reorganization)
 		if event.Status == "reverted" {
-			logger.Infof("Processing reverted event: %s", event.ID)
 			if err := ctrl.handleRevertedEvent(ctx, event); err != nil {
-				logger.Errorf("Error handling reverted event: %v", err)
+				logger.WithFields(logger.Fields{
+					"Error": err,
+					"Event": event,
+				}).Errorf("Error: InsightWebhook: Failed to handle reverted event")
 				continue
 			}
 			continue
@@ -1841,9 +1856,11 @@ func (ctrl *Controller) processWebhookEvents(ctx *gin.Context, payload types.Thi
 
 		// Process new events
 		if event.Status == "new" {
-			logger.Infof("Processing new event: %s", event.ID)
 			if err := ctrl.handleNewEvent(ctx, event); err != nil {
-				logger.Errorf("Error handling new event: %v", err)
+				logger.WithFields(logger.Fields{
+					"Error": err,
+					"Event": event,
+				}).Errorf("Error: InsightWebhook: Failed to handle new event")
 				continue
 			}
 		}
@@ -1865,7 +1882,9 @@ func (ctrl *Controller) handleNewEvent(ctx *gin.Context, event types.ThirdwebWeb
 	case "OrderRefunded":
 		return ctrl.handleOrderRefundedEvent(ctx, event)
 	default:
-		logger.Infof("Unknown event type: %s", event.Data.Decoded.Name)
+		logger.WithFields(logger.Fields{
+			"Event": event,
+		}).Errorf("Error: InsightWebhook: Unknown event type")
 		return nil
 	}
 }
@@ -1890,7 +1909,7 @@ func (ctrl *Controller) handleTransferEvent(ctx *gin.Context, event types.Thirdw
 	token, err := storage.Client.Token.
 		Query().
 		Where(
-			tokenEnt.ContractAddressEQ(event.Data.Address),
+			tokenEnt.ContractAddressEqualFold(event.Data.Address),
 			tokenEnt.HasNetworkWith(
 				networkent.ChainIDEQ(chainID),
 			),
