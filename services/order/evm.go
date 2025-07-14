@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
-	"strconv"
 	"strings"
 	"time"
 
@@ -32,7 +31,6 @@ import (
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
-	"github.com/paycrest/aggregator/utils/logger"
 )
 
 // OrderEVM provides functionality related to onchain interactions for payment orders
@@ -124,6 +122,22 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 		return fmt.Errorf("%s - CreateOrder.encryptOrderRecipient: %w", orderIDPrefix, err)
 	}
 
+	// Save the encrypted order recipient to the message hash field
+	_, err = order.Update().
+		SetMessageHash(encryptedOrderRecipient).
+		SetStatus(paymentorder.StatusPending).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("%s - CreateOrder.updateMessageHash: %w", orderIDPrefix, err)
+	}
+
+	_, err = order.Update().
+		SetStatus(paymentorder.StatusInitiated).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("%s - CreateOrder.updateStatus: %w", orderIDPrefix, err)
+	}
+
 	createOrderData, err := s.createOrderCallData(order, encryptedOrderRecipient)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.createOrderCallData: %w", orderIDPrefix, err)
@@ -152,38 +166,9 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 		},
 	}
 
-	queueId, err := s.engineService.SendTransactionBatch(ctx, order.Edges.Token.Edges.Network.ChainID, address, txPayload)
+	_, err = s.engineService.SendTransactionBatch(ctx, order.Edges.Token.Edges.Network.ChainID, address, txPayload)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.sendTransactionBatch: %w", orderIDPrefix, err)
-	}
-
-	// Wait for createOrder tx to be mined
-	result, err := s.engineService.WaitForTransactionMined(ctx, queueId, 5*time.Minute)
-	if err != nil {
-		return fmt.Errorf("CreateOrder.waitForTransactionMined: %w", err)
-	}
-
-	txHash := result["transactionHash"].(string)
-	blockNumber, err := strconv.ParseInt(result["confirmedAtBlockNumber"].(string), 0, 64)
-	if err != nil {
-		return fmt.Errorf("%s - CreateOrder.parseBlockNumber: %w", orderIDPrefix, err)
-	}
-
-	// Update payment order with tx hash and block number
-	_, err = order.Update().
-		SetTxHash(txHash).
-		SetBlockNumber(blockNumber).
-		SetStatus(paymentorder.StatusProcessing).
-		Save(ctx)
-	if err != nil {
-		return fmt.Errorf("%s - CreateOrder.updateTxHash: %w", orderIDPrefix, err)
-	}
-
-	_, err = order.Update().
-		SetStatus(paymentorder.StatusInitiated).
-		Save(ctx)
-	if err != nil {
-		return fmt.Errorf("%s - CreateOrder.updateTxHash: %w", orderIDPrefix, err)
 	}
 
 	return nil
@@ -226,44 +211,9 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 		"value": "0",
 	}
 
-	queueId, err := s.engineService.SendTransactionBatch(ctx, lockOrder.Edges.Token.Edges.Network.ChainID, cryptoConf.AggregatorSmartAccount, []map[string]interface{}{txPayload})
+	_, err = s.engineService.SendTransactionBatch(ctx, lockOrder.Edges.Token.Edges.Network.ChainID, cryptoConf.AggregatorSmartAccount, []map[string]interface{}{txPayload})
 	if err != nil {
 		return fmt.Errorf("%s - RefundOrder.sendTransaction: %w", orderIDPrefix, err)
-	}
-
-	// Wait for refundOrder tx to be mined
-	result, err := s.engineService.WaitForTransactionMined(ctx, queueId, 5*time.Minute)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"OrderID": orderID,
-			"Error":   err,
-		}).Errorf("RefundOrder.waitForTransactionMined")
-		if strings.Contains(err.Error(), "OrderRefunded") || strings.Contains(err.Error(), "UserOperation reverted during simulation") {
-			_, err = lockOrder.Update().
-				SetStatus(lockpaymentorder.StatusRefunded).
-				Save(ctx)
-			if err != nil {
-				return fmt.Errorf("%s - RefundOrder.updateStatus: %w", orderIDPrefix, err)
-			}
-			return nil
-		}
-
-		return fmt.Errorf("RefundOrder.waitForTransactionMined: %w", err)
-	}
-
-	txHash := result["transactionHash"].(string)
-	blockNumber, err := strconv.ParseInt(result["confirmedAtBlockNumber"].(string), 0, 64)
-	if err != nil {
-		return fmt.Errorf("%s - RefundOrder.parseBlockNumber: %w", orderIDPrefix, err)
-	}
-
-	// Update lock order with tx hash and block number
-	_, err = lockOrder.Update().
-		SetTxHash(txHash).
-		SetBlockNumber(blockNumber).
-		Save(ctx)
-	if err != nil {
-		return fmt.Errorf("%s - RefundOrder.updateTxHash: %w", orderIDPrefix, err)
 	}
 
 	return nil
@@ -307,39 +257,9 @@ func (s *OrderEVM) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 		"value": "0",
 	}
 
-	queueId, err := s.engineService.SendTransactionBatch(ctx, order.Edges.Token.Edges.Network.ChainID, cryptoConf.AggregatorSmartAccount, []map[string]interface{}{txPayload})
+	_, err = s.engineService.SendTransactionBatch(ctx, order.Edges.Token.Edges.Network.ChainID, cryptoConf.AggregatorSmartAccount, []map[string]interface{}{txPayload})
 	if err != nil {
 		return fmt.Errorf("%s - SettleOrder.sendTransaction: %w", orderIDPrefix, err)
-	}
-
-	// Wait for settleOrder tx to be mined
-	result, err := s.engineService.WaitForTransactionMined(ctx, queueId, 5*time.Minute)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"OrderID": orderID,
-			"Error":   err,
-		}).Errorf("SettleOrder.waitForTransactionMined")
-		if strings.Contains(err.Error(), "OrderFulfilled") || strings.Contains(err.Error(), "UserOperation reverted during simulation") {
-			_, err = order.Update().
-				SetStatus(lockpaymentorder.StatusSettled).
-				Save(ctx)
-		}
-		return fmt.Errorf("SettleOrder.waitForTransactionMined: %w", err)
-	}
-
-	txHash := result["transactionHash"].(string)
-	blockNumber, err := strconv.ParseInt(result["confirmedAtBlockNumber"].(string), 0, 64)
-	if err != nil {
-		return fmt.Errorf("%s - SettleOrder.parseBlockNumber: %w", orderIDPrefix, err)
-	}
-
-	// Update lock order with tx hash and block number
-	_, err = order.Update().
-		SetTxHash(txHash).
-		SetBlockNumber(blockNumber).
-		Save(ctx)
-	if err != nil {
-		return fmt.Errorf("%s - SettleOrder.updateTxHash: %w", orderIDPrefix, err)
 	}
 
 	return nil

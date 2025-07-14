@@ -153,6 +153,18 @@ func (f PaymentOrderRecipientFunc) Mutate(ctx context.Context, m ent.Mutation) (
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PaymentOrderRecipientMutation", m)
 }
 
+// The PaymentWebhookFunc type is an adapter to allow the use of ordinary
+// function as PaymentWebhook mutator.
+type PaymentWebhookFunc func(context.Context, *ent.PaymentWebhookMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PaymentWebhookFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.PaymentWebhookMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PaymentWebhookMutation", m)
+}
+
 // The ProviderOrderTokenFunc type is an adapter to allow the use of ordinary
 // function as ProviderOrderToken mutator.
 type ProviderOrderTokenFunc func(context.Context, *ent.ProviderOrderTokenMutation) (ent.Value, error)

@@ -16,6 +16,7 @@ import (
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
@@ -203,6 +204,20 @@ func (poc *PaymentOrderCreate) SetNillableGatewayID(s *string) *PaymentOrderCrea
 	return poc
 }
 
+// SetMessageHash sets the "message_hash" field.
+func (poc *PaymentOrderCreate) SetMessageHash(s string) *PaymentOrderCreate {
+	poc.mutation.SetMessageHash(s)
+	return poc
+}
+
+// SetNillableMessageHash sets the "message_hash" field if the given value is not nil.
+func (poc *PaymentOrderCreate) SetNillableMessageHash(s *string) *PaymentOrderCreate {
+	if s != nil {
+		poc.SetMessageHash(*s)
+	}
+	return poc
+}
+
 // SetReference sets the "reference" field.
 func (poc *PaymentOrderCreate) SetReference(s string) *PaymentOrderCreate {
 	poc.mutation.SetReference(s)
@@ -347,6 +362,25 @@ func (poc *PaymentOrderCreate) AddTransactions(t ...*TransactionLog) *PaymentOrd
 	return poc.AddTransactionIDs(ids...)
 }
 
+// SetPaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID.
+func (poc *PaymentOrderCreate) SetPaymentWebhookID(id uuid.UUID) *PaymentOrderCreate {
+	poc.mutation.SetPaymentWebhookID(id)
+	return poc
+}
+
+// SetNillablePaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID if the given value is not nil.
+func (poc *PaymentOrderCreate) SetNillablePaymentWebhookID(id *uuid.UUID) *PaymentOrderCreate {
+	if id != nil {
+		poc = poc.SetPaymentWebhookID(*id)
+	}
+	return poc
+}
+
+// SetPaymentWebhook sets the "payment_webhook" edge to the PaymentWebhook entity.
+func (poc *PaymentOrderCreate) SetPaymentWebhook(p *PaymentWebhook) *PaymentOrderCreate {
+	return poc.SetPaymentWebhookID(p.ID)
+}
+
 // Mutation returns the PaymentOrderMutation object of the builder.
 func (poc *PaymentOrderCreate) Mutation() *PaymentOrderMutation {
 	return poc.mutation
@@ -475,6 +509,11 @@ func (poc *PaymentOrderCreate) check() error {
 			return &ValidationError{Name: "gateway_id", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.gateway_id": %w`, err)}
 		}
 	}
+	if v, ok := poc.mutation.MessageHash(); ok {
+		if err := paymentorder.MessageHashValidator(v); err != nil {
+			return &ValidationError{Name: "message_hash", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.message_hash": %w`, err)}
+		}
+	}
 	if v, ok := poc.mutation.Reference(); ok {
 		if err := paymentorder.ReferenceValidator(v); err != nil {
 			return &ValidationError{Name: "reference", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.reference": %w`, err)}
@@ -599,6 +638,10 @@ func (poc *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec
 		_spec.SetField(paymentorder.FieldGatewayID, field.TypeString, value)
 		_node.GatewayID = value
 	}
+	if value, ok := poc.mutation.MessageHash(); ok {
+		_spec.SetField(paymentorder.FieldMessageHash, field.TypeString, value)
+		_node.MessageHash = value
+	}
 	if value, ok := poc.mutation.Reference(); ok {
 		_spec.SetField(paymentorder.FieldReference, field.TypeString, value)
 		_node.Reference = value
@@ -699,6 +742,22 @@ func (poc *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(transactionlog.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := poc.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   paymentorder.PaymentWebhookTable,
+			Columns: []string{paymentorder.PaymentWebhookColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1049,6 +1108,24 @@ func (u *PaymentOrderUpsert) UpdateGatewayID() *PaymentOrderUpsert {
 // ClearGatewayID clears the value of the "gateway_id" field.
 func (u *PaymentOrderUpsert) ClearGatewayID() *PaymentOrderUpsert {
 	u.SetNull(paymentorder.FieldGatewayID)
+	return u
+}
+
+// SetMessageHash sets the "message_hash" field.
+func (u *PaymentOrderUpsert) SetMessageHash(v string) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldMessageHash, v)
+	return u
+}
+
+// UpdateMessageHash sets the "message_hash" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateMessageHash() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldMessageHash)
+	return u
+}
+
+// ClearMessageHash clears the value of the "message_hash" field.
+func (u *PaymentOrderUpsert) ClearMessageHash() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldMessageHash)
 	return u
 }
 
@@ -1473,6 +1550,27 @@ func (u *PaymentOrderUpsertOne) UpdateGatewayID() *PaymentOrderUpsertOne {
 func (u *PaymentOrderUpsertOne) ClearGatewayID() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.ClearGatewayID()
+	})
+}
+
+// SetMessageHash sets the "message_hash" field.
+func (u *PaymentOrderUpsertOne) SetMessageHash(v string) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetMessageHash(v)
+	})
+}
+
+// UpdateMessageHash sets the "message_hash" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateMessageHash() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateMessageHash()
+	})
+}
+
+// ClearMessageHash clears the value of the "message_hash" field.
+func (u *PaymentOrderUpsertOne) ClearMessageHash() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearMessageHash()
 	})
 }
 
@@ -2069,6 +2167,27 @@ func (u *PaymentOrderUpsertBulk) UpdateGatewayID() *PaymentOrderUpsertBulk {
 func (u *PaymentOrderUpsertBulk) ClearGatewayID() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.ClearGatewayID()
+	})
+}
+
+// SetMessageHash sets the "message_hash" field.
+func (u *PaymentOrderUpsertBulk) SetMessageHash(v string) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetMessageHash(v)
+	})
+}
+
+// UpdateMessageHash sets the "message_hash" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateMessageHash() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateMessageHash()
+	})
+}
+
+// ClearMessageHash clears the value of the "message_hash" field.
+func (u *PaymentOrderUpsertBulk) ClearMessageHash() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearMessageHash()
 	})
 }
 

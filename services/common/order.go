@@ -23,6 +23,7 @@ import (
 	"github.com/paycrest/aggregator/ent/receiveaddress"
 	tokenent "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
+	svc "github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/ent/user"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
@@ -71,40 +72,30 @@ func CreateLockPaymentOrder(
 		return nil
 	}
 
-	go func() {
-		timeToWait := 2 * time.Second
-
-		time.Sleep(timeToWait)
-		_ = utils.Retry(10, timeToWait, func() error {
-			// Update payment order with the gateway ID
-			paymentOrder, err := db.Client.PaymentOrder.
-				Query().
-				Where(
-					paymentorder.TxHashEQ(event.TxHash),
-				).
-				Only(ctx)
-			if err != nil {
-				if ent.IsNotFound(err) {
-					// Payment order does not exist, retry
-					return fmt.Errorf("trigger retry")
-				} else {
-					return fmt.Errorf("CreateLockPaymentOrder.db: %v", err)
-				}
-			}
-
-			_, err = db.Client.PaymentOrder.
-				Update().
-				Where(paymentorder.IDEQ(paymentOrder.ID)).
-				SetBlockNumber(int64(event.BlockNumber)).
-				SetGatewayID(event.OrderId).
-				Save(ctx)
-			if err != nil {
-				return fmt.Errorf("CreateLockPaymentOrder.db: %v", err)
-			}
-
-			return nil
-		})
-	}()
+	// Update payment order with the gateway ID synchronously
+	// This ensures the payment order is updated before webhook deletion
+	paymentOrder, err := db.Client.PaymentOrder.
+		Query().
+		Where(
+			paymentorder.MessageHashEQ(event.MessageHash),
+		).
+		Only(ctx)
+	if err != nil {
+		if !ent.IsNotFound(err) {
+			logger.Errorf("Failed to fetch payment order: %v", err)
+		}
+	} else {
+		_, err = db.Client.PaymentOrder.
+			Update().
+			Where(paymentorder.IDEQ(paymentOrder.ID)).
+			SetBlockNumber(int64(event.BlockNumber)).
+			SetGatewayID(event.OrderId).
+			SetStatus(paymentorder.StatusPending).
+			Save(ctx)
+		if err != nil {
+			logger.Errorf("Failed to update payment order: %v", err)
+		}
+	}
 
 	// Get token from db
 	token, err := db.Client.Token.
@@ -334,6 +325,13 @@ func CreateLockPaymentOrder(
 			return fmt.Errorf("%s - failed to create lock payment order: %w", lockPaymentOrder.GatewayID, err)
 		}
 
+		// Delete the transfer webhook now that lock payment order is created
+		err = deleteTransferWebhook(ctx, event.TxHash)
+		if err != nil {
+			logger.Errorf("Failed to delete transfer webhook for lock payment order: %v", err)
+			// Don't fail the entire operation if webhook deletion fails
+		}
+
 		// Check AML compliance
 		if serverConf.Environment == "production" && !strings.HasPrefix(network.Identifier, "tron") {
 			ok, err := CheckAMLCompliance(network.RPCEndpoint, event.TxHash)
@@ -499,6 +497,7 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		if err != nil {
 			return fmt.Errorf("UpdateOrderStatusRefunded.webhook: %v", err)
 		}
+
 	}
 
 	return nil
@@ -659,6 +658,7 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 		if err != nil {
 			return fmt.Errorf("UpdateOrderStatusSettled.webhook: %v", err)
 		}
+
 	}
 
 	return nil
@@ -867,6 +867,40 @@ func HandleReceiveAddressValidity(ctx context.Context, receiveAddress *ent.Recei
 				return fmt.Errorf("HandleReceiveAddressValidity.db: %v", err)
 			}
 		}
+	}
+
+	return nil
+}
+
+// deleteTransferWebhook deletes the transfer webhook associated with a payment order
+func deleteTransferWebhook(ctx context.Context, txHash string) error {
+	// Get the payment order by txHash
+	paymentOrder, err := db.Client.PaymentOrder.
+		Query().
+		Where(paymentorder.TxHashEQ(txHash)).
+		WithPaymentWebhook().
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			// No payment order found, nothing to delete
+			return nil
+		}
+		return fmt.Errorf("failed to fetch payment order: %w", err)
+	}
+
+	// Check if there's an associated webhook
+	if paymentOrder.Edges.PaymentWebhook == nil {
+		// No webhook found, nothing to delete
+		return nil
+	}
+
+	// Create engine service to delete the webhook
+	engineService := svc.NewEngineService()
+
+	// Delete the webhook from thirdweb and our database
+	err = engineService.DeleteWebhookAndRecord(ctx, paymentOrder.Edges.PaymentWebhook.WebhookID)
+	if err != nil {
+		return fmt.Errorf("failed to delete webhook: %w", err)
 	}
 
 	return nil

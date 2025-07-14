@@ -344,6 +344,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 			return
 		}
+
 	}
 
 	// Prevent receive address expiry for private orders
@@ -406,6 +407,39 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 		_ = tx.Rollback()
 		return
+	}
+
+	// Create webhook for the smart address to monitor transfers (only for EVM networks)
+	if !strings.HasPrefix(payload.Network, "tron") {
+		engineService := svc.NewEngineService()
+		webhookID, webhookSecret, err := engineService.CreateTransferWebhook(
+			ctx,
+			token.Edges.Network.ChainID,
+			token.ContractAddress,    // Token contract address
+			receiveAddress.Address,   // Smart address to monitor
+			paymentOrder.ID.String(), // Order ID for webhook name
+		)
+		if err != nil {
+			logger.Errorf("Failed to create transfer webhook: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+			_ = tx.Rollback()
+			return
+		}
+
+		// Create PaymentWebhook record in database
+		_, err = tx.PaymentWebhook.
+			Create().
+			SetWebhookID(webhookID).
+			SetWebhookSecret(webhookSecret).
+			SetCallbackURL(fmt.Sprintf("%s/v1/insight/webhook", serverConf.ServerURL)).
+			SetPaymentOrder(paymentOrder).
+			Save(ctx)
+		if err != nil {
+			logger.Errorf("Failed to save payment webhook record: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+			_ = tx.Rollback()
+			return
+		}
 	}
 
 	// Create payment order recipient
