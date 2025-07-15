@@ -55,9 +55,9 @@ func (s *TurnstileService) VerifyToken(token, remoteIP string) error {
 	data := url.Values{}
 
 	// Ensure all values are strings
-	secretKey := fmt.Sprintf("%s", authConf.TurnstileSecretKey)
-	tokenStr := fmt.Sprintf("%s", token)
-	remoteIPStr := fmt.Sprintf("%s", remoteIP)
+	secretKey := authConf.TurnstileSecretKey
+	tokenStr := token
+	remoteIPStr := remoteIP
 
 	data.Set("secret", secretKey)
 	data.Set("response", tokenStr)

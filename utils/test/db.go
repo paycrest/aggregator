@@ -536,6 +536,9 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		SetCurrencyID(payload["currency_id"].(uuid.UUID)).
 		SetRateSlippage(decimal.NewFromFloat(0.1)).
 		Save(context.Background())
+	if err != nil {
+		return nil, err
+	}
 
 	orderToken, err = db.Client.ProviderOrderToken.
 		Query().

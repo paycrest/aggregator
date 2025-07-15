@@ -500,7 +500,6 @@ func (ctrl *Controller) findSuitableProviderRate(providers []string, tokenSymbol
 
 		// Check if fiat amount is within the bucket range
 		if fiatAmount.GreaterThanOrEqual(bucketData.MinAmount) && fiatAmount.LessThanOrEqual(bucketData.MaxAmount) {
-			foundExactMatch = true
 			return rate, true
 		}
 	}
@@ -1364,7 +1363,9 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 						"text":             fmt.Sprintf("✅ *APPROVED* - KYB submission for %s (%s) from %s has been approved.", firstName, email, kybProfile.CompanyName),
 					}
 					jsonPayload, _ := json.Marshal(message)
-					http.Post(responseURL, "application/json", bytes.NewBuffer(jsonPayload))
+					if _, err := http.Post(responseURL, "application/json", bytes.NewBuffer(jsonPayload)); err != nil {
+						logger.Errorf("Failed to post response to URL: %v", err)
+					}
 				}()
 			}
 
@@ -1647,7 +1648,9 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 	}
 	defer func() {
 		if p := recover(); p != nil {
-			tx.Rollback()
+			if err := tx.Rollback(); err != nil {
+				logger.Errorf("Failed to rollback transaction during panic: %v", err)
+			}
 			panic(p)
 		}
 	}()
@@ -1674,7 +1677,9 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 
 	kybSubmission, err := kybBuilder.Save(ctx)
 	if err != nil {
-		tx.Rollback()
+		if err := tx.Rollback(); err != nil {
+			logger.Errorf("Failed to rollback transaction: %v", err)
+		}
 		logger.WithFields(logger.Fields{
 			"Error":  fmt.Sprintf("%v", err),
 			"UserID": userID,
@@ -1696,7 +1701,9 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 			SetKybProfileID(kybSubmission.ID).
 			Save(ctx)
 		if err != nil {
-			tx.Rollback()
+			if err := tx.Rollback(); err != nil {
+				logger.Errorf("Failed to rollback transaction: %v", err)
+			}
 			logger.WithFields(logger.Fields{
 				"Error":  fmt.Sprintf("%v", err),
 				"UserID": userID,

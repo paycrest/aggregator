@@ -369,7 +369,6 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		// See if token already exists for provider
 		tx, err := storage.Client.Tx(ctx)
 		if err != nil {
-			tx.Rollback()
 			logger.Errorf("Failed to start transaction: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 			return
@@ -380,11 +379,15 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			// Set default slippage to 0% if not provided
 			tokenPayload.RateSlippage = decimal.NewFromFloat(0)
 		} else if tokenPayload.RateSlippage.LessThan(decimal.NewFromFloat(0.1)) {
-			tx.Rollback()
+			if err := tx.Rollback(); err != nil {
+				logger.Errorf("Failed to rollback transaction: %v", err)
+			}
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Rate slippage cannot be less than 0.1%", nil)
 			return
 		} else if rate.Mul(tokenPayload.RateSlippage.Div(decimal.NewFromFloat(100))).GreaterThan(currency.MarketRate.Mul(decimal.NewFromFloat(0.05))) {
-			tx.Rollback()
+			if err := tx.Rollback(); err != nil {
+				logger.Errorf("Failed to rollback transaction: %v", err)
+			}
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Rate slippage is too high", nil)
 			return
 		}
@@ -417,7 +420,9 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 					SetCurrencyID(currency.ID).
 					Save(ctx)
 				if err != nil {
-					tx.Rollback()
+					if err := tx.Rollback(); err != nil {
+						logger.Errorf("Failed to rollback transaction: %v", err)
+					}
 					logger.WithFields(logger.Fields{
 						"Error":    fmt.Sprintf("%v", err),
 						"Token":    tokenPayload.Symbol,
@@ -427,7 +432,9 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 					return
 				}
 			} else {
-				tx.Rollback()
+				if err := tx.Rollback(); err != nil {
+					logger.Errorf("Failed to rollback transaction: %v", err)
+				}
 				logger.WithFields(logger.Fields{
 					"Error":    fmt.Sprintf("%v", err),
 					"Token":    tokenPayload.Symbol,
@@ -454,7 +461,9 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				SetMinOrderAmount(tokenPayload.MinOrderAmount).
 				Save(ctx)
 			if err != nil {
-				tx.Rollback()
+				if err := tx.Rollback(); err != nil {
+					logger.Errorf("Failed to rollback transaction: %v", err)
+				}
 				logger.WithFields(logger.Fields{
 					"Error":    fmt.Sprintf("%v", err),
 					"Token":    tokenPayload.Symbol,
@@ -466,7 +475,9 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		}
 
 		if err := tx.Commit(); err != nil {
-			tx.Rollback()
+			if err := tx.Rollback(); err != nil {
+				logger.Errorf("Failed to rollback transaction: %v", err)
+			}
 			logger.Errorf("Failed to commit transaction: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 			return

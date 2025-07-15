@@ -300,6 +300,15 @@ func (ctrl *AuthController) Login(ctx *gin.Context) {
 		return
 	}
 
+	// Check if user has early access
+	environment := serverConf.Environment
+	if !user.HasEarlyAccess && (environment == "production") {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error",
+			"Your early access request is still pending", nil,
+		)
+		return
+	}
+
 	// Generate JWT pair
 	accessToken, refreshToken, err := token.GeneratePairJWT(user.ID.String(), user.Scope)
 

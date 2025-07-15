@@ -89,7 +89,9 @@ func TestValidateSmileIDConfig(t *testing.T) {
 		invalidConfig := map[string]interface{}{"continents": []interface{}{}}
 		tmpPath := filepath.Join(tmpDir, "empty_continents.json")
 		data, _ := json.Marshal(invalidConfig)
-		os.WriteFile(tmpPath, data, 0644)
+		if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+			t.Fatalf("Failed to write test file: %v", err)
+		}
 
 		err := ValidateSmileIDConfig(tmpPath)
 		if err == nil {
@@ -114,7 +116,9 @@ func TestValidateSmileIDConfig(t *testing.T) {
 		continent["name"] = ""
 		tmpPath := filepath.Join(tmpDir, "empty_continent_name.json")
 		data, _ = json.Marshal(config)
-		os.WriteFile(tmpPath, data, 0644)
+		if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+			t.Fatalf("Failed to write test file: %v", err)
+		}
 
 		err = ValidateSmileIDConfig(tmpPath)
 		if err == nil {
@@ -135,7 +139,9 @@ func TestValidateSmileIDConfig(t *testing.T) {
 		}
 		tmpPath := filepath.Join(tmpDir, "empty_countries.json")
 		data, _ := json.Marshal(invalidConfig)
-		os.WriteFile(tmpPath, data, 0644)
+		if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+			t.Fatalf("Failed to write test file: %v", err)
+		}
 
 		err = ValidateSmileIDConfig(tmpPath)
 		if err == nil {
@@ -161,7 +167,9 @@ func TestValidateSmileIDConfig(t *testing.T) {
 		country["code"] = "D1"
 		tmpPath := filepath.Join(tmpDir, "invalid_country_code.json")
 		data, _ = json.Marshal(config)
-		os.WriteFile(tmpPath, data, 0644)
+		if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+			t.Fatalf("Failed to write test file: %v", err)
+		}
 
 		err = ValidateSmileIDConfig(tmpPath)
 		if err == nil {
@@ -188,7 +196,9 @@ func TestValidateSmileIDConfig(t *testing.T) {
 		continents[0].(map[string]interface{})["countries"] = countries
 		tmpPath := filepath.Join(tmpDir, "duplicate_country_code.json")
 		data, _ = json.Marshal(config)
-		os.WriteFile(tmpPath, data, 0644)
+		if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+			t.Fatalf("Failed to write test file: %v", err)
+		}
 
 		err = ValidateSmileIDConfig(tmpPath)
 		if err != nil {
@@ -212,7 +222,9 @@ func TestValidateSmileIDConfig(t *testing.T) {
 		country["id_types"] = []interface{}{}
 		tmpPath := filepath.Join(tmpDir, "empty_id_types.json")
 		data, _ = json.Marshal(config)
-		os.WriteFile(tmpPath, data, 0644)
+		if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+			t.Fatalf("Failed to write test file: %v", err)
+		}
 
 		err = ValidateSmileIDConfig(tmpPath)
 		if err == nil {
@@ -239,7 +251,9 @@ func TestValidateSmileIDConfig(t *testing.T) {
 		idType["type"] = ""
 		tmpPath := filepath.Join(tmpDir, "empty_id_type.json")
 		data, _ = json.Marshal(config)
-		os.WriteFile(tmpPath, data, 0644)
+		if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+			t.Fatalf("Failed to write test file: %v", err)
+		}
 
 		err = ValidateSmileIDConfig(tmpPath)
 		if err == nil {
@@ -266,7 +280,9 @@ func TestValidateSmileIDConfig(t *testing.T) {
 		idType["verification_method"] = "invalid"
 		tmpPath := filepath.Join(tmpDir, "invalid_verification_method.json")
 		data, _ = json.Marshal(config)
-		os.WriteFile(tmpPath, data, 0644)
+		if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+			t.Fatalf("Failed to write test file: %v", err)
+		}
 
 		err = ValidateSmileIDConfig(tmpPath)
 		if err == nil {
@@ -309,7 +325,9 @@ func TestValidateSmileIDConfig(t *testing.T) {
 		config["continents"] = continents
 		tmpPath := filepath.Join(tmpDir, "add_new_country.json")
 		data, _ = json.Marshal(config)
-		os.WriteFile(tmpPath, data, 0644)
+		if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+			t.Fatalf("Failed to write test file: %v", err)
+		}
 
 		err = ValidateSmileIDConfig(tmpPath)
 		if err != nil {
@@ -333,7 +351,9 @@ func TestValidateSmileIDConfig(t *testing.T) {
 		country["extra_field"] = "invalid"
 		tmpPath := filepath.Join(tmpDir, "additional_properties.json")
 		data, _ = json.Marshal(config)
-		os.WriteFile(tmpPath, data, 0644)
+		if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+			t.Fatalf("Failed to write test file: %v", err)
+		}
 
 		err = ValidateSmileIDConfig(tmpPath)
 		if err == nil {
