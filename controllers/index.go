@@ -1,9 +1,14 @@
 package controllers
 
 import (
+	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"slices"
 	"strconv"
@@ -11,18 +16,24 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/ent/beneficialowner"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
+	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	networkent "github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
+	"github.com/paycrest/aggregator/ent/user"
 	svc "github.com/paycrest/aggregator/services"
+	"github.com/paycrest/aggregator/services/common"
 	"github.com/paycrest/aggregator/services/indexer"
 	kycErrors "github.com/paycrest/aggregator/services/kyc/errors"
 	"github.com/paycrest/aggregator/services/kyc/smile"
@@ -33,6 +44,7 @@ import (
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/shopspring/decimal"
 
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gin-gonic/gin"
 )
@@ -41,6 +53,7 @@ var cryptoConf = config.CryptoConfig()
 
 var serverConf = config.ServerConfig()
 var identityConf = config.IdentityConfig()
+var orderConf = config.OrderConfig()
 
 // Controller is the default controller for other endpoints
 type Controller struct {
@@ -48,6 +61,11 @@ type Controller struct {
 	priorityQueueService  *svc.PriorityQueueService
 	receiveAddressService *svc.ReceiveAddressService
 	kycService            types.KYCProvider
+	slackService          *svc.SlackService
+	emailService          *svc.EmailService
+	cache                 map[string]bool
+	processedActions      map[string]bool
+	actionMutex           sync.RWMutex
 }
 
 // NewController creates a new instance of AuthController with injected services
@@ -57,6 +75,10 @@ func NewController() *Controller {
 		priorityQueueService:  svc.NewPriorityQueueService(),
 		receiveAddressService: svc.NewReceiveAddressService(),
 		kycService:            smile.NewSmileIDService(),
+		slackService:          svc.NewSlackService(serverConf.SlackWebhookURL),
+		emailService:          svc.NewEmailService(svc.SENDGRID_MAIL_PROVIDER),
+		cache:                 make(map[string]bool),
+		processedActions:      make(map[string]bool),
 	}
 }
 
@@ -331,15 +353,9 @@ func (ctrl *Controller) resolveBucketRate(ctx *gin.Context, token *ent.Token, cu
 			"BestRateReason": bestRateReason,
 		}).Warnf("GetTokenRate.NoSuitableProvider: no provider found for the given parameters")
 
-		// Handle empty network identifier in error message
-		networkMsg := "any network"
-		if networkIdentifier != "" {
-			networkMsg = networkIdentifier + " network"
-		}
-
 		u.APIResponse(ctx, http.StatusNotFound, "error",
-			fmt.Sprintf("No provider available for %s %s to %s swap on %s",
-				amount, token.Symbol, currency.Code, networkMsg), nil)
+			fmt.Sprintf("No provider available for %s to %s conversion with amount %s on %s network",
+				token.Symbol, currency.Code, amount, networkIdentifier), nil)
 		return decimal.Zero, fmt.Errorf("no suitable provider found")
 	}
 
@@ -484,7 +500,6 @@ func (ctrl *Controller) findSuitableProviderRate(providers []string, tokenSymbol
 
 		// Check if fiat amount is within the bucket range
 		if fiatAmount.GreaterThanOrEqual(bucketData.MinAmount) && fiatAmount.LessThanOrEqual(bucketData.MaxAmount) {
-			foundExactMatch = true
 			return rate, true
 		}
 	}
@@ -600,16 +615,6 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 		return
 	}
 
-	if len(providers) == 0 {
-		logger.WithFields(logger.Fields{
-			"Institution":       payload.Institution,
-			"AccountIdentifier": payload.AccountIdentifier,
-			"Currency":          accountInstitution.Edges.FiatCurrency.Code,
-		}).Errorf("No providers available for account verification")
-		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "No providers available for account verification", nil)
-		return
-	}
-
 	var res fastshot.Response
 	var data map[string]interface{}
 	for _, provider := range providers {
@@ -626,9 +631,6 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 		if err != nil {
 			continue
 		}
-
-		// Success - break out of loop
-		break
 	}
 
 	if err != nil {
@@ -637,7 +639,7 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 			"Institution":       payload.Institution,
 			"AccountIdentifier": payload.AccountIdentifier,
 		}).Errorf("Failed to verify account")
-		u.APIResponse(ctx, http.StatusBadGateway, "error", "Failed to verify account", nil)
+		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to verify account", nil)
 		return
 	}
 
@@ -1115,6 +1117,1006 @@ func (ctrl *Controller) KYCWebhook(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": "Webhook processed successfully"})
 }
 
+// SlackInteractionHandler handles Slack interaction requests
+func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
+	startTime := time.Now()
+
+	// Parse form-encoded payload
+	payloadStr := ctx.PostForm("payload")
+	if payloadStr == "" {
+		body, err := ctx.GetRawData()
+		if err != nil {
+			logger.Errorf("Missing payload and failed to read raw body: %v", err)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing payload"})
+			return
+		}
+		payloadStr = string(body)
+	}
+
+	// Parse JSON payload
+	var payload map[string]interface{}
+	if err := json.Unmarshal([]byte(payloadStr), &payload); err != nil {
+		logger.Errorf("Error parsing Slack interaction payload: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Error parsing payload"})
+		return
+	}
+
+	// Handle modal trigger (button clicks)
+	if payload["type"] == "block_actions" {
+		actions, ok := payload["actions"].([]interface{})
+		if !ok || len(actions) == 0 {
+			logger.Errorf("Invalid or empty actions in Slack payload: %v", payload)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid actions"})
+			return
+		}
+
+		action, ok := actions[0].(map[string]interface{})
+		if !ok {
+			logger.Errorf("Invalid action format: %v", actions[0])
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action format"})
+			return
+		}
+
+		actionID, ok := action["action_id"].(string)
+		if !ok {
+			logger.Errorf("Missing or invalid action_id")
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing action_id"})
+			return
+		}
+
+		var kybProfileID string
+		if strings.Contains(actionID, "_") {
+			kybProfileID = actionID[strings.Index(actionID, "_")+1:]
+		} else {
+			logger.Errorf("Invalid action_id format: %s", actionID)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action_id format"})
+			return
+		}
+
+		// Parse KYB Profile ID as UUID
+		kybProfileUUID, err := uuid.Parse(kybProfileID)
+		if err != nil {
+			logger.Errorf("Invalid KYB Profile ID format: %s, error: %v", kybProfileID, err)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid KYB Profile ID format"})
+			return
+		}
+
+		// Fetch KYB submission details from database
+		kybProfile, err := storage.Client.KYBProfile.
+			Query().
+			Where(kybprofile.IDEQ(kybProfileUUID)).
+			WithUser().
+			WithBeneficialOwners().
+			Only(ctx)
+		if err != nil {
+			if ent.IsNotFound(err) {
+				logger.Errorf("KYB Profile not found: %s", kybProfileID)
+				ctx.JSON(http.StatusNotFound, gin.H{"error": "KYB Profile not found"})
+				return
+			}
+			logger.Errorf("Failed to fetch KYB Profile %s: %v", kybProfileID, err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch KYB Profile"})
+			return
+		}
+
+		// Extract user details
+		var firstName, email string
+		if kybProfile.Edges.User != nil {
+			firstName = kybProfile.Edges.User.FirstName
+			email = kybProfile.Edges.User.Email
+		} else {
+			logger.Errorf("KYB Profile %s has no associated user", kybProfileID)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "KYB Profile has no associated user"})
+			return
+		}
+
+		if email == "" {
+			logger.Errorf("Missing email for KYB Profile %s", kybProfileID)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing email"})
+			return
+		}
+		if firstName == "" {
+			logger.Warnf("Missing firstName for KYB Profile %s, using default", kybProfileID)
+			firstName = "User"
+		}
+
+		// Handle reject button - only open modal
+		if strings.HasPrefix(actionID, "reject_") {
+			logger.Infof("Reject button clicked for KYB Profile %s, action: %+v", kybProfileID, action)
+			triggerID, ok := payload["trigger_id"].(string)
+			if !ok {
+				logger.Errorf("Missing trigger_id for modal, KYB Profile ID: %s", kybProfileID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing trigger_id"})
+				return
+			}
+
+			modal := map[string]interface{}{
+				"trigger_id": triggerID,
+				"view": map[string]interface{}{
+					"type":             "modal",
+					"callback_id":      "reject_modal_" + kybProfileID,
+					"private_metadata": fmt.Sprintf(`{"email":"%s","kyb_profile_id":"%s","firstName":"%s"}`, email, kybProfileID, firstName),
+					"title": map[string]interface{}{
+						"type": "plain_text",
+						"text": "Reject KYB Submission",
+					},
+					"submit": map[string]interface{}{
+						"type": "plain_text",
+						"text": "Submit",
+					},
+					"blocks": []map[string]interface{}{
+						{
+							"type":     "input",
+							"block_id": "reason_block",
+							"element": map[string]interface{}{
+								"type":      "static_select",
+								"action_id": "reason_select",
+								"placeholder": map[string]interface{}{
+									"type": "plain_text",
+									"text": "Select a reason",
+								},
+								"options": []map[string]interface{}{
+									{
+										"text": map[string]interface{}{
+											"type": "plain_text",
+											"text": "Incomplete or falsified documentation",
+										},
+										"value": "Incomplete or falsified documentation",
+									},
+									{
+										"text": map[string]interface{}{
+											"type": "plain_text",
+											"text": "Unverifiable business identity",
+										},
+										"value": "Unverifiable business identity",
+									},
+									{
+										"text": map[string]interface{}{
+											"type": "plain_text",
+											"text": "Sanctions or watchlist hits",
+										},
+										"value": "Sanctions or watchlist hits",
+									},
+									{
+										"text": map[string]interface{}{
+											"type": "plain_text",
+											"text": "Inability to identify beneficial owners (UBOs)",
+										},
+										"value": "Inability to identify beneficial owners (UBOs)",
+									},
+									{
+										"text": map[string]interface{}{
+											"type": "plain_text",
+											"text": "Inconsistent business details across documents",
+										},
+										"value": "Inconsistent business details across documents",
+									},
+								},
+							},
+							"label": map[string]interface{}{
+								"type": "plain_text",
+								"text": "Reason for Rejection",
+							},
+						},
+					},
+				},
+			}
+
+			jsonPayload, err := json.Marshal(modal)
+			if err != nil {
+				logger.Errorf("Failed to marshal modal payload for KYB Profile %s: %v", kybProfileID, err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create modal"})
+				return
+			}
+
+			client := &http.Client{}
+			req, err := http.NewRequest("POST", "https://slack.com/api/views.open", bytes.NewBuffer(jsonPayload))
+			if err != nil {
+				logger.Errorf("Failed to create Slack API request for KYB Profile %s: %v", kybProfileID, err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create modal request"})
+				return
+			}
+			req.Header.Set("Content-Type", "application/json")
+			cnfg := config.AuthConfig()
+			if cnfg.SlackBotToken == "" {
+				logger.Errorf("Slack bot token not configured for KYB Profile %s", kybProfileID)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Slack bot token not configured"})
+				return
+			}
+			req.Header.Set("Authorization", "Bearer "+cnfg.SlackBotToken)
+
+			resp, err := client.Do(req)
+			if err != nil {
+				logger.Errorf("Failed to open Slack modal for KYB Profile %s: %v", kybProfileID, err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open modal"})
+				return
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode != http.StatusOK {
+				body, _ := io.ReadAll(resp.Body)
+				logger.Errorf("Slack API responded with status %d for KYB Profile %s: %s", resp.StatusCode, kybProfileID, string(body))
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open modal"})
+				return
+			}
+
+			ctx.JSON(http.StatusOK, gin.H{})
+			return
+		}
+
+		if strings.HasPrefix(actionID, "approve_") {
+			if ctrl.isActionProcessed(kybProfileID, "approve") || ctrl.isActionProcessed(kybProfileID, "reject") {
+				logger.Warnf("Action already processed for KYB Profile %s", kybProfileID)
+				ctx.JSON(http.StatusOK, gin.H{"text": "This submission has already been processed."})
+				return
+			}
+
+			// Mark as processed immediately
+			ctrl.markActionProcessed(kybProfileID, "approve")
+
+			// Respond immediately to Slack to remove loading state
+			responseURL, _ := payload["response_url"].(string)
+			if responseURL != "" {
+				go func() {
+					message := map[string]interface{}{
+						"replace_original": true,
+						"text":             fmt.Sprintf("✅ *APPROVED* - KYB submission for %s (%s) from %s has been approved.", firstName, email, kybProfile.CompanyName),
+					}
+					jsonPayload, _ := json.Marshal(message)
+					if _, err := http.Post(responseURL, "application/json", bytes.NewBuffer(jsonPayload)); err != nil {
+						logger.Errorf("Failed to post response to URL: %v", err)
+					}
+				}()
+			}
+
+			// Send immediate response to Slack
+			ctx.JSON(http.StatusOK, gin.H{"text": "Approving submission..."})
+
+			// Update User KYB status
+			_, err := storage.Client.User.
+				Update().
+				Where(user.IDEQ(kybProfile.Edges.User.ID)).
+				SetKybVerificationStatus(user.KybVerificationStatusApproved).
+				Save(ctx)
+			if err != nil {
+				logger.Errorf("Failed to approve KYB for user %s (KYB Profile %s): %v", email, kybProfileID, err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user KYB status"})
+				return
+			}
+
+			// Update KYB Profile status (assuming you have a status field)
+			_, err = storage.Client.KYBProfile.
+				UpdateOne(kybProfile).
+				Save(ctx)
+			if err != nil {
+				logger.Errorf("Failed to update KYB Profile status %s: %v", kybProfileID, err)
+			}
+
+			// Send approval email
+			resp, err := ctrl.emailService.SendKYBApprovalEmail(email, firstName)
+			if err != nil {
+				logger.Errorf("Failed to send KYB approval email to %s (KYB Profile %s): %v, response: %+v", email, kybProfileID, err, resp)
+			} else {
+				logger.Infof("KYB approval email sent successfully to %s (KYB Profile %s), message ID: %s", email, kybProfileID, resp.Id)
+			}
+
+			// Send Slack feedback notification
+			err = ctrl.slackService.SendActionFeedbackNotification(firstName, email, kybProfileID, "approve", "")
+			if err != nil {
+				logger.Warnf("Failed to send Slack feedback notification for KYB Profile %s: %v", kybProfileID, err)
+			}
+
+			logger.Infof("Processed Slack approve interaction in %v", time.Since(startTime))
+			return
+		}
+
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Unknown action"})
+		return
+	}
+
+	// Handle modal submission
+	if payload["type"] == "view_submission" {
+		view, ok := payload["view"].(map[string]interface{})
+		if !ok {
+			logger.Errorf("Invalid view format in payload")
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid view format"})
+			return
+		}
+		callbackID, ok := view["callback_id"].(string)
+		if !ok {
+			logger.Errorf("Missing callback_id in view")
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing callback_id"})
+			return
+		}
+
+		if strings.HasPrefix(callbackID, "reject_modal_") {
+			kybProfileID := callbackID[len("reject_modal_"):]
+
+			// Prevent modal if already processed
+			if ctrl.isActionProcessed(kybProfileID, "approve") || ctrl.isActionProcessed(kybProfileID, "reject") {
+				logger.Warnf("Action already processed for KYB Profile %s", kybProfileID)
+				ctx.JSON(http.StatusOK, gin.H{"text": "This submission has already been processed."})
+				return
+			}
+
+			// Mark as processed immediately
+			ctrl.markActionProcessed(kybProfileID, "reject")
+
+			// Extract selected reason
+			state, ok := view["state"].(map[string]interface{})
+			if !ok {
+				logger.Errorf("Invalid state in view for KYB Profile %s", kybProfileID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid state"})
+				return
+			}
+			values, ok := state["values"].(map[string]interface{})
+			if !ok {
+				logger.Errorf("Invalid values in state for KYB Profile %s", kybProfileID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid values"})
+				return
+			}
+			reasonBlock, ok := values["reason_block"].(map[string]interface{})
+			if !ok {
+				logger.Errorf("Invalid reason_block in values for KYB Profile %s", kybProfileID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid reason_block"})
+				return
+			}
+			reasonSelect, ok := reasonBlock["reason_select"].(map[string]interface{})
+			if !ok {
+				logger.Errorf("Invalid reason_select in reason_block for KYB Profile %s", kybProfileID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid reason_select"})
+				return
+			}
+			selectedReason, ok := reasonSelect["selected_option"].(map[string]interface{})
+			if !ok {
+				logger.Errorf("No reason selected for KYB Profile %s", kybProfileID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "No reason selected"})
+				return
+			}
+			reasonForDecline, ok := selectedReason["value"].(string)
+			if !ok {
+				logger.Errorf("Invalid reason value for KYB Profile %s", kybProfileID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid reason value"})
+				return
+			}
+
+			// Extract email and firstName from private_metadata
+			privateMetadata, ok := view["private_metadata"].(string)
+			if !ok {
+				logger.Errorf("Missing private_metadata in view for KYB Profile %s", kybProfileID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing private_metadata"})
+				return
+			}
+			var metadata map[string]interface{}
+			if err := json.Unmarshal([]byte(privateMetadata), &metadata); err != nil {
+				logger.Errorf("Error parsing private_metadata for KYB Profile %s: %v", kybProfileID, err)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid metadata"})
+				return
+			}
+			email, ok := metadata["email"].(string)
+			if !ok || email == "" {
+				logger.Errorf("Missing email in private_metadata for KYB Profile %s", kybProfileID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing email in metadata"})
+				return
+			}
+			firstName, ok := metadata["firstName"].(string)
+			if !ok {
+				logger.Warnf("Missing firstName in private_metadata for KYB Profile %s; using default", kybProfileID)
+				firstName = "User"
+			}
+
+			// Parse KYB Profile ID for database operations
+			kybProfileUUID, err := uuid.Parse(kybProfileID)
+			if err != nil {
+				logger.Errorf("Invalid KYB Profile ID format for rejection: %s, error: %v", kybProfileID, err)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid KYB Profile ID format"})
+				return
+			}
+
+			// Update User KYB status
+			_, err = storage.Client.User.
+				Update().
+				Where(user.EmailEQ(email)).
+				SetKybVerificationStatus(user.KybVerificationStatusRejected).
+				Save(ctx)
+			if err != nil {
+				logger.Errorf("Failed to reject KYB for user %s (KYB Profile %s): %v", email, kybProfileID, err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user KYB status"})
+				return
+			}
+
+			// Update KYB Profile status (assuming you have a status field)
+			_, err = storage.Client.KYBProfile.
+				Update().
+				Where(kybprofile.IDEQ(kybProfileUUID)).
+				Save(ctx)
+			if err != nil {
+				logger.Errorf("Failed to update KYB Profile status %s: %v", kybProfileID, err)
+			}
+
+			// Send rejection email
+			resp, err := ctrl.emailService.SendKYBRejectionEmail(email, firstName, reasonForDecline)
+			if err != nil {
+				logger.Errorf("Failed to send KYB rejection email to %s (KYB Profile %s): %v, response: %+v", email, kybProfileID, err, resp)
+			} else {
+				logger.Infof("KYB rejection email sent successfully to %s (KYB Profile %s), message ID: %s", email, kybProfileID, resp.Id)
+			}
+
+			// Send Slack feedback notification
+			err = ctrl.slackService.SendActionFeedbackNotification(firstName, email, kybProfileID, "reject", reasonForDecline)
+			if err != nil {
+				logger.Warnf("Failed to send Slack feedback notification for KYB Profile %s: %v", kybProfileID, err)
+			}
+
+			logger.Infof("Processed Slack modal submission for rejection in %v", time.Since(startTime))
+			return
+		}
+
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Unknown callback_id"})
+		return
+	}
+	ctx.JSON(http.StatusBadRequest, gin.H{"error": "Unknown payload type"})
+}
+
+// isActionProcessed checks if an action has already been processed
+func (ctrl *Controller) isActionProcessed(submissionID, actionType string) bool {
+	ctrl.actionMutex.RLock()
+	defer ctrl.actionMutex.RUnlock()
+	key := fmt.Sprintf("%s_%s", submissionID, actionType)
+	return ctrl.processedActions[key]
+}
+
+// markActionProcessed marks an action as processed
+func (ctrl *Controller) markActionProcessed(submissionID, actionType string) {
+	ctrl.actionMutex.Lock()
+	defer ctrl.actionMutex.Unlock()
+	key := fmt.Sprintf("%s_%s", submissionID, actionType)
+	ctrl.processedActions[key] = true
+}
+
+// HandleKYBSubmission handles the POST request for KYB submission
+func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
+	var input types.KYBSubmissionInput
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		logger.WithFields(logger.Fields{
+			"Error": fmt.Sprintf("%v", err),
+		}).Errorf("Error: Failed to bind KYB submission input")
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid input", err.Error())
+		return
+	}
+
+	// Get user ID from the context
+	userIDValue, exists := ctx.Get("user_id")
+	if !exists {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "User not authenticated", nil)
+		return
+	}
+
+	// Validate user ID
+	userID, err := uuid.Parse(userIDValue.(string))
+	if err != nil {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid user ID", nil)
+		return
+	}
+
+	// Fetch user record
+	userRecord, err := storage.Client.User.
+		Query().
+		Where(user.IDEQ(userID)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusNotFound, "error", "User not found", nil)
+			return
+		}
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": userID,
+		}).Error("Error: Failed to query user")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to process request", nil)
+		return
+	}
+
+	// Check if user already has a KYB submission
+	existingSubmission, err := storage.Client.KYBProfile.
+		Query().
+		Where(kybprofile.HasUserWith(user.IDEQ(userRecord.ID))).
+		Exist(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": userID,
+		}).Errorf("Error: Failed to check existing KYB submission")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to process request", nil)
+		return
+	}
+
+	if existingSubmission {
+		u.APIResponse(ctx, http.StatusConflict, "error", "KYB submission already submitted for this user", nil)
+		return
+	}
+
+	// --- Begin Transaction ---
+	tx, err := storage.Client.Tx(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": userID,
+		}).Errorf("Error: Failed to start transaction")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to process request", nil)
+		return
+	}
+	defer func() {
+		if p := recover(); p != nil {
+			if err := tx.Rollback(); err != nil {
+				logger.Errorf("Failed to rollback transaction during panic: %v", err)
+			}
+			panic(p)
+		}
+	}()
+
+	kybBuilder := tx.KYBProfile.
+		Create().
+		SetMobileNumber(input.MobileNumber).
+		SetCompanyName(input.CompanyName).
+		SetRegisteredBusinessAddress(input.RegisteredBusinessAddress).
+		SetCertificateOfIncorporationURL(input.CertificateOfIncorporationUrl).
+		SetArticlesOfIncorporationURL(input.ArticlesOfIncorporationUrl).
+		SetProofOfBusinessAddressURL(input.ProofOfBusinessAddressUrl).
+		SetUserID(userRecord.ID)
+
+	if input.BusinessLicenseUrl != nil {
+		kybBuilder.SetBusinessLicenseURL(*input.BusinessLicenseUrl)
+	}
+	if input.AmlPolicyUrl != nil {
+		kybBuilder.SetAmlPolicyURL(*input.AmlPolicyUrl)
+	}
+	if input.KycPolicyUrl != nil {
+		kybBuilder.SetKycPolicyURL(*input.KycPolicyUrl)
+	}
+
+	kybSubmission, err := kybBuilder.Save(ctx)
+	if err != nil {
+		if err := tx.Rollback(); err != nil {
+			logger.Errorf("Failed to rollback transaction: %v", err)
+		}
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": userID,
+		}).Errorf("Error: Failed to save KYB submission: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to save KYB submission", nil)
+		return
+	}
+
+	for _, owner := range input.BeneficialOwners {
+		_, err := tx.BeneficialOwner.
+			Create().
+			SetFullName(owner.FullName).
+			SetResidentialAddress(owner.ResidentialAddress).
+			SetProofOfResidentialAddressURL(owner.ProofOfResidentialAddressUrl).
+			SetGovernmentIssuedIDURL(owner.GovernmentIssuedIdUrl).
+			SetDateOfBirth(owner.DateOfBirth).
+			SetOwnershipPercentage(owner.OwnershipPercentage).
+			SetGovernmentIssuedIDType(beneficialowner.GovernmentIssuedIDType(owner.GovernmentIssuedIdType)).
+			SetKybProfileID(kybSubmission.ID).
+			Save(ctx)
+		if err != nil {
+			if err := tx.Rollback(); err != nil {
+				logger.Errorf("Failed to rollback transaction: %v", err)
+			}
+			logger.WithFields(logger.Fields{
+				"Error":  fmt.Sprintf("%v", err),
+				"UserID": userID,
+			}).Errorf("Error: Failed to save beneficial owner")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to save beneficial owner", nil)
+			return
+		}
+	}
+
+	// Commit transaction
+	if err := tx.Commit(); err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": userID,
+		}).Errorf("Error: Failed to commit transaction")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to process request", nil)
+		return
+	}
+
+	// ✅ Send Slack notification (outside transaction)
+	err = ctrl.slackService.SendSubmissionNotification(userRecord.FirstName, userRecord.Email, kybSubmission.ID.String())
+	if err != nil {
+		logger.Errorf("Webhook log: Error sending Slack notification for submission %s: %v", kybSubmission.ID, err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Error sending Slack notification", nil)
+		return
+	}
+
+	u.APIResponse(ctx, http.StatusCreated, "success", "KYB submission submitted successfully", gin.H{
+		"submission_id": kybSubmission.ID,
+	})
+}
+
+// InsightWebhook handles the webhook callback from thirdweb insight, including signature verification and event processing
+func (ctrl *Controller) InsightWebhook(ctx *gin.Context) {
+	// Get raw body for signature verification
+	rawBody, err := ctx.GetRawData()
+	if err != nil {
+		logger.Errorf("Error: InsightWebhook: Failed to read webhook payload: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
+		return
+	}
+
+	// Get webhook signature and webhook ID from headers
+	signature := ctx.GetHeader("x-webhook-signature")
+	webhookID := ctx.GetHeader("x-webhook-id")
+	if signature == "" || webhookID == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing required headers"})
+		return
+	}
+
+	// Verify webhook signature
+	verification, err := ctrl.verifyWebhookSignature(string(rawBody), signature, webhookID)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":     err,
+			"Signature": signature,
+			"WebhookID": webhookID,
+		}).Errorf("Error: InsightWebhook: Failed to verify signature")
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid signature"})
+		return
+	}
+
+	if !verification.IsValid {
+		logger.WithFields(logger.Fields{
+			"WebhookID": webhookID,
+			"Signature": signature,
+		}).Errorf("Error: InsightWebhook: Invalid signature")
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid signature"})
+		return
+	}
+
+	// Parse webhook payload
+	var webhookPayload types.ThirdwebWebhookPayload
+	if err := json.Unmarshal(rawBody, &webhookPayload); err != nil {
+		logger.Errorf("Error: InsightWebhook: Failed to parse webhook payload: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload format"})
+		return
+	}
+
+	// Verify payload age (optional - 10 minutes)
+	if ctrl.isWebhookPayloadExpired(webhookPayload.Timestamp, int64(orderConf.ReceiveAddressValidity.Seconds())) {
+		logger.WithFields(logger.Fields{
+			"Timestamp":      webhookPayload.Timestamp,
+			"Payload":        webhookPayload,
+			"ValidityConfig": orderConf.ReceiveAddressValidity.Seconds(),
+		}).Errorf("Error: InsightWebhook: Webhook payload expired")
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Payload expired"})
+		return
+	}
+
+	// Process webhook events
+	err = ctrl.processWebhookEvents(ctx, webhookPayload)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":   err,
+			"Payload": webhookPayload,
+		}).Errorf("Error: InsightWebhook: Failed to process webhook events")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process events"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "Webhook processed successfully"})
+}
+
+// verifyWebhookSignature verifies the webhook signature using the stored secret
+func (ctrl *Controller) verifyWebhookSignature(rawBody, signature, webhookID string) (*types.WebhookSignatureVerification, error) {
+	logger.Infof("Verifying webhook signature for webhook ID: %s", webhookID)
+	// Get webhook from database
+	webhook, err := storage.Client.PaymentWebhook.
+		Query().
+		Where(paymentwebhook.WebhookIDEQ(webhookID)).
+		Only(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("webhook not found: %w", err)
+	}
+
+	// Generate expected signature
+	expectedSignature := ctrl.generateWebhookSignature(rawBody, webhook.WebhookSecret)
+
+	// Compare signatures using timing-safe comparison
+	isValid := hmac.Equal([]byte(expectedSignature), []byte(signature))
+
+	return &types.WebhookSignatureVerification{
+		IsValid:   isValid,
+		WebhookID: webhookID,
+		Secret:    webhook.WebhookSecret,
+	}, nil
+}
+
+// generateWebhookSignature generates HMAC-SHA256 signature for webhook verification
+func (ctrl *Controller) generateWebhookSignature(rawBody, secret string) string {
+	h := hmac.New(sha256.New, []byte(secret))
+	h.Write([]byte(rawBody))
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+// isWebhookPayloadExpired checks if the webhook payload is older than the specified expiration time
+func (ctrl *Controller) isWebhookPayloadExpired(timestamp int64, expirationInSeconds int64) bool {
+	currentTime := time.Now().Unix()
+	return currentTime-timestamp > expirationInSeconds
+}
+
+// processWebhookEvents processes the webhook events based on their type
+func (ctrl *Controller) processWebhookEvents(ctx *gin.Context, payload types.ThirdwebWebhookPayload) error {
+	for _, event := range payload.Data {
+		// Handle reverted events (blockchain reorganization)
+		if event.Status == "reverted" {
+			if err := ctrl.handleRevertedEvent(ctx, event); err != nil {
+				logger.WithFields(logger.Fields{
+					"Error": err,
+					"Event": event,
+				}).Errorf("Error: InsightWebhook: Failed to handle reverted event")
+				continue
+			}
+			continue
+		}
+
+		// Process new events
+		if event.Status == "new" {
+			if err := ctrl.handleNewEvent(ctx, event); err != nil {
+				logger.WithFields(logger.Fields{
+					"Error": err,
+					"Event": event,
+				}).Errorf("Error: InsightWebhook: Failed to handle new event")
+				continue
+			}
+		}
+	}
+
+	return nil
+}
+
+// handleNewEvent processes a new webhook event
+func (ctrl *Controller) handleNewEvent(ctx *gin.Context, event types.ThirdwebWebhookEvent) error {
+	// Determine event type based on decoded event name
+	switch event.Data.Decoded.Name {
+	case "Transfer":
+		return ctrl.handleTransferEvent(ctx, event)
+	case "OrderCreated":
+		return ctrl.handleOrderCreatedEvent(ctx, event)
+	case "OrderSettled":
+		return ctrl.handleOrderSettledEvent(ctx, event)
+	case "OrderRefunded":
+		return ctrl.handleOrderRefundedEvent(ctx, event)
+	default:
+		logger.WithFields(logger.Fields{
+			"Event": event,
+		}).Errorf("Error: InsightWebhook: Unknown event type")
+		return nil
+	}
+}
+
+// handleRevertedEvent handles reverted events by reverting any actions taken
+func (ctrl *Controller) handleRevertedEvent(ctx *gin.Context, event types.ThirdwebWebhookEvent) error {
+	// For now, just log the reverted event
+	// In the future, this could implement rollback logic
+	logger.Infof("Event reverted - txHash: %s, eventID: %s", event.Data.TransactionHash, event.ID)
+	return nil
+}
+
+// handleTransferEvent processes Transfer events from webhook
+func (ctrl *Controller) handleTransferEvent(ctx *gin.Context, event types.ThirdwebWebhookEvent) error {
+	// Convert chain ID from string to int64
+	chainID, err := strconv.ParseInt(event.Data.ChainID, 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid chain ID: %w", err)
+	}
+
+	// Get token from database
+	token, err := storage.Client.Token.
+		Query().
+		Where(
+			tokenEnt.ContractAddressEqualFold(event.Data.Address),
+			tokenEnt.HasNetworkWith(
+				networkent.ChainIDEQ(chainID),
+			),
+		).
+		WithNetwork().
+		Only(ctx)
+	if err != nil {
+		return fmt.Errorf("token not found: %w", err)
+	}
+
+	// Extract transfer data from decoded event
+	indexedParams := event.Data.Decoded.IndexedParams
+	nonIndexedParams := event.Data.Decoded.NonIndexedParams
+
+	toAddress := ethcommon.HexToAddress(indexedParams["to"].(string)).Hex()
+	fromAddress := ethcommon.HexToAddress(indexedParams["from"].(string)).Hex()
+	valueStr := nonIndexedParams["value"].(string)
+
+	// Skip if transfer is from gateway contract
+	if strings.EqualFold(fromAddress, token.Edges.Network.GatewayContractAddress) {
+		return nil
+	}
+
+	// Parse transfer value
+	transferValue, err := decimal.NewFromString(valueStr)
+	if err != nil {
+		return fmt.Errorf("invalid transfer value: %w", err)
+	}
+
+	// Create transfer event
+	transferEvent := &types.TokenTransferEvent{
+		BlockNumber: event.Data.BlockNumber,
+		TxHash:      event.Data.TransactionHash,
+		From:        fromAddress,
+		To:          toAddress,
+		Value:       transferValue.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals)))),
+	}
+
+	// Process transfer using existing logic
+	addressToEvent := map[string]*types.TokenTransferEvent{
+		toAddress: transferEvent,
+	}
+
+	err = common.ProcessTransfers(ctx, ctrl.orderService, ctrl.priorityQueueService, []string{toAddress}, addressToEvent, token)
+	if err != nil {
+		return fmt.Errorf("failed to process transfer: %w", err)
+	}
+
+	return nil
+}
+
+// handleOrderCreatedEvent processes OrderCreated events from webhook
+func (ctrl *Controller) handleOrderCreatedEvent(ctx *gin.Context, event types.ThirdwebWebhookEvent) error {
+	// Convert chain ID from string to int64
+	chainID, err := strconv.ParseInt(event.Data.ChainID, 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid chain ID: %w", err)
+	}
+
+	// Get network from database
+	network, err := storage.Client.Network.
+		Query().
+		Where(networkent.ChainIDEQ(chainID)).
+		Only(ctx)
+	if err != nil {
+		return fmt.Errorf("network not found: %w", err)
+	}
+
+	// Extract order data from decoded event
+	indexedParams := event.Data.Decoded.IndexedParams
+	nonIndexedParams := event.Data.Decoded.NonIndexedParams
+
+	amount, err := decimal.NewFromString(indexedParams["amount"].(string))
+	if err != nil {
+		return fmt.Errorf("invalid amount: %w", err)
+	}
+
+	protocolFee, err := decimal.NewFromString(nonIndexedParams["protocolFee"].(string))
+	if err != nil {
+		return fmt.Errorf("invalid protocol fee: %w", err)
+	}
+
+	rate, err := decimal.NewFromString(nonIndexedParams["rate"].(string))
+	if err != nil {
+		return fmt.Errorf("invalid rate: %w", err)
+	}
+
+	// Create order created event
+	orderEvent := &types.OrderCreatedEvent{
+		BlockNumber: event.Data.BlockNumber,
+		TxHash:      event.Data.TransactionHash,
+		Token:       ethcommon.HexToAddress(indexedParams["token"].(string)).Hex(),
+		Amount:      amount,
+		ProtocolFee: protocolFee,
+		OrderId:     nonIndexedParams["orderId"].(string),
+		Rate:        rate.Div(decimal.NewFromInt(100)),
+		MessageHash: nonIndexedParams["messageHash"].(string),
+		Sender:      ethcommon.HexToAddress(indexedParams["sender"].(string)).Hex(),
+	}
+
+	// Process order using existing logic
+	txHashes := []string{orderEvent.TxHash}
+	hashToEvent := map[string]*types.OrderCreatedEvent{
+		orderEvent.TxHash: orderEvent,
+	}
+
+	err = common.ProcessCreatedOrders(ctx, network, txHashes, hashToEvent, ctrl.orderService, ctrl.priorityQueueService)
+	if err != nil {
+		return fmt.Errorf("failed to process order: %w", err)
+	}
+
+	return nil
+}
+
+// handleOrderSettledEvent processes OrderSettled events from webhook
+func (ctrl *Controller) handleOrderSettledEvent(ctx *gin.Context, event types.ThirdwebWebhookEvent) error {
+	// Convert chain ID from string to int64
+	chainID, err := strconv.ParseInt(event.Data.ChainID, 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid chain ID: %w", err)
+	}
+
+	// Get network from database
+	network, err := storage.Client.Network.
+		Query().
+		Where(networkent.ChainIDEQ(chainID)).
+		Only(ctx)
+	if err != nil {
+		return fmt.Errorf("network not found: %w", err)
+	}
+
+	// Extract order settled data from decoded event
+	nonIndexedParams := event.Data.Decoded.NonIndexedParams
+
+	settlePercent, err := decimal.NewFromString(nonIndexedParams["settlePercent"].(string))
+	if err != nil {
+		return fmt.Errorf("invalid settle percent: %w", err)
+	}
+
+	// Create order settled event
+	settledEvent := &types.OrderSettledEvent{
+		BlockNumber:       event.Data.BlockNumber,
+		TxHash:            event.Data.TransactionHash,
+		SplitOrderId:      nonIndexedParams["splitOrderId"].(string),
+		OrderId:           nonIndexedParams["orderId"].(string),
+		LiquidityProvider: ethcommon.HexToAddress(nonIndexedParams["liquidityProvider"].(string)).Hex(),
+		SettlePercent:     settlePercent,
+	}
+
+	// Process settled order using existing logic
+	err = common.UpdateOrderStatusSettled(ctx, network, settledEvent)
+	if err != nil {
+		return fmt.Errorf("failed to process settled order: %w", err)
+	}
+
+	return nil
+}
+
+// handleOrderRefundedEvent processes OrderRefunded events from webhook
+func (ctrl *Controller) handleOrderRefundedEvent(ctx *gin.Context, event types.ThirdwebWebhookEvent) error {
+	// Convert chain ID from string to int64
+	chainID, err := strconv.ParseInt(event.Data.ChainID, 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid chain ID: %w", err)
+	}
+
+	// Get network from database
+	network, err := storage.Client.Network.
+		Query().
+		Where(networkent.ChainIDEQ(chainID)).
+		Only(ctx)
+	if err != nil {
+		return fmt.Errorf("network not found: %w", err)
+	}
+
+	// Extract order refunded data from decoded event
+	nonIndexedParams := event.Data.Decoded.NonIndexedParams
+
+	fee, err := decimal.NewFromString(nonIndexedParams["fee"].(string))
+	if err != nil {
+		return fmt.Errorf("invalid fee: %w", err)
+	}
+
+	// Create order refunded event
+	refundedEvent := &types.OrderRefundedEvent{
+		BlockNumber: event.Data.BlockNumber,
+		TxHash:      event.Data.TransactionHash,
+		Fee:         fee,
+		OrderId:     nonIndexedParams["orderId"].(string),
+	}
+
+	// Process refunded order using existing logic
+	err = common.UpdateOrderStatusRefunded(ctx, network, refundedEvent)
+	if err != nil {
+		return fmt.Errorf("failed to process refunded order: %w", err)
+	}
+
+	return nil
+}
+
 // IndexTransaction controller indexes a specific transaction for blockchain events
 func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 	// Get network and txHash from URL parameters
@@ -1214,7 +2216,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := indexerInstance.IndexOrderCreated(ctx, network, 0, 0, txHash)
+		err := indexerInstance.IndexOrderCreated(ctx, network, "", 0, 0, txHash)
 		if err != nil && err.Error() != "no events found" {
 			logger.WithFields(logger.Fields{
 				"Error":        fmt.Sprintf("%v", err),
@@ -1231,7 +2233,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := indexerInstance.IndexOrderSettled(ctx, network, 0, 0, txHash)
+		err := indexerInstance.IndexOrderSettled(ctx, network, "", 0, 0, txHash)
 		if err != nil && err.Error() != "no events found" {
 			logger.WithFields(logger.Fields{
 				"Error":        fmt.Sprintf("%v", err),
@@ -1248,7 +2250,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := indexerInstance.IndexOrderRefunded(ctx, network, 0, 0, txHash)
+		err := indexerInstance.IndexOrderRefunded(ctx, network, "", 0, 0, txHash)
 		if err != nil && err.Error() != "no events found" {
 			logger.WithFields(logger.Fields{
 				"Error":        fmt.Sprintf("%v", err),
@@ -1288,5 +2290,5 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 		Events: eventCounts,
 	}
 
-	u.APIResponse(ctx, http.StatusOK, "success", fmt.Sprintf("Successfully indexed transaction %s for network %s", txHash, network.Identifier), response)
+	u.APIResponse(ctx, http.StatusOK, "success", fmt.Sprintf("Successfully indexed transaction %s for network %s", txHash, networkParam), response)
 }

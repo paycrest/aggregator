@@ -106,9 +106,9 @@ type OrderService interface {
 // Indexer provides an interface for indexing blockchain data to the database.
 type Indexer interface {
 	IndexTransfer(ctx context.Context, token *ent.Token, address string, fromBlock int64, toBlock int64, txHash string) error
-	IndexOrderCreated(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error
-	IndexOrderSettled(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error
-	IndexOrderRefunded(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error
+	IndexOrderCreated(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) error
+	IndexOrderSettled(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) error
+	IndexOrderRefunded(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) error
 }
 
 // KYCProvider defines the interface for KYC verification providers
@@ -703,7 +703,7 @@ type IndexTransactionRequest struct {
 
 // IndexTransactionResponse represents the response for the index transaction endpoint
 type IndexTransactionResponse struct {
-	Events  struct {
+	Events struct {
 		Transfer      int `json:"Transfer"`
 		OrderCreated  int `json:"OrderCreated"`
 		OrderSettled  int `json:"OrderSettled"`

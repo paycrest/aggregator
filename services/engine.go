@@ -334,3 +334,54 @@ func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint st
 
 	return events, nil
 }
+
+// GetUserTransactionHistory fetches user transaction history from thirdweb insight API
+func (s *EngineService) GetUserTransactionHistory(ctx context.Context, chainID int64, walletAddress string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
+	// Check if this is BNB Smart Chain (chain ID 56) - use RPC instead of Thirdweb Insight
+	if chainID == 56 {
+		return nil, fmt.Errorf("user transaction history not supported for BNB Smart Chain via Thirdweb API")
+	}
+
+	// Build query parameters
+	params := map[string]string{
+		"limit": fmt.Sprintf("%d", limit),
+	}
+
+	// Add block range filtering if specified
+	if fromBlock > 0 {
+		params["filter_block_number_gte"] = fmt.Sprintf("%d", fromBlock)
+	}
+	if toBlock > 0 {
+		params["filter_block_number_lte"] = fmt.Sprintf("%d", toBlock)
+	}
+
+	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
+		Config().SetTimeout(30 * time.Second).
+		Header().AddAll(map[string]string{
+		"Accept":       "application/json",
+		"Content-Type": "application/json",
+		"X-Secret-Key": s.config.ThirdwebSecretKey,
+	}).Build().GET(fmt.Sprintf("/v1/wallets/%s/transactions", walletAddress)).
+		Query().AddParams(params).Send()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user transaction history: %w", err)
+	}
+
+	data, err := utils.ParseJSONResponse(res.RawResponse)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
+	}
+
+	if data["data"] == nil {
+		return []map[string]interface{}{}, nil
+	}
+
+	transactions := data["data"].([]interface{})
+	result := make([]map[string]interface{}, len(transactions))
+
+	for i, tx := range transactions {
+		result[i] = tx.(map[string]interface{})
+	}
+
+	return result, nil
+}
