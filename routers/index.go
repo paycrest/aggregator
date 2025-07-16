@@ -44,7 +44,7 @@ func RegisterRoutes(route *gin.Engine) {
 	v1.GET("orders/:chain_id/:id", ctrl.GetLockPaymentOrderStatus)
 
 	// Reindex transaction endpoint
-	v1.GET("reindex/:network/:tx_hash", ctrl.IndexTransaction)
+	v1.GET("reindex/:network/:tx_hash_or_address", ctrl.IndexTransaction)
 
 	// KYC routes
 	v1.POST("kyc", ctrl.RequestIDVerification)
