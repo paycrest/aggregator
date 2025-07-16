@@ -171,7 +171,7 @@ func (s *IndexerTron) IndexTransfer(ctx context.Context, token *ent.Token, addre
 }
 
 // IndexOrderCreated indexes orders created in the Gateway contract for the Tron network.
-func (s *IndexerTron) IndexOrderCreated(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error {
+func (s *IndexerTron) IndexOrderCreated(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) error {
 	var res fastshot.Response
 	var err error
 	var data map[string]interface{}
@@ -333,7 +333,7 @@ func (s *IndexerTron) IndexOrderCreated(ctx context.Context, network *ent.Networ
 }
 
 // IndexOrderSettled indexes orders settled in the Gateway contract for the Tron network.
-func (s *IndexerTron) IndexOrderSettled(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error {
+func (s *IndexerTron) IndexOrderSettled(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) error {
 	var res fastshot.Response
 	var err error
 	var data map[string]interface{}
@@ -491,7 +491,7 @@ func (s *IndexerTron) IndexOrderSettled(ctx context.Context, network *ent.Networ
 }
 
 // IndexOrderRefunded indexes orders refunded in the Gateway contract for the Tron network.
-func (s *IndexerTron) IndexOrderRefunded(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error {
+func (s *IndexerTron) IndexOrderRefunded(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) error {
 	var res fastshot.Response
 	var err error
 	var data map[string]interface{}

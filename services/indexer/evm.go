@@ -40,6 +40,16 @@ func (s *IndexerEVM) IndexTransfer(ctx context.Context, token *ent.Token, addres
 	var events []interface{}
 	var err error
 
+	// If only address is provided (no txHash, no block range), fetch user's transaction history
+	if address != "" && txHash == "" && fromBlock == 0 && toBlock == 0 {
+		return s.indexTransferByUserAddress(ctx, token, address)
+	}
+
+	// If address is provided with block range, fetch user's transactions within that range
+	if address != "" && txHash == "" && (fromBlock > 0 || toBlock > 0) {
+		return s.indexTransferByUserAddressInRange(ctx, token, address, fromBlock, toBlock)
+	}
+
 	// Check if this is BNB Smart Chain (chain ID 56) - use RPC instead of Thirdweb Insight
 	if token.Edges.Network.ChainID == 56 {
 		eventSignature := "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef" // Transfer
@@ -136,10 +146,82 @@ func (s *IndexerEVM) IndexTransfer(ctx context.Context, token *ent.Token, addres
 	return nil
 }
 
+// indexTransferByUserAddress indexes transfer events from a user's transaction history
+func (s *IndexerEVM) indexTransferByUserAddress(ctx context.Context, token *ent.Token, userAddress string) error {
+	// Get user's transaction history (last 10 transactions by default)
+	transactions, err := s.engineService.GetUserTransactionHistory(ctx, token.Edges.Network.ChainID, userAddress, 10, 0, 0)
+	if err != nil {
+		return fmt.Errorf("failed to get user transaction history: %w", err)
+	}
+
+	if len(transactions) == 0 {
+		logger.Infof("No transactions found for address: %s", userAddress)
+		return nil
+	}
+
+	logger.Infof("Processing %d transactions for address: %s", len(transactions), userAddress)
+
+	// Process each transaction to find transfer events
+	for i, tx := range transactions {
+		txHash := tx["hash"].(string)
+		logger.Infof("Processing transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
+
+		// Index transfer events for this specific transaction
+		err := s.IndexTransfer(ctx, token, userAddress, 0, 0, txHash)
+		if err != nil {
+			logger.Errorf("Error processing transaction %s: %v", txHash[:10]+"...", err)
+			continue // Skip transactions with errors
+		}
+	}
+
+	return nil
+}
+
+// indexTransferByUserAddressInRange indexes transfer events from a user's transaction history within a block range
+func (s *IndexerEVM) indexTransferByUserAddressInRange(ctx context.Context, token *ent.Token, userAddress string, fromBlock int64, toBlock int64) error {
+	// Get user's transaction history filtered by block range using API
+	transactions, err := s.engineService.GetUserTransactionHistory(ctx, token.Edges.Network.ChainID, userAddress, 100, fromBlock, toBlock)
+	if err != nil {
+		return fmt.Errorf("failed to get user transaction history: %w", err)
+	}
+
+	if len(transactions) == 0 {
+		logger.Infof("No transactions found in block range %d-%d for address: %s", fromBlock, toBlock, userAddress)
+		return nil
+	}
+
+	logger.Infof("Processing %d transactions in block range %d-%d for address: %s", len(transactions), fromBlock, toBlock, userAddress)
+
+	// Process each transaction to find transfer events
+	for i, tx := range transactions {
+		txHash := tx["hash"].(string)
+		logger.Infof("Processing transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
+
+		// Index transfer events for this specific transaction
+		err := s.IndexTransfer(ctx, token, userAddress, 0, 0, txHash)
+		if err != nil {
+			logger.Errorf("Error processing transaction %s: %v", txHash[:10]+"...", err)
+			continue // Skip transactions with errors
+		}
+	}
+
+	return nil
+}
+
 // IndexOrderCreated indexes orders created in the Gateway contract for EVM networks.
-func (s *IndexerEVM) IndexOrderCreated(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error {
+func (s *IndexerEVM) IndexOrderCreated(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) error {
 	var events []interface{}
 	var err error
+
+	// If only address is provided (no txHash, no block range), fetch user's transaction history
+	if address != "" && txHash == "" && fromBlock == 0 && toBlock == 0 {
+		return s.indexOrderCreatedByUserAddress(ctx, network, address)
+	}
+
+	// If address is provided with block range, fetch user's transactions within that range
+	if address != "" && txHash == "" && (fromBlock > 0 || toBlock > 0) {
+		return s.indexOrderCreatedByUserAddressInRange(ctx, network, address, fromBlock, toBlock)
+	}
 
 	// Check if this is BNB Smart Chain (chain ID 56) - use RPC instead of Thirdweb Insight
 	if network.ChainID == 56 {
@@ -234,14 +316,85 @@ func (s *IndexerEVM) IndexOrderCreated(ctx context.Context, network *ent.Network
 	return nil
 }
 
+// indexOrderCreatedByUserAddress indexes OrderCreated events from a user's transaction history
+func (s *IndexerEVM) indexOrderCreatedByUserAddress(ctx context.Context, network *ent.Network, userAddress string) error {
+	// Get user's transaction history (last 10 transactions by default)
+	transactions, err := s.engineService.GetUserTransactionHistory(ctx, network.ChainID, userAddress, 10, 0, 0)
+	if err != nil {
+		return fmt.Errorf("failed to get user transaction history: %w", err)
+	}
+
+	if len(transactions) == 0 {
+		logger.Infof("No transactions found for address: %s", userAddress)
+		return nil
+	}
+
+	logger.Infof("Processing %d transactions for address: %s", len(transactions), userAddress)
+
+	// Process each transaction to find OrderCreated events
+	for i, tx := range transactions {
+		txHash := tx["hash"].(string)
+		logger.Infof("Processing transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
+
+		// Index OrderCreated events for this specific transaction
+		err := s.IndexOrderCreated(ctx, network, userAddress, 0, 0, txHash)
+		if err != nil {
+			logger.Errorf("Error processing transaction %s: %v", txHash[:10]+"...", err)
+			continue // Skip transactions with errors
+		}
+	}
+
+	return nil
+}
+
+// indexOrderCreatedByUserAddressInRange indexes OrderCreated events from a user's transaction history within a block range
+func (s *IndexerEVM) indexOrderCreatedByUserAddressInRange(ctx context.Context, network *ent.Network, userAddress string, fromBlock int64, toBlock int64) error {
+	// Get user's transaction history filtered by block range using API
+	transactions, err := s.engineService.GetUserTransactionHistory(ctx, network.ChainID, userAddress, 100, fromBlock, toBlock)
+	if err != nil {
+		return fmt.Errorf("failed to get user transaction history: %w", err)
+	}
+
+	if len(transactions) == 0 {
+		logger.Infof("No transactions found in block range %d-%d for address: %s", fromBlock, toBlock, userAddress)
+		return nil
+	}
+
+	logger.Infof("Processing %d transactions in block range %d-%d for address: %s", len(transactions), fromBlock, toBlock, userAddress)
+
+	// Process each transaction to find OrderCreated events
+	for i, tx := range transactions {
+		txHash := tx["hash"].(string)
+		logger.Infof("Processing transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
+
+		// Index OrderCreated events for this specific transaction
+		err := s.IndexOrderCreated(ctx, network, userAddress, 0, 0, txHash)
+		if err != nil {
+			logger.Errorf("Error processing transaction %s: %v", txHash[:10]+"...", err)
+			continue // Skip transactions with errors
+		}
+	}
+
+	return nil
+}
+
 // IndexOrderSettled indexes orders settled in the Gateway contract for EVM networks.
-func (s *IndexerEVM) IndexOrderSettled(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error {
+func (s *IndexerEVM) IndexOrderSettled(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) error {
 	var events []interface{}
 	var err error
 
+	// If only address is provided (no txHash, no block range), fetch user's transaction history
+	if address != "" && txHash == "" && fromBlock == 0 && toBlock == 0 {
+		return s.indexOrderSettledByUserAddress(ctx, network, address)
+	}
+
+	// If address is provided with block range, fetch user's transactions within that range
+	if address != "" && txHash == "" && (fromBlock > 0 || toBlock > 0) {
+		return s.indexOrderSettledByUserAddressInRange(ctx, network, address, fromBlock, toBlock)
+	}
+
 	// Check if this is BNB Smart Chain (chain ID 56) - use RPC instead of Thirdweb Insight
 	if network.ChainID == 56 {
-		// Use RPC for BNB Smart Chain
 		eventSignature := "0x98ece21e01a01cbe1d1c0dad3b053c8fbd368f99be78be958fcf1d1d13fd249a" // OrderSettled
 		var topics []string
 
@@ -322,14 +475,85 @@ func (s *IndexerEVM) IndexOrderSettled(ctx context.Context, network *ent.Network
 	return nil
 }
 
-// IndexOrderRefunded indexes orders settled in the Gateway contract for EVM networks.
-func (s *IndexerEVM) IndexOrderRefunded(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error {
+// indexOrderSettledByUserAddress indexes OrderSettled events from a user's transaction history
+func (s *IndexerEVM) indexOrderSettledByUserAddress(ctx context.Context, network *ent.Network, userAddress string) error {
+	// Get user's transaction history (last 10 transactions by default)
+	transactions, err := s.engineService.GetUserTransactionHistory(ctx, network.ChainID, userAddress, 10, 0, 0)
+	if err != nil {
+		return fmt.Errorf("failed to get user transaction history: %w", err)
+	}
+
+	if len(transactions) == 0 {
+		logger.Infof("No transactions found for address: %s", userAddress)
+		return nil
+	}
+
+	logger.Infof("Processing %d transactions for address: %s", len(transactions), userAddress)
+
+	// Process each transaction to find OrderSettled events
+	for i, tx := range transactions {
+		txHash := tx["hash"].(string)
+		logger.Infof("Processing transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
+
+		// Index OrderSettled events for this specific transaction
+		err := s.IndexOrderSettled(ctx, network, userAddress, 0, 0, txHash)
+		if err != nil {
+			logger.Errorf("Error processing transaction %s: %v", txHash[:10]+"...", err)
+			continue // Skip transactions with errors
+		}
+	}
+
+	return nil
+}
+
+// indexOrderSettledByUserAddressInRange indexes OrderSettled events from a user's transaction history within a block range
+func (s *IndexerEVM) indexOrderSettledByUserAddressInRange(ctx context.Context, network *ent.Network, userAddress string, fromBlock int64, toBlock int64) error {
+	// Get user's transaction history filtered by block range using API
+	transactions, err := s.engineService.GetUserTransactionHistory(ctx, network.ChainID, userAddress, 100, fromBlock, toBlock)
+	if err != nil {
+		return fmt.Errorf("failed to get user transaction history: %w", err)
+	}
+
+	if len(transactions) == 0 {
+		logger.Infof("No transactions found in block range %d-%d for address: %s", fromBlock, toBlock, userAddress)
+		return nil
+	}
+
+	logger.Infof("Processing %d transactions in block range %d-%d for address: %s", len(transactions), fromBlock, toBlock, userAddress)
+
+	// Process each transaction to find OrderSettled events
+	for i, tx := range transactions {
+		txHash := tx["hash"].(string)
+		logger.Infof("Processing transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
+
+		// Index OrderSettled events for this specific transaction
+		err := s.IndexOrderSettled(ctx, network, userAddress, 0, 0, txHash)
+		if err != nil {
+			logger.Errorf("Error processing transaction %s: %v", txHash[:10]+"...", err)
+			continue // Skip transactions with errors
+		}
+	}
+
+	return nil
+}
+
+// IndexOrderRefunded indexes orders refunded in the Gateway contract for EVM networks.
+func (s *IndexerEVM) IndexOrderRefunded(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) error {
 	var events []interface{}
 	var err error
 
+	// If only address is provided (no txHash, no block range), fetch user's transaction history
+	if address != "" && txHash == "" && fromBlock == 0 && toBlock == 0 {
+		return s.indexOrderRefundedByUserAddress(ctx, network, address)
+	}
+
+	// If address is provided with block range, fetch user's transactions within that range
+	if address != "" && txHash == "" && (fromBlock > 0 || toBlock > 0) {
+		return s.indexOrderRefundedByUserAddressInRange(ctx, network, address, fromBlock, toBlock)
+	}
+
 	// Check if this is BNB Smart Chain (chain ID 56) - use RPC instead of Thirdweb Insight
 	if network.ChainID == 56 {
-		// Use RPC for BNB Smart Chain
 		eventSignature := "0x0736fe428e1747ca8d387c2e6fa1a31a0cde62d3a167c40a46ade59a3cdc828e" // OrderRefunded
 		var topics []string
 
@@ -380,7 +604,7 @@ func (s *IndexerEVM) IndexOrderRefunded(ctx context.Context, network *ent.Networ
 			continue
 		}
 
-		refundFee, err := decimal.NewFromString(eventParams["non_indexed_params"].(map[string]interface{})["fee"].(string))
+		fee, err := decimal.NewFromString(eventParams["non_indexed_params"].(map[string]interface{})["fee"].(string))
 		if err != nil {
 			continue
 		}
@@ -389,7 +613,7 @@ func (s *IndexerEVM) IndexOrderRefunded(ctx context.Context, network *ent.Networ
 			BlockNumber: int64(event.(map[string]interface{})["block_number"].(float64)),
 			TxHash:      event.(map[string]interface{})["transaction_hash"].(string),
 			OrderId:     eventParams["indexed_params"].(map[string]interface{})["orderId"].(string),
-			Fee:         refundFee,
+			Fee:         fee,
 		}
 
 		txHashes = append(txHashes, refundedEvent.TxHash)
@@ -403,6 +627,68 @@ func (s *IndexerEVM) IndexOrderRefunded(ctx context.Context, network *ent.Networ
 	err = common.ProcessRefundedOrders(ctx, network, txHashes, hashToEvent)
 	if err != nil {
 		return fmt.Errorf("IndexOrderRefunded.processRefundedOrders: %w", err)
+	}
+
+	return nil
+}
+
+// indexOrderRefundedByUserAddress indexes OrderRefunded events from a user's transaction history
+func (s *IndexerEVM) indexOrderRefundedByUserAddress(ctx context.Context, network *ent.Network, userAddress string) error {
+	// Get user's transaction history (last 10 transactions by default)
+	transactions, err := s.engineService.GetUserTransactionHistory(ctx, network.ChainID, userAddress, 10, 0, 0)
+	if err != nil {
+		return fmt.Errorf("failed to get user transaction history: %w", err)
+	}
+
+	if len(transactions) == 0 {
+		logger.Infof("No transactions found for address: %s", userAddress)
+		return nil
+	}
+
+	logger.Infof("Processing %d transactions for address: %s", len(transactions), userAddress)
+
+	// Process each transaction to find OrderRefunded events
+	for i, tx := range transactions {
+		txHash := tx["hash"].(string)
+		logger.Infof("Processing transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
+
+		// Index OrderRefunded events for this specific transaction
+		err := s.IndexOrderRefunded(ctx, network, userAddress, 0, 0, txHash)
+		if err != nil {
+			logger.Errorf("Error processing transaction %s: %v", txHash[:10]+"...", err)
+			continue // Skip transactions with errors
+		}
+	}
+
+	return nil
+}
+
+// indexOrderRefundedByUserAddressInRange indexes OrderRefunded events from a user's transaction history within a block range
+func (s *IndexerEVM) indexOrderRefundedByUserAddressInRange(ctx context.Context, network *ent.Network, userAddress string, fromBlock int64, toBlock int64) error {
+	// Get user's transaction history filtered by block range using API
+	transactions, err := s.engineService.GetUserTransactionHistory(ctx, network.ChainID, userAddress, 100, fromBlock, toBlock)
+	if err != nil {
+		return fmt.Errorf("failed to get user transaction history: %w", err)
+	}
+
+	if len(transactions) == 0 {
+		logger.Infof("No transactions found in block range %d-%d for address: %s", fromBlock, toBlock, userAddress)
+		return nil
+	}
+
+	logger.Infof("Processing %d transactions in block range %d-%d for address: %s", len(transactions), fromBlock, toBlock, userAddress)
+
+	// Process each transaction to find OrderRefunded events
+	for i, tx := range transactions {
+		txHash := tx["hash"].(string)
+		logger.Infof("Processing transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
+
+		// Index OrderRefunded events for this specific transaction
+		err := s.IndexOrderRefunded(ctx, network, userAddress, 0, 0, txHash)
+		if err != nil {
+			logger.Errorf("Error processing transaction %s: %v", txHash[:10]+"...", err)
+			continue // Skip transactions with errors
+		}
 	}
 
 	return nil

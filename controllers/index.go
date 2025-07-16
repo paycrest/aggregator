@@ -2119,13 +2119,59 @@ func (ctrl *Controller) handleOrderRefundedEvent(ctx *gin.Context, event types.T
 
 // IndexTransaction controller indexes a specific transaction for blockchain events
 func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
-	// Get network and txHash from URL parameters
+	// Get network from URL parameters
 	networkParam := ctx.Param("network")
-	txHash := ctx.Param("tx_hash")
 
-	// Validate txHash format (basic hex validation)
-	if !strings.HasPrefix(txHash, "0x") || len(txHash) != 66 {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid transaction hash format", nil)
+	// Get the second path param, which can be a tx_hash or an address
+	pathParam := ctx.Param("tx_hash_or_address")
+
+	// Get optional parameters from query string
+	fromBlockStr := ctx.Query("from_block")
+	toBlockStr := ctx.Query("to_block")
+
+	// Determine if pathParam is a tx_hash or address based on length
+	var txHash, address string
+	if pathParam != "" && strings.HasPrefix(pathParam, "0x") {
+		if len(pathParam) == 66 {
+			txHash = pathParam
+		} else if len(pathParam) == 42 {
+			address = pathParam
+		}
+	}
+
+	// Validate that pathParam is a valid tx_hash or address
+	if pathParam == "" || !strings.HasPrefix(pathParam, "0x") {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid path parameter. Must be a valid transaction hash (66 chars) or address (42 chars)", nil)
+		return
+	}
+
+	// Validate that at least one indexing method is provided
+	if txHash == "" && address == "" && (fromBlockStr == "" || toBlockStr == "") {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Must provide either a valid transaction hash, address, or from_block/to_block range", nil)
+		return
+	}
+
+	// Parse block range if provided
+	var fromBlock, toBlock int64
+	var blockErr error
+	if fromBlockStr != "" {
+		fromBlock, blockErr = strconv.ParseInt(fromBlockStr, 10, 64)
+		if blockErr != nil {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid from_block format", nil)
+			return
+		}
+	}
+	if toBlockStr != "" {
+		toBlock, blockErr = strconv.ParseInt(toBlockStr, 10, 64)
+		if blockErr != nil {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid to_block format", nil)
+			return
+		}
+	}
+
+	// Validate block range if both are provided
+	if fromBlockStr != "" && toBlockStr != "" && fromBlock >= toBlock {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "from_block must be less than to_block", nil)
 		return
 	}
 
@@ -2216,12 +2262,15 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := indexerInstance.IndexOrderCreated(ctx, network, 0, 0, txHash)
+		err := indexerInstance.IndexOrderCreated(ctx, network, address, fromBlock, toBlock, txHash)
 		if err != nil && err.Error() != "no events found" {
 			logger.WithFields(logger.Fields{
 				"Error":        fmt.Sprintf("%v", err),
 				"NetworkParam": networkParam,
 				"TxHash":       txHash,
+				"Address":      address,
+				"FromBlock":    fromBlock,
+				"ToBlock":      toBlock,
 				"EventType":    "OrderCreated",
 			}).Errorf("Failed to index OrderCreated events")
 		} else {
@@ -2233,12 +2282,15 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := indexerInstance.IndexOrderSettled(ctx, network, 0, 0, txHash)
+		err := indexerInstance.IndexOrderSettled(ctx, network, address, fromBlock, toBlock, txHash)
 		if err != nil && err.Error() != "no events found" {
 			logger.WithFields(logger.Fields{
 				"Error":        fmt.Sprintf("%v", err),
 				"NetworkParam": networkParam,
 				"TxHash":       txHash,
+				"Address":      address,
+				"FromBlock":    fromBlock,
+				"ToBlock":      toBlock,
 				"EventType":    "OrderSettled",
 			}).Errorf("Failed to index OrderSettled events")
 		} else {
@@ -2250,12 +2302,15 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := indexerInstance.IndexOrderRefunded(ctx, network, 0, 0, txHash)
+		err := indexerInstance.IndexOrderRefunded(ctx, network, address, fromBlock, toBlock, txHash)
 		if err != nil && err.Error() != "no events found" {
 			logger.WithFields(logger.Fields{
 				"Error":        fmt.Sprintf("%v", err),
 				"NetworkParam": networkParam,
 				"TxHash":       txHash,
+				"Address":      address,
+				"FromBlock":    fromBlock,
+				"ToBlock":      toBlock,
 				"EventType":    "OrderRefunded",
 			}).Errorf("Failed to index OrderRefunded events")
 		} else {
@@ -2268,13 +2323,16 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 		wg.Add(1)
 		go func(token *ent.Token) {
 			defer wg.Done()
-			err := indexerInstance.IndexTransfer(ctx, token, "", 0, 0, txHash)
+			err := indexerInstance.IndexTransfer(ctx, token, address, fromBlock, toBlock, txHash)
 			if err != nil && err.Error() != "no events found" {
 				logger.WithFields(logger.Fields{
 					"Error":        fmt.Sprintf("%v", err),
 					"NetworkParam": networkParam,
 					"Token":        token.Symbol,
 					"TxHash":       txHash,
+					"Address":      address,
+					"FromBlock":    fromBlock,
+					"ToBlock":      toBlock,
 					"EventType":    "Transfer",
 				}).Errorf("Failed to index Transfer events")
 			} else {
@@ -2290,5 +2348,15 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 		Events: eventCounts,
 	}
 
-	u.APIResponse(ctx, http.StatusOK, "success", fmt.Sprintf("Successfully indexed transaction %s for network %s", txHash, networkParam), response)
+	// Build response message based on what was indexed
+	var responseMsg string
+	if txHash != "" {
+		responseMsg = fmt.Sprintf("Successfully indexed transaction %s for network %s", txHash, networkParam)
+	} else if address != "" {
+		responseMsg = fmt.Sprintf("Successfully indexed address %s for network %s", address, networkParam)
+	} else {
+		responseMsg = fmt.Sprintf("Successfully indexed block range %d-%d for network %s", fromBlock, toBlock, networkParam)
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", responseMsg, response)
 }
