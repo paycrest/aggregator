@@ -221,3 +221,61 @@ func ProcessRPCEvents(events []interface{}, eventSignature string) error {
 
 	return nil
 }
+
+// ProcessRPCEventsBySignature processes RPC events and automatically detects their signature for decoding
+func ProcessRPCEventsBySignature(events []interface{}) error {
+	for _, event := range events {
+		eventMap := event.(map[string]interface{})
+
+		// Convert topics to the expected format
+		if topics, ok := eventMap["topics"].([]common.Hash); ok {
+			topicsHex := make([]string, len(topics))
+			for i, topic := range topics {
+				topicsHex[i] = topic.Hex()
+			}
+			eventMap["topics"] = topicsHex
+		}
+
+		// Create a mock log for decoding (since we already have the raw log data)
+		// We'll decode directly from the event data instead
+		if topics, ok := eventMap["topics"].([]string); ok && len(topics) > 0 {
+			// Get the event signature from the first topic
+			eventSignature := topics[0]
+
+			// Create a mock log with the topics and data
+			var logTopics []common.Hash
+			for _, topic := range topics {
+				logTopics = append(logTopics, common.HexToHash(topic))
+			}
+
+			mockLog := types.Log{
+				Topics: logTopics,
+				Data:   eventMap["data"].([]byte),
+			}
+
+			var decoded map[string]interface{}
+			var err error
+
+			switch eventSignature {
+			case TransferEventSignature:
+				decoded, err = DecodeTransferEvent(mockLog)
+			case OrderCreatedEventSignature:
+				decoded, err = DecodeOrderCreatedEvent(mockLog)
+			case OrderSettledEventSignature:
+				decoded, err = DecodeOrderSettledEvent(mockLog)
+			case OrderRefundedEventSignature:
+				decoded, err = DecodeOrderRefundedEvent(mockLog)
+			default:
+				continue
+			}
+
+			if err != nil {
+				return fmt.Errorf("failed to decode event: %w", err)
+			}
+
+			eventMap["decoded"] = decoded
+		}
+	}
+
+	return nil
+}

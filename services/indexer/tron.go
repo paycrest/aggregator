@@ -6,15 +6,17 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
-	"strings"
 	"time"
 
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/ent"
+	networkent "github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/common"
 	"github.com/paycrest/aggregator/services/contracts"
 	"github.com/paycrest/aggregator/services/order"
+	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
@@ -36,138 +38,6 @@ func NewIndexerTron() types.Indexer {
 		priorityQueue: priorityQueue,
 		order:         orderService,
 	}
-}
-
-// IndexTransfer indexes transfers to the receive address for Tron network.
-func (s *IndexerTron) IndexTransfer(ctx context.Context, token *ent.Token, address string, fromBlock int64, toBlock int64, txHash string) error {
-	var res fastshot.Response
-	var err error
-	var data map[string]interface{}
-
-	if txHash != "" {
-		// If txHash is provided, get transaction info directly
-		res, err = fastshot.NewClient(token.Edges.Network.RPCEndpoint).
-			Config().SetTimeout(15 * time.Second).
-			Build().POST("/wallet/gettransactioninfobyid").
-			Body().AsJSON(map[string]interface{}{
-			"value": txHash,
-		}).
-			Send()
-		if err != nil {
-			return fmt.Errorf("IndexTransfer.getTransaction: %w", err)
-		}
-
-		data, err = utils.ParseJSONResponse(res.RawResponse)
-		if err != nil {
-			return fmt.Errorf("IndexTransfer.parseJSONResponse: %w", err)
-		}
-
-		// Check if this transaction has Transfer events for the specific token
-		unknownAddresses := []string{}
-		addressToEvent := make(map[string]*types.TokenTransferEvent)
-
-		// Parse event data
-		for _, event := range data["log"].([]interface{}) {
-			eventData := event.(map[string]interface{})
-			if eventData["topics"].([]interface{})[0] == "ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef" {
-				// Check if this is the correct token contract
-				if eventData["address"].(string) != token.ContractAddress {
-					continue
-				}
-
-				fromAddress := utils.ParseTopicToTronAddress(eventData["topics"].([]interface{})[1].(string))
-				if strings.EqualFold(fromAddress, token.Edges.Network.GatewayContractAddress) {
-					continue
-				}
-
-				toAddress := utils.ParseTopicToTronAddress(eventData["topics"].([]interface{})[2].(string))
-				transferValue := utils.ParseTopicToBigInt(eventData["topics"].([]interface{})[3].(string))
-
-				transferEvent := &types.TokenTransferEvent{
-					BlockNumber: int64(data["blockNumber"].(float64)),
-					TxHash:      data["id"].(string),
-					From:        fromAddress,
-					To:          toAddress,
-					Value:       utils.FromSubunit(transferValue, int8(token.Decimals)),
-				}
-
-				unknownAddresses = append(unknownAddresses, transferEvent.To)
-				addressToEvent[transferEvent.To] = transferEvent
-			}
-		}
-
-		if len(unknownAddresses) == 0 {
-			return nil
-		}
-
-		err = common.ProcessTransfers(ctx, s.order, s.priorityQueue, unknownAddresses, addressToEvent, token)
-		if err != nil {
-			return fmt.Errorf("IndexTransfer.processTransfers: %w", err)
-		}
-
-		return nil
-	}
-
-	// Original block-based indexing logic
-	res, err = fastshot.NewClient(token.Edges.Network.RPCEndpoint).
-		Config().SetTimeout(15 * time.Second).
-		Build().GET(fmt.Sprintf("/v1/contracts/%s/events", token.ContractAddress)).
-		Query().AddParams(map[string]string{
-		"only_confirmed":      "true",
-		"min_block_timestamp": strconv.FormatInt(fromBlock, 10),
-		"max_block_timestamp": strconv.FormatInt(toBlock, 10),
-		"order_by":            "block_timestamp,asc",
-		"limit":               "200",
-	}).
-		Send()
-	if err != nil {
-		return fmt.Errorf("IndexTransfer.getTransferEventData: %w", err)
-	}
-
-	data, err = utils.ParseJSONResponse(res.RawResponse)
-	if err != nil {
-		return fmt.Errorf("IndexTransfer.parseJSONResponse: %w", err)
-	}
-
-	unknownAddresses := []string{}
-	addressToEvent := make(map[string]*types.TokenTransferEvent)
-
-	for _, r := range data["data"].([]interface{}) {
-		if r.(map[string]interface{})["event_name"].(string) == "Transfer" {
-			fromAddress := r.(map[string]interface{})["result"].(map[string]interface{})["from"].(string)
-
-			if strings.EqualFold(fromAddress, token.Edges.Network.GatewayContractAddress) {
-				continue
-			}
-
-			transferValue, err := decimal.NewFromString(r.(map[string]interface{})["result"].(map[string]interface{})["value"].(string))
-			if err != nil {
-				return fmt.Errorf("IndexTransfer.decimal.NewFromString: %w", err)
-			}
-
-			transferEvent := &types.TokenTransferEvent{
-				BlockNumber: int64(r.(map[string]interface{})["block_number"].(float64)),
-				TxHash:      r.(map[string]interface{})["transaction_id"].(string),
-				From:        fromAddress,
-				To:          r.(map[string]interface{})["result"].(map[string]interface{})["to"].(string),
-				Value:       transferValue.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals)))),
-			}
-
-			unknownAddresses = append(unknownAddresses, transferEvent.To)
-			addressToEvent[transferEvent.To] = transferEvent
-		}
-	}
-
-	if len(unknownAddresses) == 0 {
-		return nil
-	}
-
-	err = common.ProcessTransfers(ctx, s.order, s.priorityQueue, unknownAddresses, addressToEvent, token)
-	if err != nil {
-		return fmt.Errorf("IndexTransfer.processTransfers: %w", err)
-	}
-
-	return nil
 }
 
 // IndexOrderCreated indexes orders created in the Gateway contract for the Tron network.
@@ -639,5 +509,520 @@ func (s *IndexerTron) IndexOrderRefunded(ctx context.Context, network *ent.Netwo
 		return fmt.Errorf("IndexOrderRefunded.processRefundedOrders: %w", err)
 	}
 
+	return nil
+}
+
+// IndexReceiveAddress indexes transfers to receive/linked addresses from user transaction history
+func (s *IndexerTron) IndexReceiveAddress(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) error {
+	// If txHash is provided, process that specific transaction
+	if txHash != "" {
+		return s.indexReceiveAddressByTransaction(ctx, network, address, txHash)
+	}
+
+	// If only address is provided (no txHash, no block range), fetch user's transaction history
+	if address != "" && fromBlock == 0 && toBlock == 0 {
+		return s.indexReceiveAddressByUserAddress(ctx, network, address)
+	}
+
+	// If address is provided with block range, fetch user's transactions within that range
+	if address != "" && (fromBlock > 0 || toBlock > 0) {
+		return s.indexReceiveAddressByUserAddressInRange(ctx, network, address, fromBlock, toBlock)
+	}
+
+	// If only block range is provided, this is not applicable for receive address indexing
+	return fmt.Errorf("receive address indexing requires an address parameter")
+}
+
+// indexReceiveAddressByTransaction processes a specific transaction for receive address transfers
+func (s *IndexerTron) indexReceiveAddressByTransaction(ctx context.Context, network *ent.Network, address string, txHash string) error {
+	// Get all enabled tokens for this network
+	tokens, err := storage.Client.Token.
+		Query().
+		Where(
+			token.IsEnabled(true),
+			token.HasNetworkWith(
+				networkent.IDEQ(network.ID),
+			),
+		).
+		WithNetwork().
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to fetch tokens: %w", err)
+	}
+
+	// Process each token for transfer events in this transaction
+	for _, token := range tokens {
+		err := s.IndexReceiveAddress(ctx, network, address, 0, 0, txHash)
+		if err != nil && err.Error() != "no events found" {
+			logger.Errorf("Error processing transfer for token %s in transaction %s: %v", token.Symbol, txHash[:10]+"...", err)
+		}
+	}
+
+	return nil
+}
+
+// indexReceiveAddressByUserAddress processes user's transaction history for receive address transfers
+func (s *IndexerTron) indexReceiveAddressByUserAddress(ctx context.Context, network *ent.Network, userAddress string) error {
+	// For Tron, we'll use the existing IndexTransfer method with user address
+	// Get all enabled tokens for this network
+	tokens, err := storage.Client.Token.
+		Query().
+		Where(
+			token.IsEnabled(true),
+			token.HasNetworkWith(
+				networkent.IDEQ(network.ID),
+			),
+		).
+		WithNetwork().
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to fetch tokens: %w", err)
+	}
+
+	// Process each token for transfer events
+	for _, token := range tokens {
+		err := s.IndexReceiveAddress(ctx, network, userAddress, 0, 0, "")
+		if err != nil && err.Error() != "no events found" {
+			logger.Errorf("Error processing transfer for token %s: %v", token.Symbol, err)
+		}
+	}
+
+	return nil
+}
+
+// indexReceiveAddressByUserAddressInRange processes user's transaction history within a block range for receive address transfers
+func (s *IndexerTron) indexReceiveAddressByUserAddressInRange(ctx context.Context, network *ent.Network, userAddress string, fromBlock int64, toBlock int64) error {
+	// For Tron, we'll use the existing IndexTransfer method with block range
+	// Get all enabled tokens for this network
+	tokens, err := storage.Client.Token.
+		Query().
+		Where(
+			token.IsEnabled(true),
+			token.HasNetworkWith(
+				networkent.IDEQ(network.ID),
+			),
+		).
+		WithNetwork().
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to fetch tokens: %w", err)
+	}
+
+	// Process each token for transfer events in the block range
+	for _, token := range tokens {
+		err := s.IndexReceiveAddress(ctx, network, userAddress, fromBlock, toBlock, "")
+		if err != nil && err.Error() != "no events found" {
+			logger.Errorf("Error processing transfer for token %s: %v", token.Symbol, err)
+		}
+	}
+
+	return nil
+}
+
+// IndexGateway indexes all Gateway contract events (OrderCreated, OrderSettled, OrderRefunded) in a single call
+func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error {
+	if txHash != "" {
+		// If txHash is provided, get transaction info directly
+		res, err := fastshot.NewClient(network.RPCEndpoint).
+			Config().SetTimeout(15 * time.Second).
+			Build().POST("/wallet/gettransactioninfobyid").
+			Body().AsJSON(map[string]interface{}{
+			"value": txHash,
+		}).
+			Send()
+		if err != nil {
+			return fmt.Errorf("IndexGateway.getTransaction: %w", err)
+		}
+
+		data, err := utils.ParseJSONResponse(res.RawResponse)
+		if err != nil {
+			return fmt.Errorf("IndexGateway.parseJSONResponse: %w", err)
+		}
+
+		// Process all events from this transaction
+		orderCreatedEvents := []*types.OrderCreatedEvent{}
+		orderSettledEvents := []*types.OrderSettledEvent{}
+		orderRefundedEvents := []*types.OrderRefundedEvent{}
+
+		for _, event := range data["log"].([]interface{}) {
+			eventData := event.(map[string]interface{})
+			eventSignature := eventData["topics"].([]interface{})[0].(string)
+
+			switch eventSignature {
+			case "40ccd1ceb111a3c186ef9911e1b876dc1f789ed331b86097b3b8851055b6a137": // OrderCreated
+				unpackedEventData, err := utils.UnpackEventData(eventData["data"].(string), contracts.GatewayMetaData.ABI, "OrderCreated")
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"TxHash":  data["id"].(string),
+						"Network": network.Identifier,
+					}).Errorf("Failed to unpack OrderCreated event data for %s", network.Identifier)
+					continue
+				}
+
+				orderAmount := utils.ParseTopicToBigInt(eventData["topics"].([]interface{})[3].(string))
+				protocolFee := unpackedEventData[0].(*big.Int)
+				rate := unpackedEventData[1].(*big.Int)
+				orderId := unpackedEventData[2].(string)
+				messageHash := unpackedEventData[3].(string)
+
+				createdEvent := &types.OrderCreatedEvent{
+					BlockNumber: int64(data["blockNumber"].(float64)),
+					TxHash:      data["id"].(string),
+					Token:       utils.ParseTopicToTronAddress(eventData["topics"].([]interface{})[2].(string)),
+					Amount:      utils.FromSubunit(orderAmount, 0),
+					ProtocolFee: utils.FromSubunit(protocolFee, 0),
+					OrderId:     orderId,
+					Rate:        utils.FromSubunit(rate, 0),
+					MessageHash: messageHash,
+					Sender:      utils.ParseTopicToTronAddress(eventData["topics"].([]interface{})[1].(string)),
+				}
+				orderCreatedEvents = append(orderCreatedEvents, createdEvent)
+
+			case "98ece21e01a01cbe1d1c0dad3b053c8fbd368f99be78be958fcf1d1d13fd249a": // OrderSettled
+				unpackedEventData, err := utils.UnpackEventData(eventData["data"].(string), contracts.GatewayMetaData.ABI, "OrderSettled")
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"TxHash":  data["id"].(string),
+						"Network": network.Identifier,
+					}).Errorf("Failed to unpack OrderSettled event data for %s", network.Identifier)
+					continue
+				}
+
+				splitOrderId := unpackedEventData[0].(string)
+				settlePercent := unpackedEventData[1].(*big.Int)
+				eventOrderId := utils.ParseTopicToByte32(eventData["topics"].([]interface{})[1].(string))
+				liquidityProvider := utils.ParseTopicToTronAddress(eventData["topics"].([]interface{})[2].(string))
+
+				settledEvent := &types.OrderSettledEvent{
+					BlockNumber:       int64(data["blockNumber"].(float64)),
+					TxHash:            data["id"].(string),
+					SplitOrderId:      splitOrderId,
+					OrderId:           fmt.Sprintf("0x%v", hex.EncodeToString(eventOrderId[:])),
+					LiquidityProvider: liquidityProvider,
+					SettlePercent:     utils.FromSubunit(settlePercent, 0),
+				}
+				orderSettledEvents = append(orderSettledEvents, settledEvent)
+
+			case "0736fe428e1747ca8d387c2e6fa1a31a0cde62d3a167c40a46ade59a3cdc828e": // OrderRefunded
+				unpackedEventData, err := utils.UnpackEventData(eventData["data"].(string), contracts.GatewayMetaData.ABI, "OrderRefunded")
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"TxHash":  data["id"].(string),
+						"Network": network.Identifier,
+					}).Errorf("Failed to unpack OrderRefunded event data for %s", network.Identifier)
+					continue
+				}
+
+				fee := unpackedEventData[0].(*big.Int)
+				eventOrderId := utils.ParseTopicToByte32(eventData["topics"].([]interface{})[1].(string))
+
+				refundedEvent := &types.OrderRefundedEvent{
+					BlockNumber: int64(data["blockNumber"].(float64)),
+					TxHash:      data["id"].(string),
+					OrderId:     fmt.Sprintf("0x%v", hex.EncodeToString(eventOrderId[:])),
+					Fee:         utils.FromSubunit(fee, 0),
+				}
+				orderRefundedEvents = append(orderRefundedEvents, refundedEvent)
+			}
+		}
+
+		// Process all events
+		if len(orderCreatedEvents) > 0 {
+			txHashes := []string{}
+			hashToEvent := make(map[string]*types.OrderCreatedEvent)
+			for _, event := range orderCreatedEvents {
+				txHashes = append(txHashes, event.TxHash)
+				hashToEvent[event.TxHash] = event
+			}
+			err = common.ProcessCreatedOrders(ctx, network, txHashes, hashToEvent, s.order, s.priorityQueue)
+			if err != nil {
+				logger.Errorf("Failed to process OrderCreated events: %v", err)
+			} else {
+				logger.Infof("Successfully processed %d OrderCreated events", len(orderCreatedEvents))
+			}
+		}
+
+		if len(orderSettledEvents) > 0 {
+			txHashes := []string{}
+			hashToEvent := make(map[string]*types.OrderSettledEvent)
+			for _, event := range orderSettledEvents {
+				txHashes = append(txHashes, event.TxHash)
+				hashToEvent[event.TxHash] = event
+			}
+			err = common.ProcessSettledOrders(ctx, network, txHashes, hashToEvent)
+			if err != nil {
+				logger.Errorf("Failed to process OrderSettled events: %v", err)
+			} else {
+				logger.Infof("Successfully processed %d OrderSettled events", len(orderSettledEvents))
+			}
+		}
+
+		if len(orderRefundedEvents) > 0 {
+			txHashes := []string{}
+			hashToEvent := make(map[string]*types.OrderRefundedEvent)
+			for _, event := range orderRefundedEvents {
+				txHashes = append(txHashes, event.TxHash)
+				hashToEvent[event.TxHash] = event
+			}
+			err = common.ProcessRefundedOrders(ctx, network, txHashes, hashToEvent)
+			if err != nil {
+				logger.Errorf("Failed to process OrderRefunded events: %v", err)
+			} else {
+				logger.Infof("Successfully processed %d OrderRefunded events", len(orderRefundedEvents))
+			}
+		}
+
+		return nil
+	}
+
+	// For block range queries, Tron doesn't support getting all events in one call
+	// so we need to make separate API calls for each event type
+	// This is a limitation of the Tron API - it doesn't support filtering by multiple event signatures
+
+	// Index OrderCreated events
+	if err := s.indexOrderCreatedByBlockRange(ctx, network, fromBlock, toBlock); err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":        fmt.Sprintf("%v", err),
+			"NetworkParam": network.Identifier,
+			"FromBlock":    fromBlock,
+			"ToBlock":      toBlock,
+			"EventType":    "OrderCreated",
+		}).Errorf("Failed to index OrderCreated events")
+	}
+
+	// Index OrderSettled events
+	if err := s.indexOrderSettledByBlockRange(ctx, network, fromBlock, toBlock); err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":        fmt.Sprintf("%v", err),
+			"NetworkParam": network.Identifier,
+			"FromBlock":    fromBlock,
+			"ToBlock":      toBlock,
+			"EventType":    "OrderSettled",
+		}).Errorf("Failed to index OrderSettled events")
+	}
+
+	// Index OrderRefunded events
+	if err := s.indexOrderRefundedByBlockRange(ctx, network, fromBlock, toBlock); err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":        fmt.Sprintf("%v", err),
+			"NetworkParam": network.Identifier,
+			"FromBlock":    fromBlock,
+			"ToBlock":      toBlock,
+			"EventType":    "OrderRefunded",
+		}).Errorf("Failed to index OrderRefunded events")
+	}
+
+	return nil
+}
+
+// indexOrderCreatedByBlockRange indexes OrderCreated events for a block range
+func (s *IndexerTron) indexOrderCreatedByBlockRange(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64) error {
+	res, err := fastshot.NewClient(network.RPCEndpoint).
+		Config().SetTimeout(15 * time.Second).
+		Build().GET(fmt.Sprintf("/v1/contracts/%s/events", network.GatewayContractAddress)).
+		Query().AddParams(map[string]string{
+		"min_block_timestamp": strconv.FormatInt(fromBlock, 10),
+		"max_block_timestamp": strconv.FormatInt(toBlock, 10),
+		"order_by":            "block_timestamp,asc",
+		"limit":               "200",
+	}).
+		Send()
+	if err != nil {
+		return fmt.Errorf("indexOrderCreatedByBlockRange.getEvents: %w", err)
+	}
+	data, err := utils.ParseJSONResponse(res.RawResponse)
+	if err != nil {
+		return fmt.Errorf("indexOrderCreatedByBlockRange.parseJSONResponse: %w", err)
+	}
+	txHashes := []string{}
+	hashToEvent := make(map[string]*types.OrderCreatedEvent)
+	for _, r := range data["data"].([]interface{}) {
+		if r.(map[string]interface{})["event_name"].(string) == "OrderCreated" {
+			res, err := fastshot.NewClient(network.RPCEndpoint).
+				Config().SetTimeout(15 * time.Second).
+				Build().POST("/wallet/gettransactioninfobyid").
+				Body().AsJSON(map[string]interface{}{"value": r.(map[string]interface{})["transaction_id"].(string)}).
+				Send()
+			if err != nil {
+				return fmt.Errorf("indexOrderCreatedByBlockRange.getTransaction: %w", err)
+			}
+			data, err := utils.ParseJSONResponse(res.RawResponse)
+			if err != nil {
+				return fmt.Errorf("indexOrderCreatedByBlockRange.parseJSONResponse: %w", err)
+			}
+			for _, event := range data["log"].([]interface{}) {
+				eventData := event.(map[string]interface{})
+				if eventData["topics"].([]interface{})[0] == "40ccd1ceb111a3c186ef9911e1b876dc1f789ed331b86097b3b8851055b6a137" {
+					unpackedEventData, err := utils.UnpackEventData(eventData["data"].(string), contracts.GatewayMetaData.ABI, "OrderCreated")
+					if err != nil {
+						continue
+					}
+					eventOrderId := unpackedEventData[1].([32]byte)
+					createdEvent := &types.OrderCreatedEvent{
+						BlockNumber: int64(data["blockNumber"].(float64)),
+						TxHash:      data["id"].(string),
+						Token:       utils.ParseTopicToTronAddress(eventData["topics"].([]interface{})[2].(string)),
+						Amount:      utils.FromSubunit(utils.ParseTopicToBigInt(eventData["topics"].([]interface{})[3].(string)), 0),
+						ProtocolFee: utils.FromSubunit(unpackedEventData[0].(*big.Int), 0),
+						OrderId:     fmt.Sprintf("0x%v", hex.EncodeToString(eventOrderId[:])),
+						Rate:        utils.FromSubunit(unpackedEventData[2].(*big.Int), 2),
+						MessageHash: unpackedEventData[3].(string),
+						Sender:      utils.ParseTopicToTronAddress(eventData["topics"].([]interface{})[1].(string)),
+					}
+					txHashes = append(txHashes, createdEvent.TxHash)
+					hashToEvent[createdEvent.TxHash] = createdEvent
+					break
+				}
+			}
+		}
+	}
+	if len(txHashes) == 0 {
+		return nil
+	}
+	err = common.ProcessCreatedOrders(ctx, network, txHashes, hashToEvent, s.order, s.priorityQueue)
+	if err != nil {
+		return fmt.Errorf("indexOrderCreatedByBlockRange.processCreatedOrders: %w", err)
+	}
+	return nil
+}
+
+// indexOrderSettledByBlockRange indexes OrderSettled events for a block range
+func (s *IndexerTron) indexOrderSettledByBlockRange(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64) error {
+	res, err := fastshot.NewClient(network.RPCEndpoint).
+		Config().SetTimeout(15 * time.Second).
+		Build().GET(fmt.Sprintf("/v1/contracts/%s/events", network.GatewayContractAddress)).
+		Query().AddParams(map[string]string{
+		"min_block_timestamp": strconv.FormatInt(fromBlock, 10),
+		"max_block_timestamp": strconv.FormatInt(toBlock, 10),
+		"order_by":            "block_timestamp,asc",
+		"limit":               "200",
+	}).
+		Send()
+	if err != nil {
+		return fmt.Errorf("indexOrderSettledByBlockRange.getEvents: %w", err)
+	}
+	data, err := utils.ParseJSONResponse(res.RawResponse)
+	if err != nil {
+		return fmt.Errorf("indexOrderSettledByBlockRange.parseJSONResponse: %w", err)
+	}
+	txHashes := []string{}
+	hashToEvent := make(map[string]*types.OrderSettledEvent)
+	for _, r := range data["data"].([]interface{}) {
+		if r.(map[string]interface{})["event_name"].(string) == "OrderSettled" {
+			res, err := fastshot.NewClient(network.RPCEndpoint).
+				Config().SetTimeout(15 * time.Second).
+				Build().POST("/wallet/gettransactioninfobyid").
+				Body().AsJSON(map[string]interface{}{"value": r.(map[string]interface{})["transaction_id"].(string)}).
+				Send()
+			if err != nil {
+				return fmt.Errorf("indexOrderSettledByBlockRange.getTransaction: %w", err)
+			}
+			data, err := utils.ParseJSONResponse(res.RawResponse)
+			if err != nil {
+				return fmt.Errorf("indexOrderSettledByBlockRange.parseJSONResponse: %w", err)
+			}
+			for _, event := range data["log"].([]interface{}) {
+				eventData := event.(map[string]interface{})
+				if eventData["topics"].([]interface{})[0] == "98ece21e01a01cbe1d1c0dad3b053c8fbd368f99be78be958fcf1d1d13fd249a" {
+					unpackedEventData, err := utils.UnpackEventData(eventData["data"].(string), contracts.GatewayMetaData.ABI, "OrderSettled")
+					if err != nil {
+						continue
+					}
+					splitOrderId := unpackedEventData[0].(string)
+					settlePercent := unpackedEventData[1].(*big.Int)
+					eventOrderId := utils.ParseTopicToByte32(eventData["topics"].([]interface{})[1].(string))
+					liquidityProvider := utils.ParseTopicToTronAddress(eventData["topics"].([]interface{})[2].(string))
+					settledEvent := &types.OrderSettledEvent{
+						BlockNumber:       int64(data["blockNumber"].(float64)),
+						TxHash:            data["id"].(string),
+						SplitOrderId:      splitOrderId,
+						OrderId:           fmt.Sprintf("0x%v", hex.EncodeToString(eventOrderId[:])),
+						LiquidityProvider: liquidityProvider,
+						SettlePercent:     utils.FromSubunit(settlePercent, 0),
+					}
+					txHashes = append(txHashes, settledEvent.TxHash)
+					hashToEvent[settledEvent.TxHash] = settledEvent
+					break
+				}
+			}
+		}
+	}
+	if len(txHashes) == 0 {
+		return nil
+	}
+	err = common.ProcessSettledOrders(ctx, network, txHashes, hashToEvent)
+	if err != nil {
+		return fmt.Errorf("indexOrderSettledByBlockRange.processSettledOrders: %w", err)
+	}
+	return nil
+}
+
+// indexOrderRefundedByBlockRange indexes OrderRefunded events for a block range
+func (s *IndexerTron) indexOrderRefundedByBlockRange(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64) error {
+	res, err := fastshot.NewClient(network.RPCEndpoint).
+		Config().SetTimeout(15 * time.Second).
+		Build().GET(fmt.Sprintf("/v1/contracts/%s/events", network.GatewayContractAddress)).
+		Query().AddParams(map[string]string{
+		"min_block_timestamp": strconv.FormatInt(fromBlock, 10),
+		"max_block_timestamp": strconv.FormatInt(toBlock, 10),
+		"order_by":            "block_timestamp,asc",
+		"limit":               "200",
+	}).
+		Send()
+	if err != nil {
+		return fmt.Errorf("indexOrderRefundedByBlockRange.getEvents: %w", err)
+	}
+	data, err := utils.ParseJSONResponse(res.RawResponse)
+	if err != nil {
+		return fmt.Errorf("indexOrderRefundedByBlockRange.parseJSONResponse: %w", err)
+	}
+	txHashes := []string{}
+	hashToEvent := make(map[string]*types.OrderRefundedEvent)
+	for _, r := range data["data"].([]interface{}) {
+		if r.(map[string]interface{})["event_name"].(string) == "OrderRefunded" {
+			res, err := fastshot.NewClient(network.RPCEndpoint).
+				Config().SetTimeout(15 * time.Second).
+				Build().POST("/wallet/gettransactioninfobyid").
+				Body().AsJSON(map[string]interface{}{"value": r.(map[string]interface{})["transaction_id"].(string)}).
+				Send()
+			if err != nil {
+				return fmt.Errorf("indexOrderRefundedByBlockRange.getTransaction: %w", err)
+			}
+			data, err := utils.ParseJSONResponse(res.RawResponse)
+			if err != nil {
+				return fmt.Errorf("indexOrderRefundedByBlockRange.parseJSONResponse: %w", err)
+			}
+			for _, event := range data["log"].([]interface{}) {
+				eventData := event.(map[string]interface{})
+				if eventData["topics"].([]interface{})[0] == "0736fe428e1747ca8d387c2e6fa1a31a0cde62d3a167c40a46ade59a3cdc828e" {
+					unpackedEventData, err := utils.UnpackEventData(eventData["data"].(string), contracts.GatewayMetaData.ABI, "OrderRefunded")
+					if err != nil {
+						continue
+					}
+					fee := unpackedEventData[0].(*big.Int)
+					eventOrderId := utils.ParseTopicToByte32(eventData["topics"].([]interface{})[1].(string))
+					refundedEvent := &types.OrderRefundedEvent{
+						BlockNumber: int64(data["blockNumber"].(float64)),
+						TxHash:      data["id"].(string),
+						OrderId:     fmt.Sprintf("0x%v", hex.EncodeToString(eventOrderId[:])),
+						Fee:         utils.FromSubunit(fee, 0),
+					}
+					txHashes = append(txHashes, refundedEvent.TxHash)
+					hashToEvent[refundedEvent.TxHash] = refundedEvent
+					break
+				}
+			}
+		}
+	}
+	if len(txHashes) == 0 {
+		return nil
+	}
+	err = common.ProcessRefundedOrders(ctx, network, txHashes, hashToEvent)
+	if err != nil {
+		return fmt.Errorf("indexOrderRefundedByBlockRange.processRefundedOrders: %w", err)
+	}
 	return nil
 }

@@ -752,7 +752,8 @@ func (s *EngineService) CreateGatewayWebhook() error {
 }
 
 // GetContractEventsRPC fetches contract events using RPC for networks not supported by Thirdweb Insight
-func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint string, contractAddress string, fromBlock int64, toBlock int64, eventSignature string, topics []string, txHash string) ([]interface{}, error) {
+// It fetches all events and filters for gateway events (OrderCreated, OrderSettled, OrderRefunded)
+func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint string, contractAddress string, fromBlock int64, toBlock int64, topics []string, txHash string) ([]interface{}, error) {
 	// Create RPC client
 	client, err := aggregatortypes.NewEthClient(rpcEndpoint)
 	if err != nil {
@@ -760,7 +761,13 @@ func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint st
 	}
 
 	var logs []types.Log
-	var err2 error
+
+	// Gateway event signatures to filter for
+	gatewayEventSignatures := []string{
+		utils.OrderCreatedEventSignature,
+		utils.OrderSettledEventSignature,
+		utils.OrderRefundedEventSignature,
+	}
 
 	if txHash != "" {
 		// If transaction hash is provided, get the specific transaction receipt
@@ -769,28 +776,33 @@ func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint st
 			return nil, fmt.Errorf("failed to get transaction receipt: %w", err)
 		}
 
-		// Filter logs from the receipt that match our criteria
+		// Filter logs from the receipt that match gateway events
 		for _, log := range receipt.Logs {
 			if log.Address == common.HexToAddress(contractAddress) {
-				// Check if this log matches our event signature
-				if len(log.Topics) > 0 && log.Topics[0].Hex() == eventSignature {
-					// Check additional topics if provided
-					matches := true
-					for i, topic := range topics {
-						if topic != "" && (i+1 >= len(log.Topics) || log.Topics[i+1].Hex() != topic) {
-							matches = false
+				// Check if this log matches any of our gateway event signatures
+				if len(log.Topics) > 0 {
+					eventSignature := log.Topics[0].Hex()
+					for _, gatewaySignature := range gatewayEventSignatures {
+						if eventSignature == gatewaySignature {
+							// Check additional topics if provided
+							matches := true
+							for i, topic := range topics {
+								if topic != "" && (i+1 >= len(log.Topics) || log.Topics[i+1].Hex() != topic) {
+									matches = false
+									break
+								}
+							}
+							if matches {
+								logs = append(logs, *log)
+							}
 							break
 						}
-					}
-					if matches {
-						logs = append(logs, *log)
 					}
 				}
 			}
 		}
 	} else {
-		// Use block range filtering (existing logic)
-		// Build filter query
+		// Use block range filtering to get all logs from the contract
 		filterQuery := ethereum.FilterQuery{
 			FromBlock: big.NewInt(fromBlock),
 			ToBlock:   big.NewInt(toBlock),
@@ -798,22 +810,30 @@ func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint st
 			Topics:    [][]common.Hash{},
 		}
 
-		// Add event signature as first topic
-		if eventSignature != "" {
-			filterQuery.Topics = append(filterQuery.Topics, []common.Hash{common.HexToHash(eventSignature)})
-		}
-
-		// Add additional topics if provided
+		// Add additional topics if provided (for filtering by specific addresses)
 		for _, topic := range topics {
 			if topic != "" {
 				filterQuery.Topics = append(filterQuery.Topics, []common.Hash{common.HexToHash(topic)})
 			}
 		}
 
-		// Get logs
-		logs, err2 = client.FilterLogs(ctx, filterQuery)
+		// Get all logs from the contract
+		allLogs, err2 := client.FilterLogs(ctx, filterQuery)
 		if err2 != nil {
 			return nil, fmt.Errorf("failed to get logs: %w", err2)
+		}
+
+		// Filter for gateway events only
+		for _, log := range allLogs {
+			if len(log.Topics) > 0 {
+				eventSignature := log.Topics[0].Hex()
+				for _, gatewaySignature := range gatewayEventSignatures {
+					if eventSignature == gatewaySignature {
+						logs = append(logs, log)
+						break
+					}
+				}
+			}
 		}
 	}
 
@@ -835,9 +855,9 @@ func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint st
 		events = append(events, event)
 	}
 
-	// Decode events based on signature
+	// Decode events based on their signatures
 	if len(events) > 0 {
-		err = utils.ProcessRPCEvents(events, eventSignature)
+		err = utils.ProcessRPCEventsBySignature(events)
 		if err != nil {
 			return nil, fmt.Errorf("failed to process RPC events: %w", err)
 		}

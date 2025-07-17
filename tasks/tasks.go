@@ -272,23 +272,14 @@ func GetTronLatestBlock(endpoint string) (int64, error) {
 
 // runIndexers runs the indexers for the given network, indexer, tokens, startBlock, and latestBlock
 func runIndexers(network *ent.Network, indexer types.Indexer, tokens []*ent.Token, startBlock int64, latestBlock int64) {
-	// Index Gateway events
+	// Index all Gateway events in one efficient call
 	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
 		ctx := context.Background()
-		_ = indexer.IndexOrderCreated(ctx, network, "", start, end, "")
-	}(network, indexer, startBlock, latestBlock)
-
-	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
-		ctx := context.Background()
-		_ = indexer.IndexOrderSettled(ctx, network, "", start, end, "")
-	}(network, indexer, startBlock, latestBlock)
-
-	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
-		ctx := context.Background()
-		_ = indexer.IndexOrderRefunded(ctx, network, "", start, end, "")
+		_ = indexer.IndexGateway(ctx, network, start, end, "")
 	}(network, indexer, startBlock, latestBlock)
 
 	// Index transfer events for tokens in this network
+	// For general indexing, we'll index transfers to the token contract itself
 	for _, token := range tokens {
 		if token.Edges.Network.ID != network.ID {
 			continue
@@ -296,7 +287,8 @@ func runIndexers(network *ent.Network, indexer types.Indexer, tokens []*ent.Toke
 
 		go func(token *ent.Token, indexer types.Indexer, start, end int64) {
 			ctx := context.Background()
-			_ = indexer.IndexTransfer(ctx, token, "", start, end, "")
+			// Index transfers to this token's contract address
+			_ = indexer.IndexReceiveAddress(ctx, network, token.ContractAddress, start, end, "")
 		}(token, indexer, startBlock, latestBlock)
 	}
 }
@@ -1216,38 +1208,57 @@ func ResolvePaymentOrderMishaps() error {
 
 		go func(network *ent.Network) {
 			ctx := context.Background()
-			var wg sync.WaitGroup
 
-			// Case 1: Resolve missed transfers to receive addresses
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				resolveMissedTransfers(ctx, network)
-			}()
+			// Only resolve missed transfers to receive addresses
+			resolveMissedTransfers(ctx, network)
+		}(network)
+	}
 
-			// Case 2: Resolve missed OrderCreated events
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				resolveMissedOrderCreatedEvents(ctx, network)
-			}()
+	return nil
+}
 
-			// Case 3: Resolve missed OrderRefunded events
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				resolveMissedOrderRefundedEvents(ctx, network)
-			}()
+// IndexGatewayEvents indexes all gateway events for missed OrderCreated, OrderRefunded, and OrderSettled events
+func IndexGatewayEvents() error {
+	ctx := context.Background()
 
-			// Case 4: Resolve missed OrderSettled events (aggregator side)
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				resolveMissedOrderSettledEvents(ctx, network)
-			}()
+	// Fetch networks
+	isTestnet := false
+	if serverConf.Environment != "production" {
+		isTestnet = true
+	}
 
-			// Wait for all cases to complete
-			wg.Wait()
+	networks, err := storage.Client.Network.
+		Query().
+		Where(networkent.IsTestnetEQ(isTestnet)).
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("IndexGatewayEvents.fetchNetworks: %w", err)
+	}
+
+	// Process each network in parallel (EVM only)
+	for _, network := range networks {
+		// Skip Tron networks
+		if strings.HasPrefix(network.Identifier, "tron") {
+			continue
+		}
+
+		go func(network *ent.Network) {
+			ctx := context.Background()
+
+			// Index all gateway events for this network in one efficient call
+			indexerInstance := indexer.NewIndexerEVM()
+			err := indexerInstance.IndexGateway(ctx, network, 0, 0, "")
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":             fmt.Sprintf("%v", err),
+					"NetworkIdentifier": network.Identifier,
+				}).Errorf("IndexGatewayEvents.indexGateway")
+				return
+			}
+
+			logger.WithFields(logger.Fields{
+				"NetworkIdentifier": network.Identifier,
+			}).Infof("IndexGatewayEvents.completed")
 		}(network)
 	}
 
@@ -1288,201 +1299,54 @@ func resolveMissedTransfers(ctx context.Context, network *ent.Network) {
 		return
 	}
 
-	for _, order := range orders {
-		// Search for transfer events to this specific receive address
-		indexerInstance := indexer.NewIndexerEVM()
+	if len(orders) == 0 {
+		logger.WithFields(logger.Fields{
+			"NetworkIdentifier": network.Identifier,
+		}).Infof("ResolvePaymentOrderMishaps.resolveMissedTransfers.noOrdersToProcess")
+		return
+	}
 
-		// Index transfer events for this specific receive address (address-specific, no block range)
-		err = indexerInstance.IndexTransfer(ctx, order.Edges.Token, order.Edges.ReceiveAddress.Address, 0, 0, "")
-		if err != nil {
+	// For missed transfers, we need to check each order's specific receive address
+	// Process sequentially to avoid overwhelming the RPC node and for better error handling
+	indexerInstance := indexer.NewIndexerEVM()
+	processedCount := 0
+	errorCount := 0
+
+	for i, order := range orders {
+		if order.Edges.ReceiveAddress != nil {
 			logger.WithFields(logger.Fields{
-				"Error":             fmt.Sprintf("%v", err),
 				"NetworkIdentifier": network.Identifier,
-				"OrderID":           order.ID.String(),
 				"ReceiveAddress":    order.Edges.ReceiveAddress.Address,
-			}).Errorf("ResolvePaymentOrderMishaps.resolveMissedTransfers.indexTransfer")
-			continue
-		}
+				"OrderID":           order.ID,
+				"Progress":          fmt.Sprintf("%d/%d", i+1, len(orders)),
+			}).Infof("ResolvePaymentOrderMishaps.resolveMissedTransfers")
 
-		logger.WithFields(logger.Fields{
-			"OrderID":           order.ID.String(),
-			"NetworkIdentifier": network.Identifier,
-			"ReceiveAddress":    order.Edges.ReceiveAddress.Address,
-		}).Infof("ResolvePaymentOrderMishaps.resolveMissedTransfers.completed")
-	}
-}
+			err = indexerInstance.IndexReceiveAddress(ctx, network, order.Edges.ReceiveAddress.Address, 0, 0, "")
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":             fmt.Sprintf("%v", err),
+					"NetworkIdentifier": network.Identifier,
+					"ReceiveAddress":    order.Edges.ReceiveAddress.Address,
+					"OrderID":           order.ID,
+				}).Errorf("ResolvePaymentOrderMishaps.resolveMissedTransfers.indexReceiveAddress")
+				errorCount++
+				continue // Continue with other orders even if one fails
+			}
+			processedCount++
 
-// resolveMissedOrderCreatedEvents resolves cases where OrderCreated events were missed
-func resolveMissedOrderCreatedEvents(ctx context.Context, network *ent.Network) {
-	// Find payment orders with missed OrderCreated events
-	orders, err := storage.Client.PaymentOrder.
-		Query().
-		Where(
-			paymentorder.StatusEQ(paymentorder.StatusInitiated),
-			paymentorder.GatewayIDIsNil(),
-			paymentorder.TxHashNotNil(),
-			paymentorder.FromAddressNotNil(),
-			paymentorder.BlockNumberGT(0),
-			paymentorder.CreatedAtLTE(time.Now().Add(-5*time.Minute)),
-			paymentorder.HasReceiveAddressWith(
-				receiveaddress.StatusEQ(receiveaddress.StatusUsed),
-			),
-		).
-		WithReceiveAddress().
-		All(ctx)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":             fmt.Sprintf("%v", err),
-			"NetworkIdentifier": network.Identifier,
-		}).Errorf("ResolvePaymentOrderMishaps.resolveMissedOrderCreatedEvents.fetchOrders")
-		return
-	}
-
-	for _, order := range orders {
-		// Check if order has sufficient payment (amount + sender fee + protocol fee)
-		requiredAmount := order.Amount.Add(order.SenderFee).Add(order.ProtocolFee)
-		if !order.AmountPaid.Equal(requiredAmount) {
-			continue
-		}
-
-		// Index OrderCreated events for this network (address-specific, no block range)
-		indexerInstance := indexer.NewIndexerEVM()
-		err = indexerInstance.IndexOrderCreated(ctx, network, order.Edges.ReceiveAddress.Address, 0, 0, "")
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":             fmt.Sprintf("%v", err),
-				"NetworkIdentifier": network.Identifier,
-				"OrderID":           order.ID.String(),
-			}).Errorf("ResolvePaymentOrderMishaps.resolveMissedOrderCreatedEvents.indexOrderCreated")
-			continue
-		}
-
-		logger.WithFields(logger.Fields{
-			"OrderID":           order.ID.String(),
-			"NetworkIdentifier": network.Identifier,
-		}).Infof("ResolvePaymentOrderMishaps.resolveMissedOrderCreatedEvents.completed")
-	}
-}
-
-// resolveMissedOrderRefundedEvents resolves cases where OrderRefunded events were missed
-func resolveMissedOrderRefundedEvents(ctx context.Context, network *ent.Network) {
-	// Find payment orders with missed OrderRefunded events
-	orders, err := storage.Client.PaymentOrder.
-		Query().
-		Where(
-			paymentorder.StatusEQ(paymentorder.StatusPending),
-			paymentorder.GatewayIDNotNil(),
-			paymentorder.CreatedAtLTE(time.Now().Add(-5*time.Minute)),
-			paymentorder.HasTokenWith(
-				tokenent.HasNetworkWith(
-					networkent.IDEQ(network.ID),
-				),
-			),
-		).
-		WithToken(func(tq *ent.TokenQuery) {
-			tq.WithNetwork()
-		}).
-		All(ctx)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":             fmt.Sprintf("%v", err),
-			"NetworkIdentifier": network.Identifier,
-		}).Errorf("ResolvePaymentOrderMishaps.resolveMissedOrderRefundedEvents.fetchOrders")
-		return
-	}
-
-	for _, order := range orders {
-		// Index OrderRefunded events for this network (address-specific, no block range)
-		indexerInstance := indexer.NewIndexerEVM()
-		err = indexerInstance.IndexOrderRefunded(ctx, network, order.ReturnAddress, 0, 0, "")
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":             fmt.Sprintf("%v", err),
-				"NetworkIdentifier": network.Identifier,
-				"OrderID":           order.ID.String(),
-			}).Errorf("ResolvePaymentOrderMishaps.resolveMissedOrderRefundedEvents.indexOrderRefunded")
-			continue
-		}
-
-		logger.WithFields(logger.Fields{
-			"OrderID":           order.ID.String(),
-			"NetworkIdentifier": network.Identifier,
-		}).Infof("ResolvePaymentOrderMishaps.resolveMissedOrderRefundedEvents.completed")
-	}
-}
-
-// resolveMissedOrderSettledEvents resolves cases where OrderSettled events were missed (aggregator side)
-func resolveMissedOrderSettledEvents(ctx context.Context, network *ent.Network) {
-	// Find lock payment orders with missed OrderSettled events
-	orders, err := storage.Client.LockPaymentOrder.
-		Query().
-		Where(
-			lockpaymentorder.StatusEQ(lockpaymentorder.StatusValidated),
-			lockpaymentorder.UpdatedAtLTE(time.Now().Add(-2*time.Minute)),
-			lockpaymentorder.HasTokenWith(
-				tokenent.HasNetworkWith(
-					networkent.IDEQ(network.ID),
-				),
-			),
-			lockpaymentorder.HasFulfillmentsWith(
-				lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusSuccess),
-			),
-		).
-		WithToken(func(tq *ent.TokenQuery) {
-			tq.WithNetwork()
-		}).
-		WithProvider().
-		All(ctx)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":             fmt.Sprintf("%v", err),
-			"NetworkIdentifier": network.Identifier,
-		}).Errorf("ResolvePaymentOrderMishaps.resolveMissedOrderSettledEvents.fetchOrders")
-		return
-	}
-
-	for _, order := range orders {
-		// Get provider's address for this network
-		var providerAddress string
-		if order.Edges.Provider != nil {
-			// Query provider order token for this network
-			providerOrderToken, err := storage.Client.ProviderOrderToken.
-				Query().
-				Where(
-					providerordertoken.HasProviderWith(
-						providerprofile.IDEQ(order.Edges.Provider.ID),
-					),
-					providerordertoken.HasTokenWith(
-						tokenent.HasNetworkWith(
-							networkent.IDEQ(network.ID),
-						),
-					),
-				).
-				Only(ctx)
-			if err == nil {
-				providerAddress = providerOrderToken.Address
+			// Add a small delay between requests to be respectful to the RPC node
+			if i < len(orders)-1 {
+				time.Sleep(100 * time.Millisecond)
 			}
 		}
-
-		// Index OrderSettled events for this network using provider's address
-		indexerInstance := indexer.NewIndexerEVM()
-		err = indexerInstance.IndexOrderSettled(ctx, network, providerAddress, 0, 0, "")
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":             fmt.Sprintf("%v", err),
-				"NetworkIdentifier": network.Identifier,
-				"OrderID":           order.ID.String(),
-				"ProviderAddress":   providerAddress,
-			}).Errorf("ResolvePaymentOrderMishaps.resolveMissedOrderSettledEvents.indexOrderSettled")
-			continue
-		}
-
-		logger.WithFields(logger.Fields{
-			"OrderID":           order.ID.String(),
-			"NetworkIdentifier": network.Identifier,
-			"ProviderAddress":   providerAddress,
-		}).Infof("ResolvePaymentOrderMishaps.resolveMissedOrderSettledEvents.completed")
 	}
+
+	logger.WithFields(logger.Fields{
+		"NetworkIdentifier": network.Identifier,
+		"TotalOrders":       len(orders),
+		"ProcessedCount":    processedCount,
+		"ErrorCount":        errorCount,
+	}).Infof("ResolvePaymentOrderMishaps.resolveMissedTransfers.completed")
 }
 
 // StartCronJobs starts cron jobs
@@ -1542,6 +1406,12 @@ func StartCronJobs() {
 	_, err = scheduler.Every(90).Seconds().Do(ResolvePaymentOrderMishaps)
 	if err != nil {
 		logger.Errorf("StartCronJobs for ResolvePaymentOrderMishaps: %v", err)
+	}
+
+	// Index gateway events every 1 hour
+	_, err = scheduler.Every(1).Hour().Do(IndexGatewayEvents)
+	if err != nil {
+		logger.Errorf("StartCronJobs for IndexGatewayEvents: %v", err)
 	}
 
 	// Index blockchain events every 5 seconds

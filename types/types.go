@@ -105,10 +105,11 @@ type OrderService interface {
 
 // Indexer provides an interface for indexing blockchain data to the database.
 type Indexer interface {
-	IndexTransfer(ctx context.Context, token *ent.Token, address string, fromBlock int64, toBlock int64, txHash string) error
-	IndexOrderCreated(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) error
-	IndexOrderSettled(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) error
-	IndexOrderRefunded(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) error
+	// Index all gateway events (OrderCreated, OrderSettled, OrderRefunded) in one efficient call
+	IndexGateway(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error
+
+	// Index receive address events
+	IndexReceiveAddress(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) error
 }
 
 // KYCProvider defines the interface for KYC verification providers

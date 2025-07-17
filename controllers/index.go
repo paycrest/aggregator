@@ -2219,26 +2219,6 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 		return
 	}
 
-	// Fetch enabled tokens for the network
-	tokens, err := storage.Client.Token.
-		Query().
-		Where(
-			tokenEnt.IsEnabled(true),
-			tokenEnt.HasNetworkWith(
-				networkent.IDEQ(network.ID),
-			),
-		).
-		WithNetwork().
-		All(ctx)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":        fmt.Sprintf("%v", err),
-			"NetworkParam": networkParam,
-		}).Errorf("Failed to fetch tokens for network")
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch tokens", nil)
-		return
-	}
-
 	// Create indexer instance based on network type
 	var indexerInstance types.Indexer
 	if strings.HasPrefix(network.Identifier, "tron") {
@@ -2255,91 +2235,52 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 		OrderRefunded int `json:"OrderRefunded"`
 	}{}
 
-	// Run each event type in separate goroutines
+	// Run simplified indexing operations in separate goroutines
 	var wg sync.WaitGroup
 
-	// Index OrderCreated events
+	// Index Gateway events (OrderCreated, OrderSettled, OrderRefunded)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := indexerInstance.IndexOrderCreated(ctx, network, address, fromBlock, toBlock, txHash)
+		err := indexerInstance.IndexGateway(ctx, network, fromBlock, toBlock, txHash)
 		if err != nil && err.Error() != "no events found" {
 			logger.WithFields(logger.Fields{
-				"Error":        fmt.Sprintf("%v", err),
-				"NetworkParam": networkParam,
-				"TxHash":       txHash,
-				"Address":      address,
-				"FromBlock":    fromBlock,
-				"ToBlock":      toBlock,
-				"EventType":    "OrderCreated",
-			}).Errorf("Failed to index OrderCreated events")
+				"Error":          fmt.Sprintf("%v", err),
+				"NetworkParam":   networkParam,
+				"TxHash":         txHash,
+				"GatewayAddress": network.GatewayContractAddress,
+				"FromBlock":      fromBlock,
+				"ToBlock":        toBlock,
+				"EventType":      "Gateway",
+			}).Errorf("Failed to index Gateway events")
 		} else {
+			// Increment all Gateway event counts since IndexGateway processes all three
 			eventCounts.OrderCreated++
-		}
-	}()
-
-	// Index OrderSettled events
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		err := indexerInstance.IndexOrderSettled(ctx, network, address, fromBlock, toBlock, txHash)
-		if err != nil && err.Error() != "no events found" {
-			logger.WithFields(logger.Fields{
-				"Error":        fmt.Sprintf("%v", err),
-				"NetworkParam": networkParam,
-				"TxHash":       txHash,
-				"Address":      address,
-				"FromBlock":    fromBlock,
-				"ToBlock":      toBlock,
-				"EventType":    "OrderSettled",
-			}).Errorf("Failed to index OrderSettled events")
-		} else {
 			eventCounts.OrderSettled++
-		}
-	}()
-
-	// Index OrderRefunded events
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		err := indexerInstance.IndexOrderRefunded(ctx, network, address, fromBlock, toBlock, txHash)
-		if err != nil && err.Error() != "no events found" {
-			logger.WithFields(logger.Fields{
-				"Error":        fmt.Sprintf("%v", err),
-				"NetworkParam": networkParam,
-				"TxHash":       txHash,
-				"Address":      address,
-				"FromBlock":    fromBlock,
-				"ToBlock":      toBlock,
-				"EventType":    "OrderRefunded",
-			}).Errorf("Failed to index OrderRefunded events")
-		} else {
 			eventCounts.OrderRefunded++
 		}
 	}()
 
-	// Index Transfer events for each token
-	for _, token := range tokens {
-		wg.Add(1)
-		go func(token *ent.Token) {
-			defer wg.Done()
-			err := indexerInstance.IndexTransfer(ctx, token, address, fromBlock, toBlock, txHash)
-			if err != nil && err.Error() != "no events found" {
-				logger.WithFields(logger.Fields{
-					"Error":        fmt.Sprintf("%v", err),
-					"NetworkParam": networkParam,
-					"Token":        token.Symbol,
-					"TxHash":       txHash,
-					"Address":      address,
-					"FromBlock":    fromBlock,
-					"ToBlock":      toBlock,
-					"EventType":    "Transfer",
-				}).Errorf("Failed to index Transfer events")
-			} else {
-				eventCounts.Transfer++
-			}
-		}(token)
-	}
+	// Index ReceiveAddress events (transfers to linked addresses)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := indexerInstance.IndexReceiveAddress(ctx, network, address, fromBlock, toBlock, txHash)
+		if err != nil && err.Error() != "no events found" {
+			logger.WithFields(logger.Fields{
+				"Error":        fmt.Sprintf("%v", err),
+				"NetworkParam": networkParam,
+				"TxHash":       txHash,
+				"Address":      address,
+				"FromBlock":    fromBlock,
+				"ToBlock":      toBlock,
+				"EventType":    "ReceiveAddress",
+			}).Errorf("Failed to index ReceiveAddress events")
+		} else {
+			// Increment Transfer count since IndexReceiveAddress processes transfers
+			eventCounts.Transfer++
+		}
+	}()
 
 	// Wait for all indexing operations to complete
 	wg.Wait()
