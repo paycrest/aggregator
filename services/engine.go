@@ -11,6 +11,7 @@ import (
 	types "github.com/ethereum/go-ethereum/core/types"
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
+	"github.com/paycrest/aggregator/ent"
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/storage"
 	aggregatortypes "github.com/paycrest/aggregator/types"
@@ -56,57 +57,69 @@ func (s *EngineService) CreateServerWallet(ctx context.Context, label string) (s
 
 // GetLatestBlock fetches the latest block number for a given chain ID
 func (s *EngineService) GetLatestBlock(ctx context.Context, chainID int64) (int64, error) {
-	// Check if this is BNB Smart Chain (chain ID 56) - use RPC instead of Thirdweb Insight
-	if chainID == 56 {
-		// Fetch network from database to get RPC endpoint
-		network, err := storage.Client.Network.
-			Query().
-			Where(networkent.ChainIDEQ(chainID)).
-			Only(ctx)
-		if err != nil {
-			return 0, fmt.Errorf("failed to fetch network from database: %w", err)
+	// TODO: Remove once thirdweb insight supports BSC
+	if chainID != 56 {
+		// Try ThirdWeb first for all networks
+		res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
+			Config().SetTimeout(30 * time.Second).
+			Header().AddAll(map[string]string{
+			"Content-Type": "application/json",
+			"X-Secret-Key": s.config.ThirdwebSecretKey,
+		}).Build().GET("/v1/blocks").
+			Query().AddParams(map[string]string{
+			"sort_order": "desc",
+			"limit":      "1",
+		}).Send()
+		if err == nil {
+			// ThirdWeb succeeded
+			data, err := utils.ParseJSONResponse(res.RawResponse)
+			if err != nil {
+				return 0, fmt.Errorf("failed to parse JSON response: %w", err)
+			}
+
+			if data["meta"].(map[string]interface{})["total_items"].(float64) == 0 {
+				return 0, fmt.Errorf("no block found")
+			}
+
+			blockNumber := int64(data["data"].([]interface{})[0].(map[string]interface{})["block_number"].(float64))
+			return blockNumber, nil
 		}
 
-		// Use RPC for BNB Smart Chain
-		client, err := aggregatortypes.NewEthClient(network.RPCEndpoint)
-		if err != nil {
-			return 0, fmt.Errorf("failed to create RPC client: %w", err)
-		}
-
-		header, err := client.HeaderByNumber(ctx, nil) // nil means latest block
-		if err != nil {
-			return 0, fmt.Errorf("failed to get latest block: %w", err)
-		}
-
-		return header.Number.Int64(), nil
+		// ThirdWeb failed, try RPC as fallback
+		logger.WithFields(logger.Fields{
+			"ChainID":       chainID,
+			"ThirdWebError": err.Error(),
+			"FallbackToRPC": true,
+		}).Warnf("ThirdWeb failed, falling back to RPC for latest block")
 	}
 
-	// Use Thirdweb Insight for other networks
-	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
-		Config().SetTimeout(30 * time.Second).
-		Header().AddAll(map[string]string{
-		"Content-Type": "application/json",
-		"X-Secret-Key": s.config.ThirdwebSecretKey,
-	}).Build().GET("/v1/blocks").
-		Query().AddParams(map[string]string{
-		"sort_order": "desc",
-		"limit":      "1",
-	}).Send()
+	// Fetch network from database to get RPC endpoint
+	network, err := storage.Client.Network.
+		Query().
+		Where(networkent.ChainIDEQ(chainID)).
+		Only(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("failed to get latest block: %w", err)
+		return 0, fmt.Errorf("failed to fetch network from database: %w", err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Use RPC as fallback
+	client, err := aggregatortypes.NewEthClient(network.RPCEndpoint)
 	if err != nil {
-		return 0, fmt.Errorf("failed to parse JSON response: %w", err)
+		return 0, fmt.Errorf("failed to create RPC client: %w", err)
 	}
 
-	if data["meta"].(map[string]interface{})["total_items"].(float64) == 0 {
-		return 0, fmt.Errorf("no block found")
+	header, err := client.HeaderByNumber(ctx, nil) // nil means latest block
+	if err != nil {
+		return 0, fmt.Errorf("failed to get latest block from RPC: %w", err)
 	}
 
-	blockNumber := int64(data["data"].([]interface{})[0].(map[string]interface{})["block_number"].(float64))
-	return blockNumber, nil
+	logger.WithFields(logger.Fields{
+		"ChainID":      chainID,
+		"BlockNumber":  header.Number.Int64(),
+		"FallbackUsed": true,
+	}).Infof("RPC fallback succeeded for latest block")
+
+	return header.Number.Int64(), nil
 }
 
 // GetContractEvents fetches contract events
@@ -331,6 +344,54 @@ func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint st
 			return nil, fmt.Errorf("failed to process RPC events: %w", err)
 		}
 	}
+
+	return events, nil
+}
+
+// GetContractEventsWithFallback tries ThirdWeb first and falls back to RPC if ThirdWeb fails
+func (s *EngineService) GetContractEventsWithFallback(ctx context.Context, network *ent.Network, contractAddress string, fromBlock int64, toBlock int64, eventSignature string, topics []string, txHash string, eventPayload map[string]string) ([]interface{}, error) {
+	var err error
+	
+	// TODO: Remove once thirdweb insight supports BSC
+	if network.ChainID != 56 {
+		// Try ThirdWeb first
+		events, err := s.GetContractEvents(ctx, network.ChainID, contractAddress, eventPayload)
+		if err == nil {
+			// ThirdWeb succeeded, return the events
+			return events, nil
+		}
+
+		// ThirdWeb failed, log the error and try RPC as fallback
+		logger.WithFields(logger.Fields{
+			"Network":       network.Identifier,
+			"ChainID":       network.ChainID,
+			"Contract":      contractAddress,
+			"ThirdWebError": err.Error(),
+			"FallbackToRPC": true,
+		}).Warnf("ThirdWeb failed, falling back to RPC")
+	}
+
+	// Try RPC as fallback
+	events, rpcErr := s.GetContractEventsRPC(ctx, network.RPCEndpoint, contractAddress, fromBlock, toBlock, eventSignature, topics, txHash)
+	if rpcErr != nil {
+		// Both ThirdWeb and RPC failed
+		logger.WithFields(logger.Fields{
+			"Network":       network.Identifier,
+			"ChainID":       network.ChainID,
+			"Contract":      contractAddress,
+			"RPCError":      rpcErr.Error(),
+		}).Errorf("Both ThirdWeb and RPC failed")
+		return nil, fmt.Errorf("both ThirdWeb and RPC failed - ThirdWeb: %w, RPC: %w", err, rpcErr)
+	}
+
+	// RPC succeeded as fallback
+	logger.WithFields(logger.Fields{
+		"Network":      network.Identifier,
+		"ChainID":      network.ChainID,
+		"Contract":     contractAddress,
+		"EventsFound":  len(events),
+		"FallbackUsed": true,
+	}).Infof("RPC fallback succeeded")
 
 	return events, nil
 }
