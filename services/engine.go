@@ -3,10 +3,21 @@ package services
 import (
 	"context"
 	"fmt"
+	"math/big"
+	"strconv"
+	"strings"
 	"time"
 
+	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/common"
+	types "github.com/ethereum/go-ethereum/core/types"
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
+	"github.com/paycrest/aggregator/ent"
+	networkent "github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
+	"github.com/paycrest/aggregator/storage"
+	aggregatortypes "github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 )
@@ -49,6 +60,32 @@ func (s *EngineService) CreateServerWallet(ctx context.Context, label string) (s
 
 // GetLatestBlock fetches the latest block number for a given chain ID
 func (s *EngineService) GetLatestBlock(ctx context.Context, chainID int64) (int64, error) {
+	// Check if this is BNB Smart Chain (chain ID 56) - use RPC instead of Thirdweb Insight
+	if chainID == 56 {
+		// Fetch network from database to get RPC endpoint
+		network, err := storage.Client.Network.
+			Query().
+			Where(networkent.ChainIDEQ(chainID)).
+			Only(ctx)
+		if err != nil {
+			return 0, fmt.Errorf("failed to fetch network from database: %w", err)
+		}
+
+		// Use RPC for BNB Smart Chain
+		client, err := aggregatortypes.NewEthClient(network.RPCEndpoint)
+		if err != nil {
+			return 0, fmt.Errorf("failed to create RPC client: %w", err)
+		}
+
+		header, err := client.HeaderByNumber(ctx, nil) // nil means latest block
+		if err != nil {
+			return 0, fmt.Errorf("failed to get latest block: %w", err)
+		}
+
+		return header.Number.Int64(), nil
+	}
+
+	// Use Thirdweb Insight for other networks
 	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
 		Config().SetTimeout(30 * time.Second).
 		Header().AddAll(map[string]string{
@@ -205,4 +242,606 @@ func (s *EngineService) WaitForTransactionMined(ctx context.Context, queueId str
 
 		time.Sleep(time.Second)
 	}
+}
+
+// Example usage:
+//
+// 1. Create a transfer webhook for a specific token contract:
+//    webhookID, webhookSecret, err := engineService.CreateTransferWebhook(
+//        ctx,
+//        137, // Polygon chain ID
+//        "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619", // WETH contract address
+//        "0x1234567890123456789012345678901234567890", // To address to monitor
+//        "order-uuid-here" // Order ID for webhook name
+//    )
+//
+// 2. Create gateway webhooks for all supported chains:
+//    webhookID, webhookSecret, err := engineService.CreateGatewayWebhook(ctx)
+//
+// 3. Set up all webhooks for the environment:
+//    err := engineService.SetupWebhooksForEnvironment(ctx)
+//
+// 4. Delete a webhook from thirdweb:
+//    err := engineService.DeleteWebhook(ctx, "webhook_id_here")
+//
+// 5. Delete a webhook from thirdweb and remove the record from database:
+//    err := engineService.DeleteWebhookAndRecord(ctx, "webhook_id_here")
+
+// CreateTransferWebhook creates webhooks to listen to transfer events to a specific address on a specific chain
+func (s *EngineService) CreateTransferWebhook(ctx context.Context, chainID int64, contractAddress string, toAddress string, orderID string) (string, string, error) {
+	webhookCallbackURL := fmt.Sprintf("%s/v1/insight/webhook", config.ServerConfig().ServerURL)
+
+	webhookPayload := map[string]interface{}{
+		"name":        orderID,
+		"webhook_url": webhookCallbackURL,
+		"filters": map[string]interface{}{
+			"v1.events": map[string]interface{}{
+				"chain_ids": []string{strconv.FormatInt(chainID, 10)},
+				"addresses": []string{contractAddress},
+				"signatures": []map[string]interface{}{
+					{
+						"sig_hash": "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef", // Transfer event signature
+						"abi":      "{\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"}",
+						"params": map[string]interface{}{
+							"to": toAddress, // Filter for transfers to the specific address
+						},
+					},
+				},
+			},
+		},
+	}
+
+	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
+		Config().SetTimeout(30 * time.Second).
+		Header().AddAll(map[string]string{
+		"Accept":       "application/json",
+		"Content-Type": "application/json",
+		"X-Secret-Key": s.config.ThirdwebSecretKey,
+	}).Build().POST("/v1/webhooks").
+		Body().AsJSON(webhookPayload).Send()
+	if err != nil {
+		return "", "", fmt.Errorf("failed to create transfer webhook: %w", err)
+	}
+
+	data, err := utils.ParseJSONResponse(res.RawResponse)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to parse JSON response: %w", err)
+	}
+
+	// Handle nested data structure
+	responseData, ok := data["data"].(map[string]interface{})
+	if !ok {
+		return "", "", fmt.Errorf("invalid response structure: missing 'data' field")
+	}
+
+	webhookID, ok := responseData["id"].(string)
+	if !ok {
+		return "", "", fmt.Errorf("invalid response structure: missing or invalid 'id' field")
+	}
+
+	webhookSecret, ok := responseData["webhook_secret"].(string)
+	if !ok {
+		return "", "", fmt.Errorf("invalid response structure: missing or invalid 'webhook_secret' field")
+	}
+
+	return webhookID, webhookSecret, nil
+}
+
+// DeleteWebhook deletes a webhook by its ID
+func (s *EngineService) DeleteWebhook(ctx context.Context, webhookID string) error {
+	res, err := fastshot.NewClient("https://insight.thirdweb.com").
+		Config().SetTimeout(30 * time.Second).
+		Header().AddAll(map[string]string{
+		"Accept":       "application/json",
+		"Content-Type": "application/json",
+		"X-Secret-Key": s.config.ThirdwebSecretKey,
+	}).Build().DELETE(fmt.Sprintf("/v1/webhooks/%s", webhookID)).
+		Send()
+	if err != nil {
+		return fmt.Errorf("failed to delete webhook: %w", err)
+	}
+
+	// Check if the response indicates success
+	if res.StatusCode() != 200 && res.StatusCode() != 204 {
+		return fmt.Errorf("failed to delete webhook: HTTP %d", res.StatusCode())
+	}
+
+	return nil
+}
+
+// DeleteWebhookAndRecord deletes a webhook from thirdweb and removes the PaymentWebhook record from our database
+func (s *EngineService) DeleteWebhookAndRecord(ctx context.Context, webhookID string) error {
+	// First, delete the webhook from thirdweb
+	err := s.DeleteWebhook(ctx, webhookID)
+	if err != nil {
+		return fmt.Errorf("failed to delete webhook from thirdweb: %w", err)
+	}
+
+	// Then, delete the PaymentWebhook record from our database
+	_, err = storage.Client.PaymentWebhook.
+		Delete().
+		Where(paymentwebhook.WebhookIDEQ(webhookID)).
+		Exec(ctx)
+	if err != nil {
+		logger.Errorf("Failed to delete PaymentWebhook record from database: %v", err)
+		// Don't fail the entire operation if database deletion fails
+		// The webhook is already deleted from thirdweb
+	}
+
+	return nil
+}
+
+// WebhookInfo represents a webhook from thirdweb API
+type WebhookInfo struct {
+	ID            string                 `json:"id"`
+	Name          string                 `json:"name"`
+	WebhookURL    string                 `json:"webhook_url"`
+	WebhookSecret string                 `json:"webhook_secret"`
+	Disabled      bool                   `json:"disabled"`
+	CreatedAt     string                 `json:"created_at"`
+	UpdatedAt     string                 `json:"updated_at"`
+	ProjectID     string                 `json:"project_id"`
+	Filters       map[string]interface{} `json:"filters"`
+}
+
+// WebhookListResponse represents the response from GET /v1/webhooks
+type WebhookListResponse struct {
+	Data []WebhookInfo `json:"data"`
+	Meta struct {
+		Page       int `json:"page"`
+		Limit      int `json:"limit"`
+		TotalItems int `json:"total_items"`
+		TotalPages int `json:"total_pages"`
+	} `json:"meta"`
+}
+
+// GetWebhookByID fetches a webhook by its ID from thirdweb
+func (s *EngineService) GetWebhookByID(ctx context.Context, webhookID string, chainID int64) (*WebhookInfo, error) {
+	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
+		Config().SetTimeout(30 * time.Second).
+		Header().AddAll(map[string]string{
+		"Accept":       "application/json",
+		"Content-Type": "application/json",
+		"X-Secret-Key": s.config.ThirdwebSecretKey,
+	}).Build().GET("/v1/webhooks").
+		Query().AddParams(map[string]string{
+		"webhook_id": webhookID,
+	}).Send()
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch webhook: %w", err)
+	}
+
+	data, err := utils.ParseJSONResponse(res.RawResponse)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse webhook response: %w", err)
+	}
+
+	// Parse the response data
+	responseData := data["data"].([]interface{})
+	if len(responseData) == 0 {
+		return nil, fmt.Errorf("webhook not found")
+	}
+
+	webhookData := responseData[0].(map[string]interface{})
+	webhookInfo := &WebhookInfo{
+		ID:            webhookData["id"].(string),
+		Name:          webhookData["name"].(string),
+		WebhookURL:    webhookData["webhook_url"].(string),
+		WebhookSecret: webhookData["webhook_secret"].(string),
+		Disabled:      webhookData["disabled"].(bool),
+		CreatedAt:     webhookData["created_at"].(string),
+		UpdatedAt:     webhookData["updated_at"].(string),
+		ProjectID:     webhookData["project_id"].(string),
+		Filters:       webhookData["filters"].(map[string]interface{}),
+	}
+
+	return webhookInfo, nil
+}
+
+// UpdateWebhook updates an existing webhook with new filters
+func (s *EngineService) UpdateWebhook(ctx context.Context, webhookID string, webhookPayload map[string]interface{}) error {
+	res, err := fastshot.NewClient("https://insight.thirdweb.com").
+		Config().SetTimeout(30 * time.Second).
+		Header().AddAll(map[string]string{
+		"Accept":       "application/json",
+		"Content-Type": "application/json",
+		"X-Secret-Key": s.config.ThirdwebSecretKey,
+	}).Build().PATCH(fmt.Sprintf("/v1/webhooks/%s", webhookID)).
+		Body().AsJSON(webhookPayload).Send()
+	if err != nil {
+		return fmt.Errorf("failed to update webhook: %w", err)
+	}
+
+	data, err := utils.ParseJSONResponse(res.RawResponse)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Data":       data,
+			"StatusCode": res.RawResponse.StatusCode,
+		}).Errorf("failed to parse JSON response: %v", err)
+		return fmt.Errorf("failed to parse JSON response: %v", err)
+	}
+
+	return nil
+}
+
+// CreateGatewayWebhook creates webhooks for gateway contract events across all supported chains for the environment
+func (s *EngineService) CreateGatewayWebhook() error {
+	ctx := context.Background()
+	serverConf := config.ServerConfig()
+
+	// Check if server URL is configured
+	if serverConf.ServerURL == "" {
+		logger.WithFields(logger.Fields{
+			"Environment": serverConf.Environment,
+		}).Errorf("SERVER_URL not configured in environment")
+		return fmt.Errorf("SERVER_URL not configured in environment")
+	}
+
+	// Determine if we're in testnet or mainnet
+	// isTestnet := false
+	// if serverConf.Environment != "production" {
+	// 	isTestnet = true
+	// }
+
+	// Fetch networks for the current environment
+	networks, err := storage.Client.Network.
+		Query().
+		// Where(networkent.IsTestnet(isTestnet)).
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to fetch networks: %w", err)
+	}
+
+	// Event signatures for gateway contract events (using hash-like signatures from EVM indexer)
+	eventSignatures := []map[string]interface{}{
+		{
+			"sig_hash": "0x40ccd1ceb111a3c186ef9911e1b876dc1f789ed331b86097b3b8851055b6a137", // OrderCreated event signature
+			"abi":      "{\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"protocolFee\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"orderId\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"rate\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"messageHash\",\"type\":\"string\"}],\"name\":\"OrderCreated\",\"type\":\"event\"}",
+		},
+		{
+			"sig_hash": "0x98ece21e01a01cbe1d1c0dad3b053c8fbd368f99be78be958fcf1d1d13fd249a", // OrderSettled event signature
+			"abi":      "{\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"splitOrderId\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"orderId\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"liquidityProvider\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint96\",\"name\":\"settlePercent\",\"type\":\"uint96\"}],\"name\":\"OrderSettled\",\"type\":\"event\"}",
+		},
+		{
+			"sig_hash": "0x0736fe428e1747ca8d387c2e6fa1a31a0cde62d3a167c40a46ade59a3cdc828e", // OrderRefunded event signature
+			"abi":      "{\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"fee\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"orderId\",\"type\":\"bytes32\"}],\"name\":\"OrderRefunded\",\"type\":\"event\"}",
+		},
+	}
+
+	// Collect all chain IDs and gateway addresses
+	var chainIDs []int64
+	var chainIDsStrings []string
+	var gatewayAddresses []string
+	var evmNetworks []*ent.Network
+
+	for _, network := range networks {
+		// Skip Tron networks as they don't use EVM webhooks
+		if strings.HasPrefix(network.Identifier, "tron") {
+			continue
+		}
+		chainIDs = append(chainIDs, network.ChainID)
+		chainIDsStrings = append(chainIDsStrings, strconv.FormatInt(network.ChainID, 10))
+		gatewayAddresses = append(gatewayAddresses, network.GatewayContractAddress)
+		evmNetworks = append(evmNetworks, network)
+	}
+
+	if len(chainIDs) == 0 {
+		logger.Infof("No EVM networks found for webhook creation")
+		return nil
+	}
+
+	// Check if any EVM network has an associated PaymentWebhook
+	var existingWebhookID string
+	var existingWebhookSecret string
+
+	for _, network := range evmNetworks {
+		paymentWebhook, err := storage.Client.PaymentWebhook.
+			Query().
+			Where(paymentwebhook.HasNetworkWith(networkent.IDEQ(network.ID))).
+			Only(ctx)
+		if err != nil {
+			if ent.IsNotFound(err) {
+				// No webhook for this network - continue checking others
+				continue
+			} else {
+				// Real database error - log and return
+				logger.Errorf("Database error checking webhook for network %s: %v", network.Identifier, err)
+				return fmt.Errorf("failed to check existing webhooks: %w", err)
+			}
+		}
+
+		// Found an existing webhook
+		existingWebhookID = paymentWebhook.WebhookID
+		existingWebhookSecret = paymentWebhook.WebhookSecret
+		break
+	}
+
+	// Create callback URL for gateway events
+	webhookCallbackURL := fmt.Sprintf("%s/v1/insight/webhook", serverConf.ServerURL)
+
+	if existingWebhookID != "" {
+		// Fetch the existing webhook from thirdweb
+		webhookInfo, err := s.GetWebhookByID(ctx, existingWebhookID, evmNetworks[0].ChainID)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"WebhookID": existingWebhookID,
+				"ChainID":   evmNetworks[0].ChainID,
+			}).Errorf("Failed to fetch existing webhook: %v", err)
+			// Continue with creating a new webhook
+		} else {
+			// Check if the webhook filters match our current chain IDs
+			filters, ok := webhookInfo.Filters["v1.events"].(map[string]interface{})
+			if ok {
+				existingChainIDs, ok := filters["chain_ids"].([]interface{})
+				if ok {
+					// Convert existing chain IDs to int64 for comparison
+					var existingChainIDsInt64 []int64
+					for _, chainID := range existingChainIDs {
+						if chainIDFloat, ok := chainID.(float64); ok {
+							existingChainIDsInt64 = append(existingChainIDsInt64, int64(chainIDFloat))
+						}
+					}
+
+					// Check if all our chain IDs are in the existing webhook
+					allChainsIncluded := true
+					for _, chainID := range chainIDs {
+						found := false
+						for _, existingChainID := range existingChainIDsInt64 {
+							if chainID == existingChainID {
+								found = true
+								break
+							}
+						}
+						if !found {
+							allChainsIncluded = false
+							break
+						}
+					}
+
+					if allChainsIncluded {
+						// Perfect match - no update needed
+						logger.WithFields(logger.Fields{
+							"WebhookID": existingWebhookID,
+							"ChainIDs":  chainIDs,
+						}).Infof("Gateway webhook already exists and includes all required chains")
+						return nil
+					}
+				}
+			}
+
+			// Update the webhook with new chain IDs
+			webhookPayload := map[string]interface{}{
+				"webhook_url": webhookCallbackURL,
+				"filters": map[string]interface{}{
+					"v1.events": map[string]interface{}{
+						"chain_ids":  chainIDsStrings,
+						"addresses":  gatewayAddresses,
+						"signatures": eventSignatures,
+					},
+				},
+			}
+
+			err = s.UpdateWebhook(ctx, existingWebhookID, webhookPayload)
+			if err != nil {
+				logger.Errorf("Failed to update webhook %s: %v", existingWebhookID, err)
+				// Continue with creating a new webhook
+			} else {
+				// Update successful, now update all PaymentWebhook records
+				for _, network := range evmNetworks {
+					// Delete existing PaymentWebhook for this network, if any
+					_, err = storage.Client.PaymentWebhook.Delete().
+						Where(paymentwebhook.HasNetworkWith(networkent.IDEQ(network.ID))).
+						Exec(ctx)
+					if err != nil {
+						logger.Errorf("Failed to delete existing PaymentWebhook for network %s: %v", network.Identifier, err)
+						continue
+					}
+
+					// Create new PaymentWebhook with updated webhook info
+					_, err = storage.Client.PaymentWebhook.Create().
+						SetWebhookID(existingWebhookID).
+						SetWebhookSecret(existingWebhookSecret).
+						SetCallbackURL(webhookCallbackURL).
+						SetNetwork(network).
+						Save(ctx)
+					if err != nil {
+						logger.Errorf("Failed to create PaymentWebhook for network %s: %v", network.Identifier, err)
+						continue
+					}
+				}
+
+				logger.WithFields(logger.Fields{
+					"WebhookID":        existingWebhookID,
+					"ChainIDs":         chainIDs,
+					"GatewayAddresses": gatewayAddresses,
+					"EventSignatures":  eventSignatures,
+					"CallbackURL":      webhookCallbackURL,
+					"NetworksCount":    len(chainIDs),
+				}).Infof("Updated gateway webhook successfully")
+
+				return nil
+			}
+		}
+	}
+
+	// No existing webhook found or update failed, create a new one
+	webhookPayload := map[string]interface{}{
+		"name":        "Gateway Contract Events Webhook",
+		"webhook_url": webhookCallbackURL,
+		"filters": map[string]interface{}{
+			"v1.events": map[string]interface{}{
+				"chain_ids":  chainIDsStrings,
+				"addresses":  gatewayAddresses,
+				"signatures": eventSignatures,
+			},
+		},
+	}
+
+	res, err := fastshot.NewClient("https://insight.thirdweb.com").
+		Config().SetTimeout(30 * time.Second).
+		Header().AddAll(map[string]string{
+		"Accept":       "application/json",
+		"Content-Type": "application/json",
+		"X-Secret-Key": s.config.ThirdwebSecretKey,
+	}).Build().POST("/v1/webhooks").
+		Body().AsJSON(webhookPayload).Send()
+
+	if err != nil {
+		return fmt.Errorf("failed to create gateway webhooks: %w", err)
+	}
+
+	data, err := utils.ParseJSONResponse(res.RawResponse)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Data":       data,
+			"StatusCode": res.RawResponse.StatusCode,
+		}).Errorf("failed to parse JSON response: %v", err)
+		return fmt.Errorf("failed to parse JSON response: %v", err)
+	}
+
+	// Parse webhook data from response - handle nested data structure
+	responseData, ok := data["data"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("invalid response structure: missing 'data' field")
+	}
+
+	webhookID, ok := responseData["id"].(string)
+	if !ok {
+		return fmt.Errorf("invalid response structure: missing or invalid 'id' field")
+	}
+
+	webhookSecret, ok := responseData["webhook_secret"].(string)
+	if !ok {
+		return fmt.Errorf("invalid response structure: missing or invalid 'webhook_secret' field")
+	}
+
+	// Create PaymentWebhook records for all EVM networks
+	for _, network := range evmNetworks {
+		// Delete existing PaymentWebhook for this network, if any
+		_, err = storage.Client.PaymentWebhook.Delete().
+			Where(paymentwebhook.HasNetworkWith(networkent.IDEQ(network.ID))).
+			Exec(ctx)
+		if err != nil {
+			logger.Errorf("Failed to delete existing PaymentWebhook for network %s: %v", network.Identifier, err)
+			continue
+		}
+
+		// Create new PaymentWebhook
+		_, err = storage.Client.PaymentWebhook.Create().
+			SetWebhookID(webhookID).
+			SetWebhookSecret(webhookSecret).
+			SetCallbackURL(webhookCallbackURL).
+			SetNetwork(network).
+			Save(ctx)
+		if err != nil {
+			logger.Errorf("Failed to create PaymentWebhook for network %s: %v", network.Identifier, err)
+			continue
+		}
+	}
+
+	logger.WithFields(logger.Fields{
+		"WebhookID":        webhookID,
+		"ChainIDs":         chainIDs,
+		"GatewayAddresses": gatewayAddresses,
+		"EventSignatures":  eventSignatures,
+		"CallbackURL":      webhookCallbackURL,
+		"NetworksCount":    len(chainIDs),
+	}).Infof("Created gateway webhooks successfully")
+
+	return nil
+}
+
+// GetContractEventsRPC fetches contract events using RPC for networks not supported by Thirdweb Insight
+func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint string, contractAddress string, fromBlock int64, toBlock int64, eventSignature string, topics []string, txHash string) ([]interface{}, error) {
+	// Create RPC client
+	client, err := aggregatortypes.NewEthClient(rpcEndpoint)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create RPC client: %w", err)
+	}
+
+	var logs []types.Log
+	var err2 error
+
+	if txHash != "" {
+		// If transaction hash is provided, get the specific transaction receipt
+		receipt, err := client.TransactionReceipt(ctx, common.HexToHash(txHash))
+		if err != nil {
+			return nil, fmt.Errorf("failed to get transaction receipt: %w", err)
+		}
+
+		// Filter logs from the receipt that match our criteria
+		for _, log := range receipt.Logs {
+			if log.Address == common.HexToAddress(contractAddress) {
+				// Check if this log matches our event signature
+				if len(log.Topics) > 0 && log.Topics[0].Hex() == eventSignature {
+					// Check additional topics if provided
+					matches := true
+					for i, topic := range topics {
+						if topic != "" && (i+1 >= len(log.Topics) || log.Topics[i+1].Hex() != topic) {
+							matches = false
+							break
+						}
+					}
+					if matches {
+						logs = append(logs, *log)
+					}
+				}
+			}
+		}
+	} else {
+		// Use block range filtering (existing logic)
+		// Build filter query
+		filterQuery := ethereum.FilterQuery{
+			FromBlock: big.NewInt(fromBlock),
+			ToBlock:   big.NewInt(toBlock),
+			Addresses: []common.Address{common.HexToAddress(contractAddress)},
+			Topics:    [][]common.Hash{},
+		}
+
+		// Add event signature as first topic
+		if eventSignature != "" {
+			filterQuery.Topics = append(filterQuery.Topics, []common.Hash{common.HexToHash(eventSignature)})
+		}
+
+		// Add additional topics if provided
+		for _, topic := range topics {
+			if topic != "" {
+				filterQuery.Topics = append(filterQuery.Topics, []common.Hash{common.HexToHash(topic)})
+			}
+		}
+
+		// Get logs
+		logs, err2 = client.FilterLogs(ctx, filterQuery)
+		if err2 != nil {
+			return nil, fmt.Errorf("failed to get logs: %w", err2)
+		}
+	}
+
+	// Convert logs to the same format as Thirdweb Insight
+	var events []interface{}
+	for _, log := range logs {
+		event := map[string]interface{}{
+			"block_number":     float64(log.BlockNumber),
+			"transaction_hash": log.TxHash.Hex(),
+			"log_index":        float64(log.Index),
+			"address":          log.Address.Hex(),
+			"topics":           log.Topics,
+			"data":             log.Data,
+			"decoded": map[string]interface{}{
+				"indexed_params":     make(map[string]interface{}),
+				"non_indexed_params": make(map[string]interface{}),
+			},
+		}
+		events = append(events, event)
+	}
+
+	// Decode events based on signature
+	if len(events) > 0 {
+		err = utils.ProcessRPCEvents(events, eventSignature)
+		if err != nil {
+			return nil, fmt.Errorf("failed to process RPC events: %w", err)
+		}
+	}
+
+	return events, nil
 }

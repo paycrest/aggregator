@@ -38,6 +38,8 @@ const (
 	FieldFee = "fee"
 	// EdgeTokens holds the string denoting the tokens edge name in mutations.
 	EdgeTokens = "tokens"
+	// EdgePaymentWebhook holds the string denoting the payment_webhook edge name in mutations.
+	EdgePaymentWebhook = "payment_webhook"
 	// Table holds the table name of the network in the database.
 	Table = "networks"
 	// TokensTable is the table that holds the tokens relation/edge.
@@ -47,6 +49,13 @@ const (
 	TokensInverseTable = "tokens"
 	// TokensColumn is the table column denoting the tokens relation/edge.
 	TokensColumn = "network_tokens"
+	// PaymentWebhookTable is the table that holds the payment_webhook relation/edge.
+	PaymentWebhookTable = "payment_webhooks"
+	// PaymentWebhookInverseTable is the table name for the PaymentWebhook entity.
+	// It exists in this package in order to avoid circular dependency with the "paymentwebhook" package.
+	PaymentWebhookInverseTable = "payment_webhooks"
+	// PaymentWebhookColumn is the table column denoting the payment_webhook relation/edge.
+	PaymentWebhookColumn = "network_payment_webhook"
 )
 
 // Columns holds all SQL columns for network fields.
@@ -162,10 +171,24 @@ func ByTokens(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newTokensStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByPaymentWebhookField orders the results by payment_webhook field.
+func ByPaymentWebhookField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newPaymentWebhookStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newTokensStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(TokensInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, TokensTable, TokensColumn),
+	)
+}
+func newPaymentWebhookStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(PaymentWebhookInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, false, PaymentWebhookTable, PaymentWebhookColumn),
 	)
 }

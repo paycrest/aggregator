@@ -8,9 +8,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
-	"runtime"
 	"slices"
 	"time"
 
@@ -285,23 +282,6 @@ func loadSmileIDConfig(data []byte) ([]map[string]interface{}, error) {
 
 	// Flatten the structure
 	return flattenSmileIDConfig(config)
-}
-
-// getModuleRootDir finds the root directory of the Go module
-func getModuleRootDir() (string, error) {
-	// Get the path to the current file
-	_, filename, _, _ := runtime.Caller(0)
-	dir := filepath.Dir(filename)
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir, nil
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return "", fmt.Errorf("could not find module root (no go.mod file found)")
-		}
-		dir = parent
-	}
 }
 
 type IDType struct {

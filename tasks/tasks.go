@@ -272,10 +272,6 @@ func GetTronLatestBlock(endpoint string) (int64, error) {
 
 // runIndexers runs the indexers for the given network, indexer, tokens, startBlock, and latestBlock
 func runIndexers(network *ent.Network, indexer types.Indexer, tokens []*ent.Token, startBlock int64, latestBlock int64) {
-	if network.ChainID == 42161 {
-		startBlock = startBlock - 5
-	}
-
 	// Index Gateway events
 	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
 		ctx := context.Background()
@@ -366,10 +362,10 @@ func TaskIndexBlockchainEvents() error {
 				indexerInstance = indexer.NewIndexerEVM()
 				latestBlock, err = engineService.GetLatestBlock(ctx, network.ChainID)
 				if err != nil {
-					// logger.WithFields(logger.Fields{
-					// 	"Error":             fmt.Sprintf("%v", err),
-					// 	"NetworkIdentifier": network.Identifier,
-					// }).Errorf("TaskIndexBlockchainEvents.getLatestBlock")
+					logger.WithFields(logger.Fields{
+						"Error":             fmt.Sprintf("%v", err),
+						"NetworkIdentifier": network.Identifier,
+					}).Errorf("TaskIndexBlockchainEvents.getLatestBlock")
 					return
 				}
 				duration = orderConf.IndexingDuration
@@ -961,7 +957,7 @@ func fetchExternalRate(currency string) (decimal.Decimal, error) {
 	// Fetch rates from third-party APIs
 	var price decimal.Decimal
 	if currency == "NGN" {
-		res, err := fastshot.NewClient("https://www.quidax.com").
+		res, err := fastshot.NewClient("https://app.quidax.io").
 			Config().SetTimeout(30*time.Second).
 			Build().GET(fmt.Sprintf("/api/v1/markets/tickers/usdt%s", strings.ToLower(currency))).
 			Retry().Set(3, 5*time.Second).
@@ -1247,10 +1243,10 @@ func StartCronJobs() {
 	}
 
 	// Index blockchain events every 5 seconds
-	_, err = scheduler.Every(5).Seconds().Do(TaskIndexBlockchainEvents)
-	if err != nil {
-		logger.Errorf("StartCronJobs for IndexBlockchainEvents: %v", err)
-	}
+	// _, err = scheduler.Every(5).Seconds().Do(TaskIndexBlockchainEvents)
+	// if err != nil {
+	// 	logger.Errorf("StartCronJobs for IndexBlockchainEvents: %v", err)
+	// }
 
 	// Start scheduler
 	scheduler.StartAsync()
