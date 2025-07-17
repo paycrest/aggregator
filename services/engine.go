@@ -945,7 +945,7 @@ func (s *EngineService) GetContractEventsWithFallback(ctx context.Context, netwo
 	}).Warnf("ThirdWeb failed, falling back to RPC")
 
 	// Try RPC as fallback
-	events, rpcErr := s.GetContractEventsRPC(ctx, network.RPCEndpoint, contractAddress, fromBlock, toBlock, eventSignature, topics, txHash)
+	events, rpcErr := s.GetContractEventsRPC(ctx, network.RPCEndpoint, contractAddress, fromBlock, toBlock, topics, txHash)
 	if rpcErr != nil {
 		// Both ThirdWeb and RPC failed
 		logger.WithFields(logger.Fields{
