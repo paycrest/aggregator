@@ -214,6 +214,37 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 		return fmt.Errorf("%s - RefundOrder.sendTransaction: %w", orderIDPrefix, err)
 	}
 
+	// Wait for refundOrder tx to be mined
+	result, err := s.engineService.WaitForTransactionMined(ctx, queueId, 5*time.Minute)
+	if err != nil {
+		if strings.Contains(err.Error(), "OrderRefunded") || strings.Contains(err.Error(), "UserOperation reverted during simulation") {
+			_, err = lockOrder.Update().
+				SetStatus(lockpaymentorder.StatusRefunded).
+				Save(ctx)
+			if err != nil {
+				return fmt.Errorf("%s - RefundOrder.updateStatus: %w", orderIDPrefix, err)
+			}
+			return nil
+		}
+		return fmt.Errorf("RefundOrder.waitForTransactionMined: %w", err)
+	}
+
+	txHash := result["transactionHash"].(string)
+	blockNumber, err := strconv.ParseInt(result["confirmedAtBlockNumber"].(string), 0, 64)
+	if err != nil {
+		return fmt.Errorf("%s - RefundOrder.parseBlockNumber: %w", orderIDPrefix, err)
+	}
+
+	// Update lock order with tx hash and block number
+	_, err = lockOrder.Update().
+		SetTxHash(txHash).
+		SetBlockNumber(blockNumber).
+		SetBlockNumber(blockNumber).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("%s - RefundOrder.updateTxHash: %w", orderIDPrefix, err)
+	}
+
 	return nil
 }
 
@@ -258,6 +289,33 @@ func (s *OrderEVM) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 	_, err = s.engineService.SendTransactionBatch(ctx, order.Edges.Token.Edges.Network.ChainID, cryptoConf.AggregatorSmartAccount, []map[string]interface{}{txPayload})
 	if err != nil {
 		return fmt.Errorf("%s - SettleOrder.sendTransaction: %w", orderIDPrefix, err)
+	}
+
+	// Wait for settleOrder tx to be mined
+	result, err := s.engineService.WaitForTransactionMined(ctx, queueId, 5*time.Minute)
+	if err != nil {
+		if strings.Contains(err.Error(), "OrderFulfilled") || strings.Contains(err.Error(), "UserOperation reverted during simulation") {
+			_, err = order.Update().
+				SetStatus(lockpaymentorder.StatusSettled).
+				Save(ctx)
+		}
+		return fmt.Errorf("SettleOrder.waitForTransactionMined: %w", err)
+	}
+
+	txHash := result["transactionHash"].(string)
+	blockNumber, err := strconv.ParseInt(result["confirmedAtBlockNumber"].(string), 0, 64)
+	if err != nil {
+		return fmt.Errorf("%s - SettleOrder.parseBlockNumber: %w", orderIDPrefix, err)
+	}
+
+	// Update lock order with tx hash and block number
+	_, err = order.Update().
+		SetTxHash(txHash).
+		SetBlockNumber(blockNumber).
+		SetBlockNumber(blockNumber).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("%s - SettleOrder.updateTxHash: %w", orderIDPrefix, err)
 	}
 
 	return nil

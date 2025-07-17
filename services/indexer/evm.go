@@ -280,7 +280,7 @@ func (s *IndexerEVM) IndexOrderSettled(ctx context.Context, network *ent.Network
 	}
 
 	if err != nil {
-		return fmt.Errorf("IndexOrderSettled.getEvents: %w %v %v", err, events, network.GatewayContractAddress)
+		return fmt.Errorf("IndexOrderSettled.getEvents: %w %v", err, events)
 	}
 
 	txHashes := []string{}

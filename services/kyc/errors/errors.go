@@ -10,6 +10,9 @@ type (
 	ErrProviderResponse     struct{ Err error }
 	ErrDatabase             struct{ Err error }
 	ErrNotFound             struct{}
+	ErrNotVerified          struct{}
+	ErrInvalidSecretKey     struct{}
+	ErrKYCNotFound          struct{}
 )
 
 func (e ErrSignatureAlreadyUsed) Error() string {
@@ -34,4 +37,19 @@ func (e ErrDatabase) Error() string {
 
 func (e ErrNotFound) Error() string {
 	return "no verification request found for this wallet address"
+}
+
+// Error implements the error interface for ErrNotVerified
+func (e ErrNotVerified) Error() string {
+	return "KYC not verified"
+}
+
+// Error implements the error interface for ErrInvalidSecretKey
+func (e ErrInvalidSecretKey) Error() string {
+	return "invalid secret key"
+}
+
+// Error implements the error interface for ErrKYCNotFound
+func (e ErrKYCNotFound) Error() string {
+	return "no KYC record found for wallet address"
 }
