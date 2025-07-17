@@ -160,6 +160,15 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 	// Wait for createOrder tx to be mined
 	result, err := s.engineService.WaitForTransactionMined(ctx, queueId, 5*time.Minute)
 	if err != nil {
+		if strings.Contains(err.Error(), "OrderAlreadyExists") || strings.Contains(err.Error(), "UserOperation reverted during simulation") {
+			_, err = order.Update().
+				SetStatus(paymentorder.StatusPending).
+				Save(ctx)
+			if err != nil {
+				return fmt.Errorf("%s - CreateOrder.updateStatus: %w", orderIDPrefix, err)
+			}
+			return nil
+		}
 		return fmt.Errorf("CreateOrder.waitForTransactionMined: %w", err)
 	}
 
