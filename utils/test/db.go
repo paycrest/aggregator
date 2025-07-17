@@ -131,7 +131,7 @@ func CreateERC20Token(client types.RPCClient, overrides map[string]interface{}) 
 	return token, err
 }
 
-// CreateERC20Token creates a test token with default or custom values
+// CreateTRC20Token creates a test token with default or custom values
 func CreateTRC20Token(client types.RPCClient, overrides map[string]interface{}) (*ent.Token, error) {
 
 	// Default payload
@@ -536,6 +536,9 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		SetCurrencyID(payload["currency_id"].(uuid.UUID)).
 		SetRateSlippage(decimal.NewFromFloat(0.1)).
 		Save(context.Background())
+	if err != nil {
+		return nil, err
+	}
 
 	orderToken, err = db.Client.ProviderOrderToken.
 		Query().
@@ -548,7 +551,7 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 	return orderToken, err
 }
 
-// CreateTestProviderProfile creates a test ProviderProfile with defaults or custom values
+// CreateTestProvisionBucket creates a test ProvisionBucket with defaults or custom values
 func CreateTestProvisionBucket(overrides map[string]interface{}) (*ent.ProvisionBucket, error) {
 	ctx := context.Background()
 

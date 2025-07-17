@@ -37,30 +37,55 @@ func NewIndexerEVM() types.Indexer {
 
 // IndexTransfer indexes transfers to the receive address for EVM networks.
 func (s *IndexerEVM) IndexTransfer(ctx context.Context, token *ent.Token, address string, fromBlock int64, toBlock int64, txHash string) error {
-	// Get Transfer event data
-	eventPayload := map[string]string{}
-	if txHash != "" {
-		eventPayload = map[string]string{
-			"filter_topic_0":          "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef", // Transfer
-			"filter_transaction_hash": txHash,
-			"decode":                  "true",
-		}
-	} else {
-		eventPayload = map[string]string{
-			"filter_block_number_gte": fmt.Sprintf("%d", fromBlock),
-			"filter_block_number_lte": fmt.Sprintf("%d", toBlock),
-			"filter_topic_0":          "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef", // Transfer
-			"sort_by":                 "block_number",
-			"sort_order":              "desc",
-			"decode":                  "true",
-			"limit":                   "500",
-		}
+	var events []interface{}
+	var err error
+
+	// Check if this is BNB Smart Chain (chain ID 56) - use RPC instead of Thirdweb Insight
+	if token.Edges.Network.ChainID == 56 {
+		eventSignature := "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef" // Transfer
+		var topics []string
+
 		if address != "" {
-			eventPayload["filter_topic_2"] = address
+			topics = append(topics, address)
 		}
+
+		events, err = s.engineService.GetContractEventsRPC(
+			ctx,
+			token.Edges.Network.RPCEndpoint,
+			token.ContractAddress,
+			fromBlock,
+			toBlock,
+			eventSignature,
+			topics,
+			txHash,
+		)
+	} else {
+		// Use Thirdweb Insight for other networks
+		var eventPayload map[string]string
+		if txHash != "" {
+			eventPayload = map[string]string{
+				"filter_topic_0":          "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef", // Transfer
+				"filter_transaction_hash": txHash,
+				"decode":                  "true",
+			}
+		} else {
+			eventPayload = map[string]string{
+				"filter_block_number_gte": fmt.Sprintf("%d", fromBlock),
+				"filter_block_number_lte": fmt.Sprintf("%d", toBlock),
+				"filter_topic_0":          "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef", // Transfer
+				"sort_by":                 "block_number",
+				"sort_order":              "desc",
+				"decode":                  "true",
+				"limit":                   "500",
+			}
+			if address != "" {
+				eventPayload["filter_topic_2"] = address
+			}
+		}
+
+		events, err = s.engineService.GetContractEvents(ctx, token.Edges.Network.ChainID, token.ContractAddress, eventPayload)
 	}
 
-	events, err := s.engineService.GetContractEvents(ctx, token.Edges.Network.ChainID, token.ContractAddress, eventPayload)
 	if err != nil {
 		return fmt.Errorf("ProcessTransfer.getTransferEventData: %w", err)
 	}
@@ -113,27 +138,48 @@ func (s *IndexerEVM) IndexTransfer(ctx context.Context, token *ent.Token, addres
 
 // IndexOrderCreated indexes orders created in the Gateway contract for EVM networks.
 func (s *IndexerEVM) IndexOrderCreated(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error {
-	// Get OrderCreated event data
-	eventPayload := map[string]string{}
-	if txHash != "" {
-		eventPayload = map[string]string{
-			"filter_topic_0":          "0x40ccd1ceb111a3c186ef9911e1b876dc1f789ed331b86097b3b8851055b6a137", // OrderCreated
-			"filter_transaction_hash": txHash,
-			"decode":                  "true",
-		}
+	var events []interface{}
+	var err error
+
+	// Check if this is BNB Smart Chain (chain ID 56) - use RPC instead of Thirdweb Insight
+	if network.ChainID == 56 {
+		eventSignature := "0x40ccd1ceb111a3c186ef9911e1b876dc1f789ed331b86097b3b8851055b6a137" // OrderCreated
+		var topics []string
+
+		events, err = s.engineService.GetContractEventsRPC(
+			ctx,
+			network.RPCEndpoint,
+			network.GatewayContractAddress,
+			fromBlock,
+			toBlock,
+			eventSignature,
+			topics,
+			txHash,
+		)
 	} else {
-		eventPayload = map[string]string{
-			"filter_block_number_gte": fmt.Sprintf("%d", fromBlock),
-			"filter_block_number_lte": fmt.Sprintf("%d", toBlock),
-			"filter_topic_0":          "0x40ccd1ceb111a3c186ef9911e1b876dc1f789ed331b86097b3b8851055b6a137", // OrderCreated
-			"sort_by":                 "block_number",
-			"sort_order":              "desc",
-			"decode":                  "true",
-			"limit":                   "500",
+		// Use Thirdweb Insight for other networks
+		var eventPayload map[string]string
+		if txHash != "" {
+			eventPayload = map[string]string{
+				"filter_topic_0":          "0x40ccd1ceb111a3c186ef9911e1b876dc1f789ed331b86097b3b8851055b6a137", // OrderCreated
+				"filter_transaction_hash": txHash,
+				"decode":                  "true",
+			}
+		} else {
+			eventPayload = map[string]string{
+				"filter_block_number_gte": fmt.Sprintf("%d", fromBlock),
+				"filter_block_number_lte": fmt.Sprintf("%d", toBlock),
+				"filter_topic_0":          "0x40ccd1ceb111a3c186ef9911e1b876dc1f789ed331b86097b3b8851055b6a137", // OrderCreated
+				"sort_by":                 "block_number",
+				"sort_order":              "desc",
+				"decode":                  "true",
+				"limit":                   "500",
+			}
 		}
+
+		events, err = s.engineService.GetContractEvents(ctx, network.ChainID, network.GatewayContractAddress, eventPayload)
 	}
 
-	events, err := s.engineService.GetContractEvents(ctx, network.ChainID, network.GatewayContractAddress, eventPayload)
 	if err != nil {
 		return fmt.Errorf("IndexOrderCreated.getEvents: %w", err)
 	}
@@ -190,27 +236,49 @@ func (s *IndexerEVM) IndexOrderCreated(ctx context.Context, network *ent.Network
 
 // IndexOrderSettled indexes orders settled in the Gateway contract for EVM networks.
 func (s *IndexerEVM) IndexOrderSettled(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error {
-	// Get OrderSettled event data
-	eventPayload := map[string]string{}
-	if txHash != "" {
-		eventPayload = map[string]string{
-			"filter_topic_0":          "0x98ece21e01a01cbe1d1c0dad3b053c8fbd368f99be78be958fcf1d1d13fd249a", // OrderSettled
-			"filter_transaction_hash": txHash,
-			"decode":                  "true",
-		}
+	var events []interface{}
+	var err error
+
+	// Check if this is BNB Smart Chain (chain ID 56) - use RPC instead of Thirdweb Insight
+	if network.ChainID == 56 {
+		// Use RPC for BNB Smart Chain
+		eventSignature := "0x98ece21e01a01cbe1d1c0dad3b053c8fbd368f99be78be958fcf1d1d13fd249a" // OrderSettled
+		var topics []string
+
+		events, err = s.engineService.GetContractEventsRPC(
+			ctx,
+			network.RPCEndpoint,
+			network.GatewayContractAddress,
+			fromBlock,
+			toBlock,
+			eventSignature,
+			topics,
+			txHash,
+		)
 	} else {
-		eventPayload = map[string]string{
-			"filter_block_number_gte": fmt.Sprintf("%d", fromBlock),
-			"filter_block_number_lte": fmt.Sprintf("%d", toBlock),
-			"filter_topic_0":          "0x98ece21e01a01cbe1d1c0dad3b053c8fbd368f99be78be958fcf1d1d13fd249a", // OrderSettled
-			"sort_by":                 "block_number",
-			"sort_order":              "desc",
-			"decode":                  "true",
-			"limit":                   "500",
+		// Use Thirdweb Insight for other networks
+		var eventPayload map[string]string
+		if txHash != "" {
+			eventPayload = map[string]string{
+				"filter_topic_0":          "0x98ece21e01a01cbe1d1c0dad3b053c8fbd368f99be78be958fcf1d1d13fd249a", // OrderSettled
+				"filter_transaction_hash": txHash,
+				"decode":                  "true",
+			}
+		} else {
+			eventPayload = map[string]string{
+				"filter_block_number_gte": fmt.Sprintf("%d", fromBlock),
+				"filter_block_number_lte": fmt.Sprintf("%d", toBlock),
+				"filter_topic_0":          "0x98ece21e01a01cbe1d1c0dad3b053c8fbd368f99be78be958fcf1d1d13fd249a", // OrderSettled
+				"sort_by":                 "block_number",
+				"sort_order":              "desc",
+				"decode":                  "true",
+				"limit":                   "500",
+			}
 		}
+
+		events, err = s.engineService.GetContractEvents(ctx, network.ChainID, network.GatewayContractAddress, eventPayload)
 	}
 
-	events, err := s.engineService.GetContractEvents(ctx, network.ChainID, network.GatewayContractAddress, eventPayload)
 	if err != nil {
 		return fmt.Errorf("IndexOrderSettled.getEvents: %w %v", err, events)
 	}
@@ -256,27 +324,49 @@ func (s *IndexerEVM) IndexOrderSettled(ctx context.Context, network *ent.Network
 
 // IndexOrderRefunded indexes orders settled in the Gateway contract for EVM networks.
 func (s *IndexerEVM) IndexOrderRefunded(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error {
-	// Get OrderRefunded event data
-	eventPayload := map[string]string{}
-	if txHash != "" {
-		eventPayload = map[string]string{
-			"filter_topic_0":          "0x0736fe428e1747ca8d387c2e6fa1a31a0cde62d3a167c40a46ade59a3cdc828e", // OrderRefunded
-			"filter_transaction_hash": txHash,
-			"decode":                  "true",
-		}
+	var events []interface{}
+	var err error
+
+	// Check if this is BNB Smart Chain (chain ID 56) - use RPC instead of Thirdweb Insight
+	if network.ChainID == 56 {
+		// Use RPC for BNB Smart Chain
+		eventSignature := "0x0736fe428e1747ca8d387c2e6fa1a31a0cde62d3a167c40a46ade59a3cdc828e" // OrderRefunded
+		var topics []string
+
+		events, err = s.engineService.GetContractEventsRPC(
+			ctx,
+			network.RPCEndpoint,
+			network.GatewayContractAddress,
+			fromBlock,
+			toBlock,
+			eventSignature,
+			topics,
+			txHash,
+		)
 	} else {
-		eventPayload = map[string]string{
-			"filter_block_number_gte": fmt.Sprintf("%d", fromBlock),
-			"filter_block_number_lte": fmt.Sprintf("%d", toBlock),
-			"filter_topic_0":          "0x0736fe428e1747ca8d387c2e6fa1a31a0cde62d3a167c40a46ade59a3cdc828e", // OrderRefunded
-			"sort_by":                 "block_number",
-			"sort_order":              "desc",
-			"decode":                  "true",
-			"limit":                   "500",
+		// Use Thirdweb Insight for other networks
+		var eventPayload map[string]string
+		if txHash != "" {
+			eventPayload = map[string]string{
+				"filter_topic_0":          "0x0736fe428e1747ca8d387c2e6fa1a31a0cde62d3a167c40a46ade59a3cdc828e", // OrderRefunded
+				"filter_transaction_hash": txHash,
+				"decode":                  "true",
+			}
+		} else {
+			eventPayload = map[string]string{
+				"filter_block_number_gte": fmt.Sprintf("%d", fromBlock),
+				"filter_block_number_lte": fmt.Sprintf("%d", toBlock),
+				"filter_topic_0":          "0x0736fe428e1747ca8d387c2e6fa1a31a0cde62d3a167c40a46ade59a3cdc828e", // OrderRefunded
+				"sort_by":                 "block_number",
+				"sort_order":              "desc",
+				"decode":                  "true",
+				"limit":                   "500",
+			}
 		}
+
+		events, err = s.engineService.GetContractEvents(ctx, network.ChainID, network.GatewayContractAddress, eventPayload)
 	}
 
-	events, err := s.engineService.GetContractEvents(ctx, network.ChainID, network.GatewayContractAddress, eventPayload)
 	if err != nil {
 		return fmt.Errorf("IndexOrderRefunded.getEvents: %w", err)
 	}

@@ -31,6 +31,7 @@ type RPCClient interface {
 	EstimateGas(ctx context.Context, call ethereum.CallMsg) (gas uint64, err error)
 	SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- types.Log) (ethereum.Subscription, error)
 	CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error)
+	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
 	Commit() common.Hash
 }
 
@@ -731,11 +732,54 @@ type IndexTransactionRequest struct {
 
 // IndexTransactionResponse represents the response for the index transaction endpoint
 type IndexTransactionResponse struct {
-	Message string `json:"message"`
 	Events  struct {
 		Transfer      int `json:"Transfer"`
 		OrderCreated  int `json:"OrderCreated"`
 		OrderSettled  int `json:"OrderSettled"`
 		OrderRefunded int `json:"OrderRefunded"`
 	} `json:"events"`
+}
+
+// ThirdwebWebhookPayload represents the structure of thirdweb insight webhook payload
+type ThirdwebWebhookPayload struct {
+	Data      []ThirdwebWebhookEvent `json:"data"`
+	Timestamp int64                  `json:"timestamp"`
+	Topic     string                 `json:"topic"`
+}
+
+// ThirdwebWebhookEvent represents a single event in the webhook payload
+type ThirdwebWebhookEvent struct {
+	Data   ThirdwebEventData `json:"data"`
+	Status string            `json:"status"`
+	Type   string            `json:"type"`
+	ID     string            `json:"id"`
+}
+
+// ThirdwebEventData represents the event data structure
+type ThirdwebEventData struct {
+	ChainID          string               `json:"chain_id"`
+	BlockNumber      int64                `json:"block_number"`
+	BlockHash        string               `json:"block_hash"`
+	BlockTimestamp   int64                `json:"block_timestamp"`
+	TransactionHash  string               `json:"transaction_hash"`
+	TransactionIndex int                  `json:"transaction_index"`
+	LogIndex         int                  `json:"log_index"`
+	Address          string               `json:"address"`
+	Data             string               `json:"data"`
+	Topics           []string             `json:"topics"`
+	Decoded          ThirdwebDecodedEvent `json:"decoded"`
+}
+
+// ThirdwebDecodedEvent represents the decoded event parameters
+type ThirdwebDecodedEvent struct {
+	Name             string                 `json:"name"`
+	IndexedParams    map[string]interface{} `json:"indexed_params"`
+	NonIndexedParams map[string]interface{} `json:"non_indexed_params"`
+}
+
+// WebhookSignatureVerification represents the result of signature verification
+type WebhookSignatureVerification struct {
+	IsValid   bool
+	WebhookID string
+	Secret    string
 }

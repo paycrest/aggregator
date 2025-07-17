@@ -105,14 +105,6 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		return
 	}
 
-	// Send welcome email after user creation
-	if _, err := ctrl.emailService.SendWelcomeEmail(ctx, user.Email, user.FirstName, payload.Scopes); err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":  fmt.Sprintf("%v", err),
-			"UserID": user.ID,
-		}).Errorf("Failed to send welcome email")
-	}
-
 	// Send verification email
 	verificationToken, err := tx.VerificationToken.
 		Create().
@@ -414,7 +406,7 @@ func (ctrl *AuthController) ConfirmEmail(ctx *gin.Context) {
 	}
 
 	// Update User IsEmailVerified to true
-	_, setIfVerifiedErr := verificationToken.Edges.Owner.
+	user, setIfVerifiedErr := verificationToken.Edges.Owner.
 		Update().
 		SetIsEmailVerified(true).
 		Save(ctx)
@@ -427,6 +419,14 @@ func (ctrl *AuthController) ConfirmEmail(ctx *gin.Context) {
 		DeleteOneID(verificationToken.ID).Exec(ctx)
 	if err != nil {
 		logger.Errorf("ConfirmEmailError.VerificationToken.Delete: %v", err)
+	}
+
+	// Send welcome email after email verification
+	if _, err := ctrl.emailService.SendWelcomeEmail(ctx, user.Email, user.FirstName, strings.Split(user.Scope, " ")); err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": user.ID,
+		}).Errorf("Failed to send welcome email")
 	}
 
 	// Return a success response

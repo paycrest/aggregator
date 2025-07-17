@@ -10,7 +10,6 @@ import (
 	"time"
 
 	fastshot "github.com/opus-domini/fast-shot"
-	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/common"
@@ -21,8 +20,6 @@ import (
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/shopspring/decimal"
 )
-
-var orderConf = config.OrderConfig()
 
 // IndexerTron performs blockchain to database extract, transform, load (ETL) operations.
 type IndexerTron struct {

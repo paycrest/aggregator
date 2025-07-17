@@ -28,6 +28,7 @@ import (
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -71,6 +72,8 @@ type Client struct {
 	PaymentOrder *PaymentOrderClient
 	// PaymentOrderRecipient is the client for interacting with the PaymentOrderRecipient builders.
 	PaymentOrderRecipient *PaymentOrderRecipientClient
+	// PaymentWebhook is the client for interacting with the PaymentWebhook builders.
+	PaymentWebhook *PaymentWebhookClient
 	// ProviderOrderToken is the client for interacting with the ProviderOrderToken builders.
 	ProviderOrderToken *ProviderOrderTokenClient
 	// ProviderProfile is the client for interacting with the ProviderProfile builders.
@@ -118,6 +121,7 @@ func (c *Client) init() {
 	c.Network = NewNetworkClient(c.config)
 	c.PaymentOrder = NewPaymentOrderClient(c.config)
 	c.PaymentOrderRecipient = NewPaymentOrderRecipientClient(c.config)
+	c.PaymentWebhook = NewPaymentWebhookClient(c.config)
 	c.ProviderOrderToken = NewProviderOrderTokenClient(c.config)
 	c.ProviderProfile = NewProviderProfileClient(c.config)
 	c.ProviderRating = NewProviderRatingClient(c.config)
@@ -234,6 +238,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Network:                     NewNetworkClient(cfg),
 		PaymentOrder:                NewPaymentOrderClient(cfg),
 		PaymentOrderRecipient:       NewPaymentOrderRecipientClient(cfg),
+		PaymentWebhook:              NewPaymentWebhookClient(cfg),
 		ProviderOrderToken:          NewProviderOrderTokenClient(cfg),
 		ProviderProfile:             NewProviderProfileClient(cfg),
 		ProviderRating:              NewProviderRatingClient(cfg),
@@ -277,6 +282,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Network:                     NewNetworkClient(cfg),
 		PaymentOrder:                NewPaymentOrderClient(cfg),
 		PaymentOrderRecipient:       NewPaymentOrderRecipientClient(cfg),
+		PaymentWebhook:              NewPaymentWebhookClient(cfg),
 		ProviderOrderToken:          NewProviderOrderTokenClient(cfg),
 		ProviderProfile:             NewProviderProfileClient(cfg),
 		ProviderRating:              NewProviderRatingClient(cfg),
@@ -321,7 +327,7 @@ func (c *Client) Use(hooks ...Hook) {
 		c.APIKey, c.BeneficialOwner, c.FiatCurrency, c.IdentityVerificationRequest,
 		c.Institution, c.KYBProfile, c.LinkedAddress, c.LockOrderFulfillment,
 		c.LockPaymentOrder, c.Network, c.PaymentOrder, c.PaymentOrderRecipient,
-		c.ProviderOrderToken, c.ProviderProfile, c.ProviderRating, c.ProvisionBucket,
+		c.PaymentWebhook, c.ProviderOrderToken, c.ProviderProfile, c.ProviderRating, c.ProvisionBucket,
 		c.ReceiveAddress, c.SenderOrderToken, c.SenderProfile, c.Token,
 		c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
 	} {
@@ -336,7 +342,7 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.APIKey, c.BeneficialOwner, c.FiatCurrency, c.IdentityVerificationRequest,
 		c.Institution, c.KYBProfile, c.LinkedAddress, c.LockOrderFulfillment,
 		c.LockPaymentOrder, c.Network, c.PaymentOrder, c.PaymentOrderRecipient,
-		c.ProviderOrderToken, c.ProviderProfile, c.ProviderRating, c.ProvisionBucket,
+		c.PaymentWebhook, c.ProviderOrderToken, c.ProviderProfile, c.ProviderRating, c.ProvisionBucket,
 		c.ReceiveAddress, c.SenderOrderToken, c.SenderProfile, c.Token,
 		c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
 	} {
@@ -371,6 +377,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.PaymentOrder.mutate(ctx, m)
 	case *PaymentOrderRecipientMutation:
 		return c.PaymentOrderRecipient.mutate(ctx, m)
+	case *PaymentWebhookMutation:
+		return c.PaymentWebhook.mutate(ctx, m)
 	case *ProviderOrderTokenMutation:
 		return c.ProviderOrderToken.mutate(ctx, m)
 	case *ProviderProfileMutation:
@@ -2009,6 +2017,22 @@ func (c *NetworkClient) QueryTokens(n *Network) *TokenQuery {
 	return query
 }
 
+// QueryPaymentWebhook queries the payment_webhook edge of a Network.
+func (c *NetworkClient) QueryPaymentWebhook(n *Network) *PaymentWebhookQuery {
+	query := (&PaymentWebhookClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := n.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(network.Table, network.FieldID, id),
+			sqlgraph.To(paymentwebhook.Table, paymentwebhook.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, network.PaymentWebhookTable, network.PaymentWebhookColumn),
+		)
+		fromV = sqlgraph.Neighbors(n.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *NetworkClient) Hooks() []Hook {
 	return c.hooks.Network
@@ -2238,6 +2262,22 @@ func (c *PaymentOrderClient) QueryTransactions(po *PaymentOrder) *TransactionLog
 	return query
 }
 
+// QueryPaymentWebhook queries the payment_webhook edge of a PaymentOrder.
+func (c *PaymentOrderClient) QueryPaymentWebhook(po *PaymentOrder) *PaymentWebhookQuery {
+	query := (&PaymentWebhookClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := po.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, id),
+			sqlgraph.To(paymentwebhook.Table, paymentwebhook.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, paymentorder.PaymentWebhookTable, paymentorder.PaymentWebhookColumn),
+		)
+		fromV = sqlgraph.Neighbors(po.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *PaymentOrderClient) Hooks() []Hook {
 	return c.hooks.PaymentOrder
@@ -2409,6 +2449,171 @@ func (c *PaymentOrderRecipientClient) mutate(ctx context.Context, m *PaymentOrde
 		return (&PaymentOrderRecipientDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown PaymentOrderRecipient mutation op: %q", m.Op())
+	}
+}
+
+// PaymentWebhookClient is a client for the PaymentWebhook schema.
+type PaymentWebhookClient struct {
+	config
+}
+
+// NewPaymentWebhookClient returns a client for the PaymentWebhook from the given config.
+func NewPaymentWebhookClient(c config) *PaymentWebhookClient {
+	return &PaymentWebhookClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `paymentwebhook.Hooks(f(g(h())))`.
+func (c *PaymentWebhookClient) Use(hooks ...Hook) {
+	c.hooks.PaymentWebhook = append(c.hooks.PaymentWebhook, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `paymentwebhook.Intercept(f(g(h())))`.
+func (c *PaymentWebhookClient) Intercept(interceptors ...Interceptor) {
+	c.inters.PaymentWebhook = append(c.inters.PaymentWebhook, interceptors...)
+}
+
+// Create returns a builder for creating a PaymentWebhook entity.
+func (c *PaymentWebhookClient) Create() *PaymentWebhookCreate {
+	mutation := newPaymentWebhookMutation(c.config, OpCreate)
+	return &PaymentWebhookCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of PaymentWebhook entities.
+func (c *PaymentWebhookClient) CreateBulk(builders ...*PaymentWebhookCreate) *PaymentWebhookCreateBulk {
+	return &PaymentWebhookCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PaymentWebhookClient) MapCreateBulk(slice any, setFunc func(*PaymentWebhookCreate, int)) *PaymentWebhookCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PaymentWebhookCreateBulk{err: fmt.Errorf("calling to PaymentWebhookClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*PaymentWebhookCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &PaymentWebhookCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for PaymentWebhook.
+func (c *PaymentWebhookClient) Update() *PaymentWebhookUpdate {
+	mutation := newPaymentWebhookMutation(c.config, OpUpdate)
+	return &PaymentWebhookUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PaymentWebhookClient) UpdateOne(pw *PaymentWebhook) *PaymentWebhookUpdateOne {
+	mutation := newPaymentWebhookMutation(c.config, OpUpdateOne, withPaymentWebhook(pw))
+	return &PaymentWebhookUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PaymentWebhookClient) UpdateOneID(id uuid.UUID) *PaymentWebhookUpdateOne {
+	mutation := newPaymentWebhookMutation(c.config, OpUpdateOne, withPaymentWebhookID(id))
+	return &PaymentWebhookUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for PaymentWebhook.
+func (c *PaymentWebhookClient) Delete() *PaymentWebhookDelete {
+	mutation := newPaymentWebhookMutation(c.config, OpDelete)
+	return &PaymentWebhookDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PaymentWebhookClient) DeleteOne(pw *PaymentWebhook) *PaymentWebhookDeleteOne {
+	return c.DeleteOneID(pw.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PaymentWebhookClient) DeleteOneID(id uuid.UUID) *PaymentWebhookDeleteOne {
+	builder := c.Delete().Where(paymentwebhook.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PaymentWebhookDeleteOne{builder}
+}
+
+// Query returns a query builder for PaymentWebhook.
+func (c *PaymentWebhookClient) Query() *PaymentWebhookQuery {
+	return &PaymentWebhookQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypePaymentWebhook},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a PaymentWebhook entity by its id.
+func (c *PaymentWebhookClient) Get(ctx context.Context, id uuid.UUID) (*PaymentWebhook, error) {
+	return c.Query().Where(paymentwebhook.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PaymentWebhookClient) GetX(ctx context.Context, id uuid.UUID) *PaymentWebhook {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryPaymentOrder queries the payment_order edge of a PaymentWebhook.
+func (c *PaymentWebhookClient) QueryPaymentOrder(pw *PaymentWebhook) *PaymentOrderQuery {
+	query := (&PaymentOrderClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := pw.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(paymentwebhook.Table, paymentwebhook.FieldID, id),
+			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, paymentwebhook.PaymentOrderTable, paymentwebhook.PaymentOrderColumn),
+		)
+		fromV = sqlgraph.Neighbors(pw.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryNetwork queries the network edge of a PaymentWebhook.
+func (c *PaymentWebhookClient) QueryNetwork(pw *PaymentWebhook) *NetworkQuery {
+	query := (&NetworkClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := pw.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(paymentwebhook.Table, paymentwebhook.FieldID, id),
+			sqlgraph.To(network.Table, network.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, paymentwebhook.NetworkTable, paymentwebhook.NetworkColumn),
+		)
+		fromV = sqlgraph.Neighbors(pw.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *PaymentWebhookClient) Hooks() []Hook {
+	return c.hooks.PaymentWebhook
+}
+
+// Interceptors returns the client interceptors.
+func (c *PaymentWebhookClient) Interceptors() []Interceptor {
+	return c.inters.PaymentWebhook
+}
+
+func (c *PaymentWebhookClient) mutate(ctx context.Context, m *PaymentWebhookMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&PaymentWebhookCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&PaymentWebhookUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&PaymentWebhookUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&PaymentWebhookDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown PaymentWebhook mutation op: %q", m.Op())
 	}
 }
 
@@ -4527,7 +4732,7 @@ type (
 	hooks struct {
 		APIKey, BeneficialOwner, FiatCurrency, IdentityVerificationRequest, Institution,
 		KYBProfile, LinkedAddress, LockOrderFulfillment, LockPaymentOrder, Network,
-		PaymentOrder, PaymentOrderRecipient, ProviderOrderToken, ProviderProfile,
+		PaymentOrder, PaymentOrderRecipient, PaymentWebhook, ProviderOrderToken, ProviderProfile,
 		ProviderRating, ProvisionBucket, ReceiveAddress, SenderOrderToken,
 		SenderProfile, Token, TransactionLog, User, VerificationToken,
 		WebhookRetryAttempt []ent.Hook
@@ -4535,7 +4740,7 @@ type (
 	inters struct {
 		APIKey, BeneficialOwner, FiatCurrency, IdentityVerificationRequest, Institution,
 		KYBProfile, LinkedAddress, LockOrderFulfillment, LockPaymentOrder, Network,
-		PaymentOrder, PaymentOrderRecipient, ProviderOrderToken, ProviderProfile,
+		PaymentOrder, PaymentOrderRecipient, PaymentWebhook, ProviderOrderToken, ProviderProfile,
 		ProviderRating, ProvisionBucket, ReceiveAddress, SenderOrderToken,
 		SenderProfile, Token, TransactionLog, User, VerificationToken,
 		WebhookRetryAttempt []ent.Interceptor
