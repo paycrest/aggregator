@@ -113,12 +113,6 @@ func (s *EngineService) GetLatestBlock(ctx context.Context, chainID int64) (int6
 		return 0, fmt.Errorf("failed to get latest block from RPC: %w", err)
 	}
 
-	logger.WithFields(logger.Fields{
-		"ChainID":      chainID,
-		"BlockNumber":  header.Number.Int64(),
-		"FallbackUsed": true,
-	}).Infof("RPC fallback succeeded for latest block")
-
 	return header.Number.Int64(), nil
 }
 
@@ -761,7 +755,7 @@ func (s *EngineService) CreateGatewayWebhook() error {
 }
 
 // GetContractEventsRPC fetches contract events using RPC for networks not supported by Thirdweb Insight
-// It fetches all events and filters for gateway events (OrderCreated, OrderSettled, OrderRefunded)
+// It fetches all events and filters for specified event signatures (gateway events or transfer events)
 func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint string, contractAddress string, fromBlock int64, toBlock int64, topics []string, txHash string) ([]interface{}, error) {
 	// Create RPC client
 	client, err := aggregatortypes.NewEthClient(rpcEndpoint)
@@ -771,11 +765,18 @@ func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint st
 
 	var logs []types.Log
 
-	// Gateway event signatures to filter for
-	gatewayEventSignatures := []string{
-		utils.OrderCreatedEventSignature,
-		utils.OrderSettledEventSignature,
-		utils.OrderRefundedEventSignature,
+	// Determine which event signatures to filter for based on topics
+	var eventSignatures []string
+	if len(topics) > 0 && topics[0] == utils.TransferEventSignature {
+		// If transfer event signature is provided, filter for transfer events
+		eventSignatures = []string{utils.TransferEventSignature}
+	} else {
+		// Default to gateway event signatures
+		eventSignatures = []string{
+			utils.OrderCreatedEventSignature,
+			utils.OrderSettledEventSignature,
+			utils.OrderRefundedEventSignature,
+		}
 	}
 
 	if txHash != "" {
@@ -785,14 +786,14 @@ func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint st
 			return nil, fmt.Errorf("failed to get transaction receipt: %w", err)
 		}
 
-		// Filter logs from the receipt that match gateway events
+		// Filter logs from the receipt that match the specified event signatures
 		for _, log := range receipt.Logs {
 			if log.Address == common.HexToAddress(contractAddress) {
-				// Check if this log matches any of our gateway event signatures
+				// Check if this log matches any of our event signatures
 				if len(log.Topics) > 0 {
 					eventSignature := log.Topics[0].Hex()
-					for _, gatewaySignature := range gatewayEventSignatures {
-						if eventSignature == gatewaySignature {
+					for _, signature := range eventSignatures {
+						if eventSignature == signature {
 							// Check additional topics if provided
 							matches := true
 							for i, topic := range topics {
@@ -832,12 +833,12 @@ func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint st
 			return nil, fmt.Errorf("failed to get logs: %w", err2)
 		}
 
-		// Filter for gateway events only
+		// Filter for the specified event signatures
 		for _, log := range allLogs {
 			if len(log.Topics) > 0 {
 				eventSignature := log.Topics[0].Hex()
-				for _, gatewaySignature := range gatewayEventSignatures {
-					if eventSignature == gatewaySignature {
+				for _, signature := range eventSignatures {
+					if eventSignature == signature {
 						logs = append(logs, log)
 						break
 					}
@@ -927,7 +928,7 @@ func (s *EngineService) GetUserTransactionHistory(ctx context.Context, chainID i
 }
 
 // GetContractEventsWithFallback tries ThirdWeb first and falls back to RPC if ThirdWeb fails
-func (s *EngineService) GetContractEventsWithFallback(ctx context.Context, network *ent.Network, contractAddress string, fromBlock int64, toBlock int64, eventSignature string, topics []string, txHash string, eventPayload map[string]string) ([]interface{}, error) {
+func (s *EngineService) GetContractEventsWithFallback(ctx context.Context, network *ent.Network, contractAddress string, fromBlock int64, toBlock int64, topics []string, txHash string, eventPayload map[string]string) ([]interface{}, error) {
 	// Try ThirdWeb first
 	events, err := s.GetContractEvents(ctx, network.ChainID, contractAddress, eventPayload)
 	if err == nil {
@@ -957,15 +958,6 @@ func (s *EngineService) GetContractEventsWithFallback(ctx context.Context, netwo
 		}).Errorf("Both ThirdWeb and RPC failed")
 		return nil, fmt.Errorf("both ThirdWeb and RPC failed - ThirdWeb: %w, RPC: %w", err, rpcErr)
 	}
-
-	// RPC succeeded as fallback
-	logger.WithFields(logger.Fields{
-		"Network":      network.Identifier,
-		"ChainID":      network.ChainID,
-		"Contract":     contractAddress,
-		"EventsFound":  len(events),
-		"FallbackUsed": true,
-	}).Infof("RPC fallback succeeded")
 
 	return events, nil
 }

@@ -270,29 +270,6 @@ func GetTronLatestBlock(endpoint string) (int64, error) {
 	return int64(data["block"].([]interface{})[0].(map[string]interface{})["block_header"].(map[string]interface{})["raw_data"].(map[string]interface{})["timestamp"].(float64)), nil
 }
 
-// runIndexers runs the indexers for the given network, indexer, tokens, startBlock, and latestBlock
-func runIndexers(network *ent.Network, indexer types.Indexer, tokens []*ent.Token, startBlock int64, latestBlock int64) {
-	// Index all Gateway events in one efficient call
-	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
-		ctx := context.Background()
-		_ = indexer.IndexGateway(ctx, network, start, end, "")
-	}(network, indexer, startBlock, latestBlock)
-
-	// Index transfer events for tokens in this network
-	// For general indexing, we'll index transfers to the token contract itself
-	for _, token := range tokens {
-		if token.Edges.Network.ID != network.ID {
-			continue
-		}
-
-		go func(token *ent.Token, indexer types.Indexer, start, end int64) {
-			ctx := context.Background()
-			// Index transfers to this token's contract address
-			_ = indexer.IndexReceiveAddress(ctx, network, token.ContractAddress, start, end, "")
-		}(token, indexer, startBlock, latestBlock)
-	}
-}
-
 // TaskIndexBlockchainEvents indexes transfer events for all enabled tokens
 func TaskIndexBlockchainEvents() error {
 	ctx := context.Background()
@@ -310,16 +287,6 @@ func TaskIndexBlockchainEvents() error {
 		All(ctx)
 	if err != nil {
 		return fmt.Errorf("TaskIndexBlockchainEvents.fetchNetworks: %w", err)
-	}
-
-	// Fetch enabled tokens
-	tokens, err := storage.Client.Token.
-		Query().
-		Where(tokenent.IsEnabled(true)).
-		WithNetwork().
-		All(ctx)
-	if err != nil {
-		return fmt.Errorf("TaskIndexBlockchainEvents.fetchTokens: %w", err)
 	}
 
 	// Process each network in parallel
@@ -349,7 +316,7 @@ func TaskIndexBlockchainEvents() error {
 				}
 				startBlock = latestBlock - duration.Milliseconds()
 
-				runIndexers(network, indexerInstance, tokens, startBlock, latestBlock)
+				_ = indexerInstance.IndexGateway(ctx, network, startBlock, latestBlock, "")
 			} else {
 				indexerInstance = indexer.NewIndexerEVM()
 				latestBlock, err = engineService.GetLatestBlock(ctx, network.ChainID)
@@ -373,7 +340,7 @@ func TaskIndexBlockchainEvents() error {
 						chunkEnd = latestBlock
 					}
 
-					runIndexers(network, indexerInstance, tokens, currentBlock, chunkEnd)
+					_ = indexerInstance.IndexGateway(ctx, network, currentBlock, chunkEnd, "")
 				}
 			}
 
@@ -1255,10 +1222,6 @@ func IndexGatewayEvents() error {
 				}).Errorf("IndexGatewayEvents.indexGateway")
 				return
 			}
-
-			logger.WithFields(logger.Fields{
-				"NetworkIdentifier": network.Identifier,
-			}).Infof("IndexGatewayEvents.completed")
 		}(network)
 	}
 
@@ -1277,6 +1240,7 @@ func resolveMissedTransfers(ctx context.Context, network *ent.Network) {
 			paymentorder.AmountPaidEQ(decimal.Zero),
 			paymentorder.FromAddressIsNil(),
 			paymentorder.CreatedAtLTE(time.Now().Add(-5*time.Minute)),
+			paymentorder.CreatedAtGTE(time.Now().Add(-15*time.Minute)),
 			paymentorder.HasReceiveAddressWith(
 				receiveaddress.StatusEQ(receiveaddress.StatusUnused),
 			),
@@ -1299,13 +1263,6 @@ func resolveMissedTransfers(ctx context.Context, network *ent.Network) {
 		return
 	}
 
-	if len(orders) == 0 {
-		logger.WithFields(logger.Fields{
-			"NetworkIdentifier": network.Identifier,
-		}).Infof("ResolvePaymentOrderMishaps.resolveMissedTransfers.noOrdersToProcess")
-		return
-	}
-
 	// For missed transfers, we need to check each order's specific receive address
 	// Process sequentially to avoid overwhelming the RPC node and for better error handling
 	indexerInstance := indexer.NewIndexerEVM()
@@ -1321,7 +1278,7 @@ func resolveMissedTransfers(ctx context.Context, network *ent.Network) {
 				"Progress":          fmt.Sprintf("%d/%d", i+1, len(orders)),
 			}).Infof("ResolvePaymentOrderMishaps.resolveMissedTransfers")
 
-			err = indexerInstance.IndexReceiveAddress(ctx, network, order.Edges.ReceiveAddress.Address, 0, 0, "")
+			err = indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, order.Edges.ReceiveAddress.Address, 0, 0, "")
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":             fmt.Sprintf("%v", err),
@@ -1340,13 +1297,6 @@ func resolveMissedTransfers(ctx context.Context, network *ent.Network) {
 			}
 		}
 	}
-
-	logger.WithFields(logger.Fields{
-		"NetworkIdentifier": network.Identifier,
-		"TotalOrders":       len(orders),
-		"ProcessedCount":    processedCount,
-		"ErrorCount":        errorCount,
-	}).Infof("ResolvePaymentOrderMishaps.resolveMissedTransfers.completed")
 }
 
 // StartCronJobs starts cron jobs

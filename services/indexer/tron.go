@@ -6,17 +6,15 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
+	"strings"
 	"time"
 
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/ent"
-	networkent "github.com/paycrest/aggregator/ent/network"
-	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/common"
 	"github.com/paycrest/aggregator/services/contracts"
 	"github.com/paycrest/aggregator/services/order"
-	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
@@ -40,20 +38,20 @@ func NewIndexerTron() types.Indexer {
 }
 
 // IndexReceiveAddress indexes transfers to receive/linked addresses from user transaction history
-func (s *IndexerTron) IndexReceiveAddress(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) error {
+func (s *IndexerTron) IndexReceiveAddress(ctx context.Context, token *ent.Token, address string, fromBlock int64, toBlock int64, txHash string) error {
 	// If txHash is provided, process that specific transaction
 	if txHash != "" {
-		return s.indexReceiveAddressByTransaction(ctx, network, address, txHash)
+		return s.indexReceiveAddressByTransaction(ctx, token, txHash)
 	}
 
 	// If only address is provided (no txHash, no block range), fetch user's transaction history
 	if address != "" && fromBlock == 0 && toBlock == 0 {
-		return s.indexReceiveAddressByUserAddress(ctx, network, address)
+		return s.indexReceiveAddressByUserAddress(ctx, token, address)
 	}
 
 	// If address is provided with block range, fetch user's transactions within that range
 	if address != "" && (fromBlock > 0 || toBlock > 0) {
-		return s.indexReceiveAddressByUserAddressInRange(ctx, network, address, fromBlock, toBlock)
+		return s.indexReceiveAddressByUserAddressInRange(ctx, token, address, fromBlock, toBlock)
 	}
 
 	// If only block range is provided, this is not applicable for receive address indexing
@@ -61,27 +59,68 @@ func (s *IndexerTron) IndexReceiveAddress(ctx context.Context, network *ent.Netw
 }
 
 // indexReceiveAddressByTransaction processes a specific transaction for receive address transfers
-func (s *IndexerTron) indexReceiveAddressByTransaction(ctx context.Context, network *ent.Network, address string, txHash string) error {
-	// Get all enabled tokens for this network
-	tokens, err := storage.Client.Token.
-		Query().
-		Where(
-			token.IsEnabled(true),
-			token.HasNetworkWith(
-				networkent.IDEQ(network.ID),
-			),
-		).
-		WithNetwork().
-		All(ctx)
+func (s *IndexerTron) indexReceiveAddressByTransaction(ctx context.Context, token *ent.Token, txHash string) error {
+	// For Tron, we need to get the transaction info and look for transfer events
+	res, err := fastshot.NewClient(token.Edges.Network.RPCEndpoint).
+		Config().SetTimeout(15 * time.Second).
+		Build().POST("/wallet/gettransactioninfobyid").
+		Body().AsJSON(map[string]interface{}{
+		"value": txHash,
+	}).
+		Send()
 	if err != nil {
-		return fmt.Errorf("failed to fetch tokens: %w", err)
+		return fmt.Errorf("error getting transaction info for token %s: %w", token.Symbol, err)
 	}
 
-	// Process each token for transfer events in this transaction
-	for _, token := range tokens {
-		err := s.IndexReceiveAddress(ctx, network, address, 0, 0, txHash)
-		if err != nil && err.Error() != "no events found" {
-			logger.Errorf("Error processing transfer for token %s in transaction %s: %v", token.Symbol, txHash[:10]+"...", err)
+	data, err := utils.ParseJSONResponse(res.RawResponse)
+	if err != nil {
+		return fmt.Errorf("error parsing transaction response for token %s: %w", token.Symbol, err)
+	}
+
+	// Process transfer events from this transaction
+	for _, event := range data["log"].([]interface{}) {
+		eventData := event.(map[string]interface{})
+		eventSignature := eventData["topics"].([]interface{})[0].(string)
+
+		// Check if this is a transfer event for this token contract
+		if eventSignature == utils.TransferEventSignature && eventData["address"].(string) == token.ContractAddress {
+			// Extract transfer data
+			fromAddress := utils.ParseTopicToTronAddress(eventData["topics"].([]interface{})[1].(string))
+			toAddress := utils.ParseTopicToTronAddress(eventData["topics"].([]interface{})[2].(string))
+			valueStr := eventData["data"].(string)
+
+			// Skip if transfer is from gateway contract
+			if strings.EqualFold(fromAddress, token.Edges.Network.GatewayContractAddress) {
+				continue
+			}
+
+			// Parse transfer value (data field contains the value as hex)
+			transferValueBytes, err := hex.DecodeString(valueStr)
+			if err != nil {
+				logger.Errorf("Error parsing transfer value for token %s: %v", token.Symbol, err)
+				continue
+			}
+			transferValue := new(big.Int).SetBytes(transferValueBytes)
+
+			// Create transfer event
+			transferEvent := &types.TokenTransferEvent{
+				BlockNumber: int64(data["blockNumber"].(float64)),
+				TxHash:      data["id"].(string),
+				From:        fromAddress,
+				To:          toAddress,
+				Value:       utils.FromSubunit(transferValue, int8(token.Decimals)),
+			}
+
+			// Process transfer using existing logic
+			addressToEvent := map[string]*types.TokenTransferEvent{
+				toAddress: transferEvent,
+			}
+
+			err = common.ProcessTransfers(ctx, s.order, s.priorityQueue, []string{toAddress}, addressToEvent, token)
+			if err != nil {
+				logger.Errorf("Error processing transfer for token %s: %v", token.Symbol, err)
+				continue
+			}
 		}
 	}
 
@@ -89,60 +128,20 @@ func (s *IndexerTron) indexReceiveAddressByTransaction(ctx context.Context, netw
 }
 
 // indexReceiveAddressByUserAddress processes user's transaction history for receive address transfers
-func (s *IndexerTron) indexReceiveAddressByUserAddress(ctx context.Context, network *ent.Network, userAddress string) error {
-	// For Tron, we'll use the existing IndexTransfer method with user address
-	// Get all enabled tokens for this network
-	tokens, err := storage.Client.Token.
-		Query().
-		Where(
-			token.IsEnabled(true),
-			token.HasNetworkWith(
-				networkent.IDEQ(network.ID),
-			),
-		).
-		WithNetwork().
-		All(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to fetch tokens: %w", err)
-	}
-
-	// Process each token for transfer events
-	for _, token := range tokens {
-		err := s.IndexReceiveAddress(ctx, network, userAddress, 0, 0, "")
-		if err != nil && err.Error() != "no events found" {
-			logger.Errorf("Error processing transfer for token %s: %v", token.Symbol, err)
-		}
-	}
-
+func (s *IndexerTron) indexReceiveAddressByUserAddress(ctx context.Context, token *ent.Token, userAddress string) error {
+	// For Tron, we need to implement a different approach since we don't have user transaction history
+	// This would require implementing a way to get user's transaction history from Tron network
+	// For now, we'll log that this is not implemented
+	logger.Infof("User address indexing not implemented for Tron network: %s", userAddress)
 	return nil
 }
 
 // indexReceiveAddressByUserAddressInRange processes user's transaction history within a block range for receive address transfers
-func (s *IndexerTron) indexReceiveAddressByUserAddressInRange(ctx context.Context, network *ent.Network, userAddress string, fromBlock int64, toBlock int64) error {
-	// For Tron, we'll use the existing IndexTransfer method with block range
-	// Get all enabled tokens for this network
-	tokens, err := storage.Client.Token.
-		Query().
-		Where(
-			token.IsEnabled(true),
-			token.HasNetworkWith(
-				networkent.IDEQ(network.ID),
-			),
-		).
-		WithNetwork().
-		All(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to fetch tokens: %w", err)
-	}
-
-	// Process each token for transfer events in the block range
-	for _, token := range tokens {
-		err := s.IndexReceiveAddress(ctx, network, userAddress, fromBlock, toBlock, "")
-		if err != nil && err.Error() != "no events found" {
-			logger.Errorf("Error processing transfer for token %s: %v", token.Symbol, err)
-		}
-	}
-
+func (s *IndexerTron) indexReceiveAddressByUserAddressInRange(ctx context.Context, token *ent.Token, userAddress string, fromBlock int64, toBlock int64) error {
+	// For Tron, we need to implement a different approach since we don't have user transaction history
+	// This would require implementing a way to get user's transaction history from Tron network
+	// For now, we'll log that this is not implemented
+	logger.Infof("User address indexing with block range not implemented for Tron network: %s (%d-%d)", userAddress, fromBlock, toBlock)
 	return nil
 }
 

@@ -109,7 +109,7 @@ type Indexer interface {
 	IndexGateway(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error
 
 	// Index receive address events
-	IndexReceiveAddress(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) error
+	IndexReceiveAddress(ctx context.Context, token *ent.Token, address string, fromBlock int64, toBlock int64, txHash string) error
 }
 
 // KYCProvider defines the interface for KYC verification providers
