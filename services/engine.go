@@ -360,15 +360,6 @@ func (s *EngineService) GetContractEventsWithFallback(ctx context.Context, netwo
 			// ThirdWeb succeeded, return the events
 			return events, nil
 		}
-
-		// ThirdWeb failed, log the error and try RPC as fallback
-		logger.WithFields(logger.Fields{
-			"Network":       network.Identifier,
-			"ChainID":       network.ChainID,
-			"Contract":      contractAddress,
-			"ThirdWebError": err.Error(),
-			"FallbackToRPC": true,
-		}).Warnf("ThirdWeb failed, falling back to RPC")
 	}
 
 	// Try RPC as fallback
@@ -383,15 +374,6 @@ func (s *EngineService) GetContractEventsWithFallback(ctx context.Context, netwo
 		}).Errorf("Both ThirdWeb and RPC failed")
 		return nil, fmt.Errorf("both ThirdWeb and RPC failed - ThirdWeb: %w, RPC: %w", err, rpcErr)
 	}
-
-	// RPC succeeded as fallback
-	logger.WithFields(logger.Fields{
-		"Network":      network.Identifier,
-		"ChainID":      network.ChainID,
-		"Contract":     contractAddress,
-		"EventsFound":  len(events),
-		"FallbackUsed": true,
-	}).Infof("RPC fallback succeeded")
 
 	return events, nil
 }

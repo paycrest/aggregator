@@ -139,7 +139,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			return
 		}
 
-	if payload.FeePercent.IsZero() {
+		if payload.FeePercent.IsZero() {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 				Field:   "FeePercent",
 				Message: "FeePercent must be greater than zero",
@@ -321,14 +321,22 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			SetValidUntil(time.Now().Add(orderConf.ReceiveAddressValidity)).
 			Save(ctx)
 		if err != nil {
-			logger.Errorf("error: %v", err)
+			logger.WithFields(logger.Fields{
+				"error":   err,
+				"address": address,
+			}).Errorf("Failed to create receive address")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 			return
 		}
 	} else {
-		address, err := ctrl.receiveAddressService.CreateSmartAddress(ctx, "")
+		// Generate unique label for smart address
+		uniqueLabel := fmt.Sprintf("payment_order_%d_%s", time.Now().UnixNano(), uuid.New().String()[:8])
+		address, err := ctrl.receiveAddressService.CreateSmartAddress(ctx, uniqueLabel)
 		if err != nil {
-			logger.Errorf("error: %v", err)
+			logger.WithFields(logger.Fields{
+				"error":   err,
+				"address": address,
+			}).Errorf("Failed to create receive address")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 			return
 		}
@@ -340,7 +348,10 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			SetValidUntil(time.Now().Add(orderConf.ReceiveAddressValidity)).
 			Save(ctx)
 		if err != nil {
-			logger.Errorf("error: %v", err)
+			logger.WithFields(logger.Fields{
+				"error":   err,
+				"address": address,
+			}).Errorf("Failed to create receive address")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 			return
 		}
@@ -468,6 +479,7 @@ func (ctrl *SenderController) GetPaymentOrderByID(ctx *gin.Context) {
 	sender := senderCtx.(*ent.SenderProfile)
 
 	// Fetch payment order from the database
+
 	paymentOrderQuery := storage.Client.PaymentOrder.Query()
 
 	if isUUID {
