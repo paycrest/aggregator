@@ -679,8 +679,6 @@ func (s *EngineService) CreateGatewayWebhook() error {
 		},
 	}
 
-	logger.Infof("Creating gateway webhooks for networks: %v", chainIDsStrings)
-
 	res, err := fastshot.NewClient("https://insight.thirdweb.com").
 		Config().SetTimeout(30 * time.Second).
 		Header().AddAll(map[string]string{

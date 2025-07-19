@@ -91,7 +91,10 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 	// Process transfer events
 	for _, event := range events {
 		eventMap := event.(map[string]interface{})
-		decoded := eventMap["decoded"].(map[string]interface{})
+		decoded, ok := eventMap["decoded"].(map[string]interface{})
+		if !ok || decoded == nil {
+			continue
+		}
 		indexedParams := decoded["indexed_params"].(map[string]interface{})
 		nonIndexedParams := decoded["non_indexed_params"].(map[string]interface{})
 
@@ -136,6 +139,42 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 	return nil
 }
 
+// getAddressTransactionHistoryWithFallback tries engine service first and falls back to etherscan
+func (s *IndexerEVM) getAddressTransactionHistoryWithFallback(ctx context.Context, chainID int64, address string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
+	var err error
+
+	// Try engine service first (thirdweb)
+	// Note: Engine doesn't support chain ID 56 (BNB Smart Chain)
+	if chainID != 56 {
+		transactions, err := s.engineService.GetAddressTransactionHistory(ctx, chainID, address, limit, fromBlock, toBlock)
+		if err == nil {
+			// Engine service succeeded, return the transactions
+			return transactions, nil
+		}
+		// Log the error but continue to fallback
+		logger.Warnf("Engine service failed for chain %d, falling back to Etherscan: %v", chainID, err)
+	}
+
+	// Try etherscan as fallback
+	// Note: Etherscan doesn't support chain ID 1135 (Lisk)
+	if chainID == 1135 {
+		return nil, fmt.Errorf("transaction history not supported for Lisk (chain ID 1135) via either engine or etherscan")
+	}
+
+	transactions, etherscanErr := s.etherscanService.GetAddressTransactionHistory(ctx, chainID, address, limit, fromBlock, toBlock)
+	if etherscanErr != nil {
+		// Both engine and etherscan failed
+		logger.WithFields(logger.Fields{
+			"ChainID":        chainID,
+			"Address":        address,
+			"EtherscanError": etherscanErr.Error(),
+		}).Errorf("Both engine and etherscan failed")
+		return nil, fmt.Errorf("both engine and etherscan failed - Engine: %w, Etherscan: %w", err, etherscanErr)
+	}
+
+	return transactions, nil
+}
+
 // indexReceiveAddressByUserAddress processes user's transaction history for receive address transfers
 func (s *IndexerEVM) indexReceiveAddressByUserAddress(ctx context.Context, token *ent.Token, userAddress string, fromBlock int64, toBlock int64) error {
 	// Determine parameters based on whether block range is provided
@@ -152,8 +191,8 @@ func (s *IndexerEVM) indexReceiveAddressByUserAddress(ctx context.Context, token
 		logMessage = fmt.Sprintf("Processing transactions in block range %d-%d for address: %s", fromBlock, toBlock, userAddress)
 	}
 
-	// Get address's transaction history
-	transactions, err := s.etherscanService.GetAddressTransactionHistory(ctx, token.Edges.Network.ChainID, userAddress, limit, fromBlock, toBlock)
+	// Get address's transaction history with fallback
+	transactions, err := s.getAddressTransactionHistoryWithFallback(ctx, token.Edges.Network.ChainID, userAddress, limit, fromBlock, toBlock)
 	if err != nil {
 		return fmt.Errorf("failed to get transaction history: %w", err)
 	}
@@ -222,8 +261,8 @@ func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network 
 		logMessage = fmt.Sprintf("Processing transactions in block range %d-%d for gateway contract: %s", fromBlock, toBlock, address)
 	}
 
-	// Get gateway contract's transaction history
-	transactions, err := s.etherscanService.GetAddressTransactionHistory(ctx, network.ChainID, address, limit, fromBlock, toBlock)
+	// Get gateway contract's transaction history with fallback
+	transactions, err := s.getAddressTransactionHistoryWithFallback(ctx, network.ChainID, address, limit, fromBlock, toBlock)
 	if err != nil {
 		return fmt.Errorf("failed to get gateway transaction history: %w", err)
 	}
@@ -288,7 +327,12 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 	orderRefundedEvents := []*types.OrderRefundedEvent{}
 
 	for _, event := range events {
-		eventParams := event.(map[string]interface{})["decoded"].(map[string]interface{})
+		eventMap := event.(map[string]interface{})
+		decoded, ok := eventMap["decoded"].(map[string]interface{})
+		if !ok || decoded == nil {
+			continue
+		}
+		eventParams := decoded
 		if eventParams["non_indexed_params"] == nil {
 			continue
 		}

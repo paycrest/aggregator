@@ -29,11 +29,6 @@ func NewEtherscanService() (*EtherscanService, error) {
 
 // GetAddressTransactionHistory fetches transaction history for any address from Etherscan API
 func (s *EtherscanService) GetAddressTransactionHistory(ctx context.Context, chainID int64, walletAddress string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
-	// Check if this is Lisk (chain ID 1135) - not supported by Etherscan API
-	if chainID == 1135 {
-		return nil, fmt.Errorf("transaction history not supported for Lisk via Etherscan API")
-	}
-
 	// Build query parameters for Etherscan API
 	params := map[string]string{
 		"module":  "account",
