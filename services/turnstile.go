@@ -39,11 +39,11 @@ func (s *TurnstileService) VerifyToken(token, remoteIP string) error {
 
 	// Validate required configuration
 	if token == "" {
-		return fmt.Errorf("Turnstile token is required")
+		return fmt.Errorf("turnstile token is required")
 	}
 
 	if authConf.TurnstileSecretKey == "" {
-		return fmt.Errorf("Turnstile secret key not configured")
+		return fmt.Errorf("turnstile secret key not configured")
 	}
 
 	// Ensure remoteIP is a valid string

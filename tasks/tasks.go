@@ -270,127 +270,6 @@ func GetTronLatestBlock(endpoint string) (int64, error) {
 	return int64(data["block"].([]interface{})[0].(map[string]interface{})["block_header"].(map[string]interface{})["raw_data"].(map[string]interface{})["timestamp"].(float64)), nil
 }
 
-// runIndexers runs the indexers for the given network, indexer, tokens, startBlock, and latestBlock
-func runIndexers(network *ent.Network, indexer types.Indexer, tokens []*ent.Token, startBlock int64, latestBlock int64) {
-	// Index Gateway events
-	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
-		ctx := context.Background()
-		_ = indexer.IndexOrderCreated(ctx, network, start, end, "")
-	}(network, indexer, startBlock, latestBlock)
-
-	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
-		ctx := context.Background()
-		_ = indexer.IndexOrderSettled(ctx, network, start, end, "")
-	}(network, indexer, startBlock, latestBlock)
-
-	go func(network *ent.Network, indexer types.Indexer, start, end int64) {
-		ctx := context.Background()
-		_ = indexer.IndexOrderRefunded(ctx, network, start, end, "")
-	}(network, indexer, startBlock, latestBlock)
-
-	// Index transfer events for tokens in this network
-	for _, token := range tokens {
-		if token.Edges.Network.ID != network.ID {
-			continue
-		}
-
-		go func(token *ent.Token, indexer types.Indexer, start, end int64) {
-			ctx := context.Background()
-			_ = indexer.IndexTransfer(ctx, token, "", start, end, "")
-		}(token, indexer, startBlock, latestBlock)
-	}
-}
-
-// TaskIndexBlockchainEvents indexes transfer events for all enabled tokens
-func TaskIndexBlockchainEvents() error {
-	ctx := context.Background()
-	engineService := services.NewEngineService()
-
-	// Fetch networks
-	isTestnet := false
-	if serverConf.Environment != "production" {
-		isTestnet = true
-	}
-
-	networks, err := storage.Client.Network.
-		Query().
-		Where(networkent.IsTestnetEQ(isTestnet)).
-		All(ctx)
-	if err != nil {
-		return fmt.Errorf("TaskIndexBlockchainEvents.fetchNetworks: %w", err)
-	}
-
-	// Fetch enabled tokens
-	tokens, err := storage.Client.Token.
-		Query().
-		Where(tokenent.IsEnabled(true)).
-		WithNetwork().
-		All(ctx)
-	if err != nil {
-		return fmt.Errorf("TaskIndexBlockchainEvents.fetchTokens: %w", err)
-	}
-
-	// Process each network in parallel
-	for _, network := range networks {
-		go func(network *ent.Network) {
-			// Create a new context for this network's operations
-			ctx := context.Background()
-			var startBlock int64
-			var latestBlock int64
-			var duration time.Duration
-			var indexerInstance types.Indexer
-
-			if strings.HasPrefix(network.Identifier, "tron") {
-				indexerInstance = indexer.NewIndexerTron()
-				latestBlock, err = GetTronLatestBlock(network.RPCEndpoint)
-				if err != nil {
-					// logger.WithFields(logger.Fields{
-					// 	"Error":             fmt.Sprintf("%v", err),
-					// 	"NetworkIdentifier": network.Identifier,
-					// }).Errorf("TaskIndexBlockchainEvents.getLatestBlock")
-					return
-				}
-				duration = orderConf.IndexingDuration
-				// Ensure minimum duration for Tron
-				if duration < 60*time.Second {
-					duration = 60 * time.Second
-				}
-				startBlock = latestBlock - duration.Milliseconds()
-
-				runIndexers(network, indexerInstance, tokens, startBlock, latestBlock)
-			} else {
-				indexerInstance = indexer.NewIndexerEVM()
-				latestBlock, err = engineService.GetLatestBlock(ctx, network.ChainID)
-				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":             fmt.Sprintf("%v", err),
-						"NetworkIdentifier": network.Identifier,
-					}).Errorf("TaskIndexBlockchainEvents.getLatestBlock")
-					return
-				}
-				duration = orderConf.IndexingDuration
-				blocksPerSecond := decimal.NewFromFloat(1.0).Div(decimal.NewFromFloat(2))
-				blocksPerDuration := blocksPerSecond.Mul(decimal.NewFromFloat(duration.Seconds()))
-				startBlock = latestBlock - blocksPerDuration.IntPart()
-
-				// Process blocks in chunks
-				const maxChunkSize int64 = 1000
-				for currentBlock := startBlock; currentBlock < latestBlock; currentBlock += maxChunkSize {
-					chunkEnd := currentBlock + maxChunkSize - 1
-					if chunkEnd > latestBlock {
-						chunkEnd = latestBlock
-					}
-
-					runIndexers(network, indexerInstance, tokens, currentBlock, chunkEnd)
-				}
-			}
-
-		}(network)
-	}
-
-	return nil
-}
-
 // reassignCancelledOrder reassigns cancelled orders to providers
 func reassignCancelledOrder(ctx context.Context, order *ent.LockPaymentOrder, fulfillment *ent.LockOrderFulfillment) {
 	if order.Edges.Provider.VisibilityMode != providerprofile.VisibilityModePrivate && order.CancellationCount < orderConf.RefundCancellationCount {
@@ -1189,6 +1068,171 @@ func RetryFailedWebhookNotifications() error {
 	return nil
 }
 
+// ResolvePaymentOrderMishaps resolves payment order mishaps across all networks
+func ResolvePaymentOrderMishaps() error {
+	ctx := context.Background()
+
+	// Fetch networks
+	isTestnet := false
+	if serverConf.Environment != "production" {
+		isTestnet = true
+	}
+
+	networks, err := storage.Client.Network.
+		Query().
+		Where(networkent.IsTestnetEQ(isTestnet)).
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("ResolvePaymentOrderMishaps.fetchNetworks: %w", err)
+	}
+
+	// Process each network in parallel (EVM only)
+	for _, network := range networks {
+		// Skip Tron networks
+		if strings.HasPrefix(network.Identifier, "tron") {
+			continue
+		}
+
+		go func(network *ent.Network) {
+			ctx := context.Background()
+
+			// Only resolve missed transfers to receive addresses
+			resolveMissedTransfers(ctx, network)
+		}(network)
+	}
+
+	return nil
+}
+
+// IndexGatewayEvents indexes all gateway events for missed OrderCreated, OrderRefunded, and OrderSettled events
+func IndexGatewayEvents() error {
+	ctx := context.Background()
+
+	// Fetch networks
+	isTestnet := false
+	if serverConf.Environment != "production" {
+		isTestnet = true
+	}
+
+	networks, err := storage.Client.Network.
+		Query().
+		Where(networkent.IsTestnetEQ(isTestnet)).
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("IndexGatewayEvents.fetchNetworks: %w", err)
+	}
+
+	// Process each network in parallel (EVM only)
+	for _, network := range networks {
+		// Skip Tron networks
+		if strings.HasPrefix(network.Identifier, "tron") {
+			continue
+		}
+
+		go func(network *ent.Network) {
+			ctx := context.Background()
+
+			// Index gateway events by fetching last 20 transactions of the gateway contract
+			indexerInstance, indexerErr := indexer.NewIndexerEVM()
+			if indexerErr != nil {
+				logger.WithFields(logger.Fields{
+					"Error":             fmt.Sprintf("%v", indexerErr),
+					"NetworkIdentifier": network.Identifier,
+				}).Errorf("IndexGatewayEvents.createIndexer")
+				return
+			}
+			err := indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":             fmt.Sprintf("%v", err),
+					"NetworkIdentifier": network.Identifier,
+				}).Errorf("IndexGatewayEvents.indexGateway")
+				return
+			}
+		}(network)
+	}
+
+	return nil
+}
+
+// resolveMissedTransfers resolves cases where transfers to receive addresses were missed
+func resolveMissedTransfers(ctx context.Context, network *ent.Network) {
+	// Find payment orders with missed transfers
+	orders, err := storage.Client.PaymentOrder.
+		Query().
+		Where(
+			paymentorder.StatusEQ(paymentorder.StatusInitiated),
+			paymentorder.TxHashIsNil(),
+			paymentorder.BlockNumberEQ(0),
+			paymentorder.AmountPaidEQ(decimal.Zero),
+			paymentorder.FromAddressIsNil(),
+			paymentorder.CreatedAtLTE(time.Now().Add(-5*time.Minute)),
+			paymentorder.CreatedAtGTE(time.Now().Add(-15*time.Minute)),
+			paymentorder.HasReceiveAddressWith(
+				receiveaddress.StatusEQ(receiveaddress.StatusUnused),
+			),
+			paymentorder.HasTokenWith(
+				tokenent.HasNetworkWith(
+					networkent.IDEQ(network.ID),
+				),
+			),
+		).
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
+		WithReceiveAddress().
+		All(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":             fmt.Sprintf("%v", err),
+			"NetworkIdentifier": network.Identifier,
+		}).Errorf("ResolvePaymentOrderMishaps.resolveMissedTransfers.fetchOrders")
+		return
+	}
+
+	// For missed transfers, we need to check each order's specific receive address
+	// Process sequentially to avoid overwhelming the RPC node and for better error handling
+	indexerInstance, indexerErr := indexer.NewIndexerEVM()
+	if indexerErr != nil {
+		logger.WithFields(logger.Fields{
+			"Error":             fmt.Sprintf("%v", indexerErr),
+			"NetworkIdentifier": network.Identifier,
+		}).Errorf("ResolvePaymentOrderMishaps.resolveMissedTransfers.createIndexer")
+		return
+	}
+	processedCount := 0
+	errorCount := 0
+
+	for i, order := range orders {
+		if order.Edges.ReceiveAddress != nil {
+			logger.WithFields(logger.Fields{
+				"NetworkIdentifier": network.Identifier,
+				"ReceiveAddress":    order.Edges.ReceiveAddress.Address,
+				"OrderID":           order.ID,
+				"Progress":          fmt.Sprintf("%d/%d", i+1, len(orders)),
+			}).Infof("ResolvePaymentOrderMishaps.resolveMissedTransfers")
+
+			err = indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, order.Edges.ReceiveAddress.Address, 0, 0, "")
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":             fmt.Sprintf("%v", err),
+					"NetworkIdentifier": network.Identifier,
+					"ReceiveAddress":    order.Edges.ReceiveAddress.Address,
+					"OrderID":           order.ID,
+				}).Errorf("ResolvePaymentOrderMishaps.resolveMissedTransfers.indexReceiveAddress")
+				errorCount++
+				continue // Continue with other orders even if one fails
+			}
+			processedCount++
+
+			// Add a small delay between requests to be respectful to the RPC node
+			if i < len(orders)-1 {
+				time.Sleep(500 * time.Millisecond)
+			}
+		}
+	}
+}
+
 // StartCronJobs starts cron jobs
 func StartCronJobs() {
 	scheduler := gocron.NewScheduler(time.UTC)
@@ -1218,8 +1262,8 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for ProcessBucketQueues: %v", err)
 	}
 
-	// Retry failed webhook notifications every 59 minutes
-	_, err = scheduler.Every(59).Minutes().Do(RetryFailedWebhookNotifications)
+	// Retry failed webhook notifications every 10 minutes
+	_, err = scheduler.Every(10).Minutes().Do(RetryFailedWebhookNotifications)
 	if err != nil {
 		logger.Errorf("StartCronJobs for RetryFailedWebhookNotifications: %v", err)
 	}
@@ -1230,8 +1274,8 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for SyncLockOrderFulfillments: %v", err)
 	}
 
-	// Handle receive address validity every 31 minutes
-	_, err = scheduler.Every(31).Minutes().Do(HandleReceiveAddressValidity)
+	// Handle receive address validity every 5 minutes
+	_, err = scheduler.Every(5).Minutes().Do(HandleReceiveAddressValidity)
 	if err != nil {
 		logger.Errorf("StartCronJobs for HandleReceiveAddressValidity: %v", err)
 	}
@@ -1242,11 +1286,17 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for RetryStaleUserOperations: %v", err)
 	}
 
-	// Index blockchain events every 5 seconds
-	// _, err = scheduler.Every(5).Seconds().Do(TaskIndexBlockchainEvents)
-	// if err != nil {
-	// 	logger.Errorf("StartCronJobs for IndexBlockchainEvents: %v", err)
-	// }
+	// Resolve payment order mishaps every 90 seconds
+	_, err = scheduler.Every(90).Seconds().Do(ResolvePaymentOrderMishaps)
+	if err != nil {
+		logger.Errorf("StartCronJobs for ResolvePaymentOrderMishaps: %v", err)
+	}
+
+	// Index gateway events every 1 hour
+	_, err = scheduler.Every(1).Hour().Do(IndexGatewayEvents)
+	if err != nil {
+		logger.Errorf("StartCronJobs for IndexGatewayEvents: %v", err)
+	}
 
 	// Start scheduler
 	scheduler.StartAsync()

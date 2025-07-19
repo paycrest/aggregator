@@ -2,8 +2,10 @@ package services
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"math/big"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -60,32 +62,7 @@ func (s *EngineService) CreateServerWallet(ctx context.Context, label string) (s
 
 // GetLatestBlock fetches the latest block number for a given chain ID
 func (s *EngineService) GetLatestBlock(ctx context.Context, chainID int64) (int64, error) {
-	// Check if this is BNB Smart Chain (chain ID 56) - use RPC instead of Thirdweb Insight
-	if chainID == 56 {
-		// Fetch network from database to get RPC endpoint
-		network, err := storage.Client.Network.
-			Query().
-			Where(networkent.ChainIDEQ(chainID)).
-			Only(ctx)
-		if err != nil {
-			return 0, fmt.Errorf("failed to fetch network from database: %w", err)
-		}
-
-		// Use RPC for BNB Smart Chain
-		client, err := aggregatortypes.NewEthClient(network.RPCEndpoint)
-		if err != nil {
-			return 0, fmt.Errorf("failed to create RPC client: %w", err)
-		}
-
-		header, err := client.HeaderByNumber(ctx, nil) // nil means latest block
-		if err != nil {
-			return 0, fmt.Errorf("failed to get latest block: %w", err)
-		}
-
-		return header.Number.Int64(), nil
-	}
-
-	// Use Thirdweb Insight for other networks
+	// Try ThirdWeb first for all networks
 	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
 		Config().SetTimeout(30 * time.Second).
 		Header().AddAll(map[string]string{
@@ -96,21 +73,49 @@ func (s *EngineService) GetLatestBlock(ctx context.Context, chainID int64) (int6
 		"sort_order": "desc",
 		"limit":      "1",
 	}).Send()
+	if err == nil {
+		// ThirdWeb succeeded
+		data, err := utils.ParseJSONResponse(res.RawResponse)
+		if err != nil {
+			return 0, fmt.Errorf("failed to parse JSON response: %w", err)
+		}
+
+		if data["meta"].(map[string]interface{})["total_items"].(float64) == 0 {
+			return 0, fmt.Errorf("no block found")
+		}
+
+		blockNumber := int64(data["data"].([]interface{})[0].(map[string]interface{})["block_number"].(float64))
+		return blockNumber, nil
+	}
+
+	// ThirdWeb failed, try RPC as fallback
+	logger.WithFields(logger.Fields{
+		"ChainID":       chainID,
+		"ThirdWebError": err.Error(),
+		"FallbackToRPC": true,
+	}).Warnf("ThirdWeb failed, falling back to RPC for latest block")
+
+	// Fetch network from database to get RPC endpoint
+	network, err := storage.Client.Network.
+		Query().
+		Where(networkent.ChainIDEQ(chainID)).
+		Only(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("failed to get latest block: %w", err)
+		return 0, fmt.Errorf("failed to fetch network from database: %w", err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Use RPC as fallback
+	client, err := aggregatortypes.NewEthClient(network.RPCEndpoint)
 	if err != nil {
-		return 0, fmt.Errorf("failed to parse JSON response: %w", err)
+		return 0, fmt.Errorf("failed to create RPC client: %w", err)
 	}
 
-	if data["meta"].(map[string]interface{})["total_items"].(float64) == 0 {
-		return 0, fmt.Errorf("no block found")
+	header, err := client.HeaderByNumber(ctx, nil) // nil means latest block
+	if err != nil {
+		return 0, fmt.Errorf("failed to get latest block from RPC: %w", err)
 	}
 
-	blockNumber := int64(data["data"].([]interface{})[0].(map[string]interface{})["block_number"].(float64))
-	return blockNumber, nil
+	return header.Number.Int64(), nil
 }
 
 // GetContractEvents fetches contract events
@@ -752,7 +757,8 @@ func (s *EngineService) CreateGatewayWebhook() error {
 }
 
 // GetContractEventsRPC fetches contract events using RPC for networks not supported by Thirdweb Insight
-func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint string, contractAddress string, fromBlock int64, toBlock int64, eventSignature string, topics []string, txHash string) ([]interface{}, error) {
+// It fetches all events and filters for specified event signatures (gateway events or transfer events)
+func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint string, contractAddress string, fromBlock int64, toBlock int64, topics []string, txHash string) ([]interface{}, error) {
 	// Create RPC client
 	client, err := aggregatortypes.NewEthClient(rpcEndpoint)
 	if err != nil {
@@ -760,7 +766,20 @@ func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint st
 	}
 
 	var logs []types.Log
-	var err2 error
+
+	// Determine which event signatures to filter for based on topics
+	var eventSignatures []string
+	if len(topics) > 0 && topics[0] == utils.TransferEventSignature {
+		// If transfer event signature is provided, filter for transfer events
+		eventSignatures = []string{utils.TransferEventSignature}
+	} else {
+		// Default to gateway event signatures
+		eventSignatures = []string{
+			utils.OrderCreatedEventSignature,
+			utils.OrderSettledEventSignature,
+			utils.OrderRefundedEventSignature,
+		}
+	}
 
 	if txHash != "" {
 		// If transaction hash is provided, get the specific transaction receipt
@@ -769,28 +788,33 @@ func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint st
 			return nil, fmt.Errorf("failed to get transaction receipt: %w", err)
 		}
 
-		// Filter logs from the receipt that match our criteria
+		// Filter logs from the receipt that match the specified event signatures
 		for _, log := range receipt.Logs {
 			if log.Address == common.HexToAddress(contractAddress) {
-				// Check if this log matches our event signature
-				if len(log.Topics) > 0 && log.Topics[0].Hex() == eventSignature {
-					// Check additional topics if provided
-					matches := true
-					for i, topic := range topics {
-						if topic != "" && (i+1 >= len(log.Topics) || log.Topics[i+1].Hex() != topic) {
-							matches = false
+				// Check if this log matches any of our event signatures
+				if len(log.Topics) > 0 {
+					eventSignature := log.Topics[0].Hex()
+					for _, signature := range eventSignatures {
+						if eventSignature == signature {
+							// Check additional topics if provided
+							matches := true
+							for i, topic := range topics {
+								if topic != "" && (i+1 >= len(log.Topics) || log.Topics[i+1].Hex() != topic) {
+									matches = false
+									break
+								}
+							}
+							if matches {
+								logs = append(logs, *log)
+							}
 							break
 						}
-					}
-					if matches {
-						logs = append(logs, *log)
 					}
 				}
 			}
 		}
 	} else {
-		// Use block range filtering (existing logic)
-		// Build filter query
+		// Use block range filtering to get all logs from the contract
 		filterQuery := ethereum.FilterQuery{
 			FromBlock: big.NewInt(fromBlock),
 			ToBlock:   big.NewInt(toBlock),
@@ -798,22 +822,30 @@ func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint st
 			Topics:    [][]common.Hash{},
 		}
 
-		// Add event signature as first topic
-		if eventSignature != "" {
-			filterQuery.Topics = append(filterQuery.Topics, []common.Hash{common.HexToHash(eventSignature)})
-		}
-
-		// Add additional topics if provided
+		// Add additional topics if provided (for filtering by specific addresses)
 		for _, topic := range topics {
 			if topic != "" {
 				filterQuery.Topics = append(filterQuery.Topics, []common.Hash{common.HexToHash(topic)})
 			}
 		}
 
-		// Get logs
-		logs, err2 = client.FilterLogs(ctx, filterQuery)
+		// Get all logs from the contract
+		allLogs, err2 := client.FilterLogs(ctx, filterQuery)
 		if err2 != nil {
 			return nil, fmt.Errorf("failed to get logs: %w", err2)
+		}
+
+		// Filter for the specified event signatures
+		for _, log := range allLogs {
+			if len(log.Topics) > 0 {
+				eventSignature := log.Topics[0].Hex()
+				for _, signature := range eventSignatures {
+					if eventSignature == signature {
+						logs = append(logs, log)
+						break
+					}
+				}
+			}
 		}
 	}
 
@@ -835,13 +867,160 @@ func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint st
 		events = append(events, event)
 	}
 
-	// Decode events based on signature
+	// Decode events based on their signatures
 	if len(events) > 0 {
-		err = utils.ProcessRPCEvents(events, eventSignature)
+		err = utils.ProcessRPCEventsBySignature(events)
 		if err != nil {
 			return nil, fmt.Errorf("failed to process RPC events: %w", err)
 		}
 	}
 
 	return events, nil
+}
+
+// GetAddressTransactionHistory fetches transaction history for any address from thirdweb insight API
+func (s *EngineService) GetAddressTransactionHistory(ctx context.Context, chainID int64, walletAddress string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
+	// Check if this is BNB Smart Chain (chain ID 56) - not supported by Thirdweb Insight
+	if chainID == 56 {
+		return nil, fmt.Errorf("transaction history not supported for BNB Smart Chain via Thirdweb API")
+	}
+
+	// Build query parameters
+	params := map[string]string{
+		"limit": fmt.Sprintf("%d", limit),
+	}
+
+	// Add block range filtering if specified
+	if fromBlock > 0 {
+		params["filter_block_number_gte"] = fmt.Sprintf("%d", fromBlock)
+	}
+	if toBlock > 0 {
+		params["filter_block_number_lte"] = fmt.Sprintf("%d", toBlock)
+	}
+
+	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
+		Config().SetTimeout(30 * time.Second).
+		Header().AddAll(map[string]string{
+		"Accept":       "application/json",
+		"Content-Type": "application/json",
+		"X-Secret-Key": s.config.ThirdwebSecretKey,
+	}).Build().GET(fmt.Sprintf("/v1/wallets/%s/transactions", walletAddress)).
+		Query().AddParams(params).Send()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get transaction history: %w", err)
+	}
+
+	data, err := utils.ParseJSONResponse(res.RawResponse)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
+	}
+
+	if data["data"] == nil {
+		return []map[string]interface{}{}, nil
+	}
+
+	transactions := data["data"].([]interface{})
+	result := make([]map[string]interface{}, len(transactions))
+
+	for i, tx := range transactions {
+		result[i] = tx.(map[string]interface{})
+	}
+
+	return result, nil
+}
+
+// GetContractEventsWithFallback tries ThirdWeb first and falls back to RPC if ThirdWeb fails
+func (s *EngineService) GetContractEventsWithFallback(ctx context.Context, network *ent.Network, contractAddress string, fromBlock int64, toBlock int64, topics []string, txHash string, eventPayload map[string]string) ([]interface{}, error) {
+	// Try ThirdWeb first
+	events, err := s.GetContractEvents(ctx, network.ChainID, contractAddress, eventPayload)
+	if err == nil {
+		// ThirdWeb succeeded, return the events
+		return events, nil
+	}
+
+	// ThirdWeb failed, log the error and try RPC as fallback
+	logger.WithFields(logger.Fields{
+		"Network":       network.Identifier,
+		"ChainID":       network.ChainID,
+		"Contract":      contractAddress,
+		"ThirdWebError": err.Error(),
+		"FallbackToRPC": true,
+	}).Warnf("ThirdWeb failed, falling back to RPC")
+
+	// Try RPC as fallback
+	events, rpcErr := s.GetContractEventsRPC(ctx, network.RPCEndpoint, contractAddress, fromBlock, toBlock, topics, txHash)
+	if rpcErr != nil {
+		// Both ThirdWeb and RPC failed
+		logger.WithFields(logger.Fields{
+			"Network":       network.Identifier,
+			"ChainID":       network.ChainID,
+			"Contract":      contractAddress,
+			"ThirdWebError": err.Error(),
+			"RPCError":      rpcErr.Error(),
+		}).Errorf("Both ThirdWeb and RPC failed")
+		return nil, fmt.Errorf("both ThirdWeb and RPC failed - ThirdWeb: %w, RPC: %w", err, rpcErr)
+	}
+
+	return events, nil
+}
+
+// ParseUserOpErrorJSON parses a UserOperation error JSON and returns the decoded error string
+func (s *EngineService) ParseUserOpErrorJSON(errorJSON map[string]interface{}) string {
+	// Extract the error object if it's nested
+	errorData, ok := errorJSON["error"].(map[string]interface{})
+	if !ok {
+		// If not nested, use the input directly
+		errorData = errorJSON
+	}
+
+	// Extract inner error details
+	if innerError, ok := errorData["inner_error"].(map[string]interface{}); ok {
+		if kind, ok := innerError["kind"].(map[string]interface{}); ok {
+			if body, ok := kind["body"].(string); ok {
+				// Extract and decode the hex-encoded revert reason
+				return s.extractAndDecodeRevertReason(body)
+			}
+		}
+	}
+
+	return "Unknown error"
+}
+
+// extractAndDecodeRevertReason extracts the hex-encoded revert reason from the error message and decodes it
+func (s *EngineService) extractAndDecodeRevertReason(errorBody string) string {
+	// Regular expression to find the hex-encoded revert reason
+	// This looks for the pattern that starts with 0x08c379a0 (Error(string) selector)
+	// and captures the hex string that follows
+	re := regexp.MustCompile(`0x08c379a0[0-9a-fA-F]+`)
+	matches := re.FindString(errorBody)
+
+	if matches == "" {
+		return "Unknown revert reason"
+	}
+
+	// Remove the function selector (0x08c379a0) and decode the rest
+	hexData := strings.TrimPrefix(matches, "0x08c379a0")
+
+	// The hex data contains:
+	// - 32 bytes for offset (first 64 hex chars)
+	// - 32 bytes for length (next 64 hex chars)
+	// - The actual string data (remaining hex chars)
+
+	if len(hexData) < 128 {
+		return "Invalid hex data length"
+	}
+
+	// Skip the offset and length, get the actual string data
+	stringDataHex := hexData[128:]
+
+	// Decode the hex string
+	decodedBytes, err := hex.DecodeString(stringDataHex)
+	if err != nil {
+		return fmt.Sprintf("Failed to decode hex: %v", err)
+	}
+
+	// Convert bytes to string, removing null bytes
+	decodedString := strings.TrimRight(string(decodedBytes), "\x00")
+
+	return decodedString
 }

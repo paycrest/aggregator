@@ -30,6 +30,7 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/receiveaddress"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/user"
 	svc "github.com/paycrest/aggregator/services"
@@ -1810,12 +1811,11 @@ func (ctrl *Controller) InsightWebhook(ctx *gin.Context) {
 
 // verifyWebhookSignature verifies the webhook signature using the stored secret
 func (ctrl *Controller) verifyWebhookSignature(rawBody, signature, webhookID string) (*types.WebhookSignatureVerification, error) {
-	logger.Infof("Verifying webhook signature for webhook ID: %s", webhookID)
 	// Get webhook from database
 	webhook, err := storage.Client.PaymentWebhook.
 		Query().
 		Where(paymentwebhook.WebhookIDEQ(webhookID)).
-		Only(context.Background())
+		First(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("webhook not found: %w", err)
 	}
@@ -2049,6 +2049,7 @@ func (ctrl *Controller) handleOrderSettledEvent(ctx *gin.Context, event types.Th
 	}
 
 	// Extract order settled data from decoded event
+	indexedParams := event.Data.Decoded.IndexedParams
 	nonIndexedParams := event.Data.Decoded.NonIndexedParams
 
 	settlePercent, err := decimal.NewFromString(nonIndexedParams["settlePercent"].(string))
@@ -2061,8 +2062,8 @@ func (ctrl *Controller) handleOrderSettledEvent(ctx *gin.Context, event types.Th
 		BlockNumber:       event.Data.BlockNumber,
 		TxHash:            event.Data.TransactionHash,
 		SplitOrderId:      nonIndexedParams["splitOrderId"].(string),
-		OrderId:           nonIndexedParams["orderId"].(string),
-		LiquidityProvider: ethcommon.HexToAddress(nonIndexedParams["liquidityProvider"].(string)).Hex(),
+		OrderId:           indexedParams["orderId"].(string),
+		LiquidityProvider: ethcommon.HexToAddress(indexedParams["liquidityProvider"].(string)).Hex(),
 		SettlePercent:     settlePercent,
 	}
 
@@ -2093,7 +2094,16 @@ func (ctrl *Controller) handleOrderRefundedEvent(ctx *gin.Context, event types.T
 	}
 
 	// Extract order refunded data from decoded event
+	indexedParams := event.Data.Decoded.IndexedParams
 	nonIndexedParams := event.Data.Decoded.NonIndexedParams
+
+	// Validate required parameters
+	if indexedParams["orderId"] == nil {
+		return fmt.Errorf("missing orderId in indexed params")
+	}
+	if nonIndexedParams["fee"] == nil {
+		return fmt.Errorf("missing fee in non-indexed params")
+	}
 
 	fee, err := decimal.NewFromString(nonIndexedParams["fee"].(string))
 	if err != nil {
@@ -2105,7 +2115,7 @@ func (ctrl *Controller) handleOrderRefundedEvent(ctx *gin.Context, event types.T
 		BlockNumber: event.Data.BlockNumber,
 		TxHash:      event.Data.TransactionHash,
 		Fee:         fee,
-		OrderId:     nonIndexedParams["orderId"].(string),
+		OrderId:     indexedParams["orderId"].(string),
 	}
 
 	// Process refunded order using existing logic
@@ -2119,13 +2129,59 @@ func (ctrl *Controller) handleOrderRefundedEvent(ctx *gin.Context, event types.T
 
 // IndexTransaction controller indexes a specific transaction for blockchain events
 func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
-	// Get network and txHash from URL parameters
+	// Get network from URL parameters
 	networkParam := ctx.Param("network")
-	txHash := ctx.Param("tx_hash")
 
-	// Validate txHash format (basic hex validation)
-	if !strings.HasPrefix(txHash, "0x") || len(txHash) != 66 {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid transaction hash format", nil)
+	// Get the second path param, which can be a tx_hash or an address
+	pathParam := ctx.Param("tx_hash_or_address")
+
+	// Get optional parameters from query string
+	fromBlockStr := ctx.Query("from_block")
+	toBlockStr := ctx.Query("to_block")
+
+	// Determine if pathParam is a tx_hash or address based on length
+	var txHash, address string
+	if pathParam != "" && strings.HasPrefix(pathParam, "0x") {
+		if len(pathParam) == 66 {
+			txHash = pathParam
+		} else if len(pathParam) == 42 {
+			address = pathParam
+		}
+	}
+
+	// Validate that pathParam is a valid tx_hash or address
+	if pathParam == "" || !strings.HasPrefix(pathParam, "0x") {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid path parameter. Must be a valid transaction hash (66 chars) or address (42 chars)", nil)
+		return
+	}
+
+	// Validate that at least one indexing method is provided
+	if txHash == "" && address == "" && (fromBlockStr == "" || toBlockStr == "") {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Must provide either a valid transaction hash, address, or from_block/to_block range", nil)
+		return
+	}
+
+	// Parse block range if provided
+	var fromBlock, toBlock int64
+	var blockErr error
+	if fromBlockStr != "" {
+		fromBlock, blockErr = strconv.ParseInt(fromBlockStr, 10, 64)
+		if blockErr != nil {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid from_block format", nil)
+			return
+		}
+	}
+	if toBlockStr != "" {
+		toBlock, blockErr = strconv.ParseInt(toBlockStr, 10, 64)
+		if blockErr != nil {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid to_block format", nil)
+			return
+		}
+	}
+
+	// Validate block range if both are provided
+	if fromBlockStr != "" && toBlockStr != "" && fromBlock >= toBlock {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "from_block must be less than to_block", nil)
 		return
 	}
 
@@ -2173,32 +2229,21 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 		return
 	}
 
-	// Fetch enabled tokens for the network
-	tokens, err := storage.Client.Token.
-		Query().
-		Where(
-			tokenEnt.IsEnabled(true),
-			tokenEnt.HasNetworkWith(
-				networkent.IDEQ(network.ID),
-			),
-		).
-		WithNetwork().
-		All(ctx)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":        fmt.Sprintf("%v", err),
-			"NetworkParam": networkParam,
-		}).Errorf("Failed to fetch tokens for network")
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch tokens", nil)
-		return
-	}
-
 	// Create indexer instance based on network type
 	var indexerInstance types.Indexer
+	var indexerErr error
 	if strings.HasPrefix(network.Identifier, "tron") {
 		indexerInstance = indexer.NewIndexerTron()
 	} else {
-		indexerInstance = indexer.NewIndexerEVM()
+		indexerInstance, indexerErr = indexer.NewIndexerEVM()
+		if indexerErr != nil {
+			logger.WithFields(logger.Fields{
+				"Error":        fmt.Sprintf("%v", indexerErr),
+				"NetworkParam": networkParam,
+			}).Errorf("Failed to create EVM indexer")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initialize indexer", nil)
+			return
+		}
 	}
 
 	// Track event counts
@@ -2209,78 +2254,123 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 		OrderRefunded int `json:"OrderRefunded"`
 	}{}
 
-	// Run each event type in separate goroutines
+	// Run indexing operations based on parameter type
 	var wg sync.WaitGroup
+	var eventCountsMutex sync.Mutex
 
-	// Index OrderCreated events
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		err := indexerInstance.IndexOrderCreated(ctx, network, 0, 0, txHash)
-		if err != nil && err.Error() != "no events found" {
-			logger.WithFields(logger.Fields{
-				"Error":        fmt.Sprintf("%v", err),
-				"NetworkParam": networkParam,
-				"TxHash":       txHash,
-				"EventType":    "OrderCreated",
-			}).Errorf("Failed to index OrderCreated events")
-		} else {
-			eventCounts.OrderCreated++
-		}
-	}()
-
-	// Index OrderSettled events
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		err := indexerInstance.IndexOrderSettled(ctx, network, 0, 0, txHash)
-		if err != nil && err.Error() != "no events found" {
-			logger.WithFields(logger.Fields{
-				"Error":        fmt.Sprintf("%v", err),
-				"NetworkParam": networkParam,
-				"TxHash":       txHash,
-				"EventType":    "OrderSettled",
-			}).Errorf("Failed to index OrderSettled events")
-		} else {
-			eventCounts.OrderSettled++
-		}
-	}()
-
-	// Index OrderRefunded events
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		err := indexerInstance.IndexOrderRefunded(ctx, network, 0, 0, txHash)
-		if err != nil && err.Error() != "no events found" {
-			logger.WithFields(logger.Fields{
-				"Error":        fmt.Sprintf("%v", err),
-				"NetworkParam": networkParam,
-				"TxHash":       txHash,
-				"EventType":    "OrderRefunded",
-			}).Errorf("Failed to index OrderRefunded events")
-		} else {
-			eventCounts.OrderRefunded++
-		}
-	}()
-
-	// Index Transfer events for each token
-	for _, token := range tokens {
+	// If txHash is provided, index Gateway events (OrderCreated, OrderSettled, OrderRefunded)
+	if txHash != "" {
 		wg.Add(1)
-		go func(token *ent.Token) {
+		go func() {
 			defer wg.Done()
-			err := indexerInstance.IndexTransfer(ctx, token, "", 0, 0, txHash)
+			err := indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, fromBlock, toBlock, txHash)
 			if err != nil && err.Error() != "no events found" {
 				logger.WithFields(logger.Fields{
-					"Error":        fmt.Sprintf("%v", err),
-					"NetworkParam": networkParam,
-					"Token":        token.Symbol,
-					"TxHash":       txHash,
-					"EventType":    "Transfer",
-				}).Errorf("Failed to index Transfer events")
-			} else {
-				eventCounts.Transfer++
+					"Error":          fmt.Sprintf("%v", err),
+					"NetworkParam":   networkParam,
+					"TxHash":         txHash,
+					"GatewayAddress": network.GatewayContractAddress,
+					"FromBlock":      fromBlock,
+					"ToBlock":        toBlock,
+					"EventType":      "Gateway",
+				}).Errorf("Failed to index Gateway events")
+			} else if err == nil {
+				// Only increment if operation succeeded (no error)
+				// This indicates that events were found and processed
+				eventCountsMutex.Lock()
+				eventCounts.OrderCreated++
+				eventCounts.OrderSettled++
+				eventCounts.OrderRefunded++
+				eventCountsMutex.Unlock()
 			}
-		}(token)
+		}()
+	}
+
+	// If address is provided, determine what type of indexing to perform
+	if address != "" {
+		// Check if the address is a gateway contract address
+		if strings.EqualFold(address, network.GatewayContractAddress) {
+			// Index Gateway events for the gateway contract address
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				err := indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, fromBlock, toBlock, "")
+				if err != nil && err.Error() != "no events found" {
+					logger.WithFields(logger.Fields{
+						"Error":          fmt.Sprintf("%v", err),
+						"NetworkParam":   networkParam,
+						"Address":        address,
+						"GatewayAddress": network.GatewayContractAddress,
+						"FromBlock":      fromBlock,
+						"ToBlock":        toBlock,
+						"EventType":      "Gateway",
+					}).Errorf("Failed to index Gateway events")
+				} else if err == nil {
+					// Only increment if operation succeeded (no error)
+					// This indicates that events were found and processed
+					eventCountsMutex.Lock()
+					eventCounts.OrderCreated++
+					eventCounts.OrderSettled++
+					eventCounts.OrderRefunded++
+					eventCountsMutex.Unlock()
+				}
+			}()
+		} else {
+			// Check if the address is a receive address in the database
+			receiveAddress, err := storage.Client.ReceiveAddress.
+				Query().
+				Where(receiveaddress.AddressEQ(address)).
+				First(ctx)
+
+			if err == nil && receiveAddress != nil {
+				// This is a receive address, index transfer events
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					// Get a token for this network to use with IndexReceiveAddress
+					token, err := storage.Client.Token.
+						Query().
+						Where(
+							tokenEnt.IsEnabled(true),
+							tokenEnt.HasNetworkWith(
+								networkent.IDEQ(network.ID),
+							),
+						).
+						WithNetwork().
+						First(ctx)
+					if err != nil {
+						logger.WithFields(logger.Fields{
+							"Error":        fmt.Sprintf("%v", err),
+							"NetworkParam": networkParam,
+						}).Errorf("Failed to get token for IndexReceiveAddress")
+						return
+					}
+
+					err = indexerInstance.IndexReceiveAddress(ctx, token, address, fromBlock, toBlock, txHash)
+					if err != nil && err.Error() != "no events found" {
+						logger.WithFields(logger.Fields{
+							"Error":        fmt.Sprintf("%v", err),
+							"NetworkParam": networkParam,
+							"TxHash":       txHash,
+							"Address":      address,
+							"FromBlock":    fromBlock,
+							"ToBlock":      toBlock,
+							"EventType":    "ReceiveAddress",
+						}).Errorf("Failed to index ReceiveAddress events")
+					} else if err == nil {
+						// Only increment if operation succeeded (no error)
+						// This indicates that transfer events were found and processed
+						eventCountsMutex.Lock()
+						eventCounts.Transfer++
+						eventCountsMutex.Unlock()
+					}
+				}()
+			} else {
+				// Address not found in receive_addresses table, return error
+				u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Address %s is not a valid receive address or gateway contract address", address), nil)
+				return
+			}
+		}
 	}
 
 	// Wait for all indexing operations to complete
@@ -2290,5 +2380,15 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 		Events: eventCounts,
 	}
 
-	u.APIResponse(ctx, http.StatusOK, "success", fmt.Sprintf("Successfully indexed transaction %s for network %s", txHash, networkParam), response)
+	// Build response message based on what was indexed
+	var responseMsg string
+	if txHash != "" {
+		responseMsg = fmt.Sprintf("Successfully indexed transaction %s for network %s", txHash, networkParam)
+	} else if address != "" {
+		responseMsg = fmt.Sprintf("Successfully indexed address %s for network %s", address, networkParam)
+	} else {
+		responseMsg = fmt.Sprintf("Successfully indexed block range %d-%d for network %s", fromBlock, toBlock, networkParam)
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", responseMsg, response)
 }
