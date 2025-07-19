@@ -2187,7 +2187,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 
 	// Validate network based on server environment
 	isTestnet := false
-	if serverConf.Environment != "production" {
+	if serverConf.Environment != "production" && serverConf.Environment != "staging" {
 		isTestnet = true
 	}
 

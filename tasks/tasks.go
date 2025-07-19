@@ -1076,7 +1076,7 @@ func ResolvePaymentOrderMishaps() error {
 
 	// Fetch networks
 	isTestnet := false
-	if serverConf.Environment != "production" {
+	if serverConf.Environment != "production" && serverConf.Environment != "staging" {
 		isTestnet = true
 	}
 
@@ -1112,7 +1112,7 @@ func IndexGatewayEvents() error {
 
 	// Fetch networks
 	isTestnet := false
-	if serverConf.Environment != "production" {
+	if serverConf.Environment != "production" && serverConf.Environment != "staging" {
 		isTestnet = true
 	}
 

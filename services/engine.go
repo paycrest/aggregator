@@ -485,16 +485,9 @@ func (s *EngineService) CreateGatewayWebhook() error {
 		return fmt.Errorf("SERVER_URL not configured in environment")
 	}
 
-	// Determine if we're in testnet or mainnet
-	// isTestnet := false
-	// if serverConf.Environment != "production" {
-	// 	isTestnet = true
-	// }
-
 	// Fetch networks for the current environment
 	networks, err := storage.Client.Network.
 		Query().
-		// Where(networkent.IsTestnet(isTestnet)).
 		All(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to fetch networks: %w", err)
