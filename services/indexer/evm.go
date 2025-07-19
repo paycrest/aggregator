@@ -338,11 +338,29 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 		}
 
 		// Get event name from the first topic (event signature)
-		topics := eventMap["topics"].([]interface{})
-		if len(topics) == 0 {
+		topicsInterface := eventMap["topics"]
+		var eventSignature string
+
+		// Handle both []string and []interface{} cases
+		switch topics := topicsInterface.(type) {
+		case []string:
+			if len(topics) == 0 {
+				continue
+			}
+			eventSignature = topics[0]
+		case []interface{}:
+			if len(topics) == 0 {
+				continue
+			}
+			if topicStr, ok := topics[0].(string); ok {
+				eventSignature = topicStr
+			} else {
+				continue
+			}
+		default:
+			logger.Warnf("Unknown topics type: %T", topicsInterface)
 			continue
 		}
-		eventSignature := topics[0].(string)
 
 		blockNumber := int64(eventMap["block_number"].(float64))
 		txHash := eventMap["transaction_hash"].(string)
