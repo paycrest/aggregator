@@ -2,8 +2,10 @@ package services
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"math/big"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -960,4 +962,65 @@ func (s *EngineService) GetContractEventsWithFallback(ctx context.Context, netwo
 	}
 
 	return events, nil
+}
+
+// ParseUserOpErrorJSON parses a UserOperation error JSON and returns the decoded error string
+func (s *EngineService) ParseUserOpErrorJSON(errorJSON map[string]interface{}) string {
+	// Extract the error object if it's nested
+	errorData, ok := errorJSON["error"].(map[string]interface{})
+	if !ok {
+		// If not nested, use the input directly
+		errorData = errorJSON
+	}
+
+	// Extract inner error details
+	if innerError, ok := errorData["inner_error"].(map[string]interface{}); ok {
+		if kind, ok := innerError["kind"].(map[string]interface{}); ok {
+			if body, ok := kind["body"].(string); ok {
+				// Extract and decode the hex-encoded revert reason
+				return s.extractAndDecodeRevertReason(body)
+			}
+		}
+	}
+
+	return "Unknown error"
+}
+
+// extractAndDecodeRevertReason extracts the hex-encoded revert reason from the error message and decodes it
+func (s *EngineService) extractAndDecodeRevertReason(errorBody string) string {
+	// Regular expression to find the hex-encoded revert reason
+	// This looks for the pattern that starts with 0x08c379a0 (Error(string) selector)
+	// and captures the hex string that follows
+	re := regexp.MustCompile(`0x08c379a0[0-9a-fA-F]+`)
+	matches := re.FindString(errorBody)
+
+	if matches == "" {
+		return "Unknown revert reason"
+	}
+
+	// Remove the function selector (0x08c379a0) and decode the rest
+	hexData := strings.TrimPrefix(matches, "0x08c379a0")
+
+	// The hex data contains:
+	// - 32 bytes for offset (first 64 hex chars)
+	// - 32 bytes for length (next 64 hex chars)
+	// - The actual string data (remaining hex chars)
+
+	if len(hexData) < 128 {
+		return "Invalid hex data length"
+	}
+
+	// Skip the offset and length, get the actual string data
+	stringDataHex := hexData[128:]
+
+	// Decode the hex string
+	decodedBytes, err := hex.DecodeString(stringDataHex)
+	if err != nil {
+		return fmt.Sprintf("Failed to decode hex: %v", err)
+	}
+
+	// Convert bytes to string, removing null bytes
+	decodedString := strings.TrimRight(string(decodedBytes), "\x00")
+
+	return decodedString
 }
