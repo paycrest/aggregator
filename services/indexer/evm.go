@@ -337,6 +337,8 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 			continue
 		}
 
+		logger.Infof("Event: %v", eventParams)
+
 		eventName := eventParams["name"].(string)
 		blockNumber := int64(event.(map[string]interface{})["block_number"].(float64))
 		txHash := event.(map[string]interface{})["transaction_hash"].(string)
