@@ -488,6 +488,7 @@ func (s *EngineService) CreateGatewayWebhook() error {
 	// Fetch networks for the current environment
 	networks, err := storage.Client.Network.
 		Query().
+		Where(networkent.ChainIDNEQ(56)).
 		All(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to fetch networks: %w", err)
@@ -944,10 +945,10 @@ func (s *EngineService) GetContractEventsWithFallback(ctx context.Context, netwo
 	if rpcErr != nil {
 		// Both ThirdWeb and RPC failed
 		logger.WithFields(logger.Fields{
-			"Network":       network.Identifier,
-			"ChainID":       network.ChainID,
-			"Contract":      contractAddress,
-			"RPCError":      rpcErr.Error(),
+			"Network":  network.Identifier,
+			"ChainID":  network.ChainID,
+			"Contract": contractAddress,
+			"RPCError": rpcErr.Error(),
 		}).Errorf("Both ThirdWeb and RPC failed")
 		return nil, fmt.Errorf("both ThirdWeb and RPC failed - ThirdWeb: %w, RPC: %w", err, rpcErr)
 	}
