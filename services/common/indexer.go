@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/linkedaddress"
@@ -389,9 +390,24 @@ func ProcessCreatedOrders(
 func ProcessSettledOrders(ctx context.Context, network *ent.Network, txHashes []string, hashToEvent map[string]*types.OrderSettledEvent) error {
 	lockOrders, err := storage.Client.LockPaymentOrder.
 		Query().
+		Where(func(s *sql.Selector) {
+			po := sql.Table(paymentorder.Table)
+			s.LeftJoin(po).On(s.C(lockpaymentorder.FieldGatewayID), po.C(paymentorder.FieldGatewayID)).
+				Where(sql.Or(
+					// Case 1: No corresponding payment order - must be StatusValidated
+					sql.And(
+						sql.IsNull(po.C(paymentorder.FieldGatewayID)),
+						sql.EQ(s.C(lockpaymentorder.FieldStatus), lockpaymentorder.StatusValidated),
+					),
+					// Case 2: Has corresponding payment order but it's not settled - any status
+					sql.And(
+						sql.NotNull(po.C(paymentorder.FieldGatewayID)),
+						sql.NEQ(po.C(paymentorder.FieldStatus), paymentorder.StatusSettled),
+					),
+				))
+		}).
 		Where(
 			lockpaymentorder.TxHashIn(txHashes...),
-			lockpaymentorder.StatusEQ(lockpaymentorder.StatusValidated),
 		).
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
@@ -433,12 +449,27 @@ func ProcessSettledOrders(ctx context.Context, network *ent.Network, txHashes []
 func ProcessRefundedOrders(ctx context.Context, network *ent.Network, txHashes []string, hashToEvent map[string]*types.OrderRefundedEvent) error {
 	lockOrders, err := storage.Client.LockPaymentOrder.
 		Query().
+		Where(func(s *sql.Selector) {
+			po := sql.Table(paymentorder.Table)
+			s.LeftJoin(po).On(s.C(lockpaymentorder.FieldGatewayID), po.C(paymentorder.FieldGatewayID)).
+				Where(sql.Or(
+					// Case 1: No corresponding payment order - must be Pending or Cancelled
+					sql.And(
+						sql.IsNull(po.C(paymentorder.FieldGatewayID)),
+						sql.Or(
+							sql.EQ(s.C(lockpaymentorder.FieldStatus), lockpaymentorder.StatusPending),
+							sql.EQ(s.C(lockpaymentorder.FieldStatus), lockpaymentorder.StatusCancelled),
+						),
+					),
+					// Case 2: Has corresponding payment order but it's not refunded - any status
+					sql.And(
+						sql.NotNull(po.C(paymentorder.FieldGatewayID)),
+						sql.NEQ(po.C(paymentorder.FieldStatus), paymentorder.StatusRefunded),
+					),
+				))
+		}).
 		Where(
 			lockpaymentorder.TxHashIn(txHashes...),
-			lockpaymentorder.Or(
-				lockpaymentorder.StatusEQ(lockpaymentorder.StatusPending),
-				lockpaymentorder.StatusEQ(lockpaymentorder.StatusCancelled),
-			),
 		).
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()

@@ -163,12 +163,6 @@ func (s *IndexerEVM) getAddressTransactionHistoryWithFallback(ctx context.Contex
 
 	transactions, etherscanErr := s.etherscanService.GetAddressTransactionHistory(ctx, chainID, address, limit, fromBlock, toBlock)
 	if etherscanErr != nil {
-		// Both engine and etherscan failed
-		logger.WithFields(logger.Fields{
-			"ChainID":        chainID,
-			"Address":        address,
-			"EtherscanError": etherscanErr.Error(),
-		}).Errorf("Both engine and etherscan failed")
 		return nil, fmt.Errorf("both engine and etherscan failed - Engine: %w, Etherscan: %w", err, etherscanErr)
 	}
 
