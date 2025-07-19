@@ -337,14 +337,18 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 			continue
 		}
 
-		logger.Infof("Event: %v", eventMap)
+		// Get event name from the first topic (event signature)
+		topics := eventMap["topics"].([]interface{})
+		if len(topics) == 0 {
+			continue
+		}
+		eventSignature := topics[0].(string)
 
-		eventName := eventMap["name"].(string)
 		blockNumber := int64(eventMap["block_number"].(float64))
 		txHash := eventMap["transaction_hash"].(string)
 
-		switch eventName {
-		case "OrderCreated":
+		switch eventSignature {
+		case utils.OrderCreatedEventSignature:
 			orderAmount, err := decimal.NewFromString(eventParams["indexed_params"].(map[string]interface{})["amount"].(string))
 			if err != nil {
 				continue
@@ -371,7 +375,7 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 			}
 			orderCreatedEvents = append(orderCreatedEvents, createdEvent)
 
-		case "OrderSettled":
+		case utils.OrderSettledEventSignature:
 			settlePercent, err := decimal.NewFromString(eventParams["non_indexed_params"].(map[string]interface{})["settlePercent"].(string))
 			if err != nil {
 				continue
@@ -387,7 +391,7 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 			}
 			orderSettledEvents = append(orderSettledEvents, settledEvent)
 
-		case "OrderRefunded":
+		case utils.OrderRefundedEventSignature:
 			fee, err := decimal.NewFromString(eventParams["non_indexed_params"].(map[string]interface{})["fee"].(string))
 			if err != nil {
 				continue
