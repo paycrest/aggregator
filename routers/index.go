@@ -44,12 +44,19 @@ func RegisterRoutes(route *gin.Engine) {
 	v1.GET("orders/:chain_id/:id", ctrl.GetLockPaymentOrderStatus)
 
 	// Reindex transaction endpoint
-	v1.GET("reindex/:network/:tx_hash", ctrl.IndexTransaction)
+	v1.GET("reindex/:network/:tx_hash_or_address", ctrl.IndexTransaction)
+
+	// KYB route
+	v1.POST("slack-interaction", middleware.SlackVerificationMiddleware, ctrl.SlackInteractionHandler)
+	v1.POST("kyb-submission", middleware.JWTMiddleware, ctrl.HandleKYBSubmission)
 
 	// KYC routes
 	v1.POST("kyc", ctrl.RequestIDVerification)
 	v1.GET("kyc/:wallet_address", ctrl.GetIDVerificationStatus)
 	v1.POST("kyc/webhook", ctrl.KYCWebhook)
+
+	// Insight webhook route
+	v1.POST("insight/webhook", ctrl.InsightWebhook)
 
 	// Linked address routes
 	v1.POST("linked-addresses", middleware.PrivyMiddleware, ctrl.CreateLinkedAddress)

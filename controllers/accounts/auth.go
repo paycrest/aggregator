@@ -90,10 +90,8 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		SetScope(scope)
 
 	// Checking the environment to set the user as verified and give early access
-	if serverConf.Environment != "production" {
-		userCreate = userCreate.
-			SetIsEmailVerified(true).
-			SetHasEarlyAccess(true)
+	if serverConf.Environment != "production" && serverConf.Environment != "staging" {
+		userCreate = userCreate.SetIsEmailVerified(true)
 	}
 
 	user, err := userCreate.Save(ctx)
@@ -259,13 +257,6 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 	}
 
 	u.APIResponse(ctx, http.StatusCreated, "success", "User created successfully", response)
-
-	// Send Slack notification
-	if serverConf.Environment == "production" {
-		if err := ctrl.slackService.SendUserSignupNotification(user, scopes, providerCurrencies); err != nil {
-			logger.Errorf("Failed to send Slack notification: %v", err)
-		}
-	}
 }
 
 // Login controller validates the payload and creates a new user.
@@ -296,15 +287,6 @@ func (ctrl *AuthController) Login(ctx *gin.Context) {
 	if !passwordMatch {
 		u.APIResponse(ctx, http.StatusUnauthorized, "error",
 			"Email and password do not match any user", nil,
-		)
-		return
-	}
-
-	// Check if user has early access
-	environment := serverConf.Environment
-	if !user.HasEarlyAccess && (environment == "production") {
-		u.APIResponse(ctx, http.StatusUnauthorized, "error",
-			"Your early access request is still pending", nil,
 		)
 		return
 	}
@@ -406,7 +388,7 @@ func (ctrl *AuthController) ConfirmEmail(ctx *gin.Context) {
 	}
 
 	// Update User IsEmailVerified to true
-	_, setIfVerifiedErr := verificationToken.Edges.Owner.
+	user, setIfVerifiedErr := verificationToken.Edges.Owner.
 		Update().
 		SetIsEmailVerified(true).
 		Save(ctx)
@@ -419,6 +401,14 @@ func (ctrl *AuthController) ConfirmEmail(ctx *gin.Context) {
 		DeleteOneID(verificationToken.ID).Exec(ctx)
 	if err != nil {
 		logger.Errorf("ConfirmEmailError.VerificationToken.Delete: %v", err)
+	}
+
+	// Send welcome email after email verification
+	if _, err := ctrl.emailService.SendWelcomeEmail(ctx, user.Email, user.FirstName, strings.Split(user.Scope, " ")); err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": user.ID,
+		}).Errorf("Failed to send welcome email")
 	}
 
 	// Return a success response

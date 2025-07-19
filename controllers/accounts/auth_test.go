@@ -18,6 +18,7 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/user"
 	"github.com/paycrest/aggregator/routers/middleware"
 	svc "github.com/paycrest/aggregator/services"
 	db "github.com/paycrest/aggregator/storage"
@@ -163,6 +164,157 @@ func TestAuth(t *testing.T) {
 			assert.NotNil(t, user.Edges.ProviderProfile.Edges.APIKey)
 
 		})
+
+		t.Run("with valid payload and welcome email", func(t *testing.T) {
+			payload := types.RegisterPayload{
+				FirstName:  "Ike",
+				LastName:   "Ayo",
+				Email:      "ikeayowelcome@example.com",
+				Password:   "password",
+				Currencies: []string{"NGN"},
+				Scopes:     []string{"sender", "provider"},
+			}
+
+			header := map[string]string{
+				"Client-Type": "web",
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/register", payload, header, router)
+			assert.NoError(t, err)
+
+			// Assert the response body
+			assert.Equal(t, http.StatusCreated, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "User created successfully", response.Message)
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok, "response.Data is not of type map[string]interface{}")
+			assert.NotNil(t, data, "response.Data is nil")
+
+			// Assert the response data
+			assert.Contains(t, data, "id")
+			match, _ := regexp.MatchString(
+				`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$`,
+				data["id"].(string),
+			)
+			if !match {
+				t.Errorf("Expected '%s' to be a valid UUID", data["id"].(string))
+			}
+
+			userID = data["id"].(string)
+
+			// Parse the user ID string to uuid.UUID
+			userUUID, err := uuid.Parse(userID)
+			assert.NoError(t, err)
+			assert.Equal(t, "", data["email"].(string))
+			assert.Equal(t, payload.FirstName, data["firstName"].(string))
+			assert.Equal(t, payload.LastName, data["lastName"].(string))
+
+			// Query the database to check if API key and profile were created
+			user, err := db.Client.User.
+				Query().
+				Where(user.IDEQ(userUUID)).
+				WithProviderProfile(
+					func(q *ent.ProviderProfileQuery) {
+						q.WithAPIKey()
+					}).
+				WithSenderProfile(func(q *ent.SenderProfileQuery) {
+					q.WithAPIKey()
+				}).
+				Only(context.Background())
+
+			assert.NoError(t, err)
+			assert.NotNil(t, user)
+			assert.NotNil(t, user.Edges.SenderProfile.Edges.APIKey)
+			assert.NotNil(t, user.Edges.ProviderProfile.Edges.APIKey)
+		})
+
+		t.Run("with valid payload and failed welcome email", func(t *testing.T) {
+			// Override httpmock for this test to simulate email failure
+			httpmock.Reset()
+			httpmock.RegisterResponder("POST", "https://api.sendgrid.com/v3/mail/send",
+				func(r *http.Request) (*http.Response, error) {
+					return httpmock.NewBytesResponse(500, []byte(`{"error": "SendGrid failure"}`)), fmt.Errorf("SendGrid error")
+				},
+			)
+
+			payload := types.RegisterPayload{
+				FirstName:  "Ike",
+				LastName:   "Ayo",
+				Email:      "ikeayowelcome2@example.com",
+				Password:   "password",
+				Currencies: []string{"NGN"},
+				Scopes:     []string{"sender", "provider"},
+			}
+
+			header := map[string]string{
+				"Client-Type": "web",
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/register", payload, header, router)
+			assert.NoError(t, err)
+
+			// Assert the response body
+			assert.Equal(t, http.StatusCreated, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "User created successfully", response.Message)
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok, "response.Data is not of type map[string]interface{}")
+			assert.NotNil(t, data, "response.Data is nil")
+
+			// Assert the response data
+			assert.Contains(t, data, "id")
+			match, _ := regexp.MatchString(
+				`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$`,
+				data["id"].(string),
+			)
+			if !match {
+				t.Errorf("Expected '%s' to be a valid UUID", data["id"].(string))
+			}
+
+			userID = data["id"].(string)
+
+			// Parse the user ID string to uuid.UUID
+			userUUID, err := uuid.Parse(userID)
+			assert.NoError(t, err)
+			assert.Equal(t, "", data["email"].(string))
+			assert.Equal(t, payload.FirstName, data["firstName"].(string))
+			assert.Equal(t, payload.LastName, data["lastName"].(string))
+
+			// Query the database to check if API key and profile were created
+			user, err := db.Client.User.
+				Query().
+				Where(user.IDEQ(userUUID)).
+				WithProviderProfile(
+					func(q *ent.ProviderProfileQuery) {
+						q.WithAPIKey()
+					}).
+				WithSenderProfile(func(q *ent.SenderProfileQuery) {
+					q.WithAPIKey()
+				}).
+				Only(context.Background())
+
+			assert.NoError(t, err)
+			assert.NotNil(t, user)
+			assert.NotNil(t, user.Edges.SenderProfile.Edges.APIKey)
+			assert.NotNil(t, user.Edges.ProviderProfile.Edges.APIKey)
+
+			// Restore default httpmock for other tests
+			httpmock.Reset()
+			httpmock.RegisterResponder("POST", "https://api.sendgrid.com/v3/mail/send",
+				func(r *http.Request) (*http.Response, error) {
+					resp := httpmock.NewBytesResponse(202, nil)
+					resp.Header.Set("X-Message-Id", "thisisatestid")
+					return resp, nil
+				},
+			)
+		})
+
 		t.Run("with only sender scope payload", func(t *testing.T) {
 			// Test register with valid payload
 			payload := types.RegisterPayload{
@@ -462,7 +614,7 @@ func TestAuth(t *testing.T) {
 				{
 					name:                "Non-production environment (staging)",
 					environment:         "staging",
-					expectedEarlyAccess: true,
+					expectedEarlyAccess: false,
 				},
 				{
 					name:                "Production environment",
@@ -477,7 +629,7 @@ func TestAuth(t *testing.T) {
 
 					serverConf := config.ServerConfiguration{Environment: tt.environment}
 
-					hasEarlyAccess := serverConf.Environment != "production"
+					hasEarlyAccess := serverConf.Environment != "production" && serverConf.Environment != "staging"
 
 					ctx := context.Background()
 					user, err := client.User.Create().
