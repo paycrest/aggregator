@@ -62,38 +62,41 @@ func (s *EngineService) CreateServerWallet(ctx context.Context, label string) (s
 
 // GetLatestBlock fetches the latest block number for a given chain ID
 func (s *EngineService) GetLatestBlock(ctx context.Context, chainID int64) (int64, error) {
-	// Try ThirdWeb first for all networks
-	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
-		Config().SetTimeout(30 * time.Second).
-		Header().AddAll(map[string]string{
-		"Content-Type": "application/json",
-		"X-Secret-Key": s.config.ThirdwebSecretKey,
-	}).Build().GET("/v1/blocks").
-		Query().AddParams(map[string]string{
-		"sort_order": "desc",
-		"limit":      "1",
-	}).Send()
-	if err == nil {
-		// ThirdWeb succeeded
-		data, err := utils.ParseJSONResponse(res.RawResponse)
-		if err != nil {
-			return 0, fmt.Errorf("failed to parse JSON response: %w", err)
+	// TODO: Remove once thirdweb insight supports BSC
+	if chainID != 56 {
+		// Try ThirdWeb first for all networks
+		res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
+			Config().SetTimeout(30 * time.Second).
+			Header().AddAll(map[string]string{
+			"Content-Type": "application/json",
+			"X-Secret-Key": s.config.ThirdwebSecretKey,
+		}).Build().GET("/v1/blocks").
+			Query().AddParams(map[string]string{
+			"sort_order": "desc",
+			"limit":      "1",
+		}).Send()
+		if err == nil {
+			// ThirdWeb succeeded
+			data, err := utils.ParseJSONResponse(res.RawResponse)
+			if err != nil {
+				return 0, fmt.Errorf("failed to parse JSON response: %w", err)
+			}
+
+			if data["meta"].(map[string]interface{})["total_items"].(float64) == 0 {
+				return 0, fmt.Errorf("no block found")
+			}
+
+			blockNumber := int64(data["data"].([]interface{})[0].(map[string]interface{})["block_number"].(float64))
+			return blockNumber, nil
 		}
 
-		if data["meta"].(map[string]interface{})["total_items"].(float64) == 0 {
-			return 0, fmt.Errorf("no block found")
-		}
-
-		blockNumber := int64(data["data"].([]interface{})[0].(map[string]interface{})["block_number"].(float64))
-		return blockNumber, nil
+		// ThirdWeb failed, try RPC as fallback
+		logger.WithFields(logger.Fields{
+			"ChainID":       chainID,
+			"ThirdWebError": err.Error(),
+			"FallbackToRPC": true,
+		}).Warnf("ThirdWeb failed, falling back to RPC for latest block")
 	}
-
-	// ThirdWeb failed, try RPC as fallback
-	logger.WithFields(logger.Fields{
-		"ChainID":       chainID,
-		"ThirdWebError": err.Error(),
-		"FallbackToRPC": true,
-	}).Warnf("ThirdWeb failed, falling back to RPC for latest block")
 
 	// Fetch network from database to get RPC endpoint
 	network, err := storage.Client.Network.
@@ -931,21 +934,17 @@ func (s *EngineService) GetAddressTransactionHistory(ctx context.Context, chainI
 
 // GetContractEventsWithFallback tries ThirdWeb first and falls back to RPC if ThirdWeb fails
 func (s *EngineService) GetContractEventsWithFallback(ctx context.Context, network *ent.Network, contractAddress string, fromBlock int64, toBlock int64, topics []string, txHash string, eventPayload map[string]string) ([]interface{}, error) {
-	// Try ThirdWeb first
-	events, err := s.GetContractEvents(ctx, network.ChainID, contractAddress, eventPayload)
-	if err == nil {
-		// ThirdWeb succeeded, return the events
-		return events, nil
-	}
+	var err error
 
-	// ThirdWeb failed, log the error and try RPC as fallback
-	logger.WithFields(logger.Fields{
-		"Network":       network.Identifier,
-		"ChainID":       network.ChainID,
-		"Contract":      contractAddress,
-		"ThirdWebError": err.Error(),
-		"FallbackToRPC": true,
-	}).Warnf("ThirdWeb failed, falling back to RPC")
+	// TODO: Remove once thirdweb insight supports BSC
+	if network.ChainID != 56 {
+		// Try ThirdWeb first
+		events, err := s.GetContractEvents(ctx, network.ChainID, contractAddress, eventPayload)
+		if err == nil {
+			// ThirdWeb succeeded, return the events
+			return events, nil
+		}
+	}
 
 	// Try RPC as fallback
 	events, rpcErr := s.GetContractEventsRPC(ctx, network.RPCEndpoint, contractAddress, fromBlock, toBlock, topics, txHash)
@@ -955,7 +954,6 @@ func (s *EngineService) GetContractEventsWithFallback(ctx context.Context, netwo
 			"Network":       network.Identifier,
 			"ChainID":       network.ChainID,
 			"Contract":      contractAddress,
-			"ThirdWebError": err.Error(),
 			"RPCError":      rpcErr.Error(),
 		}).Errorf("Both ThirdWeb and RPC failed")
 		return nil, fmt.Errorf("both ThirdWeb and RPC failed - ThirdWeb: %w, RPC: %w", err, rpcErr)
