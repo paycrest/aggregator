@@ -251,6 +251,89 @@ func RetryStaleUserOperations() error {
 	return nil
 }
 
+// TaskIndexBlockchainEvents indexes transfer events for all enabled tokens
+func TaskIndexBlockchainEvents() error {
+	ctx := context.Background()
+	engineService := services.NewEngineService()
+
+	// Fetch networks
+	isTestnet := false
+	if serverConf.Environment != "production" && serverConf.Environment != "staging" {
+		isTestnet = true
+	}
+	networks, err := storage.Client.Network.
+		Query().
+		Where(
+			networkent.IsTestnetEQ(isTestnet),
+			networkent.IdentifierEQ("bnb-smart-chain"),
+		).
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("TaskIndexBlockchainEvents.fetchNetworks: %w", err)
+	}
+	// Process each network in parallel
+	for _, network := range networks {
+		go func(network *ent.Network) {
+			// Create a new context for this network's operations
+			ctx := context.Background()
+			var startBlock int64
+			var latestBlock int64
+			var duration time.Duration
+			var indexerInstance types.Indexer
+			if strings.HasPrefix(network.Identifier, "tron") {
+				indexerInstance = indexer.NewIndexerTron()
+				latestBlock, err = GetTronLatestBlock(network.RPCEndpoint)
+				if err != nil {
+					// logger.WithFields(logger.Fields{
+					//  "Error":             fmt.Sprintf("%v", err),
+					//  "NetworkIdentifier": network.Identifier,
+					// }).Errorf("TaskIndexBlockchainEvents.getLatestBlock")
+					return
+				}
+				duration = orderConf.IndexingDuration
+				// Ensure minimum duration for Tron
+				if duration < 60*time.Second {
+					duration = 60 * time.Second
+				}
+				startBlock = latestBlock - duration.Milliseconds()
+				_ = indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, startBlock, latestBlock, "")
+			} else {
+				indexerInstance, err = indexer.NewIndexerEVM()
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":             fmt.Sprintf("%v", err),
+						"NetworkIdentifier": network.Identifier,
+					}).Errorf("TaskIndexBlockchainEvents.createIndexer")
+					return
+				}
+				latestBlock, err = engineService.GetLatestBlock(ctx, network.ChainID)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":             fmt.Sprintf("%v", err),
+						"NetworkIdentifier": network.Identifier,
+					}).Errorf("TaskIndexBlockchainEvents.getLatestBlock")
+					return
+				}
+				duration = orderConf.IndexingDuration
+				blocksPerSecond := decimal.NewFromFloat(1.0).Div(decimal.NewFromFloat(2))
+				blocksPerDuration := blocksPerSecond.Mul(decimal.NewFromFloat(duration.Seconds()))
+				startBlock = latestBlock - blocksPerDuration.IntPart()
+
+				// Process blocks in chunks
+				const maxChunkSize int64 = 1000
+				for currentBlock := startBlock; currentBlock < latestBlock; currentBlock += maxChunkSize {
+					chunkEnd := currentBlock + maxChunkSize - 1
+					if chunkEnd > latestBlock {
+						chunkEnd = latestBlock
+					}
+					_ = indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, currentBlock, chunkEnd, "")
+				}
+			}
+		}(network)
+	}
+	return nil
+}
+
 // GetTronLatestBlock fetches the latest block (timestamp in milliseconds) for Tron
 func GetTronLatestBlock(endpoint string) (int64, error) {
 	res, err := fastshot.NewClient(endpoint).
@@ -1298,6 +1381,12 @@ func StartCronJobs() {
 	_, err = scheduler.Every(1).Hour().Do(IndexGatewayEvents)
 	if err != nil {
 		logger.Errorf("StartCronJobs for IndexGatewayEvents: %v", err)
+	}
+
+	// Index blockchain events every 5 seconds
+	_, err = scheduler.Every(5).Seconds().Do(TaskIndexBlockchainEvents)
+	if err != nil {
+		logger.Errorf("StartCronJobs for IndexBlockchainEvents: %v", err)
 	}
 
 	// Start scheduler
