@@ -337,11 +337,11 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 			continue
 		}
 
-		logger.Infof("Event: %v", eventParams)
+		logger.Infof("Event: %v", eventMap)
 
-		eventName := eventParams["name"].(string)
-		blockNumber := int64(event.(map[string]interface{})["block_number"].(float64))
-		txHash := event.(map[string]interface{})["transaction_hash"].(string)
+		eventName := eventMap["name"].(string)
+		blockNumber := int64(eventMap["block_number"].(float64))
+		txHash := eventMap["transaction_hash"].(string)
 
 		switch eventName {
 		case "OrderCreated":
