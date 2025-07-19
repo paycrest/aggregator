@@ -66,7 +66,7 @@ func RetryStaleUserOperations() error {
 		}).
 		Where(
 			paymentorder.Or(
-				paymentorder.UpdatedAtGTE(time.Now().Add(-1*time.Hour)),
+				paymentorder.UpdatedAtGTE(time.Now().Add(-10*time.Minute)),
 				paymentorder.HasRecipientWith(
 					paymentorderrecipient.MemoHasPrefix("P#P"),
 				),
@@ -116,6 +116,7 @@ func RetryStaleUserOperations() error {
 				lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusSuccess),
 			),
 			lockpaymentorder.UpdatedAtLT(time.Now().Add(-5*time.Minute)),
+			lockpaymentorder.UpdatedAtGTE(time.Now().Add(-15*time.Minute)),
 		).
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
@@ -153,6 +154,7 @@ func RetryStaleUserOperations() error {
 		Query().
 		Where(
 			lockpaymentorder.GatewayIDNEQ(""),
+			lockpaymentorder.UpdatedAtGTE(time.Now().Add(-10*time.Minute)),
 			lockpaymentorder.Or(
 				lockpaymentorder.And(
 					lockpaymentorder.Or(
