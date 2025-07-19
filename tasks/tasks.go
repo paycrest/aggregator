@@ -1293,7 +1293,7 @@ func resolveMissedTransfers(ctx context.Context, network *ent.Network) {
 
 			// Add a small delay between requests to be respectful to the RPC node
 			if i < len(orders)-1 {
-				time.Sleep(100 * time.Millisecond)
+				time.Sleep(500 * time.Millisecond)
 			}
 		}
 	}
