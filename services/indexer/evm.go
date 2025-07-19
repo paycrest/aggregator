@@ -25,18 +25,21 @@ type IndexerEVM struct {
 }
 
 // NewIndexerEVM creates a new instance of IndexerEVM.
-func NewIndexerEVM() types.Indexer {
+func NewIndexerEVM() (types.Indexer, error) {
 	priorityQueue := services.NewPriorityQueueService()
 	orderService := order.NewOrderEVM()
 	engineService := services.NewEngineService()
-	etherscanService := services.NewEtherscanService()
+	etherscanService, err := services.NewEtherscanService()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create EtherscanService: %w", err)
+	}
 
 	return &IndexerEVM{
 		priorityQueue:    priorityQueue,
 		order:            orderService,
 		engineService:    engineService,
 		etherscanService: etherscanService,
-	}
+	}, nil
 }
 
 // IndexReceiveAddress indexes transfers to receive/linked addresses from user transaction history

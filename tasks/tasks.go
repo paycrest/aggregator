@@ -1133,7 +1133,14 @@ func IndexGatewayEvents() error {
 			ctx := context.Background()
 
 			// Index gateway events by fetching last 20 transactions of the gateway contract
-			indexerInstance := indexer.NewIndexerEVM()
+			indexerInstance, indexerErr := indexer.NewIndexerEVM()
+			if indexerErr != nil {
+				logger.WithFields(logger.Fields{
+					"Error":             fmt.Sprintf("%v", indexerErr),
+					"NetworkIdentifier": network.Identifier,
+				}).Errorf("IndexGatewayEvents.createIndexer")
+				return
+			}
 			err := indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
 			if err != nil {
 				logger.WithFields(logger.Fields{
@@ -1185,7 +1192,14 @@ func resolveMissedTransfers(ctx context.Context, network *ent.Network) {
 
 	// For missed transfers, we need to check each order's specific receive address
 	// Process sequentially to avoid overwhelming the RPC node and for better error handling
-	indexerInstance := indexer.NewIndexerEVM()
+	indexerInstance, indexerErr := indexer.NewIndexerEVM()
+	if indexerErr != nil {
+		logger.WithFields(logger.Fields{
+			"Error":             fmt.Sprintf("%v", indexerErr),
+			"NetworkIdentifier": network.Identifier,
+		}).Errorf("ResolvePaymentOrderMishaps.resolveMissedTransfers.createIndexer")
+		return
+	}
 	processedCount := 0
 	errorCount := 0
 

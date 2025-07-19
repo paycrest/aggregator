@@ -16,15 +16,15 @@ type EtherscanService struct {
 }
 
 // NewEtherscanService creates a new instance of EtherscanService
-func NewEtherscanService() *EtherscanService {
+func NewEtherscanService() (*EtherscanService, error) {
 	etherscanConfig := config.EtherscanConfig()
 	if etherscanConfig.ApiKey == "" {
-		panic("ETHERSCAN_API_KEY environment variable is required")
+		return nil, fmt.Errorf("ETHERSCAN_API_KEY environment variable is required")
 	}
 
 	return &EtherscanService{
 		config: etherscanConfig,
-	}
+	}, nil
 }
 
 // GetAddressTransactionHistory fetches transaction history for any address from Etherscan API

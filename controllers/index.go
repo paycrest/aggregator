@@ -2231,10 +2231,19 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 
 	// Create indexer instance based on network type
 	var indexerInstance types.Indexer
+	var indexerErr error
 	if strings.HasPrefix(network.Identifier, "tron") {
 		indexerInstance = indexer.NewIndexerTron()
 	} else {
-		indexerInstance = indexer.NewIndexerEVM()
+		indexerInstance, indexerErr = indexer.NewIndexerEVM()
+		if indexerErr != nil {
+			logger.WithFields(logger.Fields{
+				"Error":        fmt.Sprintf("%v", indexerErr),
+				"NetworkParam": networkParam,
+			}).Errorf("Failed to create EVM indexer")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initialize indexer", nil)
+			return
+		}
 	}
 
 	// Track event counts
