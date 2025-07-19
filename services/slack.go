@@ -125,11 +125,12 @@ func (s *SlackService) SendActionFeedbackNotification(firstName, email, submissi
 	}
 
 	var actionText string
-	if actionType == "approve" {
+	switch actionType {
+	case "approve":
 		actionText = "Approved"
-	} else if actionType == "reject" {
+	case "reject":
 		actionText = "Declined"
-	} else {
+	default:
 		return fmt.Errorf("invalid action type: %s", actionType)
 	}
 

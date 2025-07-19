@@ -614,7 +614,7 @@ func TestAuth(t *testing.T) {
 				{
 					name:                "Non-production environment (staging)",
 					environment:         "staging",
-					expectedEarlyAccess: true,
+					expectedEarlyAccess: false,
 				},
 				{
 					name:                "Production environment",
@@ -629,7 +629,7 @@ func TestAuth(t *testing.T) {
 
 					serverConf := config.ServerConfiguration{Environment: tt.environment}
 
-					hasEarlyAccess := serverConf.Environment != "production"
+					hasEarlyAccess := serverConf.Environment != "production" && serverConf.Environment != "staging"
 
 					ctx := context.Background()
 					user, err := client.User.Create().
