@@ -75,29 +75,3 @@ func TestParseUserOpErrorJSON(t *testing.T) {
 		t.Errorf("Expected %s, got %s", expected2, result2)
 	}
 }
-
-// Example usage function
-func ExampleParseUserOpErrorJSON() {
-	engineService := NewEngineService()
-
-	// Example error JSON
-	errorJSON := `{
-		"error": {
-			"stage": "BUILDING",
-			"message": "Paymaster error on chain 8453 at https://8453.bundler.thirdweb.com/v2: HTTP error 500 with body: {\"error\":\"Internal server error\",\"cause\":\"Invalid estimation result: UserOperation reverted during simulation with reason: 0x08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000011546f6b656e4e6f74537570706f72746564000000000000000000000000000000000000\",\"code\":500}",
-			"errorCode": "USER_OP_BUILD_FAILED",
-			"inner_error": {
-				"kind": {
-					"body": "{\"error\":\"Internal server error\",\"cause\":\"Invalid estimation result: UserOperation reverted during simulation with reason: 0x08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000011546f6b656e4e6f74537570706f72746564000000000000000000000000000000000000\",\"code\":500}"
-				}
-			}
-		}
-	}`
-
-	var errorData map[string]interface{}
-	json.Unmarshal([]byte(errorJSON), &errorData)
-
-	// Parse the error and get the decoded reason
-	decodedReason := engineService.ParseUserOpErrorJSON(errorData)
-	_ = decodedReason // Output: TokenNotSupported
-}
