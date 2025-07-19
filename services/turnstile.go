@@ -39,11 +39,11 @@ func (s *TurnstileService) VerifyToken(token, remoteIP string) error {
 
 	// Validate required configuration
 	if token == "" {
-		return fmt.Errorf("Turnstile token is required")
+		return fmt.Errorf("turnstile token is required")
 	}
 
 	if authConf.TurnstileSecretKey == "" {
-		return fmt.Errorf("Turnstile secret key not configured")
+		return fmt.Errorf("turnstile secret key not configured")
 	}
 
 	// Ensure remoteIP is a valid string
@@ -55,9 +55,9 @@ func (s *TurnstileService) VerifyToken(token, remoteIP string) error {
 	data := url.Values{}
 
 	// Ensure all values are strings
-	secretKey := fmt.Sprintf("%s", authConf.TurnstileSecretKey)
-	tokenStr := fmt.Sprintf("%s", token)
-	remoteIPStr := fmt.Sprintf("%s", remoteIP)
+	secretKey := authConf.TurnstileSecretKey
+	tokenStr := token
+	remoteIPStr := remoteIP
 
 	data.Set("secret", secretKey)
 	data.Set("response", tokenStr)
@@ -105,6 +105,5 @@ func (s *TurnstileService) VerifyToken(token, remoteIP string) error {
 		return fmt.Errorf("security check verification failed")
 	}
 
-	logger.Infof("Turnstile verification successful for hostname: %s", turnstileResp.Hostname)
 	return nil
 }

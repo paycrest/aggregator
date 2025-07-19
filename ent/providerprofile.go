@@ -31,26 +31,12 @@ type ProviderProfile struct {
 	IsActive bool `json:"is_active,omitempty"`
 	// IsAvailable holds the value of the "is_available" field.
 	IsAvailable bool `json:"is_available,omitempty"`
+	// IsKYBVerified holds the value of the "isKYBVerified" field.
+	IsKYBVerified bool `json:"isKYBVerified,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// VisibilityMode holds the value of the "visibility_mode" field.
 	VisibilityMode providerprofile.VisibilityMode `json:"visibility_mode,omitempty"`
-	// Address holds the value of the "address" field.
-	Address string `json:"address,omitempty"`
-	// MobileNumber holds the value of the "mobile_number" field.
-	MobileNumber string `json:"mobile_number,omitempty"`
-	// DateOfBirth holds the value of the "date_of_birth" field.
-	DateOfBirth time.Time `json:"date_of_birth,omitempty"`
-	// BusinessName holds the value of the "business_name" field.
-	BusinessName string `json:"business_name,omitempty"`
-	// IdentityDocumentType holds the value of the "identity_document_type" field.
-	IdentityDocumentType providerprofile.IdentityDocumentType `json:"identity_document_type,omitempty"`
-	// IdentityDocument holds the value of the "identity_document" field.
-	IdentityDocument string `json:"identity_document,omitempty"`
-	// BusinessDocument holds the value of the "business_document" field.
-	BusinessDocument string `json:"business_document,omitempty"`
-	// IsKybVerified holds the value of the "is_kyb_verified" field.
-	IsKybVerified bool `json:"is_kyb_verified,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ProviderProfileQuery when eager-loading is set.
 	Edges                 ProviderProfileEdges `json:"edges"`
@@ -153,11 +139,11 @@ func (*ProviderProfile) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case providerprofile.FieldIsActive, providerprofile.FieldIsAvailable, providerprofile.FieldIsKybVerified:
+		case providerprofile.FieldIsActive, providerprofile.FieldIsAvailable, providerprofile.FieldIsKYBVerified:
 			values[i] = new(sql.NullBool)
-		case providerprofile.FieldID, providerprofile.FieldTradingName, providerprofile.FieldHostIdentifier, providerprofile.FieldProvisionMode, providerprofile.FieldVisibilityMode, providerprofile.FieldAddress, providerprofile.FieldMobileNumber, providerprofile.FieldBusinessName, providerprofile.FieldIdentityDocumentType, providerprofile.FieldIdentityDocument, providerprofile.FieldBusinessDocument:
+		case providerprofile.FieldID, providerprofile.FieldTradingName, providerprofile.FieldHostIdentifier, providerprofile.FieldProvisionMode, providerprofile.FieldVisibilityMode:
 			values[i] = new(sql.NullString)
-		case providerprofile.FieldUpdatedAt, providerprofile.FieldDateOfBirth:
+		case providerprofile.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		case providerprofile.ForeignKeys[0]: // user_provider_profile
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
@@ -212,6 +198,12 @@ func (pp *ProviderProfile) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				pp.IsAvailable = value.Bool
 			}
+		case providerprofile.FieldIsKYBVerified:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field isKYBVerified", values[i])
+			} else if value.Valid {
+				pp.IsKYBVerified = value.Bool
+			}
 		case providerprofile.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
@@ -223,54 +215,6 @@ func (pp *ProviderProfile) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field visibility_mode", values[i])
 			} else if value.Valid {
 				pp.VisibilityMode = providerprofile.VisibilityMode(value.String)
-			}
-		case providerprofile.FieldAddress:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field address", values[i])
-			} else if value.Valid {
-				pp.Address = value.String
-			}
-		case providerprofile.FieldMobileNumber:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field mobile_number", values[i])
-			} else if value.Valid {
-				pp.MobileNumber = value.String
-			}
-		case providerprofile.FieldDateOfBirth:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field date_of_birth", values[i])
-			} else if value.Valid {
-				pp.DateOfBirth = value.Time
-			}
-		case providerprofile.FieldBusinessName:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field business_name", values[i])
-			} else if value.Valid {
-				pp.BusinessName = value.String
-			}
-		case providerprofile.FieldIdentityDocumentType:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field identity_document_type", values[i])
-			} else if value.Valid {
-				pp.IdentityDocumentType = providerprofile.IdentityDocumentType(value.String)
-			}
-		case providerprofile.FieldIdentityDocument:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field identity_document", values[i])
-			} else if value.Valid {
-				pp.IdentityDocument = value.String
-			}
-		case providerprofile.FieldBusinessDocument:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field business_document", values[i])
-			} else if value.Valid {
-				pp.BusinessDocument = value.String
-			}
-		case providerprofile.FieldIsKybVerified:
-			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field is_kyb_verified", values[i])
-			} else if value.Valid {
-				pp.IsKybVerified = value.Bool
 			}
 		case providerprofile.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -365,35 +309,14 @@ func (pp *ProviderProfile) String() string {
 	builder.WriteString("is_available=")
 	builder.WriteString(fmt.Sprintf("%v", pp.IsAvailable))
 	builder.WriteString(", ")
+	builder.WriteString("isKYBVerified=")
+	builder.WriteString(fmt.Sprintf("%v", pp.IsKYBVerified))
+	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
 	builder.WriteString(pp.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("visibility_mode=")
 	builder.WriteString(fmt.Sprintf("%v", pp.VisibilityMode))
-	builder.WriteString(", ")
-	builder.WriteString("address=")
-	builder.WriteString(pp.Address)
-	builder.WriteString(", ")
-	builder.WriteString("mobile_number=")
-	builder.WriteString(pp.MobileNumber)
-	builder.WriteString(", ")
-	builder.WriteString("date_of_birth=")
-	builder.WriteString(pp.DateOfBirth.Format(time.ANSIC))
-	builder.WriteString(", ")
-	builder.WriteString("business_name=")
-	builder.WriteString(pp.BusinessName)
-	builder.WriteString(", ")
-	builder.WriteString("identity_document_type=")
-	builder.WriteString(fmt.Sprintf("%v", pp.IdentityDocumentType))
-	builder.WriteString(", ")
-	builder.WriteString("identity_document=")
-	builder.WriteString(pp.IdentityDocument)
-	builder.WriteString(", ")
-	builder.WriteString("business_document=")
-	builder.WriteString(pp.BusinessDocument)
-	builder.WriteString(", ")
-	builder.WriteString("is_kyb_verified=")
-	builder.WriteString(fmt.Sprintf("%v", pp.IsKybVerified))
 	builder.WriteByte(')')
 	return builder.String()
 }

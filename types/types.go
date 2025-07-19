@@ -16,8 +16,8 @@ import (
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
-	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/transactionlog"
+	"github.com/paycrest/aggregator/ent/user"
 	"github.com/shopspring/decimal"
 )
 
@@ -105,10 +105,11 @@ type OrderService interface {
 
 // Indexer provides an interface for indexing blockchain data to the database.
 type Indexer interface {
-	IndexTransfer(ctx context.Context, token *ent.Token, address string, fromBlock int64, toBlock int64, txHash string) error
-	IndexOrderCreated(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error
-	IndexOrderSettled(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error
-	IndexOrderRefunded(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error
+	// Index all gateway events (OrderCreated, OrderSettled, OrderRefunded) in one efficient call
+	IndexGateway(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) error
+
+	// Index receive address events
+	IndexReceiveAddress(ctx context.Context, token *ent.Token, address string, fromBlock int64, toBlock int64, txHash string) error
 }
 
 // KYCProvider defines the interface for KYC verification providers
@@ -259,43 +260,30 @@ type ProviderOrderTokenPayload struct {
 
 // ProviderProfilePayload is the payload for the provider profile endpoint
 type ProviderProfilePayload struct {
-	TradingName          string                      `json:"tradingName"`
-	Currencies           []string                    `json:"currencies"`
-	HostIdentifier       string                      `json:"hostIdentifier"`
-	IsAvailable          bool                        `json:"isAvailable"`
-	Tokens               []ProviderOrderTokenPayload `json:"tokens"`
-	VisibilityMode       string                      `json:"visibilityMode"`
-	Address              string                      `json:"address"`
-	MobileNumber         string                      `json:"mobileNumber"`
-	DateOfBirth          time.Time                   `json:"dateOfBirth"`
-	BusinessName         string                      `json:"businessName"`
-	IdentityDocumentType string                      `json:"identityType"`
-	IdentityDocument     string                      `json:"identityDocument"`
-	BusinessDocument     string                      `json:"businessDocument"`
+	TradingName    string                      `json:"tradingName"`
+	Currencies     []string                    `json:"currencies"`
+	HostIdentifier string                      `json:"hostIdentifier"`
+	IsAvailable    bool                        `json:"isAvailable"`
+	IsActive       bool                        `json:"isActive"`
+	Tokens         []ProviderOrderTokenPayload `json:"tokens"`
+	VisibilityMode string                      `json:"visibilityMode"`
 }
 
 // ProviderProfileResponse is the response for the provider profile endpoint
 type ProviderProfileResponse struct {
-	ID                   string                               `json:"id"`
-	FirstName            string                               `json:"firstName"`
-	LastName             string                               `json:"lastName"`
-	Email                string                               `json:"email"`
-	TradingName          string                               `json:"tradingName"`
-	Currencies           []string                             `json:"currencies"`
-	HostIdentifier       string                               `json:"hostIdentifier"`
-	IsAvailable          bool                                 `json:"isAvailable"`
-	Tokens               []ProviderOrderTokenPayload          `json:"tokens"`
-	APIKey               APIKeyResponse                       `json:"apiKey"`
-	IsActive             bool                                 `json:"isActive"`
-	Address              string                               `json:"address"`
-	MobileNumber         string                               `json:"mobileNumber"`
-	VisibilityMode       providerprofile.VisibilityMode       `json:"visibilityMode"`
-	DateOfBirth          time.Time                            `json:"dateOfBirth"`
-	BusinessName         string                               `json:"businessName"`
-	IdentityDocumentType providerprofile.IdentityDocumentType `json:"identityType"`
-	IdentityDocument     string                               `json:"identityDocument"`
-	BusinessDocument     string                               `json:"businessDocument"`
-	IsKybVerified        bool                                 `json:"isKybVerified"`
+	ID                    string                      `json:"id"`
+	FirstName             string                      `json:"firstName"`
+	LastName              string                      `json:"lastName"`
+	Email                 string                      `json:"email"`
+	TradingName           string                      `json:"tradingName"`
+	Currencies            []string                    `json:"currencies"`
+	HostIdentifier        string                      `json:"hostIdentifier"`
+	IsAvailable           bool                        `json:"isAvailable"`
+	Tokens                []ProviderOrderTokenPayload `json:"tokens"`
+	APIKey                APIKeyResponse              `json:"apiKey"`
+	IsActive              bool                        `json:"isActive"`
+	VisibilityMode        string                      `json:"visibilityMode"`
+	KYBVerificationStatus user.KybVerificationStatus  `json:"kybVerificationStatus"`
 }
 
 // SenderOrderTokenResponse defines the provider setting for a token
@@ -309,17 +297,18 @@ type SenderOrderTokenResponse struct {
 
 // SenderProfileResponse is the response for the sender profile endpoint
 type SenderProfileResponse struct {
-	ID                 uuid.UUID                  `json:"id"`
-	FirstName          string                     `json:"firstName"`
-	LastName           string                     `json:"lastName"`
-	Email              string                     `json:"email"`
-	WebhookURL         string                     `json:"webhookUrl"`
-	DomainWhitelist    []string                   `json:"domainWhitelist"`
-	Tokens             []SenderOrderTokenResponse `json:"tokens"`
-	APIKey             APIKeyResponse             `json:"apiKey"`
-	ProviderID         string                     `json:"providerId"`
-	ProviderCurrencies []string                   `json:"providerCurrencies"`
-	IsActive           bool                       `json:"isActive"`
+	ID                    uuid.UUID                  `json:"id"`
+	FirstName             string                     `json:"firstName"`
+	LastName              string                     `json:"lastName"`
+	Email                 string                     `json:"email"`
+	WebhookURL            string                     `json:"webhookUrl"`
+	DomainWhitelist       []string                   `json:"domainWhitelist"`
+	Tokens                []SenderOrderTokenResponse `json:"tokens"`
+	APIKey                APIKeyResponse             `json:"apiKey"`
+	ProviderID            string                     `json:"providerId"`
+	ProviderCurrencies    []string                   `json:"providerCurrencies"`
+	IsActive              bool                       `json:"isActive"`
+	KYBVerificationStatus user.KybVerificationStatus `json:"kybVerificationStatus"`
 }
 
 // RefreshResponse is the response for the refresh endpoint
@@ -695,6 +684,32 @@ type SupportedTokenResponse struct {
 	Network         string `json:"network"`
 }
 
+// KYBSubmissionInput represents the input structure for KYB form submission
+type KYBSubmissionInput struct {
+	MobileNumber                  string                 `json:"mobileNumber" binding:"required"`
+	CompanyName                   string                 `json:"companyName" binding:"required"`
+	RegisteredBusinessAddress     string                 `json:"registeredBusinessAddress" binding:"required"`
+	CertificateOfIncorporationUrl string                 `json:"certificateOfIncorporationUrl" binding:"required"`
+	ArticlesOfIncorporationUrl    string                 `json:"articlesOfIncorporationUrl" binding:"required"`
+	BusinessLicenseUrl            *string                `json:"businessLicenseUrl"`
+	ProofOfBusinessAddressUrl     string                 `json:"proofOfBusinessAddressUrl" binding:"required"`
+	ProofOfResidentialAddressUrl  string                 `json:"proofOfResidentialAddressUrl" binding:"required"`
+	AmlPolicyUrl                  *string                `json:"amlPolicyUrl"`
+	KycPolicyUrl                  *string                `json:"kycPolicyUrl"`
+	BeneficialOwners              []BeneficialOwnerInput `json:"beneficialOwners" binding:"required,dive"`
+}
+
+// BeneficialOwnerInput represents the input structure for a beneficial owner
+type BeneficialOwnerInput struct {
+	FullName                     string  `json:"fullName" binding:"required"`
+	ResidentialAddress           string  `json:"residentialAddress" binding:"required"`
+	ProofOfResidentialAddressUrl string  `json:"proofOfResidentialAddressUrl" binding:"required"`
+	GovernmentIssuedIdUrl        string  `json:"governmentIssuedIdUrl" binding:"required"`
+	DateOfBirth                  string  `json:"dateOfBirth" binding:"required"`
+	OwnershipPercentage          float64 `json:"ownershipPercentage" binding:"required,gt=0,lte=100"`
+	GovernmentIssuedIdType       string  `json:"governmentIssuedIdType" binding:"required,oneof=passport drivers_license national_id"`
+}
+
 // IndexTransactionRequest represents the request payload for indexing a specific transaction
 type IndexTransactionRequest struct {
 	TxHash  string `json:"txHash" binding:"required"`
@@ -703,10 +718,54 @@ type IndexTransactionRequest struct {
 
 // IndexTransactionResponse represents the response for the index transaction endpoint
 type IndexTransactionResponse struct {
-	Events  struct {
+	Events struct {
 		Transfer      int `json:"Transfer"`
 		OrderCreated  int `json:"OrderCreated"`
 		OrderSettled  int `json:"OrderSettled"`
 		OrderRefunded int `json:"OrderRefunded"`
 	} `json:"events"`
+}
+
+// ThirdwebWebhookPayload represents the structure of thirdweb insight webhook payload
+type ThirdwebWebhookPayload struct {
+	Data      []ThirdwebWebhookEvent `json:"data"`
+	Timestamp int64                  `json:"timestamp"`
+	Topic     string                 `json:"topic"`
+}
+
+// ThirdwebWebhookEvent represents a single event in the webhook payload
+type ThirdwebWebhookEvent struct {
+	Data   ThirdwebEventData `json:"data"`
+	Status string            `json:"status"`
+	Type   string            `json:"type"`
+	ID     string            `json:"id"`
+}
+
+// ThirdwebEventData represents the event data structure
+type ThirdwebEventData struct {
+	ChainID          string               `json:"chain_id"`
+	BlockNumber      int64                `json:"block_number"`
+	BlockHash        string               `json:"block_hash"`
+	BlockTimestamp   int64                `json:"block_timestamp"`
+	TransactionHash  string               `json:"transaction_hash"`
+	TransactionIndex int                  `json:"transaction_index"`
+	LogIndex         int                  `json:"log_index"`
+	Address          string               `json:"address"`
+	Data             string               `json:"data"`
+	Topics           []string             `json:"topics"`
+	Decoded          ThirdwebDecodedEvent `json:"decoded"`
+}
+
+// ThirdwebDecodedEvent represents the decoded event parameters
+type ThirdwebDecodedEvent struct {
+	Name             string                 `json:"name"`
+	IndexedParams    map[string]interface{} `json:"indexed_params"`
+	NonIndexedParams map[string]interface{} `json:"non_indexed_params"`
+}
+
+// WebhookSignatureVerification represents the result of signature verification
+type WebhookSignatureVerification struct {
+	IsValid   bool
+	WebhookID string
+	Secret    string
 }

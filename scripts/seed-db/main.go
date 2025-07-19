@@ -219,13 +219,13 @@ func seedProvider(ctx context.Context, client *ent.Client, bucket *ent.Provision
 		SetUser(user).
 		SetIsActive(true).
 		SetIsAvailable(true).
-		SetAddress("123 Main St").
-		SetMobileNumber("+2348063000000").
-		SetDateOfBirth(time.Date(1990, time.January, 1, 0, 0, 0, 0, time.UTC)).
-		SetBusinessName("ABC Corporation").
-		SetIdentityDocumentType("passport").
-		SetIdentityDocument("https://example.com/identity_document.jpg").
-		SetBusinessDocument("https://example.com/business_document.pdf").
+		// SetAddress("123 Main St").
+		// SetMobileNumber("+2348063000000").
+		// SetDateOfBirth(time.Date(1990, time.January, 1, 0, 0, 0, 0, time.UTC)).
+		// SetBusinessName("ABC Corporation").
+		// SetIdentityDocumentType("passport").
+		// SetIdentityDocument("https://example.com/identity_document.jpg").
+		// SetBusinessDocument("https://example.com/business_document.pdf").
 		AddProvisionBuckets(bucket).
 		AddCurrencies(currency).
 		Save(ctx)

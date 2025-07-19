@@ -16,6 +16,7 @@ import (
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/senderprofile"
@@ -36,6 +37,7 @@ type PaymentOrderQuery struct {
 	withReceiveAddress *ReceiveAddressQuery
 	withRecipient      *PaymentOrderRecipientQuery
 	withTransactions   *TransactionLogQuery
+	withPaymentWebhook *PaymentWebhookQuery
 	withFKs            bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -198,6 +200,28 @@ func (poq *PaymentOrderQuery) QueryTransactions() *TransactionLogQuery {
 			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, selector),
 			sqlgraph.To(transactionlog.Table, transactionlog.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, paymentorder.TransactionsTable, paymentorder.TransactionsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(poq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryPaymentWebhook chains the current query on the "payment_webhook" edge.
+func (poq *PaymentOrderQuery) QueryPaymentWebhook() *PaymentWebhookQuery {
+	query := (&PaymentWebhookClient{config: poq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := poq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := poq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, selector),
+			sqlgraph.To(paymentwebhook.Table, paymentwebhook.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, paymentorder.PaymentWebhookTable, paymentorder.PaymentWebhookColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(poq.driver.Dialect(), step)
 		return fromU, nil
@@ -403,6 +427,7 @@ func (poq *PaymentOrderQuery) Clone() *PaymentOrderQuery {
 		withReceiveAddress: poq.withReceiveAddress.Clone(),
 		withRecipient:      poq.withRecipient.Clone(),
 		withTransactions:   poq.withTransactions.Clone(),
+		withPaymentWebhook: poq.withPaymentWebhook.Clone(),
 		// clone intermediate query.
 		sql:  poq.sql.Clone(),
 		path: poq.path,
@@ -472,6 +497,17 @@ func (poq *PaymentOrderQuery) WithTransactions(opts ...func(*TransactionLogQuery
 		opt(query)
 	}
 	poq.withTransactions = query
+	return poq
+}
+
+// WithPaymentWebhook tells the query-builder to eager-load the nodes that are connected to
+// the "payment_webhook" edge. The optional arguments are used to configure the query builder of the edge.
+func (poq *PaymentOrderQuery) WithPaymentWebhook(opts ...func(*PaymentWebhookQuery)) *PaymentOrderQuery {
+	query := (&PaymentWebhookClient{config: poq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	poq.withPaymentWebhook = query
 	return poq
 }
 
@@ -554,13 +590,14 @@ func (poq *PaymentOrderQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 		nodes       = []*PaymentOrder{}
 		withFKs     = poq.withFKs
 		_spec       = poq.querySpec()
-		loadedTypes = [6]bool{
+		loadedTypes = [7]bool{
 			poq.withSenderProfile != nil,
 			poq.withToken != nil,
 			poq.withLinkedAddress != nil,
 			poq.withReceiveAddress != nil,
 			poq.withRecipient != nil,
 			poq.withTransactions != nil,
+			poq.withPaymentWebhook != nil,
 		}
 	)
 	if poq.withSenderProfile != nil || poq.withToken != nil || poq.withLinkedAddress != nil {
@@ -621,6 +658,12 @@ func (poq *PaymentOrderQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 		if err := poq.loadTransactions(ctx, query, nodes,
 			func(n *PaymentOrder) { n.Edges.Transactions = []*TransactionLog{} },
 			func(n *PaymentOrder, e *TransactionLog) { n.Edges.Transactions = append(n.Edges.Transactions, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := poq.withPaymentWebhook; query != nil {
+		if err := poq.loadPaymentWebhook(ctx, query, nodes, nil,
+			func(n *PaymentOrder, e *PaymentWebhook) { n.Edges.PaymentWebhook = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -805,6 +848,34 @@ func (poq *PaymentOrderQuery) loadTransactions(ctx context.Context, query *Trans
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "payment_order_transactions" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (poq *PaymentOrderQuery) loadPaymentWebhook(ctx context.Context, query *PaymentWebhookQuery, nodes []*PaymentOrder, init func(*PaymentOrder), assign func(*PaymentOrder, *PaymentWebhook)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*PaymentOrder)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+	}
+	query.withFKs = true
+	query.Where(predicate.PaymentWebhook(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(paymentorder.PaymentWebhookColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.payment_order_payment_webhook
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "payment_order_payment_webhook" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "payment_order_payment_webhook" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

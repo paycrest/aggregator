@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	mailgunv3 "github.com/mailgun/mailgun-go/v3"
@@ -226,4 +227,66 @@ func SendTemplateEmailWithJsonAttachment(content types.SendEmailPayload, templat
 	}
 
 	return nil
+}
+
+// SendWelcomeEmail sends a welcome email to the user
+func (m *EmailService) SendWelcomeEmail(ctx context.Context, email, firstName string, scopes []string) (types.SendEmailResponse, error) {
+	// verificationLink := notificationConf.VerificationLink
+	payload := types.SendEmailPayload{
+		FromAddress: _DefaultFromAddress,
+		ToAddress:   email,
+		DynamicData: map[string]interface{}{
+			"first_name": firstName,
+			"email":      email,
+			"scopes":     strings.Join(scopes, ", "),
+			// "verification_link": verificationLink,
+		},
+	}
+	resp, err := SendTemplateEmail(payload, "d-b425f024e6554c5ba2b4d03ab0a8b25d")
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": email,
+		}).Errorf("Failed to send welcome email")
+	}
+	return resp, err
+}
+
+// SendKYBApprovalEmail sends a KYB approval email.
+func (m *EmailService) SendKYBApprovalEmail(email, firstName string) (types.SendEmailResponse, error) {
+	payload := types.SendEmailPayload{
+		FromAddress: _DefaultFromAddress,
+		ToAddress:   email,
+		DynamicData: map[string]interface{}{
+			"first_name": firstName,
+		},
+	}
+	resp, err := SendTemplateEmail(payload, "d-5ebb862274214ba79eae226c09300aa7")
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": email,
+		}).Errorf("Failed to send KYB approval")
+	}
+	return resp, err
+}
+
+// SendKYBRejectionEmail sends a KYB rejection email.
+func (m *EmailService) SendKYBRejectionEmail(email, firstName, reasonForDecline string) (types.SendEmailResponse, error) {
+	payload := types.SendEmailPayload{
+		FromAddress: _DefaultFromAddress,
+		ToAddress:   email,
+		DynamicData: map[string]interface{}{
+			"first_name":         firstName,
+			"reason_for_decline": reasonForDecline,
+		},
+	}
+	resp, err := SendTemplateEmail(payload, "d-6917f9c32105467b8dd806a5a3dd32dc")
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": email,
+		}).Errorf("Failed to send KYB rejection")
+	}
+	return resp, nil
 }

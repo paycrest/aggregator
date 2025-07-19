@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/token"
 )
@@ -20,11 +21,12 @@ import (
 // NetworkQuery is the builder for querying Network entities.
 type NetworkQuery struct {
 	config
-	ctx        *QueryContext
-	order      []network.OrderOption
-	inters     []Interceptor
-	predicates []predicate.Network
-	withTokens *TokenQuery
+	ctx                *QueryContext
+	order              []network.OrderOption
+	inters             []Interceptor
+	predicates         []predicate.Network
+	withTokens         *TokenQuery
+	withPaymentWebhook *PaymentWebhookQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -76,6 +78,28 @@ func (nq *NetworkQuery) QueryTokens() *TokenQuery {
 			sqlgraph.From(network.Table, network.FieldID, selector),
 			sqlgraph.To(token.Table, token.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, network.TokensTable, network.TokensColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(nq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryPaymentWebhook chains the current query on the "payment_webhook" edge.
+func (nq *NetworkQuery) QueryPaymentWebhook() *PaymentWebhookQuery {
+	query := (&PaymentWebhookClient{config: nq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := nq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := nq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(network.Table, network.FieldID, selector),
+			sqlgraph.To(paymentwebhook.Table, paymentwebhook.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, network.PaymentWebhookTable, network.PaymentWebhookColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(nq.driver.Dialect(), step)
 		return fromU, nil
@@ -270,12 +294,13 @@ func (nq *NetworkQuery) Clone() *NetworkQuery {
 		return nil
 	}
 	return &NetworkQuery{
-		config:     nq.config,
-		ctx:        nq.ctx.Clone(),
-		order:      append([]network.OrderOption{}, nq.order...),
-		inters:     append([]Interceptor{}, nq.inters...),
-		predicates: append([]predicate.Network{}, nq.predicates...),
-		withTokens: nq.withTokens.Clone(),
+		config:             nq.config,
+		ctx:                nq.ctx.Clone(),
+		order:              append([]network.OrderOption{}, nq.order...),
+		inters:             append([]Interceptor{}, nq.inters...),
+		predicates:         append([]predicate.Network{}, nq.predicates...),
+		withTokens:         nq.withTokens.Clone(),
+		withPaymentWebhook: nq.withPaymentWebhook.Clone(),
 		// clone intermediate query.
 		sql:  nq.sql.Clone(),
 		path: nq.path,
@@ -290,6 +315,17 @@ func (nq *NetworkQuery) WithTokens(opts ...func(*TokenQuery)) *NetworkQuery {
 		opt(query)
 	}
 	nq.withTokens = query
+	return nq
+}
+
+// WithPaymentWebhook tells the query-builder to eager-load the nodes that are connected to
+// the "payment_webhook" edge. The optional arguments are used to configure the query builder of the edge.
+func (nq *NetworkQuery) WithPaymentWebhook(opts ...func(*PaymentWebhookQuery)) *NetworkQuery {
+	query := (&PaymentWebhookClient{config: nq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	nq.withPaymentWebhook = query
 	return nq
 }
 
@@ -371,8 +407,9 @@ func (nq *NetworkQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Netw
 	var (
 		nodes       = []*Network{}
 		_spec       = nq.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [2]bool{
 			nq.withTokens != nil,
+			nq.withPaymentWebhook != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -397,6 +434,12 @@ func (nq *NetworkQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Netw
 		if err := nq.loadTokens(ctx, query, nodes,
 			func(n *Network) { n.Edges.Tokens = []*Token{} },
 			func(n *Network, e *Token) { n.Edges.Tokens = append(n.Edges.Tokens, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := nq.withPaymentWebhook; query != nil {
+		if err := nq.loadPaymentWebhook(ctx, query, nodes, nil,
+			func(n *Network, e *PaymentWebhook) { n.Edges.PaymentWebhook = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -429,6 +472,34 @@ func (nq *NetworkQuery) loadTokens(ctx context.Context, query *TokenQuery, nodes
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "network_tokens" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (nq *NetworkQuery) loadPaymentWebhook(ctx context.Context, query *PaymentWebhookQuery, nodes []*Network, init func(*Network), assign func(*Network, *PaymentWebhook)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*Network)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+	}
+	query.withFKs = true
+	query.Where(predicate.PaymentWebhook(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(network.PaymentWebhookColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.network_payment_webhook
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "network_payment_webhook" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "network_payment_webhook" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

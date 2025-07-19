@@ -16,6 +16,7 @@ type Configuration struct {
 	Order        OrderConfiguration
 	Notification NotificationConfiguration
 	Engine       EngineConfiguration
+	Etherscan    EtherscanConfiguration
 }
 
 // SetupConfig configuration

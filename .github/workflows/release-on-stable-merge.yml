@@ -1,0 +1,178 @@
+name: Create Advanced Release on Stable Merge
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - stable
+
+jobs:
+  create-release:
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'stable' && github.event.pull_request.head.ref == 'main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine version bump type
+        id: version_bump
+        run: |
+          # Check PR labels for version bump type
+          if echo "${{ toJSON(github.event.pull_request.labels.*.name) }}" | grep -q "major"; then
+            echo "bump_type=major" >> $GITHUB_OUTPUT
+          elif echo "${{ toJSON(github.event.pull_request.labels.*.name) }}" | grep -q "minor"; then
+            echo "bump_type=minor" >> $GITHUB_OUTPUT
+          else
+            echo "bump_type=patch" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "Bump type: ${{ steps.version_bump.outputs.bump_type }}"
+
+      - name: Get latest version and calculate new version
+        id: get_version
+        run: |
+          # Get the latest tag
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "Latest tag: $LATEST_TAG"
+          
+          # Extract version numbers
+          if [[ $LATEST_TAG =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+            MAJOR=${BASH_REMATCH[1]}
+            MINOR=${BASH_REMATCH[2]}
+            PATCH=${BASH_REMATCH[3]}
+          else
+            MAJOR=0
+            MINOR=0
+            PATCH=0
+          fi
+          
+          # Increment version based on bump type
+          BUMP_TYPE="${{ steps.version_bump.outputs.bump_type }}"
+          
+          case $BUMP_TYPE in
+            "major")
+              NEW_MAJOR=$((MAJOR + 1))
+              NEW_MINOR=0
+              NEW_PATCH=0
+              ;;
+            "minor")
+              NEW_MAJOR=$MAJOR
+              NEW_MINOR=$((MINOR + 1))
+              NEW_PATCH=0
+              ;;
+            "patch")
+              NEW_MAJOR=$MAJOR
+              NEW_MINOR=$MINOR
+              NEW_PATCH=$((PATCH + 1))
+              ;;
+            *)
+              NEW_MAJOR=$MAJOR
+              NEW_MINOR=$MINOR
+              NEW_PATCH=$((PATCH + 1))
+              ;;
+          esac
+          
+          NEW_VERSION="v$NEW_MAJOR.$NEW_MINOR.$NEW_PATCH"
+          
+          echo "Previous version: $LATEST_TAG"
+          echo "Bump type: $BUMP_TYPE"
+          echo "New version: $NEW_VERSION"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get commits since last tag
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          
+          if [ -n "$LATEST_TAG" ]; then
+            COMMITS=$(git log --oneline --no-merges $LATEST_TAG..HEAD)
+          else
+            COMMITS=$(git log --oneline --no-merges)
+          fi
+          
+          # Create changelog
+          CHANGELOG=""
+          if [ -n "$COMMITS" ]; then
+            CHANGELOG="### Recent Commits\n\n"
+            echo "$COMMITS" | while IFS= read -r commit; do
+              CHANGELOG="$CHANGELOG- $commit\n"
+            done
+          fi
+          
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create and push tag
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git tag ${{ steps.get_version.outputs.tag }}
+          git push origin ${{ steps.get_version.outputs.tag }}
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_version.outputs.tag }}
+          release_name: Release ${{ steps.get_version.outputs.version }}
+          body: |
+            ## Release ${{ steps.get_version.outputs.version }}
+            
+            ### Version Bump
+            **Type**: ${{ steps.get_version.outputs.bump_type }} version bump
+            
+            ### Changes
+            This release includes all changes merged from main to stable.
+            
+            ### Commit Range
+            ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.merge_commit_sha }}
+            
+            ### Pull Request
+            - **PR #${{ github.event.pull_request.number }}**: ${{ github.event.pull_request.title }}
+            - **Merged by**: @${{ github.event.pull_request.merged_by.login }}
+            - **Merged at**: ${{ github.event.pull_request.merged_at }}
+            
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ### Summary
+            Automated release created when PR was merged from main to stable.
+          draft: false
+          prerelease: false
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const bumpType = '${{ steps.get_version.outputs.bump_type }}';
+            const emoji = bumpType === 'major' ? '🚀' : bumpType === 'minor' ? '✨' : '🔧';
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `${emoji} **Release Created!**
+              
+              A new release has been automatically created for this merge:
+              
+              - **Version**: ${{ steps.get_version.outputs.version }}
+              - **Tag**: ${{ steps.get_version.outputs.tag }}
+              - **Bump Type**: ${{ steps.get_version.outputs.bump_type }}
+              - **Release**: [View Release](https://github.com/${{ github.repository }}/releases/tag/${{ steps.get_version.outputs.tag }})
+              
+              This release includes all changes from main that were merged to stable.
+              
+              > 💡 **Tip**: Add labels like \`major\`, \`minor\`, or \`patch\` to control version bumping.`
+            }) 

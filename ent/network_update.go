@@ -11,7 +11,9 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/shopspring/decimal"
@@ -210,6 +212,25 @@ func (nu *NetworkUpdate) AddTokens(t ...*Token) *NetworkUpdate {
 	return nu.AddTokenIDs(ids...)
 }
 
+// SetPaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID.
+func (nu *NetworkUpdate) SetPaymentWebhookID(id uuid.UUID) *NetworkUpdate {
+	nu.mutation.SetPaymentWebhookID(id)
+	return nu
+}
+
+// SetNillablePaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID if the given value is not nil.
+func (nu *NetworkUpdate) SetNillablePaymentWebhookID(id *uuid.UUID) *NetworkUpdate {
+	if id != nil {
+		nu = nu.SetPaymentWebhookID(*id)
+	}
+	return nu
+}
+
+// SetPaymentWebhook sets the "payment_webhook" edge to the PaymentWebhook entity.
+func (nu *NetworkUpdate) SetPaymentWebhook(p *PaymentWebhook) *NetworkUpdate {
+	return nu.SetPaymentWebhookID(p.ID)
+}
+
 // Mutation returns the NetworkMutation object of the builder.
 func (nu *NetworkUpdate) Mutation() *NetworkMutation {
 	return nu.mutation
@@ -234,6 +255,12 @@ func (nu *NetworkUpdate) RemoveTokens(t ...*Token) *NetworkUpdate {
 		ids[i] = t[i].ID
 	}
 	return nu.RemoveTokenIDs(ids...)
+}
+
+// ClearPaymentWebhook clears the "payment_webhook" edge to the PaymentWebhook entity.
+func (nu *NetworkUpdate) ClearPaymentWebhook() *NetworkUpdate {
+	nu.mutation.ClearPaymentWebhook()
+	return nu
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -364,6 +391,35 @@ func (nu *NetworkUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(token.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if nu.mutation.PaymentWebhookCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   network.PaymentWebhookTable,
+			Columns: []string{network.PaymentWebhookColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := nu.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   network.PaymentWebhookTable,
+			Columns: []string{network.PaymentWebhookColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -571,6 +627,25 @@ func (nuo *NetworkUpdateOne) AddTokens(t ...*Token) *NetworkUpdateOne {
 	return nuo.AddTokenIDs(ids...)
 }
 
+// SetPaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID.
+func (nuo *NetworkUpdateOne) SetPaymentWebhookID(id uuid.UUID) *NetworkUpdateOne {
+	nuo.mutation.SetPaymentWebhookID(id)
+	return nuo
+}
+
+// SetNillablePaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID if the given value is not nil.
+func (nuo *NetworkUpdateOne) SetNillablePaymentWebhookID(id *uuid.UUID) *NetworkUpdateOne {
+	if id != nil {
+		nuo = nuo.SetPaymentWebhookID(*id)
+	}
+	return nuo
+}
+
+// SetPaymentWebhook sets the "payment_webhook" edge to the PaymentWebhook entity.
+func (nuo *NetworkUpdateOne) SetPaymentWebhook(p *PaymentWebhook) *NetworkUpdateOne {
+	return nuo.SetPaymentWebhookID(p.ID)
+}
+
 // Mutation returns the NetworkMutation object of the builder.
 func (nuo *NetworkUpdateOne) Mutation() *NetworkMutation {
 	return nuo.mutation
@@ -595,6 +670,12 @@ func (nuo *NetworkUpdateOne) RemoveTokens(t ...*Token) *NetworkUpdateOne {
 		ids[i] = t[i].ID
 	}
 	return nuo.RemoveTokenIDs(ids...)
+}
+
+// ClearPaymentWebhook clears the "payment_webhook" edge to the PaymentWebhook entity.
+func (nuo *NetworkUpdateOne) ClearPaymentWebhook() *NetworkUpdateOne {
+	nuo.mutation.ClearPaymentWebhook()
+	return nuo
 }
 
 // Where appends a list predicates to the NetworkUpdate builder.
@@ -755,6 +836,35 @@ func (nuo *NetworkUpdateOne) sqlSave(ctx context.Context) (_node *Network, err e
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(token.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if nuo.mutation.PaymentWebhookCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   network.PaymentWebhookTable,
+			Columns: []string{network.PaymentWebhookColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := nuo.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   network.PaymentWebhookTable,
+			Columns: []string{network.PaymentWebhookColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
