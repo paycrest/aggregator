@@ -878,11 +878,11 @@ func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint st
 	return events, nil
 }
 
-// GetUserTransactionHistory fetches user transaction history from thirdweb insight API
-func (s *EngineService) GetUserTransactionHistory(ctx context.Context, chainID int64, walletAddress string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
-	// Check if this is BNB Smart Chain (chain ID 56) - use RPC instead of Thirdweb Insight
+// GetAddressTransactionHistory fetches transaction history for any address from thirdweb insight API
+func (s *EngineService) GetAddressTransactionHistory(ctx context.Context, chainID int64, walletAddress string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
+	// Check if this is BNB Smart Chain (chain ID 56) - not supported by Thirdweb Insight
 	if chainID == 56 {
-		return nil, fmt.Errorf("user transaction history not supported for BNB Smart Chain via Thirdweb API")
+		return nil, fmt.Errorf("transaction history not supported for BNB Smart Chain via Thirdweb API")
 	}
 
 	// Build query parameters
@@ -907,7 +907,7 @@ func (s *EngineService) GetUserTransactionHistory(ctx context.Context, chainID i
 	}).Build().GET(fmt.Sprintf("/v1/wallets/%s/transactions", walletAddress)).
 		Query().AddParams(params).Send()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user transaction history: %w", err)
+		return nil, fmt.Errorf("failed to get transaction history: %w", err)
 	}
 
 	data, err := utils.ParseJSONResponse(res.RawResponse)

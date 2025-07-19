@@ -27,11 +27,11 @@ func NewEtherscanService() *EtherscanService {
 	}
 }
 
-// GetUserTransactionHistory fetches user transaction history from Etherscan API
-func (s *EtherscanService) GetUserTransactionHistory(ctx context.Context, chainID int64, walletAddress string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
-	// Check if this is BNB Smart Chain (chain ID 56) - use RPC instead of Etherscan API
-	if chainID == 56 {
-		return nil, fmt.Errorf("user transaction history not supported for BNB Smart Chain via Etherscan API")
+// GetAddressTransactionHistory fetches transaction history for any address from Etherscan API
+func (s *EtherscanService) GetAddressTransactionHistory(ctx context.Context, chainID int64, walletAddress string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
+	// Check if this is Lisk (chain ID 1135) - not supported by Etherscan API
+	if chainID == 1135 {
+		return nil, fmt.Errorf("transaction history not supported for Lisk via Etherscan API")
 	}
 
 	// Build query parameters for Etherscan API
@@ -64,7 +64,7 @@ func (s *EtherscanService) GetUserTransactionHistory(ctx context.Context, chainI
 	}).Build().GET("").
 		Query().AddParams(params).Send()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user transaction history: %w", err)
+		return nil, fmt.Errorf("failed to get transaction history: %w", err)
 	}
 
 	data, err := utils.ParseJSONResponse(res.RawResponse)

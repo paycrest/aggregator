@@ -146,7 +146,7 @@ func (s *IndexerTron) indexReceiveAddressByUserAddressInRange(ctx context.Contex
 }
 
 // IndexGateway indexes all Gateway contract events (OrderCreated, OrderSettled, OrderRefunded) in a single call
-func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error {
+func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) error {
 	if txHash != "" {
 		// If txHash is provided, get transaction info directly
 		res, err := fastshot.NewClient(network.RPCEndpoint).

@@ -48,12 +48,12 @@ func (s *IndexerEVM) IndexReceiveAddress(ctx context.Context, token *ent.Token, 
 
 	// If only address is provided (no txHash, no block range), fetch user's transaction history
 	if address != "" && fromBlock == 0 && toBlock == 0 {
-		return s.indexReceiveAddressByUserAddress(ctx, token, address)
+		return s.indexReceiveAddressByUserAddress(ctx, token, address, 0, 0)
 	}
 
 	// If address is provided with block range, fetch user's transactions within that range
 	if address != "" && (fromBlock > 0 || toBlock > 0) {
-		return s.indexReceiveAddressByUserAddressInRange(ctx, token, address, fromBlock, toBlock)
+		return s.indexReceiveAddressByUserAddress(ctx, token, address, fromBlock, toBlock)
 	}
 
 	// If only block range is provided, this is not applicable for receive address indexing
@@ -134,50 +134,37 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 }
 
 // indexReceiveAddressByUserAddress processes user's transaction history for receive address transfers
-func (s *IndexerEVM) indexReceiveAddressByUserAddress(ctx context.Context, token *ent.Token, userAddress string) error {
-	// Get user's transaction history (last 10 transactions by default)
-	transactions, err := s.etherscanService.GetUserTransactionHistory(ctx, token.Edges.Network.ChainID, userAddress, 10, 0, 0)
+func (s *IndexerEVM) indexReceiveAddressByUserAddress(ctx context.Context, token *ent.Token, userAddress string, fromBlock int64, toBlock int64) error {
+	// Determine parameters based on whether block range is provided
+	var limit int
+	var logMessage string
+
+	if fromBlock == 0 && toBlock == 0 {
+		// No block range - get last 10 transactions
+		limit = 5
+		logMessage = fmt.Sprintf("Processing transactions for address: %s", userAddress)
+	} else {
+		// Block range provided - get up to 100 transactions in range
+		limit = 100
+		logMessage = fmt.Sprintf("Processing transactions in block range %d-%d for address: %s", fromBlock, toBlock, userAddress)
+	}
+
+	// Get address's transaction history
+	transactions, err := s.etherscanService.GetAddressTransactionHistory(ctx, token.Edges.Network.ChainID, userAddress, limit, fromBlock, toBlock)
 	if err != nil {
-		return fmt.Errorf("failed to get user transaction history: %w", err)
+		return fmt.Errorf("failed to get transaction history: %w", err)
 	}
 
 	if len(transactions) == 0 {
-		logger.Infof("No transactions found for address: %s", userAddress)
-		return nil
-	}
-
-	logger.Infof("Processing %d transactions for address: %s", len(transactions), userAddress)
-
-	// Process each transaction to find transfer events to linked addresses
-	for i, tx := range transactions {
-		txHash := tx["hash"].(string)
-		logger.Infof("Processing transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
-
-		// Index transfer events for this specific transaction
-		err := s.indexReceiveAddressByTransaction(ctx, token, txHash)
-		if err != nil {
-			logger.Errorf("Error processing transaction %s: %v", txHash[:10]+"...", err)
-			continue // Skip transactions with errors
+		if fromBlock == 0 && toBlock == 0 {
+			logger.Infof("No transactions found for address: %s", userAddress)
+		} else {
+			logger.Infof("No transactions found in block range %d-%d for address: %s", fromBlock, toBlock, userAddress)
 		}
-	}
-
-	return nil
-}
-
-// indexReceiveAddressByUserAddressInRange processes user's transaction history within a block range for receive address transfers
-func (s *IndexerEVM) indexReceiveAddressByUserAddressInRange(ctx context.Context, token *ent.Token, userAddress string, fromBlock int64, toBlock int64) error {
-	// Get user's transaction history filtered by block range
-	transactions, err := s.etherscanService.GetUserTransactionHistory(ctx, token.Edges.Network.ChainID, userAddress, 100, fromBlock, toBlock)
-	if err != nil {
-		return fmt.Errorf("failed to get user transaction history: %w", err)
-	}
-
-	if len(transactions) == 0 {
-		logger.Infof("No transactions found in block range %d-%d for address: %s", fromBlock, toBlock, userAddress)
 		return nil
 	}
 
-	logger.Infof("Processing %d transactions in block range %d-%d for address: %s", len(transactions), fromBlock, toBlock, userAddress)
+	logger.Infof(logMessage)
 
 	// Process each transaction to find transfer events to linked addresses
 	for i, tx := range transactions {
@@ -196,41 +183,100 @@ func (s *IndexerEVM) indexReceiveAddressByUserAddressInRange(ctx context.Context
 }
 
 // IndexGateway indexes all Gateway contract events (OrderCreated, OrderSettled, OrderRefunded) in a single call
-func (s *IndexerEVM) IndexGateway(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64, txHash string) error {
-	// Use GetContractEventsWithFallback to try Thirdweb first and fall back to RPC
-	var topics []string
-	var eventPayload map[string]string
-
+func (s *IndexerEVM) IndexGateway(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) error {
+	// If txHash is provided, process that specific transaction
 	if txHash != "" {
-		eventPayload = map[string]string{
-			"filter_transaction_hash": txHash,
-			"sort_by":                 "block_number",
-			"sort_order":              "desc",
-			"decode":                  "true",
-		}
+		return s.indexGatewayByTransaction(ctx, network, txHash)
+	}
+
+	// If only gateway address is provided (no txHash, no block range), fetch gateway's transaction history
+	if address != "" && fromBlock == 0 && toBlock == 0 {
+		return s.indexGatewayByContractAddress(ctx, network, address, 0, 0)
+	}
+
+	// If address is provided with block range, fetch gateway's transactions within that range
+	if address != "" && (fromBlock > 0 || toBlock > 0) {
+		return s.indexGatewayByContractAddress(ctx, network, address, fromBlock, toBlock)
+	}
+
+	// If no parameters provided, this is not applicable for gateway indexing
+	return fmt.Errorf("gateway indexing requires either a txHash or address parameter")
+}
+
+// indexGatewayByContractAddress processes gateway contract's transaction history for gateway events
+func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64) error {
+	// Determine parameters based on whether block range is provided
+	var limit int
+	var logMessage string
+
+	if fromBlock == 0 && toBlock == 0 {
+		// No block range - get last 20 transactions
+		limit = 50
+		logMessage = fmt.Sprintf("Processing last %d transactions for gateway contract: %s", limit, address)
 	} else {
-		eventPayload = map[string]string{
-			"filter_block_number_gte": fmt.Sprintf("%d", fromBlock),
-			"filter_block_number_lte": fmt.Sprintf("%d", toBlock),
-			"sort_by":                 "block_number",
-			"sort_order":              "desc",
-			"decode":                  "true",
-			"limit":                   "20",
+		// Block range provided - get up to 100 transactions in range
+		limit = 100
+		logMessage = fmt.Sprintf("Processing transactions in block range %d-%d for gateway contract: %s", fromBlock, toBlock, address)
+	}
+
+	// Get gateway contract's transaction history
+	transactions, err := s.etherscanService.GetAddressTransactionHistory(ctx, network.ChainID, address, limit, fromBlock, toBlock)
+	if err != nil {
+		return fmt.Errorf("failed to get gateway transaction history: %w", err)
+	}
+
+	if len(transactions) == 0 {
+		if fromBlock == 0 && toBlock == 0 {
+			logger.Infof("No transactions found for gateway contract: %s", address)
+		} else {
+			logger.Infof("No transactions found in block range %d-%d for gateway contract: %s", fromBlock, toBlock, address)
 		}
+		return nil
+	}
+
+	logger.Infof(logMessage)
+
+	// Process each transaction to find gateway events
+	for i, tx := range transactions {
+		txHash := tx["hash"].(string)
+		logger.Infof("Processing gateway transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
+
+		// Index gateway events for this specific transaction
+		err := s.indexGatewayByTransaction(ctx, network, txHash)
+		if err != nil {
+			logger.Errorf("Error processing gateway transaction %s: %v", txHash[:10]+"...", err)
+			continue // Skip transactions with errors
+		}
+	}
+
+	return nil
+}
+
+// indexGatewayByTransaction processes a specific transaction for gateway events
+func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent.Network, txHash string) error {
+	// Use GetContractEventsWithFallback to try Thirdweb first and fall back to RPC
+	eventPayload := map[string]string{
+		"filter_transaction_hash": txHash,
+		"sort_by":                 "block_number",
+		"sort_order":              "desc",
+		"decode":                  "true",
 	}
 
 	events, err := s.engineService.GetContractEventsWithFallback(
 		ctx,
 		network,
 		network.GatewayContractAddress,
-		fromBlock,
-		toBlock,
-		topics,
+		0,
+		0,
+		[]string{}, // No specific topics filter
 		txHash,
 		eventPayload,
 	)
 	if err != nil {
-		return fmt.Errorf("IndexGateway.getEvents: %w", err)
+		if err.Error() == "no events found" {
+			return nil // No gateway events found for this transaction
+		}
+		return fmt.Errorf("error getting gateway events for transaction %s: %w", txHash[:10]+"...", err)
 	}
 
 	// Process all events in a single pass

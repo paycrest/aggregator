@@ -1811,7 +1811,6 @@ func (ctrl *Controller) InsightWebhook(ctx *gin.Context) {
 
 // verifyWebhookSignature verifies the webhook signature using the stored secret
 func (ctrl *Controller) verifyWebhookSignature(rawBody, signature, webhookID string) (*types.WebhookSignatureVerification, error) {
-	logger.Infof("Verifying webhook signature for webhook ID: %s", webhookID)
 	// Get webhook from database
 	webhook, err := storage.Client.PaymentWebhook.
 		Query().
@@ -2053,20 +2052,6 @@ func (ctrl *Controller) handleOrderSettledEvent(ctx *gin.Context, event types.Th
 	indexedParams := event.Data.Decoded.IndexedParams
 	nonIndexedParams := event.Data.Decoded.NonIndexedParams
 
-	// Validate required parameters
-	if indexedParams["orderId"] == nil {
-		return fmt.Errorf("missing orderId in indexed params")
-	}
-	if indexedParams["liquidityProvider"] == nil {
-		return fmt.Errorf("missing liquidityProvider in indexed params")
-	}
-	if nonIndexedParams["splitOrderId"] == nil {
-		return fmt.Errorf("missing splitOrderId in non-indexed params")
-	}
-	if nonIndexedParams["settlePercent"] == nil {
-		return fmt.Errorf("missing settlePercent in non-indexed params")
-	}
-
 	settlePercent, err := decimal.NewFromString(nonIndexedParams["settlePercent"].(string))
 	if err != nil {
 		return fmt.Errorf("invalid settle percent: %w", err)
@@ -2269,7 +2254,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err := indexerInstance.IndexGateway(ctx, network, fromBlock, toBlock, txHash)
+			err := indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, fromBlock, toBlock, txHash)
 			if err != nil && err.Error() != "no events found" {
 				logger.WithFields(logger.Fields{
 					"Error":          fmt.Sprintf("%v", err),
@@ -2300,7 +2285,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				err := indexerInstance.IndexGateway(ctx, network, fromBlock, toBlock, "")
+				err := indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, fromBlock, toBlock, "")
 				if err != nil && err.Error() != "no events found" {
 					logger.WithFields(logger.Fields{
 						"Error":          fmt.Sprintf("%v", err),
