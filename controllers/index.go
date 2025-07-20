@@ -2299,7 +2299,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 				"EventType":      "Gateway",
 			}).Infof("Starting Gateway event indexing for transaction")
 
-			eventCounts, err := indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, fromBlock, toBlock, txHash)
+			counts, err := indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, fromBlock, toBlock, txHash)
 			if err != nil && err.Error() != "no events found" {
 				logger.WithFields(logger.Fields{
 					"Error":          fmt.Sprintf("%v", err),
@@ -2319,12 +2319,12 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 					"ToBlock":        toBlock,
 					"EventType":      "Gateway",
 				}).Infof("No Gateway events found for transaction")
-			} else if err == nil && eventCounts != nil {
+			} else if err == nil && counts != nil {
 				// Update event counts with actual counts from indexer
 				eventCountsMutex.Lock()
-				eventCounts.OrderCreated += eventCounts.OrderCreated
-				eventCounts.OrderSettled += eventCounts.OrderSettled
-				eventCounts.OrderRefunded += eventCounts.OrderRefunded
+				eventCounts.OrderCreated += counts.OrderCreated
+				eventCounts.OrderSettled += counts.OrderSettled
+				eventCounts.OrderRefunded += counts.OrderRefunded
 				eventCountsMutex.Unlock()
 
 				logger.WithFields(logger.Fields{
@@ -2334,9 +2334,9 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 					"FromBlock":      fromBlock,
 					"ToBlock":        toBlock,
 					"EventType":      "Gateway",
-					"OrderCreated":   eventCounts.OrderCreated,
-					"OrderSettled":   eventCounts.OrderSettled,
-					"OrderRefunded":  eventCounts.OrderRefunded,
+					"OrderCreated":   counts.OrderCreated,
+					"OrderSettled":   counts.OrderSettled,
+					"OrderRefunded":  counts.OrderRefunded,
 				}).Infof("Gateway event indexing completed successfully")
 			}
 		}()
@@ -2366,7 +2366,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 					"EventType":      "Gateway",
 				}).Infof("Starting Gateway event indexing for gateway contract address")
 
-				eventCounts, err := indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, fromBlock, toBlock, "")
+				counts, err := indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, fromBlock, toBlock, "")
 				if err != nil && err.Error() != "no events found" {
 					logger.WithFields(logger.Fields{
 						"Error":          fmt.Sprintf("%v", err),
@@ -2386,12 +2386,12 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 						"ToBlock":        toBlock,
 						"EventType":      "Gateway",
 					}).Infof("No Gateway events found for gateway contract address")
-				} else if err == nil && eventCounts != nil {
+				} else if err == nil && counts != nil {
 					// Update event counts with actual counts from indexer
 					eventCountsMutex.Lock()
-					eventCounts.OrderCreated += eventCounts.OrderCreated
-					eventCounts.OrderSettled += eventCounts.OrderSettled
-					eventCounts.OrderRefunded += eventCounts.OrderRefunded
+					eventCounts.OrderCreated += counts.OrderCreated
+					eventCounts.OrderSettled += counts.OrderSettled
+					eventCounts.OrderRefunded += counts.OrderRefunded
 					eventCountsMutex.Unlock()
 
 					logger.WithFields(logger.Fields{
@@ -2401,9 +2401,9 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 						"FromBlock":      fromBlock,
 						"ToBlock":        toBlock,
 						"EventType":      "Gateway",
-						"OrderCreated":   eventCounts.OrderCreated,
-						"OrderSettled":   eventCounts.OrderSettled,
-						"OrderRefunded":  eventCounts.OrderRefunded,
+						"OrderCreated":   counts.OrderCreated,
+						"OrderSettled":   counts.OrderSettled,
+						"OrderRefunded":  counts.OrderRefunded,
 					}).Infof("Gateway event indexing completed successfully")
 				}
 			}()
@@ -2455,7 +2455,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 						"EventType":    "ReceiveAddress",
 					}).Infof("Starting transfer event indexing for receive address")
 
-					eventCounts, err := indexerInstance.IndexReceiveAddress(ctx, token, address, fromBlock, toBlock, txHash)
+					counts, err := indexerInstance.IndexReceiveAddress(ctx, token, address, fromBlock, toBlock, txHash)
 					if err != nil && err.Error() != "no events found" {
 						logger.WithFields(logger.Fields{
 							"Error":        fmt.Sprintf("%v", err),
@@ -2474,10 +2474,10 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 							"ToBlock":      toBlock,
 							"EventType":    "ReceiveAddress",
 						}).Infof("No transfer events found for receive address")
-					} else if err == nil && eventCounts != nil {
+					} else if err == nil && counts != nil {
 						// Update event counts with actual counts from indexer
 						eventCountsMutex.Lock()
-						eventCounts.Transfer += eventCounts.Transfer
+						eventCounts.Transfer += counts.Transfer
 						eventCountsMutex.Unlock()
 
 						logger.WithFields(logger.Fields{
@@ -2486,7 +2486,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 							"FromBlock":    fromBlock,
 							"ToBlock":      toBlock,
 							"EventType":    "ReceiveAddress",
-							"Transfer":     eventCounts.Transfer,
+							"Transfer":     counts.Transfer,
 						}).Infof("Transfer event indexing completed successfully")
 					}
 				}()
