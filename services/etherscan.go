@@ -70,7 +70,7 @@ func (s *EtherscanService) GetAddressTransactionHistory(ctx context.Context, cha
 	// Check if the response indicates success
 	if data["status"] != "1" {
 		message := "unknown error"
-		if data["message"] != nil {
+		if data["message"] != nil && data["message"] != "No transactions found" {
 			message = data["message"].(string)
 		}
 		return nil, fmt.Errorf("etherscan API error: %s", message)
