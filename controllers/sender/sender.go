@@ -431,25 +431,32 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			paymentOrder.ID.String(), // Order ID for webhook name
 		)
 		if err != nil {
-			logger.Errorf("Failed to create transfer webhook: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
-			_ = tx.Rollback()
-			return
-		}
-
-		// Create PaymentWebhook record in database
-		_, err = tx.PaymentWebhook.
-			Create().
-			SetWebhookID(webhookID).
-			SetWebhookSecret(webhookSecret).
-			SetCallbackURL(fmt.Sprintf("%s/v1/insight/webhook", serverConf.ServerURL)).
-			SetPaymentOrder(paymentOrder).
-			Save(ctx)
-		if err != nil {
-			logger.Errorf("Failed to save payment webhook record: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
-			_ = tx.Rollback()
-			return
+			// Check if this is BNB Smart Chain (chain ID 56) which is not supported by Thirdweb
+			if token.Edges.Network.ChainID != 56 {
+				logger.WithFields(logger.Fields{
+					"ChainID": token.Edges.Network.ChainID,
+					"Network": token.Edges.Network.Identifier,
+					"Error":   err.Error(),
+				}).Errorf("Failed to create transfer webhook: %v", err)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+				_ = tx.Rollback()
+				return
+			}
+		} else {
+			// Create PaymentWebhook record in database only if webhook was created successfully
+			_, err = tx.PaymentWebhook.
+				Create().
+				SetWebhookID(webhookID).
+				SetWebhookSecret(webhookSecret).
+				SetCallbackURL(fmt.Sprintf("%s/v1/insight/webhook", serverConf.ServerURL)).
+				SetPaymentOrder(paymentOrder).
+				Save(ctx)
+			if err != nil {
+				logger.Errorf("Failed to save payment webhook record: %v", err)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+				_ = tx.Rollback()
+				return
+			}
 		}
 	}
 

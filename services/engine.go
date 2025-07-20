@@ -66,7 +66,7 @@ func (s *EngineService) GetLatestBlock(ctx context.Context, chainID int64) (int6
 	if chainID != 56 {
 		// Try ThirdWeb first for all networks
 		res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
-			Config().SetTimeout(30 * time.Second).
+			Config().SetTimeout(60 * time.Second).
 			Header().AddAll(map[string]string{
 			"Content-Type": "application/json",
 			"X-Secret-Key": s.config.ThirdwebSecretKey,
@@ -124,7 +124,7 @@ func (s *EngineService) GetLatestBlock(ctx context.Context, chainID int64) (int6
 // GetContractEvents fetches contract events
 func (s *EngineService) GetContractEvents(ctx context.Context, chainID int64, contractAddress string, payload map[string]string) ([]interface{}, error) {
 	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
-		Config().SetTimeout(30 * time.Second).
+		Config().SetTimeout(60 * time.Second).
 		Header().AddAll(map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/json",
@@ -277,6 +277,11 @@ func (s *EngineService) WaitForTransactionMined(ctx context.Context, queueId str
 
 // CreateTransferWebhook creates webhooks to listen to transfer events to a specific address on a specific chain
 func (s *EngineService) CreateTransferWebhook(ctx context.Context, chainID int64, contractAddress string, toAddress string, orderID string) (string, string, error) {
+	// Check if this is BNB Smart Chain (chain ID 56) - not supported by Thirdweb Insight
+	if chainID == 56 {
+		return "", "", fmt.Errorf("webhook creation not supported for BNB Smart Chain (chain ID 56) via Thirdweb API")
+	}
+
 	webhookCallbackURL := fmt.Sprintf("%s/v1/insight/webhook", config.ServerConfig().ServerURL)
 
 	webhookPayload := map[string]interface{}{
@@ -896,7 +901,7 @@ func (s *EngineService) GetAddressTransactionHistory(ctx context.Context, chainI
 	}
 
 	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
-		Config().SetTimeout(30 * time.Second).
+		Config().SetTimeout(60 * time.Second).
 		Header().AddAll(map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/json",
