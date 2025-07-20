@@ -48,27 +48,28 @@ func (s *IndexerEVM) IndexReceiveAddress(ctx context.Context, token *ent.Token, 
 
 	if txHash != "" {
 		// Index transfer events for this specific transaction
-		err := s.indexReceiveAddressByTransaction(ctx, token, txHash)
+		counts, err := s.indexReceiveAddressByTransaction(ctx, token, txHash)
 		if err != nil {
 			logger.Errorf("Error processing receive address transaction %s: %v", txHash[:10]+"...", err)
 			return eventCounts, err
 		}
-		// For transaction-specific indexing, we can't determine exact counts without parsing events
-		// Return empty counts for now
-		return eventCounts, nil
+		return counts, nil
 	}
 
 	// Index transfer events for the receive address
-	err := s.indexReceiveAddressByUserAddress(ctx, token, address, fromBlock, toBlock)
+	counts, err := s.indexReceiveAddressByUserAddress(ctx, token, address, fromBlock, toBlock)
 	if err != nil {
 		return eventCounts, err
 	}
 
-	return eventCounts, nil
+	// Return the actual counts from the indexing operation
+	return counts, nil
 }
 
 // indexReceiveAddressByTransaction processes a specific transaction for receive address transfers
-func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token *ent.Token, txHash string) error {
+func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token *ent.Token, txHash string) (*types.EventCounts, error) {
+	eventCounts := &types.EventCounts{}
+
 	// Get transfer events for this token contract in this transaction
 	events, err := s.engineService.GetContractEventsWithFallback(
 		ctx,
@@ -87,9 +88,9 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 	)
 	if err != nil {
 		if err.Error() == "no events found" {
-			return nil // No transfer events found for this token
+			return eventCounts, nil // No transfer events found for this token
 		}
-		return fmt.Errorf("error getting transfer events for token %s in transaction %s: %w", token.Symbol, txHash[:10]+"...", err)
+		return eventCounts, fmt.Errorf("error getting transfer events for token %s in transaction %s: %w", token.Symbol, txHash[:10]+"...", err)
 	}
 
 	// Process transfer events
@@ -138,9 +139,12 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 			logger.Errorf("Error processing transfer for token %s: %v", token.Symbol, err)
 			continue
 		}
+
+		// Increment transfer count for successful processing
+		eventCounts.Transfer++
 	}
 
-	return nil
+	return eventCounts, nil
 }
 
 // getAddressTransactionHistoryWithFallback tries engine service first and falls back to etherscan
@@ -167,6 +171,7 @@ func (s *IndexerEVM) getAddressTransactionHistoryWithFallback(ctx context.Contex
 
 	transactions, etherscanErr := s.etherscanService.GetAddressTransactionHistory(ctx, chainID, address, limit, fromBlock, toBlock)
 	if etherscanErr != nil {
+		logger.Errorf("Etherscan failed for chain %d: %v", chainID, etherscanErr)
 		return nil, fmt.Errorf("both engine and etherscan failed - Engine: %w, Etherscan: %w", err, etherscanErr)
 	}
 
@@ -174,7 +179,9 @@ func (s *IndexerEVM) getAddressTransactionHistoryWithFallback(ctx context.Contex
 }
 
 // indexReceiveAddressByUserAddress processes user's transaction history for receive address transfers
-func (s *IndexerEVM) indexReceiveAddressByUserAddress(ctx context.Context, token *ent.Token, userAddress string, fromBlock int64, toBlock int64) error {
+func (s *IndexerEVM) indexReceiveAddressByUserAddress(ctx context.Context, token *ent.Token, userAddress string, fromBlock int64, toBlock int64) (*types.EventCounts, error) {
+	eventCounts := &types.EventCounts{}
+
 	// Determine parameters based on whether block range is provided
 	var limit int
 	var logMessage string
@@ -192,7 +199,7 @@ func (s *IndexerEVM) indexReceiveAddressByUserAddress(ctx context.Context, token
 	// Get address's transaction history with fallback
 	transactions, err := s.getAddressTransactionHistoryWithFallback(ctx, token.Edges.Network.ChainID, userAddress, limit, fromBlock, toBlock)
 	if err != nil {
-		return fmt.Errorf("failed to get transaction history: %w", err)
+		return eventCounts, fmt.Errorf("failed to get transaction history: %w", err)
 	}
 
 	if len(transactions) == 0 {
@@ -201,7 +208,7 @@ func (s *IndexerEVM) indexReceiveAddressByUserAddress(ctx context.Context, token
 		} else {
 			logger.Infof("No transactions found in block range %d-%d for address: %s", fromBlock, toBlock, userAddress)
 		}
-		return nil
+		return eventCounts, nil
 	}
 
 	logger.Infof(logMessage)
@@ -212,14 +219,17 @@ func (s *IndexerEVM) indexReceiveAddressByUserAddress(ctx context.Context, token
 		logger.Infof("Processing transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
 
 		// Index transfer events for this specific transaction
-		err := s.indexReceiveAddressByTransaction(ctx, token, txHash)
+		counts, err := s.indexReceiveAddressByTransaction(ctx, token, txHash)
 		if err != nil {
 			logger.Errorf("Error processing transaction %s: %v", txHash[:10]+"...", err)
 			continue // Skip transactions with errors
 		}
+
+		// Accumulate transfer counts
+		eventCounts.Transfer += counts.Transfer
 	}
 
-	return nil
+	return eventCounts, nil
 }
 
 // IndexGateway indexes all gateway events (OrderCreated, OrderSettled, OrderRefunded) in one efficient call
