@@ -356,6 +356,13 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 			continue
 		}
 
+		// Log the event signature being processed
+		logger.WithFields(logger.Fields{
+			"EventSignature": eventSignature,
+			"TxHash":         txHash,
+			"BlockNumber":    int64(eventMap["block_number"].(float64)),
+		}).Infof("Processing event signature")
+
 		blockNumber := int64(eventMap["block_number"].(float64))
 		txHash := eventMap["transaction_hash"].(string)
 

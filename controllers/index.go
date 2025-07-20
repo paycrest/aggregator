@@ -41,6 +41,7 @@ import (
 	orderSvc "github.com/paycrest/aggregator/services/order"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
+	"github.com/paycrest/aggregator/utils"
 	u "github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/shopspring/decimal"
@@ -1878,21 +1879,47 @@ func (ctrl *Controller) processWebhookEvents(ctx *gin.Context, payload types.Thi
 
 // handleNewEvent processes a new webhook event
 func (ctrl *Controller) handleNewEvent(ctx *gin.Context, event types.ThirdwebWebhookEvent) error {
-	// Determine event type based on decoded event name
-	switch event.Data.Decoded.Name {
-	case "Transfer":
+	// Determine event type based on event signature (first topic)
+	var eventSignature string
+	if len(event.Data.Topics) > 0 {
+		eventSignature = event.Data.Topics[0]
+	}
+
+	// Log the event signature for debugging
+	logger.WithFields(logger.Fields{
+		"EventSignature": eventSignature,
+		"EventName":      event.Data.Decoded.Name,
+		"TxHash":         event.Data.TransactionHash,
+	}).Infof("Processing webhook event")
+
+	switch eventSignature {
+	case utils.TransferEventSignature:
 		return ctrl.handleTransferEvent(ctx, event)
-	case "OrderCreated":
+	case utils.OrderCreatedEventSignature:
 		return ctrl.handleOrderCreatedEvent(ctx, event)
-	case "OrderSettled":
+	case utils.OrderSettledEventSignature:
 		return ctrl.handleOrderSettledEvent(ctx, event)
-	case "OrderRefunded":
+	case utils.OrderRefundedEventSignature:
 		return ctrl.handleOrderRefundedEvent(ctx, event)
 	default:
-		logger.WithFields(logger.Fields{
-			"Event": event,
-		}).Errorf("Error: InsightWebhook: Unknown event type")
-		return nil
+		// Fallback to using decoded name if signature doesn't match
+		switch event.Data.Decoded.Name {
+		case "Transfer":
+			return ctrl.handleTransferEvent(ctx, event)
+		case "OrderCreated":
+			return ctrl.handleOrderCreatedEvent(ctx, event)
+		case "OrderSettled":
+			return ctrl.handleOrderSettledEvent(ctx, event)
+		case "OrderRefunded":
+			return ctrl.handleOrderRefundedEvent(ctx, event)
+		default:
+			logger.WithFields(logger.Fields{
+				"EventSignature": eventSignature,
+				"EventName":      event.Data.Decoded.Name,
+				"Event":          event,
+			}).Errorf("Error: InsightWebhook: Unknown event type")
+			return nil
+		}
 	}
 }
 
