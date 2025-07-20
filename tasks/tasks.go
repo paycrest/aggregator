@@ -296,7 +296,7 @@ func TaskIndexBlockchainEvents() error {
 					duration = 60 * time.Second
 				}
 				startBlock = latestBlock - duration.Milliseconds()
-				_ = indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, startBlock, latestBlock, "")
+				_, _ = indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, startBlock, latestBlock, "")
 			} else {
 				indexerInstance, err = indexer.NewIndexerEVM()
 				if err != nil {
@@ -326,7 +326,7 @@ func TaskIndexBlockchainEvents() error {
 					if chunkEnd > latestBlock {
 						chunkEnd = latestBlock
 					}
-					_ = indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, currentBlock, chunkEnd, "")
+					_, _ = indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, currentBlock, chunkEnd, "")
 				}
 			}
 		}(network)
@@ -1226,7 +1226,7 @@ func IndexGatewayEvents() error {
 				}).Errorf("IndexGatewayEvents.createIndexer")
 				return
 			}
-			err := indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
+			_, err := indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":             fmt.Sprintf("%v", err),
@@ -1297,7 +1297,7 @@ func resolveMissedTransfers(ctx context.Context, network *ent.Network) {
 				"Progress":          fmt.Sprintf("%d/%d", i+1, len(orders)),
 			}).Infof("ResolvePaymentOrderMishaps.resolveMissedTransfers")
 
-			err = indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, order.Edges.ReceiveAddress.Address, 0, 0, "")
+			_, err = indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, order.Edges.ReceiveAddress.Address, 0, 0, "")
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":             fmt.Sprintf("%v", err),

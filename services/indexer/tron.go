@@ -38,24 +38,34 @@ func NewIndexerTron() types.Indexer {
 }
 
 // IndexReceiveAddress indexes transfers to receive/linked addresses from user transaction history
-func (s *IndexerTron) IndexReceiveAddress(ctx context.Context, token *ent.Token, address string, fromBlock int64, toBlock int64, txHash string) error {
+func (s *IndexerTron) IndexReceiveAddress(ctx context.Context, token *ent.Token, address string, fromBlock int64, toBlock int64, txHash string) (*types.EventCounts, error) {
+	eventCounts := &types.EventCounts{}
+
 	// If txHash is provided, process that specific transaction
 	if txHash != "" {
-		return s.indexReceiveAddressByTransaction(ctx, token, txHash)
+		err := s.indexReceiveAddressByTransaction(ctx, token, txHash)
+		if err != nil {
+			return eventCounts, err
+		}
+		// For transaction-specific indexing, we can't determine exact counts without parsing events
+		// Return empty counts for now
+		return eventCounts, nil
 	}
 
 	// If only address is provided (no txHash, no block range), fetch user's transaction history
 	if address != "" && fromBlock == 0 && toBlock == 0 {
-		return s.indexReceiveAddressByUserAddress(ctx, token, address)
+		err := s.indexReceiveAddressByUserAddress(ctx, token, address)
+		return eventCounts, err
 	}
 
 	// If address is provided with block range, fetch user's transactions within that range
 	if address != "" && (fromBlock > 0 || toBlock > 0) {
-		return s.indexReceiveAddressByUserAddressInRange(ctx, token, address, fromBlock, toBlock)
+		err := s.indexReceiveAddressByUserAddressInRange(ctx, token, address, fromBlock, toBlock)
+		return eventCounts, err
 	}
 
 	// If only block range is provided, this is not applicable for receive address indexing
-	return fmt.Errorf("receive address indexing requires an address parameter")
+	return eventCounts, fmt.Errorf("receive address indexing requires an address parameter")
 }
 
 // indexReceiveAddressByTransaction processes a specific transaction for receive address transfers
@@ -146,7 +156,8 @@ func (s *IndexerTron) indexReceiveAddressByUserAddressInRange(ctx context.Contex
 }
 
 // IndexGateway indexes all Gateway contract events (OrderCreated, OrderSettled, OrderRefunded) in a single call
-func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) error {
+func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) (*types.EventCounts, error) {
+	eventCounts := &types.EventCounts{}
 	if txHash != "" {
 		// If txHash is provided, get transaction info directly
 		res, err := fastshot.NewClient(network.RPCEndpoint).
@@ -157,12 +168,12 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 		}).
 			Send()
 		if err != nil {
-			return fmt.Errorf("IndexGateway.getTransaction: %w", err)
+			return eventCounts, fmt.Errorf("IndexGateway.getTransaction: %w", err)
 		}
 
 		data, err := utils.ParseJSONResponse(res.RawResponse)
 		if err != nil {
-			return fmt.Errorf("IndexGateway.parseJSONResponse: %w", err)
+			return eventCounts, fmt.Errorf("IndexGateway.parseJSONResponse: %w", err)
 		}
 
 		// Process all events from this transaction
@@ -301,7 +312,7 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 			}
 		}
 
-		return nil
+		return eventCounts, nil
 	}
 
 	// For block range queries, Tron doesn't support getting all events in one call
@@ -341,7 +352,7 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 		}).Errorf("Failed to index OrderRefunded events")
 	}
 
-	return nil
+	return eventCounts, nil
 }
 
 // indexOrderCreatedByBlockRange indexes OrderCreated events for a block range

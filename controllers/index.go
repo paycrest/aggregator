@@ -2290,7 +2290,16 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err := indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, fromBlock, toBlock, txHash)
+			logger.WithFields(logger.Fields{
+				"NetworkParam":   networkParam,
+				"TxHash":         txHash,
+				"GatewayAddress": network.GatewayContractAddress,
+				"FromBlock":      fromBlock,
+				"ToBlock":        toBlock,
+				"EventType":      "Gateway",
+			}).Infof("Starting Gateway event indexing for transaction")
+
+			eventCounts, err := indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, fromBlock, toBlock, txHash)
 			if err != nil && err.Error() != "no events found" {
 				logger.WithFields(logger.Fields{
 					"Error":          fmt.Sprintf("%v", err),
@@ -2301,27 +2310,63 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 					"ToBlock":        toBlock,
 					"EventType":      "Gateway",
 				}).Errorf("Failed to index Gateway events")
-			} else if err == nil {
-				// Only increment if operation succeeded (no error)
-				// This indicates that events were found and processed
+			} else if err != nil && err.Error() == "no events found" {
+				logger.WithFields(logger.Fields{
+					"NetworkParam":   networkParam,
+					"TxHash":         txHash,
+					"GatewayAddress": network.GatewayContractAddress,
+					"FromBlock":      fromBlock,
+					"ToBlock":        toBlock,
+					"EventType":      "Gateway",
+				}).Infof("No Gateway events found for transaction")
+			} else if err == nil && eventCounts != nil {
+				// Update event counts with actual counts from indexer
 				eventCountsMutex.Lock()
-				eventCounts.OrderCreated++
-				eventCounts.OrderSettled++
-				eventCounts.OrderRefunded++
+				eventCounts.OrderCreated += eventCounts.OrderCreated
+				eventCounts.OrderSettled += eventCounts.OrderSettled
+				eventCounts.OrderRefunded += eventCounts.OrderRefunded
 				eventCountsMutex.Unlock()
+
+				logger.WithFields(logger.Fields{
+					"NetworkParam":   networkParam,
+					"TxHash":         txHash,
+					"GatewayAddress": network.GatewayContractAddress,
+					"FromBlock":      fromBlock,
+					"ToBlock":        toBlock,
+					"EventType":      "Gateway",
+					"OrderCreated":   eventCounts.OrderCreated,
+					"OrderSettled":   eventCounts.OrderSettled,
+					"OrderRefunded":  eventCounts.OrderRefunded,
+				}).Infof("Gateway event indexing completed successfully")
 			}
 		}()
 	}
 
 	// If address is provided, determine what type of indexing to perform
 	if address != "" {
+		logger.WithFields(logger.Fields{
+			"NetworkParam": networkParam,
+			"Address":      address,
+			"FromBlock":    fromBlock,
+			"ToBlock":      toBlock,
+		}).Infof("Starting address-based indexing")
+
 		// Check if the address is a gateway contract address
 		if strings.EqualFold(address, network.GatewayContractAddress) {
 			// Index Gateway events for the gateway contract address
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				err := indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, fromBlock, toBlock, "")
+				logger.WithFields(logger.Fields{
+					"NetworkParam":   networkParam,
+					"Address":        address,
+					"GatewayAddress": network.GatewayContractAddress,
+					"FromBlock":      fromBlock,
+					"ToBlock":        toBlock,
+					"EventType":      "Gateway",
+				}).Infof("Starting Gateway event indexing for gateway contract address")
+
+				eventCounts, err := indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, fromBlock, toBlock, "")
 				if err != nil && err.Error() != "no events found" {
 					logger.WithFields(logger.Fields{
 						"Error":          fmt.Sprintf("%v", err),
@@ -2332,14 +2377,34 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 						"ToBlock":        toBlock,
 						"EventType":      "Gateway",
 					}).Errorf("Failed to index Gateway events")
-				} else if err == nil {
-					// Only increment if operation succeeded (no error)
-					// This indicates that events were found and processed
+				} else if err != nil && err.Error() == "no events found" {
+					logger.WithFields(logger.Fields{
+						"NetworkParam":   networkParam,
+						"Address":        address,
+						"GatewayAddress": network.GatewayContractAddress,
+						"FromBlock":      fromBlock,
+						"ToBlock":        toBlock,
+						"EventType":      "Gateway",
+					}).Infof("No Gateway events found for gateway contract address")
+				} else if err == nil && eventCounts != nil {
+					// Update event counts with actual counts from indexer
 					eventCountsMutex.Lock()
-					eventCounts.OrderCreated++
-					eventCounts.OrderSettled++
-					eventCounts.OrderRefunded++
+					eventCounts.OrderCreated += eventCounts.OrderCreated
+					eventCounts.OrderSettled += eventCounts.OrderSettled
+					eventCounts.OrderRefunded += eventCounts.OrderRefunded
 					eventCountsMutex.Unlock()
+
+					logger.WithFields(logger.Fields{
+						"NetworkParam":   networkParam,
+						"Address":        address,
+						"GatewayAddress": network.GatewayContractAddress,
+						"FromBlock":      fromBlock,
+						"ToBlock":        toBlock,
+						"EventType":      "Gateway",
+						"OrderCreated":   eventCounts.OrderCreated,
+						"OrderSettled":   eventCounts.OrderSettled,
+						"OrderRefunded":  eventCounts.OrderRefunded,
+					}).Infof("Gateway event indexing completed successfully")
 				}
 			}()
 		} else {
@@ -2350,6 +2415,12 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 				First(ctx)
 
 			if err == nil && receiveAddress != nil {
+				logger.WithFields(logger.Fields{
+					"NetworkParam":     networkParam,
+					"Address":          address,
+					"ReceiveAddressID": receiveAddress.ID,
+				}).Infof("Found receive address in database, starting transfer event indexing")
+
 				// This is a receive address, index transfer events
 				wg.Add(1)
 				go func() {
@@ -2369,11 +2440,22 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 						logger.WithFields(logger.Fields{
 							"Error":        fmt.Sprintf("%v", err),
 							"NetworkParam": networkParam,
+							"Address":      address,
 						}).Errorf("Failed to get token for IndexReceiveAddress")
 						return
 					}
 
-					err = indexerInstance.IndexReceiveAddress(ctx, token, address, fromBlock, toBlock, txHash)
+					logger.WithFields(logger.Fields{
+						"NetworkParam": networkParam,
+						"Address":      address,
+						"Token":        token.Symbol,
+						"TokenAddress": token.ContractAddress,
+						"FromBlock":    fromBlock,
+						"ToBlock":      toBlock,
+						"EventType":    "ReceiveAddress",
+					}).Infof("Starting transfer event indexing for receive address")
+
+					eventCounts, err := indexerInstance.IndexReceiveAddress(ctx, token, address, fromBlock, toBlock, txHash)
 					if err != nil && err.Error() != "no events found" {
 						logger.WithFields(logger.Fields{
 							"Error":        fmt.Sprintf("%v", err),
@@ -2384,15 +2466,36 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 							"ToBlock":      toBlock,
 							"EventType":    "ReceiveAddress",
 						}).Errorf("Failed to index ReceiveAddress events")
-					} else if err == nil {
-						// Only increment if operation succeeded (no error)
-						// This indicates that transfer events were found and processed
+					} else if err != nil && err.Error() == "no events found" {
+						logger.WithFields(logger.Fields{
+							"NetworkParam": networkParam,
+							"Address":      address,
+							"FromBlock":    fromBlock,
+							"ToBlock":      toBlock,
+							"EventType":    "ReceiveAddress",
+						}).Infof("No transfer events found for receive address")
+					} else if err == nil && eventCounts != nil {
+						// Update event counts with actual counts from indexer
 						eventCountsMutex.Lock()
-						eventCounts.Transfer++
+						eventCounts.Transfer += eventCounts.Transfer
 						eventCountsMutex.Unlock()
+
+						logger.WithFields(logger.Fields{
+							"NetworkParam": networkParam,
+							"Address":      address,
+							"FromBlock":    fromBlock,
+							"ToBlock":      toBlock,
+							"EventType":    "ReceiveAddress",
+							"Transfer":     eventCounts.Transfer,
+						}).Infof("Transfer event indexing completed successfully")
 					}
 				}()
 			} else {
+				logger.WithFields(logger.Fields{
+					"NetworkParam": networkParam,
+					"Address":      address,
+					"Error":        err,
+				}).Errorf("Address not found in receive_addresses table")
 				// Address not found in receive_addresses table, return error
 				u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Address %s is not a valid receive address or gateway contract address", address), nil)
 				return

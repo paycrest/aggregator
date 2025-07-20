@@ -42,25 +42,29 @@ func NewIndexerEVM() (types.Indexer, error) {
 	}, nil
 }
 
-// IndexReceiveAddress indexes transfers to receive/linked addresses from user transaction history
-func (s *IndexerEVM) IndexReceiveAddress(ctx context.Context, token *ent.Token, address string, fromBlock int64, toBlock int64, txHash string) error {
-	// If txHash is provided, process that specific transaction
+// IndexReceiveAddress indexes all transfer events for a specific receive address
+func (s *IndexerEVM) IndexReceiveAddress(ctx context.Context, token *ent.Token, address string, fromBlock int64, toBlock int64, txHash string) (*types.EventCounts, error) {
+	eventCounts := &types.EventCounts{}
+
 	if txHash != "" {
-		return s.indexReceiveAddressByTransaction(ctx, token, txHash)
+		// Index transfer events for this specific transaction
+		err := s.indexReceiveAddressByTransaction(ctx, token, txHash)
+		if err != nil {
+			logger.Errorf("Error processing receive address transaction %s: %v", txHash[:10]+"...", err)
+			return eventCounts, err
+		}
+		// For transaction-specific indexing, we can't determine exact counts without parsing events
+		// Return empty counts for now
+		return eventCounts, nil
 	}
 
-	// If only address is provided (no txHash, no block range), fetch user's transaction history
-	if address != "" && fromBlock == 0 && toBlock == 0 {
-		return s.indexReceiveAddressByUserAddress(ctx, token, address, 0, 0)
+	// Index transfer events for the receive address
+	err := s.indexReceiveAddressByUserAddress(ctx, token, address, fromBlock, toBlock)
+	if err != nil {
+		return eventCounts, err
 	}
 
-	// If address is provided with block range, fetch user's transactions within that range
-	if address != "" && (fromBlock > 0 || toBlock > 0) {
-		return s.indexReceiveAddressByUserAddress(ctx, token, address, fromBlock, toBlock)
-	}
-
-	// If only block range is provided, this is not applicable for receive address indexing
-	return fmt.Errorf("receive address indexing requires an address parameter")
+	return eventCounts, nil
 }
 
 // indexReceiveAddressByTransaction processes a specific transaction for receive address transfers
@@ -218,25 +222,27 @@ func (s *IndexerEVM) indexReceiveAddressByUserAddress(ctx context.Context, token
 	return nil
 }
 
-// IndexGateway indexes all Gateway contract events (OrderCreated, OrderSettled, OrderRefunded) in a single call
-func (s *IndexerEVM) IndexGateway(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) error {
-	// If txHash is provided, process that specific transaction
+// IndexGateway indexes all gateway events (OrderCreated, OrderSettled, OrderRefunded) in one efficient call
+func (s *IndexerEVM) IndexGateway(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) (*types.EventCounts, error) {
+	eventCounts := &types.EventCounts{}
+
 	if txHash != "" {
-		return s.indexGatewayByTransaction(ctx, network, txHash)
+		// Index gateway events for this specific transaction
+		counts, err := s.indexGatewayByTransaction(ctx, network, txHash)
+		if err != nil {
+			logger.Errorf("Error processing gateway transaction %s: %v", txHash[:10]+"...", err)
+			return eventCounts, err
+		}
+		return counts, nil
 	}
 
-	// If only gateway address is provided (no txHash, no block range), fetch gateway's transaction history
-	if address != "" && fromBlock == 0 && toBlock == 0 {
-		return s.indexGatewayByContractAddress(ctx, network, address, 0, 0)
+	// Index gateway events for the contract address
+	err := s.indexGatewayByContractAddress(ctx, network, address, fromBlock, toBlock)
+	if err != nil {
+		return eventCounts, err
 	}
 
-	// If address is provided with block range, fetch gateway's transactions within that range
-	if address != "" && (fromBlock > 0 || toBlock > 0) {
-		return s.indexGatewayByContractAddress(ctx, network, address, fromBlock, toBlock)
-	}
-
-	// If no parameters provided, this is not applicable for gateway indexing
-	return fmt.Errorf("gateway indexing requires either a txHash or address parameter")
+	return eventCounts, nil
 }
 
 // indexGatewayByContractAddress processes gateway contract's transaction history for gateway events
@@ -278,7 +284,7 @@ func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network 
 		logger.Infof("Processing gateway transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
 
 		// Index gateway events for this specific transaction
-		err := s.indexGatewayByTransaction(ctx, network, txHash)
+		_, err := s.indexGatewayByTransaction(ctx, network, txHash)
 		if err != nil {
 			logger.Errorf("Error processing gateway transaction %s: %v", txHash[:10]+"...", err)
 			continue // Skip transactions with errors
@@ -289,7 +295,9 @@ func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network 
 }
 
 // indexGatewayByTransaction processes a specific transaction for gateway events
-func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent.Network, txHash string) error {
+func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent.Network, txHash string) (*types.EventCounts, error) {
+	eventCounts := &types.EventCounts{}
+
 	// Use GetContractEventsWithFallback to try Thirdweb first and fall back to RPC
 	eventPayload := map[string]string{
 		"filter_transaction_hash": txHash,
@@ -310,9 +318,9 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 	)
 	if err != nil {
 		if err.Error() == "no events found" {
-			return nil // No gateway events found for this transaction
+			return eventCounts, nil // No gateway events found for this transaction
 		}
-		return fmt.Errorf("error getting gateway events for transaction %s: %w", txHash[:10]+"...", err)
+		return eventCounts, fmt.Errorf("error getting gateway events for transaction %s: %w", txHash[:10]+"...", err)
 	}
 
 	// Process all events in a single pass
@@ -441,6 +449,7 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 			logger.Infof("Successfully processed %d OrderCreated events", len(orderCreatedEvents))
 		}
 	}
+	eventCounts.OrderCreated = len(orderCreatedEvents)
 
 	// Process OrderSettled events
 	if len(orderSettledEvents) > 0 {
@@ -457,6 +466,7 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 			logger.Infof("Successfully processed %d OrderSettled events", len(orderSettledEvents))
 		}
 	}
+	eventCounts.OrderSettled = len(orderSettledEvents)
 
 	// Process OrderRefunded events
 	if len(orderRefundedEvents) > 0 {
@@ -473,6 +483,7 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 			logger.Infof("Successfully processed %d OrderRefunded events", len(orderRefundedEvents))
 		}
 	}
+	eventCounts.OrderRefunded = len(orderRefundedEvents)
 
-	return nil
+	return eventCounts, nil
 }
