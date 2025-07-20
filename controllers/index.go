@@ -633,6 +633,8 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 		if err != nil {
 			continue
 		}
+
+		break
 	}
 
 	if err != nil {
