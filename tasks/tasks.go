@@ -291,6 +291,42 @@ func TaskIndexBlockchainEvents() error {
 					return
 				}
 				_, _ = indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
+
+				// Find payment orders with missed transfers
+				paymentOrders, err := storage.Client.PaymentOrder.
+					Query().
+					Where(
+						paymentorder.StatusEQ(paymentorder.StatusInitiated),
+						paymentorder.TxHashIsNil(),
+						paymentorder.BlockNumberEQ(0),
+						paymentorder.AmountPaidEQ(decimal.Zero),
+						paymentorder.FromAddressIsNil(),
+						paymentorder.HasReceiveAddressWith(
+							receiveaddress.StatusEQ(receiveaddress.StatusUnused),
+						),
+						paymentorder.HasTokenWith(
+							tokenent.HasNetworkWith(
+								networkent.IDEQ(network.ID),
+							),
+						),
+					).
+					WithToken(func(tq *ent.TokenQuery) {
+						tq.WithNetwork()
+					}).
+					WithReceiveAddress().
+					All(ctx)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":             fmt.Sprintf("%v", err),
+						"NetworkIdentifier": network.Identifier,
+					}).Errorf("TaskIndexBlockchainEvents.fetchPaymentOrders")
+					return
+				}
+
+				// Index Transfer events
+				for _, order := range paymentOrders {
+					_, _ = indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, order.Edges.ReceiveAddress.Address, 0, 0, "")
+				}
 			}
 		}(network)
 	}
@@ -1340,8 +1376,8 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for ResolvePaymentOrderMishaps: %v", err)
 	}
 
-	// Index gateway events every 1 hour
-	_, err = scheduler.Every(1).Hour().Do(IndexGatewayEvents)
+	// Index gateway events every 31 minutes
+	_, err = scheduler.Every(31).Minutes().Do(IndexGatewayEvents)
 	if err != nil {
 		logger.Errorf("StartCronJobs for IndexGatewayEvents: %v", err)
 	}

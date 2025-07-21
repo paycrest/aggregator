@@ -334,14 +334,12 @@ func ProcessSettledOrders(ctx context.Context, network *ent.Network, orderIds []
 		Where(func(s *sql.Selector) {
 			po := sql.Table(paymentorder.Table)
 			s.LeftJoin(po).On(s.C(lockpaymentorder.FieldMessageHash), po.C(paymentorder.FieldMessageHash)).
-				Where(sql.And(
-					sql.Or(
-						sql.EQ(s.C(lockpaymentorder.FieldStatus), lockpaymentorder.StatusValidated),
-						sql.NEQ(po.C(paymentorder.FieldStatus), paymentorder.StatusSettled),
-					),
-					sql.In(s.C(lockpaymentorder.FieldGatewayID), orderIds),
+				Where(sql.Or(
+					sql.EQ(s.C(lockpaymentorder.FieldStatus), lockpaymentorder.StatusValidated),
+					sql.NEQ(po.C(paymentorder.FieldStatus), paymentorder.StatusSettled),
 				))
 		}).
+		Where(lockpaymentorder.GatewayIDIn(orderIds...)).
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
@@ -385,15 +383,13 @@ func ProcessRefundedOrders(ctx context.Context, network *ent.Network, orderIds [
 		Where(func(s *sql.Selector) {
 			po := sql.Table(paymentorder.Table)
 			s.LeftJoin(po).On(s.C(lockpaymentorder.FieldMessageHash), po.C(paymentorder.FieldMessageHash)).
-				Where(sql.And(
-					sql.Or(
-						sql.EQ(s.C(lockpaymentorder.FieldStatus), lockpaymentorder.StatusPending),
-						sql.EQ(s.C(lockpaymentorder.FieldStatus), lockpaymentorder.StatusCancelled),
-						sql.NEQ(po.C(paymentorder.FieldStatus), paymentorder.StatusRefunded),
-					),
-					sql.In(s.C(lockpaymentorder.FieldGatewayID), orderIds),
+				Where(sql.Or(
+					sql.EQ(s.C(lockpaymentorder.FieldStatus), lockpaymentorder.StatusPending),
+					sql.EQ(s.C(lockpaymentorder.FieldStatus), lockpaymentorder.StatusCancelled),
+					sql.NEQ(po.C(paymentorder.FieldStatus), paymentorder.StatusRefunded),
 				))
 		}).
+		Where(lockpaymentorder.GatewayIDIn(orderIds...)).
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).

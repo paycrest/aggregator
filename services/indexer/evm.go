@@ -207,13 +207,13 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 
 	// Process OrderCreated events
 	if len(orderCreatedEvents) > 0 {
-		txHashes := []string{}
-		hashToEvent := make(map[string]*types.OrderCreatedEvent)
+		orderIds := []string{}
+		orderIdToEvent := make(map[string]*types.OrderCreatedEvent)
 		for _, event := range orderCreatedEvents {
-			txHashes = append(txHashes, event.TxHash)
-			hashToEvent[event.TxHash] = event
+			orderIds = append(orderIds, event.OrderId)
+			orderIdToEvent[event.OrderId] = event
 		}
-		err = common.ProcessCreatedOrders(ctx, token.Edges.Network, txHashes, hashToEvent, s.order, s.priorityQueue)
+		err = common.ProcessCreatedOrders(ctx, token.Edges.Network, orderIds, orderIdToEvent, s.order, s.priorityQueue)
 		if err != nil {
 			logger.Errorf("Failed to process OrderCreated events: %v", err)
 		} else {
@@ -341,7 +341,7 @@ func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network 
 
 	if fromBlock == 0 && toBlock == 0 {
 		if network.ChainID == 56 {
-			limit = 3
+			limit = 5
 		} else {
 			limit = 50
 		}

@@ -38,6 +38,7 @@ func (s *EtherscanService) GetAddressTransactionHistory(ctx context.Context, cha
 		"offset":  fmt.Sprintf("%d", limit),
 		"sort":    "desc", // Get newest transactions first
 		"apikey":  s.config.ApiKey,
+		"chainid": fmt.Sprintf("%d", chainID),
 	}
 
 	// Add block range filtering if specified
@@ -49,14 +50,12 @@ func (s *EtherscanService) GetAddressTransactionHistory(ctx context.Context, cha
 	}
 
 	// Use Etherscan API with chain ID
-	baseURL := fmt.Sprintf("https://api.etherscan.io/v2/api?chainid=%d", chainID)
-
-	res, err := fastshot.NewClient(baseURL).
+	res, err := fastshot.NewClient("https://api.etherscan.io").
 		Config().SetTimeout(30 * time.Second).
 		Header().AddAll(map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/json",
-	}).Build().GET("").
+	}).Build().GET("/v2/api").
 		Query().AddParams(params).Send()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get transaction history: %w", err)
@@ -70,7 +69,7 @@ func (s *EtherscanService) GetAddressTransactionHistory(ctx context.Context, cha
 	// Check if the response indicates success
 	if data["status"] != "1" {
 		message := "unknown error"
-		if data["message"] != nil && data["message"] != "No transactions found" {
+		if data["message"] != nil {
 			message = data["message"].(string)
 		}
 		return nil, fmt.Errorf("etherscan API error: %s", message)
