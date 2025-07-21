@@ -77,6 +77,27 @@ func (lpou *LockPaymentOrderUpdate) AddAmount(d decimal.Decimal) *LockPaymentOrd
 	return lpou
 }
 
+// SetProtocolFee sets the "protocol_fee" field.
+func (lpou *LockPaymentOrderUpdate) SetProtocolFee(d decimal.Decimal) *LockPaymentOrderUpdate {
+	lpou.mutation.ResetProtocolFee()
+	lpou.mutation.SetProtocolFee(d)
+	return lpou
+}
+
+// SetNillableProtocolFee sets the "protocol_fee" field if the given value is not nil.
+func (lpou *LockPaymentOrderUpdate) SetNillableProtocolFee(d *decimal.Decimal) *LockPaymentOrderUpdate {
+	if d != nil {
+		lpou.SetProtocolFee(*d)
+	}
+	return lpou
+}
+
+// AddProtocolFee adds d to the "protocol_fee" field.
+func (lpou *LockPaymentOrderUpdate) AddProtocolFee(d decimal.Decimal) *LockPaymentOrderUpdate {
+	lpou.mutation.AddProtocolFee(d)
+	return lpou
+}
+
 // SetRate sets the "rate" field.
 func (lpou *LockPaymentOrderUpdate) SetRate(d decimal.Decimal) *LockPaymentOrderUpdate {
 	lpou.mutation.ResetRate()
@@ -301,6 +322,26 @@ func (lpou *LockPaymentOrderUpdate) AppendCancellationReasons(s []string) *LockP
 	return lpou
 }
 
+// SetMessageHash sets the "message_hash" field.
+func (lpou *LockPaymentOrderUpdate) SetMessageHash(s string) *LockPaymentOrderUpdate {
+	lpou.mutation.SetMessageHash(s)
+	return lpou
+}
+
+// SetNillableMessageHash sets the "message_hash" field if the given value is not nil.
+func (lpou *LockPaymentOrderUpdate) SetNillableMessageHash(s *string) *LockPaymentOrderUpdate {
+	if s != nil {
+		lpou.SetMessageHash(*s)
+	}
+	return lpou
+}
+
+// ClearMessageHash clears the value of the "message_hash" field.
+func (lpou *LockPaymentOrderUpdate) ClearMessageHash() *LockPaymentOrderUpdate {
+	lpou.mutation.ClearMessageHash()
+	return lpou
+}
+
 // SetTokenID sets the "token" edge to the Token entity by ID.
 func (lpou *LockPaymentOrderUpdate) SetTokenID(id int) *LockPaymentOrderUpdate {
 	lpou.mutation.SetTokenID(id)
@@ -493,6 +534,11 @@ func (lpou *LockPaymentOrderUpdate) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "LockPaymentOrder.status": %w`, err)}
 		}
 	}
+	if v, ok := lpou.mutation.MessageHash(); ok {
+		if err := lockpaymentorder.MessageHashValidator(v); err != nil {
+			return &ValidationError{Name: "message_hash", err: fmt.Errorf(`ent: validator failed for field "LockPaymentOrder.message_hash": %w`, err)}
+		}
+	}
 	if lpou.mutation.TokenCleared() && len(lpou.mutation.TokenIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "LockPaymentOrder.token"`)
 	}
@@ -522,6 +568,12 @@ func (lpou *LockPaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err err
 	}
 	if value, ok := lpou.mutation.AddedAmount(); ok {
 		_spec.AddField(lockpaymentorder.FieldAmount, field.TypeFloat64, value)
+	}
+	if value, ok := lpou.mutation.ProtocolFee(); ok {
+		_spec.SetField(lockpaymentorder.FieldProtocolFee, field.TypeFloat64, value)
+	}
+	if value, ok := lpou.mutation.AddedProtocolFee(); ok {
+		_spec.AddField(lockpaymentorder.FieldProtocolFee, field.TypeFloat64, value)
 	}
 	if value, ok := lpou.mutation.Rate(); ok {
 		_spec.SetField(lockpaymentorder.FieldRate, field.TypeFloat64, value)
@@ -590,6 +642,12 @@ func (lpou *LockPaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err err
 		_spec.AddModifier(func(u *sql.UpdateBuilder) {
 			sqljson.Append(u, lockpaymentorder.FieldCancellationReasons, value)
 		})
+	}
+	if value, ok := lpou.mutation.MessageHash(); ok {
+		_spec.SetField(lockpaymentorder.FieldMessageHash, field.TypeString, value)
+	}
+	if lpou.mutation.MessageHashCleared() {
+		_spec.ClearField(lockpaymentorder.FieldMessageHash, field.TypeString)
 	}
 	if lpou.mutation.TokenCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -829,6 +887,27 @@ func (lpouo *LockPaymentOrderUpdateOne) AddAmount(d decimal.Decimal) *LockPaymen
 	return lpouo
 }
 
+// SetProtocolFee sets the "protocol_fee" field.
+func (lpouo *LockPaymentOrderUpdateOne) SetProtocolFee(d decimal.Decimal) *LockPaymentOrderUpdateOne {
+	lpouo.mutation.ResetProtocolFee()
+	lpouo.mutation.SetProtocolFee(d)
+	return lpouo
+}
+
+// SetNillableProtocolFee sets the "protocol_fee" field if the given value is not nil.
+func (lpouo *LockPaymentOrderUpdateOne) SetNillableProtocolFee(d *decimal.Decimal) *LockPaymentOrderUpdateOne {
+	if d != nil {
+		lpouo.SetProtocolFee(*d)
+	}
+	return lpouo
+}
+
+// AddProtocolFee adds d to the "protocol_fee" field.
+func (lpouo *LockPaymentOrderUpdateOne) AddProtocolFee(d decimal.Decimal) *LockPaymentOrderUpdateOne {
+	lpouo.mutation.AddProtocolFee(d)
+	return lpouo
+}
+
 // SetRate sets the "rate" field.
 func (lpouo *LockPaymentOrderUpdateOne) SetRate(d decimal.Decimal) *LockPaymentOrderUpdateOne {
 	lpouo.mutation.ResetRate()
@@ -1053,6 +1132,26 @@ func (lpouo *LockPaymentOrderUpdateOne) AppendCancellationReasons(s []string) *L
 	return lpouo
 }
 
+// SetMessageHash sets the "message_hash" field.
+func (lpouo *LockPaymentOrderUpdateOne) SetMessageHash(s string) *LockPaymentOrderUpdateOne {
+	lpouo.mutation.SetMessageHash(s)
+	return lpouo
+}
+
+// SetNillableMessageHash sets the "message_hash" field if the given value is not nil.
+func (lpouo *LockPaymentOrderUpdateOne) SetNillableMessageHash(s *string) *LockPaymentOrderUpdateOne {
+	if s != nil {
+		lpouo.SetMessageHash(*s)
+	}
+	return lpouo
+}
+
+// ClearMessageHash clears the value of the "message_hash" field.
+func (lpouo *LockPaymentOrderUpdateOne) ClearMessageHash() *LockPaymentOrderUpdateOne {
+	lpouo.mutation.ClearMessageHash()
+	return lpouo
+}
+
 // SetTokenID sets the "token" edge to the Token entity by ID.
 func (lpouo *LockPaymentOrderUpdateOne) SetTokenID(id int) *LockPaymentOrderUpdateOne {
 	lpouo.mutation.SetTokenID(id)
@@ -1258,6 +1357,11 @@ func (lpouo *LockPaymentOrderUpdateOne) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "LockPaymentOrder.status": %w`, err)}
 		}
 	}
+	if v, ok := lpouo.mutation.MessageHash(); ok {
+		if err := lockpaymentorder.MessageHashValidator(v); err != nil {
+			return &ValidationError{Name: "message_hash", err: fmt.Errorf(`ent: validator failed for field "LockPaymentOrder.message_hash": %w`, err)}
+		}
+	}
 	if lpouo.mutation.TokenCleared() && len(lpouo.mutation.TokenIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "LockPaymentOrder.token"`)
 	}
@@ -1304,6 +1408,12 @@ func (lpouo *LockPaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *Loc
 	}
 	if value, ok := lpouo.mutation.AddedAmount(); ok {
 		_spec.AddField(lockpaymentorder.FieldAmount, field.TypeFloat64, value)
+	}
+	if value, ok := lpouo.mutation.ProtocolFee(); ok {
+		_spec.SetField(lockpaymentorder.FieldProtocolFee, field.TypeFloat64, value)
+	}
+	if value, ok := lpouo.mutation.AddedProtocolFee(); ok {
+		_spec.AddField(lockpaymentorder.FieldProtocolFee, field.TypeFloat64, value)
 	}
 	if value, ok := lpouo.mutation.Rate(); ok {
 		_spec.SetField(lockpaymentorder.FieldRate, field.TypeFloat64, value)
@@ -1372,6 +1482,12 @@ func (lpouo *LockPaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *Loc
 		_spec.AddModifier(func(u *sql.UpdateBuilder) {
 			sqljson.Append(u, lockpaymentorder.FieldCancellationReasons, value)
 		})
+	}
+	if value, ok := lpouo.mutation.MessageHash(); ok {
+		_spec.SetField(lockpaymentorder.FieldMessageHash, field.TypeString, value)
+	}
+	if lpouo.mutation.MessageHashCleared() {
+		_spec.ClearField(lockpaymentorder.FieldMessageHash, field.TypeString)
 	}
 	if lpouo.mutation.TokenCleared() {
 		edge := &sqlgraph.EdgeSpec{

@@ -133,7 +133,7 @@ func (s *OrderTron) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 	}
 
 	// Approve gateway contract to spend token
-	calldata, err := s.approveCallData(gatewayContractAddress, utils.ToSubunit(order.Amount.Add(order.ProtocolFee), order.Edges.Token.Decimals))
+	calldata, err := s.approveCallData(gatewayContractAddress, utils.ToSubunit(order.Amount, order.Edges.Token.Decimals))
 	if err != nil {
 		return fmt.Errorf("%s - Tron.CreateOrder.approveCallData: %w", orderIDPrefix, err)
 	}
@@ -429,17 +429,14 @@ func (s *OrderTron) createOrderCallData(order *ent.PaymentOrder) ([]byte, error)
 
 	refundAddressTron, _ := util.Base58ToAddress(order.ReturnAddress)
 	refundAddress := refundAddressTron.Hex()[4:]
-
-	amountWithProtocolFee := order.Amount.Add(order.ProtocolFee)
 	tokenContractAddressTron, _ := util.Base58ToAddress(order.Edges.Token.ContractAddress)
-
 	senderFeeRecipientTron, _ := util.Base58ToAddress(order.FeeAddress)
 	senderFeeRecipient := senderFeeRecipientTron.Hex()[4:]
 
 	// Define params
 	params := &types.CreateOrderParams{
 		Token:              common.HexToAddress(tokenContractAddressTron.Hex()[4:]),
-		Amount:             utils.ToSubunit(amountWithProtocolFee, order.Edges.Token.Decimals),
+		Amount:             utils.ToSubunit(order.Amount, order.Edges.Token.Decimals),
 		Rate:               order.Rate.Mul(decimal.NewFromInt(100)).BigInt(),
 		SenderFeeRecipient: common.HexToAddress(senderFeeRecipient),
 		SenderFee:          utils.ToSubunit(order.SenderFee, order.Edges.Token.Decimals),

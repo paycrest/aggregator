@@ -337,11 +337,14 @@ type LockPaymentOrderFields struct {
 	GatewayID         string
 	Amount            decimal.Decimal
 	Rate              decimal.Decimal
+	ProtocolFee       decimal.Decimal
 	BlockNumber       int64
 	TxHash            string
 	Institution       string
 	AccountIdentifier string
 	AccountName       string
+	Sender            string
+	MessageHash       string
 	ProviderID        string
 	Memo              string
 	Metadata          map[string]interface{}

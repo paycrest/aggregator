@@ -401,7 +401,6 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		SetAmountReturned(decimal.NewFromInt(0)).
 		SetPercentSettled(decimal.NewFromInt(0)).
 		SetNetworkFee(token.Edges.Network.Fee).
-		SetProtocolFee(protocolFee).
 		SetSenderFee(senderFee).
 		SetToken(token).
 		SetRate(payload.Rate).
@@ -579,7 +578,7 @@ func (ctrl *SenderController) GetPaymentOrderByID(ctx *gin.Context) {
 		AmountReturned: paymentOrder.AmountReturned,
 		Token:          paymentOrder.Edges.Token.Symbol,
 		SenderFee:      paymentOrder.SenderFee,
-		TransactionFee: paymentOrder.NetworkFee.Add(paymentOrder.ProtocolFee),
+		TransactionFee: paymentOrder.NetworkFee,
 		Rate:           paymentOrder.Rate,
 		Network:        paymentOrder.Edges.Token.Edges.Network.Identifier,
 		Recipient: types.PaymentOrderRecipient{
@@ -746,7 +745,7 @@ func (ctrl *SenderController) GetPaymentOrders(ctx *gin.Context) {
 			AmountReturned: paymentOrder.AmountReturned,
 			Token:          paymentOrder.Edges.Token.Symbol,
 			SenderFee:      paymentOrder.SenderFee,
-			TransactionFee: paymentOrder.NetworkFee.Add(paymentOrder.ProtocolFee),
+			TransactionFee: paymentOrder.NetworkFee,
 			Rate:           paymentOrder.Rate,
 			Network:        paymentOrder.Edges.Token.Edges.Network.Identifier,
 			Recipient: types.PaymentOrderRecipient{

@@ -71,7 +71,7 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 	eventCounts := &types.EventCounts{}
 
 	// Get transfer events for this token contract in this transaction
-	events, err := s.engineService.GetContractEventsWithFallback(
+	transferEvents, err := s.engineService.GetContractEventsWithFallback(
 		ctx,
 		token.Edges.Network,
 		token.ContractAddress,
@@ -86,15 +86,32 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 			"decode":                  "true",
 		},
 	)
-	if err != nil {
-		if err.Error() == "no events found" {
-			return eventCounts, nil // No transfer events found for this token
-		}
+	if err != nil && err.Error() != "no events found" {
 		return eventCounts, fmt.Errorf("error getting transfer events for token %s in transaction %s: %w", token.Symbol, txHash[:10]+"...", err)
 	}
 
+	// Find OrderCreated events for this transaction
+	gatewayEvents, err := s.engineService.GetContractEventsWithFallback(
+		ctx,
+		token.Edges.Network,
+		token.Edges.Network.GatewayContractAddress,
+		0,
+		0,
+		[]string{utils.OrderCreatedEventSignature},
+		txHash,
+		map[string]string{
+			"filter_transaction_hash": txHash,
+			"sort_by":                 "block_number",
+			"sort_order":              "desc",
+			"decode":                  "true",
+		},
+	)
+	if err != nil && err.Error() != "no events found" {
+		return eventCounts, fmt.Errorf("error getting gateway events for transaction %s: %w", txHash[:10]+"...", err)
+	}
+
 	// Process transfer events
-	for _, event := range events {
+	for _, event := range transferEvents {
 		eventMap := event.(map[string]interface{})
 		decoded, ok := eventMap["decoded"].(map[string]interface{})
 		if !ok || decoded == nil {
@@ -142,6 +159,67 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 
 		// Increment transfer count for successful processing
 		eventCounts.Transfer++
+	}
+
+	// Process OrderCreated events
+	orderCreatedEvents := []*types.OrderCreatedEvent{}
+
+	for _, event := range gatewayEvents {
+		eventMap := event.(map[string]interface{})
+		decoded, ok := eventMap["decoded"].(map[string]interface{})
+		if !ok || decoded == nil {
+			continue
+		}
+		eventParams := decoded
+		if eventParams["non_indexed_params"] == nil {
+			continue
+		}
+
+		blockNumber := int64(eventMap["block_number"].(float64))
+		txHash := eventMap["transaction_hash"].(string)
+
+		orderAmount, err := decimal.NewFromString(eventParams["indexed_params"].(map[string]interface{})["amount"].(string))
+		if err != nil {
+			continue
+		}
+		protocolFee, err := decimal.NewFromString(eventParams["non_indexed_params"].(map[string]interface{})["protocolFee"].(string))
+		if err != nil {
+			continue
+		}
+		rate, err := decimal.NewFromString(eventParams["non_indexed_params"].(map[string]interface{})["rate"].(string))
+		if err != nil {
+			continue
+		}
+
+		createdEvent := &types.OrderCreatedEvent{
+			BlockNumber: blockNumber,
+			TxHash:      txHash,
+			Token:       ethcommon.HexToAddress(eventParams["indexed_params"].(map[string]interface{})["token"].(string)).Hex(),
+			Amount:      orderAmount,
+			ProtocolFee: protocolFee,
+			OrderId:     eventParams["non_indexed_params"].(map[string]interface{})["orderId"].(string),
+			Rate:        rate.Div(decimal.NewFromInt(100)),
+			MessageHash: eventParams["non_indexed_params"].(map[string]interface{})["messageHash"].(string),
+			Sender:      ethcommon.HexToAddress(eventParams["indexed_params"].(map[string]interface{})["sender"].(string)).Hex(),
+		}
+		orderCreatedEvents = append(orderCreatedEvents, createdEvent)
+	}
+
+	// Process OrderCreated events
+	if len(orderCreatedEvents) > 0 {
+		txHashes := []string{}
+		hashToEvent := make(map[string]*types.OrderCreatedEvent)
+		for _, event := range orderCreatedEvents {
+			txHashes = append(txHashes, event.TxHash)
+			hashToEvent[event.TxHash] = event
+		}
+		err = common.ProcessCreatedOrders(ctx, token.Edges.Network, txHashes, hashToEvent, s.order, s.priorityQueue)
+		if err != nil {
+			logger.Errorf("Failed to process OrderCreated events: %v", err)
+		} else {
+			logger.Infof("Successfully processed %d OrderCreated events", len(orderCreatedEvents))
+		}
+		eventCounts.OrderCreated = len(orderCreatedEvents)
 	}
 
 	return eventCounts, nil
@@ -449,13 +527,13 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 
 	// Process OrderCreated events
 	if len(orderCreatedEvents) > 0 {
-		txHashes := []string{}
-		hashToEvent := make(map[string]*types.OrderCreatedEvent)
+		orderIds := []string{}
+		orderIdToEvent := make(map[string]*types.OrderCreatedEvent)
 		for _, event := range orderCreatedEvents {
-			txHashes = append(txHashes, event.TxHash)
-			hashToEvent[event.TxHash] = event
+			orderIds = append(orderIds, event.OrderId)
+			orderIdToEvent[event.OrderId] = event
 		}
-		err = common.ProcessCreatedOrders(ctx, network, txHashes, hashToEvent, s.order, s.priorityQueue)
+		err = common.ProcessCreatedOrders(ctx, network, orderIds, orderIdToEvent, s.order, s.priorityQueue)
 		if err != nil {
 			logger.Errorf("Failed to process OrderCreated events: %v", err)
 		} else {
@@ -466,13 +544,13 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 
 	// Process OrderSettled events
 	if len(orderSettledEvents) > 0 {
-		txHashes := []string{}
-		hashToEvent := make(map[string]*types.OrderSettledEvent)
+		orderIds := []string{}
+		orderIdToEvent := make(map[string]*types.OrderSettledEvent)
 		for _, event := range orderSettledEvents {
-			txHashes = append(txHashes, event.TxHash)
-			hashToEvent[event.TxHash] = event
+			orderIds = append(orderIds, event.OrderId)
+			orderIdToEvent[event.OrderId] = event
 		}
-		err = common.ProcessSettledOrders(ctx, network, txHashes, hashToEvent)
+		err = common.ProcessSettledOrders(ctx, network, orderIds, orderIdToEvent)
 		if err != nil {
 			logger.Errorf("Failed to process OrderSettled events: %v", err)
 		} else {
@@ -483,13 +561,13 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 
 	// Process OrderRefunded events
 	if len(orderRefundedEvents) > 0 {
-		txHashes := []string{}
-		hashToEvent := make(map[string]*types.OrderRefundedEvent)
+		orderIds := []string{}
+		orderIdToEvent := make(map[string]*types.OrderRefundedEvent)
 		for _, event := range orderRefundedEvents {
-			txHashes = append(txHashes, event.TxHash)
-			hashToEvent[event.TxHash] = event
+			orderIds = append(orderIds, event.OrderId)
+			orderIdToEvent[event.OrderId] = event
 		}
-		err = common.ProcessRefundedOrders(ctx, network, txHashes, hashToEvent)
+		err = common.ProcessRefundedOrders(ctx, network, orderIds, orderIdToEvent)
 		if err != nil {
 			logger.Errorf("Failed to process OrderRefunded events: %v", err)
 		} else {

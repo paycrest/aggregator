@@ -2097,7 +2097,15 @@ func (ctrl *Controller) handleOrderSettledEvent(ctx *gin.Context, event types.Th
 	}
 
 	// Process settled order using existing logic
-	err = common.UpdateOrderStatusSettled(ctx, network, settledEvent)
+	lockOrder, err := storage.Client.LockPaymentOrder.
+		Query().
+		Where(lockpaymentorder.GatewayIDEQ(settledEvent.OrderId)).
+		Only(ctx)
+	if err != nil {
+		return fmt.Errorf("lock payment order not found: %w", err)
+	}
+
+	err = common.UpdateOrderStatusSettled(ctx, network, settledEvent, lockOrder.MessageHash)
 	if err != nil {
 		return fmt.Errorf("failed to process settled order: %w", err)
 	}
@@ -2148,7 +2156,15 @@ func (ctrl *Controller) handleOrderRefundedEvent(ctx *gin.Context, event types.T
 	}
 
 	// Process refunded order using existing logic
-	err = common.UpdateOrderStatusRefunded(ctx, network, refundedEvent)
+	lockOrder, err := storage.Client.LockPaymentOrder.
+		Query().
+		Where(lockpaymentorder.GatewayIDEQ(refundedEvent.OrderId)).
+		Only(ctx)
+	if err != nil {
+		return fmt.Errorf("lock payment order not found: %w", err)
+	}
+
+	err = common.UpdateOrderStatusRefunded(ctx, network, refundedEvent, lockOrder.MessageHash)
 	if err != nil {
 		return fmt.Errorf("failed to process refunded order: %w", err)
 	}

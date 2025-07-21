@@ -97,11 +97,6 @@ func NetworkFee(v decimal.Decimal) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldEQ(FieldNetworkFee, v))
 }
 
-// ProtocolFee applies equality check predicate on the "protocol_fee" field. It's identical to ProtocolFeeEQ.
-func ProtocolFee(v decimal.Decimal) predicate.PaymentOrder {
-	return predicate.PaymentOrder(sql.FieldEQ(FieldProtocolFee, v))
-}
-
 // Rate applies equality check predicate on the "rate" field. It's identical to RateEQ.
 func Rate(v decimal.Decimal) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldEQ(FieldRate, v))
@@ -475,46 +470,6 @@ func NetworkFeeLT(v decimal.Decimal) predicate.PaymentOrder {
 // NetworkFeeLTE applies the LTE predicate on the "network_fee" field.
 func NetworkFeeLTE(v decimal.Decimal) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldLTE(FieldNetworkFee, v))
-}
-
-// ProtocolFeeEQ applies the EQ predicate on the "protocol_fee" field.
-func ProtocolFeeEQ(v decimal.Decimal) predicate.PaymentOrder {
-	return predicate.PaymentOrder(sql.FieldEQ(FieldProtocolFee, v))
-}
-
-// ProtocolFeeNEQ applies the NEQ predicate on the "protocol_fee" field.
-func ProtocolFeeNEQ(v decimal.Decimal) predicate.PaymentOrder {
-	return predicate.PaymentOrder(sql.FieldNEQ(FieldProtocolFee, v))
-}
-
-// ProtocolFeeIn applies the In predicate on the "protocol_fee" field.
-func ProtocolFeeIn(vs ...decimal.Decimal) predicate.PaymentOrder {
-	return predicate.PaymentOrder(sql.FieldIn(FieldProtocolFee, vs...))
-}
-
-// ProtocolFeeNotIn applies the NotIn predicate on the "protocol_fee" field.
-func ProtocolFeeNotIn(vs ...decimal.Decimal) predicate.PaymentOrder {
-	return predicate.PaymentOrder(sql.FieldNotIn(FieldProtocolFee, vs...))
-}
-
-// ProtocolFeeGT applies the GT predicate on the "protocol_fee" field.
-func ProtocolFeeGT(v decimal.Decimal) predicate.PaymentOrder {
-	return predicate.PaymentOrder(sql.FieldGT(FieldProtocolFee, v))
-}
-
-// ProtocolFeeGTE applies the GTE predicate on the "protocol_fee" field.
-func ProtocolFeeGTE(v decimal.Decimal) predicate.PaymentOrder {
-	return predicate.PaymentOrder(sql.FieldGTE(FieldProtocolFee, v))
-}
-
-// ProtocolFeeLT applies the LT predicate on the "protocol_fee" field.
-func ProtocolFeeLT(v decimal.Decimal) predicate.PaymentOrder {
-	return predicate.PaymentOrder(sql.FieldLT(FieldProtocolFee, v))
-}
-
-// ProtocolFeeLTE applies the LTE predicate on the "protocol_fee" field.
-func ProtocolFeeLTE(v decimal.Decimal) predicate.PaymentOrder {
-	return predicate.PaymentOrder(sql.FieldLTE(FieldProtocolFee, v))
 }
 
 // RateEQ applies the EQ predicate on the "rate" field.

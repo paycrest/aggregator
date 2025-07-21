@@ -314,7 +314,6 @@ func CreateTestPaymentOrder(client types.RPCClient, token *ent.Token, overrides 
 		SetAmountReturned(decimal.NewFromInt(0)).
 		SetPercentSettled(decimal.NewFromInt(0)).
 		SetNetworkFee(token.Edges.Network.Fee).
-		SetProtocolFee(decimal.NewFromFloat(payload["amount"].(float64)).Mul(decimal.NewFromFloat(0))).
 		SetSenderFee(decimal.NewFromFloat(payload["fee_percent"].(float64)).Mul(decimal.NewFromFloat(payload["amount"].(float64))).Div(decimal.NewFromFloat(payload["rate"].(float64))).Round(int32(token.Decimals))).
 		SetToken(token).
 		SetRate(decimal.NewFromFloat(payload["rate"].(float64))).

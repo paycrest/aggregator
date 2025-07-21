@@ -215,6 +215,7 @@ var (
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "gateway_id", Type: field.TypeString},
 		{Name: "amount", Type: field.TypeFloat64},
+		{Name: "protocol_fee", Type: field.TypeFloat64},
 		{Name: "rate", Type: field.TypeFloat64},
 		{Name: "order_percent", Type: field.TypeFloat64},
 		{Name: "sender", Type: field.TypeString, Nullable: true},
@@ -228,6 +229,7 @@ var (
 		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
 		{Name: "cancellation_count", Type: field.TypeInt, Default: 0},
 		{Name: "cancellation_reasons", Type: field.TypeJSON},
+		{Name: "message_hash", Type: field.TypeString, Nullable: true, Size: 400},
 		{Name: "provider_profile_assigned_orders", Type: field.TypeString, Nullable: true},
 		{Name: "provision_bucket_lock_payment_orders", Type: field.TypeInt, Nullable: true},
 		{Name: "token_lock_payment_orders", Type: field.TypeInt},
@@ -240,19 +242,19 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "lock_payment_orders_provider_profiles_assigned_orders",
-				Columns:    []*schema.Column{LockPaymentOrdersColumns[18]},
+				Columns:    []*schema.Column{LockPaymentOrdersColumns[20]},
 				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "lock_payment_orders_provision_buckets_lock_payment_orders",
-				Columns:    []*schema.Column{LockPaymentOrdersColumns[19]},
+				Columns:    []*schema.Column{LockPaymentOrdersColumns[21]},
 				RefColumns: []*schema.Column{ProvisionBucketsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "lock_payment_orders_tokens_lock_payment_orders",
-				Columns:    []*schema.Column{LockPaymentOrdersColumns[20]},
+				Columns:    []*schema.Column{LockPaymentOrdersColumns[22]},
 				RefColumns: []*schema.Column{TokensColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -261,7 +263,7 @@ var (
 			{
 				Name:    "lockpaymentorder_gateway_id_rate_tx_hash_block_number_institution_account_identifier_account_name_memo_token_lock_payment_orders",
 				Unique:  true,
-				Columns: []*schema.Column{LockPaymentOrdersColumns[3], LockPaymentOrdersColumns[5], LockPaymentOrdersColumns[8], LockPaymentOrdersColumns[10], LockPaymentOrdersColumns[11], LockPaymentOrdersColumns[12], LockPaymentOrdersColumns[13], LockPaymentOrdersColumns[14], LockPaymentOrdersColumns[20]},
+				Columns: []*schema.Column{LockPaymentOrdersColumns[3], LockPaymentOrdersColumns[6], LockPaymentOrdersColumns[9], LockPaymentOrdersColumns[11], LockPaymentOrdersColumns[12], LockPaymentOrdersColumns[13], LockPaymentOrdersColumns[14], LockPaymentOrdersColumns[15], LockPaymentOrdersColumns[22]},
 			},
 		},
 	}
@@ -297,7 +299,6 @@ var (
 		{Name: "percent_settled", Type: field.TypeFloat64},
 		{Name: "sender_fee", Type: field.TypeFloat64},
 		{Name: "network_fee", Type: field.TypeFloat64},
-		{Name: "protocol_fee", Type: field.TypeFloat64},
 		{Name: "rate", Type: field.TypeFloat64},
 		{Name: "tx_hash", Type: field.TypeString, Nullable: true, Size: 70},
 		{Name: "block_number", Type: field.TypeInt64, Default: 0},
@@ -323,25 +324,25 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "payment_orders_api_keys_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[22]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[21]},
 				RefColumns: []*schema.Column{APIKeysColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "payment_orders_linked_addresses_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[23]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[22]},
 				RefColumns: []*schema.Column{LinkedAddressesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "payment_orders_sender_profiles_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[24]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[23]},
 				RefColumns: []*schema.Column{SenderProfilesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "payment_orders_tokens_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[25]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[24]},
 				RefColumns: []*schema.Column{TokensColumns[0]},
 				OnDelete:   schema.Cascade,
 			},

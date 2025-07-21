@@ -83,7 +83,7 @@ func RetryStaleUserOperations() error {
 	go func(ctx context.Context) {
 		defer wg.Done()
 		for _, order := range orders {
-			orderAmountWithFees := order.Amount.Add(order.NetworkFee).Add(order.SenderFee).Add(order.ProtocolFee)
+			orderAmountWithFees := order.Amount.Add(order.NetworkFee).Add(order.SenderFee)
 			if order.AmountPaid.GreaterThanOrEqual(orderAmountWithFees) {
 				var service types.OrderService
 				if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {

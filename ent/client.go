@@ -327,9 +327,9 @@ func (c *Client) Use(hooks ...Hook) {
 		c.APIKey, c.BeneficialOwner, c.FiatCurrency, c.IdentityVerificationRequest,
 		c.Institution, c.KYBProfile, c.LinkedAddress, c.LockOrderFulfillment,
 		c.LockPaymentOrder, c.Network, c.PaymentOrder, c.PaymentOrderRecipient,
-		c.PaymentWebhook, c.ProviderOrderToken, c.ProviderProfile, c.ProviderRating, c.ProvisionBucket,
-		c.ReceiveAddress, c.SenderOrderToken, c.SenderProfile, c.Token,
-		c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
+		c.PaymentWebhook, c.ProviderOrderToken, c.ProviderProfile, c.ProviderRating,
+		c.ProvisionBucket, c.ReceiveAddress, c.SenderOrderToken, c.SenderProfile,
+		c.Token, c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
 	} {
 		n.Use(hooks...)
 	}
@@ -342,9 +342,9 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.APIKey, c.BeneficialOwner, c.FiatCurrency, c.IdentityVerificationRequest,
 		c.Institution, c.KYBProfile, c.LinkedAddress, c.LockOrderFulfillment,
 		c.LockPaymentOrder, c.Network, c.PaymentOrder, c.PaymentOrderRecipient,
-		c.PaymentWebhook, c.ProviderOrderToken, c.ProviderProfile, c.ProviderRating, c.ProvisionBucket,
-		c.ReceiveAddress, c.SenderOrderToken, c.SenderProfile, c.Token,
-		c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
+		c.PaymentWebhook, c.ProviderOrderToken, c.ProviderProfile, c.ProviderRating,
+		c.ProvisionBucket, c.ReceiveAddress, c.SenderOrderToken, c.SenderProfile,
+		c.Token, c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -4732,17 +4732,17 @@ type (
 	hooks struct {
 		APIKey, BeneficialOwner, FiatCurrency, IdentityVerificationRequest, Institution,
 		KYBProfile, LinkedAddress, LockOrderFulfillment, LockPaymentOrder, Network,
-		PaymentOrder, PaymentOrderRecipient, PaymentWebhook, ProviderOrderToken, ProviderProfile,
-		ProviderRating, ProvisionBucket, ReceiveAddress, SenderOrderToken,
-		SenderProfile, Token, TransactionLog, User, VerificationToken,
-		WebhookRetryAttempt []ent.Hook
+		PaymentOrder, PaymentOrderRecipient, PaymentWebhook, ProviderOrderToken,
+		ProviderProfile, ProviderRating, ProvisionBucket, ReceiveAddress,
+		SenderOrderToken, SenderProfile, Token, TransactionLog, User,
+		VerificationToken, WebhookRetryAttempt []ent.Hook
 	}
 	inters struct {
 		APIKey, BeneficialOwner, FiatCurrency, IdentityVerificationRequest, Institution,
 		KYBProfile, LinkedAddress, LockOrderFulfillment, LockPaymentOrder, Network,
-		PaymentOrder, PaymentOrderRecipient, PaymentWebhook, ProviderOrderToken, ProviderProfile,
-		ProviderRating, ProvisionBucket, ReceiveAddress, SenderOrderToken,
-		SenderProfile, Token, TransactionLog, User, VerificationToken,
-		WebhookRetryAttempt []ent.Interceptor
+		PaymentOrder, PaymentOrderRecipient, PaymentWebhook, ProviderOrderToken,
+		ProviderProfile, ProviderRating, ProvisionBucket, ReceiveAddress,
+		SenderOrderToken, SenderProfile, Token, TransactionLog, User,
+		VerificationToken, WebhookRetryAttempt []ent.Interceptor
 	}
 )

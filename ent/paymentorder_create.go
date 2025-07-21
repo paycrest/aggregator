@@ -96,12 +96,6 @@ func (poc *PaymentOrderCreate) SetNetworkFee(d decimal.Decimal) *PaymentOrderCre
 	return poc
 }
 
-// SetProtocolFee sets the "protocol_fee" field.
-func (poc *PaymentOrderCreate) SetProtocolFee(d decimal.Decimal) *PaymentOrderCreate {
-	poc.mutation.SetProtocolFee(d)
-	return poc
-}
-
 // SetRate sets the "rate" field.
 func (poc *PaymentOrderCreate) SetRate(d decimal.Decimal) *PaymentOrderCreate {
 	poc.mutation.SetRate(d)
@@ -464,9 +458,6 @@ func (poc *PaymentOrderCreate) check() error {
 	if _, ok := poc.mutation.NetworkFee(); !ok {
 		return &ValidationError{Name: "network_fee", err: errors.New(`ent: missing required field "PaymentOrder.network_fee"`)}
 	}
-	if _, ok := poc.mutation.ProtocolFee(); !ok {
-		return &ValidationError{Name: "protocol_fee", err: errors.New(`ent: missing required field "PaymentOrder.protocol_fee"`)}
-	}
 	if _, ok := poc.mutation.Rate(); !ok {
 		return &ValidationError{Name: "rate", err: errors.New(`ent: missing required field "PaymentOrder.rate"`)}
 	}
@@ -597,10 +588,6 @@ func (poc *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec
 	if value, ok := poc.mutation.NetworkFee(); ok {
 		_spec.SetField(paymentorder.FieldNetworkFee, field.TypeFloat64, value)
 		_node.NetworkFee = value
-	}
-	if value, ok := poc.mutation.ProtocolFee(); ok {
-		_spec.SetField(paymentorder.FieldProtocolFee, field.TypeFloat64, value)
-		_node.ProtocolFee = value
 	}
 	if value, ok := poc.mutation.Rate(); ok {
 		_spec.SetField(paymentorder.FieldRate, field.TypeFloat64, value)
@@ -934,24 +921,6 @@ func (u *PaymentOrderUpsert) UpdateNetworkFee() *PaymentOrderUpsert {
 // AddNetworkFee adds v to the "network_fee" field.
 func (u *PaymentOrderUpsert) AddNetworkFee(v decimal.Decimal) *PaymentOrderUpsert {
 	u.Add(paymentorder.FieldNetworkFee, v)
-	return u
-}
-
-// SetProtocolFee sets the "protocol_fee" field.
-func (u *PaymentOrderUpsert) SetProtocolFee(v decimal.Decimal) *PaymentOrderUpsert {
-	u.Set(paymentorder.FieldProtocolFee, v)
-	return u
-}
-
-// UpdateProtocolFee sets the "protocol_fee" field to the value that was provided on create.
-func (u *PaymentOrderUpsert) UpdateProtocolFee() *PaymentOrderUpsert {
-	u.SetExcluded(paymentorder.FieldProtocolFee)
-	return u
-}
-
-// AddProtocolFee adds v to the "protocol_fee" field.
-func (u *PaymentOrderUpsert) AddProtocolFee(v decimal.Decimal) *PaymentOrderUpsert {
-	u.Add(paymentorder.FieldProtocolFee, v)
 	return u
 }
 
@@ -1347,27 +1316,6 @@ func (u *PaymentOrderUpsertOne) AddNetworkFee(v decimal.Decimal) *PaymentOrderUp
 func (u *PaymentOrderUpsertOne) UpdateNetworkFee() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.UpdateNetworkFee()
-	})
-}
-
-// SetProtocolFee sets the "protocol_fee" field.
-func (u *PaymentOrderUpsertOne) SetProtocolFee(v decimal.Decimal) *PaymentOrderUpsertOne {
-	return u.Update(func(s *PaymentOrderUpsert) {
-		s.SetProtocolFee(v)
-	})
-}
-
-// AddProtocolFee adds v to the "protocol_fee" field.
-func (u *PaymentOrderUpsertOne) AddProtocolFee(v decimal.Decimal) *PaymentOrderUpsertOne {
-	return u.Update(func(s *PaymentOrderUpsert) {
-		s.AddProtocolFee(v)
-	})
-}
-
-// UpdateProtocolFee sets the "protocol_fee" field to the value that was provided on create.
-func (u *PaymentOrderUpsertOne) UpdateProtocolFee() *PaymentOrderUpsertOne {
-	return u.Update(func(s *PaymentOrderUpsert) {
-		s.UpdateProtocolFee()
 	})
 }
 
@@ -1964,27 +1912,6 @@ func (u *PaymentOrderUpsertBulk) AddNetworkFee(v decimal.Decimal) *PaymentOrderU
 func (u *PaymentOrderUpsertBulk) UpdateNetworkFee() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.UpdateNetworkFee()
-	})
-}
-
-// SetProtocolFee sets the "protocol_fee" field.
-func (u *PaymentOrderUpsertBulk) SetProtocolFee(v decimal.Decimal) *PaymentOrderUpsertBulk {
-	return u.Update(func(s *PaymentOrderUpsert) {
-		s.SetProtocolFee(v)
-	})
-}
-
-// AddProtocolFee adds v to the "protocol_fee" field.
-func (u *PaymentOrderUpsertBulk) AddProtocolFee(v decimal.Decimal) *PaymentOrderUpsertBulk {
-	return u.Update(func(s *PaymentOrderUpsert) {
-		s.AddProtocolFee(v)
-	})
-}
-
-// UpdateProtocolFee sets the "protocol_fee" field to the value that was provided on create.
-func (u *PaymentOrderUpsertBulk) UpdateProtocolFee() *PaymentOrderUpsertBulk {
-	return u.Update(func(s *PaymentOrderUpsert) {
-		s.UpdateProtocolFee()
 	})
 }
 

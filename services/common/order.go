@@ -72,30 +72,79 @@ func CreateLockPaymentOrder(
 		return nil
 	}
 
-	// Update payment order with the gateway ID synchronously
-	// This ensures the payment order is updated before webhook deletion
-	paymentOrder, err := db.Client.PaymentOrder.
-		Query().
-		Where(
-			paymentorder.MessageHashEQ(event.MessageHash),
-		).
-		Only(ctx)
-	if err != nil {
-		if !ent.IsNotFound(err) {
-			logger.Errorf("Failed to fetch payment order: %v", err)
-		}
-	} else {
-		_, err = db.Client.PaymentOrder.
-			Update().
-			Where(paymentorder.IDEQ(paymentOrder.ID)).
-			SetBlockNumber(int64(event.BlockNumber)).
-			SetGatewayID(event.OrderId).
-			SetStatus(paymentorder.StatusPending).
-			Save(ctx)
+	// Update payment order with the gateway ID asynchronously
+	// This ensures the payment order is updated without blocking the main flow
+	go func() {
+		// Retry loop to wait for payment order to be created if blockchain event is indexed first
+		maxRetries := 10
+		retryDelay := 250 * time.Millisecond
+
+		err := utils.Retry(maxRetries, retryDelay, func() error {
+			paymentOrder, fetchErr := db.Client.PaymentOrder.
+				Query().
+				Where(
+					paymentorder.MessageHashEQ(event.MessageHash),
+				).
+				Only(ctx)
+
+			if fetchErr != nil {
+				if ent.IsNotFound(fetchErr) {
+					return fetchErr // Return error to trigger retry
+				}
+				// Other error occurred, don't retry
+				logger.WithFields(logger.Fields{
+					"MessageHash": event.MessageHash,
+					"TxHash":      event.TxHash,
+					"Error":       fetchErr.Error(),
+				}).Errorf("Failed to fetch payment order")
+				return fetchErr
+			}
+
+			// Payment order found, update it
+			_, updateErr := db.Client.PaymentOrder.
+				Update().
+				Where(paymentorder.IDEQ(paymentOrder.ID)).
+				SetBlockNumber(int64(event.BlockNumber)).
+				SetGatewayID(event.OrderId).
+				SetStatus(paymentorder.StatusPending).
+				Save(ctx)
+			if updateErr != nil {
+				logger.Errorf("Failed to update payment order: %v", updateErr)
+			} else {
+				// Refetch the updated payment order for webhook
+				updatedPaymentOrder, fetchErr := db.Client.PaymentOrder.
+					Query().
+					Where(paymentorder.IDEQ(paymentOrder.ID)).
+					WithSenderProfile().
+					Only(ctx)
+				if fetchErr != nil {
+					logger.WithFields(logger.Fields{
+						"OrderID": paymentOrder.ID,
+						"Error":   fetchErr.Error(),
+					}).Errorf("Failed to refetch payment order for webhook")
+				} else {
+					// Send webhook notification to sender
+					err = utils.SendPaymentOrderWebhook(ctx, updatedPaymentOrder)
+					if err != nil {
+						logger.WithFields(logger.Fields{
+							"OrderID":  updatedPaymentOrder.ID,
+							"SenderID": updatedPaymentOrder.Edges.SenderProfile.ID,
+							"Error":    err.Error(),
+						}).Errorf("Failed to send payment order webhook")
+					}
+				}
+			}
+
+			return nil // Success, no retry needed
+		})
+
 		if err != nil {
-			logger.Errorf("Failed to update payment order: %v", err)
+			logger.WithFields(logger.Fields{
+				"MessageHash": event.MessageHash,
+				"MaxRetries":  maxRetries,
+			}).Warnf("Payment order not found after %d attempts, continuing without payment order update", maxRetries)
 		}
-	}
+	}()
 
 	// Get token from db
 	token, err := db.Client.Token.
@@ -149,15 +198,18 @@ func CreateLockPaymentOrder(
 		Token:             token,
 		Network:           network,
 		GatewayID:         event.OrderId,
-		Amount:            event.Amount,
+		Amount:            event.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals)))),
 		Rate:              event.Rate,
+		ProtocolFee:       event.ProtocolFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals)))),
 		BlockNumber:       int64(event.BlockNumber),
 		TxHash:            event.TxHash,
 		Institution:       recipient.Institution,
 		AccountIdentifier: recipient.AccountIdentifier,
 		AccountName:       recipient.AccountName,
+		Sender:            event.Sender,
 		ProviderID:        recipient.ProviderID,
 		Memo:              recipient.Memo,
+		MessageHash:       event.MessageHash,
 		Metadata:          recipient.Metadata,
 		ProvisionBucket:   provisionBucket,
 	}
@@ -297,12 +349,16 @@ func CreateLockPaymentOrder(
 			SetGatewayID(lockPaymentOrder.GatewayID).
 			SetAmount(lockPaymentOrder.Amount).
 			SetRate(lockPaymentOrder.Rate).
+			SetProtocolFee(lockPaymentOrder.ProtocolFee).
 			SetOrderPercent(decimal.NewFromInt(100)).
 			SetBlockNumber(lockPaymentOrder.BlockNumber).
 			SetTxHash(lockPaymentOrder.TxHash).
 			SetInstitution(lockPaymentOrder.Institution).
 			SetAccountIdentifier(lockPaymentOrder.AccountIdentifier).
 			SetAccountName(lockPaymentOrder.AccountName).
+			SetSender(lockPaymentOrder.Sender).
+			SetMessageHash(lockPaymentOrder.MessageHash).
+			SetSender(lockPaymentOrder.Sender).
 			SetMemo(lockPaymentOrder.Memo).
 			SetMetadata(lockPaymentOrder.Metadata).
 			SetProvisionBucket(lockPaymentOrder.ProvisionBucket)
@@ -361,13 +417,13 @@ func CreateLockPaymentOrder(
 }
 
 // UpdateOrderStatusRefunded updates the status of a payment order to refunded
-func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event *types.OrderRefundedEvent) error {
+func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event *types.OrderRefundedEvent, messageHash string) error {
 	// Fetch payment order
 	paymentOrderExists := true
 	paymentOrder, err := db.Client.PaymentOrder.
 		Query().
 		Where(
-			paymentorder.GatewayIDEQ(event.OrderId),
+			paymentorder.MessageHashEQ(messageHash),
 			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
@@ -459,7 +515,7 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		paymentOrderUpdate := tx.PaymentOrder.
 			Update().
 			Where(
-				paymentorder.GatewayIDEQ(event.OrderId),
+				paymentorder.MessageHashEQ(messageHash),
 				paymentorder.HasTokenWith(
 					tokenent.HasNetworkWith(
 						networkent.IdentifierEQ(network.Identifier),
@@ -467,6 +523,8 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 				),
 			).
 			SetTxHash(event.TxHash).
+			SetBlockNumber(event.BlockNumber).
+			SetGatewayID(event.OrderId).
 			SetStatus(paymentorder.StatusRefunded)
 
 		if paymentOrder.Edges.LinkedAddress != nil {
@@ -481,6 +539,11 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		if err != nil {
 			return fmt.Errorf("UpdateOrderStatusRefunded.sender: %v", err)
 		}
+
+		paymentOrder.Status = paymentorder.StatusRefunded
+		paymentOrder.TxHash = event.TxHash
+		paymentOrder.BlockNumber = event.BlockNumber
+		paymentOrder.GatewayID = event.OrderId
 	}
 
 	// Commit the transaction
@@ -489,9 +552,6 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 	}
 
 	if paymentOrderExists && paymentOrder.Status != paymentorder.StatusRefunded {
-		paymentOrder.Status = paymentorder.StatusRefunded
-		paymentOrder.TxHash = event.TxHash
-
 		// Send webhook notification to sender
 		err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
 		if err != nil {
@@ -504,13 +564,13 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 }
 
 // UpdateOrderStatusSettled updates the status of a payment order to settled
-func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *types.OrderSettledEvent) error {
+func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *types.OrderSettledEvent, messageHash string) error {
 	// Fetch payment order
 	paymentOrderExists := true
 	paymentOrder, err := db.Client.PaymentOrder.
 		Query().
 		Where(
-			paymentorder.GatewayIDEQ(event.OrderId),
+			paymentorder.MessageHashEQ(messageHash),
 			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
@@ -545,7 +605,7 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 		SetTxHash(event.TxHash).
 		SetMetadata(map[string]interface{}{
 			"GatewayID":       event.OrderId,
-			"TransactionData": event,
+			"BlockNumber":     event.BlockNumber,
 		}).
 		Save(ctx)
 	if err != nil {
@@ -561,8 +621,8 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 			SetGatewayID(event.OrderId).
 			SetNetwork(network.Identifier).
 			SetMetadata(map[string]interface{}{
-				"GatewayID":       event.OrderId,
-				"TransactionData": event,
+				"GatewayID":   event.OrderId,
+				"BlockNumber": event.BlockNumber,
 			}).
 			Save(ctx)
 		if err != nil {
@@ -606,10 +666,11 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 		paymentOrderUpdate := tx.PaymentOrder.
 			Update().
 			Where(
-				paymentorder.GatewayIDEQ(event.OrderId),
+				paymentorder.MessageHashEQ(messageHash),
 			).
-			SetBlockNumber(int64(event.BlockNumber)).
-			SetTxHash(event.TxHash)
+			SetBlockNumber(event.BlockNumber).
+			SetTxHash(event.TxHash).
+			SetGatewayID(event.OrderId)
 
 		// Convert settled percent to BPS and update
 		settledPercent = paymentOrder.PercentSettled.Add(event.SettlePercent.Div(decimal.NewFromInt(1000)))
@@ -631,7 +692,8 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 			return fmt.Errorf("UpdateOrderStatusSettled.sender: %v", err)
 		}
 
-		paymentOrder.BlockNumber = int64(event.BlockNumber)
+		paymentOrder.BlockNumber = event.BlockNumber
+		paymentOrder.GatewayID = event.OrderId
 		paymentOrder.TxHash = event.TxHash
 		paymentOrder.PercentSettled = settledPercent
 	}
@@ -645,7 +707,6 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 		if settledPercent.GreaterThanOrEqual(decimal.NewFromInt(100)) {
 			paymentOrder.Status = paymentorder.StatusSettled
 		}
-		paymentOrder.TxHash = event.TxHash
 
 		// Send webhook notification to sender
 		err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
@@ -710,12 +771,14 @@ func HandleCancellation(ctx context.Context, createdLockPaymentOrder *ent.LockPa
 			SetGatewayID(lockPaymentOrder.GatewayID).
 			SetAmount(lockPaymentOrder.Amount).
 			SetRate(lockPaymentOrder.Rate).
+			SetProtocolFee(lockPaymentOrder.ProtocolFee).
 			SetOrderPercent(decimal.NewFromInt(100)).
 			SetBlockNumber(lockPaymentOrder.BlockNumber).
 			SetTxHash(lockPaymentOrder.TxHash).
 			SetInstitution(lockPaymentOrder.Institution).
 			SetAccountIdentifier(lockPaymentOrder.AccountIdentifier).
 			SetAccountName(lockPaymentOrder.AccountName).
+			SetSender(lockPaymentOrder.Sender).
 			SetMemo(lockPaymentOrder.Memo).
 			SetMetadata(lockPaymentOrder.Metadata).
 			SetProvisionBucket(lockPaymentOrder.ProvisionBucket).

@@ -70,6 +70,12 @@ func (lpoc *LockPaymentOrderCreate) SetAmount(d decimal.Decimal) *LockPaymentOrd
 	return lpoc
 }
 
+// SetProtocolFee sets the "protocol_fee" field.
+func (lpoc *LockPaymentOrderCreate) SetProtocolFee(d decimal.Decimal) *LockPaymentOrderCreate {
+	lpoc.mutation.SetProtocolFee(d)
+	return lpoc
+}
+
 // SetRate sets the "rate" field.
 func (lpoc *LockPaymentOrderCreate) SetRate(d decimal.Decimal) *LockPaymentOrderCreate {
 	lpoc.mutation.SetRate(d)
@@ -185,6 +191,20 @@ func (lpoc *LockPaymentOrderCreate) SetNillableCancellationCount(i *int) *LockPa
 // SetCancellationReasons sets the "cancellation_reasons" field.
 func (lpoc *LockPaymentOrderCreate) SetCancellationReasons(s []string) *LockPaymentOrderCreate {
 	lpoc.mutation.SetCancellationReasons(s)
+	return lpoc
+}
+
+// SetMessageHash sets the "message_hash" field.
+func (lpoc *LockPaymentOrderCreate) SetMessageHash(s string) *LockPaymentOrderCreate {
+	lpoc.mutation.SetMessageHash(s)
+	return lpoc
+}
+
+// SetNillableMessageHash sets the "message_hash" field if the given value is not nil.
+func (lpoc *LockPaymentOrderCreate) SetNillableMessageHash(s *string) *LockPaymentOrderCreate {
+	if s != nil {
+		lpoc.SetMessageHash(*s)
+	}
 	return lpoc
 }
 
@@ -356,6 +376,9 @@ func (lpoc *LockPaymentOrderCreate) check() error {
 	if _, ok := lpoc.mutation.Amount(); !ok {
 		return &ValidationError{Name: "amount", err: errors.New(`ent: missing required field "LockPaymentOrder.amount"`)}
 	}
+	if _, ok := lpoc.mutation.ProtocolFee(); !ok {
+		return &ValidationError{Name: "protocol_fee", err: errors.New(`ent: missing required field "LockPaymentOrder.protocol_fee"`)}
+	}
 	if _, ok := lpoc.mutation.Rate(); !ok {
 		return &ValidationError{Name: "rate", err: errors.New(`ent: missing required field "LockPaymentOrder.rate"`)}
 	}
@@ -392,6 +415,11 @@ func (lpoc *LockPaymentOrderCreate) check() error {
 	}
 	if _, ok := lpoc.mutation.CancellationReasons(); !ok {
 		return &ValidationError{Name: "cancellation_reasons", err: errors.New(`ent: missing required field "LockPaymentOrder.cancellation_reasons"`)}
+	}
+	if v, ok := lpoc.mutation.MessageHash(); ok {
+		if err := lockpaymentorder.MessageHashValidator(v); err != nil {
+			return &ValidationError{Name: "message_hash", err: fmt.Errorf(`ent: validator failed for field "LockPaymentOrder.message_hash": %w`, err)}
+		}
 	}
 	if len(lpoc.mutation.TokenIDs()) == 0 {
 		return &ValidationError{Name: "token", err: errors.New(`ent: missing required edge "LockPaymentOrder.token"`)}
@@ -448,6 +476,10 @@ func (lpoc *LockPaymentOrderCreate) createSpec() (*LockPaymentOrder, *sqlgraph.C
 		_spec.SetField(lockpaymentorder.FieldAmount, field.TypeFloat64, value)
 		_node.Amount = value
 	}
+	if value, ok := lpoc.mutation.ProtocolFee(); ok {
+		_spec.SetField(lockpaymentorder.FieldProtocolFee, field.TypeFloat64, value)
+		_node.ProtocolFee = value
+	}
 	if value, ok := lpoc.mutation.Rate(); ok {
 		_spec.SetField(lockpaymentorder.FieldRate, field.TypeFloat64, value)
 		_node.Rate = value
@@ -499,6 +531,10 @@ func (lpoc *LockPaymentOrderCreate) createSpec() (*LockPaymentOrder, *sqlgraph.C
 	if value, ok := lpoc.mutation.CancellationReasons(); ok {
 		_spec.SetField(lockpaymentorder.FieldCancellationReasons, field.TypeJSON, value)
 		_node.CancellationReasons = value
+	}
+	if value, ok := lpoc.mutation.MessageHash(); ok {
+		_spec.SetField(lockpaymentorder.FieldMessageHash, field.TypeString, value)
+		_node.MessageHash = value
 	}
 	if nodes := lpoc.mutation.TokenIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -674,6 +710,24 @@ func (u *LockPaymentOrderUpsert) UpdateAmount() *LockPaymentOrderUpsert {
 // AddAmount adds v to the "amount" field.
 func (u *LockPaymentOrderUpsert) AddAmount(v decimal.Decimal) *LockPaymentOrderUpsert {
 	u.Add(lockpaymentorder.FieldAmount, v)
+	return u
+}
+
+// SetProtocolFee sets the "protocol_fee" field.
+func (u *LockPaymentOrderUpsert) SetProtocolFee(v decimal.Decimal) *LockPaymentOrderUpsert {
+	u.Set(lockpaymentorder.FieldProtocolFee, v)
+	return u
+}
+
+// UpdateProtocolFee sets the "protocol_fee" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsert) UpdateProtocolFee() *LockPaymentOrderUpsert {
+	u.SetExcluded(lockpaymentorder.FieldProtocolFee)
+	return u
+}
+
+// AddProtocolFee adds v to the "protocol_fee" field.
+func (u *LockPaymentOrderUpsert) AddProtocolFee(v decimal.Decimal) *LockPaymentOrderUpsert {
+	u.Add(lockpaymentorder.FieldProtocolFee, v)
 	return u
 }
 
@@ -881,6 +935,24 @@ func (u *LockPaymentOrderUpsert) UpdateCancellationReasons() *LockPaymentOrderUp
 	return u
 }
 
+// SetMessageHash sets the "message_hash" field.
+func (u *LockPaymentOrderUpsert) SetMessageHash(v string) *LockPaymentOrderUpsert {
+	u.Set(lockpaymentorder.FieldMessageHash, v)
+	return u
+}
+
+// UpdateMessageHash sets the "message_hash" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsert) UpdateMessageHash() *LockPaymentOrderUpsert {
+	u.SetExcluded(lockpaymentorder.FieldMessageHash)
+	return u
+}
+
+// ClearMessageHash clears the value of the "message_hash" field.
+func (u *LockPaymentOrderUpsert) ClearMessageHash() *LockPaymentOrderUpsert {
+	u.SetNull(lockpaymentorder.FieldMessageHash)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
@@ -978,6 +1050,27 @@ func (u *LockPaymentOrderUpsertOne) AddAmount(v decimal.Decimal) *LockPaymentOrd
 func (u *LockPaymentOrderUpsertOne) UpdateAmount() *LockPaymentOrderUpsertOne {
 	return u.Update(func(s *LockPaymentOrderUpsert) {
 		s.UpdateAmount()
+	})
+}
+
+// SetProtocolFee sets the "protocol_fee" field.
+func (u *LockPaymentOrderUpsertOne) SetProtocolFee(v decimal.Decimal) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetProtocolFee(v)
+	})
+}
+
+// AddProtocolFee adds v to the "protocol_fee" field.
+func (u *LockPaymentOrderUpsertOne) AddProtocolFee(v decimal.Decimal) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.AddProtocolFee(v)
+	})
+}
+
+// UpdateProtocolFee sets the "protocol_fee" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertOne) UpdateProtocolFee() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateProtocolFee()
 	})
 }
 
@@ -1216,6 +1309,27 @@ func (u *LockPaymentOrderUpsertOne) SetCancellationReasons(v []string) *LockPaym
 func (u *LockPaymentOrderUpsertOne) UpdateCancellationReasons() *LockPaymentOrderUpsertOne {
 	return u.Update(func(s *LockPaymentOrderUpsert) {
 		s.UpdateCancellationReasons()
+	})
+}
+
+// SetMessageHash sets the "message_hash" field.
+func (u *LockPaymentOrderUpsertOne) SetMessageHash(v string) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetMessageHash(v)
+	})
+}
+
+// UpdateMessageHash sets the "message_hash" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertOne) UpdateMessageHash() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateMessageHash()
+	})
+}
+
+// ClearMessageHash clears the value of the "message_hash" field.
+func (u *LockPaymentOrderUpsertOne) ClearMessageHash() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.ClearMessageHash()
 	})
 }
 
@@ -1486,6 +1600,27 @@ func (u *LockPaymentOrderUpsertBulk) UpdateAmount() *LockPaymentOrderUpsertBulk 
 	})
 }
 
+// SetProtocolFee sets the "protocol_fee" field.
+func (u *LockPaymentOrderUpsertBulk) SetProtocolFee(v decimal.Decimal) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetProtocolFee(v)
+	})
+}
+
+// AddProtocolFee adds v to the "protocol_fee" field.
+func (u *LockPaymentOrderUpsertBulk) AddProtocolFee(v decimal.Decimal) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.AddProtocolFee(v)
+	})
+}
+
+// UpdateProtocolFee sets the "protocol_fee" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertBulk) UpdateProtocolFee() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateProtocolFee()
+	})
+}
+
 // SetRate sets the "rate" field.
 func (u *LockPaymentOrderUpsertBulk) SetRate(v decimal.Decimal) *LockPaymentOrderUpsertBulk {
 	return u.Update(func(s *LockPaymentOrderUpsert) {
@@ -1721,6 +1856,27 @@ func (u *LockPaymentOrderUpsertBulk) SetCancellationReasons(v []string) *LockPay
 func (u *LockPaymentOrderUpsertBulk) UpdateCancellationReasons() *LockPaymentOrderUpsertBulk {
 	return u.Update(func(s *LockPaymentOrderUpsert) {
 		s.UpdateCancellationReasons()
+	})
+}
+
+// SetMessageHash sets the "message_hash" field.
+func (u *LockPaymentOrderUpsertBulk) SetMessageHash(v string) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetMessageHash(v)
+	})
+}
+
+// UpdateMessageHash sets the "message_hash" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertBulk) UpdateMessageHash() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateMessageHash()
+	})
+}
+
+// ClearMessageHash clears the value of the "message_hash" field.
+func (u *LockPaymentOrderUpsertBulk) ClearMessageHash() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.ClearMessageHash()
 	})
 }
 

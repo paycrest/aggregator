@@ -16,7 +16,6 @@ import (
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/senderprofile"
-	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/user"
 	"github.com/paycrest/aggregator/services"
@@ -192,7 +191,6 @@ func ProcessLinkedAddresses(ctx context.Context, orderService types.OrderService
 				SetAmountReturned(decimal.NewFromInt(0)).
 				SetPercentSettled(decimal.NewFromInt(0)).
 				SetNetworkFee(token.Edges.Network.Fee).
-				SetProtocolFee(decimal.NewFromInt(0)).
 				SetSenderFee(decimal.NewFromInt(0)).
 				SetToken(token).
 				SetRate(rateResponse).
@@ -310,35 +308,7 @@ func ProcessCreatedOrders(
 		go func(createdEvent *types.OrderCreatedEvent) {
 			defer wg.Done()
 
-			paymentOrderExists := true
-			order, err := storage.Client.PaymentOrder.
-				Query().
-				Where(paymentorder.TxHashEqualFold(createdEvent.TxHash)).
-				WithToken().
-				Only(ctx)
-			if err != nil {
-				if ent.IsNotFound(err) {
-					paymentOrderExists = false
-				}
-			}
-
-			if paymentOrderExists {
-				createdEvent.Amount = createdEvent.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(order.Edges.Token.Decimals))))
-				createdEvent.ProtocolFee = createdEvent.ProtocolFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(order.Edges.Token.Decimals))))
-			} else {
-				token, err := storage.Client.Token.
-					Query().
-					Where(token.ContractAddressEqualFold(createdEvent.Token)).
-					Only(ctx)
-				if err != nil {
-					return
-				}
-
-				createdEvent.Amount = createdEvent.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
-				createdEvent.ProtocolFee = createdEvent.ProtocolFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
-			}
-
-			err = CreateLockPaymentOrder(ctx, network, createdEvent, orderService.RefundOrder, priorityQueueService.AssignLockPaymentOrder)
+			err := CreateLockPaymentOrder(ctx, network, createdEvent, orderService.RefundOrder, priorityQueueService.AssignLockPaymentOrder)
 			if err != nil {
 				if !strings.Contains(fmt.Sprintf("%v", err), "duplicate key value violates unique constraint") {
 					logger.WithFields(logger.Fields{
@@ -350,36 +320,7 @@ func ProcessCreatedOrders(
 				}
 				return
 			}
-
-			if paymentOrderExists {
-				// Update payment order with txHash
-				_, err = order.Update().
-					SetGatewayID(createdEvent.OrderId).
-					SetRate(order.Rate).
-					SetStatus(paymentorder.StatusPending).
-					Save(ctx)
-				if err != nil {
-					return
-				}
-
-				// Refetch payment order
-				paymentOrder, err := storage.Client.PaymentOrder.
-					Query().
-					Where(paymentorder.IDEQ(order.ID)).
-					WithSenderProfile().
-					Only(ctx)
-				if err != nil {
-					return
-				}
-
-				// Send webhook notifcation to sender
-				err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
-				if err != nil {
-					return
-				}
-			}
 		}(createdEvent)
-
 	}
 	wg.Wait()
 
@@ -387,28 +328,20 @@ func ProcessCreatedOrders(
 }
 
 // ProcessSettledOrders processes settled orders for a network
-func ProcessSettledOrders(ctx context.Context, network *ent.Network, txHashes []string, hashToEvent map[string]*types.OrderSettledEvent) error {
+func ProcessSettledOrders(ctx context.Context, network *ent.Network, orderIds []string, orderIdToEvent map[string]*types.OrderSettledEvent) error {
 	lockOrders, err := storage.Client.LockPaymentOrder.
 		Query().
 		Where(func(s *sql.Selector) {
 			po := sql.Table(paymentorder.Table)
-			s.LeftJoin(po).On(s.C(lockpaymentorder.FieldGatewayID), po.C(paymentorder.FieldGatewayID)).
-				Where(sql.Or(
-					// Case 1: No corresponding payment order - must be StatusValidated
-					sql.And(
-						sql.IsNull(po.C(paymentorder.FieldGatewayID)),
+			s.LeftJoin(po).On(s.C(lockpaymentorder.FieldMessageHash), po.C(paymentorder.FieldMessageHash)).
+				Where(sql.And(
+					sql.Or(
 						sql.EQ(s.C(lockpaymentorder.FieldStatus), lockpaymentorder.StatusValidated),
-					),
-					// Case 2: Has corresponding payment order but it's not settled - any status
-					sql.And(
-						sql.NotNull(po.C(paymentorder.FieldGatewayID)),
 						sql.NEQ(po.C(paymentorder.FieldStatus), paymentorder.StatusSettled),
 					),
+					sql.In(s.C(lockpaymentorder.FieldGatewayID), orderIds),
 				))
 		}).
-		Where(
-			lockpaymentorder.TxHashIn(txHashes...),
-		).
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
@@ -419,7 +352,7 @@ func ProcessSettledOrders(ctx context.Context, network *ent.Network, txHashes []
 
 	var wg sync.WaitGroup
 	for _, lockOrder := range lockOrders {
-		settledEvent, ok := hashToEvent[lockOrder.TxHash]
+		settledEvent, ok := orderIdToEvent[lockOrder.GatewayID]
 		if !ok {
 			continue
 		}
@@ -429,7 +362,7 @@ func ProcessSettledOrders(ctx context.Context, network *ent.Network, txHashes []
 			defer wg.Done()
 
 			// Update order status
-			err := UpdateOrderStatusSettled(ctx, network, se)
+			err := UpdateOrderStatusSettled(ctx, network, se, lockOrder.MessageHash)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":   fmt.Sprintf("%v", err),
@@ -446,31 +379,21 @@ func ProcessSettledOrders(ctx context.Context, network *ent.Network, txHashes []
 }
 
 // ProcessRefundedOrders processes refunded orders for a network
-func ProcessRefundedOrders(ctx context.Context, network *ent.Network, txHashes []string, hashToEvent map[string]*types.OrderRefundedEvent) error {
+func ProcessRefundedOrders(ctx context.Context, network *ent.Network, orderIds []string, orderIdToEvent map[string]*types.OrderRefundedEvent) error {
 	lockOrders, err := storage.Client.LockPaymentOrder.
 		Query().
 		Where(func(s *sql.Selector) {
 			po := sql.Table(paymentorder.Table)
-			s.LeftJoin(po).On(s.C(lockpaymentorder.FieldGatewayID), po.C(paymentorder.FieldGatewayID)).
-				Where(sql.Or(
-					// Case 1: No corresponding payment order - must be Pending or Cancelled
-					sql.And(
-						sql.IsNull(po.C(paymentorder.FieldGatewayID)),
-						sql.Or(
-							sql.EQ(s.C(lockpaymentorder.FieldStatus), lockpaymentorder.StatusPending),
-							sql.EQ(s.C(lockpaymentorder.FieldStatus), lockpaymentorder.StatusCancelled),
-						),
-					),
-					// Case 2: Has corresponding payment order but it's not refunded - any status
-					sql.And(
-						sql.NotNull(po.C(paymentorder.FieldGatewayID)),
+			s.LeftJoin(po).On(s.C(lockpaymentorder.FieldMessageHash), po.C(paymentorder.FieldMessageHash)).
+				Where(sql.And(
+					sql.Or(
+						sql.EQ(s.C(lockpaymentorder.FieldStatus), lockpaymentorder.StatusPending),
+						sql.EQ(s.C(lockpaymentorder.FieldStatus), lockpaymentorder.StatusCancelled),
 						sql.NEQ(po.C(paymentorder.FieldStatus), paymentorder.StatusRefunded),
 					),
+					sql.In(s.C(lockpaymentorder.FieldGatewayID), orderIds),
 				))
 		}).
-		Where(
-			lockpaymentorder.TxHashIn(txHashes...),
-		).
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
@@ -484,14 +407,14 @@ func ProcessRefundedOrders(ctx context.Context, network *ent.Network, txHashes [
 		wg.Add(1)
 		go func(lockOrder *ent.LockPaymentOrder) {
 			defer wg.Done()
-			refundedEvent, ok := hashToEvent[lockOrder.TxHash]
+			refundedEvent, ok := orderIdToEvent[lockOrder.GatewayID]
 			if !ok {
 				return
 			}
 
 			refundedEvent.Fee = refundedEvent.Fee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(lockOrder.Edges.Token.Decimals))))
 
-			err := UpdateOrderStatusRefunded(ctx, lockOrder.Edges.Token.Edges.Network, refundedEvent)
+			err := UpdateOrderStatusRefunded(ctx, lockOrder.Edges.Token.Edges.Network, refundedEvent, lockOrder.MessageHash)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":   fmt.Sprintf("%v", err),
@@ -538,7 +461,7 @@ func UpdateReceiveAddressStatus(
 
 		// This is a transfer to the receive address to create an order on-chain
 		// Compare the transferred value with the expected order amount + fees
-		fees := paymentOrder.NetworkFee.Add(paymentOrder.SenderFee).Add(paymentOrder.ProtocolFee)
+		fees := paymentOrder.NetworkFee.Add(paymentOrder.SenderFee)
 		orderAmountWithFees := paymentOrder.Amount.Add(fees).Round(int32(paymentOrder.Edges.Token.Decimals))
 		transferMatchesOrderAmount := event.Value.Equal(orderAmountWithFees)
 

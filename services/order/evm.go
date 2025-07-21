@@ -144,7 +144,7 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 	// Create approve data for gateway contract
 	approveGatewayData, err := s.approveCallData(
 		ethcommon.HexToAddress(order.Edges.Token.Edges.Network.GatewayContractAddress),
-		utils.ToSubunit(order.Amount.Add(order.ProtocolFee).Add(order.SenderFee), order.Edges.Token.Decimals),
+		utils.ToSubunit(order.Amount.Add(order.SenderFee), order.Edges.Token.Decimals),
 	)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.approveCallData: %w", orderIDPrefix, err)
@@ -282,12 +282,10 @@ func (s *OrderEVM) approveCallData(spender ethcommon.Address, amount *big.Int) (
 
 // createOrderCallData creates the data for the createOrder method
 func (s *OrderEVM) createOrderCallData(order *ent.PaymentOrder, encryptedOrderRecipient string) ([]byte, error) {
-	amountWithProtocolFee := order.Amount.Add(order.ProtocolFee)
-
 	// Define params
 	params := &types.CreateOrderParams{
 		Token:              ethcommon.HexToAddress(order.Edges.Token.ContractAddress),
-		Amount:             utils.ToSubunit(amountWithProtocolFee, order.Edges.Token.Decimals),
+		Amount:             utils.ToSubunit(order.Amount, order.Edges.Token.Decimals),
 		Rate:               order.Rate.Mul(decimal.NewFromInt(100)).BigInt(),
 		SenderFeeRecipient: ethcommon.HexToAddress(order.FeeAddress),
 		SenderFee:          utils.ToSubunit(order.SenderFee, order.Edges.Token.Decimals),
