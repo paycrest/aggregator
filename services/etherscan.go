@@ -72,7 +72,7 @@ func (s *EtherscanService) GetAddressTransactionHistory(ctx context.Context, cha
 		if data["message"] != nil {
 			message = data["message"].(string)
 		}
-		return nil, fmt.Errorf("etherscan API error: %s", message)
+		return nil, fmt.Errorf("etherscan API error: %s %v %v", message, data, params)
 	}
 
 	if data["result"] == nil {

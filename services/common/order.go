@@ -54,6 +54,7 @@ func CreateLockPaymentOrder(
 		Where(
 			lockpaymentorder.Or(
 				lockpaymentorder.TxHashEQ(event.TxHash),
+				lockpaymentorder.MessageHashEQ(event.MessageHash),
 				lockpaymentorder.GatewayIDEQ(event.OrderId),
 			),
 			lockpaymentorder.HasTokenWith(

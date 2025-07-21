@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-// Event signatures for Gateway contract events
+// Event signatures for Gateway and token contract events
 const (
 	TransferEventSignature      = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
 	OrderCreatedEventSignature  = "0x40ccd1ceb111a3c186ef9911e1b876dc1f789ed331b86097b3b8851055b6a137"
@@ -128,7 +128,7 @@ func DecodeOrderSettledEvent(log types.Log) (map[string]interface{}, error) {
 	}
 
 	splitOrderId := common.BytesToHash(log.Data[:32])
-	settlePercent := new(big.Int).SetBytes(log.Data[32:44])
+	settlePercent := new(big.Int).SetBytes(log.Data[32:64])
 
 	return map[string]interface{}{
 		"indexed_params": map[string]interface{}{

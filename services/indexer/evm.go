@@ -267,11 +267,15 @@ func (s *IndexerEVM) indexReceiveAddressByUserAddress(ctx context.Context, token
 	if fromBlock == 0 && toBlock == 0 {
 		// No block range - get last 10 transactions
 		limit = 5
-		logMessage = fmt.Sprintf("Processing transactions for address: %s", userAddress)
+		if token.Edges.Network.ChainID != 56 {
+			logMessage = fmt.Sprintf("Processing transactions for address: %s", userAddress)
+		}
 	} else {
 		// Block range provided - get up to 100 transactions in range
 		limit = 100
-		logMessage = fmt.Sprintf("Processing transactions in block range %d-%d for address: %s", fromBlock, toBlock, userAddress)
+		if token.Edges.Network.ChainID != 56 {
+			logMessage = fmt.Sprintf("Processing transactions in block range %d-%d for address: %s", fromBlock, toBlock, userAddress)
+		}
 	}
 
 	// Get address's transaction history with fallback
@@ -294,7 +298,9 @@ func (s *IndexerEVM) indexReceiveAddressByUserAddress(ctx context.Context, token
 	// Process each transaction to find transfer events to linked addresses
 	for i, tx := range transactions {
 		txHash := tx["hash"].(string)
-		logger.Infof("Processing transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
+		if token.Edges.Network.ChainID != 56 {
+			logger.Infof("Processing transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
+		}
 
 		// Index transfer events for this specific transaction
 		counts, err := s.indexReceiveAddressByTransaction(ctx, token, txHash)
@@ -345,11 +351,15 @@ func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network 
 		} else {
 			limit = 50
 		}
-		logMessage = fmt.Sprintf("Processing last %d transactions for gateway contract: %s", limit, address)
+		if network.ChainID != 56 {
+			logMessage = fmt.Sprintf("Processing last %d transactions for gateway contract: %s", limit, address)
+		}
 	} else {
 		// Block range provided - get up to 100 transactions in range
 		limit = 100
-		logMessage = fmt.Sprintf("Processing transactions in block range %d-%d for gateway contract: %s", fromBlock, toBlock, address)
+		if network.ChainID != 56 {
+			logMessage = fmt.Sprintf("Processing transactions in block range %d-%d for gateway contract: %s", fromBlock, toBlock, address)
+		}
 	}
 
 	// Get gateway contract's transaction history with fallback
@@ -372,7 +382,9 @@ func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network 
 	// Process each transaction to find gateway events
 	for i, tx := range transactions {
 		txHash := tx["hash"].(string)
-		logger.Infof("Processing gateway transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
+		if network.ChainID != 56 {
+			logger.Infof("Processing gateway transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
+		}
 
 		// Index gateway events for this specific transaction
 		_, err := s.indexGatewayByTransaction(ctx, network, txHash)
@@ -455,12 +467,14 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 			continue
 		}
 
-		// Log the event signature being processed
-		logger.WithFields(logger.Fields{
-			"EventSignature": eventSignature,
-			"TxHash":         txHash,
-			"BlockNumber":    int64(eventMap["block_number"].(float64)),
-		}).Infof("Processing event signature")
+		if network.ChainID != 56 {
+			// Log the event signature being processed
+			logger.WithFields(logger.Fields{
+				"EventSignature": eventSignature,
+				"TxHash":         txHash,
+				"BlockNumber":    int64(eventMap["block_number"].(float64)),
+			}).Infof("Processing event signature")
+		}
 
 		blockNumber := int64(eventMap["block_number"].(float64))
 		txHash := eventMap["transaction_hash"].(string)

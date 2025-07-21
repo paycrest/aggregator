@@ -372,7 +372,6 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	}
 
 	senderFee := feePercent.Mul(payload.Amount).Div(decimal.NewFromInt(100)).Round(4)
-	protocolFee := decimal.NewFromFloat(0)
 
 	// Create transaction Log
 	transactionLog, err := tx.TransactionLog.
@@ -493,7 +492,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			ReceiveAddress: receiveAddress.Address,
 			ValidUntil:     receiveAddress.ValidUntil,
 			SenderFee:      senderFee,
-			TransactionFee: protocolFee.Add(token.Edges.Network.Fee),
+			TransactionFee: token.Edges.Network.Fee,
 			Reference:      paymentOrder.Reference,
 		})
 }

@@ -12,14 +12,14 @@ import (
 
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	types "github.com/ethereum/go-ethereum/core/types"
+	ethereumtypes "github.com/ethereum/go-ethereum/core/types"
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/storage"
-	aggregatortypes "github.com/paycrest/aggregator/types"
+	types "github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 )
@@ -108,7 +108,7 @@ func (s *EngineService) GetLatestBlock(ctx context.Context, chainID int64) (int6
 	}
 
 	// Use RPC as fallback
-	client, err := aggregatortypes.NewEthClient(network.RPCEndpoint)
+	client, err := types.NewEthClient(network.RPCEndpoint)
 	if err != nil {
 		return 0, fmt.Errorf("failed to create RPC client: %w", err)
 	}
@@ -762,12 +762,12 @@ func (s *EngineService) CreateGatewayWebhook() error {
 // It fetches all events and filters for specified event signatures (gateway events or transfer events)
 func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint string, contractAddress string, fromBlock int64, toBlock int64, topics []string, txHash string) ([]interface{}, error) {
 	// Create RPC client
-	client, err := aggregatortypes.NewEthClient(rpcEndpoint)
+	client, err := types.NewEthClient(rpcEndpoint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create RPC client: %w", err)
 	}
 
-	var logs []types.Log
+	var logs []ethereumtypes.Log
 
 	// Determine which event signatures to filter for based on topics
 	var eventSignatures []string
@@ -798,17 +798,7 @@ func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint st
 					eventSignature := log.Topics[0].Hex()
 					for _, signature := range eventSignatures {
 						if eventSignature == signature {
-							// Check additional topics if provided
-							matches := true
-							for i, topic := range topics {
-								if topic != "" && (i+1 >= len(log.Topics) || log.Topics[i+1].Hex() != topic) {
-									matches = false
-									break
-								}
-							}
-							if matches {
-								logs = append(logs, *log)
-							}
+							logs = append(logs, *log)
 							break
 						}
 					}
@@ -816,6 +806,14 @@ func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint st
 			}
 		}
 	} else {
+		if fromBlock == 0 || toBlock == 0 {
+			return nil, fmt.Errorf("fromBlock and toBlock must be provided")
+		} else if fromBlock-toBlock > 100 && eventSignatures[0] == utils.TransferEventSignature {
+			return nil, fmt.Errorf("fromBlock and toBlock must be within 100 blocks for transfer events")
+		} else if fromBlock-toBlock > 1000 && eventSignatures[0] != utils.TransferEventSignature {
+			return nil, fmt.Errorf("fromBlock and toBlock must be within 1000 blocks for gateway events")
+		}
+
 		// Use block range filtering to get all logs from the contract
 		filterQuery := ethereum.FilterQuery{
 			FromBlock: big.NewInt(fromBlock),
@@ -824,7 +822,7 @@ func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint st
 			Topics:    [][]common.Hash{},
 		}
 
-		// Add additional topics if provided (for filtering by specific addresses)
+		// Add additional topics if provided
 		for _, topic := range topics {
 			if topic != "" {
 				filterQuery.Topics = append(filterQuery.Topics, []common.Hash{common.HexToHash(topic)})
