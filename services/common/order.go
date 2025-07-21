@@ -184,6 +184,9 @@ func CreateLockPaymentOrder(
 		return nil
 	}
 
+	event.Amount = event.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
+	event.ProtocolFee = event.ProtocolFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
+
 	provisionBucket, isLessThanMin, err := GetProvisionBucket(ctx, event.Amount.Mul(event.Rate), currency)
 	if err != nil {
 		logger.WithFields(logger.Fields{
@@ -198,9 +201,9 @@ func CreateLockPaymentOrder(
 		Token:             token,
 		Network:           network,
 		GatewayID:         event.OrderId,
-		Amount:            event.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals)))),
+		Amount:            event.Amount,
 		Rate:              event.Rate,
-		ProtocolFee:       event.ProtocolFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals)))),
+		ProtocolFee:       event.ProtocolFee,
 		BlockNumber:       int64(event.BlockNumber),
 		TxHash:            event.TxHash,
 		Institution:       recipient.Institution,
@@ -604,8 +607,8 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 		).
 		SetTxHash(event.TxHash).
 		SetMetadata(map[string]interface{}{
-			"GatewayID":       event.OrderId,
-			"BlockNumber":     event.BlockNumber,
+			"GatewayID":   event.OrderId,
+			"BlockNumber": event.BlockNumber,
 		}).
 		Save(ctx)
 	if err != nil {
