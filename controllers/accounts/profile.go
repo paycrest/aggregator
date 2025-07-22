@@ -69,7 +69,7 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 
 	update := sender.Update()
 
-	if payload.WebhookURL != "" || (payload.WebhookURL == "" && sender.WebhookURL != "") {
+	if payload.WebhookURL != "" && payload.WebhookURL != sender.WebhookURL {
 		update.SetWebhookURL(payload.WebhookURL)
 	}
 

@@ -103,28 +103,6 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		return
 	}
 
-	// Send verification email
-	verificationToken, err := tx.VerificationToken.
-		Create().
-		SetOwner(user).
-		SetScope(verificationtoken.ScopeEmailVerification).
-		SetExpiryAt(time.Now().Add(authConf.PasswordResetLifespan)).
-		Save(ctx)
-	if err != nil {
-		logger.Errorf("Error: Failed to create verification token: %v", err)
-	}
-
-	if serverConf.Environment == "production" {
-		if verificationToken != nil {
-			if _, err := ctrl.emailService.SendVerificationEmail(ctx, verificationToken.Token, user.Email, user.FirstName); err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":  fmt.Sprintf("%v", err),
-					"UserID": user.ID,
-				}).Errorf("Failed to send verification email")
-			}
-		}
-	}
-
 	scopes := payload.Scopes
 
 	// Create a provider profile
@@ -242,6 +220,28 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error",
 			"Failed to create new user", nil)
 		return
+	}
+
+	// Send verification email
+	verificationToken, err := db.Client.VerificationToken.
+		Create().
+		SetOwner(user).
+		SetScope(verificationtoken.ScopeEmailVerification).
+		SetExpiryAt(time.Now().Add(authConf.PasswordResetLifespan)).
+		Save(ctx)
+	if err != nil {
+		logger.Errorf("Error: Failed to create verification token: %v", err)
+	}
+
+	if serverConf.Environment == "production" {
+		if verificationToken != nil {
+			if _, err := ctrl.emailService.SendVerificationEmail(ctx, verificationToken.Token, user.Email, user.FirstName); err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":  fmt.Sprintf("%v", err),
+					"UserID": user.ID,
+				}).Errorf("Failed to send verification email")
+			}
+		}
 	}
 
 	response := &types.RegisterResponse{

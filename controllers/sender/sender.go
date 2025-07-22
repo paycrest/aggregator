@@ -70,8 +70,8 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	}
 	sender := senderCtx.(*ent.SenderProfile)
 
-	if !sender.IsActive && !serverConf.Debug {
-		u.APIResponse(ctx, http.StatusForbidden, "error", "Your account is not active", nil)
+	if !sender.IsActive && serverConf.Environment == "production" {
+		u.APIResponse(ctx, http.StatusForbidden, "error", "Please configure your account settings in the dashboard to activate your account", nil)
 		return
 	}
 

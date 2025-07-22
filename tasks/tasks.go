@@ -1376,8 +1376,8 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for ResolvePaymentOrderMishaps: %v", err)
 	}
 
-	// Index gateway events every 6 minutes
-	_, err = scheduler.Every(6).Minutes().Do(IndexGatewayEvents)
+	// Index gateway events every 10 minutes
+	_, err = scheduler.Every(10).Minutes().Do(IndexGatewayEvents)
 	if err != nil {
 		logger.Errorf("StartCronJobs for IndexGatewayEvents: %v", err)
 	}

@@ -358,7 +358,7 @@ func ProcessSettledOrders(ctx context.Context, network *ent.Network, orderIds []
 		}
 	}
 	logger.WithFields(logger.Fields{
-		"OrderIDs":    orderIds,
+		"OrderIDs":   orderIds,
 		"LockOrders": lockOrderDetails,
 	}).Info("Processing settled orders")
 
@@ -475,6 +475,16 @@ func UpdateReceiveAddressStatus(
 		orderAmountWithFees := paymentOrder.Amount.Add(fees).Round(int32(paymentOrder.Edges.Token.Decimals))
 		transferMatchesOrderAmount := event.Value.Equal(orderAmountWithFees)
 
+		logger.WithFields(logger.Fields{
+			"paymentOrderID":             paymentOrder.ID,
+			"event":                      event,
+			"fees":                       fees,
+			"amount":                     paymentOrder.Amount,
+			"orderAmountWithFees":        orderAmountWithFees,
+			"transferMatchesOrderAmount": transferMatchesOrderAmount,
+			"receiveAddress":             receiveAddress.Address,
+		}).Info("Processing receive address status")
+
 		tx, err := db.Client.Tx(ctx)
 		if err != nil {
 			return true, fmt.Errorf("UpdateReceiveAddressStatus.db: %v", err)
@@ -488,8 +498,8 @@ func UpdateReceiveAddressStatus(
 		orderRecipient := paymentOrder.Edges.Recipient
 		if !transferMatchesOrderAmount {
 			// Update the order amount will be updated to whatever amount was sent to the receive address
-			newOrderAmount := event.Value.Sub(fees.Round(int32(paymentOrder.Edges.Token.Decimals)))
-			paymentOrderUpdate = paymentOrderUpdate.SetAmount(newOrderAmount.Round(int32(paymentOrder.Edges.Token.Decimals)))
+			newOrderAmount := event.Value.Sub(fees.Round(int32(paymentOrder.Edges.Token.Decimals)))                           // 1.99
+			paymentOrderUpdate = paymentOrderUpdate.SetAmount(newOrderAmount.Round(int32(paymentOrder.Edges.Token.Decimals))) // 1.99
 			// Update the rate with the current rate if order is older than 30 mins for a P2P order from the sender dashboard
 			if strings.HasPrefix(orderRecipient.Memo, "P#P") && orderRecipient.ProviderID != "" && paymentOrder.CreatedAt.Before(time.Now().Add(-30*time.Minute)) {
 				providerProfile, err := db.Client.ProviderProfile.
@@ -521,6 +531,15 @@ func UpdateReceiveAddressStatus(
 			}
 			transferMatchesOrderAmount = true
 		}
+		logger.WithFields(logger.Fields{
+			"paymentOrderID":             paymentOrder.ID,
+			"event":                      event,
+			"fees":                       fees,
+			"amount":                     paymentOrder.Amount,
+			"orderAmountWithFees":        orderAmountWithFees,
+			"transferMatchesOrderAmount": transferMatchesOrderAmount,
+			"receiveAddress":             receiveAddress.Address,
+		}).Info("Processing receive address status after update")
 
 		if paymentOrder.AmountPaid.GreaterThanOrEqual(decimal.Zero) && paymentOrder.AmountPaid.LessThan(orderAmountWithFees) {
 			transactionLog, err := tx.TransactionLog.
@@ -531,7 +550,12 @@ func UpdateReceiveAddressStatus(
 				SetNetwork(paymentOrder.Edges.Token.Edges.Network.Identifier).
 				SetMetadata(map[string]interface{}{
 					"GatewayID":       paymentOrder.GatewayID,
-					"transactionData": event,
+					"transactionData": map[string]interface{}{
+						"from":         event.From,
+						"to":           receiveAddress.Address,
+						"value":        event.Value.String(),
+						"blockNumber":  event.BlockNumber,
+					},
 				}).
 				Save(ctx)
 			if err != nil {
@@ -554,6 +578,16 @@ func UpdateReceiveAddressStatus(
 				return true, fmt.Errorf("UpdateReceiveAddressStatus.db: %v", err)
 			}
 		}
+
+		logger.WithFields(logger.Fields{
+			"paymentOrderID":             paymentOrder.ID,
+			"event":                      event,
+			"fees":                       fees,
+			"amount":                     paymentOrder.Amount,
+			"orderAmountWithFees":        orderAmountWithFees,
+			"transferMatchesOrderAmount": transferMatchesOrderAmount,
+			"receiveAddress":             receiveAddress.Address,
+		}).Info("Processing receive address status after payment order update")
 
 		if transferMatchesOrderAmount {
 			// Transfer value equals order amount with fees
