@@ -1334,8 +1334,8 @@ func StartCronJobs() {
 		}
 	}
 
-	// Compute market rate every 10 minutes
-	_, err = scheduler.Every(10).Minutes().Do(ComputeMarketRate)
+	// Compute market rate every 9 minutes
+	_, err = scheduler.Every(9).Minutes().Do(ComputeMarketRate)
 	if err != nil {
 		logger.Errorf("StartCronJobs for ComputeMarketRate after 10 minutes: %v", err)
 	}
@@ -1346,20 +1346,20 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for ProcessBucketQueues: %v", err)
 	}
 
-	// Retry failed webhook notifications every 10 minutes
-	_, err = scheduler.Every(10).Minutes().Do(RetryFailedWebhookNotifications)
+	// Retry failed webhook notifications every 13 minutes
+	_, err = scheduler.Every(13).Minutes().Do(RetryFailedWebhookNotifications)
 	if err != nil {
 		logger.Errorf("StartCronJobs for RetryFailedWebhookNotifications: %v", err)
 	}
 
-	// Sync lock order fulfillments every 1 minute
-	_, err = scheduler.Every(1).Minute().Do(SyncLockOrderFulfillments)
+	// Sync lock order fulfillments every 43 seconds
+	_, err = scheduler.Every(43).Seconds().Do(SyncLockOrderFulfillments)
 	if err != nil {
 		logger.Errorf("StartCronJobs for SyncLockOrderFulfillments: %v", err)
 	}
 
-	// Handle receive address validity every 5 minutes
-	_, err = scheduler.Every(5).Minutes().Do(HandleReceiveAddressValidity)
+	// Handle receive address validity every 6 minutes
+	_, err = scheduler.Every(6).Minutes().Do(HandleReceiveAddressValidity)
 	if err != nil {
 		logger.Errorf("StartCronJobs for HandleReceiveAddressValidity: %v", err)
 	}
@@ -1376,8 +1376,8 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for ResolvePaymentOrderMishaps: %v", err)
 	}
 
-	// Index gateway events every 31 minutes
-	_, err = scheduler.Every(31).Minutes().Do(IndexGatewayEvents)
+	// Index gateway events every 6 minutes
+	_, err = scheduler.Every(6).Minutes().Do(IndexGatewayEvents)
 	if err != nil {
 		logger.Errorf("StartCronJobs for IndexGatewayEvents: %v", err)
 	}
