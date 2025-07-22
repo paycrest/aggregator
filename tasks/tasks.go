@@ -5,11 +5,14 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math"
+	"math/big"
 	"strings"
 	"sync"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/go-co-op/gocron"
 	"github.com/google/uuid"
 	fastshot "github.com/opus-domini/fast-shot"
@@ -30,6 +33,7 @@ import (
 	"github.com/paycrest/aggregator/ent/webhookretryattempt"
 	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/common"
+	"github.com/paycrest/aggregator/services/contracts"
 	"github.com/paycrest/aggregator/services/indexer"
 	orderService "github.com/paycrest/aggregator/services/order"
 	"github.com/paycrest/aggregator/storage"
@@ -885,6 +889,130 @@ func HandleReceiveAddressValidity() error {
 	return nil
 }
 
+// ProcessExpiredOrdersRefunds processes expired orders and transfers any remaining funds to refund addresses
+func ProcessExpiredOrdersRefunds() error {
+	ctx := context.Background()
+
+	// Get all payment orders that are expired and initiated in the last 24 hours
+	expiredOrders, err := storage.Client.PaymentOrder.
+		Query().
+		Where(
+			paymentorder.StatusEQ(paymentorder.StatusExpired),
+			paymentorder.CreatedAtGTE(time.Now().Add(-30*time.Minute)), // Should match jobs retrying expired orders refunds
+		).
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
+		WithReceiveAddress().
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("ProcessExpiredOrdersRefunds.fetchExpiredOrders: %w", err)
+	}
+
+	if len(expiredOrders) == 0 {
+		return nil
+	}
+
+	engineService := services.NewEngineService()
+
+	var wg sync.WaitGroup
+	semaphore := make(chan struct{}, 5)
+
+	for _, order := range expiredOrders {
+		wg.Add(1)
+		go func(order *ent.PaymentOrder) {
+			defer wg.Done()
+			semaphore <- struct{}{}        // Acquire semaphore
+			defer func() { <-semaphore }() // Release semaphore
+
+			if order.Edges.ReceiveAddress == nil {
+				return
+			}
+
+			receiveAddress := order.Edges.ReceiveAddress.Address
+			tokenContract := order.Edges.Token.ContractAddress
+			network := order.Edges.Token.Edges.Network
+			rpcEndpoint := network.RPCEndpoint
+			chainID := network.ChainID
+
+			// Skip if no return address (nowhere to refund to)
+			if order.ReturnAddress == "" {
+				return
+			}
+
+			// Check balance of token at receive address
+			balance, err := getTokenBalance(rpcEndpoint, tokenContract, receiveAddress)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":             err.Error(),
+					"OrderID":           order.ID.String(),
+					"ReceiveAddress":    receiveAddress,
+					"TokenContract":     tokenContract,
+					"NetworkIdentifier": network.Identifier,
+				}).Errorf("Failed to check token balance for receive address %s", receiveAddress)
+				return
+			}
+
+			if balance.Cmp(big.NewInt(0)) == 0 {
+				return
+			}
+
+			// Prepare transfer method call
+			method := "function transfer(address recipient, uint256 amount) public returns (bool)"
+			params := []interface{}{
+				order.ReturnAddress, // recipient address
+				balance.String(),    // amount to transfer
+			}
+
+			// Send the transfer transaction
+			_, err = engineService.SendContractCall(
+				ctx,
+				chainID,
+				receiveAddress,
+				tokenContract,
+				method,
+				params,
+			)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":             err.Error(),
+					"OrderID":           order.ID.String(),
+					"ReceiveAddress":    receiveAddress,
+					"ReturnAddress":     order.ReturnAddress,
+					"Balance":           balance.String(),
+					"TokenContract":     tokenContract,
+					"NetworkIdentifier": network.Identifier,
+				}).Errorf("Failed to send refund transfer transaction")
+				return
+			}
+
+		}(order)
+	}
+
+	wg.Wait()
+	return nil
+}
+
+func getTokenBalance(rpcEndpoint string, tokenContractAddress string, walletAddress string) (*big.Int, error) {
+	client, err := ethclient.Dial(rpcEndpoint)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create RPC client: %w", err)
+	}
+	defer client.Close()
+
+	tokenContract, err := contracts.NewERC20Token(ethcommon.HexToAddress(tokenContractAddress), client)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create token contract instance: %w", err)
+	}
+
+	balance, err := tokenContract.BalanceOf(nil, ethcommon.HexToAddress(walletAddress))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get token balance: %w", err)
+	}
+
+	return balance, nil
+}
+
 // SubscribeToRedisKeyspaceEvents subscribes to redis keyspace events according to redis.conf settings
 func SubscribeToRedisKeyspaceEvents() {
 	// ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -1386,6 +1514,12 @@ func StartCronJobs() {
 	_, err = scheduler.Every(5).Seconds().Do(TaskIndexBlockchainEvents)
 	if err != nil {
 		logger.Errorf("StartCronJobs for IndexBlockchainEvents: %v", err)
+	}
+
+	// Process expired orders refunds every 30 minutes
+	_, err = scheduler.Every(30).Minutes().Do(ProcessExpiredOrdersRefunds)
+	if err != nil {
+		logger.Errorf("StartCronJobs for ProcessExpiredOrdersRefunds: %v", err)
 	}
 
 	// Start scheduler
