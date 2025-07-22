@@ -889,16 +889,19 @@ func HandleReceiveAddressValidity() error {
 	return nil
 }
 
+// RefundsInterval defines the interval for processing expired orders refunds
+const RefundsInterval = 30
+
 // ProcessExpiredOrdersRefunds processes expired orders and transfers any remaining funds to refund addresses
 func ProcessExpiredOrdersRefunds() error {
 	ctx := context.Background()
 
-	// Get all payment orders that are expired and initiated in the last 24 hours
+	// Get all payment orders that are expired and initiated in the last RefundsInterval
 	expiredOrders, err := storage.Client.PaymentOrder.
 		Query().
 		Where(
 			paymentorder.StatusEQ(paymentorder.StatusExpired),
-			paymentorder.CreatedAtGTE(time.Now().Add(-30*time.Minute)), // Should match jobs retrying expired orders refunds
+			paymentorder.CreatedAtGTE(time.Now().Add(-(RefundsInterval * time.Minute))), // Should match jobs retrying expired orders refunds
 		).
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
@@ -922,8 +925,8 @@ func ProcessExpiredOrdersRefunds() error {
 		wg.Add(1)
 		go func(order *ent.PaymentOrder) {
 			defer wg.Done()
-			semaphore <- struct{}{}        // Acquire semaphore
-			defer func() { <-semaphore }() // Release semaphore
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
 
 			if order.Edges.ReceiveAddress == nil {
 				return
@@ -1516,8 +1519,8 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for IndexBlockchainEvents: %v", err)
 	}
 
-	// Process expired orders refunds every 30 minutes
-	_, err = scheduler.Every(30).Minutes().Do(ProcessExpiredOrdersRefunds)
+	// Process expired orders refunds every RefundsInterval
+	_, err = scheduler.Every(RefundsInterval).Minutes().Do(ProcessExpiredOrdersRefunds)
 	if err != nil {
 		logger.Errorf("StartCronJobs for ProcessExpiredOrdersRefunds: %v", err)
 	}

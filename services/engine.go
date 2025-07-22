@@ -1015,7 +1015,30 @@ func (s *EngineService) SendContractCall(ctx context.Context, chainID int64, fro
 		return "", fmt.Errorf("failed to parse JSON response: %w", err)
 	}
 
-	queueID = data["result"].(map[string]interface{})["transactions"].([]interface{})[0].(map[string]interface{})["id"].(string)
+	// Extract result field
+	result, ok := data["result"].(map[string]interface{})
+	if !ok {
+		return "", fmt.Errorf("invalid response structure: missing or invalid 'result' field")
+	}
+
+	transactionsRaw, ok := result["transactions"].([]interface{})
+	if !ok {
+		return "", fmt.Errorf("invalid response structure: missing or invalid 'transactions' field")
+	}
+
+	if len(transactionsRaw) == 0 {
+		return "", fmt.Errorf("invalid response structure: empty 'transactions' array")
+	}
+
+	firstTransaction, ok := transactionsRaw[0].(map[string]interface{})
+	if !ok {
+		return "", fmt.Errorf("invalid response structure: invalid transaction object")
+	}
+
+	queueID, ok = firstTransaction["id"].(string)
+	if !ok {
+		return "", fmt.Errorf("invalid response structure: missing or invalid 'id' field")
+	}
 
 	return queueID, nil
 }
