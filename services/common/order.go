@@ -77,8 +77,8 @@ func CreateLockPaymentOrder(
 	// This ensures the payment order is updated without blocking the main flow
 	go func() {
 		// Retry loop to wait for payment order to be created if blockchain event is indexed first
-		maxRetries := 10
-		retryDelay := 250 * time.Millisecond
+		maxRetries := 30
+		retryDelay := 500 * time.Millisecond
 
 		err := utils.Retry(maxRetries, retryDelay, func() error {
 			paymentOrder, fetchErr := db.Client.PaymentOrder.
@@ -87,7 +87,6 @@ func CreateLockPaymentOrder(
 					paymentorder.MessageHashEQ(event.MessageHash),
 				).
 				Only(ctx)
-
 			if fetchErr != nil {
 				if ent.IsNotFound(fetchErr) {
 					return fetchErr // Return error to trigger retry
@@ -650,7 +649,7 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 				),
 			),
 		).
-		SetBlockNumber(int64(event.BlockNumber)).
+		SetBlockNumber(event.BlockNumber).
 		SetTxHash(event.TxHash).
 		SetStatus(lockpaymentorder.StatusSettled)
 

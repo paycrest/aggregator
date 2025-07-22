@@ -217,7 +217,9 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 		if err != nil {
 			logger.Errorf("Failed to process OrderCreated events: %v", err)
 		} else {
-			logger.Infof("Successfully processed %d OrderCreated events", len(orderCreatedEvents))
+			if token.Edges.Network.ChainID != 56 {
+				logger.Infof("Successfully processed %d OrderCreated events", len(orderCreatedEvents))
+			}
 		}
 		eventCounts.OrderCreated = len(orderCreatedEvents)
 	}
@@ -551,7 +553,9 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 		if err != nil {
 			logger.Errorf("Failed to process OrderCreated events: %v", err)
 		} else {
-			logger.Infof("Successfully processed %d OrderCreated events", len(orderCreatedEvents))
+			if network.ChainID != 56 {
+				logger.Infof("Successfully processed %d OrderCreated events", len(orderCreatedEvents))
+			}
 		}
 	}
 	eventCounts.OrderCreated = len(orderCreatedEvents)
@@ -568,7 +572,9 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 		if err != nil {
 			logger.Errorf("Failed to process OrderSettled events: %v", err)
 		} else {
-			logger.Infof("Successfully processed %d OrderSettled events", len(orderSettledEvents))
+			if network.ChainID != 56 {
+				logger.Infof("Successfully processed %d OrderSettled events", len(orderSettledEvents))
+			}
 		}
 	}
 	eventCounts.OrderSettled = len(orderSettledEvents)
@@ -585,7 +591,9 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 		if err != nil {
 			logger.Errorf("Failed to process OrderRefunded events: %v", err)
 		} else {
-			logger.Infof("Successfully processed %d OrderRefunded events", len(orderRefundedEvents))
+			if network.ChainID != 56 {
+				logger.Infof("Successfully processed %d OrderRefunded events", len(orderRefundedEvents))
+			}
 		}
 	}
 	eventCounts.OrderRefunded = len(orderRefundedEvents)

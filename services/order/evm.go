@@ -114,6 +114,10 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 		}
 	}
 
+	if order.MessageHash != "" {
+		return nil
+	}
+
 	// Create createOrder data
 	encryptedOrderRecipient, err := cryptoUtils.EncryptOrderRecipient(order.Edges.Recipient)
 	if err != nil {
