@@ -348,6 +348,20 @@ func ProcessSettledOrders(ctx context.Context, network *ent.Network, orderIds []
 		return fmt.Errorf("IndexOrderSettled.fetchLockOrders: %w", err)
 	}
 
+	lockOrderDetails := make([]map[string]interface{}, len(lockOrders))
+	for i, lo := range lockOrders {
+		lockOrderDetails[i] = map[string]interface{}{
+			"status":      lo.Status,
+			"amount":      lo.Amount,
+			"messageHash": lo.MessageHash,
+			"gatewayID":   lo.GatewayID,
+		}
+	}
+	logger.WithFields(logger.Fields{
+		"OrderIDs":    orderIds,
+		"LockOrders": lockOrderDetails,
+	}).Info("Processing settled orders")
+
 	var wg sync.WaitGroup
 	for _, lockOrder := range lockOrders {
 		settledEvent, ok := orderIdToEvent[lockOrder.GatewayID]

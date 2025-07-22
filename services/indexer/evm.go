@@ -267,7 +267,7 @@ func (s *IndexerEVM) indexReceiveAddressByUserAddress(ctx context.Context, token
 	var logMessage string
 
 	if fromBlock == 0 && toBlock == 0 {
-		// No block range - get last 10 transactions
+		// No block range - get last 5 transactions
 		limit = 5
 		if token.Edges.Network.ChainID != 56 {
 			logMessage = fmt.Sprintf("Processing transactions for address: %s", userAddress)
@@ -348,11 +348,7 @@ func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network 
 	var logMessage string
 
 	if fromBlock == 0 && toBlock == 0 {
-		if network.ChainID == 56 {
-			limit = 5
-		} else {
-			limit = 50
-		}
+		limit = 10
 		if network.ChainID != 56 {
 			logMessage = fmt.Sprintf("Processing last %d transactions for gateway contract: %s", limit, address)
 		}
