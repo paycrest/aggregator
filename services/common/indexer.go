@@ -291,15 +291,15 @@ func ProcessTransfers(
 func ProcessCreatedOrders(
 	ctx context.Context,
 	network *ent.Network,
-	txHashes []string,
-	hashToEvent map[string]*types.OrderCreatedEvent,
+	orderIds []string,
+	orderIdToEvent map[string]*types.OrderCreatedEvent,
 	orderService types.OrderService,
 	priorityQueueService *services.PriorityQueueService,
 ) error {
 	var wg sync.WaitGroup
 
-	for _, txHash := range txHashes {
-		createdEvent, ok := hashToEvent[txHash]
+	for _, orderId := range orderIds {
+		createdEvent, ok := orderIdToEvent[orderId]
 		if !ok {
 			continue
 		}
