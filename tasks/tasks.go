@@ -1180,8 +1180,8 @@ func ResolvePaymentOrderMishaps() error {
 		go func(network *ent.Network) {
 			ctx := context.Background()
 
-			// Only resolve missed transfers to receive addresses
-			resolveMissedTransfers(ctx, network)
+			// Only resolve missed Transfer and OrderCreated events
+			resolveMissedEvents(ctx, network)
 		}(network)
 	}
 
@@ -1239,21 +1239,17 @@ func IndexGatewayEvents() error {
 	return nil
 }
 
-// resolveMissedTransfers resolves cases where transfers to receive addresses were missed
-func resolveMissedTransfers(ctx context.Context, network *ent.Network) {
+// resolveMissedEvents resolves cases where transfers to receive addresses were missed
+func resolveMissedEvents(ctx context.Context, network *ent.Network) {
 	// Find payment orders with missed transfers
 	orders, err := storage.Client.PaymentOrder.
 		Query().
 		Where(
 			paymentorder.StatusEQ(paymentorder.StatusInitiated),
-			paymentorder.TxHashIsNil(),
-			paymentorder.BlockNumberEQ(0),
-			paymentorder.AmountPaidEQ(decimal.Zero),
-			paymentorder.FromAddressIsNil(),
 			paymentorder.CreatedAtLTE(time.Now().Add(-5*time.Minute)),
 			// paymentorder.CreatedAtGTE(time.Now().Add(-15*time.Minute)),
 			paymentorder.HasReceiveAddressWith(
-				receiveaddress.StatusEQ(receiveaddress.StatusUnused),
+				receiveaddress.StatusNEQ(receiveaddress.StatusExpired),
 			),
 			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
@@ -1270,7 +1266,7 @@ func resolveMissedTransfers(ctx context.Context, network *ent.Network) {
 		logger.WithFields(logger.Fields{
 			"Error":             fmt.Sprintf("%v", err),
 			"NetworkIdentifier": network.Identifier,
-		}).Errorf("ResolvePaymentOrderMishaps.resolveMissedTransfers.fetchOrders")
+		}).Errorf("ResolvePaymentOrderMishaps.resolveMissedEvents.fetchOrders")
 		return
 	}
 
@@ -1281,7 +1277,7 @@ func resolveMissedTransfers(ctx context.Context, network *ent.Network) {
 		logger.WithFields(logger.Fields{
 			"Error":             fmt.Sprintf("%v", indexerErr),
 			"NetworkIdentifier": network.Identifier,
-		}).Errorf("ResolvePaymentOrderMishaps.resolveMissedTransfers.createIndexer")
+		}).Errorf("ResolvePaymentOrderMishaps.resolveMissedEvents.createIndexer")
 		return
 	}
 	processedCount := 0
@@ -1294,7 +1290,7 @@ func resolveMissedTransfers(ctx context.Context, network *ent.Network) {
 				"ReceiveAddress":    order.Edges.ReceiveAddress.Address,
 				"OrderID":           order.ID,
 				"Progress":          fmt.Sprintf("%d/%d", i+1, len(orders)),
-			}).Infof("ResolvePaymentOrderMishaps.resolveMissedTransfers")
+			}).Infof("ResolvePaymentOrderMishaps.resolveMissedEvents")
 
 			_, err = indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, order.Edges.ReceiveAddress.Address, 0, 0, "")
 			if err != nil {
@@ -1303,7 +1299,7 @@ func resolveMissedTransfers(ctx context.Context, network *ent.Network) {
 					"NetworkIdentifier": network.Identifier,
 					"ReceiveAddress":    order.Edges.ReceiveAddress.Address,
 					"OrderID":           order.ID,
-				}).Errorf("ResolvePaymentOrderMishaps.resolveMissedTransfers.indexReceiveAddress")
+				}).Errorf("ResolvePaymentOrderMishaps.resolveMissedEvents.indexReceiveAddress")
 				errorCount++
 				continue // Continue with other orders even if one fails
 			}
