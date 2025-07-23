@@ -1251,7 +1251,7 @@ func resolveMissedTransfers(ctx context.Context, network *ent.Network) {
 			paymentorder.AmountPaidEQ(decimal.Zero),
 			paymentorder.FromAddressIsNil(),
 			paymentorder.CreatedAtLTE(time.Now().Add(-5*time.Minute)),
-			paymentorder.CreatedAtGTE(time.Now().Add(-15*time.Minute)),
+			// paymentorder.CreatedAtGTE(time.Now().Add(-15*time.Minute)),
 			paymentorder.HasReceiveAddressWith(
 				receiveaddress.StatusEQ(receiveaddress.StatusUnused),
 			),
