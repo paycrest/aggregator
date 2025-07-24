@@ -2540,3 +2540,87 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 
 	u.APIResponse(ctx, http.StatusOK, "success", responseMsg, response)
 }
+
+// IndexProviderAddress controller indexes provider addresses for OrderSettled events
+func (ctrl *Controller) IndexProviderAddress(ctx *gin.Context) {
+	var request struct {
+		Network      string `json:"network" binding:"required"`
+		ProviderID   string `json:"providerId" binding:"required"`
+		TokenSymbol  string `json:"tokenSymbol" binding:"required"`
+		CurrencyCode string `json:"currencyCode" binding:"required"`
+		FromBlock    int64  `json:"fromBlock"`
+		ToBlock      int64  `json:"toBlock"`
+		TxHash       string `json:"txHash"`
+	}
+
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid request payload", nil)
+		return
+	}
+
+	// Get network
+	network, err := storage.Client.Network.
+		Query().
+		Where(networkent.IdentifierEQ(request.Network)).
+		Only(ctx)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Network not found", nil)
+		return
+	}
+
+	// Get token
+	token, err := storage.Client.Token.
+		Query().
+		Where(
+			tokenEnt.SymbolEQ(request.TokenSymbol),
+			tokenEnt.HasNetworkWith(networkent.IDEQ(network.ID)),
+		).
+		WithNetwork().
+		Only(ctx)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Token not found", nil)
+		return
+	}
+
+	// Get provider order token to find the provider address
+	providerOrderToken, err := storage.Client.ProviderOrderToken.
+		Query().
+		Where(
+			providerordertoken.HasProviderWith(providerprofile.IDEQ(request.ProviderID)),
+			providerordertoken.HasTokenWith(tokenEnt.IDEQ(token.ID)),
+			providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(request.CurrencyCode)),
+			providerordertoken.AddressNEQ(""),
+		).
+		Only(ctx)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Provider order token not found", nil)
+		return
+	}
+
+	// Create indexer instance
+	var indexerInstance types.Indexer
+	if strings.HasPrefix(network.Identifier, "tron") {
+		indexerInstance = indexer.NewIndexerTron()
+	} else {
+		indexerInstance, err = indexer.NewIndexerEVM()
+		if err != nil {
+			logger.Errorf("Failed to create indexer: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create indexer", nil)
+			return
+		}
+	}
+
+	// Index provider address
+	eventCounts, err := indexerInstance.IndexProviderAddress(ctx, network, providerOrderToken.Address, request.FromBlock, request.ToBlock, request.TxHash)
+	if err != nil {
+		logger.Errorf("Failed to index provider address: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to index provider address", nil)
+		return
+	}
+
+	response := types.IndexTransactionResponse{
+		Events: *eventCounts,
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Provider address indexed successfully", response)
+}

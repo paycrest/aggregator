@@ -46,6 +46,9 @@ func RegisterRoutes(route *gin.Engine) {
 	// Reindex transaction endpoint
 	v1.GET("reindex/:network/:tx_hash_or_address", ctrl.IndexTransaction)
 
+	// Index provider address endpoint
+	v1.POST("index-provider-address", ctrl.IndexProviderAddress)
+
 	// KYB route
 	v1.POST("slack-interaction", middleware.SlackVerificationMiddleware, ctrl.SlackInteractionHandler)
 	v1.POST("kyb-submission", middleware.JWTMiddleware, ctrl.HandleKYBSubmission)

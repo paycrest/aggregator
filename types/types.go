@@ -110,6 +110,9 @@ type Indexer interface {
 
 	// Index receive address events
 	IndexReceiveAddress(ctx context.Context, token *ent.Token, address string, fromBlock int64, toBlock int64, txHash string) (*EventCounts, error)
+
+	// Index provider address events (OrderSettled)
+	IndexProviderAddress(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) (*EventCounts, error)
 }
 
 // KYCProvider defines the interface for KYC verification providers

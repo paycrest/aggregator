@@ -341,6 +341,29 @@ func (s *IndexerEVM) IndexGateway(ctx context.Context, network *ent.Network, add
 	return eventCounts, nil
 }
 
+// IndexProviderAddress indexes OrderSettled events for a provider address
+func (s *IndexerEVM) IndexProviderAddress(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) (*types.EventCounts, error) {
+	eventCounts := &types.EventCounts{}
+
+	if txHash != "" {
+		// Index provider address events for this specific transaction
+		counts, err := s.indexProviderAddressByTransaction(ctx, network, address, txHash)
+		if err != nil {
+			logger.Errorf("Error processing provider address transaction %s: %v", txHash[:10]+"...", err)
+			return eventCounts, err
+		}
+		return counts, nil
+	}
+
+	// Index provider address events for the address
+	err := s.indexProviderAddressByAddress(ctx, network, address, fromBlock, toBlock)
+	if err != nil {
+		return eventCounts, err
+	}
+
+	return eventCounts, nil
+}
+
 // indexGatewayByContractAddress processes gateway contract's transaction history for gateway events
 func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64) error {
 	// Determine parameters based on whether block range is provided
@@ -595,4 +618,146 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 	eventCounts.OrderRefunded = len(orderRefundedEvents)
 
 	return eventCounts, nil
+}
+
+// indexProviderAddressByTransaction processes a specific transaction for provider address OrderSettled events
+func (s *IndexerEVM) indexProviderAddressByTransaction(ctx context.Context, network *ent.Network, providerAddress string, txHash string) (*types.EventCounts, error) {
+	eventCounts := &types.EventCounts{}
+
+	// Get OrderSettled events for this transaction
+	events, err := s.engineService.GetContractEventsWithFallback(
+		ctx,
+		network,
+		network.GatewayContractAddress,
+		0,
+		0,
+		[]string{utils.OrderSettledEventSignature},
+		txHash,
+		map[string]string{
+			"filter_transaction_hash": txHash,
+			"sort_by":                 "block_number",
+			"sort_order":              "desc",
+			"decode":                  "true",
+		},
+	)
+	if err != nil {
+		if err.Error() == "no events found" {
+			return eventCounts, nil // No OrderSettled events found for this transaction
+		}
+		return eventCounts, fmt.Errorf("error getting OrderSettled events for transaction %s: %w", txHash[:10]+"...", err)
+	}
+
+	// Process OrderSettled events for the specific provider address
+	orderSettledEvents := []*types.OrderSettledEvent{}
+
+	for _, event := range events {
+		eventMap := event.(map[string]interface{})
+		decoded, ok := eventMap["decoded"].(map[string]interface{})
+		if !ok || decoded == nil {
+			continue
+		}
+		eventParams := decoded
+		if eventParams["non_indexed_params"] == nil {
+			continue
+		}
+
+		// Check if this event is from the provider address we're looking for
+		liquidityProvider := ethcommon.HexToAddress(eventParams["indexed_params"].(map[string]interface{})["liquidityProvider"].(string)).Hex()
+		if !strings.EqualFold(liquidityProvider, providerAddress) {
+			continue
+		}
+
+		blockNumber := int64(eventMap["block_number"].(float64))
+		txHash := eventMap["transaction_hash"].(string)
+
+		settlePercent, err := decimal.NewFromString(eventParams["non_indexed_params"].(map[string]interface{})["settlePercent"].(string))
+		if err != nil {
+			continue
+		}
+
+		settledEvent := &types.OrderSettledEvent{
+			BlockNumber:       blockNumber,
+			TxHash:            txHash,
+			SplitOrderId:      eventParams["non_indexed_params"].(map[string]interface{})["splitOrderId"].(string),
+			OrderId:           eventParams["indexed_params"].(map[string]interface{})["orderId"].(string),
+			LiquidityProvider: liquidityProvider,
+			SettlePercent:     settlePercent,
+		}
+		orderSettledEvents = append(orderSettledEvents, settledEvent)
+	}
+
+	// Process OrderSettled events
+	if len(orderSettledEvents) > 0 {
+		orderIds := []string{}
+		orderIdToEvent := make(map[string]*types.OrderSettledEvent)
+		for _, event := range orderSettledEvents {
+			orderIds = append(orderIds, event.OrderId)
+			orderIdToEvent[event.OrderId] = event
+		}
+		err = common.ProcessSettledOrders(ctx, network, orderIds, orderIdToEvent)
+		if err != nil {
+			logger.Errorf("Failed to process OrderSettled events: %v", err)
+		} else {
+			if network.ChainID != 56 {
+				logger.Infof("Successfully processed %d OrderSettled events for provider %s", len(orderSettledEvents), providerAddress)
+			}
+		}
+	}
+	eventCounts.OrderSettled = len(orderSettledEvents)
+
+	return eventCounts, nil
+}
+
+// indexProviderAddressByAddress processes provider address's transaction history for OrderSettled events
+func (s *IndexerEVM) indexProviderAddressByAddress(ctx context.Context, network *ent.Network, providerAddress string, fromBlock int64, toBlock int64) error {
+	// Determine parameters based on whether block range is provided
+	var limit int
+	var logMessage string
+
+	if fromBlock == 0 && toBlock == 0 {
+		limit = 20
+		if network.ChainID != 56 {
+			logMessage = fmt.Sprintf("Processing last %d transactions for provider address: %s", limit, providerAddress)
+		}
+	} else {
+		// Block range provided - get up to 100 transactions in range
+		limit = 100
+		if network.ChainID != 56 {
+			logMessage = fmt.Sprintf("Processing transactions in block range %d-%d for provider address: %s", fromBlock, toBlock, providerAddress)
+		}
+	}
+
+	// Get provider address's transaction history with fallback
+	transactions, err := s.getAddressTransactionHistoryWithFallback(ctx, network.ChainID, providerAddress, limit, fromBlock, toBlock)
+	if err != nil {
+		return fmt.Errorf("failed to get provider transaction history: %w", err)
+	}
+
+	if len(transactions) == 0 {
+		if fromBlock == 0 && toBlock == 0 {
+			logger.Infof("No transactions found for provider address: %s", providerAddress)
+		} else {
+			logger.Infof("No transactions found in block range %d-%d for provider address: %s", fromBlock, toBlock, providerAddress)
+		}
+		return nil
+	}
+
+	logger.Infof(logMessage)
+
+	// Process each transaction to find OrderSettled events
+	for i, tx := range transactions {
+		txHash := tx["hash"].(string)
+		if network.ChainID != 56 {
+			logger.Infof("Processing provider transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
+		}
+
+		// Index provider address events for this specific transaction
+		_, err := s.indexProviderAddressByTransaction(ctx, network, providerAddress, txHash)
+		if err != nil {
+			logger.Errorf("Error processing provider transaction %s: %v", txHash[:10]+"...", err)
+			continue // Skip transactions with errors
+		}
+	}
+
+	return nil
 }

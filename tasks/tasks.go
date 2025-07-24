@@ -12,7 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/go-co-op/gocron"
 	"github.com/google/uuid"
-	fastshot "github.com/opus-domini/fast-shot"
+	"github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
@@ -1313,6 +1313,108 @@ func resolveMissedEvents(ctx context.Context, network *ent.Network) {
 	}
 }
 
+// ProcessStuckValidatedOrders processes orders stuck on validated status by indexing provider addresses
+func ProcessStuckValidatedOrders() error {
+	ctx := context.Background()
+
+	// Get all networks
+	networks, err := storage.Client.Network.Query().All(ctx)
+	if err != nil {
+		return fmt.Errorf("ProcessStuckValidatedOrders.getNetworks: %w", err)
+	}
+
+	for _, network := range networks {
+		go func(network *ent.Network) {
+			// Get stuck validated orders for this network
+			lockOrders, err := storage.Client.LockPaymentOrder.
+				Query().
+				Where(
+					lockpaymentorder.StatusEQ(lockpaymentorder.StatusValidated),
+					lockpaymentorder.HasTokenWith(
+						tokenent.HasNetworkWith(
+							networkent.IDEQ(network.ID),
+						),
+					),
+					lockpaymentorder.HasProvider(),
+					lockpaymentorder.HasProvisionBucket(),
+				).
+				WithToken(func(tq *ent.TokenQuery) {
+					tq.WithNetwork()
+				}).
+				WithProvider().
+				WithProvisionBucket(func(pb *ent.ProvisionBucketQuery) {
+					pb.WithCurrency()
+				}).
+				All(ctx)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":             fmt.Sprintf("%v", err),
+					"NetworkIdentifier": network.Identifier,
+				}).Errorf("ProcessStuckValidatedOrders.getLockOrders")
+				return
+			}
+
+			if len(lockOrders) == 0 {
+				return
+			}
+
+			logger.WithFields(logger.Fields{
+				"NetworkIdentifier": network.Identifier,
+				"OrderCount":        len(lockOrders),
+			}).Infof("Processing stuck validated orders")
+
+			// Create indexer instance
+			var indexerInstance types.Indexer
+			if strings.HasPrefix(network.Identifier, "tron") {
+				indexerInstance = indexer.NewIndexerTron()
+			} else {
+				indexerInstance, err = indexer.NewIndexerEVM()
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":             fmt.Sprintf("%v", err),
+						"NetworkIdentifier": network.Identifier,
+					}).Errorf("ProcessStuckValidatedOrders.createIndexer")
+					return
+				}
+			}
+
+			// Process each stuck order
+			for _, order := range lockOrders {
+				// Get provider address for this order
+				providerAddress, err := common.GetProviderAddressFromLockOrder(ctx, order)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":             fmt.Sprintf("%v", err),
+						"OrderID":           order.ID.String(),
+						"NetworkIdentifier": network.Identifier,
+					}).Errorf("ProcessStuckValidatedOrders.getProviderAddress")
+					continue
+				}
+
+				// Index provider address for OrderSettled events
+				_, err = indexerInstance.IndexProviderAddress(ctx, network, providerAddress, 0, 0, "")
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":             fmt.Sprintf("%v", err),
+						"OrderID":           order.ID.String(),
+						"ProviderAddress":   providerAddress,
+						"NetworkIdentifier": network.Identifier,
+					}).Errorf("ProcessStuckValidatedOrders.indexProviderAddress")
+					continue
+				}
+
+				logger.WithFields(logger.Fields{
+					"OrderID":           order.ID.String(),
+					"ProviderAddress":   providerAddress,
+					"NetworkIdentifier": network.Identifier,
+				}).Infof("Successfully indexed provider address for stuck order")
+			}
+		}(network)
+	}
+
+	return nil
+}
+
 // StartCronJobs starts cron jobs
 func StartCronJobs() {
 	scheduler := gocron.NewScheduler(time.UTC)
@@ -1376,6 +1478,12 @@ func StartCronJobs() {
 	_, err = scheduler.Every(10).Minutes().Do(IndexGatewayEvents)
 	if err != nil {
 		logger.Errorf("StartCronJobs for IndexGatewayEvents: %v", err)
+	}
+
+	// Process stuck validated orders every 12 minutes
+	_, err = scheduler.Every(12).Minutes().Do(ProcessStuckValidatedOrders)
+	if err != nil {
+		logger.Errorf("StartCronJobs for ProcessStuckValidatedOrders: %v", err)
 	}
 
 	// Index blockchain events every 5 seconds
