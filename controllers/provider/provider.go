@@ -500,7 +500,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		// Mark payment order as validated and send webhook notification to sender
 		paymentOrder, err := storage.Client.PaymentOrder.
 			Query().
-			Where(paymentorder.GatewayIDEQ(fulfillment.Edges.Order.GatewayID)).
+			Where(paymentorder.MessageHashEQ(fulfillment.Edges.Order.MessageHash)).
 			WithSenderProfile().
 			WithRecipient().
 			WithToken(func(tq *ent.TokenQuery) {
