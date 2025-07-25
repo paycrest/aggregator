@@ -66,7 +66,7 @@ func RetryStaleUserOperations() error {
 		}).
 		Where(
 			paymentorder.Or(
-				paymentorder.UpdatedAtGTE(time.Now().Add(-10*time.Minute)),
+				paymentorder.UpdatedAtGTE(time.Now().Add(-5*time.Minute)),
 				paymentorder.HasRecipientWith(
 					paymentorderrecipient.MemoHasPrefix("P#P"),
 				),
@@ -154,7 +154,7 @@ func RetryStaleUserOperations() error {
 		Query().
 		Where(
 			lockpaymentorder.GatewayIDNEQ(""),
-			lockpaymentorder.UpdatedAtGTE(time.Now().Add(-10*time.Minute)),
+			lockpaymentorder.UpdatedAtGTE(time.Now().Add(-5*time.Minute)),
 			lockpaymentorder.Or(
 				lockpaymentorder.And(
 					lockpaymentorder.Or(
@@ -1435,7 +1435,7 @@ func StartCronJobs() {
 	// Compute market rate every 9 minutes
 	_, err = scheduler.Every(9).Minutes().Do(ComputeMarketRate)
 	if err != nil {
-		logger.Errorf("StartCronJobs for ComputeMarketRate after 10 minutes: %v", err)
+		logger.Errorf("StartCronJobs for ComputeMarketRate: %v", err)
 	}
 
 	// Refresh provision bucket priority queues every X minutes
@@ -1450,8 +1450,8 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for RetryFailedWebhookNotifications: %v", err)
 	}
 
-	// Sync lock order fulfillments every 43 seconds
-	_, err = scheduler.Every(43).Seconds().Do(SyncLockOrderFulfillments)
+	// Sync lock order fulfillments every 32 seconds
+	_, err = scheduler.Every(32).Seconds().Do(SyncLockOrderFulfillments)
 	if err != nil {
 		logger.Errorf("StartCronJobs for SyncLockOrderFulfillments: %v", err)
 	}
@@ -1462,20 +1462,20 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for HandleReceiveAddressValidity: %v", err)
 	}
 
-	// Retry stale user operations every 2 minutes
-	_, err = scheduler.Every(2).Minutes().Do(RetryStaleUserOperations)
+	// Retry stale user operations every 60 seconds
+	_, err = scheduler.Every(60).Seconds().Do(RetryStaleUserOperations)
 	if err != nil {
 		logger.Errorf("StartCronJobs for RetryStaleUserOperations: %v", err)
 	}
 
-	// Resolve payment order mishaps every 90 seconds
-	_, err = scheduler.Every(90).Seconds().Do(ResolvePaymentOrderMishaps)
+	// Resolve payment order mishaps every 15 seconds
+	_, err = scheduler.Every(15).Seconds().Do(ResolvePaymentOrderMishaps)
 	if err != nil {
 		logger.Errorf("StartCronJobs for ResolvePaymentOrderMishaps: %v", err)
 	}
 
-	// Index gateway events every 10 minutes
-	_, err = scheduler.Every(10).Minutes().Do(IndexGatewayEvents)
+	// Index gateway events every 6 minutes
+	_, err = scheduler.Every(6).Minutes().Do(IndexGatewayEvents)
 	if err != nil {
 		logger.Errorf("StartCronJobs for IndexGatewayEvents: %v", err)
 	}

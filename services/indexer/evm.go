@@ -227,35 +227,38 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 	return eventCounts, nil
 }
 
-// getAddressTransactionHistoryWithFallback tries engine service first and falls back to etherscan
+// getAddressTransactionHistoryWithFallback tries etherscan first and falls back to engine
 func (s *IndexerEVM) getAddressTransactionHistoryWithFallback(ctx context.Context, chainID int64, address string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
 	var err error
 
-	// Try engine service first (thirdweb)
-	// Note: Engine doesn't support chain ID 56 (BNB Smart Chain)
-	if chainID != 56 {
-		transactions, err := s.engineService.GetAddressTransactionHistory(ctx, chainID, address, limit, fromBlock, toBlock)
+	// Try etherscan first (except for Lisk which is not supported)
+	if chainID != 1135 {
+		transactions, err := s.etherscanService.GetAddressTransactionHistory(ctx, chainID, address, limit, fromBlock, toBlock)
 		if err == nil {
-			// Engine service succeeded, return the transactions
+			// Etherscan succeeded, return the transactions
 			return transactions, nil
 		}
 		// Log the error but continue to fallback
-		logger.Warnf("Engine service failed for chain %d, falling back to Etherscan: %v", chainID, err)
+		logger.Warnf("Etherscan failed for chain %d, falling back to Engine: %v", chainID, err)
 	}
 
-	// Try etherscan as fallback
-	// Note: Etherscan doesn't support chain ID 1135 (Lisk)
-	if chainID == 1135 {
-		return nil, fmt.Errorf("transaction history not supported for Lisk (chain ID 1135) via either engine or etherscan")
+	// Try engine service as fallback
+	// Note: Engine doesn't support chain ID 56 (BNB Smart Chain)
+	if chainID != 56 {
+		transactions, engineErr := s.engineService.GetAddressTransactionHistory(ctx, chainID, address, limit, fromBlock, toBlock)
+		if engineErr != nil {
+			logger.Errorf("Engine failed for chain %d: %v", chainID, engineErr)
+			return nil, fmt.Errorf("both etherscan and engine failed - Etherscan: %w, Engine: %w", err, engineErr)
+		}
+		return transactions, nil
 	}
 
-	transactions, etherscanErr := s.etherscanService.GetAddressTransactionHistory(ctx, chainID, address, limit, fromBlock, toBlock)
-	if etherscanErr != nil {
-		logger.Errorf("Etherscan failed for chain %d: %v", chainID, etherscanErr)
-		return nil, fmt.Errorf("both engine and etherscan failed - Engine: %w, Etherscan: %w", err, etherscanErr)
+	// For BSC (chain ID 56), only Etherscan is supported
+	if chainID == 56 {
+		return nil, fmt.Errorf("transaction history not supported for BNB Smart Chain (chain ID 56) via either etherscan or engine")
 	}
 
-	return transactions, nil
+	return nil, fmt.Errorf("transaction history not supported for Lisk (chain ID 1135) via either engine or etherscan")
 }
 
 // indexReceiveAddressByUserAddress processes user's transaction history for receive address transfers

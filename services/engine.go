@@ -929,34 +929,31 @@ func (s *EngineService) GetAddressTransactionHistory(ctx context.Context, chainI
 	return result, nil
 }
 
-// GetContractEventsWithFallback tries ThirdWeb first and falls back to RPC if ThirdWeb fails
+// GetContractEventsWithFallback tries RPC first and falls back to ThirdWeb if RPC fails
 func (s *EngineService) GetContractEventsWithFallback(ctx context.Context, network *ent.Network, contractAddress string, fromBlock int64, toBlock int64, topics []string, txHash string, eventPayload map[string]string) ([]interface{}, error) {
-	var err error
+	// Try RPC first
+	events, rpcErr := s.GetContractEventsRPC(ctx, network.RPCEndpoint, contractAddress, fromBlock, toBlock, topics, txHash)
+	if rpcErr == nil {
+		return events, nil
+	}
 
-	// TODO: Remove once thirdweb insight supports BSC
+	// If RPC fails, try ThirdWeb (except for BSC)
 	if network.ChainID != 56 {
-		// Try ThirdWeb first
-		events, err := s.GetContractEvents(ctx, network.ChainID, contractAddress, eventPayload)
-		if err == nil {
-			// ThirdWeb succeeded, return the events
+		events, thirdwebErr := s.GetContractEvents(ctx, network.ChainID, contractAddress, eventPayload)
+		if thirdwebErr == nil {
 			return events, nil
 		}
-	}
-
-	// Try RPC as fallback
-	events, rpcErr := s.GetContractEventsRPC(ctx, network.RPCEndpoint, contractAddress, fromBlock, toBlock, topics, txHash)
-	if rpcErr != nil {
-		// Both ThirdWeb and RPC failed
 		logger.WithFields(logger.Fields{
-			"Network":  network.Identifier,
-			"ChainID":  network.ChainID,
-			"Contract": contractAddress,
-			"RPCError": rpcErr.Error(),
-		}).Errorf("Both ThirdWeb and RPC failed")
-		return nil, fmt.Errorf("both ThirdWeb and RPC failed - ThirdWeb: %w, RPC: %w", err, rpcErr)
+			"Network":       network.Identifier,
+			"ChainID":       network.ChainID,
+			"Contract":      contractAddress,
+			"ThirdWebError": thirdwebErr.Error(),
+			"FallbackToRPC": false,
+		}).Errorf("Both RPC and ThirdWeb failed")
+		return nil, fmt.Errorf("both RPC and ThirdWeb failed - RPC: %w, ThirdWeb: %w", rpcErr, thirdwebErr)
 	}
 
-	return events, nil
+	return nil, fmt.Errorf("both RPC and ThirdWeb failed - RPC: %w", rpcErr)
 }
 
 // ParseUserOpErrorJSON parses a UserOperation error JSON and returns the decoded error string

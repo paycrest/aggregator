@@ -897,7 +897,7 @@ func HandleReceiveAddressValidity(ctx context.Context, receiveAddress *ent.Recei
 	}
 
 	if receiveAddress.Status != receiveaddress.StatusUsed {
-		validUntilIsFarGone := receiveAddress.ValidUntil.Before(time.Now().Add(-(5 * time.Minute)))
+		validUntilIsFarGone := receiveAddress.ValidUntil.Before(time.Now().Add(-(2 * time.Minute)))
 		isExpired := receiveAddress.ValidUntil.Before(time.Now())
 
 		if validUntilIsFarGone {
