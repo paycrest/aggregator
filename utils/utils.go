@@ -23,6 +23,10 @@ import (
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	institutionEnt "github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providerordertoken"
+	"github.com/paycrest/aggregator/ent/providerprofile"
+	tokenEnt "github.com/paycrest/aggregator/ent/token"
+
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
@@ -632,4 +636,284 @@ func IsValidHttpsUrl(urlStr string) bool {
 
 	// Verify scheme is https and host is present
 	return parsedUrl.Scheme == "https" && parsedUrl.Host != ""
+}
+
+// ValidateRate validates if a provided rate is achievable for the given parameters
+func ValidateRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, providerID, networkFilter string) (decimal.Decimal, error) {
+	// Direct currency match
+	if strings.EqualFold(token.BaseCurrency, currency.Code) {
+		return decimal.NewFromInt(1), nil
+	}
+
+	// Provider-specific rate
+	if providerID != "" {
+		return validateProviderRate(ctx, token, currency, amount, providerID, networkFilter)
+	}
+
+	// Bucket-based rate resolution
+	return validateBucketRate(ctx, token, currency, amount, networkFilter)
+}
+
+// validateProviderRate handles provider-specific rate validation
+func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, providerID, networkFilter string) (decimal.Decimal, error) {
+	// Get the provider from the database
+	provider, err := storage.Client.ProviderProfile.
+		Query().
+		Where(providerprofile.IDEQ(providerID)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return decimal.Zero, fmt.Errorf("provider not found")
+		}
+		return decimal.Zero, fmt.Errorf("failed to fetch provider profile: %v", err)
+	}
+
+	// Get the provider's order token configuration to validate min/max amounts
+	providerOrderTokenQuery := storage.Client.ProviderOrderToken.
+		Query().
+		Where(
+			providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+			providerordertoken.HasTokenWith(tokenEnt.IDEQ(token.ID)),
+			providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(currency.Code)),
+		)
+
+	// Filter by network if provided
+	if networkFilter != "" {
+		providerOrderTokenQuery = providerOrderTokenQuery.Where(
+			providerordertoken.NetworkEQ(networkFilter),
+		)
+	}
+
+	providerOrderToken, err := providerOrderTokenQuery.First(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return decimal.Zero, fmt.Errorf("provider does not support this token/currency combination")
+		}
+		return decimal.Zero, fmt.Errorf("failed to fetch provider configuration: %v", err)
+	}
+
+	// Validate that the token amount is within the provider's min/max limits
+	if amount.LessThan(providerOrderToken.MinOrderAmount) || amount.GreaterThan(providerOrderToken.MaxOrderAmount) {
+		return decimal.Zero, fmt.Errorf("amount must be between %s and %s for this provider", providerOrderToken.MinOrderAmount, providerOrderToken.MaxOrderAmount)
+	}
+
+	// For provider-specific validation, we'll use the provider's configured rate
+	// This is a simplified approach - in a real implementation, you might want to
+	// get the actual rate from the provider's API or cache
+	if providerOrderToken.ConversionRateType == "fixed" {
+		return providerOrderToken.FixedConversionRate, nil
+	} else {
+		// For floating rates, use market rate + floating adjustment
+		return currency.MarketRate.Add(providerOrderToken.FloatingConversionRate), nil
+	}
+}
+
+// validateBucketRate handles bucket-based rate validation
+func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, networkIdentifier string) (decimal.Decimal, error) {
+	// Get redis keys for provision buckets
+	keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currency.Code+"_*_*", 100).Result()
+	if err != nil {
+		return decimal.Zero, fmt.Errorf("failed to fetch rates: %v", err)
+	}
+
+	// Track the best available rate and reason for logging
+	var bestRate decimal.Decimal
+	var foundExactMatch bool
+
+	// Scan through the buckets to find a matching rate
+	for _, key := range keys {
+		bucketData, err := parseBucketKey(key)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Key":   key,
+				"Error": err,
+			}).Errorf("ValidateRate.InvalidBucketKey: failed to parse bucket key")
+			continue
+		}
+
+		// Get all providers in this bucket to find the first suitable one (priority queue order)
+		providers, err := storage.RedisClient.LRange(ctx, key, 0, -1).Result()
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Key":   key,
+				"Error": err,
+			}).Errorf("ValidateRate.FailedToGetProviders: failed to get providers from bucket")
+			continue
+		}
+
+		// Find the first provider at the top of the queue that matches our criteria
+		rate, found := findSuitableProviderRate(providers, token.Symbol, networkIdentifier, amount, bucketData)
+		if found {
+			foundExactMatch = true
+			bestRate = rate
+			break // Found exact match, no need to continue
+		}
+
+		// Track the best available rate for logging purposes
+		if rate.GreaterThan(bestRate) {
+			bestRate = rate
+		}
+	}
+
+	// If no exact match found, return error with details
+	if !foundExactMatch {
+		logger.WithFields(logger.Fields{
+			"Token":         token.Symbol,
+			"Currency":      currency.Code,
+			"Amount":        amount,
+			"NetworkFilter": networkIdentifier,
+			"BestRate":      bestRate,
+		}).Warnf("ValidateRate.NoSuitableProvider: no provider found for the given parameters")
+
+		return decimal.Zero, fmt.Errorf("no provider available for %s to %s conversion with amount %s on %s network",
+			token.Symbol, currency.Code, amount, networkIdentifier)
+	}
+
+	return bestRate, nil
+}
+
+// parseBucketKey parses and validates bucket key format
+type BucketData struct {
+	Currency  string
+	MinAmount decimal.Decimal
+	MaxAmount decimal.Decimal
+}
+
+func parseBucketKey(key string) (*BucketData, error) {
+	// Expected format: "bucket_{currency}_{minAmount}_{maxAmount}"
+	parts := strings.Split(key, "_")
+	if len(parts) != 4 && len(parts) != 5 {
+		return nil, fmt.Errorf("invalid bucket key format: expected 4 parts, got %d", len(parts))
+	}
+
+	if parts[0] != "bucket" {
+		return nil, fmt.Errorf("invalid bucket key prefix: expected 'bucket', got '%s'", parts[0])
+	}
+
+	currency := parts[1]
+	if currency == "" {
+		return nil, fmt.Errorf("empty currency in bucket key")
+	}
+
+	minAmount, err := decimal.NewFromString(parts[2])
+	if err != nil {
+		return nil, fmt.Errorf("invalid min amount '%s': %v", parts[2], err)
+	}
+
+	maxAmount, err := decimal.NewFromString(parts[3])
+	if err != nil {
+		return nil, fmt.Errorf("invalid max amount '%s': %v", parts[3], err)
+	}
+
+	if minAmount.GreaterThanOrEqual(maxAmount) {
+		return nil, fmt.Errorf("min amount (%s) must be less than max amount (%s)", minAmount, maxAmount)
+	}
+
+	return &BucketData{
+		Currency:  currency,
+		MinAmount: minAmount,
+		MaxAmount: maxAmount,
+	}, nil
+}
+
+// findSuitableProviderRate finds the first suitable provider rate from the provider list
+func findSuitableProviderRate(providers []string, tokenSymbol string, networkIdentifier string, tokenAmount decimal.Decimal, bucketData *BucketData) (decimal.Decimal, bool) {
+	var bestRate decimal.Decimal
+	var foundExactMatch bool
+
+	for _, providerData := range providers {
+		parts := strings.Split(providerData, ":")
+		if len(parts) != 5 {
+			logger.WithFields(logger.Fields{
+				"ProviderData": providerData,
+				"Token":        tokenSymbol,
+				"Currency":     bucketData.Currency,
+				"MinAmount":    bucketData.MinAmount,
+				"MaxAmount":    bucketData.MaxAmount,
+			}).Errorf("ValidateRate.InvalidProviderData: provider data format is invalid")
+			continue
+		}
+
+		// Skip entry if token doesn't match
+		if parts[1] != tokenSymbol {
+			continue
+		}
+
+		// Skip entry if provider doesn't not have a token configured for the network
+		// TODO: Move this to redis cache. Provider's network should be in the key.
+		if networkIdentifier != "" {
+			_, err := storage.Client.ProviderOrderToken.
+				Query().
+				Where(
+					providerordertoken.HasProviderWith(
+						providerprofile.IDEQ(parts[0]),
+						providerprofile.IsAvailableEQ(true),
+					),
+					providerordertoken.HasTokenWith(tokenEnt.SymbolEQ(parts[1])),
+					providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
+					providerordertoken.NetworkEQ(networkIdentifier),
+					providerordertoken.AddressNEQ(""),
+				).Only(context.Background())
+			if err != nil {
+				if ent.IsNotFound(err) {
+					continue
+				}
+				logger.WithFields(logger.Fields{
+					"ProviderData": providerData,
+					"Error":        err,
+				}).Errorf("ValidateRate.InvalidProviderData: failed to fetch provider configuration")
+				continue
+			}
+		}
+
+		// Parse provider order amounts
+		minOrderAmount, err := decimal.NewFromString(parts[3])
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"ProviderData": providerData,
+				"Error":        err,
+			}).Errorf("ValidateRate.InvalidMinOrderAmount: failed to parse min order amount")
+			continue
+		}
+
+		maxOrderAmount, err := decimal.NewFromString(parts[4])
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"ProviderData": providerData,
+				"Error":        err,
+			}).Errorf("ValidateRate.InvalidMaxOrderAmount: failed to parse max order amount")
+			continue
+		}
+
+		// Skip if order amount is not within provider's min and max order amount
+		if tokenAmount.LessThan(minOrderAmount) || tokenAmount.GreaterThan(maxOrderAmount) {
+			continue
+		}
+
+		// Parse rate
+		rate, err := decimal.NewFromString(parts[2])
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"ProviderData": providerData,
+				"Error":        err,
+			}).Errorf("ValidateRate.InvalidRate: failed to parse rate")
+			continue
+		}
+
+		// Track the best rate we've seen (for logging purposes)
+		if rate.GreaterThan(bestRate) {
+			bestRate = rate
+		}
+
+		// Calculate fiat equivalent of the token amount
+		fiatAmount := tokenAmount.Mul(rate)
+
+		// Check if fiat amount is within the bucket range
+		if fiatAmount.GreaterThanOrEqual(bucketData.MinAmount) && fiatAmount.LessThanOrEqual(bucketData.MaxAmount) {
+			return rate, true
+		}
+	}
+
+	// Return the best rate we found (even if no exact match) for logging purposes
+	return bestRate, foundExactMatch
 }

@@ -209,10 +209,15 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 		return
 	}
 
-	// Resolve rate using extracted logic
-	rateResponse, err := ctrl.resolveRate(ctx, token, currency, tokenAmount, ctx.Query("provider_id"), networkFilter)
+	// Validate rate using extracted logic
+	rateResponse, err := u.ValidateRate(ctx, token, currency, tokenAmount, ctx.Query("provider_id"), networkFilter)
 	if err != nil {
-		// Error response is handled within resolveRate methods
+		// Return 404 if no provider found, else 500 for other errors
+		if strings.Contains(err.Error(), "no provider available") {
+			u.APIResponse(ctx, http.StatusNotFound, "error", err.Error(), nil)
+		} else {
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", err.Error(), nil)
+		}
 		return
 	}
 

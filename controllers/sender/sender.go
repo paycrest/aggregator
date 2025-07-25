@@ -250,6 +250,27 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		return
 	}
 
+	// Validate rate before proceeding with order creation
+	achievableRate, err := u.ValidateRate(ctx, token, institutionObj.Edges.FiatCurrency, payload.Amount, payload.Recipient.ProviderID, payload.Network)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+			Field:   "Rate",
+			Message: fmt.Sprintf("Rate validation failed: %s", err.Error()),
+		})
+		return
+	}
+
+	// Validate that the provided rate is achievable
+	// Allow for a small tolerance (0.1%) to account for minor rate fluctuations
+	tolerance := achievableRate.Mul(decimal.NewFromFloat(0.001)) // 0.1% tolerance
+	if payload.Rate.LessThan(achievableRate.Sub(tolerance)) {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+			Field:   "Rate",
+			Message: fmt.Sprintf("Provided rate %s is not achievable. Available rate is %s", payload.Rate, achievableRate),
+		})
+		return
+	}
+
 	if payload.Recipient.ProviderID != "" {
 		orderToken, err := storage.Client.ProviderOrderToken.
 			Query().
