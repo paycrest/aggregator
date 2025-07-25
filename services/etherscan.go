@@ -72,6 +72,9 @@ func (s *EtherscanService) GetAddressTransactionHistory(ctx context.Context, cha
 		if data["message"] != nil {
 			message = data["message"].(string)
 		}
+		if message == "No transactions found" {
+			return []map[string]interface{}{}, nil
+		}
 		return nil, fmt.Errorf("etherscan API error: %s %v %v", message, data, params)
 	}
 

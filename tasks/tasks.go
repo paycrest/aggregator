@@ -324,8 +324,18 @@ func TaskIndexBlockchainEvents() error {
 				}
 
 				// Index Transfer events
-				for _, order := range paymentOrders {
-					_, _ = indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, order.Edges.ReceiveAddress.Address, 0, 0, "")
+				for i, order := range paymentOrders {
+					_, err = indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, order.Edges.ReceiveAddress.Address, 0, 0, "")
+					if err != nil {
+						logger.WithFields(logger.Fields{
+							"Error":             fmt.Sprintf("%v", err),
+							"OrderID":           order.ID.String(),
+						}).Errorf("TaskIndexBlockchainEvents.IndexReceiveAddress")
+					}
+					// Add a small delay between requests to be respectful to the RPC node
+					if i < len(paymentOrders)-1 {
+						time.Sleep(250 * time.Millisecond)
+					}
 				}
 			}
 		}(network)
@@ -1307,7 +1317,7 @@ func resolveMissedEvents(ctx context.Context, network *ent.Network) {
 
 			// Add a small delay between requests to be respectful to the RPC node
 			if i < len(orders)-1 {
-				time.Sleep(500 * time.Millisecond)
+				time.Sleep(250 * time.Millisecond)
 			}
 		}
 	}
