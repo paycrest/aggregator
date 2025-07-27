@@ -912,7 +912,7 @@ func (s *EngineService) GetAddressTransactionHistory(ctx context.Context, chainI
 
 	data, err := utils.ParseJSONResponse(res.RawResponse)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
+		return nil, fmt.Errorf("failed to parse JSON response: %w %v", err, data)
 	}
 
 	if data["data"] == nil {
