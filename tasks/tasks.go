@@ -1256,7 +1256,7 @@ func resolveMissedEvents(ctx context.Context, network *ent.Network) {
 		Query().
 		Where(
 			paymentorder.StatusEQ(paymentorder.StatusInitiated),
-			paymentorder.CreatedAtLTE(time.Now().Add(-5*time.Minute)),
+			paymentorder.CreatedAtLTE(time.Now().Add(-30*time.Second)),
 			// paymentorder.CreatedAtGTE(time.Now().Add(-15*time.Minute)),
 			paymentorder.HasReceiveAddressWith(
 				receiveaddress.StatusNEQ(receiveaddress.StatusExpired),
