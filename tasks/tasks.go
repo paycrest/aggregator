@@ -946,12 +946,13 @@ func fetchExternalRate(currency string) (decimal.Decimal, error) {
 
 		// Try to use 'buy' price first, fall back to alternatives if buy is zero
 		buyPriceStr := data["data"].(map[string]interface{})["ticker"].(map[string]interface{})["buy"].(string)
+		lastPriceStr := data["data"].(map[string]interface{})["ticker"].(map[string]interface{})["last"].(string)
 		highPriceStr := data["data"].(map[string]interface{})["ticker"].(map[string]interface{})["high"].(string)
 		lowPriceStr := data["data"].(map[string]interface{})["ticker"].(map[string]interface{})["low"].(string)
 
 		var priceStr string
 		if buyPriceStr == "0.0" || buyPriceStr == "0" {
-			// Calculate midpoint between high and low as primary fallback
+			// Calculate midpoint between high and low
 			highPrice, err := decimal.NewFromString(highPriceStr)
 			if err != nil {
 				return decimal.Zero, fmt.Errorf("ComputeMarketRate: failed to parse high price: %w", err)
@@ -961,9 +962,20 @@ func fetchExternalRate(currency string) (decimal.Decimal, error) {
 				return decimal.Zero, fmt.Errorf("ComputeMarketRate: failed to parse low price: %w", err)
 			}
 
-			// Use midpoint between high and low
 			midpoint := highPrice.Add(lowPrice).Div(decimal.NewFromInt(2))
-			priceStr = midpoint.String()
+
+			// Parse last price for comparison
+			lastPrice, err := decimal.NewFromString(lastPriceStr)
+			if err != nil {
+				return decimal.Zero, fmt.Errorf("ComputeMarketRate: failed to parse last price: %w", err)
+			}
+
+			// Use the lower value between midpoint and last price
+			if midpoint.LessThan(lastPrice) {
+				priceStr = midpoint.String()
+			} else {
+				priceStr = lastPrice.String()
+			}
 		} else {
 			// Use 'buy' price when available
 			priceStr = buyPriceStr
