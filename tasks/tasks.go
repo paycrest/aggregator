@@ -12,7 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/go-co-op/gocron"
 	"github.com/google/uuid"
-	"github.com/opus-domini/fast-shot"
+	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
@@ -328,8 +328,8 @@ func TaskIndexBlockchainEvents() error {
 					_, err = indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, order.Edges.ReceiveAddress.Address, 0, 0, "")
 					if err != nil {
 						logger.WithFields(logger.Fields{
-							"Error":             fmt.Sprintf("%v", err),
-							"OrderID":           order.ID.String(),
+							"Error":   fmt.Sprintf("%v", err),
+							"OrderID": order.ID.String(),
 						}).Errorf("TaskIndexBlockchainEvents.IndexReceiveAddress")
 					}
 					// Add a small delay between requests to be respectful to the RPC node
@@ -944,7 +944,32 @@ func fetchExternalRate(currency string) (decimal.Decimal, error) {
 			return decimal.Zero, fmt.Errorf("ComputeMarketRate: %w %v", err, data)
 		}
 
-		price, err = decimal.NewFromString(data["data"].(map[string]interface{})["ticker"].(map[string]interface{})["buy"].(string))
+		// Try to use 'buy' price first, fall back to alternatives if buy is zero
+		buyPriceStr := data["data"].(map[string]interface{})["ticker"].(map[string]interface{})["buy"].(string)
+		highPriceStr := data["data"].(map[string]interface{})["ticker"].(map[string]interface{})["high"].(string)
+		lowPriceStr := data["data"].(map[string]interface{})["ticker"].(map[string]interface{})["low"].(string)
+
+		var priceStr string
+		if buyPriceStr == "0.0" || buyPriceStr == "0" {
+			// Calculate midpoint between high and low as primary fallback
+			highPrice, err := decimal.NewFromString(highPriceStr)
+			if err != nil {
+				return decimal.Zero, fmt.Errorf("ComputeMarketRate: failed to parse high price: %w", err)
+			}
+			lowPrice, err := decimal.NewFromString(lowPriceStr)
+			if err != nil {
+				return decimal.Zero, fmt.Errorf("ComputeMarketRate: failed to parse low price: %w", err)
+			}
+
+			// Use midpoint between high and low
+			midpoint := highPrice.Add(lowPrice).Div(decimal.NewFromInt(2))
+			priceStr = midpoint.String()
+		} else {
+			// Use 'buy' price when available
+			priceStr = buyPriceStr
+		}
+
+		price, err = decimal.NewFromString(priceStr)
 		if err != nil {
 			return decimal.Zero, fmt.Errorf("ComputeMarketRate: %w", err)
 		}
