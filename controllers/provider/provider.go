@@ -15,6 +15,7 @@ import (
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
@@ -67,8 +68,8 @@ func (ctrl *ProviderController) GetLockPaymentOrders(ctx *gin.Context) {
 	currency := ctx.Query("currency")
 	if currency != "" {
 		// Check if the provided currency exists in the provider's currencies
-		currencyExists, err := provider.QueryCurrencies().
-			Where(fiatcurrency.CodeEQ(currency)).
+		currencyExists, err := provider.QueryProviderCurrencies().
+			Where(providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currency))).
 			Exist(ctx)
 		if err != nil {
 			logger.Errorf("error checking provider currency: %v", err)
@@ -868,8 +869,8 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 	// Check if currency in query is present in provider currencies
 	currency := ctx.Query("currency")
 	if currency != "" {
-		currencyExists, err := provider.QueryCurrencies().
-			Where(fiatcurrency.CodeEQ(currency)).
+		currencyExists, err := provider.QueryProviderCurrencies().
+			Where(providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currency))).
 			Exist(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
@@ -1034,7 +1035,11 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 		Query().
 		Where(providerprofile.IDEQ(providerCtx.(*ent.ProviderProfile).ID)).
 		WithAPIKey().
-		WithCurrencies().
+		WithProviderCurrencies(
+			func(query *ent.ProviderCurrenciesQuery) {
+				query.WithCurrency()
+			},
+		).
 		Only(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
@@ -1088,8 +1093,8 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 		}
 	}
 
-	for _, currency := range provider.Edges.Currencies {
-		if !u.ContainsString(currencyCodes, currency.Code) {
+	for _, pc := range provider.Edges.ProviderCurrencies {
+		if !u.ContainsString(currencyCodes, pc.Edges.Currency.Code) {
 			u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
 			return
 		}

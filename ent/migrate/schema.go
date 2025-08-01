@@ -404,6 +404,44 @@ var (
 			},
 		},
 	}
+	// ProviderCurrenciesColumns holds the columns for the "provider_currencies" table.
+	ProviderCurrenciesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "available_balance", Type: field.TypeFloat64},
+		{Name: "total_balance", Type: field.TypeFloat64},
+		{Name: "reserved_balance", Type: field.TypeFloat64},
+		{Name: "is_available", Type: field.TypeBool, Default: true},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "fiat_currency_provider_currencies", Type: field.TypeUUID},
+		{Name: "provider_profile_provider_currencies", Type: field.TypeString},
+	}
+	// ProviderCurrenciesTable holds the schema information for the "provider_currencies" table.
+	ProviderCurrenciesTable = &schema.Table{
+		Name:       "provider_currencies",
+		Columns:    ProviderCurrenciesColumns,
+		PrimaryKey: []*schema.Column{ProviderCurrenciesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "provider_currencies_fiat_currencies_provider_currencies",
+				Columns:    []*schema.Column{ProviderCurrenciesColumns[6]},
+				RefColumns: []*schema.Column{FiatCurrenciesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "provider_currencies_provider_profiles_provider_currencies",
+				Columns:    []*schema.Column{ProviderCurrenciesColumns[7]},
+				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "providercurrencies_provider_profile_provider_currencies_fiat_currency_provider_currencies",
+				Unique:  true,
+				Columns: []*schema.Column{ProviderCurrenciesColumns[7], ProviderCurrenciesColumns[6]},
+			},
+		},
+	}
 	// ProviderOrderTokensColumns holds the columns for the "provider_order_tokens" table.
 	ProviderOrderTokensColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -743,31 +781,6 @@ var (
 		Columns:    WebhookRetryAttemptsColumns,
 		PrimaryKey: []*schema.Column{WebhookRetryAttemptsColumns[0]},
 	}
-	// FiatCurrencyProvidersColumns holds the columns for the "fiat_currency_providers" table.
-	FiatCurrencyProvidersColumns = []*schema.Column{
-		{Name: "fiat_currency_id", Type: field.TypeUUID},
-		{Name: "provider_profile_id", Type: field.TypeString},
-	}
-	// FiatCurrencyProvidersTable holds the schema information for the "fiat_currency_providers" table.
-	FiatCurrencyProvidersTable = &schema.Table{
-		Name:       "fiat_currency_providers",
-		Columns:    FiatCurrencyProvidersColumns,
-		PrimaryKey: []*schema.Column{FiatCurrencyProvidersColumns[0], FiatCurrencyProvidersColumns[1]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "fiat_currency_providers_fiat_currency_id",
-				Columns:    []*schema.Column{FiatCurrencyProvidersColumns[0]},
-				RefColumns: []*schema.Column{FiatCurrenciesColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-			{
-				Symbol:     "fiat_currency_providers_provider_profile_id",
-				Columns:    []*schema.Column{FiatCurrencyProvidersColumns[1]},
-				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-		},
-	}
 	// ProvisionBucketProviderProfilesColumns holds the columns for the "provision_bucket_provider_profiles" table.
 	ProvisionBucketProviderProfilesColumns = []*schema.Column{
 		{Name: "provision_bucket_id", Type: field.TypeInt},
@@ -808,6 +821,7 @@ var (
 		PaymentOrdersTable,
 		PaymentOrderRecipientsTable,
 		PaymentWebhooksTable,
+		ProviderCurrenciesTable,
 		ProviderOrderTokensTable,
 		ProviderProfilesTable,
 		ProviderRatingsTable,
@@ -820,7 +834,6 @@ var (
 		UsersTable,
 		VerificationTokensTable,
 		WebhookRetryAttemptsTable,
-		FiatCurrencyProvidersTable,
 		ProvisionBucketProviderProfilesTable,
 	}
 )
@@ -843,6 +856,8 @@ func init() {
 	PaymentOrderRecipientsTable.ForeignKeys[0].RefTable = PaymentOrdersTable
 	PaymentWebhooksTable.ForeignKeys[0].RefTable = NetworksTable
 	PaymentWebhooksTable.ForeignKeys[1].RefTable = PaymentOrdersTable
+	ProviderCurrenciesTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
+	ProviderCurrenciesTable.ForeignKeys[1].RefTable = ProviderProfilesTable
 	ProviderOrderTokensTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
 	ProviderOrderTokensTable.ForeignKeys[1].RefTable = ProviderProfilesTable
 	ProviderOrderTokensTable.ForeignKeys[2].RefTable = TokensTable
@@ -857,8 +872,6 @@ func init() {
 	TransactionLogsTable.ForeignKeys[0].RefTable = LockPaymentOrdersTable
 	TransactionLogsTable.ForeignKeys[1].RefTable = PaymentOrdersTable
 	VerificationTokensTable.ForeignKeys[0].RefTable = UsersTable
-	FiatCurrencyProvidersTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
-	FiatCurrencyProvidersTable.ForeignKeys[1].RefTable = ProviderProfilesTable
 	ProvisionBucketProviderProfilesTable.ForeignKeys[0].RefTable = ProvisionBucketsTable
 	ProvisionBucketProviderProfilesTable.ForeignKeys[1].RefTable = ProviderProfilesTable
 }

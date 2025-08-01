@@ -227,7 +227,20 @@ func seedProvider(ctx context.Context, client *ent.Client, bucket *ent.Provision
 		// SetIdentityDocument("https://example.com/identity_document.jpg").
 		// SetBusinessDocument("https://example.com/business_document.pdf").
 		AddProvisionBuckets(bucket).
-		AddCurrencies(currency).
+		Save(ctx)
+	if err != nil {
+		return "", "", "", fmt.Errorf("failed creating provider: %s", err)
+	}
+
+	// Create ProviderCurrencies entry
+	_, err = client.ProviderCurrencies.
+		Create().
+		SetProvider(provider).
+		SetCurrency(currency).
+		SetAvailableBalance(decimal.Zero).
+		SetTotalBalance(decimal.Zero).
+		SetReservedBalance(decimal.Zero).
+		SetIsAvailable(true).
 		Save(ctx)
 	if err != nil {
 		return "", "", "", fmt.Errorf("failed creating provider: %s", err)

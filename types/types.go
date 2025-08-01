@@ -16,6 +16,7 @@ import (
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
+	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/user"
 	"github.com/shopspring/decimal"
@@ -249,7 +250,6 @@ type SenderProfilePayload struct {
 
 // ProviderOrderTokenPayload defines the provider setting for a token
 type ProviderOrderTokenPayload struct {
-	Currency               string                                `json:"currency" binding:"required"`
 	Symbol                 string                                `json:"symbol" binding:"required"`
 	ConversionRateType     providerordertoken.ConversionRateType `json:"conversionRateType" binding:"required,oneof=fixed floating"`
 	FixedConversionRate    decimal.Decimal                       `json:"fixedConversionRate" binding:"required,gt=0"`
@@ -264,29 +264,28 @@ type ProviderOrderTokenPayload struct {
 // ProviderProfilePayload is the payload for the provider profile endpoint
 type ProviderProfilePayload struct {
 	TradingName    string                      `json:"tradingName"`
-	Currencies     []string                    `json:"currencies"`
+	Currency       string                      `json:"currency" binding:"required"`
 	HostIdentifier string                      `json:"hostIdentifier"`
 	IsAvailable    bool                        `json:"isAvailable"`
-	IsActive       bool                        `json:"isActive"`
 	Tokens         []ProviderOrderTokenPayload `json:"tokens"`
 	VisibilityMode string                      `json:"visibilityMode"`
 }
 
 // ProviderProfileResponse is the response for the provider profile endpoint
 type ProviderProfileResponse struct {
-	ID                    string                      `json:"id"`
-	FirstName             string                      `json:"firstName"`
-	LastName              string                      `json:"lastName"`
-	Email                 string                      `json:"email"`
-	TradingName           string                      `json:"tradingName"`
-	Currencies            []string                    `json:"currencies"`
-	HostIdentifier        string                      `json:"hostIdentifier"`
-	IsAvailable           bool                        `json:"isAvailable"`
-	Tokens                []ProviderOrderTokenPayload `json:"tokens"`
-	APIKey                APIKeyResponse              `json:"apiKey"`
-	IsActive              bool                        `json:"isActive"`
-	VisibilityMode        string                      `json:"visibilityMode"`
-	KYBVerificationStatus user.KybVerificationStatus  `json:"kybVerificationStatus"`
+	ID                    string                         `json:"id"`
+	FirstName             string                         `json:"firstName"`
+	LastName              string                         `json:"lastName"`
+	Email                 string                         `json:"email"`
+	TradingName           string                         `json:"tradingName"`
+	Currencies            []string                       `json:"currencies"`
+	HostIdentifier        string                         `json:"hostIdentifier"`
+	IsAvailable           bool                           `json:"isAvailable"`
+	Tokens                []ProviderOrderTokenPayload    `json:"tokens"`
+	APIKey                APIKeyResponse                 `json:"apiKey"`
+	IsActive              bool                           `json:"isActive"`
+	VisibilityMode        providerprofile.VisibilityMode `json:"visibilityMode"`
+	KYBVerificationStatus user.KybVerificationStatus     `json:"kybVerificationStatus"`
 }
 
 // SenderOrderTokenResponse defines the provider setting for a token

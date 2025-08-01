@@ -473,9 +473,28 @@ func CreateTestProviderProfile(overrides map[string]interface{}) (*ent.ProviderP
 		SetHostIdentifier(payload["host_identifier"].(string)).
 		SetProvisionMode(providerprofile.ProvisionMode(payload["provision_mode"].(string))).
 		SetUserID(payload["user_id"].(uuid.UUID)).
-		AddCurrencyIDs(payload["currency_id"].(uuid.UUID)).
 		SetVisibilityMode(providerprofile.VisibilityMode(payload["visibility_mode"].(string))).
 		SetIsAvailable(payload["is_available"].(bool)).
+		Save(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	// Create ProviderCurrencies entry
+	currencyID := payload["currency_id"].(uuid.UUID)
+	currency, err := db.Client.FiatCurrency.Get(context.Background(), currencyID)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = db.Client.ProviderCurrencies.
+		Create().
+		SetProvider(profile).
+		SetCurrency(currency).
+		SetAvailableBalance(decimal.Zero).
+		SetTotalBalance(decimal.Zero).
+		SetReservedBalance(decimal.Zero).
+		SetIsAvailable(true).
 		Save(context.Background())
 
 	return profile, err

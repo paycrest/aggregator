@@ -28,6 +28,7 @@ import (
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
+	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
@@ -444,7 +445,10 @@ func (ctrl *Controller) findSuitableProviderRate(providers []string, tokenSymbol
 				Where(
 					providerordertoken.HasProviderWith(
 						providerprofile.IDEQ(parts[0]),
-						providerprofile.IsAvailableEQ(true),
+						providerprofile.HasProviderCurrenciesWith(
+							providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
+							providercurrencies.IsAvailableEQ(true),
+						),
 					),
 					providerordertoken.HasTokenWith(tokenEnt.SymbolEQ(parts[1])),
 					providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
@@ -607,12 +611,14 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 	providers, err := storage.Client.ProviderProfile.
 		Query().
 		Where(
-			providerprofile.HasCurrenciesWith(
-				fiatcurrency.CodeEQ(accountInstitution.Edges.FiatCurrency.Code),
+			providerprofile.HasProviderCurrenciesWith(
+				providercurrencies.HasCurrencyWith(
+					fiatcurrency.CodeEQ(accountInstitution.Edges.FiatCurrency.Code),
+				),
+				providercurrencies.IsAvailableEQ(true),
 			),
 			providerprofile.HostIdentifierNotNil(),
 			providerprofile.IsActiveEQ(true),
-			providerprofile.IsAvailableEQ(true),
 			providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
 		).
 		All(ctx)
@@ -1894,15 +1900,15 @@ func (ctrl *Controller) handleNewEvent(ctx *gin.Context, event types.ThirdwebWeb
 
 	// Log the event signature for debugging
 	logger.WithFields(logger.Fields{
-		"EventSignature": eventSignature,
-		"EventName":      event.Data.Decoded.Name,
-		"TxHash":         event.Data.TransactionHash,
-		"BlockNumber":    event.Data.BlockNumber,
-		"ChainId":        event.Data.ChainID,
-		"Address":        event.Data.Address,
-		"Topics":         event.Data.Topics,
-		"Data":           event.Data.Data,
-		"IndexedParams":  event.Data.Decoded.IndexedParams,
+		"EventSignature":   eventSignature,
+		"EventName":        event.Data.Decoded.Name,
+		"TxHash":           event.Data.TransactionHash,
+		"BlockNumber":      event.Data.BlockNumber,
+		"ChainId":          event.Data.ChainID,
+		"Address":          event.Data.Address,
+		"Topics":           event.Data.Topics,
+		"Data":             event.Data.Data,
+		"IndexedParams":    event.Data.Decoded.IndexedParams,
 		"NonIndexedParams": event.Data.Decoded.NonIndexedParams,
 	}).Infof("Processing webhook event")
 

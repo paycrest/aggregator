@@ -18,6 +18,7 @@ import (
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
+	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -358,6 +359,22 @@ func init() {
 	paymentwebhookDescID := paymentwebhookFields[0].Descriptor()
 	// paymentwebhook.DefaultID holds the default value on creation for the id field.
 	paymentwebhook.DefaultID = paymentwebhookDescID.Default.(func() uuid.UUID)
+	providercurrenciesFields := schema.ProviderCurrencies{}.Fields()
+	_ = providercurrenciesFields
+	// providercurrenciesDescIsAvailable is the schema descriptor for is_available field.
+	providercurrenciesDescIsAvailable := providercurrenciesFields[4].Descriptor()
+	// providercurrencies.DefaultIsAvailable holds the default value on creation for the is_available field.
+	providercurrencies.DefaultIsAvailable = providercurrenciesDescIsAvailable.Default.(bool)
+	// providercurrenciesDescUpdatedAt is the schema descriptor for updated_at field.
+	providercurrenciesDescUpdatedAt := providercurrenciesFields[5].Descriptor()
+	// providercurrencies.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	providercurrencies.DefaultUpdatedAt = providercurrenciesDescUpdatedAt.Default.(func() time.Time)
+	// providercurrencies.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	providercurrencies.UpdateDefaultUpdatedAt = providercurrenciesDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// providercurrenciesDescID is the schema descriptor for id field.
+	providercurrenciesDescID := providercurrenciesFields[0].Descriptor()
+	// providercurrencies.DefaultID holds the default value on creation for the id field.
+	providercurrencies.DefaultID = providercurrenciesDescID.Default.(func() uuid.UUID)
 	providerordertokenMixin := schema.ProviderOrderToken{}.Mixin()
 	providerordertokenMixinFields0 := providerordertokenMixin[0].Fields()
 	_ = providerordertokenMixinFields0

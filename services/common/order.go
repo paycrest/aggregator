@@ -17,6 +17,7 @@ import (
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -234,7 +235,10 @@ func CreateLockPaymentOrder(
 				providerordertoken.NetworkEQ(token.Edges.Network.Identifier),
 				providerordertoken.HasProviderWith(
 					providerprofile.IDEQ(lockPaymentOrder.ProviderID),
-					providerprofile.IsAvailableEQ(true),
+					providerprofile.HasProviderCurrenciesWith(
+						providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code)),
+						providercurrencies.IsAvailableEQ(true),
+					),
 					providerprofile.HasUserWith(user.KybVerificationStatusEQ(user.KybVerificationStatusApproved)),
 				),
 				providerordertoken.HasTokenWith(tokenent.IDEQ(token.ID)),

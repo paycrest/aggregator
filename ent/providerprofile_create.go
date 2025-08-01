@@ -14,8 +14,8 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/apikey"
-	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
+	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -187,19 +187,19 @@ func (ppc *ProviderProfileCreate) SetAPIKey(a *APIKey) *ProviderProfileCreate {
 	return ppc.SetAPIKeyID(a.ID)
 }
 
-// AddCurrencyIDs adds the "currencies" edge to the FiatCurrency entity by IDs.
-func (ppc *ProviderProfileCreate) AddCurrencyIDs(ids ...uuid.UUID) *ProviderProfileCreate {
-	ppc.mutation.AddCurrencyIDs(ids...)
+// AddProviderCurrencyIDs adds the "provider_currencies" edge to the ProviderCurrencies entity by IDs.
+func (ppc *ProviderProfileCreate) AddProviderCurrencyIDs(ids ...uuid.UUID) *ProviderProfileCreate {
+	ppc.mutation.AddProviderCurrencyIDs(ids...)
 	return ppc
 }
 
-// AddCurrencies adds the "currencies" edges to the FiatCurrency entity.
-func (ppc *ProviderProfileCreate) AddCurrencies(f ...*FiatCurrency) *ProviderProfileCreate {
-	ids := make([]uuid.UUID, len(f))
-	for i := range f {
-		ids[i] = f[i].ID
+// AddProviderCurrencies adds the "provider_currencies" edges to the ProviderCurrencies entity.
+func (ppc *ProviderProfileCreate) AddProviderCurrencies(p ...*ProviderCurrencies) *ProviderProfileCreate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
 	}
-	return ppc.AddCurrencyIDs(ids...)
+	return ppc.AddProviderCurrencyIDs(ids...)
 }
 
 // AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by IDs.
@@ -369,9 +369,6 @@ func (ppc *ProviderProfileCreate) check() error {
 	if len(ppc.mutation.UserIDs()) == 0 {
 		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "ProviderProfile.user"`)}
 	}
-	if len(ppc.mutation.CurrenciesIDs()) == 0 {
-		return &ValidationError{Name: "currencies", err: errors.New(`ent: missing required edge "ProviderProfile.currencies"`)}
-	}
 	return nil
 }
 
@@ -473,15 +470,15 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ppc.mutation.CurrenciesIDs(); len(nodes) > 0 {
+	if nodes := ppc.mutation.ProviderCurrenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   providerprofile.CurrenciesTable,
-			Columns: providerprofile.CurrenciesPrimaryKey,
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.ProviderCurrenciesTable,
+			Columns: []string{providerprofile.ProviderCurrenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencies.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

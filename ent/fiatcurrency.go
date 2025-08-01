@@ -45,8 +45,8 @@ type FiatCurrency struct {
 
 // FiatCurrencyEdges holds the relations/edges for other nodes in the graph.
 type FiatCurrencyEdges struct {
-	// Providers holds the value of the providers edge.
-	Providers []*ProviderProfile `json:"providers,omitempty"`
+	// ProviderCurrencies holds the value of the provider_currencies edge.
+	ProviderCurrencies []*ProviderCurrencies `json:"provider_currencies,omitempty"`
 	// ProvisionBuckets holds the value of the provision_buckets edge.
 	ProvisionBuckets []*ProvisionBucket `json:"provision_buckets,omitempty"`
 	// Institutions holds the value of the institutions edge.
@@ -58,13 +58,13 @@ type FiatCurrencyEdges struct {
 	loadedTypes [4]bool
 }
 
-// ProvidersOrErr returns the Providers value or an error if the edge
+// ProviderCurrenciesOrErr returns the ProviderCurrencies value or an error if the edge
 // was not loaded in eager-loading.
-func (e FiatCurrencyEdges) ProvidersOrErr() ([]*ProviderProfile, error) {
+func (e FiatCurrencyEdges) ProviderCurrenciesOrErr() ([]*ProviderCurrencies, error) {
 	if e.loadedTypes[0] {
-		return e.Providers, nil
+		return e.ProviderCurrencies, nil
 	}
-	return nil, &NotLoadedError{edge: "providers"}
+	return nil, &NotLoadedError{edge: "provider_currencies"}
 }
 
 // ProvisionBucketsOrErr returns the ProvisionBuckets value or an error if the edge
@@ -199,9 +199,9 @@ func (fc *FiatCurrency) Value(name string) (ent.Value, error) {
 	return fc.selectValues.Get(name)
 }
 
-// QueryProviders queries the "providers" edge of the FiatCurrency entity.
-func (fc *FiatCurrency) QueryProviders() *ProviderProfileQuery {
-	return NewFiatCurrencyClient(fc.config).QueryProviders(fc)
+// QueryProviderCurrencies queries the "provider_currencies" edge of the FiatCurrency entity.
+func (fc *FiatCurrency) QueryProviderCurrencies() *ProviderCurrenciesQuery {
+	return NewFiatCurrencyClient(fc.config).QueryProviderCurrencies(fc)
 }
 
 // QueryProvisionBuckets queries the "provision_buckets" edge of the FiatCurrency entity.

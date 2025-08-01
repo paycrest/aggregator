@@ -13,6 +13,7 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -68,9 +69,8 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 			// })
 			ppq.Select(providerprofile.FieldID)
 
-			// Filter only providers that are always available
+			// Filter only providers that are active and verified
 			ppq.Where(
-				providerprofile.IsAvailable(true),
 				providerprofile.IsActive(true),
 				providerprofile.HasUserWith(user.KybVerificationStatusEQ(user.KybVerificationStatusApproved)),
 				providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
@@ -80,6 +80,34 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 		All(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	// Filter providers by currency availability for each bucket
+	for _, bucket := range buckets {
+		var availableProviders []*ent.ProviderProfile
+		for _, provider := range bucket.Edges.ProviderProfiles {
+			// Check if provider is available for this currency
+			available, err := storage.Client.ProviderCurrencies.
+				Query().
+				Where(
+					providercurrencies.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+					providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)),
+					providercurrencies.IsAvailableEQ(true),
+				).
+				Exist(ctx)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":      fmt.Sprintf("%v", err),
+					"ProviderID": provider.ID,
+					"CurrencyID": bucket.Edges.Currency.ID,
+				}).Errorf("Failed to check provider currency availability")
+				continue
+			}
+			if available {
+				availableProviders = append(availableProviders, provider)
+			}
+		}
+		bucket.Edges.ProviderProfiles = availableProviders
 	}
 
 	return buckets, nil
@@ -198,8 +226,8 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 	// TODO: add also the checks for all the currencies that a provider has
 
 	for _, provider := range providers {
-		exists, err := provider.QueryCurrencies().
-			Where(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)).
+		exists, err := provider.QueryProviderCurrencies().
+			Where(providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID))).
 			Exist(ctx)
 		if err != nil || !exists {
 			continue
@@ -556,7 +584,10 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 				providerordertoken.NetworkEQ(network.Identifier),
 				providerordertoken.HasProviderWith(
 					providerprofile.IDEQ(order.ProviderID),
-					providerprofile.IsAvailableEQ(true),
+					providerprofile.HasProviderCurrenciesWith(
+						providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(bucketCurrency.Code)),
+						providercurrencies.IsAvailableEQ(true),
+					),
 				),
 				providerordertoken.HasTokenWith(token.IDEQ(order.Token.ID)),
 				providerordertoken.HasCurrencyWith(

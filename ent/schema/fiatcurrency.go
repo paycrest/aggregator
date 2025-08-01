@@ -40,7 +40,8 @@ func (FiatCurrency) Fields() []ent.Field {
 // Edges of the FiatCurrency.
 func (FiatCurrency) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("providers", ProviderProfile.Type),
+		edge.To("provider_currencies", ProviderCurrencies.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("provision_buckets", ProvisionBucket.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("institutions", Institution.Type),

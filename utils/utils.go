@@ -23,6 +23,7 @@ import (
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	institutionEnt "github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
@@ -847,7 +848,10 @@ func findSuitableProviderRate(providers []string, tokenSymbol string, networkIde
 				Where(
 					providerordertoken.HasProviderWith(
 						providerprofile.IDEQ(parts[0]),
-						providerprofile.IsAvailableEQ(true),
+						providerprofile.HasProviderCurrenciesWith(
+							providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
+							providercurrencies.IsAvailableEQ(true),
+						),
 					),
 					providerordertoken.HasTokenWith(tokenEnt.SymbolEQ(parts[1])),
 					providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
