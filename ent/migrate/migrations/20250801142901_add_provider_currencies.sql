@@ -31,3 +31,6 @@ FROM "fiat_currency_providers" fcp;
 
 -- Drop "fiat_currency_providers" table
 DROP TABLE "fiat_currency_providers";
+
+-- Modify "provider_profiles" table
+ALTER TABLE "provider_profiles" DROP COLUMN "is_available";
