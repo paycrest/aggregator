@@ -1130,6 +1130,8 @@ func (ctrl *Controller) KYCWebhook(ctx *gin.Context) {
 func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 	startTime := time.Now()
 
+	logger.Infof("Request headers: %+v", ctx.Request.Header)
+
 	// Parse form-encoded payload
 	payloadStr := ctx.PostForm("payload")
 	if payloadStr == "" {
@@ -1150,7 +1152,9 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 		return
 	}
 
-	// Handle modal trigger (button clicks)
+	logger.Infof("Parsed payload: %+v", payload)
+
+	// Handle block actions (button clicks)
 	if payload["type"] == "block_actions" {
 		actions, ok := payload["actions"].([]interface{})
 		if !ok || len(actions) == 0 {
@@ -1173,14 +1177,31 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			return
 		}
 
+		logger.Infof("Processing action_id: %s", actionID)
+
 		var kybProfileID string
-		if strings.Contains(actionID, "_") {
-			kybProfileID = actionID[strings.Index(actionID, "_")+1:]
+		if strings.HasPrefix(actionID, "approve_kyb_") || strings.HasPrefix(actionID, "reject_kyb_") {
+			kybProfileID = actionID[strings.Index(actionID, "_kyb_")+5:] // Extract ID after "approve_kyb_" or "reject_kyb_"
+		} else if actionID == "review_kyb" || strings.HasPrefix(actionID, "review_kyb_") {
+			if actionID == "review_kyb" {
+				kybProfileID, ok = action["value"].(string)
+				if !ok {
+					logger.Errorf("Missing or invalid value for review_kyb action: %+v", action)
+					ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing action value"})
+					return
+				}
+			} else {
+				kybProfileID = actionID[strings.Index(actionID, "_kyb_")+5:] // Handle legacy review_kyb_<id>
+			}
+		} else if strings.HasPrefix(actionID, "approve_") || strings.HasPrefix(actionID, "reject_") {
+			kybProfileID = actionID[strings.Index(actionID, "_")+1:] // Handle legacy approve_<id>, reject_<id>
 		} else {
-			logger.Errorf("Invalid action_id format: %s", actionID)
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action_id format"})
+			logger.Errorf("Invalid action_id: %s", actionID)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action_id"})
 			return
 		}
+
+		logger.Infof("Extracted KYB Profile ID: %s", kybProfileID)
 
 		// Parse KYB Profile ID as UUID
 		kybProfileUUID, err := uuid.Parse(kybProfileID)
@@ -1229,12 +1250,181 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			firstName = "User"
 		}
 
-		// Handle reject button - only open modal
-		if strings.HasPrefix(actionID, "reject_") {
-			logger.Infof("Reject button clicked for KYB Profile %s, action: %+v", kybProfileID, action)
+		// Handle review button - open modal with KYB details
+		if actionID == "review_kyb" {
+			logger.Infof("Review button clicked for KYB Profile %s", kybProfileID)
 			triggerID, ok := payload["trigger_id"].(string)
 			if !ok {
 				logger.Errorf("Missing trigger_id for modal, KYB Profile ID: %s", kybProfileID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing trigger_id"})
+				return
+			}
+
+			// Build modal content with KYB details
+			var blocks []map[string]interface{}
+			blocks = append(blocks, map[string]interface{}{
+				"type": "section",
+				"text": map[string]interface{}{
+					"type": "mrkdwn",
+					"text": "*KYB Profile Details*",
+				},
+			})
+			blocks = append(blocks, map[string]interface{}{
+				"type": "section",
+				"text": map[string]interface{}{
+					"type": "mrkdwn",
+					"text": fmt.Sprintf(
+						"*Company Name*: %s\n*Mobile Number*: %s\n*Registered Business Address*: %s\n*Certificate of Incorporation*: %s\n*Articles of Incorporation*: %s\n*Proof of Business Address*: %s",
+						kybProfile.CompanyName,
+						kybProfile.MobileNumber,
+						kybProfile.RegisteredBusinessAddress,
+						kybProfile.CertificateOfIncorporationURL,
+						kybProfile.ArticlesOfIncorporationURL,
+						kybProfile.ProofOfBusinessAddressURL,
+					),
+				},
+			})
+
+			// Add optional fields
+			if kybProfile.BusinessLicenseURL != nil {
+				blocks = append(blocks, map[string]interface{}{
+					"type": "section",
+					"text": map[string]interface{}{
+						"type": "mrkdwn",
+						"text": fmt.Sprintf("*Business License*: %s", kybProfile.BusinessLicenseURL),
+					},
+				})
+			}
+			if kybProfile.AmlPolicyURL != "" {
+				blocks = append(blocks, map[string]interface{}{
+					"type": "section",
+					"text": map[string]interface{}{
+						"type": "mrkdwn",
+						"text": fmt.Sprintf("*AML Policy*: %s", kybProfile.AmlPolicyURL),
+					},
+				})
+			}
+			if kybProfile.KycPolicyURL != nil {
+				blocks = append(blocks, map[string]interface{}{
+					"type": "section",
+					"text": map[string]interface{}{
+						"type": "mrkdwn",
+						"text": fmt.Sprintf("*KYC Policy*: %s", kybProfile.KycPolicyURL),
+					},
+				})
+			}
+
+			// Add beneficial owners
+			if len(kybProfile.Edges.BeneficialOwners) > 0 {
+				blocks = append(blocks, map[string]interface{}{
+					"type": "section",
+					"text": map[string]interface{}{
+						"type": "mrkdwn",
+						"text": "*Beneficial Owners*",
+					},
+				})
+				for i, owner := range kybProfile.Edges.BeneficialOwners {
+					idType := "Not specified"
+					if owner.GovernmentIssuedIDType != "" {
+						idType = string(owner.GovernmentIssuedIDType)
+					}
+					blocks = append(blocks, map[string]interface{}{
+						"type": "section",
+						"text": map[string]interface{}{
+							"type": "mrkdwn",
+							"text": fmt.Sprintf(
+								"*Owner %d*\n*Full Name*: %s\n*Residential Address*: %s\n*Proof of Address*: %s\n*Government Issued ID*: %s\n*ID Type*: %s\n*Date of Birth*: %s\n*Ownership Percentage*: %.2f%%",
+								i+1,
+								owner.FullName,
+								owner.ResidentialAddress,
+								owner.ProofOfResidentialAddressURL,
+								owner.GovernmentIssuedIDURL,
+								idType,
+								owner.DateOfBirth,
+								owner.OwnershipPercentage,
+							),
+						},
+					})
+				}
+			}
+
+			// Add Approve and Reject buttons
+			blocks = append(blocks, map[string]interface{}{
+				"type": "actions",
+				"elements": []map[string]interface{}{
+					{
+						"type": "button",
+						"text": map[string]interface{}{
+							"type": "plain_text",
+							"text": "Approve",
+						},
+						"action_id": "approve_kyb_" + kybProfileID,
+						"style":     "primary",
+					},
+				},
+			})
+
+			modal := map[string]interface{}{
+				"trigger_id": triggerID,
+				"view": map[string]interface{}{
+					"type":        "modal",
+					"callback_id": "kyb_review_modal_" + kybProfileID,
+					"title": map[string]interface{}{
+						"type": "plain_text",
+						"text": "KYB Details",
+					},
+					"blocks": blocks,
+				},
+			}
+
+			jsonPayload, err := json.Marshal(modal)
+			if err != nil {
+				logger.Errorf("Failed to marshal modal payload for KYB Profile %s: %v", kybProfileID, err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create modal"})
+				return
+			}
+
+			client := &http.Client{}
+			req, err := http.NewRequest("POST", "https://slack.com/api/views.open", bytes.NewBuffer(jsonPayload))
+			if err != nil {
+				logger.Errorf("Failed to create Slack API request for KYB Profile %s: %v", kybProfileID, err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create modal request"})
+				return
+			}
+			req.Header.Set("Content-Type", "application/json")
+			cnfg := config.AuthConfig()
+			if cnfg.SlackBotToken == "" {
+				logger.Errorf("Slack bot token not configured for KYB Profile %s", kybProfileID)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Slack bot token not configured"})
+				return
+			}
+			req.Header.Set("Authorization", "Bearer "+cnfg.SlackBotToken)
+
+			resp, err := client.Do(req)
+			if err != nil {
+				logger.Errorf("Failed to open Slack modal for KYB Profile %s: %v", kybProfileID, err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open modal"})
+				return
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode != http.StatusOK {
+				body, _ := io.ReadAll(resp.Body)
+				logger.Errorf("Slack API responded with status %d for KYB Profile %s: %s", resp.StatusCode, kybProfileID, string(body))
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open modal"})
+				return
+			}
+
+			ctx.JSON(http.StatusOK, gin.H{})
+			return
+		}
+
+		// Handle reject button (from initial notification or modal) - open modal
+		if strings.HasPrefix(actionID, "reject_") || strings.HasPrefix(actionID, "reject_kyb_") {
+			logger.Infof("Reject button clicked for KYB Profile %s, action: %+v, trigger_id: %s", kybProfileID, action, payload["trigger_id"])
+			triggerID, ok := payload["trigger_id"].(string)
+			if !ok {
+				logger.Errorf("Missing trigger_id for modal, KYB Profile ID: %s, payload: %+v", kybProfileID, payload)
 				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing trigger_id"})
 				return
 			}
@@ -1353,7 +1543,8 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			return
 		}
 
-		if strings.HasPrefix(actionID, "approve_") {
+		// Handle approve button (from initial notification or modal)
+		if strings.HasPrefix(actionID, "approve_") || strings.HasPrefix(actionID, "approve_kyb_") {
 			if ctrl.isActionProcessed(kybProfileID, "approve") || ctrl.isActionProcessed(kybProfileID, "reject") {
 				logger.Warnf("Action already processed for KYB Profile %s", kybProfileID)
 				ctx.JSON(http.StatusOK, gin.H{"text": "This submission has already been processed."})
@@ -1557,6 +1748,22 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				logger.Warnf("Failed to send Slack feedback notification for KYB Profile %s: %v", kybProfileID, err)
 			}
 
+			// Update the original Slack message
+			responseURL, _ := payload["response_url"].(string)
+			if responseURL != "" {
+				go func() {
+					message := map[string]interface{}{
+						"replace_original": true,
+						// "text":             fmt.Sprintf("❌ *REJECTED* - KYB submission for %s (%s) from %s has been rejected. Reason: %s", firstName, email, kybProfile.CompanyName, reasonForDecline),
+						"text": fmt.Sprintf("❌ *REJECTED* - KYB submission for %s from %s has been rejected. Reason: %s", firstName, email, reasonForDecline),
+					}
+					jsonPayload, _ := json.Marshal(message)
+					if _, err := http.Post(responseURL, "application/json", bytes.NewBuffer(jsonPayload)); err != nil {
+						logger.Errorf("Failed to post response to URL: %v", err)
+					}
+				}()
+			}
+
 			logger.Infof("Processed Slack modal submission for rejection in %v", time.Since(startTime))
 			return
 		}
@@ -1564,6 +1771,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Unknown callback_id"})
 		return
 	}
+
 	ctx.JSON(http.StatusBadRequest, gin.H{"error": "Unknown payload type"})
 }
 
@@ -1731,6 +1939,8 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to process request", nil)
 		return
 	}
+
+	logger.Infof("Parsed KYB submission request")
 
 	// ✅ Send Slack notification (outside transaction)
 	err = ctrl.slackService.SendSubmissionNotification(userRecord.FirstName, userRecord.Email, kybSubmission.ID.String())
