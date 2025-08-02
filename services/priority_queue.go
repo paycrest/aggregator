@@ -2,13 +2,11 @@ package services
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"math/rand"
 	"strings"
 	"time"
 
-	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
@@ -22,9 +20,7 @@ import (
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
-	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/logger"
-	tokenUtils "github.com/paycrest/aggregator/utils/token"
 	"github.com/shopspring/decimal"
 )
 
@@ -465,46 +461,21 @@ func (s *PriorityQueueService) notifyProvider(ctx context.Context, orderRequestD
 	providerID := orderRequestData["providerId"].(string)
 	delete(orderRequestData, "providerId")
 
-	provider, err := storage.Client.ProviderProfile.
-		Query().
-		Where(providerprofile.IDEQ(providerID)).
-		WithAPIKey().
-		Only(ctx)
-	if err != nil {
-		return err
-	}
-
-	// Compute HMAC
-	decodedSecret, err := base64.StdEncoding.DecodeString(provider.Edges.APIKey.Secret)
-	if err != nil {
-		return err
-	}
-	decryptedSecret, err := cryptoUtils.DecryptPlain(decodedSecret)
-	if err != nil {
-		return err
-	}
-
-	signature := tokenUtils.GenerateHMACSignature(orderRequestData, string(decryptedSecret))
-
-	// Send POST request to the provider's node
-	res, err := fastshot.NewClient(provider.HostIdentifier).
-		Config().SetTimeout(30*time.Second).
-		Header().Add("X-Request-Signature", signature).
-		Build().POST("/new_order").
-		Body().AsJSON(orderRequestData).
-		Send()
-	if err != nil {
-		return err
-	}
-
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Call provider /new_order endpoint using utility function
+	data, err := utils.CallProviderWithHMAC(ctx, providerID, "POST", "/new_order", orderRequestData)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
 			"ProviderID": providerID,
-		}).Errorf("failed to parse JSON response after new order request with data: %v", data)
+		}).Errorf("failed to call provider /new_order endpoint")
 		return err
 	}
+
+	// Log successful response data for debugging
+	logger.WithFields(logger.Fields{
+		"ProviderID": providerID,
+		"Data":       data,
+	}).Infof("successfully called provider /new_order endpoint")
 
 	return nil
 }

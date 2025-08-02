@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/beneficialowner"
@@ -28,7 +27,6 @@ import (
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
-	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
@@ -286,74 +284,8 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 		return
 	}
 
-	accountInstitution, err := storage.Client.Institution.
-		Query().
-		Where(institution.CodeEQ(payload.Institution)).
-		WithFiatCurrency(
-			func(fq *ent.FiatCurrencyQuery) {
-				fq.Where(fiatcurrency.IsEnabledEQ(true))
-			},
-		).
-		Only(ctx)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":             fmt.Sprintf("%v", err),
-			"Institution":       payload.Institution,
-			"AccountIdentifier": payload.AccountIdentifier,
-		}).Errorf("Failed to validate payload when verifying account")
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", []types.ErrorData{{
-			Field:   "Institution",
-			Message: "Institution is not supported",
-		}})
-		return
-	}
-
-	// Skip account verification for mobile money institutions
-	if accountInstitution.Type == institution.TypeMobileMoney {
-		u.APIResponse(ctx, http.StatusOK, "success", "Account name was fetched successfully", "OK")
-		return
-	}
-
-	providers, err := storage.Client.ProviderProfile.
-		Query().
-		Where(
-			providerprofile.HasProviderCurrenciesWith(
-				providercurrencies.HasCurrencyWith(
-					fiatcurrency.CodeEQ(accountInstitution.Edges.FiatCurrency.Code),
-				),
-				providercurrencies.IsAvailableEQ(true),
-			),
-			providerprofile.HostIdentifierNotNil(),
-			providerprofile.IsActiveEQ(true),
-			providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
-		).
-		All(ctx)
-	if err != nil {
-		u.APIResponse(ctx, http.StatusBadRequest, "error",
-			"Failed to verify account", fmt.Sprintf("%v", err))
-		return
-	}
-
-	var res fastshot.Response
-	var data map[string]interface{}
-	for _, provider := range providers {
-		res, err = fastshot.NewClient(provider.HostIdentifier).
-			Config().SetTimeout(30 * time.Second).
-			Build().POST("/verify_account").
-			Body().AsJSON(payload).
-			Send()
-		if err != nil {
-			continue
-		}
-
-		data, err = u.ParseJSONResponse(res.RawResponse)
-		if err != nil {
-			continue
-		}
-
-		break
-	}
-
+	// Use the abstracted ValidateAccount utility function
+	accountName, err := u.ValidateAccount(ctx, payload.Institution, payload.AccountIdentifier)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":             fmt.Sprintf("%v", err),
@@ -364,7 +296,7 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 		return
 	}
 
-	u.APIResponse(ctx, http.StatusOK, "success", "Account name was fetched successfully", data["data"].(string))
+	u.APIResponse(ctx, http.StatusOK, "success", "Account name was fetched successfully", accountName)
 }
 
 // GetLockPaymentOrderStatus controller fetches a payment order status by ID

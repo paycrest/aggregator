@@ -791,3 +791,36 @@ type UpdateBalancePayload struct {
 	TotalBalance     string `json:"totalBalance" binding:"required,numeric"`
 	ReservedBalance  string `json:"reservedBalance" binding:"required,numeric"`
 }
+
+// ProviderBalance represents a provider's balance for a specific currency
+type ProviderBalance struct {
+	AvailableBalance decimal.Decimal `json:"availableBalance"`
+	TotalBalance     decimal.Decimal `json:"totalBalance"`
+	ReservedBalance  decimal.Decimal `json:"reservedBalance"`
+	LastUpdated      time.Time       `json:"lastUpdated"`
+}
+
+// ProviderInfoResponse represents the response from provider /info endpoint
+type ProviderInfoResponse struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
+	Data    struct {
+		Balances []struct {
+			AvailableBalance string `json:"availableBalance"`
+			PSP              string `json:"psp"`
+			SnapshotTime     string `json:"snapshotTime"`
+			Status           string `json:"status"`
+			TotalBalance     string `json:"totalBalance"`
+		} `json:"balances"`
+		ServiceInfo struct {
+			Currencies  []string `json:"currencies"`
+			LastUpdated string   `json:"lastUpdated"`
+			TotalPSPs   int      `json:"totalPSPs"`
+			Version     string   `json:"version"`
+		} `json:"serviceInfo"`
+		TotalBalances map[string]struct {
+			AvailableBalance string `json:"availableBalance"`
+			TotalBalance     string `json:"totalBalance"`
+		} `json:"totalBalances"`
+	} `json:"data"`
+}
