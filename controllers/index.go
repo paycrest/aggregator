@@ -1130,8 +1130,6 @@ func (ctrl *Controller) KYCWebhook(ctx *gin.Context) {
 func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 	startTime := time.Now()
 
-	logger.Infof("Request headers: %+v", ctx.Request.Header)
-
 	// Parse form-encoded payload
 	payloadStr := ctx.PostForm("payload")
 	if payloadStr == "" {
@@ -1151,8 +1149,6 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Error parsing payload"})
 		return
 	}
-
-	logger.Infof("Parsed payload: %+v", payload)
 
 	// Handle block actions (button clicks)
 	if payload["type"] == "block_actions" {
@@ -1177,8 +1173,6 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			return
 		}
 
-		logger.Infof("Processing action_id: %s", actionID)
-
 		var kybProfileID string
 		if strings.HasPrefix(actionID, "approve_kyb_") || strings.HasPrefix(actionID, "reject_kyb_") {
 			kybProfileID = actionID[strings.Index(actionID, "_kyb_")+5:] // Extract ID after "approve_kyb_" or "reject_kyb_"
@@ -1200,8 +1194,6 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action_id"})
 			return
 		}
-
-		logger.Infof("Extracted KYB Profile ID: %s", kybProfileID)
 
 		// Parse KYB Profile ID as UUID
 		kybProfileUUID, err := uuid.Parse(kybProfileID)
