@@ -689,8 +689,10 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 
 	// Provider profile should also return all the currencies associated with the provider
 	currencyCodes := make([]string, len(providerCurrencies))
+	currencyAvailability := make(map[string]bool)
 	for i, pc := range providerCurrencies {
 		currencyCodes[i] = pc.Edges.Currency.Code
+		currencyAvailability[pc.Edges.Currency.Code] = pc.IsAvailable
 	}
 
 	// Get token settings, optionally filtering by currency query parameter
@@ -744,7 +746,7 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 		TradingName:           provider.TradingName,
 		Currencies:            currencyCodes,
 		HostIdentifier:        provider.HostIdentifier,
-		IsAvailable:           provider.IsAvailable,
+		CurrencyAvailability:  currencyAvailability,
 		Tokens:                tokensPayload,
 		APIKey:                *apiKey,
 		IsActive:              provider.IsActive,

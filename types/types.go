@@ -280,7 +280,7 @@ type ProviderProfileResponse struct {
 	TradingName           string                         `json:"tradingName"`
 	Currencies            []string                       `json:"currencies"`
 	HostIdentifier        string                         `json:"hostIdentifier"`
-	IsAvailable           bool                           `json:"isAvailable"`
+	CurrencyAvailability  map[string]bool                `json:"currencyAvailability"`
 	Tokens                []ProviderOrderTokenPayload    `json:"tokens"`
 	APIKey                APIKeyResponse                 `json:"apiKey"`
 	IsActive              bool                           `json:"isActive"`
@@ -781,4 +781,13 @@ type WebhookSignatureVerification struct {
 	IsValid   bool
 	WebhookID string
 	Secret    string
+}
+
+// UpdateBalancePayload represents the payload for updating provider balance
+type UpdateBalancePayload struct {
+	ProviderID       string `json:"providerId" binding:"required,uuid"`
+	Currency         string `json:"currency" binding:"required,min=3,max=7"`
+	AvailableBalance string `json:"availableBalance" binding:"required,numeric"`
+	TotalBalance     string `json:"totalBalance" binding:"required,numeric"`
+	ReservedBalance  string `json:"reservedBalance" binding:"required,numeric"`
 }

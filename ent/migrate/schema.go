@@ -499,7 +499,6 @@ var (
 		{Name: "host_identifier", Type: field.TypeString, Nullable: true},
 		{Name: "provision_mode", Type: field.TypeEnum, Enums: []string{"manual", "auto"}, Default: "auto"},
 		{Name: "is_active", Type: field.TypeBool, Default: false},
-		{Name: "is_available", Type: field.TypeBool, Default: false},
 		{Name: "is_kyb_verified", Type: field.TypeBool, Default: false},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "visibility_mode", Type: field.TypeEnum, Enums: []string{"private", "public"}, Default: "public"},
@@ -513,7 +512,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "provider_profiles_users_provider_profile",
-				Columns:    []*schema.Column{ProviderProfilesColumns[9]},
+				Columns:    []*schema.Column{ProviderProfilesColumns[8]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Cascade,
 			},

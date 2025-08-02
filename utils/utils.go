@@ -916,6 +916,29 @@ func findSuitableProviderRate(providers []string, tokenSymbol string, networkIde
 		if fiatAmount.GreaterThanOrEqual(bucketData.MinAmount) && fiatAmount.LessThanOrEqual(bucketData.MaxAmount) {
 			return rate, true
 		}
+
+		// Check if provider has sufficient balance
+		ctx := context.Background()
+		_, err = storage.Client.ProviderCurrencies.
+			Query().
+			Where(
+				providercurrencies.HasProviderWith(providerprofile.IDEQ(parts[0])),
+				providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
+				providercurrencies.AvailableBalanceGT(fiatAmount),
+				providercurrencies.IsAvailableEQ(true),
+			).
+			Only(ctx)
+		if err != nil {
+			if ent.IsNotFound(err) {
+				continue
+			}
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", err),
+				"ProviderID": parts[0],
+				"Currency":   bucketData.Currency,
+			}).Errorf("Failed to get provider balance")
+			continue
+		}
 	}
 
 	// Return the best rate we found (even if no exact match) for logging purposes

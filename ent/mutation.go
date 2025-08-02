@@ -15602,8 +15602,7 @@ type ProviderProfileMutation struct {
 	host_identifier            *string
 	provision_mode             *providerprofile.ProvisionMode
 	is_active                  *bool
-	is_available               *bool
-	isKYBVerified              *bool
+	is_kyb_verified            *bool
 	updated_at                 *time.Time
 	visibility_mode            *providerprofile.VisibilityMode
 	clearedFields              map[string]struct{}
@@ -15904,76 +15903,40 @@ func (m *ProviderProfileMutation) ResetIsActive() {
 	m.is_active = nil
 }
 
-// SetIsAvailable sets the "is_available" field.
-func (m *ProviderProfileMutation) SetIsAvailable(b bool) {
-	m.is_available = &b
+// SetIsKybVerified sets the "is_kyb_verified" field.
+func (m *ProviderProfileMutation) SetIsKybVerified(b bool) {
+	m.is_kyb_verified = &b
 }
 
-// IsAvailable returns the value of the "is_available" field in the mutation.
-func (m *ProviderProfileMutation) IsAvailable() (r bool, exists bool) {
-	v := m.is_available
+// IsKybVerified returns the value of the "is_kyb_verified" field in the mutation.
+func (m *ProviderProfileMutation) IsKybVerified() (r bool, exists bool) {
+	v := m.is_kyb_verified
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldIsAvailable returns the old "is_available" field's value of the ProviderProfile entity.
+// OldIsKybVerified returns the old "is_kyb_verified" field's value of the ProviderProfile entity.
 // If the ProviderProfile object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProviderProfileMutation) OldIsAvailable(ctx context.Context) (v bool, err error) {
+func (m *ProviderProfileMutation) OldIsKybVerified(ctx context.Context) (v bool, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldIsAvailable is only allowed on UpdateOne operations")
+		return v, errors.New("OldIsKybVerified is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldIsAvailable requires an ID field in the mutation")
+		return v, errors.New("OldIsKybVerified requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldIsAvailable: %w", err)
+		return v, fmt.Errorf("querying old value for OldIsKybVerified: %w", err)
 	}
-	return oldValue.IsAvailable, nil
+	return oldValue.IsKybVerified, nil
 }
 
-// ResetIsAvailable resets all changes to the "is_available" field.
-func (m *ProviderProfileMutation) ResetIsAvailable() {
-	m.is_available = nil
-}
-
-// SetIsKYBVerified sets the "isKYBVerified" field.
-func (m *ProviderProfileMutation) SetIsKYBVerified(b bool) {
-	m.isKYBVerified = &b
-}
-
-// IsKYBVerified returns the value of the "isKYBVerified" field in the mutation.
-func (m *ProviderProfileMutation) IsKYBVerified() (r bool, exists bool) {
-	v := m.isKYBVerified
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldIsKYBVerified returns the old "isKYBVerified" field's value of the ProviderProfile entity.
-// If the ProviderProfile object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProviderProfileMutation) OldIsKYBVerified(ctx context.Context) (v bool, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldIsKYBVerified is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldIsKYBVerified requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldIsKYBVerified: %w", err)
-	}
-	return oldValue.IsKYBVerified, nil
-}
-
-// ResetIsKYBVerified resets all changes to the "isKYBVerified" field.
-func (m *ProviderProfileMutation) ResetIsKYBVerified() {
-	m.isKYBVerified = nil
+// ResetIsKybVerified resets all changes to the "is_kyb_verified" field.
+func (m *ProviderProfileMutation) ResetIsKybVerified() {
+	m.is_kyb_verified = nil
 }
 
 // SetUpdatedAt sets the "updated_at" field.
@@ -16415,7 +16378,7 @@ func (m *ProviderProfileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProviderProfileMutation) Fields() []string {
-	fields := make([]string, 0, 8)
+	fields := make([]string, 0, 7)
 	if m.trading_name != nil {
 		fields = append(fields, providerprofile.FieldTradingName)
 	}
@@ -16428,11 +16391,8 @@ func (m *ProviderProfileMutation) Fields() []string {
 	if m.is_active != nil {
 		fields = append(fields, providerprofile.FieldIsActive)
 	}
-	if m.is_available != nil {
-		fields = append(fields, providerprofile.FieldIsAvailable)
-	}
-	if m.isKYBVerified != nil {
-		fields = append(fields, providerprofile.FieldIsKYBVerified)
+	if m.is_kyb_verified != nil {
+		fields = append(fields, providerprofile.FieldIsKybVerified)
 	}
 	if m.updated_at != nil {
 		fields = append(fields, providerprofile.FieldUpdatedAt)
@@ -16456,10 +16416,8 @@ func (m *ProviderProfileMutation) Field(name string) (ent.Value, bool) {
 		return m.ProvisionMode()
 	case providerprofile.FieldIsActive:
 		return m.IsActive()
-	case providerprofile.FieldIsAvailable:
-		return m.IsAvailable()
-	case providerprofile.FieldIsKYBVerified:
-		return m.IsKYBVerified()
+	case providerprofile.FieldIsKybVerified:
+		return m.IsKybVerified()
 	case providerprofile.FieldUpdatedAt:
 		return m.UpdatedAt()
 	case providerprofile.FieldVisibilityMode:
@@ -16481,10 +16439,8 @@ func (m *ProviderProfileMutation) OldField(ctx context.Context, name string) (en
 		return m.OldProvisionMode(ctx)
 	case providerprofile.FieldIsActive:
 		return m.OldIsActive(ctx)
-	case providerprofile.FieldIsAvailable:
-		return m.OldIsAvailable(ctx)
-	case providerprofile.FieldIsKYBVerified:
-		return m.OldIsKYBVerified(ctx)
+	case providerprofile.FieldIsKybVerified:
+		return m.OldIsKybVerified(ctx)
 	case providerprofile.FieldUpdatedAt:
 		return m.OldUpdatedAt(ctx)
 	case providerprofile.FieldVisibilityMode:
@@ -16526,19 +16482,12 @@ func (m *ProviderProfileMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetIsActive(v)
 		return nil
-	case providerprofile.FieldIsAvailable:
+	case providerprofile.FieldIsKybVerified:
 		v, ok := value.(bool)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetIsAvailable(v)
-		return nil
-	case providerprofile.FieldIsKYBVerified:
-		v, ok := value.(bool)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetIsKYBVerified(v)
+		m.SetIsKybVerified(v)
 		return nil
 	case providerprofile.FieldUpdatedAt:
 		v, ok := value.(time.Time)
@@ -16630,11 +16579,8 @@ func (m *ProviderProfileMutation) ResetField(name string) error {
 	case providerprofile.FieldIsActive:
 		m.ResetIsActive()
 		return nil
-	case providerprofile.FieldIsAvailable:
-		m.ResetIsAvailable()
-		return nil
-	case providerprofile.FieldIsKYBVerified:
-		m.ResetIsKYBVerified()
+	case providerprofile.FieldIsKybVerified:
+		m.ResetIsKybVerified()
 		return nil
 	case providerprofile.FieldUpdatedAt:
 		m.ResetUpdatedAt()

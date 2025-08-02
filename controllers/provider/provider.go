@@ -19,6 +19,7 @@ import (
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
+	"github.com/paycrest/aggregator/services"
 	orderService "github.com/paycrest/aggregator/services/order"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
@@ -32,11 +33,15 @@ import (
 var orderConf = config.OrderConfig()
 
 // ProviderController is a controller type for provider endpoints
-type ProviderController struct{}
+type ProviderController struct {
+	balanceService *services.BalanceManagementService
+}
 
 // NewProviderController creates a new instance of ProviderController with injected services
 func NewProviderController() *ProviderController {
-	return &ProviderController{}
+	return &ProviderController{
+		balanceService: services.NewBalanceManagementService(),
+	}
 }
 
 // GetLockPaymentOrders controller fetches all assigned orders
@@ -1181,4 +1186,60 @@ func (ctrl *ProviderController) GetLockPaymentOrderByID(ctx *gin.Context) {
 		Transactions:        transactions,
 		CancellationReasons: lockPaymentOrder.CancellationReasons,
 	})
+}
+
+// UpdateProviderBalance handles the update of provider balance
+func (ctrl *ProviderController) UpdateProviderBalance(ctx *gin.Context) {
+	var payload types.UpdateBalancePayload
+
+	if err := ctx.ShouldBindJSON(&payload); err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error",
+			"Failed to validate payload", u.GetErrorData(err))
+		return
+	}
+
+	// Provider ID is already a string, no parsing needed
+	providerID := payload.ProviderID
+
+	// Parse balance amounts
+	availableBalance, err := decimal.NewFromString(payload.AvailableBalance)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid available balance format", []types.ErrorData{{
+			Field:   "AvailableBalance",
+			Message: "Invalid available balance format",
+		}})
+		return
+	}
+
+	totalBalance, err := decimal.NewFromString(payload.TotalBalance)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid total balance format", []types.ErrorData{{
+			Field:   "TotalBalance",
+			Message: "Invalid total balance format",
+		}})
+		return
+	}
+
+	reservedBalance, err := decimal.NewFromString(payload.ReservedBalance)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid reserved balance format", []types.ErrorData{{
+			Field:   "ReservedBalance",
+			Message: "Invalid reserved balance format",
+		}})
+		return
+	}
+
+	// Update the balance
+	err = ctrl.balanceService.UpdateProviderBalance(ctx, providerID, payload.Currency, availableBalance, totalBalance, reservedBalance)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"ProviderID": payload.ProviderID,
+			"Currency":   payload.Currency,
+		}).Errorf("Failed to update provider balance")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update balance", nil)
+		return
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Balance updated successfully", nil)
 }

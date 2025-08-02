@@ -400,16 +400,12 @@ func init() {
 	providerprofileDescIsActive := providerprofileFields[4].Descriptor()
 	// providerprofile.DefaultIsActive holds the default value on creation for the is_active field.
 	providerprofile.DefaultIsActive = providerprofileDescIsActive.Default.(bool)
-	// providerprofileDescIsAvailable is the schema descriptor for is_available field.
-	providerprofileDescIsAvailable := providerprofileFields[5].Descriptor()
-	// providerprofile.DefaultIsAvailable holds the default value on creation for the is_available field.
-	providerprofile.DefaultIsAvailable = providerprofileDescIsAvailable.Default.(bool)
-	// providerprofileDescIsKYBVerified is the schema descriptor for isKYBVerified field.
-	providerprofileDescIsKYBVerified := providerprofileFields[6].Descriptor()
-	// providerprofile.DefaultIsKYBVerified holds the default value on creation for the isKYBVerified field.
-	providerprofile.DefaultIsKYBVerified = providerprofileDescIsKYBVerified.Default.(bool)
+	// providerprofileDescIsKybVerified is the schema descriptor for is_kyb_verified field.
+	providerprofileDescIsKybVerified := providerprofileFields[5].Descriptor()
+	// providerprofile.DefaultIsKybVerified holds the default value on creation for the is_kyb_verified field.
+	providerprofile.DefaultIsKybVerified = providerprofileDescIsKybVerified.Default.(bool)
 	// providerprofileDescUpdatedAt is the schema descriptor for updated_at field.
-	providerprofileDescUpdatedAt := providerprofileFields[7].Descriptor()
+	providerprofileDescUpdatedAt := providerprofileFields[6].Descriptor()
 	// providerprofile.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	providerprofile.DefaultUpdatedAt = providerprofileDescUpdatedAt.Default.(func() time.Time)
 	// providerprofile.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

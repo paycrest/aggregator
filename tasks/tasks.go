@@ -1068,7 +1068,7 @@ func ComputeMarketRate() error {
 				),
 				providerordertoken.ConversionRateTypeEQ(providerordertoken.ConversionRateTypeFixed),
 				providerordertoken.HasProviderWith(
-					providerprofile.IsAvailableEQ(true),
+					providerprofile.IsActiveEQ(true),
 				),
 			).
 			Select(providerordertoken.FieldFixedConversionRate).

@@ -474,7 +474,6 @@ func CreateTestProviderProfile(overrides map[string]interface{}) (*ent.ProviderP
 		SetProvisionMode(providerprofile.ProvisionMode(payload["provision_mode"].(string))).
 		SetUserID(payload["user_id"].(uuid.UUID)).
 		SetVisibilityMode(providerprofile.VisibilityMode(payload["visibility_mode"].(string))).
-		SetIsAvailable(payload["is_available"].(bool)).
 		Save(context.Background())
 	if err != nil {
 		return nil, err

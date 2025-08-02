@@ -80,14 +80,9 @@ func IsActive(v bool) predicate.ProviderProfile {
 	return predicate.ProviderProfile(sql.FieldEQ(FieldIsActive, v))
 }
 
-// IsAvailable applies equality check predicate on the "is_available" field. It's identical to IsAvailableEQ.
-func IsAvailable(v bool) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldEQ(FieldIsAvailable, v))
-}
-
-// IsKYBVerified applies equality check predicate on the "isKYBVerified" field. It's identical to IsKYBVerifiedEQ.
-func IsKYBVerified(v bool) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldEQ(FieldIsKYBVerified, v))
+// IsKybVerified applies equality check predicate on the "is_kyb_verified" field. It's identical to IsKybVerifiedEQ.
+func IsKybVerified(v bool) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldEQ(FieldIsKybVerified, v))
 }
 
 // UpdatedAt applies equality check predicate on the "updated_at" field. It's identical to UpdatedAtEQ.
@@ -275,24 +270,14 @@ func IsActiveNEQ(v bool) predicate.ProviderProfile {
 	return predicate.ProviderProfile(sql.FieldNEQ(FieldIsActive, v))
 }
 
-// IsAvailableEQ applies the EQ predicate on the "is_available" field.
-func IsAvailableEQ(v bool) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldEQ(FieldIsAvailable, v))
+// IsKybVerifiedEQ applies the EQ predicate on the "is_kyb_verified" field.
+func IsKybVerifiedEQ(v bool) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldEQ(FieldIsKybVerified, v))
 }
 
-// IsAvailableNEQ applies the NEQ predicate on the "is_available" field.
-func IsAvailableNEQ(v bool) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldNEQ(FieldIsAvailable, v))
-}
-
-// IsKYBVerifiedEQ applies the EQ predicate on the "isKYBVerified" field.
-func IsKYBVerifiedEQ(v bool) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldEQ(FieldIsKYBVerified, v))
-}
-
-// IsKYBVerifiedNEQ applies the NEQ predicate on the "isKYBVerified" field.
-func IsKYBVerifiedNEQ(v bool) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldNEQ(FieldIsKYBVerified, v))
+// IsKybVerifiedNEQ applies the NEQ predicate on the "is_kyb_verified" field.
+func IsKybVerifiedNEQ(v bool) predicate.ProviderProfile {
+	return predicate.ProviderProfile(sql.FieldNEQ(FieldIsKybVerified, v))
 }
 
 // UpdatedAtEQ applies the EQ predicate on the "updated_at" field.

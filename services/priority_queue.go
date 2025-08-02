@@ -33,11 +33,15 @@ var (
 	orderConf  = config.OrderConfig()
 )
 
-type PriorityQueueService struct{}
+type PriorityQueueService struct {
+	balanceService *BalanceManagementService
+}
 
 // NewPriorityQueueService creates a new instance of PriorityQueueService
 func NewPriorityQueueService() *PriorityQueueService {
-	return &PriorityQueueService{}
+	return &PriorityQueueService{
+		balanceService: NewBalanceManagementService(),
+	}
 }
 
 // ProcessBucketQueues creates a priority queue for each bucket and saves it to redis
@@ -93,6 +97,7 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 					providercurrencies.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 					providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)),
 					providercurrencies.IsAvailableEQ(true),
+					providercurrencies.AvailableBalanceGT(bucket.MinAmount),
 				).
 				Exist(ctx)
 			if err != nil {
@@ -604,7 +609,31 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 		allowedDeviation := order.Rate.Mul(providerToken.RateSlippage.Div(decimal.NewFromInt(100)))
 
 		if rate.Sub(order.Rate).Abs().LessThanOrEqual(allowedDeviation) {
-			// Found a match for the rate
+			// Check if provider has sufficient balance for this order
+			hasSufficientBalance, err := s.balanceService.CheckBalanceSufficiency(ctx, order.ProviderID, bucketCurrency.Code, order.Amount)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":      fmt.Sprintf("%v", err),
+					"OrderID":    order.ID.String(),
+					"ProviderID": order.ProviderID,
+					"Currency":   bucketCurrency.Code,
+					"Amount":     order.Amount.String(),
+				}).Errorf("failed to check balance sufficiency")
+				continue
+			}
+
+			if !hasSufficientBalance {
+				// TODO: send notification to the provider
+				logger.WithFields(logger.Fields{
+					"OrderID":    order.ID.String(),
+					"ProviderID": order.ProviderID,
+					"Currency":   bucketCurrency.Code,
+					"Amount":     order.Amount.String(),
+				}).Warnf("provider has insufficient balance, skipping")
+				continue
+			}
+
+			// Found a match for the rate and sufficient balance
 			if index == 0 {
 				// Match found at index 0, perform LPOP to dequeue
 				data, err := storage.RedisClient.LPop(ctx, redisKey).Result()
