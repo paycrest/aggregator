@@ -517,6 +517,44 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		return fmt.Errorf("UpdateOrderStatusRefunded.aggregator: %v", err)
 	}
 
+	// Release reserved balance for refunded orders
+	// Get the lock payment order to access provider and currency info
+	lockOrder, err := tx.LockPaymentOrder.
+		Query().
+		Where(
+			lockpaymentorder.GatewayIDEQ(event.OrderId),
+			lockpaymentorder.HasTokenWith(
+				tokenent.HasNetworkWith(
+					networkent.IdentifierEQ(network.Identifier),
+				),
+			),
+		).
+		WithProvider().
+		WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) {
+			pbq.WithCurrency()
+		}).
+		Only(ctx)
+	if err == nil && lockOrder != nil {
+		// Create a new balance service instance for this transaction
+		balanceService := svc.NewBalanceManagementService()
+
+		providerID := lockOrder.Edges.Provider.ID
+		currency := lockOrder.Edges.ProvisionBucket.Edges.Currency.Code
+		amount := lockOrder.Amount
+
+		err = balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", err),
+				"OrderID":    event.OrderId,
+				"ProviderID": providerID,
+				"Currency":   currency,
+				"Amount":     amount.String(),
+			}).Errorf("failed to release reserved balance for refunded order")
+			// Don't return error here as the order status is already updated
+		}
+	}
+
 	// Sender side status update
 	if paymentOrderExists && paymentOrder.Status != paymentorder.StatusRefunded {
 		paymentOrderUpdate := tx.PaymentOrder.
@@ -664,6 +702,64 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 	_, err = lockPaymentOrderUpdate.Save(ctx)
 	if err != nil {
 		return fmt.Errorf("UpdateOrderStatusSettled.aggregator: %v", err)
+	}
+
+	// Update provider balance for settled orders
+	// Get the lock payment order to access provider and currency info
+	lockOrder, err := tx.LockPaymentOrder.
+		Query().
+		Where(
+			lockpaymentorder.IDEQ(splitOrderId),
+			lockpaymentorder.HasTokenWith(
+				tokenent.HasNetworkWith(
+					networkent.IdentifierEQ(network.Identifier),
+				),
+			),
+		).
+		WithProvider().
+		WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) {
+			pbq.WithCurrency()
+		}).
+		Only(ctx)
+	if err == nil && lockOrder != nil {
+		// Create a new balance service instance for this transaction
+		balanceService := svc.NewBalanceManagementService()
+
+		providerID := lockOrder.Edges.Provider.ID
+		currency := lockOrder.Edges.ProvisionBucket.Edges.Currency.Code
+		amount := lockOrder.Amount
+
+		// Get current balance to update it appropriately
+		currentBalance, err := balanceService.GetProviderBalance(ctx, providerID, currency)
+		if err == nil && currentBalance != nil {
+			// For settlement, we only reduce the reserved balance since the available balance was already reduced during assignment
+			newReservedBalance := currentBalance.ReservedBalance.Sub(amount)
+
+			// Ensure reserved balance doesn't go negative
+			if newReservedBalance.LessThan(decimal.Zero) {
+				newReservedBalance = decimal.Zero
+			}
+
+			// For settlement, we reduce the reserved balance and total balance
+			// Available balance was already reduced during assignment
+			// Total balance is reduced because the provider has actually spent money to fulfill the order
+			newTotalBalance := currentBalance.TotalBalance.Sub(amount)
+			if newTotalBalance.LessThan(decimal.Zero) {
+				newTotalBalance = decimal.Zero
+			}
+
+			err = balanceService.UpdateProviderBalance(ctx, providerID, currency, currentBalance.AvailableBalance, newTotalBalance, newReservedBalance)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":      fmt.Sprintf("%v", err),
+					"OrderID":    event.OrderId,
+					"ProviderID": providerID,
+					"Currency":   currency,
+					"Amount":     amount.String(),
+				}).Errorf("failed to update provider balance for settled order")
+				// Don't return error here as the order status is already updated
+			}
+		}
 	}
 
 	settledPercent := decimal.NewFromInt(0)

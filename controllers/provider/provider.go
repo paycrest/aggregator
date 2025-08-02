@@ -404,6 +404,10 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			poq.WithToken(func(tq *ent.TokenQuery) {
 				tq.WithNetwork()
 			})
+			poq.WithProvider()
+			poq.WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) {
+				pbq.WithCurrency()
+			})
 		}).
 		Only(ctx)
 	if err != nil {
@@ -503,6 +507,23 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			return
 		}
 
+		// Release reserved balance for this fulfilled order
+		providerID := fulfillment.Edges.Order.Edges.Provider.ID
+		currency := fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency.Code
+		amount := fulfillment.Edges.Order.Amount
+
+		err = ctrl.balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", err),
+				"OrderID":    orderID.String(),
+				"ProviderID": providerID,
+				"Currency":   currency,
+				"Amount":     amount.String(),
+			}).Errorf("failed to release reserved balance for fulfilled order")
+			// Don't return error here as the order is already fulfilled
+		}
+
 		// Mark payment order as validated and send webhook notification to sender
 		paymentOrder, err := storage.Client.PaymentOrder.
 			Query().
@@ -578,6 +599,23 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			}).Errorf("Failed to update lock order status: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 			return
+		}
+
+		// Release reserved balance for failed validation
+		providerID := fulfillment.Edges.Order.Edges.Provider.ID
+		currency := fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency.Code
+		amount := fulfillment.Edges.Order.Amount
+
+		err = ctrl.balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", err),
+				"OrderID":    orderID.String(),
+				"ProviderID": providerID,
+				"Currency":   currency,
+				"Amount":     amount.String(),
+			}).Errorf("failed to release reserved balance for failed validation")
+			// Don't return error here as the order status is already updated
 		}
 
 	} else {
@@ -729,15 +767,6 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 				break
 			}
 		}
-
-		// // Update provider availability to off
-		// _, err = storage.Client.ProviderProfile.
-		// 	UpdateOneID(provider.ID).
-		// 	SetIsAvailable(false).
-		// 	Save(ctx)
-		// if err != nil {
-		// 	logger.Errorf("failed to update provider availability: %v", err)
-		// }
 	}
 
 	// Update lock order status to cancelled
@@ -757,6 +786,23 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 
 	order.Status = lockpaymentorder.StatusCancelled
 	order.CancellationCount = cancellationCount
+
+	// Release reserved balance for this cancelled order
+	providerID := order.Edges.Provider.ID
+	currency := order.Edges.ProvisionBucket.Edges.Currency.Code
+	amount := order.Amount
+
+	err = ctrl.balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"OrderID":    orderID.String(),
+			"ProviderID": providerID,
+			"Currency":   currency,
+			"Amount":     amount.String(),
+		}).Errorf("failed to release reserved balance for cancelled order")
+		// Don't return error here as the order status is already updated
+	}
 
 	// Check if order cancellation count is equal or greater than RefundCancellationCount in config,
 	// and the order has not been refunded, then trigger refund

@@ -396,6 +396,22 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 
 // sendOrderRequest sends an order request to a provider
 func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types.LockPaymentOrderFields) error {
+	// Reserve balance for this order
+	currency := order.ProvisionBucket.Edges.Currency.Code
+	amount := order.Amount
+
+	err := s.balanceService.ReserveBalance(ctx, order.ProviderID, currency, amount)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"OrderID":    order.ID.String(),
+			"ProviderID": order.ProviderID,
+			"Currency":   currency,
+			"Amount":     amount.String(),
+		}).Errorf("failed to reserve balance for order")
+		return err
+	}
+
 	// Assign the order to the provider and save it to Redis
 	orderKey := fmt.Sprintf("order_request_%s", order.ID)
 
@@ -418,7 +434,7 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 	}
 
 	// Set a TTL for the order request
-	err := storage.RedisClient.ExpireAt(ctx, orderKey, time.Now().Add(orderConf.OrderRequestValidity)).Err()
+	err = storage.RedisClient.ExpireAt(ctx, orderKey, time.Now().Add(orderConf.OrderRequestValidity)).Err()
 	if err != nil {
 		// logger.Errorf("failed to set TTL for order request: %v", err)
 		logger.WithFields(logger.Fields{
