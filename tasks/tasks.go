@@ -1579,24 +1579,32 @@ func fetchProviderBalances(providerID string) (map[string]*types.ProviderBalance
 
 	// Use totalBalances from response
 	for currency, balanceData := range response.Data.TotalBalances {
-		availableBalance, err := decimal.NewFromString(balanceData.AvailableBalance)
-		if err != nil {
-			logger.Warnf("Failed to parse available balance for %s: %v", currency, err)
-			continue
-		}
+ 		availableBalance, err := decimal.NewFromString(balanceData.AvailableBalance)
+ 		if err != nil {
+ 			logger.Warnf("Failed to parse available balance for %s: %v", currency, err)
+ 			continue
+ 		}
++		if availableBalance.IsNegative() {
++			logger.Errorf("Negative available balance for %s: %v", currency, availableBalance)
++			continue
++		}
 
-		totalBalance, err := decimal.NewFromString(balanceData.TotalBalance)
-		if err != nil {
-			logger.Warnf("Failed to parse total balance for %s: %v", currency, err)
-			continue
-		}
+ 		totalBalance, err := decimal.NewFromString(balanceData.TotalBalance)
+ 		if err != nil {
+ 			logger.Warnf("Failed to parse total balance for %s: %v", currency, err)
+ 			continue
+ 		}
++		if totalBalance.IsNegative() {
++			logger.Errorf("Negative total balance for %s: %v", currency, totalBalance)
++			continue
++		}
 
-		balances[currency] = &types.ProviderBalance{
-			AvailableBalance: availableBalance,
-			TotalBalance:     totalBalance,
-			ReservedBalance:  decimal.Zero, // Provider doesn't track reserved balance
-			LastUpdated:      time.Now(),
-		}
+ 		balances[currency] = &types.ProviderBalance{
+ 			AvailableBalance: availableBalance,
+ 			TotalBalance:     totalBalance,
+ 			ReservedBalance:  decimal.Zero, // Provider doesn't track reserved balance
+ 			LastUpdated:      time.Now(),
+ 		}
 	}
 
 	return balances, nil
