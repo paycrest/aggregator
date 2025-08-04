@@ -542,7 +542,7 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		currency := lockOrder.Edges.ProvisionBucket.Edges.Currency.Code
 		amount := lockOrder.Amount
 
-		err = balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount)
+		err = balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount, nil)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":      fmt.Sprintf("%v", err),

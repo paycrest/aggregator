@@ -97,9 +97,35 @@ func (svc *BalanceManagementService) GetProviderBalance(ctx context.Context, pro
 
 // ReserveBalance reserves a specific amount for a provider and currency
 func (svc *BalanceManagementService) ReserveBalance(ctx context.Context, providerID string, currencyCode string, amount decimal.Decimal) error {
-	providerCurrency, err := svc.GetProviderBalance(ctx, providerID, currencyCode)
+	// Use database transaction to prevent race conditions
+	tx, err := svc.client.Tx(ctx)
 	if err != nil {
-		return err
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"ProviderID": providerID,
+			"Currency":   currencyCode,
+		}).Errorf("Failed to start transaction for balance reservation")
+		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+
+	// Get provider balance within transaction
+	providerCurrency, err := tx.ProviderCurrencies.
+		Query().
+		Where(
+			providercurrencies.HasProviderWith(providerprofile.IDEQ(providerID)),
+			providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currencyCode)),
+		).
+		WithProvider().
+		WithCurrency().
+		Only(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"ProviderID": providerID,
+			"Currency":   currencyCode,
+		}).Errorf("Failed to get provider balance for reservation")
+		_ = tx.Rollback()
+		return fmt.Errorf("failed to get provider balance: %w", err)
 	}
 
 	// Check if there's sufficient available balance
@@ -110,6 +136,7 @@ func (svc *BalanceManagementService) ReserveBalance(ctx context.Context, provide
 			"AvailableBalance": providerCurrency.AvailableBalance.String(),
 			"RequestedAmount":  amount.String(),
 		}).Warnf("Insufficient available balance for reservation")
+		_ = tx.Rollback()
 		return fmt.Errorf("insufficient available balance: available=%s, requested=%s",
 			providerCurrency.AvailableBalance.String(), amount.String())
 	}
@@ -118,7 +145,7 @@ func (svc *BalanceManagementService) ReserveBalance(ctx context.Context, provide
 	newAvailableBalance := providerCurrency.AvailableBalance.Sub(amount)
 	newReservedBalance := providerCurrency.ReservedBalance.Add(amount)
 
-	// Update the balance
+	// Update the balance within transaction
 	_, err = providerCurrency.Update().
 		SetAvailableBalance(newAvailableBalance).
 		SetReservedBalance(newReservedBalance).
@@ -130,7 +157,18 @@ func (svc *BalanceManagementService) ReserveBalance(ctx context.Context, provide
 			"ProviderID": providerID,
 			"Currency":   currencyCode,
 		}).Errorf("Failed to reserve balance")
+		_ = tx.Rollback()
 		return fmt.Errorf("failed to reserve balance: %w", err)
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"ProviderID": providerID,
+			"Currency":   currencyCode,
+		}).Errorf("Failed to commit balance reservation transaction")
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	logger.WithFields(logger.Fields{
@@ -145,14 +183,64 @@ func (svc *BalanceManagementService) ReserveBalance(ctx context.Context, provide
 }
 
 // ReleaseReservedBalance releases a previously reserved amount
-func (svc *BalanceManagementService) ReleaseReservedBalance(ctx context.Context, providerID string, currencyCode string, amount decimal.Decimal) error {
-	providerCurrency, err := svc.GetProviderBalance(ctx, providerID, currencyCode)
+// If tx is provided, the operation will be performed within that transaction
+func (svc *BalanceManagementService) ReleaseReservedBalance(ctx context.Context, providerID string, currencyCode string, amount decimal.Decimal, tx *ent.Tx) error {
+	var providerCurrency *ent.ProviderCurrencies
+	var err error
+	var shouldCommit bool
+
+	// Use transaction client if provided, otherwise create a new transaction
+	if tx != nil {
+		providerCurrency, err = tx.ProviderCurrencies.
+			Query().
+			Where(
+				providercurrencies.HasProviderWith(providerprofile.IDEQ(providerID)),
+				providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currencyCode)),
+			).
+			WithProvider().
+			WithCurrency().
+			Only(ctx)
+	} else {
+		// Create a new transaction for atomicity
+		tx, err = svc.client.Tx(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", err),
+				"ProviderID": providerID,
+				"Currency":   currencyCode,
+			}).Errorf("Failed to start transaction for balance release")
+			return fmt.Errorf("failed to start transaction: %w", err)
+		}
+		shouldCommit = true
+
+		providerCurrency, err = tx.ProviderCurrencies.
+			Query().
+			Where(
+				providercurrencies.HasProviderWith(providerprofile.IDEQ(providerID)),
+				providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currencyCode)),
+			).
+			WithProvider().
+			WithCurrency().
+			Only(ctx)
+	}
+
 	if err != nil {
-		return err
+		if shouldCommit {
+			_ = tx.Rollback()
+		}
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"ProviderID": providerID,
+			"Currency":   currencyCode,
+		}).Errorf("Failed to get provider balance for release")
+		return fmt.Errorf("failed to get provider balance: %w", err)
 	}
 
 	// Check if there's sufficient reserved balance
 	if providerCurrency.ReservedBalance.LessThan(amount) {
+		if shouldCommit {
+			_ = tx.Rollback()
+		}
 		logger.WithFields(logger.Fields{
 			"ProviderID":      providerID,
 			"Currency":        currencyCode,
@@ -174,12 +262,27 @@ func (svc *BalanceManagementService) ReleaseReservedBalance(ctx context.Context,
 		SetUpdatedAt(time.Now()).
 		Save(ctx)
 	if err != nil {
+		if shouldCommit {
+			_ = tx.Rollback()
+		}
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
 			"ProviderID": providerID,
 			"Currency":   currencyCode,
 		}).Errorf("Failed to release reserved balance")
 		return fmt.Errorf("failed to release reserved balance: %w", err)
+	}
+
+	// Commit the transaction if we created it
+	if shouldCommit {
+		if err := tx.Commit(); err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", err),
+				"ProviderID": providerID,
+				"Currency":   currencyCode,
+			}).Errorf("Failed to commit balance release transaction")
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	logger.WithFields(logger.Fields{

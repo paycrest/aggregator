@@ -456,13 +456,28 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		}
 	}
 
-	if payload.ValidationStatus == lockorderfulfillment.ValidationStatusSuccess {
+	switch payload.ValidationStatus {
+	case lockorderfulfillment.ValidationStatusSuccess:
 		if fulfillment.Edges.Order.Status != lockpaymentorder.StatusFulfilled {
 			u.APIResponse(ctx, http.StatusOK, "success", "Order already validated", nil)
 			return
 		}
 
-		_, err := fulfillment.Update().
+		// Start a database transaction to ensure consistency
+		tx, err := storage.Client.Tx(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"Trx Id":  payload.TxID,
+				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
+			}).Errorf("Failed to start transaction: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+			return
+		}
+
+		// Update fulfillment status within transaction
+		_, err = tx.LockOrderFulfillment.
+			UpdateOneID(fulfillment.ID).
 			SetValidationStatus(lockorderfulfillment.ValidationStatusSuccess).
 			Save(ctx)
 		if err != nil {
@@ -472,10 +487,12 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
 			}).Errorf("Failed to update lock order fulfillment: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+			_ = tx.Rollback()
 			return
 		}
 
-		transactionLog, err := storage.Client.TransactionLog.Create().
+		// Create transaction log within transaction
+		transactionLog, err := tx.TransactionLog.Create().
 			SetStatus(transactionlog.StatusOrderValidated).
 			SetNetwork(fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier).
 			SetMetadata(map[string]interface{}{
@@ -490,10 +507,14 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
 			}).Errorf("Failed to create transaction log: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+			_ = tx.Rollback()
 			return
 		}
 
-		_, err = updateLockOrder.
+		// Update lock order status within transaction
+		_, err = tx.LockPaymentOrder.
+			Update().
+			Where(lockpaymentorder.IDEQ(orderID)).
 			SetStatus(lockpaymentorder.StatusValidated).
 			AddTransactions(transactionLog).
 			Save(ctx)
@@ -504,15 +525,16 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
 			}).Errorf("Failed to update lock order status: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+			_ = tx.Rollback()
 			return
 		}
 
-		// Release reserved balance for this fulfilled order
+		// Release reserved balance within the same transaction
 		providerID := fulfillment.Edges.Order.Edges.Provider.ID
 		currency := fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency.Code
 		amount := fulfillment.Edges.Order.Amount
 
-		err = ctrl.balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount)
+		err = ctrl.balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount, tx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":      fmt.Sprintf("%v", err),
@@ -521,7 +543,20 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				"Currency":   currency,
 				"Amount":     amount.String(),
 			}).Errorf("failed to release reserved balance for fulfilled order")
-			// Don't return error here as the order is already fulfilled
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+			_ = tx.Rollback()
+			return
+		}
+
+		// Commit the transaction
+		if err := tx.Commit(); err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"Trx Id":  payload.TxID,
+				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
+			}).Errorf("Failed to commit transaction: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+			return
 		}
 
 		// Mark payment order as validated and send webhook notification to sender
@@ -573,7 +608,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			}
 		}()
 
-	} else if payload.ValidationStatus == lockorderfulfillment.ValidationStatusFailed {
+	case lockorderfulfillment.ValidationStatusFailed:
 		_, err = fulfillment.Update().
 			SetValidationStatus(lockorderfulfillment.ValidationStatusFailed).
 			SetValidationError(payload.ValidationError).
@@ -606,7 +641,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		currency := fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency.Code
 		amount := fulfillment.Edges.Order.Amount
 
-		err = ctrl.balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount)
+		err = ctrl.balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount, nil)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":      fmt.Sprintf("%v", err),
@@ -618,7 +653,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			// Don't return error here as the order status is already updated
 		}
 
-	} else {
+	default:
 		transactionLog, err := storage.Client.TransactionLog.Create().
 			SetStatus(transactionlog.StatusOrderFulfilled).
 			SetNetwork(fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier).
@@ -792,7 +827,7 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 	currency := order.Edges.ProvisionBucket.Edges.Currency.Code
 	amount := order.Amount
 
-	err = ctrl.balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount)
+	err = ctrl.balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount, nil)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),

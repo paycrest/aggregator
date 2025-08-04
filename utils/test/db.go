@@ -195,6 +195,7 @@ func CreateTestLockPaymentOrder(overrides map[string]interface{}) (*ent.LockPaym
 	payload := map[string]interface{}{
 		"gateway_id":           "order-123",
 		"amount":               100.50,
+		"protocol_fee":         5.0,
 		"rate":                 750.0,
 		"status":               "pending",
 		"block_number":         12345,
@@ -236,6 +237,7 @@ func CreateTestLockPaymentOrder(overrides map[string]interface{}) (*ent.LockPaym
 		Create().
 		SetGatewayID(payload["gateway_id"].(string)).
 		SetAmount(decimal.NewFromFloat(payload["amount"].(float64))).
+		SetProtocolFee(decimal.NewFromFloat(payload["protocol_fee"].(float64))).
 		SetRate(decimal.NewFromFloat(payload["rate"].(float64))).
 		SetStatus(lockpaymentorder.Status(payload["status"].(string))).
 		SetOrderPercent(decimal.NewFromFloat(100.0)).
