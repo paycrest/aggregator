@@ -215,7 +215,7 @@ func (s *SlackService) SendSubmissionNotification(firstName, email, submissionID
 						"type": "button",
 						"text": map[string]interface{}{
 							"type": "plain_text",
-							"text": "Review",
+							"text": "View Details",
 						},
 						"action_id": "review_kyb",
 						"style":     "primary",

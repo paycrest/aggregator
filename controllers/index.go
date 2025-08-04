@@ -1746,7 +1746,6 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				go func() {
 					message := map[string]interface{}{
 						"replace_original": true,
-						// "text":             fmt.Sprintf("❌ *REJECTED* - KYB submission for %s (%s) from %s has been rejected. Reason: %s", firstName, email, kybProfile.CompanyName, reasonForDecline),
 						"text": fmt.Sprintf("❌ *REJECTED* - KYB submission for %s from %s has been rejected. Reason: %s", firstName, email, reasonForDecline),
 					}
 					jsonPayload, _ := json.Marshal(message)
