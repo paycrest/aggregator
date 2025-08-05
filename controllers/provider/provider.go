@@ -1271,16 +1271,32 @@ func (ctrl *ProviderController) GetLockPaymentOrderByID(ctx *gin.Context) {
 
 // UpdateProviderBalance handles the update of provider balance
 func (ctrl *ProviderController) UpdateProviderBalance(ctx *gin.Context) {
-	var payload types.UpdateBalancePayload
+	// Extract provider from HMAC middleware context
+	providerInterface, exists := ctx.Get("provider")
+	if !exists {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Provider not found in context", nil)
+		return
+	}
+
+	provider, ok := providerInterface.(*ent.ProviderProfile)
+	if !ok {
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Invalid provider type in context", nil)
+		return
+	}
+
+	// Parse the request payload
+	var payload struct {
+		Currency         string `json:"currency" binding:"required,min=3,max=7"`
+		AvailableBalance string `json:"availableBalance" binding:"required,numeric"`
+		TotalBalance     string `json:"totalBalance" binding:"required,numeric"`
+		ReservedBalance  string `json:"reservedBalance" binding:"required,numeric"`
+	}
 
 	if err := ctx.ShouldBindJSON(&payload); err != nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error",
 			"Failed to validate payload", u.GetErrorData(err))
 		return
 	}
-
-	// Provider ID is already a string, no parsing needed
-	providerID := payload.ProviderID
 
 	// Parse balance amounts
 	availableBalance, err := decimal.NewFromString(payload.AvailableBalance)
@@ -1310,12 +1326,12 @@ func (ctrl *ProviderController) UpdateProviderBalance(ctx *gin.Context) {
 		return
 	}
 
-	// Update the balance
-	err = ctrl.balanceService.UpdateProviderBalance(ctx, providerID, payload.Currency, availableBalance, totalBalance, reservedBalance)
+	// Update the balance using the provider ID from context
+	err = ctrl.balanceService.UpdateProviderBalance(ctx, provider.ID, payload.Currency, availableBalance, totalBalance, reservedBalance)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
-			"ProviderID": payload.ProviderID,
+			"ProviderID": provider.ID,
 			"Currency":   payload.Currency,
 		}).Errorf("Failed to update provider balance")
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update balance", nil)

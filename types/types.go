@@ -783,15 +783,6 @@ type WebhookSignatureVerification struct {
 	Secret    string
 }
 
-// UpdateBalancePayload represents the payload for updating provider balance
-type UpdateBalancePayload struct {
-	ProviderID       string `json:"providerId" binding:"required,uuid"`
-	Currency         string `json:"currency" binding:"required,min=3,max=7"`
-	AvailableBalance string `json:"availableBalance" binding:"required,numeric"`
-	TotalBalance     string `json:"totalBalance" binding:"required,numeric"`
-	ReservedBalance  string `json:"reservedBalance" binding:"required,numeric"`
-}
-
 // ProviderBalance represents a provider's balance for a specific currency
 type ProviderBalance struct {
 	AvailableBalance decimal.Decimal `json:"availableBalance"`
