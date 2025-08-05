@@ -32,6 +32,12 @@ func main() {
 	// 	logger.Errorf("FixDatabaseMishap: %v", err)
 	// }
 
+	// Fetch provider balances
+	err := tasks.FetchProviderBalances()
+	if err != nil {
+		logger.Errorf("Failed to fetch provider balances: %v", err)
+	}
+
 	// Initialize Redis
 	if err := storage.InitializeRedis(); err != nil {
 		log.Println(err)
@@ -40,7 +46,7 @@ func main() {
 
 	// Setup gateway webhooks for all EVM networks
 	engineService := services.NewEngineService()
-	err := engineService.CreateGatewayWebhook()
+	err = engineService.CreateGatewayWebhook()
 	if err != nil {
 		logger.Errorf("Failed to create gateway webhooks: %v", err)
 	}

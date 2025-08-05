@@ -1744,12 +1744,6 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for IndexBlockchainEvents: %v", err)
 	}
 
-	// Fetch provider balances every 5 minutes
-	_, err = scheduler.Every(5).Minutes().Do(FetchProviderBalances)
-	if err != nil {
-		logger.Errorf("StartCronJobs for FetchProviderBalances: %v", err)
-	}
-
 	// Start scheduler
 	scheduler.StartAsync()
 }
