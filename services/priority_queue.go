@@ -14,7 +14,6 @@ import (
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
-	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/user"
 	"github.com/paycrest/aggregator/storage"
@@ -60,54 +59,35 @@ func (s *PriorityQueueService) ProcessBucketQueues() error {
 
 // GetProvisionBuckets returns a list of buckets with their providers
 func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.ProvisionBucket, error) {
-	buckets, err := storage.Client.ProvisionBucket.
-		Query().
-		Select(provisionbucket.FieldMinAmount, provisionbucket.FieldMaxAmount).
-		WithProviderProfiles(func(ppq *ent.ProviderProfileQuery) {
-			// ppq.WithProviderRating(func(prq *ent.ProviderRatingQuery) {
-			// 	prq.Select(providerrating.FieldTrustScore)
-			// })
-			ppq.Select(providerprofile.FieldID)
-
-			// Filter only providers that are active and verified
-			ppq.Where(
-				providerprofile.IsActive(true),
-				providerprofile.HasUserWith(user.KybVerificationStatusEQ(user.KybVerificationStatusApproved)),
-				providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
-			)
-		}).
-		WithCurrency().
-		All(ctx)
+	buckets, err := storage.Client.ProvisionBucket.Query().WithCurrency().All(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// Filter providers by currency availability for each bucket
+	// Filter providers by currency availability and balance for each bucket
 	for _, bucket := range buckets {
 		var availableProviders []*ent.ProviderProfile
-		for _, provider := range bucket.Edges.ProviderProfiles {
-			// Check if provider is available for this currency
-			available, err := storage.Client.ProviderCurrencies.
-				Query().
-				Where(
-					providercurrencies.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+		availableProviders, err := bucket.QueryProviderProfiles().
+			Where(
+				providerprofile.IsActive(true),
+				providerprofile.HasUserWith(user.KybVerificationStatusEQ(user.KybVerificationStatusApproved)),
+				providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
+				providerprofile.HasProviderCurrenciesWith(
 					providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)),
 					providercurrencies.IsAvailableEQ(true),
 					providercurrencies.AvailableBalanceGT(bucket.MinAmount),
-				).
-				Exist(ctx)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":      fmt.Sprintf("%v", err),
-					"ProviderID": provider.ID,
-					"CurrencyID": bucket.Edges.Currency.ID,
-				}).Errorf("Failed to check provider currency availability")
-				continue
-			}
-			if available {
-				availableProviders = append(availableProviders, provider)
-			}
+					// TODO: add check to enforce critical balance threshold in the future
+				),
+			).
+			All(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", err),
+				"CurrencyID": bucket.Edges.Currency.ID,
+			}).Errorf("Failed to get available providers for bucket")
+			continue
 		}
+
 		bucket.Edges.ProviderProfiles = availableProviders
 	}
 
