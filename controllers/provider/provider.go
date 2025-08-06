@@ -1137,7 +1137,7 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 
 	res, err := fastshot.NewClient(provider.HostIdentifier).
 		Config().SetTimeout(30 * time.Second).
-		Build().GET("/health").
+		Build().GET("/info").
 		Send()
 	if err != nil {
 		logger.WithFields(logger.Fields{
@@ -1161,12 +1161,27 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 	// Change this line to handle currencies as a slice instead of a map
 	dataMap, ok := data["data"].(map[string]interface{})
 	if !ok {
+		logger.WithFields(logger.Fields{
+			"Error": fmt.Sprintf("%v", err),
+		}).Errorf("failed to parse node info: %v", err)
 		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Invalid data format", nil)
 		return
 	}
 
-	currenciesData, ok := dataMap["currencies"].([]interface{}) // Change to []interface{} to handle any type
+	serviceInfo, ok := dataMap["serviceInfo"].(map[string]interface{})
 	if !ok {
+		logger.WithFields(logger.Fields{
+			"Error": fmt.Sprintf("%v", err),
+		}).Errorf("failed to parse node info: %v", err)
+		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Invalid service info format", nil)
+		return
+	}
+
+	currenciesData, ok := serviceInfo["currencies"].([]interface{}) // Change to []interface{} to handle any type
+	if !ok {
+		logger.WithFields(logger.Fields{
+			"Error": fmt.Sprintf("%v", err),
+		}).Errorf("failed to parse node info: %v", err)
 		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Currencies data is not in expected format", nil)
 		return
 	}
@@ -1181,6 +1196,10 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 
 	for _, pc := range provider.Edges.ProviderCurrencies {
 		if !u.ContainsString(currencyCodes, pc.Edges.Currency.Code) {
+			logger.WithFields(logger.Fields{
+				"Error":    fmt.Sprintf("%v", err),
+				"Currency": pc.Edges.Currency.Code,
+			}).Errorf("failed to parse node info: %v", err)
 			u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
 			return
 		}

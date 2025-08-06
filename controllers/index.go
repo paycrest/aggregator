@@ -172,6 +172,11 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 			if networkFilter != "" {
 				errorMsg = fmt.Sprintf("Token %s is not supported on network %s", tokenSymbol, networkFilter)
 			}
+			logger.WithFields(logger.Fields{
+				"Error": fmt.Sprintf("%v", err),
+				"Token": tokenSymbol,
+				"Network": networkFilter,
+			}).Errorf("Failed to fetch token rate: %v", err)
 			u.APIResponse(ctx, http.StatusBadRequest, "error", errorMsg, nil)
 			return
 		}
@@ -215,6 +220,11 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 		if strings.Contains(err.Error(), "no provider available") {
 			u.APIResponse(ctx, http.StatusNotFound, "error", err.Error(), nil)
 		} else {
+			logger.WithFields(logger.Fields{
+				"Error": fmt.Sprintf("%v", err),
+				"Token": tokenSymbol,
+				"Network": networkFilter,
+			}).Errorf("Failed to fetch token rate: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", err.Error(), nil)
 		}
 		return
