@@ -84,6 +84,8 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 		return
 	}
 
+	hasConfiguredToken := false
+
 	for _, tokenPayload := range payload.Tokens {
 
 		if len(tokenPayload.Addresses) == 0 {
@@ -174,6 +176,10 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 						u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 						return
 					}
+					// Check if this token is properly configured
+					if address.RefundAddress != "" && address.FeeAddress != "" {
+						hasConfiguredToken = true
+					}
 				} else {
 					u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 					return
@@ -190,22 +196,23 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 					u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 					return
 				}
+				// Check if this token is properly configured
+				if address.RefundAddress != "" && address.FeeAddress != "" {
+					hasConfiguredToken = true
+				}
 			}
 		}
 	}
 
+	// Set activation status based on whether at least one token is configured
+	if hasConfiguredToken && !sender.IsActive {
+		update.SetIsActive(true)
+	} else if !hasConfiguredToken && sender.IsActive {
+		update.SetIsActive(false)
+	}
+
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
-		return
-	}
-
-	if !sender.IsActive {
-		update.SetIsActive(true)
-	}
-
-	_, err = update.Save(ctx)
-	if err != nil {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 		return
 	}
