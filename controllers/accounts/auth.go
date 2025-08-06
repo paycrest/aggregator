@@ -11,6 +11,7 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
+
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	userEnt "github.com/paycrest/aggregator/ent/user"
 	"github.com/paycrest/aggregator/ent/verificationtoken"
@@ -21,6 +22,7 @@ import (
 	"github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/paycrest/aggregator/utils/token"
+	"github.com/shopspring/decimal"
 )
 
 var authConf = config.AuthConfig()
@@ -152,7 +154,6 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 
 		provider, err := tx.ProviderProfile.
 			Create().
-			AddCurrencies(fiatCurrencies...).
 			SetVisibilityMode(providerprofile.VisibilityModePrivate).
 			SetUser(user).
 			SetProvisionMode(providerprofile.ProvisionModeAuto).
@@ -166,6 +167,31 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusInternalServerError, "error",
 				"Failed to create new user", nil)
 			return
+		}
+
+		// Create ProviderCurrencies entries for each currency
+		for _, currency := range fiatCurrencies {
+			_, err = tx.ProviderCurrencies.
+				Create().
+				SetProvider(provider).
+				SetCurrency(currency).
+				SetAvailableBalance(decimal.Zero).
+				SetTotalBalance(decimal.Zero).
+				SetReservedBalance(decimal.Zero).
+				SetIsAvailable(true).
+				Save(ctx)
+			if err != nil {
+				_ = tx.Rollback()
+				logger.WithFields(logger.Fields{
+					"Error":      fmt.Sprintf("%v", err),
+					"UserID":     user.ID,
+					"ProviderID": provider.ID,
+					"CurrencyID": currency.ID,
+				}).Errorf("Failed to create provider currency")
+				u.APIResponse(ctx, http.StatusInternalServerError, "error",
+					"Failed to create new user", nil)
+				return
+			}
 		}
 
 		// Generate the API key using the service

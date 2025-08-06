@@ -13,9 +13,9 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/apikey"
-	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -103,30 +103,16 @@ func (ppu *ProviderProfileUpdate) SetNillableIsActive(b *bool) *ProviderProfileU
 	return ppu
 }
 
-// SetIsAvailable sets the "is_available" field.
-func (ppu *ProviderProfileUpdate) SetIsAvailable(b bool) *ProviderProfileUpdate {
-	ppu.mutation.SetIsAvailable(b)
+// SetIsKybVerified sets the "is_kyb_verified" field.
+func (ppu *ProviderProfileUpdate) SetIsKybVerified(b bool) *ProviderProfileUpdate {
+	ppu.mutation.SetIsKybVerified(b)
 	return ppu
 }
 
-// SetNillableIsAvailable sets the "is_available" field if the given value is not nil.
-func (ppu *ProviderProfileUpdate) SetNillableIsAvailable(b *bool) *ProviderProfileUpdate {
+// SetNillableIsKybVerified sets the "is_kyb_verified" field if the given value is not nil.
+func (ppu *ProviderProfileUpdate) SetNillableIsKybVerified(b *bool) *ProviderProfileUpdate {
 	if b != nil {
-		ppu.SetIsAvailable(*b)
-	}
-	return ppu
-}
-
-// SetIsKYBVerified sets the "isKYBVerified" field.
-func (ppu *ProviderProfileUpdate) SetIsKYBVerified(b bool) *ProviderProfileUpdate {
-	ppu.mutation.SetIsKYBVerified(b)
-	return ppu
-}
-
-// SetNillableIsKYBVerified sets the "isKYBVerified" field if the given value is not nil.
-func (ppu *ProviderProfileUpdate) SetNillableIsKYBVerified(b *bool) *ProviderProfileUpdate {
-	if b != nil {
-		ppu.SetIsKYBVerified(*b)
+		ppu.SetIsKybVerified(*b)
 	}
 	return ppu
 }
@@ -170,19 +156,19 @@ func (ppu *ProviderProfileUpdate) SetAPIKey(a *APIKey) *ProviderProfileUpdate {
 	return ppu.SetAPIKeyID(a.ID)
 }
 
-// AddCurrencyIDs adds the "currencies" edge to the FiatCurrency entity by IDs.
-func (ppu *ProviderProfileUpdate) AddCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
-	ppu.mutation.AddCurrencyIDs(ids...)
+// AddProviderCurrencyIDs adds the "provider_currencies" edge to the ProviderCurrencies entity by IDs.
+func (ppu *ProviderProfileUpdate) AddProviderCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
+	ppu.mutation.AddProviderCurrencyIDs(ids...)
 	return ppu
 }
 
-// AddCurrencies adds the "currencies" edges to the FiatCurrency entity.
-func (ppu *ProviderProfileUpdate) AddCurrencies(f ...*FiatCurrency) *ProviderProfileUpdate {
-	ids := make([]uuid.UUID, len(f))
-	for i := range f {
-		ids[i] = f[i].ID
+// AddProviderCurrencies adds the "provider_currencies" edges to the ProviderCurrencies entity.
+func (ppu *ProviderProfileUpdate) AddProviderCurrencies(p ...*ProviderCurrencies) *ProviderProfileUpdate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
 	}
-	return ppu.AddCurrencyIDs(ids...)
+	return ppu.AddProviderCurrencyIDs(ids...)
 }
 
 // AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by IDs.
@@ -260,25 +246,25 @@ func (ppu *ProviderProfileUpdate) ClearAPIKey() *ProviderProfileUpdate {
 	return ppu
 }
 
-// ClearCurrencies clears all "currencies" edges to the FiatCurrency entity.
-func (ppu *ProviderProfileUpdate) ClearCurrencies() *ProviderProfileUpdate {
-	ppu.mutation.ClearCurrencies()
+// ClearProviderCurrencies clears all "provider_currencies" edges to the ProviderCurrencies entity.
+func (ppu *ProviderProfileUpdate) ClearProviderCurrencies() *ProviderProfileUpdate {
+	ppu.mutation.ClearProviderCurrencies()
 	return ppu
 }
 
-// RemoveCurrencyIDs removes the "currencies" edge to FiatCurrency entities by IDs.
-func (ppu *ProviderProfileUpdate) RemoveCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
-	ppu.mutation.RemoveCurrencyIDs(ids...)
+// RemoveProviderCurrencyIDs removes the "provider_currencies" edge to ProviderCurrencies entities by IDs.
+func (ppu *ProviderProfileUpdate) RemoveProviderCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
+	ppu.mutation.RemoveProviderCurrencyIDs(ids...)
 	return ppu
 }
 
-// RemoveCurrencies removes "currencies" edges to FiatCurrency entities.
-func (ppu *ProviderProfileUpdate) RemoveCurrencies(f ...*FiatCurrency) *ProviderProfileUpdate {
-	ids := make([]uuid.UUID, len(f))
-	for i := range f {
-		ids[i] = f[i].ID
+// RemoveProviderCurrencies removes "provider_currencies" edges to ProviderCurrencies entities.
+func (ppu *ProviderProfileUpdate) RemoveProviderCurrencies(p ...*ProviderCurrencies) *ProviderProfileUpdate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
 	}
-	return ppu.RemoveCurrencyIDs(ids...)
+	return ppu.RemoveProviderCurrencyIDs(ids...)
 }
 
 // ClearProvisionBuckets clears all "provision_buckets" edges to the ProvisionBucket entity.
@@ -439,11 +425,8 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 	if value, ok := ppu.mutation.IsActive(); ok {
 		_spec.SetField(providerprofile.FieldIsActive, field.TypeBool, value)
 	}
-	if value, ok := ppu.mutation.IsAvailable(); ok {
-		_spec.SetField(providerprofile.FieldIsAvailable, field.TypeBool, value)
-	}
-	if value, ok := ppu.mutation.IsKYBVerified(); ok {
-		_spec.SetField(providerprofile.FieldIsKYBVerified, field.TypeBool, value)
+	if value, ok := ppu.mutation.IsKybVerified(); ok {
+		_spec.SetField(providerprofile.FieldIsKybVerified, field.TypeBool, value)
 	}
 	if value, ok := ppu.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerprofile.FieldUpdatedAt, field.TypeTime, value)
@@ -480,28 +463,28 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if ppu.mutation.CurrenciesCleared() {
+	if ppu.mutation.ProviderCurrenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   providerprofile.CurrenciesTable,
-			Columns: providerprofile.CurrenciesPrimaryKey,
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.ProviderCurrenciesTable,
+			Columns: []string{providerprofile.ProviderCurrenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencies.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppu.mutation.RemovedCurrenciesIDs(); len(nodes) > 0 && !ppu.mutation.CurrenciesCleared() {
+	if nodes := ppu.mutation.RemovedProviderCurrenciesIDs(); len(nodes) > 0 && !ppu.mutation.ProviderCurrenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   providerprofile.CurrenciesTable,
-			Columns: providerprofile.CurrenciesPrimaryKey,
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.ProviderCurrenciesTable,
+			Columns: []string{providerprofile.ProviderCurrenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencies.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -509,15 +492,15 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppu.mutation.CurrenciesIDs(); len(nodes) > 0 {
+	if nodes := ppu.mutation.ProviderCurrenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   providerprofile.CurrenciesTable,
-			Columns: providerprofile.CurrenciesPrimaryKey,
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.ProviderCurrenciesTable,
+			Columns: []string{providerprofile.ProviderCurrenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencies.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -777,30 +760,16 @@ func (ppuo *ProviderProfileUpdateOne) SetNillableIsActive(b *bool) *ProviderProf
 	return ppuo
 }
 
-// SetIsAvailable sets the "is_available" field.
-func (ppuo *ProviderProfileUpdateOne) SetIsAvailable(b bool) *ProviderProfileUpdateOne {
-	ppuo.mutation.SetIsAvailable(b)
+// SetIsKybVerified sets the "is_kyb_verified" field.
+func (ppuo *ProviderProfileUpdateOne) SetIsKybVerified(b bool) *ProviderProfileUpdateOne {
+	ppuo.mutation.SetIsKybVerified(b)
 	return ppuo
 }
 
-// SetNillableIsAvailable sets the "is_available" field if the given value is not nil.
-func (ppuo *ProviderProfileUpdateOne) SetNillableIsAvailable(b *bool) *ProviderProfileUpdateOne {
+// SetNillableIsKybVerified sets the "is_kyb_verified" field if the given value is not nil.
+func (ppuo *ProviderProfileUpdateOne) SetNillableIsKybVerified(b *bool) *ProviderProfileUpdateOne {
 	if b != nil {
-		ppuo.SetIsAvailable(*b)
-	}
-	return ppuo
-}
-
-// SetIsKYBVerified sets the "isKYBVerified" field.
-func (ppuo *ProviderProfileUpdateOne) SetIsKYBVerified(b bool) *ProviderProfileUpdateOne {
-	ppuo.mutation.SetIsKYBVerified(b)
-	return ppuo
-}
-
-// SetNillableIsKYBVerified sets the "isKYBVerified" field if the given value is not nil.
-func (ppuo *ProviderProfileUpdateOne) SetNillableIsKYBVerified(b *bool) *ProviderProfileUpdateOne {
-	if b != nil {
-		ppuo.SetIsKYBVerified(*b)
+		ppuo.SetIsKybVerified(*b)
 	}
 	return ppuo
 }
@@ -844,19 +813,19 @@ func (ppuo *ProviderProfileUpdateOne) SetAPIKey(a *APIKey) *ProviderProfileUpdat
 	return ppuo.SetAPIKeyID(a.ID)
 }
 
-// AddCurrencyIDs adds the "currencies" edge to the FiatCurrency entity by IDs.
-func (ppuo *ProviderProfileUpdateOne) AddCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
-	ppuo.mutation.AddCurrencyIDs(ids...)
+// AddProviderCurrencyIDs adds the "provider_currencies" edge to the ProviderCurrencies entity by IDs.
+func (ppuo *ProviderProfileUpdateOne) AddProviderCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
+	ppuo.mutation.AddProviderCurrencyIDs(ids...)
 	return ppuo
 }
 
-// AddCurrencies adds the "currencies" edges to the FiatCurrency entity.
-func (ppuo *ProviderProfileUpdateOne) AddCurrencies(f ...*FiatCurrency) *ProviderProfileUpdateOne {
-	ids := make([]uuid.UUID, len(f))
-	for i := range f {
-		ids[i] = f[i].ID
+// AddProviderCurrencies adds the "provider_currencies" edges to the ProviderCurrencies entity.
+func (ppuo *ProviderProfileUpdateOne) AddProviderCurrencies(p ...*ProviderCurrencies) *ProviderProfileUpdateOne {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
 	}
-	return ppuo.AddCurrencyIDs(ids...)
+	return ppuo.AddProviderCurrencyIDs(ids...)
 }
 
 // AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by IDs.
@@ -934,25 +903,25 @@ func (ppuo *ProviderProfileUpdateOne) ClearAPIKey() *ProviderProfileUpdateOne {
 	return ppuo
 }
 
-// ClearCurrencies clears all "currencies" edges to the FiatCurrency entity.
-func (ppuo *ProviderProfileUpdateOne) ClearCurrencies() *ProviderProfileUpdateOne {
-	ppuo.mutation.ClearCurrencies()
+// ClearProviderCurrencies clears all "provider_currencies" edges to the ProviderCurrencies entity.
+func (ppuo *ProviderProfileUpdateOne) ClearProviderCurrencies() *ProviderProfileUpdateOne {
+	ppuo.mutation.ClearProviderCurrencies()
 	return ppuo
 }
 
-// RemoveCurrencyIDs removes the "currencies" edge to FiatCurrency entities by IDs.
-func (ppuo *ProviderProfileUpdateOne) RemoveCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
-	ppuo.mutation.RemoveCurrencyIDs(ids...)
+// RemoveProviderCurrencyIDs removes the "provider_currencies" edge to ProviderCurrencies entities by IDs.
+func (ppuo *ProviderProfileUpdateOne) RemoveProviderCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
+	ppuo.mutation.RemoveProviderCurrencyIDs(ids...)
 	return ppuo
 }
 
-// RemoveCurrencies removes "currencies" edges to FiatCurrency entities.
-func (ppuo *ProviderProfileUpdateOne) RemoveCurrencies(f ...*FiatCurrency) *ProviderProfileUpdateOne {
-	ids := make([]uuid.UUID, len(f))
-	for i := range f {
-		ids[i] = f[i].ID
+// RemoveProviderCurrencies removes "provider_currencies" edges to ProviderCurrencies entities.
+func (ppuo *ProviderProfileUpdateOne) RemoveProviderCurrencies(p ...*ProviderCurrencies) *ProviderProfileUpdateOne {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
 	}
-	return ppuo.RemoveCurrencyIDs(ids...)
+	return ppuo.RemoveProviderCurrencyIDs(ids...)
 }
 
 // ClearProvisionBuckets clears all "provision_buckets" edges to the ProvisionBucket entity.
@@ -1143,11 +1112,8 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 	if value, ok := ppuo.mutation.IsActive(); ok {
 		_spec.SetField(providerprofile.FieldIsActive, field.TypeBool, value)
 	}
-	if value, ok := ppuo.mutation.IsAvailable(); ok {
-		_spec.SetField(providerprofile.FieldIsAvailable, field.TypeBool, value)
-	}
-	if value, ok := ppuo.mutation.IsKYBVerified(); ok {
-		_spec.SetField(providerprofile.FieldIsKYBVerified, field.TypeBool, value)
+	if value, ok := ppuo.mutation.IsKybVerified(); ok {
+		_spec.SetField(providerprofile.FieldIsKybVerified, field.TypeBool, value)
 	}
 	if value, ok := ppuo.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerprofile.FieldUpdatedAt, field.TypeTime, value)
@@ -1184,28 +1150,28 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if ppuo.mutation.CurrenciesCleared() {
+	if ppuo.mutation.ProviderCurrenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   providerprofile.CurrenciesTable,
-			Columns: providerprofile.CurrenciesPrimaryKey,
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.ProviderCurrenciesTable,
+			Columns: []string{providerprofile.ProviderCurrenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencies.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppuo.mutation.RemovedCurrenciesIDs(); len(nodes) > 0 && !ppuo.mutation.CurrenciesCleared() {
+	if nodes := ppuo.mutation.RemovedProviderCurrenciesIDs(); len(nodes) > 0 && !ppuo.mutation.ProviderCurrenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   providerprofile.CurrenciesTable,
-			Columns: providerprofile.CurrenciesPrimaryKey,
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.ProviderCurrenciesTable,
+			Columns: []string{providerprofile.ProviderCurrenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencies.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1213,15 +1179,15 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppuo.mutation.CurrenciesIDs(); len(nodes) > 0 {
+	if nodes := ppuo.mutation.ProviderCurrenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   providerprofile.CurrenciesTable,
-			Columns: providerprofile.CurrenciesPrimaryKey,
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.ProviderCurrenciesTable,
+			Columns: []string{providerprofile.ProviderCurrenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencies.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

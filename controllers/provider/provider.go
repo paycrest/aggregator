@@ -15,9 +15,11 @@ import (
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
+	"github.com/paycrest/aggregator/services"
 	orderService "github.com/paycrest/aggregator/services/order"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
@@ -31,11 +33,15 @@ import (
 var orderConf = config.OrderConfig()
 
 // ProviderController is a controller type for provider endpoints
-type ProviderController struct{}
+type ProviderController struct {
+	balanceService *services.BalanceManagementService
+}
 
 // NewProviderController creates a new instance of ProviderController with injected services
 func NewProviderController() *ProviderController {
-	return &ProviderController{}
+	return &ProviderController{
+		balanceService: services.NewBalanceManagementService(),
+	}
 }
 
 // GetLockPaymentOrders controller fetches all assigned orders
@@ -67,8 +73,8 @@ func (ctrl *ProviderController) GetLockPaymentOrders(ctx *gin.Context) {
 	currency := ctx.Query("currency")
 	if currency != "" {
 		// Check if the provided currency exists in the provider's currencies
-		currencyExists, err := provider.QueryCurrencies().
-			Where(fiatcurrency.CodeEQ(currency)).
+		currencyExists, err := provider.QueryProviderCurrencies().
+			Where(providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currency))).
 			Exist(ctx)
 		if err != nil {
 			logger.Errorf("error checking provider currency: %v", err)
@@ -398,6 +404,10 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			poq.WithToken(func(tq *ent.TokenQuery) {
 				tq.WithNetwork()
 			})
+			poq.WithProvider()
+			poq.WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) {
+				pbq.WithCurrency()
+			})
 		}).
 		Only(ctx)
 	if err != nil {
@@ -446,13 +456,28 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		}
 	}
 
-	if payload.ValidationStatus == lockorderfulfillment.ValidationStatusSuccess {
-		if fulfillment.Edges.Order.Status != lockpaymentorder.StatusFulfilled {
+	switch payload.ValidationStatus {
+	case lockorderfulfillment.ValidationStatusSuccess:
+		if fulfillment.Edges.Order.Status == lockpaymentorder.StatusValidated {
 			u.APIResponse(ctx, http.StatusOK, "success", "Order already validated", nil)
 			return
 		}
 
-		_, err := fulfillment.Update().
+		// Start a database transaction to ensure consistency
+		tx, err := storage.Client.Tx(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"Trx Id":  payload.TxID,
+				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
+			}).Errorf("Failed to start transaction: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+			return
+		}
+
+		// Update fulfillment status within transaction
+		_, err = tx.LockOrderFulfillment.
+			UpdateOneID(fulfillment.ID).
 			SetValidationStatus(lockorderfulfillment.ValidationStatusSuccess).
 			Save(ctx)
 		if err != nil {
@@ -462,10 +487,12 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
 			}).Errorf("Failed to update lock order fulfillment: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+			_ = tx.Rollback()
 			return
 		}
 
-		transactionLog, err := storage.Client.TransactionLog.Create().
+		// Create transaction log within transaction
+		transactionLog, err := tx.TransactionLog.Create().
 			SetStatus(transactionlog.StatusOrderValidated).
 			SetNetwork(fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier).
 			SetMetadata(map[string]interface{}{
@@ -480,10 +507,14 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
 			}).Errorf("Failed to create transaction log: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+			_ = tx.Rollback()
 			return
 		}
 
-		_, err = updateLockOrder.
+		// Update lock order status within transaction
+		_, err = tx.LockPaymentOrder.
+			Update().
+			Where(lockpaymentorder.IDEQ(orderID)).
 			SetStatus(lockpaymentorder.StatusValidated).
 			AddTransactions(transactionLog).
 			Save(ctx)
@@ -493,6 +524,37 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				"Trx Id":  payload.TxID,
 				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
 			}).Errorf("Failed to update lock order status: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+			_ = tx.Rollback()
+			return
+		}
+
+		// Release reserved balance within the same transaction
+		providerID := fulfillment.Edges.Order.Edges.Provider.ID
+		currency := fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency.Code
+		amount := fulfillment.Edges.Order.Amount
+
+		err = ctrl.balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount, tx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", err),
+				"OrderID":    orderID.String(),
+				"ProviderID": providerID,
+				"Currency":   currency,
+				"Amount":     amount.String(),
+			}).Errorf("failed to release reserved balance for fulfilled order")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+			_ = tx.Rollback()
+			return
+		}
+
+		// Commit the transaction
+		if err := tx.Commit(); err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"Trx Id":  payload.TxID,
+				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
+			}).Errorf("Failed to commit transaction: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 			return
 		}
@@ -546,7 +608,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			}
 		}()
 
-	} else if payload.ValidationStatus == lockorderfulfillment.ValidationStatusFailed {
+	case lockorderfulfillment.ValidationStatusFailed:
 		_, err = fulfillment.Update().
 			SetValidationStatus(lockorderfulfillment.ValidationStatusFailed).
 			SetValidationError(payload.ValidationError).
@@ -574,7 +636,24 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			return
 		}
 
-	} else {
+		// Release reserved balance for failed validation
+		providerID := fulfillment.Edges.Order.Edges.Provider.ID
+		currency := fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency.Code
+		amount := fulfillment.Edges.Order.Amount
+
+		err = ctrl.balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount, nil)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", err),
+				"OrderID":    orderID.String(),
+				"ProviderID": providerID,
+				"Currency":   currency,
+				"Amount":     amount.String(),
+			}).Errorf("failed to release reserved balance for failed validation")
+			// Don't return error here as the order status is already updated
+		}
+
+	default:
 		transactionLog, err := storage.Client.TransactionLog.Create().
 			SetStatus(transactionlog.StatusOrderFulfilled).
 			SetNetwork(fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier).
@@ -723,15 +802,6 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 				break
 			}
 		}
-
-		// // Update provider availability to off
-		// _, err = storage.Client.ProviderProfile.
-		// 	UpdateOneID(provider.ID).
-		// 	SetIsAvailable(false).
-		// 	Save(ctx)
-		// if err != nil {
-		// 	logger.Errorf("failed to update provider availability: %v", err)
-		// }
 	}
 
 	// Update lock order status to cancelled
@@ -751,6 +821,23 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 
 	order.Status = lockpaymentorder.StatusCancelled
 	order.CancellationCount = cancellationCount
+
+	// Release reserved balance for this cancelled order
+	providerID := order.Edges.Provider.ID
+	currency := order.Edges.ProvisionBucket.Edges.Currency.Code
+	amount := order.Amount
+
+	err = ctrl.balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount, nil)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"OrderID":    orderID.String(),
+			"ProviderID": providerID,
+			"Currency":   currency,
+			"Amount":     amount.String(),
+		}).Errorf("failed to release reserved balance for cancelled order")
+		// Don't return error here as the order status is already updated
+	}
 
 	// Check if order cancellation count is equal or greater than RefundCancellationCount in config,
 	// and the order has not been refunded, then trigger refund
@@ -868,8 +955,8 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 	// Check if currency in query is present in provider currencies
 	currency := ctx.Query("currency")
 	if currency != "" {
-		currencyExists, err := provider.QueryCurrencies().
-			Where(fiatcurrency.CodeEQ(currency)).
+		currencyExists, err := provider.QueryProviderCurrencies().
+			Where(providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currency))).
 			Exist(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
@@ -1034,7 +1121,11 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 		Query().
 		Where(providerprofile.IDEQ(providerCtx.(*ent.ProviderProfile).ID)).
 		WithAPIKey().
-		WithCurrencies().
+		WithProviderCurrencies(
+			func(query *ent.ProviderCurrenciesQuery) {
+				query.WithCurrency()
+			},
+		).
 		Only(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
@@ -1046,7 +1137,7 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 
 	res, err := fastshot.NewClient(provider.HostIdentifier).
 		Config().SetTimeout(30 * time.Second).
-		Build().GET("/health").
+		Build().GET("/info").
 		Send()
 	if err != nil {
 		logger.WithFields(logger.Fields{
@@ -1070,12 +1161,27 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 	// Change this line to handle currencies as a slice instead of a map
 	dataMap, ok := data["data"].(map[string]interface{})
 	if !ok {
+		logger.WithFields(logger.Fields{
+			"Error": "data field is not a map",
+		}).Errorf("failed to parse node info: data field is not a map")
 		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Invalid data format", nil)
 		return
 	}
 
-	currenciesData, ok := dataMap["currencies"].([]interface{}) // Change to []interface{} to handle any type
+	serviceInfo, ok := dataMap["serviceInfo"].(map[string]interface{})
 	if !ok {
+		logger.WithFields(logger.Fields{
+			"Error": "serviceInfo field is not a map",
+		}).Errorf("failed to parse node info: serviceInfo field is not a map")
+		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Invalid service info format", nil)
+		return
+	}
+
+	currenciesData, ok := serviceInfo["currencies"].([]interface{}) // Change to []interface{} to handle any type
+	if !ok {
+		logger.WithFields(logger.Fields{
+			"Error": "currencies field is not an array",
+		}).Errorf("failed to parse node info: currencies field is not an array")
 		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Currencies data is not in expected format", nil)
 		return
 	}
@@ -1088,8 +1194,12 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 		}
 	}
 
-	for _, currency := range provider.Edges.Currencies {
-		if !u.ContainsString(currencyCodes, currency.Code) {
+	for _, pc := range provider.Edges.ProviderCurrencies {
+		if !u.ContainsString(currencyCodes, pc.Edges.Currency.Code) {
+			logger.WithFields(logger.Fields{
+				"Error":    "currency not found in node response",
+				"Currency": pc.Edges.Currency.Code,
+			}).Errorf("failed to parse node info: currency %s not found in node response", pc.Edges.Currency.Code)
 			u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
 			return
 		}
@@ -1176,4 +1286,76 @@ func (ctrl *ProviderController) GetLockPaymentOrderByID(ctx *gin.Context) {
 		Transactions:        transactions,
 		CancellationReasons: lockPaymentOrder.CancellationReasons,
 	})
+}
+
+// UpdateProviderBalance handles the update of provider balance
+func (ctrl *ProviderController) UpdateProviderBalance(ctx *gin.Context) {
+	// Extract provider from HMAC middleware context
+	providerInterface, exists := ctx.Get("provider")
+	if !exists {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Provider not found in context", nil)
+		return
+	}
+
+	provider, ok := providerInterface.(*ent.ProviderProfile)
+	if !ok {
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Invalid provider type in context", nil)
+		return
+	}
+
+	// Parse the request payload
+	var payload struct {
+		Currency         string `json:"currency" binding:"required,min=3,max=7"`
+		AvailableBalance string `json:"availableBalance" binding:"required,numeric"`
+		TotalBalance     string `json:"totalBalance" binding:"required,numeric"`
+		ReservedBalance  string `json:"reservedBalance" binding:"required,numeric"`
+	}
+
+	if err := ctx.ShouldBindJSON(&payload); err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error",
+			"Failed to validate payload", u.GetErrorData(err))
+		return
+	}
+
+	// Parse balance amounts
+	availableBalance, err := decimal.NewFromString(payload.AvailableBalance)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid available balance format", []types.ErrorData{{
+			Field:   "AvailableBalance",
+			Message: "Invalid available balance format",
+		}})
+		return
+	}
+
+	totalBalance, err := decimal.NewFromString(payload.TotalBalance)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid total balance format", []types.ErrorData{{
+			Field:   "TotalBalance",
+			Message: "Invalid total balance format",
+		}})
+		return
+	}
+
+	reservedBalance, err := decimal.NewFromString(payload.ReservedBalance)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid reserved balance format", []types.ErrorData{{
+			Field:   "ReservedBalance",
+			Message: "Invalid reserved balance format",
+		}})
+		return
+	}
+
+	// Update the balance using the provider ID from context
+	err = ctrl.balanceService.UpdateProviderBalance(ctx, provider.ID, payload.Currency, availableBalance, totalBalance, reservedBalance)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"ProviderID": provider.ID,
+			"Currency":   payload.Currency,
+		}).Errorf("Failed to update provider balance")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update balance", nil)
+		return
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Balance updated successfully", nil)
 }

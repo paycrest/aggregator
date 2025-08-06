@@ -29,10 +29,8 @@ type ProviderProfile struct {
 	ProvisionMode providerprofile.ProvisionMode `json:"provision_mode,omitempty"`
 	// IsActive holds the value of the "is_active" field.
 	IsActive bool `json:"is_active,omitempty"`
-	// IsAvailable holds the value of the "is_available" field.
-	IsAvailable bool `json:"is_available,omitempty"`
-	// IsKYBVerified holds the value of the "isKYBVerified" field.
-	IsKYBVerified bool `json:"isKYBVerified,omitempty"`
+	// IsKybVerified holds the value of the "is_kyb_verified" field.
+	IsKybVerified bool `json:"is_kyb_verified,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// VisibilityMode holds the value of the "visibility_mode" field.
@@ -50,8 +48,8 @@ type ProviderProfileEdges struct {
 	User *User `json:"user,omitempty"`
 	// APIKey holds the value of the api_key edge.
 	APIKey *APIKey `json:"api_key,omitempty"`
-	// Currencies holds the value of the currencies edge.
-	Currencies []*FiatCurrency `json:"currencies,omitempty"`
+	// ProviderCurrencies holds the value of the provider_currencies edge.
+	ProviderCurrencies []*ProviderCurrencies `json:"provider_currencies,omitempty"`
 	// ProvisionBuckets holds the value of the provision_buckets edge.
 	ProvisionBuckets []*ProvisionBucket `json:"provision_buckets,omitempty"`
 	// OrderTokens holds the value of the order_tokens edge.
@@ -87,13 +85,13 @@ func (e ProviderProfileEdges) APIKeyOrErr() (*APIKey, error) {
 	return nil, &NotLoadedError{edge: "api_key"}
 }
 
-// CurrenciesOrErr returns the Currencies value or an error if the edge
+// ProviderCurrenciesOrErr returns the ProviderCurrencies value or an error if the edge
 // was not loaded in eager-loading.
-func (e ProviderProfileEdges) CurrenciesOrErr() ([]*FiatCurrency, error) {
+func (e ProviderProfileEdges) ProviderCurrenciesOrErr() ([]*ProviderCurrencies, error) {
 	if e.loadedTypes[2] {
-		return e.Currencies, nil
+		return e.ProviderCurrencies, nil
 	}
-	return nil, &NotLoadedError{edge: "currencies"}
+	return nil, &NotLoadedError{edge: "provider_currencies"}
 }
 
 // ProvisionBucketsOrErr returns the ProvisionBuckets value or an error if the edge
@@ -139,7 +137,7 @@ func (*ProviderProfile) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case providerprofile.FieldIsActive, providerprofile.FieldIsAvailable, providerprofile.FieldIsKYBVerified:
+		case providerprofile.FieldIsActive, providerprofile.FieldIsKybVerified:
 			values[i] = new(sql.NullBool)
 		case providerprofile.FieldID, providerprofile.FieldTradingName, providerprofile.FieldHostIdentifier, providerprofile.FieldProvisionMode, providerprofile.FieldVisibilityMode:
 			values[i] = new(sql.NullString)
@@ -192,17 +190,11 @@ func (pp *ProviderProfile) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				pp.IsActive = value.Bool
 			}
-		case providerprofile.FieldIsAvailable:
+		case providerprofile.FieldIsKybVerified:
 			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field is_available", values[i])
+				return fmt.Errorf("unexpected type %T for field is_kyb_verified", values[i])
 			} else if value.Valid {
-				pp.IsAvailable = value.Bool
-			}
-		case providerprofile.FieldIsKYBVerified:
-			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field isKYBVerified", values[i])
-			} else if value.Valid {
-				pp.IsKYBVerified = value.Bool
+				pp.IsKybVerified = value.Bool
 			}
 		case providerprofile.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -246,9 +238,9 @@ func (pp *ProviderProfile) QueryAPIKey() *APIKeyQuery {
 	return NewProviderProfileClient(pp.config).QueryAPIKey(pp)
 }
 
-// QueryCurrencies queries the "currencies" edge of the ProviderProfile entity.
-func (pp *ProviderProfile) QueryCurrencies() *FiatCurrencyQuery {
-	return NewProviderProfileClient(pp.config).QueryCurrencies(pp)
+// QueryProviderCurrencies queries the "provider_currencies" edge of the ProviderProfile entity.
+func (pp *ProviderProfile) QueryProviderCurrencies() *ProviderCurrenciesQuery {
+	return NewProviderProfileClient(pp.config).QueryProviderCurrencies(pp)
 }
 
 // QueryProvisionBuckets queries the "provision_buckets" edge of the ProviderProfile entity.
@@ -306,11 +298,8 @@ func (pp *ProviderProfile) String() string {
 	builder.WriteString("is_active=")
 	builder.WriteString(fmt.Sprintf("%v", pp.IsActive))
 	builder.WriteString(", ")
-	builder.WriteString("is_available=")
-	builder.WriteString(fmt.Sprintf("%v", pp.IsAvailable))
-	builder.WriteString(", ")
-	builder.WriteString("isKYBVerified=")
-	builder.WriteString(fmt.Sprintf("%v", pp.IsKYBVerified))
+	builder.WriteString("is_kyb_verified=")
+	builder.WriteString(fmt.Sprintf("%v", pp.IsKybVerified))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
 	builder.WriteString(pp.UpdatedAt.Format(time.ANSIC))

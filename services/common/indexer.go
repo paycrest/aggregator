@@ -14,6 +14,7 @@ import (
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
@@ -631,7 +632,10 @@ func GetProviderAddresses(ctx context.Context, token *ent.Token, currencyCode st
 			providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(currencyCode)),
 			providerordertoken.AddressNEQ(""),
 			providerordertoken.HasProviderWith(
-				providerprofile.IsAvailableEQ(true),
+				providerprofile.HasProviderCurrenciesWith(
+					providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currencyCode)),
+					providercurrencies.IsAvailableEQ(true),
+				),
 				providerprofile.IsActiveEQ(true),
 			),
 		).
