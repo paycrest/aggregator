@@ -11,11 +11,12 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
-	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/shopspring/decimal"
 )
@@ -151,19 +152,19 @@ func (fcu *FiatCurrencyUpdate) SetNillableIsEnabled(b *bool) *FiatCurrencyUpdate
 	return fcu
 }
 
-// AddProviderIDs adds the "providers" edge to the ProviderProfile entity by IDs.
-func (fcu *FiatCurrencyUpdate) AddProviderIDs(ids ...string) *FiatCurrencyUpdate {
-	fcu.mutation.AddProviderIDs(ids...)
+// AddProviderCurrencyIDs adds the "provider_currencies" edge to the ProviderCurrencies entity by IDs.
+func (fcu *FiatCurrencyUpdate) AddProviderCurrencyIDs(ids ...uuid.UUID) *FiatCurrencyUpdate {
+	fcu.mutation.AddProviderCurrencyIDs(ids...)
 	return fcu
 }
 
-// AddProviders adds the "providers" edges to the ProviderProfile entity.
-func (fcu *FiatCurrencyUpdate) AddProviders(p ...*ProviderProfile) *FiatCurrencyUpdate {
-	ids := make([]string, len(p))
+// AddProviderCurrencies adds the "provider_currencies" edges to the ProviderCurrencies entity.
+func (fcu *FiatCurrencyUpdate) AddProviderCurrencies(p ...*ProviderCurrencies) *FiatCurrencyUpdate {
+	ids := make([]uuid.UUID, len(p))
 	for i := range p {
 		ids[i] = p[i].ID
 	}
-	return fcu.AddProviderIDs(ids...)
+	return fcu.AddProviderCurrencyIDs(ids...)
 }
 
 // AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by IDs.
@@ -216,25 +217,25 @@ func (fcu *FiatCurrencyUpdate) Mutation() *FiatCurrencyMutation {
 	return fcu.mutation
 }
 
-// ClearProviders clears all "providers" edges to the ProviderProfile entity.
-func (fcu *FiatCurrencyUpdate) ClearProviders() *FiatCurrencyUpdate {
-	fcu.mutation.ClearProviders()
+// ClearProviderCurrencies clears all "provider_currencies" edges to the ProviderCurrencies entity.
+func (fcu *FiatCurrencyUpdate) ClearProviderCurrencies() *FiatCurrencyUpdate {
+	fcu.mutation.ClearProviderCurrencies()
 	return fcu
 }
 
-// RemoveProviderIDs removes the "providers" edge to ProviderProfile entities by IDs.
-func (fcu *FiatCurrencyUpdate) RemoveProviderIDs(ids ...string) *FiatCurrencyUpdate {
-	fcu.mutation.RemoveProviderIDs(ids...)
+// RemoveProviderCurrencyIDs removes the "provider_currencies" edge to ProviderCurrencies entities by IDs.
+func (fcu *FiatCurrencyUpdate) RemoveProviderCurrencyIDs(ids ...uuid.UUID) *FiatCurrencyUpdate {
+	fcu.mutation.RemoveProviderCurrencyIDs(ids...)
 	return fcu
 }
 
-// RemoveProviders removes "providers" edges to ProviderProfile entities.
-func (fcu *FiatCurrencyUpdate) RemoveProviders(p ...*ProviderProfile) *FiatCurrencyUpdate {
-	ids := make([]string, len(p))
+// RemoveProviderCurrencies removes "provider_currencies" edges to ProviderCurrencies entities.
+func (fcu *FiatCurrencyUpdate) RemoveProviderCurrencies(p ...*ProviderCurrencies) *FiatCurrencyUpdate {
+	ids := make([]uuid.UUID, len(p))
 	for i := range p {
 		ids[i] = p[i].ID
 	}
-	return fcu.RemoveProviderIDs(ids...)
+	return fcu.RemoveProviderCurrencyIDs(ids...)
 }
 
 // ClearProvisionBuckets clears all "provision_buckets" edges to the ProvisionBucket entity.
@@ -375,28 +376,28 @@ func (fcu *FiatCurrencyUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if value, ok := fcu.mutation.IsEnabled(); ok {
 		_spec.SetField(fiatcurrency.FieldIsEnabled, field.TypeBool, value)
 	}
-	if fcu.mutation.ProvidersCleared() {
+	if fcu.mutation.ProviderCurrenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   fiatcurrency.ProvidersTable,
-			Columns: fiatcurrency.ProvidersPrimaryKey,
+			Table:   fiatcurrency.ProviderCurrenciesTable,
+			Columns: []string{fiatcurrency.ProviderCurrenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencies.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := fcu.mutation.RemovedProvidersIDs(); len(nodes) > 0 && !fcu.mutation.ProvidersCleared() {
+	if nodes := fcu.mutation.RemovedProviderCurrenciesIDs(); len(nodes) > 0 && !fcu.mutation.ProviderCurrenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   fiatcurrency.ProvidersTable,
-			Columns: fiatcurrency.ProvidersPrimaryKey,
+			Table:   fiatcurrency.ProviderCurrenciesTable,
+			Columns: []string{fiatcurrency.ProviderCurrenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencies.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -404,15 +405,15 @@ func (fcu *FiatCurrencyUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := fcu.mutation.ProvidersIDs(); len(nodes) > 0 {
+	if nodes := fcu.mutation.ProviderCurrenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   fiatcurrency.ProvidersTable,
-			Columns: fiatcurrency.ProvidersPrimaryKey,
+			Table:   fiatcurrency.ProviderCurrenciesTable,
+			Columns: []string{fiatcurrency.ProviderCurrenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencies.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -693,19 +694,19 @@ func (fcuo *FiatCurrencyUpdateOne) SetNillableIsEnabled(b *bool) *FiatCurrencyUp
 	return fcuo
 }
 
-// AddProviderIDs adds the "providers" edge to the ProviderProfile entity by IDs.
-func (fcuo *FiatCurrencyUpdateOne) AddProviderIDs(ids ...string) *FiatCurrencyUpdateOne {
-	fcuo.mutation.AddProviderIDs(ids...)
+// AddProviderCurrencyIDs adds the "provider_currencies" edge to the ProviderCurrencies entity by IDs.
+func (fcuo *FiatCurrencyUpdateOne) AddProviderCurrencyIDs(ids ...uuid.UUID) *FiatCurrencyUpdateOne {
+	fcuo.mutation.AddProviderCurrencyIDs(ids...)
 	return fcuo
 }
 
-// AddProviders adds the "providers" edges to the ProviderProfile entity.
-func (fcuo *FiatCurrencyUpdateOne) AddProviders(p ...*ProviderProfile) *FiatCurrencyUpdateOne {
-	ids := make([]string, len(p))
+// AddProviderCurrencies adds the "provider_currencies" edges to the ProviderCurrencies entity.
+func (fcuo *FiatCurrencyUpdateOne) AddProviderCurrencies(p ...*ProviderCurrencies) *FiatCurrencyUpdateOne {
+	ids := make([]uuid.UUID, len(p))
 	for i := range p {
 		ids[i] = p[i].ID
 	}
-	return fcuo.AddProviderIDs(ids...)
+	return fcuo.AddProviderCurrencyIDs(ids...)
 }
 
 // AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by IDs.
@@ -758,25 +759,25 @@ func (fcuo *FiatCurrencyUpdateOne) Mutation() *FiatCurrencyMutation {
 	return fcuo.mutation
 }
 
-// ClearProviders clears all "providers" edges to the ProviderProfile entity.
-func (fcuo *FiatCurrencyUpdateOne) ClearProviders() *FiatCurrencyUpdateOne {
-	fcuo.mutation.ClearProviders()
+// ClearProviderCurrencies clears all "provider_currencies" edges to the ProviderCurrencies entity.
+func (fcuo *FiatCurrencyUpdateOne) ClearProviderCurrencies() *FiatCurrencyUpdateOne {
+	fcuo.mutation.ClearProviderCurrencies()
 	return fcuo
 }
 
-// RemoveProviderIDs removes the "providers" edge to ProviderProfile entities by IDs.
-func (fcuo *FiatCurrencyUpdateOne) RemoveProviderIDs(ids ...string) *FiatCurrencyUpdateOne {
-	fcuo.mutation.RemoveProviderIDs(ids...)
+// RemoveProviderCurrencyIDs removes the "provider_currencies" edge to ProviderCurrencies entities by IDs.
+func (fcuo *FiatCurrencyUpdateOne) RemoveProviderCurrencyIDs(ids ...uuid.UUID) *FiatCurrencyUpdateOne {
+	fcuo.mutation.RemoveProviderCurrencyIDs(ids...)
 	return fcuo
 }
 
-// RemoveProviders removes "providers" edges to ProviderProfile entities.
-func (fcuo *FiatCurrencyUpdateOne) RemoveProviders(p ...*ProviderProfile) *FiatCurrencyUpdateOne {
-	ids := make([]string, len(p))
+// RemoveProviderCurrencies removes "provider_currencies" edges to ProviderCurrencies entities.
+func (fcuo *FiatCurrencyUpdateOne) RemoveProviderCurrencies(p ...*ProviderCurrencies) *FiatCurrencyUpdateOne {
+	ids := make([]uuid.UUID, len(p))
 	for i := range p {
 		ids[i] = p[i].ID
 	}
-	return fcuo.RemoveProviderIDs(ids...)
+	return fcuo.RemoveProviderCurrencyIDs(ids...)
 }
 
 // ClearProvisionBuckets clears all "provision_buckets" edges to the ProvisionBucket entity.
@@ -947,28 +948,28 @@ func (fcuo *FiatCurrencyUpdateOne) sqlSave(ctx context.Context) (_node *FiatCurr
 	if value, ok := fcuo.mutation.IsEnabled(); ok {
 		_spec.SetField(fiatcurrency.FieldIsEnabled, field.TypeBool, value)
 	}
-	if fcuo.mutation.ProvidersCleared() {
+	if fcuo.mutation.ProviderCurrenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   fiatcurrency.ProvidersTable,
-			Columns: fiatcurrency.ProvidersPrimaryKey,
+			Table:   fiatcurrency.ProviderCurrenciesTable,
+			Columns: []string{fiatcurrency.ProviderCurrenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencies.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := fcuo.mutation.RemovedProvidersIDs(); len(nodes) > 0 && !fcuo.mutation.ProvidersCleared() {
+	if nodes := fcuo.mutation.RemovedProviderCurrenciesIDs(); len(nodes) > 0 && !fcuo.mutation.ProviderCurrenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   fiatcurrency.ProvidersTable,
-			Columns: fiatcurrency.ProvidersPrimaryKey,
+			Table:   fiatcurrency.ProviderCurrenciesTable,
+			Columns: []string{fiatcurrency.ProviderCurrenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencies.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -976,15 +977,15 @@ func (fcuo *FiatCurrencyUpdateOne) sqlSave(ctx context.Context) (_node *FiatCurr
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := fcuo.mutation.ProvidersIDs(); len(nodes) > 0 {
+	if nodes := fcuo.mutation.ProviderCurrenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   fiatcurrency.ProvidersTable,
-			Columns: fiatcurrency.ProvidersPrimaryKey,
+			Table:   fiatcurrency.ProviderCurrenciesTable,
+			Columns: []string{fiatcurrency.ProviderCurrenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencies.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

@@ -708,7 +708,7 @@ func TestProvider(t *testing.T) {
 			defer httpmock.Deactivate()
 
 			// Register mock response
-			httpmock.RegisterResponder("GET", "https://example.com/health",
+			httpmock.RegisterResponder("GET", "https://example.com/info",
 				func(r *http.Request) (*http.Response, error) {
 					return httpmock.NewJsonResponse(200, map[string]interface{}{
 						"status":  "success",
@@ -749,7 +749,7 @@ func TestProvider(t *testing.T) {
 			defer httpmock.Deactivate()
 
 			// Register mock response
-			httpmock.RegisterResponder("GET", "https://example.com/health",
+			httpmock.RegisterResponder("GET", "https://example.com/info",
 				func(r *http.Request) (*http.Response, error) {
 					return httpmock.NewJsonResponse(503, nil)
 				},

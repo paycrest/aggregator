@@ -250,15 +250,60 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		return
 	}
 
-	// Validate rate before proceeding with order creation
-	achievableRate, err := u.ValidateRate(ctx, token, institutionObj.Edges.FiatCurrency, payload.Amount, payload.Recipient.ProviderID, payload.Network)
-	if err != nil {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
-			Field:   "Rate",
-			Message: fmt.Sprintf("Rate validation failed: %s", err.Error()),
-		})
-		return
+	// Validate account and rate in parallel with fail fast logic before proceeding with order creation
+	type AccountResult struct {
+		accountName string
+		err         error
 	}
+
+	type RateResult struct {
+		achievableRate decimal.Decimal
+		err            error
+	}
+
+	accountChan := make(chan AccountResult, 1)
+	rateChan := make(chan RateResult, 1)
+
+	go func() {
+		accountName, err := u.ValidateAccount(ctx, payload.Recipient.Institution, payload.Recipient.AccountIdentifier)
+		accountChan <- AccountResult{accountName, err}
+	}()
+
+	go func() {
+		achievableRate, err := u.ValidateRate(ctx, token, institutionObj.Edges.FiatCurrency, payload.Amount, payload.Recipient.ProviderID, payload.Network)
+		rateChan <- RateResult{achievableRate, err}
+	}()
+
+	var accountResult AccountResult
+	var rateResult RateResult
+	var completedCount int
+
+	for completedCount < 2 {
+		select {
+		case accountResult = <-accountChan:
+			completedCount++
+			if accountResult.err != nil {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Recipient",
+					Message: fmt.Sprintf("Account validation failed: %s", accountResult.err.Error()),
+				})
+				return
+			}
+		case rateResult = <-rateChan:
+			completedCount++
+			if rateResult.err != nil {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Rate",
+					Message: fmt.Sprintf("Rate validation failed: %s", rateResult.err.Error()),
+				})
+				return
+			}
+		}
+	}
+
+	// Both validations successful
+	payload.Recipient.AccountName = accountResult.accountName
+	achievableRate := rateResult.achievableRate
 
 	// Validate that the provided rate is achievable
 	// Allow for a small tolerance (0.1%) to account for minor rate fluctuations

@@ -16,6 +16,7 @@ import (
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
+	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/user"
 	"github.com/shopspring/decimal"
@@ -249,7 +250,6 @@ type SenderProfilePayload struct {
 
 // ProviderOrderTokenPayload defines the provider setting for a token
 type ProviderOrderTokenPayload struct {
-	Currency               string                                `json:"currency" binding:"required"`
 	Symbol                 string                                `json:"symbol" binding:"required"`
 	ConversionRateType     providerordertoken.ConversionRateType `json:"conversionRateType" binding:"required,oneof=fixed floating"`
 	FixedConversionRate    decimal.Decimal                       `json:"fixedConversionRate" binding:"required,gt=0"`
@@ -264,29 +264,28 @@ type ProviderOrderTokenPayload struct {
 // ProviderProfilePayload is the payload for the provider profile endpoint
 type ProviderProfilePayload struct {
 	TradingName    string                      `json:"tradingName"`
-	Currencies     []string                    `json:"currencies"`
+	Currency       string                      `json:"currency" binding:"required"`
 	HostIdentifier string                      `json:"hostIdentifier"`
 	IsAvailable    bool                        `json:"isAvailable"`
-	IsActive       bool                        `json:"isActive"`
 	Tokens         []ProviderOrderTokenPayload `json:"tokens"`
 	VisibilityMode string                      `json:"visibilityMode"`
 }
 
 // ProviderProfileResponse is the response for the provider profile endpoint
 type ProviderProfileResponse struct {
-	ID                    string                      `json:"id"`
-	FirstName             string                      `json:"firstName"`
-	LastName              string                      `json:"lastName"`
-	Email                 string                      `json:"email"`
-	TradingName           string                      `json:"tradingName"`
-	Currencies            []string                    `json:"currencies"`
-	HostIdentifier        string                      `json:"hostIdentifier"`
-	IsAvailable           bool                        `json:"isAvailable"`
-	Tokens                []ProviderOrderTokenPayload `json:"tokens"`
-	APIKey                APIKeyResponse              `json:"apiKey"`
-	IsActive              bool                        `json:"isActive"`
-	VisibilityMode        string                      `json:"visibilityMode"`
-	KYBVerificationStatus user.KybVerificationStatus  `json:"kybVerificationStatus"`
+	ID                    string                         `json:"id"`
+	FirstName             string                         `json:"firstName"`
+	LastName              string                         `json:"lastName"`
+	Email                 string                         `json:"email"`
+	TradingName           string                         `json:"tradingName"`
+	Currencies            []string                       `json:"currencies"`
+	HostIdentifier        string                         `json:"hostIdentifier"`
+	CurrencyAvailability  map[string]bool                `json:"currencyAvailability"`
+	Tokens                []ProviderOrderTokenPayload    `json:"tokens"`
+	APIKey                APIKeyResponse                 `json:"apiKey"`
+	IsActive              bool                           `json:"isActive"`
+	VisibilityMode        providerprofile.VisibilityMode `json:"visibilityMode"`
+	KYBVerificationStatus user.KybVerificationStatus     `json:"kybVerificationStatus"`
 }
 
 // SenderOrderTokenResponse defines the provider setting for a token
@@ -782,4 +781,37 @@ type WebhookSignatureVerification struct {
 	IsValid   bool
 	WebhookID string
 	Secret    string
+}
+
+// ProviderBalance represents a provider's balance for a specific currency
+type ProviderBalance struct {
+	AvailableBalance decimal.Decimal `json:"availableBalance"`
+	TotalBalance     decimal.Decimal `json:"totalBalance"`
+	ReservedBalance  decimal.Decimal `json:"reservedBalance"`
+	LastUpdated      time.Time       `json:"lastUpdated"`
+}
+
+// ProviderInfoResponse represents the response from provider /info endpoint
+type ProviderInfoResponse struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
+	Data    struct {
+		Balances []struct {
+			AvailableBalance string `json:"availableBalance"`
+			PSP              string `json:"psp"`
+			SnapshotTime     string `json:"snapshotTime"`
+			Status           string `json:"status"`
+			TotalBalance     string `json:"totalBalance"`
+		} `json:"balances"`
+		ServiceInfo struct {
+			Currencies  []string `json:"currencies"`
+			LastUpdated string   `json:"lastUpdated"`
+			TotalPSPs   int      `json:"totalPSPs"`
+			Version     string   `json:"version"`
+		} `json:"serviceInfo"`
+		TotalBalances map[string]struct {
+			AvailableBalance string `json:"availableBalance"`
+			TotalBalance     string `json:"totalBalance"`
+		} `json:"totalBalances"`
+	} `json:"data"`
 }
