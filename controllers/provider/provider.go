@@ -458,7 +458,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 
 	switch payload.ValidationStatus {
 	case lockorderfulfillment.ValidationStatusSuccess:
-		if fulfillment.Edges.Order.Status != lockpaymentorder.StatusFulfilled {
+		if fulfillment.Edges.Order.Status == lockpaymentorder.StatusValidated {
 			u.APIResponse(ctx, http.StatusOK, "success", "Order already validated", nil)
 			return
 		}
