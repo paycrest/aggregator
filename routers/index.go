@@ -18,7 +18,7 @@ func RegisterRoutes(route *gin.Engine) {
 	route.NoRoute(func(ctx *gin.Context) {
 		u.APIResponse(ctx, http.StatusNotFound, "error", "Route Not Found", nil)
 	})
-	route.GET("/health", func(ctx *gin.Context) { ctx.JSON(http.StatusOK, gin.H{"live": "ok"}) })
+	route.GET("/info", func(ctx *gin.Context) { ctx.JSON(http.StatusOK, gin.H{"live": "ok"}) })
 
 	// Add all routes
 	authRoutes(route)

@@ -1162,8 +1162,8 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 	dataMap, ok := data["data"].(map[string]interface{})
 	if !ok {
 		logger.WithFields(logger.Fields{
-			"Error": fmt.Sprintf("%v", err),
-		}).Errorf("failed to parse node info: %v", err)
+			"Error": "data field is not a map",
+		}).Errorf("failed to parse node info: data field is not a map")
 		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Invalid data format", nil)
 		return
 	}
@@ -1171,8 +1171,8 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 	serviceInfo, ok := dataMap["serviceInfo"].(map[string]interface{})
 	if !ok {
 		logger.WithFields(logger.Fields{
-			"Error": fmt.Sprintf("%v", err),
-		}).Errorf("failed to parse node info: %v", err)
+			"Error": "serviceInfo field is not a map",
+		}).Errorf("failed to parse node info: serviceInfo field is not a map")
 		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Invalid service info format", nil)
 		return
 	}
@@ -1180,8 +1180,8 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 	currenciesData, ok := serviceInfo["currencies"].([]interface{}) // Change to []interface{} to handle any type
 	if !ok {
 		logger.WithFields(logger.Fields{
-			"Error": fmt.Sprintf("%v", err),
-		}).Errorf("failed to parse node info: %v", err)
+			"Error": "currencies field is not an array",
+		}).Errorf("failed to parse node info: currencies field is not an array")
 		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Currencies data is not in expected format", nil)
 		return
 	}
@@ -1197,9 +1197,9 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 	for _, pc := range provider.Edges.ProviderCurrencies {
 		if !u.ContainsString(currencyCodes, pc.Edges.Currency.Code) {
 			logger.WithFields(logger.Fields{
-				"Error":    fmt.Sprintf("%v", err),
+				"Error":    "currency not found in node response",
 				"Currency": pc.Edges.Currency.Code,
-			}).Errorf("failed to parse node info: %v", err)
+			}).Errorf("failed to parse node info: currency %s not found in node response", pc.Edges.Currency.Code)
 			u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
 			return
 		}
