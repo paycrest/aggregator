@@ -886,10 +886,14 @@ func HandleCancellation(ctx context.Context, createdLockPaymentOrder *ent.LockPa
 			SetSender(lockPaymentOrder.Sender).
 			SetMemo(lockPaymentOrder.Memo).
 			SetMetadata(lockPaymentOrder.Metadata).
-			SetProvisionBucket(lockPaymentOrder.ProvisionBucket).
 			SetCancellationCount(3).
 			SetCancellationReasons([]string{cancellationReason}).
 			SetStatus(lockpaymentorder.StatusCancelled)
+
+		// Only set ProvisionBucket if it's not nil
+		if lockPaymentOrder.ProvisionBucket != nil {
+			orderBuilder = orderBuilder.SetProvisionBucket(lockPaymentOrder.ProvisionBucket)
+		}
 
 		if lockPaymentOrder.ProviderID != "" {
 			orderBuilder = orderBuilder.
