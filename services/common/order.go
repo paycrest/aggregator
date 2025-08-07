@@ -1082,14 +1082,18 @@ func createBasicLockPaymentOrderAndCancel(
 	cancellationReason string,
 	refundOrder func(context.Context, *ent.Network, string) error,
 ) error {
+	// Apply token decimal adjustment to amount and protocol fee
+	adjustedAmount := event.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
+	adjustedProtocolFee := event.ProtocolFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
+
 	// Create a basic lock payment order for cancellation
 	lockPaymentOrder := types.LockPaymentOrderFields{
 		Token:       token,
 		Network:     network,
 		GatewayID:   event.OrderId,
-		Amount:      event.Amount,
+		Amount:      adjustedAmount,
 		Rate:        event.Rate,
-		ProtocolFee: event.ProtocolFee,
+		ProtocolFee: adjustedProtocolFee,
 		BlockNumber: int64(event.BlockNumber),
 		TxHash:      event.TxHash,
 		Sender:      event.Sender,
