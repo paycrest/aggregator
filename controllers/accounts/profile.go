@@ -68,7 +68,14 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 	}
 	sender := senderCtx.(*ent.SenderProfile)
 
-	update := sender.Update()
+	// save or update SenderOrderToken
+	tx, err := storage.Client.Tx(ctx)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+		return
+	}
+
+	update := tx.SenderProfile.Update().Where(senderprofile.IDEQ(sender.ID))
 
 	if payload.WebhookURL != "" && payload.WebhookURL != sender.WebhookURL {
 		update.SetWebhookURL(payload.WebhookURL)
@@ -78,12 +85,6 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 		update.SetDomainWhitelist(payload.DomainWhitelist)
 	}
 
-	// save or update SenderOrderToken
-	tx, err := storage.Client.Tx(ctx)
-	if err != nil {
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
-		return
-	}
 
 	hasConfiguredToken := false
 
@@ -210,6 +211,13 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 		update.SetIsActive(true)
 	} else if !hasConfiguredToken && sender.IsActive {
 		update.SetIsActive(false)
+	}
+
+	// Save the sender profile update within the transaction
+	_, err = update.Save(ctx)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+		return
 	}
 
 	// Commit the transaction
