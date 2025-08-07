@@ -159,19 +159,19 @@ func CreateLockPaymentOrder(
 		WithNetwork().
 		Only(ctx)
 	if err != nil {
-		return nil
+		return createBasicLockPaymentOrderAndCancel(ctx, event, network, nil, nil, "Token lookup failed", refundOrder)
 	}
 
 	// Get order recipient from message hash
 	recipient, err := cryptoUtils.GetOrderRecipientFromMessageHash(event.MessageHash)
 	if err != nil {
-		return nil
+		return createBasicLockPaymentOrderAndCancel(ctx, event, network, token, nil, "Message hash decryption failed", refundOrder)
 	}
 
 	// Get provision bucket
 	institution, err := utils.GetInstitutionByCode(ctx, recipient.Institution, true)
 	if err != nil {
-		return nil
+		return createBasicLockPaymentOrderAndCancel(ctx, event, network, token, recipient, "Institution lookup failed", refundOrder)
 	}
 
 	currency, err := db.Client.FiatCurrency.
@@ -182,7 +182,7 @@ func CreateLockPaymentOrder(
 		).
 		Only(ctx)
 	if err != nil {
-		return nil
+		return createBasicLockPaymentOrderAndCancel(ctx, event, network, token, recipient, "Currency lookup failed", refundOrder)
 	}
 
 	event.Amount = event.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
@@ -195,6 +195,8 @@ func CreateLockPaymentOrder(
 			"Amount":   event.Amount,
 			"Currency": currency,
 		}).Errorf("failed to fetch provision bucket when creating lock payment order")
+
+		return createBasicLockPaymentOrderAndCancel(ctx, event, network, token, recipient, "Provision bucket lookup failed", refundOrder)
 	}
 
 	// Create lock payment order fields
@@ -1063,5 +1065,46 @@ func deleteTransferWebhook(ctx context.Context, txHash string) error {
 		return fmt.Errorf("failed to delete webhook: %w", err)
 	}
 
+	return nil
+}
+
+// createBasicLockPaymentOrderAndCancel creates a basic lock payment order and cancels it with the given reason
+func createBasicLockPaymentOrderAndCancel(
+	ctx context.Context,
+	event *types.OrderCreatedEvent,
+	network *ent.Network,
+	token *ent.Token,
+	recipient *types.PaymentOrderRecipient,
+	cancellationReason string,
+	refundOrder func(context.Context, *ent.Network, string) error,
+) error {
+	// Create a basic lock payment order for cancellation
+	lockPaymentOrder := types.LockPaymentOrderFields{
+		Token:       token,
+		Network:     network,
+		GatewayID:   event.OrderId,
+		Amount:      event.Amount,
+		Rate:        event.Rate,
+		ProtocolFee: event.ProtocolFee,
+		BlockNumber: int64(event.BlockNumber),
+		TxHash:      event.TxHash,
+		Sender:      event.Sender,
+		MessageHash: event.MessageHash,
+	}
+
+	// Add recipient fields if available
+	if recipient != nil {
+		lockPaymentOrder.Institution = recipient.Institution
+		lockPaymentOrder.AccountIdentifier = recipient.AccountIdentifier
+		lockPaymentOrder.AccountName = recipient.AccountName
+		lockPaymentOrder.ProviderID = recipient.ProviderID
+		lockPaymentOrder.Memo = recipient.Memo
+		lockPaymentOrder.Metadata = recipient.Metadata
+	}
+
+	err := HandleCancellation(ctx, nil, &lockPaymentOrder, cancellationReason, refundOrder)
+	if err != nil {
+		return fmt.Errorf("failed to handle cancellation due to %s: %w", cancellationReason, err)
+	}
 	return nil
 }
