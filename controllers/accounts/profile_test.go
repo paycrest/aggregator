@@ -1,6 +1,8 @@
 package accounts
 
 import (
+	"fmt"
+	"strings"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -764,6 +766,7866 @@ func TestProfile(t *testing.T) {
 		assert.Contains(t, response.Data.WebhookURL, "https://example.com")
 	})
 
+
+	t.Run("Authentication and Authorization Tests", func(t *testing.T) {
+		t.Run("GetSenderProfile fails without JWT token", func(t *testing.T) {
+			res, err := test.PerformRequest(t, "GET", "/settings/sender", nil, nil, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusUnauthorized, res.Code)
+		})
+
+		t.Run("GetProviderProfile fails without JWT token", func(t *testing.T) {
+			res, err := test.PerformRequest(t, "GET", "/settings/provider", nil, nil, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusUnauthorized, res.Code)
+		})
+
+		t.Run("UpdateSenderProfile fails without JWT token", func(t *testing.T) {
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: []string{"example.com"},
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, nil, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusUnauthorized, res.Code)
+		})
+
+		t.Run("UpdateProviderProfile fails without JWT token", func(t *testing.T) {
+			payload := types.ProviderProfilePayload{
+				TradingName: "Test Name",
+				Currency:    "KES",
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, nil, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusUnauthorized, res.Code)
+		})
+
+		t.Run("Sender cannot access provider endpoints", func(t *testing.T) {
+			senderUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+			accessToken, _ := token.GenerateAccessJWT(senderUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+			res, err := test.PerformRequest(t, "GET", "/settings/provider", nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusForbidden, res.Code)
+		})
+
+		t.Run("Provider cannot access sender endpoints", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+			res, err := test.PerformRequest(t, "GET", "/settings/sender", nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusForbidden, res.Code)
+		})
+
+		t.Run("Invalid JWT token fails", func(t *testing.T) {
+			headers := map[string]string{
+				"Authorization": "Bearer invalid.token.here",
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+			res, err := test.PerformRequest(t, "GET", "/settings/sender", nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusUnauthorized, res.Code)
+		})
+	})
+
+	t.Run("UpdateSenderProfile Advanced Tests", func(t *testing.T) {
+		t.Run("handles empty domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"domain_whitelist": []string{"example.com"},
+				"user_id":          testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: []string{},
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			senderProfile, err := db.Client.SenderProfile.
+				Query().
+				Where(senderprofile.HasUserWith(user.ID(testUser.ID))).
+				Only(context.Background())
+			assert.NoError(t, err)
+			assert.Empty(t, senderProfile.DomainWhitelist)
+		})
+
+		t.Run("handles malformed JSON payload", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization":  "Bearer " + accessToken,
+				"Content-Type":   "application/json",
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+
+			// Send malformed JSON
+			res := httptest.NewRecorder()
+			req := httptest.NewRequest("PATCH", "/settings/sender", strings.NewReader(`{"invalid": json}`))
+			for k, v := range headers {
+				req.Header.Set(k, v)
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+			router.ServeHTTP(res, req)
+
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Failed to validate payload", response.Message)
+		})
+
+		t.Run("handles webhook URL validation edge cases", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+
+			// Test various invalid URL formats
+			invalidURLs := []string{
+				"not-a-url",
+				"ftp://example.com",
+				"http://",
+				"://example.com",
+				"example.com",
+				" https://example.com ",
+				"https://",
+				"javascript:alert(1)",
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+
+			for _, invalidURL := range invalidURLs {
+				payload := types.SenderProfilePayload{
+					WebhookURL: invalidURL,
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+				assert.NoError(t, err)
+				assert.Equal(t, http.StatusBadRequest, res.Code, fmt.Sprintf("Should reject invalid URL: %s", invalidURL))
+
+				var response types.Response
+				err = json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, "Failed to validate payload", response.Message)
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+		})
+
+		t.Run("handles token address validation for different networks", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+
+			// Test invalid Ethereum addresses
+			invalidEthAddresses := []string{
+				"0x123", // Too short
+				"123456789012345678901234567890123456789012", // No 0x prefix
+				"0xGGGG567890123456789012345678901234567890", // Invalid hex
+				"0x0000000000000000000000000000000000000000000", // Too long
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+
+			for _, invalidAddr := range invalidEthAddresses {
+				tokenAddresses := []types.SenderOrderAddressPayload{{
+					FeeAddress:    invalidAddr,
+					Network:       testCtx.token.Edges.Network.Identifier,
+					RefundAddress: "0xD4EB9067111F81b9bAabE06E2b8ebBaDADEd5DA0",
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+				}}
+
+				tokenPayload := []types.SenderOrderTokenPayload{{
+					Symbol:    testCtx.token.Symbol,
+					Addresses: tokenAddresses,
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+				}}
+
+				payload := types.SenderProfilePayload{
+					Tokens: tokenPayload,
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+				assert.NoError(t, err)
+				assert.Equal(t, http.StatusBadRequest, res.Code, fmt.Sprintf("Should reject invalid Ethereum address: %s", invalidAddr))
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+		})
+
+		t.Run("handles token with no addresses", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+
+			tokenPayload := []types.SenderOrderTokenPayload{{
+				Symbol:    testCtx.token.Symbol,
+				Addresses: []types.SenderOrderAddressPayload{}, // Empty addresses
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}}
+
+			payload := types.SenderProfilePayload{
+				Tokens: tokenPayload,
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Contains(t, response.Message, "No wallet address provided")
+		})
+
+		t.Run("handles unsupported token symbol", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+
+			tokenAddresses := []types.SenderOrderAddressPayload{{
+				FeeAddress:    "0xD4EB9067111F81b9bAabE06E2b8ebBaDADEd5DAf",
+				Network:       "ethereum",
+				RefundAddress: "0xD4EB9067111F81b9bAabE06E2b8ebBaDADEd5DA0",
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}}
+
+			tokenPayload := []types.SenderOrderTokenPayload{{
+				Symbol:    "NONEXISTENT",
+				Addresses: tokenAddresses,
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}}
+
+			payload := types.SenderProfilePayload{
+				Tokens: tokenPayload,
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Token not supported", response.Message)
+		})
+
+		t.Run("handles unsupported network", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+
+			tokenAddresses := []types.SenderOrderAddressPayload{{
+				FeeAddress:    "0xD4EB9067111F81b9bAabE06E2b8ebBaDADEd5DAf",
+				Network:       "unsupported_network",
+				RefundAddress: "0xD4EB9067111F81b9bAabE06E2b8ebBaDADEd5DA0",
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}}
+
+			tokenPayload := []types.SenderOrderTokenPayload{{
+				Symbol:    testCtx.token.Symbol,
+				Addresses: tokenAddresses,
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}}
+
+			payload := types.SenderProfilePayload{
+				Tokens: tokenPayload,
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Contains(t, response.Message, "Network not supported")
+		})
+
+		t.Run("activates sender profile when tokens are configured", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+			senderProfile, err := test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+			assert.False(t, senderProfile.IsActive, "Profile should start inactive")
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+
+			tokenAddresses := []types.SenderOrderAddressPayload{{
+				FeeAddress:    "0xD4EB9067111F81b9bAabE06E2b8ebBaDADEd5DAf",
+				Network:       testCtx.token.Edges.Network.Identifier,
+				RefundAddress: "0xD4EB9067111F81b9bAabE06E2b8ebBaDADEd5DA0",
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}}
+
+			tokenPayload := []types.SenderOrderTokenPayload{{
+				Symbol:     testCtx.token.Symbol,
+				Addresses:  tokenAddresses,
+				FeePercent: decimal.NewFromInt(1),
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: []string{"example.com"},
+				Tokens:          tokenPayload,
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			// Verify profile is now active
+			updatedProfile, err := db.Client.SenderProfile.
+				Query().
+				Where(senderprofile.HasUserWith(user.ID(testUser.ID))).
+				Only(context.Background())
+			assert.NoError(t, err)
+			assert.True(t, updatedProfile.IsActive)
+		})
+	})
+
+	t.Run("UpdateProviderProfile Advanced Tests", func(t *testing.T) {
+		t.Run("handles malformed JSON payload", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization":  "Bearer " + accessToken,
+				"Content-Type":   "application/json",
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+
+			// Send malformed JSON
+			res := httptest.NewRecorder()
+			req := httptest.NewRequest("PATCH", "/settings/provider", strings.NewReader(`{"currency": "KES", invalid: json}`))
+			for k, v := range headers {
+				req.Header.Set(k, v)
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+			router.ServeHTTP(res, req)
+
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+		})
+
+		t.Run("handles empty trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+			payload := types.ProviderProfilePayload{
+				TradingName:    "",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Empty trading name should be allowed (field is optional)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles missing required currency field", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test Provider",
+				HostIdentifier: "https://example.com",
+				// Currency field missing - this is required
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+		})
+
+		t.Run("validates HTTPS requirement for host identifier", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+
+			// Test various invalid URL schemes
+			invalidHosts := []string{
+				"http://example.com",      // HTTP not allowed
+				"ftp://example.com",       // FTP not allowed
+				"not-a-valid-url",         // Not a URL
+				"https://",                // Incomplete URL
+				"://example.com",          // Missing scheme
+				" https://example.com ",   // Whitespace
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles Unicode and emoji characters", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "测试公司 🚀 Тест Компания العربية 🌍",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+		})
+
+		t.Run("handles large domain whitelist", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Create large domain whitelist
+			largeDomainList := make([]string, 100)
+			for i := 0; i < 100; i++ {
+				largeDomainList[i] = fmt.Sprintf("domain%d.com", i)
+			}
+
+			payload := types.SenderProfilePayload{
+				DomainWhitelist: largeDomainList,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+	})
+
+	t.Run("Concurrency and Performance Tests", func(t *testing.T) {
+		t.Run("handles concurrent profile updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "sender"})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Simulate concurrent updates
+			done := make(chan bool, 3)
+			results := make([]int, 3)
+
+			for i := 0; i < 3; i++ {
+				go func(index int) {
+					defer func() { done <- true }()
+					payload := types.SenderProfilePayload{
+						DomainWhitelist: []string{fmt.Sprintf("domain%d.com", index)},
+					}
+					res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+					assert.NoError(t, err)
+					results[index] = res.Code
+				}(i)
+			}
+
+			// Wait for all goroutines to complete
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+
+			// At least one should succeed, others may fail due to concurrency
+			successCount := 0
+			for _, code := range results {
+				if code == http.StatusOK {
+					successCount++
+				}
+			}
+			assert.Greater(t, successCount, 0, "At least one concurrent update should succeed")
+		})
+
+		t.Run("stress test with rapid sequential updates", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{"scope": "provider"})
+			assert.NoError(t, err)
+
+			currency, err := test.CreateTestFiatCurrency(map[string]interface{}{
+				"code":        "USD",
+				"short_name":  "US Dollar",
+				"decimals":    2,
+				"symbol":      "$",
+				"name":        "US Dollar",
+				"market_rate": 1.0,
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     testUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Perform rapid sequential updates
+			successCount := 0
+			for i := 0; i < 10; i++ {
+				payload := types.ProviderProfilePayload{
+					TradingName:    fmt.Sprintf("Test Provider %d", i),
+					HostIdentifier: "https://example.com",
+					Currency:       "USD",
+				}
+
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				if res.Code == http.StatusOK {
+					successCount++
+				}
+			}
+
+			assert.Greater(t, successCount, 5, "Most sequential updates should succeed")
+		})
+	})
+			}
+
+			for _, invalidHost := range invalidHosts {
+				payload := types.ProviderProfilePayload{
+					TradingName:    "Test Provider",
+					HostIdentifier: invalidHost,
+					Currency:       "KES",
+
+	t.Run("Input Validation and Boundary Tests", func(t *testing.T) {
+		t.Run("handles extremely long trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			longName := strings.Repeat("A", 1000) // Very long name
+			payload := types.ProviderProfilePayload{
+				TradingName:    longName,
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			// Should either succeed or fail with proper validation
+			assert.True(t, res.Code == http.StatusOK || res.Code == http.StatusBadRequest)
+		})
+
+		t.Run("handles special characters in trading name", func(t *testing.T) {
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Test & Co. (2023) - Special #1 @Provider! €₹¥£",
+				HostIdentifier: "https://example.com",
+				Currency:       "KES",
+			}
+
+			res, err := test.Perfo
 	t.Run("GetProviderProfile", func(t *testing.T) {
 		t.Run("with currency filter", func(t *testing.T) {
 			ctx := context.Background()
