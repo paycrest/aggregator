@@ -1129,6 +1129,7 @@ func (ctrl *Controller) KYCWebhook(ctx *gin.Context) {
 // SlackInteractionHandler handles Slack interaction requests
 func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 	startTime := time.Now()
+	cnfg := config.AuthConfig()
 
 	// Parse form-encoded payload
 	payloadStr := ctx.PostForm("payload")
@@ -1283,7 +1284,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 					"type": "section",
 					"text": map[string]interface{}{
 						"type": "mrkdwn",
-						"text": fmt.Sprintf("*Business License*: %s", kybProfile.BusinessLicenseURL),
+						"text": fmt.Sprintf("*Business License*: %s", *kybProfile.BusinessLicenseURL),
 					},
 				})
 			}
@@ -1301,7 +1302,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 					"type": "section",
 					"text": map[string]interface{}{
 						"type": "mrkdwn",
-						"text": fmt.Sprintf("*KYC Policy*: %s", kybProfile.KycPolicyURL),
+						"text": fmt.Sprintf("*KYC Policy*: %s", *kybProfile.KycPolicyURL),
 					},
 				})
 			}
@@ -1384,10 +1385,14 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				return
 			}
 			req.Header.Set("Content-Type", "application/json")
-			cnfg := config.AuthConfig()
 			if cnfg.SlackBotToken == "" {
 				logger.Errorf("Slack bot token not configured for KYB Profile %s", kybProfileID)
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Slack bot token not configured"})
+				return
+			}
+			if !strings.HasPrefix(cnfg.SlackBotToken, "xoxb-") {
+				logger.Errorf("Invalid Slack bot token format for KYB Profile %s", kybProfileID)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid Slack bot token format"})
 				return
 			}
 			req.Header.Set("Authorization", "Bearer "+cnfg.SlackBotToken)
@@ -1746,7 +1751,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				go func() {
 					message := map[string]interface{}{
 						"replace_original": true,
-						"text": fmt.Sprintf("❌ *REJECTED* - KYB submission for %s from %s has been rejected. Reason: %s", firstName, email, reasonForDecline),
+						"text":             fmt.Sprintf("❌ *REJECTED* - KYB submission for %s from %s has been rejected. Reason: %s", firstName, email, reasonForDecline),
 					}
 					jsonPayload, _ := json.Marshal(message)
 					if _, err := http.Post(responseURL, "application/json", bytes.NewBuffer(jsonPayload)); err != nil {
