@@ -84,7 +84,6 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 		update.SetDomainWhitelist(payload.DomainWhitelist)
 	}
 
-
 	hasConfiguredToken := false
 
 	for _, tokenPayload := range payload.Tokens {
@@ -153,54 +152,36 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 			networksToTokenId[key] = tokenId.ID
 		}
 
-		for _, address := range tokenPayload.Addresses {
-			senderToken, err := tx.SenderOrderToken.
-				Query().
-				Where(
-					senderordertoken.And(
-						senderordertoken.HasTokenWith(token.IDEQ(networksToTokenId[address.Network])),
-						senderordertoken.HasSenderWith(senderprofile.IDEQ(sender.ID)),
-					),
-				).
-				Only(ctx)
-			if err != nil {
-				if ent.IsNotFound(err) {
-					_, err := tx.SenderOrderToken.
-						Create().
-						SetSenderID(sender.ID).
-						SetTokenID(networksToTokenId[address.Network]).
-						SetRefundAddress(address.RefundAddress).
-						SetFeePercent(tokenPayload.FeePercent).
-						SetFeeAddress(address.FeeAddress).
-						Save(ctx)
-					if err != nil {
-						u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
-						return
-					}
-					// Check if this token is properly configured
-					if address.RefundAddress != "" && address.FeeAddress != "" {
-						hasConfiguredToken = true
-					}
-				} else {
-					u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
-					return
-				}
+		// Delete existing sender order tokens for this token symbol to handle removals
+		_, err = tx.SenderOrderToken.
+			Delete().
+			Where(
+				senderordertoken.HasTokenWith(token.SymbolEQ(tokenPayload.Symbol)),
+				senderordertoken.HasSenderWith(senderprofile.IDEQ(sender.ID)),
+			).
+			Exec(ctx)
+		if err != nil {
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+			return
+		}
 
-			} else {
-				_, err := senderToken.
-					Update().
-					SetRefundAddress(address.RefundAddress).
-					SetFeePercent(tokenPayload.FeePercent).
-					SetFeeAddress(address.FeeAddress).
-					Save(ctx)
-				if err != nil {
-					u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
-					return
-				}
-				// Check if this token is properly configured
-				if address.RefundAddress != "" && address.FeeAddress != "" {
-					hasConfiguredToken = true
-				}
+		// Create new sender order tokens for the networks in the payload
+		for _, address := range tokenPayload.Addresses {
+			_, err := tx.SenderOrderToken.
+				Create().
+				SetSenderID(sender.ID).
+				SetTokenID(networksToTokenId[address.Network]).
+				SetRefundAddress(address.RefundAddress).
+				SetFeePercent(tokenPayload.FeePercent).
+				SetFeeAddress(address.FeeAddress).
+				Save(ctx)
+			if err != nil {
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+				return
+			}
+			// Check if this token is properly configured
+			if address.RefundAddress != "" && address.FeeAddress != "" {
+				hasConfiguredToken = true
 			}
 		}
 	}
