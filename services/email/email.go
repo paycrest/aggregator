@@ -190,7 +190,7 @@ func getTemplateID(emailType, provider string) string {
 			"password_reset": "d-8b689801cd9947748775ccd1c4cc932e",
 			"welcome":        "d-b425f024e6554c5ba2b4d03ab0a8b25d",
 			"kyb_approval":   "d-5ebb862274214ba79eae226c09300aa7",
-			"kyb_rejection":  "d-kyb-rejection-template-id", // TODO: Add actual template ID
+			"kyb_rejection":  "d-6917f9c32105467b8dd806a5a3dd32dc", // TODO: Add actual template ID
 		},
 		"brevo": {
 			"verification":   "1", // TODO: Replace with actual Brevo template ID
