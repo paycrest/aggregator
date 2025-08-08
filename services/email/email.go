@@ -86,6 +86,15 @@ func (e *EmailService) SendTemplateEmail(ctx context.Context, payload types.Send
 			"error":            err.Error(),
 		}).Warnf("Primary email provider failed for template, trying fallback")
 
+		// Check if fallback provider exists
+		if e.fallbackProvider == nil {
+			logger.WithFields(logger.Fields{
+				"primary_provider": e.primaryProvider.GetName(),
+				"template_id":      templateID,
+			}).Errorf("No fallback provider available for template")
+			return types.SendEmailResponse{}, fmt.Errorf("no fallback provider available for template: %w", err)
+		}
+
 		// Try fallback provider
 		response, err = e.fallbackProvider.SendTemplateEmail(ctx, payload, templateID)
 		if err != nil {
