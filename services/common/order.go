@@ -545,6 +545,7 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 			return fmt.Errorf("UpdateOrderStatusRefunded.sender: %v", err)
 		}
 
+		// Update the local paymentOrder object for webhook
 		paymentOrder.Status = paymentorder.StatusRefunded
 		paymentOrder.TxHash = event.TxHash
 		paymentOrder.BlockNumber = event.BlockNumber
@@ -556,13 +557,12 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		return fmt.Errorf("UpdateOrderStatusRefunded.commit %v", err)
 	}
 
-	if paymentOrderExists && paymentOrder.Status != paymentorder.StatusRefunded {
+	if paymentOrderExists && paymentOrder.Status == paymentorder.StatusRefunded {
 		// Send webhook notification to sender
 		err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
 		if err != nil {
 			return fmt.Errorf("UpdateOrderStatusRefunded.webhook: %v", err)
 		}
-
 	}
 
 	return nil
