@@ -21,6 +21,7 @@ import (
 	"github.com/paycrest/aggregator/ent/user"
 	"github.com/paycrest/aggregator/routers/middleware"
 	svc "github.com/paycrest/aggregator/services"
+	"github.com/paycrest/aggregator/services/email"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/spf13/viper"
@@ -79,7 +80,7 @@ func TestAuth(t *testing.T) {
 	router := gin.New()
 	ctrl := &AuthController{
 		apiKeyService: svc.NewAPIKeyService(),
-		emailService:  svc.NewEmailService(svc.SENDGRID_MAIL_PROVIDER),
+		emailService:  email.NewEmailServiceWithProviders(),
 	}
 
 	router.POST("/register", ctrl.Register)
