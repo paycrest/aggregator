@@ -9,19 +9,16 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// FiatCurrency holds the schema definition for the FiatCurrency entity.
 type FiatCurrency struct {
 	ent.Schema
 }
 
-// Mixin of the FiatCurrency.
 func (FiatCurrency) Mixin() []ent.Mixin {
 	return []ent.Mixin{
 		TimeMixin{},
 	}
 }
 
-// Fields of the FiatCurrency.
 func (FiatCurrency) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).
@@ -34,10 +31,16 @@ func (FiatCurrency) Fields() []ent.Field {
 		field.Float("market_rate").
 			GoType(decimal.Decimal{}),
 		field.Bool("is_enabled").Default(false),
+
+		field.Float("minimum_available_balance").
+			GoType(decimal.Decimal{}),
+		field.Float("alert_threshold").
+			GoType(decimal.Decimal{}),
+		field.Float("critical_threshold").
+			GoType(decimal.Decimal{}),
 	}
 }
 
-// Edges of the FiatCurrency.
 func (FiatCurrency) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("provider_currencies", ProviderCurrencies.Type).
