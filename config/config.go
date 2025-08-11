@@ -11,7 +11,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Configuration type
 type Configuration struct {
 	Server       ServerConfiguration
 	Database     DatabaseConfiguration
@@ -23,7 +22,6 @@ type Configuration struct {
 	Balance      BalanceConfiguration
 }
 
-// SetupConfig configuration
 func SetupConfig() error {
 	var configuration *Configuration
 
@@ -35,7 +33,7 @@ func SetupConfig() error {
 
 	envFilePath := os.Getenv("ENV_FILE_PATH")
 	if envFilePath == "" {
-		envFilePath = ".env" // Set default value to ".env"
+		envFilePath = ".env"
 	}
 
 	viper.SetConfigName(envFilePath)
@@ -54,10 +52,8 @@ func SetupConfig() error {
 		return err
 	}
 
-	// Initialize balance configuration with environment variables
 	balanceConfig := NewBalanceConfiguration()
 	
-	// Override with environment variables if set
 	if redisEnabled := os.Getenv("BALANCE_REDIS_ENABLED"); redisEnabled != "" {
 		balanceConfig.RedisEnabled = redisEnabled == "true"
 	}
@@ -83,7 +79,6 @@ func SetupConfig() error {
 		balanceConfig.MonitoringEmailEnabled = emailEnabled == "true"
 	}
 	
-	// Set default thresholds from environment
 	if defaultMin := os.Getenv("BALANCE_DEFAULT_MINIMUM"); defaultMin != "" {
 		if min, err := decimal.NewFromString(defaultMin); err == nil {
 			balanceConfig.DefaultMinimumBalance = min
