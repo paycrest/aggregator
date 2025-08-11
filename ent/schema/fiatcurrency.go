@@ -34,6 +34,14 @@ func (FiatCurrency) Fields() []ent.Field {
 		field.Float("market_rate").
 			GoType(decimal.Decimal{}),
 		field.Bool("is_enabled").Default(false),
+
+		// Balance threshold fields for monitoring
+		field.Float("minimum_available_balance").
+			GoType(decimal.Decimal{}),
+		field.Float("alert_threshold").
+			GoType(decimal.Decimal{}),
+		field.Float("critical_threshold").
+			GoType(decimal.Decimal{}),
 	}
 }
 

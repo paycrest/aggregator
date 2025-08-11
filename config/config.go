@@ -3,8 +3,11 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/cosmos/go-bip39"
+	"github.com/shopspring/decimal"
 	"github.com/spf13/viper"
 )
 
@@ -17,6 +20,7 @@ type Configuration struct {
 	Notification NotificationConfiguration
 	Engine       EngineConfiguration
 	Etherscan    EtherscanConfiguration
+	Balance      BalanceConfiguration
 }
 
 // SetupConfig configuration
@@ -49,6 +53,54 @@ func SetupConfig() error {
 		fmt.Printf("error to decode, %v", err)
 		return err
 	}
+
+	// Initialize balance configuration with environment variables
+	balanceConfig := NewBalanceConfiguration()
+	
+	// Override with environment variables if set
+	if redisEnabled := os.Getenv("BALANCE_REDIS_ENABLED"); redisEnabled != "" {
+		balanceConfig.RedisEnabled = redisEnabled == "true"
+	}
+	if redisTTL := os.Getenv("BALANCE_REDIS_TTL"); redisTTL != "" {
+		if ttl, err := time.ParseDuration(redisTTL); err == nil {
+			balanceConfig.RedisTTL = ttl
+		}
+	}
+	if maxRetries := os.Getenv("BALANCE_REDIS_MAX_RETRIES"); maxRetries != "" {
+		if retries, err := strconv.Atoi(maxRetries); err == nil {
+			balanceConfig.RedisMaxRetries = retries
+		}
+	}
+	if monitoringEnabled := os.Getenv("BALANCE_MONITORING_ENABLED"); monitoringEnabled != "" {
+		balanceConfig.MonitoringEnabled = monitoringEnabled == "true"
+	}
+	if checkInterval := os.Getenv("BALANCE_MONITORING_CHECK_INTERVAL"); checkInterval != "" {
+		if interval, err := time.ParseDuration(checkInterval); err == nil {
+			balanceConfig.MonitoringCheckInterval = interval
+		}
+	}
+	if emailEnabled := os.Getenv("BALANCE_MONITORING_EMAIL_ENABLED"); emailEnabled != "" {
+		balanceConfig.MonitoringEmailEnabled = emailEnabled == "true"
+	}
+	
+	// Set default thresholds from environment
+	if defaultMin := os.Getenv("BALANCE_DEFAULT_MINIMUM"); defaultMin != "" {
+		if min, err := decimal.NewFromString(defaultMin); err == nil {
+			balanceConfig.DefaultMinimumBalance = min
+		}
+	}
+	if defaultAlert := os.Getenv("BALANCE_DEFAULT_ALERT"); defaultAlert != "" {
+		if alert, err := decimal.NewFromString(defaultAlert); err == nil {
+			balanceConfig.DefaultAlertThreshold = alert
+		}
+	}
+	if defaultCritical := os.Getenv("BALANCE_DEFAULT_CRITICAL"); defaultCritical != "" {
+		if critical, err := decimal.NewFromString(defaultCritical); err == nil {
+			balanceConfig.DefaultCriticalThreshold = critical
+		}
+	}
+	
+	configuration.Balance = *balanceConfig
 
 	var cryptoConf = CryptoConfig()
 

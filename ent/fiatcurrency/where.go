@@ -102,6 +102,21 @@ func IsEnabled(v bool) predicate.FiatCurrency {
 	return predicate.FiatCurrency(sql.FieldEQ(FieldIsEnabled, v))
 }
 
+// MinimumAvailableBalance applies equality check predicate on the "minimum_available_balance" field. It's identical to MinimumAvailableBalanceEQ.
+func MinimumAvailableBalance(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldEQ(FieldMinimumAvailableBalance, v))
+}
+
+// AlertThreshold applies equality check predicate on the "alert_threshold" field. It's identical to AlertThresholdEQ.
+func AlertThreshold(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldEQ(FieldAlertThreshold, v))
+}
+
+// CriticalThreshold applies equality check predicate on the "critical_threshold" field. It's identical to CriticalThresholdEQ.
+func CriticalThreshold(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldEQ(FieldCriticalThreshold, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.FiatCurrency {
 	return predicate.FiatCurrency(sql.FieldEQ(FieldCreatedAt, v))
@@ -530,6 +545,126 @@ func IsEnabledEQ(v bool) predicate.FiatCurrency {
 // IsEnabledNEQ applies the NEQ predicate on the "is_enabled" field.
 func IsEnabledNEQ(v bool) predicate.FiatCurrency {
 	return predicate.FiatCurrency(sql.FieldNEQ(FieldIsEnabled, v))
+}
+
+// MinimumAvailableBalanceEQ applies the EQ predicate on the "minimum_available_balance" field.
+func MinimumAvailableBalanceEQ(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldEQ(FieldMinimumAvailableBalance, v))
+}
+
+// MinimumAvailableBalanceNEQ applies the NEQ predicate on the "minimum_available_balance" field.
+func MinimumAvailableBalanceNEQ(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldNEQ(FieldMinimumAvailableBalance, v))
+}
+
+// MinimumAvailableBalanceIn applies the In predicate on the "minimum_available_balance" field.
+func MinimumAvailableBalanceIn(vs ...decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldIn(FieldMinimumAvailableBalance, vs...))
+}
+
+// MinimumAvailableBalanceNotIn applies the NotIn predicate on the "minimum_available_balance" field.
+func MinimumAvailableBalanceNotIn(vs ...decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldNotIn(FieldMinimumAvailableBalance, vs...))
+}
+
+// MinimumAvailableBalanceGT applies the GT predicate on the "minimum_available_balance" field.
+func MinimumAvailableBalanceGT(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldGT(FieldMinimumAvailableBalance, v))
+}
+
+// MinimumAvailableBalanceGTE applies the GTE predicate on the "minimum_available_balance" field.
+func MinimumAvailableBalanceGTE(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldGTE(FieldMinimumAvailableBalance, v))
+}
+
+// MinimumAvailableBalanceLT applies the LT predicate on the "minimum_available_balance" field.
+func MinimumAvailableBalanceLT(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldLT(FieldMinimumAvailableBalance, v))
+}
+
+// MinimumAvailableBalanceLTE applies the LTE predicate on the "minimum_available_balance" field.
+func MinimumAvailableBalanceLTE(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldLTE(FieldMinimumAvailableBalance, v))
+}
+
+// AlertThresholdEQ applies the EQ predicate on the "alert_threshold" field.
+func AlertThresholdEQ(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldEQ(FieldAlertThreshold, v))
+}
+
+// AlertThresholdNEQ applies the NEQ predicate on the "alert_threshold" field.
+func AlertThresholdNEQ(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldNEQ(FieldAlertThreshold, v))
+}
+
+// AlertThresholdIn applies the In predicate on the "alert_threshold" field.
+func AlertThresholdIn(vs ...decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldIn(FieldAlertThreshold, vs...))
+}
+
+// AlertThresholdNotIn applies the NotIn predicate on the "alert_threshold" field.
+func AlertThresholdNotIn(vs ...decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldNotIn(FieldAlertThreshold, vs...))
+}
+
+// AlertThresholdGT applies the GT predicate on the "alert_threshold" field.
+func AlertThresholdGT(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldGT(FieldAlertThreshold, v))
+}
+
+// AlertThresholdGTE applies the GTE predicate on the "alert_threshold" field.
+func AlertThresholdGTE(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldGTE(FieldAlertThreshold, v))
+}
+
+// AlertThresholdLT applies the LT predicate on the "alert_threshold" field.
+func AlertThresholdLT(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldLT(FieldAlertThreshold, v))
+}
+
+// AlertThresholdLTE applies the LTE predicate on the "alert_threshold" field.
+func AlertThresholdLTE(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldLTE(FieldAlertThreshold, v))
+}
+
+// CriticalThresholdEQ applies the EQ predicate on the "critical_threshold" field.
+func CriticalThresholdEQ(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldEQ(FieldCriticalThreshold, v))
+}
+
+// CriticalThresholdNEQ applies the NEQ predicate on the "critical_threshold" field.
+func CriticalThresholdNEQ(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldNEQ(FieldCriticalThreshold, v))
+}
+
+// CriticalThresholdIn applies the In predicate on the "critical_threshold" field.
+func CriticalThresholdIn(vs ...decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldIn(FieldCriticalThreshold, vs...))
+}
+
+// CriticalThresholdNotIn applies the NotIn predicate on the "critical_threshold" field.
+func CriticalThresholdNotIn(vs ...decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldNotIn(FieldCriticalThreshold, vs...))
+}
+
+// CriticalThresholdGT applies the GT predicate on the "critical_threshold" field.
+func CriticalThresholdGT(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldGT(FieldCriticalThreshold, v))
+}
+
+// CriticalThresholdGTE applies the GTE predicate on the "critical_threshold" field.
+func CriticalThresholdGTE(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldGTE(FieldCriticalThreshold, v))
+}
+
+// CriticalThresholdLT applies the LT predicate on the "critical_threshold" field.
+func CriticalThresholdLT(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldLT(FieldCriticalThreshold, v))
+}
+
+// CriticalThresholdLTE applies the LTE predicate on the "critical_threshold" field.
+func CriticalThresholdLTE(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldLTE(FieldCriticalThreshold, v))
 }
 
 // HasProviderCurrencies applies the HasEdge predicate on the "provider_currencies" edge.

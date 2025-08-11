@@ -1672,6 +1672,15 @@ func StartCronJobs() {
 	scheduler := gocron.NewScheduler(time.UTC)
 	priorityQueue := services.NewPriorityQueueService()
 
+	// Initialize balance monitoring service
+	balanceConfig := config.NewBalanceConfiguration()
+	balanceMonitoringService := services.NewBalanceMonitoringService(storage.GetClient(), balanceConfig, nil)
+	
+	// Start balance monitoring
+	if err := balanceMonitoringService.Start(); err != nil {
+		logger.Errorf("StartCronJobs for BalanceMonitoring: %v", err)
+	}
+
 	err := ComputeMarketRate()
 	if err != nil {
 		logger.Errorf("StartCronJobs for ComputeMarketRate: %v", err)
