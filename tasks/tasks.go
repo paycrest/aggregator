@@ -1515,8 +1515,8 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for RetryStaleUserOperations: %v", err)
 	}
 
-	// Resolve payment order mishaps every 15 seconds
-	_, err = scheduler.Every(15).Seconds().Do(ResolvePaymentOrderMishaps)
+	// Resolve payment order mishaps every 15 seconds (staggered to avoid rate limit conflicts)
+	_, err = scheduler.Every(15).Seconds().At("00:05").Do(ResolvePaymentOrderMishaps)
 	if err != nil {
 		logger.Errorf("StartCronJobs for ResolvePaymentOrderMishaps: %v", err)
 	}
@@ -1533,8 +1533,8 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for ProcessStuckValidatedOrders: %v", err)
 	}
 
-	// Index blockchain events every 5 seconds
-	_, err = scheduler.Every(5).Seconds().Do(TaskIndexBlockchainEvents)
+	// Index blockchain events every 5 seconds (staggered to avoid rate limit conflicts)
+	_, err = scheduler.Every(5).Seconds().At("00:00").Do(TaskIndexBlockchainEvents)
 	if err != nil {
 		logger.Errorf("StartCronJobs for IndexBlockchainEvents: %v", err)
 	}
