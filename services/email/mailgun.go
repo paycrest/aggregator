@@ -18,6 +18,14 @@ type MailgunProvider struct {
 
 // NewMailgunProvider creates a new Mailgun provider
 func NewMailgunProvider(config *config.NotificationConfiguration) *MailgunProvider {
+	if config == nil {
+		logger.Errorf("Mailgun provider configuration is nil")
+		return nil
+	}
+	if config.EmailDomain == "" || config.EmailAPIKey == "" {
+		logger.Errorf("Mailgun provider requires EmailDomain and EmailAPIKey")
+		return nil
+	}
 	client := mailgunv3.NewMailgun(config.EmailDomain, config.EmailAPIKey)
 	return &MailgunProvider{
 		config: config,

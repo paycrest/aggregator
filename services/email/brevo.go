@@ -20,6 +20,10 @@ type BrevoProvider struct {
 
 // NewBrevoProvider creates a new Brevo provider
 func NewBrevoProvider(config *config.NotificationConfiguration) *BrevoProvider {
+	if config == nil || config.EmailAPIKey == "" {
+		logger.Errorf("Brevo provider requires EmailAPIKey")
+		return nil
+	}
 	return &BrevoProvider{
 		config: config,
 	}

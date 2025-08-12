@@ -34,9 +34,13 @@ func NewEmailService() *EmailService {
 	// Get fallback provider (different from primary)
 	var fallbackProvider EmailProvider
 	if primaryProvider.GetName() == "sendgrid" {
-		fallbackProvider, _ = factory.CreateProvider("mailgun")
+		fallbackProvider, err = factory.CreateProvider("mailgun")
 	} else {
-		fallbackProvider, _ = factory.CreateProvider("sendgrid")
+		fallbackProvider, err = factory.CreateProvider("sendgrid")
+	}
+	if err != nil {
+		logger.Errorf("Failed to create fallback email provider: %v", err)
+		return nil
 	}
 
 	return &EmailService{
@@ -58,6 +62,9 @@ func (e *EmailService) SendEmail(ctx context.Context, payload types.SendEmailPay
 		}).Warnf("Primary email provider failed, trying fallback")
 
 		// Try fallback provider
+		if e.fallbackProvider == nil {
+			return types.SendEmailResponse{}, fmt.Errorf("no fallback provider available: %w", err)
+		}
 		response, err = e.fallbackProvider.SendEmail(ctx, payload)
 		if err != nil {
 			logger.WithFields(logger.Fields{
