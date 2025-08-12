@@ -213,7 +213,7 @@ func getTemplateID(emailType, provider string) string {
 			"password_reset": "6",
 			"welcome":        "4",
 			"kyb_approval":   "7",
-			"kyb_rejection":  "5",
+			"kyb_rejection":  "8",
 		},
 		"mailgun": {
 			"verification":   "mailgun-verification-template-id",   // TODO: Add actual template ID
