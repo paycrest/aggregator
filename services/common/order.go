@@ -932,6 +932,17 @@ func HandleReceiveAddressValidity(ctx context.Context, receiveAddress *ent.Recei
 			if err != nil {
 				return fmt.Errorf("HandleReceiveAddressValidity.db: %v", err)
 			}
+
+			// Send webhook notification for expired payment order
+			// The paymentOrder already has all necessary edges loaded from tasks.go
+			err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"OrderID":  paymentOrder.ID,
+					"SenderID": paymentOrder.Edges.SenderProfile.ID,
+					"Error":    err.Error(),
+				}).Errorf("Failed to send expired payment order webhook")
+			}
 		}
 	}
 

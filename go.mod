@@ -25,6 +25,7 @@ require (
 	github.com/stackup-wallet/stackup-bundler v0.6.30
 	github.com/stretchr/testify v1.8.4
 	github.com/xeipuuv/gojsonschema v1.2.0
+	golang.org/x/time v0.3.0
 	google.golang.org/grpc v1.55.0
 )
 
