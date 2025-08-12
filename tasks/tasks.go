@@ -1170,16 +1170,10 @@ func RetryFailedWebhookNotifications() error {
 				}
 
 				emailService := email.NewEmailServiceWithProviders()
-				_, err = emailService.SendTemplateEmail(ctx, types.SendEmailPayload{
-					FromAddress: config.NotificationConfig().EmailFromAddress,
-					ToAddress:   profile.Edges.User.Email,
-					DynamicData: map[string]interface{}{
-						"first_name": profile.Edges.User.FirstName,
-					},
-				}, "d-da75eee4966544ad92dcd060421d4e12")
+				_, err = emailService.SendWebhookFailureEmail(ctx, profile.Edges.User.Email, profile.Edges.User.FirstName)
 
 				if err != nil {
-					return fmt.Errorf("RetryFailedWebhookNotifications.SendTemplateEmail: %w", err)
+					return fmt.Errorf("RetryFailedWebhookNotifications.SendWebhookFailureEmail: %w", err)
 				}
 			}
 

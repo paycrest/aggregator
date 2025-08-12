@@ -15,6 +15,7 @@ type EmailServiceInterface interface {
 	SendWelcomeEmail(ctx context.Context, email, firstName string, scopes []string) (types.SendEmailResponse, error)
 	SendKYBApprovalEmail(ctx context.Context, email, firstName string) (types.SendEmailResponse, error)
 	SendKYBRejectionEmail(ctx context.Context, email, firstName, reasonForDecline string) (types.SendEmailResponse, error)
+	SendWebhookFailureEmail(ctx context.Context, email, firstName string) (types.SendEmailResponse, error)
 }
 
 // NewEmailServiceWithProviders creates a new email service with dynamic provider selection
