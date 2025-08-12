@@ -3,6 +3,8 @@ package email
 import (
 	"context"
 	"errors"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/paycrest/aggregator/config"
@@ -16,9 +18,10 @@ type mockProvider struct {
 	sendTemplateErr   error
 	lastTemplateID    string
 	responseToReturn  types.SendEmailResponse
-	callCount         int
-	templateCallCount int
+	callCount         int64
+	templateCallCount int64
 	lastPayload       types.SendEmailPayload
+	mu                sync.RWMutex
 }
 
 func (m *mockProvider) GetName() string {
@@ -26,16 +29,44 @@ func (m *mockProvider) GetName() string {
 }
 
 func (m *mockProvider) SendEmail(ctx context.Context, payload types.SendEmailPayload) (types.SendEmailResponse, error) {
-	m.callCount++
+	atomic.AddInt64(&m.callCount, 1)
+	m.mu.Lock()
 	m.lastPayload = payload
+	m.mu.Unlock()
 	return m.responseToReturn, m.sendErr
 }
 
 func (m *mockProvider) SendTemplateEmail(ctx context.Context, payload types.SendEmailPayload, templateID string) (types.SendEmailResponse, error) {
-	m.templateCallCount++
+	atomic.AddInt64(&m.templateCallCount, 1)
+	m.mu.Lock()
 	m.lastTemplateID = templateID
 	m.lastPayload = payload
+	m.mu.Unlock()
 	return m.responseToReturn, m.sendTemplateErr
+}
+
+// GetCallCount returns the current call count safely
+func (m *mockProvider) GetCallCount() int64 {
+	return atomic.LoadInt64(&m.callCount)
+}
+
+// GetTemplateCallCount returns the current template call count safely
+func (m *mockProvider) GetTemplateCallCount() int64 {
+	return atomic.LoadInt64(&m.templateCallCount)
+}
+
+// GetLastTemplateID returns the last template ID safely
+func (m *mockProvider) GetLastTemplateID() string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.lastTemplateID
+}
+
+// GetLastPayload returns the last payload safely
+func (m *mockProvider) GetLastPayload() types.SendEmailPayload {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.lastPayload
 }
 
 func TestSendEmail_PrimarySuccess(t *testing.T) {
@@ -50,8 +81,8 @@ func TestSendEmail_PrimarySuccess(t *testing.T) {
 	resp, err := service.SendEmail(context.Background(), types.SendEmailPayload{})
 	assert.NoError(t, err)
 	assert.Equal(t, "123", resp.Id)
-	assert.Equal(t, 1, primary.callCount)
-	assert.Equal(t, 0, fallback.callCount)
+	assert.Equal(t, int64(1), primary.GetCallCount())
+	assert.Equal(t, int64(0), fallback.GetCallCount())
 }
 
 func TestSendEmail_FallbackSuccess(t *testing.T) {
@@ -66,8 +97,8 @@ func TestSendEmail_FallbackSuccess(t *testing.T) {
 	resp, err := service.SendEmail(context.Background(), types.SendEmailPayload{})
 	assert.NoError(t, err)
 	assert.Equal(t, "456", resp.Id)
-	assert.Equal(t, 1, primary.callCount)
-	assert.Equal(t, 1, fallback.callCount)
+	assert.Equal(t, int64(1), primary.GetCallCount())
+	assert.Equal(t, int64(1), fallback.GetCallCount())
 }
 
 func TestSendEmail_AllFail(t *testing.T) {
@@ -82,8 +113,8 @@ func TestSendEmail_AllFail(t *testing.T) {
 	_, err := service.SendEmail(context.Background(), types.SendEmailPayload{})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "all email providers failed")
-	assert.Equal(t, 1, primary.callCount)
-	assert.Equal(t, 1, fallback.callCount)
+	assert.Equal(t, int64(1), primary.GetCallCount())
+	assert.Equal(t, int64(1), fallback.GetCallCount())
 }
 
 func TestSendEmail_PayloadPropagation(t *testing.T) {
@@ -103,10 +134,11 @@ func TestSendEmail_PayloadPropagation(t *testing.T) {
 
 	_, err := service.SendEmail(context.Background(), payload)
 	assert.NoError(t, err)
-	assert.Equal(t, payload.FromAddress, primary.lastPayload.FromAddress)
-	assert.Equal(t, payload.ToAddress, primary.lastPayload.ToAddress)
-	assert.Equal(t, payload.Subject, primary.lastPayload.Subject)
-	assert.Equal(t, payload.DynamicData, primary.lastPayload.DynamicData)
+	lastPayload := primary.GetLastPayload()
+	assert.Equal(t, payload.FromAddress, lastPayload.FromAddress)
+	assert.Equal(t, payload.ToAddress, lastPayload.ToAddress)
+	assert.Equal(t, payload.Subject, lastPayload.Subject)
+	assert.Equal(t, payload.DynamicData, lastPayload.DynamicData)
 }
 
 func TestSendTemplateEmail_PrimarySuccess(t *testing.T) {
@@ -121,9 +153,9 @@ func TestSendTemplateEmail_PrimarySuccess(t *testing.T) {
 	resp, err := service.SendTemplateEmail(context.Background(), types.SendEmailPayload{}, "template-id")
 	assert.NoError(t, err)
 	assert.Equal(t, "templ-123", resp.Id)
-	assert.Equal(t, 1, primary.templateCallCount)
-	assert.Equal(t, 0, fallback.templateCallCount)
-	assert.Equal(t, "template-id", primary.lastTemplateID)
+	assert.Equal(t, int64(1), primary.GetTemplateCallCount())
+	assert.Equal(t, int64(0), fallback.GetTemplateCallCount())
+	assert.Equal(t, "template-id", primary.GetLastTemplateID())
 }
 
 func TestSendTemplateEmail_FallbackSuccess(t *testing.T) {
@@ -138,9 +170,9 @@ func TestSendTemplateEmail_FallbackSuccess(t *testing.T) {
 	resp, err := service.SendTemplateEmail(context.Background(), types.SendEmailPayload{}, "template-id")
 	assert.NoError(t, err)
 	assert.Equal(t, "fallback-456", resp.Id)
-	assert.Equal(t, 1, primary.templateCallCount)
-	assert.Equal(t, 1, fallback.templateCallCount)
-	assert.Equal(t, "template-id", fallback.lastTemplateID)
+	assert.Equal(t, int64(1), primary.GetTemplateCallCount())
+	assert.Equal(t, int64(1), fallback.GetTemplateCallCount())
+	assert.Equal(t, "template-id", fallback.GetLastTemplateID())
 }
 
 func TestSendTemplateEmail_NoFallbackProvider(t *testing.T) {
@@ -181,11 +213,12 @@ func TestSendVerificationEmail(t *testing.T) {
 	resp, err := service.SendVerificationEmail(context.Background(), "token123", "user@test.com", "John")
 	assert.NoError(t, err)
 	assert.Equal(t, "verify-123", resp.Id)
-	assert.Equal(t, "d-f26d853bbb884c0c856f0bbda894032c", primary.lastTemplateID)
-	assert.Equal(t, "noreply@paycrest.io", primary.lastPayload.FromAddress)
-	assert.Equal(t, "user@test.com", primary.lastPayload.ToAddress)
-	assert.Equal(t, "John", primary.lastPayload.DynamicData["first_name"])
-	assert.Equal(t, "token123", primary.lastPayload.DynamicData["token"])
+	assert.Equal(t, "d-f26d853bbb884c0c856f0bbda894032c", primary.GetLastTemplateID())
+	lastPayload := primary.GetLastPayload()
+	assert.Equal(t, "noreply@paycrest.io", lastPayload.FromAddress)
+	assert.Equal(t, "user@test.com", lastPayload.ToAddress)
+	assert.Equal(t, "John", lastPayload.DynamicData["first_name"])
+	assert.Equal(t, "token123", lastPayload.DynamicData["token"])
 }
 
 func TestSendPasswordResetEmail(t *testing.T) {
@@ -199,11 +232,12 @@ func TestSendPasswordResetEmail(t *testing.T) {
 	resp, err := service.SendPasswordResetEmail(context.Background(), "resetToken", "user@example.com", "Jane")
 	assert.NoError(t, err)
 	assert.Equal(t, "reset-456", resp.Id)
-	assert.Equal(t, "2", primary.lastTemplateID) // Brevo password reset template ID
-	assert.Equal(t, "support@paycrest.io", primary.lastPayload.FromAddress)
-	assert.Equal(t, "user@example.com", primary.lastPayload.ToAddress)
-	assert.Equal(t, "Jane", primary.lastPayload.DynamicData["first_name"])
-	assert.Equal(t, "resetToken", primary.lastPayload.DynamicData["token"])
+	assert.Equal(t, "6", primary.GetLastTemplateID()) // Brevo password reset template ID
+	lastPayload := primary.GetLastPayload()
+	assert.Equal(t, "support@paycrest.io", lastPayload.FromAddress)
+	assert.Equal(t, "user@example.com", lastPayload.ToAddress)
+	assert.Equal(t, "Jane", lastPayload.DynamicData["first_name"])
+	assert.Equal(t, "resetToken", lastPayload.DynamicData["token"])
 }
 
 func TestSendWelcomeEmail(t *testing.T) {
@@ -218,12 +252,13 @@ func TestSendWelcomeEmail(t *testing.T) {
 	resp, err := service.SendWelcomeEmail(context.Background(), "new@user.com", "Alice", scopes)
 	assert.NoError(t, err)
 	assert.Equal(t, "welcome-789", resp.Id)
-	assert.Equal(t, "mailgun-welcome-template-id", primary.lastTemplateID)
-	assert.Equal(t, "welcome@paycrest.io", primary.lastPayload.FromAddress)
-	assert.Equal(t, "new@user.com", primary.lastPayload.ToAddress)
-	assert.Equal(t, "Alice", primary.lastPayload.DynamicData["first_name"])
-	assert.Equal(t, "new@user.com", primary.lastPayload.DynamicData["email"])
-	assert.Equal(t, "read, write, admin", primary.lastPayload.DynamicData["scopes"])
+	assert.Equal(t, "mailgun-welcome-template-id", primary.GetLastTemplateID())
+	lastPayload := primary.GetLastPayload()
+	assert.Equal(t, "welcome@paycrest.io", lastPayload.FromAddress)
+	assert.Equal(t, "new@user.com", lastPayload.ToAddress)
+	assert.Equal(t, "Alice", lastPayload.DynamicData["first_name"])
+	assert.Equal(t, "new@user.com", lastPayload.DynamicData["email"])
+	assert.Equal(t, "read, write, admin", lastPayload.DynamicData["scopes"])
 }
 
 func TestSendKYBApprovalEmail(t *testing.T) {
@@ -237,10 +272,11 @@ func TestSendKYBApprovalEmail(t *testing.T) {
 	resp, err := service.SendKYBApprovalEmail(context.Background(), "business@company.com", "Robert")
 	assert.NoError(t, err)
 	assert.Equal(t, "kyb-approve-123", resp.Id)
-	assert.Equal(t, "d-5ebb862274214ba79eae226c09300aa7", primary.lastTemplateID)
-	assert.Equal(t, "kyb@paycrest.io", primary.lastPayload.FromAddress)
-	assert.Equal(t, "business@company.com", primary.lastPayload.ToAddress)
-	assert.Equal(t, "Robert", primary.lastPayload.DynamicData["first_name"])
+	assert.Equal(t, "d-5ebb862274214ba79eae226c09300aa7", primary.GetLastTemplateID())
+	lastPayload := primary.GetLastPayload()
+	assert.Equal(t, "kyb@paycrest.io", lastPayload.FromAddress)
+	assert.Equal(t, "business@company.com", lastPayload.ToAddress)
+	assert.Equal(t, "Robert", lastPayload.DynamicData["first_name"])
 }
 
 func TestSendKYBRejectionEmail(t *testing.T) {
@@ -255,11 +291,12 @@ func TestSendKYBRejectionEmail(t *testing.T) {
 	resp, err := service.SendKYBRejectionEmail(context.Background(), "business@fail.com", "Sarah", reason)
 	assert.NoError(t, err)
 	assert.Equal(t, "kyb-reject-456", resp.Id)
-	assert.Equal(t, "5", primary.lastTemplateID) // Brevo KYB rejection template ID
-	assert.Equal(t, "kyb@paycrest.io", primary.lastPayload.FromAddress)
-	assert.Equal(t, "business@fail.com", primary.lastPayload.ToAddress)
-	assert.Equal(t, "Sarah", primary.lastPayload.DynamicData["first_name"])
-	assert.Equal(t, reason, primary.lastPayload.DynamicData["reason_for_decline"])
+	assert.Equal(t, "5", primary.GetLastTemplateID()) // Brevo KYB rejection template ID
+	lastPayload := primary.GetLastPayload()
+	assert.Equal(t, "kyb@paycrest.io", lastPayload.FromAddress)
+	assert.Equal(t, "business@fail.com", lastPayload.ToAddress)
+	assert.Equal(t, "Sarah", lastPayload.DynamicData["first_name"])
+	assert.Equal(t, reason, lastPayload.DynamicData["reason_for_decline"])
 }
 
 func TestGetTemplateID_SendgridTemplates(t *testing.T) {
@@ -287,10 +324,10 @@ func TestGetTemplateID_BrevoTemplates(t *testing.T) {
 		emailType string
 		expected  string
 	}{
-		{"verification", "1"},
-		{"password_reset", "2"},
-		{"welcome", "3"},
-		{"kyb_approval", "4"},
+		{"verification", "5"},
+		{"password_reset", "6"},
+		{"welcome", "4"},
+		{"kyb_approval", "7"},
 		{"kyb_rejection", "5"},
 	}
 
@@ -329,17 +366,17 @@ func TestGetTemplateID_FallbackLogic(t *testing.T) {
 
 	// Test unknown email type for known provider
 	id = getTemplateID("unknown-email-type", "sendgrid")
-	assert.Equal(t, "d-f26d853bbb884c0c856f0bbda894032c", id)
+	assert.Equal(t, "", id)
 
 	// Test unknown email type for unknown provider (double fallback)
 	id = getTemplateID("unknown-email-type", "unknown-provider")
-	assert.Equal(t, "d-f26d853bbb884c0c856f0bbda894032c", id)
+	assert.Equal(t, "", id)
 }
 
 func TestGetTemplateID_EmptyInputs(t *testing.T) {
 	// Test empty email type
 	id := getTemplateID("", "sendgrid")
-	assert.Equal(t, "d-f26d853bbb884c0c856f0bbda894032c", id)
+	assert.Equal(t, "", id)
 
 	// Test empty provider
 	id = getTemplateID("verification", "")
@@ -347,7 +384,7 @@ func TestGetTemplateID_EmptyInputs(t *testing.T) {
 
 	// Test both empty
 	id = getTemplateID("", "")
-	assert.Equal(t, "d-f26d853bbb884c0c856f0bbda894032c", id)
+	assert.Equal(t, "", id)
 }
 
 func TestEmailService_ConcurrentRequests(t *testing.T) {
@@ -373,7 +410,7 @@ func TestEmailService_ConcurrentRequests(t *testing.T) {
 		<-done
 	}
 
-	assert.Equal(t, 3, primary.templateCallCount)
+	assert.Equal(t, int64(3), primary.GetTemplateCallCount())
 }
 
 func TestEmailService_SpecializedEmailMethods_WithFallback(t *testing.T) {
@@ -430,8 +467,8 @@ func TestEmailService_SpecializedEmailMethods_WithFallback(t *testing.T) {
 
 			err := tt.testFunc(service)
 			assert.NoError(t, err)
-			assert.Equal(t, 1, primary.templateCallCount)
-			assert.Equal(t, 1, fallback.templateCallCount)
+			assert.Equal(t, int64(1), primary.GetTemplateCallCount())
+			assert.Equal(t, int64(1), fallback.GetTemplateCallCount())
 		})
 	}
 }
