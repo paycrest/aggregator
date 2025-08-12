@@ -995,24 +995,33 @@ func findSuitableProviderRate(providers []string, tokenSymbol string, networkIde
 
 		// Check if provider has sufficient balance
 		ctx := context.Background()
-		_, err = storage.Client.ProviderCurrencies.
+		providerCurrency, err := storage.Client.ProviderCurrencies.
 			Query().
 			Where(
 				providercurrencies.HasProviderWith(providerprofile.IDEQ(parts[0])),
 				providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
-				providercurrencies.AvailableBalanceGT(fiatAmount),
 				providercurrencies.IsAvailableEQ(true),
 			).
 			Only(ctx)
 		if err != nil {
-			if ent.IsNotFound(err) {
-				continue
-			}
 			logger.WithFields(logger.Fields{
 				"Error":      fmt.Sprintf("%v", err),
 				"ProviderID": parts[0],
 				"Currency":   bucketData.Currency,
 			}).Errorf("Failed to get provider balance")
+			continue
+		}
+
+		// Check if provider has sufficient balance
+		// Legacy provider with zero balance is assumed to have sufficient balance to prevent service disruption
+		if providerCurrency.AvailableBalance.LessThanOrEqual(fiatAmount) && !providerCurrency.AvailableBalance.Equal(decimal.Zero) {
+			// Modern provider with insufficient balance - skip
+			logger.WithFields(logger.Fields{
+				"ProviderID":       parts[0],
+				"Currency":         bucketData.Currency,
+				"AvailableBalance": providerCurrency.AvailableBalance.String(),
+				"RequiredAmount":   fiatAmount.String(),
+			}).Debugf("Provider %s has insufficient balance, skipping", parts[0])
 			continue
 		}
 	}
