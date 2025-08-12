@@ -3,6 +3,7 @@ package email
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	fastshot "github.com/opus-domini/fast-shot"
@@ -34,7 +35,6 @@ func (b *BrevoProvider) SendEmail(ctx context.Context, payload types.SendEmailPa
 		"to": []map[string]string{
 			{
 				"email": payload.ToAddress,
-				"name":  "Paycrest",
 			},
 		},
 		"subject":     payload.Subject,
@@ -48,7 +48,7 @@ func (b *BrevoProvider) SendEmail(ctx context.Context, payload types.SendEmailPa
 // SendTemplateEmail sends a template email via Brevo
 func (b *BrevoProvider) SendTemplateEmail(ctx context.Context, payload types.SendEmailPayload, templateID string) (types.SendEmailResponse, error) {
 	reqBody := map[string]interface{}{
-		"templateId": templateID,
+		"templateId": func() int { id, _ := strconv.Atoi(templateID); return id }(),
 		"sender": map[string]string{
 			"email": payload.FromAddress,
 			"name":  "Paycrest",
@@ -56,7 +56,6 @@ func (b *BrevoProvider) SendTemplateEmail(ctx context.Context, payload types.Sen
 		"to": []map[string]string{
 			{
 				"email": payload.ToAddress,
-				"name":  "Paycrest",
 			},
 		},
 		"params": payload.DynamicData,

@@ -69,7 +69,6 @@ func (s *SendGridProvider) SendTemplateEmail(ctx context.Context, payload types.
 				"to": []map[string]string{
 					{
 						"email": payload.ToAddress,
-						"name":  "Paycrest",
 					},
 				},
 				"dynamic_template_data": payload.DynamicData,

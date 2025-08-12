@@ -199,14 +199,14 @@ func getTemplateID(emailType, provider string) string {
 			"password_reset": "d-8b689801cd9947748775ccd1c4cc932e",
 			"welcome":        "d-b425f024e6554c5ba2b4d03ab0a8b25d",
 			"kyb_approval":   "d-5ebb862274214ba79eae226c09300aa7",
-			"kyb_rejection":  "d-6917f9c32105467b8dd806a5a3dd32dc", // TODO: Add actual template ID
+			"kyb_rejection":  "d-6917f9c32105467b8dd806a5a3dd32dc",
 		},
 		"brevo": {
-			"verification":   "1", // TODO: Replace with actual Brevo template ID
-			"password_reset": "2", // TODO: Replace with actual Brevo template ID
-			"welcome":        "3", // TODO: Replace with actual Brevo template ID
-			"kyb_approval":   "4", // TODO: Replace with actual Brevo template ID
-			"kyb_rejection":  "5", // TODO: Replace with actual Brevo template ID
+			"verification":   "5",
+			"password_reset": "6",
+			"welcome":        "4",
+			"kyb_approval":   "7",
+			"kyb_rejection":  "5",
 		},
 		"mailgun": {
 			"verification":   "mailgun-verification-template-id",   // TODO: Add actual template ID
@@ -229,5 +229,5 @@ func getTemplateID(emailType, provider string) string {
 	}
 
 	// Final fallback
-	return "d-f26d853bbb884c0c856f0bbda894032c"
+	return ""
 }
