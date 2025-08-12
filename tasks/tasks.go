@@ -880,6 +880,7 @@ func HandleReceiveAddressValidity() error {
 				tq.WithNetwork()
 			})
 			po.WithRecipient()
+			po.WithSenderProfile()
 		}).
 		All(ctx)
 	if err != nil {
