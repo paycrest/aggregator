@@ -1377,6 +1377,24 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		}
 	}
 
+	// Update user's KYB verification status to pending
+	_, err = tx.User.
+		Update().
+		Where(user.IDEQ(userRecord.ID)).
+		SetKybVerificationStatus(user.KybVerificationStatusPending).
+		Save(ctx)
+	if err != nil {
+		if err := tx.Rollback(); err != nil {
+			logger.Errorf("Failed to rollback transaction: %v", err)
+		}
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": userID,
+		}).Errorf("Error: Failed to update user KYB verification status")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update user KYB verification status", nil)
+		return
+	}
+
 	// Commit transaction
 	if err := tx.Commit(); err != nil {
 		logger.WithFields(logger.Fields{
