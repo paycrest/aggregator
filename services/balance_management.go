@@ -322,15 +322,32 @@ func (svc *BalanceManagementService) CheckBalanceSufficiency(ctx context.Context
 		return false, err
 	}
 
+	// If provider has zero balance (hasn't updated yet), assume sufficient balance, to ensure legacy providers are not skipped
+	// This prevents service disruption during the transition period
+	if providerCurrency.AvailableBalance.Equal(decimal.Zero) {
+		logger.WithFields(logger.Fields{
+			"ProviderID": providerID,
+			"Currency":   currencyCode,
+		}).Infof("Provider %s has zero balance (legacy mode), assuming sufficient balance", providerID)
+		return true, nil
+	}
+
 	hasSufficientBalance := providerCurrency.AvailableBalance.GreaterThanOrEqual(amount)
 
-	logger.WithFields(logger.Fields{
-		"ProviderID":       providerID,
-		"Currency":         currencyCode,
-		"AvailableBalance": providerCurrency.AvailableBalance.String(),
-		"RequiredAmount":   amount.String(),
-		"HasSufficient":    hasSufficientBalance,
-	}).Debugf("Balance sufficiency check completed")
-
 	return hasSufficientBalance, nil
+}
+
+// IsLegacyProvider checks if a provider has zero balances (hasn't updated to balance management yet)
+func (svc *BalanceManagementService) IsLegacyProvider(ctx context.Context, providerID string, currencyCode string) (bool, error) {
+	providerCurrency, err := svc.GetProviderBalance(ctx, providerID, currencyCode)
+	if err != nil {
+		return false, err
+	}
+
+	// Provider is considered legacy if all balance fields are zero
+	isLegacy := providerCurrency.AvailableBalance.Equal(decimal.Zero) &&
+		providerCurrency.TotalBalance.Equal(decimal.Zero) &&
+		providerCurrency.ReservedBalance.Equal(decimal.Zero)
+
+	return isLegacy, nil
 }

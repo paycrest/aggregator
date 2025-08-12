@@ -75,7 +75,8 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 				providerprofile.HasProviderCurrenciesWith(
 					providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)),
 					providercurrencies.IsAvailableEQ(true),
-					providercurrencies.AvailableBalanceGT(bucket.MinAmount),
+					// Removed AvailableBalanceGT check to prevent service disruption during balance management rollout
+					// Legacy providers (with zero balance) will still be included
 					// TODO: add check to enforce critical balance threshold in the future
 				),
 			).
