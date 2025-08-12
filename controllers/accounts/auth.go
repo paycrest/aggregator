@@ -15,6 +15,7 @@ import (
 	userEnt "github.com/paycrest/aggregator/ent/user"
 	"github.com/paycrest/aggregator/ent/verificationtoken"
 	svc "github.com/paycrest/aggregator/services"
+	"github.com/paycrest/aggregator/services/email"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	u "github.com/paycrest/aggregator/utils"
@@ -29,7 +30,7 @@ var serverConf = config.ServerConfig()
 // AuthController is the controller type for the auth endpoints
 type AuthController struct {
 	apiKeyService *svc.APIKeyService
-	emailService  *svc.EmailService
+	emailService  email.EmailServiceInterface
 	slackService  *svc.SlackService
 }
 
@@ -37,7 +38,7 @@ type AuthController struct {
 func NewAuthController() *AuthController {
 	return &AuthController{
 		apiKeyService: svc.NewAPIKeyService(),
-		emailService:  svc.NewEmailService(svc.SENDGRID_MAIL_PROVIDER),
+		emailService:  email.NewEmailServiceWithProviders(),
 		slackService:  svc.NewSlackService(serverConf.SlackWebhookURL),
 	}
 }

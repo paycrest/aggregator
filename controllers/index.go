@@ -35,6 +35,7 @@ import (
 	"github.com/paycrest/aggregator/ent/user"
 	svc "github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/common"
+	"github.com/paycrest/aggregator/services/email"
 	"github.com/paycrest/aggregator/services/indexer"
 	kycErrors "github.com/paycrest/aggregator/services/kyc/errors"
 	"github.com/paycrest/aggregator/services/kyc/smile"
@@ -64,7 +65,7 @@ type Controller struct {
 	receiveAddressService *svc.ReceiveAddressService
 	kycService            types.KYCProvider
 	slackService          *svc.SlackService
-	emailService          *svc.EmailService
+	emailService          email.EmailServiceInterface
 	cache                 map[string]bool
 	processedActions      map[string]bool
 	actionMutex           sync.RWMutex
@@ -78,7 +79,7 @@ func NewController() *Controller {
 		receiveAddressService: svc.NewReceiveAddressService(),
 		kycService:            smile.NewSmileIDService(),
 		slackService:          svc.NewSlackService(serverConf.SlackWebhookURL),
-		emailService:          svc.NewEmailService(svc.SENDGRID_MAIL_PROVIDER),
+		emailService:          email.NewEmailServiceWithProviders(),
 		cache:                 make(map[string]bool),
 		processedActions:      make(map[string]bool),
 	}
@@ -173,6 +174,11 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 			if networkFilter != "" {
 				errorMsg = fmt.Sprintf("Token %s is not supported on network %s", tokenSymbol, networkFilter)
 			}
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"Token":   tokenSymbol,
+				"Network": networkFilter,
+			}).Errorf("Failed to fetch token rate: %v", err)
 			u.APIResponse(ctx, http.StatusBadRequest, "error", errorMsg, nil)
 			return
 		}
@@ -216,6 +222,11 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 		if strings.Contains(err.Error(), "no provider available") {
 			u.APIResponse(ctx, http.StatusNotFound, "error", err.Error(), nil)
 		} else {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"Token":   tokenSymbol,
+				"Network": networkFilter,
+			}).Errorf("Failed to fetch token rate: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", err.Error(), nil)
 		}
 		return
@@ -1402,7 +1413,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			}
 
 			// Send approval email
-			resp, err := ctrl.emailService.SendKYBApprovalEmail(email, firstName)
+			resp, err := ctrl.emailService.SendKYBApprovalEmail(ctx, email, firstName)
 			if err != nil {
 				logger.Errorf("Failed to send KYB approval email to %s (KYB Profile %s): %v, response: %+v", email, kybProfileID, err, resp)
 			} else {
@@ -1544,7 +1555,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			}
 
 			// Send rejection email
-			resp, err := ctrl.emailService.SendKYBRejectionEmail(email, firstName, reasonForDecline)
+			resp, err := ctrl.emailService.SendKYBRejectionEmail(ctx, email, firstName, reasonForDecline)
 			if err != nil {
 				logger.Errorf("Failed to send KYB rejection email to %s (KYB Profile %s): %v, response: %+v", email, kybProfileID, err, resp)
 			} else {
