@@ -16,9 +16,9 @@ type NotificationConfiguration struct {
 
 // NotificationConfig sets the email configurations
 func NotificationConfig() (config *NotificationConfiguration) {
-	viper.SetDefault("EMAIL_DOMAIN", "sandbox9c66b379b78d43d2b1533bf2a09a5325.mailgun.org")
+	viper.SetDefault("EMAIL_DOMAIN", "api.brevo.com")
 	viper.SetDefault("EMAIL_FROM_ADDRESS", "Paycrest <no-reply@paycrest.io>")
-	viper.SetDefault("EMAIL_PROVIDER", "sendgrid")
+	viper.SetDefault("EMAIL_PROVIDER", "brevo")
 
 	return &NotificationConfiguration{
 		EmailDomain:      viper.GetString("EMAIL_DOMAIN"),

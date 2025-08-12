@@ -77,7 +77,7 @@ func (b *BrevoProvider) SendTemplateEmail(ctx context.Context, payload types.Sen
 
 // sendBrevoRequest sends a request to Brevo API
 func (b *BrevoProvider) sendBrevoRequest(ctx context.Context, reqBody map[string]interface{}) (types.SendEmailResponse, error) {
-	res, err := fastshot.NewClient("https://api.brevo.com").
+	res, err := fastshot.NewClient(fmt.Sprintf("https://%s", b.config.EmailDomain)).
 		Config().SetTimeout(30*time.Second).
 		Header().Add("Content-Type", "application/json").
 		Header().Add("api-key", b.config.EmailAPIKey).
