@@ -31,6 +31,7 @@ import (
 	"github.com/paycrest/aggregator/ent/webhookretryattempt"
 	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/common"
+	"github.com/paycrest/aggregator/services/email"
 	"github.com/paycrest/aggregator/services/indexer"
 	orderService "github.com/paycrest/aggregator/services/order"
 	"github.com/paycrest/aggregator/storage"
@@ -1168,7 +1169,8 @@ func RetryFailedWebhookNotifications() error {
 					return fmt.Errorf("RetryFailedWebhookNotifications.CouldNotFetchProfile: %w", err)
 				}
 
-				_, err = services.SendTemplateEmail(types.SendEmailPayload{
+				emailService := email.NewEmailServiceWithProviders()
+				_, err = emailService.SendTemplateEmail(ctx, types.SendEmailPayload{
 					FromAddress: config.NotificationConfig().EmailFromAddress,
 					ToAddress:   profile.Edges.User.Email,
 					DynamicData: map[string]interface{}{
