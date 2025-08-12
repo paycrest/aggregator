@@ -90,16 +90,25 @@ func (b *BrevoProvider) sendBrevoRequest(ctx context.Context, reqBody map[string
 		return types.SendEmailResponse{}, fmt.Errorf("brevo API error: %d", res.RawResponse.StatusCode)
 	}
 
-	_, err = utils.ParseJSONResponse(res.RawResponse)
+	// Parse response body to extract message ID
+	responseBody, err := utils.ParseJSONResponse(res.RawResponse)
 	if err != nil {
 		logger.Errorf("Failed to decode Brevo response: %v", err)
 		return types.SendEmailResponse{}, fmt.Errorf("brevo response parse error: %w", err)
 	}
 
-	// Extract message ID from response headers
-	messageID := res.RawResponse.Header.Get("X-Message-Id")
+	// Extract message ID from response body
+	var messageID string
+	if id, exists := responseBody["messageId"]; exists {
+		if idStr, ok := id.(string); ok {
+			messageID = idStr
+		}
+	}
+
+	// Fallback if message ID not found in response body
 	if messageID == "" {
-		messageID = "brevo-message-id" // Fallback
+		logger.Warnf("Message ID not found in Brevo response, using fallback")
+		messageID = fmt.Sprintf("brevo-%d", time.Now().UnixNano())
 	}
 
 	return types.SendEmailResponse{
