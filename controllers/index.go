@@ -1905,15 +1905,15 @@ func (ctrl *Controller) handleNewEvent(ctx *gin.Context, event types.ThirdwebWeb
 
 	// Log the event signature for debugging
 	logger.WithFields(logger.Fields{
-		"EventSignature": eventSignature,
-		"EventName":      event.Data.Decoded.Name,
-		"TxHash":         event.Data.TransactionHash,
-		"BlockNumber":    event.Data.BlockNumber,
-		"ChainId":        event.Data.ChainID,
-		"Address":        event.Data.Address,
-		"Topics":         event.Data.Topics,
-		"Data":           event.Data.Data,
-		"IndexedParams":  event.Data.Decoded.IndexedParams,
+		"EventSignature":   eventSignature,
+		"EventName":        event.Data.Decoded.Name,
+		"TxHash":           event.Data.TransactionHash,
+		"BlockNumber":      event.Data.BlockNumber,
+		"ChainId":          event.Data.ChainID,
+		"Address":          event.Data.Address,
+		"Topics":           event.Data.Topics,
+		"Data":             event.Data.Data,
+		"IndexedParams":    event.Data.Decoded.IndexedParams,
 		"NonIndexedParams": event.Data.Decoded.NonIndexedParams,
 	}).Infof("Processing webhook event")
 
