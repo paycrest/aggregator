@@ -453,6 +453,11 @@ func CallProviderWithHMAC(ctx context.Context, providerID, method, path string, 
 		return nil, fmt.Errorf("provider %s has no host identifier", providerID)
 	}
 
+	// Check if provider has API key
+	if provider.Edges.APIKey == nil {
+		return nil, fmt.Errorf("provider %s has no API key (data integrity issue)", providerID)
+	}
+
 	// Decrypt API key secret
 	decodedSecret, err := base64.StdEncoding.DecodeString(provider.Edges.APIKey.Secret)
 	if err != nil {

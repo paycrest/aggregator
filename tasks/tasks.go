@@ -1496,6 +1496,16 @@ func FetchProviderBalances() error {
 
 	for _, provider := range providers {
 		go func(p *ent.ProviderProfile) {
+			// Skip providers that don't have required configuration
+			if p.HostIdentifier == "" {
+				results <- balanceResult{
+					providerID: p.ID,
+					balances:   nil,
+					err:        fmt.Errorf("provider has no host identifier"),
+				}
+				return
+			}
+
 			balances, err := fetchProviderBalances(p.ID)
 			results <- balanceResult{
 				providerID: p.ID,
