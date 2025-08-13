@@ -291,7 +291,7 @@ func TestSendKYBRejectionEmail(t *testing.T) {
 	resp, err := service.SendKYBRejectionEmail(context.Background(), "business@fail.com", "Sarah", reason)
 	assert.NoError(t, err)
 	assert.Equal(t, "kyb-reject-456", resp.Id)
-	assert.Equal(t, "5", primary.GetLastTemplateID()) // Brevo KYB rejection template ID
+	assert.Equal(t, "8", primary.GetLastTemplateID()) // Brevo KYB rejection template ID
 	lastPayload := primary.GetLastPayload()
 	assert.Equal(t, "kyb@paycrest.io", lastPayload.FromAddress)
 	assert.Equal(t, "business@fail.com", lastPayload.ToAddress)
@@ -328,7 +328,7 @@ func TestGetTemplateID_BrevoTemplates(t *testing.T) {
 		{"password_reset", "6"},
 		{"welcome", "4"},
 		{"kyb_approval", "7"},
-		{"kyb_rejection", "5"},
+		{"kyb_rejection", "8"},
 	}
 
 	for _, tt := range tests {
@@ -453,6 +453,13 @@ func TestEmailService_SpecializedEmailMethods_WithFallback(t *testing.T) {
 				return err
 			},
 		},
+		{
+			"webhook_failure_with_fallback",
+			func(s *EmailService) error {
+				_, err := s.SendWebhookFailureEmail(context.Background(), "user@test.com", "User")
+				return err
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -471,4 +478,41 @@ func TestEmailService_SpecializedEmailMethods_WithFallback(t *testing.T) {
 			assert.Equal(t, int64(1), fallback.GetTemplateCallCount())
 		})
 	}
+}
+
+func TestSendWebhookFailureEmail_Success(t *testing.T) {
+	primary := &mockProvider{name: "sendgrid", responseToReturn: types.SendEmailResponse{Id: "webhook-failure-123"}}
+	service := &EmailService{
+		primaryProvider:  primary,
+		fallbackProvider: nil,
+		notificationConf: &config.NotificationConfiguration{EmailFromAddress: "test@paycrest.io"},
+	}
+
+	resp, err := service.SendWebhookFailureEmail(context.Background(), "user@test.com", "TestUser")
+	assert.NoError(t, err)
+	assert.Equal(t, "webhook-failure-123", resp.Id)
+	assert.Equal(t, int64(1), primary.GetTemplateCallCount())
+	assert.Equal(t, "d-da75eee4966544ad92dcd060421d4e12", primary.GetLastTemplateID())
+
+	// Verify the payload
+	payload := primary.GetLastPayload()
+	assert.Equal(t, "test@paycrest.io", payload.FromAddress)
+	assert.Equal(t, "user@test.com", payload.ToAddress)
+	assert.Equal(t, "TestUser", payload.DynamicData["first_name"])
+}
+
+func TestSendWebhookFailureEmail_WithFallback(t *testing.T) {
+	primary := &mockProvider{name: "sendgrid", sendTemplateErr: errors.New("primary failed")}
+	fallback := &mockProvider{name: "mailgun", responseToReturn: types.SendEmailResponse{Id: "fallback-webhook-failure"}}
+	service := &EmailService{
+		primaryProvider:  primary,
+		fallbackProvider: fallback,
+		notificationConf: &config.NotificationConfiguration{EmailFromAddress: "test@paycrest.io"},
+	}
+
+	resp, err := service.SendWebhookFailureEmail(context.Background(), "user@test.com", "TestUser")
+	assert.NoError(t, err)
+	assert.Equal(t, "fallback-webhook-failure", resp.Id)
+	assert.Equal(t, int64(1), primary.GetTemplateCallCount())
+	assert.Equal(t, int64(1), fallback.GetTemplateCallCount())
 }

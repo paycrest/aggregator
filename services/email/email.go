@@ -197,30 +197,47 @@ func (e *EmailService) SendKYBRejectionEmail(ctx context.Context, email, firstNa
 	return e.SendTemplateEmail(ctx, payload, templateID)
 }
 
+// SendWebhookFailureEmail sends a webhook failure notification email
+func (e *EmailService) SendWebhookFailureEmail(ctx context.Context, email, firstName string) (types.SendEmailResponse, error) {
+	payload := types.SendEmailPayload{
+		FromAddress: e.notificationConf.EmailFromAddress,
+		ToAddress:   email,
+		DynamicData: map[string]interface{}{
+			"first_name": firstName,
+		},
+	}
+
+	templateID := getTemplateID("webhook_failure", e.primaryProvider.GetName())
+	return e.SendTemplateEmail(ctx, payload, templateID)
+}
+
 // getTemplateID returns the appropriate template ID based on email type and provider
 func getTemplateID(emailType, provider string) string {
 	// Template ID mapping based on provider and email type
 	templates := map[string]map[string]string{
 		"sendgrid": {
-			"verification":   "d-f26d853bbb884c0c856f0bbda894032c",
-			"password_reset": "d-8b689801cd9947748775ccd1c4cc932e",
-			"welcome":        "d-b425f024e6554c5ba2b4d03ab0a8b25d",
-			"kyb_approval":   "d-5ebb862274214ba79eae226c09300aa7",
-			"kyb_rejection":  "d-6917f9c32105467b8dd806a5a3dd32dc",
+			"verification":    "d-f26d853bbb884c0c856f0bbda894032c",
+			"password_reset":  "d-8b689801cd9947748775ccd1c4cc932e",
+			"welcome":         "d-b425f024e6554c5ba2b4d03ab0a8b25d",
+			"kyb_approval":    "d-5ebb862274214ba79eae226c09300aa7",
+			"kyb_rejection":   "d-6917f9c32105467b8dd806a5a3dd32dc",
+			"webhook_failure": "d-da75eee4966544ad92dcd060421d4e12",
 		},
 		"brevo": {
-			"verification":   "5",
-			"password_reset": "6",
-			"welcome":        "4",
-			"kyb_approval":   "7",
-			"kyb_rejection":  "5",
+			"verification":    "5",
+			"password_reset":  "6",
+			"welcome":         "4",
+			"kyb_approval":    "7",
+			"kyb_rejection":   "8",
+			"webhook_failure": "9",
 		},
 		"mailgun": {
-			"verification":   "mailgun-verification-template-id",   // TODO: Add actual template ID
-			"password_reset": "mailgun-password-reset-template-id", // TODO: Add actual template ID
-			"welcome":        "mailgun-welcome-template-id",        // TODO: Add actual template ID
-			"kyb_approval":   "mailgun-kyb-approval-template-id",   // TODO: Add actual template ID
-			"kyb_rejection":  "mailgun-kyb-rejection-template-id",  // TODO: Add actual template ID
+			"verification":    "mailgun-verification-template-id",    // TODO: Add actual template ID
+			"password_reset":  "mailgun-password-reset-template-id",  // TODO: Add actual template ID
+			"welcome":         "mailgun-welcome-template-id",         // TODO: Add actual template ID
+			"kyb_approval":    "mailgun-kyb-approval-template-id",    // TODO: Add actual template ID
+			"kyb_rejection":   "mailgun-kyb-rejection-template-id",   // TODO: Add actual template ID
+			"webhook_failure": "mailgun-webhook-failure-template-id", // TODO: Add actual template ID
 		},
 	}
 
