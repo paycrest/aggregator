@@ -1170,10 +1170,16 @@ func RetryFailedWebhookNotifications() error {
 				}
 
 				emailService := email.NewEmailServiceWithProviders()
-				_, err = emailService.SendWebhookFailureEmail(ctx, profile.Edges.User.Email, profile.Edges.User.FirstName)
+				_, err = emailService.SendTemplateEmail(ctx, types.SendEmailPayload{
+					FromAddress: config.NotificationConfig().EmailFromAddress,
+					ToAddress:   profile.Edges.User.Email,
+					DynamicData: map[string]interface{}{
+						"first_name": profile.Edges.User.FirstName,
+					},
+				}, "d-da75eee4966544ad92dcd060421d4e12")
 
 				if err != nil {
-					return fmt.Errorf("RetryFailedWebhookNotifications.SendWebhookFailureEmail: %w", err)
+					return fmt.Errorf("RetryFailedWebhookNotifications.SendTemplateEmail: %w", err)
 				}
 			}
 
@@ -1737,13 +1743,8 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for RetryStaleUserOperations: %v", err)
 	}
 
-<<<<<<< HEAD
 	// Resolve payment order mishaps every 14 seconds
 	_, err = scheduler.Every(14).Seconds().Do(ResolvePaymentOrderMishaps)
-=======
-	// Resolve payment order mishaps every 15 seconds (staggered to avoid rate limit conflicts)
-	_, err = scheduler.Every(15).Seconds().At("00:05").Do(ResolvePaymentOrderMishaps)
->>>>>>> feee2953 (fix: stagger cron jobs to prevent Etherscan rate limit conflicts)
 	if err != nil {
 		logger.Errorf("StartCronJobs for ResolvePaymentOrderMishaps: %v", err)
 	}
