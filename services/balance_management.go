@@ -97,6 +97,17 @@ func (svc *BalanceManagementService) GetProviderBalance(ctx context.Context, pro
 
 // ReserveBalance reserves a specific amount for a provider and currency
 func (svc *BalanceManagementService) ReserveBalance(ctx context.Context, providerID string, currencyCode string, amount decimal.Decimal) error {
+	// Validate and fix balance inconsistencies before proceeding
+	err := svc.ValidateAndFixBalances(ctx, providerID, currencyCode)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"ProviderID": providerID,
+			"Currency":   currencyCode,
+		}).Errorf("Failed to validate or fix balances before reservation")
+		return fmt.Errorf("balance validation failed: %w", err)
+	}
+
 	// Use database transaction to prevent race conditions
 	tx, err := svc.client.Tx(ctx)
 	if err != nil {
@@ -185,6 +196,19 @@ func (svc *BalanceManagementService) ReserveBalance(ctx context.Context, provide
 // ReleaseReservedBalance releases a previously reserved amount
 // If tx is provided, the operation will be performed within that transaction
 func (svc *BalanceManagementService) ReleaseReservedBalance(ctx context.Context, providerID string, currencyCode string, amount decimal.Decimal, tx *ent.Tx) error {
+	// Validate and fix balance inconsistencies before proceeding (only if not in transaction)
+	if tx == nil {
+		err := svc.ValidateAndFixBalances(ctx, providerID, currencyCode)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", err),
+				"ProviderID": providerID,
+				"Currency":   currencyCode,
+			}).Errorf("Failed to validate or fix balances before balance release")
+			return fmt.Errorf("balance validation failed: %w", err)
+		}
+	}
+
 	var providerCurrency *ent.ProviderCurrencies
 	var err error
 	var shouldCommit bool
@@ -238,17 +262,24 @@ func (svc *BalanceManagementService) ReleaseReservedBalance(ctx context.Context,
 
 	// Check if there's sufficient reserved balance
 	if providerCurrency.ReservedBalance.LessThan(amount) {
-		if shouldCommit {
-			_ = tx.Rollback()
+		// For legacy providers or edge cases, allow partial release
+		if providerCurrency.ReservedBalance.Equal(decimal.Zero) {
+			logger.WithFields(logger.Fields{
+				"ProviderID": providerID,
+				"Currency":   currencyCode,
+				"Requested":  amount.String(),
+			}).Infof("Provider %s has zero reserved balance, allowing full release", providerID)
+			amount = providerCurrency.ReservedBalance // Release whatever is available
+		} else {
+			logger.WithFields(logger.Fields{
+				"ProviderID":      providerID,
+				"Currency":        currencyCode,
+				"ReservedBalance": providerCurrency.ReservedBalance.String(),
+				"ReleaseAmount":   amount.String(),
+			}).Warnf("Insufficient reserved balance for release")
+			return fmt.Errorf("insufficient reserved balance: reserved=%s, requested=%s",
+				providerCurrency.ReservedBalance.String(), amount.String())
 		}
-		logger.WithFields(logger.Fields{
-			"ProviderID":      providerID,
-			"Currency":        currencyCode,
-			"ReservedBalance": providerCurrency.ReservedBalance.String(),
-			"ReleaseAmount":   amount.String(),
-		}).Warnf("Insufficient reserved balance for release")
-		return fmt.Errorf("insufficient reserved balance: reserved=%s, requested=%s",
-			providerCurrency.ReservedBalance.String(), amount.String())
 	}
 
 	// Calculate new balances
@@ -322,16 +353,22 @@ func (svc *BalanceManagementService) CheckBalanceSufficiency(ctx context.Context
 		return false, err
 	}
 
-	// If provider has zero balance (hasn't updated yet), assume sufficient balance, to ensure legacy providers are not skipped
-	// This prevents service disruption during the transition period
-	if providerCurrency.AvailableBalance.Equal(decimal.Zero) {
+	// Check if this is a legacy provider (all balance fields are zero)
+	isLegacy, err := svc.IsLegacyProvider(ctx, providerID, currencyCode)
+	if err != nil {
+		return false, err
+	}
+
+	// If legacy provider, assume sufficient balance to maintain service continuity
+	if isLegacy {
 		logger.WithFields(logger.Fields{
 			"ProviderID": providerID,
 			"Currency":   currencyCode,
-		}).Infof("Provider %s has zero balance (legacy mode), assuming sufficient balance", providerID)
+		}).Infof("Provider %s is in legacy mode, assuming sufficient balance", providerID)
 		return true, nil
 	}
 
+	// For providers with balance management, perform actual balance check
 	hasSufficientBalance := providerCurrency.AvailableBalance.GreaterThanOrEqual(amount)
 
 	return hasSufficientBalance, nil
@@ -350,4 +387,129 @@ func (svc *BalanceManagementService) IsLegacyProvider(ctx context.Context, provi
 		providerCurrency.ReservedBalance.Equal(decimal.Zero)
 
 	return isLegacy, nil
+}
+
+// ValidateBalanceConsistency validates that provider balances are logically consistent
+func (svc *BalanceManagementService) ValidateBalanceConsistency(ctx context.Context, providerID string, currencyCode string) error {
+	providerCurrency, err := svc.GetProviderBalance(ctx, providerID, currencyCode)
+	if err != nil {
+		return err
+	}
+
+	// Ensure balances are logically consistent
+	if providerCurrency.AvailableBalance.Add(providerCurrency.ReservedBalance).GreaterThan(providerCurrency.TotalBalance) {
+		return fmt.Errorf("balance inconsistency: available + reserved > total for provider %s, currency %s", providerID, currencyCode)
+	}
+
+	// Ensure no negative balances
+	if providerCurrency.AvailableBalance.LessThan(decimal.Zero) {
+		return fmt.Errorf("negative available balance for provider %s, currency %s: %s", providerID, currencyCode, providerCurrency.AvailableBalance.String())
+	}
+
+	if providerCurrency.ReservedBalance.LessThan(decimal.Zero) {
+		return fmt.Errorf("negative reserved balance for provider %s, currency %s: %s", providerID, currencyCode, providerCurrency.ReservedBalance.String())
+	}
+
+	if providerCurrency.TotalBalance.LessThan(decimal.Zero) {
+		return fmt.Errorf("negative total balance for provider %s, currency %s: %s", providerID, currencyCode, providerCurrency.TotalBalance.String())
+	}
+
+	return nil
+}
+
+// FixBalanceInconsistencies automatically fixes common balance inconsistencies
+func (svc *BalanceManagementService) FixBalanceInconsistencies(ctx context.Context, providerID string, currencyCode string) error {
+	providerCurrency, err := svc.GetProviderBalance(ctx, providerID, currencyCode)
+	if err != nil {
+		return err
+	}
+
+	var needsUpdate bool
+	availableBalance := providerCurrency.AvailableBalance
+	reservedBalance := providerCurrency.ReservedBalance
+	totalBalance := providerCurrency.TotalBalance
+
+	// Fix negative balances by setting them to zero
+	if availableBalance.LessThan(decimal.Zero) {
+		availableBalance = decimal.Zero
+		needsUpdate = true
+		logger.WithFields(logger.Fields{
+			"ProviderID": providerID,
+			"Currency":   currencyCode,
+		}).Warnf("Fixed negative available balance for provider %s", providerID)
+	}
+
+	if reservedBalance.LessThan(decimal.Zero) {
+		reservedBalance = decimal.Zero
+		needsUpdate = true
+		logger.WithFields(logger.Fields{
+			"ProviderID": providerID,
+			"Currency":   currencyCode,
+		}).Warnf("Fixed negative reserved balance for provider %s", providerID)
+	}
+
+	if totalBalance.LessThan(decimal.Zero) {
+		totalBalance = decimal.Zero
+		needsUpdate = true
+		logger.WithFields(logger.Fields{
+			"ProviderID": providerID,
+			"Currency":   currencyCode,
+		}).Warnf("Fixed negative total balance for provider %s", providerID)
+	}
+
+	// Fix logical inconsistency: available + reserved should not exceed total
+	if availableBalance.Add(reservedBalance).GreaterThan(totalBalance) {
+		// Adjust total balance to be the sum of available and reserved
+		totalBalance = availableBalance.Add(reservedBalance)
+		needsUpdate = true
+		logger.WithFields(logger.Fields{
+			"ProviderID": providerID,
+			"Currency":   currencyCode,
+		}).Warnf("Fixed balance inconsistency for provider %s by adjusting total balance", providerID)
+	}
+
+	// Update balances if fixes were applied
+	if needsUpdate {
+		err = svc.UpdateProviderBalance(ctx, providerID, currencyCode, availableBalance, totalBalance, reservedBalance)
+		if err != nil {
+			return fmt.Errorf("failed to update balances after fixing inconsistencies: %w", err)
+		}
+
+		logger.WithFields(logger.Fields{
+			"ProviderID":       providerID,
+			"Currency":         currencyCode,
+			"AvailableBalance": availableBalance.String(),
+			"TotalBalance":     totalBalance.String(),
+			"ReservedBalance":  reservedBalance.String(),
+		}).Infof("Successfully fixed balance inconsistencies for provider %s", providerID)
+	}
+
+	return nil
+}
+
+// ValidateAndFixBalances validates and automatically fixes balance inconsistencies before operations
+func (svc *BalanceManagementService) ValidateAndFixBalances(ctx context.Context, providerID string, currencyCode string) error {
+	// First try to validate balances
+	err := svc.ValidateBalanceConsistency(ctx, providerID, currencyCode)
+	if err != nil {
+		// If validation fails, try to fix inconsistencies
+		logger.WithFields(logger.Fields{
+			"ProviderID": providerID,
+			"Currency":   currencyCode,
+			"Error":      err.Error(),
+		}).Warnf("Balance validation failed for provider %s, attempting to fix inconsistencies", providerID)
+
+		fixErr := svc.FixBalanceInconsistencies(ctx, providerID, currencyCode)
+		if fixErr != nil {
+			return fmt.Errorf("failed to validate or fix balances: validation error: %w, fix error: %w", err, fixErr)
+		}
+
+		// Validate again after fixing
+		err = svc.ValidateBalanceConsistency(ctx, providerID, currencyCode)
+		if err != nil {
+			return fmt.Errorf("balance validation still failed after fixing inconsistencies: %w", err)
+		}
+	}
+
+	return nil
 }
