@@ -266,7 +266,7 @@ func CreateLockPaymentOrder(
 			}
 		}
 
-		if orderToken.Edges.Provider.VisibilityMode == providerprofile.VisibilityModePrivate {
+		if orderToken != nil && orderToken.Edges.Provider != nil && orderToken.Edges.Provider.VisibilityMode == providerprofile.VisibilityModePrivate {
 			normalizedAmount := lockPaymentOrder.Amount
 			if strings.EqualFold(token.BaseCurrency, institution.Edges.FiatCurrency.Code) && token.BaseCurrency != "USD" {
 				rateResponse, err := utils.GetTokenRateFromQueue("USDT", normalizedAmount, institution.Edges.FiatCurrency.Code, currency.MarketRate)
@@ -536,7 +536,8 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 			pbq.WithCurrency()
 		}).
 		Only(ctx)
-	if err == nil && lockOrder != nil {
+	if err == nil && lockOrder != nil && lockOrder.Edges.Provider != nil && lockOrder.Edges.ProvisionBucket != nil && lockOrder.Edges.ProvisionBucket.Edges.Currency != nil {
+		// Only attempt balance operations if we have the required edge data
 		// Create a new balance service instance for this transaction
 		balanceService := svc.NewBalanceManagementService()
 
@@ -723,7 +724,8 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 			pbq.WithCurrency()
 		}).
 		Only(ctx)
-	if err == nil && lockOrder != nil {
+	if err == nil && lockOrder != nil && lockOrder.Edges.Provider != nil && lockOrder.Edges.ProvisionBucket != nil && lockOrder.Edges.ProvisionBucket.Edges.Currency != nil {
+		// Only attempt balance operations if we have the required edge data
 		// Create a new balance service instance for this transaction
 		balanceService := svc.NewBalanceManagementService()
 
