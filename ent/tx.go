@@ -38,6 +38,8 @@ type Tx struct {
 	PaymentOrderRecipient *PaymentOrderRecipientClient
 	// PaymentWebhook is the client for interacting with the PaymentWebhook builders.
 	PaymentWebhook *PaymentWebhookClient
+	// ProviderCurrencies is the client for interacting with the ProviderCurrencies builders.
+	ProviderCurrencies *ProviderCurrenciesClient
 	// ProviderOrderToken is the client for interacting with the ProviderOrderToken builders.
 	ProviderOrderToken *ProviderOrderTokenClient
 	// ProviderProfile is the client for interacting with the ProviderProfile builders.
@@ -206,6 +208,7 @@ func (tx *Tx) init() {
 	tx.PaymentOrder = NewPaymentOrderClient(tx.config)
 	tx.PaymentOrderRecipient = NewPaymentOrderRecipientClient(tx.config)
 	tx.PaymentWebhook = NewPaymentWebhookClient(tx.config)
+	tx.ProviderCurrencies = NewProviderCurrenciesClient(tx.config)
 	tx.ProviderOrderToken = NewProviderOrderTokenClient(tx.config)
 	tx.ProviderProfile = NewProviderProfileClient(tx.config)
 	tx.ProviderRating = NewProviderRatingClient(tx.config)

@@ -14,8 +14,8 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/apikey"
-	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
+	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -87,30 +87,16 @@ func (ppc *ProviderProfileCreate) SetNillableIsActive(b *bool) *ProviderProfileC
 	return ppc
 }
 
-// SetIsAvailable sets the "is_available" field.
-func (ppc *ProviderProfileCreate) SetIsAvailable(b bool) *ProviderProfileCreate {
-	ppc.mutation.SetIsAvailable(b)
+// SetIsKybVerified sets the "is_kyb_verified" field.
+func (ppc *ProviderProfileCreate) SetIsKybVerified(b bool) *ProviderProfileCreate {
+	ppc.mutation.SetIsKybVerified(b)
 	return ppc
 }
 
-// SetNillableIsAvailable sets the "is_available" field if the given value is not nil.
-func (ppc *ProviderProfileCreate) SetNillableIsAvailable(b *bool) *ProviderProfileCreate {
+// SetNillableIsKybVerified sets the "is_kyb_verified" field if the given value is not nil.
+func (ppc *ProviderProfileCreate) SetNillableIsKybVerified(b *bool) *ProviderProfileCreate {
 	if b != nil {
-		ppc.SetIsAvailable(*b)
-	}
-	return ppc
-}
-
-// SetIsKYBVerified sets the "isKYBVerified" field.
-func (ppc *ProviderProfileCreate) SetIsKYBVerified(b bool) *ProviderProfileCreate {
-	ppc.mutation.SetIsKYBVerified(b)
-	return ppc
-}
-
-// SetNillableIsKYBVerified sets the "isKYBVerified" field if the given value is not nil.
-func (ppc *ProviderProfileCreate) SetNillableIsKYBVerified(b *bool) *ProviderProfileCreate {
-	if b != nil {
-		ppc.SetIsKYBVerified(*b)
+		ppc.SetIsKybVerified(*b)
 	}
 	return ppc
 }
@@ -187,19 +173,19 @@ func (ppc *ProviderProfileCreate) SetAPIKey(a *APIKey) *ProviderProfileCreate {
 	return ppc.SetAPIKeyID(a.ID)
 }
 
-// AddCurrencyIDs adds the "currencies" edge to the FiatCurrency entity by IDs.
-func (ppc *ProviderProfileCreate) AddCurrencyIDs(ids ...uuid.UUID) *ProviderProfileCreate {
-	ppc.mutation.AddCurrencyIDs(ids...)
+// AddProviderCurrencyIDs adds the "provider_currencies" edge to the ProviderCurrencies entity by IDs.
+func (ppc *ProviderProfileCreate) AddProviderCurrencyIDs(ids ...uuid.UUID) *ProviderProfileCreate {
+	ppc.mutation.AddProviderCurrencyIDs(ids...)
 	return ppc
 }
 
-// AddCurrencies adds the "currencies" edges to the FiatCurrency entity.
-func (ppc *ProviderProfileCreate) AddCurrencies(f ...*FiatCurrency) *ProviderProfileCreate {
-	ids := make([]uuid.UUID, len(f))
-	for i := range f {
-		ids[i] = f[i].ID
+// AddProviderCurrencies adds the "provider_currencies" edges to the ProviderCurrencies entity.
+func (ppc *ProviderProfileCreate) AddProviderCurrencies(p ...*ProviderCurrencies) *ProviderProfileCreate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
 	}
-	return ppc.AddCurrencyIDs(ids...)
+	return ppc.AddProviderCurrencyIDs(ids...)
 }
 
 // AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by IDs.
@@ -309,13 +295,9 @@ func (ppc *ProviderProfileCreate) defaults() {
 		v := providerprofile.DefaultIsActive
 		ppc.mutation.SetIsActive(v)
 	}
-	if _, ok := ppc.mutation.IsAvailable(); !ok {
-		v := providerprofile.DefaultIsAvailable
-		ppc.mutation.SetIsAvailable(v)
-	}
-	if _, ok := ppc.mutation.IsKYBVerified(); !ok {
-		v := providerprofile.DefaultIsKYBVerified
-		ppc.mutation.SetIsKYBVerified(v)
+	if _, ok := ppc.mutation.IsKybVerified(); !ok {
+		v := providerprofile.DefaultIsKybVerified
+		ppc.mutation.SetIsKybVerified(v)
 	}
 	if _, ok := ppc.mutation.UpdatedAt(); !ok {
 		v := providerprofile.DefaultUpdatedAt()
@@ -349,11 +331,8 @@ func (ppc *ProviderProfileCreate) check() error {
 	if _, ok := ppc.mutation.IsActive(); !ok {
 		return &ValidationError{Name: "is_active", err: errors.New(`ent: missing required field "ProviderProfile.is_active"`)}
 	}
-	if _, ok := ppc.mutation.IsAvailable(); !ok {
-		return &ValidationError{Name: "is_available", err: errors.New(`ent: missing required field "ProviderProfile.is_available"`)}
-	}
-	if _, ok := ppc.mutation.IsKYBVerified(); !ok {
-		return &ValidationError{Name: "isKYBVerified", err: errors.New(`ent: missing required field "ProviderProfile.isKYBVerified"`)}
+	if _, ok := ppc.mutation.IsKybVerified(); !ok {
+		return &ValidationError{Name: "is_kyb_verified", err: errors.New(`ent: missing required field "ProviderProfile.is_kyb_verified"`)}
 	}
 	if _, ok := ppc.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ProviderProfile.updated_at"`)}
@@ -368,9 +347,6 @@ func (ppc *ProviderProfileCreate) check() error {
 	}
 	if len(ppc.mutation.UserIDs()) == 0 {
 		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "ProviderProfile.user"`)}
-	}
-	if len(ppc.mutation.CurrenciesIDs()) == 0 {
-		return &ValidationError{Name: "currencies", err: errors.New(`ent: missing required edge "ProviderProfile.currencies"`)}
 	}
 	return nil
 }
@@ -424,13 +400,9 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 		_spec.SetField(providerprofile.FieldIsActive, field.TypeBool, value)
 		_node.IsActive = value
 	}
-	if value, ok := ppc.mutation.IsAvailable(); ok {
-		_spec.SetField(providerprofile.FieldIsAvailable, field.TypeBool, value)
-		_node.IsAvailable = value
-	}
-	if value, ok := ppc.mutation.IsKYBVerified(); ok {
-		_spec.SetField(providerprofile.FieldIsKYBVerified, field.TypeBool, value)
-		_node.IsKYBVerified = value
+	if value, ok := ppc.mutation.IsKybVerified(); ok {
+		_spec.SetField(providerprofile.FieldIsKybVerified, field.TypeBool, value)
+		_node.IsKybVerified = value
 	}
 	if value, ok := ppc.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerprofile.FieldUpdatedAt, field.TypeTime, value)
@@ -473,15 +445,15 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ppc.mutation.CurrenciesIDs(); len(nodes) > 0 {
+	if nodes := ppc.mutation.ProviderCurrenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   providerprofile.CurrenciesTable,
-			Columns: providerprofile.CurrenciesPrimaryKey,
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.ProviderCurrenciesTable,
+			Columns: []string{providerprofile.ProviderCurrenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencies.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -665,27 +637,15 @@ func (u *ProviderProfileUpsert) UpdateIsActive() *ProviderProfileUpsert {
 	return u
 }
 
-// SetIsAvailable sets the "is_available" field.
-func (u *ProviderProfileUpsert) SetIsAvailable(v bool) *ProviderProfileUpsert {
-	u.Set(providerprofile.FieldIsAvailable, v)
+// SetIsKybVerified sets the "is_kyb_verified" field.
+func (u *ProviderProfileUpsert) SetIsKybVerified(v bool) *ProviderProfileUpsert {
+	u.Set(providerprofile.FieldIsKybVerified, v)
 	return u
 }
 
-// UpdateIsAvailable sets the "is_available" field to the value that was provided on create.
-func (u *ProviderProfileUpsert) UpdateIsAvailable() *ProviderProfileUpsert {
-	u.SetExcluded(providerprofile.FieldIsAvailable)
-	return u
-}
-
-// SetIsKYBVerified sets the "isKYBVerified" field.
-func (u *ProviderProfileUpsert) SetIsKYBVerified(v bool) *ProviderProfileUpsert {
-	u.Set(providerprofile.FieldIsKYBVerified, v)
-	return u
-}
-
-// UpdateIsKYBVerified sets the "isKYBVerified" field to the value that was provided on create.
-func (u *ProviderProfileUpsert) UpdateIsKYBVerified() *ProviderProfileUpsert {
-	u.SetExcluded(providerprofile.FieldIsKYBVerified)
+// UpdateIsKybVerified sets the "is_kyb_verified" field to the value that was provided on create.
+func (u *ProviderProfileUpsert) UpdateIsKybVerified() *ProviderProfileUpsert {
+	u.SetExcluded(providerprofile.FieldIsKybVerified)
 	return u
 }
 
@@ -831,31 +791,17 @@ func (u *ProviderProfileUpsertOne) UpdateIsActive() *ProviderProfileUpsertOne {
 	})
 }
 
-// SetIsAvailable sets the "is_available" field.
-func (u *ProviderProfileUpsertOne) SetIsAvailable(v bool) *ProviderProfileUpsertOne {
+// SetIsKybVerified sets the "is_kyb_verified" field.
+func (u *ProviderProfileUpsertOne) SetIsKybVerified(v bool) *ProviderProfileUpsertOne {
 	return u.Update(func(s *ProviderProfileUpsert) {
-		s.SetIsAvailable(v)
+		s.SetIsKybVerified(v)
 	})
 }
 
-// UpdateIsAvailable sets the "is_available" field to the value that was provided on create.
-func (u *ProviderProfileUpsertOne) UpdateIsAvailable() *ProviderProfileUpsertOne {
+// UpdateIsKybVerified sets the "is_kyb_verified" field to the value that was provided on create.
+func (u *ProviderProfileUpsertOne) UpdateIsKybVerified() *ProviderProfileUpsertOne {
 	return u.Update(func(s *ProviderProfileUpsert) {
-		s.UpdateIsAvailable()
-	})
-}
-
-// SetIsKYBVerified sets the "isKYBVerified" field.
-func (u *ProviderProfileUpsertOne) SetIsKYBVerified(v bool) *ProviderProfileUpsertOne {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.SetIsKYBVerified(v)
-	})
-}
-
-// UpdateIsKYBVerified sets the "isKYBVerified" field to the value that was provided on create.
-func (u *ProviderProfileUpsertOne) UpdateIsKYBVerified() *ProviderProfileUpsertOne {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.UpdateIsKYBVerified()
+		s.UpdateIsKybVerified()
 	})
 }
 
@@ -1172,31 +1118,17 @@ func (u *ProviderProfileUpsertBulk) UpdateIsActive() *ProviderProfileUpsertBulk 
 	})
 }
 
-// SetIsAvailable sets the "is_available" field.
-func (u *ProviderProfileUpsertBulk) SetIsAvailable(v bool) *ProviderProfileUpsertBulk {
+// SetIsKybVerified sets the "is_kyb_verified" field.
+func (u *ProviderProfileUpsertBulk) SetIsKybVerified(v bool) *ProviderProfileUpsertBulk {
 	return u.Update(func(s *ProviderProfileUpsert) {
-		s.SetIsAvailable(v)
+		s.SetIsKybVerified(v)
 	})
 }
 
-// UpdateIsAvailable sets the "is_available" field to the value that was provided on create.
-func (u *ProviderProfileUpsertBulk) UpdateIsAvailable() *ProviderProfileUpsertBulk {
+// UpdateIsKybVerified sets the "is_kyb_verified" field to the value that was provided on create.
+func (u *ProviderProfileUpsertBulk) UpdateIsKybVerified() *ProviderProfileUpsertBulk {
 	return u.Update(func(s *ProviderProfileUpsert) {
-		s.UpdateIsAvailable()
-	})
-}
-
-// SetIsKYBVerified sets the "isKYBVerified" field.
-func (u *ProviderProfileUpsertBulk) SetIsKYBVerified(v bool) *ProviderProfileUpsertBulk {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.SetIsKYBVerified(v)
-	})
-}
-
-// UpdateIsKYBVerified sets the "isKYBVerified" field to the value that was provided on create.
-func (u *ProviderProfileUpsertBulk) UpdateIsKYBVerified() *ProviderProfileUpsertBulk {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.UpdateIsKYBVerified()
+		s.UpdateIsKybVerified()
 	})
 }
 

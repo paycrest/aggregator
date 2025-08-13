@@ -21,6 +21,7 @@ import (
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
+	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
@@ -1070,7 +1071,7 @@ func ComputeMarketRate() error {
 				),
 				providerordertoken.ConversionRateTypeEQ(providerordertoken.ConversionRateTypeFixed),
 				providerordertoken.HasProviderWith(
-					providerprofile.IsAvailableEQ(true),
+					providerprofile.IsActiveEQ(true),
 				),
 			).
 			Select(providerordertoken.FieldFixedConversionRate).
@@ -1459,9 +1460,224 @@ func ProcessStuckValidatedOrders() error {
 	return nil
 }
 
+// FetchProviderBalances fetches balance updates from all providers
+func FetchProviderBalances() error {
+	ctx := context.Background()
+	startTime := time.Now()
+
+	// Get all provider profiles
+	providers, err := storage.Client.ProviderProfile.
+		Query().
+		All(ctx)
+	if err != nil {
+		logger.Errorf("Failed to fetch provider profiles: %v", err)
+		return err
+	}
+
+	if len(providers) == 0 {
+		logger.Infof("No providers found, skipping balance fetch")
+		return nil
+	}
+
+	// Fetch balances for each provider in parallel
+	type balanceResult struct {
+		providerID string
+		balances   map[string]*types.ProviderBalance
+		err        error
+	}
+
+	results := make(chan balanceResult, len(providers))
+
+	for _, provider := range providers {
+		go func(p *ent.ProviderProfile) {
+			// Skip providers that don't have required configuration
+			if p.HostIdentifier == "" {
+				results <- balanceResult{
+					providerID: p.ID,
+					balances:   nil,
+					err:        fmt.Errorf("provider has no host identifier"),
+				}
+				return
+			}
+
+			balances, err := fetchProviderBalances(p.ID)
+			results <- balanceResult{
+				providerID: p.ID,
+				balances:   balances,
+				err:        err,
+			}
+		}(provider)
+	}
+
+	// Collect results
+	successCount := 0
+	errorCount := 0
+	totalBalanceUpdates := 0
+
+	for i := 0; i < len(providers); i++ {
+		result := <-results
+		if result.err != nil {
+			logger.Errorf("Failed to fetch balances for provider %s: %v", result.providerID, result.err)
+			errorCount++
+			continue
+		}
+
+		// Update balances in database
+		for currency, balance := range result.balances {
+			err := utils.Retry(3, 2*time.Second, func() error {
+				return updateProviderBalance(result.providerID, currency, balance)
+			})
+			if err != nil {
+				logger.Errorf("Failed to update balance for provider %s currency %s: %v", result.providerID, currency, err)
+				errorCount++
+				continue
+			}
+			totalBalanceUpdates++
+		}
+
+		successCount++
+		logger.Infof("Successfully updated balances for provider %s", result.providerID)
+	}
+
+	duration := time.Since(startTime)
+	logger.Infof("Provider balance fetch completed: %d success, %d errors, %d balance updates in %v",
+		successCount, errorCount, totalBalanceUpdates, duration)
+
+	// Alert if more than 50% of providers failed
+	if errorCount > 0 && float64(errorCount)/float64(len(providers)) > 0.5 {
+		logger.Errorf("ALERT: More than 50%% of providers failed balance fetch: %d/%d", errorCount, len(providers))
+		return fmt.Errorf("more than 50%% of providers failed balance fetch: %d/%d", errorCount, len(providers))
+	}
+
+	// Alert if no balance updates were made
+	if totalBalanceUpdates == 0 {
+		logger.Warnf("ALERT: No balance updates were made during this fetch cycle")
+	}
+
+	// Log performance metrics
+	if duration > 30*time.Second {
+		logger.Warnf("ALERT: Balance fetch took longer than expected: %v", duration)
+	}
+
+	return nil
+}
+
+// fetchProviderBalances fetches balances for a specific provider
+func fetchProviderBalances(providerID string) (map[string]*types.ProviderBalance, error) {
+	// Prepare payload for HMAC authentication
+	payload := map[string]interface{}{
+		"timestamp": time.Now().Unix(),
+	}
+
+	// Call provider /info endpoint using utility function
+	data, err := utils.CallProviderWithHMAC(context.Background(), providerID, "GET", "/info", payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call provider: %v", err)
+	}
+
+	// Parse the response data into ProviderInfoResponse
+	var response types.ProviderInfoResponse
+	if err := utils.MapToStruct(data, &response); err != nil {
+		return nil, fmt.Errorf("failed to parse response data: %v", err)
+	}
+
+	// Convert response to ProviderBalance map
+	balances := make(map[string]*types.ProviderBalance)
+
+	// Use totalBalances from response
+	for currency, balanceData := range response.Data.TotalBalances {
+		availableBalance, err := decimal.NewFromString(balanceData.AvailableBalance)
+		if err != nil {
+			logger.Warnf("Failed to parse available balance for %s: %v", currency, err)
+			continue
+		}
+		if availableBalance.IsNegative() {
+			logger.Errorf("Negative available balance for %s: %v", currency, availableBalance)
+			continue
+		}
+
+		totalBalance, err := decimal.NewFromString(balanceData.TotalBalance)
+		if err != nil {
+			logger.Warnf("Failed to parse total balance for %s: %v", currency, err)
+			continue
+		}
+		if totalBalance.IsNegative() {
+			logger.Errorf("Negative total balance for %s: %v", currency, totalBalance)
+			continue
+		}
+
+		balances[currency] = &types.ProviderBalance{
+			AvailableBalance: availableBalance,
+			TotalBalance:     totalBalance,
+			ReservedBalance:  decimal.Zero, // Provider doesn't track reserved balance
+			LastUpdated:      time.Now(),
+		}
+	}
+
+	return balances, nil
+}
+
+// updateProviderBalance updates the balance for a specific provider and currency
+func updateProviderBalance(providerID, currency string, balance *types.ProviderBalance) error {
+	ctx := context.Background()
+	// Get or create ProviderCurrencies entry
+	providerCurrency, err := storage.Client.ProviderCurrencies.Query().
+		Where(
+			providercurrencies.HasProviderWith(providerprofile.IDEQ(providerID)),
+			providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currency)),
+		).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			// Create new entry
+			provider, err := storage.Client.ProviderProfile.Get(ctx, providerID)
+			if err != nil {
+				return fmt.Errorf("failed to get provider: %v", err)
+			}
+
+			fiatCurrency, err := storage.Client.FiatCurrency.Query().
+				Where(fiatcurrency.CodeEQ(currency)).
+				Only(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to get fiat currency: %v", err)
+			}
+
+			_, err = storage.Client.ProviderCurrencies.Create().
+				SetProvider(provider).
+				SetCurrency(fiatCurrency).
+				SetAvailableBalance(balance.AvailableBalance).
+				SetTotalBalance(balance.TotalBalance).
+				SetReservedBalance(balance.ReservedBalance).
+				SetUpdatedAt(time.Now()).
+				SetIsAvailable(true).
+				Save(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to create provider currency: %v", err)
+			}
+		} else {
+			return fmt.Errorf("failed to query provider currency: %v", err)
+		}
+	} else {
+		// Update existing entry
+		_, err = providerCurrency.Update().
+			SetAvailableBalance(balance.AvailableBalance).
+			SetTotalBalance(balance.TotalBalance).
+			SetReservedBalance(balance.ReservedBalance).
+			SetUpdatedAt(time.Now()).
+			Save(ctx)
+
+		if err != nil {
+			return fmt.Errorf("failed to update provider currency: %v", err)
+		}
+	}
+
+	return nil
+}
+
 // StartCronJobs starts cron jobs
 func StartCronJobs() {
-	scheduler := gocron.NewScheduler(time.UTC)
+	// Use the system's local timezone instead of hardcoded UTC to prevent timezone conflicts
+	scheduler := gocron.NewScheduler(time.Local)
 	priorityQueue := services.NewPriorityQueueService()
 
 	err := ComputeMarketRate()

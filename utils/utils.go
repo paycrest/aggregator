@@ -23,6 +23,7 @@ import (
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	institutionEnt "github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
@@ -424,9 +425,90 @@ func IsValidEthereumAddress(address string) bool {
 
 // IsValidTronAddress checks if a string is a valid Tron address
 func IsValidTronAddress(address string) bool {
-	pattern := `^T[a-zA-Z0-9]{33}$`
-	matched, _ := regexp.MatchString(pattern, address)
-	return matched
+	// Tron addresses are base58check encoded and start with 'T'
+	if len(address) != 34 || !strings.HasPrefix(address, "T") {
+		return false
+	}
+
+	// Try to decode the address
+	_, err := base58check.Decode(address)
+	return err == nil
+}
+
+// CallProviderWithHMAC makes an authenticated HTTP request to a provider with HMAC signature
+// Returns the parsed JSON response data and error
+func CallProviderWithHMAC(ctx context.Context, providerID, method, path string, payload map[string]interface{}) (map[string]interface{}, error) {
+	// Get provider with API key
+	provider, err := storage.Client.ProviderProfile.
+		Query().
+		Where(providerprofile.IDEQ(providerID)).
+		WithAPIKey().
+		Only(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get provider: %v", err)
+	}
+
+	// Check if provider has host identifier
+	if provider.HostIdentifier == "" {
+		return nil, fmt.Errorf("provider %s has no host identifier", providerID)
+	}
+
+	// Check if provider has API key
+	if provider.Edges.APIKey == nil {
+		return nil, fmt.Errorf("provider %s has no API key (data integrity issue)", providerID)
+	}
+
+	// Decrypt API key secret
+	decodedSecret, err := base64.StdEncoding.DecodeString(provider.Edges.APIKey.Secret)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode API key secret: %v", err)
+	}
+	decryptedSecret, err := cryptoUtils.DecryptPlain(decodedSecret)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt API key secret: %v", err)
+	}
+
+	// Generate HMAC signature
+	signature := tokenUtils.GenerateHMACSignature(payload, string(decryptedSecret))
+
+	// Create HTTP client and make request
+	client := fastshot.NewClient(provider.HostIdentifier).
+		Config().SetTimeout(30*time.Second).
+		Header().Add("X-Request-Signature", signature).
+		Build()
+
+	var res fastshot.Response
+	var reqErr error
+
+	switch method {
+	case "GET":
+		res, reqErr = client.GET(path).
+			Body().AsJSON(payload).
+			Send()
+	case "POST":
+		res, reqErr = client.POST(path).
+			Body().AsJSON(payload).
+			Send()
+	default:
+		return nil, fmt.Errorf("unsupported HTTP method: %s", method)
+	}
+
+	if reqErr != nil {
+		return nil, fmt.Errorf("failed to make HTTP request: %v", reqErr)
+	}
+
+	// Parse JSON response
+	data, err := ParseJSONResponse(res.RawResponse)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"ProviderID": providerID,
+			"Path":       path,
+		}).Errorf("failed to parse JSON response from provider")
+		return nil, fmt.Errorf("failed to parse response: %v", err)
+	}
+
+	return data, nil
 }
 
 // Retry is a function that attempts to execute a given function multiple times until it succeeds or the maximum number of attempts is reached.
@@ -847,7 +929,10 @@ func findSuitableProviderRate(providers []string, tokenSymbol string, networkIde
 				Where(
 					providerordertoken.HasProviderWith(
 						providerprofile.IDEQ(parts[0]),
-						providerprofile.IsAvailableEQ(true),
+						providerprofile.HasProviderCurrenciesWith(
+							providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
+							providercurrencies.IsAvailableEQ(true),
+						),
 					),
 					providerordertoken.HasTokenWith(tokenEnt.SymbolEQ(parts[1])),
 					providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
@@ -912,8 +997,115 @@ func findSuitableProviderRate(providers []string, tokenSymbol string, networkIde
 		if fiatAmount.GreaterThanOrEqual(bucketData.MinAmount) && fiatAmount.LessThanOrEqual(bucketData.MaxAmount) {
 			return rate, true
 		}
+
+		// Check if provider has sufficient balance
+		ctx := context.Background()
+		providerCurrency, err := storage.Client.ProviderCurrencies.
+			Query().
+			Where(
+				providercurrencies.HasProviderWith(providerprofile.IDEQ(parts[0])),
+				providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
+				providercurrencies.IsAvailableEQ(true),
+			).
+			Only(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", err),
+				"ProviderID": parts[0],
+				"Currency":   bucketData.Currency,
+			}).Errorf("Failed to get provider balance")
+			continue
+		}
+
+		// Check if provider has sufficient balance
+		// Legacy provider with zero balance is assumed to have sufficient balance to prevent service disruption
+		if providerCurrency.AvailableBalance.LessThanOrEqual(fiatAmount) && !providerCurrency.AvailableBalance.Equal(decimal.Zero) {
+			// Modern provider with insufficient balance - skip
+			logger.WithFields(logger.Fields{
+				"ProviderID":       parts[0],
+				"Currency":         bucketData.Currency,
+				"AvailableBalance": providerCurrency.AvailableBalance.String(),
+				"RequiredAmount":   fiatAmount.String(),
+			}).Debugf("Provider %s has insufficient balance, skipping", parts[0])
+			continue
+		}
 	}
 
 	// Return the best rate we found (even if no exact match) for logging purposes
 	return bestRate, foundExactMatch
+}
+
+// ValidateAccount validates if an account exists for the given institution and account identifier
+// Returns the account name if verification is successful, or an error if verification fails
+func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier string) (string, error) {
+	// Get institution with enabled fiat currency
+	institution, err := storage.Client.Institution.
+		Query().
+		Where(institutionEnt.CodeEQ(institutionCode)).
+		WithFiatCurrency(func(fq *ent.FiatCurrencyQuery) {
+			fq.Where(fiatcurrency.IsEnabledEQ(true))
+		}).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return "", fmt.Errorf("institution %s is not supported", institutionCode)
+		}
+		return "", fmt.Errorf("failed to fetch institution: %v", err)
+	}
+
+	// Skip account verification for mobile money institutions
+	if institution.Type == institutionEnt.TypeMobileMoney {
+		return "OK", nil
+	}
+
+	// Find available providers for the currency
+	providers, err := storage.Client.ProviderProfile.
+		Query().
+		Where(
+			providerprofile.HasProviderCurrenciesWith(
+				providercurrencies.HasCurrencyWith(
+					fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
+				),
+				providercurrencies.IsAvailableEQ(true),
+			),
+			providerprofile.HostIdentifierNotNil(),
+			providerprofile.IsActiveEQ(true),
+			providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
+		).
+		All(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch providers: %v", err)
+	}
+
+	if len(providers) == 0 {
+		return "", fmt.Errorf("no available providers found for currency %s", institution.Edges.FiatCurrency.Code)
+	}
+
+	// Prepare payload for account verification
+	payload := map[string]interface{}{
+		"institution":       institutionCode,
+		"accountIdentifier": accountIdentifier,
+	}
+
+	// Try each provider until one succeeds
+	for _, provider := range providers {
+		// Call provider /verify_account endpoint using utility function
+		data, err := CallProviderWithHMAC(ctx, provider.ID, "POST", "/verify_account", payload)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":             fmt.Sprintf("%v", err),
+				"ProviderID":        provider.ID,
+				"Institution":       institutionCode,
+				"AccountIdentifier": accountIdentifier,
+			}).Warnf("Failed to verify account with provider %s", provider.ID)
+			continue
+		}
+
+		// Extract account name from response
+		if accountName, ok := data["data"].(string); ok && accountName != "" {
+			return accountName, nil
+		}
+	}
+
+	return "", fmt.Errorf("failed to verify account with any provider")
 }

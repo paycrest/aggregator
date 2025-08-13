@@ -30,9 +30,7 @@ func (ProviderProfile) Fields() []ent.Field {
 			Default("auto"),
 		field.Bool("is_active").
 			Default(false),
-		field.Bool("is_available").
-			Default(false),
-		field.Bool("isKYBVerified").
+		field.Bool("is_kyb_verified").
 			Default(false),
 		field.Time("updated_at").
 			Default(time.Now).
@@ -54,9 +52,8 @@ func (ProviderProfile) Edges() []ent.Edge {
 		edge.To("api_key", APIKey.Type).
 			Unique().
 			Annotations(entsql.OnDelete(entsql.Cascade)),
-		edge.From("currencies", FiatCurrency.Type).
-			Ref("providers").
-			Required(),
+		edge.To("provider_currencies", ProviderCurrencies.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.From("provision_buckets", ProvisionBucket.Type).
 			Ref("provider_profiles"),
 		edge.To("order_tokens", ProviderOrderToken.Type).
