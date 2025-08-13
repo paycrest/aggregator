@@ -379,14 +379,26 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 
 	err := s.balanceService.ReserveBalance(ctx, order.ProviderID, currency, amount)
 	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":      fmt.Sprintf("%v", err),
-			"OrderID":    order.ID.String(),
-			"ProviderID": order.ProviderID,
-			"Currency":   currency,
-			"Amount":     amount.String(),
-		}).Errorf("failed to reserve balance for order")
-		return err
+		// Check if this is a legacy provider
+		isLegacy, legacyErr := s.balanceService.IsLegacyProvider(ctx, order.ProviderID, currency)
+		if legacyErr == nil && isLegacy {
+			// For legacy providers, skip balance reservation
+			logger.WithFields(logger.Fields{
+				"OrderID":    order.ID.String(),
+				"ProviderID": order.ProviderID,
+				"Currency":   currency,
+				"Amount":     amount.String(),
+			}).Infof("Legacy provider %s, skipping balance reservation", order.ProviderID)
+		} else {
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", err),
+				"OrderID":    order.ID.String(),
+				"ProviderID": order.ProviderID,
+				"Currency":   currency,
+				"Amount":     amount.String(),
+			}).Errorf("failed to reserve balance for order")
+			return err
+		}
 	}
 
 	// Assign the order to the provider and save it to Redis
@@ -413,12 +425,10 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 	// Set a TTL for the order request
 	err = storage.RedisClient.ExpireAt(ctx, orderKey, time.Now().Add(orderConf.OrderRequestValidity)).Err()
 	if err != nil {
-		// logger.Errorf("failed to set TTL for order request: %v", err)
 		logger.WithFields(logger.Fields{
 			"Error":    fmt.Sprintf("%v", err),
-			"orderKey": orderKey,
+			"OrderKey": orderKey,
 		}).Errorf("failed to set TTL for order request")
-		return err
 	}
 
 	// Notify the provider
