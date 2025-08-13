@@ -1672,7 +1672,8 @@ func updateProviderBalance(providerID, currency string, balance *types.ProviderB
 
 // StartCronJobs starts cron jobs
 func StartCronJobs() {
-	scheduler := gocron.NewScheduler(time.UTC)
+	// Use the system's local timezone instead of hardcoded UTC to prevent timezone conflicts
+	scheduler := gocron.NewScheduler(time.Local)
 	priorityQueue := services.NewPriorityQueueService()
 
 	err := ComputeMarketRate()
