@@ -7,6 +7,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/shopspring/decimal"
 )
 
 // ID filters vertices based on their ID field.
@@ -80,7 +81,7 @@ func DateOfBirth(v string) predicate.BeneficialOwner {
 }
 
 // OwnershipPercentage applies equality check predicate on the "ownership_percentage" field. It's identical to OwnershipPercentageEQ.
-func OwnershipPercentage(v float64) predicate.BeneficialOwner {
+func OwnershipPercentage(v decimal.Decimal) predicate.BeneficialOwner {
 	return predicate.BeneficialOwner(sql.FieldEQ(FieldOwnershipPercentage, v))
 }
 
@@ -410,42 +411,42 @@ func DateOfBirthContainsFold(v string) predicate.BeneficialOwner {
 }
 
 // OwnershipPercentageEQ applies the EQ predicate on the "ownership_percentage" field.
-func OwnershipPercentageEQ(v float64) predicate.BeneficialOwner {
+func OwnershipPercentageEQ(v decimal.Decimal) predicate.BeneficialOwner {
 	return predicate.BeneficialOwner(sql.FieldEQ(FieldOwnershipPercentage, v))
 }
 
 // OwnershipPercentageNEQ applies the NEQ predicate on the "ownership_percentage" field.
-func OwnershipPercentageNEQ(v float64) predicate.BeneficialOwner {
+func OwnershipPercentageNEQ(v decimal.Decimal) predicate.BeneficialOwner {
 	return predicate.BeneficialOwner(sql.FieldNEQ(FieldOwnershipPercentage, v))
 }
 
 // OwnershipPercentageIn applies the In predicate on the "ownership_percentage" field.
-func OwnershipPercentageIn(vs ...float64) predicate.BeneficialOwner {
+func OwnershipPercentageIn(vs ...decimal.Decimal) predicate.BeneficialOwner {
 	return predicate.BeneficialOwner(sql.FieldIn(FieldOwnershipPercentage, vs...))
 }
 
 // OwnershipPercentageNotIn applies the NotIn predicate on the "ownership_percentage" field.
-func OwnershipPercentageNotIn(vs ...float64) predicate.BeneficialOwner {
+func OwnershipPercentageNotIn(vs ...decimal.Decimal) predicate.BeneficialOwner {
 	return predicate.BeneficialOwner(sql.FieldNotIn(FieldOwnershipPercentage, vs...))
 }
 
 // OwnershipPercentageGT applies the GT predicate on the "ownership_percentage" field.
-func OwnershipPercentageGT(v float64) predicate.BeneficialOwner {
+func OwnershipPercentageGT(v decimal.Decimal) predicate.BeneficialOwner {
 	return predicate.BeneficialOwner(sql.FieldGT(FieldOwnershipPercentage, v))
 }
 
 // OwnershipPercentageGTE applies the GTE predicate on the "ownership_percentage" field.
-func OwnershipPercentageGTE(v float64) predicate.BeneficialOwner {
+func OwnershipPercentageGTE(v decimal.Decimal) predicate.BeneficialOwner {
 	return predicate.BeneficialOwner(sql.FieldGTE(FieldOwnershipPercentage, v))
 }
 
 // OwnershipPercentageLT applies the LT predicate on the "ownership_percentage" field.
-func OwnershipPercentageLT(v float64) predicate.BeneficialOwner {
+func OwnershipPercentageLT(v decimal.Decimal) predicate.BeneficialOwner {
 	return predicate.BeneficialOwner(sql.FieldLT(FieldOwnershipPercentage, v))
 }
 
 // OwnershipPercentageLTE applies the LTE predicate on the "ownership_percentage" field.
-func OwnershipPercentageLTE(v float64) predicate.BeneficialOwner {
+func OwnershipPercentageLTE(v decimal.Decimal) predicate.BeneficialOwner {
 	return predicate.BeneficialOwner(sql.FieldLTE(FieldOwnershipPercentage, v))
 }
 

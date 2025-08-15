@@ -37,7 +37,8 @@ func (Network) Fields() []ent.Field {
 		field.String("paymaster_url").
 			Optional(),
 		field.Float("fee").
-			GoType(decimal.Decimal{}),
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
 	}
 }
 

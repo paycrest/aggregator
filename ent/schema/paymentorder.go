@@ -25,13 +25,27 @@ func (PaymentOrder) Mixin() []ent.Mixin {
 func (PaymentOrder) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(uuid.New),
-		field.Float("amount").GoType(decimal.Decimal{}),
-		field.Float("amount_paid").GoType(decimal.Decimal{}),
-		field.Float("amount_returned").GoType(decimal.Decimal{}),
-		field.Float("percent_settled").GoType(decimal.Decimal{}),
-		field.Float("sender_fee").GoType(decimal.Decimal{}),
-		field.Float("network_fee").GoType(decimal.Decimal{}),
-		field.Float("rate").GoType(decimal.Decimal{}),
+		field.Float("amount").
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
+		field.Float("amount_paid").
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
+		field.Float("amount_returned").
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
+		field.Float("percent_settled").
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
+		field.Float("sender_fee").
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
+		field.Float("network_fee").
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
+		field.Float("rate").
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
 		field.String("tx_hash").
 			MaxLen(70).
 			Optional(),
@@ -44,7 +58,9 @@ func (PaymentOrder) Fields() []ent.Field {
 			Optional(),
 		field.String("receive_address_text").
 			MaxLen(60),
-		field.Float("fee_percent").GoType(decimal.Decimal{}),
+		field.Float("fee_percent").
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
 		field.String("fee_address").
 			MaxLen(60).
 			Optional(),

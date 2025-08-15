@@ -14,6 +14,7 @@ import (
 	"github.com/paycrest/aggregator/ent/beneficialowner"
 	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/shopspring/decimal"
 )
 
 // BeneficialOwnerUpdate is the builder for updating BeneficialOwner entities.
@@ -100,23 +101,23 @@ func (bou *BeneficialOwnerUpdate) SetNillableDateOfBirth(s *string) *BeneficialO
 }
 
 // SetOwnershipPercentage sets the "ownership_percentage" field.
-func (bou *BeneficialOwnerUpdate) SetOwnershipPercentage(f float64) *BeneficialOwnerUpdate {
+func (bou *BeneficialOwnerUpdate) SetOwnershipPercentage(d decimal.Decimal) *BeneficialOwnerUpdate {
 	bou.mutation.ResetOwnershipPercentage()
-	bou.mutation.SetOwnershipPercentage(f)
+	bou.mutation.SetOwnershipPercentage(d)
 	return bou
 }
 
 // SetNillableOwnershipPercentage sets the "ownership_percentage" field if the given value is not nil.
-func (bou *BeneficialOwnerUpdate) SetNillableOwnershipPercentage(f *float64) *BeneficialOwnerUpdate {
-	if f != nil {
-		bou.SetOwnershipPercentage(*f)
+func (bou *BeneficialOwnerUpdate) SetNillableOwnershipPercentage(d *decimal.Decimal) *BeneficialOwnerUpdate {
+	if d != nil {
+		bou.SetOwnershipPercentage(*d)
 	}
 	return bou
 }
 
-// AddOwnershipPercentage adds f to the "ownership_percentage" field.
-func (bou *BeneficialOwnerUpdate) AddOwnershipPercentage(f float64) *BeneficialOwnerUpdate {
-	bou.mutation.AddOwnershipPercentage(f)
+// AddOwnershipPercentage adds d to the "ownership_percentage" field.
+func (bou *BeneficialOwnerUpdate) AddOwnershipPercentage(d decimal.Decimal) *BeneficialOwnerUpdate {
+	bou.mutation.AddOwnershipPercentage(d)
 	return bou
 }
 
@@ -366,23 +367,23 @@ func (bouo *BeneficialOwnerUpdateOne) SetNillableDateOfBirth(s *string) *Benefic
 }
 
 // SetOwnershipPercentage sets the "ownership_percentage" field.
-func (bouo *BeneficialOwnerUpdateOne) SetOwnershipPercentage(f float64) *BeneficialOwnerUpdateOne {
+func (bouo *BeneficialOwnerUpdateOne) SetOwnershipPercentage(d decimal.Decimal) *BeneficialOwnerUpdateOne {
 	bouo.mutation.ResetOwnershipPercentage()
-	bouo.mutation.SetOwnershipPercentage(f)
+	bouo.mutation.SetOwnershipPercentage(d)
 	return bouo
 }
 
 // SetNillableOwnershipPercentage sets the "ownership_percentage" field if the given value is not nil.
-func (bouo *BeneficialOwnerUpdateOne) SetNillableOwnershipPercentage(f *float64) *BeneficialOwnerUpdateOne {
-	if f != nil {
-		bouo.SetOwnershipPercentage(*f)
+func (bouo *BeneficialOwnerUpdateOne) SetNillableOwnershipPercentage(d *decimal.Decimal) *BeneficialOwnerUpdateOne {
+	if d != nil {
+		bouo.SetOwnershipPercentage(*d)
 	}
 	return bouo
 }
 
-// AddOwnershipPercentage adds f to the "ownership_percentage" field.
-func (bouo *BeneficialOwnerUpdateOne) AddOwnershipPercentage(f float64) *BeneficialOwnerUpdateOne {
-	bouo.mutation.AddOwnershipPercentage(f)
+// AddOwnershipPercentage adds d to the "ownership_percentage" field.
+func (bouo *BeneficialOwnerUpdateOne) AddOwnershipPercentage(d decimal.Decimal) *BeneficialOwnerUpdateOne {
+	bouo.mutation.AddOwnershipPercentage(d)
 	return bouo
 }
 

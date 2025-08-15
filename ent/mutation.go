@@ -633,8 +633,8 @@ type BeneficialOwnerMutation struct {
 	proof_of_residential_address_url *string
 	government_issued_id_url         *string
 	date_of_birth                    *string
-	ownership_percentage             *float64
-	addownership_percentage          *float64
+	ownership_percentage             *decimal.Decimal
+	addownership_percentage          *decimal.Decimal
 	government_issued_id_type        *beneficialowner.GovernmentIssuedIDType
 	clearedFields                    map[string]struct{}
 	kyb_profile                      *uuid.UUID
@@ -929,13 +929,13 @@ func (m *BeneficialOwnerMutation) ResetDateOfBirth() {
 }
 
 // SetOwnershipPercentage sets the "ownership_percentage" field.
-func (m *BeneficialOwnerMutation) SetOwnershipPercentage(f float64) {
-	m.ownership_percentage = &f
+func (m *BeneficialOwnerMutation) SetOwnershipPercentage(d decimal.Decimal) {
+	m.ownership_percentage = &d
 	m.addownership_percentage = nil
 }
 
 // OwnershipPercentage returns the value of the "ownership_percentage" field in the mutation.
-func (m *BeneficialOwnerMutation) OwnershipPercentage() (r float64, exists bool) {
+func (m *BeneficialOwnerMutation) OwnershipPercentage() (r decimal.Decimal, exists bool) {
 	v := m.ownership_percentage
 	if v == nil {
 		return
@@ -946,7 +946,7 @@ func (m *BeneficialOwnerMutation) OwnershipPercentage() (r float64, exists bool)
 // OldOwnershipPercentage returns the old "ownership_percentage" field's value of the BeneficialOwner entity.
 // If the BeneficialOwner object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *BeneficialOwnerMutation) OldOwnershipPercentage(ctx context.Context) (v float64, err error) {
+func (m *BeneficialOwnerMutation) OldOwnershipPercentage(ctx context.Context) (v decimal.Decimal, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldOwnershipPercentage is only allowed on UpdateOne operations")
 	}
@@ -960,17 +960,17 @@ func (m *BeneficialOwnerMutation) OldOwnershipPercentage(ctx context.Context) (v
 	return oldValue.OwnershipPercentage, nil
 }
 
-// AddOwnershipPercentage adds f to the "ownership_percentage" field.
-func (m *BeneficialOwnerMutation) AddOwnershipPercentage(f float64) {
+// AddOwnershipPercentage adds d to the "ownership_percentage" field.
+func (m *BeneficialOwnerMutation) AddOwnershipPercentage(d decimal.Decimal) {
 	if m.addownership_percentage != nil {
-		*m.addownership_percentage += f
+		*m.addownership_percentage = m.addownership_percentage.Add(d)
 	} else {
-		m.addownership_percentage = &f
+		m.addownership_percentage = &d
 	}
 }
 
 // AddedOwnershipPercentage returns the value that was added to the "ownership_percentage" field in this mutation.
-func (m *BeneficialOwnerMutation) AddedOwnershipPercentage() (r float64, exists bool) {
+func (m *BeneficialOwnerMutation) AddedOwnershipPercentage() (r decimal.Decimal, exists bool) {
 	v := m.addownership_percentage
 	if v == nil {
 		return
@@ -1218,7 +1218,7 @@ func (m *BeneficialOwnerMutation) SetField(name string, value ent.Value) error {
 		m.SetDateOfBirth(v)
 		return nil
 	case beneficialowner.FieldOwnershipPercentage:
-		v, ok := value.(float64)
+		v, ok := value.(decimal.Decimal)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -1262,7 +1262,7 @@ func (m *BeneficialOwnerMutation) AddedField(name string) (ent.Value, bool) {
 func (m *BeneficialOwnerMutation) AddField(name string, value ent.Value) error {
 	switch name {
 	case beneficialowner.FieldOwnershipPercentage:
-		v, ok := value.(float64)
+		v, ok := value.(decimal.Decimal)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
