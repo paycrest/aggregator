@@ -786,4 +786,207 @@ func TestSender(t *testing.T) {
 			assert.True(t, diff.LessThanOrEqual(tolerance), "Fee difference %s exceeds tolerance %s", diff.String(), tolerance.String())
 		})
 	})
+
+	t.Run("TestDECIMALPrecision", func(t *testing.T) {
+		t.Run("High Precision Amounts", func(t *testing.T) {
+			highPrecisionAmount := "123456.123456"
+			highPrecisionRate := "987654.123456"
+
+			payload := map[string]interface{}{
+				"amount":  highPrecisionAmount,
+				"token":   testCtx.token.Symbol,
+				"rate":    highPrecisionRate,
+				"network": testCtx.networkIdentifier,
+				"recipient": map[string]interface{}{
+					"institution":       "MOMONGPC",
+					"accountIdentifier": "PRECISION_TEST_001",
+					"accountName":       "Precision Test User",
+					"memo":              "Testing DECIMAL(20,8) precision with high precision values",
+				},
+				"reference": "DECIMAL_PRECISION_TEST_001",
+			}
+
+			headers := map[string]string{
+				"API-Key": testCtx.apiKey.ID.String(),
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/sender/orders", payload, headers, router)
+			assert.NoError(t, err)
+
+			assert.Equal(t, http.StatusCreated, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Payment order initiated successfully", response.Message)
+
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok, "response.Data is not of type map[string]interface{}")
+
+			paymentOrderUUID, err := uuid.Parse(data["id"].(string))
+			assert.NoError(t, err)
+
+			// Query the database to verify DECIMAL precision storage
+			paymentOrder, err := db.Client.PaymentOrder.
+				Query().
+				Where(paymentorder.IDEQ(paymentOrderUUID)).
+				Only(context.Background())
+			assert.NoError(t, err)
+
+			// Verify the amount is stored with full precision
+			expectedAmount, err := decimal.NewFromString(highPrecisionAmount)
+			assert.NoError(t, err)
+			assert.Equal(t, 0, paymentOrder.Amount.Cmp(expectedAmount),
+				"Amount precision mismatch. Expected: %s, Got: %s",
+				expectedAmount.String(), paymentOrder.Amount.String())
+
+			// Verify the rate is stored with full precision
+			expectedRate, err := decimal.NewFromString(highPrecisionRate)
+			assert.NoError(t, err)
+			assert.Equal(t, 0, paymentOrder.Rate.Cmp(expectedRate),
+				"Rate precision mismatch. Expected: %s, Got: %s",
+				expectedRate.String(), paymentOrder.Rate.String())
+
+			// Verify network fee precision
+			expectedNetworkFee := testCtx.token.Edges.Network.Fee
+			assert.Equal(t, 0, paymentOrder.NetworkFee.Cmp(expectedNetworkFee),
+				"Network fee precision mismatch. Expected: %s, Got: %s",
+				expectedNetworkFee.String(), paymentOrder.NetworkFee.String())
+
+			// Verify sender fee calculation precision (5% of amount)
+			expectedSenderFee := expectedAmount.Mul(decimal.NewFromFloat(0.05))
+			// Use tolerance for rounding differences
+			diff := paymentOrder.SenderFee.Sub(expectedSenderFee).Abs()
+			tolerance := decimal.NewFromFloat(0.01) // Allow 0.01 tolerance
+			assert.True(t, diff.LessThanOrEqual(tolerance),
+				"Sender fee calculation precision mismatch. Expected: %s, Got: %s, Diff: %s",
+				expectedSenderFee.String(), paymentOrder.SenderFee.String(), diff.String())
+		})
+
+		t.Run("Small Amounts", func(t *testing.T) {
+			// Test with small amounts to ensure no precision loss
+			// Use values that fit within the token's decimal precision (6 decimals) and pass validation
+			smallAmount := "1.000001"
+			smallRate := "1.000001"
+
+			payload := map[string]interface{}{
+				"amount":  smallAmount,
+				"token":   testCtx.token.Symbol,
+				"rate":    smallRate,
+				"network": testCtx.networkIdentifier,
+				"recipient": map[string]interface{}{
+					"institution":       "MOMONGPC",
+					"accountIdentifier": "PRECISION_TEST_002",
+					"accountName":       "Small Amount Test User",
+					"memo":              "Testing DECIMAL(20,8) precision with very small values",
+				},
+				"reference": "DECIMAL_PRECISION_TEST_002",
+			}
+
+			headers := map[string]string{
+				"API-Key": testCtx.apiKey.ID.String(),
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/sender/orders", payload, headers, router)
+			assert.NoError(t, err)
+
+			assert.Equal(t, http.StatusCreated, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Payment order initiated successfully", response.Message)
+
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok, "response.Data is not of type map[string]interface{}")
+			assert.NotNil(t, data, "response.Data is nil")
+
+			idValue, exists := data["id"]
+			assert.True(t, exists, "response.Data does not contain 'id' field")
+			assert.NotNil(t, idValue, "response.Data['id'] is nil")
+
+			paymentOrderUUID, err := uuid.Parse(idValue.(string))
+			assert.NoError(t, err)
+
+			paymentOrder, err := db.Client.PaymentOrder.
+				Query().
+				Where(paymentorder.IDEQ(paymentOrderUUID)).
+				Only(context.Background())
+			assert.NoError(t, err)
+
+			expectedAmount, err := decimal.NewFromString(smallAmount)
+			assert.NoError(t, err)
+			assert.Equal(t, 0, paymentOrder.Amount.Cmp(expectedAmount),
+				"Small amount precision mismatch. Expected: %s, Got: %s",
+				expectedAmount.String(), paymentOrder.Amount.String())
+
+			expectedRate, err := decimal.NewFromString(smallRate)
+			assert.NoError(t, err)
+			assert.Equal(t, 0, paymentOrder.Rate.Cmp(expectedRate),
+				"Small rate precision mismatch. Expected: %s, Got: %s",
+				expectedRate.String(), paymentOrder.Rate.String())
+		})
+
+		t.Run("Large Amounts", func(t *testing.T) {
+			largeAmount := "999999.999999"
+			largeRate := "999999.999999"
+
+			payload := map[string]interface{}{
+				"amount":  largeAmount,
+				"token":   testCtx.token.Symbol,
+				"rate":    largeRate,
+				"network": testCtx.networkIdentifier,
+				"recipient": map[string]interface{}{
+					"institution":       "MOMONGPC",
+					"accountIdentifier": "PRECISION_TEST_003",
+					"accountName":       "Large Amount Test User",
+					"memo":              "Testing DECIMAL(20,8) precision with very large values",
+				},
+				"reference": "DECIMAL_PRECISION_TEST_003",
+			}
+
+			headers := map[string]string{
+				"API-Key": testCtx.apiKey.ID.String(),
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/sender/orders", payload, headers, router)
+			assert.NoError(t, err)
+
+			// Assert the response
+			assert.Equal(t, http.StatusCreated, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Payment order initiated successfully", response.Message)
+
+			// Extract payment order ID
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok, "response.Data is not of type map[string]interface{}")
+
+			paymentOrderUUID, err := uuid.Parse(data["id"].(string))
+			assert.NoError(t, err)
+
+			// Query the database to verify precision
+			paymentOrder, err := db.Client.PaymentOrder.
+				Query().
+				Where(paymentorder.IDEQ(paymentOrderUUID)).
+				Only(context.Background())
+			assert.NoError(t, err)
+
+			// Verify large amount precision
+			expectedAmount, err := decimal.NewFromString(largeAmount)
+			assert.NoError(t, err)
+			assert.Equal(t, 0, paymentOrder.Amount.Cmp(expectedAmount),
+				"Large amount precision mismatch. Expected: %s, Got: %s",
+				expectedAmount.String(), paymentOrder.Amount.String())
+
+			// Verify large rate precision
+			expectedRate, err := decimal.NewFromString(largeRate)
+			assert.NoError(t, err)
+			assert.Equal(t, 0, paymentOrder.Rate.Cmp(expectedRate),
+				"Large rate precision mismatch. Expected: %s, Got: %s",
+				expectedRate.String(), paymentOrder.Rate.String())
+		})
+	})
 }
