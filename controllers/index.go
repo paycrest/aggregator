@@ -1360,7 +1360,7 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 			SetProofOfResidentialAddressURL(owner.ProofOfResidentialAddressUrl).
 			SetGovernmentIssuedIDURL(owner.GovernmentIssuedIdUrl).
 			SetDateOfBirth(owner.DateOfBirth).
-			SetOwnershipPercentage(owner.OwnershipPercentage).
+			SetOwnershipPercentage(decimal.NewFromFloat(owner.OwnershipPercentage)).
 			SetGovernmentIssuedIDType(beneficialowner.GovernmentIssuedIDType(owner.GovernmentIssuedIdType)).
 			SetKybProfileID(kybSubmission.ID).
 			Save(ctx)

@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/beneficialowner"
 	"github.com/paycrest/aggregator/ent/kybprofile"
+	"github.com/shopspring/decimal"
 )
 
 // BeneficialOwner is the model entity for the BeneficialOwner schema.
@@ -29,7 +30,7 @@ type BeneficialOwner struct {
 	// DateOfBirth holds the value of the "date_of_birth" field.
 	DateOfBirth string `json:"date_of_birth,omitempty"`
 	// OwnershipPercentage holds the value of the "ownership_percentage" field.
-	OwnershipPercentage float64 `json:"ownership_percentage,omitempty"`
+	OwnershipPercentage decimal.Decimal `json:"ownership_percentage,omitempty"`
 	// GovernmentIssuedIDType holds the value of the "government_issued_id_type" field.
 	GovernmentIssuedIDType beneficialowner.GovernmentIssuedIDType `json:"government_issued_id_type,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -65,7 +66,7 @@ func (*BeneficialOwner) scanValues(columns []string) ([]any, error) {
 	for i := range columns {
 		switch columns[i] {
 		case beneficialowner.FieldOwnershipPercentage:
-			values[i] = new(sql.NullFloat64)
+			values[i] = new(decimal.Decimal)
 		case beneficialowner.FieldFullName, beneficialowner.FieldResidentialAddress, beneficialowner.FieldProofOfResidentialAddressURL, beneficialowner.FieldGovernmentIssuedIDURL, beneficialowner.FieldDateOfBirth, beneficialowner.FieldGovernmentIssuedIDType:
 			values[i] = new(sql.NullString)
 		case beneficialowner.FieldID:
@@ -124,10 +125,10 @@ func (bo *BeneficialOwner) assignValues(columns []string, values []any) error {
 				bo.DateOfBirth = value.String
 			}
 		case beneficialowner.FieldOwnershipPercentage:
-			if value, ok := values[i].(*sql.NullFloat64); !ok {
+			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field ownership_percentage", values[i])
-			} else if value.Valid {
-				bo.OwnershipPercentage = value.Float64
+			} else if value != nil {
+				bo.OwnershipPercentage = *value
 			}
 		case beneficialowner.FieldGovernmentIssuedIDType:
 			if value, ok := values[i].(*sql.NullString); !ok {

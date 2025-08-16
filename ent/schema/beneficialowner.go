@@ -6,6 +6,7 @@ import (
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 // BeneficialOwner holds the schema definition for the BeneficialOwner entity.
@@ -24,7 +25,9 @@ func (BeneficialOwner) Fields() []ent.Field {
 		field.String("proof_of_residential_address_url"),
 		field.String("government_issued_id_url"),
 		field.String("date_of_birth"),
-		field.Float("ownership_percentage"),
+		field.Float("ownership_percentage").
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
 		field.Enum("government_issued_id_type").
 			Values("passport", "drivers_license", "national_id").
 			Optional(),

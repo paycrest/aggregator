@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/beneficialowner"
 	"github.com/paycrest/aggregator/ent/kybprofile"
+	"github.com/shopspring/decimal"
 )
 
 // BeneficialOwnerCreate is the builder for creating a BeneficialOwner entity.
@@ -55,8 +56,8 @@ func (boc *BeneficialOwnerCreate) SetDateOfBirth(s string) *BeneficialOwnerCreat
 }
 
 // SetOwnershipPercentage sets the "ownership_percentage" field.
-func (boc *BeneficialOwnerCreate) SetOwnershipPercentage(f float64) *BeneficialOwnerCreate {
-	boc.mutation.SetOwnershipPercentage(f)
+func (boc *BeneficialOwnerCreate) SetOwnershipPercentage(d decimal.Decimal) *BeneficialOwnerCreate {
+	boc.mutation.SetOwnershipPercentage(d)
 	return boc
 }
 
@@ -367,7 +368,7 @@ func (u *BeneficialOwnerUpsert) UpdateDateOfBirth() *BeneficialOwnerUpsert {
 }
 
 // SetOwnershipPercentage sets the "ownership_percentage" field.
-func (u *BeneficialOwnerUpsert) SetOwnershipPercentage(v float64) *BeneficialOwnerUpsert {
+func (u *BeneficialOwnerUpsert) SetOwnershipPercentage(v decimal.Decimal) *BeneficialOwnerUpsert {
 	u.Set(beneficialowner.FieldOwnershipPercentage, v)
 	return u
 }
@@ -379,7 +380,7 @@ func (u *BeneficialOwnerUpsert) UpdateOwnershipPercentage() *BeneficialOwnerUpse
 }
 
 // AddOwnershipPercentage adds v to the "ownership_percentage" field.
-func (u *BeneficialOwnerUpsert) AddOwnershipPercentage(v float64) *BeneficialOwnerUpsert {
+func (u *BeneficialOwnerUpsert) AddOwnershipPercentage(v decimal.Decimal) *BeneficialOwnerUpsert {
 	u.Add(beneficialowner.FieldOwnershipPercentage, v)
 	return u
 }
@@ -521,14 +522,14 @@ func (u *BeneficialOwnerUpsertOne) UpdateDateOfBirth() *BeneficialOwnerUpsertOne
 }
 
 // SetOwnershipPercentage sets the "ownership_percentage" field.
-func (u *BeneficialOwnerUpsertOne) SetOwnershipPercentage(v float64) *BeneficialOwnerUpsertOne {
+func (u *BeneficialOwnerUpsertOne) SetOwnershipPercentage(v decimal.Decimal) *BeneficialOwnerUpsertOne {
 	return u.Update(func(s *BeneficialOwnerUpsert) {
 		s.SetOwnershipPercentage(v)
 	})
 }
 
 // AddOwnershipPercentage adds v to the "ownership_percentage" field.
-func (u *BeneficialOwnerUpsertOne) AddOwnershipPercentage(v float64) *BeneficialOwnerUpsertOne {
+func (u *BeneficialOwnerUpsertOne) AddOwnershipPercentage(v decimal.Decimal) *BeneficialOwnerUpsertOne {
 	return u.Update(func(s *BeneficialOwnerUpsert) {
 		s.AddOwnershipPercentage(v)
 	})
@@ -848,14 +849,14 @@ func (u *BeneficialOwnerUpsertBulk) UpdateDateOfBirth() *BeneficialOwnerUpsertBu
 }
 
 // SetOwnershipPercentage sets the "ownership_percentage" field.
-func (u *BeneficialOwnerUpsertBulk) SetOwnershipPercentage(v float64) *BeneficialOwnerUpsertBulk {
+func (u *BeneficialOwnerUpsertBulk) SetOwnershipPercentage(v decimal.Decimal) *BeneficialOwnerUpsertBulk {
 	return u.Update(func(s *BeneficialOwnerUpsert) {
 		s.SetOwnershipPercentage(v)
 	})
 }
 
 // AddOwnershipPercentage adds v to the "ownership_percentage" field.
-func (u *BeneficialOwnerUpsertBulk) AddOwnershipPercentage(v float64) *BeneficialOwnerUpsertBulk {
+func (u *BeneficialOwnerUpsertBulk) AddOwnershipPercentage(v decimal.Decimal) *BeneficialOwnerUpsertBulk {
 	return u.Update(func(s *BeneficialOwnerUpsert) {
 		s.AddOwnershipPercentage(v)
 	})

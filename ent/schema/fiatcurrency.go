@@ -32,7 +32,8 @@ func (FiatCurrency) Fields() []ent.Field {
 		field.String("symbol"),
 		field.String("name"),
 		field.Float("market_rate").
-			GoType(decimal.Decimal{}),
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
 		field.Bool("is_enabled").Default(false),
 	}
 }
