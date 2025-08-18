@@ -1,4 +1,3 @@
-
 CREATE TABLE provider_currencies (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     available_balance DECIMAL(20,8) NOT NULL DEFAULT 0.0,
