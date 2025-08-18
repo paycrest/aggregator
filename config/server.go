@@ -26,7 +26,7 @@ func ServerConfig() *ServerConfiguration {
 	viper.SetDefault("DEBUG", true)
 	viper.SetDefault("SERVER_HOST", "0.0.0.0")
 	viper.SetDefault("SERVER_PORT", "8000")
-	viper.SetDefault("SERVER_TIMEZONE", "UTC")
+	viper.SetDefault("SERVER_TIMEZONE", "Africa/Lagos")
 	viper.SetDefault("ALLOWED_HOSTS", "*")
 	viper.SetDefault("ENVIRONMENT", "local")
 	viper.SetDefault("SENTRY_DSN", "")

@@ -117,33 +117,13 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 		if !ok || decoded == nil {
 			continue
 		}
-		// Safely extract indexed_params and non_indexed_params
-		indexedParams, ok := decoded["indexed_params"].(map[string]interface{})
-		if !ok || indexedParams == nil {
-			continue
-		}
-		nonIndexedParams, ok := decoded["non_indexed_params"].(map[string]interface{})
-		if !ok || nonIndexedParams == nil {
-			continue
-		}
+		indexedParams := decoded["indexed_params"].(map[string]interface{})
+		nonIndexedParams := decoded["non_indexed_params"].(map[string]interface{})
 
-		// Safely extract transfer data
-		fromStr, ok := indexedParams["from"].(string)
-		if !ok || fromStr == "" {
-			continue
-		}
-		fromAddress := ethcommon.HexToAddress(fromStr).Hex()
-
-		toStr, ok := indexedParams["to"].(string)
-		if !ok || toStr == "" {
-			continue
-		}
-		toAddress := ethcommon.HexToAddress(toStr).Hex()
-
-		valueStr, ok := nonIndexedParams["value"].(string)
-		if !ok || valueStr == "" {
-			continue
-		}
+		// Extract transfer data
+		fromAddress := ethcommon.HexToAddress(indexedParams["from"].(string)).Hex()
+		toAddress := ethcommon.HexToAddress(indexedParams["to"].(string)).Hex()
+		valueStr := nonIndexedParams["value"].(string)
 
 		// Skip if transfer is from gateway contract
 		if strings.EqualFold(fromAddress, token.Edges.Network.GatewayContractAddress) {
@@ -157,22 +137,10 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 			continue
 		}
 
-		// Safely extract block_number and transaction_hash
-		blockNumberRaw, ok := eventMap["block_number"].(float64)
-		if !ok {
-			continue
-		}
-		blockNumber := int64(blockNumberRaw)
-
-		txHashFromEvent, ok := eventMap["transaction_hash"].(string)
-		if !ok || txHashFromEvent == "" {
-			continue
-		}
-
 		// Create transfer event
 		transferEvent := &types.TokenTransferEvent{
-			BlockNumber: blockNumber,
-			TxHash:      txHashFromEvent,
+			BlockNumber: int64(eventMap["block_number"].(float64)),
+			TxHash:      eventMap["transaction_hash"].(string),
 			From:        fromAddress,
 			To:          toAddress,
 			Value:       transferValue.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals)))),
@@ -207,87 +175,32 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 			continue
 		}
 
-		// Safely extract block_number and transaction_hash
-		blockNumberRaw, ok := eventMap["block_number"].(float64)
-		if !ok {
-			continue
-		}
-		blockNumber := int64(blockNumberRaw)
+		blockNumber := int64(eventMap["block_number"].(float64))
+		txHash := eventMap["transaction_hash"].(string)
 
-		txHash, ok := eventMap["transaction_hash"].(string)
-		if !ok || txHash == "" {
-			continue
-		}
-
-		// Safely extract indexed_params and non_indexed_params
-		indexedParams, ok := eventParams["indexed_params"].(map[string]interface{})
-		if !ok || indexedParams == nil {
-			continue
-		}
-
-		nonIndexedParams, ok := eventParams["non_indexed_params"].(map[string]interface{})
-		if !ok || nonIndexedParams == nil {
-			continue
-		}
-
-		// Safely extract required fields
-		amountStr, ok := indexedParams["amount"].(string)
-		if !ok || amountStr == "" {
-			continue
-		}
-		orderAmount, err := decimal.NewFromString(amountStr)
+		orderAmount, err := decimal.NewFromString(eventParams["indexed_params"].(map[string]interface{})["amount"].(string))
 		if err != nil {
 			continue
 		}
-
-		protocolFeeStr, ok := nonIndexedParams["protocolFee"].(string)
-		if !ok || protocolFeeStr == "" {
-			continue
-		}
-		protocolFee, err := decimal.NewFromString(protocolFeeStr)
+		protocolFee, err := decimal.NewFromString(eventParams["non_indexed_params"].(map[string]interface{})["protocolFee"].(string))
 		if err != nil {
 			continue
 		}
-
-		rateStr, ok := nonIndexedParams["rate"].(string)
-		if !ok || rateStr == "" {
-			continue
-		}
-		rate, err := decimal.NewFromString(rateStr)
+		rate, err := decimal.NewFromString(eventParams["non_indexed_params"].(map[string]interface{})["rate"].(string))
 		if err != nil {
-			continue
-		}
-
-		tokenStr, ok := indexedParams["token"].(string)
-		if !ok || tokenStr == "" {
-			continue
-		}
-
-		orderIdStr, ok := nonIndexedParams["orderId"].(string)
-		if !ok || orderIdStr == "" {
-			continue
-		}
-
-		messageHashStr, ok := nonIndexedParams["messageHash"].(string)
-		if !ok || messageHashStr == "" {
-			continue
-		}
-
-		senderStr, ok := indexedParams["sender"].(string)
-		if !ok || senderStr == "" {
 			continue
 		}
 
 		createdEvent := &types.OrderCreatedEvent{
 			BlockNumber: blockNumber,
 			TxHash:      txHash,
-			Token:       ethcommon.HexToAddress(tokenStr).Hex(),
+			Token:       ethcommon.HexToAddress(eventParams["indexed_params"].(map[string]interface{})["token"].(string)).Hex(),
 			Amount:      orderAmount,
 			ProtocolFee: protocolFee,
-			OrderId:     orderIdStr,
+			OrderId:     eventParams["non_indexed_params"].(map[string]interface{})["orderId"].(string),
 			Rate:        rate.Div(decimal.NewFromInt(100)),
-			MessageHash: messageHashStr,
-			Sender:      ethcommon.HexToAddress(senderStr).Hex(),
+			MessageHash: eventParams["non_indexed_params"].(map[string]interface{})["messageHash"].(string),
+			Sender:      ethcommon.HexToAddress(eventParams["indexed_params"].(map[string]interface{})["sender"].(string)).Hex(),
 		}
 		orderCreatedEvents = append(orderCreatedEvents, createdEvent)
 	}
@@ -389,10 +302,7 @@ func (s *IndexerEVM) indexReceiveAddressByUserAddress(ctx context.Context, token
 
 	// Process each transaction to find transfer events to linked addresses
 	for i, tx := range transactions {
-		txHash, ok := tx["hash"].(string)
-		if !ok || txHash == "" {
-			continue
-		}
+		txHash := tx["hash"].(string)
 		if token.Edges.Network.ChainID != 56 {
 			logger.Infof("Processing transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
 		}
@@ -495,10 +405,7 @@ func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network 
 
 	// Process each transaction to find gateway events
 	for i, tx := range transactions {
-		txHash, ok := tx["hash"].(string)
-		if !ok || txHash == "" {
-			continue
-		}
+		txHash := tx["hash"].(string)
 		if network.ChainID != 56 {
 			logger.Infof("Processing gateway transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
 		}
@@ -593,148 +500,63 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 			}).Infof("Processing event signature")
 		}
 
-		// Safely extract block_number and transaction_hash
-		blockNumberRaw, ok := eventMap["block_number"].(float64)
-		if !ok {
-			continue
-		}
-		blockNumber := int64(blockNumberRaw)
-
-		txHashFromEvent, ok := eventMap["transaction_hash"].(string)
-		if !ok || txHashFromEvent == "" {
-			continue
-		}
-
-		// Safely extract indexed_params and non_indexed_params
-		indexedParams, ok := eventParams["indexed_params"].(map[string]interface{})
-		if !ok || indexedParams == nil {
-			continue
-		}
-
-		nonIndexedParams, ok := eventParams["non_indexed_params"].(map[string]interface{})
-		if !ok || nonIndexedParams == nil {
-			continue
-		}
+		blockNumber := int64(eventMap["block_number"].(float64))
+		txHash := eventMap["transaction_hash"].(string)
 
 		switch eventSignature {
 		case utils.OrderCreatedEventSignature:
-			// Safely extract required fields for OrderCreated
-			amountStr, ok := indexedParams["amount"].(string)
-			if !ok || amountStr == "" {
-				continue
-			}
-			orderAmount, err := decimal.NewFromString(amountStr)
+			orderAmount, err := decimal.NewFromString(eventParams["indexed_params"].(map[string]interface{})["amount"].(string))
 			if err != nil {
 				continue
 			}
-
-			protocolFeeStr, ok := nonIndexedParams["protocolFee"].(string)
-			if !ok || protocolFeeStr == "" {
-				continue
-			}
-			protocolFee, err := decimal.NewFromString(protocolFeeStr)
+			protocolFee, err := decimal.NewFromString(eventParams["non_indexed_params"].(map[string]interface{})["protocolFee"].(string))
 			if err != nil {
 				continue
 			}
-
-			rateStr, ok := nonIndexedParams["rate"].(string)
-			if !ok || rateStr == "" {
-				continue
-			}
-			rate, err := decimal.NewFromString(rateStr)
+			rate, err := decimal.NewFromString(eventParams["non_indexed_params"].(map[string]interface{})["rate"].(string))
 			if err != nil {
-				continue
-			}
-
-			tokenStr, ok := indexedParams["token"].(string)
-			if !ok || tokenStr == "" {
-				continue
-			}
-
-			orderIdStr, ok := nonIndexedParams["orderId"].(string)
-			if !ok || orderIdStr == "" {
-				continue
-			}
-
-			messageHashStr, ok := nonIndexedParams["messageHash"].(string)
-			if !ok || messageHashStr == "" {
-				continue
-			}
-
-			senderStr, ok := indexedParams["sender"].(string)
-			if !ok || senderStr == "" {
 				continue
 			}
 
 			createdEvent := &types.OrderCreatedEvent{
 				BlockNumber: blockNumber,
-				TxHash:      txHashFromEvent,
-				Token:       ethcommon.HexToAddress(tokenStr).Hex(),
+				TxHash:      txHash,
+				Token:       ethcommon.HexToAddress(eventParams["indexed_params"].(map[string]interface{})["token"].(string)).Hex(),
 				Amount:      orderAmount,
 				ProtocolFee: protocolFee,
-				OrderId:     orderIdStr,
+				OrderId:     eventParams["non_indexed_params"].(map[string]interface{})["orderId"].(string),
 				Rate:        rate.Div(decimal.NewFromInt(100)),
-				MessageHash: messageHashStr,
-				Sender:      ethcommon.HexToAddress(senderStr).Hex(),
+				MessageHash: eventParams["non_indexed_params"].(map[string]interface{})["messageHash"].(string),
+				Sender:      ethcommon.HexToAddress(eventParams["indexed_params"].(map[string]interface{})["sender"].(string)).Hex(),
 			}
 			orderCreatedEvents = append(orderCreatedEvents, createdEvent)
 
 		case utils.OrderSettledEventSignature:
-			// Safely extract required fields for OrderSettled
-			settlePercentStr, ok := nonIndexedParams["settlePercent"].(string)
-			if !ok || settlePercentStr == "" {
-				continue
-			}
-			settlePercent, err := decimal.NewFromString(settlePercentStr)
+			settlePercent, err := decimal.NewFromString(eventParams["non_indexed_params"].(map[string]interface{})["settlePercent"].(string))
 			if err != nil {
-				continue
-			}
-
-			splitOrderIdStr, ok := nonIndexedParams["splitOrderId"].(string)
-			if !ok || splitOrderIdStr == "" {
-				continue
-			}
-
-			orderIdStr, ok := indexedParams["orderId"].(string)
-			if !ok || orderIdStr == "" {
-				continue
-			}
-
-			liquidityProviderStr, ok := indexedParams["liquidityProvider"].(string)
-			if !ok || liquidityProviderStr == "" {
 				continue
 			}
 
 			settledEvent := &types.OrderSettledEvent{
 				BlockNumber:       blockNumber,
-				TxHash:            txHashFromEvent,
-				SplitOrderId:      splitOrderIdStr,
-				OrderId:           orderIdStr,
-				LiquidityProvider: ethcommon.HexToAddress(liquidityProviderStr).Hex(),
+				TxHash:            txHash,
+				SplitOrderId:      eventParams["non_indexed_params"].(map[string]interface{})["splitOrderId"].(string),
+				OrderId:           eventParams["indexed_params"].(map[string]interface{})["orderId"].(string),
+				LiquidityProvider: ethcommon.HexToAddress(eventParams["indexed_params"].(map[string]interface{})["liquidityProvider"].(string)).Hex(),
 				SettlePercent:     settlePercent,
 			}
 			orderSettledEvents = append(orderSettledEvents, settledEvent)
 
 		case utils.OrderRefundedEventSignature:
-			// Safely extract required fields for OrderRefunded
-			feeStr, ok := nonIndexedParams["fee"].(string)
-			if !ok || feeStr == "" {
-				continue
-			}
-			fee, err := decimal.NewFromString(feeStr)
+			fee, err := decimal.NewFromString(eventParams["non_indexed_params"].(map[string]interface{})["fee"].(string))
 			if err != nil {
-				continue
-			}
-
-			orderIdStr, ok := indexedParams["orderId"].(string)
-			if !ok || orderIdStr == "" {
 				continue
 			}
 
 			refundedEvent := &types.OrderRefundedEvent{
 				BlockNumber: blockNumber,
-				TxHash:      txHashFromEvent,
-				OrderId:     orderIdStr,
+				TxHash:      txHash,
+				OrderId:     eventParams["indexed_params"].(map[string]interface{})["orderId"].(string),
 				Fee:         fee,
 			}
 			orderRefundedEvents = append(orderRefundedEvents, refundedEvent)
@@ -842,66 +664,25 @@ func (s *IndexerEVM) indexProviderAddressByTransaction(ctx context.Context, netw
 			continue
 		}
 
-		// Check if indexed_params exists and is not nil before accessing it
-		indexedParams, ok := eventParams["indexed_params"].(map[string]interface{})
-		if !ok || indexedParams == nil {
-			continue
-		}
-
 		// Check if this event is from the provider address we're looking for
-		liquidityProvider, ok := indexedParams["liquidityProvider"].(string)
-		if !ok || liquidityProvider == "" {
-			continue
-		}
-		liquidityProvider = ethcommon.HexToAddress(liquidityProvider).Hex()
+		liquidityProvider := ethcommon.HexToAddress(eventParams["indexed_params"].(map[string]interface{})["liquidityProvider"].(string)).Hex()
 		if !strings.EqualFold(liquidityProvider, providerAddress) {
 			continue
 		}
 
-		// Safely extract block_number and transaction_hash
-		blockNumberRaw, ok := eventMap["block_number"].(float64)
-		if !ok {
-			continue
-		}
-		blockNumber := int64(blockNumberRaw)
+		blockNumber := int64(eventMap["block_number"].(float64))
+		txHash := eventMap["transaction_hash"].(string)
 
-		txHash, ok := eventMap["transaction_hash"].(string)
-		if !ok || txHash == "" {
-			continue
-		}
-
-		// Safely extract non_indexed_params
-		nonIndexedParams, ok := eventParams["non_indexed_params"].(map[string]interface{})
-		if !ok || nonIndexedParams == nil {
-			continue
-		}
-
-		// Safely extract required fields
-		settlePercentStr, ok := nonIndexedParams["settlePercent"].(string)
-		if !ok || settlePercentStr == "" {
-			continue
-		}
-
-		settlePercent, err := decimal.NewFromString(settlePercentStr)
+		settlePercent, err := decimal.NewFromString(eventParams["non_indexed_params"].(map[string]interface{})["settlePercent"].(string))
 		if err != nil {
-			continue
-		}
-
-		splitOrderId, ok := nonIndexedParams["splitOrderId"].(string)
-		if !ok || splitOrderId == "" {
-			continue
-		}
-
-		orderId, ok := indexedParams["orderId"].(string)
-		if !ok || orderId == "" {
 			continue
 		}
 
 		settledEvent := &types.OrderSettledEvent{
 			BlockNumber:       blockNumber,
 			TxHash:            txHash,
-			SplitOrderId:      splitOrderId,
-			OrderId:           orderId,
+			SplitOrderId:      eventParams["non_indexed_params"].(map[string]interface{})["splitOrderId"].(string),
+			OrderId:           eventParams["indexed_params"].(map[string]interface{})["orderId"].(string),
 			LiquidityProvider: liquidityProvider,
 			SettlePercent:     settlePercent,
 		}
@@ -968,10 +749,7 @@ func (s *IndexerEVM) indexProviderAddressByAddress(ctx context.Context, network 
 
 	// Process each transaction to find OrderSettled events
 	for i, tx := range transactions {
-		txHash, ok := tx["hash"].(string)
-		if !ok || txHash == "" {
-			continue
-		}
+		txHash := tx["hash"].(string)
 		if network.ChainID != 56 {
 			logger.Infof("Processing provider transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
 		}

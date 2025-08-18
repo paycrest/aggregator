@@ -159,19 +159,19 @@ func CreateLockPaymentOrder(
 		WithNetwork().
 		Only(ctx)
 	if err != nil {
-		return createBasicLockPaymentOrderAndCancel(ctx, event, network, nil, nil, "Token lookup failed", refundOrder)
+		return nil
 	}
 
 	// Get order recipient from message hash
 	recipient, err := cryptoUtils.GetOrderRecipientFromMessageHash(event.MessageHash)
 	if err != nil {
-		return createBasicLockPaymentOrderAndCancel(ctx, event, network, token, nil, "Message hash decryption failed", refundOrder)
+		return nil
 	}
 
 	// Get provision bucket
 	institution, err := utils.GetInstitutionByCode(ctx, recipient.Institution, true)
 	if err != nil {
-		return createBasicLockPaymentOrderAndCancel(ctx, event, network, token, recipient, "Institution lookup failed", refundOrder)
+		return nil
 	}
 
 	currency, err := db.Client.FiatCurrency.
@@ -182,7 +182,7 @@ func CreateLockPaymentOrder(
 		).
 		Only(ctx)
 	if err != nil {
-		return createBasicLockPaymentOrderAndCancel(ctx, event, network, token, recipient, "Currency lookup failed", refundOrder)
+		return nil
 	}
 
 	event.Amount = event.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
@@ -195,8 +195,6 @@ func CreateLockPaymentOrder(
 			"Amount":   event.Amount,
 			"Currency": currency,
 		}).Errorf("failed to fetch provision bucket when creating lock payment order")
-
-		return createBasicLockPaymentOrderAndCancel(ctx, event, network, token, recipient, "Provision bucket lookup failed", refundOrder)
 	}
 
 	// Create lock payment order fields
@@ -266,7 +264,7 @@ func CreateLockPaymentOrder(
 			}
 		}
 
-		if orderToken != nil && orderToken.Edges.Provider != nil && orderToken.Edges.Provider.VisibilityMode == providerprofile.VisibilityModePrivate {
+		if orderToken.Edges.Provider.VisibilityMode == providerprofile.VisibilityModePrivate {
 			normalizedAmount := lockPaymentOrder.Amount
 			if strings.EqualFold(token.BaseCurrency, institution.Edges.FiatCurrency.Code) && token.BaseCurrency != "USD" {
 				rateResponse, err := utils.GetTokenRateFromQueue("USDT", normalizedAmount, institution.Edges.FiatCurrency.Code, currency.MarketRate)
@@ -536,8 +534,7 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 			pbq.WithCurrency()
 		}).
 		Only(ctx)
-	if err == nil && lockOrder != nil && lockOrder.Edges.Provider != nil && lockOrder.Edges.ProvisionBucket != nil && lockOrder.Edges.ProvisionBucket.Edges.Currency != nil {
-		// Only attempt balance operations if we have the required edge data
+	if err == nil && lockOrder != nil {
 		// Create a new balance service instance for this transaction
 		balanceService := svc.NewBalanceManagementService()
 
@@ -588,7 +585,6 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 			return fmt.Errorf("UpdateOrderStatusRefunded.sender: %v", err)
 		}
 
-		// Update the local paymentOrder object for webhook
 		paymentOrder.Status = paymentorder.StatusRefunded
 		paymentOrder.TxHash = event.TxHash
 		paymentOrder.BlockNumber = event.BlockNumber
@@ -600,12 +596,13 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		return fmt.Errorf("UpdateOrderStatusRefunded.commit %v", err)
 	}
 
-	if paymentOrderExists && paymentOrder.Status == paymentorder.StatusRefunded {
+	if paymentOrderExists && paymentOrder.Status != paymentorder.StatusRefunded {
 		// Send webhook notification to sender
 		err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
 		if err != nil {
 			return fmt.Errorf("UpdateOrderStatusRefunded.webhook: %v", err)
 		}
+
 	}
 
 	return nil
@@ -724,8 +721,7 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 			pbq.WithCurrency()
 		}).
 		Only(ctx)
-	if err == nil && lockOrder != nil && lockOrder.Edges.Provider != nil && lockOrder.Edges.ProvisionBucket != nil && lockOrder.Edges.ProvisionBucket.Edges.Currency != nil {
-		// Only attempt balance operations if we have the required edge data
+	if err == nil && lockOrder != nil {
 		// Create a new balance service instance for this transaction
 		balanceService := svc.NewBalanceManagementService()
 
@@ -888,14 +884,10 @@ func HandleCancellation(ctx context.Context, createdLockPaymentOrder *ent.LockPa
 			SetSender(lockPaymentOrder.Sender).
 			SetMemo(lockPaymentOrder.Memo).
 			SetMetadata(lockPaymentOrder.Metadata).
+			SetProvisionBucket(lockPaymentOrder.ProvisionBucket).
 			SetCancellationCount(3).
 			SetCancellationReasons([]string{cancellationReason}).
 			SetStatus(lockpaymentorder.StatusCancelled)
-
-		// Only set ProvisionBucket if it's not nil
-		if lockPaymentOrder.ProvisionBucket != nil {
-			orderBuilder = orderBuilder.SetProvisionBucket(lockPaymentOrder.ProvisionBucket)
-		}
 
 		if lockPaymentOrder.ProviderID != "" {
 			orderBuilder = orderBuilder.
@@ -1034,17 +1026,6 @@ func HandleReceiveAddressValidity(ctx context.Context, receiveAddress *ent.Recei
 			if err != nil {
 				return fmt.Errorf("HandleReceiveAddressValidity.db: %v", err)
 			}
-
-			// Send webhook notification for expired payment order
-			// The paymentOrder already has all necessary edges loaded from tasks.go
-			err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"OrderID":  paymentOrder.ID,
-					"SenderID": paymentOrder.Edges.SenderProfile.ID,
-					"Error":    err.Error(),
-				}).Errorf("Failed to send expired payment order webhook")
-			}
 		}
 	}
 
@@ -1082,50 +1063,5 @@ func deleteTransferWebhook(ctx context.Context, txHash string) error {
 		return fmt.Errorf("failed to delete webhook: %w", err)
 	}
 
-	return nil
-}
-
-// createBasicLockPaymentOrderAndCancel creates a basic lock payment order and cancels it with the given reason
-func createBasicLockPaymentOrderAndCancel(
-	ctx context.Context,
-	event *types.OrderCreatedEvent,
-	network *ent.Network,
-	token *ent.Token,
-	recipient *types.PaymentOrderRecipient,
-	cancellationReason string,
-	refundOrder func(context.Context, *ent.Network, string) error,
-) error {
-	// Apply token decimal adjustment to amount and protocol fee
-	adjustedAmount := event.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
-	adjustedProtocolFee := event.ProtocolFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
-
-	// Create a basic lock payment order for cancellation
-	lockPaymentOrder := types.LockPaymentOrderFields{
-		Token:       token,
-		Network:     network,
-		GatewayID:   event.OrderId,
-		Amount:      adjustedAmount,
-		Rate:        event.Rate,
-		ProtocolFee: adjustedProtocolFee,
-		BlockNumber: int64(event.BlockNumber),
-		TxHash:      event.TxHash,
-		Sender:      event.Sender,
-		MessageHash: event.MessageHash,
-	}
-
-	// Add recipient fields if available
-	if recipient != nil {
-		lockPaymentOrder.Institution = recipient.Institution
-		lockPaymentOrder.AccountIdentifier = recipient.AccountIdentifier
-		lockPaymentOrder.AccountName = recipient.AccountName
-		lockPaymentOrder.ProviderID = recipient.ProviderID
-		lockPaymentOrder.Memo = recipient.Memo
-		lockPaymentOrder.Metadata = recipient.Metadata
-	}
-
-	err := HandleCancellation(ctx, nil, &lockPaymentOrder, cancellationReason, refundOrder)
-	if err != nil {
-		return fmt.Errorf("failed to handle cancellation due to %s: %w", cancellationReason, err)
-	}
 	return nil
 }

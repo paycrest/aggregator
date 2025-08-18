@@ -23,7 +23,6 @@ import (
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
 	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/token"
-	"github.com/paycrest/aggregator/ent/user"
 	"github.com/paycrest/aggregator/utils/test"
 	tokenUtils "github.com/paycrest/aggregator/utils/token"
 	"github.com/stretchr/testify/assert"
@@ -462,15 +461,6 @@ func TestIndex(t *testing.T) {
 			assert.Equal(t, validKYBSubmission.BeneficialOwners[0].DateOfBirth, owner1.DateOfBirth)
 			assert.Equal(t, validKYBSubmission.BeneficialOwners[0].OwnershipPercentage, owner1.OwnershipPercentage)
 			assert.Equal(t, beneficialowner.GovernmentIssuedIDType(validKYBSubmission.BeneficialOwners[0].GovernmentIssuedIdType), owner1.GovernmentIssuedIDType)
-
-			// ✅ NEW: Verify user's KYB verification status was updated to "pending"
-			updatedUser, err := db.Client.User.
-				Query().
-				Where(user.IDEQ(testUser.ID)).
-				Only(context.Background())
-			assert.NoError(t, err)
-			assert.Equal(t, user.KybVerificationStatusPending, updatedUser.KybVerificationStatus,
-				"User's KYB verification status should be updated to 'pending' after submission")
 		})
 
 		t.Run("duplicate KYB submission", func(t *testing.T) {

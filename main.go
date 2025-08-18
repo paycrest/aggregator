@@ -14,28 +14,9 @@ import (
 )
 
 func main() {
-	// Set timezone with fallback options
+	// Set timezone
 	conf := config.ServerConfig()
-	loc, err := time.LoadLocation(conf.Timezone)
-	if err != nil {
-		// Try fallback timezones if the configured one fails
-		fallbackTimezones := []string{"UTC", "GMT", "America/New_York"}
-
-		for _, fallback := range fallbackTimezones {
-			if fallbackLoc, fallbackErr := time.LoadLocation(fallback); fallbackErr == nil {
-				logger.Warnf("Failed to load configured timezone %s, using fallback: %s", conf.Timezone, fallback)
-				loc = fallbackLoc
-				break
-			}
-		}
-
-		// If all fallbacks fail, use UTC as last resort
-		if loc == nil {
-			logger.Errorf("All timezone fallbacks failed, using UTC as last resort. Error: %v", err)
-			loc = time.UTC
-		}
-	}
-
+	loc, _ := time.LoadLocation(conf.Timezone)
 	time.Local = loc
 
 	// Connect to the database
@@ -52,7 +33,7 @@ func main() {
 	// }
 
 	// Fetch provider balances
-	err = tasks.FetchProviderBalances()
+	err := tasks.FetchProviderBalances()
 	if err != nil {
 		logger.Errorf("Failed to fetch provider balances: %v", err)
 	}

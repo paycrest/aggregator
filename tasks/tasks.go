@@ -31,7 +31,6 @@ import (
 	"github.com/paycrest/aggregator/ent/webhookretryattempt"
 	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/common"
-	"github.com/paycrest/aggregator/services/email"
 	"github.com/paycrest/aggregator/services/indexer"
 	orderService "github.com/paycrest/aggregator/services/order"
 	"github.com/paycrest/aggregator/storage"
@@ -881,7 +880,6 @@ func HandleReceiveAddressValidity() error {
 				tq.WithNetwork()
 			})
 			po.WithRecipient()
-			po.WithSenderProfile()
 		}).
 		All(ctx)
 	if err != nil {
@@ -1496,16 +1494,6 @@ func FetchProviderBalances() error {
 
 	for _, provider := range providers {
 		go func(p *ent.ProviderProfile) {
-			// Skip providers that don't have required configuration
-			if p.HostIdentifier == "" {
-				results <- balanceResult{
-					providerID: p.ID,
-					balances:   nil,
-					err:        fmt.Errorf("provider has no host identifier"),
-				}
-				return
-			}
-
 			balances, err := fetchProviderBalances(p.ID)
 			results <- balanceResult{
 				providerID: p.ID,
@@ -1682,8 +1670,7 @@ func updateProviderBalance(providerID, currency string, balance *types.ProviderB
 
 // StartCronJobs starts cron jobs
 func StartCronJobs() {
-	// Use the system's local timezone instead of hardcoded UTC to prevent timezone conflicts
-	scheduler := gocron.NewScheduler(time.Local)
+	scheduler := gocron.NewScheduler(time.UTC)
 	priorityQueue := services.NewPriorityQueueService()
 
 	// Initialize balance monitoring service

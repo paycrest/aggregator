@@ -453,11 +453,6 @@ func CallProviderWithHMAC(ctx context.Context, providerID, method, path string, 
 		return nil, fmt.Errorf("provider %s has no host identifier", providerID)
 	}
 
-	// Check if provider has API key
-	if provider.Edges.APIKey == nil {
-		return nil, fmt.Errorf("provider %s has no API key (data integrity issue)", providerID)
-	}
-
 	// Decrypt API key secret
 	decodedSecret, err := base64.StdEncoding.DecodeString(provider.Edges.APIKey.Secret)
 	if err != nil {
@@ -1000,33 +995,24 @@ func findSuitableProviderRate(providers []string, tokenSymbol string, networkIde
 
 		// Check if provider has sufficient balance
 		ctx := context.Background()
-		providerCurrency, err := storage.Client.ProviderCurrencies.
+		_, err = storage.Client.ProviderCurrencies.
 			Query().
 			Where(
 				providercurrencies.HasProviderWith(providerprofile.IDEQ(parts[0])),
 				providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
+				providercurrencies.AvailableBalanceGT(fiatAmount),
 				providercurrencies.IsAvailableEQ(true),
 			).
 			Only(ctx)
 		if err != nil {
+			if ent.IsNotFound(err) {
+				continue
+			}
 			logger.WithFields(logger.Fields{
 				"Error":      fmt.Sprintf("%v", err),
 				"ProviderID": parts[0],
 				"Currency":   bucketData.Currency,
 			}).Errorf("Failed to get provider balance")
-			continue
-		}
-
-		// Check if provider has sufficient balance
-		// Legacy provider with zero balance is assumed to have sufficient balance to prevent service disruption
-		if providerCurrency.AvailableBalance.LessThanOrEqual(fiatAmount) && !providerCurrency.AvailableBalance.Equal(decimal.Zero) {
-			// Modern provider with insufficient balance - skip
-			logger.WithFields(logger.Fields{
-				"ProviderID":       parts[0],
-				"Currency":         bucketData.Currency,
-				"AvailableBalance": providerCurrency.AvailableBalance.String(),
-				"RequiredAmount":   fiatAmount.String(),
-			}).Debugf("Provider %s has insufficient balance, skipping", parts[0])
 			continue
 		}
 	}
