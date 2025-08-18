@@ -445,7 +445,7 @@ func CallProviderWithHMAC(ctx context.Context, providerID, method, path string, 
 		WithAPIKey().
 		Only(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get provider: %v", err)
+		return nil, fmt.Errorf("failed to get provider: %v", err) 
 	}
 
 	// Check if provider has host identifier
