@@ -779,15 +779,83 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 		return decimal.Zero, fmt.Errorf("amount must be between %s and %s for this provider", providerOrderToken.MinOrderAmount, providerOrderToken.MaxOrderAmount)
 	}
 
-	// For provider-specific validation, we'll use the provider's configured rate
-	// This is a simplified approach - in a real implementation, you might want to
-	// get the actual rate from the provider's API or cache
+	// Try to get the provider's current rate from Redis queue first (most up-to-date)
+	redisRate, found := getProviderRateFromRedis(ctx, providerID, token.Symbol, currency.Code, amount)
+	if found {
+		return redisRate, nil
+	}
+
+	// Fallback to database rate if Redis rate not found
 	if providerOrderToken.ConversionRateType == "fixed" {
 		return providerOrderToken.FixedConversionRate, nil
 	} else {
 		// For floating rates, use market rate + floating adjustment
 		return currency.MarketRate.Add(providerOrderToken.FloatingConversionRate), nil
 	}
+}
+
+// getProviderRateFromRedis retrieves the provider's current rate from Redis queue
+func getProviderRateFromRedis(ctx context.Context, providerID, tokenSymbol, currencyCode string, amount decimal.Decimal) (decimal.Decimal, bool) {
+	// Get redis keys for provision buckets for this currency
+	keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currencyCode+"_*_*", 100).Result()
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"ProviderID": providerID,
+			"Token":      tokenSymbol,
+			"Currency":   currencyCode,
+		}).Debugf("Failed to scan Redis buckets for provider rate")
+		return decimal.Zero, false
+	}
+
+	// Scan through the buckets to find the provider's rate
+	for _, key := range keys {
+		_, err := parseBucketKey(key)
+		if err != nil {
+			continue
+		}
+
+		// Get all providers in this bucket
+		providers, err := storage.RedisClient.LRange(ctx, key, 0, -1).Result()
+		if err != nil {
+			continue
+		}
+
+		// Look for the specific provider
+		for _, providerData := range providers {
+			parts := strings.Split(providerData, ":")
+			if len(parts) != 5 {
+				continue
+			}
+
+			// Check if this is the provider we're looking for
+			if parts[0] == providerID && parts[1] == tokenSymbol {
+				// Parse the rate
+				rate, err := decimal.NewFromString(parts[2])
+				if err != nil {
+					continue
+				}
+
+				// Parse min/max order amounts
+				minOrderAmount, err := decimal.NewFromString(parts[3])
+				if err != nil {
+					continue
+				}
+
+				maxOrderAmount, err := decimal.NewFromString(parts[4])
+				if err != nil {
+					continue
+				}
+
+				// Check if amount is within provider's limits
+				if amount.GreaterThanOrEqual(minOrderAmount) && amount.LessThanOrEqual(maxOrderAmount) {
+					return rate, true
+				}
+			}
+		}
+	}
+
+	return decimal.Zero, false
 }
 
 // validateBucketRate handles bucket-based rate validation
