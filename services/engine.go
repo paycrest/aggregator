@@ -62,8 +62,8 @@ func (s *EngineService) CreateServerWallet(ctx context.Context, label string) (s
 
 // GetLatestBlock fetches the latest block number for a given chain ID
 func (s *EngineService) GetLatestBlock(ctx context.Context, chainID int64) (int64, error) {
-	// TODO: Remove once thirdweb insight supports BSC
-	if chainID != 56 {
+	// TODO: Remove once thirdweb insight supports BSC and Lisk
+	if chainID != 56 && chainID != 1135 {
 		// Try ThirdWeb first for all networks
 		res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
 			Config().SetTimeout(30 * time.Second).
@@ -277,8 +277,8 @@ func (s *EngineService) WaitForTransactionMined(ctx context.Context, queueId str
 
 // CreateTransferWebhook creates webhooks to listen to transfer events to a specific address on a specific chain
 func (s *EngineService) CreateTransferWebhook(ctx context.Context, chainID int64, contractAddress string, toAddress string, orderID string) (string, string, error) {
-	// Check if this is BNB Smart Chain (chain ID 56) - not supported by Thirdweb Insight
-	if chainID == 56 {
+	// Check if this is BNB Smart Chain (chain ID 56) or Linea (chain ID 1135) - not supported by Thirdweb Insight
+	if chainID == 56 || chainID == 1135 {
 		return "", "", fmt.Errorf("webhook creation not supported for BNB Smart Chain (chain ID 56) via Thirdweb API")
 	}
 
@@ -493,7 +493,7 @@ func (s *EngineService) CreateGatewayWebhook() error {
 	// Fetch networks for the current environment
 	networks, err := storage.Client.Network.
 		Query().
-		Where(networkent.ChainIDNEQ(56)).
+		Where(networkent.ChainIDNotIn(56, 1135)).
 		All(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to fetch networks: %w", err)
@@ -701,6 +701,7 @@ func (s *EngineService) CreateGatewayWebhook() error {
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Data":       data,
+			"ChainIDs":   chainIDsStrings,
 			"StatusCode": res.RawResponse.StatusCode,
 		}).Errorf("failed to parse JSON response: %v", err)
 		return fmt.Errorf("failed to parse JSON response: %v", err)
@@ -880,8 +881,8 @@ func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint st
 
 // GetAddressTransactionHistory fetches transaction history for any address from thirdweb insight API
 func (s *EngineService) GetAddressTransactionHistory(ctx context.Context, chainID int64, walletAddress string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
-	// Check if this is BNB Smart Chain (chain ID 56) - not supported by Thirdweb Insight
-	if chainID == 56 {
+	// Check if this is BNB Smart Chain (chain ID 56) or Linea (chain ID 1135) - not supported by Thirdweb Insight
+	if chainID == 56 || chainID == 1135 {
 		return nil, fmt.Errorf("transaction history not supported for BNB Smart Chain via Thirdweb API")
 	}
 
@@ -937,8 +938,8 @@ func (s *EngineService) GetContractEventsWithFallback(ctx context.Context, netwo
 		return events, nil
 	}
 
-	// If RPC fails, try ThirdWeb (except for BSC)
-	if network.ChainID != 56 {
+	// If RPC fails, try ThirdWeb (except for BSC and Lisk)
+	if network.ChainID != 56 && network.ChainID != 1135 {
 		events, thirdwebErr := s.GetContractEvents(ctx, network.ChainID, contractAddress, eventPayload)
 		if thirdwebErr == nil {
 			return events, nil

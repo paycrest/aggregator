@@ -3,6 +3,7 @@ package tasks
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"math"
 	"strings"
@@ -274,7 +275,12 @@ func TaskIndexBlockchainEvents() error {
 	}
 
 	// Process each network in parallel
-	for _, network := range networks {
+	for i, network := range networks {
+		// Add a small delay between starting goroutines to prevent overwhelming Etherscan
+		if i > 0 {
+			time.Sleep(100 * time.Millisecond)
+		}
+
 		go func(network *ent.Network) {
 			// Create a new context for this network's operations
 			ctx := context.Background()
@@ -1216,10 +1222,16 @@ func ResolvePaymentOrderMishaps() error {
 	}
 
 	// Process each network in parallel (EVM only)
-	for _, network := range networks {
+	for i, network := range networks {
 		// Skip Tron networks
 		if strings.HasPrefix(network.Identifier, "tron") {
 			continue
+		}
+
+		// Add a larger delay between starting goroutines to prevent overwhelming Etherscan
+		// Increased from 100ms to 500ms to respect 5 requests/second limit
+		if i > 0 {
+			time.Sleep(500 * time.Millisecond)
 		}
 
 		go func(network *ent.Network) {
@@ -1252,10 +1264,16 @@ func IndexGatewayEvents() error {
 	}
 
 	// Process each network in parallel (EVM only)
-	for _, network := range networks {
+	for i, network := range networks {
 		// Skip Tron networks
 		if strings.HasPrefix(network.Identifier, "tron") {
 			continue
+		}
+
+		// Add a larger delay between starting goroutines to prevent overwhelming Etherscan
+		// Increased from 100ms to 500ms to respect 5 requests/second limit
+		if i > 0 {
+			time.Sleep(500 * time.Millisecond)
 		}
 
 		go func(network *ent.Network) {
@@ -1368,7 +1386,12 @@ func ProcessStuckValidatedOrders() error {
 		return fmt.Errorf("ProcessStuckValidatedOrders.getNetworks: %w", err)
 	}
 
-	for _, network := range networks {
+	for i, network := range networks {
+		// Add a small delay between starting goroutines to prevent overwhelming Etherscan
+		if i > 0 {
+			time.Sleep(100 * time.Millisecond)
+		}
+
 		go func(network *ent.Network) {
 			// Get stuck validated orders for this network
 			lockOrders, err := storage.Client.LockPaymentOrder.
@@ -1468,6 +1491,13 @@ func FetchProviderBalances() error {
 	// Get all provider profiles
 	providers, err := storage.Client.ProviderProfile.
 		Query().
+		Where(
+			providerprofile.HostIdentifierNEQ(""),
+			providerprofile.IsActiveEQ(true),
+			providerprofile.HasProviderCurrenciesWith(
+				providercurrencies.IsAvailableEQ(true),
+			),
+		).
 		All(ctx)
 	if err != nil {
 		logger.Errorf("Failed to fetch provider profiles: %v", err)
@@ -1490,16 +1520,6 @@ func FetchProviderBalances() error {
 
 	for _, provider := range providers {
 		go func(p *ent.ProviderProfile) {
-			// Skip providers that don't have required configuration
-			if p.HostIdentifier == "" {
-				results <- balanceResult{
-					providerID: p.ID,
-					balances:   nil,
-					err:        fmt.Errorf("provider has no host identifier"),
-				}
-				return
-			}
-
 			balances, err := fetchProviderBalances(p.ID)
 			results <- balanceResult{
 				providerID: p.ID,
@@ -1564,20 +1584,43 @@ func FetchProviderBalances() error {
 
 // fetchProviderBalances fetches balances for a specific provider
 func fetchProviderBalances(providerID string) (map[string]*types.ProviderBalance, error) {
-	// Prepare payload for HMAC authentication
-	payload := map[string]interface{}{
-		"timestamp": time.Now().Unix(),
-	}
-
-	// Call provider /info endpoint using utility function
-	data, err := utils.CallProviderWithHMAC(context.Background(), providerID, "GET", "/info", payload)
+	// Get provider with host identifier
+	provider, err := storage.Client.ProviderProfile.
+		Query().
+		Where(providerprofile.IDEQ(providerID)).
+		Only(context.Background())
 	if err != nil {
-		return nil, fmt.Errorf("failed to call provider: %v", err)
+		return nil, fmt.Errorf("failed to get provider: %v", err)
 	}
 
-	// Parse the response data into ProviderInfoResponse
+	// Check if provider has host identifier
+	if provider.HostIdentifier == "" {
+		return nil, fmt.Errorf("provider %s has no host identifier", providerID)
+	}
+
+	// Call provider /info endpoint without HMAC (endpoint doesn't require authentication)
+	res, err := fastshot.NewClient(provider.HostIdentifier).
+		Config().SetTimeout(30 * time.Second).
+		Build().GET("/info").
+		Send()
+	if err != nil {
+		return nil, fmt.Errorf("failed to call provider /info endpoint: %v", err)
+	}
+
+	// Parse JSON response
+	data, err := utils.ParseJSONResponse(res.RawResponse)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse response: %v", err)
+	}
+
+	// Parse the response data into ProviderInfoResponse using proper JSON unmarshaling
+	responseBytes, err := json.Marshal(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal response data: %v", err)
+	}
+
 	var response types.ProviderInfoResponse
-	if err := utils.MapToStruct(data, &response); err != nil {
+	if err := json.Unmarshal(responseBytes, &response); err != nil {
 		return nil, fmt.Errorf("failed to parse response data: %v", err)
 	}
 
@@ -1746,8 +1789,8 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for ProcessStuckValidatedOrders: %v", err)
 	}
 
-	// Index blockchain events every 6 seconds
-	_, err = scheduler.Every(6).Seconds().Do(TaskIndexBlockchainEvents)
+	// Index blockchain events every 4 seconds
+	_, err = scheduler.Every(4).Seconds().Do(TaskIndexBlockchainEvents)
 	if err != nil {
 		logger.Errorf("StartCronJobs for IndexBlockchainEvents: %v", err)
 	}

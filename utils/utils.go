@@ -780,18 +780,35 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 	}
 
 	// Try to get the provider's current rate from Redis queue first (most up-to-date)
+	var rateResponse decimal.Decimal
 	redisRate, found := getProviderRateFromRedis(ctx, providerID, token.Symbol, currency.Code, amount)
 	if found {
-		return redisRate, nil
+		rateResponse = redisRate
+	} else {
+		// Fallback to database rate if Redis rate not found
+		if providerOrderToken.ConversionRateType == "fixed" {
+			rateResponse = providerOrderToken.FixedConversionRate
+		} else {
+			// For floating rates, use market rate + floating adjustment
+			rateResponse = currency.MarketRate.Add(providerOrderToken.FloatingConversionRate)
+		}
 	}
 
-	// Fallback to database rate if Redis rate not found
-	if providerOrderToken.ConversionRateType == "fixed" {
-		return providerOrderToken.FixedConversionRate, nil
-	} else {
-		// For floating rates, use market rate + floating adjustment
-		return currency.MarketRate.Add(providerOrderToken.FloatingConversionRate), nil
+	// Check if provider has sufficient balance
+	_, err = storage.Client.ProviderCurrencies.
+		Query().
+		Where(
+			providercurrencies.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+			providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currency.Code)),
+			providercurrencies.AvailableBalanceGT(amount.Mul(rateResponse)),
+			providercurrencies.IsAvailableEQ(true),
+		).
+		Only(ctx)
+	if err != nil {
+		return decimal.Zero, fmt.Errorf("provider has insufficient liquidity for this currency: %s", currency.Code)
 	}
+
+	return rateResponse, nil
 }
 
 // getProviderRateFromRedis retrieves the provider's current rate from Redis queue
@@ -1068,11 +1085,12 @@ func findSuitableProviderRate(providers []string, tokenSymbol string, networkIde
 
 		// Check if provider has sufficient balance
 		ctx := context.Background()
-		providerCurrency, err := storage.Client.ProviderCurrencies.
+		_, err = storage.Client.ProviderCurrencies.
 			Query().
 			Where(
 				providercurrencies.HasProviderWith(providerprofile.IDEQ(parts[0])),
 				providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
+				providercurrencies.AvailableBalanceGT(fiatAmount),
 				providercurrencies.IsAvailableEQ(true),
 			).
 			Only(ctx)
@@ -1082,19 +1100,6 @@ func findSuitableProviderRate(providers []string, tokenSymbol string, networkIde
 				"ProviderID": parts[0],
 				"Currency":   bucketData.Currency,
 			}).Errorf("Failed to get provider balance")
-			continue
-		}
-
-		// Check if provider has sufficient balance
-		// Legacy provider with zero balance is assumed to have sufficient balance to prevent service disruption
-		if providerCurrency.AvailableBalance.LessThanOrEqual(fiatAmount) && !providerCurrency.AvailableBalance.Equal(decimal.Zero) {
-			// Modern provider with insufficient balance - skip
-			logger.WithFields(logger.Fields{
-				"ProviderID":       parts[0],
-				"Currency":         bucketData.Currency,
-				"AvailableBalance": providerCurrency.AvailableBalance.String(),
-				"RequiredAmount":   fiatAmount.String(),
-			}).Debugf("Provider %s has insufficient balance, skipping", parts[0])
 			continue
 		}
 	}

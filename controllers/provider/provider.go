@@ -532,7 +532,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		// Release reserved balance within the same transaction
 		providerID := fulfillment.Edges.Order.Edges.Provider.ID
 		currency := fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency.Code
-		amount := fulfillment.Edges.Order.Amount
+		amount := fulfillment.Edges.Order.Amount.Mul(fulfillment.Edges.Order.Rate).RoundBank(0)
 
 		err = ctrl.balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount, tx)
 		if err != nil {
@@ -639,7 +639,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		// Release reserved balance for failed validation
 		providerID := fulfillment.Edges.Order.Edges.Provider.ID
 		currency := fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency.Code
-		amount := fulfillment.Edges.Order.Amount
+		amount := fulfillment.Edges.Order.Amount.Mul(fulfillment.Edges.Order.Rate).RoundBank(0)
 
 		err = ctrl.balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount, nil)
 		if err != nil {
@@ -825,7 +825,7 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 	// Release reserved balance for this cancelled order
 	providerID := order.Edges.Provider.ID
 	currency := order.Edges.ProvisionBucket.Edges.Currency.Code
-	amount := order.Amount
+	amount := order.Amount.Mul(order.Rate).RoundBank(0)
 
 	err = ctrl.balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount, nil)
 	if err != nil {
@@ -1138,7 +1138,6 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 	// Try to fetch from /info endpoint first (for new providers)
 	var data map[string]interface{}
 	var currencyCodes []string
-	var isLegacyProvider bool
 
 	res, err := fastshot.NewClient(provider.HostIdentifier).
 		Config().SetTimeout(30 * time.Second).
@@ -1146,23 +1145,13 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 		Send()
 
 	if err != nil {
-		// Try /health endpoint for legacy providers
-		res, err = fastshot.NewClient(provider.HostIdentifier).
-			Config().SetTimeout(30 * time.Second).
-			Build().GET("/health").
-			Send()
-
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":    fmt.Sprintf("%v", err),
-				"Provider": provider.ID,
-				"Host":     provider.HostIdentifier,
-			}).Errorf("Failed to fetch node info from both /info and /health endpoints: %v", err)
-			u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
-			return
-		}
-
-		isLegacyProvider = true
+		logger.WithFields(logger.Fields{
+			"Error":    fmt.Sprintf("%v", err),
+			"Provider": provider.ID,
+			"Host":     provider.HostIdentifier,
+		}).Errorf("Failed to fetch node info from /info endpoint: %v", err)
+		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
+		return
 	}
 
 	data, err = u.ParseJSONResponse(res.RawResponse)
@@ -1174,66 +1163,38 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 		return
 	}
 
-	if isLegacyProvider {
-		// Handle legacy provider response format: {"data":{"currencies":["NGN","KES","GHS"]},"message":"Node is live","status":"success"}
-		dataMap, ok := data["data"].(map[string]interface{})
-		if !ok {
-			logger.WithFields(logger.Fields{
-				"Error": "data field is not a map in legacy response",
-			}).Errorf("failed to parse legacy node info: data field is not a map")
-			u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Invalid legacy data format", nil)
-			return
-		}
+	// Handle new provider response format with serviceInfo
+	dataMap, ok := data["data"].(map[string]interface{})
+	if !ok {
+		logger.WithFields(logger.Fields{
+			"Error": "data field is not a map",
+		}).Errorf("failed to parse node info: data field is not a map")
+		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Invalid data format", nil)
+		return
+	}
 
-		currenciesData, ok := dataMap["currencies"].([]interface{})
-		if !ok {
-			logger.WithFields(logger.Fields{
-				"Error": "currencies field is not an array in legacy response",
-			}).Errorf("failed to parse legacy node info: currencies field is not an array")
-			u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Currencies data is not in expected format", nil)
-			return
-		}
+	serviceInfo, ok := dataMap["serviceInfo"].(map[string]interface{})
+	if !ok {
+		logger.WithFields(logger.Fields{
+			"Error": "serviceInfo field is not a map",
+		}).Errorf("failed to parse node info: serviceInfo field is not a map")
+		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Invalid service info format", nil)
+		return
+	}
 
-		// Convert []interface{} to []string
-		for _, currency := range currenciesData {
-			if code, ok := currency.(string); ok {
-				currencyCodes = append(currencyCodes, code)
-			}
-		}
-	} else {
-		// Handle new provider response format with serviceInfo
-		dataMap, ok := data["data"].(map[string]interface{})
-		if !ok {
-			logger.WithFields(logger.Fields{
-				"Error": "data field is not a map",
-			}).Errorf("failed to parse node info: data field is not a map")
-			u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Invalid data format", nil)
-			return
-		}
+	currenciesData, ok := serviceInfo["currencies"].([]interface{})
+	if !ok {
+		logger.WithFields(logger.Fields{
+			"Error": "currencies field is not an array",
+		}).Errorf("failed to parse node info: currencies field is not an array")
+		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Currencies data is not in expected format", nil)
+		return
+	}
 
-		serviceInfo, ok := dataMap["serviceInfo"].(map[string]interface{})
-		if !ok {
-			logger.WithFields(logger.Fields{
-				"Error": "serviceInfo field is not a map",
-			}).Errorf("failed to parse node info: serviceInfo field is not a map")
-			u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Invalid service info format", nil)
-			return
-		}
-
-		currenciesData, ok := serviceInfo["currencies"].([]interface{})
-		if !ok {
-			logger.WithFields(logger.Fields{
-				"Error": "currencies field is not an array",
-			}).Errorf("failed to parse node info: currencies field is not an array")
-			u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Currencies data is not in expected format", nil)
-			return
-		}
-
-		// Convert []interface{} to []string
-		for _, currency := range currenciesData {
-			if code, ok := currency.(string); ok {
-				currencyCodes = append(currencyCodes, code)
-			}
+	// Convert []interface{} to []string
+	for _, currency := range currenciesData {
+		if code, ok := currency.(string); ok {
+			currencyCodes = append(currencyCodes, code)
 		}
 	}
 

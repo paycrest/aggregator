@@ -543,7 +543,7 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 
 		providerID := lockOrder.Edges.Provider.ID
 		currency := lockOrder.Edges.ProvisionBucket.Edges.Currency.Code
-		amount := lockOrder.Amount
+		amount := lockOrder.Amount.Mul(lockOrder.Rate).RoundBank(0)
 
 		err = balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount, nil)
 		if err != nil {
@@ -731,7 +731,7 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 
 		providerID := lockOrder.Edges.Provider.ID
 		currency := lockOrder.Edges.ProvisionBucket.Edges.Currency.Code
-		amount := lockOrder.Amount
+		amount := lockOrder.Amount.Mul(lockOrder.Rate).RoundBank(0)
 
 		// Get current balance to update it appropriately
 		currentBalance, err := balanceService.GetProviderBalance(ctx, providerID, currency)
