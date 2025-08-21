@@ -66,7 +66,7 @@ func (s *EngineService) GetLatestBlock(ctx context.Context, chainID int64) (int6
 	if chainID != 56 && chainID != 1135 {
 		// Try ThirdWeb first for all networks
 		res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
-			Config().SetTimeout(30 * time.Second).
+			Config().SetTimeout(60 * time.Second).
 			Header().AddAll(map[string]string{
 			"Content-Type": "application/json",
 			"X-Secret-Key": s.config.ThirdwebSecretKey,
@@ -124,7 +124,7 @@ func (s *EngineService) GetLatestBlock(ctx context.Context, chainID int64) (int6
 // GetContractEvents fetches contract events
 func (s *EngineService) GetContractEvents(ctx context.Context, chainID int64, contractAddress string, payload map[string]string) ([]interface{}, error) {
 	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
-		Config().SetTimeout(30 * time.Second).
+		Config().SetTimeout(60 * time.Second).
 		Header().AddAll(map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/json",
@@ -182,7 +182,7 @@ func (s *EngineService) SendTransactionBatch(ctx context.Context, chainID int64,
 // GetTransactionStatus gets the status of a transaction
 func (s *EngineService) GetTransactionStatus(ctx context.Context, queueId string) (result map[string]interface{}, err error) {
 	res, err := fastshot.NewClient(s.config.BaseURL).
-		Config().SetTimeout(30 * time.Second).
+		Config().SetTimeout(60 * time.Second).
 		Header().AddAll(map[string]string{
 		"Accept":               "application/json",
 		"Content-Type":         "application/json",
@@ -411,7 +411,7 @@ type WebhookListResponse struct {
 // GetWebhookByID fetches a webhook by its ID from thirdweb
 func (s *EngineService) GetWebhookByID(ctx context.Context, webhookID string, chainID int64) (*WebhookInfo, error) {
 	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
-		Config().SetTimeout(30 * time.Second).
+		Config().SetTimeout(60 * time.Second).
 		Header().AddAll(map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/json",
@@ -900,7 +900,7 @@ func (s *EngineService) GetAddressTransactionHistory(ctx context.Context, chainI
 	}
 
 	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
-		Config().SetTimeout(30 * time.Second).
+		Config().SetTimeout(60 * time.Second).
 		Header().AddAll(map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/json",
