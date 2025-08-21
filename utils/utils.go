@@ -747,7 +747,7 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 		if ent.IsNotFound(err) {
 			return decimal.Zero, fmt.Errorf("provider not found")
 		}
-		return decimal.Zero, fmt.Errorf("failed to fetch provider profile: %v", err)
+		return decimal.Zero, fmt.Errorf("internal server error")
 	}
 
 	// Get the provider's order token configuration to validate min/max amounts
@@ -771,7 +771,7 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 		if ent.IsNotFound(err) {
 			return decimal.Zero, fmt.Errorf("provider does not support this token/currency combination")
 		}
-		return decimal.Zero, fmt.Errorf("failed to fetch provider configuration: %v", err)
+		return decimal.Zero, fmt.Errorf("internal server error")
 	}
 
 	// Validate that the token amount is within the provider's min/max limits
@@ -805,7 +805,10 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 		).
 		Only(ctx)
 	if err != nil {
-		return decimal.Zero, fmt.Errorf("provider has insufficient liquidity for this currency: %s", currency.Code)
+		if ent.IsNotFound(err) {
+			return decimal.Zero, fmt.Errorf("provider has insufficient liquidity for %s", currency.Code)
+		}
+		return decimal.Zero, fmt.Errorf("internal server error")
 	}
 
 	return rateResponse, nil
@@ -880,7 +883,12 @@ func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.Fia
 	// Get redis keys for provision buckets
 	keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currency.Code+"_*_*", 100).Result()
 	if err != nil {
-		return decimal.Zero, fmt.Errorf("failed to fetch rates: %v", err)
+		logger.WithFields(logger.Fields{
+			"Error":    fmt.Sprintf("%v", err),
+			"Currency": currency.Code,
+			"Network":  networkIdentifier,
+		}).Errorf("Failed to scan Redis buckets for bucket rate")
+		return decimal.Zero, fmt.Errorf("internal server error")
 	}
 
 	// Track the best available rate and reason for logging
@@ -1095,12 +1103,10 @@ func findSuitableProviderRate(providers []string, tokenSymbol string, networkIde
 			).
 			Only(ctx)
 		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":      fmt.Sprintf("%v", err),
-				"ProviderID": parts[0],
-				"Currency":   bucketData.Currency,
-			}).Errorf("Failed to get provider balance")
-			continue
+			if ent.IsNotFound(err) {
+				continue
+			}
+			return decimal.Zero, false
 		}
 	}
 
