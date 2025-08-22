@@ -1016,7 +1016,7 @@ func HandleReceiveAddressValidity(ctx context.Context, receiveAddress *ent.Recei
 			if err != nil {
 				return fmt.Errorf("HandleReceiveAddressValidity.db: %v", err)
 			}
-		} else if isExpired && !strings.HasPrefix(paymentOrder.Edges.Recipient.Memo, "P#P") {
+		} else if isExpired && receiveAddress.Status != receiveaddress.StatusExpired && paymentOrder.Status != paymentorder.StatusExpired && !strings.HasPrefix(paymentOrder.Edges.Recipient.Memo, "P#P") {
 			// Receive address hasn't received payment after validity period, mark status as expired
 			_, err := receiveAddress.
 				Update().
