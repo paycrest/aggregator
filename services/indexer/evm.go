@@ -18,10 +18,11 @@ import (
 
 // IndexerEVM performs blockchain to database extract, transform, load (ETL) operations.
 type IndexerEVM struct {
-	priorityQueue    *services.PriorityQueueService
-	order            types.OrderService
-	engineService    *services.EngineService
-	etherscanService *services.EtherscanService
+	priorityQueue     *services.PriorityQueueService
+	order             types.OrderService
+	engineService     *services.EngineService
+	etherscanService  *services.EtherscanService
+	blockscoutService *services.BlockscoutService
 }
 
 // NewIndexerEVM creates a new instance of IndexerEVM.
@@ -33,12 +34,14 @@ func NewIndexerEVM() (types.Indexer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create EtherscanService: %w", err)
 	}
+	blockscoutService := services.NewBlockscoutService()
 
 	return &IndexerEVM{
-		priorityQueue:    priorityQueue,
-		order:            orderService,
-		engineService:    engineService,
-		etherscanService: etherscanService,
+		priorityQueue:     priorityQueue,
+		order:             orderService,
+		engineService:     engineService,
+		etherscanService:  etherscanService,
+		blockscoutService: blockscoutService,
 	}, nil
 }
 
@@ -314,7 +317,7 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 	return eventCounts, nil
 }
 
-// getAddressTransactionHistoryWithFallback tries etherscan first and falls back to engine
+// getAddressTransactionHistoryWithFallback tries etherscan first and falls back to engine or blockscout
 func (s *IndexerEVM) getAddressTransactionHistoryWithFallback(ctx context.Context, chainID int64, address string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
 	var err error
 
@@ -327,6 +330,17 @@ func (s *IndexerEVM) getAddressTransactionHistoryWithFallback(ctx context.Contex
 		}
 		// Log the error but continue to fallback
 		logger.Warnf("Etherscan failed for chain %d, falling back to Engine: %v", chainID, err)
+	}
+
+	// For Lisk (chain ID 1135), use Blockscout service
+	if chainID == 1135 {
+		transactions, err := s.blockscoutService.GetAddressTransactionHistory(ctx, chainID, address, limit, fromBlock, toBlock)
+		if err == nil {
+			// Blockscout succeeded, return the transactions
+			return transactions, nil
+		}
+		// Log the error but continue to fallback
+		logger.Warnf("Blockscout failed for chain %d, falling back to Engine: %v", chainID, err)
 	}
 
 	// Try engine service as fallback
@@ -345,7 +359,7 @@ func (s *IndexerEVM) getAddressTransactionHistoryWithFallback(ctx context.Contex
 		return nil, fmt.Errorf("transaction history not supported for BNB Smart Chain (chain ID 56) via either etherscan or engine")
 	}
 
-	return nil, fmt.Errorf("transaction history not supported for Lisk (chain ID 1135) via either engine or etherscan")
+	return nil, fmt.Errorf("transaction history not supported for chain %d via any available service", chainID)
 }
 
 // indexReceiveAddressByUserAddress processes user's transaction history for receive address transfers
