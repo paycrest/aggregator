@@ -543,7 +543,7 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 
 		providerID := lockOrder.Edges.Provider.ID
 		currency := lockOrder.Edges.ProvisionBucket.Edges.Currency.Code
-		amount := lockOrder.Amount
+		amount := lockOrder.Amount.Mul(lockOrder.Rate).RoundBank(0)
 
 		err = balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount, nil)
 		if err != nil {
@@ -731,7 +731,7 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 
 		providerID := lockOrder.Edges.Provider.ID
 		currency := lockOrder.Edges.ProvisionBucket.Edges.Currency.Code
-		amount := lockOrder.Amount
+		amount := lockOrder.Amount.Mul(lockOrder.Rate).RoundBank(0)
 
 		// Get current balance to update it appropriately
 		currentBalance, err := balanceService.GetProviderBalance(ctx, providerID, currency)
@@ -1016,7 +1016,7 @@ func HandleReceiveAddressValidity(ctx context.Context, receiveAddress *ent.Recei
 			if err != nil {
 				return fmt.Errorf("HandleReceiveAddressValidity.db: %v", err)
 			}
-		} else if isExpired && !strings.HasPrefix(paymentOrder.Edges.Recipient.Memo, "P#P") {
+		} else if isExpired && receiveAddress.Status != receiveaddress.StatusExpired && paymentOrder.Status != paymentorder.StatusExpired && !strings.HasPrefix(paymentOrder.Edges.Recipient.Memo, "P#P") {
 			// Receive address hasn't received payment after validity period, mark status as expired
 			_, err := receiveAddress.
 				Update().

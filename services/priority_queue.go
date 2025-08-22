@@ -74,9 +74,8 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 				providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
 				providerprofile.HasProviderCurrenciesWith(
 					providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)),
+					providercurrencies.AvailableBalanceGT(bucket.MinAmount),
 					providercurrencies.IsAvailableEQ(true),
-					// Removed AvailableBalanceGT check to prevent service disruption during balance management rollout
-					// Legacy providers (with zero balance) will still be included
 					// TODO: add check to enforce critical balance threshold in the future
 				),
 			).
@@ -375,30 +374,37 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types.LockPaymentOrderFields) error {
 	// Reserve balance for this order
 	currency := order.ProvisionBucket.Edges.Currency.Code
-	amount := order.Amount
+	amount := order.Amount.Mul(order.Rate).RoundBank(0)
 
-	err := s.balanceService.ReserveBalance(ctx, order.ProviderID, currency, amount)
+	// Start a transaction for the entire operation
+	tx, err := storage.Client.Tx(ctx)
 	if err != nil {
-		// Check if this is a legacy provider
-		isLegacy, legacyErr := s.balanceService.IsLegacyProvider(ctx, order.ProviderID, currency)
-		if legacyErr == nil && isLegacy {
-			// For legacy providers, skip balance reservation
-			logger.WithFields(logger.Fields{
-				"OrderID":    order.ID.String(),
-				"ProviderID": order.ProviderID,
-				"Currency":   currency,
-				"Amount":     amount.String(),
-			}).Infof("Legacy provider %s, skipping balance reservation", order.ProviderID)
-		} else {
-			logger.WithFields(logger.Fields{
-				"Error":      fmt.Sprintf("%v", err),
-				"OrderID":    order.ID.String(),
-				"ProviderID": order.ProviderID,
-				"Currency":   currency,
-				"Amount":     amount.String(),
-			}).Errorf("failed to reserve balance for order")
-			return err
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"OrderID":    order.ID.String(),
+			"ProviderID": order.ProviderID,
+			"Currency":   currency,
+			"Amount":     amount.String(),
+		}).Errorf("Failed to start transaction for order processing")
+		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
 		}
+	}()
+
+	// Reserve balance within the transaction
+	err = s.balanceService.ReserveBalance(ctx, order.ProviderID, currency, amount, tx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"OrderID":    order.ID.String(),
+			"ProviderID": order.ProviderID,
+			"Currency":   currency,
+			"Amount":     amount.String(),
+		}).Errorf("Failed to reserve balance for order")
+		return err
 	}
 
 	// Assign the order to the provider and save it to Redis
@@ -418,7 +424,7 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 			"OrderID":    order.ID.String(),
 			"ProviderID": order.ProviderID,
 			"OrderKey":   orderKey,
-		}).Errorf("failed to map order to a provider in Redis")
+		}).Errorf("Failed to map order to a provider in Redis")
 		return err
 	}
 
@@ -428,7 +434,7 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 		logger.WithFields(logger.Fields{
 			"Error":    fmt.Sprintf("%v", err),
 			"OrderKey": orderKey,
-		}).Errorf("failed to set TTL for order request")
+		}).Errorf("Failed to set TTL for order request")
 	}
 
 	// Notify the provider
@@ -438,9 +444,26 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 			"Error":      fmt.Sprintf("%v", err),
 			"OrderID":    order.ID.String(),
 			"ProviderID": order.ProviderID,
-		}).Errorf("failed to notify provider")
+		}).Errorf("Failed to notify provider")
 		return err
 	}
+
+	// Commit the transaction if everything succeeded
+	if err := tx.Commit(); err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"OrderID":    order.ID.String(),
+			"ProviderID": order.ProviderID,
+		}).Errorf("Failed to commit order processing transaction")
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	logger.WithFields(logger.Fields{
+		"OrderID":    order.ID.String(),
+		"ProviderID": order.ProviderID,
+		"Currency":   currency,
+		"Amount":     amount.String(),
+	}).Infof("Order processed successfully with balance reserved")
 
 	return nil
 }
@@ -588,7 +611,7 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 
 		if rate.Sub(order.Rate).Abs().LessThanOrEqual(allowedDeviation) {
 			// Check if provider has sufficient balance for this order
-			hasSufficientBalance, err := s.balanceService.CheckBalanceSufficiency(ctx, order.ProviderID, bucketCurrency.Code, order.Amount)
+			hasSufficientBalance, err := s.balanceService.CheckBalanceSufficiency(ctx, order.ProviderID, bucketCurrency.Code, order.Amount.Mul(order.Rate).RoundBank(0))
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":      fmt.Sprintf("%v", err),
@@ -664,6 +687,7 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 					}).Errorf("failed to push provider to order exclude list when matching rate")
 				}
 
+				// Note: Balance cleanup is now handled in sendOrderRequest via defer
 				// Reassign the lock payment order to another provider
 				return s.AssignLockPaymentOrder(ctx, order)
 			}
