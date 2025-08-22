@@ -57,6 +57,7 @@ func RegisterRoutes(route *gin.Engine) {
 	v1.POST("kyc", ctrl.RequestIDVerification)
 	v1.GET("kyc/:wallet_address", ctrl.GetIDVerificationStatus)
 	v1.POST("kyc/webhook", ctrl.KYCWebhook)
+	v1.PUT("kyc/update_kyc_wallet_address", ctrl.HandleWalletAddressUpdateForKYC)
 
 	// Insight webhook route
 	v1.POST("insight/webhook", ctrl.InsightWebhook)
