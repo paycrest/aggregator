@@ -2,30 +2,33 @@ package controllers
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jarcoal/httpmock"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
-	"github.com/paycrest/aggregator/routers/middleware"
-	db "github.com/paycrest/aggregator/storage"
-	"github.com/paycrest/aggregator/types"
-	"github.com/shopspring/decimal"
-
-	"github.com/gin-gonic/gin"
 	"github.com/paycrest/aggregator/ent/beneficialowner"
 	"github.com/paycrest/aggregator/ent/enttest"
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
 	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/user"
+	"github.com/paycrest/aggregator/routers/middleware"
+	db "github.com/paycrest/aggregator/storage"
+	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils/test"
 	tokenUtils "github.com/paycrest/aggregator/utils/token"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -66,6 +69,7 @@ func TestIndex(t *testing.T) {
 	router.POST("kyc", ctrl.RequestIDVerification)
 	router.GET("kyc/:wallet_address", ctrl.GetIDVerificationStatus)
 	router.POST("kyc/webhook", ctrl.KYCWebhook)
+	router.PUT("kyc/update_kyc_wallet_address", ctrl.HandleWalletAddressUpdateForKYC)
 	router.GET("/v1/tokens", ctrl.GetSupportedTokens)
 	router.POST("/v1/kyb-submission", middleware.JWTMiddleware, ctrl.HandleKYBSubmission)
 
@@ -569,6 +573,214 @@ func TestIndex(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, "error", response.Status)
 			assert.Equal(t, "Invalid input", response.Message)
+		})
+	})
+
+	t.Run("HandleWalletAddressUpdateForKYC", func(t *testing.T) {
+		// Create test data for KYC verification request
+		timestamp := time.Now().UnixNano()
+		oldWalletAddress := fmt.Sprintf("0xf4c5c4deDde7A86b25E7430796441e209e23eBF%d", timestamp%1000)
+		nonce := fmt.Sprintf("test-nonce-%d", timestamp)
+
+		// Generate a private key for testing
+		privateKey, err := crypto.GenerateKey()
+		assert.NoError(t, err)
+
+		// Get the wallet address from the private key
+		publicKey := privateKey.Public()
+		publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+		assert.True(t, ok)
+		signerAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
+		newWalletAddress := signerAddress.Hex()
+
+		// Create a valid signature for the new wallet address
+		message := fmt.Sprintf("I accept the KYC Policy and hereby request an identity verification check for %s with nonce %s", newWalletAddress, nonce)
+		prefix := "\x19Ethereum Signed Message:\n" + fmt.Sprint(len(message))
+		hash := crypto.Keccak256Hash([]byte(prefix + message))
+
+		// Sign the message
+		signature, err := crypto.Sign(hash.Bytes(), privateKey)
+		assert.NoError(t, err)
+
+		// Adjust the recovery ID to match Ethereum's expected format (27 or 28)
+		if signature[64] == 0 {
+			signature[64] = 27
+		} else if signature[64] == 1 {
+			signature[64] = 28
+		}
+
+		// Convert signature to hex string
+		signatureHex := hex.EncodeToString(signature)
+
+		// Create a verified KYC record for the old wallet address
+		verifiedIVR, err := db.Client.IdentityVerificationRequest.
+			Create().
+			SetWalletAddress(oldWalletAddress).
+			SetWalletSignature("old-signature").
+			SetPlatform(identityverificationrequest.PlatformSmileID).
+			SetStatus(identityverificationrequest.StatusSuccess).
+			SetVerificationURL("https://example.com/verify").
+			SetPlatformRef("test-ref").
+			Save(context.Background())
+		assert.NoError(t, err)
+		assert.NotNil(t, verifiedIVR)
+
+		t.Run("successful wallet address update", func(t *testing.T) {
+			payload := types.UpdateKYCWalletAddressRequest{
+				OldWalletAddress: oldWalletAddress,
+				NewWalletAddress: newWalletAddress,
+				Signature:        signatureHex,
+				Nonce:            nonce,
+			}
+
+			res, err := test.PerformRequest(t, "PUT", "/kyc/update_kyc_wallet_address", payload, nil, router)
+			assert.NoError(t, err)
+
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "success", response.Status)
+			assert.Equal(t, "KYC wallet address updated successfully", response.Message)
+
+			// Verify response data
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok, "response.Data should be map[string]interface{}")
+			assert.Equal(t, oldWalletAddress, data["old_wallet_address"])
+			assert.Equal(t, newWalletAddress, data["new_wallet_address"])
+			assert.NotNil(t, data["updated_at"])
+
+			// Verify database was updated
+			updatedIVR, err := db.Client.IdentityVerificationRequest.
+				Query().
+				Where(identityverificationrequest.WalletAddressEQ(newWalletAddress)).
+				Only(context.Background())
+			assert.NoError(t, err)
+			assert.Equal(t, newWalletAddress, updatedIVR.WalletAddress)
+			assert.Equal(t, identityverificationrequest.StatusSuccess, updatedIVR.Status)
+
+			// Verify old wallet address no longer exists
+			_, err = db.Client.IdentityVerificationRequest.
+				Query().
+				Where(identityverificationrequest.WalletAddressEQ(oldWalletAddress)).
+				Only(context.Background())
+			assert.Error(t, err)
+			assert.True(t, ent.IsNotFound(err))
+		})
+
+		t.Run("invalid signature", func(t *testing.T) {
+			payload := types.UpdateKYCWalletAddressRequest{
+				OldWalletAddress: oldWalletAddress,
+				NewWalletAddress: newWalletAddress,
+				Signature:        "invalid-signature",
+				Nonce:            nonce,
+			}
+
+			res, err := test.PerformRequest(t, "PUT", "/kyc/update_kyc_wallet_address", payload, nil, router)
+			assert.NoError(t, err)
+
+			assert.Equal(t, http.StatusUnauthorized, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Equal(t, "Invalid signature", response.Message)
+		})
+
+		t.Run("missing required fields", func(t *testing.T) {
+			payload := types.UpdateKYCWalletAddressRequest{
+				OldWalletAddress: oldWalletAddress,
+				// Missing NewWalletAddress, Signature, and Nonce
+			}
+
+			res, err := test.PerformRequest(t, "PUT", "/kyc/update_kyc_wallet_address", payload, nil, router)
+			assert.NoError(t, err)
+
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Equal(t, "OldWalletAddress, NewWalletAddress, Signature, and Nonce are required", response.Message)
+		})
+
+		t.Run("empty required fields", func(t *testing.T) {
+			payload := types.UpdateKYCWalletAddressRequest{
+				OldWalletAddress: "",
+				NewWalletAddress: "",
+				Signature:        "",
+				Nonce:            "",
+			}
+
+			res, err := test.PerformRequest(t, "PUT", "/kyc/update_kyc_wallet_address", payload, nil, router)
+			assert.NoError(t, err)
+
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Equal(t, "OldWalletAddress, NewWalletAddress, Signature, and Nonce are required", response.Message)
+		})
+
+		t.Run("old wallet address not found", func(t *testing.T) {
+			payload := types.UpdateKYCWalletAddressRequest{
+				OldWalletAddress: "0x9999999999999999999999999999999999999999",
+				NewWalletAddress: newWalletAddress,
+				Signature:        signatureHex,
+				Nonce:            nonce,
+			}
+
+			res, err := test.PerformRequest(t, "PUT", "/kyc/update_kyc_wallet_address", payload, nil, router)
+			assert.NoError(t, err)
+
+			assert.Equal(t, http.StatusNotFound, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Equal(t, "No verification request found for this wallet address", response.Message)
+		})
+
+		t.Run("KYC not verified", func(t *testing.T) {
+			// Create a pending KYC record
+			pendingIVR, err := db.Client.IdentityVerificationRequest.
+				Create().
+				SetWalletAddress("0x8888888888888888888888888888888888888888").
+				SetWalletSignature("pending-signature").
+				SetPlatform(identityverificationrequest.PlatformSmileID).
+				SetStatus(identityverificationrequest.StatusPending).
+				SetVerificationURL("https://example.com/verify").
+				SetPlatformRef("test-ref-pending").
+				Save(context.Background())
+			assert.NoError(t, err)
+
+			payload := types.UpdateKYCWalletAddressRequest{
+				OldWalletAddress: "0x8888888888888888888888888888888888888888",
+				NewWalletAddress: newWalletAddress,
+				Signature:        signatureHex,
+				Nonce:            nonce,
+			}
+
+			res, err := test.PerformRequest(t, "PUT", "/kyc/update_kyc_wallet_address", payload, nil, router)
+			assert.NoError(t, err)
+
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Equal(t, "This account has not been verified", response.Message)
+
+			// Clean up
+			err = db.Client.IdentityVerificationRequest.DeleteOne(pendingIVR).Exec(context.Background())
+			assert.NoError(t, err)
 		})
 	})
 }
