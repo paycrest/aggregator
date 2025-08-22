@@ -972,7 +972,7 @@ func (s *IndexerEVM) indexProviderAddressByAddress(ctx context.Context, network 
 		if !ok || txHash == "" {
 			continue
 		}
-		if network.ChainID != 56 {
+		if network.ChainID != 56 && network.ChainID != 1135 {
 			logger.Infof("Processing provider transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
 		}
 

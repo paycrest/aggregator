@@ -490,8 +490,8 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			paymentOrder.ID.String(), // Order ID for webhook name
 		)
 		if err != nil {
-			// Check if this is BNB Smart Chain (chain ID 56) which is not supported by Thirdweb
-			if token.Edges.Network.ChainID != 56 {
+			// Check if this is BNB Smart Chain (chain ID 56) or Lisk (chain ID 1135) which is not supported by Thirdweb
+			if token.Edges.Network.ChainID != 56 && token.Edges.Network.ChainID != 1135 {
 				logger.WithFields(logger.Fields{
 					"ChainID": token.Edges.Network.ChainID,
 					"Network": token.Edges.Network.Identifier,

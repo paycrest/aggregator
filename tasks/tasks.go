@@ -267,7 +267,10 @@ func TaskIndexBlockchainEvents() error {
 		Query().
 		Where(
 			networkent.IsTestnetEQ(isTestnet),
-			networkent.IdentifierEQ("bnb-smart-chain"),
+			networkent.Or(
+				networkent.IdentifierEQ("bnb-smart-chain"),
+				networkent.IdentifierEQ("lisk"),
+			),
 		).
 		All(ctx)
 	if err != nil {

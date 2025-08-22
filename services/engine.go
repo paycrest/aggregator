@@ -277,9 +277,9 @@ func (s *EngineService) WaitForTransactionMined(ctx context.Context, queueId str
 
 // CreateTransferWebhook creates webhooks to listen to transfer events to a specific address on a specific chain
 func (s *EngineService) CreateTransferWebhook(ctx context.Context, chainID int64, contractAddress string, toAddress string, orderID string) (string, string, error) {
-	// Check if this is BNB Smart Chain (chain ID 56) or Linea (chain ID 1135) - not supported by Thirdweb Insight
+	// Check if this is BNB Smart Chain (chain ID 56) or Lisk (chain ID 1135) - not supported by Thirdweb Insight
 	if chainID == 56 || chainID == 1135 {
-		return "", "", fmt.Errorf("webhook creation not supported for BNB Smart Chain (chain ID 56) via Thirdweb API")
+		return "", "", fmt.Errorf("webhook creation not supported for BNB Smart Chain (chain ID 56) or Lisk (chain ID 1135) via Thirdweb API")
 	}
 
 	webhookCallbackURL := fmt.Sprintf("%s/v1/insight/webhook", config.ServerConfig().ServerURL)
@@ -883,7 +883,7 @@ func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint st
 func (s *EngineService) GetAddressTransactionHistory(ctx context.Context, chainID int64, walletAddress string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
 	// Check if this is BNB Smart Chain (chain ID 56) or Linea (chain ID 1135) - not supported by Thirdweb Insight
 	if chainID == 56 || chainID == 1135 {
-		return nil, fmt.Errorf("transaction history not supported for BNB Smart Chain via Thirdweb API")
+		return nil, fmt.Errorf("transaction history not supported for BNB Smart Chain (chain ID 56) or Lisk (chain ID 1135) via Thirdweb API")
 	}
 
 	// Build query parameters

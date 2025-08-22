@@ -61,55 +61,46 @@ func (limiter *EtherscanRateLimiter) waitForRateLimit(ctx context.Context) error
 	defer limiter.mu.Unlock()
 
 	now := time.Now()
-	
-	// Refill tokens based on time passed since last refill (4 tokens per second)
+
+	// Simpler token refill calculation
 	timePassed := now.Sub(limiter.lastRefill)
 	tokensToAdd := int(timePassed.Seconds() * 4) // 4 tokens per second
 
 	if tokensToAdd > 0 {
 		limiter.tokens = min(limiter.maxTokens, limiter.tokens+tokensToAdd)
-		limiter.lastRefill = limiter.lastRefill.Add(time.Duration(tokensToAdd) * 250 * time.Millisecond)
+		// Set lastRefill to now instead of adding duration
+		limiter.lastRefill = now
 	}
 
-	// If no tokens available, calculate exact wait time
+	// If no tokens available, wait for next token
 	if limiter.tokens <= 0 {
-		// Calculate time needed for next token (250ms per token at 4 tokens/second)
-		timeSinceLastRefill := now.Sub(limiter.lastRefill)
-		timeForNextToken := 250 * time.Millisecond
-		waitTime := timeForNextToken - timeSinceLastRefill
-		
-		if waitTime > 0 {
-			timer := time.NewTimer(waitTime)
-			defer timer.Stop()
+		// Simple calculation - wait 250ms for next token
+		waitTime := 250 * time.Millisecond
 
-			select {
-			case <-timer.C:
-				// Timer completed, add one token
-				limiter.tokens = 1
-				limiter.lastRefill = now
-			case <-ctx.Done():
-				// Context was cancelled
-				return ctx.Err()
-			}
-		} else {
-			// Enough time has passed, add one token
+		// Unlock mutex before waiting to prevent deadlock
+		limiter.mu.Unlock()
+
+		timer := time.NewTimer(waitTime)
+		defer timer.Stop()
+
+		select {
+		case <-timer.C:
+			// Timer completed, reacquire lock and add token
+			limiter.mu.Lock()
 			limiter.tokens = 1
-			limiter.lastRefill = now
+			limiter.lastRefill = time.Now()
+		case <-ctx.Done():
+			// Context was cancelled
+			return ctx.Err()
 		}
+		// Note: defer will unlock again, but that's safe with mutex
+	} else {
+		// Consume a token
+		limiter.tokens--
 	}
 
-	// Consume a token
-	limiter.tokens--
 	limiter.lastCall = now
 	return nil
-}
-
-// min returns the minimum of two integers
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 // GetAddressTransactionHistory fetches transaction history for any address from Etherscan API
