@@ -21,6 +21,7 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/beneficialowner"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
+	"github.com/paycrest/aggregator/ent/identityverificationrequest"
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/linkedaddress"
@@ -2308,4 +2309,78 @@ func (ctrl *Controller) IndexProviderAddress(ctx *gin.Context) {
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Provider address indexed successfully", response)
+}
+
+func (ctrl *Controller) HandleWalletAddressUpdateForKYC(ctx *gin.Context) {
+	var payload types.UpdateKYCWalletAddressRequest
+
+	// Bind and validate JSON payload
+	if err := ctx.ShouldBindJSON(&payload); err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", u.GetErrorData(err))
+		return
+	}
+
+	// Basic payload validation
+	if payload.OldWalletAddress == "" || payload.NewWalletAddress == "" || payload.Signature == "" || payload.Nonce == "" {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "OldWalletAddress, NewWalletAddress, Signature, and Nonce are required", nil)
+		return
+	}
+
+	// Verify the signature signed by the new wallet address
+	if err := ctrl.verifyWalletSignature(payload.NewWalletAddress, payload.Signature, payload.Nonce); err != nil {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid signature", err.Error())
+		return
+	}
+
+	// Query existing KYC record for old wallet address
+	ivr, err := storage.Client.IdentityVerificationRequest.
+		Query().
+		Where(identityverificationrequest.WalletAddressEQ(payload.OldWalletAddress)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusNotFound, "error", "No verification request found for this wallet address", nil)
+			return
+		}
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Database error", nil)
+		return
+	}
+
+	// Verify KYC status
+	if ivr.Status != identityverificationrequest.StatusSuccess {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "This account has not been verified", nil)
+		return
+	}
+
+	// Check if new wallet address is already associated with a KYC record
+	exists, err := storage.Client.IdentityVerificationRequest.
+		Query().
+		Where(identityverificationrequest.WalletAddressEQ(payload.NewWalletAddress)).
+		Exist(ctx)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Database error", nil)
+		return
+	}
+	if exists {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "New wallet address is already verified", nil)
+		return
+	}
+
+	// Update database with new wallet address
+	timestamp := time.Now()
+	_, err = ivr.
+		Update().
+		SetWalletAddress(payload.NewWalletAddress).
+		SetUpdatedAt(timestamp).
+		Save(ctx)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update KYC wallet address", nil)
+		return
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "KYC wallet address updated successfully", gin.H{
+		"old_wallet_address": payload.OldWalletAddress,
+		"new_wallet_address": payload.NewWalletAddress,
+		"updated_at":         timestamp,
+	})
 }
