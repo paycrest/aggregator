@@ -215,7 +215,7 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 	}
 
 	// Validate rate using extracted logic
-	rateResponse, err := u.ValidateRate(ctx, token, currency, tokenAmount, ctx.Query("provider_id"), networkFilter)
+	rateResponse, _, err := u.ValidateRate(ctx, token, currency, tokenAmount, ctx.Query("provider_id"), networkFilter)
 	if err != nil {
 		// Return 404 if no provider found, else 500 for other errors
 		if strings.Contains(err.Error(), "no provider available") {

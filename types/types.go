@@ -516,18 +516,56 @@ type NewOrderResponse struct {
 	ValidUntil        string `json:"validUntil"`
 }
 
+type ResponseSource struct {
+	Type          string       `json:"type"`
+	Currency      string       `json:"currency"`
+	PaymentRail   string       `json:"paymentRail,omitempty"`
+	RefundAddress string       `json:"refundAddress,omitempty"`
+	Country       string       `json:"country,omitempty"`
+	RefundAccount *AccountInfo `json:"refundAccount,omitempty"`
+}
 
-// ReceiveAddressResponse is the response type for a receive address
-type ReceiveAddressResponse struct {
-	ID             uuid.UUID       `json:"id"`
-	Amount         decimal.Decimal `json:"amount"`
-	Token          string          `json:"token"`
-	Network        string          `json:"network"`
-	ReceiveAddress string          `json:"receiveAddress"`
-	ValidUntil     time.Time       `json:"validUntil"`
-	SenderFee      decimal.Decimal `json:"senderFee"`
-	TransactionFee decimal.Decimal `json:"transactionFee"`
-	Reference      string          `json:"reference"`
+type ResponseDestination struct {
+	Type       string            `json:"type"`
+	Currency   string            `json:"currency"`
+	Country    string            `json:"country,omitempty"`
+	ProviderID string            `json:"providerId,omitempty"`
+	Recipient  ResponseRecipient `json:"recipient"`
+}
+
+type ResponseRecipient struct {
+	Institution       string                 `json:"institution,omitempty"`
+	AccountIdentifier string                 `json:"accountIdentifier,omitempty"`
+	AccountName       string                 `json:"accountName,omitempty"`
+	Memo              string                 `json:"memo,omitempty"`
+	Metadata          map[string]interface{} `json:"metadata,omitempty"`
+	PaymentRail       string                 `json:"paymentRail,omitempty"`
+	Address           string                 `json:"address,omitempty"`
+}
+
+type ProviderAccount struct {
+	ValidUntil        string `json:"validUntil"`
+	Institution       string `json:"institution,omitempty"`
+	AccountIdentifier string `json:"accountIdentifier,omitempty"`
+	AccountName       string `json:"accountName,omitempty"`
+	PaymentRail       string `json:"paymentRail,omitempty"`
+	ReceiveAddress    string `json:"receiveAddress,omitempty"`
+}
+
+type OrderResponse struct {
+	ID               string              `json:"id"`
+	Status           string              `json:"status"`
+	Timestamp        string              `json:"timestamp"`
+	Amount           string              `json:"amount"`
+	Rate             string              `json:"rate,omitempty"`
+	AmountIn         string              `json:"amountIn,omitempty"`
+	SenderFee        string              `json:"senderFee,omitempty"`
+	SenderFeePercent string              `json:"senderFeePercent,omitempty"`
+	Reference        string              `json:"reference,omitempty"`
+	ProviderAccount  ProviderAccount     `json:"providerAccount"`
+	Source           ResponseSource      `json:"source"`
+	Destination      ResponseDestination `json:"destination"`
+	KYC              KYCInfo             `json:"kyc,omitempty"`
 }
 
 // PaymentOrderResponse is the response type for a payment order
