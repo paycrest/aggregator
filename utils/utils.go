@@ -721,10 +721,10 @@ func IsValidHttpsUrl(urlStr string) bool {
 }
 
 // ValidateRate validates if a provided rate is achievable for the given parameters
-func ValidateRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, providerID, networkFilter string) (decimal.Decimal, error) {
+func ValidateRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, providerID, networkFilter string) (decimal.Decimal, *ent.ProviderProfile, error) {
 	// Direct currency match
 	if strings.EqualFold(token.BaseCurrency, currency.Code) {
-		return decimal.NewFromInt(1), nil
+		return decimal.NewFromInt(1), nil, nil
 	}
 
 	// Provider-specific rate
@@ -737,7 +737,7 @@ func ValidateRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurre
 }
 
 // validateProviderRate handles provider-specific rate validation
-func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, providerID, networkFilter string) (decimal.Decimal, error) {
+func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, providerID, networkFilter string) (decimal.Decimal, *ent.ProviderProfile, error) {
 	// Get the provider from the database
 	provider, err := storage.Client.ProviderProfile.
 		Query().
@@ -745,9 +745,9 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return decimal.Zero, fmt.Errorf("provider not found")
+			return decimal.Zero, nil,fmt.Errorf("provider not found")
 		}
-		return decimal.Zero, fmt.Errorf("internal server error")
+		return decimal.Zero, nil, fmt.Errorf("internal server error")
 	}
 
 	// Get the provider's order token configuration to validate min/max amounts
@@ -769,14 +769,14 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 	providerOrderToken, err := providerOrderTokenQuery.First(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return decimal.Zero, fmt.Errorf("provider does not support this token/currency combination")
+			return decimal.Zero, nil, fmt.Errorf("provider does not support this token/currency combination")
 		}
-		return decimal.Zero, fmt.Errorf("internal server error")
+		return decimal.Zero, nil, fmt.Errorf("internal server error")
 	}
 
 	// Validate that the token amount is within the provider's min/max limits
 	if amount.LessThan(providerOrderToken.MinOrderAmount) || amount.GreaterThan(providerOrderToken.MaxOrderAmount) {
-		return decimal.Zero, fmt.Errorf("amount must be between %s and %s for this provider", providerOrderToken.MinOrderAmount, providerOrderToken.MaxOrderAmount)
+		return decimal.Zero, nil, fmt.Errorf("amount must be between %s and %s for this provider", providerOrderToken.MinOrderAmount, providerOrderToken.MaxOrderAmount)
 	}
 
 	// Try to get the provider's current rate from Redis queue first (most up-to-date)
@@ -806,12 +806,12 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return decimal.Zero, fmt.Errorf("provider has insufficient liquidity for %s", currency.Code)
+			return decimal.Zero, nil,fmt.Errorf("provider has insufficient liquidity for %s", currency.Code)
 		}
-		return decimal.Zero, fmt.Errorf("internal server error")
+		return decimal.Zero, nil, fmt.Errorf("internal server error")
 	}
 
-	return rateResponse, nil
+	return rateResponse, provider, nil
 }
 
 // getProviderRateFromRedis retrieves the provider's current rate from Redis queue
@@ -879,7 +879,7 @@ func getProviderRateFromRedis(ctx context.Context, providerID, tokenSymbol, curr
 }
 
 // validateBucketRate handles bucket-based rate validation
-func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, networkIdentifier string) (decimal.Decimal, error) {
+func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, networkIdentifier string) (decimal.Decimal, *ent.ProviderProfile, error) {
 	// Get redis keys for provision buckets
 	keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currency.Code+"_*_*", 100).Result()
 	if err != nil {
@@ -888,12 +888,13 @@ func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.Fia
 			"Currency": currency.Code,
 			"Network":  networkIdentifier,
 		}).Errorf("Failed to scan Redis buckets for bucket rate")
-		return decimal.Zero, fmt.Errorf("internal server error")
+		return decimal.Zero, nil,fmt.Errorf("internal server error")
 	}
 
 	// Track the best available rate and reason for logging
 	var bestRate decimal.Decimal
 	var foundExactMatch bool
+	var provider *ent.ProviderProfile
 
 	// Scan through the buckets to find a matching rate
 	for _, key := range keys {
@@ -917,10 +918,11 @@ func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.Fia
 		}
 
 		// Find the first provider at the top of the queue that matches our criteria
-		rate, found := findSuitableProviderRate(providers, token.Symbol, networkIdentifier, amount, bucketData)
+		rate, suitableProvider, found := findSuitableProviderRate(providers, token.Symbol, networkIdentifier, amount, bucketData)
 		if found {
 			foundExactMatch = true
 			bestRate = rate
+			provider = suitableProvider
 			break // Found exact match, no need to continue
 		}
 
@@ -940,11 +942,11 @@ func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.Fia
 			"BestRate":      bestRate,
 		}).Warnf("ValidateRate.NoSuitableProvider: no provider found for the given parameters")
 
-		return decimal.Zero, fmt.Errorf("no provider available for %s to %s conversion with amount %s on %s network",
+		return decimal.Zero, nil, fmt.Errorf("no provider available for %s to %s conversion with amount %s on %s network",
 			token.Symbol, currency.Code, amount, networkIdentifier)
 	}
 
-	return bestRate, nil
+	return bestRate, provider, nil
 }
 
 // parseBucketKey parses and validates bucket key format
@@ -992,8 +994,9 @@ func parseBucketKey(key string) (*BucketData, error) {
 }
 
 // findSuitableProviderRate finds the first suitable provider rate from the provider list
-func findSuitableProviderRate(providers []string, tokenSymbol string, networkIdentifier string, tokenAmount decimal.Decimal, bucketData *BucketData) (decimal.Decimal, bool) {
+func findSuitableProviderRate(providers []string, tokenSymbol string, networkIdentifier string, tokenAmount decimal.Decimal, bucketData *BucketData) (decimal.Decimal, *ent.ProviderProfile, bool) {
 	var bestRate decimal.Decimal
+	var bestProvider *ent.ProviderProfile
 	var foundExactMatch bool
 
 	for _, providerData := range providers {
@@ -1014,7 +1017,22 @@ func findSuitableProviderRate(providers []string, tokenSymbol string, networkIde
 			continue
 		}
 
-		// Skip entry if provider doesn't not have a token configured for the network
+		// Get the provider profile
+		ctx := context.Background()
+		provider, err := storage.Client.ProviderProfile.
+			Query().
+			Where(providerprofile.IDEQ(parts[0])).
+			WithUser().
+			Only(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"ProviderID": parts[0],
+				"Error":      err,
+			}).Errorf("ValidateRate.ProviderNotFound: failed to fetch provider profile")
+			continue
+		}
+
+		// Skip entry if provider doesn't have a token configured for the network
 		// TODO: Move this to redis cache. Provider's network should be in the key.
 		if networkIdentifier != "" {
 			_, err := storage.Client.ProviderOrderToken.
@@ -1031,7 +1049,7 @@ func findSuitableProviderRate(providers []string, tokenSymbol string, networkIde
 					providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
 					providerordertoken.NetworkEQ(networkIdentifier),
 					providerordertoken.AddressNEQ(""),
-				).Only(context.Background())
+				).Only(ctx)
 			if err != nil {
 				if ent.IsNotFound(err) {
 					continue
@@ -1078,40 +1096,46 @@ func findSuitableProviderRate(providers []string, tokenSymbol string, networkIde
 			continue
 		}
 
-		// Track the best rate we've seen (for logging purposes)
-		if rate.GreaterThan(bestRate) {
-			bestRate = rate
-		}
-
 		// Calculate fiat equivalent of the token amount
 		fiatAmount := tokenAmount.Mul(rate)
 
 		// Check if fiat amount is within the bucket range
 		if fiatAmount.GreaterThanOrEqual(bucketData.MinAmount) && fiatAmount.LessThanOrEqual(bucketData.MaxAmount) {
-			return rate, true
-		}
-
-		// Check if provider has sufficient balance
-		ctx := context.Background()
-		_, err = storage.Client.ProviderCurrencies.
-			Query().
-			Where(
-				providercurrencies.HasProviderWith(providerprofile.IDEQ(parts[0])),
-				providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
-				providercurrencies.AvailableBalanceGT(fiatAmount),
-				providercurrencies.IsAvailableEQ(true),
-			).
-			Only(ctx)
-		if err != nil {
-			if ent.IsNotFound(err) {
+			// Check if provider has sufficient balance
+			_, err = storage.Client.ProviderCurrencies.
+				Query().
+				Where(
+					providercurrencies.HasProviderWith(providerprofile.IDEQ(parts[0])),
+					providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
+					providercurrencies.AvailableBalanceGT(fiatAmount),
+					providercurrencies.IsAvailableEQ(true),
+				).
+				Only(ctx)
+			if err != nil {
+				if ent.IsNotFound(err) {
+					// Provider doesn't have sufficient balance, continue to next provider
+					continue
+				}
+				logger.WithFields(logger.Fields{
+					"ProviderData": providerData,
+					"Error":        err,
+				}).Errorf("ValidateRate.BalanceCheckFailed: failed to check provider balance")
 				continue
 			}
-			return decimal.Zero, false
+
+			// Found a suitable provider with exact match
+			return rate, provider, true
+		}
+
+		// Track the best rate we've seen (for fallback purposes)
+		if rate.GreaterThan(bestRate) {
+			bestRate = rate
+			bestProvider = provider
 		}
 	}
 
 	// Return the best rate we found (even if no exact match) for logging purposes
-	return bestRate, foundExactMatch
+	return bestRate, bestProvider, foundExactMatch
 }
 
 // ValidateAccount validates if an account exists for the given institution and account identifier

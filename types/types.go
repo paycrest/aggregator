@@ -412,6 +412,67 @@ type LockPaymentOrderStatusResponse struct {
 	UpdatedAt     time.Time                    `json:"updatedAt"`
 }
 
+type PaymentOrderRequest struct {
+	OrderType        string      `json:"orderType"` // "onramp" or "offramp"
+	Amount           string      `json:"amount"`
+	Rate             string      `json:"rate,omitempty"`
+	AmountIn         string      `json:"amountIn,omitempty"`
+	SenderFee        string      `json:"senderFee,omitempty"`
+	SenderFeePercent string      `json:"senderFeePercent,omitempty"`
+	Reference        string      `json:"reference,omitempty"`
+	Source           Source      `json:"source"`
+	Destination      Destination `json:"destination"`
+	KYC              KYCInfo     `json:"kyc"`
+}
+
+type Source struct {
+	Type          string       `json:"type"` // "crypto" or "fiat"
+	Currency      string       `json:"currency"`
+	PaymentRail   string       `json:"paymentRail,omitempty"`
+	RefundAddress string       `json:"refundAddress,omitempty"`
+	Country       string       `json:"country,omitempty"`
+	RefundAccount *AccountInfo `json:"refundAccount,omitempty"`
+}
+
+type AccountInfo struct {
+	Institution       string `json:"institution"`
+	AccountIdentifier string `json:"accountIdentifier"`
+	AccountName       string `json:"accountName"`
+}
+
+type Destination struct {
+	Type       string    `json:"type"` // "crypto" or "fiat"
+	Currency   string    `json:"currency"`
+	Country    string    `json:"country,omitempty"`
+	ProviderID string    `json:"providerId"`
+	Recipient  Recipient `json:"recipient"`
+}
+
+type Recipient struct {
+	Institution       string                 `json:"institution,omitempty"`
+	AccountIdentifier string                 `json:"accountIdentifier,omitempty"`
+	AccountName       string                 `json:"accountName,omitempty"`
+	Memo              string                 `json:"memo,omitempty"`
+	Metadata          map[string]interface{} `json:"metadata,omitempty"`
+	PaymentRail       string                 `json:"paymentRail,omitempty"`
+	Address           string                 `json:"address,omitempty"`
+}
+
+type KYCInfo struct {
+	Provider  *KYCProviderInfo `json:"provider,omitempty"`
+	Recipient interface{}      `json:"recipient,omitempty"`
+	Sender    interface{}      `json:"sender,omitempty"`
+}
+
+type KYCProviderInfo struct {
+	Email       string `json:"email"`
+	PhoneNumber string `json:"phoneNumber"`
+	FullName    string `json:"fullName"`
+	Address     string `json:"address"`
+	Gender      string `json:"gender"`
+	DateOfBirth string `json:"dateOfBirth"`
+}
+
 // PaymentOrderRecipient describes a payment order recipient
 type PaymentOrderRecipient struct {
 	Institution       string                 `json:"institution" binding:"required"`
@@ -426,16 +487,35 @@ type PaymentOrderRecipient struct {
 
 // NewPaymentOrderPayload is the payload for the create payment order endpoint
 type NewPaymentOrderPayload struct {
-	Amount        decimal.Decimal       `json:"amount" binding:"required"`
-	Token         string                `json:"token" binding:"required"`
-	Rate          decimal.Decimal       `json:"rate" binding:"required"`
-	Network       string                `json:"network" binding:"required"`
-	Recipient     PaymentOrderRecipient `json:"recipient" binding:"required"`
-	Reference     string                `json:"reference"`
-	ReturnAddress string                `json:"returnAddress"`
-	FeePercent    decimal.Decimal       `json:"feePercent"`
-	FeeAddress    string                `json:"feeAddress"`
+	Amount        decimal.Decimal       `json:"amount,omitempty"`
+	Token         string                `json:"token,omitempty"`
+	Rate          decimal.Decimal       `json:"rate,omitempty"`
+	Network       string                `json:"network,omitempty"`
+	Recipient     PaymentOrderRecipient `json:"recipient,omitempty"`
+	Reference     string                `json:"reference,omitempty"`
+	ReturnAddress string                `json:"returnAddress,omitempty"`
+	FeePercent    decimal.Decimal       `json:"feePercent,omitempty"`
+	FeeAddress    string                `json:"feeAddress,omitempty"`
+
+	SenderFeePercent decimal.Decimal `json:"senderFeePercent,omitempty"`
+	AmountIn         decimal.Decimal `json:"amountIn,omitempty"`
+	SenderFee        decimal.Decimal `json:"senderFee,omitempty"`
+	Source           Source          `json:"source,omitempty"`
+	Destination      Destination     `json:"destination,omitempty"`
+	KYC              KYCInfo         `json:"kyc,omitempty"`
 }
+
+type NewOrderResponse struct {
+	OrderID           string `json:"orderId"`
+	Type              string `json:"type" binding:"required"` // "onramp" | "offramp"
+	Amount            string `json:"amount"`
+	Currency          string `json:"currency"`
+	InstitutionName   string `json:"institutionName"`
+	AccountIdentifier string `json:"accountIdentifier"`
+	AccountName       string `json:"accountName"`
+	ValidUntil        string `json:"validUntil"`
+}
+
 
 // ReceiveAddressResponse is the response type for a receive address
 type ReceiveAddressResponse struct {
