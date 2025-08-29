@@ -49,6 +49,9 @@ func RegisterRoutes(route *gin.Engine) {
 	// Index provider address endpoint
 	v1.POST("index-provider-address", ctrl.IndexProviderAddress)
 
+	// Etherscan queue monitoring endpoint
+	v1.GET("etherscan/stats", ctrl.GetEtherscanQueueStats)
+
 	// KYB route
 	v1.POST("slack-interaction", middleware.SlackVerificationMiddleware, ctrl.SlackInteractionHandler)
 	v1.POST("kyb-submission", middleware.JWTMiddleware, ctrl.HandleKYBSubmission)

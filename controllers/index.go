@@ -2309,3 +2309,24 @@ func (ctrl *Controller) IndexProviderAddress(ctx *gin.Context) {
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Provider address indexed successfully", response)
 }
+
+// GetEtherscanQueueStats controller returns statistics about the Etherscan queue
+func (ctrl *Controller) GetEtherscanQueueStats(ctx *gin.Context) {
+	// Create Etherscan service instance
+	etherscanService, err := svc.NewEtherscanService()
+	if err != nil {
+		logger.Errorf("Error: Failed to create Etherscan service: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create Etherscan service", err.Error())
+		return
+	}
+
+	// Get queue statistics
+	stats, err := etherscanService.GetQueueStats(ctx)
+	if err != nil {
+		logger.Errorf("Error: Failed to get Etherscan queue stats: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to get queue stats", err.Error())
+		return
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Etherscan queue stats fetched successfully", stats)
+}
