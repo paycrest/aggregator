@@ -141,10 +141,12 @@ func processNextEtherscanRequest(ctx context.Context) error {
 	// Try to send response, but don't block if channel is closed
 	select {
 	case request.ResponseChan <- response:
+		// Response sent successfully
 	default:
+		// Channel is full or closed
 		logger.WithFields(logger.Fields{
 			"RequestID": request.ID,
-		}).Warnf("Response channel closed for request")
+		}).Debugf("Could not send response to request (channel full or closed)")
 	}
 
 	return nil
@@ -255,8 +257,12 @@ func (s *EtherscanService) GetAddressTransactionHistory(ctx context.Context, cha
 		}
 		return response.Data, nil
 	case <-ctx.Done():
+		// Context was cancelled, close the channel to signal worker
+		close(responseChan)
 		return nil, ctx.Err()
 	case <-time.After(30 * time.Second): // 30 second timeout
+		// Request timed out, close the channel to signal worker
+		close(responseChan)
 		return nil, fmt.Errorf("request timeout after 30 seconds")
 	}
 }
