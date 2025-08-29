@@ -2158,7 +2158,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 						"EventType":    "ReceiveAddress",
 					}).Infof("Starting transfer event indexing for receive address")
 
-					counts, err := indexerInstance.IndexReceiveAddress(ctx, token, address, fromBlock, toBlock, txHash)
+					counts, err := indexerInstance.(*indexer.IndexerEVM).IndexReceiveAddressWithBypass(ctx, token, address, fromBlock, toBlock, txHash, true)
 					if err != nil && err.Error() != "no events found" {
 						logger.WithFields(logger.Fields{
 							"Error":        fmt.Sprintf("%v", err),

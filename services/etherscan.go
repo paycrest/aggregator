@@ -218,6 +218,20 @@ func makeEtherscanAPICall(request EtherscanRequest) ([]map[string]interface{}, e
 	return result, nil
 }
 
+// GetAddressTransactionHistoryImmediate fetches transaction history immediately without queuing
+// This is used for reindexing requests that need immediate processing
+func (s *EtherscanService) GetAddressTransactionHistoryImmediate(ctx context.Context, chainID int64, walletAddress string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
+	request := EtherscanRequest{
+		ID:            fmt.Sprintf("%d_%s_%d_%d_%d", chainID, walletAddress, limit, fromBlock, toBlock),
+		ChainID:       chainID,
+		WalletAddress: walletAddress,
+		Limit:         limit,
+		FromBlock:     fromBlock,
+		ToBlock:       toBlock,
+	}
+	return makeEtherscanAPICall(request)
+}
+
 // GetAddressTransactionHistory fetches transaction history for any address from Etherscan API
 func (s *EtherscanService) GetAddressTransactionHistory(ctx context.Context, chainID int64, walletAddress string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
 	// Create a unique request ID
@@ -245,6 +259,67 @@ func (s *EtherscanService) GetAddressTransactionHistory(ctx context.Context, cha
 	}
 
 	// Add to queue
+	if err := storage.RedisClient.RPush(ctx, "etherscan_queue", requestData).Err(); err != nil {
+		return nil, fmt.Errorf("failed to queue request: %w", err)
+	}
+
+	// Wait for response with timeout
+	select {
+	case response := <-responseChan:
+		if response.Error != nil {
+			return nil, response.Error
+		}
+		return response.Data, nil
+	case <-ctx.Done():
+		// Context was cancelled, close the channel to signal worker
+		close(responseChan)
+		return nil, ctx.Err()
+	case <-time.After(30 * time.Second): // 30 second timeout
+		// Request timed out, close the channel to signal worker
+		close(responseChan)
+		return nil, fmt.Errorf("request timeout after 30 seconds")
+	}
+}
+
+// GetAddressTransactionHistoryWithBypass fetches transaction history with option to bypass queue
+func (s *EtherscanService) GetAddressTransactionHistoryWithBypass(ctx context.Context, chainID int64, walletAddress string, limit int, fromBlock int64, toBlock int64, bypassQueue bool) ([]map[string]interface{}, error) {
+	// If bypassing queue, make the API call immediately
+	if bypassQueue {
+		request := EtherscanRequest{
+			ID:            fmt.Sprintf("%d_%s_%d_%d_%d", chainID, walletAddress, limit, fromBlock, toBlock),
+			ChainID:       chainID,
+			WalletAddress: walletAddress,
+			Limit:         limit,
+			FromBlock:     fromBlock,
+			ToBlock:       toBlock,
+		}
+		return makeEtherscanAPICall(request)
+	}
+
+	// Generate unique request ID
+	requestID := fmt.Sprintf("%d_%s_%s_%d_%d_%d", chainID, walletAddress, limit, fromBlock, toBlock)
+
+	// Create response channel for this request
+	responseChan := make(chan *EtherscanResponse, 1)
+
+	// Create the request
+	request := EtherscanRequest{
+		ID:            requestID,
+		ChainID:       chainID,
+		WalletAddress: walletAddress,
+		Limit:         limit,
+		FromBlock:     fromBlock,
+		ToBlock:       toBlock,
+		ResponseChan:  responseChan,
+	}
+
+	// Serialize and queue the request
+	requestData, err := json.Marshal(request)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	// Add request to the queue
 	if err := storage.RedisClient.RPush(ctx, "etherscan_queue", requestData).Err(); err != nil {
 		return nil, fmt.Errorf("failed to queue request: %w", err)
 	}

@@ -47,6 +47,11 @@ func NewIndexerEVM() (types.Indexer, error) {
 
 // IndexReceiveAddress indexes all transfer events for a specific receive address
 func (s *IndexerEVM) IndexReceiveAddress(ctx context.Context, token *ent.Token, address string, fromBlock int64, toBlock int64, txHash string) (*types.EventCounts, error) {
+	return s.IndexReceiveAddressWithBypass(ctx, token, address, fromBlock, toBlock, txHash, false)
+}
+
+// IndexReceiveAddressWithBypass indexes all transfer events for a specific receive address with option to bypass queue
+func (s *IndexerEVM) IndexReceiveAddressWithBypass(ctx context.Context, token *ent.Token, address string, fromBlock int64, toBlock int64, txHash string, bypassQueue bool) (*types.EventCounts, error) {
 	eventCounts := &types.EventCounts{}
 
 	if txHash != "" {
@@ -60,7 +65,7 @@ func (s *IndexerEVM) IndexReceiveAddress(ctx context.Context, token *ent.Token, 
 	}
 
 	// Index transfer events for the receive address
-	counts, err := s.indexReceiveAddressByUserAddress(ctx, token, address, fromBlock, toBlock)
+	counts, err := s.indexReceiveAddressByUserAddressWithBypass(ctx, token, address, fromBlock, toBlock, bypassQueue)
 	if err != nil {
 		return eventCounts, err
 	}
@@ -319,11 +324,28 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 
 // getAddressTransactionHistoryWithFallback tries etherscan first and falls back to engine or blockscout
 func (s *IndexerEVM) getAddressTransactionHistoryWithFallback(ctx context.Context, chainID int64, address string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
+	return s.getAddressTransactionHistoryWithFallbackAndBypass(ctx, chainID, address, limit, fromBlock, toBlock, false)
+}
+
+// getAddressTransactionHistoryImmediate tries etherscan immediately without queuing and falls back to engine or blockscout
+// This is used for reindexing requests that need immediate processing
+func (s *IndexerEVM) getAddressTransactionHistoryImmediate(ctx context.Context, chainID int64, address string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
+	return s.getAddressTransactionHistoryWithFallbackAndBypass(ctx, chainID, address, limit, fromBlock, toBlock, true)
+}
+
+// getAddressTransactionHistoryWithFallbackAndBypass tries etherscan first and falls back to engine or blockscout
+// with option to bypass queue for immediate processing
+func (s *IndexerEVM) getAddressTransactionHistoryWithFallbackAndBypass(ctx context.Context, chainID int64, address string, limit int, fromBlock int64, toBlock int64, bypassQueue bool) ([]map[string]interface{}, error) {
 	var err error
 
 	// Try etherscan first (except for Lisk which is not supported)
 	if chainID != 1135 {
-		transactions, err := s.etherscanService.GetAddressTransactionHistory(ctx, chainID, address, limit, fromBlock, toBlock)
+		var transactions []map[string]interface{}
+		if bypassQueue {
+			transactions, err = s.etherscanService.GetAddressTransactionHistoryImmediate(ctx, chainID, address, limit, fromBlock, toBlock)
+		} else {
+			transactions, err = s.etherscanService.GetAddressTransactionHistory(ctx, chainID, address, limit, fromBlock, toBlock)
+		}
 		if err == nil {
 			// Etherscan succeeded, return the transactions
 			return transactions, nil
@@ -362,8 +384,8 @@ func (s *IndexerEVM) getAddressTransactionHistoryWithFallback(ctx context.Contex
 	return nil, fmt.Errorf("transaction history not supported for chain %d via any available service", chainID)
 }
 
-// indexReceiveAddressByUserAddress processes user's transaction history for receive address transfers
-func (s *IndexerEVM) indexReceiveAddressByUserAddress(ctx context.Context, token *ent.Token, userAddress string, fromBlock int64, toBlock int64) (*types.EventCounts, error) {
+// indexReceiveAddressByUserAddressWithBypass processes user's transaction history for receive address transfers with option to bypass queue
+func (s *IndexerEVM) indexReceiveAddressByUserAddressWithBypass(ctx context.Context, token *ent.Token, userAddress string, fromBlock int64, toBlock int64, bypassQueue bool) (*types.EventCounts, error) {
 	eventCounts := &types.EventCounts{}
 
 	// Determine parameters based on whether block range is provided
@@ -385,7 +407,13 @@ func (s *IndexerEVM) indexReceiveAddressByUserAddress(ctx context.Context, token
 	}
 
 	// Get address's transaction history with fallback
-	transactions, err := s.getAddressTransactionHistoryWithFallback(ctx, token.Edges.Network.ChainID, userAddress, limit, fromBlock, toBlock)
+	var transactions []map[string]interface{}
+	var err error
+	if bypassQueue {
+		transactions, err = s.getAddressTransactionHistoryImmediate(ctx, token.Edges.Network.ChainID, userAddress, limit, fromBlock, toBlock)
+	} else {
+		transactions, err = s.getAddressTransactionHistoryWithFallback(ctx, token.Edges.Network.ChainID, userAddress, limit, fromBlock, toBlock)
+	}
 	if err != nil {
 		return eventCounts, fmt.Errorf("failed to get transaction history: %w", err)
 	}
