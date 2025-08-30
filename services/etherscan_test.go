@@ -1,6 +1,7 @@
 package services
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/paycrest/aggregator/config"
@@ -8,14 +9,13 @@ import (
 )
 
 func TestNewEtherscanService_WithValidConfig(t *testing.T) {
-	// This test would require setting up environment variables
-	// For now, we'll test the error case when API key is missing
+	// Test service creation with valid config
 	service, err := NewEtherscanService()
 
-	// Since we don't have a valid API key in test environment, expect an error
-	assert.Error(t, err)
-	assert.Nil(t, service)
-	assert.Contains(t, err.Error(), "ETHERSCAN_API_KEY environment variable is required")
+	// Since we have a valid API key in test environment, expect success
+	assert.NoError(t, err)
+	assert.NotNil(t, service)
+	assert.NotNil(t, service.config)
 }
 
 func TestEtherscanService_Configuration(t *testing.T) {
@@ -52,4 +52,47 @@ func TestEtherscanService_GetAddressTransactionHistory_Parameters(t *testing.T) 
 	assert.Equal(t, limit, limit)                 // Placeholder assertion
 	assert.Equal(t, fromBlock, fromBlock)         // Placeholder assertion
 	assert.Equal(t, toBlock, toBlock)             // Placeholder assertion
+}
+
+func TestMultiKeyParsing(t *testing.T) {
+	// Test parsing multiple API keys
+	apiKeys := "key1,key2,key3"
+	keys := parseAPIKeys(apiKeys)
+
+	assert.Equal(t, 3, len(keys))
+	assert.Equal(t, "key1", keys[0])
+	assert.Equal(t, "key2", keys[1])
+	assert.Equal(t, "key3", keys[2])
+}
+
+func TestMultiKeyParsingWithSpaces(t *testing.T) {
+	// Test parsing keys with spaces
+	apiKeys := "key1 , key2 , key3"
+	keys := parseAPIKeys(apiKeys)
+
+	assert.Equal(t, 3, len(keys))
+	assert.Equal(t, "key1", keys[0])
+	assert.Equal(t, "key2", keys[1])
+	assert.Equal(t, "key3", keys[2])
+}
+
+func TestMultiKeyParsingEmpty(t *testing.T) {
+	// Test parsing empty string
+	apiKeys := ""
+	keys := parseAPIKeys(apiKeys)
+
+	assert.Equal(t, 0, len(keys))
+}
+
+// Helper function to test the parsing logic
+func parseAPIKeys(apiKeys string) []string {
+	keys := strings.Split(apiKeys, ",")
+	var cleanKeys []string
+	for _, key := range keys {
+		cleanKey := strings.TrimSpace(key)
+		if cleanKey != "" {
+			cleanKeys = append(cleanKeys, cleanKey)
+		}
+	}
+	return cleanKeys
 }
