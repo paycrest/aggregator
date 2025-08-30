@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	fastshot "github.com/opus-domini/fast-shot"
@@ -66,6 +67,8 @@ type EtherscanWorker struct {
 	ConsecutiveErrors int64
 	CircuitOpen       bool
 	LastFailure       time.Time
+	ExhaustedUntil    time.Time
+	BackoffInterval   time.Duration
 	Mutex             sync.RWMutex
 }
 
@@ -75,7 +78,7 @@ func classifyError(message string) ErrorType {
 	case strings.Contains(strings.ToLower(message), "max daily limit reached"):
 		return ErrorTypeDailyLimit
 	case strings.Contains(strings.ToLower(message), "max rate limit reached"):
-		return ErrorTypeDailyLimit
+		return ErrorTypeRateLimit
 	case strings.Contains(strings.ToLower(message), "max calls per sec"):
 		return ErrorTypeRateLimit
 	case strings.Contains(strings.ToLower(message), "rate limit"):
@@ -86,20 +89,70 @@ func classifyError(message string) ErrorType {
 		return ErrorTypeNetwork
 	case strings.Contains(strings.ToLower(message), "connection"):
 		return ErrorTypeNetwork
+	case strings.Contains(strings.ToLower(message), "too many invalid api key attempts"):
+		return ErrorTypeAPI
+	case strings.Contains(strings.ToLower(message), "invalid api key"):
+		return ErrorTypeAPI
+	case strings.Contains(strings.ToLower(message), "missing required parameter"):
+		return ErrorTypeAPI
+	case strings.Contains(strings.ToLower(message), "invalid module name"):
+		return ErrorTypeAPI
 	default:
 		return ErrorTypeUnknown
 	}
 }
 
+// timeUntilMidnightUTC calculates the duration until the next midnight UTC
+func timeUntilMidnightUTC() time.Duration {
+	now := time.Now().UTC()
+	tomorrow := now.Truncate(24 * time.Hour).Add(24 * time.Hour)
+	return tomorrow.Sub(now)
+}
+
+// markExhausted marks the worker as unavailable for the specified duration
+func (w *EtherscanWorker) markExhausted(duration time.Duration) {
+	w.Mutex.Lock()
+	defer w.Mutex.Unlock()
+	w.ExhaustedUntil = time.Now().Add(duration)
+	logger.Debugf("Worker %d marked as exhausted until %v", w.WorkerID, w.ExhaustedUntil)
+}
+
+// increaseBackoff temporarily increases the worker's backoff interval
+func (w *EtherscanWorker) increaseBackoff() {
+	w.Mutex.Lock()
+	defer w.Mutex.Unlock()
+	// Double the backoff interval, but cap at 5 seconds
+	if w.BackoffInterval == 0 {
+		w.BackoffInterval = 500 * time.Millisecond
+	} else {
+		w.BackoffInterval = time.Duration(float64(w.BackoffInterval) * 1.5)
+		if w.BackoffInterval > 5*time.Second {
+			w.BackoffInterval = 5 * time.Second
+		}
+	}
+	logger.Debugf("Worker %d backoff increased to %v", w.WorkerID, w.BackoffInterval)
+}
+
+// isExhausted checks if the worker should be skipped
+func (w *EtherscanWorker) isExhausted() bool {
+	w.Mutex.RLock()
+	defer w.Mutex.RUnlock()
+	return time.Now().Before(w.ExhaustedUntil)
+}
+
 // QueueStats represents statistics about the Etherscan queue and workers
 type QueueStats struct {
-	QueueLength     int64 `json:"queue_length"`
-	TotalProcessed  int64 `json:"total_processed"`
-	TotalErrors     int64 `json:"total_errors"`
-	ActiveWorkers   int   `json:"active_workers"`
-	RateLimit       int   `json:"rate_limit"`
-	WorkerActive    bool  `json:"worker_active"`
-	PendingRequests int   `json:"pending_requests"`
+	QueueLength      int64 `json:"queue_length"`
+	TotalProcessed   int64 `json:"total_processed"`
+	TotalErrors      int64 `json:"total_errors"`
+	ActiveWorkers    int   `json:"active_workers"`
+	RateLimit        int   `json:"rate_limit"`
+	WorkerActive     bool  `json:"worker_active"`
+	PendingRequests  int   `json:"pending_requests"`
+	RateLimitErrors  int64 `json:"rate_limit_errors"`
+	DailyLimitErrors int64 `json:"daily_limit_errors"`
+	APIErrors        int64 `json:"api_errors"`
+	NetworkErrors    int64 `json:"network_errors"`
 }
 
 // EtherscanService provides functionality for interacting with Etherscan API
@@ -124,6 +177,12 @@ var (
 	// Request cleanup configuration
 	requestCleanupInterval = 1 * time.Minute
 	requestTimeout         = 2 * time.Minute
+
+	// Error type counters for monitoring
+	rateLimitErrorsCounter  int64
+	dailyLimitErrorsCounter int64
+	apiErrorsCounter        int64
+	networkErrorsCounter    int64
 )
 
 // NewEtherscanService creates a new instance of EtherscanService
@@ -260,10 +319,26 @@ func (w *EtherscanWorker) start(ctx context.Context) {
 			}).Info("Etherscan worker stopped")
 			return
 		case <-ticker.C:
+			// Check if worker is exhausted
+			if w.isExhausted() {
+				continue
+			}
+
 			// Check circuit breaker before processing
 			if w.isCircuitOpen() {
 				continue
 			}
+
+			// Use dynamic interval based on backoff
+			currentInterval := w.Interval
+			w.Mutex.RLock()
+			if w.BackoffInterval > 0 {
+				currentInterval = w.BackoffInterval
+			}
+			w.Mutex.RUnlock()
+
+			// Reset ticker with current interval
+			ticker.Reset(currentInterval)
 
 			// Process one request from the queue
 			if err := w.processNextRequest(ctx); err != nil {
@@ -339,6 +414,8 @@ func (w *EtherscanWorker) recordSuccess() {
 	w.Processed++
 	// Reset consecutive errors on success, but keep total error count
 	w.ConsecutiveErrors = 0
+	// Reset backoff interval on success
+	w.BackoffInterval = 0
 }
 
 // processNextRequest processes the next request from the queue using this worker's API key
@@ -366,6 +443,55 @@ func (w *EtherscanWorker) processNextRequest(ctx context.Context) error {
 
 	// Make the actual API call using this worker's API key
 	data, err := w.makeEtherscanAPICall(request)
+
+	// Smart error handling based on error type
+	if err != nil {
+		errorType := classifyError(err.Error())
+		switch errorType {
+		case ErrorTypeDailyLimit:
+			// Mark this worker as exhausted until midnight UTC
+			resetDuration := timeUntilMidnightUTC()
+			w.markExhausted(resetDuration)
+			atomic.AddInt64(&dailyLimitErrorsCounter, 1)
+			logger.WithFields(logger.Fields{
+				"WorkerID":  w.WorkerID,
+				"RequestID": request.ID,
+				"ErrorType": errorType,
+			}).Warnf("Worker marked as exhausted due to daily limit")
+		case ErrorTypeRateLimit:
+			// Increase backoff interval temporarily
+			w.increaseBackoff()
+			atomic.AddInt64(&rateLimitErrorsCounter, 1)
+			logger.WithFields(logger.Fields{
+				"WorkerID":  w.WorkerID,
+				"RequestID": request.ID,
+				"ErrorType": errorType,
+			}).Warnf("Worker backoff increased due to rate limit")
+		case ErrorTypeAPI:
+			// Log API errors for monitoring
+			atomic.AddInt64(&apiErrorsCounter, 1)
+			logger.WithFields(logger.Fields{
+				"WorkerID":  w.WorkerID,
+				"RequestID": request.ID,
+				"ErrorType": errorType,
+			}).Errorf("API error occurred: %v", err)
+		case ErrorTypeNetwork:
+			// Network errors are usually temporary
+			atomic.AddInt64(&networkErrorsCounter, 1)
+			logger.WithFields(logger.Fields{
+				"WorkerID":  w.WorkerID,
+				"RequestID": request.ID,
+				"ErrorType": errorType,
+			}).Warnf("Network error occurred: %v", err)
+		default:
+			// Unknown errors
+			logger.WithFields(logger.Fields{
+				"WorkerID":  w.WorkerID,
+				"RequestID": request.ID,
+				"ErrorType": errorType,
+			}).Errorf("Unknown error occurred: %v", err)
+		}
+	}
 
 	// Find and notify the pending request
 	if reqCtxValue, exists := pendingRequests.Load(request.ID); exists {
@@ -511,11 +637,19 @@ func (s *EtherscanService) GetAddressTransactionHistoryImmediate(ctx context.Con
 		return nil, fmt.Errorf("limit must be between 1 and 1000")
 	}
 
-	// Use the first available worker for immediate processing
+	// Use the first available non-exhausted worker for immediate processing
 	workerMutex.RLock()
 	var worker *EtherscanWorker
-	if len(workers) > 0 {
+	for _, w := range workers {
+		if !w.isExhausted() {
+			worker = w
+			break
+		}
+	}
+	// If all workers are exhausted, use the first one anyway
+	if worker == nil && len(workers) > 0 {
 		worker = workers[0]
+		logger.Warnf("All workers are exhausted, using worker %d anyway", workers[0].WorkerID)
 	}
 	workerMutex.RUnlock()
 
@@ -692,13 +826,17 @@ func (s *EtherscanService) GetQueueStats(ctx context.Context) (*QueueStats, erro
 	totalRateLimit := activeWorkers * 5 // Default 5 req/sec per worker
 
 	return &QueueStats{
-		QueueLength:     queueLength,
-		TotalProcessed:  totalProcessed,
-		TotalErrors:     totalErrors,
-		ActiveWorkers:   activeWorkers,
-		RateLimit:       totalRateLimit,
-		WorkerActive:    activeWorkers > 0,
-		PendingRequests: pendingCount,
+		QueueLength:      queueLength,
+		TotalProcessed:   totalProcessed,
+		TotalErrors:      totalErrors,
+		ActiveWorkers:    activeWorkers,
+		RateLimit:        totalRateLimit,
+		WorkerActive:     activeWorkers > 0,
+		PendingRequests:  pendingCount,
+		RateLimitErrors:  atomic.LoadInt64(&rateLimitErrorsCounter),
+		DailyLimitErrors: atomic.LoadInt64(&dailyLimitErrorsCounter),
+		APIErrors:        atomic.LoadInt64(&apiErrorsCounter),
+		NetworkErrors:    atomic.LoadInt64(&networkErrorsCounter),
 	}, nil
 }
 
