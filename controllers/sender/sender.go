@@ -501,7 +501,6 @@ func (ctrl *SenderController) Stats(ctx *gin.Context) {
 	})
 }
 
-
 // validateAndNormalizePayload validates the payload and determines order type
 func (ctrl *SenderController) validateAndNormalizePayload(payload *types.NewPaymentOrderPayload) (string, *types.ErrorData) {
 	// Determine order type
@@ -744,6 +743,7 @@ type RateResult struct {
 	achievableRate decimal.Decimal
 	err            error
 }
+
 // validateAccountAndRate performs parallel validation of account and rate
 func (ctrl *SenderController) validateAccountAndRate(ctx *gin.Context, token *ent.Token, institutionObj *ent.Institution, payload types.NewPaymentOrderPayload) (AccountResult, RateResult, *types.ErrorData) {
 
@@ -792,7 +792,7 @@ func (ctrl *SenderController) validateAccountAndRate(ctx *gin.Context, token *en
 func (ctrl *SenderController) createReceiveAddress(ctx *gin.Context, payload types.NewPaymentOrderPayload) (*ent.ReceiveAddress, error) {
 	var receiveAddress *ent.ReceiveAddress
 	var networkIdentifier string
-	
+
 	if payload.Source.PaymentRail != "" {
 		networkIdentifier = payload.Source.PaymentRail
 	} else {
@@ -915,9 +915,11 @@ func (ctrl *SenderController) createOfframpPaymentOrder(ctx *gin.Context, payloa
 	// Create payment order
 	paymentOrder, err := tx.PaymentOrder.
 		Create().
+		SetType(paymentorder.TypeOfframp).
 		SetSenderProfile(sender).
 		SetAmount(payload.Amount).
 		SetAmountPaid(decimal.NewFromInt(0)).
+		SetAmountIn(payload.AmountIn).
 		SetAmountReturned(decimal.NewFromInt(0)).
 		SetPercentSettled(decimal.NewFromInt(0)).
 		SetNetworkFee(token.Edges.Network.Fee).
@@ -1097,7 +1099,6 @@ func (ctrl *SenderController) getSenderOrderTokenConfigWithReturn(ctx *gin.Conte
 	return feePercent, feeAddress, returnAddress, nil
 }
 
-
 func (ctrl *SenderController) handleOfframpOrder(ctx *gin.Context, payload types.NewPaymentOrderPayload, sender *ent.SenderProfile, token *ent.Token, institutionObj *ent.Institution) {
 	// Get sender configuration
 	feePercent, feeAddress, returnAddress, err := ctrl.getSenderOrderTokenConfigWithReturn(ctx, sender, token, payload)
@@ -1156,39 +1157,39 @@ func (ctrl *SenderController) handleOfframpOrder(ctx *gin.Context, payload types
 	// Return success response
 	senderFee := feePercent.Mul(payload.Amount).Div(decimal.NewFromInt(100)).Round(4)
 	response := &types.OrderResponse{
-        ID:        paymentOrder.ID.String(),
-        Status:    "initiated",
-        Timestamp: paymentOrder.CreatedAt.Format(time.RFC3339),
-        Amount:    paymentOrder.Amount.String(),
-        Rate:      paymentOrder.Rate.String(),
-		AmountIn: payload.AmountIn.String(),
-        SenderFee: senderFee.String(),
+		ID:               paymentOrder.ID.String(),
+		Status:           "initiated",
+		Timestamp:        paymentOrder.CreatedAt.Format(time.RFC3339),
+		Amount:           paymentOrder.Amount.String(),
+		Rate:             paymentOrder.Rate.String(),
+		AmountIn:         payload.AmountIn,
+		SenderFee:        senderFee.String(),
 		SenderFeePercent: feePercent.String(),
-        Reference: paymentOrder.Reference,
-        ProviderAccount: types.ProviderAccount{
-            PaymentRail:    token.Edges.Network.Identifier,
-            ReceiveAddress: receiveAddress.Address,
-            ValidUntil:     receiveAddress.ValidUntil.Format(time.RFC3339),
-        },
-        Source: types.ResponseSource{
-            Type:        "crypto",
-            Currency:    token.Symbol,
-            PaymentRail: token.Edges.Network.Identifier,
+		Reference:        paymentOrder.Reference,
+		ProviderAccount: types.ProviderAccount{
+			PaymentRail:    token.Edges.Network.Identifier,
+			ReceiveAddress: receiveAddress.Address,
+			ValidUntil:     receiveAddress.ValidUntil.Format(time.RFC3339),
+		},
+		Source: types.ResponseSource{
+			Type:          "crypto",
+			Currency:      token.Symbol,
+			PaymentRail:   token.Edges.Network.Identifier,
 			RefundAddress: returnAddress,
-        },
-        Destination: types.ResponseDestination{
-            Type:     "fiat",
-            Currency: institutionObj.Edges.FiatCurrency.Code,
-			Country:  payload.Destination.Country,
+		},
+		Destination: types.ResponseDestination{
+			Type:       "fiat",
+			Currency:   institutionObj.Edges.FiatCurrency.Code,
+			Country:    payload.Destination.Country,
 			ProviderID: provider,
-            Recipient: types.ResponseRecipient{
-                Institution:       payload.Recipient.Institution,
-                AccountIdentifier: payload.Recipient.AccountIdentifier,
-                AccountName:       accountResult.accountName,
-                Memo:              payload.Recipient.Memo,
-            },
-        },
-    }
+			Recipient: types.ResponseRecipient{
+				Institution:       payload.Recipient.Institution,
+				AccountIdentifier: payload.Recipient.AccountIdentifier,
+				AccountName:       accountResult.accountName,
+				Memo:              payload.Recipient.Memo,
+			},
+		},
+	}
 	u.APIResponse(ctx, http.StatusCreated, "success", "Payment order initiated successfully", response)
 }
 
@@ -1290,9 +1291,11 @@ func (ctrl *SenderController) handleOnrampOrder(ctx *gin.Context, payload types.
 	// Create payment order
 	paymentOrder, err := tx.PaymentOrder.
 		Create().
+		SetType(paymentorder.TypeOnramp).
 		SetSenderProfile(sender).
 		SetAmount(payload.Amount).
 		SetAmountPaid(decimal.NewFromInt(0)).
+		SetAmountIn(payload.AmountIn).
 		SetAmountReturned(decimal.NewFromInt(0)).
 		SetPercentSettled(decimal.NewFromInt(0)).
 		SetNetworkFee(token.Edges.Network.Fee).
@@ -1319,6 +1322,29 @@ func (ctrl *SenderController) handleOnrampOrder(ctx *gin.Context, payload types.
 		return
 	}
 
+	_, err = tx.VirtualAccount.
+		Create().
+		SetAmount(paymentOrder.Amount).
+		SetCurrency(payload.Source.Currency).
+		SetInstitutionName(virtualAccountResp.InstitutionName).
+		SetAccountIdentifier(virtualAccountResp.AccountIdentifier).
+		SetAccountName(virtualAccountResp.AccountName).
+		SetValidUntil(virtualAccountResp.ValidUntil).
+		SetPaymentOrder(paymentOrder).
+		SetProvider(suitableProvider).
+		SetMetadata(map[string]interface{}{
+			"orderType":          "onramp",
+			"destinationAddress": payload.Destination.Recipient.Address,
+			"paymentRail":        payload.Destination.Recipient.PaymentRail,
+		}).
+		Save(ctx)
+	if err != nil {
+		logger.Errorf("Failed to create virtual account: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create virtual account", nil)
+		tx.Rollback()
+		return
+	}
+
 	// @TODO - need to update schema
 	_, err = tx.PaymentOrderRecipient.
 		Create().
@@ -1327,11 +1353,11 @@ func (ctrl *SenderController) handleOnrampOrder(ctx *gin.Context, payload types.
 		SetAccountName(virtualAccountResp.AccountName).
 		SetProviderID(payload.Destination.ProviderID).
 		SetMetadata(map[string]interface{}{
-			"virtualAccountId": virtualAccountResp.OrderID,
-			"validUntil":       virtualAccountResp.ValidUntil,
-			"orderType":        virtualAccountResp.Type,
+			"virtualAccountId":   virtualAccountResp.OrderID,
+			"validUntil":         virtualAccountResp.ValidUntil,
+			"orderType":          virtualAccountResp.Type,
 			"destinationAddress": payload.Destination.Recipient.Address,
-			"paymentRail":      payload.Destination.Recipient.PaymentRail,
+			"paymentRail":        payload.Destination.Recipient.PaymentRail,
 		}).
 		SetPaymentOrder(paymentOrder).
 		Save(ctx)
@@ -1351,41 +1377,41 @@ func (ctrl *SenderController) handleOnrampOrder(ctx *gin.Context, payload types.
 	senderFee := decimal.NewFromInt(0)
 
 	response := &types.OrderResponse{
-        ID:        paymentOrder.ID.String(),
-        Status:    "initiated",
-        Timestamp: paymentOrder.CreatedAt.Format(time.RFC3339),
-        Amount:    paymentOrder.Amount.String(),
-        Rate:      paymentOrder.Rate.String(),
-		AmountIn: payload.AmountIn.String(),
-        SenderFee: senderFee.String(),
+		ID:               paymentOrder.ID.String(),
+		Status:           "initiated",
+		Timestamp:        paymentOrder.CreatedAt.Format(time.RFC3339),
+		Amount:           paymentOrder.Amount.String(),
+		Rate:             paymentOrder.Rate.String(),
+		AmountIn:         payload.AmountIn,
+		SenderFee:        senderFee.String(),
 		SenderFeePercent: feePercent.String(),
-        Reference: paymentOrder.Reference,
-        ProviderAccount: types.ProviderAccount{
-            Institution:       virtualAccountResp.InstitutionName,
-            AccountIdentifier: virtualAccountResp.AccountIdentifier,
-            AccountName:       virtualAccountResp.AccountName,
-            ValidUntil:        virtualAccountResp.ValidUntil,
-        },
-        Source: types.ResponseSource{
-            Type:     "fiat",
-            Currency: payload.Source.Currency,
-            Country:  payload.Source.Country,
+		Reference:        paymentOrder.Reference,
+		ProviderAccount: types.ProviderAccount{
+			Institution:       virtualAccountResp.InstitutionName,
+			AccountIdentifier: virtualAccountResp.AccountIdentifier,
+			AccountName:       virtualAccountResp.AccountName,
+			ValidUntil:        virtualAccountResp.ValidUntil,
+		},
+		Source: types.ResponseSource{
+			Type:     "fiat",
+			Currency: payload.Source.Currency,
+			Country:  payload.Source.Country,
 			RefundAccount: &types.AccountInfo{
 				Institution:       payload.Source.RefundAccount.Institution,
 				AccountIdentifier: payload.Source.RefundAccount.AccountIdentifier,
 				AccountName:       payload.Source.RefundAccount.AccountName,
 			},
-        },
-        Destination: types.ResponseDestination{
-            Type:       "crypto",
-            Currency:   payload.Destination.Currency,
-            ProviderID: payload.Destination.ProviderID,
-            Recipient: types.ResponseRecipient{
-                PaymentRail: payload.Destination.Recipient.PaymentRail,
-                Address:     payload.Destination.Recipient.Address,
-            },
-        },
-    }
+		},
+		Destination: types.ResponseDestination{
+			Type:       "crypto",
+			Currency:   payload.Destination.Currency,
+			ProviderID: payload.Destination.ProviderID,
+			Recipient: types.ResponseRecipient{
+				PaymentRail: payload.Destination.Recipient.PaymentRail,
+				Address:     payload.Destination.Recipient.Address,
+			},
+		},
+	}
 
 	// Return virtual account response
 	u.APIResponse(ctx, http.StatusCreated, "success", "Onramp payment order initiated successfully", response)

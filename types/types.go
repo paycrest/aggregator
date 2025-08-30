@@ -188,20 +188,40 @@ type LockOrderResponse struct {
 // AcceptOrderResponse is the response for the accept order endpoint
 type AcceptOrderResponse struct {
 	ID                uuid.UUID              `json:"id"`
-	Amount            decimal.Decimal        `json:"amount"`
-	Institution       string                 `json:"institution"`
-	AccountIdentifier string                 `json:"accountIdentifier"`
-	AccountName       string                 `json:"accountName"`
-	Memo              string                 `json:"memo"`
-	Metadata          map[string]interface{} `json:"metadata"`
+	Type              string                 `json:"type" binding:"required"` // "onramp" | "offramp"
+	Amount            decimal.Decimal        `json:"amount" binding:"required"`
+	Institution       string                 `json:"institution,omitempty"`
+	AccountIdentifier string                 `json:"accountIdentifier,omitempty"`
+	AccountName       string                 `json:"accountName,omitempty"`
+	Memo              string                 `json:"memo,omitempty"`
+	Rate              decimal.Decimal        `json:"rate,omitempty"`
+	Network           *NetworkInfo           `json:"network,omitempty"`
+	Metadata          map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// NetworkInfo contains network and token information for onramp orders
+type NetworkInfo struct {
+	ChainID                   uint64     `json:"chainId" binding:"required"`
+	RpcURL                    string     `json:"rpcUrl" binding:"required"`
+	Token                     *TokenInfo `json:"token" binding:"required"`
+	Nonce                     uint64     `json:"nonce" binding:"required"`
+	DelegationContractAddress string     `json:"delegationContractAddress" binding:"required"`
+}
+
+// TokenInfo contains token contract information
+type TokenInfo struct {
+	Address  string `json:"address" binding:"required"`
+	Decimals string `json:"decimals" binding:"required"`
 }
 
 // FulfillLockOrderPayload is the payload for the fulfill order endpoint
 type FulfillLockOrderPayload struct {
-	PSP              string                                `json:"psp" binding:"required"`
-	TxID             string                                `json:"txId" binding:"required"`
+	OrderID          string                      `json:"orderId" binding:"required"`
+	TxID             string                      `json:"txId,omitempty"`
+	PSP              string                      `json:"psp" binding:"required"`
 	ValidationStatus lockorderfulfillment.ValidationStatus `json:"validationStatus"`
-	ValidationError  string                                `json:"validationError"`
+	ValidationError  string                      `json:"validationError,omitempty"`
+	Authorization    *types.SetCodeAuthorization `json:"authorization,omitempty"`
 }
 
 // CancelLockOrderPayload is the payload for the cancel order endpoint
@@ -487,22 +507,21 @@ type PaymentOrderRecipient struct {
 
 // NewPaymentOrderPayload is the payload for the create payment order endpoint
 type NewPaymentOrderPayload struct {
-	Amount        decimal.Decimal       `json:"amount,omitempty"`
-	Token         string                `json:"token,omitempty"`
-	Rate          decimal.Decimal       `json:"rate,omitempty"`
-	Network       string                `json:"network,omitempty"`
-	Recipient     PaymentOrderRecipient `json:"recipient,omitempty"`
-	Reference     string                `json:"reference,omitempty"`
-	ReturnAddress string                `json:"returnAddress,omitempty"`
-	FeePercent    decimal.Decimal       `json:"feePercent,omitempty"`
-	FeeAddress    string                `json:"feeAddress,omitempty"`
-
-	SenderFeePercent decimal.Decimal `json:"senderFeePercent,omitempty"`
-	AmountIn         decimal.Decimal `json:"amountIn,omitempty"`
-	SenderFee        decimal.Decimal `json:"senderFee,omitempty"`
-	Source           Source          `json:"source,omitempty"`
-	Destination      Destination     `json:"destination,omitempty"`
-	KYC              KYCInfo         `json:"kyc,omitempty"`
+	Amount           decimal.Decimal       `json:"amount,omitempty"`
+	Token            string                `json:"token,omitempty"`
+	Rate             decimal.Decimal       `json:"rate,omitempty"`
+	Network          string                `json:"network,omitempty"`
+	Recipient        PaymentOrderRecipient `json:"recipient,omitempty"`
+	Reference        string                `json:"reference,omitempty"`
+	ReturnAddress    string                `json:"returnAddress,omitempty"`
+	FeePercent       decimal.Decimal       `json:"feePercent,omitempty"`
+	FeeAddress       string                `json:"feeAddress,omitempty"`
+	SenderFeePercent decimal.Decimal       `json:"senderFeePercent,omitempty"`
+	AmountIn         string                `json:"amountIn,omitempty"`
+	SenderFee        decimal.Decimal       `json:"senderFee,omitempty"`
+	Source           Source                `json:"source,omitempty"`
+	Destination      Destination           `json:"destination,omitempty"`
+	KYC              KYCInfo               `json:"kyc,omitempty"`
 }
 
 type NewOrderResponse struct {

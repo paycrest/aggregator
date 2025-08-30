@@ -25,8 +25,11 @@ func (PaymentOrder) Mixin() []ent.Mixin {
 func (PaymentOrder) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(uuid.New),
+		field.Enum("type").
+            Values("onramp", "offramp"),
 		field.Float("amount").GoType(decimal.Decimal{}),
 		field.Float("amount_paid").GoType(decimal.Decimal{}),
+		field.String("amount_in").MaxLen(30).Default(""),
 		field.Float("amount_returned").GoType(decimal.Decimal{}),
 		field.Float("percent_settled").GoType(decimal.Decimal{}),
 		field.Float("sender_fee").GoType(decimal.Decimal{}),
@@ -85,5 +88,8 @@ func (PaymentOrder) Edges() []ent.Edge {
 		edge.To("transactions", TransactionLog.Type),
 		edge.To("payment_webhook", PaymentWebhook.Type).
 			Unique(),
+		edge.To("virtual_account", VirtualAccount.Type).
+            Unique().
+            Annotations(entsql.OnDelete(entsql.SetNull)),
 	}
 }
