@@ -229,7 +229,7 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 
 				splitOrderId := unpackedEventData[0].(string)
 				settlePercent := unpackedEventData[1].(*big.Int)
-				eventOrderId := utils.ParseTopicToByte32(eventData["topics"].([]interface{})[1].(string))
+				eventOrderId := utils.ParseTopicToByte32Flexible(eventData["topics"].([]interface{})[1])
 				liquidityProvider := utils.ParseTopicToTronAddress(eventData["topics"].([]interface{})[2].(string))
 
 				settledEvent := &types.OrderSettledEvent{
@@ -254,7 +254,7 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 				}
 
 				fee := unpackedEventData[0].(*big.Int)
-				eventOrderId := utils.ParseTopicToByte32(eventData["topics"].([]interface{})[1].(string))
+				eventOrderId := utils.ParseTopicToByte32Flexible(eventData["topics"].([]interface{})[1])
 
 				refundedEvent := &types.OrderRefundedEvent{
 					BlockNumber: int64(data["blockNumber"].(float64)),
@@ -481,7 +481,7 @@ func (s *IndexerTron) indexOrderSettledByBlockRange(ctx context.Context, network
 					}
 					splitOrderId := unpackedEventData[0].(string)
 					settlePercent := unpackedEventData[1].(*big.Int)
-					eventOrderId := utils.ParseTopicToByte32(eventData["topics"].([]interface{})[1].(string))
+					eventOrderId := utils.ParseTopicToByte32Flexible(eventData["topics"].([]interface{})[1])
 					liquidityProvider := utils.ParseTopicToTronAddress(eventData["topics"].([]interface{})[2].(string))
 					settledEvent := &types.OrderSettledEvent{
 						BlockNumber:       int64(data["blockNumber"].(float64)),
@@ -551,7 +551,7 @@ func (s *IndexerTron) indexOrderRefundedByBlockRange(ctx context.Context, networ
 						continue
 					}
 					fee := unpackedEventData[0].(*big.Int)
-					eventOrderId := utils.ParseTopicToByte32(eventData["topics"].([]interface{})[1].(string))
+					eventOrderId := utils.ParseTopicToByte32Flexible(eventData["topics"].([]interface{})[1])
 					refundedEvent := &types.OrderRefundedEvent{
 						BlockNumber: int64(data["blockNumber"].(float64)),
 						TxHash:      data["id"].(string),

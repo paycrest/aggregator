@@ -570,6 +570,22 @@ func ParseTopicToByte32(paddedHexString string) [32]byte {
 	return [32]byte(addressBytes)
 }
 
+// ParseTopicToByte32Flexible handles both string and [32]uint8 inputs for compatibility
+func ParseTopicToByte32Flexible(topic interface{}) [32]byte {
+	switch v := topic.(type) {
+	case string:
+		// Handle string input (hex string)
+		return ParseTopicToByte32(v)
+	case [32]uint8:
+		// Handle direct byte array input
+		return [32]byte(v)
+	default:
+		// Try to convert to string as fallback
+		str := fmt.Sprintf("%v", v)
+		return ParseTopicToByte32(str)
+	}
+}
+
 // UnpackEventData unpacks the data from a padded hex string using the ABI
 func UnpackEventData(paddedHexString, contractABI, eventName string) ([]interface{}, error) {
 	rawData, err := hex.DecodeString(paddedHexString)
