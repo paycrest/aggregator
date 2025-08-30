@@ -176,7 +176,7 @@ var (
 
 	// Request cleanup configuration
 	requestCleanupInterval = 1 * time.Minute
-	requestTimeout         = 2 * time.Minute
+	requestTimeout         = 60 * time.Second
 
 	// Error type counters for monitoring
 	rateLimitErrorsCounter  int64
@@ -266,6 +266,7 @@ func startRequestCleanup(ctx context.Context) {
 			return
 		case <-ticker.C:
 			cleanupStaleRequests()
+			cleanupStaleQueueEntries(ctx)
 		}
 	}
 }
@@ -296,6 +297,37 @@ func cleanupStaleRequests() {
 		logger.WithFields(logger.Fields{
 			"CleanedRequests": cleaned,
 		}).Infof("Cleaned up stale requests")
+	}
+}
+
+// cleanupStaleQueueEntries removes old requests from Redis queue
+func cleanupStaleQueueEntries(ctx context.Context) {
+	queueKey := "etherscan_queue"
+
+	// Get all items in queue without removing them
+	items, err := storage.RedisClient.LRange(ctx, queueKey, 0, -1).Result()
+	if err != nil {
+		logger.Errorf("Failed to get queue items for cleanup: %v", err)
+		return
+	}
+
+	var staleCount int
+	for _, item := range items {
+		var request EtherscanRequest
+		if json.Unmarshal([]byte(item), &request) == nil {
+			if time.Since(request.CreatedAt) > requestTimeout {
+				// Remove this specific stale item
+				if err := storage.RedisClient.LRem(ctx, queueKey, 1, item).Err(); err == nil {
+					staleCount++
+				}
+			}
+		}
+	}
+
+	if staleCount > 0 {
+		logger.WithFields(logger.Fields{
+			"StaleRequests": staleCount,
+		}).Infof("Cleaned up stale queue entries")
 	}
 }
 
