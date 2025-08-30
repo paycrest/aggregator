@@ -29,6 +29,7 @@ import (
 	"github.com/paycrest/aggregator/types"
 	u "github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
+	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/shopspring/decimal"
 
 	"github.com/gin-gonic/gin"
@@ -1346,7 +1347,7 @@ func (ctrl *SenderController) handleOnrampOrder(ctx *gin.Context, payload types.
 	}
 
 	// @TODO - need to update schema
-	_, err = tx.PaymentOrderRecipient.
+	recipient, err := tx.PaymentOrderRecipient.
 		Create().
 		SetInstitution(virtualAccountResp.InstitutionName).
 		SetAccountIdentifier(virtualAccountResp.AccountIdentifier).
@@ -1363,6 +1364,24 @@ func (ctrl *SenderController) handleOnrampOrder(ctx *gin.Context, payload types.
 		Save(ctx)
 	if err != nil {
 		logger.Errorf("Failed to create payment order recipient: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+		tx.Rollback()
+		return
+	}
+
+	encryptedOrderRecipient, err := cryptoUtils.EncryptOrderRecipient(recipient)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+		return
+	}
+
+	// update payment order with message hash
+	_, err = tx.PaymentOrder.
+		UpdateOneID(paymentOrder.ID).
+		SetMessageHash(encryptedOrderRecipient).
+		Save(ctx)
+	if err != nil {
+		logger.Errorf("Failed to update payment order: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 		tx.Rollback()
 		return

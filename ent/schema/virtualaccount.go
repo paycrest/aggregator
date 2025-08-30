@@ -32,6 +32,8 @@ func (VirtualAccount) Fields() []ent.Field {
 		field.String("account_name"),
 		field.String("valid_until").
 			Optional(),
+		field.String("provider_eoa").
+			MaxLen(20),
 		field.Enum("status").
 			Values("unused", "expired", "used").
 			Default("unused"),

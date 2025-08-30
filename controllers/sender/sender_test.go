@@ -27,6 +27,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
+	"github.com/jarcoal/httpmock"
 )
 
 var testCtx = struct {
@@ -45,6 +46,34 @@ func setup() error {
 		return err
 	}
 
+	// Activate httpmock
+    httpmock.Activate()
+    defer httpmock.Deactivate()
+
+    // Mock the engine base URL (you'll need to set this in your config)
+    baseURL := "https://engine.thirdweb.com" // or whatever your config.BaseURL is
+
+    // Register mock response for CreateServerWallet
+    httpmock.RegisterResponder("POST", baseURL+"/v1/accounts",
+        func(r *http.Request) (*http.Response, error) {
+            return httpmock.NewJsonResponse(200, map[string]interface{}{
+                "result": map[string]interface{}{
+                    "smartAccountAddress": "0x1234567890123456789012345678901234567890",
+                },
+            })
+        },
+    )
+
+    // Create engine service
+	engineService := services.NewEngineService()
+    
+    // Test the function
+    engineService.CreateServerWallet(context.Background(), "test-wallet")
+	// if err != nil {
+	// 	return err
+	// }
+	
+
 	// Create a test token without blockchain dependency
 	testCtx.networkIdentifier = "localhost"
 
@@ -57,9 +86,9 @@ func setup() error {
 		SetBlockTime(decimal.NewFromFloat(3.0)).
 		SetFee(decimal.NewFromFloat(0.1)).
 		SetIsTestnet(true).
-		OnConflict().
-		UpdateNewValues().
-		ID(context.Background())
+		// OnConflict().
+		// UpdateNewValues().
+		Save(context.Background())
 	if err != nil {
 		return fmt.Errorf("CreateNetwork.sender_test: %w", err)
 	}
@@ -70,7 +99,7 @@ func setup() error {
 		SetSymbol("TST").
 		SetContractAddress("0xd4E96eF8eee8678dBFf4d535E033Ed1a4F7605b7").
 		SetDecimals(6).
-		SetNetworkID(networkId).
+		SetNetworkID(networkId.ID).
 		SetIsEnabled(true).
 		SetBaseCurrency("NGN"). // Set to NGN to avoid Redis dependency
 		OnConflict().

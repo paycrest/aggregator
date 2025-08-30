@@ -2,12 +2,15 @@ package order
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"math/big"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/config"
@@ -404,4 +407,70 @@ func (s *OrderEVM) refundCallData(fee *big.Int, orderId string) ([]byte, error) 
 	}
 
 	return data, nil
+}
+
+func (s *OrderEVM) settleInCallData(ctx context.Context, orderID uuid.UUID) ([]byte, error) {
+	gatewayABI, err := abi.JSON(strings.NewReader(contracts.GatewayMetaData.ABI))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse GatewayOrder ABI: %w", err)
+	}
+
+	batchABI, err := abi.JSON(strings.NewReader(contracts.BATCH_ABI))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse batch ABI: %v", err)
+	}
+
+	nonce := make([]byte, 32)
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return nil, err
+	}
+
+	order, err := db.Client.PaymentOrder.
+		Query().
+		Where(
+			paymentorder.IDEQ(orderID),
+			paymentorder.StatusEQ(paymentorder.StatusValidated),
+		).
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
+		WithRecipient().
+		WithVirtualAccount().
+		Only(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch order: %w", err)
+	}
+
+	// Convert to hex string with 0x prefix
+	onchainOrderID := "0x" + hex.EncodeToString(nonce)
+
+	// Pack the function call data
+	createOrderData, err := gatewayABI.Pack(
+		"settleIn",
+		onchainOrderID,
+		order.Edges.Token.ContractAddress,
+		order.Amount,
+		order.FeeAddress,
+		order.SenderFee,
+		order.ReceiveAddressText,
+		order.Rate,
+		order.MessageHash,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to pack settleIn ABI: %w", err)
+	}
+
+	calls := []Call{
+		{To: ethcommon.HexToAddress(order.Edges.Token.Edges.Network.GatewayContractAddress), Value: big.NewInt(0), Data: createOrderData},
+	}
+
+	batchData, err := batchABI.Pack("execute", calls, "signature")
+
+	return batchData, nil
+}
+
+type Call struct {
+	To    common.Address `abi:"to"`
+	Value *big.Int       `abi:"value"`
+	Data  []byte         `abi:"data"`
 }

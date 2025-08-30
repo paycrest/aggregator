@@ -1489,6 +1489,11 @@ func (ctrl *ProviderController) handleOnrampFulfillment(ctx *gin.Context, payloa
 		return
 	}
 
+	_ = storage.Client.VirtualAccount.
+		UpdateOneID(virtualAccount.ID).
+		SetProviderAddress(payload.ProviderAddress).
+		Save(ctx)
+
 	paymentOrder := virtualAccount.Edges.PaymentOrder
 
 	switch payload.ValidationStatus {

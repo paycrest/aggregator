@@ -216,12 +216,13 @@ type TokenInfo struct {
 
 // FulfillLockOrderPayload is the payload for the fulfill order endpoint
 type FulfillLockOrderPayload struct {
-	OrderID          string                      `json:"orderId" binding:"required"`
-	TxID             string                      `json:"txId,omitempty"`
-	PSP              string                      `json:"psp" binding:"required"`
+	OrderID          string                                `json:"orderId" binding:"required"`
+	TxID             string                                `json:"txId,omitempty"`
+	PSP              string                                `json:"psp" binding:"required"`
+	ProviderEOA      string                                `json:"providerEOA" binding:"required"`
 	ValidationStatus lockorderfulfillment.ValidationStatus `json:"validationStatus"`
-	ValidationError  string                      `json:"validationError,omitempty"`
-	Authorization    *types.SetCodeAuthorization `json:"authorization,omitempty"`
+	ValidationError  string                                `json:"validationError,omitempty"`
+	Authorization    *types.SetCodeAuthorization           `json:"authorization,omitempty"`
 }
 
 // CancelLockOrderPayload is the payload for the cancel order endpoint
