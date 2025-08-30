@@ -271,6 +271,7 @@ func TaskIndexBlockchainEvents() error {
 			// 	networkent.IdentifierEQ("bnb-smart-chain"),
 			// 	networkent.IdentifierEQ("lisk"),
 			// ),
+			networkent.Not(networkent.IdentifierHasPrefix("tron")),
 		).
 		All(ctx)
 	if err != nil {
