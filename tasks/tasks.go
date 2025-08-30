@@ -321,6 +321,7 @@ func TaskIndexBlockchainEvents() error {
 						tq.WithNetwork()
 					}).
 					WithReceiveAddress().
+					Order(ent.Desc(paymentorder.FieldCreatedAt)).
 					All(ctx)
 				if err != nil {
 					logger.WithFields(logger.Fields{
