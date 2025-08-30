@@ -279,12 +279,7 @@ func TaskIndexBlockchainEvents() error {
 	}
 
 	// Process each network in parallel
-	for i, network := range networks {
-		// Add a small delay between starting goroutines to prevent overwhelming Etherscan
-		if i > 0 {
-			time.Sleep(100 * time.Millisecond)
-		}
-
+	for _, network := range networks {
 		go func(network *ent.Network) {
 			// Create a new context for this network's operations
 			ctx := context.Background()
@@ -335,19 +330,27 @@ func TaskIndexBlockchainEvents() error {
 					return
 				}
 
-				// Index Transfer events
-				for i, order := range paymentOrders {
-					_, err = indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, order.Edges.ReceiveAddress.Address, 0, 0, "")
-					if err != nil {
-						logger.WithFields(logger.Fields{
-							"Error":   fmt.Sprintf("%v", err),
-							"OrderID": order.ID.String(),
-						}).Errorf("TaskIndexBlockchainEvents.IndexReceiveAddress")
+				// Index Transfer events in parallel using goroutines
+				if len(paymentOrders) > 0 {
+					var wg sync.WaitGroup
+
+					for _, order := range paymentOrders {
+						wg.Add(1)
+						go func(order *ent.PaymentOrder) {
+							defer wg.Done()
+
+							_, err := indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, order.Edges.ReceiveAddress.Address, 0, 0, "")
+							if err != nil {
+								logger.WithFields(logger.Fields{
+									"Error":   fmt.Sprintf("%v", err),
+									"OrderID": order.ID.String(),
+								}).Errorf("TaskIndexBlockchainEvents.IndexReceiveAddress")
+							}
+						}(order)
 					}
-					// Add a small delay between requests to be respectful to the RPC node
-					if i < len(paymentOrders)-1 {
-						time.Sleep(250 * time.Millisecond)
-					}
+
+					// Wait for all transfer indexing to complete
+					wg.Wait()
 				}
 			}
 		}(network)
