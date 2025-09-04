@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"strconv"
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jarcoal/httpmock"
@@ -133,7 +133,6 @@ func setup() error {
 	testCtx.apiKeySecret = secretKey
 
 	for i := 0; i < 9; i++ {
-		time.Sleep(time.Duration(float64(rand.Intn(12))) * time.Second)
 
 		// Create a simple payment order without blockchain dependency
 		address := fmt.Sprintf("0x%040d", i) // Simple mock address
@@ -200,16 +199,15 @@ func TestSender(t *testing.T) {
 
 	db.Client = client
 
-	// Set up mock Redis client
-	redisClient := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
-	})
-	defer redisClient.Close()
+	// Set up in-memory Redis
+	mr, err := miniredis.Run()
+	assert.NoError(t, err)
+	defer mr.Close()
 
-	db.RedisClient = redisClient
+	db.RedisClient = redis.NewClient(&redis.Options{Addr: mr.Addr()})
 
 	// Setup test data
-	err := setup()
+	err = setup()
 	assert.NoError(t, err)
 
 	senderTokens, err := client.SenderOrderToken.Query().All(context.Background())
@@ -231,8 +229,8 @@ func TestSender(t *testing.T) {
 	var paymentOrderUUID uuid.UUID
 
 	t.Run("InitiatePaymentOrder", func(t *testing.T) {
-		// Activate httpmock
-		httpmock.Activate()
+		// Activate httpmock to intercept all HTTP calls
+		httpmock.ActivateNonDefault(http.DefaultClient)
 		defer httpmock.Deactivate()
 
 		// Mock the engine service call for receive address creation
@@ -330,11 +328,14 @@ func TestSender(t *testing.T) {
 		assert.Equal(t, data["transactionFee"], network.Fee.String())
 
 		t.Run("Check Transaction Logs", func(t *testing.T) {
+			ts := time.Now().Unix()
+			sigPayload := map[string]interface{}{"timestamp": ts}
+			sig := token.GenerateHMACSignature(sigPayload, testCtx.apiKeySecret)
 			headers := map[string]string{
-				"API-Key": testCtx.apiKey.ID.String(),
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + sig,
 			}
 
-			res, err = test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders/%s?timestamp=%v", paymentOrderUUID.String(), payload["timestamp"]), nil, headers, router)
+			res, err = test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders/%s?timestamp=%v", paymentOrderUUID.String(), ts), nil, headers, router)
 			assert.NoError(t, err)
 
 			type Response struct {

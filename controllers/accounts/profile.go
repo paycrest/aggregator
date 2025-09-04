@@ -81,7 +81,7 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 		update.SetWebhookURL(payload.WebhookURL)
 	}
 
-	if payload.DomainWhitelist != nil || (payload.DomainWhitelist == nil && sender.DomainWhitelist != nil) {
+	if payload.DomainWhitelist != nil {
 		update.SetDomainWhitelist(payload.DomainWhitelist)
 	}
 
@@ -110,20 +110,20 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 			if strings.HasPrefix(address.Network, "tron") {
 				feeAddressIsValid := u.IsValidTronAddress(address.FeeAddress)
 				if address.FeeAddress != "" && !feeAddressIsValid {
-					u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", []types.ErrorData{{
 						Field:   "FeeAddress",
 						Message: "Invalid Tron address",
-					})
+					}})
 					return
 				}
 				networksToTokenId[address.Network] = 0
 			} else {
 				feeAddressIsValid := u.IsValidEthereumAddress(address.FeeAddress)
 				if address.FeeAddress != "" && !feeAddressIsValid {
-					u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", []types.ErrorData{{
 						Field:   "FeeAddress",
 						Message: "Invalid Ethereum address",
-					})
+					}})
 					return
 				}
 				networksToTokenId[address.Network] = 0
@@ -233,86 +233,24 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		// Validate HTTPS protocol
 		if !u.IsValidHttpsUrl(payload.HostIdentifier) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error",
-				"Host identifier must use HTTPS protocol and be a valid URL", types.ErrorData{
+				"Host identifier must use HTTPS protocol and be a valid URL", []types.ErrorData{{
 					Field:   "HostIdentifier",
 					Message: "Please provide a valid URL starting with https://",
-				})
+				}})
 			return
 		}
 	}
 
-	// Handle currency-specific availability updates
+	// Capture currency availability update intent (no writes yet)
+	var availabilityOp *struct {
+		currencyCode string
+		isAvailable  bool
+	}
 	if payload.Currency != "" {
-		// Find the ProviderCurrencies entry for this provider and currency
-		providerCurrency, err := storage.Client.ProviderCurrencies.
-			Query().
-			Where(
-				providercurrencies.HasProviderWith(providerprofile.IDEQ(provider.ID)),
-				providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(payload.Currency)),
-			).
-			Only(ctx)
-		if err != nil {
-			if ent.IsNotFound(err) {
-				// ProviderCurrencies entry doesn't exist, create it
-				currency, err := storage.Client.FiatCurrency.
-					Query().
-					Where(
-						fiatcurrency.CodeEQ(payload.Currency),
-						fiatcurrency.IsEnabledEQ(true),
-					).
-					Only(ctx)
-				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":      fmt.Sprintf("%v", err),
-						"Currency":   payload.Currency,
-						"ProviderID": provider.ID,
-					}).Errorf("Failed to find enabled currency for availability update")
-					u.APIResponse(ctx, http.StatusBadRequest, "error", "Currency not supported", nil)
-					return
-				}
-
-				_, err = storage.Client.ProviderCurrencies.
-					Create().
-					SetProvider(provider).
-					SetCurrency(currency).
-					SetAvailableBalance(decimal.Zero).
-					SetTotalBalance(decimal.Zero).
-					SetReservedBalance(decimal.Zero).
-					SetIsAvailable(payload.IsAvailable).
-					Save(ctx)
-				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":      fmt.Sprintf("%v", err),
-						"Currency":   payload.Currency,
-						"ProviderID": provider.ID,
-					}).Errorf("Failed to create provider currency for availability update")
-					u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update availability", nil)
-					return
-				}
-			} else {
-				logger.WithFields(logger.Fields{
-					"Error":      fmt.Sprintf("%v", err),
-					"Currency":   payload.Currency,
-					"ProviderID": provider.ID,
-				}).Errorf("Failed to find provider currency for availability update")
-				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update availability", nil)
-				return
-			}
-		} else {
-			// Update existing ProviderCurrencies entry
-			_, err = providerCurrency.Update().
-				SetIsAvailable(payload.IsAvailable).
-				Save(ctx)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":      fmt.Sprintf("%v", err),
-					"Currency":   payload.Currency,
-					"ProviderID": provider.ID,
-				}).Errorf("Failed to update provider currency availability")
-				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update availability", nil)
-				return
-			}
-		}
+		availabilityOp = &struct {
+			currencyCode string
+			isAvailable  bool
+		}{payload.Currency, payload.IsAvailable}
 	}
 
 	// PHASE 1: Validate all tokens and prepare operations
@@ -478,6 +416,39 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		logger.Errorf("Failed to start transaction: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 		return
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	// Handle currency availability updates within the transaction
+	if availabilityOp != nil {
+		curr, err := tx.FiatCurrency.Query().
+			Where(fiatcurrency.CodeEQ(availabilityOp.currencyCode), fiatcurrency.IsEnabledEQ(true)).
+			Only(ctx)
+		if err != nil {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Currency not supported", nil)
+			return
+		}
+
+		pc, err := tx.ProviderCurrencies.Query().
+			Where(providercurrencies.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+				providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(availabilityOp.currencyCode))).
+			Only(ctx)
+		if ent.IsNotFound(err) {
+			_, err = tx.ProviderCurrencies.Create().
+				SetProvider(provider).
+				SetCurrency(curr).
+				SetAvailableBalance(decimal.Zero).
+				SetTotalBalance(decimal.Zero).
+				SetReservedBalance(decimal.Zero).
+				SetIsAvailable(availabilityOp.isAvailable).
+				Save(ctx)
+		} else if err == nil {
+			_, err = pc.Update().SetIsAvailable(availabilityOp.isAvailable).Save(ctx)
+		}
+		if err != nil {
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update availability", nil)
+			return
+		}
 	}
 
 	// Update provider profile within the same transaction
@@ -664,7 +635,7 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 		return
 	}
 
-	tokensPayload := make([]types.SenderOrderTokenResponse, len(sender.Edges.OrderTokens))
+	tokensPayload := make([]types.SenderOrderTokenResponse, len(senderToken))
 	for i, token := range senderToken {
 		payload := types.SenderOrderTokenResponse{
 			Symbol:        token.Edges.Token.Symbol,
