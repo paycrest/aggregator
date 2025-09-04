@@ -36,7 +36,7 @@ func (ProviderOrderToken) Fields() []ent.Field {
 		field.Float("rate_slippage").
 			GoType(decimal.Decimal{}),
 		field.String("address").Optional(),
-		field.String("network").Optional(),
+		field.String("network"),
 	}
 }
 
@@ -61,7 +61,7 @@ func (ProviderOrderToken) Edges() []ent.Edge {
 // Indexes of the ProviderOrderToken.
 func (ProviderOrderToken) Indexes() []ent.Index {
 	return []ent.Index{
-		// Define a unique index across multiple fields.
-		index.Edges("provider", "token", "currency").Unique(),
+		// Define a unique index across multiple fields including network.
+		index.Edges("provider", "token", "currency").Fields("network").Unique(),
 	}
 }

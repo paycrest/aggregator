@@ -325,7 +325,20 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		update.SetVisibilityMode(providerprofile.VisibilityMode(payload.VisibilityMode))
 	}
 
-	// Update tokens
+	// PHASE 1: Validate all tokens and prepare operations
+	type TokenOperation struct {
+		TokenPayload  types.ProviderOrderTokenPayload
+		ProviderToken *ent.Token
+		Currency      *ent.FiatCurrency
+		Rate          decimal.Decimal
+		IsUpdate      bool
+		ExistingToken *ent.ProviderOrderToken
+	}
+
+	var tokenOperations []TokenOperation
+	var validationErrors []types.ErrorData
+
+	// Validate all tokens first
 	for _, tokenPayload := range payload.Tokens {
 		// Check if token is supported
 		providerToken, err := storage.Client.Token.
@@ -338,7 +351,10 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			Only(ctx)
 		if err != nil {
 			if ent.IsNotFound(err) {
-				u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Token not supported - %s", tokenPayload.Symbol), nil)
+				validationErrors = append(validationErrors, types.ErrorData{
+					Field:   "Tokens",
+					Message: fmt.Sprintf("Token not supported - %s on %s", tokenPayload.Symbol, tokenPayload.Network),
+				})
 			} else {
 				logger.WithFields(logger.Fields{
 					"Error": fmt.Sprintf("%v", err),
@@ -350,8 +366,9 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 					"error", "Failed to update profile",
 					nil,
 				)
+				return
 			}
-			return
+			continue
 		}
 
 		// Ensure rate is within allowed deviation from the market rate
@@ -363,25 +380,19 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			Only(ctx)
 		if err != nil {
 			if ent.IsNotFound(err) {
-				u.APIResponse(ctx, http.StatusBadRequest, "error", "Currency not supported", nil)
+				validationErrors = append(validationErrors, types.ErrorData{
+					Field:   "Currency",
+					Message: "Currency not supported",
+				})
 			} else {
 				logger.WithFields(logger.Fields{
 					"Error":    fmt.Sprintf("%v", err),
 					"Currency": payload.Currency,
 				}).Errorf("Failed to fetch currency during update")
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
-			}
-			return
-		}
-
-		if tokenPayload.ConversionRateType == providerordertoken.ConversionRateTypeFloating {
-			rate := currency.MarketRate.Add(tokenPayload.FloatingConversionRate)
-
-			percentDeviation := u.AbsPercentageDeviation(currency.MarketRate, rate)
-			if percentDeviation.GreaterThan(orderConf.PercentDeviationFromMarketRate) {
-				u.APIResponse(ctx, http.StatusBadRequest, "error", "Rate is too far from market rate", nil)
 				return
 			}
+			continue
 		}
 
 		// Calculate rate from tokenPayload based on conversion type
@@ -392,33 +403,37 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			rate = currency.MarketRate.Add(tokenPayload.FloatingConversionRate)
 		}
 
-		// See if token already exists for provider
-		tx, err := storage.Client.Tx(ctx)
-		if err != nil {
-			logger.Errorf("Failed to start transaction: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
-			return
+		// Validate rate deviation for floating rates
+		if tokenPayload.ConversionRateType == providerordertoken.ConversionRateTypeFloating {
+			percentDeviation := u.AbsPercentageDeviation(currency.MarketRate, rate)
+			if percentDeviation.GreaterThan(orderConf.PercentDeviationFromMarketRate) {
+				validationErrors = append(validationErrors, types.ErrorData{
+					Field:   "Tokens",
+					Message: fmt.Sprintf("Rate is too far from market rate for %s", tokenPayload.Symbol),
+				})
+				continue
+			}
 		}
 
-		// Handle slippage validation and default value
+		// Handle slippage validation
 		if tokenPayload.RateSlippage.IsZero() {
-			// Set default slippage to 0% if not provided
 			tokenPayload.RateSlippage = decimal.NewFromFloat(0)
 		} else if tokenPayload.RateSlippage.LessThan(decimal.NewFromFloat(0.1)) {
-			if err := tx.Rollback(); err != nil {
-				logger.Errorf("Failed to rollback transaction: %v", err)
-			}
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Rate slippage cannot be less than 0.1%", nil)
-			return
+			validationErrors = append(validationErrors, types.ErrorData{
+				Field:   "Tokens",
+				Message: fmt.Sprintf("Rate slippage cannot be less than 0.1%% for %s", tokenPayload.Symbol),
+			})
+			continue
 		} else if rate.Mul(tokenPayload.RateSlippage.Div(decimal.NewFromFloat(100))).GreaterThan(currency.MarketRate.Mul(decimal.NewFromFloat(0.05))) {
-			if err := tx.Rollback(); err != nil {
-				logger.Errorf("Failed to rollback transaction: %v", err)
-			}
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Rate slippage is too high", nil)
-			return
+			validationErrors = append(validationErrors, types.ErrorData{
+				Field:   "Tokens",
+				Message: fmt.Sprintf("Rate slippage is too high for %s", tokenPayload.Symbol),
+			})
+			continue
 		}
 
-		orderToken, err := tx.ProviderOrderToken.
+		// Check if token already exists for provider
+		existingToken, err := storage.Client.ProviderOrderToken.
 			Query().
 			Where(
 				providerordertoken.HasTokenWith(token.IDEQ(providerToken.ID)),
@@ -428,117 +443,161 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			).
 			WithCurrency().
 			Only(ctx)
-		if err != nil {
-			if ent.IsNotFound(err) {
-				// Token doesn't exist, create it
-				_, err = tx.ProviderOrderToken.
-					Create().
-					SetConversionRateType(tokenPayload.ConversionRateType).
-					SetFixedConversionRate(tokenPayload.FixedConversionRate).
-					SetFloatingConversionRate(tokenPayload.FloatingConversionRate).
-					SetMaxOrderAmount(tokenPayload.MaxOrderAmount).
-					SetMinOrderAmount(tokenPayload.MinOrderAmount).
-					SetAddress(tokenPayload.Address).
-					SetNetwork(tokenPayload.Network).
-					SetProviderID(provider.ID).
-					SetRateSlippage(tokenPayload.RateSlippage).
-					SetTokenID(providerToken.ID).
-					SetCurrencyID(currency.ID).
-					Save(ctx)
-				if err != nil {
-					if err := tx.Rollback(); err != nil {
-						logger.Errorf("Failed to rollback transaction: %v", err)
-					}
-					logger.WithFields(logger.Fields{
-						"Error":    fmt.Sprintf("%v", err),
-						"Token":    tokenPayload.Symbol,
-						"Currency": payload.Currency,
-					}).Errorf("Failed to create token during update")
-					u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
-					return
-				}
-			} else {
-				if err := tx.Rollback(); err != nil {
-					logger.Errorf("Failed to rollback transaction: %v", err)
-				}
-				logger.WithFields(logger.Fields{
-					"Error":    fmt.Sprintf("%v", err),
-					"Token":    tokenPayload.Symbol,
-					"Currency": payload.Currency,
-				}).Errorf("Failed to query token during update")
-				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
-				return
-			}
-		} else {
-			// TODO: Remove when dashboard allows rate slippage to be set
-			if tokenPayload.RateSlippage.IsZero() && orderToken.RateSlippage.GreaterThan(decimal.NewFromFloat(0)) {
-				tokenPayload.RateSlippage = orderToken.RateSlippage
-			}
 
-			// Token exists, update it
-			_, err := orderToken.Update().
-				SetAddress(tokenPayload.Address).
-				SetNetwork(tokenPayload.Network).
-				SetRateSlippage(tokenPayload.RateSlippage).
-				SetConversionRateType(tokenPayload.ConversionRateType).
-				SetFixedConversionRate(tokenPayload.FixedConversionRate).
-				SetFloatingConversionRate(tokenPayload.FloatingConversionRate).
-				SetMaxOrderAmount(tokenPayload.MaxOrderAmount).
-				SetMinOrderAmount(tokenPayload.MinOrderAmount).
+		isUpdate := err == nil
+		if err != nil && !ent.IsNotFound(err) {
+			logger.WithFields(logger.Fields{
+				"Error":    fmt.Sprintf("%v", err),
+				"Token":    tokenPayload.Symbol,
+				"Currency": payload.Currency,
+			}).Errorf("Failed to query existing token during validation")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+			return
+		}
+
+		// If updating, preserve existing rate slippage if not provided
+		if isUpdate && tokenPayload.RateSlippage.IsZero() && existingToken.RateSlippage.GreaterThan(decimal.NewFromFloat(0)) {
+			tokenPayload.RateSlippage = existingToken.RateSlippage
+		}
+
+		tokenOperations = append(tokenOperations, TokenOperation{
+			TokenPayload:  tokenPayload,
+			ProviderToken: providerToken,
+			Currency:      currency,
+			Rate:          rate,
+			IsUpdate:      isUpdate,
+			ExistingToken: existingToken,
+		})
+	}
+
+	// Return validation errors if any
+	if len(validationErrors) > 0 {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Validation failed", validationErrors)
+		return
+	}
+
+	// PHASE 2: Execute all operations in a single transaction
+	tx, err := storage.Client.Tx(ctx)
+	if err != nil {
+		logger.Errorf("Failed to start transaction: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+		return
+	}
+
+	// Update provider profile within the same transaction
+	txUpdate := tx.ProviderProfile.Update().Where(providerprofile.IDEQ(provider.ID))
+	var allBuckets []*ent.ProvisionBucket
+
+	// Process all token operations
+	for _, op := range tokenOperations {
+
+		if op.IsUpdate {
+			// Update existing token
+			_, err := op.ExistingToken.Update().
+				SetAddress(op.TokenPayload.Address).
+				SetNetwork(op.TokenPayload.Network).
+				SetRateSlippage(op.TokenPayload.RateSlippage).
+				SetConversionRateType(op.TokenPayload.ConversionRateType).
+				SetFixedConversionRate(op.TokenPayload.FixedConversionRate).
+				SetFloatingConversionRate(op.TokenPayload.FloatingConversionRate).
+				SetMaxOrderAmount(op.TokenPayload.MaxOrderAmount).
+				SetMinOrderAmount(op.TokenPayload.MinOrderAmount).
 				Save(ctx)
 			if err != nil {
-				if err := tx.Rollback(); err != nil {
-					logger.Errorf("Failed to rollback transaction: %v", err)
+				if rollbackErr := tx.Rollback(); rollbackErr != nil {
+					logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
 				}
 				logger.WithFields(logger.Fields{
 					"Error":    fmt.Sprintf("%v", err),
-					"Token":    tokenPayload.Symbol,
+					"Token":    op.TokenPayload.Symbol,
 					"Currency": payload.Currency,
 				}).Errorf("Failed to update token during update")
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 				return
 			}
-		}
-
-		if err := tx.Commit(); err != nil {
-			if err := tx.Rollback(); err != nil {
-				logger.Errorf("Failed to rollback transaction: %v", err)
+		} else {
+			// Create new token
+			_, err = tx.ProviderOrderToken.
+				Create().
+				SetConversionRateType(op.TokenPayload.ConversionRateType).
+				SetFixedConversionRate(op.TokenPayload.FixedConversionRate).
+				SetFloatingConversionRate(op.TokenPayload.FloatingConversionRate).
+				SetMaxOrderAmount(op.TokenPayload.MaxOrderAmount).
+				SetMinOrderAmount(op.TokenPayload.MinOrderAmount).
+				SetAddress(op.TokenPayload.Address).
+				SetNetwork(op.TokenPayload.Network).
+				SetProviderID(provider.ID).
+				SetRateSlippage(op.TokenPayload.RateSlippage).
+				SetTokenID(op.ProviderToken.ID).
+				SetCurrencyID(op.Currency.ID).
+				Save(ctx)
+			if err != nil {
+				if rollbackErr := tx.Rollback(); rollbackErr != nil {
+					logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
+				}
+				logger.WithFields(logger.Fields{
+					"Error":    fmt.Sprintf("%v", err),
+					"Token":    op.TokenPayload.Symbol,
+					"Currency": payload.Currency,
+				}).Errorf("Failed to create token during update")
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+				return
 			}
-			logger.Errorf("Failed to commit transaction: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
-			return
 		}
 
-		// Add provider to buckets
-		buckets, err := storage.Client.ProvisionBucket.
+		// Collect buckets for this token
+		buckets, err := tx.ProvisionBucket.
 			Query().
 			Where(
 				provisionbucket.Or(
-					provisionbucket.MinAmountLTE(tokenPayload.MinOrderAmount.Mul(rate)),
-					provisionbucket.MinAmountLTE(tokenPayload.MaxOrderAmount.Mul(rate)),
-					provisionbucket.MaxAmountGTE(tokenPayload.MaxOrderAmount.Mul(rate)),
+					provisionbucket.MinAmountLTE(op.TokenPayload.MinOrderAmount.Mul(op.Rate)),
+					provisionbucket.MinAmountLTE(op.TokenPayload.MaxOrderAmount.Mul(op.Rate)),
+					provisionbucket.MaxAmountGTE(op.TokenPayload.MaxOrderAmount.Mul(op.Rate)),
 				),
 			).
 			All(ctx)
 		if err != nil {
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
+			}
 			logger.WithFields(logger.Fields{
 				"Error":      fmt.Sprintf("%v", err),
 				"ProviderID": provider.ID,
-				"MinAmount":  tokenPayload.MinOrderAmount,
-				"MaxAmount":  tokenPayload.MaxOrderAmount,
+				"MinAmount":  op.TokenPayload.MinOrderAmount,
+				"MaxAmount":  op.TokenPayload.MaxOrderAmount,
 			}).Errorf("Failed to assign provider to buckets")
-		} else {
-			update.ClearProvisionBuckets()
-			update.AddProvisionBuckets(buckets...)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+			return
 		}
+		allBuckets = append(allBuckets, buckets...)
 	}
 
-	_, err := update.Save(ctx)
+	// Update provider profile with all buckets
+	if len(allBuckets) > 0 {
+		txUpdate.ClearProvisionBuckets()
+		txUpdate.AddProvisionBuckets(allBuckets...)
+	}
+
+	// Save provider profile update within the transaction
+	_, err = txUpdate.Save(ctx)
 	if err != nil {
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
+		}
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
 			"ProviderID": provider.ID,
 		}).Errorf("Failed to commit update of provider profile")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+		return
+	}
+
+	// Commit all changes
+	if err := tx.Commit(); err != nil {
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
+		}
+		logger.Errorf("Failed to commit transaction: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 		return
 	}

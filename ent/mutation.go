@@ -14985,22 +14985,9 @@ func (m *ProviderOrderTokenMutation) OldNetwork(ctx context.Context) (v string, 
 	return oldValue.Network, nil
 }
 
-// ClearNetwork clears the value of the "network" field.
-func (m *ProviderOrderTokenMutation) ClearNetwork() {
-	m.network = nil
-	m.clearedFields[providerordertoken.FieldNetwork] = struct{}{}
-}
-
-// NetworkCleared returns if the "network" field was cleared in this mutation.
-func (m *ProviderOrderTokenMutation) NetworkCleared() bool {
-	_, ok := m.clearedFields[providerordertoken.FieldNetwork]
-	return ok
-}
-
 // ResetNetwork resets all changes to the "network" field.
 func (m *ProviderOrderTokenMutation) ResetNetwork() {
 	m.network = nil
-	delete(m.clearedFields, providerordertoken.FieldNetwork)
 }
 
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by id.
@@ -15417,9 +15404,6 @@ func (m *ProviderOrderTokenMutation) ClearedFields() []string {
 	if m.FieldCleared(providerordertoken.FieldAddress) {
 		fields = append(fields, providerordertoken.FieldAddress)
 	}
-	if m.FieldCleared(providerordertoken.FieldNetwork) {
-		fields = append(fields, providerordertoken.FieldNetwork)
-	}
 	return fields
 }
 
@@ -15436,9 +15420,6 @@ func (m *ProviderOrderTokenMutation) ClearField(name string) error {
 	switch name {
 	case providerordertoken.FieldAddress:
 		m.ClearAddress()
-		return nil
-	case providerordertoken.FieldNetwork:
-		m.ClearNetwork()
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderOrderToken nullable field %s", name)

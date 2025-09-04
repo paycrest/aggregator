@@ -111,14 +111,6 @@ func (potc *ProviderOrderTokenCreate) SetNetwork(s string) *ProviderOrderTokenCr
 	return potc
 }
 
-// SetNillableNetwork sets the "network" field if the given value is not nil.
-func (potc *ProviderOrderTokenCreate) SetNillableNetwork(s *string) *ProviderOrderTokenCreate {
-	if s != nil {
-		potc.SetNetwork(*s)
-	}
-	return potc
-}
-
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
 func (potc *ProviderOrderTokenCreate) SetProviderID(id string) *ProviderOrderTokenCreate {
 	potc.mutation.SetProviderID(id)
@@ -227,6 +219,9 @@ func (potc *ProviderOrderTokenCreate) check() error {
 	}
 	if _, ok := potc.mutation.RateSlippage(); !ok {
 		return &ValidationError{Name: "rate_slippage", err: errors.New(`ent: missing required field "ProviderOrderToken.rate_slippage"`)}
+	}
+	if _, ok := potc.mutation.Network(); !ok {
+		return &ValidationError{Name: "network", err: errors.New(`ent: missing required field "ProviderOrderToken.network"`)}
 	}
 	if len(potc.mutation.ProviderIDs()) == 0 {
 		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required edge "ProviderOrderToken.provider"`)}
@@ -551,12 +546,6 @@ func (u *ProviderOrderTokenUpsert) UpdateNetwork() *ProviderOrderTokenUpsert {
 	return u
 }
 
-// ClearNetwork clears the value of the "network" field.
-func (u *ProviderOrderTokenUpsert) ClearNetwork() *ProviderOrderTokenUpsert {
-	u.SetNull(providerordertoken.FieldNetwork)
-	return u
-}
-
 // UpdateNewValues updates the mutable fields using the new values that were set on create.
 // Using this option is equivalent to using:
 //
@@ -767,13 +756,6 @@ func (u *ProviderOrderTokenUpsertOne) SetNetwork(v string) *ProviderOrderTokenUp
 func (u *ProviderOrderTokenUpsertOne) UpdateNetwork() *ProviderOrderTokenUpsertOne {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
 		s.UpdateNetwork()
-	})
-}
-
-// ClearNetwork clears the value of the "network" field.
-func (u *ProviderOrderTokenUpsertOne) ClearNetwork() *ProviderOrderTokenUpsertOne {
-	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.ClearNetwork()
 	})
 }
 
@@ -1153,13 +1135,6 @@ func (u *ProviderOrderTokenUpsertBulk) SetNetwork(v string) *ProviderOrderTokenU
 func (u *ProviderOrderTokenUpsertBulk) UpdateNetwork() *ProviderOrderTokenUpsertBulk {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
 		s.UpdateNetwork()
-	})
-}
-
-// ClearNetwork clears the value of the "network" field.
-func (u *ProviderOrderTokenUpsertBulk) ClearNetwork() *ProviderOrderTokenUpsertBulk {
-	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.ClearNetwork()
 	})
 }
 
