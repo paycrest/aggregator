@@ -492,8 +492,9 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 	for _, op := range tokenOperations {
 
 		if op.IsUpdate {
-			// Update existing token
-			_, err := op.ExistingToken.Update().
+			// Update existing token using transaction-bound client
+			_, err := tx.ProviderOrderToken.
+				UpdateOneID(op.ExistingToken.ID).
 				SetAddress(op.TokenPayload.Address).
 				SetNetwork(op.TokenPayload.Network).
 				SetRateSlippage(op.TokenPayload.RateSlippage).
@@ -546,13 +547,15 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		}
 
 		// Collect buckets for this token
+		convertedMin := op.TokenPayload.MinOrderAmount.Mul(op.Rate)
+		convertedMax := op.TokenPayload.MaxOrderAmount.Mul(op.Rate)
+
 		buckets, err := tx.ProvisionBucket.
 			Query().
 			Where(
-				provisionbucket.Or(
-					provisionbucket.MinAmountLTE(op.TokenPayload.MinOrderAmount.Mul(op.Rate)),
-					provisionbucket.MinAmountLTE(op.TokenPayload.MaxOrderAmount.Mul(op.Rate)),
-					provisionbucket.MaxAmountGTE(op.TokenPayload.MaxOrderAmount.Mul(op.Rate)),
+				provisionbucket.And(
+					provisionbucket.MinAmountLTE(convertedMax), // providerMin ≤ bucketMax
+					provisionbucket.MaxAmountGTE(convertedMin), // providerMax ≥ bucketMin
 				),
 			).
 			All(ctx)
