@@ -556,10 +556,20 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		allBuckets = append(allBuckets, buckets...)
 	}
 
-	// Update provider profile with all buckets
-	if len(allBuckets) > 0 {
+	// Deduplicate buckets to prevent duplicate many-to-many edges
+	seenBuckets := make(map[int]bool)
+	var dedupedBuckets []*ent.ProvisionBucket
+	for _, bucket := range allBuckets {
+		if !seenBuckets[bucket.ID] {
+			seenBuckets[bucket.ID] = true
+			dedupedBuckets = append(dedupedBuckets, bucket)
+		}
+	}
+
+	// Update provider profile with deduplicated buckets
+	if len(dedupedBuckets) > 0 {
 		txUpdate.ClearProvisionBuckets()
-		txUpdate.AddProvisionBuckets(allBuckets...)
+		txUpdate.AddProvisionBuckets(dedupedBuckets...)
 	}
 
 	// Save provider profile update within the transaction
