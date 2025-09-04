@@ -463,7 +463,7 @@ func TestProfile(t *testing.T) {
 				var response types.Response
 				err = json.Unmarshal(res.Body.Bytes(), &response)
 				assert.NoError(t, err)
-				assert.Equal(t, "Rate slippage is too high", response.Message)
+				assert.Equal(t, "Rate slippage is too high for TST", response.Message)
 			})
 
 			t.Run("fails when rate slippage is less than 0.1", func(t *testing.T) {
@@ -483,7 +483,7 @@ func TestProfile(t *testing.T) {
 				var response types.Response
 				err = json.Unmarshal(res.Body.Bytes(), &response)
 				assert.NoError(t, err)
-				assert.Equal(t, "Rate slippage cannot be less than 0.1%", response.Message)
+				assert.Equal(t, "Rate slippage cannot be less than 0.1% for TST", response.Message)
 			})
 
 			t.Run("succeeds with valid rate slippage", func(t *testing.T) {

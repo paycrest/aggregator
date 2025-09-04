@@ -714,7 +714,9 @@ func TestProvider(t *testing.T) {
 						"status":  "success",
 						"message": "Node is live",
 						"data": map[string]interface{}{
-							"currencies": []string{"NGN"},
+							"serviceInfo": map[string]interface{}{
+								"currencies": []string{"NGN"},
+							},
 						},
 					})
 				},
@@ -1509,6 +1511,21 @@ func TestProvider(t *testing.T) {
 			})
 			assert.NoError(t, err)
 
+			// Create a provision bucket for the order
+			provisionBucket, err := db.Client.ProvisionBucket.
+				Create().
+				SetMinAmount(decimal.NewFromFloat(100.0)).
+				SetMaxAmount(decimal.NewFromFloat(1000.0)).
+				SetCurrency(testCtx.currency).
+				Save(context.Background())
+			assert.NoError(t, err)
+
+			// Add provision bucket to the order
+			order, err = order.Update().
+				SetProvisionBucket(provisionBucket).
+				Save(context.Background())
+			assert.NoError(t, err)
+
 			orderKey := fmt.Sprintf("order_request_%s", order.ID)
 
 			user, err := test.CreateTestUser(map[string]interface{}{
@@ -1516,7 +1533,7 @@ func TestProvider(t *testing.T) {
 			})
 			assert.NoError(t, err)
 
-			providerProfile, err := test.CreateTestProviderProfile(map[string]interface{}{
+			_, err = test.CreateTestProviderProfile(map[string]interface{}{
 				"user_id":     user.ID,
 				"currency_id": testCtx.currency.ID,
 			})
@@ -1525,7 +1542,7 @@ func TestProvider(t *testing.T) {
 			orderRequestData := map[string]interface{}{
 				"amount":      order.Amount.Mul(order.Rate).RoundBank(0).String(),
 				"institution": order.Institution,
-				"providerId":  providerProfile.ID,
+				"providerId":  testCtx.provider.ID, // Use the same provider as the order
 			}
 
 			err = db.RedisClient.HSet(context.Background(), orderKey, orderRequestData).Err()

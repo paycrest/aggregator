@@ -1,6 +1,7 @@
 package services
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -9,6 +10,18 @@ import (
 )
 
 func TestNewEtherscanService_WithValidConfig(t *testing.T) {
+	// Set a test API key for this test
+	originalKey := os.Getenv("ETHERSCAN_API_KEY")
+	defer func() {
+		if originalKey != "" {
+			os.Setenv("ETHERSCAN_API_KEY", originalKey)
+		} else {
+			os.Unsetenv("ETHERSCAN_API_KEY")
+		}
+	}()
+
+	os.Setenv("ETHERSCAN_API_KEY", "test-api-key")
+
 	// Test service creation with valid config
 	service, err := NewEtherscanService()
 

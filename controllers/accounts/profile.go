@@ -228,12 +228,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 	}
 	provider := providerCtx.(*ent.ProviderProfile)
 
-	update := provider.Update()
-
-	if payload.TradingName != "" {
-		update.SetTradingName(payload.TradingName)
-	}
-
+	// Validate basic fields first (before starting transaction)
 	if payload.HostIdentifier != "" {
 		// Validate HTTPS protocol
 		if !u.IsValidHttpsUrl(payload.HostIdentifier) {
@@ -244,7 +239,6 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				})
 			return
 		}
-		update.SetHostIdentifier(payload.HostIdentifier)
 	}
 
 	// Handle currency-specific availability updates
@@ -319,10 +313,6 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				return
 			}
 		}
-	}
-
-	if payload.VisibilityMode != "" {
-		update.SetVisibilityMode(providerprofile.VisibilityMode(payload.VisibilityMode))
 	}
 
 	// PHASE 1: Validate all tokens and prepare operations
@@ -472,7 +462,13 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 
 	// Return validation errors if any
 	if len(validationErrors) > 0 {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Validation failed", validationErrors)
+		var mainMessage string
+		if len(validationErrors) == 1 {
+			mainMessage = validationErrors[0].Message
+		} else {
+			mainMessage = fmt.Sprintf("Validation failed: %d errors found", len(validationErrors))
+		}
+		u.APIResponse(ctx, http.StatusBadRequest, "error", mainMessage, validationErrors)
 		return
 	}
 
@@ -486,6 +482,20 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 
 	// Update provider profile within the same transaction
 	txUpdate := tx.ProviderProfile.Update().Where(providerprofile.IDEQ(provider.ID))
+
+	// Set basic profile fields within the transaction
+	if payload.TradingName != "" {
+		txUpdate.SetTradingName(payload.TradingName)
+	}
+
+	if payload.HostIdentifier != "" {
+		txUpdate.SetHostIdentifier(payload.HostIdentifier)
+	}
+
+	if payload.VisibilityMode != "" {
+		txUpdate.SetVisibilityMode(providerprofile.VisibilityMode(payload.VisibilityMode))
+	}
+
 	var allBuckets []*ent.ProvisionBucket
 
 	// Process all token operations

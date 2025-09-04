@@ -12,6 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/jarcoal/httpmock"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/enttest"
@@ -230,6 +231,20 @@ func TestSender(t *testing.T) {
 	var paymentOrderUUID uuid.UUID
 
 	t.Run("InitiatePaymentOrder", func(t *testing.T) {
+		// Activate httpmock
+		httpmock.Activate()
+		defer httpmock.Deactivate()
+
+		// Mock the engine service call for receive address creation
+		httpmock.RegisterResponder("POST", "https://engine.thirdweb.com/v1/accounts",
+			func(r *http.Request) (*http.Response, error) {
+				return httpmock.NewJsonResponse(200, map[string]interface{}{
+					"result": map[string]interface{}{
+						"smartAccountAddress": "0x1234567890123456789012345678901234567890",
+					},
+				})
+			},
+		)
 
 		// Fetch network from db
 		network, err := db.Client.Network.
