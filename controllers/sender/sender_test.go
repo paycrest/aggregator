@@ -246,6 +246,18 @@ func TestSender(t *testing.T) {
 			},
 		)
 
+		// Mock the engine service call for webhook creation
+		httpmock.RegisterResponder("POST", "https://1.insight.thirdweb.com/v1/webhooks",
+			func(r *http.Request) (*http.Response, error) {
+				return httpmock.NewJsonResponse(200, map[string]interface{}{
+					"data": map[string]interface{}{
+						"id":             "webhook_123456789",
+						"webhook_secret": "secret_123456789",
+					},
+				})
+			},
+		)
+
 		// Fetch network from db
 		network, err := db.Client.Network.
 			Query().

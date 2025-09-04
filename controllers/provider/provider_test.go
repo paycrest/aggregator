@@ -1580,6 +1580,21 @@ func TestProvider(t *testing.T) {
 			})
 			assert.NoError(t, err)
 
+			// Create a provision bucket for the order
+			provisionBucket, err := db.Client.ProvisionBucket.
+				Create().
+				SetMinAmount(decimal.NewFromFloat(100.0)).
+				SetMaxAmount(decimal.NewFromFloat(1000.0)).
+				SetCurrency(testCtx.currency).
+				Save(context.Background())
+			assert.NoError(t, err)
+
+			// Add provision bucket to the order
+			order, err = order.Update().
+				SetProvisionBucket(provisionBucket).
+				Save(context.Background())
+			assert.NoError(t, err)
+
 			orderKey := fmt.Sprintf("order_request_%s", order.ID)
 
 			orderRequestData := map[string]interface{}{
