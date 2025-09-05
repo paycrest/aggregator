@@ -95,54 +95,26 @@ func RetryStaleUserOperations() error {
 					service = orderService.NewOrderEVM()
 				}
 
-				// Unset message hash and update status in atomic transaction
-				tx, err := storage.Client.Tx(ctx)
-				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":   fmt.Sprintf("%v", err),
-						"OrderID": order.ID.String(),
-					}).Errorf("RetryStaleUserOperations.CreateOrder.BeginTx")
-					continue
-				}
-
-				// First: Set to pending and unset message hash
-				_, err = tx.PaymentOrder.UpdateOneID(order.ID).
+				// Unset message hash
+				_, err = order.Update().
 					SetNillableMessageHash(nil).
 					SetStatus(paymentorder.StatusPending).
 					Save(ctx)
 				if err != nil {
-					if rollbackErr := tx.Rollback(); rollbackErr != nil {
-						logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
-					}
 					logger.WithFields(logger.Fields{
 						"Error":   fmt.Sprintf("%v", err),
 						"OrderID": order.ID.String(),
-					}).Errorf("RetryStaleUserOperations.CreateOrder.SetPending")
-					continue
+					}).Errorf("RetryStaleUserOperations.CreateOrder.SetMessageHash")
 				}
 
-				// Second: Set to initiated
-				_, err = tx.PaymentOrder.UpdateOneID(order.ID).
+				_, err = order.Update().
 					SetStatus(paymentorder.StatusInitiated).
 					Save(ctx)
 				if err != nil {
-					if rollbackErr := tx.Rollback(); rollbackErr != nil {
-						logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
-					}
 					logger.WithFields(logger.Fields{
 						"Error":   fmt.Sprintf("%v", err),
 						"OrderID": order.ID.String(),
-					}).Errorf("RetryStaleUserOperations.CreateOrder.SetInitiated")
-					continue
-				}
-
-				// Commit the transaction
-				if err = tx.Commit(); err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":   fmt.Sprintf("%v", err),
-						"OrderID": order.ID.String(),
-					}).Errorf("RetryStaleUserOperations.CreateOrder.Commit")
-					continue
+					}).Errorf("RetryStaleUserOperations.CreateOrder.SetStatus")
 				}
 
 				err = service.CreateOrder(ctx, order.ID)

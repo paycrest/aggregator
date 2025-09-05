@@ -124,38 +124,20 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 		return fmt.Errorf("%s - CreateOrder.encryptOrderRecipient: %w", orderIDPrefix, err)
 	}
 
-	// Save the encrypted order recipient and update status in atomic transaction
-	tx, err := db.Client.Tx(ctx)
-	if err != nil {
-		return fmt.Errorf("%s - CreateOrder.beginTx: %w", orderIDPrefix, err)
-	}
-
-	// First: Set message hash and status to pending
-	_, err = tx.PaymentOrder.UpdateOneID(order.ID).
+	// Save the encrypted order recipient to the message hash field
+	_, err = order.Update().
 		SetMessageHash(encryptedOrderRecipient).
 		SetStatus(paymentorder.StatusPending).
 		Save(ctx)
 	if err != nil {
-		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			return fmt.Errorf("%s - CreateOrder.rollback: %w", orderIDPrefix, rollbackErr)
-		}
 		return fmt.Errorf("%s - CreateOrder.updateMessageHash: %w", orderIDPrefix, err)
 	}
 
-	// Second: Set status to initiated
-	_, err = tx.PaymentOrder.UpdateOneID(order.ID).
+	_, err = order.Update().
 		SetStatus(paymentorder.StatusInitiated).
 		Save(ctx)
 	if err != nil {
-		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			return fmt.Errorf("%s - CreateOrder.rollback: %w", orderIDPrefix, rollbackErr)
-		}
 		return fmt.Errorf("%s - CreateOrder.updateStatus: %w", orderIDPrefix, err)
-	}
-
-	// Commit the transaction
-	if err = tx.Commit(); err != nil {
-		return fmt.Errorf("%s - CreateOrder.commit: %w", orderIDPrefix, err)
 	}
 
 	createOrderData, err := s.createOrderCallData(order, encryptedOrderRecipient)
