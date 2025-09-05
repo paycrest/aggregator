@@ -238,9 +238,9 @@ func TestSender(t *testing.T) {
 			os.Unsetenv("THIRDWEB_SECRET_KEY")
 		}()
 
-		// Activate httpmock to intercept all HTTP calls
-		httpmock.ActivateNonDefault(http.DefaultClient)
-		defer httpmock.Deactivate()
+		// Activate httpmock globally to intercept all HTTP calls (including fastshot)
+		httpmock.Activate()
+		defer httpmock.DeactivateAndReset()
 
 		// Mock the engine service call for receive address creation
 		httpmock.RegisterResponder("POST", "https://engine.thirdweb.com/v1/accounts",
