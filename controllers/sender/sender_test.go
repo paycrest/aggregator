@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -229,6 +230,14 @@ func TestSender(t *testing.T) {
 	var paymentOrderUUID uuid.UUID
 
 	t.Run("InitiatePaymentOrder", func(t *testing.T) {
+		// Set environment variables for engine service to match our mocks
+		os.Setenv("ENGINE_BASE_URL", "https://engine.thirdweb.com")
+		os.Setenv("THIRDWEB_SECRET_KEY", "test-secret-key")
+		defer func() {
+			os.Unsetenv("ENGINE_BASE_URL")
+			os.Unsetenv("THIRDWEB_SECRET_KEY")
+		}()
+
 		// Activate httpmock to intercept all HTTP calls
 		httpmock.ActivateNonDefault(http.DefaultClient)
 		defer httpmock.Deactivate()
