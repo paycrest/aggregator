@@ -383,6 +383,29 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			return
 		}
 
+		// If updating and changing network, ensure target network doesn't already exist
+		if isUpdate && existingToken.Network != tokenPayload.Network {
+			dup, derr := storage.Client.ProviderOrderToken.
+				Query().
+				Where(
+					providerordertoken.HasTokenWith(token.IDEQ(providerToken.ID)),
+					providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+					providerordertoken.HasCurrencyWith(fiatcurrency.IDEQ(currency.ID)),
+					providerordertoken.NetworkEQ(tokenPayload.Network),
+				).Exist(ctx)
+			if derr != nil {
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+				return
+			}
+			if dup {
+				validationErrors = append(validationErrors, types.ErrorData{
+					Field:   "Tokens",
+					Message: fmt.Sprintf("Token already configured on network %s for %s", tokenPayload.Network, tokenPayload.Symbol),
+				})
+				continue
+			}
+		}
+
 		// If updating, preserve existing rate slippage if not provided
 		if isUpdate && tokenPayload.RateSlippage.IsZero() && existingToken.RateSlippage.GreaterThan(decimal.NewFromFloat(0)) {
 			tokenPayload.RateSlippage = existingToken.RateSlippage
