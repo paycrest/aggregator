@@ -454,7 +454,7 @@ var (
 		{Name: "min_order_amount", Type: field.TypeFloat64},
 		{Name: "rate_slippage", Type: field.TypeFloat64},
 		{Name: "address", Type: field.TypeString, Nullable: true},
-		{Name: "network", Type: field.TypeString, Nullable: true},
+		{Name: "network", Type: field.TypeString},
 		{Name: "fiat_currency_provider_order_tokens", Type: field.TypeUUID},
 		{Name: "provider_profile_order_tokens", Type: field.TypeString},
 		{Name: "token_provider_order_tokens", Type: field.TypeInt},
@@ -486,9 +486,9 @@ var (
 		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "providerordertoken_provider_profile_order_tokens_token_provider_order_tokens_fiat_currency_provider_order_tokens",
+				Name:    "providerordertoken_network_provider_profile_order_tokens_token_provider_order_tokens_fiat_currency_provider_order_tokens",
 				Unique:  true,
-				Columns: []*schema.Column{ProviderOrderTokensColumns[12], ProviderOrderTokensColumns[13], ProviderOrderTokensColumns[11]},
+				Columns: []*schema.Column{ProviderOrderTokensColumns[10], ProviderOrderTokensColumns[12], ProviderOrderTokensColumns[13], ProviderOrderTokensColumns[11]},
 			},
 		},
 	}

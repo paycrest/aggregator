@@ -4,14 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"net/http"
+	"os"
 	"strconv"
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/jarcoal/httpmock"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/enttest"
@@ -132,7 +134,6 @@ func setup() error {
 	testCtx.apiKeySecret = secretKey
 
 	for i := 0; i < 9; i++ {
-		time.Sleep(time.Duration(float64(rand.Intn(12))) * time.Second)
 
 		// Create a simple payment order without blockchain dependency
 		address := fmt.Sprintf("0x%040d", i) // Simple mock address
@@ -199,16 +200,15 @@ func TestSender(t *testing.T) {
 
 	db.Client = client
 
-	// Set up mock Redis client
-	redisClient := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
-	})
-	defer redisClient.Close()
+	// Set up in-memory Redis
+	mr, err := miniredis.Run()
+	assert.NoError(t, err)
+	defer mr.Close()
 
-	db.RedisClient = redisClient
+	db.RedisClient = redis.NewClient(&redis.Options{Addr: mr.Addr()})
 
 	// Setup test data
-	err := setup()
+	err = setup()
 	assert.NoError(t, err)
 
 	senderTokens, err := client.SenderOrderToken.Query().All(context.Background())
@@ -230,6 +230,40 @@ func TestSender(t *testing.T) {
 	var paymentOrderUUID uuid.UUID
 
 	t.Run("InitiatePaymentOrder", func(t *testing.T) {
+		// Set environment variables for engine service to match our mocks
+		os.Setenv("ENGINE_BASE_URL", "https://engine.thirdweb.com")
+		os.Setenv("THIRDWEB_SECRET_KEY", "test-secret-key")
+		defer func() {
+			os.Unsetenv("ENGINE_BASE_URL")
+			os.Unsetenv("THIRDWEB_SECRET_KEY")
+		}()
+
+		// Activate httpmock globally to intercept all HTTP calls (including fastshot)
+		httpmock.Activate()
+		defer httpmock.DeactivateAndReset()
+
+		// Mock the engine service call for receive address creation
+		httpmock.RegisterResponder("POST", "https://engine.thirdweb.com/v1/accounts",
+			func(r *http.Request) (*http.Response, error) {
+				return httpmock.NewJsonResponse(200, map[string]interface{}{
+					"result": map[string]interface{}{
+						"smartAccountAddress": "0x1234567890123456789012345678901234567890",
+					},
+				})
+			},
+		)
+
+		// Mock the engine service call for webhook creation
+		httpmock.RegisterResponder("POST", "https://1.insight.thirdweb.com/v1/webhooks",
+			func(r *http.Request) (*http.Response, error) {
+				return httpmock.NewJsonResponse(200, map[string]interface{}{
+					"data": map[string]interface{}{
+						"id":             "webhook_123456789",
+						"webhook_secret": "secret_123456789",
+					},
+				})
+			},
+		)
 
 		// Fetch network from db
 		network, err := db.Client.Network.
@@ -263,6 +297,8 @@ func TestSender(t *testing.T) {
 		if res.Code != http.StatusCreated {
 			t.Logf("Response Status: %d", res.Code)
 			t.Logf("Response Body: %s", res.Body.String())
+			t.Logf("Request payload: %+v", payload)
+			t.Logf("Request headers: %+v", headers)
 		}
 
 		// Assert the response body
@@ -282,7 +318,15 @@ func TestSender(t *testing.T) {
 		assert.NotEmpty(t, data["validUntil"])
 
 		// Parse the payment order ID string to uuid.UUID
-		paymentOrderUUID, err = uuid.Parse(data["id"].(string))
+		idValue, exists := data["id"]
+		if !exists || idValue == nil {
+			t.Fatalf("ID field is missing or nil in response data: %+v", data)
+		}
+		idString, ok := idValue.(string)
+		if !ok {
+			t.Fatalf("ID field is not a string, got %T: %+v", idValue, idValue)
+		}
+		paymentOrderUUID, err = uuid.Parse(idString)
 		assert.NoError(t, err)
 
 		// Query the database for the payment order
@@ -303,11 +347,14 @@ func TestSender(t *testing.T) {
 		assert.Equal(t, data["transactionFee"], network.Fee.String())
 
 		t.Run("Check Transaction Logs", func(t *testing.T) {
+			ts := time.Now().Unix()
+			sigPayload := map[string]interface{}{"timestamp": ts}
+			sig := token.GenerateHMACSignature(sigPayload, testCtx.apiKeySecret)
 			headers := map[string]string{
-				"API-Key": testCtx.apiKey.ID.String(),
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + sig,
 			}
 
-			res, err = test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders/%s?timestamp=%v", paymentOrderUUID.String(), payload["timestamp"]), nil, headers, router)
+			res, err = test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders/%s?timestamp=%v", paymentOrderUUID.String(), ts), nil, headers, router)
 			assert.NoError(t, err)
 
 			type Response struct {

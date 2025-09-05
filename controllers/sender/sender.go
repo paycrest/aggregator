@@ -201,8 +201,10 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			).
 			Exist(ctx)
 		if err != nil {
-			logger.Errorf("error: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+			logger.Errorf("Reference check error: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", map[string]interface{}{
+				"context": "reference_check",
+			})
 			return
 		}
 
@@ -235,7 +237,9 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			})
 		} else {
 			logger.Errorf("Failed to fetch institution: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to validate institution", nil)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to validate institution", map[string]interface{}{
+				"context": "institution_fetch",
+			})
 		}
 		return
 	}
@@ -348,7 +352,9 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 				rateResponse, err := u.GetTokenRateFromQueue("USDT", normalizedAmount, institutionObj.Edges.FiatCurrency.Code, institutionObj.Edges.FiatCurrency.MarketRate)
 				if err != nil {
 					logger.Errorf("InitiatePaymentOrder.GetTokenRateFromQueue: %v", err)
-					u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+					u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", map[string]interface{}{
+						"context": "token_rate_queue",
+					})
 					return
 				}
 				normalizedAmount = payload.Amount.Div(rateResponse)
@@ -369,8 +375,10 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	if strings.HasPrefix(payload.Network, "tron") {
 		address, salt, err := ctrl.receiveAddressService.CreateTronAddress(ctx)
 		if err != nil {
-			logger.Errorf("error: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+			logger.Errorf("CreateTronAddress error: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", map[string]interface{}{
+				"context": "create_tron_address",
+			})
 			return
 		}
 
@@ -398,7 +406,9 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 				"error":   err,
 				"address": address,
 			}).Errorf("Failed to create receive address")
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", map[string]interface{}{
+				"context": "create_smart_address",
+			})
 			return
 		}
 

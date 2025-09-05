@@ -192,12 +192,6 @@ func (potu *ProviderOrderTokenUpdate) SetNillableNetwork(s *string) *ProviderOrd
 	return potu
 }
 
-// ClearNetwork clears the value of the "network" field.
-func (potu *ProviderOrderTokenUpdate) ClearNetwork() *ProviderOrderTokenUpdate {
-	potu.mutation.ClearNetwork()
-	return potu
-}
-
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
 func (potu *ProviderOrderTokenUpdate) SetProviderID(id string) *ProviderOrderTokenUpdate {
 	potu.mutation.SetProviderID(id)
@@ -365,9 +359,6 @@ func (potu *ProviderOrderTokenUpdate) sqlSave(ctx context.Context) (n int, err e
 	}
 	if value, ok := potu.mutation.Network(); ok {
 		_spec.SetField(providerordertoken.FieldNetwork, field.TypeString, value)
-	}
-	if potu.mutation.NetworkCleared() {
-		_spec.ClearField(providerordertoken.FieldNetwork, field.TypeString)
 	}
 	if potu.mutation.ProviderCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -635,12 +626,6 @@ func (potuo *ProviderOrderTokenUpdateOne) SetNillableNetwork(s *string) *Provide
 	return potuo
 }
 
-// ClearNetwork clears the value of the "network" field.
-func (potuo *ProviderOrderTokenUpdateOne) ClearNetwork() *ProviderOrderTokenUpdateOne {
-	potuo.mutation.ClearNetwork()
-	return potuo
-}
-
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
 func (potuo *ProviderOrderTokenUpdateOne) SetProviderID(id string) *ProviderOrderTokenUpdateOne {
 	potuo.mutation.SetProviderID(id)
@@ -838,9 +823,6 @@ func (potuo *ProviderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *P
 	}
 	if value, ok := potuo.mutation.Network(); ok {
 		_spec.SetField(providerordertoken.FieldNetwork, field.TypeString, value)
-	}
-	if potuo.mutation.NetworkCleared() {
-		_spec.ClearField(providerordertoken.FieldNetwork, field.TypeString)
 	}
 	if potuo.mutation.ProviderCleared() {
 		edge := &sqlgraph.EdgeSpec{
