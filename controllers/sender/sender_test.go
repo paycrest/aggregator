@@ -288,6 +288,8 @@ func TestSender(t *testing.T) {
 		if res.Code != http.StatusCreated {
 			t.Logf("Response Status: %d", res.Code)
 			t.Logf("Response Body: %s", res.Body.String())
+			t.Logf("Request payload: %+v", payload)
+			t.Logf("Request headers: %+v", headers)
 		}
 
 		// Assert the response body
@@ -307,7 +309,15 @@ func TestSender(t *testing.T) {
 		assert.NotEmpty(t, data["validUntil"])
 
 		// Parse the payment order ID string to uuid.UUID
-		paymentOrderUUID, err = uuid.Parse(data["id"].(string))
+		idValue, exists := data["id"]
+		if !exists || idValue == nil {
+			t.Fatalf("ID field is missing or nil in response data: %+v", data)
+		}
+		idString, ok := idValue.(string)
+		if !ok {
+			t.Fatalf("ID field is not a string, got %T: %+v", idValue, idValue)
+		}
+		paymentOrderUUID, err = uuid.Parse(idString)
 		assert.NoError(t, err)
 
 		// Query the database for the payment order
