@@ -33,6 +33,12 @@ const (
 	FieldMarketRate = "market_rate"
 	// FieldIsEnabled holds the string denoting the is_enabled field in the database.
 	FieldIsEnabled = "is_enabled"
+	// FieldMinimumAvailableBalance holds the string denoting the minimum_available_balance field in the database.
+	FieldMinimumAvailableBalance = "minimum_available_balance"
+	// FieldAlertThreshold holds the string denoting the alert_threshold field in the database.
+	FieldAlertThreshold = "alert_threshold"
+	// FieldCriticalThreshold holds the string denoting the critical_threshold field in the database.
+	FieldCriticalThreshold = "critical_threshold"
 	// EdgeProviderCurrencies holds the string denoting the provider_currencies edge name in mutations.
 	EdgeProviderCurrencies = "provider_currencies"
 	// EdgeProvisionBuckets holds the string denoting the provision_buckets edge name in mutations.
@@ -85,6 +91,9 @@ var Columns = []string{
 	FieldName,
 	FieldMarketRate,
 	FieldIsEnabled,
+	FieldMinimumAvailableBalance,
+	FieldAlertThreshold,
+	FieldCriticalThreshold,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -163,6 +172,21 @@ func ByMarketRate(opts ...sql.OrderTermOption) OrderOption {
 // ByIsEnabled orders the results by the is_enabled field.
 func ByIsEnabled(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldIsEnabled, opts...).ToFunc()
+}
+
+// ByMinimumAvailableBalance orders the results by the minimum_available_balance field.
+func ByMinimumAvailableBalance(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMinimumAvailableBalance, opts...).ToFunc()
+}
+
+// ByAlertThreshold orders the results by the alert_threshold field.
+func ByAlertThreshold(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAlertThreshold, opts...).ToFunc()
+}
+
+// ByCriticalThreshold orders the results by the critical_threshold field.
+func ByCriticalThreshold(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCriticalThreshold, opts...).ToFunc()
 }
 
 // ByProviderCurrenciesCount orders the results by provider_currencies count.

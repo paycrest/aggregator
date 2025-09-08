@@ -211,6 +211,32 @@ func (e *EmailService) SendWebhookFailureEmail(ctx context.Context, email, first
 	return e.SendTemplateEmail(ctx, payload, templateID)
 }
 
+// This function will be used to send a balance alert email to provider
+func (e *EmailService) SendBalanceAlertEmail(ctx context.Context, email, firstName string) (types.SendEmailResponse, error) {
+	payload := types.SendEmailPayload{
+		FromAddress: e.notificationConf.EmailFromAddress,
+		ToAddress:   email,
+		DynamicData: map[string]interface{}{
+			"first_name": firstName,
+		},
+	}
+
+	templateID := getTemplateID("balance_alert", e.primaryProvider.GetName())
+	return e.SendTemplateEmail(ctx, payload, templateID)
+}
+
+// This function will be used to send a critical balance alert email to provider
+func (e *EmailService) SendCriticalBalanceAlertEmail(ctx context.Context, email, firstName string, additionalData map[string]interface{}) (types.SendEmailResponse, error) {
+	payload := types.SendEmailPayload{
+		FromAddress: e.notificationConf.EmailFromAddress,
+		ToAddress:   email,
+		DynamicData: additionalData,
+	}
+
+	templateID := getTemplateID("critical_balance_alert", e.primaryProvider.GetName())
+	return e.SendTemplateEmail(ctx, payload, templateID)
+}
+
 // getTemplateID returns the appropriate template ID based on email type and provider
 func getTemplateID(emailType, provider string) string {
 	// Template ID mapping based on provider and email type
@@ -222,6 +248,7 @@ func getTemplateID(emailType, provider string) string {
 			"kyb_approval":    "d-5ebb862274214ba79eae226c09300aa7",
 			"kyb_rejection":   "d-6917f9c32105467b8dd806a5a3dd32dc",
 			"webhook_failure": "d-da75eee4966544ad92dcd060421d4e12",
+			"balance_alert":   "d-6917f9c32105467b8dd806a5a3dd32dc", // how are these IDs gotten. ask Chibie
 		},
 		"brevo": {
 			"verification":    "5",
@@ -230,6 +257,7 @@ func getTemplateID(emailType, provider string) string {
 			"kyb_approval":    "7",
 			"kyb_rejection":   "8",
 			"webhook_failure": "9",
+			"balance_alert":   "10", // same here
 		},
 		"mailgun": {
 			"verification":    "mailgun-verification-template-id",    // TODO: Add actual template ID
@@ -238,6 +266,7 @@ func getTemplateID(emailType, provider string) string {
 			"kyb_approval":    "mailgun-kyb-approval-template-id",    // TODO: Add actual template ID
 			"kyb_rejection":   "mailgun-kyb-rejection-template-id",   // TODO: Add actual template ID
 			"webhook_failure": "mailgun-webhook-failure-template-id", // TODO: Add actual template ID
+			"balance_alert":   "mailgun-balance-alert-template-id",   // TODO: Add actual template ID
 		},
 	}
 

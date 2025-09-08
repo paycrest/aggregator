@@ -41,7 +41,7 @@ func (LockPaymentOrder) Fields() []ent.Field {
 			MaxLen(70).
 			Optional(),
 		field.Enum("status").
-			Values("pending", "processing", "cancelled", "fulfilled", "validated", "settled", "refunded").
+			Values("pending", "processing", "cancelled", "fulfilled", "validated", "settled", "refunded", "paused").
 			Default("pending"),
 		field.Int64("block_number"),
 		field.String("institution"),

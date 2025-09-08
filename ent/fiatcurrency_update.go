@@ -152,6 +152,69 @@ func (fcu *FiatCurrencyUpdate) SetNillableIsEnabled(b *bool) *FiatCurrencyUpdate
 	return fcu
 }
 
+// SetMinimumAvailableBalance sets the "minimum_available_balance" field.
+func (fcu *FiatCurrencyUpdate) SetMinimumAvailableBalance(d decimal.Decimal) *FiatCurrencyUpdate {
+	fcu.mutation.ResetMinimumAvailableBalance()
+	fcu.mutation.SetMinimumAvailableBalance(d)
+	return fcu
+}
+
+// SetNillableMinimumAvailableBalance sets the "minimum_available_balance" field if the given value is not nil.
+func (fcu *FiatCurrencyUpdate) SetNillableMinimumAvailableBalance(d *decimal.Decimal) *FiatCurrencyUpdate {
+	if d != nil {
+		fcu.SetMinimumAvailableBalance(*d)
+	}
+	return fcu
+}
+
+// AddMinimumAvailableBalance adds d to the "minimum_available_balance" field.
+func (fcu *FiatCurrencyUpdate) AddMinimumAvailableBalance(d decimal.Decimal) *FiatCurrencyUpdate {
+	fcu.mutation.AddMinimumAvailableBalance(d)
+	return fcu
+}
+
+// SetAlertThreshold sets the "alert_threshold" field.
+func (fcu *FiatCurrencyUpdate) SetAlertThreshold(d decimal.Decimal) *FiatCurrencyUpdate {
+	fcu.mutation.ResetAlertThreshold()
+	fcu.mutation.SetAlertThreshold(d)
+	return fcu
+}
+
+// SetNillableAlertThreshold sets the "alert_threshold" field if the given value is not nil.
+func (fcu *FiatCurrencyUpdate) SetNillableAlertThreshold(d *decimal.Decimal) *FiatCurrencyUpdate {
+	if d != nil {
+		fcu.SetAlertThreshold(*d)
+	}
+	return fcu
+}
+
+// AddAlertThreshold adds d to the "alert_threshold" field.
+func (fcu *FiatCurrencyUpdate) AddAlertThreshold(d decimal.Decimal) *FiatCurrencyUpdate {
+	fcu.mutation.AddAlertThreshold(d)
+	return fcu
+}
+
+// SetCriticalThreshold sets the "critical_threshold" field.
+func (fcu *FiatCurrencyUpdate) SetCriticalThreshold(d decimal.Decimal) *FiatCurrencyUpdate {
+	fcu.mutation.ResetCriticalThreshold()
+	fcu.mutation.SetCriticalThreshold(d)
+	return fcu
+}
+
+// SetNillableCriticalThreshold sets the "critical_threshold" field if the given value is not nil.
+func (fcu *FiatCurrencyUpdate) SetNillableCriticalThreshold(d *decimal.Decimal) *FiatCurrencyUpdate {
+	if d != nil {
+		fcu.SetCriticalThreshold(*d)
+	}
+	return fcu
+}
+
+// AddCriticalThreshold adds d to the "critical_threshold" field.
+func (fcu *FiatCurrencyUpdate) AddCriticalThreshold(d decimal.Decimal) *FiatCurrencyUpdate {
+	fcu.mutation.AddCriticalThreshold(d)
+	return fcu
+}
+
 // AddProviderCurrencyIDs adds the "provider_currencies" edge to the ProviderCurrencies entity by IDs.
 func (fcu *FiatCurrencyUpdate) AddProviderCurrencyIDs(ids ...uuid.UUID) *FiatCurrencyUpdate {
 	fcu.mutation.AddProviderCurrencyIDs(ids...)
@@ -375,6 +438,24 @@ func (fcu *FiatCurrencyUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := fcu.mutation.IsEnabled(); ok {
 		_spec.SetField(fiatcurrency.FieldIsEnabled, field.TypeBool, value)
+	}
+	if value, ok := fcu.mutation.MinimumAvailableBalance(); ok {
+		_spec.SetField(fiatcurrency.FieldMinimumAvailableBalance, field.TypeFloat64, value)
+	}
+	if value, ok := fcu.mutation.AddedMinimumAvailableBalance(); ok {
+		_spec.AddField(fiatcurrency.FieldMinimumAvailableBalance, field.TypeFloat64, value)
+	}
+	if value, ok := fcu.mutation.AlertThreshold(); ok {
+		_spec.SetField(fiatcurrency.FieldAlertThreshold, field.TypeFloat64, value)
+	}
+	if value, ok := fcu.mutation.AddedAlertThreshold(); ok {
+		_spec.AddField(fiatcurrency.FieldAlertThreshold, field.TypeFloat64, value)
+	}
+	if value, ok := fcu.mutation.CriticalThreshold(); ok {
+		_spec.SetField(fiatcurrency.FieldCriticalThreshold, field.TypeFloat64, value)
+	}
+	if value, ok := fcu.mutation.AddedCriticalThreshold(); ok {
+		_spec.AddField(fiatcurrency.FieldCriticalThreshold, field.TypeFloat64, value)
 	}
 	if fcu.mutation.ProviderCurrenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -694,6 +775,69 @@ func (fcuo *FiatCurrencyUpdateOne) SetNillableIsEnabled(b *bool) *FiatCurrencyUp
 	return fcuo
 }
 
+// SetMinimumAvailableBalance sets the "minimum_available_balance" field.
+func (fcuo *FiatCurrencyUpdateOne) SetMinimumAvailableBalance(d decimal.Decimal) *FiatCurrencyUpdateOne {
+	fcuo.mutation.ResetMinimumAvailableBalance()
+	fcuo.mutation.SetMinimumAvailableBalance(d)
+	return fcuo
+}
+
+// SetNillableMinimumAvailableBalance sets the "minimum_available_balance" field if the given value is not nil.
+func (fcuo *FiatCurrencyUpdateOne) SetNillableMinimumAvailableBalance(d *decimal.Decimal) *FiatCurrencyUpdateOne {
+	if d != nil {
+		fcuo.SetMinimumAvailableBalance(*d)
+	}
+	return fcuo
+}
+
+// AddMinimumAvailableBalance adds d to the "minimum_available_balance" field.
+func (fcuo *FiatCurrencyUpdateOne) AddMinimumAvailableBalance(d decimal.Decimal) *FiatCurrencyUpdateOne {
+	fcuo.mutation.AddMinimumAvailableBalance(d)
+	return fcuo
+}
+
+// SetAlertThreshold sets the "alert_threshold" field.
+func (fcuo *FiatCurrencyUpdateOne) SetAlertThreshold(d decimal.Decimal) *FiatCurrencyUpdateOne {
+	fcuo.mutation.ResetAlertThreshold()
+	fcuo.mutation.SetAlertThreshold(d)
+	return fcuo
+}
+
+// SetNillableAlertThreshold sets the "alert_threshold" field if the given value is not nil.
+func (fcuo *FiatCurrencyUpdateOne) SetNillableAlertThreshold(d *decimal.Decimal) *FiatCurrencyUpdateOne {
+	if d != nil {
+		fcuo.SetAlertThreshold(*d)
+	}
+	return fcuo
+}
+
+// AddAlertThreshold adds d to the "alert_threshold" field.
+func (fcuo *FiatCurrencyUpdateOne) AddAlertThreshold(d decimal.Decimal) *FiatCurrencyUpdateOne {
+	fcuo.mutation.AddAlertThreshold(d)
+	return fcuo
+}
+
+// SetCriticalThreshold sets the "critical_threshold" field.
+func (fcuo *FiatCurrencyUpdateOne) SetCriticalThreshold(d decimal.Decimal) *FiatCurrencyUpdateOne {
+	fcuo.mutation.ResetCriticalThreshold()
+	fcuo.mutation.SetCriticalThreshold(d)
+	return fcuo
+}
+
+// SetNillableCriticalThreshold sets the "critical_threshold" field if the given value is not nil.
+func (fcuo *FiatCurrencyUpdateOne) SetNillableCriticalThreshold(d *decimal.Decimal) *FiatCurrencyUpdateOne {
+	if d != nil {
+		fcuo.SetCriticalThreshold(*d)
+	}
+	return fcuo
+}
+
+// AddCriticalThreshold adds d to the "critical_threshold" field.
+func (fcuo *FiatCurrencyUpdateOne) AddCriticalThreshold(d decimal.Decimal) *FiatCurrencyUpdateOne {
+	fcuo.mutation.AddCriticalThreshold(d)
+	return fcuo
+}
+
 // AddProviderCurrencyIDs adds the "provider_currencies" edge to the ProviderCurrencies entity by IDs.
 func (fcuo *FiatCurrencyUpdateOne) AddProviderCurrencyIDs(ids ...uuid.UUID) *FiatCurrencyUpdateOne {
 	fcuo.mutation.AddProviderCurrencyIDs(ids...)
@@ -947,6 +1091,24 @@ func (fcuo *FiatCurrencyUpdateOne) sqlSave(ctx context.Context) (_node *FiatCurr
 	}
 	if value, ok := fcuo.mutation.IsEnabled(); ok {
 		_spec.SetField(fiatcurrency.FieldIsEnabled, field.TypeBool, value)
+	}
+	if value, ok := fcuo.mutation.MinimumAvailableBalance(); ok {
+		_spec.SetField(fiatcurrency.FieldMinimumAvailableBalance, field.TypeFloat64, value)
+	}
+	if value, ok := fcuo.mutation.AddedMinimumAvailableBalance(); ok {
+		_spec.AddField(fiatcurrency.FieldMinimumAvailableBalance, field.TypeFloat64, value)
+	}
+	if value, ok := fcuo.mutation.AlertThreshold(); ok {
+		_spec.SetField(fiatcurrency.FieldAlertThreshold, field.TypeFloat64, value)
+	}
+	if value, ok := fcuo.mutation.AddedAlertThreshold(); ok {
+		_spec.AddField(fiatcurrency.FieldAlertThreshold, field.TypeFloat64, value)
+	}
+	if value, ok := fcuo.mutation.CriticalThreshold(); ok {
+		_spec.SetField(fiatcurrency.FieldCriticalThreshold, field.TypeFloat64, value)
+	}
+	if value, ok := fcuo.mutation.AddedCriticalThreshold(); ok {
+		_spec.AddField(fiatcurrency.FieldCriticalThreshold, field.TypeFloat64, value)
 	}
 	if fcuo.mutation.ProviderCurrenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{

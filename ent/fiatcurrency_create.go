@@ -115,6 +115,24 @@ func (fcc *FiatCurrencyCreate) SetNillableIsEnabled(b *bool) *FiatCurrencyCreate
 	return fcc
 }
 
+// SetMinimumAvailableBalance sets the "minimum_available_balance" field.
+func (fcc *FiatCurrencyCreate) SetMinimumAvailableBalance(d decimal.Decimal) *FiatCurrencyCreate {
+	fcc.mutation.SetMinimumAvailableBalance(d)
+	return fcc
+}
+
+// SetAlertThreshold sets the "alert_threshold" field.
+func (fcc *FiatCurrencyCreate) SetAlertThreshold(d decimal.Decimal) *FiatCurrencyCreate {
+	fcc.mutation.SetAlertThreshold(d)
+	return fcc
+}
+
+// SetCriticalThreshold sets the "critical_threshold" field.
+func (fcc *FiatCurrencyCreate) SetCriticalThreshold(d decimal.Decimal) *FiatCurrencyCreate {
+	fcc.mutation.SetCriticalThreshold(d)
+	return fcc
+}
+
 // SetID sets the "id" field.
 func (fcc *FiatCurrencyCreate) SetID(u uuid.UUID) *FiatCurrencyCreate {
 	fcc.mutation.SetID(u)
@@ -275,6 +293,15 @@ func (fcc *FiatCurrencyCreate) check() error {
 	if _, ok := fcc.mutation.IsEnabled(); !ok {
 		return &ValidationError{Name: "is_enabled", err: errors.New(`ent: missing required field "FiatCurrency.is_enabled"`)}
 	}
+	if _, ok := fcc.mutation.MinimumAvailableBalance(); !ok {
+		return &ValidationError{Name: "minimum_available_balance", err: errors.New(`ent: missing required field "FiatCurrency.minimum_available_balance"`)}
+	}
+	if _, ok := fcc.mutation.AlertThreshold(); !ok {
+		return &ValidationError{Name: "alert_threshold", err: errors.New(`ent: missing required field "FiatCurrency.alert_threshold"`)}
+	}
+	if _, ok := fcc.mutation.CriticalThreshold(); !ok {
+		return &ValidationError{Name: "critical_threshold", err: errors.New(`ent: missing required field "FiatCurrency.critical_threshold"`)}
+	}
 	return nil
 }
 
@@ -346,6 +373,18 @@ func (fcc *FiatCurrencyCreate) createSpec() (*FiatCurrency, *sqlgraph.CreateSpec
 	if value, ok := fcc.mutation.IsEnabled(); ok {
 		_spec.SetField(fiatcurrency.FieldIsEnabled, field.TypeBool, value)
 		_node.IsEnabled = value
+	}
+	if value, ok := fcc.mutation.MinimumAvailableBalance(); ok {
+		_spec.SetField(fiatcurrency.FieldMinimumAvailableBalance, field.TypeFloat64, value)
+		_node.MinimumAvailableBalance = value
+	}
+	if value, ok := fcc.mutation.AlertThreshold(); ok {
+		_spec.SetField(fiatcurrency.FieldAlertThreshold, field.TypeFloat64, value)
+		_node.AlertThreshold = value
+	}
+	if value, ok := fcc.mutation.CriticalThreshold(); ok {
+		_spec.SetField(fiatcurrency.FieldCriticalThreshold, field.TypeFloat64, value)
+		_node.CriticalThreshold = value
 	}
 	if nodes := fcc.mutation.ProviderCurrenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -571,6 +610,60 @@ func (u *FiatCurrencyUpsert) UpdateIsEnabled() *FiatCurrencyUpsert {
 	return u
 }
 
+// SetMinimumAvailableBalance sets the "minimum_available_balance" field.
+func (u *FiatCurrencyUpsert) SetMinimumAvailableBalance(v decimal.Decimal) *FiatCurrencyUpsert {
+	u.Set(fiatcurrency.FieldMinimumAvailableBalance, v)
+	return u
+}
+
+// UpdateMinimumAvailableBalance sets the "minimum_available_balance" field to the value that was provided on create.
+func (u *FiatCurrencyUpsert) UpdateMinimumAvailableBalance() *FiatCurrencyUpsert {
+	u.SetExcluded(fiatcurrency.FieldMinimumAvailableBalance)
+	return u
+}
+
+// AddMinimumAvailableBalance adds v to the "minimum_available_balance" field.
+func (u *FiatCurrencyUpsert) AddMinimumAvailableBalance(v decimal.Decimal) *FiatCurrencyUpsert {
+	u.Add(fiatcurrency.FieldMinimumAvailableBalance, v)
+	return u
+}
+
+// SetAlertThreshold sets the "alert_threshold" field.
+func (u *FiatCurrencyUpsert) SetAlertThreshold(v decimal.Decimal) *FiatCurrencyUpsert {
+	u.Set(fiatcurrency.FieldAlertThreshold, v)
+	return u
+}
+
+// UpdateAlertThreshold sets the "alert_threshold" field to the value that was provided on create.
+func (u *FiatCurrencyUpsert) UpdateAlertThreshold() *FiatCurrencyUpsert {
+	u.SetExcluded(fiatcurrency.FieldAlertThreshold)
+	return u
+}
+
+// AddAlertThreshold adds v to the "alert_threshold" field.
+func (u *FiatCurrencyUpsert) AddAlertThreshold(v decimal.Decimal) *FiatCurrencyUpsert {
+	u.Add(fiatcurrency.FieldAlertThreshold, v)
+	return u
+}
+
+// SetCriticalThreshold sets the "critical_threshold" field.
+func (u *FiatCurrencyUpsert) SetCriticalThreshold(v decimal.Decimal) *FiatCurrencyUpsert {
+	u.Set(fiatcurrency.FieldCriticalThreshold, v)
+	return u
+}
+
+// UpdateCriticalThreshold sets the "critical_threshold" field to the value that was provided on create.
+func (u *FiatCurrencyUpsert) UpdateCriticalThreshold() *FiatCurrencyUpsert {
+	u.SetExcluded(fiatcurrency.FieldCriticalThreshold)
+	return u
+}
+
+// AddCriticalThreshold adds v to the "critical_threshold" field.
+func (u *FiatCurrencyUpsert) AddCriticalThreshold(v decimal.Decimal) *FiatCurrencyUpsert {
+	u.Add(fiatcurrency.FieldCriticalThreshold, v)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
@@ -745,6 +838,69 @@ func (u *FiatCurrencyUpsertOne) SetIsEnabled(v bool) *FiatCurrencyUpsertOne {
 func (u *FiatCurrencyUpsertOne) UpdateIsEnabled() *FiatCurrencyUpsertOne {
 	return u.Update(func(s *FiatCurrencyUpsert) {
 		s.UpdateIsEnabled()
+	})
+}
+
+// SetMinimumAvailableBalance sets the "minimum_available_balance" field.
+func (u *FiatCurrencyUpsertOne) SetMinimumAvailableBalance(v decimal.Decimal) *FiatCurrencyUpsertOne {
+	return u.Update(func(s *FiatCurrencyUpsert) {
+		s.SetMinimumAvailableBalance(v)
+	})
+}
+
+// AddMinimumAvailableBalance adds v to the "minimum_available_balance" field.
+func (u *FiatCurrencyUpsertOne) AddMinimumAvailableBalance(v decimal.Decimal) *FiatCurrencyUpsertOne {
+	return u.Update(func(s *FiatCurrencyUpsert) {
+		s.AddMinimumAvailableBalance(v)
+	})
+}
+
+// UpdateMinimumAvailableBalance sets the "minimum_available_balance" field to the value that was provided on create.
+func (u *FiatCurrencyUpsertOne) UpdateMinimumAvailableBalance() *FiatCurrencyUpsertOne {
+	return u.Update(func(s *FiatCurrencyUpsert) {
+		s.UpdateMinimumAvailableBalance()
+	})
+}
+
+// SetAlertThreshold sets the "alert_threshold" field.
+func (u *FiatCurrencyUpsertOne) SetAlertThreshold(v decimal.Decimal) *FiatCurrencyUpsertOne {
+	return u.Update(func(s *FiatCurrencyUpsert) {
+		s.SetAlertThreshold(v)
+	})
+}
+
+// AddAlertThreshold adds v to the "alert_threshold" field.
+func (u *FiatCurrencyUpsertOne) AddAlertThreshold(v decimal.Decimal) *FiatCurrencyUpsertOne {
+	return u.Update(func(s *FiatCurrencyUpsert) {
+		s.AddAlertThreshold(v)
+	})
+}
+
+// UpdateAlertThreshold sets the "alert_threshold" field to the value that was provided on create.
+func (u *FiatCurrencyUpsertOne) UpdateAlertThreshold() *FiatCurrencyUpsertOne {
+	return u.Update(func(s *FiatCurrencyUpsert) {
+		s.UpdateAlertThreshold()
+	})
+}
+
+// SetCriticalThreshold sets the "critical_threshold" field.
+func (u *FiatCurrencyUpsertOne) SetCriticalThreshold(v decimal.Decimal) *FiatCurrencyUpsertOne {
+	return u.Update(func(s *FiatCurrencyUpsert) {
+		s.SetCriticalThreshold(v)
+	})
+}
+
+// AddCriticalThreshold adds v to the "critical_threshold" field.
+func (u *FiatCurrencyUpsertOne) AddCriticalThreshold(v decimal.Decimal) *FiatCurrencyUpsertOne {
+	return u.Update(func(s *FiatCurrencyUpsert) {
+		s.AddCriticalThreshold(v)
+	})
+}
+
+// UpdateCriticalThreshold sets the "critical_threshold" field to the value that was provided on create.
+func (u *FiatCurrencyUpsertOne) UpdateCriticalThreshold() *FiatCurrencyUpsertOne {
+	return u.Update(func(s *FiatCurrencyUpsert) {
+		s.UpdateCriticalThreshold()
 	})
 }
 
@@ -1089,6 +1245,69 @@ func (u *FiatCurrencyUpsertBulk) SetIsEnabled(v bool) *FiatCurrencyUpsertBulk {
 func (u *FiatCurrencyUpsertBulk) UpdateIsEnabled() *FiatCurrencyUpsertBulk {
 	return u.Update(func(s *FiatCurrencyUpsert) {
 		s.UpdateIsEnabled()
+	})
+}
+
+// SetMinimumAvailableBalance sets the "minimum_available_balance" field.
+func (u *FiatCurrencyUpsertBulk) SetMinimumAvailableBalance(v decimal.Decimal) *FiatCurrencyUpsertBulk {
+	return u.Update(func(s *FiatCurrencyUpsert) {
+		s.SetMinimumAvailableBalance(v)
+	})
+}
+
+// AddMinimumAvailableBalance adds v to the "minimum_available_balance" field.
+func (u *FiatCurrencyUpsertBulk) AddMinimumAvailableBalance(v decimal.Decimal) *FiatCurrencyUpsertBulk {
+	return u.Update(func(s *FiatCurrencyUpsert) {
+		s.AddMinimumAvailableBalance(v)
+	})
+}
+
+// UpdateMinimumAvailableBalance sets the "minimum_available_balance" field to the value that was provided on create.
+func (u *FiatCurrencyUpsertBulk) UpdateMinimumAvailableBalance() *FiatCurrencyUpsertBulk {
+	return u.Update(func(s *FiatCurrencyUpsert) {
+		s.UpdateMinimumAvailableBalance()
+	})
+}
+
+// SetAlertThreshold sets the "alert_threshold" field.
+func (u *FiatCurrencyUpsertBulk) SetAlertThreshold(v decimal.Decimal) *FiatCurrencyUpsertBulk {
+	return u.Update(func(s *FiatCurrencyUpsert) {
+		s.SetAlertThreshold(v)
+	})
+}
+
+// AddAlertThreshold adds v to the "alert_threshold" field.
+func (u *FiatCurrencyUpsertBulk) AddAlertThreshold(v decimal.Decimal) *FiatCurrencyUpsertBulk {
+	return u.Update(func(s *FiatCurrencyUpsert) {
+		s.AddAlertThreshold(v)
+	})
+}
+
+// UpdateAlertThreshold sets the "alert_threshold" field to the value that was provided on create.
+func (u *FiatCurrencyUpsertBulk) UpdateAlertThreshold() *FiatCurrencyUpsertBulk {
+	return u.Update(func(s *FiatCurrencyUpsert) {
+		s.UpdateAlertThreshold()
+	})
+}
+
+// SetCriticalThreshold sets the "critical_threshold" field.
+func (u *FiatCurrencyUpsertBulk) SetCriticalThreshold(v decimal.Decimal) *FiatCurrencyUpsertBulk {
+	return u.Update(func(s *FiatCurrencyUpsert) {
+		s.SetCriticalThreshold(v)
+	})
+}
+
+// AddCriticalThreshold adds v to the "critical_threshold" field.
+func (u *FiatCurrencyUpsertBulk) AddCriticalThreshold(v decimal.Decimal) *FiatCurrencyUpsertBulk {
+	return u.Update(func(s *FiatCurrencyUpsert) {
+		s.AddCriticalThreshold(v)
+	})
+}
+
+// UpdateCriticalThreshold sets the "critical_threshold" field to the value that was provided on create.
+func (u *FiatCurrencyUpsertBulk) UpdateCriticalThreshold() *FiatCurrencyUpsertBulk {
+	return u.Update(func(s *FiatCurrencyUpsert) {
+		s.UpdateCriticalThreshold()
 	})
 }
 
