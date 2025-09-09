@@ -57,38 +57,24 @@ func (s *PriorityQueueService) ProcessBucketQueues() error {
 	return nil
 }
 
-// GetProvisionBuckets returns a list of buckets with their providers
 func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.ProvisionBucket, error) {
 	buckets, err := storage.Client.ProvisionBucket.Query().WithCurrency().All(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// Filter providers by currency availability and balance for each bucket
+	// Use existing balance service with its config
 	for _, bucket := range buckets {
-		var availableProviders []*ent.ProviderProfile
-		availableProviders, err := bucket.QueryProviderProfiles().
-			Where(
-				providerprofile.IsActive(true),
-				providerprofile.HasUserWith(user.KybVerificationStatusEQ(user.KybVerificationStatusApproved)),
-				providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
-				providerprofile.HasProviderCurrenciesWith(
-					providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)),
-					providercurrencies.AvailableBalanceGT(bucket.MinAmount),
-					providercurrencies.IsAvailableEQ(true),
-					// TODO: add check to enforce critical balance threshold in the future
-				),
-			).
-			All(ctx)
+		healthyProviders, err := s.balanceService.GetHealthyProvidersForCurrency(ctx, bucket.Edges.Currency.Code)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":      fmt.Sprintf("%v", err),
 				"CurrencyID": bucket.Edges.Currency.ID,
-			}).Errorf("Failed to get available providers for bucket")
+			}).Errorf("Failed to get healthy providers for bucket")
 			continue
 		}
 
-		bucket.Edges.ProviderProfiles = availableProviders
+		bucket.Edges.ProviderProfiles = healthyProviders
 	}
 
 	return buckets, nil
@@ -296,72 +282,105 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 		return err
 	}
 
-	// Sends order directly to the specified provider in order.
-	// Incase of failure, do nothing. The order will eventually refund
+	// If specific provider is requested, validate their health first
 	if order.ProviderID != "" && !utils.ContainsString(excludeList, order.ProviderID) {
-		provider, err := storage.Client.ProviderProfile.
-			Query().
-			Where(
-				providerprofile.IDEQ(order.ProviderID),
-			).
-			Only(ctx)
+		// Check provider health before assignment
+		balanceService := NewBalanceManagementService()
+		isHealthy, err := balanceService.IsProviderHealthyForCurrency(ctx, order.ProviderID, order.ProvisionBucket.Edges.Currency.Code)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", err),
+				"OrderID":    order.ID.String(),
+				"ProviderID": order.ProviderID,
+			}).Errorf("failed to check provider health")
+		} else if !isHealthy {
+			logger.WithFields(logger.Fields{
+				"OrderID":    order.ID.String(),
+				"ProviderID": order.ProviderID,
+			}).Warnf("requested provider is not healthy, falling back to queue")
+			order.ProviderID = "" // Clear provider ID to use queue
+		} else {
+			// Provider is healthy, proceed with assignment
+			provider, err := storage.Client.ProviderProfile.
+				Query().
+				Where(providerprofile.IDEQ(order.ProviderID)).
+				Only(ctx)
 
-		if err == nil {
-			// TODO: check for provider's minimum and maximum rate for negotiation
-			// Update the rate with the current rate if order was last updated more than 10 mins ago
-			if order.UpdatedAt.Before(time.Now().Add(-10 * time.Minute)) {
-				order.Rate, err = s.GetProviderRate(ctx, provider, order.Token.Symbol, order.ProvisionBucket.Edges.Currency.Code)
-				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":      fmt.Sprintf("%v", err),
-						"OrderID":    order.ID.String(),
-						"ProviderID": order.ProviderID,
-					}).Errorf("failed to get rate for provider")
-				}
-				_, err = storage.Client.PaymentOrder.
-					Update().
-					Where(paymentorder.IDEQ(order.ID)).
-					SetRate(order.Rate).
-					Save(ctx)
-				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":      fmt.Sprintf("%v", err),
-						"OrderID":    order.ID.String(),
-						"ProviderID": order.ProviderID,
-					}).Errorf("failed to update rate for provider")
-				}
-			}
-			err = s.sendOrderRequest(ctx, order)
 			if err == nil {
+				// Update rate if needed
+				if order.UpdatedAt.Before(time.Now().Add(-10 * time.Minute)) {
+					order.Rate, err = s.GetProviderRate(ctx, provider, order.Token.Symbol, order.ProvisionBucket.Edges.Currency.Code)
+					if err != nil {
+						logger.WithFields(logger.Fields{
+							"Error":      fmt.Sprintf("%v", err),
+							"OrderID":    order.ID.String(),
+							"ProviderID": order.ProviderID,
+						}).Errorf("failed to get rate for provider")
+					} else {
+						_, err = storage.Client.PaymentOrder.
+							Update().
+							Where(paymentorder.IDEQ(order.ID)).
+							SetRate(order.Rate).
+							Save(ctx)
+						if err != nil {
+							logger.WithFields(logger.Fields{
+								"Error":      fmt.Sprintf("%v", err),
+								"OrderID":    order.ID.String(),
+								"ProviderID": order.ProviderID,
+							}).Errorf("failed to update rate for provider")
+						}
+					}
+				}
+
+				// Validate balance health before sending order
+				healthReport, err := balanceService.ValidateProviderBalanceHealth(ctx, order.ProviderID, order.ProvisionBucket.Edges.Currency.Code, order.Amount.Mul(order.Rate).RoundBank(0))
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":      fmt.Sprintf("%v", err),
+						"OrderID":    order.ID.String(),
+						"ProviderID": order.ProviderID,
+					}).Errorf("failed to validate provider balance health")
+				} else if healthReport.Status != "healthy" {
+					logger.WithFields(logger.Fields{
+						"OrderID":      order.ID.String(),
+						"ProviderID":   order.ProviderID,
+						"HealthStatus": healthReport.Status,
+						"Issues":       healthReport.Issues,
+					}).Warnf("provider balance health check failed, falling back to queue")
+					order.ProviderID = "" // Clear provider ID to use queue
+				} else {
+					// Provider is healthy, send order
+					err = s.sendOrderRequest(ctx, order)
+					if err == nil {
+						return nil
+					}
+					logger.WithFields(logger.Fields{
+						"Error":      fmt.Sprintf("%v", err),
+						"OrderID":    order.ID.String(),
+						"ProviderID": order.ProviderID,
+					}).Errorf("failed to send order request to specific provider")
+				}
+			} else {
+				logger.WithFields(logger.Fields{
+					"Error":      fmt.Sprintf("%v", err),
+					"OrderID":    order.ID.String(),
+					"ProviderID": order.ProviderID,
+				}).Errorf("failed to get provider")
+			}
+
+			if provider != nil && provider.VisibilityMode == providerprofile.VisibilityModePrivate {
 				return nil
 			}
-			logger.WithFields(logger.Fields{
-				"Error":      fmt.Sprintf("%v", err),
-				"OrderID":    order.ID.String(),
-				"ProviderID": order.ProviderID,
-			}).Errorf("failed to send order request to specific provider")
-		} else {
-			logger.WithFields(logger.Fields{
-				"Error":      fmt.Sprintf("%v", err),
-				"OrderID":    order.ID.String(),
-				"ProviderID": order.ProviderID,
-			}).Errorf("failed to get provider")
-		}
-
-		if provider.VisibilityMode == providerprofile.VisibilityModePrivate {
-			return nil
 		}
 	}
 
-	// Get the first provider from the circular queue
+	// Use queue-based assignment with health checks
 	redisKey := fmt.Sprintf("bucket_%s_%s_%s", order.ProvisionBucket.Edges.Currency.Code, order.ProvisionBucket.MinAmount, order.ProvisionBucket.MaxAmount)
 
-	// partnerProviders := []string{}
-
-	err = s.matchRate(ctx, redisKey, orderIDPrefix, order, excludeList)
+	err = s.matchRateWithHealthCheck(ctx, redisKey, orderIDPrefix, order, excludeList)
 	if err != nil {
 		prevRedisKey := redisKey + "_prev"
-		err = s.matchRate(ctx, prevRedisKey, orderIDPrefix, order, excludeList)
+		err = s.matchRateWithHealthCheck(ctx, prevRedisKey, orderIDPrefix, order, excludeList)
 		if err != nil && !strings.Contains(fmt.Sprintf("%v", err), "redis: nil") {
 			return err
 		}
@@ -495,206 +514,356 @@ func (s *PriorityQueueService) notifyProvider(ctx context.Context, orderRequestD
 }
 
 // matchRate matches order rate with a provider rate
-func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, orderIDPrefix string, order types.LockPaymentOrderFields, excludeList []string) error {
-	for index := 0; ; index++ {
-		providerData, err := storage.RedisClient.LIndex(ctx, redisKey, int64(index)).Result()
-		if err != nil {
-			return err
-		}
+// func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, orderIDPrefix string, order types.LockPaymentOrderFields, excludeList []string) error {
+// 	for index := 0; ; index++ {
+// 		providerData, err := storage.RedisClient.LIndex(ctx, redisKey, int64(index)).Result()
+// 		if err != nil {
+// 			return err
+// 		}
 
-		// if providerData == "" {
-		// 	// Reached the end of the queue
-		// 	logger.Errorf("%s - rate didn't match a provider, finding a partner provider", orderIDPrefix)
+// 		// if providerData == "" {
+// 		// 	// Reached the end of the queue
+// 		// 	logger.Errorf("%s - rate didn't match a provider, finding a partner provider", orderIDPrefix)
 
-		// 	if len(partnerProviders) == 0 {
-		// 		logger.Errorf("%s - no partner providers found", orderIDPrefix)
-		// 		return nil
-		// 	}
+// 		// 	if len(partnerProviders) == 0 {
+// 		// 		logger.Errorf("%s - no partner providers found", orderIDPrefix)
+// 		// 		return nil
+// 		// 	}
 
-		// 	// Pick a random partner provider
-		// 	randomIndex := rand.New(rand.NewSource(time.Now().UnixNano())).Intn(len(partnerProviders))
-		// 	providerData = partnerProviders[randomIndex]
-		// }
+// 		// 	// Pick a random partner provider
+// 		// 	randomIndex := rand.New(rand.NewSource(time.Now().UnixNano())).Intn(len(partnerProviders))
+// 		// 	providerData = partnerProviders[randomIndex]
+// 		// }
 
-		// Extract the rate from the data (assuming it's in the format "providerID:token:rate:minAmount:maxAmount")
+// 		// Extract the rate from the data (assuming it's in the format "providerID:token:rate:minAmount:maxAmount")
+// 		parts := strings.Split(providerData, ":")
+// 		if len(parts) != 5 {
+// 			logger.WithFields(logger.Fields{
+// 				"Error":        fmt.Sprintf("%v", err),
+// 				"OrderID":      order.ID.String(),
+// 				"ProviderID":   order.ProviderID,
+// 				"ProviderData": providerData,
+// 			}).Errorf("invalid data format at index %d when matching rate", index)
+// 			continue // Skip this entry due to invalid format
+// 		}
+
+// 		order.ProviderID = parts[0]
+
+// 		// Skip entry if provider is excluded
+// 		if utils.ContainsString(excludeList, order.ProviderID) {
+// 			continue
+// 		}
+
+// 		// Skip entry if token doesn't match
+// 		if parts[1] != order.Token.Symbol {
+// 			continue
+// 		}
+
+// 		// Skip entry if order amount is not within provider's min and max order amount
+// 		minOrderAmount, err := decimal.NewFromString(parts[3])
+// 		if err != nil {
+// 			continue
+// 		}
+
+// 		maxOrderAmount, err := decimal.NewFromString(parts[4])
+// 		if err != nil {
+// 			continue
+// 		}
+
+// 		normalizedAmount := order.Amount
+// 		bucketCurrency := order.ProvisionBucket.Edges.Currency
+// 		if bucketCurrency == nil {
+// 			bucketCurrency, err = order.ProvisionBucket.QueryCurrency().Only(ctx)
+// 			if err != nil {
+// 				continue
+// 			}
+// 		}
+// 		if strings.EqualFold(order.Token.BaseCurrency, bucketCurrency.Code) && order.Token.BaseCurrency != "USD" {
+// 			rateResponse, err := utils.GetTokenRateFromQueue("USDT", normalizedAmount, bucketCurrency.Code, bucketCurrency.MarketRate)
+// 			if err != nil {
+// 				continue
+// 			}
+// 			normalizedAmount = order.Amount.Div(rateResponse)
+// 		}
+// 		if normalizedAmount.LessThan(minOrderAmount) || normalizedAmount.GreaterThan(maxOrderAmount) {
+// 			continue
+// 		}
+
+// 		// Fetch and check provider for rate match
+// 		rate, err := decimal.NewFromString(parts[2])
+// 		if err != nil {
+// 			continue
+// 		}
+
+// 		network := order.Token.Edges.Network
+// 		if network == nil {
+// 			network, err = order.Token.QueryNetwork().Only(ctx)
+// 			if err != nil {
+// 				continue
+// 			}
+// 		}
+
+// 		providerToken, err := storage.Client.ProviderOrderToken.
+// 			Query().
+// 			Where(
+// 				providerordertoken.NetworkEQ(network.Identifier),
+// 				providerordertoken.HasProviderWith(
+// 					providerprofile.IDEQ(order.ProviderID),
+// 					providerprofile.HasProviderCurrenciesWith(
+// 						providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(bucketCurrency.Code)),
+// 						providercurrencies.IsAvailableEQ(true),
+// 					),
+// 				),
+// 				providerordertoken.HasTokenWith(token.IDEQ(order.Token.ID)),
+// 				providerordertoken.HasCurrencyWith(
+// 					fiatcurrency.CodeEQ(bucketCurrency.Code),
+// 				),
+// 				providerordertoken.AddressNEQ(""),
+// 			).
+// 			First(ctx)
+// 		if err != nil {
+// 			continue
+// 		}
+
+// 		// Calculate allowed deviation based on slippage
+// 		allowedDeviation := order.Rate.Mul(providerToken.RateSlippage.Div(decimal.NewFromInt(100)))
+
+// 		if rate.Sub(order.Rate).Abs().LessThanOrEqual(allowedDeviation) {
+// 			// Check if provider has sufficient balance for this order
+// 			hasSufficientBalance, err := s.balanceService.CheckBalanceSufficiency(ctx, order.ProviderID, bucketCurrency.Code, order.Amount.Mul(order.Rate).RoundBank(0))
+// 			if err != nil {
+// 				logger.WithFields(logger.Fields{
+// 					"Error":      fmt.Sprintf("%v", err),
+// 					"OrderID":    order.ID.String(),
+// 					"ProviderID": order.ProviderID,
+// 					"Currency":   bucketCurrency.Code,
+// 					"Amount":     order.Amount.String(),
+// 				}).Errorf("failed to check balance sufficiency")
+// 				continue
+// 			}
+
+// 			if !hasSufficientBalance {
+// 				// TODO: send notification to the provider
+// 				logger.WithFields(logger.Fields{
+// 					"OrderID":    order.ID.String(),
+// 					"ProviderID": order.ProviderID,
+// 					"Currency":   bucketCurrency.Code,
+// 					"Amount":     order.Amount.String(),
+// 				}).Warnf("provider has insufficient balance, skipping")
+// 				continue
+// 			}
+
+// 			// Found a match for the rate and sufficient balance
+// 			if index == 0 {
+// 				// Match found at index 0, perform LPOP to dequeue
+// 				data, err := storage.RedisClient.LPop(ctx, redisKey).Result()
+// 				if err != nil {
+// 					logger.WithFields(logger.Fields{
+// 						"Error":         fmt.Sprintf("%v", err),
+// 						"OrderID":       order.ID.String(),
+// 						"ProviderID":    order.ProviderID,
+// 						"redisKey":      redisKey,
+// 						"orderIDPrefix": orderIDPrefix,
+// 					}).Errorf("failed to dequeue from circular queue when matching rate")
+// 					return err
+// 				}
+
+// 				// Enqueue data to the end of the queue
+// 				err = storage.RedisClient.RPush(ctx, redisKey, data).Err()
+// 				if err != nil {
+// 					logger.WithFields(logger.Fields{
+// 						"Error":         fmt.Sprintf("%v", err),
+// 						"OrderID":       order.ID.String(),
+// 						"ProviderID":    order.ProviderID,
+// 						"redisKey":      redisKey,
+// 						"orderIDPrefix": orderIDPrefix,
+// 					}).Errorf("failed to enqueue to circular queue when matching rate")
+// 					return err
+// 				}
+// 			}
+
+// 			// Assign the order to the provider and save it to Redis
+// 			err = s.sendOrderRequest(ctx, order)
+// 			if err != nil {
+// 				logger.WithFields(logger.Fields{
+// 					"Error":         fmt.Sprintf("%v", err),
+// 					"OrderID":       order.ID.String(),
+// 					"ProviderID":    order.ProviderID,
+// 					"redisKey":      redisKey,
+// 					"orderIDPrefix": orderIDPrefix,
+// 				}).Errorf("failed to send order request to specific provider when matching rate")
+
+// 				// Push provider ID to order exclude list
+// 				orderKey := fmt.Sprintf("order_exclude_list_%s", order.ID)
+// 				_, err = storage.RedisClient.RPush(ctx, orderKey, order.ProviderID).Result()
+// 				if err != nil {
+// 					logger.WithFields(logger.Fields{
+// 						"Error":         fmt.Sprintf("%v", err),
+// 						"OrderID":       order.ID.String(),
+// 						"ProviderID":    order.ProviderID,
+// 						"redisKey":      redisKey,
+// 						"orderIDPrefix": orderIDPrefix,
+// 					}).Errorf("failed to push provider to order exclude list when matching rate")
+// 				}
+
+// 				// Note: Balance cleanup is now handled in sendOrderRequest via defer
+// 				// Reassign the lock payment order to another provider
+// 				return s.AssignLockPaymentOrder(ctx, order)
+// 			}
+
+// 			break
+// 		}
+// 	}
+
+// 	return nil
+// }
+
+// providerMeetsBucketRequirements checks if a provider meets specific bucket requirements
+func (s *PriorityQueueService) providerMeetsBucketRequirements(ctx context.Context, provider *ent.ProviderProfile, bucket *ent.ProvisionBucket) (bool, error) {
+	// Check KYB verification status
+	if provider.Edges.User == nil || provider.Edges.User.KybVerificationStatus != user.KybVerificationStatusApproved {
+		return false, nil
+	}
+
+	// Check visibility mode
+	if provider.VisibilityMode != providerprofile.VisibilityModePublic {
+		return false, nil
+	}
+
+	// Check if provider has sufficient balance for bucket minimum amount
+	hasBalance, err := s.balanceService.HasSufficientBalance(ctx, provider.ID, bucket.Edges.Currency.Code, bucket.MinAmount)
+	if err != nil {
+		return false, err
+	}
+
+	return hasBalance, nil
+}
+
+func (s *PriorityQueueService) matchRateWithHealthCheck(ctx context.Context, redisKey, orderIDPrefix string, order types.LockPaymentOrderFields, excludeList []string) error {
+	// Get providers from Redis queue
+	providers, err := storage.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
+	if err != nil {
+		return fmt.Errorf("failed to get providers from queue: %w", err)
+	}
+
+	if len(providers) == 0 {
+		return fmt.Errorf("no providers available in queue")
+	}
+
+	// Try each provider in order
+	for i, providerData := range providers {
 		parts := strings.Split(providerData, ":")
-		if len(parts) != 5 {
+		if len(parts) < 2 {
+			continue
+		}
+
+		providerID := parts[0]
+
+		// Skip if provider is in exclude list
+		if utils.ContainsString(excludeList, providerID) {
+			continue
+		}
+
+		// Check provider health before processing
+		balanceService := NewBalanceManagementService()
+		isHealthy, err := balanceService.IsProviderHealthyForCurrency(ctx, providerID, order.ProvisionBucket.Edges.Currency.Code)
+		if err != nil {
 			logger.WithFields(logger.Fields{
-				"Error":        fmt.Sprintf("%v", err),
-				"OrderID":      order.ID.String(),
-				"ProviderID":   order.ProviderID,
-				"ProviderData": providerData,
-			}).Errorf("invalid data format at index %d when matching rate", index)
-			continue // Skip this entry due to invalid format
-		}
-
-		order.ProviderID = parts[0]
-
-		// Skip entry if provider is excluded
-		if utils.ContainsString(excludeList, order.ProviderID) {
+				"Error":      fmt.Sprintf("%v", err),
+				"OrderID":    order.ID.String(),
+				"ProviderID": providerID,
+			}).Errorf("failed to check provider health")
 			continue
 		}
 
-		// Skip entry if token doesn't match
-		if parts[1] != order.Token.Symbol {
+		if !isHealthy {
+			logger.WithFields(logger.Fields{
+				"OrderID":    order.ID.String(),
+				"ProviderID": providerID,
+			}).Warnf("provider is not healthy, skipping")
 			continue
 		}
 
-		// Skip entry if order amount is not within provider's min and max order amount
-		minOrderAmount, err := decimal.NewFromString(parts[3])
+		// Set provider ID and try to process
+		order.ProviderID = providerID
+
+		// Get provider rate
+		provider, err := storage.Client.ProviderProfile.Query().Where(providerprofile.IDEQ(providerID)).Only(ctx)
 		if err != nil {
 			continue
 		}
 
-		maxOrderAmount, err := decimal.NewFromString(parts[4])
+		rate, err := s.GetProviderRate(ctx, provider, order.Token.Symbol, order.ProvisionBucket.Edges.Currency.Code)
 		if err != nil {
 			continue
 		}
 
-		normalizedAmount := order.Amount
-		bucketCurrency := order.ProvisionBucket.Edges.Currency
-		if bucketCurrency == nil {
-			bucketCurrency, err = order.ProvisionBucket.QueryCurrency().Only(ctx)
-			if err != nil {
-				continue
-			}
-		}
-		if strings.EqualFold(order.Token.BaseCurrency, bucketCurrency.Code) && order.Token.BaseCurrency != "USD" {
-			rateResponse, err := utils.GetTokenRateFromQueue("USDT", normalizedAmount, bucketCurrency.Code, bucketCurrency.MarketRate)
-			if err != nil {
-				continue
-			}
-			normalizedAmount = order.Amount.Div(rateResponse)
-		}
-		if normalizedAmount.LessThan(minOrderAmount) || normalizedAmount.GreaterThan(maxOrderAmount) {
-			continue
-		}
-
-		// Fetch and check provider for rate match
-		rate, err := decimal.NewFromString(parts[2])
-		if err != nil {
-			continue
-		}
-
-		network := order.Token.Edges.Network
-		if network == nil {
-			network, err = order.Token.QueryNetwork().Only(ctx)
-			if err != nil {
-				continue
-			}
-		}
-
+		// Validate rate and balance
 		providerToken, err := storage.Client.ProviderOrderToken.
 			Query().
 			Where(
-				providerordertoken.NetworkEQ(network.Identifier),
-				providerordertoken.HasProviderWith(
-					providerprofile.IDEQ(order.ProviderID),
-					providerprofile.HasProviderCurrenciesWith(
-						providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(bucketCurrency.Code)),
-						providercurrencies.IsAvailableEQ(true),
-					),
-				),
-				providerordertoken.HasTokenWith(token.IDEQ(order.Token.ID)),
-				providerordertoken.HasCurrencyWith(
-					fiatcurrency.CodeEQ(bucketCurrency.Code),
-				),
-				providerordertoken.AddressNEQ(""),
+				providerordertoken.HasProviderWith(providerprofile.IDEQ(providerID)),
+				providerordertoken.HasTokenWith(token.SymbolEQ(order.Token.Symbol)),
+				providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(order.ProvisionBucket.Edges.Currency.Code)),
 			).
-			First(ctx)
+			Only(ctx)
 		if err != nil {
 			continue
 		}
 
-		// Calculate allowed deviation based on slippage
 		allowedDeviation := order.Rate.Mul(providerToken.RateSlippage.Div(decimal.NewFromInt(100)))
-
 		if rate.Sub(order.Rate).Abs().LessThanOrEqual(allowedDeviation) {
-			// Check if provider has sufficient balance for this order
-			hasSufficientBalance, err := s.balanceService.CheckBalanceSufficiency(ctx, order.ProviderID, bucketCurrency.Code, order.Amount.Mul(order.Rate).RoundBank(0))
+			// Check balance sufficiency with health validation
+			hasSufficientBalance, err := balanceService.HasSufficientBalance(ctx, providerID, order.ProvisionBucket.Edges.Currency.Code, order.Amount.Mul(order.Rate).RoundBank(0))
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":      fmt.Sprintf("%v", err),
 					"OrderID":    order.ID.String(),
-					"ProviderID": order.ProviderID,
-					"Currency":   bucketCurrency.Code,
-					"Amount":     order.Amount.String(),
+					"ProviderID": providerID,
 				}).Errorf("failed to check balance sufficiency")
 				continue
 			}
 
 			if !hasSufficientBalance {
-				// TODO: send notification to the provider
 				logger.WithFields(logger.Fields{
 					"OrderID":    order.ID.String(),
-					"ProviderID": order.ProviderID,
-					"Currency":   bucketCurrency.Code,
-					"Amount":     order.Amount.String(),
+					"ProviderID": providerID,
 				}).Warnf("provider has insufficient balance, skipping")
 				continue
 			}
 
-			// Found a match for the rate and sufficient balance
-			if index == 0 {
+			// Found a healthy provider with sufficient balance
+			if i == 0 {
 				// Match found at index 0, perform LPOP to dequeue
-				data, err := storage.RedisClient.LPop(ctx, redisKey).Result()
+				err = storage.RedisClient.LPop(ctx, redisKey).Err()
 				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":         fmt.Sprintf("%v", err),
-						"OrderID":       order.ID.String(),
-						"ProviderID":    order.ProviderID,
-						"redisKey":      redisKey,
-						"orderIDPrefix": orderIDPrefix,
-					}).Errorf("failed to dequeue from circular queue when matching rate")
-					return err
+					logger.Errorf("Failed to dequeue provider: %v", err)
 				}
-
-				// Enqueue data to the end of the queue
-				err = storage.RedisClient.RPush(ctx, redisKey, data).Err()
+			} else {
+				// Match found at other index, move to end of queue
+				err = storage.RedisClient.LRem(ctx, redisKey, 1, providerData).Err()
 				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":         fmt.Sprintf("%v", err),
-						"OrderID":       order.ID.String(),
-						"ProviderID":    order.ProviderID,
-						"redisKey":      redisKey,
-						"orderIDPrefix": orderIDPrefix,
-					}).Errorf("failed to enqueue to circular queue when matching rate")
-					return err
+					logger.Errorf("Failed to remove provider from queue: %v", err)
+				}
+				err = storage.RedisClient.RPush(ctx, redisKey, providerData).Err()
+				if err != nil {
+					logger.Errorf("Failed to add provider to end of queue: %v", err)
 				}
 			}
 
-			// Assign the order to the provider and save it to Redis
+			// Send order request
 			err = s.sendOrderRequest(ctx, order)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":         fmt.Sprintf("%v", err),
-					"OrderID":       order.ID.String(),
-					"ProviderID":    order.ProviderID,
-					"redisKey":      redisKey,
-					"orderIDPrefix": orderIDPrefix,
-				}).Errorf("failed to send order request to specific provider when matching rate")
-
-				// Push provider ID to order exclude list
-				orderKey := fmt.Sprintf("order_exclude_list_%s", order.ID)
-				_, err = storage.RedisClient.RPush(ctx, orderKey, order.ProviderID).Result()
-				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":         fmt.Sprintf("%v", err),
-						"OrderID":       order.ID.String(),
-						"ProviderID":    order.ProviderID,
-						"redisKey":      redisKey,
-						"orderIDPrefix": orderIDPrefix,
-					}).Errorf("failed to push provider to order exclude list when matching rate")
-				}
-
-				// Note: Balance cleanup is now handled in sendOrderRequest via defer
-				// Reassign the lock payment order to another provider
-				return s.AssignLockPaymentOrder(ctx, order)
+			if err == nil {
+				return nil
 			}
 
-			break
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", err),
+				"OrderID":    order.ID.String(),
+				"ProviderID": providerID,
+			}).Errorf("failed to send order request")
 		}
 	}
 
-	return nil
+	return fmt.Errorf("no healthy providers found for order")
 }

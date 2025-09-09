@@ -1799,12 +1799,13 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for IndexBlockchainEvents: %v", err)
 	}
 
-	// Monitor provider balances every 10 minutes
-	_, err = scheduler.Every(10).Minutes().Do(MonitorProviderBalances)
+	// Monitor provider balances every 1 minute for testing
+	_, err = scheduler.Every(5).Seconds().Do(MonitorProviderBalances)
 	if err != nil {
 		logger.Errorf("StartCronJobs for MonitorProviderBalances: %v", err)
 	}
 	// Start scheduler
+	
 	scheduler.StartAsync()
 }
 

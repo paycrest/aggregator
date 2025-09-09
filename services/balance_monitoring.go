@@ -155,6 +155,12 @@ func (s *BalanceMonitoringService) handleCriticalAlert(ctx context.Context, prov
 		"CurrencyBalance": currency.AvailableBalance.String(),
 	}).Errorf("Provider has critical balance - consider disabling")
 
+	// Update provider health status to unhealthy
+	err := s.UpdateProviderHealthStatus(ctx, provider.ID, currency.Edges.Currency.Code, false)
+	if err != nil {
+		logger.Errorf("Failed to update provider health status: %v", err)
+	}
+
 	// mark provider as unavailable
 	if err := s.disableProvider(ctx, provider, currency); err != nil {
 		logger.Errorf("Failed to disable provider: %v", err)
@@ -163,10 +169,6 @@ func (s *BalanceMonitoringService) handleCriticalAlert(ctx context.Context, prov
 	if err := s.sendCriticalAlert(ctx, provider, currency); err != nil {
 		logger.Errorf("Failed to send critical alert: %v", err)
 	}
-
-	// if err := s.notifyAdminTeam(ctx, provider, currency); err != nil {
-	// 	logger.Errorf("Failed to notify admin team: %v", err)
-	// }
 
 	if err := s.pauseProviderOrders(ctx, provider, currency); err != nil {
 		logger.Errorf("Failed to pause providers orders: %v", err)
@@ -366,7 +368,7 @@ func (s *BalanceMonitoringService) pauseProviderOrders(ctx context.Context, prov
 	return nil
 }
 
-func (s *BalanceMonitoringService) creditAuditLog(ctx context.Context, provider *ent.ProviderProfile, currency *ent.ProviderCurrencies, action string) error {
+func (s *BalanceMonitoringService) creditAuditLog(_ctx context.Context, provider *ent.ProviderProfile, currency *ent.ProviderCurrencies, action string) error {
 	auditLog := map[string]interface{}{
 		"action":           action,
 		"provider_id":      provider.ID,
@@ -384,4 +386,74 @@ func (s *BalanceMonitoringService) creditAuditLog(ctx context.Context, provider 
 	}).Errorf("Critical balance audit log: %s", action)
 
 	return nil
+}
+
+func (s *BalanceMonitoringService) IsProviderHealthyForOrders(ctx context.Context, providerID string, currencyCode string) (bool, error) {
+	// Check if provider is in critical state (cached check)
+	if s.config.RedisEnabled && storage.RedisClient != nil {
+		key := fmt.Sprintf("provider_health:%s:%s", providerID, currencyCode)
+		status, err := storage.RedisClient.Get(ctx, key).Result()
+		if err == nil {
+			return status == "healthy", nil
+		}
+	}
+
+	// Fallback to balance service health check
+	balanceService := NewBalanceManagementService()
+	isHealthy, err := balanceService.IsProviderHealthyForCurrency(ctx, providerID, currencyCode)
+	if err != nil {
+		return false, err
+	}
+
+	// Cache the result if Redis is available
+	if s.config.RedisEnabled && storage.RedisClient != nil {
+		key := fmt.Sprintf("provider_health:%s:%s", providerID, currencyCode)
+		status := "unhealthy"
+		if isHealthy {
+			status = "healthy"
+		}
+		storage.RedisClient.Set(ctx, key, status, 5*time.Minute)
+	}
+
+	return isHealthy, nil
+}
+
+func (s *BalanceMonitoringService) UpdateProviderHealthStatus(ctx context.Context, providerID string, currencyCode string, isHealthy bool) error {
+	if s.config.RedisEnabled && storage.RedisClient != nil {
+		key := fmt.Sprintf("provider_health:%s:%s", providerID, currencyCode)
+		status := "unhealthy"
+		if isHealthy {
+			status = "healthy"
+		}
+		return storage.RedisClient.Set(ctx, key, status, 5*time.Minute).Err()
+	}
+
+	key := fmt.Sprintf("provider_health:%s:%s", providerID, currencyCode)
+	status := "unhealthy"
+	if isHealthy {
+		status = "healthy"
+	}
+
+	return storage.RedisClient.Set(ctx, key, status, 5*time.Minute).Err()
+}
+
+func (s *BalanceMonitoringService) GetProviderHealthStatus(ctx context.Context, providerID string, currencyCode string) (string, error) {
+	if s.config.RedisEnabled && storage.RedisClient != nil {
+		key := fmt.Sprintf("provider_health:%s:%s", providerID, currencyCode)
+		status, err := storage.RedisClient.Get(ctx, key).Result()
+		if err == nil {
+			return status, nil
+		}
+	}
+
+	// Fallback to balance service check
+	balanceService := NewBalanceManagementService()
+	isHealthy, err := balanceService.IsProviderHealthyForCurrency(ctx, providerID, currencyCode)
+	if err != nil {
+		return "unknown", err
+	}
+	if isHealthy {
+		return "healthy", nil
+	}
+	return "unhealthy", nil
 }

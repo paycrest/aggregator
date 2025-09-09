@@ -1237,6 +1237,169 @@ func (svc *BalanceManagementService) GetEligibleProviders(ctx context.Context, c
 	return eligibleProviders, nil
 }
 
+func (svc *BalanceManagementService) IsProviderHealthyForCurrency(ctx context.Context, providerID string, currencyCode string) (bool, error) {
+	// Get provider currency with thresholds
+	providerCurrency, err := svc.client.ProviderCurrencies.
+		Query().
+		Where(
+			providercurrencies.HasProviderWith(providerprofile.IDEQ(providerID)),
+			providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currencyCode)),
+		).
+		WithCurrency().
+		Only(ctx)
+
+	if err != nil {
+		return false, fmt.Errorf("failed to get provider currency: %w", err)
+	}
+
+	// Check if provider is active and available
+	if !providerCurrency.IsAvailable {
+		logger.WithFields(logger.Fields{
+			"ProviderID":   providerID,
+			"CurrencyCode": currencyCode,
+		}).Warn("Provider currency is not available")
+		return false, nil
+	}
+
+	// Check if balance is above critical threshold
+	criticalThreshold := providerCurrency.Edges.Currency.CriticalThreshold
+	if providerCurrency.AvailableBalance.LessThanOrEqual(criticalThreshold) {
+		logger.WithFields(logger.Fields{
+			"ProviderID":        providerID,
+			"CurrencyCode":      currencyCode,
+			"AvailableBalance":  providerCurrency.AvailableBalance.String(),
+			"CriticalThreshold": criticalThreshold.String(),
+		}).Warn("Provider balance at or below critical threshold")
+		return false, nil
+	}
+
+	// Check if balance is above alert threshold (with safety margin)
+	alertThreshold := providerCurrency.Edges.Currency.AlertThreshold
+	safetyMargin := alertThreshold.Mul(decimal.NewFromFloat(0.1)) // 10% safety margin
+	effectiveThreshold := alertThreshold.Add(safetyMargin)
+
+	if providerCurrency.AvailableBalance.LessThan(effectiveThreshold) {
+		logger.WithFields(logger.Fields{
+			"ProviderID":         providerID,
+			"CurrencyCode":       currencyCode,
+			"AvailableBalance":   providerCurrency.AvailableBalance.String(),
+			"AlertThreshold":     alertThreshold.String(),
+			"EffectiveThreshold": effectiveThreshold.String(),
+		}).Warn("Provider balance below effective threshold (alert + safety margin)")
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func (svc *BalanceManagementService) ValidateProviderBalanceHealth(ctx context.Context, providerID string, currencyCode string, orderAmount decimal.Decimal) (*BalanceHealthReport, error) {
+	// Get provider currency with thresholds
+	providerCurrency, err := svc.client.ProviderCurrencies.
+		Query().
+		Where(
+			providercurrencies.HasProviderWith(providerprofile.IDEQ(providerID)),
+			providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currencyCode)),
+		).
+		WithCurrency().
+		Only(ctx)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get provider currency: %w", err)
+	}
+
+	report := &BalanceHealthReport{
+		ProviderID:       providerID,
+		CurrencyCode:     currencyCode,
+		AvailableBalance: providerCurrency.AvailableBalance,
+		ReservedBalance:  providerCurrency.ReservedBalance,
+		TotalBalance:     providerCurrency.TotalBalance,
+		LastUpdated:      providerCurrency.UpdatedAt,
+		Issues:           []string{},
+		Recommendations:  []string{},
+	}
+
+	// Check critical threshold
+	criticalThreshold := providerCurrency.Edges.Currency.CriticalThreshold
+	if providerCurrency.AvailableBalance.LessThanOrEqual(criticalThreshold) {
+		report.Status = "critical"
+		report.Severity = "high"
+		report.Issues = append(report.Issues, "Balance at or below critical threshold")
+		report.Recommendations = append(report.Recommendations, "Top up balance immediately")
+		return report, nil
+	}
+
+	// Check alert threshold
+	alertThreshold := providerCurrency.Edges.Currency.AlertThreshold
+	if providerCurrency.AvailableBalance.LessThan(alertThreshold) {
+		report.Status = "warning"
+		report.Severity = "medium"
+		report.Issues = append(report.Issues, "Balance below alert threshold")
+		report.Recommendations = append(report.Recommendations, "Consider topping up balance soon")
+	}
+
+	// Check if balance can cover order amount plus minimum threshold
+	minThreshold := providerCurrency.Edges.Currency.MinimumAvailableBalance
+	requiredBalance := orderAmount.Add(minThreshold)
+	if providerCurrency.AvailableBalance.LessThan(requiredBalance) {
+		report.Status = "insufficient"
+		report.Severity = "high"
+		report.Issues = append(report.Issues, "Insufficient balance for order")
+		report.Recommendations = append(report.Recommendations, "Increase balance or reduce order amount")
+		return report, nil
+	}
+
+	// Check if balance is healthy
+	if len(report.Issues) == 0 {
+		report.Status = "healthy"
+		report.Severity = "low"
+		report.Recommendations = append(report.Recommendations, "Balance is in good condition")
+	}
+
+	return report, nil
+}
+
+func (svc *BalanceManagementService) GetHealthyProvidersForCurrency(ctx context.Context, currencyCode string) ([]*ent.ProviderProfile, error) {
+	// Get all active providers for this currency
+	providers, err := svc.client.ProviderProfile.
+		Query().
+		Where(providerprofile.IsActiveEQ(true)).
+		WithProviderCurrencies(func(pcq *ent.ProviderCurrenciesQuery) {
+			pcq.Where(providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currencyCode)))
+		}).
+		All(ctx)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get providers: %w", err)
+	}
+
+	// Filter providers by health status
+	var healthyProviders []*ent.ProviderProfile
+
+	for _, provider := range providers {
+		if len(provider.Edges.ProviderCurrencies) == 0 {
+			continue
+		}
+
+		isHealthy, err := svc.IsProviderHealthyForCurrency(ctx, provider.ID, currencyCode)
+		if err != nil {
+			logger.Errorf("Health check failed for provider %s: %v", provider.ID, err)
+			continue
+		}
+
+		if isHealthy {
+			healthyProviders = append(healthyProviders, provider)
+		}
+	}
+
+	logger.WithFields(logger.Fields{
+		"CurrencyCode":      currencyCode,
+		"TotalProviders":    len(providers),
+		"HealthyProviders":  len(healthyProviders),
+	}).Infof("Provider health check completed")
+
+	return healthyProviders, nil
+}
+
 // BalanceHealthReport represents the result of a balance health check
 type BalanceHealthReport struct {
 	ProviderID       string          `json:"providerId"`
