@@ -369,7 +369,11 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 			}
 
 			if provider != nil && provider.VisibilityMode == providerprofile.VisibilityModePrivate {
-				return nil
+				logger.WithFields(logger.Fields{
+					"OrderID":    order.ID.String(),
+					"ProviderID": order.ProviderID,
+				}).Warnf("requested provider is private, falling back to queue")
+				order.ProviderID = "" // use queue below
 			}
 		}
 	}
@@ -753,11 +757,27 @@ func (s *PriorityQueueService) matchRateWithHealthCheck(ctx context.Context, red
 	// Try each provider in order
 	for i, providerData := range providers {
 		parts := strings.Split(providerData, ":")
-		if len(parts) < 2 {
+		// Expected: providerID:token:rate:minAmount:maxAmount
+		if len(parts) != 5 {
 			continue
 		}
 
 		providerID := parts[0]
+
+		queueToken := parts[1]
+		minOrderAmount, err := decimal.NewFromString(parts[3])
+		if err != nil {
+			continue
+		}
+		maxOrderAmount, err := decimal.NewFromString(parts[4])
+		if err != nil {
+			continue
+		}
+
+		// Token must match
+		if !strings.EqualFold(queueToken, order.Token.Symbol) {
+			continue
+		}
 
 		// Skip if provider is in exclude list
 		if utils.ContainsString(excludeList, providerID) {
@@ -794,9 +814,9 @@ func (s *PriorityQueueService) matchRateWithHealthCheck(ctx context.Context, red
 		}
 
 		rate, err := s.GetProviderRate(ctx, provider, order.Token.Symbol, order.ProvisionBucket.Edges.Currency.Code)
-		if err != nil {
-			continue
-		}
+ 		if err != nil {
+ 			continue
+ 		}
 
 		// Validate rate and balance
 		providerToken, err := storage.Client.ProviderOrderToken.
@@ -813,8 +833,14 @@ func (s *PriorityQueueService) matchRateWithHealthCheck(ctx context.Context, red
 
 		allowedDeviation := order.Rate.Mul(providerToken.RateSlippage.Div(decimal.NewFromInt(100)))
 		if rate.Sub(order.Rate).Abs().LessThanOrEqual(allowedDeviation) {
+			// Enforce provider min/max order constraints from queue snapshot
+			normalizedAmount := order.Amount
+			if normalizedAmount.LessThan(minOrderAmount) || normalizedAmount.GreaterThan(maxOrderAmount) {
+				continue
+			}
+
 			// Check balance sufficiency with health validation
-			hasSufficientBalance, err := balanceService.HasSufficientBalance(ctx, providerID, order.ProvisionBucket.Edges.Currency.Code, order.Amount.Mul(order.Rate).RoundBank(0))
+			hasSufficientBalance, err := s.balanceService.HasSufficientBalance(ctx, providerID, order.ProvisionBucket.Edges.Currency.Code, order.Amount.Mul(order.Rate).RoundBank(0))
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":      fmt.Sprintf("%v", err),

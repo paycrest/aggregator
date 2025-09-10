@@ -19,19 +19,19 @@ type BalanceConfiguration struct {
 
 func BalanceConfig() *BalanceConfiguration {
 	viper.SetDefault("REDIS_ENABLED", true)
-	viper.SetDefault("REDIS_TTL", 10*time.Minute)
+	viper.SetDefault("REDIS_TTL", "10m")
 	viper.SetDefault("REDIS_MAX_RETRIES", 3)
 
 	viper.SetDefault("MONITORING_ENABLED", true)
-	viper.SetDefault("CHECK_INTERVAL", 10*time.Minute)
+	viper.SetDefault("CHECK_INTERVAL", "10m")
 	viper.SetDefault("EMAIL_ENABLED", true)
 
 	return &BalanceConfiguration{
 		RedisEnabled:      viper.GetBool("REDIS_ENABLED"),
-		RedisTTL:          time.Duration(viper.GetInt("REDIS_TTL")) * time.Minute,
+		RedisTTL:          time.Duration(viper.GetInt("REDIS_TTL")),
 		RedisMaxRetries:   viper.GetInt("REDIS_MAX_RETRIES"),
 		MonitoringEnabled: viper.GetBool("MONITORING_ENABLED"),
-		CheckInterval:     time.Duration(viper.GetInt("CHECK_INTERVAL")) * time.Minute,
+		CheckInterval:     time.Duration(viper.GetInt("CHECK_INTERVAL")),
 		EmailEnabled:      viper.GetBool("EMAIL_ENABLED"),
 	}
 }

@@ -318,6 +318,14 @@ func (s *BalanceMonitoringService) disableProvider(ctx context.Context, provider
 }
 
 func (s *BalanceMonitoringService) sendCriticalAlert(ctx context.Context, provider *ent.ProviderProfile, currency *ent.ProviderCurrencies) error {
+	if s.emailService == nil {
+		return fmt.Errorf("email service not initialized")
+	}
+	prov, errd := s.getProviderDetails(ctx, provider.ID)
+	if errd != nil {
+		return errd
+	}
+
 	additionalData := map[string]interface{}{
 		"currency_code":      currency.Edges.Currency.Code,
 		"currency_balance":   currency.AvailableBalance.String(),
@@ -329,7 +337,7 @@ func (s *BalanceMonitoringService) sendCriticalAlert(ctx context.Context, provid
 		"next_steps":         "Please top up your balance and contact support to reactivate your account",
 	}
 
-	response, err := s.emailService.SendCriticalBalanceAlertEmail(ctx, provider.Edges.User.Email, provider.Edges.User.FirstName, additionalData)
+	response, err := s.emailService.SendCriticalBalanceAlertEmail(ctx, prov.Edges.User.Email, prov.Edges.User.FirstName, additionalData)
 
 	if err != nil {
 		return fmt.Errorf("failed to send critical alert: %w", err)
@@ -339,7 +347,7 @@ func (s *BalanceMonitoringService) sendCriticalAlert(ctx context.Context, provid
 		"ProviderID":    provider.ID,
 		"EmailResponse": response.Id,
 		"Action":        "critical_alert_sent",
-	})
+	}).Warnf("Critical alert sent to provider")
 
 	return nil
 }
@@ -425,16 +433,11 @@ func (s *BalanceMonitoringService) UpdateProviderHealthStatus(ctx context.Contex
 		if isHealthy {
 			status = "healthy"
 		}
-		return storage.RedisClient.Set(ctx, key, status, 5*time.Minute).Err()
+		return storage.RedisClient.Set(ctx, key, status, s.config.RedisTTL).Err()
 	}
 
-	key := fmt.Sprintf("provider_health:%s:%s", providerID, currencyCode)
-	status := "unhealthy"
-	if isHealthy {
-		status = "healthy"
-	}
-
-	return storage.RedisClient.Set(ctx, key, status, 5*time.Minute).Err()
+	logger.Infof("Redis disabled/unavailable; skipping provider health cache update for %s:%s", providerID, currencyCode)
+	return nil
 }
 
 func (s *BalanceMonitoringService) GetProviderHealthStatus(ctx context.Context, providerID string, currencyCode string) (string, error) {

@@ -1200,7 +1200,7 @@ func (svc *BalanceManagementService) GetEligibleProviders(ctx context.Context, c
 		Query().
 		Where(providerprofile.IsActiveEQ(true)).
 		WithProviderCurrencies(func(pcq *ent.ProviderCurrenciesQuery) {
-			pcq.Where(providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currencyCode)))
+			pcq.Where(providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currencyCode))).WithCurrency()
 		}).
 		All(ctx)
 
@@ -1392,9 +1392,9 @@ func (svc *BalanceManagementService) GetHealthyProvidersForCurrency(ctx context.
 	}
 
 	logger.WithFields(logger.Fields{
-		"CurrencyCode":      currencyCode,
-		"TotalProviders":    len(providers),
-		"HealthyProviders":  len(healthyProviders),
+		"CurrencyCode":     currencyCode,
+		"TotalProviders":   len(providers),
+		"HealthyProviders": len(healthyProviders),
 	}).Infof("Provider health check completed")
 
 	return healthyProviders, nil

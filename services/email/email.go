@@ -227,6 +227,12 @@ func (e *EmailService) SendBalanceAlertEmail(ctx context.Context, email, firstNa
 
 // This function will be used to send a critical balance alert email to provider
 func (e *EmailService) SendCriticalBalanceAlertEmail(ctx context.Context, email, firstName string, additionalData map[string]interface{}) (types.SendEmailResponse, error) {
+	if additionalData == nil {
+		additionalData = map[string]interface{}{}
+	}
+	if _, ok := additionalData["first_name"]; !ok {
+		additionalData["first_name"] = firstName
+	}
 	payload := types.SendEmailPayload{
 		FromAddress: e.notificationConf.EmailFromAddress,
 		ToAddress:   email,
