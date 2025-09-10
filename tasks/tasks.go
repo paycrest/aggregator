@@ -1826,6 +1826,30 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for IndexBlockchainEvents: %v", err)
 	}
 
+	// Monitor provider balances every 1 minute for testing
+	_, err = scheduler.Every(5).Seconds().Do(MonitorProviderBalances)
+	if err != nil {
+		logger.Errorf("StartCronJobs for MonitorProviderBalances: %v", err)
+	}
 	// Start scheduler
+	
 	scheduler.StartAsync()
+}
+
+func MonitorProviderBalances() error {
+	ctx := context.Background()
+
+	if !config.BalanceConfig().MonitoringEnabled {
+		logger.Infof("Balance monitoring is disabled, skipping check")
+		return nil
+	}
+
+	logger.Infof("Starting balance monitoring check")
+
+	monitoringService := services.NewBalanceMonitoringService()
+
+	monitoringService.CheckAllProviderBalances(ctx)
+
+	logger.Infof("Balance monitoring check completed successfully")
+	return nil
 }
