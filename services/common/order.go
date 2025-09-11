@@ -105,6 +105,7 @@ func CreateLockPaymentOrder(
 			_, updateErr := db.Client.PaymentOrder.
 				Update().
 				Where(paymentorder.IDEQ(paymentOrder.ID)).
+				SetTxHash(event.TxHash).
 				SetBlockNumber(int64(event.BlockNumber)).
 				SetGatewayID(event.OrderId).
 				SetStatus(paymentorder.StatusPending).
