@@ -1223,7 +1223,7 @@ func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier str
 		}
 
 		// Extract account name from response
-		if accountName, ok := data["data"].(string); ok && accountName != "" {
+		if accountName, ok := data["data"].(string); ok && accountName != "" && accountName != "OK" {
 			return accountName, nil
 		}
 	}
