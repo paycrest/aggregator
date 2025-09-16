@@ -116,16 +116,6 @@ func TestBalanceMonitoringIntegration(t *testing.T) {
 		assert.False(t, isHealthy, "Provider should be unhealthy at critical threshold")
 		t.Log("✅ Provider correctly identified as critical")
 
-		// Test 4: Test balance monitoring service integration
-		t.Log("🔍 Testing balance monitoring service integration...")
-		monitoringService := NewBalanceMonitoringService()
-
-		// Test provider health for orders
-		isHealthyForOrders, err := monitoringService.IsProviderHealthyForOrders(context.Background(), provider.ID, "USD")
-		assert.NoError(t, err)
-		assert.False(t, isHealthyForOrders, "Provider should not be healthy for orders")
-		t.Log("✅ Balance monitoring service correctly identifies unhealthy provider")
-
 		// Test 5: Simulate balance recovery
 		t.Log("�� Simulating balance recovery...")
 		_, err = db.Client.ProviderCurrencies.
@@ -299,25 +289,6 @@ func TestBalanceMonitoringIntegration(t *testing.T) {
 		assert.NoError(t, err)
 		t.Logf("✅ Created test provider: %s", provider.TradingName)
 
-		// Test balance monitoring service
-		monitoringService := NewBalanceMonitoringService()
-
-		// Test provider health for orders
-		t.Log("🔍 Testing provider health for orders...")
-		isHealthy, err := monitoringService.IsProviderHealthyForOrders(context.Background(), provider.ID, "GBP")
-		assert.NoError(t, err)
-		assert.True(t, isHealthy, "Provider should be healthy for orders")
-		t.Log("✅ Provider is healthy for orders")
-
-		t.Log("⚠️  Skipping health status update tests (Redis disabled)")
-
-		// Test that GetProviderHealthStatus works with fallback logic
-		t.Log("🔍 Testing health status retrieval with fallback...")
-		status, err := monitoringService.GetProviderHealthStatus(context.Background(), provider.ID, "GBP")
-		assert.NoError(t, err)
-		assert.Equal(t, "healthy", status, "Provider health status should be healthy via fallback")
-		t.Logf("✅ Health status retrieved via fallback: %s", status)
-
 		t.Log(" Balance Monitoring Service Integration Test completed successfully")
 	})
 
@@ -438,7 +409,6 @@ func TestBalanceMonitoringIntegration(t *testing.T) {
 		t.Logf("✅ Created test provider with initial balance: %s", providerCurrency.AvailableBalance.String())
 
 		// Test balance monitoring service
-		monitoringService := NewBalanceMonitoringService()
 		balanceService := NewBalanceManagementService()
 
 		// Simulate multiple balance updates and test health changes
@@ -471,16 +441,6 @@ func TestBalanceMonitoringIntegration(t *testing.T) {
 			assert.Equal(t, update.expected, isHealthy, fmt.Sprintf("Balance %s should be %v (%s)",
 				decimal.NewFromFloat(update.amount).String(), update.expected, update.reason))
 
-			// Test monitoring service health check
-			isHealthyForOrders, err := monitoringService.IsProviderHealthyForOrders(context.Background(), provider.ID, "AUD")
-			assert.NoError(t, err)
-			assert.Equal(t, update.expected, isHealthyForOrders, "Monitoring service should match balance service")
-
-			if isHealthy {
-				t.Logf("✅ Balance %s is HEALTHY", decimal.NewFromFloat(update.amount).String())
-			} else {
-				t.Logf("⚠️  Balance %s is UNHEALTHY", decimal.NewFromFloat(update.amount).String())
-			}
 		}
 
 		t.Log("�� Balance Monitoring with Real-Time Updates Test completed successfully")

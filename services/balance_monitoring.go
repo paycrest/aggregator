@@ -359,35 +359,6 @@ func (s *BalanceMonitoringService) creditAuditLog(_ctx context.Context, provider
 	return nil
 }
 
-func (s *BalanceMonitoringService) IsProviderHealthyForOrders(ctx context.Context, providerID string, currencyCode string) (bool, error) {
-	if s.config.RedisEnabled && storage.RedisClient != nil {
-		key := fmt.Sprintf("provider_health:%s:%s", providerID, currencyCode)
-		status, err := storage.RedisClient.Get(ctx, key).Result()
-		if err == nil {
-			return status == "healthy", nil
-		}
-	}
-
-	// Fallback to balance service health check
-	balanceService := NewBalanceManagementService()
-	isHealthy, err := balanceService.GetProviderHealthForACurrency(ctx, providerID, currencyCode)
-	if err != nil {
-		return false, err
-	}
-
-	// Cache the result if Redis is available
-	if s.config.RedisEnabled && storage.RedisClient != nil {
-		key := fmt.Sprintf("provider_health:%s:%s", providerID, currencyCode)
-		status := "unhealthy"
-		if isHealthy {
-			status = "healthy"
-		}
-		storage.RedisClient.Set(ctx, key, status, 5*time.Minute)
-	}
-
-	return isHealthy, nil
-}
-
 func (s *BalanceMonitoringService) UpdateProviderHealthStatus(ctx context.Context, providerID string, currencyCode string, isHealthy bool) error {
 	if s.config.RedisEnabled && storage.RedisClient != nil {
 		key := fmt.Sprintf("provider_health:%s:%s", providerID, currencyCode)
@@ -402,23 +373,3 @@ func (s *BalanceMonitoringService) UpdateProviderHealthStatus(ctx context.Contex
 	return nil
 }
 
-func (s *BalanceMonitoringService) GetProviderHealthStatus(ctx context.Context, providerID string, currencyCode string) (string, error) {
-	if s.config.RedisEnabled && storage.RedisClient != nil {
-		key := fmt.Sprintf("provider_health:%s:%s", providerID, currencyCode)
-		status, err := storage.RedisClient.Get(ctx, key).Result()
-		if err == nil {
-			return status, nil
-		}
-	}
-
-	// Fallback to balance service check
-	balanceService := NewBalanceManagementService()
-	isHealthy, err := balanceService.GetProviderHealthForACurrency(ctx, providerID, currencyCode)
-	if err != nil {
-		return "unknown", err
-	}
-	if isHealthy {
-		return "healthy", nil
-	}
-	return "unhealthy", nil
-}
