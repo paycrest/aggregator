@@ -74,7 +74,6 @@ var (
 		{Name: "market_rate", Type: field.TypeFloat64},
 		{Name: "is_enabled", Type: field.TypeBool, Default: false},
 		{Name: "minimum_available_balance", Type: field.TypeFloat64, Default: 0},
-		{Name: "alert_threshold", Type: field.TypeFloat64, Default: 0},
 		{Name: "critical_threshold", Type: field.TypeFloat64, Default: 0},
 	}
 	// FiatCurrenciesTable holds the schema information for the "fiat_currencies" table.
@@ -223,7 +222,7 @@ var (
 		{Name: "order_percent", Type: field.TypeFloat64},
 		{Name: "sender", Type: field.TypeString, Nullable: true},
 		{Name: "tx_hash", Type: field.TypeString, Nullable: true, Size: 70},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "processing", "cancelled", "fulfilled", "validated", "settled", "refunded", "paused"}, Default: "pending"},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "processing", "cancelled", "fulfilled", "validated", "settled", "refunded"}, Default: "pending"},
 		{Name: "block_number", Type: field.TypeInt64},
 		{Name: "institution", Type: field.TypeString},
 		{Name: "account_identifier", Type: field.TypeString},

@@ -41,7 +41,6 @@ func TestBalanceMonitoringIntegration(t *testing.T) {
 			SetMarketRate(decimal.NewFromFloat(1.0)).
 			SetIsEnabled(true).
 			SetMinimumAvailableBalance(decimal.NewFromFloat(100.0)).
-			SetAlertThreshold(decimal.NewFromFloat(500.0)).
 			SetCriticalThreshold(decimal.NewFromFloat(200.0)).
 			Save(context.Background())
 		assert.NoError(t, err)
@@ -83,16 +82,6 @@ func TestBalanceMonitoringIntegration(t *testing.T) {
 		assert.NoError(t, err)
 		assert.True(t, isHealthy, "Provider should be healthy initially")
 		t.Log("✅ Provider is healthy initially")
-
-		// Test 2: Simulate balance drop to alert threshold
-		t.Log("⚠️  Simulating balance drop to alert threshold...")
-		_, err = db.Client.ProviderCurrencies.
-			UpdateOneID(providerCurrency.ID).
-			SetAvailableBalance(decimal.NewFromFloat(400.0)). // Below alert threshold
-			Save(context.Background())
-		assert.NoError(t, err)
-		t.Logf("✅ Updated balance to: %s (below alert threshold: %s)",
-			decimal.NewFromFloat(400.0).String(), currency.AlertThreshold.String())
 
 		// Test health check after balance drop
 		isHealthy, err = balanceService.CheckBalanceSufficiency(context.Background(), provider.ID, "USD", decimal.NewFromFloat(0.0))
@@ -148,7 +137,6 @@ func TestBalanceMonitoringIntegration(t *testing.T) {
 			SetMarketRate(decimal.NewFromFloat(0.85)).
 			SetIsEnabled(true).
 			SetMinimumAvailableBalance(decimal.NewFromFloat(50.0)).
-			SetAlertThreshold(decimal.NewFromFloat(300.0)).
 			SetCriticalThreshold(decimal.NewFromFloat(150.0)).
 			Save(context.Background())
 		assert.NoError(t, err)
@@ -257,7 +245,6 @@ func TestBalanceMonitoringIntegration(t *testing.T) {
 			SetMarketRate(decimal.NewFromFloat(0.75)).
 			SetIsEnabled(true).
 			SetMinimumAvailableBalance(decimal.NewFromFloat(75.0)).
-			SetAlertThreshold(decimal.NewFromFloat(400.0)).
 			SetCriticalThreshold(decimal.NewFromFloat(200.0)).
 			Save(context.Background())
 		assert.NoError(t, err)
@@ -306,7 +293,6 @@ func TestBalanceMonitoringIntegration(t *testing.T) {
 			SetMarketRate(decimal.NewFromFloat(1.25)).
 			SetIsEnabled(true).
 			SetMinimumAvailableBalance(decimal.NewFromFloat(100.0)).
-			SetAlertThreshold(decimal.NewFromFloat(500.0)).
 			SetCriticalThreshold(decimal.NewFromFloat(250.0)).
 			Save(context.Background())
 		assert.NoError(t, err)
@@ -376,7 +362,6 @@ func TestBalanceMonitoringIntegration(t *testing.T) {
 			SetMarketRate(decimal.NewFromFloat(1.35)).
 			SetIsEnabled(true).
 			SetMinimumAvailableBalance(decimal.NewFromFloat(200.0)).
-			SetAlertThreshold(decimal.NewFromFloat(1000.0)).
 			SetCriticalThreshold(decimal.NewFromFloat(500.0)).
 			Save(context.Background())
 		assert.NoError(t, err)

@@ -107,11 +107,6 @@ func MinimumAvailableBalance(v decimal.Decimal) predicate.FiatCurrency {
 	return predicate.FiatCurrency(sql.FieldEQ(FieldMinimumAvailableBalance, v))
 }
 
-// AlertThreshold applies equality check predicate on the "alert_threshold" field. It's identical to AlertThresholdEQ.
-func AlertThreshold(v decimal.Decimal) predicate.FiatCurrency {
-	return predicate.FiatCurrency(sql.FieldEQ(FieldAlertThreshold, v))
-}
-
 // CriticalThreshold applies equality check predicate on the "critical_threshold" field. It's identical to CriticalThresholdEQ.
 func CriticalThreshold(v decimal.Decimal) predicate.FiatCurrency {
 	return predicate.FiatCurrency(sql.FieldEQ(FieldCriticalThreshold, v))
@@ -585,46 +580,6 @@ func MinimumAvailableBalanceLT(v decimal.Decimal) predicate.FiatCurrency {
 // MinimumAvailableBalanceLTE applies the LTE predicate on the "minimum_available_balance" field.
 func MinimumAvailableBalanceLTE(v decimal.Decimal) predicate.FiatCurrency {
 	return predicate.FiatCurrency(sql.FieldLTE(FieldMinimumAvailableBalance, v))
-}
-
-// AlertThresholdEQ applies the EQ predicate on the "alert_threshold" field.
-func AlertThresholdEQ(v decimal.Decimal) predicate.FiatCurrency {
-	return predicate.FiatCurrency(sql.FieldEQ(FieldAlertThreshold, v))
-}
-
-// AlertThresholdNEQ applies the NEQ predicate on the "alert_threshold" field.
-func AlertThresholdNEQ(v decimal.Decimal) predicate.FiatCurrency {
-	return predicate.FiatCurrency(sql.FieldNEQ(FieldAlertThreshold, v))
-}
-
-// AlertThresholdIn applies the In predicate on the "alert_threshold" field.
-func AlertThresholdIn(vs ...decimal.Decimal) predicate.FiatCurrency {
-	return predicate.FiatCurrency(sql.FieldIn(FieldAlertThreshold, vs...))
-}
-
-// AlertThresholdNotIn applies the NotIn predicate on the "alert_threshold" field.
-func AlertThresholdNotIn(vs ...decimal.Decimal) predicate.FiatCurrency {
-	return predicate.FiatCurrency(sql.FieldNotIn(FieldAlertThreshold, vs...))
-}
-
-// AlertThresholdGT applies the GT predicate on the "alert_threshold" field.
-func AlertThresholdGT(v decimal.Decimal) predicate.FiatCurrency {
-	return predicate.FiatCurrency(sql.FieldGT(FieldAlertThreshold, v))
-}
-
-// AlertThresholdGTE applies the GTE predicate on the "alert_threshold" field.
-func AlertThresholdGTE(v decimal.Decimal) predicate.FiatCurrency {
-	return predicate.FiatCurrency(sql.FieldGTE(FieldAlertThreshold, v))
-}
-
-// AlertThresholdLT applies the LT predicate on the "alert_threshold" field.
-func AlertThresholdLT(v decimal.Decimal) predicate.FiatCurrency {
-	return predicate.FiatCurrency(sql.FieldLT(FieldAlertThreshold, v))
-}
-
-// AlertThresholdLTE applies the LTE predicate on the "alert_threshold" field.
-func AlertThresholdLTE(v decimal.Decimal) predicate.FiatCurrency {
-	return predicate.FiatCurrency(sql.FieldLTE(FieldAlertThreshold, v))
 }
 
 // CriticalThresholdEQ applies the EQ predicate on the "critical_threshold" field.

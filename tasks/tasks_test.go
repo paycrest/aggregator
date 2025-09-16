@@ -130,7 +130,6 @@ func createTestProviderWithBalance(t *testing.T, currencyCode string, availableB
 		SetCode(currencyCode).
 		SetName(fmt.Sprintf("Test %s", currencyCode)).
 		SetMinimumAvailableBalance(decimal.NewFromFloat(100.0)).
-		SetAlertThreshold(decimal.NewFromFloat(500.0)).
 		SetCriticalThreshold(decimal.NewFromFloat(200.0)).
 		Save(context.Background())
 	assert.NoError(t, err)
@@ -247,14 +246,12 @@ func TestTasks(t *testing.T) {
 				SetDecimals(2).
 				SetMarketRate(decimal.NewFromFloat(1.0)).
 				SetMinimumAvailableBalance(decimal.NewFromFloat(100.0)).
-				SetAlertThreshold(decimal.NewFromFloat(500.0)).
 				SetCriticalThreshold(decimal.NewFromFloat(200.0)).
 				Save(context.Background())
 			assert.NoError(t, err)
 			t.Logf("✅ Created test currency: %s (Code: %s, Min: %s, Alert: %s, Critical: %s)",
 				currency.Name, currency.Code,
 				currency.MinimumAvailableBalance.String(),
-				currency.AlertThreshold.String(),
 				currency.CriticalThreshold.String())
 
 			// Create test provider
@@ -321,14 +318,12 @@ func TestTasks(t *testing.T) {
 				SetDecimals(2).
 				SetMarketRate(decimal.NewFromFloat(1.0)).
 				SetMinimumAvailableBalance(decimal.NewFromFloat(50.0)).
-				SetAlertThreshold(decimal.NewFromFloat(300.0)).
 				SetCriticalThreshold(decimal.NewFromFloat(150.0)).
 				Save(context.Background())
 			assert.NoError(t, err)
 			t.Logf("✅ Created test currency: %s (Code: %s, Min: %s, Alert: %s, Critical: %s)",
 				currency.Name, currency.Code,
 				currency.MinimumAvailableBalance.String(),
-				currency.AlertThreshold.String(),
 				currency.CriticalThreshold.String())
 
 			// Create test provider
@@ -393,14 +388,12 @@ func TestTasks(t *testing.T) {
 				SetDecimals(2).
 				SetMarketRate(decimal.NewFromFloat(1.0)).
 				SetMinimumAvailableBalance(decimal.NewFromFloat(75.0)).
-				SetAlertThreshold(decimal.NewFromFloat(400.0)).
 				SetCriticalThreshold(decimal.NewFromFloat(200.0)).
 				Save(context.Background())
 			assert.NoError(t, err)
 			t.Logf("✅ Created test currency: %s (Code: %s, Min: %s, Alert: %s, Critical: %s)",
 				currency.Name, currency.Code,
 				currency.MinimumAvailableBalance.String(),
-				currency.AlertThreshold.String(),
 				currency.CriticalThreshold.String())
 
 			// Create test provider
@@ -465,14 +458,12 @@ func TestTasks(t *testing.T) {
 				SetDecimals(2).
 				SetMarketRate(decimal.NewFromFloat(1.0)).
 				SetMinimumAvailableBalance(decimal.NewFromFloat(100.0)).
-				SetAlertThreshold(decimal.NewFromFloat(500.0)).
 				SetCriticalThreshold(decimal.NewFromFloat(250.0)).
 				Save(context.Background())
 			assert.NoError(t, err)
 			t.Logf("✅ Created test currency: %s (Code: %s, Min: %s, Alert: %s, Critical: %s)",
 				currency.Name, currency.Code,
 				currency.MinimumAvailableBalance.String(),
-				currency.AlertThreshold.String(),
 				currency.CriticalThreshold.String())
 
 			// Create test provider
@@ -546,7 +537,6 @@ func TestTasks(t *testing.T) {
 				SetMarketRate(decimal.NewFromFloat(110.0)).
 				SetIsEnabled(true).
 				SetMinimumAvailableBalance(decimal.NewFromFloat(1000.0)).
-				SetAlertThreshold(decimal.NewFromFloat(5000.0)).
 				SetCriticalThreshold(decimal.NewFromFloat(2000.0)).
 				Save(context.Background())
 			assert.NoError(t, err)
@@ -554,7 +544,6 @@ func TestTasks(t *testing.T) {
 			t.Logf("✅ Created test currency: %s (Code: %s, Min: %s, Alert: %s, Critical: %s)",
 				currency.Name, currency.Code,
 				currency.MinimumAvailableBalance.String(),
-				currency.AlertThreshold.String(),
 				currency.CriticalThreshold.String())
 			// Create healthy provider
 			healthyProvider, err := db.Client.ProviderProfile.

@@ -1190,7 +1190,7 @@ func (svc *BalanceManagementService) GetProviderHealthForACurrency(ctx context.C
 	}
 
 	// Check if balance is above alert threshold (with safety margin)
-	alertThreshold := providerCurrency.Edges.Currency.AlertThreshold
+	alertThreshold := providerCurrency.Edges.Currency.MinimumAvailableBalance
 	safetyMargin := alertThreshold.Mul(decimal.NewFromFloat(0.1)) // 10% safety margin
 	effectiveThreshold := alertThreshold.Add(safetyMargin)
 
