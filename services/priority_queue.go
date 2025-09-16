@@ -286,7 +286,7 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 	if order.ProviderID != "" && !utils.ContainsString(excludeList, order.ProviderID) {
 		// Check provider health before assignment
 		balanceService := NewBalanceManagementService()
-		isHealthy, err := balanceService.IsProviderHealthyForCurrency(ctx, order.ProviderID, order.ProvisionBucket.Edges.Currency.Code)
+		isHealthy, err := balanceService.CheckBalanceSufficiency(ctx, order.ProviderID, order.ProvisionBucket.Edges.Currency.Code, order.Amount.Mul(order.Rate).RoundBank(0))
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":      fmt.Sprintf("%v", err),
@@ -333,19 +333,18 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 				}
 
 				// Validate balance health before sending order
-				healthReport, err := balanceService.ValidateProviderBalanceHealth(ctx, order.ProviderID, order.ProvisionBucket.Edges.Currency.Code, order.Amount.Mul(order.Rate).RoundBank(0))
+				healthReport, err := balanceService.CheckBalanceSufficiency(ctx, order.ProviderID, order.ProvisionBucket.Edges.Currency.Code, order.Amount.Mul(order.Rate).RoundBank(0))
 				if err != nil {
 					logger.WithFields(logger.Fields{
 						"Error":      fmt.Sprintf("%v", err),
 						"OrderID":    order.ID.String(),
 						"ProviderID": order.ProviderID,
 					}).Errorf("failed to validate provider balance health")
-				} else if healthReport.Status != "healthy" {
+				} else if !healthReport {
 					logger.WithFields(logger.Fields{
 						"OrderID":      order.ID.String(),
 						"ProviderID":   order.ProviderID,
-						"HealthStatus": healthReport.Status,
-						"Issues":       healthReport.Issues,
+						"HealthStatus": healthReport,
 					}).Warnf("provider balance health check failed, falling back to queue")
 					order.ProviderID = "" // Clear provider ID to use queue
 				} else {
@@ -735,7 +734,7 @@ func (s *PriorityQueueService) providerMeetsBucketRequirements(ctx context.Conte
 	}
 
 	// Check if provider has sufficient balance for bucket minimum amount
-	hasBalance, err := s.balanceService.HasSufficientBalance(ctx, provider.ID, bucket.Edges.Currency.Code, bucket.MinAmount)
+	hasBalance, err := s.balanceService.CheckBalanceSufficiency(ctx, provider.ID, bucket.Edges.Currency.Code, bucket.MinAmount)
 	if err != nil {
 		return false, err
 	}
@@ -786,7 +785,7 @@ func (s *PriorityQueueService) matchRateWithHealthCheck(ctx context.Context, red
 
 		// Check provider health before processing
 		balanceService := NewBalanceManagementService()
-		isHealthy, err := balanceService.IsProviderHealthyForCurrency(ctx, providerID, order.ProvisionBucket.Edges.Currency.Code)
+		isHealthy, err := balanceService.CheckBalanceSufficiency(ctx, providerID, order.ProvisionBucket.Edges.Currency.Code, decimal.NewFromFloat(0.0))
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":      fmt.Sprintf("%v", err),
@@ -840,7 +839,7 @@ func (s *PriorityQueueService) matchRateWithHealthCheck(ctx context.Context, red
 			}
 
 			// Check balance sufficiency with health validation
-			hasSufficientBalance, err := s.balanceService.HasSufficientBalance(ctx, providerID, order.ProvisionBucket.Edges.Currency.Code, order.Amount.Mul(order.Rate).RoundBank(0))
+			hasSufficientBalance, err := s.balanceService.CheckBalanceSufficiency(ctx, providerID, order.ProvisionBucket.Edges.Currency.Code, order.Amount.Mul(order.Rate).RoundBank(0))
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":      fmt.Sprintf("%v", err),

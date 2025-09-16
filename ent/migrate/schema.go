@@ -73,9 +73,9 @@ var (
 		{Name: "name", Type: field.TypeString},
 		{Name: "market_rate", Type: field.TypeFloat64},
 		{Name: "is_enabled", Type: field.TypeBool, Default: false},
-		{Name: "minimum_available_balance", Type: field.TypeFloat64},
-		{Name: "alert_threshold", Type: field.TypeFloat64},
-		{Name: "critical_threshold", Type: field.TypeFloat64},
+		{Name: "minimum_available_balance", Type: field.TypeFloat64, Default: 0},
+		{Name: "alert_threshold", Type: field.TypeFloat64, Default: 0},
+		{Name: "critical_threshold", Type: field.TypeFloat64, Default: 0},
 	}
 	// FiatCurrenciesTable holds the schema information for the "fiat_currencies" table.
 	FiatCurrenciesTable = &schema.Table{

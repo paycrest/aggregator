@@ -8,6 +8,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 const (
@@ -117,6 +118,12 @@ var (
 	DefaultDecimals int
 	// DefaultIsEnabled holds the default value on creation for the "is_enabled" field.
 	DefaultIsEnabled bool
+	// DefaultMinimumAvailableBalance holds the default value on creation for the "minimum_available_balance" field.
+	DefaultMinimumAvailableBalance decimal.Decimal
+	// DefaultAlertThreshold holds the default value on creation for the "alert_threshold" field.
+	DefaultAlertThreshold decimal.Decimal
+	// DefaultCriticalThreshold holds the default value on creation for the "critical_threshold" field.
+	DefaultCriticalThreshold decimal.Decimal
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )

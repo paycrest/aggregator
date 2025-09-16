@@ -9,7 +9,6 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/services/email"
 	"github.com/paycrest/aggregator/storage"
@@ -170,10 +169,6 @@ func (s *BalanceMonitoringService) handleCriticalAlert(ctx context.Context, prov
 		logger.Errorf("Failed to send critical alert: %v", err)
 	}
 
-	if err := s.pauseProviderOrders(ctx, provider, currency); err != nil {
-		logger.Errorf("Failed to pause providers orders: %v", err)
-	}
-
 	if err := s.creditAuditLog(ctx, provider, currency, "critical_balance"); err != nil {
 		logger.Errorf("Failed to create audit log: %v", err)
 	}
@@ -197,7 +192,6 @@ func (s *BalanceMonitoringService) getCurrencyThresholds(ctx context.Context, cu
 
 	thresholds := &CurrencyThresholds{
 		MinAvailable:      currency.MinimumAvailableBalance,
-		AlertThreshold:    currency.AlertThreshold,
 		CriticalThreshold: currency.CriticalThreshold,
 	}
 
@@ -207,6 +201,7 @@ func (s *BalanceMonitoringService) getCurrencyThresholds(ctx context.Context, cu
 
 	return thresholds, nil
 }
+
 func (s *BalanceMonitoringService) getCachedThresholds(currencyCode string) (*CurrencyThresholds, error) {
 	if !s.config.RedisEnabled {
 		return nil, fmt.Errorf("redis is not enabled")
@@ -288,14 +283,6 @@ func (s *BalanceMonitoringService) getProviderDetails(ctx context.Context, provi
 	return provider, nil
 }
 
-// func (s *BalanceMonitoringService) handleCriticalBalance(ctx context.Context, provider *ent.ProviderProfile, currency *ent.ProviderCurrencies) {
-// 	logger.WithFields(logger.Fields{
-// 		"ProviderID":      provider.ID,
-// 		"CurrencyCode":    currency.Edges.Currency.Code,
-// 		"CurrencyBalance": currency.AvailableBalance.String(),
-// 	}).Errorf("Provider has critical balance - consider disabling")
-// }
-
 func (s *BalanceMonitoringService) disableProvider(ctx context.Context, provider *ent.ProviderProfile, currency *ent.ProviderCurrencies) error {
 	_, err := storage.Client.ProviderProfile.
 		UpdateOneID(provider.ID).
@@ -352,30 +339,6 @@ func (s *BalanceMonitoringService) sendCriticalAlert(ctx context.Context, provid
 	return nil
 }
 
-func (s *BalanceMonitoringService) pauseProviderOrders(ctx context.Context, provider *ent.ProviderProfile, currency *ent.ProviderCurrencies) error {
-	updatedCount, err := storage.Client.LockPaymentOrder.
-		Update().
-		Where(lockpaymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
-			lockpaymentorder.StatusEQ(lockpaymentorder.StatusValidated),
-		).
-		SetStatus(lockpaymentorder.StatusPaused).
-		SetUpdatedAt(time.Now()).
-		Save(ctx)
-
-	if err != nil {
-		return fmt.Errorf("failed to pause provider orders: %w", err)
-	}
-
-	logger.WithFields(logger.Fields{
-		"ProviderID":   provider.ID,
-		"CurrencyCode": currency.Edges.Currency.Code,
-		"PausedOrders": updatedCount,
-		"Action":       "orders_paused",
-	}).Warnf("Paused %d orders for provider due to critical balance", updatedCount)
-
-	return nil
-}
-
 func (s *BalanceMonitoringService) creditAuditLog(_ctx context.Context, provider *ent.ProviderProfile, currency *ent.ProviderCurrencies, action string) error {
 	auditLog := map[string]interface{}{
 		"action":           action,
@@ -397,7 +360,6 @@ func (s *BalanceMonitoringService) creditAuditLog(_ctx context.Context, provider
 }
 
 func (s *BalanceMonitoringService) IsProviderHealthyForOrders(ctx context.Context, providerID string, currencyCode string) (bool, error) {
-	// Check if provider is in critical state (cached check)
 	if s.config.RedisEnabled && storage.RedisClient != nil {
 		key := fmt.Sprintf("provider_health:%s:%s", providerID, currencyCode)
 		status, err := storage.RedisClient.Get(ctx, key).Result()
@@ -408,7 +370,7 @@ func (s *BalanceMonitoringService) IsProviderHealthyForOrders(ctx context.Contex
 
 	// Fallback to balance service health check
 	balanceService := NewBalanceManagementService()
-	isHealthy, err := balanceService.IsProviderHealthyForCurrency(ctx, providerID, currencyCode)
+	isHealthy, err := balanceService.GetProviderHealthForACurrency(ctx, providerID, currencyCode)
 	if err != nil {
 		return false, err
 	}
@@ -451,7 +413,7 @@ func (s *BalanceMonitoringService) GetProviderHealthStatus(ctx context.Context, 
 
 	// Fallback to balance service check
 	balanceService := NewBalanceManagementService()
-	isHealthy, err := balanceService.IsProviderHealthyForCurrency(ctx, providerID, currencyCode)
+	isHealthy, err := balanceService.GetProviderHealthForACurrency(ctx, providerID, currencyCode)
 	if err != nil {
 		return "unknown", err
 	}

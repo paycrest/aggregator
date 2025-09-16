@@ -163,7 +163,7 @@ func createTestProviderWithBalance(t *testing.T, currencyCode string, availableB
 // Helper function to test balance health validation
 func testBalanceHealthValidation(t *testing.T, providerID, currencyCode string, expectedHealthy bool) {
 	balanceService := services.NewBalanceManagementService()
-	isHealthy, err := balanceService.IsProviderHealthyForCurrency(context.Background(), providerID, currencyCode)
+	isHealthy, err := balanceService.GetProviderHealthForACurrency(context.Background(), providerID, currencyCode)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedHealthy, isHealthy, fmt.Sprintf("Provider health should be %v", expectedHealthy))
 }
@@ -287,7 +287,7 @@ func TestTasks(t *testing.T) {
 			// Test health check
 			t.Log("🔍 Testing balance health check...")
 			balanceService := services.NewBalanceManagementService()
-			isHealthy, err := balanceService.IsProviderHealthyForCurrency(context.Background(), provider.ID, "USD")
+			isHealthy, err := balanceService.GetProviderHealthForACurrency(context.Background(), provider.ID, "USD")
 			assert.NoError(t, err)
 			assert.True(t, isHealthy, "Provider with healthy balance should be considered healthy")
 			if isHealthy {
@@ -361,7 +361,7 @@ func TestTasks(t *testing.T) {
 
 			// Test health check
 			balanceService := services.NewBalanceManagementService()
-			isHealthy, err := balanceService.IsProviderHealthyForCurrency(context.Background(), provider.ID, "EUR")
+			isHealthy, err := balanceService.GetProviderHealthForACurrency(context.Background(), provider.ID, "EUR")
 			assert.NoError(t, err)
 			assert.False(t, isHealthy, "Provider with critical balance should not be considered healthy")
 			if isHealthy {
@@ -433,7 +433,7 @@ func TestTasks(t *testing.T) {
 
 			// Test health check
 			balanceService := services.NewBalanceManagementService()
-			isHealthy, err := balanceService.IsProviderHealthyForCurrency(context.Background(), provider.ID, "GBP")
+			isHealthy, err := balanceService.GetProviderHealthForACurrency(context.Background(), provider.ID, "GBP")
 			assert.NoError(t, err)
 			assert.False(t, isHealthy, "Provider with alert threshold balance should not be considered healthy")
 			if isHealthy {
@@ -505,7 +505,7 @@ func TestTasks(t *testing.T) {
 
 			// Test balance sufficiency for large order
 			balanceService := services.NewBalanceManagementService()
-			hasBalance, err := balanceService.HasSufficientBalance(context.Background(), provider.ID, "CAD", decimal.NewFromFloat(250.0))
+			hasBalance, err := balanceService.CheckBalanceSufficiency(context.Background(), provider.ID, "CAD", decimal.NewFromFloat(250.0))
 			assert.NoError(t, err)
 			assert.False(t, hasBalance, "Provider should not have sufficient balance for order that would leave them below minimum threshold")
 			if hasBalance {

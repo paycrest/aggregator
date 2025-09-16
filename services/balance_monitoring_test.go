@@ -79,7 +79,7 @@ func TestBalanceMonitoringIntegration(t *testing.T) {
 		// Test 1: Initial health check
 		t.Log("🔍 Testing initial health check...")
 		balanceService := NewBalanceManagementService()
-		isHealthy, err := balanceService.IsProviderHealthyForCurrency(context.Background(), provider.ID, "USD")
+		isHealthy, err := balanceService.CheckBalanceSufficiency(context.Background(), provider.ID, "USD", decimal.NewFromFloat(0.0))
 		assert.NoError(t, err)
 		assert.True(t, isHealthy, "Provider should be healthy initially")
 		t.Log("✅ Provider is healthy initially")
@@ -95,7 +95,7 @@ func TestBalanceMonitoringIntegration(t *testing.T) {
 			decimal.NewFromFloat(400.0).String(), currency.AlertThreshold.String())
 
 		// Test health check after balance drop
-		isHealthy, err = balanceService.IsProviderHealthyForCurrency(context.Background(), provider.ID, "USD")
+		isHealthy, err = balanceService.CheckBalanceSufficiency(context.Background(), provider.ID, "USD", decimal.NewFromFloat(0.0))
 		assert.NoError(t, err)
 		assert.False(t, isHealthy, "Provider should be unhealthy after balance drop")
 		t.Log("✅ Provider correctly identified as unhealthy")
@@ -111,7 +111,7 @@ func TestBalanceMonitoringIntegration(t *testing.T) {
 			decimal.NewFromFloat(150.0).String(), currency.CriticalThreshold.String())
 
 		// Test health check after critical balance drop
-		isHealthy, err = balanceService.IsProviderHealthyForCurrency(context.Background(), provider.ID, "USD")
+		isHealthy, err = balanceService.CheckBalanceSufficiency(context.Background(), provider.ID, "USD", decimal.NewFromFloat(0.0))
 		assert.NoError(t, err)
 		assert.False(t, isHealthy, "Provider should be unhealthy at critical threshold")
 		t.Log("✅ Provider correctly identified as critical")
@@ -136,7 +136,7 @@ func TestBalanceMonitoringIntegration(t *testing.T) {
 		t.Logf("✅ Recovered balance to: %s", decimal.NewFromFloat(800.0).String())
 
 		// Test health check after recovery
-		isHealthy, err = balanceService.IsProviderHealthyForCurrency(context.Background(), provider.ID, "USD")
+		isHealthy, err = balanceService.CheckBalanceSufficiency(context.Background(), provider.ID, "USD", decimal.NewFromFloat(0.0))
 		assert.NoError(t, err)
 		assert.True(t, isHealthy, "Provider should be healthy after recovery")
 		t.Log("✅ Provider correctly identified as healthy after recovery")
@@ -374,20 +374,19 @@ func TestBalanceMonitoringIntegration(t *testing.T) {
 		smallOrderAmount := decimal.NewFromFloat(200.0)
 		t.Logf("�� Testing with small order amount: %s", smallOrderAmount.String())
 
-		healthReport, err := balanceService.ValidateProviderBalanceHealth(context.Background(), provider.ID, "CAD", smallOrderAmount)
+		healthReport, err := balanceService.CheckBalanceSufficiency(context.Background(), provider.ID, "CAD", smallOrderAmount)
 		assert.NoError(t, err)
-		assert.Equal(t, "healthy", healthReport.Status, "Provider should be healthy for small order")
-		t.Logf("✅ Health report: Status=%s, Severity=%s", healthReport.Status, healthReport.Severity)
+		assert.Equal(t, true, healthReport, "Provider should be healthy for small order")
+		t.Logf("✅ Health report: Status=%s", healthReport)
 
 		// Test with large order (should be insufficient)
 		largeOrderAmount := decimal.NewFromFloat(600.0)
 		t.Logf("�� Testing with large order amount: %s", largeOrderAmount.String())
 
-		healthReport, err = balanceService.ValidateProviderBalanceHealth(context.Background(), provider.ID, "CAD", largeOrderAmount)
+		healthReport, err = balanceService.CheckBalanceSufficiency(context.Background(), provider.ID, "CAD", largeOrderAmount)
 		assert.NoError(t, err)
-		assert.Equal(t, "insufficient", healthReport.Status, "Provider should be insufficient for large order")
-		t.Logf("✅ Health report: Status=%s, Severity=%s, Issues=%v",
-			healthReport.Status, healthReport.Severity, healthReport.Issues)
+		assert.Equal(t, false, healthReport, "Provider should be insufficient for large order")
+		t.Logf("✅ Health report: Status=%s", healthReport)
 
 		t.Log("🎉 Balance Health Validation Integration Test completed successfully")
 	})
@@ -467,7 +466,7 @@ func TestBalanceMonitoringIntegration(t *testing.T) {
 			assert.NoError(t, err)
 
 			// Test health check
-			isHealthy, err := balanceService.IsProviderHealthyForCurrency(context.Background(), provider.ID, "AUD")
+			isHealthy, err := balanceService.CheckBalanceSufficiency(context.Background(), provider.ID, "AUD", decimal.NewFromFloat(update.amount))
 			assert.NoError(t, err)
 			assert.Equal(t, update.expected, isHealthy, fmt.Sprintf("Balance %s should be %v (%s)",
 				decimal.NewFromFloat(update.amount).String(), update.expected, update.reason))

@@ -121,15 +121,39 @@ func (fcc *FiatCurrencyCreate) SetMinimumAvailableBalance(d decimal.Decimal) *Fi
 	return fcc
 }
 
+// SetNillableMinimumAvailableBalance sets the "minimum_available_balance" field if the given value is not nil.
+func (fcc *FiatCurrencyCreate) SetNillableMinimumAvailableBalance(d *decimal.Decimal) *FiatCurrencyCreate {
+	if d != nil {
+		fcc.SetMinimumAvailableBalance(*d)
+	}
+	return fcc
+}
+
 // SetAlertThreshold sets the "alert_threshold" field.
 func (fcc *FiatCurrencyCreate) SetAlertThreshold(d decimal.Decimal) *FiatCurrencyCreate {
 	fcc.mutation.SetAlertThreshold(d)
 	return fcc
 }
 
+// SetNillableAlertThreshold sets the "alert_threshold" field if the given value is not nil.
+func (fcc *FiatCurrencyCreate) SetNillableAlertThreshold(d *decimal.Decimal) *FiatCurrencyCreate {
+	if d != nil {
+		fcc.SetAlertThreshold(*d)
+	}
+	return fcc
+}
+
 // SetCriticalThreshold sets the "critical_threshold" field.
 func (fcc *FiatCurrencyCreate) SetCriticalThreshold(d decimal.Decimal) *FiatCurrencyCreate {
 	fcc.mutation.SetCriticalThreshold(d)
+	return fcc
+}
+
+// SetNillableCriticalThreshold sets the "critical_threshold" field if the given value is not nil.
+func (fcc *FiatCurrencyCreate) SetNillableCriticalThreshold(d *decimal.Decimal) *FiatCurrencyCreate {
+	if d != nil {
+		fcc.SetCriticalThreshold(*d)
+	}
 	return fcc
 }
 
@@ -257,6 +281,18 @@ func (fcc *FiatCurrencyCreate) defaults() {
 	if _, ok := fcc.mutation.IsEnabled(); !ok {
 		v := fiatcurrency.DefaultIsEnabled
 		fcc.mutation.SetIsEnabled(v)
+	}
+	if _, ok := fcc.mutation.MinimumAvailableBalance(); !ok {
+		v := fiatcurrency.DefaultMinimumAvailableBalance
+		fcc.mutation.SetMinimumAvailableBalance(v)
+	}
+	if _, ok := fcc.mutation.AlertThreshold(); !ok {
+		v := fiatcurrency.DefaultAlertThreshold
+		fcc.mutation.SetAlertThreshold(v)
+	}
+	if _, ok := fcc.mutation.CriticalThreshold(); !ok {
+		v := fiatcurrency.DefaultCriticalThreshold
+		fcc.mutation.SetCriticalThreshold(v)
 	}
 	if _, ok := fcc.mutation.ID(); !ok {
 		v := fiatcurrency.DefaultID()
