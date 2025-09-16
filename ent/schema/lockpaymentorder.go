@@ -29,13 +29,17 @@ func (LockPaymentOrder) Fields() []ent.Field {
 			Default(uuid.New),
 		field.String("gateway_id"),
 		field.Float("amount").
-			GoType(decimal.Decimal{}),
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
 		field.Float("protocol_fee").
-			GoType(decimal.Decimal{}),
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
 		field.Float("rate").
-			GoType(decimal.Decimal{}),
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
 		field.Float("order_percent").
-			GoType(decimal.Decimal{}),
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
 		field.String("sender").Optional(),
 		field.String("tx_hash").
 			MaxLen(70).

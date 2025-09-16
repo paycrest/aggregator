@@ -19,9 +19,11 @@ type ProvisionBucket struct {
 func (ProvisionBucket) Fields() []ent.Field {
 	return []ent.Field{
 		field.Float("min_amount").
-			GoType(decimal.Decimal{}),
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
 		field.Float("max_amount").
-			GoType(decimal.Decimal{}),
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
 		field.Time("created_at").
 			Immutable().
 			Default(time.Now),
