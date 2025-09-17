@@ -263,7 +263,8 @@ func getTemplateID(emailType, provider string) string {
 			"kyb_approval":    "7",
 			"kyb_rejection":   "8",
 			"webhook_failure": "9",
-			"balance_alert":   "10", // same here
+			"balance_alert":   "20",
+			"critical_balance_alert": "21",
 		},
 		"mailgun": {
 			"verification":    "mailgun-verification-template-id",    // TODO: Add actual template ID
