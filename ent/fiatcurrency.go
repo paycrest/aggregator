@@ -37,6 +37,10 @@ type FiatCurrency struct {
 	MarketRate decimal.Decimal `json:"market_rate,omitempty"`
 	// IsEnabled holds the value of the "is_enabled" field.
 	IsEnabled bool `json:"is_enabled,omitempty"`
+	// MinimumAvailableBalance holds the value of the "minimum_available_balance" field.
+	MinimumAvailableBalance decimal.Decimal `json:"minimum_available_balance,omitempty"`
+	// CriticalThreshold holds the value of the "critical_threshold" field.
+	CriticalThreshold decimal.Decimal `json:"critical_threshold,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the FiatCurrencyQuery when eager-loading is set.
 	Edges        FiatCurrencyEdges `json:"edges"`
@@ -99,7 +103,7 @@ func (*FiatCurrency) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case fiatcurrency.FieldMarketRate:
+		case fiatcurrency.FieldMarketRate, fiatcurrency.FieldMinimumAvailableBalance, fiatcurrency.FieldCriticalThreshold:
 			values[i] = new(decimal.Decimal)
 		case fiatcurrency.FieldIsEnabled:
 			values[i] = new(sql.NullBool)
@@ -186,6 +190,18 @@ func (fc *FiatCurrency) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				fc.IsEnabled = value.Bool
 			}
+		case fiatcurrency.FieldMinimumAvailableBalance:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field minimum_available_balance", values[i])
+			} else if value != nil {
+				fc.MinimumAvailableBalance = *value
+			}
+		case fiatcurrency.FieldCriticalThreshold:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field critical_threshold", values[i])
+			} else if value != nil {
+				fc.CriticalThreshold = *value
+			}
 		default:
 			fc.selectValues.Set(columns[i], values[i])
 		}
@@ -268,6 +284,12 @@ func (fc *FiatCurrency) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("is_enabled=")
 	builder.WriteString(fmt.Sprintf("%v", fc.IsEnabled))
+	builder.WriteString(", ")
+	builder.WriteString("minimum_available_balance=")
+	builder.WriteString(fmt.Sprintf("%v", fc.MinimumAvailableBalance))
+	builder.WriteString(", ")
+	builder.WriteString("critical_threshold=")
+	builder.WriteString(fmt.Sprintf("%v", fc.CriticalThreshold))
 	builder.WriteByte(')')
 	return builder.String()
 }

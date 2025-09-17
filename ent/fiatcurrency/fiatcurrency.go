@@ -8,6 +8,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 const (
@@ -33,6 +34,10 @@ const (
 	FieldMarketRate = "market_rate"
 	// FieldIsEnabled holds the string denoting the is_enabled field in the database.
 	FieldIsEnabled = "is_enabled"
+	// FieldMinimumAvailableBalance holds the string denoting the minimum_available_balance field in the database.
+	FieldMinimumAvailableBalance = "minimum_available_balance"
+	// FieldCriticalThreshold holds the string denoting the critical_threshold field in the database.
+	FieldCriticalThreshold = "critical_threshold"
 	// EdgeProviderCurrencies holds the string denoting the provider_currencies edge name in mutations.
 	EdgeProviderCurrencies = "provider_currencies"
 	// EdgeProvisionBuckets holds the string denoting the provision_buckets edge name in mutations.
@@ -85,6 +90,8 @@ var Columns = []string{
 	FieldName,
 	FieldMarketRate,
 	FieldIsEnabled,
+	FieldMinimumAvailableBalance,
+	FieldCriticalThreshold,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -108,6 +115,10 @@ var (
 	DefaultDecimals int
 	// DefaultIsEnabled holds the default value on creation for the "is_enabled" field.
 	DefaultIsEnabled bool
+	// DefaultMinimumAvailableBalance holds the default value on creation for the "minimum_available_balance" field.
+	DefaultMinimumAvailableBalance decimal.Decimal
+	// DefaultCriticalThreshold holds the default value on creation for the "critical_threshold" field.
+	DefaultCriticalThreshold decimal.Decimal
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -163,6 +174,16 @@ func ByMarketRate(opts ...sql.OrderTermOption) OrderOption {
 // ByIsEnabled orders the results by the is_enabled field.
 func ByIsEnabled(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldIsEnabled, opts...).ToFunc()
+}
+
+// ByMinimumAvailableBalance orders the results by the minimum_available_balance field.
+func ByMinimumAvailableBalance(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMinimumAvailableBalance, opts...).ToFunc()
+}
+
+// ByCriticalThreshold orders the results by the critical_threshold field.
+func ByCriticalThreshold(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCriticalThreshold, opts...).ToFunc()
 }
 
 // ByProviderCurrenciesCount orders the results by provider_currencies count.
