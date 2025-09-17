@@ -607,9 +607,9 @@ func UpdateReceiveAddressStatus(
 			}
 
 			// Delete the transfer webhook now that the transfer has been received
-			err = deleteTransferWebhook(ctx, paymentOrder.ID.String())
+			err = deleteTransferWebhook(ctx, event.TxHash)
 			if err != nil {
-				logger.Errorf("Failed to delete transfer webhook for payment order %s: %v", paymentOrder.ID, err)
+				logger.Errorf("Failed to delete transfer webhook for transaction %s: %v", event.TxHash, err)
 				// Don't fail the entire operation if webhook deletion fails
 			}
 
