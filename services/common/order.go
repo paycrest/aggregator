@@ -1053,13 +1053,28 @@ func HandleReceiveAddressValidity(ctx context.Context, receiveAddress *ent.Recei
 }
 
 // deleteTransferWebhook deletes the transfer webhook associated with a payment order
-func deleteTransferWebhook(ctx context.Context, txHash string) error {
-	// Get the payment order by txHash
-	paymentOrder, err := db.Client.PaymentOrder.
-		Query().
-		Where(paymentorder.TxHashEQ(txHash)).
-		WithPaymentWebhook().
-		Only(ctx)
+// Can be called with either txHash (for missing events) or paymentOrderID (for Transfer events)
+func deleteTransferWebhook(ctx context.Context, identifier string) error {
+	var paymentOrder *ent.PaymentOrder
+	var err error
+
+	// Try to parse as UUID first (payment order ID)
+	if paymentOrderID, parseErr := uuid.Parse(identifier); parseErr == nil {
+		// Get the payment order by ID
+		paymentOrder, err = db.Client.PaymentOrder.
+			Query().
+			Where(paymentorder.IDEQ(paymentOrderID)).
+			WithPaymentWebhook().
+			Only(ctx)
+	} else {
+		// Treat as transaction hash
+		paymentOrder, err = db.Client.PaymentOrder.
+			Query().
+			Where(paymentorder.TxHashEQ(identifier)).
+			WithPaymentWebhook().
+			Only(ctx)
+	}
+
 	if err != nil {
 		if ent.IsNotFound(err) {
 			// No payment order found, nothing to delete
