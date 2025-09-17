@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 
+	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -19,6 +21,7 @@ type BeneficialOwnerCreate struct {
 	config
 	mutation *BeneficialOwnerMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetFullName sets the "full_name" field.
@@ -201,6 +204,7 @@ func (boc *BeneficialOwnerCreate) createSpec() (*BeneficialOwner, *sqlgraph.Crea
 		_node = &BeneficialOwner{config: boc.config}
 		_spec = sqlgraph.NewCreateSpec(beneficialowner.Table, sqlgraph.NewFieldSpec(beneficialowner.FieldID, field.TypeUUID))
 	)
+	_spec.OnConflict = boc.conflict
 	if id, ok := boc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
@@ -253,11 +257,355 @@ func (boc *BeneficialOwnerCreate) createSpec() (*BeneficialOwner, *sqlgraph.Crea
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.BeneficialOwner.Create().
+//		SetFullName(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.BeneficialOwnerUpsert) {
+//			SetFullName(v+v).
+//		}).
+//		Exec(ctx)
+func (boc *BeneficialOwnerCreate) OnConflict(opts ...sql.ConflictOption) *BeneficialOwnerUpsertOne {
+	boc.conflict = opts
+	return &BeneficialOwnerUpsertOne{
+		create: boc,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.BeneficialOwner.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (boc *BeneficialOwnerCreate) OnConflictColumns(columns ...string) *BeneficialOwnerUpsertOne {
+	boc.conflict = append(boc.conflict, sql.ConflictColumns(columns...))
+	return &BeneficialOwnerUpsertOne{
+		create: boc,
+	}
+}
+
+type (
+	// BeneficialOwnerUpsertOne is the builder for "upsert"-ing
+	//  one BeneficialOwner node.
+	BeneficialOwnerUpsertOne struct {
+		create *BeneficialOwnerCreate
+	}
+
+	// BeneficialOwnerUpsert is the "OnConflict" setter.
+	BeneficialOwnerUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetFullName sets the "full_name" field.
+func (u *BeneficialOwnerUpsert) SetFullName(v string) *BeneficialOwnerUpsert {
+	u.Set(beneficialowner.FieldFullName, v)
+	return u
+}
+
+// UpdateFullName sets the "full_name" field to the value that was provided on create.
+func (u *BeneficialOwnerUpsert) UpdateFullName() *BeneficialOwnerUpsert {
+	u.SetExcluded(beneficialowner.FieldFullName)
+	return u
+}
+
+// SetResidentialAddress sets the "residential_address" field.
+func (u *BeneficialOwnerUpsert) SetResidentialAddress(v string) *BeneficialOwnerUpsert {
+	u.Set(beneficialowner.FieldResidentialAddress, v)
+	return u
+}
+
+// UpdateResidentialAddress sets the "residential_address" field to the value that was provided on create.
+func (u *BeneficialOwnerUpsert) UpdateResidentialAddress() *BeneficialOwnerUpsert {
+	u.SetExcluded(beneficialowner.FieldResidentialAddress)
+	return u
+}
+
+// SetProofOfResidentialAddressURL sets the "proof_of_residential_address_url" field.
+func (u *BeneficialOwnerUpsert) SetProofOfResidentialAddressURL(v string) *BeneficialOwnerUpsert {
+	u.Set(beneficialowner.FieldProofOfResidentialAddressURL, v)
+	return u
+}
+
+// UpdateProofOfResidentialAddressURL sets the "proof_of_residential_address_url" field to the value that was provided on create.
+func (u *BeneficialOwnerUpsert) UpdateProofOfResidentialAddressURL() *BeneficialOwnerUpsert {
+	u.SetExcluded(beneficialowner.FieldProofOfResidentialAddressURL)
+	return u
+}
+
+// SetGovernmentIssuedIDURL sets the "government_issued_id_url" field.
+func (u *BeneficialOwnerUpsert) SetGovernmentIssuedIDURL(v string) *BeneficialOwnerUpsert {
+	u.Set(beneficialowner.FieldGovernmentIssuedIDURL, v)
+	return u
+}
+
+// UpdateGovernmentIssuedIDURL sets the "government_issued_id_url" field to the value that was provided on create.
+func (u *BeneficialOwnerUpsert) UpdateGovernmentIssuedIDURL() *BeneficialOwnerUpsert {
+	u.SetExcluded(beneficialowner.FieldGovernmentIssuedIDURL)
+	return u
+}
+
+// SetDateOfBirth sets the "date_of_birth" field.
+func (u *BeneficialOwnerUpsert) SetDateOfBirth(v string) *BeneficialOwnerUpsert {
+	u.Set(beneficialowner.FieldDateOfBirth, v)
+	return u
+}
+
+// UpdateDateOfBirth sets the "date_of_birth" field to the value that was provided on create.
+func (u *BeneficialOwnerUpsert) UpdateDateOfBirth() *BeneficialOwnerUpsert {
+	u.SetExcluded(beneficialowner.FieldDateOfBirth)
+	return u
+}
+
+// SetOwnershipPercentage sets the "ownership_percentage" field.
+func (u *BeneficialOwnerUpsert) SetOwnershipPercentage(v float64) *BeneficialOwnerUpsert {
+	u.Set(beneficialowner.FieldOwnershipPercentage, v)
+	return u
+}
+
+// UpdateOwnershipPercentage sets the "ownership_percentage" field to the value that was provided on create.
+func (u *BeneficialOwnerUpsert) UpdateOwnershipPercentage() *BeneficialOwnerUpsert {
+	u.SetExcluded(beneficialowner.FieldOwnershipPercentage)
+	return u
+}
+
+// AddOwnershipPercentage adds v to the "ownership_percentage" field.
+func (u *BeneficialOwnerUpsert) AddOwnershipPercentage(v float64) *BeneficialOwnerUpsert {
+	u.Add(beneficialowner.FieldOwnershipPercentage, v)
+	return u
+}
+
+// SetGovernmentIssuedIDType sets the "government_issued_id_type" field.
+func (u *BeneficialOwnerUpsert) SetGovernmentIssuedIDType(v beneficialowner.GovernmentIssuedIDType) *BeneficialOwnerUpsert {
+	u.Set(beneficialowner.FieldGovernmentIssuedIDType, v)
+	return u
+}
+
+// UpdateGovernmentIssuedIDType sets the "government_issued_id_type" field to the value that was provided on create.
+func (u *BeneficialOwnerUpsert) UpdateGovernmentIssuedIDType() *BeneficialOwnerUpsert {
+	u.SetExcluded(beneficialowner.FieldGovernmentIssuedIDType)
+	return u
+}
+
+// ClearGovernmentIssuedIDType clears the value of the "government_issued_id_type" field.
+func (u *BeneficialOwnerUpsert) ClearGovernmentIssuedIDType() *BeneficialOwnerUpsert {
+	u.SetNull(beneficialowner.FieldGovernmentIssuedIDType)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
+// Using this option is equivalent to using:
+//
+//	client.BeneficialOwner.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(beneficialowner.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *BeneficialOwnerUpsertOne) UpdateNewValues() *BeneficialOwnerUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(beneficialowner.FieldID)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.BeneficialOwner.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *BeneficialOwnerUpsertOne) Ignore() *BeneficialOwnerUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *BeneficialOwnerUpsertOne) DoNothing() *BeneficialOwnerUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the BeneficialOwnerCreate.OnConflict
+// documentation for more info.
+func (u *BeneficialOwnerUpsertOne) Update(set func(*BeneficialOwnerUpsert)) *BeneficialOwnerUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&BeneficialOwnerUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetFullName sets the "full_name" field.
+func (u *BeneficialOwnerUpsertOne) SetFullName(v string) *BeneficialOwnerUpsertOne {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.SetFullName(v)
+	})
+}
+
+// UpdateFullName sets the "full_name" field to the value that was provided on create.
+func (u *BeneficialOwnerUpsertOne) UpdateFullName() *BeneficialOwnerUpsertOne {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.UpdateFullName()
+	})
+}
+
+// SetResidentialAddress sets the "residential_address" field.
+func (u *BeneficialOwnerUpsertOne) SetResidentialAddress(v string) *BeneficialOwnerUpsertOne {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.SetResidentialAddress(v)
+	})
+}
+
+// UpdateResidentialAddress sets the "residential_address" field to the value that was provided on create.
+func (u *BeneficialOwnerUpsertOne) UpdateResidentialAddress() *BeneficialOwnerUpsertOne {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.UpdateResidentialAddress()
+	})
+}
+
+// SetProofOfResidentialAddressURL sets the "proof_of_residential_address_url" field.
+func (u *BeneficialOwnerUpsertOne) SetProofOfResidentialAddressURL(v string) *BeneficialOwnerUpsertOne {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.SetProofOfResidentialAddressURL(v)
+	})
+}
+
+// UpdateProofOfResidentialAddressURL sets the "proof_of_residential_address_url" field to the value that was provided on create.
+func (u *BeneficialOwnerUpsertOne) UpdateProofOfResidentialAddressURL() *BeneficialOwnerUpsertOne {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.UpdateProofOfResidentialAddressURL()
+	})
+}
+
+// SetGovernmentIssuedIDURL sets the "government_issued_id_url" field.
+func (u *BeneficialOwnerUpsertOne) SetGovernmentIssuedIDURL(v string) *BeneficialOwnerUpsertOne {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.SetGovernmentIssuedIDURL(v)
+	})
+}
+
+// UpdateGovernmentIssuedIDURL sets the "government_issued_id_url" field to the value that was provided on create.
+func (u *BeneficialOwnerUpsertOne) UpdateGovernmentIssuedIDURL() *BeneficialOwnerUpsertOne {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.UpdateGovernmentIssuedIDURL()
+	})
+}
+
+// SetDateOfBirth sets the "date_of_birth" field.
+func (u *BeneficialOwnerUpsertOne) SetDateOfBirth(v string) *BeneficialOwnerUpsertOne {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.SetDateOfBirth(v)
+	})
+}
+
+// UpdateDateOfBirth sets the "date_of_birth" field to the value that was provided on create.
+func (u *BeneficialOwnerUpsertOne) UpdateDateOfBirth() *BeneficialOwnerUpsertOne {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.UpdateDateOfBirth()
+	})
+}
+
+// SetOwnershipPercentage sets the "ownership_percentage" field.
+func (u *BeneficialOwnerUpsertOne) SetOwnershipPercentage(v float64) *BeneficialOwnerUpsertOne {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.SetOwnershipPercentage(v)
+	})
+}
+
+// AddOwnershipPercentage adds v to the "ownership_percentage" field.
+func (u *BeneficialOwnerUpsertOne) AddOwnershipPercentage(v float64) *BeneficialOwnerUpsertOne {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.AddOwnershipPercentage(v)
+	})
+}
+
+// UpdateOwnershipPercentage sets the "ownership_percentage" field to the value that was provided on create.
+func (u *BeneficialOwnerUpsertOne) UpdateOwnershipPercentage() *BeneficialOwnerUpsertOne {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.UpdateOwnershipPercentage()
+	})
+}
+
+// SetGovernmentIssuedIDType sets the "government_issued_id_type" field.
+func (u *BeneficialOwnerUpsertOne) SetGovernmentIssuedIDType(v beneficialowner.GovernmentIssuedIDType) *BeneficialOwnerUpsertOne {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.SetGovernmentIssuedIDType(v)
+	})
+}
+
+// UpdateGovernmentIssuedIDType sets the "government_issued_id_type" field to the value that was provided on create.
+func (u *BeneficialOwnerUpsertOne) UpdateGovernmentIssuedIDType() *BeneficialOwnerUpsertOne {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.UpdateGovernmentIssuedIDType()
+	})
+}
+
+// ClearGovernmentIssuedIDType clears the value of the "government_issued_id_type" field.
+func (u *BeneficialOwnerUpsertOne) ClearGovernmentIssuedIDType() *BeneficialOwnerUpsertOne {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.ClearGovernmentIssuedIDType()
+	})
+}
+
+// Exec executes the query.
+func (u *BeneficialOwnerUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for BeneficialOwnerCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *BeneficialOwnerUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *BeneficialOwnerUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: BeneficialOwnerUpsertOne.ID is not supported by MySQL driver. Use BeneficialOwnerUpsertOne.Exec instead")
+	}
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *BeneficialOwnerUpsertOne) IDX(ctx context.Context) uuid.UUID {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // BeneficialOwnerCreateBulk is the builder for creating many BeneficialOwner entities in bulk.
 type BeneficialOwnerCreateBulk struct {
 	config
 	err      error
 	builders []*BeneficialOwnerCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the BeneficialOwner entities in the database.
@@ -287,6 +635,7 @@ func (bocb *BeneficialOwnerCreateBulk) Save(ctx context.Context) ([]*BeneficialO
 					_, err = mutators[i+1].Mutate(root, bocb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = bocb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, bocb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -333,6 +682,232 @@ func (bocb *BeneficialOwnerCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (bocb *BeneficialOwnerCreateBulk) ExecX(ctx context.Context) {
 	if err := bocb.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.BeneficialOwner.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.BeneficialOwnerUpsert) {
+//			SetFullName(v+v).
+//		}).
+//		Exec(ctx)
+func (bocb *BeneficialOwnerCreateBulk) OnConflict(opts ...sql.ConflictOption) *BeneficialOwnerUpsertBulk {
+	bocb.conflict = opts
+	return &BeneficialOwnerUpsertBulk{
+		create: bocb,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.BeneficialOwner.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (bocb *BeneficialOwnerCreateBulk) OnConflictColumns(columns ...string) *BeneficialOwnerUpsertBulk {
+	bocb.conflict = append(bocb.conflict, sql.ConflictColumns(columns...))
+	return &BeneficialOwnerUpsertBulk{
+		create: bocb,
+	}
+}
+
+// BeneficialOwnerUpsertBulk is the builder for "upsert"-ing
+// a bulk of BeneficialOwner nodes.
+type BeneficialOwnerUpsertBulk struct {
+	create *BeneficialOwnerCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.BeneficialOwner.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(beneficialowner.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *BeneficialOwnerUpsertBulk) UpdateNewValues() *BeneficialOwnerUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(beneficialowner.FieldID)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.BeneficialOwner.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *BeneficialOwnerUpsertBulk) Ignore() *BeneficialOwnerUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *BeneficialOwnerUpsertBulk) DoNothing() *BeneficialOwnerUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the BeneficialOwnerCreateBulk.OnConflict
+// documentation for more info.
+func (u *BeneficialOwnerUpsertBulk) Update(set func(*BeneficialOwnerUpsert)) *BeneficialOwnerUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&BeneficialOwnerUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetFullName sets the "full_name" field.
+func (u *BeneficialOwnerUpsertBulk) SetFullName(v string) *BeneficialOwnerUpsertBulk {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.SetFullName(v)
+	})
+}
+
+// UpdateFullName sets the "full_name" field to the value that was provided on create.
+func (u *BeneficialOwnerUpsertBulk) UpdateFullName() *BeneficialOwnerUpsertBulk {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.UpdateFullName()
+	})
+}
+
+// SetResidentialAddress sets the "residential_address" field.
+func (u *BeneficialOwnerUpsertBulk) SetResidentialAddress(v string) *BeneficialOwnerUpsertBulk {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.SetResidentialAddress(v)
+	})
+}
+
+// UpdateResidentialAddress sets the "residential_address" field to the value that was provided on create.
+func (u *BeneficialOwnerUpsertBulk) UpdateResidentialAddress() *BeneficialOwnerUpsertBulk {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.UpdateResidentialAddress()
+	})
+}
+
+// SetProofOfResidentialAddressURL sets the "proof_of_residential_address_url" field.
+func (u *BeneficialOwnerUpsertBulk) SetProofOfResidentialAddressURL(v string) *BeneficialOwnerUpsertBulk {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.SetProofOfResidentialAddressURL(v)
+	})
+}
+
+// UpdateProofOfResidentialAddressURL sets the "proof_of_residential_address_url" field to the value that was provided on create.
+func (u *BeneficialOwnerUpsertBulk) UpdateProofOfResidentialAddressURL() *BeneficialOwnerUpsertBulk {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.UpdateProofOfResidentialAddressURL()
+	})
+}
+
+// SetGovernmentIssuedIDURL sets the "government_issued_id_url" field.
+func (u *BeneficialOwnerUpsertBulk) SetGovernmentIssuedIDURL(v string) *BeneficialOwnerUpsertBulk {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.SetGovernmentIssuedIDURL(v)
+	})
+}
+
+// UpdateGovernmentIssuedIDURL sets the "government_issued_id_url" field to the value that was provided on create.
+func (u *BeneficialOwnerUpsertBulk) UpdateGovernmentIssuedIDURL() *BeneficialOwnerUpsertBulk {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.UpdateGovernmentIssuedIDURL()
+	})
+}
+
+// SetDateOfBirth sets the "date_of_birth" field.
+func (u *BeneficialOwnerUpsertBulk) SetDateOfBirth(v string) *BeneficialOwnerUpsertBulk {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.SetDateOfBirth(v)
+	})
+}
+
+// UpdateDateOfBirth sets the "date_of_birth" field to the value that was provided on create.
+func (u *BeneficialOwnerUpsertBulk) UpdateDateOfBirth() *BeneficialOwnerUpsertBulk {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.UpdateDateOfBirth()
+	})
+}
+
+// SetOwnershipPercentage sets the "ownership_percentage" field.
+func (u *BeneficialOwnerUpsertBulk) SetOwnershipPercentage(v float64) *BeneficialOwnerUpsertBulk {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.SetOwnershipPercentage(v)
+	})
+}
+
+// AddOwnershipPercentage adds v to the "ownership_percentage" field.
+func (u *BeneficialOwnerUpsertBulk) AddOwnershipPercentage(v float64) *BeneficialOwnerUpsertBulk {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.AddOwnershipPercentage(v)
+	})
+}
+
+// UpdateOwnershipPercentage sets the "ownership_percentage" field to the value that was provided on create.
+func (u *BeneficialOwnerUpsertBulk) UpdateOwnershipPercentage() *BeneficialOwnerUpsertBulk {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.UpdateOwnershipPercentage()
+	})
+}
+
+// SetGovernmentIssuedIDType sets the "government_issued_id_type" field.
+func (u *BeneficialOwnerUpsertBulk) SetGovernmentIssuedIDType(v beneficialowner.GovernmentIssuedIDType) *BeneficialOwnerUpsertBulk {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.SetGovernmentIssuedIDType(v)
+	})
+}
+
+// UpdateGovernmentIssuedIDType sets the "government_issued_id_type" field to the value that was provided on create.
+func (u *BeneficialOwnerUpsertBulk) UpdateGovernmentIssuedIDType() *BeneficialOwnerUpsertBulk {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.UpdateGovernmentIssuedIDType()
+	})
+}
+
+// ClearGovernmentIssuedIDType clears the value of the "government_issued_id_type" field.
+func (u *BeneficialOwnerUpsertBulk) ClearGovernmentIssuedIDType() *BeneficialOwnerUpsertBulk {
+	return u.Update(func(s *BeneficialOwnerUpsert) {
+		s.ClearGovernmentIssuedIDType()
+	})
+}
+
+// Exec executes the query.
+func (u *BeneficialOwnerUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the BeneficialOwnerCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for BeneficialOwnerCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *BeneficialOwnerUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

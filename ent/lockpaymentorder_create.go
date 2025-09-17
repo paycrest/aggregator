@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -25,6 +27,7 @@ type LockPaymentOrderCreate struct {
 	config
 	mutation *LockPaymentOrderMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -452,6 +455,7 @@ func (lpoc *LockPaymentOrderCreate) createSpec() (*LockPaymentOrder, *sqlgraph.C
 		_node = &LockPaymentOrder{config: lpoc.config}
 		_spec = sqlgraph.NewCreateSpec(lockpaymentorder.Table, sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID))
 	)
+	_spec.OnConflict = lpoc.conflict
 	if id, ok := lpoc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
@@ -618,11 +622,761 @@ func (lpoc *LockPaymentOrderCreate) createSpec() (*LockPaymentOrder, *sqlgraph.C
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.LockPaymentOrder.Create().
+//		SetCreatedAt(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.LockPaymentOrderUpsert) {
+//			SetCreatedAt(v+v).
+//		}).
+//		Exec(ctx)
+func (lpoc *LockPaymentOrderCreate) OnConflict(opts ...sql.ConflictOption) *LockPaymentOrderUpsertOne {
+	lpoc.conflict = opts
+	return &LockPaymentOrderUpsertOne{
+		create: lpoc,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.LockPaymentOrder.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (lpoc *LockPaymentOrderCreate) OnConflictColumns(columns ...string) *LockPaymentOrderUpsertOne {
+	lpoc.conflict = append(lpoc.conflict, sql.ConflictColumns(columns...))
+	return &LockPaymentOrderUpsertOne{
+		create: lpoc,
+	}
+}
+
+type (
+	// LockPaymentOrderUpsertOne is the builder for "upsert"-ing
+	//  one LockPaymentOrder node.
+	LockPaymentOrderUpsertOne struct {
+		create *LockPaymentOrderCreate
+	}
+
+	// LockPaymentOrderUpsert is the "OnConflict" setter.
+	LockPaymentOrderUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *LockPaymentOrderUpsert) SetUpdatedAt(v time.Time) *LockPaymentOrderUpsert {
+	u.Set(lockpaymentorder.FieldUpdatedAt, v)
+	return u
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsert) UpdateUpdatedAt() *LockPaymentOrderUpsert {
+	u.SetExcluded(lockpaymentorder.FieldUpdatedAt)
+	return u
+}
+
+// SetGatewayID sets the "gateway_id" field.
+func (u *LockPaymentOrderUpsert) SetGatewayID(v string) *LockPaymentOrderUpsert {
+	u.Set(lockpaymentorder.FieldGatewayID, v)
+	return u
+}
+
+// UpdateGatewayID sets the "gateway_id" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsert) UpdateGatewayID() *LockPaymentOrderUpsert {
+	u.SetExcluded(lockpaymentorder.FieldGatewayID)
+	return u
+}
+
+// SetAmount sets the "amount" field.
+func (u *LockPaymentOrderUpsert) SetAmount(v decimal.Decimal) *LockPaymentOrderUpsert {
+	u.Set(lockpaymentorder.FieldAmount, v)
+	return u
+}
+
+// UpdateAmount sets the "amount" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsert) UpdateAmount() *LockPaymentOrderUpsert {
+	u.SetExcluded(lockpaymentorder.FieldAmount)
+	return u
+}
+
+// AddAmount adds v to the "amount" field.
+func (u *LockPaymentOrderUpsert) AddAmount(v decimal.Decimal) *LockPaymentOrderUpsert {
+	u.Add(lockpaymentorder.FieldAmount, v)
+	return u
+}
+
+// SetProtocolFee sets the "protocol_fee" field.
+func (u *LockPaymentOrderUpsert) SetProtocolFee(v decimal.Decimal) *LockPaymentOrderUpsert {
+	u.Set(lockpaymentorder.FieldProtocolFee, v)
+	return u
+}
+
+// UpdateProtocolFee sets the "protocol_fee" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsert) UpdateProtocolFee() *LockPaymentOrderUpsert {
+	u.SetExcluded(lockpaymentorder.FieldProtocolFee)
+	return u
+}
+
+// AddProtocolFee adds v to the "protocol_fee" field.
+func (u *LockPaymentOrderUpsert) AddProtocolFee(v decimal.Decimal) *LockPaymentOrderUpsert {
+	u.Add(lockpaymentorder.FieldProtocolFee, v)
+	return u
+}
+
+// SetRate sets the "rate" field.
+func (u *LockPaymentOrderUpsert) SetRate(v decimal.Decimal) *LockPaymentOrderUpsert {
+	u.Set(lockpaymentorder.FieldRate, v)
+	return u
+}
+
+// UpdateRate sets the "rate" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsert) UpdateRate() *LockPaymentOrderUpsert {
+	u.SetExcluded(lockpaymentorder.FieldRate)
+	return u
+}
+
+// AddRate adds v to the "rate" field.
+func (u *LockPaymentOrderUpsert) AddRate(v decimal.Decimal) *LockPaymentOrderUpsert {
+	u.Add(lockpaymentorder.FieldRate, v)
+	return u
+}
+
+// SetOrderPercent sets the "order_percent" field.
+func (u *LockPaymentOrderUpsert) SetOrderPercent(v decimal.Decimal) *LockPaymentOrderUpsert {
+	u.Set(lockpaymentorder.FieldOrderPercent, v)
+	return u
+}
+
+// UpdateOrderPercent sets the "order_percent" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsert) UpdateOrderPercent() *LockPaymentOrderUpsert {
+	u.SetExcluded(lockpaymentorder.FieldOrderPercent)
+	return u
+}
+
+// AddOrderPercent adds v to the "order_percent" field.
+func (u *LockPaymentOrderUpsert) AddOrderPercent(v decimal.Decimal) *LockPaymentOrderUpsert {
+	u.Add(lockpaymentorder.FieldOrderPercent, v)
+	return u
+}
+
+// SetSender sets the "sender" field.
+func (u *LockPaymentOrderUpsert) SetSender(v string) *LockPaymentOrderUpsert {
+	u.Set(lockpaymentorder.FieldSender, v)
+	return u
+}
+
+// UpdateSender sets the "sender" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsert) UpdateSender() *LockPaymentOrderUpsert {
+	u.SetExcluded(lockpaymentorder.FieldSender)
+	return u
+}
+
+// ClearSender clears the value of the "sender" field.
+func (u *LockPaymentOrderUpsert) ClearSender() *LockPaymentOrderUpsert {
+	u.SetNull(lockpaymentorder.FieldSender)
+	return u
+}
+
+// SetTxHash sets the "tx_hash" field.
+func (u *LockPaymentOrderUpsert) SetTxHash(v string) *LockPaymentOrderUpsert {
+	u.Set(lockpaymentorder.FieldTxHash, v)
+	return u
+}
+
+// UpdateTxHash sets the "tx_hash" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsert) UpdateTxHash() *LockPaymentOrderUpsert {
+	u.SetExcluded(lockpaymentorder.FieldTxHash)
+	return u
+}
+
+// ClearTxHash clears the value of the "tx_hash" field.
+func (u *LockPaymentOrderUpsert) ClearTxHash() *LockPaymentOrderUpsert {
+	u.SetNull(lockpaymentorder.FieldTxHash)
+	return u
+}
+
+// SetStatus sets the "status" field.
+func (u *LockPaymentOrderUpsert) SetStatus(v lockpaymentorder.Status) *LockPaymentOrderUpsert {
+	u.Set(lockpaymentorder.FieldStatus, v)
+	return u
+}
+
+// UpdateStatus sets the "status" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsert) UpdateStatus() *LockPaymentOrderUpsert {
+	u.SetExcluded(lockpaymentorder.FieldStatus)
+	return u
+}
+
+// SetBlockNumber sets the "block_number" field.
+func (u *LockPaymentOrderUpsert) SetBlockNumber(v int64) *LockPaymentOrderUpsert {
+	u.Set(lockpaymentorder.FieldBlockNumber, v)
+	return u
+}
+
+// UpdateBlockNumber sets the "block_number" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsert) UpdateBlockNumber() *LockPaymentOrderUpsert {
+	u.SetExcluded(lockpaymentorder.FieldBlockNumber)
+	return u
+}
+
+// AddBlockNumber adds v to the "block_number" field.
+func (u *LockPaymentOrderUpsert) AddBlockNumber(v int64) *LockPaymentOrderUpsert {
+	u.Add(lockpaymentorder.FieldBlockNumber, v)
+	return u
+}
+
+// SetInstitution sets the "institution" field.
+func (u *LockPaymentOrderUpsert) SetInstitution(v string) *LockPaymentOrderUpsert {
+	u.Set(lockpaymentorder.FieldInstitution, v)
+	return u
+}
+
+// UpdateInstitution sets the "institution" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsert) UpdateInstitution() *LockPaymentOrderUpsert {
+	u.SetExcluded(lockpaymentorder.FieldInstitution)
+	return u
+}
+
+// SetAccountIdentifier sets the "account_identifier" field.
+func (u *LockPaymentOrderUpsert) SetAccountIdentifier(v string) *LockPaymentOrderUpsert {
+	u.Set(lockpaymentorder.FieldAccountIdentifier, v)
+	return u
+}
+
+// UpdateAccountIdentifier sets the "account_identifier" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsert) UpdateAccountIdentifier() *LockPaymentOrderUpsert {
+	u.SetExcluded(lockpaymentorder.FieldAccountIdentifier)
+	return u
+}
+
+// SetAccountName sets the "account_name" field.
+func (u *LockPaymentOrderUpsert) SetAccountName(v string) *LockPaymentOrderUpsert {
+	u.Set(lockpaymentorder.FieldAccountName, v)
+	return u
+}
+
+// UpdateAccountName sets the "account_name" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsert) UpdateAccountName() *LockPaymentOrderUpsert {
+	u.SetExcluded(lockpaymentorder.FieldAccountName)
+	return u
+}
+
+// SetMemo sets the "memo" field.
+func (u *LockPaymentOrderUpsert) SetMemo(v string) *LockPaymentOrderUpsert {
+	u.Set(lockpaymentorder.FieldMemo, v)
+	return u
+}
+
+// UpdateMemo sets the "memo" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsert) UpdateMemo() *LockPaymentOrderUpsert {
+	u.SetExcluded(lockpaymentorder.FieldMemo)
+	return u
+}
+
+// ClearMemo clears the value of the "memo" field.
+func (u *LockPaymentOrderUpsert) ClearMemo() *LockPaymentOrderUpsert {
+	u.SetNull(lockpaymentorder.FieldMemo)
+	return u
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *LockPaymentOrderUpsert) SetMetadata(v map[string]interface{}) *LockPaymentOrderUpsert {
+	u.Set(lockpaymentorder.FieldMetadata, v)
+	return u
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsert) UpdateMetadata() *LockPaymentOrderUpsert {
+	u.SetExcluded(lockpaymentorder.FieldMetadata)
+	return u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *LockPaymentOrderUpsert) ClearMetadata() *LockPaymentOrderUpsert {
+	u.SetNull(lockpaymentorder.FieldMetadata)
+	return u
+}
+
+// SetCancellationCount sets the "cancellation_count" field.
+func (u *LockPaymentOrderUpsert) SetCancellationCount(v int) *LockPaymentOrderUpsert {
+	u.Set(lockpaymentorder.FieldCancellationCount, v)
+	return u
+}
+
+// UpdateCancellationCount sets the "cancellation_count" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsert) UpdateCancellationCount() *LockPaymentOrderUpsert {
+	u.SetExcluded(lockpaymentorder.FieldCancellationCount)
+	return u
+}
+
+// AddCancellationCount adds v to the "cancellation_count" field.
+func (u *LockPaymentOrderUpsert) AddCancellationCount(v int) *LockPaymentOrderUpsert {
+	u.Add(lockpaymentorder.FieldCancellationCount, v)
+	return u
+}
+
+// SetCancellationReasons sets the "cancellation_reasons" field.
+func (u *LockPaymentOrderUpsert) SetCancellationReasons(v []string) *LockPaymentOrderUpsert {
+	u.Set(lockpaymentorder.FieldCancellationReasons, v)
+	return u
+}
+
+// UpdateCancellationReasons sets the "cancellation_reasons" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsert) UpdateCancellationReasons() *LockPaymentOrderUpsert {
+	u.SetExcluded(lockpaymentorder.FieldCancellationReasons)
+	return u
+}
+
+// SetMessageHash sets the "message_hash" field.
+func (u *LockPaymentOrderUpsert) SetMessageHash(v string) *LockPaymentOrderUpsert {
+	u.Set(lockpaymentorder.FieldMessageHash, v)
+	return u
+}
+
+// UpdateMessageHash sets the "message_hash" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsert) UpdateMessageHash() *LockPaymentOrderUpsert {
+	u.SetExcluded(lockpaymentorder.FieldMessageHash)
+	return u
+}
+
+// ClearMessageHash clears the value of the "message_hash" field.
+func (u *LockPaymentOrderUpsert) ClearMessageHash() *LockPaymentOrderUpsert {
+	u.SetNull(lockpaymentorder.FieldMessageHash)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
+// Using this option is equivalent to using:
+//
+//	client.LockPaymentOrder.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(lockpaymentorder.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *LockPaymentOrderUpsertOne) UpdateNewValues() *LockPaymentOrderUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(lockpaymentorder.FieldID)
+		}
+		if _, exists := u.create.mutation.CreatedAt(); exists {
+			s.SetIgnore(lockpaymentorder.FieldCreatedAt)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.LockPaymentOrder.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *LockPaymentOrderUpsertOne) Ignore() *LockPaymentOrderUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *LockPaymentOrderUpsertOne) DoNothing() *LockPaymentOrderUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the LockPaymentOrderCreate.OnConflict
+// documentation for more info.
+func (u *LockPaymentOrderUpsertOne) Update(set func(*LockPaymentOrderUpsert)) *LockPaymentOrderUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&LockPaymentOrderUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *LockPaymentOrderUpsertOne) SetUpdatedAt(v time.Time) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetUpdatedAt(v)
+	})
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertOne) UpdateUpdatedAt() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateUpdatedAt()
+	})
+}
+
+// SetGatewayID sets the "gateway_id" field.
+func (u *LockPaymentOrderUpsertOne) SetGatewayID(v string) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetGatewayID(v)
+	})
+}
+
+// UpdateGatewayID sets the "gateway_id" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertOne) UpdateGatewayID() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateGatewayID()
+	})
+}
+
+// SetAmount sets the "amount" field.
+func (u *LockPaymentOrderUpsertOne) SetAmount(v decimal.Decimal) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetAmount(v)
+	})
+}
+
+// AddAmount adds v to the "amount" field.
+func (u *LockPaymentOrderUpsertOne) AddAmount(v decimal.Decimal) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.AddAmount(v)
+	})
+}
+
+// UpdateAmount sets the "amount" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertOne) UpdateAmount() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateAmount()
+	})
+}
+
+// SetProtocolFee sets the "protocol_fee" field.
+func (u *LockPaymentOrderUpsertOne) SetProtocolFee(v decimal.Decimal) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetProtocolFee(v)
+	})
+}
+
+// AddProtocolFee adds v to the "protocol_fee" field.
+func (u *LockPaymentOrderUpsertOne) AddProtocolFee(v decimal.Decimal) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.AddProtocolFee(v)
+	})
+}
+
+// UpdateProtocolFee sets the "protocol_fee" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertOne) UpdateProtocolFee() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateProtocolFee()
+	})
+}
+
+// SetRate sets the "rate" field.
+func (u *LockPaymentOrderUpsertOne) SetRate(v decimal.Decimal) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetRate(v)
+	})
+}
+
+// AddRate adds v to the "rate" field.
+func (u *LockPaymentOrderUpsertOne) AddRate(v decimal.Decimal) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.AddRate(v)
+	})
+}
+
+// UpdateRate sets the "rate" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertOne) UpdateRate() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateRate()
+	})
+}
+
+// SetOrderPercent sets the "order_percent" field.
+func (u *LockPaymentOrderUpsertOne) SetOrderPercent(v decimal.Decimal) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetOrderPercent(v)
+	})
+}
+
+// AddOrderPercent adds v to the "order_percent" field.
+func (u *LockPaymentOrderUpsertOne) AddOrderPercent(v decimal.Decimal) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.AddOrderPercent(v)
+	})
+}
+
+// UpdateOrderPercent sets the "order_percent" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertOne) UpdateOrderPercent() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateOrderPercent()
+	})
+}
+
+// SetSender sets the "sender" field.
+func (u *LockPaymentOrderUpsertOne) SetSender(v string) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetSender(v)
+	})
+}
+
+// UpdateSender sets the "sender" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertOne) UpdateSender() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateSender()
+	})
+}
+
+// ClearSender clears the value of the "sender" field.
+func (u *LockPaymentOrderUpsertOne) ClearSender() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.ClearSender()
+	})
+}
+
+// SetTxHash sets the "tx_hash" field.
+func (u *LockPaymentOrderUpsertOne) SetTxHash(v string) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetTxHash(v)
+	})
+}
+
+// UpdateTxHash sets the "tx_hash" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertOne) UpdateTxHash() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateTxHash()
+	})
+}
+
+// ClearTxHash clears the value of the "tx_hash" field.
+func (u *LockPaymentOrderUpsertOne) ClearTxHash() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.ClearTxHash()
+	})
+}
+
+// SetStatus sets the "status" field.
+func (u *LockPaymentOrderUpsertOne) SetStatus(v lockpaymentorder.Status) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetStatus(v)
+	})
+}
+
+// UpdateStatus sets the "status" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertOne) UpdateStatus() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateStatus()
+	})
+}
+
+// SetBlockNumber sets the "block_number" field.
+func (u *LockPaymentOrderUpsertOne) SetBlockNumber(v int64) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetBlockNumber(v)
+	})
+}
+
+// AddBlockNumber adds v to the "block_number" field.
+func (u *LockPaymentOrderUpsertOne) AddBlockNumber(v int64) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.AddBlockNumber(v)
+	})
+}
+
+// UpdateBlockNumber sets the "block_number" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertOne) UpdateBlockNumber() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateBlockNumber()
+	})
+}
+
+// SetInstitution sets the "institution" field.
+func (u *LockPaymentOrderUpsertOne) SetInstitution(v string) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetInstitution(v)
+	})
+}
+
+// UpdateInstitution sets the "institution" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertOne) UpdateInstitution() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateInstitution()
+	})
+}
+
+// SetAccountIdentifier sets the "account_identifier" field.
+func (u *LockPaymentOrderUpsertOne) SetAccountIdentifier(v string) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetAccountIdentifier(v)
+	})
+}
+
+// UpdateAccountIdentifier sets the "account_identifier" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertOne) UpdateAccountIdentifier() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateAccountIdentifier()
+	})
+}
+
+// SetAccountName sets the "account_name" field.
+func (u *LockPaymentOrderUpsertOne) SetAccountName(v string) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetAccountName(v)
+	})
+}
+
+// UpdateAccountName sets the "account_name" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertOne) UpdateAccountName() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateAccountName()
+	})
+}
+
+// SetMemo sets the "memo" field.
+func (u *LockPaymentOrderUpsertOne) SetMemo(v string) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetMemo(v)
+	})
+}
+
+// UpdateMemo sets the "memo" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertOne) UpdateMemo() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateMemo()
+	})
+}
+
+// ClearMemo clears the value of the "memo" field.
+func (u *LockPaymentOrderUpsertOne) ClearMemo() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.ClearMemo()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *LockPaymentOrderUpsertOne) SetMetadata(v map[string]interface{}) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertOne) UpdateMetadata() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *LockPaymentOrderUpsertOne) ClearMetadata() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.ClearMetadata()
+	})
+}
+
+// SetCancellationCount sets the "cancellation_count" field.
+func (u *LockPaymentOrderUpsertOne) SetCancellationCount(v int) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetCancellationCount(v)
+	})
+}
+
+// AddCancellationCount adds v to the "cancellation_count" field.
+func (u *LockPaymentOrderUpsertOne) AddCancellationCount(v int) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.AddCancellationCount(v)
+	})
+}
+
+// UpdateCancellationCount sets the "cancellation_count" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertOne) UpdateCancellationCount() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateCancellationCount()
+	})
+}
+
+// SetCancellationReasons sets the "cancellation_reasons" field.
+func (u *LockPaymentOrderUpsertOne) SetCancellationReasons(v []string) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetCancellationReasons(v)
+	})
+}
+
+// UpdateCancellationReasons sets the "cancellation_reasons" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertOne) UpdateCancellationReasons() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateCancellationReasons()
+	})
+}
+
+// SetMessageHash sets the "message_hash" field.
+func (u *LockPaymentOrderUpsertOne) SetMessageHash(v string) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetMessageHash(v)
+	})
+}
+
+// UpdateMessageHash sets the "message_hash" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertOne) UpdateMessageHash() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateMessageHash()
+	})
+}
+
+// ClearMessageHash clears the value of the "message_hash" field.
+func (u *LockPaymentOrderUpsertOne) ClearMessageHash() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.ClearMessageHash()
+	})
+}
+
+// Exec executes the query.
+func (u *LockPaymentOrderUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for LockPaymentOrderCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *LockPaymentOrderUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *LockPaymentOrderUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: LockPaymentOrderUpsertOne.ID is not supported by MySQL driver. Use LockPaymentOrderUpsertOne.Exec instead")
+	}
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *LockPaymentOrderUpsertOne) IDX(ctx context.Context) uuid.UUID {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // LockPaymentOrderCreateBulk is the builder for creating many LockPaymentOrder entities in bulk.
 type LockPaymentOrderCreateBulk struct {
 	config
 	err      error
 	builders []*LockPaymentOrderCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the LockPaymentOrder entities in the database.
@@ -652,6 +1406,7 @@ func (lpocb *LockPaymentOrderCreateBulk) Save(ctx context.Context) ([]*LockPayme
 					_, err = mutators[i+1].Mutate(root, lpocb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = lpocb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, lpocb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -698,6 +1453,452 @@ func (lpocb *LockPaymentOrderCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (lpocb *LockPaymentOrderCreateBulk) ExecX(ctx context.Context) {
 	if err := lpocb.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.LockPaymentOrder.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.LockPaymentOrderUpsert) {
+//			SetCreatedAt(v+v).
+//		}).
+//		Exec(ctx)
+func (lpocb *LockPaymentOrderCreateBulk) OnConflict(opts ...sql.ConflictOption) *LockPaymentOrderUpsertBulk {
+	lpocb.conflict = opts
+	return &LockPaymentOrderUpsertBulk{
+		create: lpocb,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.LockPaymentOrder.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (lpocb *LockPaymentOrderCreateBulk) OnConflictColumns(columns ...string) *LockPaymentOrderUpsertBulk {
+	lpocb.conflict = append(lpocb.conflict, sql.ConflictColumns(columns...))
+	return &LockPaymentOrderUpsertBulk{
+		create: lpocb,
+	}
+}
+
+// LockPaymentOrderUpsertBulk is the builder for "upsert"-ing
+// a bulk of LockPaymentOrder nodes.
+type LockPaymentOrderUpsertBulk struct {
+	create *LockPaymentOrderCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.LockPaymentOrder.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(lockpaymentorder.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *LockPaymentOrderUpsertBulk) UpdateNewValues() *LockPaymentOrderUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(lockpaymentorder.FieldID)
+			}
+			if _, exists := b.mutation.CreatedAt(); exists {
+				s.SetIgnore(lockpaymentorder.FieldCreatedAt)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.LockPaymentOrder.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *LockPaymentOrderUpsertBulk) Ignore() *LockPaymentOrderUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *LockPaymentOrderUpsertBulk) DoNothing() *LockPaymentOrderUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the LockPaymentOrderCreateBulk.OnConflict
+// documentation for more info.
+func (u *LockPaymentOrderUpsertBulk) Update(set func(*LockPaymentOrderUpsert)) *LockPaymentOrderUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&LockPaymentOrderUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *LockPaymentOrderUpsertBulk) SetUpdatedAt(v time.Time) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetUpdatedAt(v)
+	})
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertBulk) UpdateUpdatedAt() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateUpdatedAt()
+	})
+}
+
+// SetGatewayID sets the "gateway_id" field.
+func (u *LockPaymentOrderUpsertBulk) SetGatewayID(v string) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetGatewayID(v)
+	})
+}
+
+// UpdateGatewayID sets the "gateway_id" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertBulk) UpdateGatewayID() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateGatewayID()
+	})
+}
+
+// SetAmount sets the "amount" field.
+func (u *LockPaymentOrderUpsertBulk) SetAmount(v decimal.Decimal) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetAmount(v)
+	})
+}
+
+// AddAmount adds v to the "amount" field.
+func (u *LockPaymentOrderUpsertBulk) AddAmount(v decimal.Decimal) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.AddAmount(v)
+	})
+}
+
+// UpdateAmount sets the "amount" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertBulk) UpdateAmount() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateAmount()
+	})
+}
+
+// SetProtocolFee sets the "protocol_fee" field.
+func (u *LockPaymentOrderUpsertBulk) SetProtocolFee(v decimal.Decimal) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetProtocolFee(v)
+	})
+}
+
+// AddProtocolFee adds v to the "protocol_fee" field.
+func (u *LockPaymentOrderUpsertBulk) AddProtocolFee(v decimal.Decimal) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.AddProtocolFee(v)
+	})
+}
+
+// UpdateProtocolFee sets the "protocol_fee" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertBulk) UpdateProtocolFee() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateProtocolFee()
+	})
+}
+
+// SetRate sets the "rate" field.
+func (u *LockPaymentOrderUpsertBulk) SetRate(v decimal.Decimal) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetRate(v)
+	})
+}
+
+// AddRate adds v to the "rate" field.
+func (u *LockPaymentOrderUpsertBulk) AddRate(v decimal.Decimal) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.AddRate(v)
+	})
+}
+
+// UpdateRate sets the "rate" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertBulk) UpdateRate() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateRate()
+	})
+}
+
+// SetOrderPercent sets the "order_percent" field.
+func (u *LockPaymentOrderUpsertBulk) SetOrderPercent(v decimal.Decimal) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetOrderPercent(v)
+	})
+}
+
+// AddOrderPercent adds v to the "order_percent" field.
+func (u *LockPaymentOrderUpsertBulk) AddOrderPercent(v decimal.Decimal) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.AddOrderPercent(v)
+	})
+}
+
+// UpdateOrderPercent sets the "order_percent" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertBulk) UpdateOrderPercent() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateOrderPercent()
+	})
+}
+
+// SetSender sets the "sender" field.
+func (u *LockPaymentOrderUpsertBulk) SetSender(v string) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetSender(v)
+	})
+}
+
+// UpdateSender sets the "sender" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertBulk) UpdateSender() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateSender()
+	})
+}
+
+// ClearSender clears the value of the "sender" field.
+func (u *LockPaymentOrderUpsertBulk) ClearSender() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.ClearSender()
+	})
+}
+
+// SetTxHash sets the "tx_hash" field.
+func (u *LockPaymentOrderUpsertBulk) SetTxHash(v string) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetTxHash(v)
+	})
+}
+
+// UpdateTxHash sets the "tx_hash" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertBulk) UpdateTxHash() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateTxHash()
+	})
+}
+
+// ClearTxHash clears the value of the "tx_hash" field.
+func (u *LockPaymentOrderUpsertBulk) ClearTxHash() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.ClearTxHash()
+	})
+}
+
+// SetStatus sets the "status" field.
+func (u *LockPaymentOrderUpsertBulk) SetStatus(v lockpaymentorder.Status) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetStatus(v)
+	})
+}
+
+// UpdateStatus sets the "status" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertBulk) UpdateStatus() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateStatus()
+	})
+}
+
+// SetBlockNumber sets the "block_number" field.
+func (u *LockPaymentOrderUpsertBulk) SetBlockNumber(v int64) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetBlockNumber(v)
+	})
+}
+
+// AddBlockNumber adds v to the "block_number" field.
+func (u *LockPaymentOrderUpsertBulk) AddBlockNumber(v int64) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.AddBlockNumber(v)
+	})
+}
+
+// UpdateBlockNumber sets the "block_number" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertBulk) UpdateBlockNumber() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateBlockNumber()
+	})
+}
+
+// SetInstitution sets the "institution" field.
+func (u *LockPaymentOrderUpsertBulk) SetInstitution(v string) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetInstitution(v)
+	})
+}
+
+// UpdateInstitution sets the "institution" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertBulk) UpdateInstitution() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateInstitution()
+	})
+}
+
+// SetAccountIdentifier sets the "account_identifier" field.
+func (u *LockPaymentOrderUpsertBulk) SetAccountIdentifier(v string) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetAccountIdentifier(v)
+	})
+}
+
+// UpdateAccountIdentifier sets the "account_identifier" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertBulk) UpdateAccountIdentifier() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateAccountIdentifier()
+	})
+}
+
+// SetAccountName sets the "account_name" field.
+func (u *LockPaymentOrderUpsertBulk) SetAccountName(v string) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetAccountName(v)
+	})
+}
+
+// UpdateAccountName sets the "account_name" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertBulk) UpdateAccountName() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateAccountName()
+	})
+}
+
+// SetMemo sets the "memo" field.
+func (u *LockPaymentOrderUpsertBulk) SetMemo(v string) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetMemo(v)
+	})
+}
+
+// UpdateMemo sets the "memo" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertBulk) UpdateMemo() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateMemo()
+	})
+}
+
+// ClearMemo clears the value of the "memo" field.
+func (u *LockPaymentOrderUpsertBulk) ClearMemo() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.ClearMemo()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *LockPaymentOrderUpsertBulk) SetMetadata(v map[string]interface{}) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertBulk) UpdateMetadata() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *LockPaymentOrderUpsertBulk) ClearMetadata() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.ClearMetadata()
+	})
+}
+
+// SetCancellationCount sets the "cancellation_count" field.
+func (u *LockPaymentOrderUpsertBulk) SetCancellationCount(v int) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetCancellationCount(v)
+	})
+}
+
+// AddCancellationCount adds v to the "cancellation_count" field.
+func (u *LockPaymentOrderUpsertBulk) AddCancellationCount(v int) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.AddCancellationCount(v)
+	})
+}
+
+// UpdateCancellationCount sets the "cancellation_count" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertBulk) UpdateCancellationCount() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateCancellationCount()
+	})
+}
+
+// SetCancellationReasons sets the "cancellation_reasons" field.
+func (u *LockPaymentOrderUpsertBulk) SetCancellationReasons(v []string) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetCancellationReasons(v)
+	})
+}
+
+// UpdateCancellationReasons sets the "cancellation_reasons" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertBulk) UpdateCancellationReasons() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateCancellationReasons()
+	})
+}
+
+// SetMessageHash sets the "message_hash" field.
+func (u *LockPaymentOrderUpsertBulk) SetMessageHash(v string) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetMessageHash(v)
+	})
+}
+
+// UpdateMessageHash sets the "message_hash" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertBulk) UpdateMessageHash() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateMessageHash()
+	})
+}
+
+// ClearMessageHash clears the value of the "message_hash" field.
+func (u *LockPaymentOrderUpsertBulk) ClearMessageHash() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.ClearMessageHash()
+	})
+}
+
+// Exec executes the query.
+func (u *LockPaymentOrderUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the LockPaymentOrderCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for LockPaymentOrderCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *LockPaymentOrderUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -21,6 +23,7 @@ type PaymentWebhookCreate struct {
 	config
 	mutation *PaymentWebhookMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -233,6 +236,7 @@ func (pwc *PaymentWebhookCreate) createSpec() (*PaymentWebhook, *sqlgraph.Create
 		_node = &PaymentWebhook{config: pwc.config}
 		_spec = sqlgraph.NewCreateSpec(paymentwebhook.Table, sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID))
 	)
+	_spec.OnConflict = pwc.conflict
 	if id, ok := pwc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
@@ -294,11 +298,254 @@ func (pwc *PaymentWebhookCreate) createSpec() (*PaymentWebhook, *sqlgraph.Create
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.PaymentWebhook.Create().
+//		SetCreatedAt(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.PaymentWebhookUpsert) {
+//			SetCreatedAt(v+v).
+//		}).
+//		Exec(ctx)
+func (pwc *PaymentWebhookCreate) OnConflict(opts ...sql.ConflictOption) *PaymentWebhookUpsertOne {
+	pwc.conflict = opts
+	return &PaymentWebhookUpsertOne{
+		create: pwc,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.PaymentWebhook.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (pwc *PaymentWebhookCreate) OnConflictColumns(columns ...string) *PaymentWebhookUpsertOne {
+	pwc.conflict = append(pwc.conflict, sql.ConflictColumns(columns...))
+	return &PaymentWebhookUpsertOne{
+		create: pwc,
+	}
+}
+
+type (
+	// PaymentWebhookUpsertOne is the builder for "upsert"-ing
+	//  one PaymentWebhook node.
+	PaymentWebhookUpsertOne struct {
+		create *PaymentWebhookCreate
+	}
+
+	// PaymentWebhookUpsert is the "OnConflict" setter.
+	PaymentWebhookUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *PaymentWebhookUpsert) SetUpdatedAt(v time.Time) *PaymentWebhookUpsert {
+	u.Set(paymentwebhook.FieldUpdatedAt, v)
+	return u
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *PaymentWebhookUpsert) UpdateUpdatedAt() *PaymentWebhookUpsert {
+	u.SetExcluded(paymentwebhook.FieldUpdatedAt)
+	return u
+}
+
+// SetWebhookID sets the "webhook_id" field.
+func (u *PaymentWebhookUpsert) SetWebhookID(v string) *PaymentWebhookUpsert {
+	u.Set(paymentwebhook.FieldWebhookID, v)
+	return u
+}
+
+// UpdateWebhookID sets the "webhook_id" field to the value that was provided on create.
+func (u *PaymentWebhookUpsert) UpdateWebhookID() *PaymentWebhookUpsert {
+	u.SetExcluded(paymentwebhook.FieldWebhookID)
+	return u
+}
+
+// SetWebhookSecret sets the "webhook_secret" field.
+func (u *PaymentWebhookUpsert) SetWebhookSecret(v string) *PaymentWebhookUpsert {
+	u.Set(paymentwebhook.FieldWebhookSecret, v)
+	return u
+}
+
+// UpdateWebhookSecret sets the "webhook_secret" field to the value that was provided on create.
+func (u *PaymentWebhookUpsert) UpdateWebhookSecret() *PaymentWebhookUpsert {
+	u.SetExcluded(paymentwebhook.FieldWebhookSecret)
+	return u
+}
+
+// SetCallbackURL sets the "callback_url" field.
+func (u *PaymentWebhookUpsert) SetCallbackURL(v string) *PaymentWebhookUpsert {
+	u.Set(paymentwebhook.FieldCallbackURL, v)
+	return u
+}
+
+// UpdateCallbackURL sets the "callback_url" field to the value that was provided on create.
+func (u *PaymentWebhookUpsert) UpdateCallbackURL() *PaymentWebhookUpsert {
+	u.SetExcluded(paymentwebhook.FieldCallbackURL)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
+// Using this option is equivalent to using:
+//
+//	client.PaymentWebhook.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(paymentwebhook.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *PaymentWebhookUpsertOne) UpdateNewValues() *PaymentWebhookUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(paymentwebhook.FieldID)
+		}
+		if _, exists := u.create.mutation.CreatedAt(); exists {
+			s.SetIgnore(paymentwebhook.FieldCreatedAt)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.PaymentWebhook.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *PaymentWebhookUpsertOne) Ignore() *PaymentWebhookUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *PaymentWebhookUpsertOne) DoNothing() *PaymentWebhookUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the PaymentWebhookCreate.OnConflict
+// documentation for more info.
+func (u *PaymentWebhookUpsertOne) Update(set func(*PaymentWebhookUpsert)) *PaymentWebhookUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&PaymentWebhookUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *PaymentWebhookUpsertOne) SetUpdatedAt(v time.Time) *PaymentWebhookUpsertOne {
+	return u.Update(func(s *PaymentWebhookUpsert) {
+		s.SetUpdatedAt(v)
+	})
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *PaymentWebhookUpsertOne) UpdateUpdatedAt() *PaymentWebhookUpsertOne {
+	return u.Update(func(s *PaymentWebhookUpsert) {
+		s.UpdateUpdatedAt()
+	})
+}
+
+// SetWebhookID sets the "webhook_id" field.
+func (u *PaymentWebhookUpsertOne) SetWebhookID(v string) *PaymentWebhookUpsertOne {
+	return u.Update(func(s *PaymentWebhookUpsert) {
+		s.SetWebhookID(v)
+	})
+}
+
+// UpdateWebhookID sets the "webhook_id" field to the value that was provided on create.
+func (u *PaymentWebhookUpsertOne) UpdateWebhookID() *PaymentWebhookUpsertOne {
+	return u.Update(func(s *PaymentWebhookUpsert) {
+		s.UpdateWebhookID()
+	})
+}
+
+// SetWebhookSecret sets the "webhook_secret" field.
+func (u *PaymentWebhookUpsertOne) SetWebhookSecret(v string) *PaymentWebhookUpsertOne {
+	return u.Update(func(s *PaymentWebhookUpsert) {
+		s.SetWebhookSecret(v)
+	})
+}
+
+// UpdateWebhookSecret sets the "webhook_secret" field to the value that was provided on create.
+func (u *PaymentWebhookUpsertOne) UpdateWebhookSecret() *PaymentWebhookUpsertOne {
+	return u.Update(func(s *PaymentWebhookUpsert) {
+		s.UpdateWebhookSecret()
+	})
+}
+
+// SetCallbackURL sets the "callback_url" field.
+func (u *PaymentWebhookUpsertOne) SetCallbackURL(v string) *PaymentWebhookUpsertOne {
+	return u.Update(func(s *PaymentWebhookUpsert) {
+		s.SetCallbackURL(v)
+	})
+}
+
+// UpdateCallbackURL sets the "callback_url" field to the value that was provided on create.
+func (u *PaymentWebhookUpsertOne) UpdateCallbackURL() *PaymentWebhookUpsertOne {
+	return u.Update(func(s *PaymentWebhookUpsert) {
+		s.UpdateCallbackURL()
+	})
+}
+
+// Exec executes the query.
+func (u *PaymentWebhookUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for PaymentWebhookCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *PaymentWebhookUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *PaymentWebhookUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: PaymentWebhookUpsertOne.ID is not supported by MySQL driver. Use PaymentWebhookUpsertOne.Exec instead")
+	}
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *PaymentWebhookUpsertOne) IDX(ctx context.Context) uuid.UUID {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // PaymentWebhookCreateBulk is the builder for creating many PaymentWebhook entities in bulk.
 type PaymentWebhookCreateBulk struct {
 	config
 	err      error
 	builders []*PaymentWebhookCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the PaymentWebhook entities in the database.
@@ -328,6 +575,7 @@ func (pwcb *PaymentWebhookCreateBulk) Save(ctx context.Context) ([]*PaymentWebho
 					_, err = mutators[i+1].Mutate(root, pwcb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = pwcb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, pwcb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -374,6 +622,179 @@ func (pwcb *PaymentWebhookCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (pwcb *PaymentWebhookCreateBulk) ExecX(ctx context.Context) {
 	if err := pwcb.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.PaymentWebhook.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.PaymentWebhookUpsert) {
+//			SetCreatedAt(v+v).
+//		}).
+//		Exec(ctx)
+func (pwcb *PaymentWebhookCreateBulk) OnConflict(opts ...sql.ConflictOption) *PaymentWebhookUpsertBulk {
+	pwcb.conflict = opts
+	return &PaymentWebhookUpsertBulk{
+		create: pwcb,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.PaymentWebhook.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (pwcb *PaymentWebhookCreateBulk) OnConflictColumns(columns ...string) *PaymentWebhookUpsertBulk {
+	pwcb.conflict = append(pwcb.conflict, sql.ConflictColumns(columns...))
+	return &PaymentWebhookUpsertBulk{
+		create: pwcb,
+	}
+}
+
+// PaymentWebhookUpsertBulk is the builder for "upsert"-ing
+// a bulk of PaymentWebhook nodes.
+type PaymentWebhookUpsertBulk struct {
+	create *PaymentWebhookCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.PaymentWebhook.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(paymentwebhook.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *PaymentWebhookUpsertBulk) UpdateNewValues() *PaymentWebhookUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(paymentwebhook.FieldID)
+			}
+			if _, exists := b.mutation.CreatedAt(); exists {
+				s.SetIgnore(paymentwebhook.FieldCreatedAt)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.PaymentWebhook.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *PaymentWebhookUpsertBulk) Ignore() *PaymentWebhookUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *PaymentWebhookUpsertBulk) DoNothing() *PaymentWebhookUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the PaymentWebhookCreateBulk.OnConflict
+// documentation for more info.
+func (u *PaymentWebhookUpsertBulk) Update(set func(*PaymentWebhookUpsert)) *PaymentWebhookUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&PaymentWebhookUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *PaymentWebhookUpsertBulk) SetUpdatedAt(v time.Time) *PaymentWebhookUpsertBulk {
+	return u.Update(func(s *PaymentWebhookUpsert) {
+		s.SetUpdatedAt(v)
+	})
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *PaymentWebhookUpsertBulk) UpdateUpdatedAt() *PaymentWebhookUpsertBulk {
+	return u.Update(func(s *PaymentWebhookUpsert) {
+		s.UpdateUpdatedAt()
+	})
+}
+
+// SetWebhookID sets the "webhook_id" field.
+func (u *PaymentWebhookUpsertBulk) SetWebhookID(v string) *PaymentWebhookUpsertBulk {
+	return u.Update(func(s *PaymentWebhookUpsert) {
+		s.SetWebhookID(v)
+	})
+}
+
+// UpdateWebhookID sets the "webhook_id" field to the value that was provided on create.
+func (u *PaymentWebhookUpsertBulk) UpdateWebhookID() *PaymentWebhookUpsertBulk {
+	return u.Update(func(s *PaymentWebhookUpsert) {
+		s.UpdateWebhookID()
+	})
+}
+
+// SetWebhookSecret sets the "webhook_secret" field.
+func (u *PaymentWebhookUpsertBulk) SetWebhookSecret(v string) *PaymentWebhookUpsertBulk {
+	return u.Update(func(s *PaymentWebhookUpsert) {
+		s.SetWebhookSecret(v)
+	})
+}
+
+// UpdateWebhookSecret sets the "webhook_secret" field to the value that was provided on create.
+func (u *PaymentWebhookUpsertBulk) UpdateWebhookSecret() *PaymentWebhookUpsertBulk {
+	return u.Update(func(s *PaymentWebhookUpsert) {
+		s.UpdateWebhookSecret()
+	})
+}
+
+// SetCallbackURL sets the "callback_url" field.
+func (u *PaymentWebhookUpsertBulk) SetCallbackURL(v string) *PaymentWebhookUpsertBulk {
+	return u.Update(func(s *PaymentWebhookUpsert) {
+		s.SetCallbackURL(v)
+	})
+}
+
+// UpdateCallbackURL sets the "callback_url" field to the value that was provided on create.
+func (u *PaymentWebhookUpsertBulk) UpdateCallbackURL() *PaymentWebhookUpsertBulk {
+	return u.Update(func(s *PaymentWebhookUpsert) {
+		s.UpdateCallbackURL()
+	})
+}
+
+// Exec executes the query.
+func (u *PaymentWebhookUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the PaymentWebhookCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for PaymentWebhookCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *PaymentWebhookUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

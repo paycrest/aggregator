@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -20,6 +21,7 @@ type ReceiveAddressCreate struct {
 	config
 	mutation *ReceiveAddressMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -250,6 +252,7 @@ func (rac *ReceiveAddressCreate) createSpec() (*ReceiveAddress, *sqlgraph.Create
 		_node = &ReceiveAddress{config: rac.config}
 		_spec = sqlgraph.NewCreateSpec(receiveaddress.Table, sqlgraph.NewFieldSpec(receiveaddress.FieldID, field.TypeInt))
 	)
+	_spec.OnConflict = rac.conflict
 	if value, ok := rac.mutation.CreatedAt(); ok {
 		_spec.SetField(receiveaddress.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -306,11 +309,425 @@ func (rac *ReceiveAddressCreate) createSpec() (*ReceiveAddress, *sqlgraph.Create
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.ReceiveAddress.Create().
+//		SetCreatedAt(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.ReceiveAddressUpsert) {
+//			SetCreatedAt(v+v).
+//		}).
+//		Exec(ctx)
+func (rac *ReceiveAddressCreate) OnConflict(opts ...sql.ConflictOption) *ReceiveAddressUpsertOne {
+	rac.conflict = opts
+	return &ReceiveAddressUpsertOne{
+		create: rac,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.ReceiveAddress.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (rac *ReceiveAddressCreate) OnConflictColumns(columns ...string) *ReceiveAddressUpsertOne {
+	rac.conflict = append(rac.conflict, sql.ConflictColumns(columns...))
+	return &ReceiveAddressUpsertOne{
+		create: rac,
+	}
+}
+
+type (
+	// ReceiveAddressUpsertOne is the builder for "upsert"-ing
+	//  one ReceiveAddress node.
+	ReceiveAddressUpsertOne struct {
+		create *ReceiveAddressCreate
+	}
+
+	// ReceiveAddressUpsert is the "OnConflict" setter.
+	ReceiveAddressUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *ReceiveAddressUpsert) SetUpdatedAt(v time.Time) *ReceiveAddressUpsert {
+	u.Set(receiveaddress.FieldUpdatedAt, v)
+	return u
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *ReceiveAddressUpsert) UpdateUpdatedAt() *ReceiveAddressUpsert {
+	u.SetExcluded(receiveaddress.FieldUpdatedAt)
+	return u
+}
+
+// SetAddress sets the "address" field.
+func (u *ReceiveAddressUpsert) SetAddress(v string) *ReceiveAddressUpsert {
+	u.Set(receiveaddress.FieldAddress, v)
+	return u
+}
+
+// UpdateAddress sets the "address" field to the value that was provided on create.
+func (u *ReceiveAddressUpsert) UpdateAddress() *ReceiveAddressUpsert {
+	u.SetExcluded(receiveaddress.FieldAddress)
+	return u
+}
+
+// SetSalt sets the "salt" field.
+func (u *ReceiveAddressUpsert) SetSalt(v []byte) *ReceiveAddressUpsert {
+	u.Set(receiveaddress.FieldSalt, v)
+	return u
+}
+
+// UpdateSalt sets the "salt" field to the value that was provided on create.
+func (u *ReceiveAddressUpsert) UpdateSalt() *ReceiveAddressUpsert {
+	u.SetExcluded(receiveaddress.FieldSalt)
+	return u
+}
+
+// ClearSalt clears the value of the "salt" field.
+func (u *ReceiveAddressUpsert) ClearSalt() *ReceiveAddressUpsert {
+	u.SetNull(receiveaddress.FieldSalt)
+	return u
+}
+
+// SetStatus sets the "status" field.
+func (u *ReceiveAddressUpsert) SetStatus(v receiveaddress.Status) *ReceiveAddressUpsert {
+	u.Set(receiveaddress.FieldStatus, v)
+	return u
+}
+
+// UpdateStatus sets the "status" field to the value that was provided on create.
+func (u *ReceiveAddressUpsert) UpdateStatus() *ReceiveAddressUpsert {
+	u.SetExcluded(receiveaddress.FieldStatus)
+	return u
+}
+
+// SetLastIndexedBlock sets the "last_indexed_block" field.
+func (u *ReceiveAddressUpsert) SetLastIndexedBlock(v int64) *ReceiveAddressUpsert {
+	u.Set(receiveaddress.FieldLastIndexedBlock, v)
+	return u
+}
+
+// UpdateLastIndexedBlock sets the "last_indexed_block" field to the value that was provided on create.
+func (u *ReceiveAddressUpsert) UpdateLastIndexedBlock() *ReceiveAddressUpsert {
+	u.SetExcluded(receiveaddress.FieldLastIndexedBlock)
+	return u
+}
+
+// AddLastIndexedBlock adds v to the "last_indexed_block" field.
+func (u *ReceiveAddressUpsert) AddLastIndexedBlock(v int64) *ReceiveAddressUpsert {
+	u.Add(receiveaddress.FieldLastIndexedBlock, v)
+	return u
+}
+
+// ClearLastIndexedBlock clears the value of the "last_indexed_block" field.
+func (u *ReceiveAddressUpsert) ClearLastIndexedBlock() *ReceiveAddressUpsert {
+	u.SetNull(receiveaddress.FieldLastIndexedBlock)
+	return u
+}
+
+// SetLastUsed sets the "last_used" field.
+func (u *ReceiveAddressUpsert) SetLastUsed(v time.Time) *ReceiveAddressUpsert {
+	u.Set(receiveaddress.FieldLastUsed, v)
+	return u
+}
+
+// UpdateLastUsed sets the "last_used" field to the value that was provided on create.
+func (u *ReceiveAddressUpsert) UpdateLastUsed() *ReceiveAddressUpsert {
+	u.SetExcluded(receiveaddress.FieldLastUsed)
+	return u
+}
+
+// ClearLastUsed clears the value of the "last_used" field.
+func (u *ReceiveAddressUpsert) ClearLastUsed() *ReceiveAddressUpsert {
+	u.SetNull(receiveaddress.FieldLastUsed)
+	return u
+}
+
+// SetTxHash sets the "tx_hash" field.
+func (u *ReceiveAddressUpsert) SetTxHash(v string) *ReceiveAddressUpsert {
+	u.Set(receiveaddress.FieldTxHash, v)
+	return u
+}
+
+// UpdateTxHash sets the "tx_hash" field to the value that was provided on create.
+func (u *ReceiveAddressUpsert) UpdateTxHash() *ReceiveAddressUpsert {
+	u.SetExcluded(receiveaddress.FieldTxHash)
+	return u
+}
+
+// ClearTxHash clears the value of the "tx_hash" field.
+func (u *ReceiveAddressUpsert) ClearTxHash() *ReceiveAddressUpsert {
+	u.SetNull(receiveaddress.FieldTxHash)
+	return u
+}
+
+// SetValidUntil sets the "valid_until" field.
+func (u *ReceiveAddressUpsert) SetValidUntil(v time.Time) *ReceiveAddressUpsert {
+	u.Set(receiveaddress.FieldValidUntil, v)
+	return u
+}
+
+// UpdateValidUntil sets the "valid_until" field to the value that was provided on create.
+func (u *ReceiveAddressUpsert) UpdateValidUntil() *ReceiveAddressUpsert {
+	u.SetExcluded(receiveaddress.FieldValidUntil)
+	return u
+}
+
+// ClearValidUntil clears the value of the "valid_until" field.
+func (u *ReceiveAddressUpsert) ClearValidUntil() *ReceiveAddressUpsert {
+	u.SetNull(receiveaddress.FieldValidUntil)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// Using this option is equivalent to using:
+//
+//	client.ReceiveAddress.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *ReceiveAddressUpsertOne) UpdateNewValues() *ReceiveAddressUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.CreatedAt(); exists {
+			s.SetIgnore(receiveaddress.FieldCreatedAt)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.ReceiveAddress.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *ReceiveAddressUpsertOne) Ignore() *ReceiveAddressUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *ReceiveAddressUpsertOne) DoNothing() *ReceiveAddressUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the ReceiveAddressCreate.OnConflict
+// documentation for more info.
+func (u *ReceiveAddressUpsertOne) Update(set func(*ReceiveAddressUpsert)) *ReceiveAddressUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&ReceiveAddressUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *ReceiveAddressUpsertOne) SetUpdatedAt(v time.Time) *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.SetUpdatedAt(v)
+	})
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *ReceiveAddressUpsertOne) UpdateUpdatedAt() *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.UpdateUpdatedAt()
+	})
+}
+
+// SetAddress sets the "address" field.
+func (u *ReceiveAddressUpsertOne) SetAddress(v string) *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.SetAddress(v)
+	})
+}
+
+// UpdateAddress sets the "address" field to the value that was provided on create.
+func (u *ReceiveAddressUpsertOne) UpdateAddress() *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.UpdateAddress()
+	})
+}
+
+// SetSalt sets the "salt" field.
+func (u *ReceiveAddressUpsertOne) SetSalt(v []byte) *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.SetSalt(v)
+	})
+}
+
+// UpdateSalt sets the "salt" field to the value that was provided on create.
+func (u *ReceiveAddressUpsertOne) UpdateSalt() *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.UpdateSalt()
+	})
+}
+
+// ClearSalt clears the value of the "salt" field.
+func (u *ReceiveAddressUpsertOne) ClearSalt() *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.ClearSalt()
+	})
+}
+
+// SetStatus sets the "status" field.
+func (u *ReceiveAddressUpsertOne) SetStatus(v receiveaddress.Status) *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.SetStatus(v)
+	})
+}
+
+// UpdateStatus sets the "status" field to the value that was provided on create.
+func (u *ReceiveAddressUpsertOne) UpdateStatus() *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.UpdateStatus()
+	})
+}
+
+// SetLastIndexedBlock sets the "last_indexed_block" field.
+func (u *ReceiveAddressUpsertOne) SetLastIndexedBlock(v int64) *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.SetLastIndexedBlock(v)
+	})
+}
+
+// AddLastIndexedBlock adds v to the "last_indexed_block" field.
+func (u *ReceiveAddressUpsertOne) AddLastIndexedBlock(v int64) *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.AddLastIndexedBlock(v)
+	})
+}
+
+// UpdateLastIndexedBlock sets the "last_indexed_block" field to the value that was provided on create.
+func (u *ReceiveAddressUpsertOne) UpdateLastIndexedBlock() *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.UpdateLastIndexedBlock()
+	})
+}
+
+// ClearLastIndexedBlock clears the value of the "last_indexed_block" field.
+func (u *ReceiveAddressUpsertOne) ClearLastIndexedBlock() *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.ClearLastIndexedBlock()
+	})
+}
+
+// SetLastUsed sets the "last_used" field.
+func (u *ReceiveAddressUpsertOne) SetLastUsed(v time.Time) *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.SetLastUsed(v)
+	})
+}
+
+// UpdateLastUsed sets the "last_used" field to the value that was provided on create.
+func (u *ReceiveAddressUpsertOne) UpdateLastUsed() *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.UpdateLastUsed()
+	})
+}
+
+// ClearLastUsed clears the value of the "last_used" field.
+func (u *ReceiveAddressUpsertOne) ClearLastUsed() *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.ClearLastUsed()
+	})
+}
+
+// SetTxHash sets the "tx_hash" field.
+func (u *ReceiveAddressUpsertOne) SetTxHash(v string) *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.SetTxHash(v)
+	})
+}
+
+// UpdateTxHash sets the "tx_hash" field to the value that was provided on create.
+func (u *ReceiveAddressUpsertOne) UpdateTxHash() *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.UpdateTxHash()
+	})
+}
+
+// ClearTxHash clears the value of the "tx_hash" field.
+func (u *ReceiveAddressUpsertOne) ClearTxHash() *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.ClearTxHash()
+	})
+}
+
+// SetValidUntil sets the "valid_until" field.
+func (u *ReceiveAddressUpsertOne) SetValidUntil(v time.Time) *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.SetValidUntil(v)
+	})
+}
+
+// UpdateValidUntil sets the "valid_until" field to the value that was provided on create.
+func (u *ReceiveAddressUpsertOne) UpdateValidUntil() *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.UpdateValidUntil()
+	})
+}
+
+// ClearValidUntil clears the value of the "valid_until" field.
+func (u *ReceiveAddressUpsertOne) ClearValidUntil() *ReceiveAddressUpsertOne {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.ClearValidUntil()
+	})
+}
+
+// Exec executes the query.
+func (u *ReceiveAddressUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for ReceiveAddressCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *ReceiveAddressUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *ReceiveAddressUpsertOne) ID(ctx context.Context) (id int, err error) {
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *ReceiveAddressUpsertOne) IDX(ctx context.Context) int {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // ReceiveAddressCreateBulk is the builder for creating many ReceiveAddress entities in bulk.
 type ReceiveAddressCreateBulk struct {
 	config
 	err      error
 	builders []*ReceiveAddressCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the ReceiveAddress entities in the database.
@@ -340,6 +757,7 @@ func (racb *ReceiveAddressCreateBulk) Save(ctx context.Context) ([]*ReceiveAddre
 					_, err = mutators[i+1].Mutate(root, racb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = racb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, racb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -390,6 +808,271 @@ func (racb *ReceiveAddressCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (racb *ReceiveAddressCreateBulk) ExecX(ctx context.Context) {
 	if err := racb.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.ReceiveAddress.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.ReceiveAddressUpsert) {
+//			SetCreatedAt(v+v).
+//		}).
+//		Exec(ctx)
+func (racb *ReceiveAddressCreateBulk) OnConflict(opts ...sql.ConflictOption) *ReceiveAddressUpsertBulk {
+	racb.conflict = opts
+	return &ReceiveAddressUpsertBulk{
+		create: racb,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.ReceiveAddress.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (racb *ReceiveAddressCreateBulk) OnConflictColumns(columns ...string) *ReceiveAddressUpsertBulk {
+	racb.conflict = append(racb.conflict, sql.ConflictColumns(columns...))
+	return &ReceiveAddressUpsertBulk{
+		create: racb,
+	}
+}
+
+// ReceiveAddressUpsertBulk is the builder for "upsert"-ing
+// a bulk of ReceiveAddress nodes.
+type ReceiveAddressUpsertBulk struct {
+	create *ReceiveAddressCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.ReceiveAddress.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *ReceiveAddressUpsertBulk) UpdateNewValues() *ReceiveAddressUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.CreatedAt(); exists {
+				s.SetIgnore(receiveaddress.FieldCreatedAt)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.ReceiveAddress.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *ReceiveAddressUpsertBulk) Ignore() *ReceiveAddressUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *ReceiveAddressUpsertBulk) DoNothing() *ReceiveAddressUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the ReceiveAddressCreateBulk.OnConflict
+// documentation for more info.
+func (u *ReceiveAddressUpsertBulk) Update(set func(*ReceiveAddressUpsert)) *ReceiveAddressUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&ReceiveAddressUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *ReceiveAddressUpsertBulk) SetUpdatedAt(v time.Time) *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.SetUpdatedAt(v)
+	})
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *ReceiveAddressUpsertBulk) UpdateUpdatedAt() *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.UpdateUpdatedAt()
+	})
+}
+
+// SetAddress sets the "address" field.
+func (u *ReceiveAddressUpsertBulk) SetAddress(v string) *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.SetAddress(v)
+	})
+}
+
+// UpdateAddress sets the "address" field to the value that was provided on create.
+func (u *ReceiveAddressUpsertBulk) UpdateAddress() *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.UpdateAddress()
+	})
+}
+
+// SetSalt sets the "salt" field.
+func (u *ReceiveAddressUpsertBulk) SetSalt(v []byte) *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.SetSalt(v)
+	})
+}
+
+// UpdateSalt sets the "salt" field to the value that was provided on create.
+func (u *ReceiveAddressUpsertBulk) UpdateSalt() *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.UpdateSalt()
+	})
+}
+
+// ClearSalt clears the value of the "salt" field.
+func (u *ReceiveAddressUpsertBulk) ClearSalt() *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.ClearSalt()
+	})
+}
+
+// SetStatus sets the "status" field.
+func (u *ReceiveAddressUpsertBulk) SetStatus(v receiveaddress.Status) *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.SetStatus(v)
+	})
+}
+
+// UpdateStatus sets the "status" field to the value that was provided on create.
+func (u *ReceiveAddressUpsertBulk) UpdateStatus() *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.UpdateStatus()
+	})
+}
+
+// SetLastIndexedBlock sets the "last_indexed_block" field.
+func (u *ReceiveAddressUpsertBulk) SetLastIndexedBlock(v int64) *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.SetLastIndexedBlock(v)
+	})
+}
+
+// AddLastIndexedBlock adds v to the "last_indexed_block" field.
+func (u *ReceiveAddressUpsertBulk) AddLastIndexedBlock(v int64) *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.AddLastIndexedBlock(v)
+	})
+}
+
+// UpdateLastIndexedBlock sets the "last_indexed_block" field to the value that was provided on create.
+func (u *ReceiveAddressUpsertBulk) UpdateLastIndexedBlock() *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.UpdateLastIndexedBlock()
+	})
+}
+
+// ClearLastIndexedBlock clears the value of the "last_indexed_block" field.
+func (u *ReceiveAddressUpsertBulk) ClearLastIndexedBlock() *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.ClearLastIndexedBlock()
+	})
+}
+
+// SetLastUsed sets the "last_used" field.
+func (u *ReceiveAddressUpsertBulk) SetLastUsed(v time.Time) *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.SetLastUsed(v)
+	})
+}
+
+// UpdateLastUsed sets the "last_used" field to the value that was provided on create.
+func (u *ReceiveAddressUpsertBulk) UpdateLastUsed() *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.UpdateLastUsed()
+	})
+}
+
+// ClearLastUsed clears the value of the "last_used" field.
+func (u *ReceiveAddressUpsertBulk) ClearLastUsed() *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.ClearLastUsed()
+	})
+}
+
+// SetTxHash sets the "tx_hash" field.
+func (u *ReceiveAddressUpsertBulk) SetTxHash(v string) *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.SetTxHash(v)
+	})
+}
+
+// UpdateTxHash sets the "tx_hash" field to the value that was provided on create.
+func (u *ReceiveAddressUpsertBulk) UpdateTxHash() *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.UpdateTxHash()
+	})
+}
+
+// ClearTxHash clears the value of the "tx_hash" field.
+func (u *ReceiveAddressUpsertBulk) ClearTxHash() *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.ClearTxHash()
+	})
+}
+
+// SetValidUntil sets the "valid_until" field.
+func (u *ReceiveAddressUpsertBulk) SetValidUntil(v time.Time) *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.SetValidUntil(v)
+	})
+}
+
+// UpdateValidUntil sets the "valid_until" field to the value that was provided on create.
+func (u *ReceiveAddressUpsertBulk) UpdateValidUntil() *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.UpdateValidUntil()
+	})
+}
+
+// ClearValidUntil clears the value of the "valid_until" field.
+func (u *ReceiveAddressUpsertBulk) ClearValidUntil() *ReceiveAddressUpsertBulk {
+	return u.Update(func(s *ReceiveAddressUpsert) {
+		s.ClearValidUntil()
+	})
+}
+
+// Exec executes the query.
+func (u *ReceiveAddressUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the ReceiveAddressCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for ReceiveAddressCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *ReceiveAddressUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -21,6 +23,7 @@ type KYBProfileCreate struct {
 	config
 	mutation *KYBProfileMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -283,6 +286,7 @@ func (kpc *KYBProfileCreate) createSpec() (*KYBProfile, *sqlgraph.CreateSpec) {
 		_node = &KYBProfile{config: kpc.config}
 		_spec = sqlgraph.NewCreateSpec(kybprofile.Table, sqlgraph.NewFieldSpec(kybprofile.FieldID, field.TypeUUID))
 	)
+	_spec.OnConflict = kpc.conflict
 	if id, ok := kpc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
@@ -367,11 +371,449 @@ func (kpc *KYBProfileCreate) createSpec() (*KYBProfile, *sqlgraph.CreateSpec) {
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.KYBProfile.Create().
+//		SetCreatedAt(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.KYBProfileUpsert) {
+//			SetCreatedAt(v+v).
+//		}).
+//		Exec(ctx)
+func (kpc *KYBProfileCreate) OnConflict(opts ...sql.ConflictOption) *KYBProfileUpsertOne {
+	kpc.conflict = opts
+	return &KYBProfileUpsertOne{
+		create: kpc,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.KYBProfile.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (kpc *KYBProfileCreate) OnConflictColumns(columns ...string) *KYBProfileUpsertOne {
+	kpc.conflict = append(kpc.conflict, sql.ConflictColumns(columns...))
+	return &KYBProfileUpsertOne{
+		create: kpc,
+	}
+}
+
+type (
+	// KYBProfileUpsertOne is the builder for "upsert"-ing
+	//  one KYBProfile node.
+	KYBProfileUpsertOne struct {
+		create *KYBProfileCreate
+	}
+
+	// KYBProfileUpsert is the "OnConflict" setter.
+	KYBProfileUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *KYBProfileUpsert) SetUpdatedAt(v time.Time) *KYBProfileUpsert {
+	u.Set(kybprofile.FieldUpdatedAt, v)
+	return u
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *KYBProfileUpsert) UpdateUpdatedAt() *KYBProfileUpsert {
+	u.SetExcluded(kybprofile.FieldUpdatedAt)
+	return u
+}
+
+// SetMobileNumber sets the "mobile_number" field.
+func (u *KYBProfileUpsert) SetMobileNumber(v string) *KYBProfileUpsert {
+	u.Set(kybprofile.FieldMobileNumber, v)
+	return u
+}
+
+// UpdateMobileNumber sets the "mobile_number" field to the value that was provided on create.
+func (u *KYBProfileUpsert) UpdateMobileNumber() *KYBProfileUpsert {
+	u.SetExcluded(kybprofile.FieldMobileNumber)
+	return u
+}
+
+// SetCompanyName sets the "company_name" field.
+func (u *KYBProfileUpsert) SetCompanyName(v string) *KYBProfileUpsert {
+	u.Set(kybprofile.FieldCompanyName, v)
+	return u
+}
+
+// UpdateCompanyName sets the "company_name" field to the value that was provided on create.
+func (u *KYBProfileUpsert) UpdateCompanyName() *KYBProfileUpsert {
+	u.SetExcluded(kybprofile.FieldCompanyName)
+	return u
+}
+
+// SetRegisteredBusinessAddress sets the "registered_business_address" field.
+func (u *KYBProfileUpsert) SetRegisteredBusinessAddress(v string) *KYBProfileUpsert {
+	u.Set(kybprofile.FieldRegisteredBusinessAddress, v)
+	return u
+}
+
+// UpdateRegisteredBusinessAddress sets the "registered_business_address" field to the value that was provided on create.
+func (u *KYBProfileUpsert) UpdateRegisteredBusinessAddress() *KYBProfileUpsert {
+	u.SetExcluded(kybprofile.FieldRegisteredBusinessAddress)
+	return u
+}
+
+// SetCertificateOfIncorporationURL sets the "certificate_of_incorporation_url" field.
+func (u *KYBProfileUpsert) SetCertificateOfIncorporationURL(v string) *KYBProfileUpsert {
+	u.Set(kybprofile.FieldCertificateOfIncorporationURL, v)
+	return u
+}
+
+// UpdateCertificateOfIncorporationURL sets the "certificate_of_incorporation_url" field to the value that was provided on create.
+func (u *KYBProfileUpsert) UpdateCertificateOfIncorporationURL() *KYBProfileUpsert {
+	u.SetExcluded(kybprofile.FieldCertificateOfIncorporationURL)
+	return u
+}
+
+// SetArticlesOfIncorporationURL sets the "articles_of_incorporation_url" field.
+func (u *KYBProfileUpsert) SetArticlesOfIncorporationURL(v string) *KYBProfileUpsert {
+	u.Set(kybprofile.FieldArticlesOfIncorporationURL, v)
+	return u
+}
+
+// UpdateArticlesOfIncorporationURL sets the "articles_of_incorporation_url" field to the value that was provided on create.
+func (u *KYBProfileUpsert) UpdateArticlesOfIncorporationURL() *KYBProfileUpsert {
+	u.SetExcluded(kybprofile.FieldArticlesOfIncorporationURL)
+	return u
+}
+
+// SetBusinessLicenseURL sets the "business_license_url" field.
+func (u *KYBProfileUpsert) SetBusinessLicenseURL(v string) *KYBProfileUpsert {
+	u.Set(kybprofile.FieldBusinessLicenseURL, v)
+	return u
+}
+
+// UpdateBusinessLicenseURL sets the "business_license_url" field to the value that was provided on create.
+func (u *KYBProfileUpsert) UpdateBusinessLicenseURL() *KYBProfileUpsert {
+	u.SetExcluded(kybprofile.FieldBusinessLicenseURL)
+	return u
+}
+
+// ClearBusinessLicenseURL clears the value of the "business_license_url" field.
+func (u *KYBProfileUpsert) ClearBusinessLicenseURL() *KYBProfileUpsert {
+	u.SetNull(kybprofile.FieldBusinessLicenseURL)
+	return u
+}
+
+// SetProofOfBusinessAddressURL sets the "proof_of_business_address_url" field.
+func (u *KYBProfileUpsert) SetProofOfBusinessAddressURL(v string) *KYBProfileUpsert {
+	u.Set(kybprofile.FieldProofOfBusinessAddressURL, v)
+	return u
+}
+
+// UpdateProofOfBusinessAddressURL sets the "proof_of_business_address_url" field to the value that was provided on create.
+func (u *KYBProfileUpsert) UpdateProofOfBusinessAddressURL() *KYBProfileUpsert {
+	u.SetExcluded(kybprofile.FieldProofOfBusinessAddressURL)
+	return u
+}
+
+// SetAmlPolicyURL sets the "aml_policy_url" field.
+func (u *KYBProfileUpsert) SetAmlPolicyURL(v string) *KYBProfileUpsert {
+	u.Set(kybprofile.FieldAmlPolicyURL, v)
+	return u
+}
+
+// UpdateAmlPolicyURL sets the "aml_policy_url" field to the value that was provided on create.
+func (u *KYBProfileUpsert) UpdateAmlPolicyURL() *KYBProfileUpsert {
+	u.SetExcluded(kybprofile.FieldAmlPolicyURL)
+	return u
+}
+
+// ClearAmlPolicyURL clears the value of the "aml_policy_url" field.
+func (u *KYBProfileUpsert) ClearAmlPolicyURL() *KYBProfileUpsert {
+	u.SetNull(kybprofile.FieldAmlPolicyURL)
+	return u
+}
+
+// SetKycPolicyURL sets the "kyc_policy_url" field.
+func (u *KYBProfileUpsert) SetKycPolicyURL(v string) *KYBProfileUpsert {
+	u.Set(kybprofile.FieldKycPolicyURL, v)
+	return u
+}
+
+// UpdateKycPolicyURL sets the "kyc_policy_url" field to the value that was provided on create.
+func (u *KYBProfileUpsert) UpdateKycPolicyURL() *KYBProfileUpsert {
+	u.SetExcluded(kybprofile.FieldKycPolicyURL)
+	return u
+}
+
+// ClearKycPolicyURL clears the value of the "kyc_policy_url" field.
+func (u *KYBProfileUpsert) ClearKycPolicyURL() *KYBProfileUpsert {
+	u.SetNull(kybprofile.FieldKycPolicyURL)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
+// Using this option is equivalent to using:
+//
+//	client.KYBProfile.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(kybprofile.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *KYBProfileUpsertOne) UpdateNewValues() *KYBProfileUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(kybprofile.FieldID)
+		}
+		if _, exists := u.create.mutation.CreatedAt(); exists {
+			s.SetIgnore(kybprofile.FieldCreatedAt)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.KYBProfile.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *KYBProfileUpsertOne) Ignore() *KYBProfileUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *KYBProfileUpsertOne) DoNothing() *KYBProfileUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the KYBProfileCreate.OnConflict
+// documentation for more info.
+func (u *KYBProfileUpsertOne) Update(set func(*KYBProfileUpsert)) *KYBProfileUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&KYBProfileUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *KYBProfileUpsertOne) SetUpdatedAt(v time.Time) *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.SetUpdatedAt(v)
+	})
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *KYBProfileUpsertOne) UpdateUpdatedAt() *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.UpdateUpdatedAt()
+	})
+}
+
+// SetMobileNumber sets the "mobile_number" field.
+func (u *KYBProfileUpsertOne) SetMobileNumber(v string) *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.SetMobileNumber(v)
+	})
+}
+
+// UpdateMobileNumber sets the "mobile_number" field to the value that was provided on create.
+func (u *KYBProfileUpsertOne) UpdateMobileNumber() *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.UpdateMobileNumber()
+	})
+}
+
+// SetCompanyName sets the "company_name" field.
+func (u *KYBProfileUpsertOne) SetCompanyName(v string) *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.SetCompanyName(v)
+	})
+}
+
+// UpdateCompanyName sets the "company_name" field to the value that was provided on create.
+func (u *KYBProfileUpsertOne) UpdateCompanyName() *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.UpdateCompanyName()
+	})
+}
+
+// SetRegisteredBusinessAddress sets the "registered_business_address" field.
+func (u *KYBProfileUpsertOne) SetRegisteredBusinessAddress(v string) *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.SetRegisteredBusinessAddress(v)
+	})
+}
+
+// UpdateRegisteredBusinessAddress sets the "registered_business_address" field to the value that was provided on create.
+func (u *KYBProfileUpsertOne) UpdateRegisteredBusinessAddress() *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.UpdateRegisteredBusinessAddress()
+	})
+}
+
+// SetCertificateOfIncorporationURL sets the "certificate_of_incorporation_url" field.
+func (u *KYBProfileUpsertOne) SetCertificateOfIncorporationURL(v string) *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.SetCertificateOfIncorporationURL(v)
+	})
+}
+
+// UpdateCertificateOfIncorporationURL sets the "certificate_of_incorporation_url" field to the value that was provided on create.
+func (u *KYBProfileUpsertOne) UpdateCertificateOfIncorporationURL() *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.UpdateCertificateOfIncorporationURL()
+	})
+}
+
+// SetArticlesOfIncorporationURL sets the "articles_of_incorporation_url" field.
+func (u *KYBProfileUpsertOne) SetArticlesOfIncorporationURL(v string) *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.SetArticlesOfIncorporationURL(v)
+	})
+}
+
+// UpdateArticlesOfIncorporationURL sets the "articles_of_incorporation_url" field to the value that was provided on create.
+func (u *KYBProfileUpsertOne) UpdateArticlesOfIncorporationURL() *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.UpdateArticlesOfIncorporationURL()
+	})
+}
+
+// SetBusinessLicenseURL sets the "business_license_url" field.
+func (u *KYBProfileUpsertOne) SetBusinessLicenseURL(v string) *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.SetBusinessLicenseURL(v)
+	})
+}
+
+// UpdateBusinessLicenseURL sets the "business_license_url" field to the value that was provided on create.
+func (u *KYBProfileUpsertOne) UpdateBusinessLicenseURL() *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.UpdateBusinessLicenseURL()
+	})
+}
+
+// ClearBusinessLicenseURL clears the value of the "business_license_url" field.
+func (u *KYBProfileUpsertOne) ClearBusinessLicenseURL() *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.ClearBusinessLicenseURL()
+	})
+}
+
+// SetProofOfBusinessAddressURL sets the "proof_of_business_address_url" field.
+func (u *KYBProfileUpsertOne) SetProofOfBusinessAddressURL(v string) *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.SetProofOfBusinessAddressURL(v)
+	})
+}
+
+// UpdateProofOfBusinessAddressURL sets the "proof_of_business_address_url" field to the value that was provided on create.
+func (u *KYBProfileUpsertOne) UpdateProofOfBusinessAddressURL() *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.UpdateProofOfBusinessAddressURL()
+	})
+}
+
+// SetAmlPolicyURL sets the "aml_policy_url" field.
+func (u *KYBProfileUpsertOne) SetAmlPolicyURL(v string) *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.SetAmlPolicyURL(v)
+	})
+}
+
+// UpdateAmlPolicyURL sets the "aml_policy_url" field to the value that was provided on create.
+func (u *KYBProfileUpsertOne) UpdateAmlPolicyURL() *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.UpdateAmlPolicyURL()
+	})
+}
+
+// ClearAmlPolicyURL clears the value of the "aml_policy_url" field.
+func (u *KYBProfileUpsertOne) ClearAmlPolicyURL() *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.ClearAmlPolicyURL()
+	})
+}
+
+// SetKycPolicyURL sets the "kyc_policy_url" field.
+func (u *KYBProfileUpsertOne) SetKycPolicyURL(v string) *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.SetKycPolicyURL(v)
+	})
+}
+
+// UpdateKycPolicyURL sets the "kyc_policy_url" field to the value that was provided on create.
+func (u *KYBProfileUpsertOne) UpdateKycPolicyURL() *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.UpdateKycPolicyURL()
+	})
+}
+
+// ClearKycPolicyURL clears the value of the "kyc_policy_url" field.
+func (u *KYBProfileUpsertOne) ClearKycPolicyURL() *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.ClearKycPolicyURL()
+	})
+}
+
+// Exec executes the query.
+func (u *KYBProfileUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for KYBProfileCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *KYBProfileUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *KYBProfileUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: KYBProfileUpsertOne.ID is not supported by MySQL driver. Use KYBProfileUpsertOne.Exec instead")
+	}
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *KYBProfileUpsertOne) IDX(ctx context.Context) uuid.UUID {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // KYBProfileCreateBulk is the builder for creating many KYBProfile entities in bulk.
 type KYBProfileCreateBulk struct {
 	config
 	err      error
 	builders []*KYBProfileCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the KYBProfile entities in the database.
@@ -401,6 +843,7 @@ func (kpcb *KYBProfileCreateBulk) Save(ctx context.Context) ([]*KYBProfile, erro
 					_, err = mutators[i+1].Mutate(root, kpcb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = kpcb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, kpcb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -447,6 +890,284 @@ func (kpcb *KYBProfileCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (kpcb *KYBProfileCreateBulk) ExecX(ctx context.Context) {
 	if err := kpcb.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.KYBProfile.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.KYBProfileUpsert) {
+//			SetCreatedAt(v+v).
+//		}).
+//		Exec(ctx)
+func (kpcb *KYBProfileCreateBulk) OnConflict(opts ...sql.ConflictOption) *KYBProfileUpsertBulk {
+	kpcb.conflict = opts
+	return &KYBProfileUpsertBulk{
+		create: kpcb,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.KYBProfile.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (kpcb *KYBProfileCreateBulk) OnConflictColumns(columns ...string) *KYBProfileUpsertBulk {
+	kpcb.conflict = append(kpcb.conflict, sql.ConflictColumns(columns...))
+	return &KYBProfileUpsertBulk{
+		create: kpcb,
+	}
+}
+
+// KYBProfileUpsertBulk is the builder for "upsert"-ing
+// a bulk of KYBProfile nodes.
+type KYBProfileUpsertBulk struct {
+	create *KYBProfileCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.KYBProfile.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(kybprofile.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *KYBProfileUpsertBulk) UpdateNewValues() *KYBProfileUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(kybprofile.FieldID)
+			}
+			if _, exists := b.mutation.CreatedAt(); exists {
+				s.SetIgnore(kybprofile.FieldCreatedAt)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.KYBProfile.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *KYBProfileUpsertBulk) Ignore() *KYBProfileUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *KYBProfileUpsertBulk) DoNothing() *KYBProfileUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the KYBProfileCreateBulk.OnConflict
+// documentation for more info.
+func (u *KYBProfileUpsertBulk) Update(set func(*KYBProfileUpsert)) *KYBProfileUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&KYBProfileUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *KYBProfileUpsertBulk) SetUpdatedAt(v time.Time) *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.SetUpdatedAt(v)
+	})
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *KYBProfileUpsertBulk) UpdateUpdatedAt() *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.UpdateUpdatedAt()
+	})
+}
+
+// SetMobileNumber sets the "mobile_number" field.
+func (u *KYBProfileUpsertBulk) SetMobileNumber(v string) *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.SetMobileNumber(v)
+	})
+}
+
+// UpdateMobileNumber sets the "mobile_number" field to the value that was provided on create.
+func (u *KYBProfileUpsertBulk) UpdateMobileNumber() *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.UpdateMobileNumber()
+	})
+}
+
+// SetCompanyName sets the "company_name" field.
+func (u *KYBProfileUpsertBulk) SetCompanyName(v string) *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.SetCompanyName(v)
+	})
+}
+
+// UpdateCompanyName sets the "company_name" field to the value that was provided on create.
+func (u *KYBProfileUpsertBulk) UpdateCompanyName() *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.UpdateCompanyName()
+	})
+}
+
+// SetRegisteredBusinessAddress sets the "registered_business_address" field.
+func (u *KYBProfileUpsertBulk) SetRegisteredBusinessAddress(v string) *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.SetRegisteredBusinessAddress(v)
+	})
+}
+
+// UpdateRegisteredBusinessAddress sets the "registered_business_address" field to the value that was provided on create.
+func (u *KYBProfileUpsertBulk) UpdateRegisteredBusinessAddress() *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.UpdateRegisteredBusinessAddress()
+	})
+}
+
+// SetCertificateOfIncorporationURL sets the "certificate_of_incorporation_url" field.
+func (u *KYBProfileUpsertBulk) SetCertificateOfIncorporationURL(v string) *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.SetCertificateOfIncorporationURL(v)
+	})
+}
+
+// UpdateCertificateOfIncorporationURL sets the "certificate_of_incorporation_url" field to the value that was provided on create.
+func (u *KYBProfileUpsertBulk) UpdateCertificateOfIncorporationURL() *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.UpdateCertificateOfIncorporationURL()
+	})
+}
+
+// SetArticlesOfIncorporationURL sets the "articles_of_incorporation_url" field.
+func (u *KYBProfileUpsertBulk) SetArticlesOfIncorporationURL(v string) *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.SetArticlesOfIncorporationURL(v)
+	})
+}
+
+// UpdateArticlesOfIncorporationURL sets the "articles_of_incorporation_url" field to the value that was provided on create.
+func (u *KYBProfileUpsertBulk) UpdateArticlesOfIncorporationURL() *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.UpdateArticlesOfIncorporationURL()
+	})
+}
+
+// SetBusinessLicenseURL sets the "business_license_url" field.
+func (u *KYBProfileUpsertBulk) SetBusinessLicenseURL(v string) *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.SetBusinessLicenseURL(v)
+	})
+}
+
+// UpdateBusinessLicenseURL sets the "business_license_url" field to the value that was provided on create.
+func (u *KYBProfileUpsertBulk) UpdateBusinessLicenseURL() *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.UpdateBusinessLicenseURL()
+	})
+}
+
+// ClearBusinessLicenseURL clears the value of the "business_license_url" field.
+func (u *KYBProfileUpsertBulk) ClearBusinessLicenseURL() *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.ClearBusinessLicenseURL()
+	})
+}
+
+// SetProofOfBusinessAddressURL sets the "proof_of_business_address_url" field.
+func (u *KYBProfileUpsertBulk) SetProofOfBusinessAddressURL(v string) *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.SetProofOfBusinessAddressURL(v)
+	})
+}
+
+// UpdateProofOfBusinessAddressURL sets the "proof_of_business_address_url" field to the value that was provided on create.
+func (u *KYBProfileUpsertBulk) UpdateProofOfBusinessAddressURL() *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.UpdateProofOfBusinessAddressURL()
+	})
+}
+
+// SetAmlPolicyURL sets the "aml_policy_url" field.
+func (u *KYBProfileUpsertBulk) SetAmlPolicyURL(v string) *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.SetAmlPolicyURL(v)
+	})
+}
+
+// UpdateAmlPolicyURL sets the "aml_policy_url" field to the value that was provided on create.
+func (u *KYBProfileUpsertBulk) UpdateAmlPolicyURL() *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.UpdateAmlPolicyURL()
+	})
+}
+
+// ClearAmlPolicyURL clears the value of the "aml_policy_url" field.
+func (u *KYBProfileUpsertBulk) ClearAmlPolicyURL() *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.ClearAmlPolicyURL()
+	})
+}
+
+// SetKycPolicyURL sets the "kyc_policy_url" field.
+func (u *KYBProfileUpsertBulk) SetKycPolicyURL(v string) *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.SetKycPolicyURL(v)
+	})
+}
+
+// UpdateKycPolicyURL sets the "kyc_policy_url" field to the value that was provided on create.
+func (u *KYBProfileUpsertBulk) UpdateKycPolicyURL() *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.UpdateKycPolicyURL()
+	})
+}
+
+// ClearKycPolicyURL clears the value of the "kyc_policy_url" field.
+func (u *KYBProfileUpsertBulk) ClearKycPolicyURL() *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.ClearKycPolicyURL()
+	})
+}
+
+// Exec executes the query.
+func (u *KYBProfileUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the KYBProfileCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for KYBProfileCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *KYBProfileUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

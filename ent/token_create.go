@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -24,6 +25,7 @@ type TokenCreate struct {
 	config
 	mutation *TokenMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -286,6 +288,7 @@ func (tc *TokenCreate) createSpec() (*Token, *sqlgraph.CreateSpec) {
 		_node = &Token{config: tc.config}
 		_spec = sqlgraph.NewCreateSpec(token.Table, sqlgraph.NewFieldSpec(token.FieldID, field.TypeInt))
 	)
+	_spec.OnConflict = tc.conflict
 	if value, ok := tc.mutation.CreatedAt(); ok {
 		_spec.SetField(token.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -398,11 +401,308 @@ func (tc *TokenCreate) createSpec() (*Token, *sqlgraph.CreateSpec) {
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Token.Create().
+//		SetCreatedAt(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.TokenUpsert) {
+//			SetCreatedAt(v+v).
+//		}).
+//		Exec(ctx)
+func (tc *TokenCreate) OnConflict(opts ...sql.ConflictOption) *TokenUpsertOne {
+	tc.conflict = opts
+	return &TokenUpsertOne{
+		create: tc,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Token.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (tc *TokenCreate) OnConflictColumns(columns ...string) *TokenUpsertOne {
+	tc.conflict = append(tc.conflict, sql.ConflictColumns(columns...))
+	return &TokenUpsertOne{
+		create: tc,
+	}
+}
+
+type (
+	// TokenUpsertOne is the builder for "upsert"-ing
+	//  one Token node.
+	TokenUpsertOne struct {
+		create *TokenCreate
+	}
+
+	// TokenUpsert is the "OnConflict" setter.
+	TokenUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *TokenUpsert) SetUpdatedAt(v time.Time) *TokenUpsert {
+	u.Set(token.FieldUpdatedAt, v)
+	return u
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *TokenUpsert) UpdateUpdatedAt() *TokenUpsert {
+	u.SetExcluded(token.FieldUpdatedAt)
+	return u
+}
+
+// SetSymbol sets the "symbol" field.
+func (u *TokenUpsert) SetSymbol(v string) *TokenUpsert {
+	u.Set(token.FieldSymbol, v)
+	return u
+}
+
+// UpdateSymbol sets the "symbol" field to the value that was provided on create.
+func (u *TokenUpsert) UpdateSymbol() *TokenUpsert {
+	u.SetExcluded(token.FieldSymbol)
+	return u
+}
+
+// SetContractAddress sets the "contract_address" field.
+func (u *TokenUpsert) SetContractAddress(v string) *TokenUpsert {
+	u.Set(token.FieldContractAddress, v)
+	return u
+}
+
+// UpdateContractAddress sets the "contract_address" field to the value that was provided on create.
+func (u *TokenUpsert) UpdateContractAddress() *TokenUpsert {
+	u.SetExcluded(token.FieldContractAddress)
+	return u
+}
+
+// SetDecimals sets the "decimals" field.
+func (u *TokenUpsert) SetDecimals(v int8) *TokenUpsert {
+	u.Set(token.FieldDecimals, v)
+	return u
+}
+
+// UpdateDecimals sets the "decimals" field to the value that was provided on create.
+func (u *TokenUpsert) UpdateDecimals() *TokenUpsert {
+	u.SetExcluded(token.FieldDecimals)
+	return u
+}
+
+// AddDecimals adds v to the "decimals" field.
+func (u *TokenUpsert) AddDecimals(v int8) *TokenUpsert {
+	u.Add(token.FieldDecimals, v)
+	return u
+}
+
+// SetIsEnabled sets the "is_enabled" field.
+func (u *TokenUpsert) SetIsEnabled(v bool) *TokenUpsert {
+	u.Set(token.FieldIsEnabled, v)
+	return u
+}
+
+// UpdateIsEnabled sets the "is_enabled" field to the value that was provided on create.
+func (u *TokenUpsert) UpdateIsEnabled() *TokenUpsert {
+	u.SetExcluded(token.FieldIsEnabled)
+	return u
+}
+
+// SetBaseCurrency sets the "base_currency" field.
+func (u *TokenUpsert) SetBaseCurrency(v string) *TokenUpsert {
+	u.Set(token.FieldBaseCurrency, v)
+	return u
+}
+
+// UpdateBaseCurrency sets the "base_currency" field to the value that was provided on create.
+func (u *TokenUpsert) UpdateBaseCurrency() *TokenUpsert {
+	u.SetExcluded(token.FieldBaseCurrency)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// Using this option is equivalent to using:
+//
+//	client.Token.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *TokenUpsertOne) UpdateNewValues() *TokenUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.CreatedAt(); exists {
+			s.SetIgnore(token.FieldCreatedAt)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.Token.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *TokenUpsertOne) Ignore() *TokenUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *TokenUpsertOne) DoNothing() *TokenUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the TokenCreate.OnConflict
+// documentation for more info.
+func (u *TokenUpsertOne) Update(set func(*TokenUpsert)) *TokenUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&TokenUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *TokenUpsertOne) SetUpdatedAt(v time.Time) *TokenUpsertOne {
+	return u.Update(func(s *TokenUpsert) {
+		s.SetUpdatedAt(v)
+	})
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *TokenUpsertOne) UpdateUpdatedAt() *TokenUpsertOne {
+	return u.Update(func(s *TokenUpsert) {
+		s.UpdateUpdatedAt()
+	})
+}
+
+// SetSymbol sets the "symbol" field.
+func (u *TokenUpsertOne) SetSymbol(v string) *TokenUpsertOne {
+	return u.Update(func(s *TokenUpsert) {
+		s.SetSymbol(v)
+	})
+}
+
+// UpdateSymbol sets the "symbol" field to the value that was provided on create.
+func (u *TokenUpsertOne) UpdateSymbol() *TokenUpsertOne {
+	return u.Update(func(s *TokenUpsert) {
+		s.UpdateSymbol()
+	})
+}
+
+// SetContractAddress sets the "contract_address" field.
+func (u *TokenUpsertOne) SetContractAddress(v string) *TokenUpsertOne {
+	return u.Update(func(s *TokenUpsert) {
+		s.SetContractAddress(v)
+	})
+}
+
+// UpdateContractAddress sets the "contract_address" field to the value that was provided on create.
+func (u *TokenUpsertOne) UpdateContractAddress() *TokenUpsertOne {
+	return u.Update(func(s *TokenUpsert) {
+		s.UpdateContractAddress()
+	})
+}
+
+// SetDecimals sets the "decimals" field.
+func (u *TokenUpsertOne) SetDecimals(v int8) *TokenUpsertOne {
+	return u.Update(func(s *TokenUpsert) {
+		s.SetDecimals(v)
+	})
+}
+
+// AddDecimals adds v to the "decimals" field.
+func (u *TokenUpsertOne) AddDecimals(v int8) *TokenUpsertOne {
+	return u.Update(func(s *TokenUpsert) {
+		s.AddDecimals(v)
+	})
+}
+
+// UpdateDecimals sets the "decimals" field to the value that was provided on create.
+func (u *TokenUpsertOne) UpdateDecimals() *TokenUpsertOne {
+	return u.Update(func(s *TokenUpsert) {
+		s.UpdateDecimals()
+	})
+}
+
+// SetIsEnabled sets the "is_enabled" field.
+func (u *TokenUpsertOne) SetIsEnabled(v bool) *TokenUpsertOne {
+	return u.Update(func(s *TokenUpsert) {
+		s.SetIsEnabled(v)
+	})
+}
+
+// UpdateIsEnabled sets the "is_enabled" field to the value that was provided on create.
+func (u *TokenUpsertOne) UpdateIsEnabled() *TokenUpsertOne {
+	return u.Update(func(s *TokenUpsert) {
+		s.UpdateIsEnabled()
+	})
+}
+
+// SetBaseCurrency sets the "base_currency" field.
+func (u *TokenUpsertOne) SetBaseCurrency(v string) *TokenUpsertOne {
+	return u.Update(func(s *TokenUpsert) {
+		s.SetBaseCurrency(v)
+	})
+}
+
+// UpdateBaseCurrency sets the "base_currency" field to the value that was provided on create.
+func (u *TokenUpsertOne) UpdateBaseCurrency() *TokenUpsertOne {
+	return u.Update(func(s *TokenUpsert) {
+		s.UpdateBaseCurrency()
+	})
+}
+
+// Exec executes the query.
+func (u *TokenUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for TokenCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *TokenUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *TokenUpsertOne) ID(ctx context.Context) (id int, err error) {
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *TokenUpsertOne) IDX(ctx context.Context) int {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // TokenCreateBulk is the builder for creating many Token entities in bulk.
 type TokenCreateBulk struct {
 	config
 	err      error
 	builders []*TokenCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the Token entities in the database.
@@ -432,6 +732,7 @@ func (tcb *TokenCreateBulk) Save(ctx context.Context) ([]*Token, error) {
 					_, err = mutators[i+1].Mutate(root, tcb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = tcb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, tcb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -482,6 +783,208 @@ func (tcb *TokenCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (tcb *TokenCreateBulk) ExecX(ctx context.Context) {
 	if err := tcb.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Token.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.TokenUpsert) {
+//			SetCreatedAt(v+v).
+//		}).
+//		Exec(ctx)
+func (tcb *TokenCreateBulk) OnConflict(opts ...sql.ConflictOption) *TokenUpsertBulk {
+	tcb.conflict = opts
+	return &TokenUpsertBulk{
+		create: tcb,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Token.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (tcb *TokenCreateBulk) OnConflictColumns(columns ...string) *TokenUpsertBulk {
+	tcb.conflict = append(tcb.conflict, sql.ConflictColumns(columns...))
+	return &TokenUpsertBulk{
+		create: tcb,
+	}
+}
+
+// TokenUpsertBulk is the builder for "upsert"-ing
+// a bulk of Token nodes.
+type TokenUpsertBulk struct {
+	create *TokenCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.Token.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *TokenUpsertBulk) UpdateNewValues() *TokenUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.CreatedAt(); exists {
+				s.SetIgnore(token.FieldCreatedAt)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.Token.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *TokenUpsertBulk) Ignore() *TokenUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *TokenUpsertBulk) DoNothing() *TokenUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the TokenCreateBulk.OnConflict
+// documentation for more info.
+func (u *TokenUpsertBulk) Update(set func(*TokenUpsert)) *TokenUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&TokenUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *TokenUpsertBulk) SetUpdatedAt(v time.Time) *TokenUpsertBulk {
+	return u.Update(func(s *TokenUpsert) {
+		s.SetUpdatedAt(v)
+	})
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *TokenUpsertBulk) UpdateUpdatedAt() *TokenUpsertBulk {
+	return u.Update(func(s *TokenUpsert) {
+		s.UpdateUpdatedAt()
+	})
+}
+
+// SetSymbol sets the "symbol" field.
+func (u *TokenUpsertBulk) SetSymbol(v string) *TokenUpsertBulk {
+	return u.Update(func(s *TokenUpsert) {
+		s.SetSymbol(v)
+	})
+}
+
+// UpdateSymbol sets the "symbol" field to the value that was provided on create.
+func (u *TokenUpsertBulk) UpdateSymbol() *TokenUpsertBulk {
+	return u.Update(func(s *TokenUpsert) {
+		s.UpdateSymbol()
+	})
+}
+
+// SetContractAddress sets the "contract_address" field.
+func (u *TokenUpsertBulk) SetContractAddress(v string) *TokenUpsertBulk {
+	return u.Update(func(s *TokenUpsert) {
+		s.SetContractAddress(v)
+	})
+}
+
+// UpdateContractAddress sets the "contract_address" field to the value that was provided on create.
+func (u *TokenUpsertBulk) UpdateContractAddress() *TokenUpsertBulk {
+	return u.Update(func(s *TokenUpsert) {
+		s.UpdateContractAddress()
+	})
+}
+
+// SetDecimals sets the "decimals" field.
+func (u *TokenUpsertBulk) SetDecimals(v int8) *TokenUpsertBulk {
+	return u.Update(func(s *TokenUpsert) {
+		s.SetDecimals(v)
+	})
+}
+
+// AddDecimals adds v to the "decimals" field.
+func (u *TokenUpsertBulk) AddDecimals(v int8) *TokenUpsertBulk {
+	return u.Update(func(s *TokenUpsert) {
+		s.AddDecimals(v)
+	})
+}
+
+// UpdateDecimals sets the "decimals" field to the value that was provided on create.
+func (u *TokenUpsertBulk) UpdateDecimals() *TokenUpsertBulk {
+	return u.Update(func(s *TokenUpsert) {
+		s.UpdateDecimals()
+	})
+}
+
+// SetIsEnabled sets the "is_enabled" field.
+func (u *TokenUpsertBulk) SetIsEnabled(v bool) *TokenUpsertBulk {
+	return u.Update(func(s *TokenUpsert) {
+		s.SetIsEnabled(v)
+	})
+}
+
+// UpdateIsEnabled sets the "is_enabled" field to the value that was provided on create.
+func (u *TokenUpsertBulk) UpdateIsEnabled() *TokenUpsertBulk {
+	return u.Update(func(s *TokenUpsert) {
+		s.UpdateIsEnabled()
+	})
+}
+
+// SetBaseCurrency sets the "base_currency" field.
+func (u *TokenUpsertBulk) SetBaseCurrency(v string) *TokenUpsertBulk {
+	return u.Update(func(s *TokenUpsert) {
+		s.SetBaseCurrency(v)
+	})
+}
+
+// UpdateBaseCurrency sets the "base_currency" field to the value that was provided on create.
+func (u *TokenUpsertBulk) UpdateBaseCurrency() *TokenUpsertBulk {
+	return u.Update(func(s *TokenUpsert) {
+		s.UpdateBaseCurrency()
+	})
+}
+
+// Exec executes the query.
+func (u *TokenUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the TokenCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for TokenCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *TokenUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -22,6 +24,7 @@ type ProviderCurrenciesCreate struct {
 	config
 	mutation *ProviderCurrenciesMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetAvailableBalance sets the "available_balance" field.
@@ -209,6 +212,7 @@ func (pcc *ProviderCurrenciesCreate) createSpec() (*ProviderCurrencies, *sqlgrap
 		_node = &ProviderCurrencies{config: pcc.config}
 		_spec = sqlgraph.NewCreateSpec(providercurrencies.Table, sqlgraph.NewFieldSpec(providercurrencies.FieldID, field.TypeUUID))
 	)
+	_spec.OnConflict = pcc.conflict
 	if id, ok := pcc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
@@ -270,11 +274,316 @@ func (pcc *ProviderCurrenciesCreate) createSpec() (*ProviderCurrencies, *sqlgrap
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.ProviderCurrencies.Create().
+//		SetAvailableBalance(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.ProviderCurrenciesUpsert) {
+//			SetAvailableBalance(v+v).
+//		}).
+//		Exec(ctx)
+func (pcc *ProviderCurrenciesCreate) OnConflict(opts ...sql.ConflictOption) *ProviderCurrenciesUpsertOne {
+	pcc.conflict = opts
+	return &ProviderCurrenciesUpsertOne{
+		create: pcc,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.ProviderCurrencies.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (pcc *ProviderCurrenciesCreate) OnConflictColumns(columns ...string) *ProviderCurrenciesUpsertOne {
+	pcc.conflict = append(pcc.conflict, sql.ConflictColumns(columns...))
+	return &ProviderCurrenciesUpsertOne{
+		create: pcc,
+	}
+}
+
+type (
+	// ProviderCurrenciesUpsertOne is the builder for "upsert"-ing
+	//  one ProviderCurrencies node.
+	ProviderCurrenciesUpsertOne struct {
+		create *ProviderCurrenciesCreate
+	}
+
+	// ProviderCurrenciesUpsert is the "OnConflict" setter.
+	ProviderCurrenciesUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetAvailableBalance sets the "available_balance" field.
+func (u *ProviderCurrenciesUpsert) SetAvailableBalance(v decimal.Decimal) *ProviderCurrenciesUpsert {
+	u.Set(providercurrencies.FieldAvailableBalance, v)
+	return u
+}
+
+// UpdateAvailableBalance sets the "available_balance" field to the value that was provided on create.
+func (u *ProviderCurrenciesUpsert) UpdateAvailableBalance() *ProviderCurrenciesUpsert {
+	u.SetExcluded(providercurrencies.FieldAvailableBalance)
+	return u
+}
+
+// AddAvailableBalance adds v to the "available_balance" field.
+func (u *ProviderCurrenciesUpsert) AddAvailableBalance(v decimal.Decimal) *ProviderCurrenciesUpsert {
+	u.Add(providercurrencies.FieldAvailableBalance, v)
+	return u
+}
+
+// SetTotalBalance sets the "total_balance" field.
+func (u *ProviderCurrenciesUpsert) SetTotalBalance(v decimal.Decimal) *ProviderCurrenciesUpsert {
+	u.Set(providercurrencies.FieldTotalBalance, v)
+	return u
+}
+
+// UpdateTotalBalance sets the "total_balance" field to the value that was provided on create.
+func (u *ProviderCurrenciesUpsert) UpdateTotalBalance() *ProviderCurrenciesUpsert {
+	u.SetExcluded(providercurrencies.FieldTotalBalance)
+	return u
+}
+
+// AddTotalBalance adds v to the "total_balance" field.
+func (u *ProviderCurrenciesUpsert) AddTotalBalance(v decimal.Decimal) *ProviderCurrenciesUpsert {
+	u.Add(providercurrencies.FieldTotalBalance, v)
+	return u
+}
+
+// SetReservedBalance sets the "reserved_balance" field.
+func (u *ProviderCurrenciesUpsert) SetReservedBalance(v decimal.Decimal) *ProviderCurrenciesUpsert {
+	u.Set(providercurrencies.FieldReservedBalance, v)
+	return u
+}
+
+// UpdateReservedBalance sets the "reserved_balance" field to the value that was provided on create.
+func (u *ProviderCurrenciesUpsert) UpdateReservedBalance() *ProviderCurrenciesUpsert {
+	u.SetExcluded(providercurrencies.FieldReservedBalance)
+	return u
+}
+
+// AddReservedBalance adds v to the "reserved_balance" field.
+func (u *ProviderCurrenciesUpsert) AddReservedBalance(v decimal.Decimal) *ProviderCurrenciesUpsert {
+	u.Add(providercurrencies.FieldReservedBalance, v)
+	return u
+}
+
+// SetIsAvailable sets the "is_available" field.
+func (u *ProviderCurrenciesUpsert) SetIsAvailable(v bool) *ProviderCurrenciesUpsert {
+	u.Set(providercurrencies.FieldIsAvailable, v)
+	return u
+}
+
+// UpdateIsAvailable sets the "is_available" field to the value that was provided on create.
+func (u *ProviderCurrenciesUpsert) UpdateIsAvailable() *ProviderCurrenciesUpsert {
+	u.SetExcluded(providercurrencies.FieldIsAvailable)
+	return u
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *ProviderCurrenciesUpsert) SetUpdatedAt(v time.Time) *ProviderCurrenciesUpsert {
+	u.Set(providercurrencies.FieldUpdatedAt, v)
+	return u
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *ProviderCurrenciesUpsert) UpdateUpdatedAt() *ProviderCurrenciesUpsert {
+	u.SetExcluded(providercurrencies.FieldUpdatedAt)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
+// Using this option is equivalent to using:
+//
+//	client.ProviderCurrencies.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(providercurrencies.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *ProviderCurrenciesUpsertOne) UpdateNewValues() *ProviderCurrenciesUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(providercurrencies.FieldID)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.ProviderCurrencies.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *ProviderCurrenciesUpsertOne) Ignore() *ProviderCurrenciesUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *ProviderCurrenciesUpsertOne) DoNothing() *ProviderCurrenciesUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the ProviderCurrenciesCreate.OnConflict
+// documentation for more info.
+func (u *ProviderCurrenciesUpsertOne) Update(set func(*ProviderCurrenciesUpsert)) *ProviderCurrenciesUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&ProviderCurrenciesUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetAvailableBalance sets the "available_balance" field.
+func (u *ProviderCurrenciesUpsertOne) SetAvailableBalance(v decimal.Decimal) *ProviderCurrenciesUpsertOne {
+	return u.Update(func(s *ProviderCurrenciesUpsert) {
+		s.SetAvailableBalance(v)
+	})
+}
+
+// AddAvailableBalance adds v to the "available_balance" field.
+func (u *ProviderCurrenciesUpsertOne) AddAvailableBalance(v decimal.Decimal) *ProviderCurrenciesUpsertOne {
+	return u.Update(func(s *ProviderCurrenciesUpsert) {
+		s.AddAvailableBalance(v)
+	})
+}
+
+// UpdateAvailableBalance sets the "available_balance" field to the value that was provided on create.
+func (u *ProviderCurrenciesUpsertOne) UpdateAvailableBalance() *ProviderCurrenciesUpsertOne {
+	return u.Update(func(s *ProviderCurrenciesUpsert) {
+		s.UpdateAvailableBalance()
+	})
+}
+
+// SetTotalBalance sets the "total_balance" field.
+func (u *ProviderCurrenciesUpsertOne) SetTotalBalance(v decimal.Decimal) *ProviderCurrenciesUpsertOne {
+	return u.Update(func(s *ProviderCurrenciesUpsert) {
+		s.SetTotalBalance(v)
+	})
+}
+
+// AddTotalBalance adds v to the "total_balance" field.
+func (u *ProviderCurrenciesUpsertOne) AddTotalBalance(v decimal.Decimal) *ProviderCurrenciesUpsertOne {
+	return u.Update(func(s *ProviderCurrenciesUpsert) {
+		s.AddTotalBalance(v)
+	})
+}
+
+// UpdateTotalBalance sets the "total_balance" field to the value that was provided on create.
+func (u *ProviderCurrenciesUpsertOne) UpdateTotalBalance() *ProviderCurrenciesUpsertOne {
+	return u.Update(func(s *ProviderCurrenciesUpsert) {
+		s.UpdateTotalBalance()
+	})
+}
+
+// SetReservedBalance sets the "reserved_balance" field.
+func (u *ProviderCurrenciesUpsertOne) SetReservedBalance(v decimal.Decimal) *ProviderCurrenciesUpsertOne {
+	return u.Update(func(s *ProviderCurrenciesUpsert) {
+		s.SetReservedBalance(v)
+	})
+}
+
+// AddReservedBalance adds v to the "reserved_balance" field.
+func (u *ProviderCurrenciesUpsertOne) AddReservedBalance(v decimal.Decimal) *ProviderCurrenciesUpsertOne {
+	return u.Update(func(s *ProviderCurrenciesUpsert) {
+		s.AddReservedBalance(v)
+	})
+}
+
+// UpdateReservedBalance sets the "reserved_balance" field to the value that was provided on create.
+func (u *ProviderCurrenciesUpsertOne) UpdateReservedBalance() *ProviderCurrenciesUpsertOne {
+	return u.Update(func(s *ProviderCurrenciesUpsert) {
+		s.UpdateReservedBalance()
+	})
+}
+
+// SetIsAvailable sets the "is_available" field.
+func (u *ProviderCurrenciesUpsertOne) SetIsAvailable(v bool) *ProviderCurrenciesUpsertOne {
+	return u.Update(func(s *ProviderCurrenciesUpsert) {
+		s.SetIsAvailable(v)
+	})
+}
+
+// UpdateIsAvailable sets the "is_available" field to the value that was provided on create.
+func (u *ProviderCurrenciesUpsertOne) UpdateIsAvailable() *ProviderCurrenciesUpsertOne {
+	return u.Update(func(s *ProviderCurrenciesUpsert) {
+		s.UpdateIsAvailable()
+	})
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *ProviderCurrenciesUpsertOne) SetUpdatedAt(v time.Time) *ProviderCurrenciesUpsertOne {
+	return u.Update(func(s *ProviderCurrenciesUpsert) {
+		s.SetUpdatedAt(v)
+	})
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *ProviderCurrenciesUpsertOne) UpdateUpdatedAt() *ProviderCurrenciesUpsertOne {
+	return u.Update(func(s *ProviderCurrenciesUpsert) {
+		s.UpdateUpdatedAt()
+	})
+}
+
+// Exec executes the query.
+func (u *ProviderCurrenciesUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for ProviderCurrenciesCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *ProviderCurrenciesUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *ProviderCurrenciesUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: ProviderCurrenciesUpsertOne.ID is not supported by MySQL driver. Use ProviderCurrenciesUpsertOne.Exec instead")
+	}
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *ProviderCurrenciesUpsertOne) IDX(ctx context.Context) uuid.UUID {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // ProviderCurrenciesCreateBulk is the builder for creating many ProviderCurrencies entities in bulk.
 type ProviderCurrenciesCreateBulk struct {
 	config
 	err      error
 	builders []*ProviderCurrenciesCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the ProviderCurrencies entities in the database.
@@ -304,6 +613,7 @@ func (pccb *ProviderCurrenciesCreateBulk) Save(ctx context.Context) ([]*Provider
 					_, err = mutators[i+1].Mutate(root, pccb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = pccb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, pccb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -350,6 +660,211 @@ func (pccb *ProviderCurrenciesCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (pccb *ProviderCurrenciesCreateBulk) ExecX(ctx context.Context) {
 	if err := pccb.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.ProviderCurrencies.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.ProviderCurrenciesUpsert) {
+//			SetAvailableBalance(v+v).
+//		}).
+//		Exec(ctx)
+func (pccb *ProviderCurrenciesCreateBulk) OnConflict(opts ...sql.ConflictOption) *ProviderCurrenciesUpsertBulk {
+	pccb.conflict = opts
+	return &ProviderCurrenciesUpsertBulk{
+		create: pccb,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.ProviderCurrencies.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (pccb *ProviderCurrenciesCreateBulk) OnConflictColumns(columns ...string) *ProviderCurrenciesUpsertBulk {
+	pccb.conflict = append(pccb.conflict, sql.ConflictColumns(columns...))
+	return &ProviderCurrenciesUpsertBulk{
+		create: pccb,
+	}
+}
+
+// ProviderCurrenciesUpsertBulk is the builder for "upsert"-ing
+// a bulk of ProviderCurrencies nodes.
+type ProviderCurrenciesUpsertBulk struct {
+	create *ProviderCurrenciesCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.ProviderCurrencies.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(providercurrencies.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *ProviderCurrenciesUpsertBulk) UpdateNewValues() *ProviderCurrenciesUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(providercurrencies.FieldID)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.ProviderCurrencies.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *ProviderCurrenciesUpsertBulk) Ignore() *ProviderCurrenciesUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *ProviderCurrenciesUpsertBulk) DoNothing() *ProviderCurrenciesUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the ProviderCurrenciesCreateBulk.OnConflict
+// documentation for more info.
+func (u *ProviderCurrenciesUpsertBulk) Update(set func(*ProviderCurrenciesUpsert)) *ProviderCurrenciesUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&ProviderCurrenciesUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetAvailableBalance sets the "available_balance" field.
+func (u *ProviderCurrenciesUpsertBulk) SetAvailableBalance(v decimal.Decimal) *ProviderCurrenciesUpsertBulk {
+	return u.Update(func(s *ProviderCurrenciesUpsert) {
+		s.SetAvailableBalance(v)
+	})
+}
+
+// AddAvailableBalance adds v to the "available_balance" field.
+func (u *ProviderCurrenciesUpsertBulk) AddAvailableBalance(v decimal.Decimal) *ProviderCurrenciesUpsertBulk {
+	return u.Update(func(s *ProviderCurrenciesUpsert) {
+		s.AddAvailableBalance(v)
+	})
+}
+
+// UpdateAvailableBalance sets the "available_balance" field to the value that was provided on create.
+func (u *ProviderCurrenciesUpsertBulk) UpdateAvailableBalance() *ProviderCurrenciesUpsertBulk {
+	return u.Update(func(s *ProviderCurrenciesUpsert) {
+		s.UpdateAvailableBalance()
+	})
+}
+
+// SetTotalBalance sets the "total_balance" field.
+func (u *ProviderCurrenciesUpsertBulk) SetTotalBalance(v decimal.Decimal) *ProviderCurrenciesUpsertBulk {
+	return u.Update(func(s *ProviderCurrenciesUpsert) {
+		s.SetTotalBalance(v)
+	})
+}
+
+// AddTotalBalance adds v to the "total_balance" field.
+func (u *ProviderCurrenciesUpsertBulk) AddTotalBalance(v decimal.Decimal) *ProviderCurrenciesUpsertBulk {
+	return u.Update(func(s *ProviderCurrenciesUpsert) {
+		s.AddTotalBalance(v)
+	})
+}
+
+// UpdateTotalBalance sets the "total_balance" field to the value that was provided on create.
+func (u *ProviderCurrenciesUpsertBulk) UpdateTotalBalance() *ProviderCurrenciesUpsertBulk {
+	return u.Update(func(s *ProviderCurrenciesUpsert) {
+		s.UpdateTotalBalance()
+	})
+}
+
+// SetReservedBalance sets the "reserved_balance" field.
+func (u *ProviderCurrenciesUpsertBulk) SetReservedBalance(v decimal.Decimal) *ProviderCurrenciesUpsertBulk {
+	return u.Update(func(s *ProviderCurrenciesUpsert) {
+		s.SetReservedBalance(v)
+	})
+}
+
+// AddReservedBalance adds v to the "reserved_balance" field.
+func (u *ProviderCurrenciesUpsertBulk) AddReservedBalance(v decimal.Decimal) *ProviderCurrenciesUpsertBulk {
+	return u.Update(func(s *ProviderCurrenciesUpsert) {
+		s.AddReservedBalance(v)
+	})
+}
+
+// UpdateReservedBalance sets the "reserved_balance" field to the value that was provided on create.
+func (u *ProviderCurrenciesUpsertBulk) UpdateReservedBalance() *ProviderCurrenciesUpsertBulk {
+	return u.Update(func(s *ProviderCurrenciesUpsert) {
+		s.UpdateReservedBalance()
+	})
+}
+
+// SetIsAvailable sets the "is_available" field.
+func (u *ProviderCurrenciesUpsertBulk) SetIsAvailable(v bool) *ProviderCurrenciesUpsertBulk {
+	return u.Update(func(s *ProviderCurrenciesUpsert) {
+		s.SetIsAvailable(v)
+	})
+}
+
+// UpdateIsAvailable sets the "is_available" field to the value that was provided on create.
+func (u *ProviderCurrenciesUpsertBulk) UpdateIsAvailable() *ProviderCurrenciesUpsertBulk {
+	return u.Update(func(s *ProviderCurrenciesUpsert) {
+		s.UpdateIsAvailable()
+	})
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *ProviderCurrenciesUpsertBulk) SetUpdatedAt(v time.Time) *ProviderCurrenciesUpsertBulk {
+	return u.Update(func(s *ProviderCurrenciesUpsert) {
+		s.SetUpdatedAt(v)
+	})
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *ProviderCurrenciesUpsertBulk) UpdateUpdatedAt() *ProviderCurrenciesUpsertBulk {
+	return u.Update(func(s *ProviderCurrenciesUpsert) {
+		s.UpdateUpdatedAt()
+	})
+}
+
+// Exec executes the query.
+func (u *ProviderCurrenciesUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the ProviderCurrenciesCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for ProviderCurrenciesCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *ProviderCurrenciesUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
