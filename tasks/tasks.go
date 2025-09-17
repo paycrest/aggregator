@@ -1239,10 +1239,9 @@ func RetryFailedWebhookNotifications() error {
 func CleanupOldWebhooks() error {
 	ctx := context.Background()
 
-	// Calculate the cutoff time (3 days ago)
+	// 3 days ago
 	cutoffTime := time.Now().AddDate(0, 0, -3)
 
-	// Find old webhooks to delete
 	oldWebhooks, err := storage.Client.PaymentWebhook.
 		Query().
 		Where(paymentwebhookent.CreatedAtLT(cutoffTime)).
@@ -1255,10 +1254,8 @@ func CleanupOldWebhooks() error {
 		return nil
 	}
 
-	// Initialize engine service
 	engineService := services.NewEngineService()
 
-	// Delete each webhook from both Insight and database
 	var deletedCount int
 	for _, webhook := range oldWebhooks {
 		if webhook.WebhookID == "" {
@@ -1271,7 +1268,6 @@ func CleanupOldWebhooks() error {
 				"webhookID": webhook.WebhookID,
 				"error":     err.Error(),
 			}).Error("Failed to delete webhook")
-			// Continue with other webhooks even if one fails
 			continue
 		}
 		deletedCount++
