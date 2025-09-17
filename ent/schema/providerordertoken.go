@@ -24,17 +24,22 @@ func (ProviderOrderToken) Mixin() []ent.Mixin {
 func (ProviderOrderToken) Fields() []ent.Field {
 	return []ent.Field{
 		field.Float("fixed_conversion_rate").
-			GoType(decimal.Decimal{}),
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
 		field.Float("floating_conversion_rate").
-			GoType(decimal.Decimal{}),
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
 		field.Enum("conversion_rate_type").
 			Values("fixed", "floating"),
 		field.Float("max_order_amount").
-			GoType(decimal.Decimal{}),
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
 		field.Float("min_order_amount").
-			GoType(decimal.Decimal{}),
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
 		field.Float("rate_slippage").
-			GoType(decimal.Decimal{}),
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
 		field.String("address").Optional(),
 		field.String("network"),
 	}

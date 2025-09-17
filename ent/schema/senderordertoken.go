@@ -24,7 +24,8 @@ func (SenderOrderToken) Mixin() []ent.Mixin {
 func (SenderOrderToken) Fields() []ent.Field {
 	return []ent.Field{
 		field.Float("fee_percent").
-			GoType(decimal.Decimal{}),
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
 		field.String("fee_address").MaxLen(60),
 		field.String("refund_address").MaxLen(60),
 	}

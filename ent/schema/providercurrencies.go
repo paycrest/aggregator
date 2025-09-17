@@ -22,11 +22,14 @@ func (ProviderCurrencies) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).
 			Default(uuid.New),
 		field.Float("available_balance").
-			GoType(decimal.Decimal{}),
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
 		field.Float("total_balance").
-			GoType(decimal.Decimal{}),
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
 		field.Float("reserved_balance").
-			GoType(decimal.Decimal{}),
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
 		field.Bool("is_available").
 			Default(true),
 		field.Time("updated_at").

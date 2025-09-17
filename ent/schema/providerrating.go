@@ -23,7 +23,8 @@ func (ProviderRating) Mixin() []ent.Mixin {
 func (ProviderRating) Fields() []ent.Field {
 	return []ent.Field{
 		field.Float("trust_score").
-			GoType(decimal.Decimal{}),
+			GoType(decimal.Decimal{}).
+			SchemaType(map[string]string{"postgres": "DECIMAL(20,8)"}),
 	}
 }
 
