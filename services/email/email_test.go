@@ -516,3 +516,257 @@ func TestSendWebhookFailureEmail_WithFallback(t *testing.T) {
 	assert.Equal(t, int64(1), primary.GetTemplateCallCount())
 	assert.Equal(t, int64(1), fallback.GetTemplateCallCount())
 }
+
+func TestSendStuckOrderNotificationEmail(t *testing.T) {
+	t.Run("SendStuckOrderNotificationEmail should work properly with primary provider", func(t *testing.T) {
+		// Create mock providers
+		mockPrimary := &mockProvider{
+			name:             "sendgrid",
+			responseToReturn: types.SendEmailResponse{Id: "test-message-id"},
+		}
+		mockFallback := &mockProvider{
+			name:             "brevo",
+			responseToReturn: types.SendEmailResponse{Id: "test-fallback-message-id"},
+		}
+
+		// Create email service with mock providers
+		service := &EmailService{
+			primaryProvider:  mockPrimary,
+			fallbackProvider: mockFallback,
+			providerFactory:  &ProviderFactory{},
+			notificationConf: &config.NotificationConfiguration{},
+		}
+
+		// Test data
+		ctx := context.Background()
+		email := "provider@example.com"
+		firstName := "John"
+		providerName := "Test Provider"
+		orders := []map[string]interface{}{
+			{
+				"order_id":      "123e4567-e89b-12d3-a456-426614174000",
+				"tx_id":         "0x1234567890abcdef",
+				"amount":        "100.50",
+				"currency":      "USD",
+				"time_stuck":    "5 minutes",
+				"institution":   "Test Bank",
+				"account_name":  "Test Account",
+				"dashboard_url": "https://example.com/dashboard/orders/123e4567-e89b-12d3-a456-426614174000",
+			},
+			{
+				"order_id":      "987fcdeb-51a2-43d1-b456-426614174000",
+				"tx_id":         "0xabcdef1234567890",
+				"amount":        "250.75",
+				"currency":      "EUR",
+				"time_stuck":    "12 minutes",
+				"institution":   "Another Bank",
+				"account_name":  "Another Account",
+				"dashboard_url": "https://example.com/dashboard/orders/987fcdeb-51a2-43d1-b456-426614174000",
+			},
+		}
+		orderCount := 2
+		templateType := "initial"
+
+		// Test successful email sending
+		response, err := service.SendStuckOrderNotificationEmail(ctx, email, firstName, providerName, orders, orderCount, templateType)
+
+		// Assertions
+		assert.NoError(t, err)
+		assert.Equal(t, "test-message-id", response.Id)
+		assert.Equal(t, int64(1), mockPrimary.GetTemplateCallCount())
+		assert.Equal(t, int64(0), mockFallback.GetTemplateCallCount())
+
+		// Test that correct template ID is used
+		assert.Equal(t, "d-stuck-order-initial-template-id", mockPrimary.lastTemplateID)
+
+		// Test payload content
+		payload := mockPrimary.GetLastPayload()
+		assert.Equal(t, email, payload.ToAddress)
+		assert.Equal(t, firstName, payload.DynamicData["first_name"])
+		assert.Equal(t, providerName, payload.DynamicData["provider_name"])
+		assert.Equal(t, orders, payload.DynamicData["orders"])
+		assert.Equal(t, orderCount, payload.DynamicData["order_count"])
+	})
+
+	t.Run("SendStuckOrderNotificationEmail should use fallback provider when primary fails", func(t *testing.T) {
+		// Create mock providers with primary failing
+		mockPrimary := &mockProvider{
+			name:            "sendgrid",
+			sendTemplateErr: errors.New("primary provider failed"),
+		}
+		mockFallback := &mockProvider{
+			name:             "brevo",
+			responseToReturn: types.SendEmailResponse{Id: "test-fallback-message-id"},
+		}
+
+		// Create email service with mock providers
+		service := &EmailService{
+			primaryProvider:  mockPrimary,
+			fallbackProvider: mockFallback,
+			providerFactory:  &ProviderFactory{},
+			notificationConf: &config.NotificationConfiguration{},
+		}
+
+		// Test data
+		ctx := context.Background()
+		email := "provider@example.com"
+		firstName := "Jane"
+		providerName := "Test Provider"
+		orders := []map[string]interface{}{
+			{
+				"order_id":      "123e4567-e89b-12d3-a456-426614174000",
+				"tx_id":         "0x1234567890abcdef",
+				"amount":        "100.50",
+				"currency":      "USD",
+				"time_stuck":    "10 minutes",
+				"institution":   "Test Bank",
+				"account_name":  "Test Account",
+				"dashboard_url": "https://example.com/dashboard/orders/123e4567-e89b-12d3-a456-426614174000",
+			},
+		}
+		orderCount := 1
+		templateType := "follow_up"
+
+		// Test fallback email sending
+		response, err := service.SendStuckOrderNotificationEmail(ctx, email, firstName, providerName, orders, orderCount, templateType)
+
+		// Assertions
+		assert.NoError(t, err)
+		assert.Equal(t, "test-fallback-message-id", response.Id)
+		assert.Equal(t, int64(1), mockPrimary.GetTemplateCallCount())
+		assert.Equal(t, int64(1), mockFallback.GetTemplateCallCount())
+
+		// Test that correct template ID is used for fallback
+		assert.Equal(t, "d-stuck-order-followup-template-id", mockFallback.lastTemplateID) // Same template ID as primary
+	})
+
+	t.Run("SendStuckOrderNotificationEmail should handle different template types correctly", func(t *testing.T) {
+		// Create mock providers
+		mockPrimary := &mockProvider{
+			name:             "sendgrid",
+			responseToReturn: types.SendEmailResponse{Id: "test-message-id"},
+		}
+		mockFallback := &mockProvider{
+			name:             "brevo",
+			responseToReturn: types.SendEmailResponse{Id: "test-fallback-message-id"},
+		}
+
+		// Create email service with mock providers
+		service := &EmailService{
+			primaryProvider:  mockPrimary,
+			fallbackProvider: mockFallback,
+			providerFactory:  &ProviderFactory{},
+			notificationConf: &config.NotificationConfiguration{},
+		}
+
+		ctx := context.Background()
+		email := "provider@example.com"
+		firstName := "John"
+		providerName := "Test Provider"
+		orders := []map[string]interface{}{
+			{
+				"order_id":      "123e4567-e89b-12d3-a456-426614174000",
+				"tx_id":         "0x1234567890abcdef",
+				"amount":        "100.50",
+				"currency":      "USD",
+				"time_stuck":    "30 minutes",
+				"institution":   "Test Bank",
+				"account_name":  "Test Account",
+				"dashboard_url": "https://example.com/dashboard/orders/123e4567-e89b-12d3-a456-426614174000",
+			},
+		}
+		orderCount := 1
+
+		// Test escalation template
+		templateType := "escalation"
+		_, err := service.SendStuckOrderNotificationEmail(ctx, email, firstName, providerName, orders, orderCount, templateType)
+
+		assert.NoError(t, err)
+		assert.Equal(t, "d-stuck-order-escalation-template-id", mockPrimary.lastTemplateID)
+
+		// Reset call count
+		mockPrimary.callCount = 0
+		mockPrimary.templateCallCount = 0
+
+		// Test follow-up template
+		templateType = "follow_up"
+		_, err = service.SendStuckOrderNotificationEmail(ctx, email, firstName, providerName, orders, orderCount, templateType)
+
+		assert.NoError(t, err)
+		assert.Equal(t, "d-stuck-order-followup-template-id", mockPrimary.lastTemplateID)
+	})
+
+	t.Run("SendStuckOrderNotificationEmail should return error when both providers fail", func(t *testing.T) {
+		// Create mock providers with both failing
+		mockPrimary := &mockProvider{
+			name:            "sendgrid",
+			sendTemplateErr: errors.New("primary provider failed"),
+		}
+		mockFallback := &mockProvider{
+			name:            "brevo",
+			sendTemplateErr: errors.New("fallback provider failed"),
+		}
+
+		// Create email service with mock providers
+		service := &EmailService{
+			primaryProvider:  mockPrimary,
+			fallbackProvider: mockFallback,
+			providerFactory:  &ProviderFactory{},
+			notificationConf: &config.NotificationConfiguration{},
+		}
+
+		// Test data
+		ctx := context.Background()
+		email := "provider@example.com"
+		firstName := "John"
+		providerName := "Test Provider"
+		orders := []map[string]interface{}{
+			{
+				"order_id":      "123e4567-e89b-12d3-a456-426614174000",
+				"tx_id":         "0x1234567890abcdef",
+				"amount":        "100.50",
+				"currency":      "USD",
+				"time_stuck":    "5 minutes",
+				"institution":   "Test Bank",
+				"account_name":  "Test Account",
+				"dashboard_url": "https://example.com/dashboard/orders/123e4567-e89b-12d3-a456-426614174000",
+			},
+		}
+		orderCount := 1
+		templateType := "initial"
+
+		// Test error handling
+		response, err := service.SendStuckOrderNotificationEmail(ctx, email, firstName, providerName, orders, orderCount, templateType)
+
+		// Assertions
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "fallback provider failed")
+		assert.Equal(t, "", response.Id)
+		assert.Equal(t, int64(1), mockPrimary.GetTemplateCallCount())
+		assert.Equal(t, int64(1), mockFallback.GetTemplateCallCount())
+	})
+
+	t.Run("GetTemplateID should return correct template IDs for stuck orders", func(t *testing.T) {
+		// Test stuck order template IDs for different providers
+		testCases := []struct {
+			provider     string
+			templateType string
+			expectedID   string
+		}{
+			{"sendgrid", "stuck_order_initial", "d-stuck-order-initial-template-id"},
+			{"sendgrid", "stuck_order_follow_up", "d-stuck-order-followup-template-id"},
+			{"sendgrid", "stuck_order_escalation", "d-stuck-order-escalation-template-id"},
+			{"brevo", "stuck_order_initial", "10"},
+			{"brevo", "stuck_order_follow_up", "11"},
+			{"brevo", "stuck_order_escalation", "12"},
+			{"mailgun", "stuck_order_initial", "mailgun-stuck-order-initial-template-id"},
+			{"mailgun", "stuck_order_follow_up", "mailgun-stuck-order-followup-template-id"},
+			{"mailgun", "stuck_order_escalation", "mailgun-stuck-order-escalation-template-id"},
+		}
+
+		for _, tc := range testCases {
+			result := getTemplateID(tc.templateType, tc.provider)
+			assert.Equal(t, tc.expectedID, result, "Template ID mismatch for %s %s", tc.provider, tc.templateType)
+		}
+	})
+}

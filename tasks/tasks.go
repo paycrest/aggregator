@@ -1820,7 +1820,7 @@ func NotifyStuckLockOrders() error {
 	serverConf := config.ServerConfig()
 	slackService := services.NewSlackService(serverConf.SlackWebhookURL)
 
-	for providerID, orders := range providerOrders {
+	for _, orders := range providerOrders {
 		if len(orders) == 0 {
 			continue
 		}
@@ -1828,73 +1828,103 @@ func NotifyStuckLockOrders() error {
 		provider := orders[0].Edges.Provider
 		user := provider.Edges.User
 
-		// Check if we've already sent a notification for these orders recently
-		shouldNotify, err := shouldSendNotification(ctx, orders)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":      fmt.Sprintf("%v", err),
-				"ProviderID": providerID,
-			}).Errorf("NotifyStuckLockOrders.checkNotificationHistory")
-			continue
-		}
+		// Separate orders by template type based on individual time stuck
+		initialOrders := []*ent.LockPaymentOrder{}
+		followUpOrders := []*ent.LockPaymentOrder{}
+		escalationOrders := []*ent.LockPaymentOrder{}
 
-		if !shouldNotify {
-			continue
-		}
-
-		// Prepare email data
-		emailData := prepareStuckOrderEmailData(orders)
-
-		// Determine template based on time stuck
-		templateType := determineTemplateType(orders)
-
-		// Send email notification using the new method
-		_, err = emailService.SendStuckOrderNotificationEmail(ctx, user.Email, user.FirstName, provider.TradingName, emailData, len(orders), templateType)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":      fmt.Sprintf("%v", err),
-				"ProviderID": providerID,
-				"Email":      user.Email,
-			}).Errorf("NotifyStuckLockOrders.sendEmail")
-			continue
-		}
-
-		// Send Slack notification for critical alerts (escalation and follow-up)
-		if templateType == "escalation" || templateType == "follow_up" {
-			err = slackService.SendStuckOrderNotification(provider.TradingName, user.Email, emailData, templateType)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":        fmt.Sprintf("%v", err),
-					"ProviderID":   providerID,
-					"TemplateType": templateType,
-				}).Errorf("NotifyStuckLockOrders.sendSlackNotification")
-				// Don't fail the entire process if Slack fails
+		for _, order := range orders {
+			timeStuck := time.Since(order.UpdatedAt)
+			if timeStuck >= 30*time.Minute {
+				escalationOrders = append(escalationOrders, order)
+			} else if timeStuck >= 10*time.Minute {
+				followUpOrders = append(followUpOrders, order)
 			} else {
-				logger.WithFields(logger.Fields{
-					"ProviderID":   providerID,
-					"TemplateType": templateType,
-				}).Infof("Successfully sent Slack notification for stuck orders")
+				initialOrders = append(initialOrders, order)
 			}
 		}
 
-		// Record notification sent
-		err = recordNotificationSent(ctx, orders, templateType)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":      fmt.Sprintf("%v", err),
-				"ProviderID": providerID,
-			}).Errorf("NotifyStuckLockOrders.recordNotification")
+		// Send separate notifications for each template type
+		if len(initialOrders) > 0 {
+			sendNotificationForOrders(ctx, initialOrders, "initial", provider, user, emailService, slackService)
 		}
-
-		logger.WithFields(logger.Fields{
-			"ProviderID":   providerID,
-			"Email":        user.Email,
-			"OrderCount":   len(orders),
-			"TemplateType": templateType,
-		}).Infof("Successfully sent stuck order notification")
+		if len(followUpOrders) > 0 {
+			sendNotificationForOrders(ctx, followUpOrders, "follow_up", provider, user, emailService, slackService)
+		}
+		if len(escalationOrders) > 0 {
+			sendNotificationForOrders(ctx, escalationOrders, "escalation", provider, user, emailService, slackService)
+		}
 	}
 
 	return nil
+}
+
+// sendNotificationForOrders sends notifications for a specific set of orders with a specific template type
+func sendNotificationForOrders(ctx context.Context, orders []*ent.LockPaymentOrder, templateType string, provider *ent.ProviderProfile, user *ent.User, emailService email.EmailServiceInterface, slackService *services.SlackService) {
+	// Check if we've already sent a notification for these orders recently
+	shouldNotify, err := shouldSendNotification(ctx, orders)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":        fmt.Sprintf("%v", err),
+			"ProviderID":   provider.ID,
+			"TemplateType": templateType,
+		}).Errorf("sendNotificationForOrders.checkNotificationHistory")
+		return
+	}
+
+	if !shouldNotify {
+		return
+	}
+
+	// Prepare email data
+	emailData := prepareStuckOrderEmailData(orders)
+
+	// Send email notification using the new method
+	_, err = emailService.SendStuckOrderNotificationEmail(ctx, user.Email, user.FirstName, provider.TradingName, emailData, len(orders), templateType)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":        fmt.Sprintf("%v", err),
+			"ProviderID":   provider.ID,
+			"Email":        user.Email,
+			"TemplateType": templateType,
+		}).Errorf("sendNotificationForOrders.sendEmail")
+		return
+	}
+
+	// Send Slack notification for critical alerts (escalation and follow-up)
+	if templateType == "escalation" || templateType == "follow_up" {
+		err = slackService.SendStuckOrderNotification(provider.TradingName, user.Email, emailData, templateType)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":        fmt.Sprintf("%v", err),
+				"ProviderID":   provider.ID,
+				"TemplateType": templateType,
+			}).Errorf("sendNotificationForOrders.sendSlackNotification")
+			// Don't fail the entire process if Slack fails
+		} else {
+			logger.WithFields(logger.Fields{
+				"ProviderID":   provider.ID,
+				"TemplateType": templateType,
+			}).Infof("Successfully sent Slack notification for stuck orders")
+		}
+	}
+
+	// Record notification sent
+	err = recordNotificationSent(ctx, orders, templateType)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":        fmt.Sprintf("%v", err),
+			"ProviderID":   provider.ID,
+			"TemplateType": templateType,
+		}).Errorf("sendNotificationForOrders.recordNotification")
+	}
+
+	logger.WithFields(logger.Fields{
+		"ProviderID":   provider.ID,
+		"Email":        user.Email,
+		"OrderCount":   len(orders),
+		"TemplateType": templateType,
+	}).Infof("Successfully sent stuck order notification")
 }
 
 // shouldSendNotification checks if we should send a notification for the given orders
@@ -1969,27 +1999,6 @@ func prepareStuckOrderEmailData(orders []*ent.LockPaymentOrder) []map[string]int
 	}
 
 	return emailData
-}
-
-// determineTemplateType determines which email template to use based on how long orders have been stuck
-func determineTemplateType(orders []*ent.LockPaymentOrder) string {
-	maxTimeStuck := time.Duration(0)
-
-	for _, order := range orders {
-		timeStuck := time.Since(order.UpdatedAt)
-		if timeStuck > maxTimeStuck {
-			maxTimeStuck = timeStuck
-		}
-	}
-
-	// Determine template based on time stuck
-	if maxTimeStuck >= 30*time.Minute {
-		return "escalation" // 30+ minutes
-	} else if maxTimeStuck >= 10*time.Minute {
-		return "follow_up" // 10+ minutes
-	} else {
-		return "initial" // 5+ minutes
-	}
 }
 
 // formatDuration formats a duration into a human-readable string

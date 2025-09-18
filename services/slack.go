@@ -263,6 +263,12 @@ func (s *SlackService) SendStuckOrderNotification(providerName, providerEmail st
 		return nil
 	}
 
+	// Skip initial notifications - only send follow_up and escalation to Slack
+	if templateType == "initial" {
+		logger.Infof("Skipping initial notification for Slack - only sending follow_up and escalation")
+		return nil
+	}
+
 	// Determine urgency based on template type
 	var urgencyEmoji, urgencyText string
 	switch templateType {
@@ -281,9 +287,9 @@ func (s *SlackService) SendStuckOrderNotification(providerName, providerEmail st
 	var orderDetails strings.Builder
 	for i, order := range orders {
 		if i > 0 {
-			orderDetails.WriteString("\n")
+			orderDetails.WriteString("\n\n")
 		}
-		orderDetails.WriteString(fmt.Sprintf("• Order: %s | Amount: %s %s | Stuck: %s",
+		orderDetails.WriteString(fmt.Sprintf("OrderID: %s\nAmount: %s %s\nStuck: %s",
 			order["order_id"], order["amount"], order["currency"], order["time_stuck"]))
 	}
 
@@ -322,7 +328,7 @@ func (s *SlackService) SendStuckOrderNotification(providerName, providerEmail st
 				"elements": []map[string]interface{}{
 					{
 						"type": "mrkdwn",
-						"text": fmt.Sprintf("Template Type: %s | Timestamp: %s", templateType, formattedTime),
+						"text": fmt.Sprintf("Template Type: %s\nTimestamp: %s", templateType, formattedTime),
 					},
 				},
 			},
