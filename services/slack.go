@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/utils"
@@ -251,6 +252,99 @@ func (s *SlackService) SendSubmissionNotification(firstName, email, submissionID
 	if resp.StatusCode != http.StatusOK {
 		logger.Errorf("Slack notification failed with status: %d", resp.StatusCode)
 		return fmt.Errorf("slack notification failed with status: %d", resp.StatusCode)
+	}
+	return nil
+}
+
+// SendStuckOrderNotification sends a Slack notification for stuck lock orders
+func (s *SlackService) SendStuckOrderNotification(providerName, providerEmail string, orders []map[string]interface{}, templateType string) error {
+	if s.SlackWebhookURL == "" {
+		logger.Warnf("Slack webhook URL not set, skipping stuck order notification")
+		return nil
+	}
+
+	// Determine urgency based on template type
+	var urgencyEmoji, urgencyText string
+	switch templateType {
+	case "escalation":
+		urgencyEmoji = "🚨"
+		urgencyText = "CRITICAL"
+	case "follow_up":
+		urgencyEmoji = "⚠️"
+		urgencyText = "HIGH"
+	default:
+		urgencyEmoji = "📧"
+		urgencyText = "MEDIUM"
+	}
+
+	// Build order details text
+	var orderDetails strings.Builder
+	for i, order := range orders {
+		if i > 0 {
+			orderDetails.WriteString("\n")
+		}
+		orderDetails.WriteString(fmt.Sprintf("• Order: %s | Amount: %s %s | Stuck: %s",
+			order["order_id"], order["amount"], order["currency"], order["time_stuck"]))
+	}
+
+	formattedTime, err := utils.FormatTimestampToGMT1(time.Now())
+	if err != nil {
+		logger.Errorf("Failed to format timestamp: %v", err)
+		return fmt.Errorf("failed to format timestamp: %v", err)
+	}
+
+	message := map[string]interface{}{
+		"blocks": []map[string]interface{}{
+			{
+				"type": "section",
+				"text": map[string]interface{}{
+					"type": "mrkdwn",
+					"text": fmt.Sprintf("%s *Stuck Lock Order Alert* - %s Priority", urgencyEmoji, urgencyText),
+				},
+			},
+			{
+				"type": "section",
+				"text": map[string]interface{}{
+					"type": "mrkdwn",
+					"text": fmt.Sprintf("*Provider:* %s\n*Email:* %s\n*Orders Count:* %d",
+						providerName, providerEmail, len(orders)),
+				},
+			},
+			{
+				"type": "section",
+				"text": map[string]interface{}{
+					"type": "mrkdwn",
+					"text": fmt.Sprintf("*Order Details:*\n%s", orderDetails.String()),
+				},
+			},
+			{
+				"type": "context",
+				"elements": []map[string]interface{}{
+					{
+						"type": "mrkdwn",
+						"text": fmt.Sprintf("Template Type: %s | Timestamp: %s", templateType, formattedTime),
+					},
+				},
+			},
+		},
+	}
+
+	jsonPayload, err := json.Marshal(message)
+	if err != nil {
+		logger.Errorf("Failed to marshal Slack stuck order notification: %v", err)
+		return fmt.Errorf("failed to marshal payload: %v", err)
+	}
+
+	resp, err := http.Post(s.SlackWebhookURL, "application/json", bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		logger.Errorf("Failed to send Slack stuck order notification: %v", err)
+		return fmt.Errorf("failed to send notification: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		logger.Errorf("Slack stuck order notification failed with status: %d", resp.StatusCode)
+		return fmt.Errorf("notification failed with status: %d", resp.StatusCode)
 	}
 	return nil
 }

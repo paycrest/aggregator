@@ -211,33 +211,61 @@ func (e *EmailService) SendWebhookFailureEmail(ctx context.Context, email, first
 	return e.SendTemplateEmail(ctx, payload, templateID)
 }
 
+// SendStuckOrderNotificationEmail sends a stuck order notification email
+func (e *EmailService) SendStuckOrderNotificationEmail(ctx context.Context, email, firstName, providerName string, orders []map[string]interface{}, orderCount int, templateType string) (types.SendEmailResponse, error) {
+	payload := types.SendEmailPayload{
+		FromAddress: e.notificationConf.EmailFromAddress,
+		ToAddress:   email,
+		DynamicData: map[string]interface{}{
+			"first_name":    firstName,
+			"provider_name": providerName,
+			"orders":        orders,
+			"order_count":   orderCount,
+		},
+	}
+
+	// Map template type to email type for the consolidated getTemplateID function
+	emailType := "stuck_order_" + templateType
+	templateID := getTemplateID(emailType, e.primaryProvider.GetName())
+	return e.SendTemplateEmail(ctx, payload, templateID)
+}
+
 // getTemplateID returns the appropriate template ID based on email type and provider
 func getTemplateID(emailType, provider string) string {
 	// Template ID mapping based on provider and email type
 	templates := map[string]map[string]string{
 		"sendgrid": {
-			"verification":    "d-f26d853bbb884c0c856f0bbda894032c",
-			"password_reset":  "d-8b689801cd9947748775ccd1c4cc932e",
-			"welcome":         "d-b425f024e6554c5ba2b4d03ab0a8b25d",
-			"kyb_approval":    "d-5ebb862274214ba79eae226c09300aa7",
-			"kyb_rejection":   "d-6917f9c32105467b8dd806a5a3dd32dc",
-			"webhook_failure": "d-da75eee4966544ad92dcd060421d4e12",
+			"verification":           "d-f26d853bbb884c0c856f0bbda894032c",
+			"password_reset":         "d-8b689801cd9947748775ccd1c4cc932e",
+			"welcome":                "d-b425f024e6554c5ba2b4d03ab0a8b25d",
+			"kyb_approval":           "d-5ebb862274214ba79eae226c09300aa7",
+			"kyb_rejection":          "d-6917f9c32105467b8dd806a5a3dd32dc",
+			"webhook_failure":        "d-da75eee4966544ad92dcd060421d4e12",
+			"stuck_order_initial":    "d-stuck-order-initial-template-id",    // TODO: Add actual template ID
+			"stuck_order_follow_up":  "d-stuck-order-followup-template-id",   // TODO: Add actual template ID
+			"stuck_order_escalation": "d-stuck-order-escalation-template-id", // TODO: Add actual template ID
 		},
 		"brevo": {
-			"verification":    "5",
-			"password_reset":  "6",
-			"welcome":         "4",
-			"kyb_approval":    "7",
-			"kyb_rejection":   "8",
-			"webhook_failure": "9",
+			"verification":           "5",
+			"password_reset":         "6",
+			"welcome":                "4",
+			"kyb_approval":           "7",
+			"kyb_rejection":          "8",
+			"webhook_failure":        "9",
+			"stuck_order_initial":    "10", // TODO: Add actual template ID
+			"stuck_order_follow_up":  "11", // TODO: Add actual template ID
+			"stuck_order_escalation": "12", // TODO: Add actual template ID
 		},
 		"mailgun": {
-			"verification":    "mailgun-verification-template-id",    // TODO: Add actual template ID
-			"password_reset":  "mailgun-password-reset-template-id",  // TODO: Add actual template ID
-			"welcome":         "mailgun-welcome-template-id",         // TODO: Add actual template ID
-			"kyb_approval":    "mailgun-kyb-approval-template-id",    // TODO: Add actual template ID
-			"kyb_rejection":   "mailgun-kyb-rejection-template-id",   // TODO: Add actual template ID
-			"webhook_failure": "mailgun-webhook-failure-template-id", // TODO: Add actual template ID
+			"verification":           "mailgun-verification-template-id",           // TODO: Add actual template ID
+			"password_reset":         "mailgun-password-reset-template-id",         // TODO: Add actual template ID
+			"welcome":                "mailgun-welcome-template-id",                // TODO: Add actual template ID
+			"kyb_approval":           "mailgun-kyb-approval-template-id",           // TODO: Add actual template ID
+			"kyb_rejection":          "mailgun-kyb-rejection-template-id",          // TODO: Add actual template ID
+			"webhook_failure":        "mailgun-webhook-failure-template-id",        // TODO: Add actual template ID
+			"stuck_order_initial":    "mailgun-stuck-order-initial-template-id",    // TODO: Add actual template ID
+			"stuck_order_follow_up":  "mailgun-stuck-order-followup-template-id",   // TODO: Add actual template ID
+			"stuck_order_escalation": "mailgun-stuck-order-escalation-template-id", // TODO: Add actual template ID
 		},
 	}
 
