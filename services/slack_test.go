@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jarcoal/httpmock"
 	"github.com/paycrest/aggregator/config"
+	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/utils"
 	"github.com/stretchr/testify/assert"
 )
@@ -22,13 +23,13 @@ var (
 	conf             *config.ServerConfiguration
 
 	// Declare mockUser globally
-	// mockUser = &ent.User{
-	// 	ID:        testUserID,
-	// 	Email:     SlackEmail,
-	// 	FirstName: FirstName,
-	// 	LastName:  LastName,
-	// 	CreatedAt: time.Now(),
-	// }
+	mockUser = &ent.User{
+		ID:        testUserID,
+		Email:     SlackEmail,
+		FirstName: FirstName,
+		LastName:  LastName,
+		CreatedAt: time.Now(),
+	}
 )
 
 func init() {
