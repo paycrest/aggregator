@@ -22,7 +22,6 @@ import (
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
-	paymentwebhookent "github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -1235,55 +1234,6 @@ func RetryFailedWebhookNotifications() error {
 	return nil
 }
 
-// CleanupOldWebhooks deletes PaymentWebhook records older than 3 days from both Insight and database for unused receive addresses
-func CleanupOldWebhooks() error {
-	ctx := context.Background()
-
-	// 3 days ago
-	cutoffTime := time.Now().AddDate(0, 0, -3)
-
-	oldWebhooks, err := storage.Client.PaymentWebhook.
-		Query().
-		Where(paymentwebhookent.CreatedAtLT(cutoffTime)).
-		All(ctx)
-	if err != nil {
-		return fmt.Errorf("CleanupOldWebhooks: failed to query old webhooks: %w", err)
-	}
-
-	if len(oldWebhooks) == 0 {
-		return nil
-	}
-
-	engineService := services.NewEngineService()
-
-	var deletedCount int
-	for _, webhook := range oldWebhooks {
-		if webhook.WebhookID == "" {
-			continue
-		}
-		err := engineService.DeleteWebhookAndRecord(ctx, webhook.WebhookID)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"function":  "CleanupOldWebhooks",
-				"webhookID": webhook.WebhookID,
-				"error":     err.Error(),
-			}).Error("Failed to delete webhook")
-			continue
-		}
-		deletedCount++
-	}
-
-	if deletedCount > 0 {
-		logger.WithFields(logger.Fields{
-			"function":     "CleanupOldWebhooks",
-			"deletedCount": deletedCount,
-			"totalFound":   len(oldWebhooks),
-		}).Info("Successfully deleted old webhooks from Insight and database")
-	}
-
-	return nil
-}
-
 // ResolvePaymentOrderMishaps resolves payment order mishaps across all networks
 func ResolvePaymentOrderMishaps() error {
 	ctx := context.Background()
@@ -1832,12 +1782,6 @@ func StartCronJobs() {
 	_, err = scheduler.Every(13).Minutes().Do(RetryFailedWebhookNotifications)
 	if err != nil {
 		logger.Errorf("StartCronJobs for RetryFailedWebhookNotifications: %v", err)
-	}
-
-	// Cleanup old webhooks once a day
-	_, err = scheduler.Every(1).Day().Do(CleanupOldWebhooks)
-	if err != nil {
-		logger.Errorf("StartCronJobs for CleanupOldWebhooks: %v", err)
 	}
 
 	// Sync lock order fulfillments every 32 seconds
