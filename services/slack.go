@@ -341,7 +341,16 @@ func (s *SlackService) SendStuckOrderNotification(providerName, providerEmail st
 		return fmt.Errorf("failed to marshal payload: %v", err)
 	}
 
-	resp, err := http.Post(s.SlackWebhookURL, "application/json", bytes.NewBuffer(jsonPayload))
+	// Create HTTP client with timeout to prevent hanging cron workers
+	httpClient := &http.Client{Timeout: 5 * time.Second}
+	req, err := http.NewRequest("POST", s.SlackWebhookURL, bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		logger.Errorf("Failed to create Slack request: %v", err)
+		return fmt.Errorf("failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		logger.Errorf("Failed to send Slack stuck order notification: %v", err)
 		return fmt.Errorf("failed to send notification: %v", err)

@@ -637,7 +637,7 @@ func TestSendStuckOrderNotificationEmail(t *testing.T) {
 		assert.Equal(t, int64(1), mockFallback.GetTemplateCallCount())
 
 		// Test that correct template ID is used for fallback
-		assert.Equal(t, "d-stuck-order-followup-template-id", mockFallback.lastTemplateID) // Same template ID as primary
+		assert.Equal(t, "d-stuck-order-followup-template-id", mockFallback.lastTemplateID)
 	})
 
 	t.Run("SendStuckOrderNotificationEmail should handle different template types correctly", func(t *testing.T) {

@@ -1861,101 +1861,97 @@ func NotifyStuckLockOrders() error {
 
 // sendNotificationForOrders sends notifications for a specific set of orders with a specific template type
 func sendNotificationForOrders(ctx context.Context, orders []*ent.LockPaymentOrder, templateType string, provider *ent.ProviderProfile, user *ent.User, emailService email.EmailServiceInterface, slackService *services.SlackService) {
-	// Check if we've already sent a notification for these orders recently
-	shouldNotify, err := shouldSendNotification(ctx, orders)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":        fmt.Sprintf("%v", err),
-			"ProviderID":   provider.ID,
-			"TemplateType": templateType,
-		}).Errorf("sendNotificationForOrders.checkNotificationHistory")
-		return
-	}
-
-	if !shouldNotify {
-		return
-	}
-
-	// Prepare email data
-	emailData := prepareStuckOrderEmailData(orders)
-
-	// Send email notification using the new method
-	_, err = emailService.SendStuckOrderNotificationEmail(ctx, user.Email, user.FirstName, provider.TradingName, emailData, len(orders), templateType)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":        fmt.Sprintf("%v", err),
-			"ProviderID":   provider.ID,
-			"Email":        user.Email,
-			"TemplateType": templateType,
-		}).Errorf("sendNotificationForOrders.sendEmail")
-		return
-	}
-
-	// Send Slack notification for critical alerts (escalation and follow-up)
-	if templateType == "escalation" || templateType == "follow_up" {
-		err = slackService.SendStuckOrderNotification(provider.TradingName, user.Email, emailData, templateType)
+	// Filter orders that have not yet received this template recently
+	filtered := make([]*ent.LockPaymentOrder, 0, len(orders))
+	for _, o := range orders {
+		ok, err := shouldSendNotification(o, templateType)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":        fmt.Sprintf("%v", err),
 				"ProviderID":   provider.ID,
+				"OrderID":      o.ID.String(),
+				"TemplateType": templateType,
+			}).Errorf("sendNotificationForOrders.checkNotificationHistory")
+			continue
+		}
+		if ok {
+			filtered = append(filtered, o)
+		}
+	}
+	if len(filtered) == 0 {
+		return
+	}
+
+	// Prepare email data
+	emailData := prepareStuckOrderEmailData(filtered)
+
+	// Send email notification
+	emailResp, emailErr := emailService.SendStuckOrderNotificationEmail(ctx, user.Email, user.FirstName, provider.TradingName, emailData, len(filtered), templateType)
+	if emailErr != nil {
+		logger.WithFields(logger.Fields{
+			"Error":        fmt.Sprintf("%v", emailErr),
+			"ProviderID":   provider.ID,
+			"Email":        user.Email,
+			"TemplateType": templateType,
+		}).Errorf("sendNotificationForOrders.sendEmail")
+	} else {
+		logger.WithFields(logger.Fields{
+			"ProviderID":   provider.ID,
+			"Email":        user.Email,
+			"TemplateType": templateType,
+			"Response":     fmt.Sprintf("%v", emailResp),
+		}).Infof("Sent stuck order email")
+	}
+
+	// Send Slack notification for follow-up/escalation regardless of email outcome
+	var slackErr error
+	if templateType == "escalation" || templateType == "follow_up" {
+		slackErr = slackService.SendStuckOrderNotification(provider.TradingName, user.Email, emailData, templateType)
+		if slackErr != nil {
+			logger.WithFields(logger.Fields{
+				"Error":        fmt.Sprintf("%v", slackErr),
+				"ProviderID":   provider.ID,
 				"TemplateType": templateType,
 			}).Errorf("sendNotificationForOrders.sendSlackNotification")
-			// Don't fail the entire process if Slack fails
 		} else {
 			logger.WithFields(logger.Fields{
 				"ProviderID":   provider.ID,
 				"TemplateType": templateType,
-			}).Infof("Successfully sent Slack notification for stuck orders")
+			}).Infof("Sent stuck order Slack notification")
 		}
 	}
 
-	// Record notification sent
-	err = recordNotificationSent(ctx, orders, templateType)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":        fmt.Sprintf("%v", err),
-			"ProviderID":   provider.ID,
-			"TemplateType": templateType,
-		}).Errorf("sendNotificationForOrders.recordNotification")
+	// Record notification only if at least one channel succeeded
+	if emailErr == nil || slackErr == nil {
+		if err := recordNotificationSent(ctx, filtered, templateType); err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":        fmt.Sprintf("%v", err),
+				"ProviderID":   provider.ID,
+				"TemplateType": templateType,
+			}).Errorf("sendNotificationForOrders.recordNotification")
+		}
 	}
-
-	logger.WithFields(logger.Fields{
-		"ProviderID":   provider.ID,
-		"Email":        user.Email,
-		"OrderCount":   len(orders),
-		"TemplateType": templateType,
-	}).Infof("Successfully sent stuck order notification")
 }
 
-// shouldSendNotification checks if we should send a notification for the given orders
-func shouldSendNotification(ctx context.Context, orders []*ent.LockPaymentOrder) (bool, error) {
-	// Check notification history in order metadata to prevent spam
-	for _, order := range orders {
-		if order.Metadata != nil {
-			if notifications, ok := order.Metadata["notifications"].([]interface{}); ok {
-				// Check if we've sent a notification recently (within last 10 minutes)
-				cutoffTime := time.Now().Add(-10 * time.Minute)
-
-				for _, notification := range notifications {
-					if notificationMap, ok := notification.(map[string]interface{}); ok {
-						if sentAtStr, ok := notificationMap["sent_at"].(string); ok {
-							if sentAt, err := time.Parse(time.RFC3339, sentAtStr); err == nil {
-								if sentAt.After(cutoffTime) {
-									logger.WithFields(logger.Fields{
-										"OrderID":    order.ID.String(),
-										"SentAt":     sentAt,
-										"CutoffTime": cutoffTime,
-									}).Debugf("Skipping notification - already sent recently")
-									return false, nil
-								}
-							}
-						}
-					}
-				}
-			}
+// shouldSendNotification checks if we should send a notification of a given template for one order
+func shouldSendNotification(order *ent.LockPaymentOrder, templateType string) (bool, error) {
+	if order.Metadata == nil {
+		return true, nil
+	}
+	notifications, ok := order.Metadata["notifications"].([]interface{})
+	if !ok {
+		return true, nil
+	}
+	// Avoid duplicates of the same template per order
+	for _, n := range notifications {
+		m, ok := n.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if t, ok := m["type"].(string); ok && t == templateType {
+			return false, nil
 		}
 	}
-
 	return true, nil
 }
 

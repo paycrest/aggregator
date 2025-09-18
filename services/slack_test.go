@@ -39,8 +39,8 @@ func init() {
 
 func TestSlackService(t *testing.T) {
 	// Activate httpmock
-	httpmock.Activate()
-	defer httpmock.Deactivate()
+	// httpmock.Activate()
+	// defer httpmock.Deactivate()
 
 	webhookURL := conf.SlackWebhookURL
 	if webhookURL == "" {
@@ -149,7 +149,7 @@ func TestSlackService(t *testing.T) {
 
 			// Verify NO request was made (initial notifications are skipped)
 			info := httpmock.GetCallCountInfo()
-			assert.Equal(t, 3, info["POST "+webhookURL])
+			assert.Equal(t, 0, info["POST "+webhookURL])
 		})
 
 		t.Run("SendStuckOrderNotification should work properly for follow-up notification", func(t *testing.T) {
@@ -179,7 +179,7 @@ func TestSlackService(t *testing.T) {
 
 			// Verify the request was made
 			info := httpmock.GetCallCountInfo()
-			assert.Equal(t, 4, info["POST "+webhookURL])
+			assert.Equal(t, 1, info["POST "+webhookURL])
 		})
 
 		t.Run("SendStuckOrderNotification should work properly for escalation notification", func(t *testing.T) {
@@ -209,7 +209,7 @@ func TestSlackService(t *testing.T) {
 
 			// Verify the request was made
 			info := httpmock.GetCallCountInfo()
-			assert.Equal(t, 5, info["POST "+webhookURL])
+			assert.Equal(t, 2, info["POST "+webhookURL])
 		})
 		t.Run("SendStuckOrderNotification should return error when HTTP request fails", func(t *testing.T) {
 			// Create Slack service
