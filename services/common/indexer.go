@@ -606,6 +606,11 @@ func UpdateReceiveAddressStatus(
 				return true, fmt.Errorf("UpdateReceiveAddressStatus.db: %v", err)
 			}
 
+			err = deleteTransferWebhook(ctx, event.TxHash)
+			if err != nil {
+				logger.Errorf("Failed to delete transfer webhook for transaction %s: %v", event.TxHash, err)
+			}
+
 			err = createOrder(ctx, paymentOrder.ID)
 			if err != nil {
 				return true, fmt.Errorf("UpdateReceiveAddressStatus.CreateOrder: %v", err)
