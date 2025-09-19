@@ -342,6 +342,27 @@ func (lpou *LockPaymentOrderUpdate) ClearMessageHash() *LockPaymentOrderUpdate {
 	return lpou
 }
 
+// SetAmountInUsd sets the "amount_in_usd" field.
+func (lpou *LockPaymentOrderUpdate) SetAmountInUsd(d decimal.Decimal) *LockPaymentOrderUpdate {
+	lpou.mutation.ResetAmountInUsd()
+	lpou.mutation.SetAmountInUsd(d)
+	return lpou
+}
+
+// SetNillableAmountInUsd sets the "amount_in_usd" field if the given value is not nil.
+func (lpou *LockPaymentOrderUpdate) SetNillableAmountInUsd(d *decimal.Decimal) *LockPaymentOrderUpdate {
+	if d != nil {
+		lpou.SetAmountInUsd(*d)
+	}
+	return lpou
+}
+
+// AddAmountInUsd adds d to the "amount_in_usd" field.
+func (lpou *LockPaymentOrderUpdate) AddAmountInUsd(d decimal.Decimal) *LockPaymentOrderUpdate {
+	lpou.mutation.AddAmountInUsd(d)
+	return lpou
+}
+
 // SetTokenID sets the "token" edge to the Token entity by ID.
 func (lpou *LockPaymentOrderUpdate) SetTokenID(id int) *LockPaymentOrderUpdate {
 	lpou.mutation.SetTokenID(id)
@@ -648,6 +669,12 @@ func (lpou *LockPaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err err
 	}
 	if lpou.mutation.MessageHashCleared() {
 		_spec.ClearField(lockpaymentorder.FieldMessageHash, field.TypeString)
+	}
+	if value, ok := lpou.mutation.AmountInUsd(); ok {
+		_spec.SetField(lockpaymentorder.FieldAmountInUsd, field.TypeFloat64, value)
+	}
+	if value, ok := lpou.mutation.AddedAmountInUsd(); ok {
+		_spec.AddField(lockpaymentorder.FieldAmountInUsd, field.TypeFloat64, value)
 	}
 	if lpou.mutation.TokenCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1152,6 +1179,27 @@ func (lpouo *LockPaymentOrderUpdateOne) ClearMessageHash() *LockPaymentOrderUpda
 	return lpouo
 }
 
+// SetAmountInUsd sets the "amount_in_usd" field.
+func (lpouo *LockPaymentOrderUpdateOne) SetAmountInUsd(d decimal.Decimal) *LockPaymentOrderUpdateOne {
+	lpouo.mutation.ResetAmountInUsd()
+	lpouo.mutation.SetAmountInUsd(d)
+	return lpouo
+}
+
+// SetNillableAmountInUsd sets the "amount_in_usd" field if the given value is not nil.
+func (lpouo *LockPaymentOrderUpdateOne) SetNillableAmountInUsd(d *decimal.Decimal) *LockPaymentOrderUpdateOne {
+	if d != nil {
+		lpouo.SetAmountInUsd(*d)
+	}
+	return lpouo
+}
+
+// AddAmountInUsd adds d to the "amount_in_usd" field.
+func (lpouo *LockPaymentOrderUpdateOne) AddAmountInUsd(d decimal.Decimal) *LockPaymentOrderUpdateOne {
+	lpouo.mutation.AddAmountInUsd(d)
+	return lpouo
+}
+
 // SetTokenID sets the "token" edge to the Token entity by ID.
 func (lpouo *LockPaymentOrderUpdateOne) SetTokenID(id int) *LockPaymentOrderUpdateOne {
 	lpouo.mutation.SetTokenID(id)
@@ -1488,6 +1536,12 @@ func (lpouo *LockPaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *Loc
 	}
 	if lpouo.mutation.MessageHashCleared() {
 		_spec.ClearField(lockpaymentorder.FieldMessageHash, field.TypeString)
+	}
+	if value, ok := lpouo.mutation.AmountInUsd(); ok {
+		_spec.SetField(lockpaymentorder.FieldAmountInUsd, field.TypeFloat64, value)
+	}
+	if value, ok := lpouo.mutation.AddedAmountInUsd(); ok {
+		_spec.AddField(lockpaymentorder.FieldAmountInUsd, field.TypeFloat64, value)
 	}
 	if lpouo.mutation.TokenCleared() {
 		edge := &sqlgraph.EdgeSpec{
