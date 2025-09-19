@@ -1789,6 +1789,36 @@ func NotifyStuckLockOrders() error {
 	providerOrders := make(map[string][]*ent.LockPaymentOrder)
 	skippedOrders := 0
 
+	var filteredLockOrders []*ent.LockPaymentOrder
+	for _, order := range lockOrders {
+		// Determine which notification interval applies
+		timeStuck := time.Since(order.UpdatedAt)
+		var templateType string
+		if timeStuck >= 30*time.Minute {
+			templateType = "escalation"
+		} else if timeStuck >= 10*time.Minute {
+			templateType = "follow_up"
+		} else {
+			templateType = "initial"
+		}
+
+		ok, err := shouldSendNotification(order, templateType)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":        fmt.Sprintf("%v", err),
+				"OrderID":      order.ID.String(),
+				"TemplateType": templateType,
+			}).Errorf("NotifyStuckLockOrders.shouldSendNotification")
+			skippedOrders++
+			continue
+		}
+		if !ok {
+			skippedOrders++
+			continue
+		}
+		filteredLockOrders = append(filteredLockOrders, order)
+	}
+	lockOrders = filteredLockOrders
 	for _, order := range lockOrders {
 		if order.Edges.Provider != nil && order.Edges.Provider.Edges.User != nil && order.Edges.Provider.Edges.User.Email != "" {
 			providerID := order.Edges.Provider.ID
@@ -1846,13 +1876,19 @@ func NotifyStuckLockOrders() error {
 
 		// Send separate notifications for each template type
 		if len(initialOrders) > 0 {
-			sendNotificationForOrders(ctx, initialOrders, "initial", provider, user, emailService, slackService)
+			if err := sendNotificationForOrders(ctx, initialOrders, "initial", provider, user, emailService, slackService); err != nil {
+				return fmt.Errorf("failed to send initial notifications for provider %s: %w", provider.ID, err)
+			}
 		}
 		if len(followUpOrders) > 0 {
-			sendNotificationForOrders(ctx, followUpOrders, "follow_up", provider, user, emailService, slackService)
+			if err := sendNotificationForOrders(ctx, followUpOrders, "follow_up", provider, user, emailService, slackService); err != nil {
+				return fmt.Errorf("failed to send follow-up notifications for provider %s: %w", provider.ID, err)
+			}
 		}
 		if len(escalationOrders) > 0 {
-			sendNotificationForOrders(ctx, escalationOrders, "escalation", provider, user, emailService, slackService)
+			if err := sendNotificationForOrders(ctx, escalationOrders, "escalation", provider, user, emailService, slackService); err != nil {
+				return fmt.Errorf("failed to send escalation notifications for provider %s: %w", provider.ID, err)
+			}
 		}
 	}
 
@@ -1860,7 +1896,7 @@ func NotifyStuckLockOrders() error {
 }
 
 // sendNotificationForOrders sends notifications for a specific set of orders with a specific template type
-func sendNotificationForOrders(ctx context.Context, orders []*ent.LockPaymentOrder, templateType string, provider *ent.ProviderProfile, user *ent.User, emailService email.EmailServiceInterface, slackService *services.SlackService) {
+func sendNotificationForOrders(ctx context.Context, orders []*ent.LockPaymentOrder, templateType string, provider *ent.ProviderProfile, user *ent.User, emailService email.EmailServiceInterface, slackService *services.SlackService) error {
 	// Filter orders that have not yet received this template recently
 	filtered := make([]*ent.LockPaymentOrder, 0, len(orders))
 	for _, o := range orders {
@@ -1872,14 +1908,14 @@ func sendNotificationForOrders(ctx context.Context, orders []*ent.LockPaymentOrd
 				"OrderID":      o.ID.String(),
 				"TemplateType": templateType,
 			}).Errorf("sendNotificationForOrders.checkNotificationHistory")
-			continue
+			return fmt.Errorf("failed to check notification history for order %s: %w", o.ID.String(), err)
 		}
 		if ok {
 			filtered = append(filtered, o)
 		}
 	}
 	if len(filtered) == 0 {
-		return
+		return nil
 	}
 
 	// Prepare email data
@@ -1894,14 +1930,15 @@ func sendNotificationForOrders(ctx context.Context, orders []*ent.LockPaymentOrd
 			"Email":        user.Email,
 			"TemplateType": templateType,
 		}).Errorf("sendNotificationForOrders.sendEmail")
-	} else {
-		logger.WithFields(logger.Fields{
-			"ProviderID":   provider.ID,
-			"Email":        user.Email,
-			"TemplateType": templateType,
-			"Response":     fmt.Sprintf("%v", emailResp),
-		}).Infof("Sent stuck order email")
+		return fmt.Errorf("failed to send email notification for provider %s: %w", provider.ID, emailErr)
 	}
+
+	logger.WithFields(logger.Fields{
+		"ProviderID":   provider.ID,
+		"Email":        user.Email,
+		"TemplateType": templateType,
+		"Response":     fmt.Sprintf("%v", emailResp),
+	}).Infof("Sent stuck order email")
 
 	// Send Slack notification for follow-up/escalation regardless of email outcome
 	var slackErr error
@@ -1922,15 +1959,17 @@ func sendNotificationForOrders(ctx context.Context, orders []*ent.LockPaymentOrd
 	}
 
 	// Record notification only if at least one channel succeeded
-	if emailErr == nil || slackErr == nil {
+	if slackErr == nil {
 		if err := recordNotificationSent(ctx, filtered, templateType); err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":        fmt.Sprintf("%v", err),
 				"ProviderID":   provider.ID,
 				"TemplateType": templateType,
 			}).Errorf("sendNotificationForOrders.recordNotification")
+			return fmt.Errorf("failed to record notification sent for provider %s: %w", provider.ID, err)
 		}
 	}
+	return nil
 }
 
 // shouldSendNotification checks if we should send a notification of a given template for one order
@@ -2026,9 +2065,8 @@ func recordNotificationSent(ctx context.Context, orders []*ent.LockPaymentOrder,
 		}
 
 		notification := map[string]interface{}{
-			"type":     templateType,
-			"sent_at":  time.Now().Format(time.RFC3339),
-			"order_id": order.ID.String(),
+			"type":    templateType,
+			"sent_at": time.Now().Format(time.RFC3339),
 		}
 
 		notifications = append(notifications, notification)
