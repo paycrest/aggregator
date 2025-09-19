@@ -39,8 +39,8 @@ func init() {
 
 func TestSlackService(t *testing.T) {
 	// Activate httpmock
-	httpmock.Activate()
-	defer httpmock.Deactivate()
+	// httpmock.Activate()
+	// defer httpmock.Deactivate()
 
 	webhookURL := conf.SlackWebhookURL
 	if webhookURL == "" {
@@ -120,6 +120,126 @@ func TestSlackService(t *testing.T) {
 			assert.NoError(t, err, "formatting current timestamp should not produce an error")
 			assert.NotEmpty(t, formattedTime, "formatted time should not be empty")
 			assert.Contains(t, formattedTime, now.In(time.FixedZone("GMT+1", 3600)).Format("2006"))
+		})
+
+		t.Run("SendStuckOrderNotification should skip initial notifications", func(t *testing.T) {
+			// Create Slack service
+			slackService := NewSlackService(webhookURL)
+
+			// Test data
+			providerName := "Test Provider"
+			providerEmail := "provider@example.com"
+			orders := []map[string]interface{}{
+				{
+					"order_id":      "123e4567-e89b-12d3-a456-426614174000",
+					"tx_id":         "0x1234567890abcdef",
+					"amount":        "100.50",
+					"currency":      "USD",
+					"time_stuck":    "5 minutes",
+					"institution":   "Test Bank",
+					"account_name":  "Test Account",
+					"dashboard_url": "https://example.com/dashboard/orders/123e4567-e89b-12d3-a456-426614174000",
+				},
+			}
+
+			// Test initial notification - should be skipped
+			templateType := "initial"
+			err := slackService.SendStuckOrderNotification(providerName, providerEmail, orders, templateType)
+			assert.NoError(t, err, "unexpected error")
+
+			// Verify NO request was made (initial notifications are skipped)
+			info := httpmock.GetCallCountInfo()
+			assert.Equal(t, 0, info["POST "+webhookURL])
+		})
+
+		t.Run("SendStuckOrderNotification should work properly for follow-up notification", func(t *testing.T) {
+			// Create Slack service
+			slackService := NewSlackService(webhookURL)
+
+			// Test data
+			providerName := "Test Provider"
+			providerEmail := "provider@example.com"
+			orders := []map[string]interface{}{
+				{
+					"order_id":      "123e4567-e89b-12d3-a456-426614174000",
+					"tx_id":         "0x1234567890abcdef",
+					"amount":        "100.50",
+					"currency":      "USD",
+					"time_stuck":    "10 minutes",
+					"institution":   "Test Bank",
+					"account_name":  "Test Account",
+					"dashboard_url": "https://example.com/dashboard/orders/123e4567-e89b-12d3-a456-426614174000",
+				},
+			}
+
+			// Test follow-up notification (should trigger HIGH priority)
+			templateType := "follow_up"
+			err := slackService.SendStuckOrderNotification(providerName, providerEmail, orders, templateType)
+			assert.NoError(t, err, "unexpected error")
+
+			// Verify the request was made
+			info := httpmock.GetCallCountInfo()
+			assert.Equal(t, 1, info["POST "+webhookURL])
+		})
+
+		t.Run("SendStuckOrderNotification should work properly for escalation notification", func(t *testing.T) {
+			// Create Slack service
+			slackService := NewSlackService(webhookURL)
+
+			// Test data
+			providerName := "Test Provider"
+			providerEmail := "provider@example.com"
+			orders := []map[string]interface{}{
+				{
+					"order_id":      "123e4567-e89b-12d3-a456-426614174000",
+					"tx_id":         "0x1234567890abcdef",
+					"amount":        "100.50",
+					"currency":      "USD",
+					"time_stuck":    "30 minutes",
+					"institution":   "Test Bank",
+					"account_name":  "Test Account",
+					"dashboard_url": "https://example.com/dashboard/orders/123e4567-e89b-12d3-a456-426614174000",
+				},
+			}
+
+			// Test escalation notification (should trigger CRITICAL priority)
+			templateType := "escalation"
+			err := slackService.SendStuckOrderNotification(providerName, providerEmail, orders, templateType)
+			assert.NoError(t, err, "unexpected error")
+
+			// Verify the request was made
+			info := httpmock.GetCallCountInfo()
+			assert.Equal(t, 2, info["POST "+webhookURL])
+		})
+		t.Run("SendStuckOrderNotification should return error when HTTP request fails", func(t *testing.T) {
+			// Create Slack service
+			slackService := NewSlackService(webhookURL)
+
+			// Register mock response with error status
+			httpmock.RegisterResponder("POST", webhookURL,
+				httpmock.NewStringResponder(500, `{"error": "Internal Server Error"}`))
+
+			// Test data
+			providerName := "Test Provider"
+			providerEmail := "provider@example.com"
+			orders := []map[string]interface{}{
+				{
+					"order_id":      "123e4567-e89b-12d3-a456-426614174000",
+					"tx_id":         "0x1234567890abcdef",
+					"amount":        "100.50",
+					"currency":      "USD",
+					"time_stuck":    "5 minutes",
+					"institution":   "Test Bank",
+					"account_name":  "Test Account",
+					"dashboard_url": "https://example.com/dashboard/orders/123e4567-e89b-12d3-a456-426614174000",
+				},
+			}
+
+			// Test that error is returned when HTTP request fails
+			templateType := "initial"
+			err := slackService.SendStuckOrderNotification(providerName, providerEmail, orders, templateType)
+			assert.Error(t, err, "expected error")
+			assert.Contains(t, err.Error(), "notification failed with status: 500")
 		})
 	})
 }
