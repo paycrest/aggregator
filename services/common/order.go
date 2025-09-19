@@ -207,6 +207,7 @@ func CreateLockPaymentOrder(
 		Amount:            event.Amount,
 		Rate:              event.Rate,
 		ProtocolFee:       event.ProtocolFee,
+		AmountInUSD:       utils.CalculatePaymentOrderAmountInUSD(event.Amount, event.Rate),
 		BlockNumber:       int64(event.BlockNumber),
 		TxHash:            event.TxHash,
 		Institution:       recipient.Institution,
@@ -360,6 +361,7 @@ func CreateLockPaymentOrder(
 			SetRate(lockPaymentOrder.Rate).
 			SetProtocolFee(lockPaymentOrder.ProtocolFee).
 			SetOrderPercent(decimal.NewFromInt(100)).
+			SetAmountInUsd(lockPaymentOrder.AmountInUSD).
 			SetBlockNumber(lockPaymentOrder.BlockNumber).
 			SetTxHash(lockPaymentOrder.TxHash).
 			SetInstitution(lockPaymentOrder.Institution).
@@ -1107,6 +1109,7 @@ func createBasicLockPaymentOrderAndCancel(
 		Amount:      adjustedAmount,
 		Rate:        event.Rate,
 		ProtocolFee: adjustedProtocolFee,
+		AmountInUSD: utils.CalculatePaymentOrderAmountInUSD(adjustedAmount, event.Rate),
 		BlockNumber: int64(event.BlockNumber),
 		TxHash:      event.TxHash,
 		Sender:      event.Sender,
