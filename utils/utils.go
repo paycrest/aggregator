@@ -208,6 +208,14 @@ func AbsPercentageDeviation(trueValue, measuredValue decimal.Decimal) decimal.De
 	return deviation.Abs()
 }
 
+// CalculatePaymentOrderAmountInUSD calculates the amount in USD for a payment order
+func CalculatePaymentOrderAmountInUSD(amount, rate decimal.Decimal) decimal.Decimal {
+    if rate.Equal(decimal.NewFromInt(1)) {
+        return amount.Div(decimal.NewFromInt(1515))
+    }
+    return amount
+}
+
 // SendPaymentOrderWebhook notifies a sender when the status of a payment order changes
 func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder) error {
 	var err error
