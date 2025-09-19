@@ -58,6 +58,8 @@ func (LockPaymentOrder) Fields() []ent.Field {
 		field.String("message_hash").
 			MaxLen(400).
 			Optional(),
+		field.Float("amount_in_usd").
+			GoType(decimal.Decimal{}),
 	}
 }
 
