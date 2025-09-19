@@ -1,4 +1,4 @@
-h1:jOGi0Tg63IoKTKyaWvGzi4aIwMXCzQ9BVgD6eGYc+ck=
+h1:iftYS3t+VYOIbBpJnsXvEGl7lFEJ6mOi9YENWov0aB0=
 20240118234246_initial.sql h1:dYuYBqns33WT+3p8VQvbKUP62k3k6w6h8S+FqNqgSvU=
 20240130122324_order_from_address.sql h1:mMVI2iBUd1roIYLUqu0d2jZ7+B6exppRN8qqn+aIHx4=
 20240202010744_fees_on_order.sql h1:P7ngxZKqDKefBM5vk6M3kbWeMPVwbZ4MZVcLBjEfS34=
@@ -61,3 +61,4 @@ h1:jOGi0Tg63IoKTKyaWvGzi4aIwMXCzQ9BVgD6eGYc+ck=
 20250721080600_update_payment_order_triggers.sql h1:Ei+DoaBGSK/GDnQ0Iq1KNZEJc17fuJAn2nJfU1cbZVc=
 20250801142901_add_provider_currencies.sql h1:Xmdc1PylAOMTkH3txmdh6g9vCAHT82pzy4yr45i+Le8=
 20250904102613_add_network_unique_to_provider_order_token.sql h1:mMhR5RAwAX5kU0dO1wc3eeWz7Cf/KouUkEUL3N7yOAE=
+20250918114527_add_amount_in_usd_to_payment_tables.sql h1:jNuv4TWamWntsUyve6+hOARa5AFOjlSUT8IkCQn15K8=
