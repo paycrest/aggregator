@@ -143,6 +143,20 @@ func (fcc *FiatCurrencyCreate) SetNillableCriticalThreshold(d *decimal.Decimal) 
 	return fcc
 }
 
+// SetAlertThreshold sets the "alert_threshold" field.
+func (fcc *FiatCurrencyCreate) SetAlertThreshold(d decimal.Decimal) *FiatCurrencyCreate {
+	fcc.mutation.SetAlertThreshold(d)
+	return fcc
+}
+
+// SetNillableAlertThreshold sets the "alert_threshold" field if the given value is not nil.
+func (fcc *FiatCurrencyCreate) SetNillableAlertThreshold(d *decimal.Decimal) *FiatCurrencyCreate {
+	if d != nil {
+		fcc.SetAlertThreshold(*d)
+	}
+	return fcc
+}
+
 // SetID sets the "id" field.
 func (fcc *FiatCurrencyCreate) SetID(u uuid.UUID) *FiatCurrencyCreate {
 	fcc.mutation.SetID(u)
@@ -276,6 +290,10 @@ func (fcc *FiatCurrencyCreate) defaults() {
 		v := fiatcurrency.DefaultCriticalThreshold
 		fcc.mutation.SetCriticalThreshold(v)
 	}
+	if _, ok := fcc.mutation.AlertThreshold(); !ok {
+		v := fiatcurrency.DefaultAlertThreshold
+		fcc.mutation.SetAlertThreshold(v)
+	}
 	if _, ok := fcc.mutation.ID(); !ok {
 		v := fiatcurrency.DefaultID()
 		fcc.mutation.SetID(v)
@@ -316,6 +334,9 @@ func (fcc *FiatCurrencyCreate) check() error {
 	}
 	if _, ok := fcc.mutation.CriticalThreshold(); !ok {
 		return &ValidationError{Name: "critical_threshold", err: errors.New(`ent: missing required field "FiatCurrency.critical_threshold"`)}
+	}
+	if _, ok := fcc.mutation.AlertThreshold(); !ok {
+		return &ValidationError{Name: "alert_threshold", err: errors.New(`ent: missing required field "FiatCurrency.alert_threshold"`)}
 	}
 	return nil
 }
@@ -396,6 +417,10 @@ func (fcc *FiatCurrencyCreate) createSpec() (*FiatCurrency, *sqlgraph.CreateSpec
 	if value, ok := fcc.mutation.CriticalThreshold(); ok {
 		_spec.SetField(fiatcurrency.FieldCriticalThreshold, field.TypeFloat64, value)
 		_node.CriticalThreshold = value
+	}
+	if value, ok := fcc.mutation.AlertThreshold(); ok {
+		_spec.SetField(fiatcurrency.FieldAlertThreshold, field.TypeFloat64, value)
+		_node.AlertThreshold = value
 	}
 	if nodes := fcc.mutation.ProviderCurrenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -657,6 +682,24 @@ func (u *FiatCurrencyUpsert) AddCriticalThreshold(v decimal.Decimal) *FiatCurren
 	return u
 }
 
+// SetAlertThreshold sets the "alert_threshold" field.
+func (u *FiatCurrencyUpsert) SetAlertThreshold(v decimal.Decimal) *FiatCurrencyUpsert {
+	u.Set(fiatcurrency.FieldAlertThreshold, v)
+	return u
+}
+
+// UpdateAlertThreshold sets the "alert_threshold" field to the value that was provided on create.
+func (u *FiatCurrencyUpsert) UpdateAlertThreshold() *FiatCurrencyUpsert {
+	u.SetExcluded(fiatcurrency.FieldAlertThreshold)
+	return u
+}
+
+// AddAlertThreshold adds v to the "alert_threshold" field.
+func (u *FiatCurrencyUpsert) AddAlertThreshold(v decimal.Decimal) *FiatCurrencyUpsert {
+	u.Add(fiatcurrency.FieldAlertThreshold, v)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
@@ -873,6 +916,27 @@ func (u *FiatCurrencyUpsertOne) AddCriticalThreshold(v decimal.Decimal) *FiatCur
 func (u *FiatCurrencyUpsertOne) UpdateCriticalThreshold() *FiatCurrencyUpsertOne {
 	return u.Update(func(s *FiatCurrencyUpsert) {
 		s.UpdateCriticalThreshold()
+	})
+}
+
+// SetAlertThreshold sets the "alert_threshold" field.
+func (u *FiatCurrencyUpsertOne) SetAlertThreshold(v decimal.Decimal) *FiatCurrencyUpsertOne {
+	return u.Update(func(s *FiatCurrencyUpsert) {
+		s.SetAlertThreshold(v)
+	})
+}
+
+// AddAlertThreshold adds v to the "alert_threshold" field.
+func (u *FiatCurrencyUpsertOne) AddAlertThreshold(v decimal.Decimal) *FiatCurrencyUpsertOne {
+	return u.Update(func(s *FiatCurrencyUpsert) {
+		s.AddAlertThreshold(v)
+	})
+}
+
+// UpdateAlertThreshold sets the "alert_threshold" field to the value that was provided on create.
+func (u *FiatCurrencyUpsertOne) UpdateAlertThreshold() *FiatCurrencyUpsertOne {
+	return u.Update(func(s *FiatCurrencyUpsert) {
+		s.UpdateAlertThreshold()
 	})
 }
 
@@ -1259,6 +1323,27 @@ func (u *FiatCurrencyUpsertBulk) AddCriticalThreshold(v decimal.Decimal) *FiatCu
 func (u *FiatCurrencyUpsertBulk) UpdateCriticalThreshold() *FiatCurrencyUpsertBulk {
 	return u.Update(func(s *FiatCurrencyUpsert) {
 		s.UpdateCriticalThreshold()
+	})
+}
+
+// SetAlertThreshold sets the "alert_threshold" field.
+func (u *FiatCurrencyUpsertBulk) SetAlertThreshold(v decimal.Decimal) *FiatCurrencyUpsertBulk {
+	return u.Update(func(s *FiatCurrencyUpsert) {
+		s.SetAlertThreshold(v)
+	})
+}
+
+// AddAlertThreshold adds v to the "alert_threshold" field.
+func (u *FiatCurrencyUpsertBulk) AddAlertThreshold(v decimal.Decimal) *FiatCurrencyUpsertBulk {
+	return u.Update(func(s *FiatCurrencyUpsert) {
+		s.AddAlertThreshold(v)
+	})
+}
+
+// UpdateAlertThreshold sets the "alert_threshold" field to the value that was provided on create.
+func (u *FiatCurrencyUpsertBulk) UpdateAlertThreshold() *FiatCurrencyUpsertBulk {
+	return u.Update(func(s *FiatCurrencyUpsert) {
+		s.UpdateAlertThreshold()
 	})
 }
 

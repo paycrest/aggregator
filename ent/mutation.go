@@ -1424,6 +1424,8 @@ type FiatCurrencyMutation struct {
 	addminimum_available_balance *decimal.Decimal
 	critical_threshold           *decimal.Decimal
 	addcritical_threshold        *decimal.Decimal
+	alert_threshold              *decimal.Decimal
+	addalert_threshold           *decimal.Decimal
 	clearedFields                map[string]struct{}
 	provider_currencies          map[uuid.UUID]struct{}
 	removedprovider_currencies   map[uuid.UUID]struct{}
@@ -2022,6 +2024,62 @@ func (m *FiatCurrencyMutation) ResetCriticalThreshold() {
 	m.addcritical_threshold = nil
 }
 
+// SetAlertThreshold sets the "alert_threshold" field.
+func (m *FiatCurrencyMutation) SetAlertThreshold(d decimal.Decimal) {
+	m.alert_threshold = &d
+	m.addalert_threshold = nil
+}
+
+// AlertThreshold returns the value of the "alert_threshold" field in the mutation.
+func (m *FiatCurrencyMutation) AlertThreshold() (r decimal.Decimal, exists bool) {
+	v := m.alert_threshold
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAlertThreshold returns the old "alert_threshold" field's value of the FiatCurrency entity.
+// If the FiatCurrency object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FiatCurrencyMutation) OldAlertThreshold(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAlertThreshold is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAlertThreshold requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAlertThreshold: %w", err)
+	}
+	return oldValue.AlertThreshold, nil
+}
+
+// AddAlertThreshold adds d to the "alert_threshold" field.
+func (m *FiatCurrencyMutation) AddAlertThreshold(d decimal.Decimal) {
+	if m.addalert_threshold != nil {
+		*m.addalert_threshold = m.addalert_threshold.Add(d)
+	} else {
+		m.addalert_threshold = &d
+	}
+}
+
+// AddedAlertThreshold returns the value that was added to the "alert_threshold" field in this mutation.
+func (m *FiatCurrencyMutation) AddedAlertThreshold() (r decimal.Decimal, exists bool) {
+	v := m.addalert_threshold
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAlertThreshold resets all changes to the "alert_threshold" field.
+func (m *FiatCurrencyMutation) ResetAlertThreshold() {
+	m.alert_threshold = nil
+	m.addalert_threshold = nil
+}
+
 // AddProviderCurrencyIDs adds the "provider_currencies" edge to the ProviderCurrencies entity by ids.
 func (m *FiatCurrencyMutation) AddProviderCurrencyIDs(ids ...uuid.UUID) {
 	if m.provider_currencies == nil {
@@ -2272,7 +2330,7 @@ func (m *FiatCurrencyMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *FiatCurrencyMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 12)
 	if m.created_at != nil {
 		fields = append(fields, fiatcurrency.FieldCreatedAt)
 	}
@@ -2306,6 +2364,9 @@ func (m *FiatCurrencyMutation) Fields() []string {
 	if m.critical_threshold != nil {
 		fields = append(fields, fiatcurrency.FieldCriticalThreshold)
 	}
+	if m.alert_threshold != nil {
+		fields = append(fields, fiatcurrency.FieldAlertThreshold)
+	}
 	return fields
 }
 
@@ -2336,6 +2397,8 @@ func (m *FiatCurrencyMutation) Field(name string) (ent.Value, bool) {
 		return m.MinimumAvailableBalance()
 	case fiatcurrency.FieldCriticalThreshold:
 		return m.CriticalThreshold()
+	case fiatcurrency.FieldAlertThreshold:
+		return m.AlertThreshold()
 	}
 	return nil, false
 }
@@ -2367,6 +2430,8 @@ func (m *FiatCurrencyMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldMinimumAvailableBalance(ctx)
 	case fiatcurrency.FieldCriticalThreshold:
 		return m.OldCriticalThreshold(ctx)
+	case fiatcurrency.FieldAlertThreshold:
+		return m.OldAlertThreshold(ctx)
 	}
 	return nil, fmt.Errorf("unknown FiatCurrency field %s", name)
 }
@@ -2453,6 +2518,13 @@ func (m *FiatCurrencyMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetCriticalThreshold(v)
 		return nil
+	case fiatcurrency.FieldAlertThreshold:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAlertThreshold(v)
+		return nil
 	}
 	return fmt.Errorf("unknown FiatCurrency field %s", name)
 }
@@ -2473,6 +2545,9 @@ func (m *FiatCurrencyMutation) AddedFields() []string {
 	if m.addcritical_threshold != nil {
 		fields = append(fields, fiatcurrency.FieldCriticalThreshold)
 	}
+	if m.addalert_threshold != nil {
+		fields = append(fields, fiatcurrency.FieldAlertThreshold)
+	}
 	return fields
 }
 
@@ -2489,6 +2564,8 @@ func (m *FiatCurrencyMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedMinimumAvailableBalance()
 	case fiatcurrency.FieldCriticalThreshold:
 		return m.AddedCriticalThreshold()
+	case fiatcurrency.FieldAlertThreshold:
+		return m.AddedAlertThreshold()
 	}
 	return nil, false
 }
@@ -2525,6 +2602,13 @@ func (m *FiatCurrencyMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddCriticalThreshold(v)
+		return nil
+	case fiatcurrency.FieldAlertThreshold:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAlertThreshold(v)
 		return nil
 	}
 	return fmt.Errorf("unknown FiatCurrency numeric field %s", name)
@@ -2585,6 +2669,9 @@ func (m *FiatCurrencyMutation) ResetField(name string) error {
 		return nil
 	case fiatcurrency.FieldCriticalThreshold:
 		m.ResetCriticalThreshold()
+		return nil
+	case fiatcurrency.FieldAlertThreshold:
+		m.ResetAlertThreshold()
 		return nil
 	}
 	return fmt.Errorf("unknown FiatCurrency field %s", name)

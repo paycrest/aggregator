@@ -38,6 +38,8 @@ const (
 	FieldMinimumAvailableBalance = "minimum_available_balance"
 	// FieldCriticalThreshold holds the string denoting the critical_threshold field in the database.
 	FieldCriticalThreshold = "critical_threshold"
+	// FieldAlertThreshold holds the string denoting the alert_threshold field in the database.
+	FieldAlertThreshold = "alert_threshold"
 	// EdgeProviderCurrencies holds the string denoting the provider_currencies edge name in mutations.
 	EdgeProviderCurrencies = "provider_currencies"
 	// EdgeProvisionBuckets holds the string denoting the provision_buckets edge name in mutations.
@@ -92,6 +94,7 @@ var Columns = []string{
 	FieldIsEnabled,
 	FieldMinimumAvailableBalance,
 	FieldCriticalThreshold,
+	FieldAlertThreshold,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -119,6 +122,8 @@ var (
 	DefaultMinimumAvailableBalance decimal.Decimal
 	// DefaultCriticalThreshold holds the default value on creation for the "critical_threshold" field.
 	DefaultCriticalThreshold decimal.Decimal
+	// DefaultAlertThreshold holds the default value on creation for the "alert_threshold" field.
+	DefaultAlertThreshold decimal.Decimal
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -184,6 +189,11 @@ func ByMinimumAvailableBalance(opts ...sql.OrderTermOption) OrderOption {
 // ByCriticalThreshold orders the results by the critical_threshold field.
 func ByCriticalThreshold(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCriticalThreshold, opts...).ToFunc()
+}
+
+// ByAlertThreshold orders the results by the alert_threshold field.
+func ByAlertThreshold(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAlertThreshold, opts...).ToFunc()
 }
 
 // ByProviderCurrenciesCount orders the results by provider_currencies count.

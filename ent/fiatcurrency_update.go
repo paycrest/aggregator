@@ -194,6 +194,27 @@ func (fcu *FiatCurrencyUpdate) AddCriticalThreshold(d decimal.Decimal) *FiatCurr
 	return fcu
 }
 
+// SetAlertThreshold sets the "alert_threshold" field.
+func (fcu *FiatCurrencyUpdate) SetAlertThreshold(d decimal.Decimal) *FiatCurrencyUpdate {
+	fcu.mutation.ResetAlertThreshold()
+	fcu.mutation.SetAlertThreshold(d)
+	return fcu
+}
+
+// SetNillableAlertThreshold sets the "alert_threshold" field if the given value is not nil.
+func (fcu *FiatCurrencyUpdate) SetNillableAlertThreshold(d *decimal.Decimal) *FiatCurrencyUpdate {
+	if d != nil {
+		fcu.SetAlertThreshold(*d)
+	}
+	return fcu
+}
+
+// AddAlertThreshold adds d to the "alert_threshold" field.
+func (fcu *FiatCurrencyUpdate) AddAlertThreshold(d decimal.Decimal) *FiatCurrencyUpdate {
+	fcu.mutation.AddAlertThreshold(d)
+	return fcu
+}
+
 // AddProviderCurrencyIDs adds the "provider_currencies" edge to the ProviderCurrencies entity by IDs.
 func (fcu *FiatCurrencyUpdate) AddProviderCurrencyIDs(ids ...uuid.UUID) *FiatCurrencyUpdate {
 	fcu.mutation.AddProviderCurrencyIDs(ids...)
@@ -429,6 +450,12 @@ func (fcu *FiatCurrencyUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := fcu.mutation.AddedCriticalThreshold(); ok {
 		_spec.AddField(fiatcurrency.FieldCriticalThreshold, field.TypeFloat64, value)
+	}
+	if value, ok := fcu.mutation.AlertThreshold(); ok {
+		_spec.SetField(fiatcurrency.FieldAlertThreshold, field.TypeFloat64, value)
+	}
+	if value, ok := fcu.mutation.AddedAlertThreshold(); ok {
+		_spec.AddField(fiatcurrency.FieldAlertThreshold, field.TypeFloat64, value)
 	}
 	if fcu.mutation.ProviderCurrenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -790,6 +817,27 @@ func (fcuo *FiatCurrencyUpdateOne) AddCriticalThreshold(d decimal.Decimal) *Fiat
 	return fcuo
 }
 
+// SetAlertThreshold sets the "alert_threshold" field.
+func (fcuo *FiatCurrencyUpdateOne) SetAlertThreshold(d decimal.Decimal) *FiatCurrencyUpdateOne {
+	fcuo.mutation.ResetAlertThreshold()
+	fcuo.mutation.SetAlertThreshold(d)
+	return fcuo
+}
+
+// SetNillableAlertThreshold sets the "alert_threshold" field if the given value is not nil.
+func (fcuo *FiatCurrencyUpdateOne) SetNillableAlertThreshold(d *decimal.Decimal) *FiatCurrencyUpdateOne {
+	if d != nil {
+		fcuo.SetAlertThreshold(*d)
+	}
+	return fcuo
+}
+
+// AddAlertThreshold adds d to the "alert_threshold" field.
+func (fcuo *FiatCurrencyUpdateOne) AddAlertThreshold(d decimal.Decimal) *FiatCurrencyUpdateOne {
+	fcuo.mutation.AddAlertThreshold(d)
+	return fcuo
+}
+
 // AddProviderCurrencyIDs adds the "provider_currencies" edge to the ProviderCurrencies entity by IDs.
 func (fcuo *FiatCurrencyUpdateOne) AddProviderCurrencyIDs(ids ...uuid.UUID) *FiatCurrencyUpdateOne {
 	fcuo.mutation.AddProviderCurrencyIDs(ids...)
@@ -1055,6 +1103,12 @@ func (fcuo *FiatCurrencyUpdateOne) sqlSave(ctx context.Context) (_node *FiatCurr
 	}
 	if value, ok := fcuo.mutation.AddedCriticalThreshold(); ok {
 		_spec.AddField(fiatcurrency.FieldCriticalThreshold, field.TypeFloat64, value)
+	}
+	if value, ok := fcuo.mutation.AlertThreshold(); ok {
+		_spec.SetField(fiatcurrency.FieldAlertThreshold, field.TypeFloat64, value)
+	}
+	if value, ok := fcuo.mutation.AddedAlertThreshold(); ok {
+		_spec.AddField(fiatcurrency.FieldAlertThreshold, field.TypeFloat64, value)
 	}
 	if fcuo.mutation.ProviderCurrenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{

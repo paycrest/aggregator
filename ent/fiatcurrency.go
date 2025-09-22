@@ -41,6 +41,8 @@ type FiatCurrency struct {
 	MinimumAvailableBalance decimal.Decimal `json:"minimum_available_balance,omitempty"`
 	// CriticalThreshold holds the value of the "critical_threshold" field.
 	CriticalThreshold decimal.Decimal `json:"critical_threshold,omitempty"`
+	// AlertThreshold holds the value of the "alert_threshold" field.
+	AlertThreshold decimal.Decimal `json:"alert_threshold,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the FiatCurrencyQuery when eager-loading is set.
 	Edges        FiatCurrencyEdges `json:"edges"`
@@ -103,7 +105,7 @@ func (*FiatCurrency) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case fiatcurrency.FieldMarketRate, fiatcurrency.FieldMinimumAvailableBalance, fiatcurrency.FieldCriticalThreshold:
+		case fiatcurrency.FieldMarketRate, fiatcurrency.FieldMinimumAvailableBalance, fiatcurrency.FieldCriticalThreshold, fiatcurrency.FieldAlertThreshold:
 			values[i] = new(decimal.Decimal)
 		case fiatcurrency.FieldIsEnabled:
 			values[i] = new(sql.NullBool)
@@ -202,6 +204,12 @@ func (fc *FiatCurrency) assignValues(columns []string, values []any) error {
 			} else if value != nil {
 				fc.CriticalThreshold = *value
 			}
+		case fiatcurrency.FieldAlertThreshold:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field alert_threshold", values[i])
+			} else if value != nil {
+				fc.AlertThreshold = *value
+			}
 		default:
 			fc.selectValues.Set(columns[i], values[i])
 		}
@@ -290,6 +298,9 @@ func (fc *FiatCurrency) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("critical_threshold=")
 	builder.WriteString(fmt.Sprintf("%v", fc.CriticalThreshold))
+	builder.WriteString(", ")
+	builder.WriteString("alert_threshold=")
+	builder.WriteString(fmt.Sprintf("%v", fc.AlertThreshold))
 	builder.WriteByte(')')
 	return builder.String()
 }

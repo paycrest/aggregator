@@ -47,6 +47,7 @@ import (
 
 var orderConf = config.OrderConfig()
 var serverConf = config.ServerConfig()
+var balanceConf = config.BalanceConfig()
 
 // RetryStaleUserOperations retries stale user operations
 // TODO: Fetch failed orders from a separate db table and process them
@@ -1799,13 +1800,13 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for IndexBlockchainEvents: %v", err)
 	}
 
-	// Monitor provider balances every 1 minute for testing
-	_, err = scheduler.Every(5).Seconds().Do(MonitorProviderBalances)
+	// Monitor provider balances using configured interval
+	_, err = scheduler.Every(balanceConf.CheckInterval).Do(MonitorProviderBalances)
 	if err != nil {
 		logger.Errorf("StartCronJobs for MonitorProviderBalances: %v", err)
 	}
 	// Start scheduler
-	
+
 	scheduler.StartAsync()
 }
 

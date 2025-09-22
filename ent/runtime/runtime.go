@@ -85,11 +85,15 @@ func init() {
 	// fiatcurrencyDescMinimumAvailableBalance is the schema descriptor for minimum_available_balance field.
 	fiatcurrencyDescMinimumAvailableBalance := fiatcurrencyFields[8].Descriptor()
 	// fiatcurrency.DefaultMinimumAvailableBalance holds the default value on creation for the minimum_available_balance field.
-	fiatcurrency.DefaultMinimumAvailableBalance = decimal.NewFromFloat(fiatcurrencyDescMinimumAvailableBalance.Default.(float64))
+	fiatcurrency.DefaultMinimumAvailableBalance = decimal.Decimal(fiatcurrencyDescMinimumAvailableBalance.Default.(float64))
 	// fiatcurrencyDescCriticalThreshold is the schema descriptor for critical_threshold field.
 	fiatcurrencyDescCriticalThreshold := fiatcurrencyFields[9].Descriptor()
 	// fiatcurrency.DefaultCriticalThreshold holds the default value on creation for the critical_threshold field.
-	fiatcurrency.DefaultCriticalThreshold = decimal.NewFromFloat(fiatcurrencyDescCriticalThreshold.Default.(float64))
+	fiatcurrency.DefaultCriticalThreshold = decimal.Decimal(fiatcurrencyDescCriticalThreshold.Default.(float64))
+	// fiatcurrencyDescAlertThreshold is the schema descriptor for alert_threshold field.
+	fiatcurrencyDescAlertThreshold := fiatcurrencyFields[10].Descriptor()
+	// fiatcurrency.DefaultAlertThreshold holds the default value on creation for the alert_threshold field.
+	fiatcurrency.DefaultAlertThreshold = decimal.Decimal(fiatcurrencyDescAlertThreshold.Default.(float64))
 	// fiatcurrencyDescID is the schema descriptor for id field.
 	fiatcurrencyDescID := fiatcurrencyFields[0].Descriptor()
 	// fiatcurrency.DefaultID holds the default value on creation for the id field.

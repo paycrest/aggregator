@@ -38,6 +38,8 @@ func (FiatCurrency) Fields() []ent.Field {
 			GoType(decimal.Decimal{}).Default(0.0),
 		field.Float("critical_threshold").
 			GoType(decimal.Decimal{}).Default(0.0),
+		field.Float("alert_threshold").
+			GoType(decimal.Decimal{}).Default(0.0),
 	}
 }
 

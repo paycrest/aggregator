@@ -54,7 +54,6 @@ func NewBalanceMonitoringService() *BalanceMonitoringService {
 
 func (s *BalanceMonitoringService) StartMonitoring(ctx context.Context) {
 	if !s.config.MonitoringEnabled {
-		logger.Infof("Balance monitoring is disabled")
 		return
 	}
 
@@ -111,7 +110,7 @@ func (s *BalanceMonitoringService) checkProviderBalances(ctx context.Context, pr
 }
 
 func (s *BalanceMonitoringService) checkCurrencyBalance(ctx context.Context, provider *ent.ProviderProfile, currency *ent.ProviderCurrencies) {
-	thresholds, err := s.getCurrencyThresholds(ctx, currency.Edges.Currency.Code)
+	thresholds, err := s.GetCurrencyThresholds(ctx, currency.Edges.Currency.Code)
 
 	if err != nil {
 		logger.Errorf("Failed to get thresholds for currency %s: %v", currency.Edges.Currency.Code, err)
@@ -130,7 +129,7 @@ func (s *BalanceMonitoringService) checkCurrencyBalance(ctx context.Context, pro
 			Timestamp:      time.Now(),
 		}
 
-		s.sendAlert(ctx, alert)
+		s.SendAlert(ctx, alert)
 
 		s.handleCriticalAlert(ctx, provider, currency)
 	} else if currentBalance.LessThan(thresholds.AlertThreshold) {
@@ -143,7 +142,7 @@ func (s *BalanceMonitoringService) checkCurrencyBalance(ctx context.Context, pro
 			Timestamp:      time.Now(),
 		}
 
-		s.sendAlert(ctx, alert)
+		s.SendAlert(ctx, alert)
 	}
 }
 
@@ -161,7 +160,7 @@ func (s *BalanceMonitoringService) handleCriticalAlert(ctx context.Context, prov
 	}
 
 	// mark provider as unavailable
-	if err := s.disableProvider(ctx, provider, currency); err != nil {
+	if err := s.DisableProvider(ctx, provider, currency); err != nil {
 		logger.Errorf("Failed to disable provider: %v", err)
 	}
 
@@ -174,7 +173,7 @@ func (s *BalanceMonitoringService) handleCriticalAlert(ctx context.Context, prov
 	}
 }
 
-func (s *BalanceMonitoringService) getCurrencyThresholds(ctx context.Context, currencyCode string) (*CurrencyThresholds, error) {
+func (s *BalanceMonitoringService) GetCurrencyThresholds(ctx context.Context, currencyCode string) (*CurrencyThresholds, error) {
 	if s.config.RedisEnabled {
 		if cached, err := s.getCachedThresholds(currencyCode); err == nil {
 			return cached, nil
@@ -192,6 +191,7 @@ func (s *BalanceMonitoringService) getCurrencyThresholds(ctx context.Context, cu
 
 	thresholds := &CurrencyThresholds{
 		MinAvailable:      currency.MinimumAvailableBalance,
+		AlertThreshold:    currency.AlertThreshold,
 		CriticalThreshold: currency.CriticalThreshold,
 	}
 
@@ -244,7 +244,7 @@ func (s *BalanceMonitoringService) cacheThresholds(currencyCode string, threshol
 	}
 }
 
-func (s *BalanceMonitoringService) sendAlert(ctx context.Context, alert *BalanceAlert) {
+func (s *BalanceMonitoringService) SendAlert(ctx context.Context, alert *BalanceAlert) {
 	if !s.config.EmailEnabled {
 		logger.Infof("Email notifications are disabled, skipping alert for %s", alert.CurrencyCode)
 		return
@@ -283,7 +283,7 @@ func (s *BalanceMonitoringService) getProviderDetails(ctx context.Context, provi
 	return provider, nil
 }
 
-func (s *BalanceMonitoringService) disableProvider(ctx context.Context, provider *ent.ProviderProfile, currency *ent.ProviderCurrencies) error {
+func (s *BalanceMonitoringService) DisableProvider(ctx context.Context, provider *ent.ProviderProfile, currency *ent.ProviderCurrencies) error {
 	_, err := storage.Client.ProviderProfile.
 		UpdateOneID(provider.ID).
 		SetIsActive(false).
@@ -372,4 +372,3 @@ func (s *BalanceMonitoringService) UpdateProviderHealthStatus(ctx context.Contex
 	logger.Infof("Redis disabled/unavailable; skipping provider health cache update for %s:%s", providerID, currencyCode)
 	return nil
 }
-
