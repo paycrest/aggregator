@@ -35,11 +35,11 @@ func (FiatCurrency) Fields() []ent.Field {
 			GoType(decimal.Decimal{}),
 		field.Bool("is_enabled").Default(false),
 		field.Float("minimum_available_balance").
-			GoType(decimal.Decimal{}).Default(0.0),
+			GoType(decimal.Decimal{}),
 		field.Float("critical_threshold").
-			GoType(decimal.Decimal{}).Default(0.0),
+			GoType(decimal.Decimal{}),
 		field.Float("alert_threshold").
-			GoType(decimal.Decimal{}).Default(0.0),
+			GoType(decimal.Decimal{}),
 	}
 }
 
