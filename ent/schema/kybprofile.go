@@ -38,6 +38,9 @@ func (KYBProfile) Fields() []ent.Field {
 		field.String("kyc_policy_url").
 			Optional().
 			Nillable(),
+		field.String("kyb_rejection_comment").
+			Optional().
+			Nillable(),
 	}
 }
 

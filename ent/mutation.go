@@ -3968,6 +3968,7 @@ type KYBProfileMutation struct {
 	proof_of_business_address_url    *string
 	aml_policy_url                   *string
 	kyc_policy_url                   *string
+	kyb_rejection_comment            *string
 	clearedFields                    map[string]struct{}
 	beneficial_owners                map[uuid.UUID]struct{}
 	removedbeneficial_owners         map[uuid.UUID]struct{}
@@ -4518,6 +4519,55 @@ func (m *KYBProfileMutation) ResetKycPolicyURL() {
 	delete(m.clearedFields, kybprofile.FieldKycPolicyURL)
 }
 
+// SetKybRejectionComment sets the "kyb_rejection_comment" field.
+func (m *KYBProfileMutation) SetKybRejectionComment(s string) {
+	m.kyb_rejection_comment = &s
+}
+
+// KybRejectionComment returns the value of the "kyb_rejection_comment" field in the mutation.
+func (m *KYBProfileMutation) KybRejectionComment() (r string, exists bool) {
+	v := m.kyb_rejection_comment
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldKybRejectionComment returns the old "kyb_rejection_comment" field's value of the KYBProfile entity.
+// If the KYBProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *KYBProfileMutation) OldKybRejectionComment(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKybRejectionComment is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKybRejectionComment requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKybRejectionComment: %w", err)
+	}
+	return oldValue.KybRejectionComment, nil
+}
+
+// ClearKybRejectionComment clears the value of the "kyb_rejection_comment" field.
+func (m *KYBProfileMutation) ClearKybRejectionComment() {
+	m.kyb_rejection_comment = nil
+	m.clearedFields[kybprofile.FieldKybRejectionComment] = struct{}{}
+}
+
+// KybRejectionCommentCleared returns if the "kyb_rejection_comment" field was cleared in this mutation.
+func (m *KYBProfileMutation) KybRejectionCommentCleared() bool {
+	_, ok := m.clearedFields[kybprofile.FieldKybRejectionComment]
+	return ok
+}
+
+// ResetKybRejectionComment resets all changes to the "kyb_rejection_comment" field.
+func (m *KYBProfileMutation) ResetKybRejectionComment() {
+	m.kyb_rejection_comment = nil
+	delete(m.clearedFields, kybprofile.FieldKybRejectionComment)
+}
+
 // AddBeneficialOwnerIDs adds the "beneficial_owners" edge to the BeneficialOwner entity by ids.
 func (m *KYBProfileMutation) AddBeneficialOwnerIDs(ids ...uuid.UUID) {
 	if m.beneficial_owners == nil {
@@ -4645,7 +4695,7 @@ func (m *KYBProfileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *KYBProfileMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 12)
 	if m.created_at != nil {
 		fields = append(fields, kybprofile.FieldCreatedAt)
 	}
@@ -4679,6 +4729,9 @@ func (m *KYBProfileMutation) Fields() []string {
 	if m.kyc_policy_url != nil {
 		fields = append(fields, kybprofile.FieldKycPolicyURL)
 	}
+	if m.kyb_rejection_comment != nil {
+		fields = append(fields, kybprofile.FieldKybRejectionComment)
+	}
 	return fields
 }
 
@@ -4709,6 +4762,8 @@ func (m *KYBProfileMutation) Field(name string) (ent.Value, bool) {
 		return m.AmlPolicyURL()
 	case kybprofile.FieldKycPolicyURL:
 		return m.KycPolicyURL()
+	case kybprofile.FieldKybRejectionComment:
+		return m.KybRejectionComment()
 	}
 	return nil, false
 }
@@ -4740,6 +4795,8 @@ func (m *KYBProfileMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldAmlPolicyURL(ctx)
 	case kybprofile.FieldKycPolicyURL:
 		return m.OldKycPolicyURL(ctx)
+	case kybprofile.FieldKybRejectionComment:
+		return m.OldKybRejectionComment(ctx)
 	}
 	return nil, fmt.Errorf("unknown KYBProfile field %s", name)
 }
@@ -4826,6 +4883,13 @@ func (m *KYBProfileMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetKycPolicyURL(v)
 		return nil
+	case kybprofile.FieldKybRejectionComment:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetKybRejectionComment(v)
+		return nil
 	}
 	return fmt.Errorf("unknown KYBProfile field %s", name)
 }
@@ -4865,6 +4929,9 @@ func (m *KYBProfileMutation) ClearedFields() []string {
 	if m.FieldCleared(kybprofile.FieldKycPolicyURL) {
 		fields = append(fields, kybprofile.FieldKycPolicyURL)
 	}
+	if m.FieldCleared(kybprofile.FieldKybRejectionComment) {
+		fields = append(fields, kybprofile.FieldKybRejectionComment)
+	}
 	return fields
 }
 
@@ -4887,6 +4954,9 @@ func (m *KYBProfileMutation) ClearField(name string) error {
 		return nil
 	case kybprofile.FieldKycPolicyURL:
 		m.ClearKycPolicyURL()
+		return nil
+	case kybprofile.FieldKybRejectionComment:
+		m.ClearKybRejectionComment()
 		return nil
 	}
 	return fmt.Errorf("unknown KYBProfile nullable field %s", name)
@@ -4928,6 +4998,9 @@ func (m *KYBProfileMutation) ResetField(name string) error {
 		return nil
 	case kybprofile.FieldKycPolicyURL:
 		m.ResetKycPolicyURL()
+		return nil
+	case kybprofile.FieldKybRejectionComment:
+		m.ResetKybRejectionComment()
 		return nil
 	}
 	return fmt.Errorf("unknown KYBProfile field %s", name)
