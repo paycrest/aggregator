@@ -38,7 +38,7 @@ services:
       - postgres_db:postgres_db
     volumes:
       - .:/app
-      - tmpfs-cache:/root/.cache/go-build  # Add tmpfs volume for build cache
+     #  - tmpfs-cache:/root/.cache/go-build  # Add tmpfs volume for build cache
     deploy:
       resources:
         limits:
