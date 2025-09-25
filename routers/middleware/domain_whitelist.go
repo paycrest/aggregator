@@ -45,6 +45,13 @@ func DomainWhitelistMiddleware() gin.HandlerFunc {
 				"error":   err.Error(),
 			}).Warnf("Failed to extract domain from request headers")
 
+			if len(sender.DomainWhitelist) > 0 {
+				u.APIResponse(c, http.StatusBadRequest, "error",
+					"Invalid request origin", nil)
+				c.Abort()
+				return
+			}
+
 			c.Next()
 			return
 		}
@@ -118,6 +125,13 @@ func DomainWhitelistMiddlewareForAPIKey() gin.HandlerFunc {
 				"referer": referer,
 				"error":   err.Error(),
 			}).Warnf("Failed to extract domain from request headers")
+
+			if len(senderProfile.DomainWhitelist) > 0 {
+				u.APIResponse(c, http.StatusBadRequest, "error",
+					"Invalid request origin", nil)
+				c.Abort()
+				return
+			}
 
 			c.Next()
 			return
