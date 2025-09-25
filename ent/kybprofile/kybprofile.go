@@ -37,6 +37,8 @@ const (
 	FieldAmlPolicyURL = "aml_policy_url"
 	// FieldKycPolicyURL holds the string denoting the kyc_policy_url field in the database.
 	FieldKycPolicyURL = "kyc_policy_url"
+	// FieldKybRejectionComment holds the string denoting the kyb_rejection_comment field in the database.
+	FieldKybRejectionComment = "kyb_rejection_comment"
 	// EdgeBeneficialOwners holds the string denoting the beneficial_owners edge name in mutations.
 	EdgeBeneficialOwners = "beneficial_owners"
 	// EdgeUser holds the string denoting the user edge name in mutations.
@@ -73,6 +75,7 @@ var Columns = []string{
 	FieldProofOfBusinessAddressURL,
 	FieldAmlPolicyURL,
 	FieldKycPolicyURL,
+	FieldKybRejectionComment,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "kyb_profiles"
@@ -168,6 +171,11 @@ func ByAmlPolicyURL(opts ...sql.OrderTermOption) OrderOption {
 // ByKycPolicyURL orders the results by the kyc_policy_url field.
 func ByKycPolicyURL(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldKycPolicyURL, opts...).ToFunc()
+}
+
+// ByKybRejectionComment orders the results by the kyb_rejection_comment field.
+func ByKybRejectionComment(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldKybRejectionComment, opts...).ToFunc()
 }
 
 // ByBeneficialOwnersCount orders the results by beneficial_owners count.
