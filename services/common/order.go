@@ -77,74 +77,57 @@ func CreateLockPaymentOrder(
 	// Update payment order with the gateway ID asynchronously
 	// This ensures the payment order is updated without blocking the main flow
 	go func() {
-		// Retry loop to wait for payment order to be created if blockchain event is indexed first
-		maxRetries := 30
-		retryDelay := 500 * time.Millisecond
-
-		err := utils.Retry(maxRetries, retryDelay, func() error {
-			paymentOrder, fetchErr := db.Client.PaymentOrder.
-				Query().
-				Where(
-					paymentorder.MessageHashEQ(event.MessageHash),
-				).
-				Only(ctx)
-			if fetchErr != nil {
-				if ent.IsNotFound(fetchErr) {
-					return fetchErr // Return error to trigger retry
-				}
-				// Other error occurred, don't retry
+		paymentOrder, fetchErr := db.Client.PaymentOrder.
+			Query().
+			Where(
+				paymentorder.MessageHashEQ(event.MessageHash),
+			).
+			Only(ctx)
+		if fetchErr != nil {
+			if !ent.IsNotFound(fetchErr) {
 				logger.WithFields(logger.Fields{
 					"MessageHash": event.MessageHash,
 					"TxHash":      event.TxHash,
 					"Error":       fetchErr.Error(),
 				}).Errorf("Failed to fetch payment order")
-				return fetchErr
 			}
+			return
+		}
 
-			// Payment order found, update it
-			_, updateErr := db.Client.PaymentOrder.
-				Update().
+		// Payment order found, update it
+		_, updateErr := db.Client.PaymentOrder.
+			Update().
+			Where(paymentorder.IDEQ(paymentOrder.ID)).
+			SetTxHash(event.TxHash).
+			SetBlockNumber(int64(event.BlockNumber)).
+			SetGatewayID(event.OrderId).
+			SetStatus(paymentorder.StatusPending).
+			Save(ctx)
+		if updateErr != nil {
+			logger.Errorf("Failed to update payment order: %v", updateErr)
+		} else {
+			// Refetch the updated payment order for webhook
+			updatedPaymentOrder, fetchErr := db.Client.PaymentOrder.
+				Query().
 				Where(paymentorder.IDEQ(paymentOrder.ID)).
-				SetTxHash(event.TxHash).
-				SetBlockNumber(int64(event.BlockNumber)).
-				SetGatewayID(event.OrderId).
-				SetStatus(paymentorder.StatusPending).
-				Save(ctx)
-			if updateErr != nil {
-				logger.Errorf("Failed to update payment order: %v", updateErr)
+				WithSenderProfile().
+				Only(ctx)
+			if fetchErr != nil {
+				logger.WithFields(logger.Fields{
+					"OrderID": paymentOrder.ID,
+					"Error":   fetchErr.Error(),
+				}).Errorf("Failed to refetch payment order for webhook")
 			} else {
-				// Refetch the updated payment order for webhook
-				updatedPaymentOrder, fetchErr := db.Client.PaymentOrder.
-					Query().
-					Where(paymentorder.IDEQ(paymentOrder.ID)).
-					WithSenderProfile().
-					Only(ctx)
-				if fetchErr != nil {
+				// Send webhook notification to sender
+				err := utils.SendPaymentOrderWebhook(ctx, updatedPaymentOrder)
+				if err != nil {
 					logger.WithFields(logger.Fields{
-						"OrderID": paymentOrder.ID,
-						"Error":   fetchErr.Error(),
-					}).Errorf("Failed to refetch payment order for webhook")
-				} else {
-					// Send webhook notification to sender
-					err = utils.SendPaymentOrderWebhook(ctx, updatedPaymentOrder)
-					if err != nil {
-						logger.WithFields(logger.Fields{
-							"OrderID":  updatedPaymentOrder.ID,
-							"SenderID": updatedPaymentOrder.Edges.SenderProfile.ID,
-							"Error":    err.Error(),
-						}).Errorf("Failed to send payment order webhook")
-					}
+						"OrderID":  updatedPaymentOrder.ID,
+						"SenderID": updatedPaymentOrder.Edges.SenderProfile.ID,
+						"Error":    err.Error(),
+					}).Errorf("Failed to send payment order webhook")
 				}
 			}
-
-			return nil // Success, no retry needed
-		})
-
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"MessageHash": event.MessageHash,
-				"MaxRetries":  maxRetries,
-			}).Warnf("Payment order not found after %d attempts, continuing without payment order update", maxRetries)
 		}
 	}()
 

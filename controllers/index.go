@@ -296,7 +296,7 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 	}
 
 	// Use the abstracted ValidateAccount utility function
-	accountName, err := u.ValidateAccount(ctx, payload.Institution, payload.AccountIdentifier)
+	accountName, manualEntryRequired, err := u.ValidateAccount(ctx, payload.Institution, payload.AccountIdentifier)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":             fmt.Sprintf("%v", err),
@@ -304,6 +304,12 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 			"AccountIdentifier": payload.AccountIdentifier,
 		}).Errorf("Failed to verify account")
 		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to verify account", nil)
+		return
+	}
+
+	// If manual entry is required, return an error with a clear message
+	if manualEntryRequired {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Manual account name entry required - providers cannot validate this account", nil)
 		return
 	}
 

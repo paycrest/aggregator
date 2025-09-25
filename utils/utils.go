@@ -1157,8 +1157,10 @@ func findSuitableProviderRate(providers []string, tokenSymbol string, networkIde
 }
 
 // ValidateAccount validates if an account exists for the given institution and account identifier
-// Returns the account name if verification is successful, or an error if verification fails
-func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier string) (string, error) {
+// Returns (accountName, manualEntryRequired, error)
+// - accountName is non-empty only when a provider returned a real validated name
+// - manualEntryRequired true signals the client must ask user to input the name manually
+func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier string) (string, bool, error) {
 	// Get institution with enabled fiat currency
 	institution, err := storage.Client.Institution.
 		Query().
@@ -1169,14 +1171,15 @@ func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier str
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return "", fmt.Errorf("institution %s is not supported", institutionCode)
+			return "", false, fmt.Errorf("institution %s is not supported", institutionCode)
 		}
-		return "", fmt.Errorf("failed to fetch institution: %v", err)
+		return "", false, fmt.Errorf("failed to fetch institution: %v", err)
 	}
 
 	// Skip account verification for mobile money institutions
 	if institution.Type == institutionEnt.TypeMobileMoney {
-		return "OK", nil
+		// Existing mobile money providers cannot validate names reliably
+		return "", true, nil
 	}
 
 	// Find available providers for the currency
@@ -1195,11 +1198,12 @@ func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier str
 		).
 		All(ctx)
 	if err != nil {
-		return "", fmt.Errorf("failed to fetch providers: %v", err)
+		return "", true, fmt.Errorf("failed to fetch providers: %v", err)
 	}
 
 	if len(providers) == 0 {
-		return "", fmt.Errorf("no available providers found for currency %s", institution.Edges.FiatCurrency.Code)
+		// No providers to validate account name; require manual entry
+		return "", true, nil
 	}
 
 	// Prepare payload for account verification
@@ -1224,9 +1228,10 @@ func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier str
 
 		// Extract account name from response
 		if accountName, ok := data["data"].(string); ok && accountName != "" && accountName != "OK" {
-			return accountName, nil
+			return accountName, false, nil
 		}
 	}
 
-	return "", fmt.Errorf("failed to verify account with any provider")
+	// Providers reachable but none supplied a valid name → require manual entry
+	return "", true, nil
 }
