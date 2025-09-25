@@ -286,6 +286,7 @@ type ProviderProfileResponse struct {
 	IsActive              bool                           `json:"isActive"`
 	VisibilityMode        providerprofile.VisibilityMode `json:"visibilityMode"`
 	KYBVerificationStatus user.KybVerificationStatus     `json:"kybVerificationStatus"`
+	KYBRejectionComment   *string                        `json:"kybRejectionComment,omitempty"`
 }
 
 // SenderOrderTokenResponse defines the provider setting for a token
@@ -311,6 +312,7 @@ type SenderProfileResponse struct {
 	ProviderCurrencies    []string                   `json:"providerCurrencies"`
 	IsActive              bool                       `json:"isActive"`
 	KYBVerificationStatus user.KybVerificationStatus `json:"kybVerificationStatus"`
+	KYBRejectionComment   *string                    `json:"kybRejectionComment,omitempty"`
 }
 
 // RefreshResponse is the response for the refresh endpoint

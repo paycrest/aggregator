@@ -111,6 +111,11 @@ func KycPolicyURL(v string) predicate.KYBProfile {
 	return predicate.KYBProfile(sql.FieldEQ(FieldKycPolicyURL, v))
 }
 
+// KybRejectionComment applies equality check predicate on the "kyb_rejection_comment" field. It's identical to KybRejectionCommentEQ.
+func KybRejectionComment(v string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldEQ(FieldKybRejectionComment, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.KYBProfile {
 	return predicate.KYBProfile(sql.FieldEQ(FieldCreatedAt, v))
@@ -804,6 +809,81 @@ func KycPolicyURLEqualFold(v string) predicate.KYBProfile {
 // KycPolicyURLContainsFold applies the ContainsFold predicate on the "kyc_policy_url" field.
 func KycPolicyURLContainsFold(v string) predicate.KYBProfile {
 	return predicate.KYBProfile(sql.FieldContainsFold(FieldKycPolicyURL, v))
+}
+
+// KybRejectionCommentEQ applies the EQ predicate on the "kyb_rejection_comment" field.
+func KybRejectionCommentEQ(v string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldEQ(FieldKybRejectionComment, v))
+}
+
+// KybRejectionCommentNEQ applies the NEQ predicate on the "kyb_rejection_comment" field.
+func KybRejectionCommentNEQ(v string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldNEQ(FieldKybRejectionComment, v))
+}
+
+// KybRejectionCommentIn applies the In predicate on the "kyb_rejection_comment" field.
+func KybRejectionCommentIn(vs ...string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldIn(FieldKybRejectionComment, vs...))
+}
+
+// KybRejectionCommentNotIn applies the NotIn predicate on the "kyb_rejection_comment" field.
+func KybRejectionCommentNotIn(vs ...string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldNotIn(FieldKybRejectionComment, vs...))
+}
+
+// KybRejectionCommentGT applies the GT predicate on the "kyb_rejection_comment" field.
+func KybRejectionCommentGT(v string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldGT(FieldKybRejectionComment, v))
+}
+
+// KybRejectionCommentGTE applies the GTE predicate on the "kyb_rejection_comment" field.
+func KybRejectionCommentGTE(v string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldGTE(FieldKybRejectionComment, v))
+}
+
+// KybRejectionCommentLT applies the LT predicate on the "kyb_rejection_comment" field.
+func KybRejectionCommentLT(v string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldLT(FieldKybRejectionComment, v))
+}
+
+// KybRejectionCommentLTE applies the LTE predicate on the "kyb_rejection_comment" field.
+func KybRejectionCommentLTE(v string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldLTE(FieldKybRejectionComment, v))
+}
+
+// KybRejectionCommentContains applies the Contains predicate on the "kyb_rejection_comment" field.
+func KybRejectionCommentContains(v string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldContains(FieldKybRejectionComment, v))
+}
+
+// KybRejectionCommentHasPrefix applies the HasPrefix predicate on the "kyb_rejection_comment" field.
+func KybRejectionCommentHasPrefix(v string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldHasPrefix(FieldKybRejectionComment, v))
+}
+
+// KybRejectionCommentHasSuffix applies the HasSuffix predicate on the "kyb_rejection_comment" field.
+func KybRejectionCommentHasSuffix(v string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldHasSuffix(FieldKybRejectionComment, v))
+}
+
+// KybRejectionCommentIsNil applies the IsNil predicate on the "kyb_rejection_comment" field.
+func KybRejectionCommentIsNil() predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldIsNull(FieldKybRejectionComment))
+}
+
+// KybRejectionCommentNotNil applies the NotNil predicate on the "kyb_rejection_comment" field.
+func KybRejectionCommentNotNil() predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldNotNull(FieldKybRejectionComment))
+}
+
+// KybRejectionCommentEqualFold applies the EqualFold predicate on the "kyb_rejection_comment" field.
+func KybRejectionCommentEqualFold(v string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldEqualFold(FieldKybRejectionComment, v))
+}
+
+// KybRejectionCommentContainsFold applies the ContainsFold predicate on the "kyb_rejection_comment" field.
+func KybRejectionCommentContainsFold(v string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldContainsFold(FieldKybRejectionComment, v))
 }
 
 // HasBeneficialOwners applies the HasEdge predicate on the "beneficial_owners" edge.
