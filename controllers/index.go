@@ -1066,9 +1066,11 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				return
 			}
 
-			// Update KYB Profile status (assuming you have a status field)
+			// Update KYB Profile status and clear rejection comment
 			_, err = storage.Client.KYBProfile.
-				UpdateOne(kybProfile).
+				Update().
+				Where(kybprofile.IDEQ(kybProfileUUID)).
+				ClearKybRejectionComment().
 				Save(ctx)
 			if err != nil {
 				logger.Errorf("Failed to update KYB Profile status %s: %v", kybProfileID, err)
