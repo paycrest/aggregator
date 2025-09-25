@@ -783,7 +783,10 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 
 	// Get token settings, optionally filtering by currency query parameter
 	currencyFilter := ctx.Query("currency")
-	query := provider.QueryOrderTokens().WithToken().WithCurrency()
+	query := provider.QueryOrderTokens().
+		Where(providerordertoken.HasTokenWith(token.IsEnabledEQ(true))).
+		WithToken().
+		WithCurrency()
 	if currencyFilter != "" {
 		query = query.Where(providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(currencyFilter)))
 	}

@@ -264,8 +264,17 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	rateChan := make(chan RateResult, 1)
 
 	go func() {
-		accountName, err := u.ValidateAccount(ctx, payload.Recipient.Institution, payload.Recipient.AccountIdentifier)
-		accountChan <- AccountResult{accountName, err}
+		accountName, manualEntry, err := u.ValidateAccount(ctx, payload.Recipient.Institution, payload.Recipient.AccountIdentifier)
+		// If manual entry is required, pass empty name but no error; client must provide name
+		if err != nil {
+			accountChan <- AccountResult{"", err}
+			return
+		}
+		if manualEntry {
+			accountChan <- AccountResult{"", nil}
+			return
+		}
+		accountChan <- AccountResult{accountName, nil}
 	}()
 
 	go func() {
@@ -300,8 +309,19 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		}
 	}
 
-	// Both validations successful
-	payload.Recipient.AccountName = accountResult.accountName
+	// Both validations successful; only override AccountName if a validated name was supplied
+	if accountResult.accountName != "" {
+		payload.Recipient.AccountName = accountResult.accountName
+	}
+
+	// If no validated name and client didn't provide a name, require manual entry now
+	if payload.Recipient.AccountName == "" {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+			Field:   "Recipient.accountName",
+			Message: "Account name required as providers cannot validate. Please enter the account holder name manually.",
+		})
+		return
+	}
 	achievableRate := rateResult.achievableRate
 
 	// Validate that the provided rate is achievable

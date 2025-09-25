@@ -867,6 +867,8 @@ func (svc *BalanceManagementService) ValidateAndFixBalances(ctx context.Context,
 	// Get provider balance within transaction to prevent race conditions
 	providerCurrency, err := tx.ProviderCurrencies.
 		Query().
+		WithProvider().
+		WithCurrency().
 		Where(
 			providercurrencies.HasProviderWith(providerprofile.IDEQ(providerID)),
 			providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currencyCode)),
@@ -908,6 +910,14 @@ func (svc *BalanceManagementService) ValidateAndFixBalances(ctx context.Context,
 
 // validateBalanceConsistencyInternal validates balance consistency without database queries
 func (svc *BalanceManagementService) validateBalanceConsistencyInternal(providerCurrency *ent.ProviderCurrencies) error {
+	// Check if edges are loaded to prevent nil pointer dereference
+	if providerCurrency.Edges.Provider == nil {
+		return fmt.Errorf("provider edge not loaded for provider currency validation")
+	}
+	if providerCurrency.Edges.Currency == nil {
+		return fmt.Errorf("currency edge not loaded for provider currency validation")
+	}
+
 	// Ensure balances are logically consistent
 	if providerCurrency.AvailableBalance.Add(providerCurrency.ReservedBalance).GreaterThan(providerCurrency.TotalBalance) {
 		return fmt.Errorf("balance inconsistency: available + reserved > total for provider %s, currency %s",
