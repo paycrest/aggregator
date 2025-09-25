@@ -311,10 +311,6 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 		err = common.ProcessCreatedOrders(ctx, token.Edges.Network, orderIds, orderIdToEvent, s.order, s.priorityQueue)
 		if err != nil {
 			logger.Errorf("Failed to process OrderCreated events: %v", err)
-		} else {
-			if token.Edges.Network.ChainID != 56 && token.Edges.Network.ChainID != 1135 {
-				logger.Infof("Successfully processed %d OrderCreated events", len(orderCreatedEvents))
-			}
 		}
 		eventCounts.OrderCreated = len(orderCreatedEvents)
 	}
@@ -390,20 +386,13 @@ func (s *IndexerEVM) indexReceiveAddressByUserAddressWithBypass(ctx context.Cont
 
 	// Determine parameters based on whether block range is provided
 	var limit int
-	var logMessage string
 
 	if fromBlock == 0 && toBlock == 0 {
 		// No block range - get last 5 transactions
 		limit = 5
-		if token.Edges.Network.ChainID != 56 && token.Edges.Network.ChainID != 1135 {
-			logMessage = fmt.Sprintf("Processing transactions for address: %s", userAddress)
-		}
 	} else {
 		// Block range provided - get up to 100 transactions in range
 		limit = 100
-		if token.Edges.Network.ChainID != 56 && token.Edges.Network.ChainID != 1135 {
-			logMessage = fmt.Sprintf("Processing transactions in block range %d-%d for address: %s", fromBlock, toBlock, userAddress)
-		}
 	}
 
 	// Get address's transaction history with fallback
@@ -427,16 +416,11 @@ func (s *IndexerEVM) indexReceiveAddressByUserAddressWithBypass(ctx context.Cont
 		return eventCounts, nil
 	}
 
-	logger.Infof(logMessage)
-
 	// Process each transaction to find transfer events to linked addresses
-	for i, tx := range transactions {
+	for _, tx := range transactions {
 		txHash, ok := tx["hash"].(string)
 		if !ok || txHash == "" {
 			continue
-		}
-		if token.Edges.Network.ChainID != 56 && token.Edges.Network.ChainID != 1135 {
-			logger.Infof("Processing transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
 		}
 
 		// Index transfer events for this specific transaction
@@ -503,19 +487,12 @@ func (s *IndexerEVM) IndexProviderAddress(ctx context.Context, network *ent.Netw
 func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64) error {
 	// Determine parameters based on whether block range is provided
 	var limit int
-	var logMessage string
 
 	if fromBlock == 0 && toBlock == 0 {
 		limit = 10
-		if network.ChainID != 56 && network.ChainID != 1135 {
-			logMessage = fmt.Sprintf("Processing last %d transactions for gateway contract: %s", limit, address)
-		}
 	} else {
 		// Block range provided - get up to 100 transactions in range
 		limit = 100
-		if network.ChainID != 56 && network.ChainID != 1135 {
-			logMessage = fmt.Sprintf("Processing transactions in block range %d-%d for gateway contract: %s", fromBlock, toBlock, address)
-		}
 	}
 
 	// Get gateway contract's transaction history with fallback
@@ -533,16 +510,11 @@ func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network 
 		return nil
 	}
 
-	logger.Infof(logMessage)
-
 	// Process each transaction to find gateway events
-	for i, tx := range transactions {
+	for _, tx := range transactions {
 		txHash, ok := tx["hash"].(string)
 		if !ok || txHash == "" {
 			continue
-		}
-		if network.ChainID != 56 && network.ChainID != 1135 {
-			logger.Infof("Processing gateway transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
 		}
 
 		// Index gateway events for this specific transaction
@@ -624,15 +596,6 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 		default:
 			logger.Warnf("Unknown topics type: %T", topicsInterface)
 			continue
-		}
-
-		if network.ChainID != 56 && network.ChainID != 1135 {
-			// Log the event signature being processed
-			logger.WithFields(logger.Fields{
-				"EventSignature": eventSignature,
-				"TxHash":         txHash,
-				"BlockNumber":    int64(eventMap["block_number"].(float64)),
-			}).Infof("Processing event signature")
 		}
 
 		// Safely extract block_number and transaction_hash
@@ -794,10 +757,6 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 		err = common.ProcessCreatedOrders(ctx, network, orderIds, orderIdToEvent, s.order, s.priorityQueue)
 		if err != nil {
 			logger.Errorf("Failed to process OrderCreated events: %v", err)
-		} else {
-			if network.ChainID != 56 && network.ChainID != 1135 {
-				logger.Infof("Successfully processed %d OrderCreated events", len(orderCreatedEvents))
-			}
 		}
 	}
 	eventCounts.OrderCreated = len(orderCreatedEvents)
@@ -813,10 +772,6 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 		err = common.ProcessSettledOrders(ctx, network, orderIds, orderIdToEvent)
 		if err != nil {
 			logger.Errorf("Failed to process OrderSettled events: %v", err)
-		} else {
-			if network.ChainID != 56 && network.ChainID != 1135 {
-				logger.Infof("Successfully processed %d OrderSettled events", len(orderSettledEvents))
-			}
 		}
 	}
 	eventCounts.OrderSettled = len(orderSettledEvents)
@@ -832,10 +787,6 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 		err = common.ProcessRefundedOrders(ctx, network, orderIds, orderIdToEvent)
 		if err != nil {
 			logger.Errorf("Failed to process OrderRefunded events: %v", err)
-		} else {
-			if network.ChainID != 56 && network.ChainID != 1135 {
-				logger.Infof("Successfully processed %d OrderRefunded events", len(orderRefundedEvents))
-			}
 		}
 	}
 	eventCounts.OrderRefunded = len(orderRefundedEvents)
@@ -961,10 +912,6 @@ func (s *IndexerEVM) indexProviderAddressByTransaction(ctx context.Context, netw
 		err = common.ProcessSettledOrders(ctx, network, orderIds, orderIdToEvent)
 		if err != nil {
 			logger.Errorf("Failed to process OrderSettled events: %v", err)
-		} else {
-			if network.ChainID != 56 && network.ChainID != 1135 {
-				logger.Infof("Successfully processed %d OrderSettled events for provider %s", len(orderSettledEvents), providerAddress)
-			}
 		}
 	}
 	eventCounts.OrderSettled = len(orderSettledEvents)
@@ -976,19 +923,12 @@ func (s *IndexerEVM) indexProviderAddressByTransaction(ctx context.Context, netw
 func (s *IndexerEVM) indexProviderAddressByAddress(ctx context.Context, network *ent.Network, providerAddress string, fromBlock int64, toBlock int64) error {
 	// Determine parameters based on whether block range is provided
 	var limit int
-	var logMessage string
 
 	if fromBlock == 0 && toBlock == 0 {
 		limit = 20
-		if network.ChainID != 56 && network.ChainID != 1135 {
-			logMessage = fmt.Sprintf("Processing last %d transactions for provider address: %s", limit, providerAddress)
-		}
 	} else {
 		// Block range provided - get up to 100 transactions in range
 		limit = 100
-		if network.ChainID != 56 && network.ChainID != 1135 {
-			logMessage = fmt.Sprintf("Processing transactions in block range %d-%d for provider address: %s", fromBlock, toBlock, providerAddress)
-		}
 	}
 
 	// Get provider address's transaction history with fallback
@@ -1006,16 +946,11 @@ func (s *IndexerEVM) indexProviderAddressByAddress(ctx context.Context, network 
 		return nil
 	}
 
-	logger.Infof(logMessage)
-
 	// Process each transaction to find OrderSettled events
-	for i, tx := range transactions {
+	for _, tx := range transactions {
 		txHash, ok := tx["hash"].(string)
 		if !ok || txHash == "" {
 			continue
-		}
-		if network.ChainID != 56 && network.ChainID != 1135 {
-			logger.Infof("Processing provider transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
 		}
 
 		// Index provider address events for this specific transaction
