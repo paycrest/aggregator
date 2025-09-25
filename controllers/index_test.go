@@ -490,6 +490,143 @@ func TestIndex(t *testing.T) {
 			assert.Equal(t, "KYB submission already submitted for this user", response.Message)
 		})
 
+		t.Run("KYB resubmission after rejection", func(t *testing.T) {
+			// First, create a KYB profile for this test
+			kybProfile, err := db.Client.KYBProfile.
+				Create().
+				SetMobileNumber("+1234567890").
+				SetCompanyName("Test Company Ltd").
+				SetRegisteredBusinessAddress("123 Business St, Test City, TC 12345").
+				SetCertificateOfIncorporationURL("https://example.com/cert.pdf").
+				SetArticlesOfIncorporationURL("https://example.com/articles.pdf").
+				SetProofOfBusinessAddressURL("https://example.com/business-address.pdf").
+				SetUserID(testUser.ID).
+				Save(context.Background())
+			assert.NoError(t, err)
+
+			// Simulate a rejected KYB by updating the user's status and adding a rejection comment
+			_, err = db.Client.User.
+				Update().
+				Where(user.IDEQ(testUser.ID)).
+				SetKybVerificationStatus(user.KybVerificationStatusRejected).
+				Save(context.Background())
+			assert.NoError(t, err)
+
+			// Update the KYB profile with a rejection comment
+			_, err = db.Client.KYBProfile.
+				Update().
+				Where(kybprofile.IDEQ(kybProfile.ID)).
+				SetKybRejectionComment("Incomplete documentation::Please provide clearer business license").
+				Save(context.Background())
+			assert.NoError(t, err)
+
+			// Create a modified KYB submission for resubmission
+			businessLicenseUrl := "https://example.com/new-business-license.pdf"
+			amlPolicyUrl := "https://example.com/new-aml-policy.pdf"
+			kycPolicyUrl := "https://example.com/new-kyc-policy.pdf"
+
+			modifiedKYBSubmission := types.KYBSubmissionInput{
+				MobileNumber:                  "+9876543210",
+				CompanyName:                   "Updated Business Solutions Ltd",
+				RegisteredBusinessAddress:     "456 Corporate Blvd, New City, New Country",
+				CertificateOfIncorporationUrl: "https://example.com/new-cert-inc.pdf",
+				ArticlesOfIncorporationUrl:    "https://example.com/new-articles-inc.pdf",
+				BusinessLicenseUrl:            &businessLicenseUrl,
+				ProofOfBusinessAddressUrl:     "https://example.com/new-proof-business-address.pdf",
+				ProofOfResidentialAddressUrl:  "https://example.com/new-proof-residential-address.pdf",
+				AmlPolicyUrl:                  &amlPolicyUrl,
+				KycPolicyUrl:                  &kycPolicyUrl,
+				BeneficialOwners: []types.BeneficialOwnerInput{
+					{
+						FullName:                     "Robert Johnson",
+						ResidentialAddress:           "789 Executive Lane, New City, New Country",
+						ProofOfResidentialAddressUrl: "https://example.com/robert-proof-address.pdf",
+						GovernmentIssuedIdUrl:        "https://example.com/robert-id.pdf",
+						DateOfBirth:                  "1975-03-20",
+						OwnershipPercentage:          70.0,
+						GovernmentIssuedIdType:       "drivers_license",
+					},
+					{
+						FullName:                     "Sarah Wilson",
+						ResidentialAddress:           "321 Manager Street, New City, New Country",
+						ProofOfResidentialAddressUrl: "https://example.com/sarah-proof-address.pdf",
+						GovernmentIssuedIdUrl:        "https://example.com/sarah-id.pdf",
+						DateOfBirth:                  "1982-07-10",
+						OwnershipPercentage:          30.0,
+						GovernmentIssuedIdType:       "national_id",
+					},
+				},
+			}
+
+			headers := map[string]string{
+				"Authorization": "Bearer " + token,
+			}
+
+			// Test resubmission - should succeed
+			res, err := test.PerformRequest(t, "POST", "/v1/kyb-submission", modifiedKYBSubmission, headers, router)
+			assert.NoError(t, err)
+
+			assert.Equal(t, http.StatusCreated, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "success", response.Status)
+			assert.Equal(t, "KYB submission updated successfully", response.Message)
+
+			// Verify the KYB profile was updated
+			updatedKYBProfile, err := db.Client.KYBProfile.
+				Query().
+				Where(kybprofile.HasUserWith(user.IDEQ(testUser.ID))).
+				WithBeneficialOwners().
+				Only(context.Background())
+			assert.NoError(t, err)
+
+			// Verify updated fields
+			assert.Equal(t, modifiedKYBSubmission.MobileNumber, updatedKYBProfile.MobileNumber)
+			assert.Equal(t, modifiedKYBSubmission.CompanyName, updatedKYBProfile.CompanyName)
+			assert.Equal(t, modifiedKYBSubmission.RegisteredBusinessAddress, updatedKYBProfile.RegisteredBusinessAddress)
+			assert.Equal(t, modifiedKYBSubmission.CertificateOfIncorporationUrl, updatedKYBProfile.CertificateOfIncorporationURL)
+			assert.Equal(t, modifiedKYBSubmission.ArticlesOfIncorporationUrl, updatedKYBProfile.ArticlesOfIncorporationURL)
+			assert.Equal(t, *modifiedKYBSubmission.BusinessLicenseUrl, *updatedKYBProfile.BusinessLicenseURL)
+			assert.Equal(t, modifiedKYBSubmission.ProofOfBusinessAddressUrl, updatedKYBProfile.ProofOfBusinessAddressURL)
+			assert.Equal(t, *modifiedKYBSubmission.AmlPolicyUrl, updatedKYBProfile.AmlPolicyURL)
+			assert.Equal(t, *modifiedKYBSubmission.KycPolicyUrl, *updatedKYBProfile.KycPolicyURL)
+
+			// Verify beneficial owners were updated
+			assert.Equal(t, 2, len(updatedKYBProfile.Edges.BeneficialOwners))
+
+			// Check first beneficial owner
+			owner1 := updatedKYBProfile.Edges.BeneficialOwners[0]
+			assert.Equal(t, modifiedKYBSubmission.BeneficialOwners[0].FullName, owner1.FullName)
+			assert.Equal(t, modifiedKYBSubmission.BeneficialOwners[0].ResidentialAddress, owner1.ResidentialAddress)
+			assert.Equal(t, modifiedKYBSubmission.BeneficialOwners[0].ProofOfResidentialAddressUrl, owner1.ProofOfResidentialAddressURL)
+			assert.Equal(t, modifiedKYBSubmission.BeneficialOwners[0].GovernmentIssuedIdUrl, owner1.GovernmentIssuedIDURL)
+			assert.Equal(t, modifiedKYBSubmission.BeneficialOwners[0].DateOfBirth, owner1.DateOfBirth)
+			assert.Equal(t, modifiedKYBSubmission.BeneficialOwners[0].OwnershipPercentage, owner1.OwnershipPercentage)
+			assert.Equal(t, beneficialowner.GovernmentIssuedIDType(modifiedKYBSubmission.BeneficialOwners[0].GovernmentIssuedIdType), owner1.GovernmentIssuedIDType)
+
+			// Verify user's KYB verification status was updated to pending
+			updatedUser, err := db.Client.User.
+				Query().
+				Where(user.IDEQ(testUser.ID)).
+				Only(context.Background())
+			assert.NoError(t, err)
+			assert.Equal(t, user.KybVerificationStatusPending, updatedUser.KybVerificationStatus,
+				"User's KYB verification status should be updated to 'pending' after resubmission")
+
+			// Test that another resubmission is blocked
+			res, err = test.PerformRequest(t, "POST", "/v1/kyb-submission", modifiedKYBSubmission, headers, router)
+			assert.NoError(t, err)
+
+			assert.Equal(t, http.StatusConflict, res.Code)
+
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Equal(t, "KYB submission already submitted for this user", response.Message)
+		})
+
 		t.Run("missing authorization header", func(t *testing.T) {
 			res, err := test.PerformRequest(t, "POST", "/v1/kyb-submission", validKYBSubmission, nil, router)
 			assert.NoError(t, err)

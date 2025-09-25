@@ -1323,12 +1323,13 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		return
 	}
 
-	// Check if user already has a KYB submission
+	// Check if user already has a KYB submission and get the user's status
 	existingSubmission, err := storage.Client.KYBProfile.
 		Query().
 		Where(kybprofile.HasUserWith(user.IDEQ(userRecord.ID))).
-		Exist(ctx)
-	if err != nil {
+		WithUser().
+		Only(ctx)
+	if err != nil && !ent.IsNotFound(err) {
 		logger.WithFields(logger.Fields{
 			"Error":  fmt.Sprintf("%v", err),
 			"UserID": userID,
@@ -1337,9 +1338,14 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		return
 	}
 
-	if existingSubmission {
-		u.APIResponse(ctx, http.StatusConflict, "error", "KYB submission already submitted for this user", nil)
-		return
+	// If user has existing submission, check the status
+	if existingSubmission != nil {
+		userStatus := existingSubmission.Edges.User.KybVerificationStatus
+		if userStatus == user.KybVerificationStatusPending || userStatus == user.KybVerificationStatusApproved {
+			u.APIResponse(ctx, http.StatusConflict, "error", "KYB submission already submitted for this user", nil)
+			return
+		}
+		// If status is rejected, allow resubmission by updating the existing record
 	}
 
 	// --- Begin Transaction ---
@@ -1361,27 +1367,61 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		}
 	}()
 
-	kybBuilder := tx.KYBProfile.
-		Create().
-		SetMobileNumber(input.MobileNumber).
-		SetCompanyName(input.CompanyName).
-		SetRegisteredBusinessAddress(input.RegisteredBusinessAddress).
-		SetCertificateOfIncorporationURL(input.CertificateOfIncorporationUrl).
-		SetArticlesOfIncorporationURL(input.ArticlesOfIncorporationUrl).
-		SetProofOfBusinessAddressURL(input.ProofOfBusinessAddressUrl).
-		SetUserID(userRecord.ID)
+	var kybSubmission *ent.KYBProfile
 
-	if input.BusinessLicenseUrl != nil {
-		kybBuilder.SetBusinessLicenseURL(*input.BusinessLicenseUrl)
-	}
-	if input.AmlPolicyUrl != nil {
-		kybBuilder.SetAmlPolicyURL(*input.AmlPolicyUrl)
-	}
-	if input.KycPolicyUrl != nil {
-		kybBuilder.SetKycPolicyURL(*input.KycPolicyUrl)
-	}
+	if existingSubmission != nil {
+		// Update existing rejected submission
+		updateBuilder := tx.KYBProfile.
+			UpdateOneID(existingSubmission.ID).
+			SetMobileNumber(input.MobileNumber).
+			SetCompanyName(input.CompanyName).
+			SetRegisteredBusinessAddress(input.RegisteredBusinessAddress).
+			SetCertificateOfIncorporationURL(input.CertificateOfIncorporationUrl).
+			SetArticlesOfIncorporationURL(input.ArticlesOfIncorporationUrl).
+			SetProofOfBusinessAddressURL(input.ProofOfBusinessAddressUrl)
+			// Note: Rejection comment will be cleared when admin approves the resubmission
 
-	kybSubmission, err := kybBuilder.Save(ctx)
+		if input.BusinessLicenseUrl != nil {
+			updateBuilder = updateBuilder.SetBusinessLicenseURL(*input.BusinessLicenseUrl)
+		} else {
+			updateBuilder = updateBuilder.ClearBusinessLicenseURL()
+		}
+		if input.AmlPolicyUrl != nil {
+			updateBuilder = updateBuilder.SetAmlPolicyURL(*input.AmlPolicyUrl)
+		} else {
+			updateBuilder = updateBuilder.ClearAmlPolicyURL()
+		}
+		if input.KycPolicyUrl != nil {
+			updateBuilder = updateBuilder.SetKycPolicyURL(*input.KycPolicyUrl)
+		} else {
+			updateBuilder = updateBuilder.ClearKycPolicyURL()
+		}
+
+		kybSubmission, err = updateBuilder.Save(ctx)
+	} else {
+		// Create new submission
+		kybBuilder := tx.KYBProfile.
+			Create().
+			SetMobileNumber(input.MobileNumber).
+			SetCompanyName(input.CompanyName).
+			SetRegisteredBusinessAddress(input.RegisteredBusinessAddress).
+			SetCertificateOfIncorporationURL(input.CertificateOfIncorporationUrl).
+			SetArticlesOfIncorporationURL(input.ArticlesOfIncorporationUrl).
+			SetProofOfBusinessAddressURL(input.ProofOfBusinessAddressUrl).
+			SetUserID(userRecord.ID)
+
+		if input.BusinessLicenseUrl != nil {
+			kybBuilder.SetBusinessLicenseURL(*input.BusinessLicenseUrl)
+		}
+		if input.AmlPolicyUrl != nil {
+			kybBuilder.SetAmlPolicyURL(*input.AmlPolicyUrl)
+		}
+		if input.KycPolicyUrl != nil {
+			kybBuilder.SetKycPolicyURL(*input.KycPolicyUrl)
+		}
+
+		kybSubmission, err = kybBuilder.Save(ctx)
+	}
 	if err != nil {
 		if err := tx.Rollback(); err != nil {
 			logger.Errorf("Failed to rollback transaction: %v", err)
@@ -1394,6 +1434,27 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		return
 	}
 
+	// Handle beneficial owners
+	if existingSubmission != nil {
+		// Delete existing beneficial owners for update
+		_, err = tx.BeneficialOwner.
+			Delete().
+			Where(beneficialowner.HasKybProfileWith(kybprofile.IDEQ(kybSubmission.ID))).
+			Exec(ctx)
+		if err != nil {
+			if err := tx.Rollback(); err != nil {
+				logger.Errorf("Failed to rollback transaction: %v", err)
+			}
+			logger.WithFields(logger.Fields{
+				"Error":  fmt.Sprintf("%v", err),
+				"UserID": userID,
+			}).Errorf("Error: Failed to delete existing beneficial owners")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update beneficial owners", nil)
+			return
+		}
+	}
+
+	// Create new beneficial owners
 	for _, owner := range input.BeneficialOwners {
 		_, err := tx.BeneficialOwner.
 			Create().
@@ -1455,7 +1516,15 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		return
 	}
 
-	u.APIResponse(ctx, http.StatusCreated, "success", "KYB submission submitted successfully", gin.H{
+	// Determine response message based on whether it's an update or new submission
+	var message string
+	if existingSubmission != nil {
+		message = "KYB submission updated successfully"
+	} else {
+		message = "KYB submission submitted successfully"
+	}
+
+	u.APIResponse(ctx, http.StatusCreated, "success", message, gin.H{
 		"submission_id": kybSubmission.ID,
 	})
 }
