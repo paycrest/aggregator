@@ -97,11 +97,6 @@ func NetworkFee(v decimal.Decimal) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldEQ(FieldNetworkFee, v))
 }
 
-// ProtocolFee applies equality check predicate on the "protocol_fee" field. It's identical to ProtocolFeeEQ.
-func ProtocolFee(v decimal.Decimal) predicate.PaymentOrder {
-	return predicate.PaymentOrder(sql.FieldEQ(FieldProtocolFee, v))
-}
-
 // Rate applies equality check predicate on the "rate" field. It's identical to RateEQ.
 func Rate(v decimal.Decimal) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldEQ(FieldRate, v))
@@ -145,6 +140,11 @@ func FeeAddress(v string) predicate.PaymentOrder {
 // GatewayID applies equality check predicate on the "gateway_id" field. It's identical to GatewayIDEQ.
 func GatewayID(v string) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldEQ(FieldGatewayID, v))
+}
+
+// MessageHash applies equality check predicate on the "message_hash" field. It's identical to MessageHashEQ.
+func MessageHash(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldMessageHash, v))
 }
 
 // Reference applies equality check predicate on the "reference" field. It's identical to ReferenceEQ.
@@ -470,46 +470,6 @@ func NetworkFeeLT(v decimal.Decimal) predicate.PaymentOrder {
 // NetworkFeeLTE applies the LTE predicate on the "network_fee" field.
 func NetworkFeeLTE(v decimal.Decimal) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldLTE(FieldNetworkFee, v))
-}
-
-// ProtocolFeeEQ applies the EQ predicate on the "protocol_fee" field.
-func ProtocolFeeEQ(v decimal.Decimal) predicate.PaymentOrder {
-	return predicate.PaymentOrder(sql.FieldEQ(FieldProtocolFee, v))
-}
-
-// ProtocolFeeNEQ applies the NEQ predicate on the "protocol_fee" field.
-func ProtocolFeeNEQ(v decimal.Decimal) predicate.PaymentOrder {
-	return predicate.PaymentOrder(sql.FieldNEQ(FieldProtocolFee, v))
-}
-
-// ProtocolFeeIn applies the In predicate on the "protocol_fee" field.
-func ProtocolFeeIn(vs ...decimal.Decimal) predicate.PaymentOrder {
-	return predicate.PaymentOrder(sql.FieldIn(FieldProtocolFee, vs...))
-}
-
-// ProtocolFeeNotIn applies the NotIn predicate on the "protocol_fee" field.
-func ProtocolFeeNotIn(vs ...decimal.Decimal) predicate.PaymentOrder {
-	return predicate.PaymentOrder(sql.FieldNotIn(FieldProtocolFee, vs...))
-}
-
-// ProtocolFeeGT applies the GT predicate on the "protocol_fee" field.
-func ProtocolFeeGT(v decimal.Decimal) predicate.PaymentOrder {
-	return predicate.PaymentOrder(sql.FieldGT(FieldProtocolFee, v))
-}
-
-// ProtocolFeeGTE applies the GTE predicate on the "protocol_fee" field.
-func ProtocolFeeGTE(v decimal.Decimal) predicate.PaymentOrder {
-	return predicate.PaymentOrder(sql.FieldGTE(FieldProtocolFee, v))
-}
-
-// ProtocolFeeLT applies the LT predicate on the "protocol_fee" field.
-func ProtocolFeeLT(v decimal.Decimal) predicate.PaymentOrder {
-	return predicate.PaymentOrder(sql.FieldLT(FieldProtocolFee, v))
-}
-
-// ProtocolFeeLTE applies the LTE predicate on the "protocol_fee" field.
-func ProtocolFeeLTE(v decimal.Decimal) predicate.PaymentOrder {
-	return predicate.PaymentOrder(sql.FieldLTE(FieldProtocolFee, v))
 }
 
 // RateEQ applies the EQ predicate on the "rate" field.
@@ -1072,6 +1032,81 @@ func GatewayIDContainsFold(v string) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldContainsFold(FieldGatewayID, v))
 }
 
+// MessageHashEQ applies the EQ predicate on the "message_hash" field.
+func MessageHashEQ(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldMessageHash, v))
+}
+
+// MessageHashNEQ applies the NEQ predicate on the "message_hash" field.
+func MessageHashNEQ(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNEQ(FieldMessageHash, v))
+}
+
+// MessageHashIn applies the In predicate on the "message_hash" field.
+func MessageHashIn(vs ...string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIn(FieldMessageHash, vs...))
+}
+
+// MessageHashNotIn applies the NotIn predicate on the "message_hash" field.
+func MessageHashNotIn(vs ...string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotIn(FieldMessageHash, vs...))
+}
+
+// MessageHashGT applies the GT predicate on the "message_hash" field.
+func MessageHashGT(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGT(FieldMessageHash, v))
+}
+
+// MessageHashGTE applies the GTE predicate on the "message_hash" field.
+func MessageHashGTE(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGTE(FieldMessageHash, v))
+}
+
+// MessageHashLT applies the LT predicate on the "message_hash" field.
+func MessageHashLT(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLT(FieldMessageHash, v))
+}
+
+// MessageHashLTE applies the LTE predicate on the "message_hash" field.
+func MessageHashLTE(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLTE(FieldMessageHash, v))
+}
+
+// MessageHashContains applies the Contains predicate on the "message_hash" field.
+func MessageHashContains(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldContains(FieldMessageHash, v))
+}
+
+// MessageHashHasPrefix applies the HasPrefix predicate on the "message_hash" field.
+func MessageHashHasPrefix(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldHasPrefix(FieldMessageHash, v))
+}
+
+// MessageHashHasSuffix applies the HasSuffix predicate on the "message_hash" field.
+func MessageHashHasSuffix(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldHasSuffix(FieldMessageHash, v))
+}
+
+// MessageHashIsNil applies the IsNil predicate on the "message_hash" field.
+func MessageHashIsNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIsNull(FieldMessageHash))
+}
+
+// MessageHashNotNil applies the NotNil predicate on the "message_hash" field.
+func MessageHashNotNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotNull(FieldMessageHash))
+}
+
+// MessageHashEqualFold applies the EqualFold predicate on the "message_hash" field.
+func MessageHashEqualFold(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEqualFold(FieldMessageHash, v))
+}
+
+// MessageHashContainsFold applies the ContainsFold predicate on the "message_hash" field.
+func MessageHashContainsFold(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldContainsFold(FieldMessageHash, v))
+}
+
 // ReferenceEQ applies the EQ predicate on the "reference" field.
 func ReferenceEQ(v string) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldEQ(FieldReference, v))
@@ -1297,6 +1332,29 @@ func HasTransactions() predicate.PaymentOrder {
 func HasTransactionsWith(preds ...predicate.TransactionLog) predicate.PaymentOrder {
 	return predicate.PaymentOrder(func(s *sql.Selector) {
 		step := newTransactionsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasPaymentWebhook applies the HasEdge predicate on the "payment_webhook" edge.
+func HasPaymentWebhook() predicate.PaymentOrder {
+	return predicate.PaymentOrder(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, PaymentWebhookTable, PaymentWebhookColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasPaymentWebhookWith applies the HasEdge predicate on the "payment_webhook" edge with a given conditions (other predicates).
+func HasPaymentWebhookWith(preds ...predicate.PaymentWebhook) predicate.PaymentOrder {
+	return predicate.PaymentOrder(func(s *sql.Selector) {
+		step := newPaymentWebhookStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

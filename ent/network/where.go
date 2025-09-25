@@ -71,11 +71,6 @@ func ChainID(v int64) predicate.Network {
 	return predicate.Network(sql.FieldEQ(FieldChainID, v))
 }
 
-// ChainIDHex applies equality check predicate on the "chain_id_hex" field. It's identical to ChainIDHexEQ.
-func ChainIDHex(v string) predicate.Network {
-	return predicate.Network(sql.FieldEQ(FieldChainIDHex, v))
-}
-
 // Identifier applies equality check predicate on the "identifier" field. It's identical to IdentifierEQ.
 func Identifier(v string) predicate.Network {
 	return predicate.Network(sql.FieldEQ(FieldIdentifier, v))
@@ -89,6 +84,11 @@ func RPCEndpoint(v string) predicate.Network {
 // GatewayContractAddress applies equality check predicate on the "gateway_contract_address" field. It's identical to GatewayContractAddressEQ.
 func GatewayContractAddress(v string) predicate.Network {
 	return predicate.Network(sql.FieldEQ(FieldGatewayContractAddress, v))
+}
+
+// BlockTime applies equality check predicate on the "block_time" field. It's identical to BlockTimeEQ.
+func BlockTime(v decimal.Decimal) predicate.Network {
+	return predicate.Network(sql.FieldEQ(FieldBlockTime, v))
 }
 
 // IsTestnet applies equality check predicate on the "is_testnet" field. It's identical to IsTestnetEQ.
@@ -229,81 +229,6 @@ func ChainIDLT(v int64) predicate.Network {
 // ChainIDLTE applies the LTE predicate on the "chain_id" field.
 func ChainIDLTE(v int64) predicate.Network {
 	return predicate.Network(sql.FieldLTE(FieldChainID, v))
-}
-
-// ChainIDHexEQ applies the EQ predicate on the "chain_id_hex" field.
-func ChainIDHexEQ(v string) predicate.Network {
-	return predicate.Network(sql.FieldEQ(FieldChainIDHex, v))
-}
-
-// ChainIDHexNEQ applies the NEQ predicate on the "chain_id_hex" field.
-func ChainIDHexNEQ(v string) predicate.Network {
-	return predicate.Network(sql.FieldNEQ(FieldChainIDHex, v))
-}
-
-// ChainIDHexIn applies the In predicate on the "chain_id_hex" field.
-func ChainIDHexIn(vs ...string) predicate.Network {
-	return predicate.Network(sql.FieldIn(FieldChainIDHex, vs...))
-}
-
-// ChainIDHexNotIn applies the NotIn predicate on the "chain_id_hex" field.
-func ChainIDHexNotIn(vs ...string) predicate.Network {
-	return predicate.Network(sql.FieldNotIn(FieldChainIDHex, vs...))
-}
-
-// ChainIDHexGT applies the GT predicate on the "chain_id_hex" field.
-func ChainIDHexGT(v string) predicate.Network {
-	return predicate.Network(sql.FieldGT(FieldChainIDHex, v))
-}
-
-// ChainIDHexGTE applies the GTE predicate on the "chain_id_hex" field.
-func ChainIDHexGTE(v string) predicate.Network {
-	return predicate.Network(sql.FieldGTE(FieldChainIDHex, v))
-}
-
-// ChainIDHexLT applies the LT predicate on the "chain_id_hex" field.
-func ChainIDHexLT(v string) predicate.Network {
-	return predicate.Network(sql.FieldLT(FieldChainIDHex, v))
-}
-
-// ChainIDHexLTE applies the LTE predicate on the "chain_id_hex" field.
-func ChainIDHexLTE(v string) predicate.Network {
-	return predicate.Network(sql.FieldLTE(FieldChainIDHex, v))
-}
-
-// ChainIDHexContains applies the Contains predicate on the "chain_id_hex" field.
-func ChainIDHexContains(v string) predicate.Network {
-	return predicate.Network(sql.FieldContains(FieldChainIDHex, v))
-}
-
-// ChainIDHexHasPrefix applies the HasPrefix predicate on the "chain_id_hex" field.
-func ChainIDHexHasPrefix(v string) predicate.Network {
-	return predicate.Network(sql.FieldHasPrefix(FieldChainIDHex, v))
-}
-
-// ChainIDHexHasSuffix applies the HasSuffix predicate on the "chain_id_hex" field.
-func ChainIDHexHasSuffix(v string) predicate.Network {
-	return predicate.Network(sql.FieldHasSuffix(FieldChainIDHex, v))
-}
-
-// ChainIDHexIsNil applies the IsNil predicate on the "chain_id_hex" field.
-func ChainIDHexIsNil() predicate.Network {
-	return predicate.Network(sql.FieldIsNull(FieldChainIDHex))
-}
-
-// ChainIDHexNotNil applies the NotNil predicate on the "chain_id_hex" field.
-func ChainIDHexNotNil() predicate.Network {
-	return predicate.Network(sql.FieldNotNull(FieldChainIDHex))
-}
-
-// ChainIDHexEqualFold applies the EqualFold predicate on the "chain_id_hex" field.
-func ChainIDHexEqualFold(v string) predicate.Network {
-	return predicate.Network(sql.FieldEqualFold(FieldChainIDHex, v))
-}
-
-// ChainIDHexContainsFold applies the ContainsFold predicate on the "chain_id_hex" field.
-func ChainIDHexContainsFold(v string) predicate.Network {
-	return predicate.Network(sql.FieldContainsFold(FieldChainIDHex, v))
 }
 
 // IdentifierEQ applies the EQ predicate on the "identifier" field.
@@ -499,6 +424,46 @@ func GatewayContractAddressEqualFold(v string) predicate.Network {
 // GatewayContractAddressContainsFold applies the ContainsFold predicate on the "gateway_contract_address" field.
 func GatewayContractAddressContainsFold(v string) predicate.Network {
 	return predicate.Network(sql.FieldContainsFold(FieldGatewayContractAddress, v))
+}
+
+// BlockTimeEQ applies the EQ predicate on the "block_time" field.
+func BlockTimeEQ(v decimal.Decimal) predicate.Network {
+	return predicate.Network(sql.FieldEQ(FieldBlockTime, v))
+}
+
+// BlockTimeNEQ applies the NEQ predicate on the "block_time" field.
+func BlockTimeNEQ(v decimal.Decimal) predicate.Network {
+	return predicate.Network(sql.FieldNEQ(FieldBlockTime, v))
+}
+
+// BlockTimeIn applies the In predicate on the "block_time" field.
+func BlockTimeIn(vs ...decimal.Decimal) predicate.Network {
+	return predicate.Network(sql.FieldIn(FieldBlockTime, vs...))
+}
+
+// BlockTimeNotIn applies the NotIn predicate on the "block_time" field.
+func BlockTimeNotIn(vs ...decimal.Decimal) predicate.Network {
+	return predicate.Network(sql.FieldNotIn(FieldBlockTime, vs...))
+}
+
+// BlockTimeGT applies the GT predicate on the "block_time" field.
+func BlockTimeGT(v decimal.Decimal) predicate.Network {
+	return predicate.Network(sql.FieldGT(FieldBlockTime, v))
+}
+
+// BlockTimeGTE applies the GTE predicate on the "block_time" field.
+func BlockTimeGTE(v decimal.Decimal) predicate.Network {
+	return predicate.Network(sql.FieldGTE(FieldBlockTime, v))
+}
+
+// BlockTimeLT applies the LT predicate on the "block_time" field.
+func BlockTimeLT(v decimal.Decimal) predicate.Network {
+	return predicate.Network(sql.FieldLT(FieldBlockTime, v))
+}
+
+// BlockTimeLTE applies the LTE predicate on the "block_time" field.
+func BlockTimeLTE(v decimal.Decimal) predicate.Network {
+	return predicate.Network(sql.FieldLTE(FieldBlockTime, v))
 }
 
 // IsTestnetEQ applies the EQ predicate on the "is_testnet" field.
@@ -716,6 +681,29 @@ func HasTokens() predicate.Network {
 func HasTokensWith(preds ...predicate.Token) predicate.Network {
 	return predicate.Network(func(s *sql.Selector) {
 		step := newTokensStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasPaymentWebhook applies the HasEdge predicate on the "payment_webhook" edge.
+func HasPaymentWebhook() predicate.Network {
+	return predicate.Network(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, PaymentWebhookTable, PaymentWebhookColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasPaymentWebhookWith applies the HasEdge predicate on the "payment_webhook" edge with a given conditions (other predicates).
+func HasPaymentWebhookWith(preds ...predicate.PaymentWebhook) predicate.Network {
+	return predicate.Network(func(s *sql.Selector) {
+		step := newPaymentWebhookStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

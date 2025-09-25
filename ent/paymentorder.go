@@ -13,6 +13,7 @@ import (
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
@@ -40,8 +41,6 @@ type PaymentOrder struct {
 	SenderFee decimal.Decimal `json:"sender_fee,omitempty"`
 	// NetworkFee holds the value of the "network_fee" field.
 	NetworkFee decimal.Decimal `json:"network_fee,omitempty"`
-	// ProtocolFee holds the value of the "protocol_fee" field.
-	ProtocolFee decimal.Decimal `json:"protocol_fee,omitempty"`
 	// Rate holds the value of the "rate" field.
 	Rate decimal.Decimal `json:"rate,omitempty"`
 	// TxHash holds the value of the "tx_hash" field.
@@ -60,6 +59,8 @@ type PaymentOrder struct {
 	FeeAddress string `json:"fee_address,omitempty"`
 	// GatewayID holds the value of the "gateway_id" field.
 	GatewayID string `json:"gateway_id,omitempty"`
+	// MessageHash holds the value of the "message_hash" field.
+	MessageHash string `json:"message_hash,omitempty"`
 	// Reference holds the value of the "reference" field.
 	Reference string `json:"reference,omitempty"`
 	// Status holds the value of the "status" field.
@@ -88,9 +89,11 @@ type PaymentOrderEdges struct {
 	Recipient *PaymentOrderRecipient `json:"recipient,omitempty"`
 	// Transactions holds the value of the transactions edge.
 	Transactions []*TransactionLog `json:"transactions,omitempty"`
+	// PaymentWebhook holds the value of the payment_webhook edge.
+	PaymentWebhook *PaymentWebhook `json:"payment_webhook,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [6]bool
+	loadedTypes [7]bool
 }
 
 // SenderProfileOrErr returns the SenderProfile value or an error if the edge
@@ -157,16 +160,27 @@ func (e PaymentOrderEdges) TransactionsOrErr() ([]*TransactionLog, error) {
 	return nil, &NotLoadedError{edge: "transactions"}
 }
 
+// PaymentWebhookOrErr returns the PaymentWebhook value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e PaymentOrderEdges) PaymentWebhookOrErr() (*PaymentWebhook, error) {
+	if e.PaymentWebhook != nil {
+		return e.PaymentWebhook, nil
+	} else if e.loadedTypes[6] {
+		return nil, &NotFoundError{label: paymentwebhook.Label}
+	}
+	return nil, &NotLoadedError{edge: "payment_webhook"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*PaymentOrder) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case paymentorder.FieldAmount, paymentorder.FieldAmountPaid, paymentorder.FieldAmountReturned, paymentorder.FieldPercentSettled, paymentorder.FieldSenderFee, paymentorder.FieldNetworkFee, paymentorder.FieldProtocolFee, paymentorder.FieldRate, paymentorder.FieldFeePercent:
+		case paymentorder.FieldAmount, paymentorder.FieldAmountPaid, paymentorder.FieldAmountReturned, paymentorder.FieldPercentSettled, paymentorder.FieldSenderFee, paymentorder.FieldNetworkFee, paymentorder.FieldRate, paymentorder.FieldFeePercent:
 			values[i] = new(decimal.Decimal)
 		case paymentorder.FieldBlockNumber:
 			values[i] = new(sql.NullInt64)
-		case paymentorder.FieldTxHash, paymentorder.FieldFromAddress, paymentorder.FieldReturnAddress, paymentorder.FieldReceiveAddressText, paymentorder.FieldFeeAddress, paymentorder.FieldGatewayID, paymentorder.FieldReference, paymentorder.FieldStatus:
+		case paymentorder.FieldTxHash, paymentorder.FieldFromAddress, paymentorder.FieldReturnAddress, paymentorder.FieldReceiveAddressText, paymentorder.FieldFeeAddress, paymentorder.FieldGatewayID, paymentorder.FieldMessageHash, paymentorder.FieldReference, paymentorder.FieldStatus:
 			values[i] = new(sql.NullString)
 		case paymentorder.FieldCreatedAt, paymentorder.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -249,12 +263,6 @@ func (po *PaymentOrder) assignValues(columns []string, values []any) error {
 			} else if value != nil {
 				po.NetworkFee = *value
 			}
-		case paymentorder.FieldProtocolFee:
-			if value, ok := values[i].(*decimal.Decimal); !ok {
-				return fmt.Errorf("unexpected type %T for field protocol_fee", values[i])
-			} else if value != nil {
-				po.ProtocolFee = *value
-			}
 		case paymentorder.FieldRate:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field rate", values[i])
@@ -308,6 +316,12 @@ func (po *PaymentOrder) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field gateway_id", values[i])
 			} else if value.Valid {
 				po.GatewayID = value.String
+			}
+		case paymentorder.FieldMessageHash:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field message_hash", values[i])
+			} else if value.Valid {
+				po.MessageHash = value.String
 			}
 		case paymentorder.FieldReference:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -392,6 +406,11 @@ func (po *PaymentOrder) QueryTransactions() *TransactionLogQuery {
 	return NewPaymentOrderClient(po.config).QueryTransactions(po)
 }
 
+// QueryPaymentWebhook queries the "payment_webhook" edge of the PaymentOrder entity.
+func (po *PaymentOrder) QueryPaymentWebhook() *PaymentWebhookQuery {
+	return NewPaymentOrderClient(po.config).QueryPaymentWebhook(po)
+}
+
 // Update returns a builder for updating this PaymentOrder.
 // Note that you need to call PaymentOrder.Unwrap() before calling this method if this PaymentOrder
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -439,9 +458,6 @@ func (po *PaymentOrder) String() string {
 	builder.WriteString("network_fee=")
 	builder.WriteString(fmt.Sprintf("%v", po.NetworkFee))
 	builder.WriteString(", ")
-	builder.WriteString("protocol_fee=")
-	builder.WriteString(fmt.Sprintf("%v", po.ProtocolFee))
-	builder.WriteString(", ")
 	builder.WriteString("rate=")
 	builder.WriteString(fmt.Sprintf("%v", po.Rate))
 	builder.WriteString(", ")
@@ -468,6 +484,9 @@ func (po *PaymentOrder) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("gateway_id=")
 	builder.WriteString(po.GatewayID)
+	builder.WriteString(", ")
+	builder.WriteString("message_hash=")
+	builder.WriteString(po.MessageHash)
 	builder.WriteString(", ")
 	builder.WriteString("reference=")
 	builder.WriteString(po.Reference)

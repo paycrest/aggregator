@@ -15,6 +15,7 @@ import (
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/senderprofile"
@@ -165,27 +166,6 @@ func (pou *PaymentOrderUpdate) SetNillableNetworkFee(d *decimal.Decimal) *Paymen
 // AddNetworkFee adds d to the "network_fee" field.
 func (pou *PaymentOrderUpdate) AddNetworkFee(d decimal.Decimal) *PaymentOrderUpdate {
 	pou.mutation.AddNetworkFee(d)
-	return pou
-}
-
-// SetProtocolFee sets the "protocol_fee" field.
-func (pou *PaymentOrderUpdate) SetProtocolFee(d decimal.Decimal) *PaymentOrderUpdate {
-	pou.mutation.ResetProtocolFee()
-	pou.mutation.SetProtocolFee(d)
-	return pou
-}
-
-// SetNillableProtocolFee sets the "protocol_fee" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableProtocolFee(d *decimal.Decimal) *PaymentOrderUpdate {
-	if d != nil {
-		pou.SetProtocolFee(*d)
-	}
-	return pou
-}
-
-// AddProtocolFee adds d to the "protocol_fee" field.
-func (pou *PaymentOrderUpdate) AddProtocolFee(d decimal.Decimal) *PaymentOrderUpdate {
-	pou.mutation.AddProtocolFee(d)
 	return pou
 }
 
@@ -366,6 +346,26 @@ func (pou *PaymentOrderUpdate) ClearGatewayID() *PaymentOrderUpdate {
 	return pou
 }
 
+// SetMessageHash sets the "message_hash" field.
+func (pou *PaymentOrderUpdate) SetMessageHash(s string) *PaymentOrderUpdate {
+	pou.mutation.SetMessageHash(s)
+	return pou
+}
+
+// SetNillableMessageHash sets the "message_hash" field if the given value is not nil.
+func (pou *PaymentOrderUpdate) SetNillableMessageHash(s *string) *PaymentOrderUpdate {
+	if s != nil {
+		pou.SetMessageHash(*s)
+	}
+	return pou
+}
+
+// ClearMessageHash clears the value of the "message_hash" field.
+func (pou *PaymentOrderUpdate) ClearMessageHash() *PaymentOrderUpdate {
+	pou.mutation.ClearMessageHash()
+	return pou
+}
+
 // SetReference sets the "reference" field.
 func (pou *PaymentOrderUpdate) SetReference(s string) *PaymentOrderUpdate {
 	pou.mutation.SetReference(s)
@@ -502,6 +502,25 @@ func (pou *PaymentOrderUpdate) AddTransactions(t ...*TransactionLog) *PaymentOrd
 	return pou.AddTransactionIDs(ids...)
 }
 
+// SetPaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID.
+func (pou *PaymentOrderUpdate) SetPaymentWebhookID(id uuid.UUID) *PaymentOrderUpdate {
+	pou.mutation.SetPaymentWebhookID(id)
+	return pou
+}
+
+// SetNillablePaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID if the given value is not nil.
+func (pou *PaymentOrderUpdate) SetNillablePaymentWebhookID(id *uuid.UUID) *PaymentOrderUpdate {
+	if id != nil {
+		pou = pou.SetPaymentWebhookID(*id)
+	}
+	return pou
+}
+
+// SetPaymentWebhook sets the "payment_webhook" edge to the PaymentWebhook entity.
+func (pou *PaymentOrderUpdate) SetPaymentWebhook(p *PaymentWebhook) *PaymentOrderUpdate {
+	return pou.SetPaymentWebhookID(p.ID)
+}
+
 // Mutation returns the PaymentOrderMutation object of the builder.
 func (pou *PaymentOrderUpdate) Mutation() *PaymentOrderMutation {
 	return pou.mutation
@@ -556,6 +575,12 @@ func (pou *PaymentOrderUpdate) RemoveTransactions(t ...*TransactionLog) *Payment
 		ids[i] = t[i].ID
 	}
 	return pou.RemoveTransactionIDs(ids...)
+}
+
+// ClearPaymentWebhook clears the "payment_webhook" edge to the PaymentWebhook entity.
+func (pou *PaymentOrderUpdate) ClearPaymentWebhook() *PaymentOrderUpdate {
+	pou.mutation.ClearPaymentWebhook()
+	return pou
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -626,6 +651,11 @@ func (pou *PaymentOrderUpdate) check() error {
 			return &ValidationError{Name: "gateway_id", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.gateway_id": %w`, err)}
 		}
 	}
+	if v, ok := pou.mutation.MessageHash(); ok {
+		if err := paymentorder.MessageHashValidator(v); err != nil {
+			return &ValidationError{Name: "message_hash", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.message_hash": %w`, err)}
+		}
+	}
 	if v, ok := pou.mutation.Reference(); ok {
 		if err := paymentorder.ReferenceValidator(v); err != nil {
 			return &ValidationError{Name: "reference", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.reference": %w`, err)}
@@ -693,12 +723,6 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if value, ok := pou.mutation.AddedNetworkFee(); ok {
 		_spec.AddField(paymentorder.FieldNetworkFee, field.TypeFloat64, value)
 	}
-	if value, ok := pou.mutation.ProtocolFee(); ok {
-		_spec.SetField(paymentorder.FieldProtocolFee, field.TypeFloat64, value)
-	}
-	if value, ok := pou.mutation.AddedProtocolFee(); ok {
-		_spec.AddField(paymentorder.FieldProtocolFee, field.TypeFloat64, value)
-	}
 	if value, ok := pou.mutation.Rate(); ok {
 		_spec.SetField(paymentorder.FieldRate, field.TypeFloat64, value)
 	}
@@ -749,6 +773,12 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if pou.mutation.GatewayIDCleared() {
 		_spec.ClearField(paymentorder.FieldGatewayID, field.TypeString)
+	}
+	if value, ok := pou.mutation.MessageHash(); ok {
+		_spec.SetField(paymentorder.FieldMessageHash, field.TypeString, value)
+	}
+	if pou.mutation.MessageHashCleared() {
+		_spec.ClearField(paymentorder.FieldMessageHash, field.TypeString)
 	}
 	if value, ok := pou.mutation.Reference(); ok {
 		_spec.SetField(paymentorder.FieldReference, field.TypeString, value)
@@ -949,6 +979,35 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if pou.mutation.PaymentWebhookCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   paymentorder.PaymentWebhookTable,
+			Columns: []string{paymentorder.PaymentWebhookColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := pou.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   paymentorder.PaymentWebhookTable,
+			Columns: []string{paymentorder.PaymentWebhookColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, pou.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{paymentorder.Label}
@@ -1098,27 +1157,6 @@ func (pouo *PaymentOrderUpdateOne) SetNillableNetworkFee(d *decimal.Decimal) *Pa
 // AddNetworkFee adds d to the "network_fee" field.
 func (pouo *PaymentOrderUpdateOne) AddNetworkFee(d decimal.Decimal) *PaymentOrderUpdateOne {
 	pouo.mutation.AddNetworkFee(d)
-	return pouo
-}
-
-// SetProtocolFee sets the "protocol_fee" field.
-func (pouo *PaymentOrderUpdateOne) SetProtocolFee(d decimal.Decimal) *PaymentOrderUpdateOne {
-	pouo.mutation.ResetProtocolFee()
-	pouo.mutation.SetProtocolFee(d)
-	return pouo
-}
-
-// SetNillableProtocolFee sets the "protocol_fee" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableProtocolFee(d *decimal.Decimal) *PaymentOrderUpdateOne {
-	if d != nil {
-		pouo.SetProtocolFee(*d)
-	}
-	return pouo
-}
-
-// AddProtocolFee adds d to the "protocol_fee" field.
-func (pouo *PaymentOrderUpdateOne) AddProtocolFee(d decimal.Decimal) *PaymentOrderUpdateOne {
-	pouo.mutation.AddProtocolFee(d)
 	return pouo
 }
 
@@ -1299,6 +1337,26 @@ func (pouo *PaymentOrderUpdateOne) ClearGatewayID() *PaymentOrderUpdateOne {
 	return pouo
 }
 
+// SetMessageHash sets the "message_hash" field.
+func (pouo *PaymentOrderUpdateOne) SetMessageHash(s string) *PaymentOrderUpdateOne {
+	pouo.mutation.SetMessageHash(s)
+	return pouo
+}
+
+// SetNillableMessageHash sets the "message_hash" field if the given value is not nil.
+func (pouo *PaymentOrderUpdateOne) SetNillableMessageHash(s *string) *PaymentOrderUpdateOne {
+	if s != nil {
+		pouo.SetMessageHash(*s)
+	}
+	return pouo
+}
+
+// ClearMessageHash clears the value of the "message_hash" field.
+func (pouo *PaymentOrderUpdateOne) ClearMessageHash() *PaymentOrderUpdateOne {
+	pouo.mutation.ClearMessageHash()
+	return pouo
+}
+
 // SetReference sets the "reference" field.
 func (pouo *PaymentOrderUpdateOne) SetReference(s string) *PaymentOrderUpdateOne {
 	pouo.mutation.SetReference(s)
@@ -1435,6 +1493,25 @@ func (pouo *PaymentOrderUpdateOne) AddTransactions(t ...*TransactionLog) *Paymen
 	return pouo.AddTransactionIDs(ids...)
 }
 
+// SetPaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID.
+func (pouo *PaymentOrderUpdateOne) SetPaymentWebhookID(id uuid.UUID) *PaymentOrderUpdateOne {
+	pouo.mutation.SetPaymentWebhookID(id)
+	return pouo
+}
+
+// SetNillablePaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID if the given value is not nil.
+func (pouo *PaymentOrderUpdateOne) SetNillablePaymentWebhookID(id *uuid.UUID) *PaymentOrderUpdateOne {
+	if id != nil {
+		pouo = pouo.SetPaymentWebhookID(*id)
+	}
+	return pouo
+}
+
+// SetPaymentWebhook sets the "payment_webhook" edge to the PaymentWebhook entity.
+func (pouo *PaymentOrderUpdateOne) SetPaymentWebhook(p *PaymentWebhook) *PaymentOrderUpdateOne {
+	return pouo.SetPaymentWebhookID(p.ID)
+}
+
 // Mutation returns the PaymentOrderMutation object of the builder.
 func (pouo *PaymentOrderUpdateOne) Mutation() *PaymentOrderMutation {
 	return pouo.mutation
@@ -1489,6 +1566,12 @@ func (pouo *PaymentOrderUpdateOne) RemoveTransactions(t ...*TransactionLog) *Pay
 		ids[i] = t[i].ID
 	}
 	return pouo.RemoveTransactionIDs(ids...)
+}
+
+// ClearPaymentWebhook clears the "payment_webhook" edge to the PaymentWebhook entity.
+func (pouo *PaymentOrderUpdateOne) ClearPaymentWebhook() *PaymentOrderUpdateOne {
+	pouo.mutation.ClearPaymentWebhook()
+	return pouo
 }
 
 // Where appends a list predicates to the PaymentOrderUpdate builder.
@@ -1570,6 +1653,11 @@ func (pouo *PaymentOrderUpdateOne) check() error {
 	if v, ok := pouo.mutation.GatewayID(); ok {
 		if err := paymentorder.GatewayIDValidator(v); err != nil {
 			return &ValidationError{Name: "gateway_id", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.gateway_id": %w`, err)}
+		}
+	}
+	if v, ok := pouo.mutation.MessageHash(); ok {
+		if err := paymentorder.MessageHashValidator(v); err != nil {
+			return &ValidationError{Name: "message_hash", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.message_hash": %w`, err)}
 		}
 	}
 	if v, ok := pouo.mutation.Reference(); ok {
@@ -1656,12 +1744,6 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 	if value, ok := pouo.mutation.AddedNetworkFee(); ok {
 		_spec.AddField(paymentorder.FieldNetworkFee, field.TypeFloat64, value)
 	}
-	if value, ok := pouo.mutation.ProtocolFee(); ok {
-		_spec.SetField(paymentorder.FieldProtocolFee, field.TypeFloat64, value)
-	}
-	if value, ok := pouo.mutation.AddedProtocolFee(); ok {
-		_spec.AddField(paymentorder.FieldProtocolFee, field.TypeFloat64, value)
-	}
 	if value, ok := pouo.mutation.Rate(); ok {
 		_spec.SetField(paymentorder.FieldRate, field.TypeFloat64, value)
 	}
@@ -1712,6 +1794,12 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 	}
 	if pouo.mutation.GatewayIDCleared() {
 		_spec.ClearField(paymentorder.FieldGatewayID, field.TypeString)
+	}
+	if value, ok := pouo.mutation.MessageHash(); ok {
+		_spec.SetField(paymentorder.FieldMessageHash, field.TypeString, value)
+	}
+	if pouo.mutation.MessageHashCleared() {
+		_spec.ClearField(paymentorder.FieldMessageHash, field.TypeString)
 	}
 	if value, ok := pouo.mutation.Reference(); ok {
 		_spec.SetField(paymentorder.FieldReference, field.TypeString, value)
@@ -1905,6 +1993,35 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(transactionlog.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if pouo.mutation.PaymentWebhookCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   paymentorder.PaymentWebhookTable,
+			Columns: []string{paymentorder.PaymentWebhookColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := pouo.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   paymentorder.PaymentWebhookTable,
+			Columns: []string{paymentorder.PaymentWebhookColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

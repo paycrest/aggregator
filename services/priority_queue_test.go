@@ -10,16 +10,24 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/alicebob/miniredis/v2"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/jarcoal/httpmock"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/enttest"
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
+	"github.com/paycrest/aggregator/ent/migrate"
+	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
+	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/paycrest/aggregator/utils/test"
 	tokenUtils "github.com/paycrest/aggregator/utils/token"
+	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/redis/go-redis/v9"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
@@ -38,18 +46,83 @@ var testCtxForPQ = struct {
 	bucket                      *ent.ProvisionBucket
 }{}
 
+// TestPriorityQueueService extends the original service with test-specific overrides
+type TestPriorityQueueService struct {
+	*PriorityQueueService
+}
+
+// Override sendOrderRequest to mock the provider notification
+func (s *TestPriorityQueueService) sendOrderRequest(ctx context.Context, order types.LockPaymentOrderFields) error {
+	// Mock successful balance reservation and provider notification
+	bucketCurrency := order.ProvisionBucket.Edges.Currency
+	amount := order.Amount.Mul(order.Rate).Round(int32(bucketCurrency.Decimals))
+	
+	// Reserve balance (keep the original logic)
+	err := s.balanceService.ReserveBalance(ctx, order.ProviderID, bucketCurrency.Code, amount, nil)
+	if err != nil {
+		return err
+	}
+	
+	// Mock successful provider notification (skip the actual API call)
+	logger.WithFields(logger.Fields{
+		"ProviderID": order.ProviderID,
+		"Data":       map[string]interface{}{}, // Empty data for test
+	}).Infof("successfully called provider /new_order endpoint")
+	
+	return nil
+}
+
+// Create a test-specific service instance
+func NewTestPriorityQueueService() *TestPriorityQueueService {
+	return &TestPriorityQueueService{
+		PriorityQueueService: NewPriorityQueueService(),
+	}
+}
+
 func setupForPQ() error {
 	// Set up test data
 	testCtxForPQ.maxAmount = decimal.NewFromFloat(10000)
 	testCtxForPQ.minAmount = decimal.NewFromFloat(1)
 
-	backend, err := test.SetUpTestBlockchain()
+	// Create Network first
+	networkId, err := db.Client.Network.
+		Create().
+		SetIdentifier("localhost").
+		SetChainID(int64(56)). // Use BNB Smart Chain to skip webhook creation
+		SetRPCEndpoint("ws://localhost:8545").
+		SetBlockTime(decimal.NewFromFloat(3.0)).
+		SetFee(decimal.NewFromFloat(0.1)).
+		SetIsTestnet(true).
+		OnConflict().
+		UpdateNewValues().
+		ID(context.Background())
 	if err != nil {
-		return err
+		return fmt.Errorf("CreateNetwork.priority_queue_test: %w", err)
 	}
-	token, err := test.CreateERC20Token(backend, map[string]interface{}{})
+
+	// Create token directly without blockchain
+	tokenId, err := db.Client.Token.
+		Create().
+		SetSymbol("TST").
+		SetContractAddress("0xd4E96eF8eee8678dBFf4d535E033Ed1a4F7605b7").
+		SetDecimals(6).
+		SetNetworkID(networkId).
+		SetIsEnabled(true).
+		SetBaseCurrency("KES"). // Use KES to match the currency below
+		OnConflict().
+		UpdateNewValues().
+		ID(context.Background())
 	if err != nil {
-		return err
+		return fmt.Errorf("CreateToken.priority_queue_test: %w", err)
+	}
+
+	token, err := db.Client.Token.
+		Query().
+		Where(tokenEnt.IDEQ(tokenId)).
+		WithNetwork().
+		Only(context.Background())
+	if err != nil {
+		return fmt.Errorf("GetToken.priority_queue_test: %w", err)
 	}
 	testCtxForPQ.token = token
 
@@ -112,6 +185,18 @@ func setupForPQ() error {
 	}
 	testCtxForPQ.publicProviderProfile = publicProviderProfile
 
+	// Update ProviderCurrencies with sufficient balance for the publicProviderProfile
+	_, err = db.Client.ProviderCurrencies.
+		Update().
+		Where(providercurrencies.HasProviderWith(providerprofile.IDEQ(publicProviderProfile.ID))).
+		Where(providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(currency.ID))).
+		SetAvailableBalance(decimal.NewFromFloat(100000)). // Set sufficient balance
+		SetTotalBalance(decimal.NewFromFloat(100000)).
+		Save(context.Background())
+	if err != nil {
+		return fmt.Errorf("UpdateProviderCurrencies.publicProvider: %w", err)
+	}
+
 	bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
 		"provider_id": publicProviderProfile.ID,
 		"min_amount":  decimal.NewFromFloat(1),
@@ -140,6 +225,18 @@ func setupForPQ() error {
 		return err
 	}
 	testCtxForPQ.privateProviderProfile = privateProviderProfile
+
+	// Update ProviderCurrencies with sufficient balance for the privateProviderProfile
+	_, err = db.Client.ProviderCurrencies.
+		Update().
+		Where(providercurrencies.HasProviderWith(providerprofile.IDEQ(privateProviderProfile.ID))).
+		Where(providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(currency.ID))).
+		SetAvailableBalance(decimal.NewFromFloat(100000)). // Set sufficient balance
+		SetTotalBalance(decimal.NewFromFloat(100000)).
+		Save(context.Background())
+	if err != nil {
+		return fmt.Errorf("UpdateProviderCurrencies.privateProvider: %w", err)
+	}
 
 	_, err = test.CreateTestProvisionBucket(map[string]interface{}{
 		"provider_id": privateProviderProfile.ID,
@@ -176,26 +273,29 @@ func TestPriorityQueueTest(t *testing.T) {
 	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
 	defer client.Close()
 
-	redisClient := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
-	})
+	// Run schema migrations to ensure all tables are created
+	if err := client.Schema.Create(context.Background(), migrate.WithGlobalUniqueID(true)); err != nil {
+		t.Fatal(err)
+	}
 
+	// Set up in-memory Redis
+	mr, err := miniredis.Run()
+	assert.NoError(t, err)
+	defer mr.Close()
+
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: mr.Addr(),
+	})
 	defer redisClient.Close()
 
 	db.RedisClient = redisClient
-	{
-
-		err := redisClient.FlushAll(context.Background()).Err()
-		assert.NoError(t, err)
-	}
-
 	db.Client = client
 
 	// Setup test data
-	err := setupForPQ()
+	err = setupForPQ()
 	assert.NoError(t, err)
 
-	service := NewPriorityQueueService()
+	service := NewTestPriorityQueueService()
 	t.Run("TestGetProvisionBuckets", func(t *testing.T) {
 		buckets, err := service.GetProvisionBuckets(context.Background())
 		assert.NoError(t, err)

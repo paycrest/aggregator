@@ -24,12 +24,13 @@ func (Network) Mixin() []ent.Mixin {
 func (Network) Fields() []ent.Field {
 	return []ent.Field{
 		field.Int64("chain_id"),
-		field.String("chain_id_hex").Optional(),
 		// e.g "bnb-smart-chain", "base", "arbitrum-one", "polygon", "ethereum", "ethereum-sepolia", "tron-shasta", "tron"
 		field.String("identifier").
 			Unique(),
 		field.String("rpc_endpoint"),
 		field.String("gateway_contract_address").Default(""),
+		field.Float("block_time").
+			GoType(decimal.Decimal{}),
 		field.Bool("is_testnet"),
 		field.String("bundler_url").
 			Optional(),
@@ -45,5 +46,7 @@ func (Network) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("tokens", Token.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("payment_webhook", PaymentWebhook.Type).
+			Unique(),
 	}
 }

@@ -17,15 +17,19 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/paycrest/aggregator/ent/apikey"
+	"github.com/paycrest/aggregator/ent/beneficialowner"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
 	"github.com/paycrest/aggregator/ent/institution"
+	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
+	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -47,12 +51,16 @@ type Client struct {
 	Schema *migrate.Schema
 	// APIKey is the client for interacting with the APIKey builders.
 	APIKey *APIKeyClient
+	// BeneficialOwner is the client for interacting with the BeneficialOwner builders.
+	BeneficialOwner *BeneficialOwnerClient
 	// FiatCurrency is the client for interacting with the FiatCurrency builders.
 	FiatCurrency *FiatCurrencyClient
 	// IdentityVerificationRequest is the client for interacting with the IdentityVerificationRequest builders.
 	IdentityVerificationRequest *IdentityVerificationRequestClient
 	// Institution is the client for interacting with the Institution builders.
 	Institution *InstitutionClient
+	// KYBProfile is the client for interacting with the KYBProfile builders.
+	KYBProfile *KYBProfileClient
 	// LinkedAddress is the client for interacting with the LinkedAddress builders.
 	LinkedAddress *LinkedAddressClient
 	// LockOrderFulfillment is the client for interacting with the LockOrderFulfillment builders.
@@ -65,6 +73,10 @@ type Client struct {
 	PaymentOrder *PaymentOrderClient
 	// PaymentOrderRecipient is the client for interacting with the PaymentOrderRecipient builders.
 	PaymentOrderRecipient *PaymentOrderRecipientClient
+	// PaymentWebhook is the client for interacting with the PaymentWebhook builders.
+	PaymentWebhook *PaymentWebhookClient
+	// ProviderCurrencies is the client for interacting with the ProviderCurrencies builders.
+	ProviderCurrencies *ProviderCurrenciesClient
 	// ProviderOrderToken is the client for interacting with the ProviderOrderToken builders.
 	ProviderOrderToken *ProviderOrderTokenClient
 	// ProviderProfile is the client for interacting with the ProviderProfile builders.
@@ -101,15 +113,19 @@ func NewClient(opts ...Option) *Client {
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.APIKey = NewAPIKeyClient(c.config)
+	c.BeneficialOwner = NewBeneficialOwnerClient(c.config)
 	c.FiatCurrency = NewFiatCurrencyClient(c.config)
 	c.IdentityVerificationRequest = NewIdentityVerificationRequestClient(c.config)
 	c.Institution = NewInstitutionClient(c.config)
+	c.KYBProfile = NewKYBProfileClient(c.config)
 	c.LinkedAddress = NewLinkedAddressClient(c.config)
 	c.LockOrderFulfillment = NewLockOrderFulfillmentClient(c.config)
 	c.LockPaymentOrder = NewLockPaymentOrderClient(c.config)
 	c.Network = NewNetworkClient(c.config)
 	c.PaymentOrder = NewPaymentOrderClient(c.config)
 	c.PaymentOrderRecipient = NewPaymentOrderRecipientClient(c.config)
+	c.PaymentWebhook = NewPaymentWebhookClient(c.config)
+	c.ProviderCurrencies = NewProviderCurrenciesClient(c.config)
 	c.ProviderOrderToken = NewProviderOrderTokenClient(c.config)
 	c.ProviderProfile = NewProviderProfileClient(c.config)
 	c.ProviderRating = NewProviderRatingClient(c.config)
@@ -215,15 +231,19 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ctx:                         ctx,
 		config:                      cfg,
 		APIKey:                      NewAPIKeyClient(cfg),
+		BeneficialOwner:             NewBeneficialOwnerClient(cfg),
 		FiatCurrency:                NewFiatCurrencyClient(cfg),
 		IdentityVerificationRequest: NewIdentityVerificationRequestClient(cfg),
 		Institution:                 NewInstitutionClient(cfg),
+		KYBProfile:                  NewKYBProfileClient(cfg),
 		LinkedAddress:               NewLinkedAddressClient(cfg),
 		LockOrderFulfillment:        NewLockOrderFulfillmentClient(cfg),
 		LockPaymentOrder:            NewLockPaymentOrderClient(cfg),
 		Network:                     NewNetworkClient(cfg),
 		PaymentOrder:                NewPaymentOrderClient(cfg),
 		PaymentOrderRecipient:       NewPaymentOrderRecipientClient(cfg),
+		PaymentWebhook:              NewPaymentWebhookClient(cfg),
+		ProviderCurrencies:          NewProviderCurrenciesClient(cfg),
 		ProviderOrderToken:          NewProviderOrderTokenClient(cfg),
 		ProviderProfile:             NewProviderProfileClient(cfg),
 		ProviderRating:              NewProviderRatingClient(cfg),
@@ -256,15 +276,19 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ctx:                         ctx,
 		config:                      cfg,
 		APIKey:                      NewAPIKeyClient(cfg),
+		BeneficialOwner:             NewBeneficialOwnerClient(cfg),
 		FiatCurrency:                NewFiatCurrencyClient(cfg),
 		IdentityVerificationRequest: NewIdentityVerificationRequestClient(cfg),
 		Institution:                 NewInstitutionClient(cfg),
+		KYBProfile:                  NewKYBProfileClient(cfg),
 		LinkedAddress:               NewLinkedAddressClient(cfg),
 		LockOrderFulfillment:        NewLockOrderFulfillmentClient(cfg),
 		LockPaymentOrder:            NewLockPaymentOrderClient(cfg),
 		Network:                     NewNetworkClient(cfg),
 		PaymentOrder:                NewPaymentOrderClient(cfg),
 		PaymentOrderRecipient:       NewPaymentOrderRecipientClient(cfg),
+		PaymentWebhook:              NewPaymentWebhookClient(cfg),
+		ProviderCurrencies:          NewProviderCurrenciesClient(cfg),
 		ProviderOrderToken:          NewProviderOrderTokenClient(cfg),
 		ProviderProfile:             NewProviderProfileClient(cfg),
 		ProviderRating:              NewProviderRatingClient(cfg),
@@ -306,9 +330,10 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.APIKey, c.FiatCurrency, c.IdentityVerificationRequest, c.Institution,
-		c.LinkedAddress, c.LockOrderFulfillment, c.LockPaymentOrder, c.Network,
-		c.PaymentOrder, c.PaymentOrderRecipient, c.ProviderOrderToken,
+		c.APIKey, c.BeneficialOwner, c.FiatCurrency, c.IdentityVerificationRequest,
+		c.Institution, c.KYBProfile, c.LinkedAddress, c.LockOrderFulfillment,
+		c.LockPaymentOrder, c.Network, c.PaymentOrder, c.PaymentOrderRecipient,
+		c.PaymentWebhook, c.ProviderCurrencies, c.ProviderOrderToken,
 		c.ProviderProfile, c.ProviderRating, c.ProvisionBucket, c.ReceiveAddress,
 		c.SenderOrderToken, c.SenderProfile, c.Token, c.TransactionLog, c.User,
 		c.VerificationToken, c.WebhookRetryAttempt,
@@ -321,9 +346,10 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.APIKey, c.FiatCurrency, c.IdentityVerificationRequest, c.Institution,
-		c.LinkedAddress, c.LockOrderFulfillment, c.LockPaymentOrder, c.Network,
-		c.PaymentOrder, c.PaymentOrderRecipient, c.ProviderOrderToken,
+		c.APIKey, c.BeneficialOwner, c.FiatCurrency, c.IdentityVerificationRequest,
+		c.Institution, c.KYBProfile, c.LinkedAddress, c.LockOrderFulfillment,
+		c.LockPaymentOrder, c.Network, c.PaymentOrder, c.PaymentOrderRecipient,
+		c.PaymentWebhook, c.ProviderCurrencies, c.ProviderOrderToken,
 		c.ProviderProfile, c.ProviderRating, c.ProvisionBucket, c.ReceiveAddress,
 		c.SenderOrderToken, c.SenderProfile, c.Token, c.TransactionLog, c.User,
 		c.VerificationToken, c.WebhookRetryAttempt,
@@ -337,12 +363,16 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
 	case *APIKeyMutation:
 		return c.APIKey.mutate(ctx, m)
+	case *BeneficialOwnerMutation:
+		return c.BeneficialOwner.mutate(ctx, m)
 	case *FiatCurrencyMutation:
 		return c.FiatCurrency.mutate(ctx, m)
 	case *IdentityVerificationRequestMutation:
 		return c.IdentityVerificationRequest.mutate(ctx, m)
 	case *InstitutionMutation:
 		return c.Institution.mutate(ctx, m)
+	case *KYBProfileMutation:
+		return c.KYBProfile.mutate(ctx, m)
 	case *LinkedAddressMutation:
 		return c.LinkedAddress.mutate(ctx, m)
 	case *LockOrderFulfillmentMutation:
@@ -355,6 +385,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.PaymentOrder.mutate(ctx, m)
 	case *PaymentOrderRecipientMutation:
 		return c.PaymentOrderRecipient.mutate(ctx, m)
+	case *PaymentWebhookMutation:
+		return c.PaymentWebhook.mutate(ctx, m)
+	case *ProviderCurrenciesMutation:
+		return c.ProviderCurrencies.mutate(ctx, m)
 	case *ProviderOrderTokenMutation:
 		return c.ProviderOrderToken.mutate(ctx, m)
 	case *ProviderProfileMutation:
@@ -565,6 +599,155 @@ func (c *APIKeyClient) mutate(ctx context.Context, m *APIKeyMutation) (Value, er
 	}
 }
 
+// BeneficialOwnerClient is a client for the BeneficialOwner schema.
+type BeneficialOwnerClient struct {
+	config
+}
+
+// NewBeneficialOwnerClient returns a client for the BeneficialOwner from the given config.
+func NewBeneficialOwnerClient(c config) *BeneficialOwnerClient {
+	return &BeneficialOwnerClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `beneficialowner.Hooks(f(g(h())))`.
+func (c *BeneficialOwnerClient) Use(hooks ...Hook) {
+	c.hooks.BeneficialOwner = append(c.hooks.BeneficialOwner, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `beneficialowner.Intercept(f(g(h())))`.
+func (c *BeneficialOwnerClient) Intercept(interceptors ...Interceptor) {
+	c.inters.BeneficialOwner = append(c.inters.BeneficialOwner, interceptors...)
+}
+
+// Create returns a builder for creating a BeneficialOwner entity.
+func (c *BeneficialOwnerClient) Create() *BeneficialOwnerCreate {
+	mutation := newBeneficialOwnerMutation(c.config, OpCreate)
+	return &BeneficialOwnerCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of BeneficialOwner entities.
+func (c *BeneficialOwnerClient) CreateBulk(builders ...*BeneficialOwnerCreate) *BeneficialOwnerCreateBulk {
+	return &BeneficialOwnerCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *BeneficialOwnerClient) MapCreateBulk(slice any, setFunc func(*BeneficialOwnerCreate, int)) *BeneficialOwnerCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &BeneficialOwnerCreateBulk{err: fmt.Errorf("calling to BeneficialOwnerClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*BeneficialOwnerCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &BeneficialOwnerCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for BeneficialOwner.
+func (c *BeneficialOwnerClient) Update() *BeneficialOwnerUpdate {
+	mutation := newBeneficialOwnerMutation(c.config, OpUpdate)
+	return &BeneficialOwnerUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *BeneficialOwnerClient) UpdateOne(bo *BeneficialOwner) *BeneficialOwnerUpdateOne {
+	mutation := newBeneficialOwnerMutation(c.config, OpUpdateOne, withBeneficialOwner(bo))
+	return &BeneficialOwnerUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *BeneficialOwnerClient) UpdateOneID(id uuid.UUID) *BeneficialOwnerUpdateOne {
+	mutation := newBeneficialOwnerMutation(c.config, OpUpdateOne, withBeneficialOwnerID(id))
+	return &BeneficialOwnerUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for BeneficialOwner.
+func (c *BeneficialOwnerClient) Delete() *BeneficialOwnerDelete {
+	mutation := newBeneficialOwnerMutation(c.config, OpDelete)
+	return &BeneficialOwnerDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *BeneficialOwnerClient) DeleteOne(bo *BeneficialOwner) *BeneficialOwnerDeleteOne {
+	return c.DeleteOneID(bo.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *BeneficialOwnerClient) DeleteOneID(id uuid.UUID) *BeneficialOwnerDeleteOne {
+	builder := c.Delete().Where(beneficialowner.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &BeneficialOwnerDeleteOne{builder}
+}
+
+// Query returns a query builder for BeneficialOwner.
+func (c *BeneficialOwnerClient) Query() *BeneficialOwnerQuery {
+	return &BeneficialOwnerQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeBeneficialOwner},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a BeneficialOwner entity by its id.
+func (c *BeneficialOwnerClient) Get(ctx context.Context, id uuid.UUID) (*BeneficialOwner, error) {
+	return c.Query().Where(beneficialowner.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *BeneficialOwnerClient) GetX(ctx context.Context, id uuid.UUID) *BeneficialOwner {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryKybProfile queries the kyb_profile edge of a BeneficialOwner.
+func (c *BeneficialOwnerClient) QueryKybProfile(bo *BeneficialOwner) *KYBProfileQuery {
+	query := (&KYBProfileClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := bo.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(beneficialowner.Table, beneficialowner.FieldID, id),
+			sqlgraph.To(kybprofile.Table, kybprofile.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, beneficialowner.KybProfileTable, beneficialowner.KybProfileColumn),
+		)
+		fromV = sqlgraph.Neighbors(bo.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *BeneficialOwnerClient) Hooks() []Hook {
+	return c.hooks.BeneficialOwner
+}
+
+// Interceptors returns the client interceptors.
+func (c *BeneficialOwnerClient) Interceptors() []Interceptor {
+	return c.inters.BeneficialOwner
+}
+
+func (c *BeneficialOwnerClient) mutate(ctx context.Context, m *BeneficialOwnerMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&BeneficialOwnerCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&BeneficialOwnerUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&BeneficialOwnerUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&BeneficialOwnerDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown BeneficialOwner mutation op: %q", m.Op())
+	}
+}
+
 // FiatCurrencyClient is a client for the FiatCurrency schema.
 type FiatCurrencyClient struct {
 	config
@@ -673,15 +856,15 @@ func (c *FiatCurrencyClient) GetX(ctx context.Context, id uuid.UUID) *FiatCurren
 	return obj
 }
 
-// QueryProviders queries the providers edge of a FiatCurrency.
-func (c *FiatCurrencyClient) QueryProviders(fc *FiatCurrency) *ProviderProfileQuery {
-	query := (&ProviderProfileClient{config: c.config}).Query()
+// QueryProviderCurrencies queries the provider_currencies edge of a FiatCurrency.
+func (c *FiatCurrencyClient) QueryProviderCurrencies(fc *FiatCurrency) *ProviderCurrenciesQuery {
+	query := (&ProviderCurrenciesClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := fc.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(fiatcurrency.Table, fiatcurrency.FieldID, id),
-			sqlgraph.To(providerprofile.Table, providerprofile.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, fiatcurrency.ProvidersTable, fiatcurrency.ProvidersPrimaryKey...),
+			sqlgraph.To(providercurrencies.Table, providercurrencies.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, fiatcurrency.ProviderCurrenciesTable, fiatcurrency.ProviderCurrenciesColumn),
 		)
 		fromV = sqlgraph.Neighbors(fc.driver.Dialect(), step)
 		return fromV, nil
@@ -1041,6 +1224,171 @@ func (c *InstitutionClient) mutate(ctx context.Context, m *InstitutionMutation) 
 		return (&InstitutionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Institution mutation op: %q", m.Op())
+	}
+}
+
+// KYBProfileClient is a client for the KYBProfile schema.
+type KYBProfileClient struct {
+	config
+}
+
+// NewKYBProfileClient returns a client for the KYBProfile from the given config.
+func NewKYBProfileClient(c config) *KYBProfileClient {
+	return &KYBProfileClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `kybprofile.Hooks(f(g(h())))`.
+func (c *KYBProfileClient) Use(hooks ...Hook) {
+	c.hooks.KYBProfile = append(c.hooks.KYBProfile, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `kybprofile.Intercept(f(g(h())))`.
+func (c *KYBProfileClient) Intercept(interceptors ...Interceptor) {
+	c.inters.KYBProfile = append(c.inters.KYBProfile, interceptors...)
+}
+
+// Create returns a builder for creating a KYBProfile entity.
+func (c *KYBProfileClient) Create() *KYBProfileCreate {
+	mutation := newKYBProfileMutation(c.config, OpCreate)
+	return &KYBProfileCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of KYBProfile entities.
+func (c *KYBProfileClient) CreateBulk(builders ...*KYBProfileCreate) *KYBProfileCreateBulk {
+	return &KYBProfileCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *KYBProfileClient) MapCreateBulk(slice any, setFunc func(*KYBProfileCreate, int)) *KYBProfileCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &KYBProfileCreateBulk{err: fmt.Errorf("calling to KYBProfileClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*KYBProfileCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &KYBProfileCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for KYBProfile.
+func (c *KYBProfileClient) Update() *KYBProfileUpdate {
+	mutation := newKYBProfileMutation(c.config, OpUpdate)
+	return &KYBProfileUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *KYBProfileClient) UpdateOne(kp *KYBProfile) *KYBProfileUpdateOne {
+	mutation := newKYBProfileMutation(c.config, OpUpdateOne, withKYBProfile(kp))
+	return &KYBProfileUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *KYBProfileClient) UpdateOneID(id uuid.UUID) *KYBProfileUpdateOne {
+	mutation := newKYBProfileMutation(c.config, OpUpdateOne, withKYBProfileID(id))
+	return &KYBProfileUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for KYBProfile.
+func (c *KYBProfileClient) Delete() *KYBProfileDelete {
+	mutation := newKYBProfileMutation(c.config, OpDelete)
+	return &KYBProfileDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *KYBProfileClient) DeleteOne(kp *KYBProfile) *KYBProfileDeleteOne {
+	return c.DeleteOneID(kp.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *KYBProfileClient) DeleteOneID(id uuid.UUID) *KYBProfileDeleteOne {
+	builder := c.Delete().Where(kybprofile.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &KYBProfileDeleteOne{builder}
+}
+
+// Query returns a query builder for KYBProfile.
+func (c *KYBProfileClient) Query() *KYBProfileQuery {
+	return &KYBProfileQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeKYBProfile},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a KYBProfile entity by its id.
+func (c *KYBProfileClient) Get(ctx context.Context, id uuid.UUID) (*KYBProfile, error) {
+	return c.Query().Where(kybprofile.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *KYBProfileClient) GetX(ctx context.Context, id uuid.UUID) *KYBProfile {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryBeneficialOwners queries the beneficial_owners edge of a KYBProfile.
+func (c *KYBProfileClient) QueryBeneficialOwners(kp *KYBProfile) *BeneficialOwnerQuery {
+	query := (&BeneficialOwnerClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := kp.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(kybprofile.Table, kybprofile.FieldID, id),
+			sqlgraph.To(beneficialowner.Table, beneficialowner.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, kybprofile.BeneficialOwnersTable, kybprofile.BeneficialOwnersColumn),
+		)
+		fromV = sqlgraph.Neighbors(kp.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryUser queries the user edge of a KYBProfile.
+func (c *KYBProfileClient) QueryUser(kp *KYBProfile) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := kp.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(kybprofile.Table, kybprofile.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, kybprofile.UserTable, kybprofile.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(kp.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *KYBProfileClient) Hooks() []Hook {
+	return c.hooks.KYBProfile
+}
+
+// Interceptors returns the client interceptors.
+func (c *KYBProfileClient) Interceptors() []Interceptor {
+	return c.inters.KYBProfile
+}
+
+func (c *KYBProfileClient) mutate(ctx context.Context, m *KYBProfileMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&KYBProfileCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&KYBProfileUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&KYBProfileUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&KYBProfileDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown KYBProfile mutation op: %q", m.Op())
 	}
 }
 
@@ -1679,6 +2027,22 @@ func (c *NetworkClient) QueryTokens(n *Network) *TokenQuery {
 	return query
 }
 
+// QueryPaymentWebhook queries the payment_webhook edge of a Network.
+func (c *NetworkClient) QueryPaymentWebhook(n *Network) *PaymentWebhookQuery {
+	query := (&PaymentWebhookClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := n.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(network.Table, network.FieldID, id),
+			sqlgraph.To(paymentwebhook.Table, paymentwebhook.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, network.PaymentWebhookTable, network.PaymentWebhookColumn),
+		)
+		fromV = sqlgraph.Neighbors(n.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *NetworkClient) Hooks() []Hook {
 	return c.hooks.Network
@@ -1908,6 +2272,22 @@ func (c *PaymentOrderClient) QueryTransactions(po *PaymentOrder) *TransactionLog
 	return query
 }
 
+// QueryPaymentWebhook queries the payment_webhook edge of a PaymentOrder.
+func (c *PaymentOrderClient) QueryPaymentWebhook(po *PaymentOrder) *PaymentWebhookQuery {
+	query := (&PaymentWebhookClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := po.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, id),
+			sqlgraph.To(paymentwebhook.Table, paymentwebhook.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, paymentorder.PaymentWebhookTable, paymentorder.PaymentWebhookColumn),
+		)
+		fromV = sqlgraph.Neighbors(po.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *PaymentOrderClient) Hooks() []Hook {
 	return c.hooks.PaymentOrder
@@ -2079,6 +2459,336 @@ func (c *PaymentOrderRecipientClient) mutate(ctx context.Context, m *PaymentOrde
 		return (&PaymentOrderRecipientDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown PaymentOrderRecipient mutation op: %q", m.Op())
+	}
+}
+
+// PaymentWebhookClient is a client for the PaymentWebhook schema.
+type PaymentWebhookClient struct {
+	config
+}
+
+// NewPaymentWebhookClient returns a client for the PaymentWebhook from the given config.
+func NewPaymentWebhookClient(c config) *PaymentWebhookClient {
+	return &PaymentWebhookClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `paymentwebhook.Hooks(f(g(h())))`.
+func (c *PaymentWebhookClient) Use(hooks ...Hook) {
+	c.hooks.PaymentWebhook = append(c.hooks.PaymentWebhook, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `paymentwebhook.Intercept(f(g(h())))`.
+func (c *PaymentWebhookClient) Intercept(interceptors ...Interceptor) {
+	c.inters.PaymentWebhook = append(c.inters.PaymentWebhook, interceptors...)
+}
+
+// Create returns a builder for creating a PaymentWebhook entity.
+func (c *PaymentWebhookClient) Create() *PaymentWebhookCreate {
+	mutation := newPaymentWebhookMutation(c.config, OpCreate)
+	return &PaymentWebhookCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of PaymentWebhook entities.
+func (c *PaymentWebhookClient) CreateBulk(builders ...*PaymentWebhookCreate) *PaymentWebhookCreateBulk {
+	return &PaymentWebhookCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PaymentWebhookClient) MapCreateBulk(slice any, setFunc func(*PaymentWebhookCreate, int)) *PaymentWebhookCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PaymentWebhookCreateBulk{err: fmt.Errorf("calling to PaymentWebhookClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*PaymentWebhookCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &PaymentWebhookCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for PaymentWebhook.
+func (c *PaymentWebhookClient) Update() *PaymentWebhookUpdate {
+	mutation := newPaymentWebhookMutation(c.config, OpUpdate)
+	return &PaymentWebhookUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PaymentWebhookClient) UpdateOne(pw *PaymentWebhook) *PaymentWebhookUpdateOne {
+	mutation := newPaymentWebhookMutation(c.config, OpUpdateOne, withPaymentWebhook(pw))
+	return &PaymentWebhookUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PaymentWebhookClient) UpdateOneID(id uuid.UUID) *PaymentWebhookUpdateOne {
+	mutation := newPaymentWebhookMutation(c.config, OpUpdateOne, withPaymentWebhookID(id))
+	return &PaymentWebhookUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for PaymentWebhook.
+func (c *PaymentWebhookClient) Delete() *PaymentWebhookDelete {
+	mutation := newPaymentWebhookMutation(c.config, OpDelete)
+	return &PaymentWebhookDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PaymentWebhookClient) DeleteOne(pw *PaymentWebhook) *PaymentWebhookDeleteOne {
+	return c.DeleteOneID(pw.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PaymentWebhookClient) DeleteOneID(id uuid.UUID) *PaymentWebhookDeleteOne {
+	builder := c.Delete().Where(paymentwebhook.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PaymentWebhookDeleteOne{builder}
+}
+
+// Query returns a query builder for PaymentWebhook.
+func (c *PaymentWebhookClient) Query() *PaymentWebhookQuery {
+	return &PaymentWebhookQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypePaymentWebhook},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a PaymentWebhook entity by its id.
+func (c *PaymentWebhookClient) Get(ctx context.Context, id uuid.UUID) (*PaymentWebhook, error) {
+	return c.Query().Where(paymentwebhook.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PaymentWebhookClient) GetX(ctx context.Context, id uuid.UUID) *PaymentWebhook {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryPaymentOrder queries the payment_order edge of a PaymentWebhook.
+func (c *PaymentWebhookClient) QueryPaymentOrder(pw *PaymentWebhook) *PaymentOrderQuery {
+	query := (&PaymentOrderClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := pw.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(paymentwebhook.Table, paymentwebhook.FieldID, id),
+			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, paymentwebhook.PaymentOrderTable, paymentwebhook.PaymentOrderColumn),
+		)
+		fromV = sqlgraph.Neighbors(pw.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryNetwork queries the network edge of a PaymentWebhook.
+func (c *PaymentWebhookClient) QueryNetwork(pw *PaymentWebhook) *NetworkQuery {
+	query := (&NetworkClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := pw.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(paymentwebhook.Table, paymentwebhook.FieldID, id),
+			sqlgraph.To(network.Table, network.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, paymentwebhook.NetworkTable, paymentwebhook.NetworkColumn),
+		)
+		fromV = sqlgraph.Neighbors(pw.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *PaymentWebhookClient) Hooks() []Hook {
+	return c.hooks.PaymentWebhook
+}
+
+// Interceptors returns the client interceptors.
+func (c *PaymentWebhookClient) Interceptors() []Interceptor {
+	return c.inters.PaymentWebhook
+}
+
+func (c *PaymentWebhookClient) mutate(ctx context.Context, m *PaymentWebhookMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&PaymentWebhookCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&PaymentWebhookUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&PaymentWebhookUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&PaymentWebhookDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown PaymentWebhook mutation op: %q", m.Op())
+	}
+}
+
+// ProviderCurrenciesClient is a client for the ProviderCurrencies schema.
+type ProviderCurrenciesClient struct {
+	config
+}
+
+// NewProviderCurrenciesClient returns a client for the ProviderCurrencies from the given config.
+func NewProviderCurrenciesClient(c config) *ProviderCurrenciesClient {
+	return &ProviderCurrenciesClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `providercurrencies.Hooks(f(g(h())))`.
+func (c *ProviderCurrenciesClient) Use(hooks ...Hook) {
+	c.hooks.ProviderCurrencies = append(c.hooks.ProviderCurrencies, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `providercurrencies.Intercept(f(g(h())))`.
+func (c *ProviderCurrenciesClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ProviderCurrencies = append(c.inters.ProviderCurrencies, interceptors...)
+}
+
+// Create returns a builder for creating a ProviderCurrencies entity.
+func (c *ProviderCurrenciesClient) Create() *ProviderCurrenciesCreate {
+	mutation := newProviderCurrenciesMutation(c.config, OpCreate)
+	return &ProviderCurrenciesCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ProviderCurrencies entities.
+func (c *ProviderCurrenciesClient) CreateBulk(builders ...*ProviderCurrenciesCreate) *ProviderCurrenciesCreateBulk {
+	return &ProviderCurrenciesCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ProviderCurrenciesClient) MapCreateBulk(slice any, setFunc func(*ProviderCurrenciesCreate, int)) *ProviderCurrenciesCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ProviderCurrenciesCreateBulk{err: fmt.Errorf("calling to ProviderCurrenciesClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ProviderCurrenciesCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ProviderCurrenciesCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ProviderCurrencies.
+func (c *ProviderCurrenciesClient) Update() *ProviderCurrenciesUpdate {
+	mutation := newProviderCurrenciesMutation(c.config, OpUpdate)
+	return &ProviderCurrenciesUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ProviderCurrenciesClient) UpdateOne(pc *ProviderCurrencies) *ProviderCurrenciesUpdateOne {
+	mutation := newProviderCurrenciesMutation(c.config, OpUpdateOne, withProviderCurrencies(pc))
+	return &ProviderCurrenciesUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ProviderCurrenciesClient) UpdateOneID(id uuid.UUID) *ProviderCurrenciesUpdateOne {
+	mutation := newProviderCurrenciesMutation(c.config, OpUpdateOne, withProviderCurrenciesID(id))
+	return &ProviderCurrenciesUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ProviderCurrencies.
+func (c *ProviderCurrenciesClient) Delete() *ProviderCurrenciesDelete {
+	mutation := newProviderCurrenciesMutation(c.config, OpDelete)
+	return &ProviderCurrenciesDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ProviderCurrenciesClient) DeleteOne(pc *ProviderCurrencies) *ProviderCurrenciesDeleteOne {
+	return c.DeleteOneID(pc.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ProviderCurrenciesClient) DeleteOneID(id uuid.UUID) *ProviderCurrenciesDeleteOne {
+	builder := c.Delete().Where(providercurrencies.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ProviderCurrenciesDeleteOne{builder}
+}
+
+// Query returns a query builder for ProviderCurrencies.
+func (c *ProviderCurrenciesClient) Query() *ProviderCurrenciesQuery {
+	return &ProviderCurrenciesQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeProviderCurrencies},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ProviderCurrencies entity by its id.
+func (c *ProviderCurrenciesClient) Get(ctx context.Context, id uuid.UUID) (*ProviderCurrencies, error) {
+	return c.Query().Where(providercurrencies.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ProviderCurrenciesClient) GetX(ctx context.Context, id uuid.UUID) *ProviderCurrencies {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryProvider queries the provider edge of a ProviderCurrencies.
+func (c *ProviderCurrenciesClient) QueryProvider(pc *ProviderCurrencies) *ProviderProfileQuery {
+	query := (&ProviderProfileClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := pc.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(providercurrencies.Table, providercurrencies.FieldID, id),
+			sqlgraph.To(providerprofile.Table, providerprofile.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, providercurrencies.ProviderTable, providercurrencies.ProviderColumn),
+		)
+		fromV = sqlgraph.Neighbors(pc.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryCurrency queries the currency edge of a ProviderCurrencies.
+func (c *ProviderCurrenciesClient) QueryCurrency(pc *ProviderCurrencies) *FiatCurrencyQuery {
+	query := (&FiatCurrencyClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := pc.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(providercurrencies.Table, providercurrencies.FieldID, id),
+			sqlgraph.To(fiatcurrency.Table, fiatcurrency.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, providercurrencies.CurrencyTable, providercurrencies.CurrencyColumn),
+		)
+		fromV = sqlgraph.Neighbors(pc.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ProviderCurrenciesClient) Hooks() []Hook {
+	return c.hooks.ProviderCurrencies
+}
+
+// Interceptors returns the client interceptors.
+func (c *ProviderCurrenciesClient) Interceptors() []Interceptor {
+	return c.inters.ProviderCurrencies
+}
+
+func (c *ProviderCurrenciesClient) mutate(ctx context.Context, m *ProviderCurrenciesMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ProviderCurrenciesCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ProviderCurrenciesUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ProviderCurrenciesUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ProviderCurrenciesDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ProviderCurrencies mutation op: %q", m.Op())
 	}
 }
 
@@ -2403,15 +3113,15 @@ func (c *ProviderProfileClient) QueryAPIKey(pp *ProviderProfile) *APIKeyQuery {
 	return query
 }
 
-// QueryCurrencies queries the currencies edge of a ProviderProfile.
-func (c *ProviderProfileClient) QueryCurrencies(pp *ProviderProfile) *FiatCurrencyQuery {
-	query := (&FiatCurrencyClient{config: c.config}).Query()
+// QueryProviderCurrencies queries the provider_currencies edge of a ProviderProfile.
+func (c *ProviderProfileClient) QueryProviderCurrencies(pp *ProviderProfile) *ProviderCurrenciesQuery {
+	query := (&ProviderCurrenciesClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := pp.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(providerprofile.Table, providerprofile.FieldID, id),
-			sqlgraph.To(fiatcurrency.Table, fiatcurrency.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, providerprofile.CurrenciesTable, providerprofile.CurrenciesPrimaryKey...),
+			sqlgraph.To(providercurrencies.Table, providercurrencies.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.ProviderCurrenciesTable, providerprofile.ProviderCurrenciesColumn),
 		)
 		fromV = sqlgraph.Neighbors(pp.driver.Dialect(), step)
 		return fromV, nil
@@ -3867,6 +4577,22 @@ func (c *UserClient) QueryVerificationToken(u *User) *VerificationTokenQuery {
 	return query
 }
 
+// QueryKybProfile queries the kyb_profile edge of a User.
+func (c *UserClient) QueryKybProfile(u *User) *KYBProfileQuery {
+	query := (&KYBProfileClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := u.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(kybprofile.Table, kybprofile.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, user.KybProfileTable, user.KybProfileColumn),
+		)
+		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *UserClient) Hooks() []Hook {
 	hooks := c.hooks.User
@@ -4179,17 +4905,19 @@ func (c *WebhookRetryAttemptClient) mutate(ctx context.Context, m *WebhookRetryA
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		APIKey, FiatCurrency, IdentityVerificationRequest, Institution, LinkedAddress,
-		LockOrderFulfillment, LockPaymentOrder, Network, PaymentOrder,
-		PaymentOrderRecipient, ProviderOrderToken, ProviderProfile, ProviderRating,
-		ProvisionBucket, ReceiveAddress, SenderOrderToken, SenderProfile, Token,
-		TransactionLog, User, VerificationToken, WebhookRetryAttempt []ent.Hook
+		APIKey, BeneficialOwner, FiatCurrency, IdentityVerificationRequest, Institution,
+		KYBProfile, LinkedAddress, LockOrderFulfillment, LockPaymentOrder, Network,
+		PaymentOrder, PaymentOrderRecipient, PaymentWebhook, ProviderCurrencies,
+		ProviderOrderToken, ProviderProfile, ProviderRating, ProvisionBucket,
+		ReceiveAddress, SenderOrderToken, SenderProfile, Token, TransactionLog, User,
+		VerificationToken, WebhookRetryAttempt []ent.Hook
 	}
 	inters struct {
-		APIKey, FiatCurrency, IdentityVerificationRequest, Institution, LinkedAddress,
-		LockOrderFulfillment, LockPaymentOrder, Network, PaymentOrder,
-		PaymentOrderRecipient, ProviderOrderToken, ProviderProfile, ProviderRating,
-		ProvisionBucket, ReceiveAddress, SenderOrderToken, SenderProfile, Token,
-		TransactionLog, User, VerificationToken, WebhookRetryAttempt []ent.Interceptor
+		APIKey, BeneficialOwner, FiatCurrency, IdentityVerificationRequest, Institution,
+		KYBProfile, LinkedAddress, LockOrderFulfillment, LockPaymentOrder, Network,
+		PaymentOrder, PaymentOrderRecipient, PaymentWebhook, ProviderCurrencies,
+		ProviderOrderToken, ProviderProfile, ProviderRating, ProvisionBucket,
+		ReceiveAddress, SenderOrderToken, SenderProfile, Token, TransactionLog, User,
+		VerificationToken, WebhookRetryAttempt []ent.Interceptor
 	}
 )

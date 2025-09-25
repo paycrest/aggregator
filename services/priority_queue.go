@@ -2,34 +2,41 @@ package services
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"math/rand"
 	"strings"
 	"time"
 
-	fastshot "github.com/opus-domini/fast-shot"
+	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
-	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/token"
+	"github.com/paycrest/aggregator/ent/user"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
-	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/logger"
-	tokenUtils "github.com/paycrest/aggregator/utils/token"
 	"github.com/shopspring/decimal"
 )
 
-type PriorityQueueService struct{}
+var (
+	serverConf = config.ServerConfig()
+	orderConf  = config.OrderConfig()
+)
+
+type PriorityQueueService struct {
+	balanceService *BalanceManagementService
+}
 
 // NewPriorityQueueService creates a new instance of PriorityQueueService
 func NewPriorityQueueService() *PriorityQueueService {
-	return &PriorityQueueService{}
+	return &PriorityQueueService{
+		balanceService: NewBalanceManagementService(),
+	}
 }
 
 // ProcessBucketQueues creates a priority queue for each bucket and saves it to redis
@@ -52,27 +59,36 @@ func (s *PriorityQueueService) ProcessBucketQueues() error {
 
 // GetProvisionBuckets returns a list of buckets with their providers
 func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.ProvisionBucket, error) {
-	buckets, err := storage.Client.ProvisionBucket.
-		Query().
-		Select(provisionbucket.FieldMinAmount, provisionbucket.FieldMaxAmount).
-		WithProviderProfiles(func(ppq *ent.ProviderProfileQuery) {
-			// ppq.WithProviderRating(func(prq *ent.ProviderRatingQuery) {
-			// 	prq.Select(providerrating.FieldTrustScore)
-			// })
-			ppq.Select(providerprofile.FieldID)
-
-			// Filter only providers that are always available
-			ppq.Where(
-				providerprofile.IsAvailable(true),
-				providerprofile.IsActive(true),
-				providerprofile.IsKybVerified(true),
-				providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
-			)
-		}).
-		WithCurrency().
-		All(ctx)
+	buckets, err := storage.Client.ProvisionBucket.Query().WithCurrency().All(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	// Filter providers by currency availability and balance for each bucket
+	for _, bucket := range buckets {
+		var availableProviders []*ent.ProviderProfile
+		availableProviders, err := bucket.QueryProviderProfiles().
+			Where(
+				providerprofile.IsActive(true),
+				providerprofile.HasUserWith(user.KybVerificationStatusEQ(user.KybVerificationStatusApproved)),
+				providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
+				providerprofile.HasProviderCurrenciesWith(
+					providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)),
+					providercurrencies.AvailableBalanceGT(bucket.MinAmount),
+					providercurrencies.IsAvailableEQ(true),
+					// TODO: add check to enforce critical balance threshold in the future
+				),
+			).
+			All(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", err),
+				"CurrencyID": bucket.Edges.Currency.ID,
+			}).Errorf("Failed to get available providers for bucket")
+			continue
+		}
+
+		bucket.Edges.ProviderProfiles = availableProviders
 	}
 
 	return buckets, nil
@@ -191,8 +207,8 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 	// TODO: add also the checks for all the currencies that a provider has
 
 	for _, provider := range providers {
-		exists, err := provider.QueryCurrencies().
-			Where(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)).
+		exists, err := provider.QueryProviderCurrencies().
+			Where(providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID))).
 			Exist(ctx)
 		if err != nil || !exists {
 			continue
@@ -356,6 +372,41 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 
 // sendOrderRequest sends an order request to a provider
 func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types.LockPaymentOrderFields) error {
+	// Reserve balance for this order
+	currency := order.ProvisionBucket.Edges.Currency.Code
+	amount := order.Amount.Mul(order.Rate).RoundBank(0)
+
+	// Start a transaction for the entire operation
+	tx, err := storage.Client.Tx(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"OrderID":    order.ID.String(),
+			"ProviderID": order.ProviderID,
+			"Currency":   currency,
+			"Amount":     amount.String(),
+		}).Errorf("Failed to start transaction for order processing")
+		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	// Reserve balance within the transaction
+	err = s.balanceService.ReserveBalance(ctx, order.ProviderID, currency, amount, tx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"OrderID":    order.ID.String(),
+			"ProviderID": order.ProviderID,
+			"Currency":   currency,
+			"Amount":     amount.String(),
+		}).Errorf("Failed to reserve balance for order")
+		return err
+	}
+
 	// Assign the order to the provider and save it to Redis
 	orderKey := fmt.Sprintf("order_request_%s", order.ID)
 
@@ -363,6 +414,7 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 	orderRequestData := map[string]interface{}{
 		"amount":      order.Amount.Mul(order.Rate).RoundBank(0).String(),
 		"institution": order.Institution,
+		"currency":    order.ProvisionBucket.Edges.Currency.Code,
 		"providerId":  order.ProviderID,
 	}
 
@@ -371,20 +423,18 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 			"Error":      fmt.Sprintf("%v", err),
 			"OrderID":    order.ID.String(),
 			"ProviderID": order.ProviderID,
-			"orderKey":   orderKey,
-		}).Errorf("failed to map order to a provider in Redis")
+			"OrderKey":   orderKey,
+		}).Errorf("Failed to map order to a provider in Redis")
 		return err
 	}
 
 	// Set a TTL for the order request
-	err := storage.RedisClient.ExpireAt(ctx, orderKey, time.Now().Add(orderConf.OrderRequestValidity)).Err()
+	err = storage.RedisClient.ExpireAt(ctx, orderKey, time.Now().Add(orderConf.OrderRequestValidity)).Err()
 	if err != nil {
-		// logger.Errorf("failed to set TTL for order request: %v", err)
 		logger.WithFields(logger.Fields{
 			"Error":    fmt.Sprintf("%v", err),
-			"orderKey": orderKey,
-		}).Errorf("failed to set TTL for order request")
-		return err
+			"OrderKey": orderKey,
+		}).Errorf("Failed to set TTL for order request")
 	}
 
 	// Notify the provider
@@ -394,9 +444,26 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 			"Error":      fmt.Sprintf("%v", err),
 			"OrderID":    order.ID.String(),
 			"ProviderID": order.ProviderID,
-		}).Errorf("failed to notify provider")
+		}).Errorf("Failed to notify provider")
 		return err
 	}
+
+	// Commit the transaction if everything succeeded
+	if err := tx.Commit(); err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"OrderID":    order.ID.String(),
+			"ProviderID": order.ProviderID,
+		}).Errorf("Failed to commit order processing transaction")
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	logger.WithFields(logger.Fields{
+		"OrderID":    order.ID.String(),
+		"ProviderID": order.ProviderID,
+		"Currency":   currency,
+		"Amount":     amount.String(),
+	}).Infof("Order processed successfully with balance reserved")
 
 	return nil
 }
@@ -408,46 +475,21 @@ func (s *PriorityQueueService) notifyProvider(ctx context.Context, orderRequestD
 	providerID := orderRequestData["providerId"].(string)
 	delete(orderRequestData, "providerId")
 
-	provider, err := storage.Client.ProviderProfile.
-		Query().
-		Where(providerprofile.IDEQ(providerID)).
-		WithAPIKey().
-		Only(ctx)
-	if err != nil {
-		return err
-	}
-
-	// Compute HMAC
-	decodedSecret, err := base64.StdEncoding.DecodeString(provider.Edges.APIKey.Secret)
-	if err != nil {
-		return err
-	}
-	decryptedSecret, err := cryptoUtils.DecryptPlain(decodedSecret)
-	if err != nil {
-		return err
-	}
-
-	signature := tokenUtils.GenerateHMACSignature(orderRequestData, string(decryptedSecret))
-
-	// Send POST request to the provider's node
-	res, err := fastshot.NewClient(provider.HostIdentifier).
-		Config().SetTimeout(30*time.Second).
-		Header().Add("X-Request-Signature", signature).
-		Build().POST("/new_order").
-		Body().AsJSON(orderRequestData).
-		Send()
-	if err != nil {
-		return err
-	}
-
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Call provider /new_order endpoint using utility function
+	data, err := utils.CallProviderWithHMAC(ctx, providerID, "POST", "/new_order", orderRequestData)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
 			"ProviderID": providerID,
-		}).Errorf("failed to parse JSON response after new order request with data: %v", data)
+		}).Errorf("failed to call provider /new_order endpoint")
 		return err
 	}
+
+	// Log successful response data for debugging
+	logger.WithFields(logger.Fields{
+		"ProviderID": providerID,
+		"Data":       data,
+	}).Infof("successfully called provider /new_order endpoint")
 
 	return nil
 }
@@ -548,7 +590,10 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 				providerordertoken.NetworkEQ(network.Identifier),
 				providerordertoken.HasProviderWith(
 					providerprofile.IDEQ(order.ProviderID),
-					providerprofile.IsAvailableEQ(true),
+					providerprofile.HasProviderCurrenciesWith(
+						providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(bucketCurrency.Code)),
+						providercurrencies.IsAvailableEQ(true),
+					),
 				),
 				providerordertoken.HasTokenWith(token.IDEQ(order.Token.ID)),
 				providerordertoken.HasCurrencyWith(
@@ -565,7 +610,31 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 		allowedDeviation := order.Rate.Mul(providerToken.RateSlippage.Div(decimal.NewFromInt(100)))
 
 		if rate.Sub(order.Rate).Abs().LessThanOrEqual(allowedDeviation) {
-			// Found a match for the rate
+			// Check if provider has sufficient balance for this order
+			hasSufficientBalance, err := s.balanceService.CheckBalanceSufficiency(ctx, order.ProviderID, bucketCurrency.Code, order.Amount.Mul(order.Rate).RoundBank(0))
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":      fmt.Sprintf("%v", err),
+					"OrderID":    order.ID.String(),
+					"ProviderID": order.ProviderID,
+					"Currency":   bucketCurrency.Code,
+					"Amount":     order.Amount.String(),
+				}).Errorf("failed to check balance sufficiency")
+				continue
+			}
+
+			if !hasSufficientBalance {
+				// TODO: send notification to the provider
+				logger.WithFields(logger.Fields{
+					"OrderID":    order.ID.String(),
+					"ProviderID": order.ProviderID,
+					"Currency":   bucketCurrency.Code,
+					"Amount":     order.Amount.String(),
+				}).Warnf("provider has insufficient balance, skipping")
+				continue
+			}
+
+			// Found a match for the rate and sufficient balance
 			if index == 0 {
 				// Match found at index 0, perform LPOP to dequeue
 				data, err := storage.RedisClient.LPop(ctx, redisKey).Result()
@@ -618,6 +687,7 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 					}).Errorf("failed to push provider to order exclude list when matching rate")
 				}
 
+				// Note: Balance cleanup is now handled in sendOrderRequest via defer
 				// Reassign the lock payment order to another provider
 				return s.AssignLockPaymentOrder(ctx, order)
 			}

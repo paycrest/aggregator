@@ -61,8 +61,13 @@ func (s *OrderTron) getNode() enums.Node {
 	}
 }
 
+// ProcessTransfer processes a transfer event for a given receive address and token.
+func (s *OrderTron) ProcessTransfer(ctx context.Context, receiveAddress string, token *ent.Token) error {
+	return nil
+}
+
 // CreateOrder creates a new payment order on-chain.
-func (s *OrderTron) CreateOrder(ctx context.Context, client types.RPCClient, orderID uuid.UUID) error {
+func (s *OrderTron) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 	var err error
 	orderIDPrefix := strings.Split(orderID.String(), "-")[0]
 
@@ -128,7 +133,7 @@ func (s *OrderTron) CreateOrder(ctx context.Context, client types.RPCClient, ord
 	}
 
 	// Approve gateway contract to spend token
-	calldata, err := s.approveCallData(gatewayContractAddress, utils.ToSubunit(order.Amount.Add(order.ProtocolFee), order.Edges.Token.Decimals))
+	calldata, err := s.approveCallData(gatewayContractAddress, utils.ToSubunit(order.Amount, order.Edges.Token.Decimals))
 	if err != nil {
 		return fmt.Errorf("%s - Tron.CreateOrder.approveCallData: %w", orderIDPrefix, err)
 	}
@@ -203,7 +208,7 @@ func (s *OrderTron) CreateOrder(ctx context.Context, client types.RPCClient, ord
 }
 
 // RefundOrder refunds sender on canceled lock order
-func (s *OrderTron) RefundOrder(ctx context.Context, client types.RPCClient, network *ent.Network, orderID string) error {
+func (s *OrderTron) RefundOrder(ctx context.Context, network *ent.Network, orderID string) error {
 	orderIDPrefix := strings.Split(orderID, "-")[0]
 
 	// Fetch lock order from db
@@ -303,7 +308,7 @@ func (s *OrderTron) RefundOrder(ctx context.Context, client types.RPCClient, net
 }
 
 // SettleOrder settles a payment order on-chain.
-func (s *OrderTron) SettleOrder(ctx context.Context, client types.RPCClient, orderID uuid.UUID) error {
+func (s *OrderTron) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 	var err error
 
 	orderIDPrefix := strings.Split(orderID.String(), "-")[0]
@@ -424,17 +429,14 @@ func (s *OrderTron) createOrderCallData(order *ent.PaymentOrder) ([]byte, error)
 
 	refundAddressTron, _ := util.Base58ToAddress(order.ReturnAddress)
 	refundAddress := refundAddressTron.Hex()[4:]
-
-	amountWithProtocolFee := order.Amount.Add(order.ProtocolFee)
 	tokenContractAddressTron, _ := util.Base58ToAddress(order.Edges.Token.ContractAddress)
-
 	senderFeeRecipientTron, _ := util.Base58ToAddress(order.FeeAddress)
 	senderFeeRecipient := senderFeeRecipientTron.Hex()[4:]
 
 	// Define params
 	params := &types.CreateOrderParams{
 		Token:              common.HexToAddress(tokenContractAddressTron.Hex()[4:]),
-		Amount:             utils.ToSubunit(amountWithProtocolFee, order.Edges.Token.Decimals),
+		Amount:             utils.ToSubunit(order.Amount, order.Edges.Token.Decimals),
 		Rate:               order.Rate.Mul(decimal.NewFromInt(100)).BigInt(),
 		SenderFeeRecipient: common.HexToAddress(senderFeeRecipient),
 		SenderFee:          utils.ToSubunit(order.SenderFee, order.Edges.Token.Decimals),

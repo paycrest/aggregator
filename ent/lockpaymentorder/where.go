@@ -77,6 +77,11 @@ func Amount(v decimal.Decimal) predicate.LockPaymentOrder {
 	return predicate.LockPaymentOrder(sql.FieldEQ(FieldAmount, v))
 }
 
+// ProtocolFee applies equality check predicate on the "protocol_fee" field. It's identical to ProtocolFeeEQ.
+func ProtocolFee(v decimal.Decimal) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldEQ(FieldProtocolFee, v))
+}
+
 // Rate applies equality check predicate on the "rate" field. It's identical to RateEQ.
 func Rate(v decimal.Decimal) predicate.LockPaymentOrder {
 	return predicate.LockPaymentOrder(sql.FieldEQ(FieldRate, v))
@@ -85,6 +90,11 @@ func Rate(v decimal.Decimal) predicate.LockPaymentOrder {
 // OrderPercent applies equality check predicate on the "order_percent" field. It's identical to OrderPercentEQ.
 func OrderPercent(v decimal.Decimal) predicate.LockPaymentOrder {
 	return predicate.LockPaymentOrder(sql.FieldEQ(FieldOrderPercent, v))
+}
+
+// Sender applies equality check predicate on the "sender" field. It's identical to SenderEQ.
+func Sender(v string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldEQ(FieldSender, v))
 }
 
 // TxHash applies equality check predicate on the "tx_hash" field. It's identical to TxHashEQ.
@@ -120,6 +130,11 @@ func Memo(v string) predicate.LockPaymentOrder {
 // CancellationCount applies equality check predicate on the "cancellation_count" field. It's identical to CancellationCountEQ.
 func CancellationCount(v int) predicate.LockPaymentOrder {
 	return predicate.LockPaymentOrder(sql.FieldEQ(FieldCancellationCount, v))
+}
+
+// MessageHash applies equality check predicate on the "message_hash" field. It's identical to MessageHashEQ.
+func MessageHash(v string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldEQ(FieldMessageHash, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
@@ -307,6 +322,46 @@ func AmountLTE(v decimal.Decimal) predicate.LockPaymentOrder {
 	return predicate.LockPaymentOrder(sql.FieldLTE(FieldAmount, v))
 }
 
+// ProtocolFeeEQ applies the EQ predicate on the "protocol_fee" field.
+func ProtocolFeeEQ(v decimal.Decimal) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldEQ(FieldProtocolFee, v))
+}
+
+// ProtocolFeeNEQ applies the NEQ predicate on the "protocol_fee" field.
+func ProtocolFeeNEQ(v decimal.Decimal) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldNEQ(FieldProtocolFee, v))
+}
+
+// ProtocolFeeIn applies the In predicate on the "protocol_fee" field.
+func ProtocolFeeIn(vs ...decimal.Decimal) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldIn(FieldProtocolFee, vs...))
+}
+
+// ProtocolFeeNotIn applies the NotIn predicate on the "protocol_fee" field.
+func ProtocolFeeNotIn(vs ...decimal.Decimal) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldNotIn(FieldProtocolFee, vs...))
+}
+
+// ProtocolFeeGT applies the GT predicate on the "protocol_fee" field.
+func ProtocolFeeGT(v decimal.Decimal) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldGT(FieldProtocolFee, v))
+}
+
+// ProtocolFeeGTE applies the GTE predicate on the "protocol_fee" field.
+func ProtocolFeeGTE(v decimal.Decimal) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldGTE(FieldProtocolFee, v))
+}
+
+// ProtocolFeeLT applies the LT predicate on the "protocol_fee" field.
+func ProtocolFeeLT(v decimal.Decimal) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldLT(FieldProtocolFee, v))
+}
+
+// ProtocolFeeLTE applies the LTE predicate on the "protocol_fee" field.
+func ProtocolFeeLTE(v decimal.Decimal) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldLTE(FieldProtocolFee, v))
+}
+
 // RateEQ applies the EQ predicate on the "rate" field.
 func RateEQ(v decimal.Decimal) predicate.LockPaymentOrder {
 	return predicate.LockPaymentOrder(sql.FieldEQ(FieldRate, v))
@@ -385,6 +440,81 @@ func OrderPercentLT(v decimal.Decimal) predicate.LockPaymentOrder {
 // OrderPercentLTE applies the LTE predicate on the "order_percent" field.
 func OrderPercentLTE(v decimal.Decimal) predicate.LockPaymentOrder {
 	return predicate.LockPaymentOrder(sql.FieldLTE(FieldOrderPercent, v))
+}
+
+// SenderEQ applies the EQ predicate on the "sender" field.
+func SenderEQ(v string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldEQ(FieldSender, v))
+}
+
+// SenderNEQ applies the NEQ predicate on the "sender" field.
+func SenderNEQ(v string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldNEQ(FieldSender, v))
+}
+
+// SenderIn applies the In predicate on the "sender" field.
+func SenderIn(vs ...string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldIn(FieldSender, vs...))
+}
+
+// SenderNotIn applies the NotIn predicate on the "sender" field.
+func SenderNotIn(vs ...string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldNotIn(FieldSender, vs...))
+}
+
+// SenderGT applies the GT predicate on the "sender" field.
+func SenderGT(v string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldGT(FieldSender, v))
+}
+
+// SenderGTE applies the GTE predicate on the "sender" field.
+func SenderGTE(v string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldGTE(FieldSender, v))
+}
+
+// SenderLT applies the LT predicate on the "sender" field.
+func SenderLT(v string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldLT(FieldSender, v))
+}
+
+// SenderLTE applies the LTE predicate on the "sender" field.
+func SenderLTE(v string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldLTE(FieldSender, v))
+}
+
+// SenderContains applies the Contains predicate on the "sender" field.
+func SenderContains(v string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldContains(FieldSender, v))
+}
+
+// SenderHasPrefix applies the HasPrefix predicate on the "sender" field.
+func SenderHasPrefix(v string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldHasPrefix(FieldSender, v))
+}
+
+// SenderHasSuffix applies the HasSuffix predicate on the "sender" field.
+func SenderHasSuffix(v string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldHasSuffix(FieldSender, v))
+}
+
+// SenderIsNil applies the IsNil predicate on the "sender" field.
+func SenderIsNil() predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldIsNull(FieldSender))
+}
+
+// SenderNotNil applies the NotNil predicate on the "sender" field.
+func SenderNotNil() predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldNotNull(FieldSender))
+}
+
+// SenderEqualFold applies the EqualFold predicate on the "sender" field.
+func SenderEqualFold(v string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldEqualFold(FieldSender, v))
+}
+
+// SenderContainsFold applies the ContainsFold predicate on the "sender" field.
+func SenderContainsFold(v string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldContainsFold(FieldSender, v))
 }
 
 // TxHashEQ applies the EQ predicate on the "tx_hash" field.
@@ -840,6 +970,81 @@ func CancellationCountLT(v int) predicate.LockPaymentOrder {
 // CancellationCountLTE applies the LTE predicate on the "cancellation_count" field.
 func CancellationCountLTE(v int) predicate.LockPaymentOrder {
 	return predicate.LockPaymentOrder(sql.FieldLTE(FieldCancellationCount, v))
+}
+
+// MessageHashEQ applies the EQ predicate on the "message_hash" field.
+func MessageHashEQ(v string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldEQ(FieldMessageHash, v))
+}
+
+// MessageHashNEQ applies the NEQ predicate on the "message_hash" field.
+func MessageHashNEQ(v string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldNEQ(FieldMessageHash, v))
+}
+
+// MessageHashIn applies the In predicate on the "message_hash" field.
+func MessageHashIn(vs ...string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldIn(FieldMessageHash, vs...))
+}
+
+// MessageHashNotIn applies the NotIn predicate on the "message_hash" field.
+func MessageHashNotIn(vs ...string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldNotIn(FieldMessageHash, vs...))
+}
+
+// MessageHashGT applies the GT predicate on the "message_hash" field.
+func MessageHashGT(v string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldGT(FieldMessageHash, v))
+}
+
+// MessageHashGTE applies the GTE predicate on the "message_hash" field.
+func MessageHashGTE(v string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldGTE(FieldMessageHash, v))
+}
+
+// MessageHashLT applies the LT predicate on the "message_hash" field.
+func MessageHashLT(v string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldLT(FieldMessageHash, v))
+}
+
+// MessageHashLTE applies the LTE predicate on the "message_hash" field.
+func MessageHashLTE(v string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldLTE(FieldMessageHash, v))
+}
+
+// MessageHashContains applies the Contains predicate on the "message_hash" field.
+func MessageHashContains(v string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldContains(FieldMessageHash, v))
+}
+
+// MessageHashHasPrefix applies the HasPrefix predicate on the "message_hash" field.
+func MessageHashHasPrefix(v string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldHasPrefix(FieldMessageHash, v))
+}
+
+// MessageHashHasSuffix applies the HasSuffix predicate on the "message_hash" field.
+func MessageHashHasSuffix(v string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldHasSuffix(FieldMessageHash, v))
+}
+
+// MessageHashIsNil applies the IsNil predicate on the "message_hash" field.
+func MessageHashIsNil() predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldIsNull(FieldMessageHash))
+}
+
+// MessageHashNotNil applies the NotNil predicate on the "message_hash" field.
+func MessageHashNotNil() predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldNotNull(FieldMessageHash))
+}
+
+// MessageHashEqualFold applies the EqualFold predicate on the "message_hash" field.
+func MessageHashEqualFold(v string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldEqualFold(FieldMessageHash, v))
+}
+
+// MessageHashContainsFold applies the ContainsFold predicate on the "message_hash" field.
+func MessageHashContainsFold(v string) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldContainsFold(FieldMessageHash, v))
 }
 
 // HasToken applies the HasEdge predicate on the "token" edge.

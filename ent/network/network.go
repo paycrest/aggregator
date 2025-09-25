@@ -20,14 +20,14 @@ const (
 	FieldUpdatedAt = "updated_at"
 	// FieldChainID holds the string denoting the chain_id field in the database.
 	FieldChainID = "chain_id"
-	// FieldChainIDHex holds the string denoting the chain_id_hex field in the database.
-	FieldChainIDHex = "chain_id_hex"
 	// FieldIdentifier holds the string denoting the identifier field in the database.
 	FieldIdentifier = "identifier"
 	// FieldRPCEndpoint holds the string denoting the rpc_endpoint field in the database.
 	FieldRPCEndpoint = "rpc_endpoint"
 	// FieldGatewayContractAddress holds the string denoting the gateway_contract_address field in the database.
 	FieldGatewayContractAddress = "gateway_contract_address"
+	// FieldBlockTime holds the string denoting the block_time field in the database.
+	FieldBlockTime = "block_time"
 	// FieldIsTestnet holds the string denoting the is_testnet field in the database.
 	FieldIsTestnet = "is_testnet"
 	// FieldBundlerURL holds the string denoting the bundler_url field in the database.
@@ -38,6 +38,8 @@ const (
 	FieldFee = "fee"
 	// EdgeTokens holds the string denoting the tokens edge name in mutations.
 	EdgeTokens = "tokens"
+	// EdgePaymentWebhook holds the string denoting the payment_webhook edge name in mutations.
+	EdgePaymentWebhook = "payment_webhook"
 	// Table holds the table name of the network in the database.
 	Table = "networks"
 	// TokensTable is the table that holds the tokens relation/edge.
@@ -47,6 +49,13 @@ const (
 	TokensInverseTable = "tokens"
 	// TokensColumn is the table column denoting the tokens relation/edge.
 	TokensColumn = "network_tokens"
+	// PaymentWebhookTable is the table that holds the payment_webhook relation/edge.
+	PaymentWebhookTable = "payment_webhooks"
+	// PaymentWebhookInverseTable is the table name for the PaymentWebhook entity.
+	// It exists in this package in order to avoid circular dependency with the "paymentwebhook" package.
+	PaymentWebhookInverseTable = "payment_webhooks"
+	// PaymentWebhookColumn is the table column denoting the payment_webhook relation/edge.
+	PaymentWebhookColumn = "network_payment_webhook"
 )
 
 // Columns holds all SQL columns for network fields.
@@ -55,10 +64,10 @@ var Columns = []string{
 	FieldCreatedAt,
 	FieldUpdatedAt,
 	FieldChainID,
-	FieldChainIDHex,
 	FieldIdentifier,
 	FieldRPCEndpoint,
 	FieldGatewayContractAddress,
+	FieldBlockTime,
 	FieldIsTestnet,
 	FieldBundlerURL,
 	FieldPaymasterURL,
@@ -109,11 +118,6 @@ func ByChainID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldChainID, opts...).ToFunc()
 }
 
-// ByChainIDHex orders the results by the chain_id_hex field.
-func ByChainIDHex(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldChainIDHex, opts...).ToFunc()
-}
-
 // ByIdentifier orders the results by the identifier field.
 func ByIdentifier(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldIdentifier, opts...).ToFunc()
@@ -127,6 +131,11 @@ func ByRPCEndpoint(opts ...sql.OrderTermOption) OrderOption {
 // ByGatewayContractAddress orders the results by the gateway_contract_address field.
 func ByGatewayContractAddress(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldGatewayContractAddress, opts...).ToFunc()
+}
+
+// ByBlockTime orders the results by the block_time field.
+func ByBlockTime(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBlockTime, opts...).ToFunc()
 }
 
 // ByIsTestnet orders the results by the is_testnet field.
@@ -162,10 +171,24 @@ func ByTokens(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newTokensStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByPaymentWebhookField orders the results by payment_webhook field.
+func ByPaymentWebhookField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newPaymentWebhookStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newTokensStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(TokensInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, TokensTable, TokensColumn),
+	)
+}
+func newPaymentWebhookStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(PaymentWebhookInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, false, PaymentWebhookTable, PaymentWebhookColumn),
 	)
 }

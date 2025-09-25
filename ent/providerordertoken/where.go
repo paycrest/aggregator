@@ -531,16 +531,6 @@ func NetworkHasSuffix(v string) predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(sql.FieldHasSuffix(FieldNetwork, v))
 }
 
-// NetworkIsNil applies the IsNil predicate on the "network" field.
-func NetworkIsNil() predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldIsNull(FieldNetwork))
-}
-
-// NetworkNotNil applies the NotNil predicate on the "network" field.
-func NetworkNotNil() predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldNotNull(FieldNetwork))
-}
-
 // NetworkEqualFold applies the EqualFold predicate on the "network" field.
 func NetworkEqualFold(v string) predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(sql.FieldEqualFold(FieldNetwork, v))

@@ -24,10 +24,14 @@ const (
 	FieldGatewayID = "gateway_id"
 	// FieldAmount holds the string denoting the amount field in the database.
 	FieldAmount = "amount"
+	// FieldProtocolFee holds the string denoting the protocol_fee field in the database.
+	FieldProtocolFee = "protocol_fee"
 	// FieldRate holds the string denoting the rate field in the database.
 	FieldRate = "rate"
 	// FieldOrderPercent holds the string denoting the order_percent field in the database.
 	FieldOrderPercent = "order_percent"
+	// FieldSender holds the string denoting the sender field in the database.
+	FieldSender = "sender"
 	// FieldTxHash holds the string denoting the tx_hash field in the database.
 	FieldTxHash = "tx_hash"
 	// FieldStatus holds the string denoting the status field in the database.
@@ -48,6 +52,8 @@ const (
 	FieldCancellationCount = "cancellation_count"
 	// FieldCancellationReasons holds the string denoting the cancellation_reasons field in the database.
 	FieldCancellationReasons = "cancellation_reasons"
+	// FieldMessageHash holds the string denoting the message_hash field in the database.
+	FieldMessageHash = "message_hash"
 	// EdgeToken holds the string denoting the token edge name in mutations.
 	EdgeToken = "token"
 	// EdgeProvisionBucket holds the string denoting the provision_bucket edge name in mutations.
@@ -104,8 +110,10 @@ var Columns = []string{
 	FieldUpdatedAt,
 	FieldGatewayID,
 	FieldAmount,
+	FieldProtocolFee,
 	FieldRate,
 	FieldOrderPercent,
+	FieldSender,
 	FieldTxHash,
 	FieldStatus,
 	FieldBlockNumber,
@@ -116,6 +124,7 @@ var Columns = []string{
 	FieldMetadata,
 	FieldCancellationCount,
 	FieldCancellationReasons,
+	FieldMessageHash,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "lock_payment_orders"
@@ -154,6 +163,8 @@ var (
 	DefaultCancellationCount int
 	// DefaultCancellationReasons holds the default value on creation for the "cancellation_reasons" field.
 	DefaultCancellationReasons []string
+	// MessageHashValidator is a validator for the "message_hash" field. It is called by the builders before save.
+	MessageHashValidator func(string) error
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -217,6 +228,11 @@ func ByAmount(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAmount, opts...).ToFunc()
 }
 
+// ByProtocolFee orders the results by the protocol_fee field.
+func ByProtocolFee(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldProtocolFee, opts...).ToFunc()
+}
+
 // ByRate orders the results by the rate field.
 func ByRate(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRate, opts...).ToFunc()
@@ -225,6 +241,11 @@ func ByRate(opts ...sql.OrderTermOption) OrderOption {
 // ByOrderPercent orders the results by the order_percent field.
 func ByOrderPercent(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldOrderPercent, opts...).ToFunc()
+}
+
+// BySender orders the results by the sender field.
+func BySender(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSender, opts...).ToFunc()
 }
 
 // ByTxHash orders the results by the tx_hash field.
@@ -265,6 +286,11 @@ func ByMemo(opts ...sql.OrderTermOption) OrderOption {
 // ByCancellationCount orders the results by the cancellation_count field.
 func ByCancellationCount(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCancellationCount, opts...).ToFunc()
+}
+
+// ByMessageHash orders the results by the message_hash field.
+func ByMessageHash(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMessageHash, opts...).ToFunc()
 }
 
 // ByTokenField orders the results by token field.

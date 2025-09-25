@@ -2,7 +2,10 @@ package middleware
 
 import (
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -21,6 +24,7 @@ import (
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/user"
+	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/storage"
 	u "github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/crypto"
@@ -526,4 +530,85 @@ func determineOwnerAddress(accounts []LinkedAccount) string {
 	}
 
 	return ""
+}
+
+// SlackVerificationMiddleware verifies incoming requests from Slack using the signing secret.
+func SlackVerificationMiddleware(c *gin.Context) {
+
+	// Load config on each request
+	conf := config.AuthConfig()
+
+	slackSig := c.GetHeader("X-Slack-Signature")
+	slackTimestamp := c.GetHeader("X-Slack-Request-Timestamp")
+
+	if slackSig == "" || slackTimestamp == "" {
+		logger.Warnf("Missing Slack signature or timestamp")
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Missing Slack headers"})
+		return
+	}
+
+	// Prevent replay attacks (5 min window)
+	ts, err := strconv.ParseInt(slackTimestamp, 10, 64)
+	if err != nil || time.Now().Unix()-ts > 60*5 {
+		logger.Warnf("Invalid or expired timestamp: %s", slackTimestamp)
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid timestamp"})
+		return
+	}
+
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		logger.Errorf("Could not read request body: %v", err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Could not read body"})
+		return
+	}
+	// Restore body for downstream handlers
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
+
+	basestring := "v0:" + slackTimestamp + ":" + string(body)
+	mac := hmac.New(sha256.New, []byte(conf.SlackSigningSecret))
+	mac.Write([]byte(basestring))
+	expectedSig := "v0=" + hex.EncodeToString(mac.Sum(nil))
+
+	if !hmac.Equal([]byte(expectedSig), []byte(slackSig)) {
+		logger.Warnf("Invalid Slack signature. Expected: %s, Received: %s", expectedSig, slackSig)
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid Slack signature"})
+		return
+	}
+
+	c.Next()
+}
+
+// TurnstileMiddleware is a middleware that verifies Turnstile tokens
+func TurnstileMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		turnstileService := services.NewTurnstileService()
+
+		// Get token from header, query parameter, or request body
+		token := c.GetHeader("X-Turnstile-Token")
+		if token == "" {
+			token = c.Query("turnstile_token")
+		}
+
+		// If no token is found, allow the request to pass through
+		if token == "" {
+			c.Next()
+			return
+		}
+
+		// Get client IP safely
+		clientIP := c.ClientIP()
+		if clientIP == "" {
+			clientIP = "127.0.0.1" // fallback
+		}
+
+		// Verify the token
+		if err := turnstileService.VerifyToken(token, clientIP); err != nil {
+			u.APIResponse(c, http.StatusBadRequest, "error",
+				"Security check verification failed", nil)
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
 }

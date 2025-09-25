@@ -13,9 +13,9 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/apikey"
-	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -103,16 +103,16 @@ func (ppu *ProviderProfileUpdate) SetNillableIsActive(b *bool) *ProviderProfileU
 	return ppu
 }
 
-// SetIsAvailable sets the "is_available" field.
-func (ppu *ProviderProfileUpdate) SetIsAvailable(b bool) *ProviderProfileUpdate {
-	ppu.mutation.SetIsAvailable(b)
+// SetIsKybVerified sets the "is_kyb_verified" field.
+func (ppu *ProviderProfileUpdate) SetIsKybVerified(b bool) *ProviderProfileUpdate {
+	ppu.mutation.SetIsKybVerified(b)
 	return ppu
 }
 
-// SetNillableIsAvailable sets the "is_available" field if the given value is not nil.
-func (ppu *ProviderProfileUpdate) SetNillableIsAvailable(b *bool) *ProviderProfileUpdate {
+// SetNillableIsKybVerified sets the "is_kyb_verified" field if the given value is not nil.
+func (ppu *ProviderProfileUpdate) SetNillableIsKybVerified(b *bool) *ProviderProfileUpdate {
 	if b != nil {
-		ppu.SetIsAvailable(*b)
+		ppu.SetIsKybVerified(*b)
 	}
 	return ppu
 }
@@ -137,160 +137,6 @@ func (ppu *ProviderProfileUpdate) SetNillableVisibilityMode(pm *providerprofile.
 	return ppu
 }
 
-// SetAddress sets the "address" field.
-func (ppu *ProviderProfileUpdate) SetAddress(s string) *ProviderProfileUpdate {
-	ppu.mutation.SetAddress(s)
-	return ppu
-}
-
-// SetNillableAddress sets the "address" field if the given value is not nil.
-func (ppu *ProviderProfileUpdate) SetNillableAddress(s *string) *ProviderProfileUpdate {
-	if s != nil {
-		ppu.SetAddress(*s)
-	}
-	return ppu
-}
-
-// ClearAddress clears the value of the "address" field.
-func (ppu *ProviderProfileUpdate) ClearAddress() *ProviderProfileUpdate {
-	ppu.mutation.ClearAddress()
-	return ppu
-}
-
-// SetMobileNumber sets the "mobile_number" field.
-func (ppu *ProviderProfileUpdate) SetMobileNumber(s string) *ProviderProfileUpdate {
-	ppu.mutation.SetMobileNumber(s)
-	return ppu
-}
-
-// SetNillableMobileNumber sets the "mobile_number" field if the given value is not nil.
-func (ppu *ProviderProfileUpdate) SetNillableMobileNumber(s *string) *ProviderProfileUpdate {
-	if s != nil {
-		ppu.SetMobileNumber(*s)
-	}
-	return ppu
-}
-
-// ClearMobileNumber clears the value of the "mobile_number" field.
-func (ppu *ProviderProfileUpdate) ClearMobileNumber() *ProviderProfileUpdate {
-	ppu.mutation.ClearMobileNumber()
-	return ppu
-}
-
-// SetDateOfBirth sets the "date_of_birth" field.
-func (ppu *ProviderProfileUpdate) SetDateOfBirth(t time.Time) *ProviderProfileUpdate {
-	ppu.mutation.SetDateOfBirth(t)
-	return ppu
-}
-
-// SetNillableDateOfBirth sets the "date_of_birth" field if the given value is not nil.
-func (ppu *ProviderProfileUpdate) SetNillableDateOfBirth(t *time.Time) *ProviderProfileUpdate {
-	if t != nil {
-		ppu.SetDateOfBirth(*t)
-	}
-	return ppu
-}
-
-// ClearDateOfBirth clears the value of the "date_of_birth" field.
-func (ppu *ProviderProfileUpdate) ClearDateOfBirth() *ProviderProfileUpdate {
-	ppu.mutation.ClearDateOfBirth()
-	return ppu
-}
-
-// SetBusinessName sets the "business_name" field.
-func (ppu *ProviderProfileUpdate) SetBusinessName(s string) *ProviderProfileUpdate {
-	ppu.mutation.SetBusinessName(s)
-	return ppu
-}
-
-// SetNillableBusinessName sets the "business_name" field if the given value is not nil.
-func (ppu *ProviderProfileUpdate) SetNillableBusinessName(s *string) *ProviderProfileUpdate {
-	if s != nil {
-		ppu.SetBusinessName(*s)
-	}
-	return ppu
-}
-
-// ClearBusinessName clears the value of the "business_name" field.
-func (ppu *ProviderProfileUpdate) ClearBusinessName() *ProviderProfileUpdate {
-	ppu.mutation.ClearBusinessName()
-	return ppu
-}
-
-// SetIdentityDocumentType sets the "identity_document_type" field.
-func (ppu *ProviderProfileUpdate) SetIdentityDocumentType(pdt providerprofile.IdentityDocumentType) *ProviderProfileUpdate {
-	ppu.mutation.SetIdentityDocumentType(pdt)
-	return ppu
-}
-
-// SetNillableIdentityDocumentType sets the "identity_document_type" field if the given value is not nil.
-func (ppu *ProviderProfileUpdate) SetNillableIdentityDocumentType(pdt *providerprofile.IdentityDocumentType) *ProviderProfileUpdate {
-	if pdt != nil {
-		ppu.SetIdentityDocumentType(*pdt)
-	}
-	return ppu
-}
-
-// ClearIdentityDocumentType clears the value of the "identity_document_type" field.
-func (ppu *ProviderProfileUpdate) ClearIdentityDocumentType() *ProviderProfileUpdate {
-	ppu.mutation.ClearIdentityDocumentType()
-	return ppu
-}
-
-// SetIdentityDocument sets the "identity_document" field.
-func (ppu *ProviderProfileUpdate) SetIdentityDocument(s string) *ProviderProfileUpdate {
-	ppu.mutation.SetIdentityDocument(s)
-	return ppu
-}
-
-// SetNillableIdentityDocument sets the "identity_document" field if the given value is not nil.
-func (ppu *ProviderProfileUpdate) SetNillableIdentityDocument(s *string) *ProviderProfileUpdate {
-	if s != nil {
-		ppu.SetIdentityDocument(*s)
-	}
-	return ppu
-}
-
-// ClearIdentityDocument clears the value of the "identity_document" field.
-func (ppu *ProviderProfileUpdate) ClearIdentityDocument() *ProviderProfileUpdate {
-	ppu.mutation.ClearIdentityDocument()
-	return ppu
-}
-
-// SetBusinessDocument sets the "business_document" field.
-func (ppu *ProviderProfileUpdate) SetBusinessDocument(s string) *ProviderProfileUpdate {
-	ppu.mutation.SetBusinessDocument(s)
-	return ppu
-}
-
-// SetNillableBusinessDocument sets the "business_document" field if the given value is not nil.
-func (ppu *ProviderProfileUpdate) SetNillableBusinessDocument(s *string) *ProviderProfileUpdate {
-	if s != nil {
-		ppu.SetBusinessDocument(*s)
-	}
-	return ppu
-}
-
-// ClearBusinessDocument clears the value of the "business_document" field.
-func (ppu *ProviderProfileUpdate) ClearBusinessDocument() *ProviderProfileUpdate {
-	ppu.mutation.ClearBusinessDocument()
-	return ppu
-}
-
-// SetIsKybVerified sets the "is_kyb_verified" field.
-func (ppu *ProviderProfileUpdate) SetIsKybVerified(b bool) *ProviderProfileUpdate {
-	ppu.mutation.SetIsKybVerified(b)
-	return ppu
-}
-
-// SetNillableIsKybVerified sets the "is_kyb_verified" field if the given value is not nil.
-func (ppu *ProviderProfileUpdate) SetNillableIsKybVerified(b *bool) *ProviderProfileUpdate {
-	if b != nil {
-		ppu.SetIsKybVerified(*b)
-	}
-	return ppu
-}
-
 // SetAPIKeyID sets the "api_key" edge to the APIKey entity by ID.
 func (ppu *ProviderProfileUpdate) SetAPIKeyID(id uuid.UUID) *ProviderProfileUpdate {
 	ppu.mutation.SetAPIKeyID(id)
@@ -310,19 +156,19 @@ func (ppu *ProviderProfileUpdate) SetAPIKey(a *APIKey) *ProviderProfileUpdate {
 	return ppu.SetAPIKeyID(a.ID)
 }
 
-// AddCurrencyIDs adds the "currencies" edge to the FiatCurrency entity by IDs.
-func (ppu *ProviderProfileUpdate) AddCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
-	ppu.mutation.AddCurrencyIDs(ids...)
+// AddProviderCurrencyIDs adds the "provider_currencies" edge to the ProviderCurrencies entity by IDs.
+func (ppu *ProviderProfileUpdate) AddProviderCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
+	ppu.mutation.AddProviderCurrencyIDs(ids...)
 	return ppu
 }
 
-// AddCurrencies adds the "currencies" edges to the FiatCurrency entity.
-func (ppu *ProviderProfileUpdate) AddCurrencies(f ...*FiatCurrency) *ProviderProfileUpdate {
-	ids := make([]uuid.UUID, len(f))
-	for i := range f {
-		ids[i] = f[i].ID
+// AddProviderCurrencies adds the "provider_currencies" edges to the ProviderCurrencies entity.
+func (ppu *ProviderProfileUpdate) AddProviderCurrencies(p ...*ProviderCurrencies) *ProviderProfileUpdate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
 	}
-	return ppu.AddCurrencyIDs(ids...)
+	return ppu.AddProviderCurrencyIDs(ids...)
 }
 
 // AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by IDs.
@@ -400,25 +246,25 @@ func (ppu *ProviderProfileUpdate) ClearAPIKey() *ProviderProfileUpdate {
 	return ppu
 }
 
-// ClearCurrencies clears all "currencies" edges to the FiatCurrency entity.
-func (ppu *ProviderProfileUpdate) ClearCurrencies() *ProviderProfileUpdate {
-	ppu.mutation.ClearCurrencies()
+// ClearProviderCurrencies clears all "provider_currencies" edges to the ProviderCurrencies entity.
+func (ppu *ProviderProfileUpdate) ClearProviderCurrencies() *ProviderProfileUpdate {
+	ppu.mutation.ClearProviderCurrencies()
 	return ppu
 }
 
-// RemoveCurrencyIDs removes the "currencies" edge to FiatCurrency entities by IDs.
-func (ppu *ProviderProfileUpdate) RemoveCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
-	ppu.mutation.RemoveCurrencyIDs(ids...)
+// RemoveProviderCurrencyIDs removes the "provider_currencies" edge to ProviderCurrencies entities by IDs.
+func (ppu *ProviderProfileUpdate) RemoveProviderCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
+	ppu.mutation.RemoveProviderCurrencyIDs(ids...)
 	return ppu
 }
 
-// RemoveCurrencies removes "currencies" edges to FiatCurrency entities.
-func (ppu *ProviderProfileUpdate) RemoveCurrencies(f ...*FiatCurrency) *ProviderProfileUpdate {
-	ids := make([]uuid.UUID, len(f))
-	for i := range f {
-		ids[i] = f[i].ID
+// RemoveProviderCurrencies removes "provider_currencies" edges to ProviderCurrencies entities.
+func (ppu *ProviderProfileUpdate) RemoveProviderCurrencies(p ...*ProviderCurrencies) *ProviderProfileUpdate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
 	}
-	return ppu.RemoveCurrencyIDs(ids...)
+	return ppu.RemoveProviderCurrencyIDs(ids...)
 }
 
 // ClearProvisionBuckets clears all "provision_buckets" edges to the ProvisionBucket entity.
@@ -543,11 +389,6 @@ func (ppu *ProviderProfileUpdate) check() error {
 			return &ValidationError{Name: "visibility_mode", err: fmt.Errorf(`ent: validator failed for field "ProviderProfile.visibility_mode": %w`, err)}
 		}
 	}
-	if v, ok := ppu.mutation.IdentityDocumentType(); ok {
-		if err := providerprofile.IdentityDocumentTypeValidator(v); err != nil {
-			return &ValidationError{Name: "identity_document_type", err: fmt.Errorf(`ent: validator failed for field "ProviderProfile.identity_document_type": %w`, err)}
-		}
-	}
 	if ppu.mutation.UserCleared() && len(ppu.mutation.UserIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ProviderProfile.user"`)
 	}
@@ -584,59 +425,14 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 	if value, ok := ppu.mutation.IsActive(); ok {
 		_spec.SetField(providerprofile.FieldIsActive, field.TypeBool, value)
 	}
-	if value, ok := ppu.mutation.IsAvailable(); ok {
-		_spec.SetField(providerprofile.FieldIsAvailable, field.TypeBool, value)
+	if value, ok := ppu.mutation.IsKybVerified(); ok {
+		_spec.SetField(providerprofile.FieldIsKybVerified, field.TypeBool, value)
 	}
 	if value, ok := ppu.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerprofile.FieldUpdatedAt, field.TypeTime, value)
 	}
 	if value, ok := ppu.mutation.VisibilityMode(); ok {
 		_spec.SetField(providerprofile.FieldVisibilityMode, field.TypeEnum, value)
-	}
-	if value, ok := ppu.mutation.Address(); ok {
-		_spec.SetField(providerprofile.FieldAddress, field.TypeString, value)
-	}
-	if ppu.mutation.AddressCleared() {
-		_spec.ClearField(providerprofile.FieldAddress, field.TypeString)
-	}
-	if value, ok := ppu.mutation.MobileNumber(); ok {
-		_spec.SetField(providerprofile.FieldMobileNumber, field.TypeString, value)
-	}
-	if ppu.mutation.MobileNumberCleared() {
-		_spec.ClearField(providerprofile.FieldMobileNumber, field.TypeString)
-	}
-	if value, ok := ppu.mutation.DateOfBirth(); ok {
-		_spec.SetField(providerprofile.FieldDateOfBirth, field.TypeTime, value)
-	}
-	if ppu.mutation.DateOfBirthCleared() {
-		_spec.ClearField(providerprofile.FieldDateOfBirth, field.TypeTime)
-	}
-	if value, ok := ppu.mutation.BusinessName(); ok {
-		_spec.SetField(providerprofile.FieldBusinessName, field.TypeString, value)
-	}
-	if ppu.mutation.BusinessNameCleared() {
-		_spec.ClearField(providerprofile.FieldBusinessName, field.TypeString)
-	}
-	if value, ok := ppu.mutation.IdentityDocumentType(); ok {
-		_spec.SetField(providerprofile.FieldIdentityDocumentType, field.TypeEnum, value)
-	}
-	if ppu.mutation.IdentityDocumentTypeCleared() {
-		_spec.ClearField(providerprofile.FieldIdentityDocumentType, field.TypeEnum)
-	}
-	if value, ok := ppu.mutation.IdentityDocument(); ok {
-		_spec.SetField(providerprofile.FieldIdentityDocument, field.TypeString, value)
-	}
-	if ppu.mutation.IdentityDocumentCleared() {
-		_spec.ClearField(providerprofile.FieldIdentityDocument, field.TypeString)
-	}
-	if value, ok := ppu.mutation.BusinessDocument(); ok {
-		_spec.SetField(providerprofile.FieldBusinessDocument, field.TypeString, value)
-	}
-	if ppu.mutation.BusinessDocumentCleared() {
-		_spec.ClearField(providerprofile.FieldBusinessDocument, field.TypeString)
-	}
-	if value, ok := ppu.mutation.IsKybVerified(); ok {
-		_spec.SetField(providerprofile.FieldIsKybVerified, field.TypeBool, value)
 	}
 	if ppu.mutation.APIKeyCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -667,28 +463,28 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if ppu.mutation.CurrenciesCleared() {
+	if ppu.mutation.ProviderCurrenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   providerprofile.CurrenciesTable,
-			Columns: providerprofile.CurrenciesPrimaryKey,
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.ProviderCurrenciesTable,
+			Columns: []string{providerprofile.ProviderCurrenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencies.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppu.mutation.RemovedCurrenciesIDs(); len(nodes) > 0 && !ppu.mutation.CurrenciesCleared() {
+	if nodes := ppu.mutation.RemovedProviderCurrenciesIDs(); len(nodes) > 0 && !ppu.mutation.ProviderCurrenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   providerprofile.CurrenciesTable,
-			Columns: providerprofile.CurrenciesPrimaryKey,
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.ProviderCurrenciesTable,
+			Columns: []string{providerprofile.ProviderCurrenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencies.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -696,15 +492,15 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppu.mutation.CurrenciesIDs(); len(nodes) > 0 {
+	if nodes := ppu.mutation.ProviderCurrenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   providerprofile.CurrenciesTable,
-			Columns: providerprofile.CurrenciesPrimaryKey,
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.ProviderCurrenciesTable,
+			Columns: []string{providerprofile.ProviderCurrenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencies.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -964,16 +760,16 @@ func (ppuo *ProviderProfileUpdateOne) SetNillableIsActive(b *bool) *ProviderProf
 	return ppuo
 }
 
-// SetIsAvailable sets the "is_available" field.
-func (ppuo *ProviderProfileUpdateOne) SetIsAvailable(b bool) *ProviderProfileUpdateOne {
-	ppuo.mutation.SetIsAvailable(b)
+// SetIsKybVerified sets the "is_kyb_verified" field.
+func (ppuo *ProviderProfileUpdateOne) SetIsKybVerified(b bool) *ProviderProfileUpdateOne {
+	ppuo.mutation.SetIsKybVerified(b)
 	return ppuo
 }
 
-// SetNillableIsAvailable sets the "is_available" field if the given value is not nil.
-func (ppuo *ProviderProfileUpdateOne) SetNillableIsAvailable(b *bool) *ProviderProfileUpdateOne {
+// SetNillableIsKybVerified sets the "is_kyb_verified" field if the given value is not nil.
+func (ppuo *ProviderProfileUpdateOne) SetNillableIsKybVerified(b *bool) *ProviderProfileUpdateOne {
 	if b != nil {
-		ppuo.SetIsAvailable(*b)
+		ppuo.SetIsKybVerified(*b)
 	}
 	return ppuo
 }
@@ -998,160 +794,6 @@ func (ppuo *ProviderProfileUpdateOne) SetNillableVisibilityMode(pm *providerprof
 	return ppuo
 }
 
-// SetAddress sets the "address" field.
-func (ppuo *ProviderProfileUpdateOne) SetAddress(s string) *ProviderProfileUpdateOne {
-	ppuo.mutation.SetAddress(s)
-	return ppuo
-}
-
-// SetNillableAddress sets the "address" field if the given value is not nil.
-func (ppuo *ProviderProfileUpdateOne) SetNillableAddress(s *string) *ProviderProfileUpdateOne {
-	if s != nil {
-		ppuo.SetAddress(*s)
-	}
-	return ppuo
-}
-
-// ClearAddress clears the value of the "address" field.
-func (ppuo *ProviderProfileUpdateOne) ClearAddress() *ProviderProfileUpdateOne {
-	ppuo.mutation.ClearAddress()
-	return ppuo
-}
-
-// SetMobileNumber sets the "mobile_number" field.
-func (ppuo *ProviderProfileUpdateOne) SetMobileNumber(s string) *ProviderProfileUpdateOne {
-	ppuo.mutation.SetMobileNumber(s)
-	return ppuo
-}
-
-// SetNillableMobileNumber sets the "mobile_number" field if the given value is not nil.
-func (ppuo *ProviderProfileUpdateOne) SetNillableMobileNumber(s *string) *ProviderProfileUpdateOne {
-	if s != nil {
-		ppuo.SetMobileNumber(*s)
-	}
-	return ppuo
-}
-
-// ClearMobileNumber clears the value of the "mobile_number" field.
-func (ppuo *ProviderProfileUpdateOne) ClearMobileNumber() *ProviderProfileUpdateOne {
-	ppuo.mutation.ClearMobileNumber()
-	return ppuo
-}
-
-// SetDateOfBirth sets the "date_of_birth" field.
-func (ppuo *ProviderProfileUpdateOne) SetDateOfBirth(t time.Time) *ProviderProfileUpdateOne {
-	ppuo.mutation.SetDateOfBirth(t)
-	return ppuo
-}
-
-// SetNillableDateOfBirth sets the "date_of_birth" field if the given value is not nil.
-func (ppuo *ProviderProfileUpdateOne) SetNillableDateOfBirth(t *time.Time) *ProviderProfileUpdateOne {
-	if t != nil {
-		ppuo.SetDateOfBirth(*t)
-	}
-	return ppuo
-}
-
-// ClearDateOfBirth clears the value of the "date_of_birth" field.
-func (ppuo *ProviderProfileUpdateOne) ClearDateOfBirth() *ProviderProfileUpdateOne {
-	ppuo.mutation.ClearDateOfBirth()
-	return ppuo
-}
-
-// SetBusinessName sets the "business_name" field.
-func (ppuo *ProviderProfileUpdateOne) SetBusinessName(s string) *ProviderProfileUpdateOne {
-	ppuo.mutation.SetBusinessName(s)
-	return ppuo
-}
-
-// SetNillableBusinessName sets the "business_name" field if the given value is not nil.
-func (ppuo *ProviderProfileUpdateOne) SetNillableBusinessName(s *string) *ProviderProfileUpdateOne {
-	if s != nil {
-		ppuo.SetBusinessName(*s)
-	}
-	return ppuo
-}
-
-// ClearBusinessName clears the value of the "business_name" field.
-func (ppuo *ProviderProfileUpdateOne) ClearBusinessName() *ProviderProfileUpdateOne {
-	ppuo.mutation.ClearBusinessName()
-	return ppuo
-}
-
-// SetIdentityDocumentType sets the "identity_document_type" field.
-func (ppuo *ProviderProfileUpdateOne) SetIdentityDocumentType(pdt providerprofile.IdentityDocumentType) *ProviderProfileUpdateOne {
-	ppuo.mutation.SetIdentityDocumentType(pdt)
-	return ppuo
-}
-
-// SetNillableIdentityDocumentType sets the "identity_document_type" field if the given value is not nil.
-func (ppuo *ProviderProfileUpdateOne) SetNillableIdentityDocumentType(pdt *providerprofile.IdentityDocumentType) *ProviderProfileUpdateOne {
-	if pdt != nil {
-		ppuo.SetIdentityDocumentType(*pdt)
-	}
-	return ppuo
-}
-
-// ClearIdentityDocumentType clears the value of the "identity_document_type" field.
-func (ppuo *ProviderProfileUpdateOne) ClearIdentityDocumentType() *ProviderProfileUpdateOne {
-	ppuo.mutation.ClearIdentityDocumentType()
-	return ppuo
-}
-
-// SetIdentityDocument sets the "identity_document" field.
-func (ppuo *ProviderProfileUpdateOne) SetIdentityDocument(s string) *ProviderProfileUpdateOne {
-	ppuo.mutation.SetIdentityDocument(s)
-	return ppuo
-}
-
-// SetNillableIdentityDocument sets the "identity_document" field if the given value is not nil.
-func (ppuo *ProviderProfileUpdateOne) SetNillableIdentityDocument(s *string) *ProviderProfileUpdateOne {
-	if s != nil {
-		ppuo.SetIdentityDocument(*s)
-	}
-	return ppuo
-}
-
-// ClearIdentityDocument clears the value of the "identity_document" field.
-func (ppuo *ProviderProfileUpdateOne) ClearIdentityDocument() *ProviderProfileUpdateOne {
-	ppuo.mutation.ClearIdentityDocument()
-	return ppuo
-}
-
-// SetBusinessDocument sets the "business_document" field.
-func (ppuo *ProviderProfileUpdateOne) SetBusinessDocument(s string) *ProviderProfileUpdateOne {
-	ppuo.mutation.SetBusinessDocument(s)
-	return ppuo
-}
-
-// SetNillableBusinessDocument sets the "business_document" field if the given value is not nil.
-func (ppuo *ProviderProfileUpdateOne) SetNillableBusinessDocument(s *string) *ProviderProfileUpdateOne {
-	if s != nil {
-		ppuo.SetBusinessDocument(*s)
-	}
-	return ppuo
-}
-
-// ClearBusinessDocument clears the value of the "business_document" field.
-func (ppuo *ProviderProfileUpdateOne) ClearBusinessDocument() *ProviderProfileUpdateOne {
-	ppuo.mutation.ClearBusinessDocument()
-	return ppuo
-}
-
-// SetIsKybVerified sets the "is_kyb_verified" field.
-func (ppuo *ProviderProfileUpdateOne) SetIsKybVerified(b bool) *ProviderProfileUpdateOne {
-	ppuo.mutation.SetIsKybVerified(b)
-	return ppuo
-}
-
-// SetNillableIsKybVerified sets the "is_kyb_verified" field if the given value is not nil.
-func (ppuo *ProviderProfileUpdateOne) SetNillableIsKybVerified(b *bool) *ProviderProfileUpdateOne {
-	if b != nil {
-		ppuo.SetIsKybVerified(*b)
-	}
-	return ppuo
-}
-
 // SetAPIKeyID sets the "api_key" edge to the APIKey entity by ID.
 func (ppuo *ProviderProfileUpdateOne) SetAPIKeyID(id uuid.UUID) *ProviderProfileUpdateOne {
 	ppuo.mutation.SetAPIKeyID(id)
@@ -1171,19 +813,19 @@ func (ppuo *ProviderProfileUpdateOne) SetAPIKey(a *APIKey) *ProviderProfileUpdat
 	return ppuo.SetAPIKeyID(a.ID)
 }
 
-// AddCurrencyIDs adds the "currencies" edge to the FiatCurrency entity by IDs.
-func (ppuo *ProviderProfileUpdateOne) AddCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
-	ppuo.mutation.AddCurrencyIDs(ids...)
+// AddProviderCurrencyIDs adds the "provider_currencies" edge to the ProviderCurrencies entity by IDs.
+func (ppuo *ProviderProfileUpdateOne) AddProviderCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
+	ppuo.mutation.AddProviderCurrencyIDs(ids...)
 	return ppuo
 }
 
-// AddCurrencies adds the "currencies" edges to the FiatCurrency entity.
-func (ppuo *ProviderProfileUpdateOne) AddCurrencies(f ...*FiatCurrency) *ProviderProfileUpdateOne {
-	ids := make([]uuid.UUID, len(f))
-	for i := range f {
-		ids[i] = f[i].ID
+// AddProviderCurrencies adds the "provider_currencies" edges to the ProviderCurrencies entity.
+func (ppuo *ProviderProfileUpdateOne) AddProviderCurrencies(p ...*ProviderCurrencies) *ProviderProfileUpdateOne {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
 	}
-	return ppuo.AddCurrencyIDs(ids...)
+	return ppuo.AddProviderCurrencyIDs(ids...)
 }
 
 // AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by IDs.
@@ -1261,25 +903,25 @@ func (ppuo *ProviderProfileUpdateOne) ClearAPIKey() *ProviderProfileUpdateOne {
 	return ppuo
 }
 
-// ClearCurrencies clears all "currencies" edges to the FiatCurrency entity.
-func (ppuo *ProviderProfileUpdateOne) ClearCurrencies() *ProviderProfileUpdateOne {
-	ppuo.mutation.ClearCurrencies()
+// ClearProviderCurrencies clears all "provider_currencies" edges to the ProviderCurrencies entity.
+func (ppuo *ProviderProfileUpdateOne) ClearProviderCurrencies() *ProviderProfileUpdateOne {
+	ppuo.mutation.ClearProviderCurrencies()
 	return ppuo
 }
 
-// RemoveCurrencyIDs removes the "currencies" edge to FiatCurrency entities by IDs.
-func (ppuo *ProviderProfileUpdateOne) RemoveCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
-	ppuo.mutation.RemoveCurrencyIDs(ids...)
+// RemoveProviderCurrencyIDs removes the "provider_currencies" edge to ProviderCurrencies entities by IDs.
+func (ppuo *ProviderProfileUpdateOne) RemoveProviderCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
+	ppuo.mutation.RemoveProviderCurrencyIDs(ids...)
 	return ppuo
 }
 
-// RemoveCurrencies removes "currencies" edges to FiatCurrency entities.
-func (ppuo *ProviderProfileUpdateOne) RemoveCurrencies(f ...*FiatCurrency) *ProviderProfileUpdateOne {
-	ids := make([]uuid.UUID, len(f))
-	for i := range f {
-		ids[i] = f[i].ID
+// RemoveProviderCurrencies removes "provider_currencies" edges to ProviderCurrencies entities.
+func (ppuo *ProviderProfileUpdateOne) RemoveProviderCurrencies(p ...*ProviderCurrencies) *ProviderProfileUpdateOne {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
 	}
-	return ppuo.RemoveCurrencyIDs(ids...)
+	return ppuo.RemoveProviderCurrencyIDs(ids...)
 }
 
 // ClearProvisionBuckets clears all "provision_buckets" edges to the ProvisionBucket entity.
@@ -1417,11 +1059,6 @@ func (ppuo *ProviderProfileUpdateOne) check() error {
 			return &ValidationError{Name: "visibility_mode", err: fmt.Errorf(`ent: validator failed for field "ProviderProfile.visibility_mode": %w`, err)}
 		}
 	}
-	if v, ok := ppuo.mutation.IdentityDocumentType(); ok {
-		if err := providerprofile.IdentityDocumentTypeValidator(v); err != nil {
-			return &ValidationError{Name: "identity_document_type", err: fmt.Errorf(`ent: validator failed for field "ProviderProfile.identity_document_type": %w`, err)}
-		}
-	}
 	if ppuo.mutation.UserCleared() && len(ppuo.mutation.UserIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ProviderProfile.user"`)
 	}
@@ -1475,59 +1112,14 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 	if value, ok := ppuo.mutation.IsActive(); ok {
 		_spec.SetField(providerprofile.FieldIsActive, field.TypeBool, value)
 	}
-	if value, ok := ppuo.mutation.IsAvailable(); ok {
-		_spec.SetField(providerprofile.FieldIsAvailable, field.TypeBool, value)
+	if value, ok := ppuo.mutation.IsKybVerified(); ok {
+		_spec.SetField(providerprofile.FieldIsKybVerified, field.TypeBool, value)
 	}
 	if value, ok := ppuo.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerprofile.FieldUpdatedAt, field.TypeTime, value)
 	}
 	if value, ok := ppuo.mutation.VisibilityMode(); ok {
 		_spec.SetField(providerprofile.FieldVisibilityMode, field.TypeEnum, value)
-	}
-	if value, ok := ppuo.mutation.Address(); ok {
-		_spec.SetField(providerprofile.FieldAddress, field.TypeString, value)
-	}
-	if ppuo.mutation.AddressCleared() {
-		_spec.ClearField(providerprofile.FieldAddress, field.TypeString)
-	}
-	if value, ok := ppuo.mutation.MobileNumber(); ok {
-		_spec.SetField(providerprofile.FieldMobileNumber, field.TypeString, value)
-	}
-	if ppuo.mutation.MobileNumberCleared() {
-		_spec.ClearField(providerprofile.FieldMobileNumber, field.TypeString)
-	}
-	if value, ok := ppuo.mutation.DateOfBirth(); ok {
-		_spec.SetField(providerprofile.FieldDateOfBirth, field.TypeTime, value)
-	}
-	if ppuo.mutation.DateOfBirthCleared() {
-		_spec.ClearField(providerprofile.FieldDateOfBirth, field.TypeTime)
-	}
-	if value, ok := ppuo.mutation.BusinessName(); ok {
-		_spec.SetField(providerprofile.FieldBusinessName, field.TypeString, value)
-	}
-	if ppuo.mutation.BusinessNameCleared() {
-		_spec.ClearField(providerprofile.FieldBusinessName, field.TypeString)
-	}
-	if value, ok := ppuo.mutation.IdentityDocumentType(); ok {
-		_spec.SetField(providerprofile.FieldIdentityDocumentType, field.TypeEnum, value)
-	}
-	if ppuo.mutation.IdentityDocumentTypeCleared() {
-		_spec.ClearField(providerprofile.FieldIdentityDocumentType, field.TypeEnum)
-	}
-	if value, ok := ppuo.mutation.IdentityDocument(); ok {
-		_spec.SetField(providerprofile.FieldIdentityDocument, field.TypeString, value)
-	}
-	if ppuo.mutation.IdentityDocumentCleared() {
-		_spec.ClearField(providerprofile.FieldIdentityDocument, field.TypeString)
-	}
-	if value, ok := ppuo.mutation.BusinessDocument(); ok {
-		_spec.SetField(providerprofile.FieldBusinessDocument, field.TypeString, value)
-	}
-	if ppuo.mutation.BusinessDocumentCleared() {
-		_spec.ClearField(providerprofile.FieldBusinessDocument, field.TypeString)
-	}
-	if value, ok := ppuo.mutation.IsKybVerified(); ok {
-		_spec.SetField(providerprofile.FieldIsKybVerified, field.TypeBool, value)
 	}
 	if ppuo.mutation.APIKeyCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1558,28 +1150,28 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if ppuo.mutation.CurrenciesCleared() {
+	if ppuo.mutation.ProviderCurrenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   providerprofile.CurrenciesTable,
-			Columns: providerprofile.CurrenciesPrimaryKey,
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.ProviderCurrenciesTable,
+			Columns: []string{providerprofile.ProviderCurrenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencies.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppuo.mutation.RemovedCurrenciesIDs(); len(nodes) > 0 && !ppuo.mutation.CurrenciesCleared() {
+	if nodes := ppuo.mutation.RemovedProviderCurrenciesIDs(); len(nodes) > 0 && !ppuo.mutation.ProviderCurrenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   providerprofile.CurrenciesTable,
-			Columns: providerprofile.CurrenciesPrimaryKey,
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.ProviderCurrenciesTable,
+			Columns: []string{providerprofile.ProviderCurrenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencies.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1587,15 +1179,15 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppuo.mutation.CurrenciesIDs(); len(nodes) > 0 {
+	if nodes := ppuo.mutation.ProviderCurrenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   providerprofile.CurrenciesTable,
-			Columns: providerprofile.CurrenciesPrimaryKey,
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.ProviderCurrenciesTable,
+			Columns: []string{providerprofile.ProviderCurrenciesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(providercurrencies.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

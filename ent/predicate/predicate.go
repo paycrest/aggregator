@@ -9,6 +9,9 @@ import (
 // APIKey is the predicate function for apikey builders.
 type APIKey func(*sql.Selector)
 
+// BeneficialOwner is the predicate function for beneficialowner builders.
+type BeneficialOwner func(*sql.Selector)
+
 // FiatCurrency is the predicate function for fiatcurrency builders.
 type FiatCurrency func(*sql.Selector)
 
@@ -17,6 +20,9 @@ type IdentityVerificationRequest func(*sql.Selector)
 
 // Institution is the predicate function for institution builders.
 type Institution func(*sql.Selector)
+
+// KYBProfile is the predicate function for kybprofile builders.
+type KYBProfile func(*sql.Selector)
 
 // LinkedAddress is the predicate function for linkedaddress builders.
 type LinkedAddress func(*sql.Selector)
@@ -35,6 +41,12 @@ type PaymentOrder func(*sql.Selector)
 
 // PaymentOrderRecipient is the predicate function for paymentorderrecipient builders.
 type PaymentOrderRecipient func(*sql.Selector)
+
+// PaymentWebhook is the predicate function for paymentwebhook builders.
+type PaymentWebhook func(*sql.Selector)
+
+// ProviderCurrencies is the predicate function for providercurrencies builders.
+type ProviderCurrencies func(*sql.Selector)
 
 // ProviderOrderToken is the predicate function for providerordertoken builders.
 type ProviderOrderToken func(*sql.Selector)

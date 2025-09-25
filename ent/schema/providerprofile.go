@@ -30,7 +30,7 @@ func (ProviderProfile) Fields() []ent.Field {
 			Default("auto"),
 		field.Bool("is_active").
 			Default(false),
-		field.Bool("is_available").
+		field.Bool("is_kyb_verified").
 			Default(false),
 		field.Time("updated_at").
 			Default(time.Now).
@@ -38,18 +38,6 @@ func (ProviderProfile) Fields() []ent.Field {
 		field.Enum("visibility_mode").
 			Values("private", "public").
 			Default("public"),
-
-		// KYB fields
-		field.Text("address").Optional(),
-		field.String("mobile_number").Optional(),
-		field.Time("date_of_birth").Optional(),
-		field.String("business_name").Optional(),
-		field.Enum("identity_document_type").
-			Values("passport", "drivers_license", "national_id").
-			Optional(),
-		field.String("identity_document").Optional(),
-		field.String("business_document").Optional(),
-		field.Bool("is_kyb_verified").Default(false),
 	}
 }
 
@@ -64,9 +52,8 @@ func (ProviderProfile) Edges() []ent.Edge {
 		edge.To("api_key", APIKey.Type).
 			Unique().
 			Annotations(entsql.OnDelete(entsql.Cascade)),
-		edge.From("currencies", FiatCurrency.Type).
-			Ref("providers").
-			Required(),
+		edge.To("provider_currencies", ProviderCurrencies.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.From("provision_buckets", ProvisionBucket.Type).
 			Ref("provider_profiles"),
 		edge.To("order_tokens", ProviderOrderToken.Type).

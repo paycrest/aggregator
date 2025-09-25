@@ -31,10 +31,14 @@ type LockPaymentOrder struct {
 	GatewayID string `json:"gateway_id,omitempty"`
 	// Amount holds the value of the "amount" field.
 	Amount decimal.Decimal `json:"amount,omitempty"`
+	// ProtocolFee holds the value of the "protocol_fee" field.
+	ProtocolFee decimal.Decimal `json:"protocol_fee,omitempty"`
 	// Rate holds the value of the "rate" field.
 	Rate decimal.Decimal `json:"rate,omitempty"`
 	// OrderPercent holds the value of the "order_percent" field.
 	OrderPercent decimal.Decimal `json:"order_percent,omitempty"`
+	// Sender holds the value of the "sender" field.
+	Sender string `json:"sender,omitempty"`
 	// TxHash holds the value of the "tx_hash" field.
 	TxHash string `json:"tx_hash,omitempty"`
 	// Status holds the value of the "status" field.
@@ -55,6 +59,8 @@ type LockPaymentOrder struct {
 	CancellationCount int `json:"cancellation_count,omitempty"`
 	// CancellationReasons holds the value of the "cancellation_reasons" field.
 	CancellationReasons []string `json:"cancellation_reasons,omitempty"`
+	// MessageHash holds the value of the "message_hash" field.
+	MessageHash string `json:"message_hash,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the LockPaymentOrderQuery when eager-loading is set.
 	Edges                                LockPaymentOrderEdges `json:"edges"`
@@ -139,11 +145,11 @@ func (*LockPaymentOrder) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case lockpaymentorder.FieldMetadata, lockpaymentorder.FieldCancellationReasons:
 			values[i] = new([]byte)
-		case lockpaymentorder.FieldAmount, lockpaymentorder.FieldRate, lockpaymentorder.FieldOrderPercent:
+		case lockpaymentorder.FieldAmount, lockpaymentorder.FieldProtocolFee, lockpaymentorder.FieldRate, lockpaymentorder.FieldOrderPercent:
 			values[i] = new(decimal.Decimal)
 		case lockpaymentorder.FieldBlockNumber, lockpaymentorder.FieldCancellationCount:
 			values[i] = new(sql.NullInt64)
-		case lockpaymentorder.FieldGatewayID, lockpaymentorder.FieldTxHash, lockpaymentorder.FieldStatus, lockpaymentorder.FieldInstitution, lockpaymentorder.FieldAccountIdentifier, lockpaymentorder.FieldAccountName, lockpaymentorder.FieldMemo:
+		case lockpaymentorder.FieldGatewayID, lockpaymentorder.FieldSender, lockpaymentorder.FieldTxHash, lockpaymentorder.FieldStatus, lockpaymentorder.FieldInstitution, lockpaymentorder.FieldAccountIdentifier, lockpaymentorder.FieldAccountName, lockpaymentorder.FieldMemo, lockpaymentorder.FieldMessageHash:
 			values[i] = new(sql.NullString)
 		case lockpaymentorder.FieldCreatedAt, lockpaymentorder.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -200,6 +206,12 @@ func (lpo *LockPaymentOrder) assignValues(columns []string, values []any) error 
 			} else if value != nil {
 				lpo.Amount = *value
 			}
+		case lockpaymentorder.FieldProtocolFee:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field protocol_fee", values[i])
+			} else if value != nil {
+				lpo.ProtocolFee = *value
+			}
 		case lockpaymentorder.FieldRate:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field rate", values[i])
@@ -211,6 +223,12 @@ func (lpo *LockPaymentOrder) assignValues(columns []string, values []any) error 
 				return fmt.Errorf("unexpected type %T for field order_percent", values[i])
 			} else if value != nil {
 				lpo.OrderPercent = *value
+			}
+		case lockpaymentorder.FieldSender:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field sender", values[i])
+			} else if value.Valid {
+				lpo.Sender = value.String
 			}
 		case lockpaymentorder.FieldTxHash:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -275,6 +293,12 @@ func (lpo *LockPaymentOrder) assignValues(columns []string, values []any) error 
 				if err := json.Unmarshal(*value, &lpo.CancellationReasons); err != nil {
 					return fmt.Errorf("unmarshal field cancellation_reasons: %w", err)
 				}
+			}
+		case lockpaymentorder.FieldMessageHash:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field message_hash", values[i])
+			} else if value.Valid {
+				lpo.MessageHash = value.String
 			}
 		case lockpaymentorder.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -370,11 +394,17 @@ func (lpo *LockPaymentOrder) String() string {
 	builder.WriteString("amount=")
 	builder.WriteString(fmt.Sprintf("%v", lpo.Amount))
 	builder.WriteString(", ")
+	builder.WriteString("protocol_fee=")
+	builder.WriteString(fmt.Sprintf("%v", lpo.ProtocolFee))
+	builder.WriteString(", ")
 	builder.WriteString("rate=")
 	builder.WriteString(fmt.Sprintf("%v", lpo.Rate))
 	builder.WriteString(", ")
 	builder.WriteString("order_percent=")
 	builder.WriteString(fmt.Sprintf("%v", lpo.OrderPercent))
+	builder.WriteString(", ")
+	builder.WriteString("sender=")
+	builder.WriteString(lpo.Sender)
 	builder.WriteString(", ")
 	builder.WriteString("tx_hash=")
 	builder.WriteString(lpo.TxHash)
@@ -405,6 +435,9 @@ func (lpo *LockPaymentOrder) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("cancellation_reasons=")
 	builder.WriteString(fmt.Sprintf("%v", lpo.CancellationReasons))
+	builder.WriteString(", ")
+	builder.WriteString("message_hash=")
+	builder.WriteString(lpo.MessageHash)
 	builder.WriteByte(')')
 	return builder.String()
 }

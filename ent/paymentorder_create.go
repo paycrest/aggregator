@@ -16,6 +16,7 @@ import (
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
@@ -92,12 +93,6 @@ func (poc *PaymentOrderCreate) SetSenderFee(d decimal.Decimal) *PaymentOrderCrea
 // SetNetworkFee sets the "network_fee" field.
 func (poc *PaymentOrderCreate) SetNetworkFee(d decimal.Decimal) *PaymentOrderCreate {
 	poc.mutation.SetNetworkFee(d)
-	return poc
-}
-
-// SetProtocolFee sets the "protocol_fee" field.
-func (poc *PaymentOrderCreate) SetProtocolFee(d decimal.Decimal) *PaymentOrderCreate {
-	poc.mutation.SetProtocolFee(d)
 	return poc
 }
 
@@ -199,6 +194,20 @@ func (poc *PaymentOrderCreate) SetGatewayID(s string) *PaymentOrderCreate {
 func (poc *PaymentOrderCreate) SetNillableGatewayID(s *string) *PaymentOrderCreate {
 	if s != nil {
 		poc.SetGatewayID(*s)
+	}
+	return poc
+}
+
+// SetMessageHash sets the "message_hash" field.
+func (poc *PaymentOrderCreate) SetMessageHash(s string) *PaymentOrderCreate {
+	poc.mutation.SetMessageHash(s)
+	return poc
+}
+
+// SetNillableMessageHash sets the "message_hash" field if the given value is not nil.
+func (poc *PaymentOrderCreate) SetNillableMessageHash(s *string) *PaymentOrderCreate {
+	if s != nil {
+		poc.SetMessageHash(*s)
 	}
 	return poc
 }
@@ -347,6 +356,25 @@ func (poc *PaymentOrderCreate) AddTransactions(t ...*TransactionLog) *PaymentOrd
 	return poc.AddTransactionIDs(ids...)
 }
 
+// SetPaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID.
+func (poc *PaymentOrderCreate) SetPaymentWebhookID(id uuid.UUID) *PaymentOrderCreate {
+	poc.mutation.SetPaymentWebhookID(id)
+	return poc
+}
+
+// SetNillablePaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID if the given value is not nil.
+func (poc *PaymentOrderCreate) SetNillablePaymentWebhookID(id *uuid.UUID) *PaymentOrderCreate {
+	if id != nil {
+		poc = poc.SetPaymentWebhookID(*id)
+	}
+	return poc
+}
+
+// SetPaymentWebhook sets the "payment_webhook" edge to the PaymentWebhook entity.
+func (poc *PaymentOrderCreate) SetPaymentWebhook(p *PaymentWebhook) *PaymentOrderCreate {
+	return poc.SetPaymentWebhookID(p.ID)
+}
+
 // Mutation returns the PaymentOrderMutation object of the builder.
 func (poc *PaymentOrderCreate) Mutation() *PaymentOrderMutation {
 	return poc.mutation
@@ -430,9 +458,6 @@ func (poc *PaymentOrderCreate) check() error {
 	if _, ok := poc.mutation.NetworkFee(); !ok {
 		return &ValidationError{Name: "network_fee", err: errors.New(`ent: missing required field "PaymentOrder.network_fee"`)}
 	}
-	if _, ok := poc.mutation.ProtocolFee(); !ok {
-		return &ValidationError{Name: "protocol_fee", err: errors.New(`ent: missing required field "PaymentOrder.protocol_fee"`)}
-	}
 	if _, ok := poc.mutation.Rate(); !ok {
 		return &ValidationError{Name: "rate", err: errors.New(`ent: missing required field "PaymentOrder.rate"`)}
 	}
@@ -473,6 +498,11 @@ func (poc *PaymentOrderCreate) check() error {
 	if v, ok := poc.mutation.GatewayID(); ok {
 		if err := paymentorder.GatewayIDValidator(v); err != nil {
 			return &ValidationError{Name: "gateway_id", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.gateway_id": %w`, err)}
+		}
+	}
+	if v, ok := poc.mutation.MessageHash(); ok {
+		if err := paymentorder.MessageHashValidator(v); err != nil {
+			return &ValidationError{Name: "message_hash", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.message_hash": %w`, err)}
 		}
 	}
 	if v, ok := poc.mutation.Reference(); ok {
@@ -559,10 +589,6 @@ func (poc *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec
 		_spec.SetField(paymentorder.FieldNetworkFee, field.TypeFloat64, value)
 		_node.NetworkFee = value
 	}
-	if value, ok := poc.mutation.ProtocolFee(); ok {
-		_spec.SetField(paymentorder.FieldProtocolFee, field.TypeFloat64, value)
-		_node.ProtocolFee = value
-	}
 	if value, ok := poc.mutation.Rate(); ok {
 		_spec.SetField(paymentorder.FieldRate, field.TypeFloat64, value)
 		_node.Rate = value
@@ -598,6 +624,10 @@ func (poc *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec
 	if value, ok := poc.mutation.GatewayID(); ok {
 		_spec.SetField(paymentorder.FieldGatewayID, field.TypeString, value)
 		_node.GatewayID = value
+	}
+	if value, ok := poc.mutation.MessageHash(); ok {
+		_spec.SetField(paymentorder.FieldMessageHash, field.TypeString, value)
+		_node.MessageHash = value
 	}
 	if value, ok := poc.mutation.Reference(); ok {
 		_spec.SetField(paymentorder.FieldReference, field.TypeString, value)
@@ -699,6 +729,22 @@ func (poc *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(transactionlog.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := poc.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   paymentorder.PaymentWebhookTable,
+			Columns: []string{paymentorder.PaymentWebhookColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -878,24 +924,6 @@ func (u *PaymentOrderUpsert) AddNetworkFee(v decimal.Decimal) *PaymentOrderUpser
 	return u
 }
 
-// SetProtocolFee sets the "protocol_fee" field.
-func (u *PaymentOrderUpsert) SetProtocolFee(v decimal.Decimal) *PaymentOrderUpsert {
-	u.Set(paymentorder.FieldProtocolFee, v)
-	return u
-}
-
-// UpdateProtocolFee sets the "protocol_fee" field to the value that was provided on create.
-func (u *PaymentOrderUpsert) UpdateProtocolFee() *PaymentOrderUpsert {
-	u.SetExcluded(paymentorder.FieldProtocolFee)
-	return u
-}
-
-// AddProtocolFee adds v to the "protocol_fee" field.
-func (u *PaymentOrderUpsert) AddProtocolFee(v decimal.Decimal) *PaymentOrderUpsert {
-	u.Add(paymentorder.FieldProtocolFee, v)
-	return u
-}
-
 // SetRate sets the "rate" field.
 func (u *PaymentOrderUpsert) SetRate(v decimal.Decimal) *PaymentOrderUpsert {
 	u.Set(paymentorder.FieldRate, v)
@@ -1049,6 +1077,24 @@ func (u *PaymentOrderUpsert) UpdateGatewayID() *PaymentOrderUpsert {
 // ClearGatewayID clears the value of the "gateway_id" field.
 func (u *PaymentOrderUpsert) ClearGatewayID() *PaymentOrderUpsert {
 	u.SetNull(paymentorder.FieldGatewayID)
+	return u
+}
+
+// SetMessageHash sets the "message_hash" field.
+func (u *PaymentOrderUpsert) SetMessageHash(v string) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldMessageHash, v)
+	return u
+}
+
+// UpdateMessageHash sets the "message_hash" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateMessageHash() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldMessageHash)
+	return u
+}
+
+// ClearMessageHash clears the value of the "message_hash" field.
+func (u *PaymentOrderUpsert) ClearMessageHash() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldMessageHash)
 	return u
 }
 
@@ -1273,27 +1319,6 @@ func (u *PaymentOrderUpsertOne) UpdateNetworkFee() *PaymentOrderUpsertOne {
 	})
 }
 
-// SetProtocolFee sets the "protocol_fee" field.
-func (u *PaymentOrderUpsertOne) SetProtocolFee(v decimal.Decimal) *PaymentOrderUpsertOne {
-	return u.Update(func(s *PaymentOrderUpsert) {
-		s.SetProtocolFee(v)
-	})
-}
-
-// AddProtocolFee adds v to the "protocol_fee" field.
-func (u *PaymentOrderUpsertOne) AddProtocolFee(v decimal.Decimal) *PaymentOrderUpsertOne {
-	return u.Update(func(s *PaymentOrderUpsert) {
-		s.AddProtocolFee(v)
-	})
-}
-
-// UpdateProtocolFee sets the "protocol_fee" field to the value that was provided on create.
-func (u *PaymentOrderUpsertOne) UpdateProtocolFee() *PaymentOrderUpsertOne {
-	return u.Update(func(s *PaymentOrderUpsert) {
-		s.UpdateProtocolFee()
-	})
-}
-
 // SetRate sets the "rate" field.
 func (u *PaymentOrderUpsertOne) SetRate(v decimal.Decimal) *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
@@ -1473,6 +1498,27 @@ func (u *PaymentOrderUpsertOne) UpdateGatewayID() *PaymentOrderUpsertOne {
 func (u *PaymentOrderUpsertOne) ClearGatewayID() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.ClearGatewayID()
+	})
+}
+
+// SetMessageHash sets the "message_hash" field.
+func (u *PaymentOrderUpsertOne) SetMessageHash(v string) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetMessageHash(v)
+	})
+}
+
+// UpdateMessageHash sets the "message_hash" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateMessageHash() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateMessageHash()
+	})
+}
+
+// ClearMessageHash clears the value of the "message_hash" field.
+func (u *PaymentOrderUpsertOne) ClearMessageHash() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearMessageHash()
 	})
 }
 
@@ -1869,27 +1915,6 @@ func (u *PaymentOrderUpsertBulk) UpdateNetworkFee() *PaymentOrderUpsertBulk {
 	})
 }
 
-// SetProtocolFee sets the "protocol_fee" field.
-func (u *PaymentOrderUpsertBulk) SetProtocolFee(v decimal.Decimal) *PaymentOrderUpsertBulk {
-	return u.Update(func(s *PaymentOrderUpsert) {
-		s.SetProtocolFee(v)
-	})
-}
-
-// AddProtocolFee adds v to the "protocol_fee" field.
-func (u *PaymentOrderUpsertBulk) AddProtocolFee(v decimal.Decimal) *PaymentOrderUpsertBulk {
-	return u.Update(func(s *PaymentOrderUpsert) {
-		s.AddProtocolFee(v)
-	})
-}
-
-// UpdateProtocolFee sets the "protocol_fee" field to the value that was provided on create.
-func (u *PaymentOrderUpsertBulk) UpdateProtocolFee() *PaymentOrderUpsertBulk {
-	return u.Update(func(s *PaymentOrderUpsert) {
-		s.UpdateProtocolFee()
-	})
-}
-
 // SetRate sets the "rate" field.
 func (u *PaymentOrderUpsertBulk) SetRate(v decimal.Decimal) *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
@@ -2069,6 +2094,27 @@ func (u *PaymentOrderUpsertBulk) UpdateGatewayID() *PaymentOrderUpsertBulk {
 func (u *PaymentOrderUpsertBulk) ClearGatewayID() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.ClearGatewayID()
+	})
+}
+
+// SetMessageHash sets the "message_hash" field.
+func (u *PaymentOrderUpsertBulk) SetMessageHash(v string) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetMessageHash(v)
+	})
+}
+
+// UpdateMessageHash sets the "message_hash" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateMessageHash() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateMessageHash()
+	})
+}
+
+// ClearMessageHash clears the value of the "message_hash" field.
+func (u *PaymentOrderUpsertBulk) ClearMessageHash() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearMessageHash()
 	})
 }
 

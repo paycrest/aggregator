@@ -11,7 +11,9 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/shopspring/decimal"
 )
@@ -58,20 +60,6 @@ func (nc *NetworkCreate) SetChainID(i int64) *NetworkCreate {
 	return nc
 }
 
-// SetChainIDHex sets the "chain_id_hex" field.
-func (nc *NetworkCreate) SetChainIDHex(s string) *NetworkCreate {
-	nc.mutation.SetChainIDHex(s)
-	return nc
-}
-
-// SetNillableChainIDHex sets the "chain_id_hex" field if the given value is not nil.
-func (nc *NetworkCreate) SetNillableChainIDHex(s *string) *NetworkCreate {
-	if s != nil {
-		nc.SetChainIDHex(*s)
-	}
-	return nc
-}
-
 // SetIdentifier sets the "identifier" field.
 func (nc *NetworkCreate) SetIdentifier(s string) *NetworkCreate {
 	nc.mutation.SetIdentifier(s)
@@ -95,6 +83,12 @@ func (nc *NetworkCreate) SetNillableGatewayContractAddress(s *string) *NetworkCr
 	if s != nil {
 		nc.SetGatewayContractAddress(*s)
 	}
+	return nc
+}
+
+// SetBlockTime sets the "block_time" field.
+func (nc *NetworkCreate) SetBlockTime(d decimal.Decimal) *NetworkCreate {
+	nc.mutation.SetBlockTime(d)
 	return nc
 }
 
@@ -151,6 +145,25 @@ func (nc *NetworkCreate) AddTokens(t ...*Token) *NetworkCreate {
 		ids[i] = t[i].ID
 	}
 	return nc.AddTokenIDs(ids...)
+}
+
+// SetPaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID.
+func (nc *NetworkCreate) SetPaymentWebhookID(id uuid.UUID) *NetworkCreate {
+	nc.mutation.SetPaymentWebhookID(id)
+	return nc
+}
+
+// SetNillablePaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID if the given value is not nil.
+func (nc *NetworkCreate) SetNillablePaymentWebhookID(id *uuid.UUID) *NetworkCreate {
+	if id != nil {
+		nc = nc.SetPaymentWebhookID(*id)
+	}
+	return nc
+}
+
+// SetPaymentWebhook sets the "payment_webhook" edge to the PaymentWebhook entity.
+func (nc *NetworkCreate) SetPaymentWebhook(p *PaymentWebhook) *NetworkCreate {
+	return nc.SetPaymentWebhookID(p.ID)
 }
 
 // Mutation returns the NetworkMutation object of the builder.
@@ -222,6 +235,9 @@ func (nc *NetworkCreate) check() error {
 	if _, ok := nc.mutation.GatewayContractAddress(); !ok {
 		return &ValidationError{Name: "gateway_contract_address", err: errors.New(`ent: missing required field "Network.gateway_contract_address"`)}
 	}
+	if _, ok := nc.mutation.BlockTime(); !ok {
+		return &ValidationError{Name: "block_time", err: errors.New(`ent: missing required field "Network.block_time"`)}
+	}
 	if _, ok := nc.mutation.IsTestnet(); !ok {
 		return &ValidationError{Name: "is_testnet", err: errors.New(`ent: missing required field "Network.is_testnet"`)}
 	}
@@ -267,10 +283,6 @@ func (nc *NetworkCreate) createSpec() (*Network, *sqlgraph.CreateSpec) {
 		_spec.SetField(network.FieldChainID, field.TypeInt64, value)
 		_node.ChainID = value
 	}
-	if value, ok := nc.mutation.ChainIDHex(); ok {
-		_spec.SetField(network.FieldChainIDHex, field.TypeString, value)
-		_node.ChainIDHex = value
-	}
 	if value, ok := nc.mutation.Identifier(); ok {
 		_spec.SetField(network.FieldIdentifier, field.TypeString, value)
 		_node.Identifier = value
@@ -282,6 +294,10 @@ func (nc *NetworkCreate) createSpec() (*Network, *sqlgraph.CreateSpec) {
 	if value, ok := nc.mutation.GatewayContractAddress(); ok {
 		_spec.SetField(network.FieldGatewayContractAddress, field.TypeString, value)
 		_node.GatewayContractAddress = value
+	}
+	if value, ok := nc.mutation.BlockTime(); ok {
+		_spec.SetField(network.FieldBlockTime, field.TypeFloat64, value)
+		_node.BlockTime = value
 	}
 	if value, ok := nc.mutation.IsTestnet(); ok {
 		_spec.SetField(network.FieldIsTestnet, field.TypeBool, value)
@@ -308,6 +324,22 @@ func (nc *NetworkCreate) createSpec() (*Network, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(token.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := nc.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   network.PaymentWebhookTable,
+			Columns: []string{network.PaymentWebhookColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -397,24 +429,6 @@ func (u *NetworkUpsert) AddChainID(v int64) *NetworkUpsert {
 	return u
 }
 
-// SetChainIDHex sets the "chain_id_hex" field.
-func (u *NetworkUpsert) SetChainIDHex(v string) *NetworkUpsert {
-	u.Set(network.FieldChainIDHex, v)
-	return u
-}
-
-// UpdateChainIDHex sets the "chain_id_hex" field to the value that was provided on create.
-func (u *NetworkUpsert) UpdateChainIDHex() *NetworkUpsert {
-	u.SetExcluded(network.FieldChainIDHex)
-	return u
-}
-
-// ClearChainIDHex clears the value of the "chain_id_hex" field.
-func (u *NetworkUpsert) ClearChainIDHex() *NetworkUpsert {
-	u.SetNull(network.FieldChainIDHex)
-	return u
-}
-
 // SetIdentifier sets the "identifier" field.
 func (u *NetworkUpsert) SetIdentifier(v string) *NetworkUpsert {
 	u.Set(network.FieldIdentifier, v)
@@ -448,6 +462,24 @@ func (u *NetworkUpsert) SetGatewayContractAddress(v string) *NetworkUpsert {
 // UpdateGatewayContractAddress sets the "gateway_contract_address" field to the value that was provided on create.
 func (u *NetworkUpsert) UpdateGatewayContractAddress() *NetworkUpsert {
 	u.SetExcluded(network.FieldGatewayContractAddress)
+	return u
+}
+
+// SetBlockTime sets the "block_time" field.
+func (u *NetworkUpsert) SetBlockTime(v decimal.Decimal) *NetworkUpsert {
+	u.Set(network.FieldBlockTime, v)
+	return u
+}
+
+// UpdateBlockTime sets the "block_time" field to the value that was provided on create.
+func (u *NetworkUpsert) UpdateBlockTime() *NetworkUpsert {
+	u.SetExcluded(network.FieldBlockTime)
+	return u
+}
+
+// AddBlockTime adds v to the "block_time" field.
+func (u *NetworkUpsert) AddBlockTime(v decimal.Decimal) *NetworkUpsert {
+	u.Add(network.FieldBlockTime, v)
 	return u
 }
 
@@ -597,27 +629,6 @@ func (u *NetworkUpsertOne) UpdateChainID() *NetworkUpsertOne {
 	})
 }
 
-// SetChainIDHex sets the "chain_id_hex" field.
-func (u *NetworkUpsertOne) SetChainIDHex(v string) *NetworkUpsertOne {
-	return u.Update(func(s *NetworkUpsert) {
-		s.SetChainIDHex(v)
-	})
-}
-
-// UpdateChainIDHex sets the "chain_id_hex" field to the value that was provided on create.
-func (u *NetworkUpsertOne) UpdateChainIDHex() *NetworkUpsertOne {
-	return u.Update(func(s *NetworkUpsert) {
-		s.UpdateChainIDHex()
-	})
-}
-
-// ClearChainIDHex clears the value of the "chain_id_hex" field.
-func (u *NetworkUpsertOne) ClearChainIDHex() *NetworkUpsertOne {
-	return u.Update(func(s *NetworkUpsert) {
-		s.ClearChainIDHex()
-	})
-}
-
 // SetIdentifier sets the "identifier" field.
 func (u *NetworkUpsertOne) SetIdentifier(v string) *NetworkUpsertOne {
 	return u.Update(func(s *NetworkUpsert) {
@@ -657,6 +668,27 @@ func (u *NetworkUpsertOne) SetGatewayContractAddress(v string) *NetworkUpsertOne
 func (u *NetworkUpsertOne) UpdateGatewayContractAddress() *NetworkUpsertOne {
 	return u.Update(func(s *NetworkUpsert) {
 		s.UpdateGatewayContractAddress()
+	})
+}
+
+// SetBlockTime sets the "block_time" field.
+func (u *NetworkUpsertOne) SetBlockTime(v decimal.Decimal) *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetBlockTime(v)
+	})
+}
+
+// AddBlockTime adds v to the "block_time" field.
+func (u *NetworkUpsertOne) AddBlockTime(v decimal.Decimal) *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.AddBlockTime(v)
+	})
+}
+
+// UpdateBlockTime sets the "block_time" field to the value that was provided on create.
+func (u *NetworkUpsertOne) UpdateBlockTime() *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateBlockTime()
 	})
 }
 
@@ -983,27 +1015,6 @@ func (u *NetworkUpsertBulk) UpdateChainID() *NetworkUpsertBulk {
 	})
 }
 
-// SetChainIDHex sets the "chain_id_hex" field.
-func (u *NetworkUpsertBulk) SetChainIDHex(v string) *NetworkUpsertBulk {
-	return u.Update(func(s *NetworkUpsert) {
-		s.SetChainIDHex(v)
-	})
-}
-
-// UpdateChainIDHex sets the "chain_id_hex" field to the value that was provided on create.
-func (u *NetworkUpsertBulk) UpdateChainIDHex() *NetworkUpsertBulk {
-	return u.Update(func(s *NetworkUpsert) {
-		s.UpdateChainIDHex()
-	})
-}
-
-// ClearChainIDHex clears the value of the "chain_id_hex" field.
-func (u *NetworkUpsertBulk) ClearChainIDHex() *NetworkUpsertBulk {
-	return u.Update(func(s *NetworkUpsert) {
-		s.ClearChainIDHex()
-	})
-}
-
 // SetIdentifier sets the "identifier" field.
 func (u *NetworkUpsertBulk) SetIdentifier(v string) *NetworkUpsertBulk {
 	return u.Update(func(s *NetworkUpsert) {
@@ -1043,6 +1054,27 @@ func (u *NetworkUpsertBulk) SetGatewayContractAddress(v string) *NetworkUpsertBu
 func (u *NetworkUpsertBulk) UpdateGatewayContractAddress() *NetworkUpsertBulk {
 	return u.Update(func(s *NetworkUpsert) {
 		s.UpdateGatewayContractAddress()
+	})
+}
+
+// SetBlockTime sets the "block_time" field.
+func (u *NetworkUpsertBulk) SetBlockTime(v decimal.Decimal) *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetBlockTime(v)
+	})
+}
+
+// AddBlockTime adds v to the "block_time" field.
+func (u *NetworkUpsertBulk) AddBlockTime(v decimal.Decimal) *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.AddBlockTime(v)
+	})
+}
+
+// UpdateBlockTime sets the "block_time" field to the value that was provided on create.
+func (u *NetworkUpsertBulk) UpdateBlockTime() *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateBlockTime()
 	})
 }
 

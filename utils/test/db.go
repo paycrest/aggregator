@@ -99,6 +99,7 @@ func CreateERC20Token(client types.RPCClient, overrides map[string]interface{}) 
 		SetIdentifier(payload["identifier"].(string)).
 		SetChainID(payload["chainID"].(int64)).
 		SetRPCEndpoint(payload["networkRPC"].(string)).
+		SetBlockTime(decimal.NewFromFloat(3.0)).
 		SetFee(decimal.NewFromFloat(0.1)).
 		SetIsTestnet(true).
 		OnConflict().
@@ -130,7 +131,7 @@ func CreateERC20Token(client types.RPCClient, overrides map[string]interface{}) 
 	return token, err
 }
 
-// CreateERC20Token creates a test token with default or custom values
+// CreateTRC20Token creates a test token with default or custom values
 func CreateTRC20Token(client types.RPCClient, overrides map[string]interface{}) (*ent.Token, error) {
 
 	// Default payload
@@ -156,6 +157,7 @@ func CreateTRC20Token(client types.RPCClient, overrides map[string]interface{}) 
 		SetIdentifier(payload["identifier"].(string)).
 		SetChainID(payload["chainID"].(int64)).
 		SetRPCEndpoint(payload["networkRPC"].(string)).
+		SetBlockTime(decimal.NewFromFloat(3.0)).
 		SetFee(decimal.NewFromFloat(0.1)).
 		SetIsTestnet(true).
 		OnConflict().
@@ -193,6 +195,7 @@ func CreateTestLockPaymentOrder(overrides map[string]interface{}) (*ent.LockPaym
 	payload := map[string]interface{}{
 		"gateway_id":           "order-123",
 		"amount":               100.50,
+		"protocol_fee":         5.0,
 		"rate":                 750.0,
 		"status":               "pending",
 		"block_number":         12345,
@@ -234,6 +237,7 @@ func CreateTestLockPaymentOrder(overrides map[string]interface{}) (*ent.LockPaym
 		Create().
 		SetGatewayID(payload["gateway_id"].(string)).
 		SetAmount(decimal.NewFromFloat(payload["amount"].(float64))).
+		SetProtocolFee(decimal.NewFromFloat(payload["protocol_fee"].(float64))).
 		SetRate(decimal.NewFromFloat(payload["rate"].(float64))).
 		SetStatus(lockpaymentorder.Status(payload["status"].(string))).
 		SetOrderPercent(decimal.NewFromFloat(100.0)).
@@ -312,7 +316,6 @@ func CreateTestPaymentOrder(client types.RPCClient, token *ent.Token, overrides 
 		SetAmountReturned(decimal.NewFromInt(0)).
 		SetPercentSettled(decimal.NewFromInt(0)).
 		SetNetworkFee(token.Edges.Network.Fee).
-		SetProtocolFee(decimal.NewFromFloat(payload["amount"].(float64)).Mul(decimal.NewFromFloat(0))).
 		SetSenderFee(decimal.NewFromFloat(payload["fee_percent"].(float64)).Mul(decimal.NewFromFloat(payload["amount"].(float64))).Div(decimal.NewFromFloat(payload["rate"].(float64))).Round(int32(token.Decimals))).
 		SetToken(token).
 		SetRate(decimal.NewFromFloat(payload["rate"].(float64))).
@@ -472,9 +475,27 @@ func CreateTestProviderProfile(overrides map[string]interface{}) (*ent.ProviderP
 		SetHostIdentifier(payload["host_identifier"].(string)).
 		SetProvisionMode(providerprofile.ProvisionMode(payload["provision_mode"].(string))).
 		SetUserID(payload["user_id"].(uuid.UUID)).
-		AddCurrencyIDs(payload["currency_id"].(uuid.UUID)).
 		SetVisibilityMode(providerprofile.VisibilityMode(payload["visibility_mode"].(string))).
-		SetIsAvailable(payload["is_available"].(bool)).
+		Save(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	// Create ProviderCurrencies entry
+	currencyID := payload["currency_id"].(uuid.UUID)
+	currency, err := db.Client.FiatCurrency.Get(context.Background(), currencyID)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = db.Client.ProviderCurrencies.
+		Create().
+		SetProvider(profile).
+		SetCurrency(currency).
+		SetAvailableBalance(decimal.Zero).
+		SetTotalBalance(decimal.Zero).
+		SetReservedBalance(decimal.Zero).
+		SetIsAvailable(true).
 		Save(context.Background())
 
 	return profile, err
@@ -534,6 +555,9 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		SetCurrencyID(payload["currency_id"].(uuid.UUID)).
 		SetRateSlippage(decimal.NewFromFloat(0.1)).
 		Save(context.Background())
+	if err != nil {
+		return nil, err
+	}
 
 	orderToken, err = db.Client.ProviderOrderToken.
 		Query().
@@ -546,7 +570,7 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 	return orderToken, err
 }
 
-// CreateTestProviderProfile creates a test ProviderProfile with defaults or custom values
+// CreateTestProvisionBucket creates a test ProvisionBucket with defaults or custom values
 func CreateTestProvisionBucket(overrides map[string]interface{}) (*ent.ProvisionBucket, error) {
 	ctx := context.Background()
 
@@ -662,6 +686,7 @@ func CreateTestTokenData(t *testing.T, client *ent.Client) ([]*ent.Network, []*e
 		SetRPCEndpoint("https://arb1.arbitrum.io/rpc").
 		SetGatewayContractAddress("0x123").
 		SetIsTestnet(false).
+		SetBlockTime(decimal.NewFromFloat(3.0)).
 		SetFee(decimal.NewFromFloat(0.01)).
 		Save(ctx)
 	assert.NoError(t, err)
@@ -672,6 +697,7 @@ func CreateTestTokenData(t *testing.T, client *ent.Client) ([]*ent.Network, []*e
 		SetRPCEndpoint("https://polygon-rpc.com").
 		SetGatewayContractAddress("0x456").
 		SetIsTestnet(false).
+		SetBlockTime(decimal.NewFromFloat(3.0)).
 		SetFee(decimal.NewFromFloat(0.02)).
 		Save(ctx)
 	assert.NoError(t, err)

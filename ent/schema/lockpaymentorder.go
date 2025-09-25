@@ -30,10 +30,13 @@ func (LockPaymentOrder) Fields() []ent.Field {
 		field.String("gateway_id"),
 		field.Float("amount").
 			GoType(decimal.Decimal{}),
+		field.Float("protocol_fee").
+			GoType(decimal.Decimal{}),
 		field.Float("rate").
 			GoType(decimal.Decimal{}),
 		field.Float("order_percent").
 			GoType(decimal.Decimal{}),
+		field.String("sender").Optional(),
 		field.String("tx_hash").
 			MaxLen(70).
 			Optional(),
@@ -52,6 +55,9 @@ func (LockPaymentOrder) Fields() []ent.Field {
 			Default(0),
 		field.Strings("cancellation_reasons").
 			Default([]string{}),
+		field.String("message_hash").
+			MaxLen(400).
+			Optional(),
 	}
 }
 

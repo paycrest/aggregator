@@ -14,12 +14,16 @@ type Tx struct {
 	config
 	// APIKey is the client for interacting with the APIKey builders.
 	APIKey *APIKeyClient
+	// BeneficialOwner is the client for interacting with the BeneficialOwner builders.
+	BeneficialOwner *BeneficialOwnerClient
 	// FiatCurrency is the client for interacting with the FiatCurrency builders.
 	FiatCurrency *FiatCurrencyClient
 	// IdentityVerificationRequest is the client for interacting with the IdentityVerificationRequest builders.
 	IdentityVerificationRequest *IdentityVerificationRequestClient
 	// Institution is the client for interacting with the Institution builders.
 	Institution *InstitutionClient
+	// KYBProfile is the client for interacting with the KYBProfile builders.
+	KYBProfile *KYBProfileClient
 	// LinkedAddress is the client for interacting with the LinkedAddress builders.
 	LinkedAddress *LinkedAddressClient
 	// LockOrderFulfillment is the client for interacting with the LockOrderFulfillment builders.
@@ -32,6 +36,10 @@ type Tx struct {
 	PaymentOrder *PaymentOrderClient
 	// PaymentOrderRecipient is the client for interacting with the PaymentOrderRecipient builders.
 	PaymentOrderRecipient *PaymentOrderRecipientClient
+	// PaymentWebhook is the client for interacting with the PaymentWebhook builders.
+	PaymentWebhook *PaymentWebhookClient
+	// ProviderCurrencies is the client for interacting with the ProviderCurrencies builders.
+	ProviderCurrencies *ProviderCurrenciesClient
 	// ProviderOrderToken is the client for interacting with the ProviderOrderToken builders.
 	ProviderOrderToken *ProviderOrderTokenClient
 	// ProviderProfile is the client for interacting with the ProviderProfile builders.
@@ -188,15 +196,19 @@ func (tx *Tx) Client() *Client {
 
 func (tx *Tx) init() {
 	tx.APIKey = NewAPIKeyClient(tx.config)
+	tx.BeneficialOwner = NewBeneficialOwnerClient(tx.config)
 	tx.FiatCurrency = NewFiatCurrencyClient(tx.config)
 	tx.IdentityVerificationRequest = NewIdentityVerificationRequestClient(tx.config)
 	tx.Institution = NewInstitutionClient(tx.config)
+	tx.KYBProfile = NewKYBProfileClient(tx.config)
 	tx.LinkedAddress = NewLinkedAddressClient(tx.config)
 	tx.LockOrderFulfillment = NewLockOrderFulfillmentClient(tx.config)
 	tx.LockPaymentOrder = NewLockPaymentOrderClient(tx.config)
 	tx.Network = NewNetworkClient(tx.config)
 	tx.PaymentOrder = NewPaymentOrderClient(tx.config)
 	tx.PaymentOrderRecipient = NewPaymentOrderRecipientClient(tx.config)
+	tx.PaymentWebhook = NewPaymentWebhookClient(tx.config)
+	tx.ProviderCurrencies = NewProviderCurrenciesClient(tx.config)
 	tx.ProviderOrderToken = NewProviderOrderTokenClient(tx.config)
 	tx.ProviderProfile = NewProviderProfileClient(tx.config)
 	tx.ProviderRating = NewProviderRatingClient(tx.config)

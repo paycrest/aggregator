@@ -21,9 +21,13 @@ import (
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
-	"github.com/paycrest/aggregator/ent/institution"
 	institutionEnt "github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerordertoken"
+	"github.com/paycrest/aggregator/ent/providerprofile"
+	tokenEnt "github.com/paycrest/aggregator/ent/token"
+
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
@@ -101,6 +105,20 @@ func Byte32ToString(b [32]byte) string {
 	} else {
 		return string(b[:])
 	}
+}
+
+// HexToDecimal converts a hex string to a decimal.Decimal
+func HexToDecimal(hexStr string) decimal.Decimal {
+	// Remove "0x" prefix if present
+	hexStr = strings.TrimPrefix(hexStr, "0x")
+
+	// Convert hex string to big.Int
+	n := new(big.Int)
+	n.SetString(hexStr, 16)
+
+	// Convert to decimal
+	dec := decimal.NewFromBigInt(n, 0)
+	return dec
 }
 
 // BigMin returns the minimum value between two big numbers
@@ -210,6 +228,8 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 	switch paymentOrder.Status {
 	case paymentorder.StatusPending:
 		event = "payment_order.pending"
+	case paymentorder.StatusValidated:
+		event = "payment_order.validated"
 	case paymentorder.StatusExpired:
 		event = "payment_order.expired"
 	case paymentorder.StatusSettled:
@@ -221,18 +241,24 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 	}
 
 	// Fetch the recipient
-	recipient, err := paymentOrder.QueryRecipient().Only(ctx)
-	if err != nil {
-		return err
+	recipient := paymentOrder.Edges.Recipient
+	if recipient == nil {
+		recipient, err = paymentOrder.QueryRecipient().Only(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Fetch the token
-	token, err := paymentOrder.
-		QueryToken().
-		WithNetwork().
-		Only(ctx)
-	if err != nil {
-		return err
+	token := paymentOrder.Edges.Token
+	if token == nil {
+		token, err = paymentOrder.
+			QueryToken().
+			WithNetwork().
+			Only(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	institution, err := storage.Client.Institution.
@@ -399,9 +425,90 @@ func IsValidEthereumAddress(address string) bool {
 
 // IsValidTronAddress checks if a string is a valid Tron address
 func IsValidTronAddress(address string) bool {
-	pattern := `^T[a-zA-Z0-9]{33}$`
-	matched, _ := regexp.MatchString(pattern, address)
-	return matched
+	// Tron addresses are base58check encoded and start with 'T'
+	if len(address) != 34 || !strings.HasPrefix(address, "T") {
+		return false
+	}
+
+	// Try to decode the address
+	_, err := base58check.Decode(address)
+	return err == nil
+}
+
+// CallProviderWithHMAC makes an authenticated HTTP request to a provider with HMAC signature
+// Returns the parsed JSON response data and error
+func CallProviderWithHMAC(ctx context.Context, providerID, method, path string, payload map[string]interface{}) (map[string]interface{}, error) {
+	// Get provider with API key
+	provider, err := storage.Client.ProviderProfile.
+		Query().
+		Where(providerprofile.IDEQ(providerID)).
+		WithAPIKey().
+		Only(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get provider: %v", err)
+	}
+
+	// Check if provider has host identifier
+	if provider.HostIdentifier == "" {
+		return nil, fmt.Errorf("provider %s has no host identifier", providerID)
+	}
+
+	// Check if provider has API key
+	if provider.Edges.APIKey == nil {
+		return nil, fmt.Errorf("provider %s has no API key (data integrity issue)", providerID)
+	}
+
+	// Decrypt API key secret
+	decodedSecret, err := base64.StdEncoding.DecodeString(provider.Edges.APIKey.Secret)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode API key secret: %v", err)
+	}
+	decryptedSecret, err := cryptoUtils.DecryptPlain(decodedSecret)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt API key secret: %v", err)
+	}
+
+	// Generate HMAC signature
+	signature := tokenUtils.GenerateHMACSignature(payload, string(decryptedSecret))
+
+	// Create HTTP client and make request
+	client := fastshot.NewClient(provider.HostIdentifier).
+		Config().SetTimeout(30*time.Second).
+		Header().Add("X-Request-Signature", signature).
+		Build()
+
+	var res fastshot.Response
+	var reqErr error
+
+	switch method {
+	case "GET":
+		res, reqErr = client.GET(path).
+			Body().AsJSON(payload).
+			Send()
+	case "POST":
+		res, reqErr = client.POST(path).
+			Body().AsJSON(payload).
+			Send()
+	default:
+		return nil, fmt.Errorf("unsupported HTTP method: %s", method)
+	}
+
+	if reqErr != nil {
+		return nil, fmt.Errorf("failed to make HTTP request: %v", reqErr)
+	}
+
+	// Parse JSON response
+	data, err := ParseJSONResponse(res.RawResponse)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"ProviderID": providerID,
+			"Path":       path,
+		}).Errorf("failed to parse JSON response from provider")
+		return nil, fmt.Errorf("failed to parse response: %v", err)
+	}
+
+	return data, nil
 }
 
 // Retry is a function that attempts to execute a given function multiple times until it succeeds or the maximum number of attempts is reached.
@@ -461,6 +568,22 @@ func ParseTopicToByte32(paddedHexString string) [32]byte {
 	}
 
 	return [32]byte(addressBytes)
+}
+
+// ParseTopicToByte32Flexible handles both string and [32]uint8 inputs for compatibility
+func ParseTopicToByte32Flexible(topic interface{}) [32]byte {
+	switch v := topic.(type) {
+	case string:
+		// Handle string input (hex string)
+		return ParseTopicToByte32(v)
+	case [32]uint8:
+		// Handle direct byte array input
+		return [32]byte(v)
+	default:
+		// Try to convert to string as fallback
+		str := fmt.Sprintf("%v", v)
+		return ParseTopicToByte32(str)
+	}
 }
 
 // UnpackEventData unpacks the data from a padded hex string using the ABI
@@ -577,7 +700,7 @@ func GetTokenRateFromQueue(tokenSymbol string, orderAmount decimal.Decimal, fiat
 func GetInstitutionByCode(ctx context.Context, institutionCode string, enabledFiatCurrency bool) (*ent.Institution, error) {
 	institutionQuery := storage.Client.Institution.
 		Query().
-		Where(institution.CodeEQ(institutionCode))
+		Where(institutionEnt.CodeEQ(institutionCode))
 
 	if enabledFiatCurrency {
 		institutionQuery = institutionQuery.WithFiatCurrency(
@@ -611,4 +734,473 @@ func IsValidHttpsUrl(urlStr string) bool {
 
 	// Verify scheme is https and host is present
 	return parsedUrl.Scheme == "https" && parsedUrl.Host != ""
+}
+
+// ValidateRate validates if a provided rate is achievable for the given parameters
+func ValidateRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, providerID, networkFilter string) (decimal.Decimal, error) {
+	// Direct currency match
+	if strings.EqualFold(token.BaseCurrency, currency.Code) {
+		return decimal.NewFromInt(1), nil
+	}
+
+	// Provider-specific rate
+	if providerID != "" {
+		return validateProviderRate(ctx, token, currency, amount, providerID, networkFilter)
+	}
+
+	// Bucket-based rate resolution
+	return validateBucketRate(ctx, token, currency, amount, networkFilter)
+}
+
+// validateProviderRate handles provider-specific rate validation
+func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, providerID, networkFilter string) (decimal.Decimal, error) {
+	// Get the provider from the database
+	provider, err := storage.Client.ProviderProfile.
+		Query().
+		Where(providerprofile.IDEQ(providerID)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return decimal.Zero, fmt.Errorf("provider not found")
+		}
+		return decimal.Zero, fmt.Errorf("internal server error")
+	}
+
+	// Get the provider's order token configuration to validate min/max amounts
+	providerOrderTokenQuery := storage.Client.ProviderOrderToken.
+		Query().
+		Where(
+			providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+			providerordertoken.HasTokenWith(tokenEnt.IDEQ(token.ID)),
+			providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(currency.Code)),
+		)
+
+	// Filter by network if provided
+	if networkFilter != "" {
+		providerOrderTokenQuery = providerOrderTokenQuery.Where(
+			providerordertoken.NetworkEQ(networkFilter),
+		)
+	}
+
+	providerOrderToken, err := providerOrderTokenQuery.First(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return decimal.Zero, fmt.Errorf("provider does not support this token/currency combination")
+		}
+		return decimal.Zero, fmt.Errorf("internal server error")
+	}
+
+	// Validate that the token amount is within the provider's min/max limits
+	if amount.LessThan(providerOrderToken.MinOrderAmount) || amount.GreaterThan(providerOrderToken.MaxOrderAmount) {
+		return decimal.Zero, fmt.Errorf("amount must be between %s and %s for this provider", providerOrderToken.MinOrderAmount, providerOrderToken.MaxOrderAmount)
+	}
+
+	// Try to get the provider's current rate from Redis queue first (most up-to-date)
+	var rateResponse decimal.Decimal
+	redisRate, found := getProviderRateFromRedis(ctx, providerID, token.Symbol, currency.Code, amount)
+	if found {
+		rateResponse = redisRate
+	} else {
+		// Fallback to database rate if Redis rate not found
+		if providerOrderToken.ConversionRateType == "fixed" {
+			rateResponse = providerOrderToken.FixedConversionRate
+		} else {
+			// For floating rates, use market rate + floating adjustment
+			rateResponse = currency.MarketRate.Add(providerOrderToken.FloatingConversionRate)
+		}
+	}
+
+	// Check if provider has sufficient balance
+	_, err = storage.Client.ProviderCurrencies.
+		Query().
+		Where(
+			providercurrencies.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+			providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currency.Code)),
+			providercurrencies.AvailableBalanceGT(amount.Mul(rateResponse)),
+			providercurrencies.IsAvailableEQ(true),
+		).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return decimal.Zero, fmt.Errorf("provider has insufficient liquidity for %s", currency.Code)
+		}
+		return decimal.Zero, fmt.Errorf("internal server error")
+	}
+
+	return rateResponse, nil
+}
+
+// getProviderRateFromRedis retrieves the provider's current rate from Redis queue
+func getProviderRateFromRedis(ctx context.Context, providerID, tokenSymbol, currencyCode string, amount decimal.Decimal) (decimal.Decimal, bool) {
+	// Get redis keys for provision buckets for this currency
+	keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currencyCode+"_*_*", 100).Result()
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"ProviderID": providerID,
+			"Token":      tokenSymbol,
+			"Currency":   currencyCode,
+		}).Debugf("Failed to scan Redis buckets for provider rate")
+		return decimal.Zero, false
+	}
+
+	// Scan through the buckets to find the provider's rate
+	for _, key := range keys {
+		_, err := parseBucketKey(key)
+		if err != nil {
+			continue
+		}
+
+		// Get all providers in this bucket
+		providers, err := storage.RedisClient.LRange(ctx, key, 0, -1).Result()
+		if err != nil {
+			continue
+		}
+
+		// Look for the specific provider
+		for _, providerData := range providers {
+			parts := strings.Split(providerData, ":")
+			if len(parts) != 5 {
+				continue
+			}
+
+			// Check if this is the provider we're looking for
+			if parts[0] == providerID && parts[1] == tokenSymbol {
+				// Parse the rate
+				rate, err := decimal.NewFromString(parts[2])
+				if err != nil {
+					continue
+				}
+
+				// Parse min/max order amounts
+				minOrderAmount, err := decimal.NewFromString(parts[3])
+				if err != nil {
+					continue
+				}
+
+				maxOrderAmount, err := decimal.NewFromString(parts[4])
+				if err != nil {
+					continue
+				}
+
+				// Check if amount is within provider's limits
+				if amount.GreaterThanOrEqual(minOrderAmount) && amount.LessThanOrEqual(maxOrderAmount) {
+					return rate, true
+				}
+			}
+		}
+	}
+
+	return decimal.Zero, false
+}
+
+// validateBucketRate handles bucket-based rate validation
+func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, networkIdentifier string) (decimal.Decimal, error) {
+	// Get redis keys for provision buckets
+	keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currency.Code+"_*_*", 100).Result()
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":    fmt.Sprintf("%v", err),
+			"Currency": currency.Code,
+			"Network":  networkIdentifier,
+		}).Errorf("Failed to scan Redis buckets for bucket rate")
+		return decimal.Zero, fmt.Errorf("internal server error")
+	}
+
+	// Track the best available rate and reason for logging
+	var bestRate decimal.Decimal
+	var foundExactMatch bool
+
+	// Scan through the buckets to find a matching rate
+	for _, key := range keys {
+		bucketData, err := parseBucketKey(key)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Key":   key,
+				"Error": err,
+			}).Errorf("ValidateRate.InvalidBucketKey: failed to parse bucket key")
+			continue
+		}
+
+		// Get all providers in this bucket to find the first suitable one (priority queue order)
+		providers, err := storage.RedisClient.LRange(ctx, key, 0, -1).Result()
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Key":   key,
+				"Error": err,
+			}).Errorf("ValidateRate.FailedToGetProviders: failed to get providers from bucket")
+			continue
+		}
+
+		// Find the first provider at the top of the queue that matches our criteria
+		rate, found := findSuitableProviderRate(providers, token.Symbol, networkIdentifier, amount, bucketData)
+		if found {
+			foundExactMatch = true
+			bestRate = rate
+			break // Found exact match, no need to continue
+		}
+
+		// Track the best available rate for logging purposes
+		if rate.GreaterThan(bestRate) {
+			bestRate = rate
+		}
+	}
+
+	// If no exact match found, return error with details
+	if !foundExactMatch {
+		logger.WithFields(logger.Fields{
+			"Token":         token.Symbol,
+			"Currency":      currency.Code,
+			"Amount":        amount,
+			"NetworkFilter": networkIdentifier,
+			"BestRate":      bestRate,
+		}).Warnf("ValidateRate.NoSuitableProvider: no provider found for the given parameters")
+
+		return decimal.Zero, fmt.Errorf("no provider available for %s to %s conversion with amount %s on %s network",
+			token.Symbol, currency.Code, amount, networkIdentifier)
+	}
+
+	return bestRate, nil
+}
+
+// parseBucketKey parses and validates bucket key format
+type BucketData struct {
+	Currency  string
+	MinAmount decimal.Decimal
+	MaxAmount decimal.Decimal
+}
+
+func parseBucketKey(key string) (*BucketData, error) {
+	// Expected format: "bucket_{currency}_{minAmount}_{maxAmount}"
+	parts := strings.Split(key, "_")
+	if len(parts) != 4 && len(parts) != 5 {
+		return nil, fmt.Errorf("invalid bucket key format: expected 4 parts, got %d", len(parts))
+	}
+
+	if parts[0] != "bucket" {
+		return nil, fmt.Errorf("invalid bucket key prefix: expected 'bucket', got '%s'", parts[0])
+	}
+
+	currency := parts[1]
+	if currency == "" {
+		return nil, fmt.Errorf("empty currency in bucket key")
+	}
+
+	minAmount, err := decimal.NewFromString(parts[2])
+	if err != nil {
+		return nil, fmt.Errorf("invalid min amount '%s': %v", parts[2], err)
+	}
+
+	maxAmount, err := decimal.NewFromString(parts[3])
+	if err != nil {
+		return nil, fmt.Errorf("invalid max amount '%s': %v", parts[3], err)
+	}
+
+	if minAmount.GreaterThanOrEqual(maxAmount) {
+		return nil, fmt.Errorf("min amount (%s) must be less than max amount (%s)", minAmount, maxAmount)
+	}
+
+	return &BucketData{
+		Currency:  currency,
+		MinAmount: minAmount,
+		MaxAmount: maxAmount,
+	}, nil
+}
+
+// findSuitableProviderRate finds the first suitable provider rate from the provider list
+func findSuitableProviderRate(providers []string, tokenSymbol string, networkIdentifier string, tokenAmount decimal.Decimal, bucketData *BucketData) (decimal.Decimal, bool) {
+	var bestRate decimal.Decimal
+	var foundExactMatch bool
+
+	for _, providerData := range providers {
+		parts := strings.Split(providerData, ":")
+		if len(parts) != 5 {
+			logger.WithFields(logger.Fields{
+				"ProviderData": providerData,
+				"Token":        tokenSymbol,
+				"Currency":     bucketData.Currency,
+				"MinAmount":    bucketData.MinAmount,
+				"MaxAmount":    bucketData.MaxAmount,
+			}).Errorf("ValidateRate.InvalidProviderData: provider data format is invalid")
+			continue
+		}
+
+		// Skip entry if token doesn't match
+		if parts[1] != tokenSymbol {
+			continue
+		}
+
+		// Skip entry if provider doesn't not have a token configured for the network
+		// TODO: Move this to redis cache. Provider's network should be in the key.
+		if networkIdentifier != "" {
+			_, err := storage.Client.ProviderOrderToken.
+				Query().
+				Where(
+					providerordertoken.HasProviderWith(
+						providerprofile.IDEQ(parts[0]),
+						providerprofile.HasProviderCurrenciesWith(
+							providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
+							providercurrencies.IsAvailableEQ(true),
+						),
+					),
+					providerordertoken.HasTokenWith(tokenEnt.SymbolEQ(parts[1])),
+					providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
+					providerordertoken.NetworkEQ(networkIdentifier),
+					providerordertoken.AddressNEQ(""),
+				).Only(context.Background())
+			if err != nil {
+				if ent.IsNotFound(err) {
+					continue
+				}
+				logger.WithFields(logger.Fields{
+					"ProviderData": providerData,
+					"Error":        err,
+				}).Errorf("ValidateRate.InvalidProviderData: failed to fetch provider configuration")
+				continue
+			}
+		}
+
+		// Parse provider order amounts
+		minOrderAmount, err := decimal.NewFromString(parts[3])
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"ProviderData": providerData,
+				"Error":        err,
+			}).Errorf("ValidateRate.InvalidMinOrderAmount: failed to parse min order amount")
+			continue
+		}
+
+		maxOrderAmount, err := decimal.NewFromString(parts[4])
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"ProviderData": providerData,
+				"Error":        err,
+			}).Errorf("ValidateRate.InvalidMaxOrderAmount: failed to parse max order amount")
+			continue
+		}
+
+		// Skip if order amount is not within provider's min and max order amount
+		if tokenAmount.LessThan(minOrderAmount) || tokenAmount.GreaterThan(maxOrderAmount) {
+			continue
+		}
+
+		// Parse rate
+		rate, err := decimal.NewFromString(parts[2])
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"ProviderData": providerData,
+				"Error":        err,
+			}).Errorf("ValidateRate.InvalidRate: failed to parse rate")
+			continue
+		}
+
+		// Track the best rate we've seen (for logging purposes)
+		if rate.GreaterThan(bestRate) {
+			bestRate = rate
+		}
+
+		// Calculate fiat equivalent of the token amount
+		fiatAmount := tokenAmount.Mul(rate)
+
+		// Check if fiat amount is within the bucket range
+		if fiatAmount.GreaterThanOrEqual(bucketData.MinAmount) && fiatAmount.LessThanOrEqual(bucketData.MaxAmount) {
+			return rate, true
+		}
+
+		// Check if provider has sufficient balance
+		ctx := context.Background()
+		_, err = storage.Client.ProviderCurrencies.
+			Query().
+			Where(
+				providercurrencies.HasProviderWith(providerprofile.IDEQ(parts[0])),
+				providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
+				providercurrencies.AvailableBalanceGT(fiatAmount),
+				providercurrencies.IsAvailableEQ(true),
+			).
+			Only(ctx)
+		if err != nil {
+			if ent.IsNotFound(err) {
+				continue
+			}
+			return decimal.Zero, false
+		}
+	}
+
+	// Return the best rate we found (even if no exact match) for logging purposes
+	return bestRate, foundExactMatch
+}
+
+// ValidateAccount validates if an account exists for the given institution and account identifier
+// Returns the account name if verification is successful, or an error if verification fails
+func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier string) (string, error) {
+	// Get institution with enabled fiat currency
+	institution, err := storage.Client.Institution.
+		Query().
+		Where(institutionEnt.CodeEQ(institutionCode)).
+		WithFiatCurrency(func(fq *ent.FiatCurrencyQuery) {
+			fq.Where(fiatcurrency.IsEnabledEQ(true))
+		}).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return "", fmt.Errorf("institution %s is not supported", institutionCode)
+		}
+		return "", fmt.Errorf("failed to fetch institution: %v", err)
+	}
+
+	// Skip account verification for mobile money institutions
+	if institution.Type == institutionEnt.TypeMobileMoney {
+		return "OK", nil
+	}
+
+	// Find available providers for the currency
+	providers, err := storage.Client.ProviderProfile.
+		Query().
+		Where(
+			providerprofile.HasProviderCurrenciesWith(
+				providercurrencies.HasCurrencyWith(
+					fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
+				),
+				providercurrencies.IsAvailableEQ(true),
+			),
+			providerprofile.HostIdentifierNotNil(),
+			providerprofile.IsActiveEQ(true),
+			providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
+		).
+		All(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch providers: %v", err)
+	}
+
+	if len(providers) == 0 {
+		return "", fmt.Errorf("no available providers found for currency %s", institution.Edges.FiatCurrency.Code)
+	}
+
+	// Prepare payload for account verification
+	payload := map[string]interface{}{
+		"institution":       institutionCode,
+		"accountIdentifier": accountIdentifier,
+	}
+
+	// Try each provider until one succeeds
+	for _, provider := range providers {
+		// Call provider /verify_account endpoint using utility function
+		data, err := CallProviderWithHMAC(ctx, provider.ID, "POST", "/verify_account", payload)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":             fmt.Sprintf("%v", err),
+				"ProviderID":        provider.ID,
+				"Institution":       institutionCode,
+				"AccountIdentifier": accountIdentifier,
+			}).Warnf("Failed to verify account with provider %s", provider.ID)
+			continue
+		}
+
+		// Extract account name from response
+		if accountName, ok := data["data"].(string); ok && accountName != "" {
+			return accountName, nil
+		}
+	}
+
+	return "", fmt.Errorf("failed to verify account with any provider")
 }

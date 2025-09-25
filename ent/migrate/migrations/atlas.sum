@@ -1,4 +1,4 @@
-h1:mbjYUn+9Ft6WqrWeZurNpG+pt3iyhucaGjJHe2+C+uI=
+h1:jOGi0Tg63IoKTKyaWvGzi4aIwMXCzQ9BVgD6eGYc+ck=
 20240118234246_initial.sql h1:dYuYBqns33WT+3p8VQvbKUP62k3k6w6h8S+FqNqgSvU=
 20240130122324_order_from_address.sql h1:mMVI2iBUd1roIYLUqu0d2jZ7+B6exppRN8qqn+aIHx4=
 20240202010744_fees_on_order.sql h1:P7ngxZKqDKefBM5vk6M3kbWeMPVwbZ4MZVcLBjEfS34=
@@ -53,3 +53,11 @@ h1:mbjYUn+9Ft6WqrWeZurNpG+pt3iyhucaGjJHe2+C+uI=
 20250505033200_tzs_bank_institutions.sql h1:kQHdkewxxx63Z5dMQJYsq5LPL1SaeBv8hGv84fpsLCQ=
 20250505033210_ugx_bank_institutions.sql h1:8ex3xOuruqqPQJbcR9rUNpPDHU4n8Q3URvUIXQ6oDDE=
 20250510231545_order_metadata.sql h1:BrHlYt3LvuYcnsw7b9xfzjg5U4D1RfPy+RusxRDj66k=
+20250517004500_brl_institutions.sql h1:w/xeXviTmKXCVt7s+h1nVfciXgB717stoY+T9GLnH8c=
+20250608014647_engine_bump.sql h1:lDpdJhk2jYJao9Gc6HpMiXkAmkeLujowwKHHT7W+U8c=
+20250626085120_kyb_schema.sql h1:EwWj8hZmygQEFh1+EG/v9XjGdvutiY1n9upWEuwDp84=
+20250704022235_payment_webhook.sql h1:Z8F8wwHg6GtfWqE0QyvE7dY9t6oBlNdiGwviDDXiu5g=
+20250721051708_add_message_hash_and_protocol_fee.sql h1:uTNSjhrYVx+wmJRIqRDPUpwYxdJcIxuZNEi/8OQMSJc=
+20250721080600_update_payment_order_triggers.sql h1:Ei+DoaBGSK/GDnQ0Iq1KNZEJc17fuJAn2nJfU1cbZVc=
+20250801142901_add_provider_currencies.sql h1:Xmdc1PylAOMTkH3txmdh6g9vCAHT82pzy4yr45i+Le8=
+20250904102613_add_network_unique_to_provider_order_token.sql h1:mMhR5RAwAX5kU0dO1wc3eeWz7Cf/KouUkEUL3N7yOAE=

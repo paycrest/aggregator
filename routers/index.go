@@ -58,10 +58,26 @@ func RegisterRoutes(route *gin.Engine) {
 	v1.POST("verify-account", ctrl.VerifyAccount)
 	v1.GET("orders/:chain_id/:id", ctrl.GetLockPaymentOrderStatus)
 
+	// Reindex transaction endpoint
+	v1.GET("reindex/:network/:tx_hash_or_address", ctrl.IndexTransaction)
+
+	// Index provider address endpoint
+	v1.POST("index-provider-address", ctrl.IndexProviderAddress)
+
+	// Etherscan queue monitoring endpoint
+	v1.GET("etherscan/stats", ctrl.GetEtherscanQueueStats)
+
+	// KYB route
+	v1.POST("slack-interaction", middleware.SlackVerificationMiddleware, ctrl.SlackInteractionHandler)
+	v1.POST("kyb-submission", middleware.JWTMiddleware, ctrl.HandleKYBSubmission)
+
 	// KYC routes
 	v1.POST("kyc", ctrl.RequestIDVerification)
 	v1.GET("kyc/:wallet_address", ctrl.GetIDVerificationStatus)
 	v1.POST("kyc/webhook", ctrl.KYCWebhook)
+
+	// Insight webhook route
+	v1.POST("insight/webhook", ctrl.InsightWebhook)
 
 	// Linked address routes
 	v1.POST("linked-addresses", middleware.PrivyMiddleware, ctrl.CreateLinkedAddress)
@@ -75,8 +91,8 @@ func authRoutes(route *gin.Engine) {
 	var profileCtrl accounts.ProfileController
 
 	v1 := route.Group("/v1/")
-	v1.POST("auth/register", middleware.OnlyWebMiddleware, authCtrl.Register)
-	v1.POST("auth/login", middleware.OnlyWebMiddleware, authCtrl.Login)
+	v1.POST("auth/register", middleware.OnlyWebMiddleware, middleware.TurnstileMiddleware(), authCtrl.Register)
+	v1.POST("auth/login", middleware.OnlyWebMiddleware, middleware.TurnstileMiddleware(), authCtrl.Login)
 	v1.POST("auth/confirm-account", middleware.OnlyWebMiddleware, authCtrl.ConfirmEmail)
 	v1.POST("auth/resend-token", middleware.OnlyWebMiddleware, authCtrl.ResendVerificationToken)
 	v1.POST("auth/refresh", middleware.OnlyWebMiddleware, authCtrl.RefreshJWT)
@@ -141,6 +157,7 @@ func providerRoutes(route *gin.Engine) {
 	v1.POST("orders/:id/decline", providerCtrl.DeclineOrder)
 	v1.POST("orders/:id/fulfill", providerCtrl.FulfillOrder)
 	v1.POST("orders/:id/cancel", providerCtrl.CancelOrder)
+	v1.POST("balances", providerCtrl.UpdateProviderBalance)
 	v1.GET("rates/:token/:fiat", providerCtrl.GetMarketRate)
 	v1.GET("stats", providerCtrl.Stats)
 	v1.GET("node-info", providerCtrl.NodeInfo)

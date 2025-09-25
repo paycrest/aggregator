@@ -32,8 +32,6 @@ const (
 	FieldSenderFee = "sender_fee"
 	// FieldNetworkFee holds the string denoting the network_fee field in the database.
 	FieldNetworkFee = "network_fee"
-	// FieldProtocolFee holds the string denoting the protocol_fee field in the database.
-	FieldProtocolFee = "protocol_fee"
 	// FieldRate holds the string denoting the rate field in the database.
 	FieldRate = "rate"
 	// FieldTxHash holds the string denoting the tx_hash field in the database.
@@ -52,6 +50,8 @@ const (
 	FieldFeeAddress = "fee_address"
 	// FieldGatewayID holds the string denoting the gateway_id field in the database.
 	FieldGatewayID = "gateway_id"
+	// FieldMessageHash holds the string denoting the message_hash field in the database.
+	FieldMessageHash = "message_hash"
 	// FieldReference holds the string denoting the reference field in the database.
 	FieldReference = "reference"
 	// FieldStatus holds the string denoting the status field in the database.
@@ -68,6 +68,8 @@ const (
 	EdgeRecipient = "recipient"
 	// EdgeTransactions holds the string denoting the transactions edge name in mutations.
 	EdgeTransactions = "transactions"
+	// EdgePaymentWebhook holds the string denoting the payment_webhook edge name in mutations.
+	EdgePaymentWebhook = "payment_webhook"
 	// Table holds the table name of the paymentorder in the database.
 	Table = "payment_orders"
 	// SenderProfileTable is the table that holds the sender_profile relation/edge.
@@ -112,6 +114,13 @@ const (
 	TransactionsInverseTable = "transaction_logs"
 	// TransactionsColumn is the table column denoting the transactions relation/edge.
 	TransactionsColumn = "payment_order_transactions"
+	// PaymentWebhookTable is the table that holds the payment_webhook relation/edge.
+	PaymentWebhookTable = "payment_webhooks"
+	// PaymentWebhookInverseTable is the table name for the PaymentWebhook entity.
+	// It exists in this package in order to avoid circular dependency with the "paymentwebhook" package.
+	PaymentWebhookInverseTable = "payment_webhooks"
+	// PaymentWebhookColumn is the table column denoting the payment_webhook relation/edge.
+	PaymentWebhookColumn = "payment_order_payment_webhook"
 )
 
 // Columns holds all SQL columns for paymentorder fields.
@@ -125,7 +134,6 @@ var Columns = []string{
 	FieldPercentSettled,
 	FieldSenderFee,
 	FieldNetworkFee,
-	FieldProtocolFee,
 	FieldRate,
 	FieldTxHash,
 	FieldBlockNumber,
@@ -135,6 +143,7 @@ var Columns = []string{
 	FieldFeePercent,
 	FieldFeeAddress,
 	FieldGatewayID,
+	FieldMessageHash,
 	FieldReference,
 	FieldStatus,
 }
@@ -184,6 +193,8 @@ var (
 	FeeAddressValidator func(string) error
 	// GatewayIDValidator is a validator for the "gateway_id" field. It is called by the builders before save.
 	GatewayIDValidator func(string) error
+	// MessageHashValidator is a validator for the "message_hash" field. It is called by the builders before save.
+	MessageHashValidator func(string) error
 	// ReferenceValidator is a validator for the "reference" field. It is called by the builders before save.
 	ReferenceValidator func(string) error
 	// DefaultID holds the default value on creation for the "id" field.
@@ -198,11 +209,13 @@ const DefaultStatus = StatusInitiated
 
 // Status values.
 const (
-	StatusInitiated Status = "initiated"
-	StatusPending   Status = "pending"
-	StatusExpired   Status = "expired"
-	StatusSettled   Status = "settled"
-	StatusRefunded  Status = "refunded"
+	StatusInitiated  Status = "initiated"
+	StatusProcessing Status = "processing"
+	StatusPending    Status = "pending"
+	StatusValidated  Status = "validated"
+	StatusExpired    Status = "expired"
+	StatusSettled    Status = "settled"
+	StatusRefunded   Status = "refunded"
 )
 
 func (s Status) String() string {
@@ -212,7 +225,7 @@ func (s Status) String() string {
 // StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
 func StatusValidator(s Status) error {
 	switch s {
-	case StatusInitiated, StatusPending, StatusExpired, StatusSettled, StatusRefunded:
+	case StatusInitiated, StatusProcessing, StatusPending, StatusValidated, StatusExpired, StatusSettled, StatusRefunded:
 		return nil
 	default:
 		return fmt.Errorf("paymentorder: invalid enum value for status field: %q", s)
@@ -267,11 +280,6 @@ func ByNetworkFee(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldNetworkFee, opts...).ToFunc()
 }
 
-// ByProtocolFee orders the results by the protocol_fee field.
-func ByProtocolFee(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldProtocolFee, opts...).ToFunc()
-}
-
 // ByRate orders the results by the rate field.
 func ByRate(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRate, opts...).ToFunc()
@@ -315,6 +323,11 @@ func ByFeeAddress(opts ...sql.OrderTermOption) OrderOption {
 // ByGatewayID orders the results by the gateway_id field.
 func ByGatewayID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldGatewayID, opts...).ToFunc()
+}
+
+// ByMessageHash orders the results by the message_hash field.
+func ByMessageHash(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMessageHash, opts...).ToFunc()
 }
 
 // ByReference orders the results by the reference field.
@@ -375,6 +388,13 @@ func ByTransactions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newTransactionsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByPaymentWebhookField orders the results by payment_webhook field.
+func ByPaymentWebhookField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newPaymentWebhookStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newSenderProfileStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -415,5 +435,12 @@ func newTransactionsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(TransactionsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, TransactionsTable, TransactionsColumn),
+	)
+}
+func newPaymentWebhookStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(PaymentWebhookInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, false, PaymentWebhookTable, PaymentWebhookColumn),
 	)
 }

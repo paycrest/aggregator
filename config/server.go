@@ -30,17 +30,17 @@ func ServerConfig() *ServerConfiguration {
 	viper.SetDefault("DEBUG", true)
 	viper.SetDefault("SERVER_HOST", "0.0.0.0")
 	viper.SetDefault("SERVER_PORT", "8000")
-	viper.SetDefault("SERVER_TIMEZONE", "Africa/Lagos")
+	viper.SetDefault("SERVER_TIMEZONE", "UTC")
 	viper.SetDefault("ALLOWED_HOSTS", "*")
 	viper.SetDefault("ENVIRONMENT", "local")
 	viper.SetDefault("SENTRY_DSN", "")
-	viper.SetDefault("RATE_LIMIT_UNAUTHENTICATED", 5)
-	viper.SetDefault("RATE_LIMIT_AUTHENTICATED", 100)
 	viper.SetDefault("CURRENCIES_CACHE_DURATION", 24)
 	viper.SetDefault("INSTITUTIONS_CACHE_DURATION", 24)
 	viper.SetDefault("PUBKEY_CACHE_DURATION", 365)
-	viper.SetDefault("SERVER_URL", "")
+	viper.SetDefault("RATE_LIMIT_UNAUTHENTICATED", 20)
+	viper.SetDefault("RATE_LIMIT_AUTHENTICATED", 500)
 	viper.SetDefault("SLACK_WEBHOOK_URL", "")
+	viper.SetDefault("SERVER_URL", "")
 
 	return &ServerConfiguration{
 		Debug:                     viper.GetBool("DEBUG"),

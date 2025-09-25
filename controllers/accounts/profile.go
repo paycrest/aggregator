@@ -9,6 +9,7 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -67,22 +68,24 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 	}
 	sender := senderCtx.(*ent.SenderProfile)
 
-	update := sender.Update()
-
-	if payload.WebhookURL != "" || (payload.WebhookURL == "" && sender.WebhookURL != "") {
-		update.SetWebhookURL(payload.WebhookURL)
-	}
-
-	if payload.DomainWhitelist != nil || (payload.DomainWhitelist == nil && sender.DomainWhitelist != nil) {
-		update.SetDomainWhitelist(payload.DomainWhitelist)
-	}
-
 	// save or update SenderOrderToken
 	tx, err := storage.Client.Tx(ctx)
 	if err != nil {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 		return
 	}
+
+	update := tx.SenderProfile.Update().Where(senderprofile.IDEQ(sender.ID))
+
+	if payload.WebhookURL != "" && payload.WebhookURL != sender.WebhookURL {
+		update.SetWebhookURL(payload.WebhookURL)
+	}
+
+	if payload.DomainWhitelist != nil {
+		update.SetDomainWhitelist(payload.DomainWhitelist)
+	}
+
+	hasConfiguredToken := false
 
 	for _, tokenPayload := range payload.Tokens {
 
@@ -107,20 +110,20 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 			if strings.HasPrefix(address.Network, "tron") {
 				feeAddressIsValid := u.IsValidTronAddress(address.FeeAddress)
 				if address.FeeAddress != "" && !feeAddressIsValid {
-					u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", []types.ErrorData{{
 						Field:   "FeeAddress",
 						Message: "Invalid Tron address",
-					})
+					}})
 					return
 				}
 				networksToTokenId[address.Network] = 0
 			} else {
 				feeAddressIsValid := u.IsValidEthereumAddress(address.FeeAddress)
 				if address.FeeAddress != "" && !feeAddressIsValid {
-					u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", []types.ErrorData{{
 						Field:   "FeeAddress",
 						Message: "Invalid Ethereum address",
-					})
+					}})
 					return
 				}
 				networksToTokenId[address.Network] = 0
@@ -150,62 +153,56 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 			networksToTokenId[key] = tokenId.ID
 		}
 
-		for _, address := range tokenPayload.Addresses {
-			senderToken, err := tx.SenderOrderToken.
-				Query().
-				Where(
-					senderordertoken.And(
-						senderordertoken.HasTokenWith(token.IDEQ(networksToTokenId[address.Network])),
-						senderordertoken.HasSenderWith(senderprofile.IDEQ(sender.ID)),
-					),
-				).
-				Only(ctx)
-			if err != nil {
-				if ent.IsNotFound(err) {
-					_, err := tx.SenderOrderToken.
-						Create().
-						SetSenderID(sender.ID).
-						SetTokenID(networksToTokenId[address.Network]).
-						SetRefundAddress(address.RefundAddress).
-						SetFeePercent(tokenPayload.FeePercent).
-						SetFeeAddress(address.FeeAddress).
-						Save(ctx)
-					if err != nil {
-						u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
-						return
-					}
-				} else {
-					u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
-					return
-				}
+		// Delete existing sender order tokens for this token symbol to handle removals
+		_, err = tx.SenderOrderToken.
+			Delete().
+			Where(
+				senderordertoken.HasTokenWith(token.SymbolEQ(tokenPayload.Symbol)),
+				senderordertoken.HasSenderWith(senderprofile.IDEQ(sender.ID)),
+			).
+			Exec(ctx)
+		if err != nil {
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+			return
+		}
 
-			} else {
-				_, err := senderToken.
-					Update().
-					SetRefundAddress(address.RefundAddress).
-					SetFeePercent(tokenPayload.FeePercent).
-					SetFeeAddress(address.FeeAddress).
-					Save(ctx)
-				if err != nil {
-					u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
-					return
-				}
+		// Create new sender order tokens for the networks in the payload
+		for _, address := range tokenPayload.Addresses {
+			_, err := tx.SenderOrderToken.
+				Create().
+				SetSenderID(sender.ID).
+				SetTokenID(networksToTokenId[address.Network]).
+				SetRefundAddress(address.RefundAddress).
+				SetFeePercent(tokenPayload.FeePercent).
+				SetFeeAddress(address.FeeAddress).
+				Save(ctx)
+			if err != nil {
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+				return
+			}
+			// Check if this token is properly configured
+			if address.RefundAddress != "" && address.FeeAddress != "" {
+				hasConfiguredToken = true
 			}
 		}
 	}
 
-	// Commit the transaction
-	if err := tx.Commit(); err != nil {
+	// Set activation status based on whether at least one token is configured
+	if hasConfiguredToken && !sender.IsActive {
+		update.SetIsActive(true)
+	} else if !hasConfiguredToken && sender.IsActive {
+		update.SetIsActive(false)
+	}
+
+	// Save the sender profile update within the transaction
+	_, err = update.Save(ctx)
+	if err != nil {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 		return
 	}
 
-	if !sender.IsActive {
-		update.SetIsActive(true)
-	}
-
-	_, err = update.Save(ctx)
-	if err != nil {
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 		return
 	}
@@ -231,121 +228,45 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 	}
 	provider := providerCtx.(*ent.ProviderProfile)
 
-	update := provider.Update()
-
-	if payload.TradingName != "" {
-		update.SetTradingName(payload.TradingName)
-	}
-
+	// Validate basic fields first (before starting transaction)
 	if payload.HostIdentifier != "" {
 		// Validate HTTPS protocol
 		if !u.IsValidHttpsUrl(payload.HostIdentifier) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error",
-				"Host identifier must use HTTPS protocol and be a valid URL", types.ErrorData{
+				"Host identifier must use HTTPS protocol and be a valid URL", []types.ErrorData{{
 					Field:   "HostIdentifier",
 					Message: "Please provide a valid URL starting with https://",
-				})
+				}})
 			return
 		}
-		update.SetHostIdentifier(payload.HostIdentifier)
 	}
 
-	if payload.IsAvailable {
-		update.SetIsAvailable(true)
-	} else {
-		update.SetIsAvailable(false)
+	// Capture currency availability update intent (no writes yet)
+	var availabilityOp *struct {
+		currencyCode string
+		isAvailable  bool
+	}
+	if payload.Currency != "" {
+		availabilityOp = &struct {
+			currencyCode string
+			isAvailable  bool
+		}{payload.Currency, payload.IsAvailable}
 	}
 
-	if len(payload.Currencies) > 0 {
-		newCurrencies, err := storage.Client.FiatCurrency.Query().
-			Where(
-				fiatcurrency.And(
-					fiatcurrency.IsEnabledEQ(true),
-					fiatcurrency.CodeIn(payload.Currencies...),
-				),
-			).
-			All(ctx)
-		if err != nil {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
-				Field:   "FiatCurrency",
-				Message: "This field is required",
-			})
-			return
-		}
-
-		// Fetch the existing currencies associated with the provider profile
-		existingCurrencies, err := storage.Client.ProviderProfile.
-			Query().
-			Where(providerprofile.IDEQ(provider.ID)).
-			QueryCurrencies().
-			All(ctx)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":      fmt.Sprintf("%v", err),
-				"ProviderID": provider.ID,
-			}).Errorf("Failed to fetch existing currencies for provider")
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch existing currencies", nil)
-			return
-		}
-
-		// Combine existing and new currencies
-		allCurrencies := append(existingCurrencies, newCurrencies...)
-
-		// will be set currencies
-		update.AddCurrencies(allCurrencies...)
+	// PHASE 1: Validate all tokens and prepare operations
+	type TokenOperation struct {
+		TokenPayload  types.ProviderOrderTokenPayload
+		ProviderToken *ent.Token
+		Currency      *ent.FiatCurrency
+		Rate          decimal.Decimal
+		IsUpdate      bool
+		ExistingToken *ent.ProviderOrderToken
 	}
 
-	if payload.VisibilityMode != "" {
-		update.SetVisibilityMode(providerprofile.VisibilityMode(payload.VisibilityMode))
-	}
+	var tokenOperations []TokenOperation
+	var validationErrors []types.ErrorData
 
-	if payload.Address != "" {
-		update.SetAddress(payload.Address)
-	}
-
-	if payload.MobileNumber != "" {
-		if !u.IsValidMobileNumber(payload.MobileNumber) {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid mobile number", nil)
-			return
-		}
-		update.SetMobileNumber(payload.MobileNumber)
-	}
-
-	if !payload.DateOfBirth.IsZero() {
-		update.SetDateOfBirth(payload.DateOfBirth)
-	}
-
-	if payload.BusinessName != "" {
-		update.SetBusinessName(payload.BusinessName)
-	}
-
-	if payload.IdentityDocumentType != "" {
-		if providerprofile.IdentityDocumentType(payload.IdentityDocumentType) != providerprofile.IdentityDocumentTypePassport &&
-			providerprofile.IdentityDocumentType(payload.IdentityDocumentType) != providerprofile.IdentityDocumentTypeDriversLicense &&
-			providerprofile.IdentityDocumentType(payload.IdentityDocumentType) != providerprofile.IdentityDocumentTypeNationalID {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid identity document type", nil)
-			return
-		}
-		update.SetIdentityDocumentType(providerprofile.IdentityDocumentType(payload.IdentityDocumentType))
-	}
-
-	if payload.IdentityDocument != "" {
-		if !u.IsValidFileURL(payload.IdentityDocument) {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid identity document URL", nil)
-			return
-		}
-		update.SetIdentityDocument(payload.IdentityDocument)
-	}
-
-	if payload.BusinessDocument != "" {
-		if !u.IsValidFileURL(payload.BusinessDocument) {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid business document URL", nil)
-			return
-		}
-		update.SetBusinessDocument(payload.BusinessDocument)
-	}
-
-	// Update tokens
+	// Validate all tokens first
 	for _, tokenPayload := range payload.Tokens {
 		// Check if token is supported
 		providerToken, err := storage.Client.Token.
@@ -358,7 +279,10 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			Only(ctx)
 		if err != nil {
 			if ent.IsNotFound(err) {
-				u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Token not supported - %s", tokenPayload.Symbol), nil)
+				validationErrors = append(validationErrors, types.ErrorData{
+					Field:   "Tokens",
+					Message: fmt.Sprintf("Token not supported - %s on %s", tokenPayload.Symbol, tokenPayload.Network),
+				})
 			} else {
 				logger.WithFields(logger.Fields{
 					"Error": fmt.Sprintf("%v", err),
@@ -370,38 +294,33 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 					"error", "Failed to update profile",
 					nil,
 				)
+				return
 			}
-			return
+			continue
 		}
 
 		// Ensure rate is within allowed deviation from the market rate
 		currency, err := storage.Client.FiatCurrency.Query().
 			Where(
 				fiatcurrency.IsEnabledEQ(true),
-				fiatcurrency.CodeEQ(tokenPayload.Currency),
+				fiatcurrency.CodeEQ(payload.Currency),
 			).
 			Only(ctx)
 		if err != nil {
 			if ent.IsNotFound(err) {
-				u.APIResponse(ctx, http.StatusBadRequest, "error", "Currency not supported", nil)
+				validationErrors = append(validationErrors, types.ErrorData{
+					Field:   "Currency",
+					Message: "Currency not supported",
+				})
 			} else {
 				logger.WithFields(logger.Fields{
 					"Error":    fmt.Sprintf("%v", err),
-					"Currency": tokenPayload.Currency,
+					"Currency": payload.Currency,
 				}).Errorf("Failed to fetch currency during update")
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
-			}
-			return
-		}
-
-		if tokenPayload.ConversionRateType == providerordertoken.ConversionRateTypeFloating {
-			rate := currency.MarketRate.Add(tokenPayload.FloatingConversionRate)
-
-			percentDeviation := u.AbsPercentageDeviation(currency.MarketRate, rate)
-			if percentDeviation.GreaterThan(orderConf.PercentDeviationFromMarketRate) {
-				u.APIResponse(ctx, http.StatusBadRequest, "error", "Rate is too far from market rate", nil)
 				return
 			}
+			continue
 		}
 
 		// Calculate rate from tokenPayload based on conversion type
@@ -412,30 +331,37 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			rate = currency.MarketRate.Add(tokenPayload.FloatingConversionRate)
 		}
 
-		// See if token already exists for provider
-		tx, err := storage.Client.Tx(ctx)
-		if err != nil {
-			tx.Rollback()
-			logger.Errorf("Failed to start transaction: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
-			return
+		// Validate rate deviation for floating rates
+		if tokenPayload.ConversionRateType == providerordertoken.ConversionRateTypeFloating {
+			percentDeviation := u.AbsPercentageDeviation(currency.MarketRate, rate)
+			if percentDeviation.GreaterThan(orderConf.PercentDeviationFromMarketRate) {
+				validationErrors = append(validationErrors, types.ErrorData{
+					Field:   "Tokens",
+					Message: fmt.Sprintf("Rate is too far from market rate for %s", tokenPayload.Symbol),
+				})
+				continue
+			}
 		}
 
-		// Handle slippage validation and default value
+		// Handle slippage validation
 		if tokenPayload.RateSlippage.IsZero() {
-			// Set default slippage to 0% if not provided
 			tokenPayload.RateSlippage = decimal.NewFromFloat(0)
 		} else if tokenPayload.RateSlippage.LessThan(decimal.NewFromFloat(0.1)) {
-			tx.Rollback()
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Rate slippage cannot be less than 0.1%", nil)
-			return
+			validationErrors = append(validationErrors, types.ErrorData{
+				Field:   "Tokens",
+				Message: fmt.Sprintf("Rate slippage cannot be less than 0.1%% for %s", tokenPayload.Symbol),
+			})
+			continue
 		} else if rate.Mul(tokenPayload.RateSlippage.Div(decimal.NewFromFloat(100))).GreaterThan(currency.MarketRate.Mul(decimal.NewFromFloat(0.05))) {
-			tx.Rollback()
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Rate slippage is too high", nil)
-			return
+			validationErrors = append(validationErrors, types.ErrorData{
+				Field:   "Tokens",
+				Message: fmt.Sprintf("Rate slippage is too high for %s", tokenPayload.Symbol),
+			})
+			continue
 		}
 
-		orderToken, err := tx.ProviderOrderToken.
+		// Check if token already exists for provider
+		existingToken, err := storage.Client.ProviderOrderToken.
 			Query().
 			Where(
 				providerordertoken.HasTokenWith(token.IDEQ(providerToken.ID)),
@@ -445,114 +371,250 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			).
 			WithCurrency().
 			Only(ctx)
-		if err != nil {
-			if ent.IsNotFound(err) {
-				// Token doesn't exist, create it
-				_, err = tx.ProviderOrderToken.
-					Create().
-					SetConversionRateType(tokenPayload.ConversionRateType).
-					SetFixedConversionRate(tokenPayload.FixedConversionRate).
-					SetFloatingConversionRate(tokenPayload.FloatingConversionRate).
-					SetMaxOrderAmount(tokenPayload.MaxOrderAmount).
-					SetMinOrderAmount(tokenPayload.MinOrderAmount).
-					SetAddress(tokenPayload.Address).
-					SetNetwork(tokenPayload.Network).
-					SetProviderID(provider.ID).
-					SetRateSlippage(tokenPayload.RateSlippage).
-					SetTokenID(providerToken.ID).
-					SetCurrencyID(currency.ID).
-					Save(ctx)
-				if err != nil {
-					tx.Rollback()
-					logger.WithFields(logger.Fields{
-						"Error":    fmt.Sprintf("%v", err),
-						"Token":    tokenPayload.Symbol,
-						"Currency": tokenPayload.Currency,
-					}).Errorf("Failed to create token during update")
-					u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
-					return
-				}
-			} else {
-				tx.Rollback()
-				logger.WithFields(logger.Fields{
-					"Error":    fmt.Sprintf("%v", err),
-					"Token":    tokenPayload.Symbol,
-					"Currency": tokenPayload.Currency,
-				}).Errorf("Failed to query token during update")
-				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
-				return
-			}
-		} else {
-			// TODO: Remove when dashboard allows rate slippage to be set
-			if tokenPayload.RateSlippage.IsZero() && orderToken.RateSlippage.GreaterThan(decimal.NewFromFloat(0)) {
-				tokenPayload.RateSlippage = orderToken.RateSlippage
-			}
 
-			// Token exists, update it
-			_, err := orderToken.Update().
-				SetAddress(tokenPayload.Address).
-				SetNetwork(tokenPayload.Network).
-				SetRateSlippage(tokenPayload.RateSlippage).
-				SetConversionRateType(tokenPayload.ConversionRateType).
-				SetFixedConversionRate(tokenPayload.FixedConversionRate).
-				SetFloatingConversionRate(tokenPayload.FloatingConversionRate).
-				SetMaxOrderAmount(tokenPayload.MaxOrderAmount).
-				SetMinOrderAmount(tokenPayload.MinOrderAmount).
-				Save(ctx)
-			if err != nil {
-				tx.Rollback()
-				logger.WithFields(logger.Fields{
-					"Error":    fmt.Sprintf("%v", err),
-					"Token":    tokenPayload.Symbol,
-					"Currency": tokenPayload.Currency,
-				}).Errorf("Failed to update token during update")
-				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
-				return
-			}
-		}
-
-		if err := tx.Commit(); err != nil {
-			tx.Rollback()
-			logger.Errorf("Failed to commit transaction: %v", err)
+		isUpdate := err == nil
+		if err != nil && !ent.IsNotFound(err) {
+			logger.WithFields(logger.Fields{
+				"Error":    fmt.Sprintf("%v", err),
+				"Token":    tokenPayload.Symbol,
+				"Currency": payload.Currency,
+			}).Errorf("Failed to query existing token during validation")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 			return
 		}
 
-		// Add provider to buckets
-		buckets, err := storage.Client.ProvisionBucket.
+		// If updating and changing network, ensure target network doesn't already exist
+		if isUpdate && existingToken.Network != tokenPayload.Network {
+			dup, derr := storage.Client.ProviderOrderToken.
+				Query().
+				Where(
+					providerordertoken.HasTokenWith(token.IDEQ(providerToken.ID)),
+					providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+					providerordertoken.HasCurrencyWith(fiatcurrency.IDEQ(currency.ID)),
+					providerordertoken.NetworkEQ(tokenPayload.Network),
+				).Exist(ctx)
+			if derr != nil {
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+				return
+			}
+			if dup {
+				validationErrors = append(validationErrors, types.ErrorData{
+					Field:   "Tokens",
+					Message: fmt.Sprintf("Token already configured on network %s for %s", tokenPayload.Network, tokenPayload.Symbol),
+				})
+				continue
+			}
+		}
+
+		// If updating, preserve existing rate slippage if not provided
+		if isUpdate && tokenPayload.RateSlippage.IsZero() && existingToken.RateSlippage.GreaterThan(decimal.NewFromFloat(0)) {
+			tokenPayload.RateSlippage = existingToken.RateSlippage
+		}
+
+		tokenOperations = append(tokenOperations, TokenOperation{
+			TokenPayload:  tokenPayload,
+			ProviderToken: providerToken,
+			Currency:      currency,
+			Rate:          rate,
+			IsUpdate:      isUpdate,
+			ExistingToken: existingToken,
+		})
+	}
+
+	// Return validation errors if any
+	if len(validationErrors) > 0 {
+		var mainMessage string
+		if len(validationErrors) == 1 {
+			mainMessage = validationErrors[0].Message
+		} else {
+			mainMessage = fmt.Sprintf("Validation failed: %d errors found", len(validationErrors))
+		}
+		u.APIResponse(ctx, http.StatusBadRequest, "error", mainMessage, validationErrors)
+		return
+	}
+
+	// PHASE 2: Execute all operations in a single transaction
+	tx, err := storage.Client.Tx(ctx)
+	if err != nil {
+		logger.Errorf("Failed to start transaction: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+		return
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	// Handle currency availability updates within the transaction
+	if availabilityOp != nil {
+		curr, err := tx.FiatCurrency.Query().
+			Where(fiatcurrency.CodeEQ(availabilityOp.currencyCode), fiatcurrency.IsEnabledEQ(true)).
+			Only(ctx)
+		if err != nil {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Currency not supported", nil)
+			return
+		}
+
+		pc, err := tx.ProviderCurrencies.Query().
+			Where(providercurrencies.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+				providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(availabilityOp.currencyCode))).
+			Only(ctx)
+		if ent.IsNotFound(err) {
+			_, err = tx.ProviderCurrencies.Create().
+				SetProvider(provider).
+				SetCurrency(curr).
+				SetAvailableBalance(decimal.Zero).
+				SetTotalBalance(decimal.Zero).
+				SetReservedBalance(decimal.Zero).
+				SetIsAvailable(availabilityOp.isAvailable).
+				Save(ctx)
+		} else if err == nil {
+			_, err = pc.Update().SetIsAvailable(availabilityOp.isAvailable).Save(ctx)
+		}
+		if err != nil {
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update availability", nil)
+			return
+		}
+	}
+
+	// Update provider profile within the same transaction
+	txUpdate := tx.ProviderProfile.Update().Where(providerprofile.IDEQ(provider.ID))
+
+	// Set basic profile fields within the transaction
+	if payload.TradingName != "" {
+		txUpdate.SetTradingName(payload.TradingName)
+	}
+
+	if payload.HostIdentifier != "" {
+		txUpdate.SetHostIdentifier(payload.HostIdentifier)
+	}
+
+	if payload.VisibilityMode != "" {
+		txUpdate.SetVisibilityMode(providerprofile.VisibilityMode(payload.VisibilityMode))
+	}
+
+	var allBuckets []*ent.ProvisionBucket
+
+	// Process all token operations
+	for _, op := range tokenOperations {
+
+		if op.IsUpdate {
+			// Update existing token using transaction-bound client
+			_, err := tx.ProviderOrderToken.
+				UpdateOneID(op.ExistingToken.ID).
+				SetAddress(op.TokenPayload.Address).
+				SetNetwork(op.TokenPayload.Network).
+				SetRateSlippage(op.TokenPayload.RateSlippage).
+				SetConversionRateType(op.TokenPayload.ConversionRateType).
+				SetFixedConversionRate(op.TokenPayload.FixedConversionRate).
+				SetFloatingConversionRate(op.TokenPayload.FloatingConversionRate).
+				SetMaxOrderAmount(op.TokenPayload.MaxOrderAmount).
+				SetMinOrderAmount(op.TokenPayload.MinOrderAmount).
+				Save(ctx)
+			if err != nil {
+				if rollbackErr := tx.Rollback(); rollbackErr != nil {
+					logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
+				}
+				logger.WithFields(logger.Fields{
+					"Error":    fmt.Sprintf("%v", err),
+					"Token":    op.TokenPayload.Symbol,
+					"Currency": payload.Currency,
+				}).Errorf("Failed to update token during update")
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+				return
+			}
+		} else {
+			// Create new token
+			_, err = tx.ProviderOrderToken.
+				Create().
+				SetConversionRateType(op.TokenPayload.ConversionRateType).
+				SetFixedConversionRate(op.TokenPayload.FixedConversionRate).
+				SetFloatingConversionRate(op.TokenPayload.FloatingConversionRate).
+				SetMaxOrderAmount(op.TokenPayload.MaxOrderAmount).
+				SetMinOrderAmount(op.TokenPayload.MinOrderAmount).
+				SetAddress(op.TokenPayload.Address).
+				SetNetwork(op.TokenPayload.Network).
+				SetProviderID(provider.ID).
+				SetRateSlippage(op.TokenPayload.RateSlippage).
+				SetTokenID(op.ProviderToken.ID).
+				SetCurrencyID(op.Currency.ID).
+				Save(ctx)
+			if err != nil {
+				if rollbackErr := tx.Rollback(); rollbackErr != nil {
+					logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
+				}
+				logger.WithFields(logger.Fields{
+					"Error":    fmt.Sprintf("%v", err),
+					"Token":    op.TokenPayload.Symbol,
+					"Currency": payload.Currency,
+				}).Errorf("Failed to create token during update")
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+				return
+			}
+		}
+
+		// Collect buckets for this token
+		convertedMin := op.TokenPayload.MinOrderAmount.Mul(op.Rate)
+		convertedMax := op.TokenPayload.MaxOrderAmount.Mul(op.Rate)
+
+		buckets, err := tx.ProvisionBucket.
 			Query().
 			Where(
-				provisionbucket.Or(
-					provisionbucket.MinAmountLTE(tokenPayload.MinOrderAmount.Mul(rate)),
-					provisionbucket.MinAmountLTE(tokenPayload.MaxOrderAmount.Mul(rate)),
-					provisionbucket.MaxAmountGTE(tokenPayload.MaxOrderAmount.Mul(rate)),
+				provisionbucket.And(
+					provisionbucket.MinAmountLTE(convertedMax), // providerMin ≤ bucketMax
+					provisionbucket.MaxAmountGTE(convertedMin), // providerMax ≥ bucketMin
 				),
 			).
 			All(ctx)
 		if err != nil {
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
+			}
 			logger.WithFields(logger.Fields{
 				"Error":      fmt.Sprintf("%v", err),
 				"ProviderID": provider.ID,
-				"MinAmount":  tokenPayload.MinOrderAmount,
-				"MaxAmount":  tokenPayload.MaxOrderAmount,
+				"MinAmount":  op.TokenPayload.MinOrderAmount,
+				"MaxAmount":  op.TokenPayload.MaxOrderAmount,
 			}).Errorf("Failed to assign provider to buckets")
-		} else {
-			update.ClearProvisionBuckets()
-			update.AddProvisionBuckets(buckets...)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+			return
+		}
+		allBuckets = append(allBuckets, buckets...)
+	}
+
+	// Deduplicate buckets to prevent duplicate many-to-many edges
+	seenBuckets := make(map[int]bool)
+	var dedupedBuckets []*ent.ProvisionBucket
+	for _, bucket := range allBuckets {
+		if !seenBuckets[bucket.ID] {
+			seenBuckets[bucket.ID] = true
+			dedupedBuckets = append(dedupedBuckets, bucket)
 		}
 	}
 
-	// Activate profile
-	if payload.BusinessDocument != "" && payload.IdentityDocument != "" {
-		update.SetIsActive(true)
+	// Update provider profile with deduplicated buckets
+	if len(dedupedBuckets) > 0 {
+		txUpdate.ClearProvisionBuckets()
+		txUpdate.AddProvisionBuckets(dedupedBuckets...)
 	}
 
-	_, err := update.Save(ctx)
+	// Save provider profile update within the transaction
+	_, err = txUpdate.Save(ctx)
 	if err != nil {
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
+		}
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
 			"ProviderID": provider.ID,
 		}).Errorf("Failed to commit update of provider profile")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+		return
+	}
+
+	// Commit all changes
+	if err := tx.Commit(); err != nil {
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
+		}
+		logger.Errorf("Failed to commit transaction: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 		return
 	}
@@ -606,7 +668,7 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 		return
 	}
 
-	tokensPayload := make([]types.SenderOrderTokenResponse, len(sender.Edges.OrderTokens))
+	tokensPayload := make([]types.SenderOrderTokenResponse, len(senderToken))
 	for i, token := range senderToken {
 		payload := types.SenderOrderTokenResponse{
 			Symbol:        token.Edges.Token.Symbol,
@@ -620,21 +682,26 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 	}
 
 	response := &types.SenderProfileResponse{
-		ID:              sender.ID,
-		FirstName:       user.FirstName,
-		LastName:        user.LastName,
-		Email:           user.Email,
-		WebhookURL:      sender.WebhookURL,
-		DomainWhitelist: sender.DomainWhitelist,
-		Tokens:          tokensPayload,
-		APIKey:          *apiKey,
-		IsActive:        sender.IsActive,
+		ID:                    sender.ID,
+		FirstName:             user.FirstName,
+		LastName:              user.LastName,
+		Email:                 user.Email,
+		WebhookURL:            sender.WebhookURL,
+		DomainWhitelist:       sender.DomainWhitelist,
+		Tokens:                tokensPayload,
+		APIKey:                *apiKey,
+		IsActive:              sender.IsActive,
+		KYBVerificationStatus: user.KybVerificationStatus,
 	}
 
 	linkedProvider, err := storage.Client.ProviderProfile.
 		Query().
 		Where(providerprofile.IDEQ(sender.ProviderID)).
-		WithCurrencies().
+		WithProviderCurrencies(
+			func(query *ent.ProviderCurrenciesQuery) {
+				query.WithCurrency()
+			},
+		).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -652,9 +719,9 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 	if linkedProvider != nil {
 		response.ProviderID = sender.ProviderID
 		// Extract currency codes from linked provider
-		currencyCodes := make([]string, len(linkedProvider.Edges.Currencies))
-		for i, currency := range linkedProvider.Edges.Currencies {
-			currencyCodes[i] = currency.Code
+		currencyCodes := make([]string, len(linkedProvider.Edges.ProviderCurrencies))
+		for i, pc := range linkedProvider.Edges.ProviderCurrencies {
+			currencyCodes[i] = pc.Edges.Currency.Code
 		}
 		response.ProviderCurrencies = currencyCodes
 	}
@@ -679,8 +746,10 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 		return
 	}
 
-	// Get currencies
-	currencies, err := provider.QueryCurrencies().All(ctx)
+	// Get currencies through ProviderCurrencies
+	providerCurrencies, err := provider.QueryProviderCurrencies().
+		WithCurrency().
+		All(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
@@ -691,9 +760,11 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 	}
 
 	// Provider profile should also return all the currencies associated with the provider
-	currencyCodes := make([]string, len(currencies))
-	for i, currency := range currencies {
-		currencyCodes[i] = currency.Code
+	currencyCodes := make([]string, len(providerCurrencies))
+	currencyAvailability := make(map[string]bool)
+	for i, pc := range providerCurrencies {
+		currencyCodes[i] = pc.Edges.Currency.Code
+		currencyAvailability[pc.Edges.Currency.Code] = pc.IsAvailable
 	}
 
 	// Get token settings, optionally filtering by currency query parameter
@@ -715,7 +786,6 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 	tokensPayload := make([]types.ProviderOrderTokenPayload, len(orderTokens))
 	for i, orderToken := range orderTokens {
 		payload := types.ProviderOrderTokenPayload{
-			Currency:               orderToken.Edges.Currency.Code,
 			Symbol:                 orderToken.Edges.Token.Symbol,
 			ConversionRateType:     orderToken.ConversionRateType,
 			FixedConversionRate:    orderToken.FixedConversionRate,
@@ -741,25 +811,18 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Profile retrieved successfully", &types.ProviderProfileResponse{
-		ID:                   provider.ID,
-		FirstName:            user.FirstName,
-		LastName:             user.LastName,
-		Email:                user.Email,
-		TradingName:          provider.TradingName,
-		Currencies:           currencyCodes,
-		HostIdentifier:       provider.HostIdentifier,
-		IsAvailable:          provider.IsAvailable,
-		Tokens:               tokensPayload,
-		APIKey:               *apiKey,
-		IsActive:             provider.IsActive,
-		Address:              provider.Address,
-		MobileNumber:         provider.MobileNumber,
-		DateOfBirth:          provider.DateOfBirth,
-		BusinessName:         provider.BusinessName,
-		VisibilityMode:       provider.VisibilityMode,
-		IdentityDocumentType: provider.IdentityDocumentType,
-		IdentityDocument:     provider.IdentityDocument,
-		BusinessDocument:     provider.BusinessDocument,
-		IsKybVerified:        provider.IsKybVerified,
+		ID:                    provider.ID,
+		FirstName:             user.FirstName,
+		LastName:              user.LastName,
+		Email:                 user.Email,
+		TradingName:           provider.TradingName,
+		Currencies:            currencyCodes,
+		HostIdentifier:        provider.HostIdentifier,
+		CurrencyAvailability:  currencyAvailability,
+		Tokens:                tokensPayload,
+		APIKey:                *apiKey,
+		IsActive:              provider.IsActive,
+		VisibilityMode:        provider.VisibilityMode,
+		KYBVerificationStatus: user.KybVerificationStatus,
 	})
 }
