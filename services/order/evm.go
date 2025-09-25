@@ -94,7 +94,10 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 
 		if rate != order.Rate {
 			// Update order rate and amount_in_usd
-			amountInUSD := utils.CalculatePaymentOrderAmountInUSD(order.Amount, rate)
+			amountInUSD, err := utils.CalculatePaymentOrderAmountInUSD(order.Amount, order.Edges.Token.Symbol, rate, institution)
+			if err != nil {
+				return fmt.Errorf("%s - CreateOrder.calculateAmountInUSD: %w", orderIDPrefix, err)
+			}
 
 			_, err = db.Client.PaymentOrder.
 				Update().

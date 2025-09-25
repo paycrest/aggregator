@@ -208,12 +208,13 @@ func AbsPercentageDeviation(trueValue, measuredValue decimal.Decimal) decimal.De
 	return deviation.Abs()
 }
 
-// CalculatePaymentOrderAmountInUSD calculates the amount in USD for a payment order
-func CalculatePaymentOrderAmountInUSD(amount, rate decimal.Decimal) decimal.Decimal {
-    if rate.Equal(decimal.NewFromInt(1)) {
-        return amount.Div(decimal.NewFromInt(1515))
-    }
-    return amount
+func CalculatePaymentOrderAmountInUSD(amount decimal.Decimal, tokenSymbol string, rate decimal.Decimal, institution *ent.Institution) (decimal.Decimal, error) {
+	liveRate, err := GetTokenRateFromQueue(tokenSymbol, amount, institution.Edges.FiatCurrency.Code, institution.Edges.FiatCurrency.MarketRate)
+	if err != nil {
+		liveRate = rate
+	}
+
+	return amount.Mul(liveRate), nil
 }
 
 // SendPaymentOrderWebhook notifies a sender when the status of a payment order changes

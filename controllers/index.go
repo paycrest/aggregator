@@ -353,7 +353,6 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 	var totalAmountInUSD decimal.Decimal
 
 	for _, order := range orders {
-		totalAmountInUSD = totalAmountInUSD.Add(order.AmountInUsd)
 		for _, transaction := range order.Edges.Transactions {
 			if u.ContainsString([]string{"order_settled", "order_created", "order_refunded"}, transaction.Status.String()) {
 				var status lockpaymentorder.Status
@@ -379,6 +378,7 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 
 		settlePercent = settlePercent.Add(order.OrderPercent)
 		totalAmount = totalAmount.Add(order.Amount)
+		totalAmountInUSD = totalAmountInUSD.Add(order.AmountInUsd)
 	}
 
 	// Sort receipts by latest timestamp

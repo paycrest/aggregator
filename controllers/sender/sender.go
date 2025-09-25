@@ -463,7 +463,16 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		return
 	}
 
-	amountInUSD := utils.CalculatePaymentOrderAmountInUSD(payload.Amount, payload.Rate)
+	amountInUSD, err := utils.CalculatePaymentOrderAmountInUSD(payload.Amount, token.Symbol, payload.Rate, institutionObj)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":  err.Error(),
+			"Token":  token.Symbol,
+			"Amount": payload.Amount,
+		}).Warnf("Failed to calculate amount in USD, using fallback rate")
+		// Fallback to simple multiplication
+		amountInUSD = payload.Amount.Mul(payload.Rate)
+	}
 
 	// Create payment order
 	paymentOrder, err := tx.PaymentOrder.
