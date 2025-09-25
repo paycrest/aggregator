@@ -41,6 +41,8 @@ type KYBProfile struct {
 	AmlPolicyURL string `json:"aml_policy_url,omitempty"`
 	// KycPolicyURL holds the value of the "kyc_policy_url" field.
 	KycPolicyURL *string `json:"kyc_policy_url,omitempty"`
+	// KybRejectionComment holds the value of the "kyb_rejection_comment" field.
+	KybRejectionComment *string `json:"kyb_rejection_comment,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the KYBProfileQuery when eager-loading is set.
 	Edges            KYBProfileEdges `json:"edges"`
@@ -84,7 +86,7 @@ func (*KYBProfile) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case kybprofile.FieldMobileNumber, kybprofile.FieldCompanyName, kybprofile.FieldRegisteredBusinessAddress, kybprofile.FieldCertificateOfIncorporationURL, kybprofile.FieldArticlesOfIncorporationURL, kybprofile.FieldBusinessLicenseURL, kybprofile.FieldProofOfBusinessAddressURL, kybprofile.FieldAmlPolicyURL, kybprofile.FieldKycPolicyURL:
+		case kybprofile.FieldMobileNumber, kybprofile.FieldCompanyName, kybprofile.FieldRegisteredBusinessAddress, kybprofile.FieldCertificateOfIncorporationURL, kybprofile.FieldArticlesOfIncorporationURL, kybprofile.FieldBusinessLicenseURL, kybprofile.FieldProofOfBusinessAddressURL, kybprofile.FieldAmlPolicyURL, kybprofile.FieldKycPolicyURL, kybprofile.FieldKybRejectionComment:
 			values[i] = new(sql.NullString)
 		case kybprofile.FieldCreatedAt, kybprofile.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -181,6 +183,13 @@ func (kp *KYBProfile) assignValues(columns []string, values []any) error {
 				kp.KycPolicyURL = new(string)
 				*kp.KycPolicyURL = value.String
 			}
+		case kybprofile.FieldKybRejectionComment:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field kyb_rejection_comment", values[i])
+			} else if value.Valid {
+				kp.KybRejectionComment = new(string)
+				*kp.KybRejectionComment = value.String
+			}
 		case kybprofile.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field user_kyb_profile", values[i])
@@ -268,6 +277,11 @@ func (kp *KYBProfile) String() string {
 	builder.WriteString(", ")
 	if v := kp.KycPolicyURL; v != nil {
 		builder.WriteString("kyc_policy_url=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := kp.KybRejectionComment; v != nil {
+		builder.WriteString("kyb_rejection_comment=")
 		builder.WriteString(*v)
 	}
 	builder.WriteByte(')')

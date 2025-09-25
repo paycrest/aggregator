@@ -137,6 +137,7 @@ var (
 		{Name: "proof_of_business_address_url", Type: field.TypeString},
 		{Name: "aml_policy_url", Type: field.TypeString, Nullable: true},
 		{Name: "kyc_policy_url", Type: field.TypeString, Nullable: true},
+		{Name: "kyb_rejection_comment", Type: field.TypeString, Nullable: true},
 		{Name: "user_kyb_profile", Type: field.TypeUUID, Unique: true, Nullable: true},
 	}
 	// KybProfilesTable holds the schema information for the "kyb_profiles" table.
@@ -147,7 +148,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "kyb_profiles_users_kyb_profile",
-				Columns:    []*schema.Column{KybProfilesColumns[12]},
+				Columns:    []*schema.Column{KybProfilesColumns[13]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Cascade,
 			},

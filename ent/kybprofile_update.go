@@ -181,6 +181,26 @@ func (kpu *KYBProfileUpdate) ClearKycPolicyURL() *KYBProfileUpdate {
 	return kpu
 }
 
+// SetKybRejectionComment sets the "kyb_rejection_comment" field.
+func (kpu *KYBProfileUpdate) SetKybRejectionComment(s string) *KYBProfileUpdate {
+	kpu.mutation.SetKybRejectionComment(s)
+	return kpu
+}
+
+// SetNillableKybRejectionComment sets the "kyb_rejection_comment" field if the given value is not nil.
+func (kpu *KYBProfileUpdate) SetNillableKybRejectionComment(s *string) *KYBProfileUpdate {
+	if s != nil {
+		kpu.SetKybRejectionComment(*s)
+	}
+	return kpu
+}
+
+// ClearKybRejectionComment clears the value of the "kyb_rejection_comment" field.
+func (kpu *KYBProfileUpdate) ClearKybRejectionComment() *KYBProfileUpdate {
+	kpu.mutation.ClearKybRejectionComment()
+	return kpu
+}
+
 // AddBeneficialOwnerIDs adds the "beneficial_owners" edge to the BeneficialOwner entity by IDs.
 func (kpu *KYBProfileUpdate) AddBeneficialOwnerIDs(ids ...uuid.UUID) *KYBProfileUpdate {
 	kpu.mutation.AddBeneficialOwnerIDs(ids...)
@@ -330,6 +350,12 @@ func (kpu *KYBProfileUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if kpu.mutation.KycPolicyURLCleared() {
 		_spec.ClearField(kybprofile.FieldKycPolicyURL, field.TypeString)
+	}
+	if value, ok := kpu.mutation.KybRejectionComment(); ok {
+		_spec.SetField(kybprofile.FieldKybRejectionComment, field.TypeString, value)
+	}
+	if kpu.mutation.KybRejectionCommentCleared() {
+		_spec.ClearField(kybprofile.FieldKybRejectionComment, field.TypeString)
 	}
 	if kpu.mutation.BeneficialOwnersCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -575,6 +601,26 @@ func (kpuo *KYBProfileUpdateOne) ClearKycPolicyURL() *KYBProfileUpdateOne {
 	return kpuo
 }
 
+// SetKybRejectionComment sets the "kyb_rejection_comment" field.
+func (kpuo *KYBProfileUpdateOne) SetKybRejectionComment(s string) *KYBProfileUpdateOne {
+	kpuo.mutation.SetKybRejectionComment(s)
+	return kpuo
+}
+
+// SetNillableKybRejectionComment sets the "kyb_rejection_comment" field if the given value is not nil.
+func (kpuo *KYBProfileUpdateOne) SetNillableKybRejectionComment(s *string) *KYBProfileUpdateOne {
+	if s != nil {
+		kpuo.SetKybRejectionComment(*s)
+	}
+	return kpuo
+}
+
+// ClearKybRejectionComment clears the value of the "kyb_rejection_comment" field.
+func (kpuo *KYBProfileUpdateOne) ClearKybRejectionComment() *KYBProfileUpdateOne {
+	kpuo.mutation.ClearKybRejectionComment()
+	return kpuo
+}
+
 // AddBeneficialOwnerIDs adds the "beneficial_owners" edge to the BeneficialOwner entity by IDs.
 func (kpuo *KYBProfileUpdateOne) AddBeneficialOwnerIDs(ids ...uuid.UUID) *KYBProfileUpdateOne {
 	kpuo.mutation.AddBeneficialOwnerIDs(ids...)
@@ -754,6 +800,12 @@ func (kpuo *KYBProfileUpdateOne) sqlSave(ctx context.Context) (_node *KYBProfile
 	}
 	if kpuo.mutation.KycPolicyURLCleared() {
 		_spec.ClearField(kybprofile.FieldKycPolicyURL, field.TypeString)
+	}
+	if value, ok := kpuo.mutation.KybRejectionComment(); ok {
+		_spec.SetField(kybprofile.FieldKybRejectionComment, field.TypeString, value)
+	}
+	if kpuo.mutation.KybRejectionCommentCleared() {
+		_spec.ClearField(kybprofile.FieldKybRejectionComment, field.TypeString)
 	}
 	if kpuo.mutation.BeneficialOwnersCleared() {
 		edge := &sqlgraph.EdgeSpec{
