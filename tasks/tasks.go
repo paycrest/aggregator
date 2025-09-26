@@ -1748,6 +1748,341 @@ func updateProviderBalance(providerID, currency string, balance *types.ProviderB
 	return nil
 }
 
+// NotifyStuckLockOrders sends email notifications for stuck lock payment orders
+func NotifyStuckLockOrders() error {
+	ctx := context.Background()
+
+	// Query for orders with status "fulfilled" and pending validation for more than 5 minutes
+	lockOrders, err := storage.Client.LockPaymentOrder.
+		Query().
+		Where(
+			lockpaymentorder.StatusEQ(lockpaymentorder.StatusFulfilled),
+			lockpaymentorder.HasFulfillmentsWith(
+				lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusPending),
+			),
+			lockpaymentorder.UpdatedAtLT(time.Now().Add(-5*time.Minute)),
+		).
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
+		WithProvider(func(pq *ent.ProviderProfileQuery) {
+			pq.WithUser()
+		}).
+		WithFulfillments().
+		WithProvisionBucket(func(pb *ent.ProvisionBucketQuery) {
+			pb.WithCurrency()
+		}).
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("NotifyStuckLockOrders: %w", err)
+	}
+
+	if len(lockOrders) == 0 {
+		return nil
+	}
+
+	logger.WithFields(logger.Fields{
+		"OrderCount": len(lockOrders),
+	}).Infof("Found stuck lock orders requiring notification")
+
+	// Group orders by provider to send consolidated emails
+	providerOrders := make(map[string][]*ent.LockPaymentOrder)
+	skippedOrders := 0
+
+	var filteredLockOrders []*ent.LockPaymentOrder
+	for _, order := range lockOrders {
+		// Determine which notification interval applies
+		timeStuck := time.Since(order.UpdatedAt)
+		var templateType string
+		if timeStuck >= 30*time.Minute {
+			templateType = "escalation"
+		} else if timeStuck >= 10*time.Minute {
+			templateType = "follow_up"
+		} else {
+			templateType = "initial"
+		}
+
+		ok, err := shouldSendNotification(order, templateType)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":        fmt.Sprintf("%v", err),
+				"OrderID":      order.ID.String(),
+				"TemplateType": templateType,
+			}).Errorf("NotifyStuckLockOrders.shouldSendNotification")
+			skippedOrders++
+			continue
+		}
+		if !ok {
+			skippedOrders++
+			continue
+		}
+		filteredLockOrders = append(filteredLockOrders, order)
+	}
+	lockOrders = filteredLockOrders
+	for _, order := range lockOrders {
+		if order.Edges.Provider != nil && order.Edges.Provider.Edges.User != nil && order.Edges.Provider.Edges.User.Email != "" {
+			providerID := order.Edges.Provider.ID
+			providerOrders[providerID] = append(providerOrders[providerID], order)
+		} else {
+			skippedOrders++
+			logger.WithFields(logger.Fields{
+				"OrderID": order.ID.String(),
+				"ProviderID": func() string {
+					if order.Edges.Provider != nil {
+						return order.Edges.Provider.ID
+					}
+					return "nil"
+				}(),
+				"HasUser":  order.Edges.Provider != nil && order.Edges.Provider.Edges.User != nil,
+				"HasEmail": order.Edges.Provider != nil && order.Edges.Provider.Edges.User != nil && order.Edges.Provider.Edges.User.Email != "",
+			}).Warnf("Skipping order due to missing provider or email")
+		}
+	}
+
+	if skippedOrders > 0 {
+		logger.WithFields(logger.Fields{
+			"SkippedOrders": skippedOrders,
+		}).Warnf("Skipped orders due to missing provider or email information")
+	}
+
+	// Send notifications to each provider
+	emailService := email.NewEmailServiceWithProviders()
+	serverConf := config.ServerConfig()
+	slackService := services.NewSlackService(serverConf.SlackWebhookURL)
+
+	for _, orders := range providerOrders {
+		if len(orders) == 0 {
+			continue
+		}
+
+		provider := orders[0].Edges.Provider
+		user := provider.Edges.User
+
+		// Separate orders by template type based on individual time stuck
+		initialOrders := []*ent.LockPaymentOrder{}
+		followUpOrders := []*ent.LockPaymentOrder{}
+		escalationOrders := []*ent.LockPaymentOrder{}
+
+		for _, order := range orders {
+			timeStuck := time.Since(order.UpdatedAt)
+			if timeStuck >= 30*time.Minute {
+				escalationOrders = append(escalationOrders, order)
+			} else if timeStuck >= 10*time.Minute {
+				followUpOrders = append(followUpOrders, order)
+			} else {
+				initialOrders = append(initialOrders, order)
+			}
+		}
+
+		// Send separate notifications for each template type
+		if len(initialOrders) > 0 {
+			if err := sendNotificationForOrders(ctx, initialOrders, "initial", provider, user, emailService, slackService); err != nil {
+				return fmt.Errorf("failed to send initial notifications for provider %s: %w", provider.ID, err)
+			}
+		}
+		if len(followUpOrders) > 0 {
+			if err := sendNotificationForOrders(ctx, followUpOrders, "follow_up", provider, user, emailService, slackService); err != nil {
+				return fmt.Errorf("failed to send follow-up notifications for provider %s: %w", provider.ID, err)
+			}
+		}
+		if len(escalationOrders) > 0 {
+			if err := sendNotificationForOrders(ctx, escalationOrders, "escalation", provider, user, emailService, slackService); err != nil {
+				return fmt.Errorf("failed to send escalation notifications for provider %s: %w", provider.ID, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// sendNotificationForOrders sends notifications for a specific set of orders with a specific template type
+func sendNotificationForOrders(ctx context.Context, orders []*ent.LockPaymentOrder, templateType string, provider *ent.ProviderProfile, user *ent.User, emailService email.EmailServiceInterface, slackService *services.SlackService) error {
+	// Filter orders that have not yet received this template recently
+	filtered := make([]*ent.LockPaymentOrder, 0, len(orders))
+	for _, o := range orders {
+		ok, err := shouldSendNotification(o, templateType)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":        fmt.Sprintf("%v", err),
+				"ProviderID":   provider.ID,
+				"OrderID":      o.ID.String(),
+				"TemplateType": templateType,
+			}).Errorf("sendNotificationForOrders.checkNotificationHistory")
+			return fmt.Errorf("failed to check notification history for order %s: %w", o.ID.String(), err)
+		}
+		if ok {
+			filtered = append(filtered, o)
+		}
+	}
+	if len(filtered) == 0 {
+		return nil
+	}
+
+	// Prepare email data
+	emailData := prepareStuckOrderEmailData(filtered)
+
+	// Send email notification
+	emailResp, emailErr := emailService.SendStuckOrderNotificationEmail(ctx, user.Email, user.FirstName, provider.TradingName, emailData, len(filtered), templateType)
+	if emailErr != nil {
+		logger.WithFields(logger.Fields{
+			"Error":        fmt.Sprintf("%v", emailErr),
+			"ProviderID":   provider.ID,
+			"Email":        user.Email,
+			"TemplateType": templateType,
+		}).Errorf("sendNotificationForOrders.sendEmail")
+		return fmt.Errorf("failed to send email notification for provider %s: %w", provider.ID, emailErr)
+	}
+
+	logger.WithFields(logger.Fields{
+		"ProviderID":   provider.ID,
+		"Email":        user.Email,
+		"TemplateType": templateType,
+		"Response":     fmt.Sprintf("%v", emailResp),
+	}).Infof("Sent stuck order email")
+
+	// Send Slack notification for follow-up/escalation regardless of email outcome
+	var slackErr error
+	if templateType == "escalation" || templateType == "follow_up" {
+		slackErr = slackService.SendStuckOrderNotification(provider.TradingName, user.Email, emailData, templateType)
+		if slackErr != nil {
+			logger.WithFields(logger.Fields{
+				"Error":        fmt.Sprintf("%v", slackErr),
+				"ProviderID":   provider.ID,
+				"TemplateType": templateType,
+			}).Errorf("sendNotificationForOrders.sendSlackNotification")
+		} else {
+			logger.WithFields(logger.Fields{
+				"ProviderID":   provider.ID,
+				"TemplateType": templateType,
+			}).Infof("Sent stuck order Slack notification")
+		}
+	}
+
+	// Record notification only if at least one channel succeeded
+	if slackErr == nil {
+		if err := recordNotificationSent(ctx, filtered, templateType); err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":        fmt.Sprintf("%v", err),
+				"ProviderID":   provider.ID,
+				"TemplateType": templateType,
+			}).Errorf("sendNotificationForOrders.recordNotification")
+			return fmt.Errorf("failed to record notification sent for provider %s: %w", provider.ID, err)
+		}
+	}
+	return nil
+}
+
+// shouldSendNotification checks if we should send a notification of a given template for one order
+func shouldSendNotification(order *ent.LockPaymentOrder, templateType string) (bool, error) {
+	if order.Metadata == nil {
+		return true, nil
+	}
+	notifications, ok := order.Metadata["notifications"].([]interface{})
+	if !ok {
+		return true, nil
+	}
+	// Avoid duplicates of the same template per order
+	for _, n := range notifications {
+		m, ok := n.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if t, ok := m["type"].(string); ok && t == templateType {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+// prepareStuckOrderEmailData prepares the email data for stuck orders
+func prepareStuckOrderEmailData(orders []*ent.LockPaymentOrder) []map[string]interface{} {
+	var emailData []map[string]interface{}
+
+	for _, order := range orders {
+		// Calculate time stuck
+		timeStuck := time.Since(order.UpdatedAt)
+
+		// Get the pending fulfillment
+		var txID string
+		for _, fulfillment := range order.Edges.Fulfillments {
+			if fulfillment.ValidationStatus == lockorderfulfillment.ValidationStatusPending {
+				txID = fulfillment.TxID
+				break
+			}
+		}
+
+		// Calculate amount (order amount x rate)
+		amount := order.Amount.Mul(order.Rate)
+
+		// Generate provider dashboard URL (assuming standard pattern)
+		dashboardURL := fmt.Sprintf("%s/dashboard/orders/%s", serverConf.ServerURL, order.ID.String())
+
+		orderData := map[string]interface{}{
+			"order_id":      order.ID.String(),
+			"tx_id":         txID,
+			"amount":        amount.String(),
+			"currency":      order.Edges.ProvisionBucket.Edges.Currency.Code,
+			"time_stuck":    formatDuration(timeStuck),
+			"institution":   order.Institution,
+			"account_name":  order.AccountName,
+			"dashboard_url": dashboardURL,
+			"created_at":    order.CreatedAt.Format(time.RFC3339),
+			"updated_at":    order.UpdatedAt.Format(time.RFC3339),
+		}
+
+		emailData = append(emailData, orderData)
+	}
+
+	return emailData
+}
+
+// formatDuration formats a duration into a human-readable string
+func formatDuration(d time.Duration) string {
+	if d < time.Minute {
+		return fmt.Sprintf("%.0f seconds", d.Seconds())
+	} else if d < time.Hour {
+		return fmt.Sprintf("%.0f minutes", d.Minutes())
+	} else {
+		hours := int(d.Hours())
+		minutes := int(d.Minutes()) % 60
+		return fmt.Sprintf("%d hours %d minutes", hours, minutes)
+	}
+}
+
+// recordNotificationSent records that a notification was sent for the given orders
+func recordNotificationSent(ctx context.Context, orders []*ent.LockPaymentOrder, templateType string) error {
+
+	for _, order := range orders {
+		metadata := order.Metadata
+		if metadata == nil {
+			metadata = make(map[string]interface{})
+		}
+
+		// Add notification tracking
+		notifications, ok := metadata["notifications"].([]interface{})
+		if !ok {
+			notifications = []interface{}{}
+		}
+
+		notification := map[string]interface{}{
+			"type":    templateType,
+			"sent_at": time.Now().Format(time.RFC3339),
+		}
+
+		notifications = append(notifications, notification)
+		metadata["notifications"] = notifications
+
+		_, err := order.Update().
+			SetMetadata(metadata).
+			Save(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to update order metadata: %w", err)
+		}
+	}
+
+	return nil
+}
+
 // StartCronJobs starts cron jobs
 func StartCronJobs() {
 	// Use the system's local timezone instead of hardcoded UTC to prevent timezone conflicts
@@ -1824,6 +2159,12 @@ func StartCronJobs() {
 	_, err = scheduler.Every(4).Seconds().Do(TaskIndexBlockchainEvents)
 	if err != nil {
 		logger.Errorf("StartCronJobs for IndexBlockchainEvents: %v", err)
+	}
+
+	// Notify stuck lock orders every 2 minutes
+	_, err = scheduler.Every(2).Minutes().Do(NotifyStuckLockOrders)
+	if err != nil {
+		logger.Errorf("StartCronJobs for NotifyStuckLockOrders: %v", err)
 	}
 
 	// Start scheduler
