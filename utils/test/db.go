@@ -195,6 +195,7 @@ func CreateTestLockPaymentOrder(overrides map[string]interface{}) (*ent.LockPaym
 	payload := map[string]interface{}{
 		"gateway_id":           "order-123",
 		"amount":               100.50,
+		"amount_in_usd":        100.50,
 		"protocol_fee":         5.0,
 		"rate":                 750.0,
 		"status":               "pending",
@@ -237,6 +238,7 @@ func CreateTestLockPaymentOrder(overrides map[string]interface{}) (*ent.LockPaym
 		Create().
 		SetGatewayID(payload["gateway_id"].(string)).
 		SetAmount(decimal.NewFromFloat(payload["amount"].(float64))).
+		SetAmountInUsd(decimal.NewFromFloat(payload["amount_in_usd"].(float64))).
 		SetProtocolFee(decimal.NewFromFloat(payload["protocol_fee"].(float64))).
 		SetRate(decimal.NewFromFloat(payload["rate"].(float64))).
 		SetStatus(lockpaymentorder.Status(payload["status"].(string))).
@@ -269,6 +271,7 @@ func CreateTestPaymentOrder(client types.RPCClient, token *ent.Token, overrides 
 	// Default payload
 	payload := map[string]interface{}{
 		"amount":             100.50,
+		"amount_in_usd":      100.50,
 		"rate":               750.0,
 		"status":             "pending",
 		"fee_percent":        0.0,
@@ -312,6 +315,7 @@ func CreateTestPaymentOrder(client types.RPCClient, token *ent.Token, overrides 
 		Create().
 		SetSenderProfile(overrides["sender"].(*ent.SenderProfile)).
 		SetAmount(decimal.NewFromFloat(payload["amount"].(float64))).
+		SetAmountInUsd(decimal.NewFromFloat(payload["amount_in_usd"].(float64))).
 		SetAmountPaid(decimal.NewFromInt(0)).
 		SetAmountReturned(decimal.NewFromInt(0)).
 		SetPercentSettled(decimal.NewFromInt(0)).
