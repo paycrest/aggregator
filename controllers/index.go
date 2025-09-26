@@ -1431,10 +1431,19 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				return
 			}
 
-			// Update User KYB status
+			// Update User KYB status using the KYB profile's user ID
+			kyb, qerr := storage.Client.KYBProfile.
+				Query().
+				Where(kybprofile.IDEQ(kybProfileUUID)).
+				WithUser().
+				Only(ctx)
+			if qerr != nil || kyb.Edges.User == nil {
+				logger.Errorf("Failed to resolve user for KYB %s: %v", kybProfileID, qerr)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user KYB status"})
+				return
+			}
 			_, err = storage.Client.User.
-				Update().
-				Where(user.EmailEQ(email)).
+				UpdateOneID(kyb.Edges.User.ID).
 				SetKybVerificationStatus(user.KybVerificationStatusApproved).
 				Save(ctx)
 			if err != nil {
