@@ -227,10 +227,10 @@ func CalculatePaymentOrderAmountInUSD(amount decimal.Decimal, token *ent.Token, 
 	}
 
 	// Only multiply when the token matches the institution's fiat currency
-	if fiatCurrency != nil && token.BaseCurrency == fiatCurrency.Code {
-		return amount.Mul(fiatCurrency.MarketRate)
+	if fiatCurrency != nil && token.BaseCurrency == fiatCurrency.Code && !fiatCurrency.MarketRate.IsZero() {
+		return amount.Div(fiatCurrency.MarketRate)
 	}
-
+	
 	return amount
 }
 
