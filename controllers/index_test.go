@@ -491,18 +491,35 @@ func TestIndex(t *testing.T) {
 		})
 
 		t.Run("KYB resubmission after rejection", func(t *testing.T) {
-			// First, create a KYB profile for this test
-			kybProfile, err := db.Client.KYBProfile.
-				Create().
-				SetMobileNumber("+1234567890").
-				SetCompanyName("Test Company Ltd").
-				SetRegisteredBusinessAddress("123 Business St, Test City, TC 12345").
-				SetCertificateOfIncorporationURL("https://example.com/cert.pdf").
-				SetArticlesOfIncorporationURL("https://example.com/articles.pdf").
-				SetProofOfBusinessAddressURL("https://example.com/business-address.pdf").
-				SetUserID(testUser.ID).
-				Save(context.Background())
-			assert.NoError(t, err)
+			// First, check if a KYB profile already exists for this test user
+			existingKYBProfile, err := db.Client.KYBProfile.
+				Query().
+				Where(kybprofile.HasUserWith(user.IDEQ(testUser.ID))).
+				Only(context.Background())
+
+			var kybProfile *ent.KYBProfile
+			if err != nil {
+				if ent.IsNotFound(err) {
+					// No existing profile found, create a new one
+					kybProfile, err = db.Client.KYBProfile.
+						Create().
+						SetMobileNumber("+1234567890").
+						SetCompanyName("Test Company Ltd").
+						SetRegisteredBusinessAddress("123 Business St, Test City, TC 12345").
+						SetCertificateOfIncorporationURL("https://example.com/cert.pdf").
+						SetArticlesOfIncorporationURL("https://example.com/articles.pdf").
+						SetProofOfBusinessAddressURL("https://example.com/business-address.pdf").
+						SetUserID(testUser.ID).
+						Save(context.Background())
+					assert.NoError(t, err)
+				} else {
+					// Unexpected error during query
+					assert.NoError(t, err)
+				}
+			} else {
+				// Existing profile found, reuse it
+				kybProfile = existingKYBProfile
+			}
 
 			// Simulate a rejected KYB by updating the user's status and adding a rejection comment
 			_, err = db.Client.User.

@@ -1611,8 +1611,8 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		kybSubmission, err = kybBuilder.Save(ctx)
 	}
 	if err != nil {
-		if err := tx.Rollback(); err != nil {
-			logger.Errorf("Failed to rollback transaction: %v", err)
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
 		}
 		logger.WithFields(logger.Fields{
 			"Error":  fmt.Sprintf("%v", err),
@@ -1630,8 +1630,8 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 			Where(beneficialowner.HasKybProfileWith(kybprofile.IDEQ(kybSubmission.ID))).
 			Exec(ctx)
 		if err != nil {
-			if err := tx.Rollback(); err != nil {
-				logger.Errorf("Failed to rollback transaction: %v", err)
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
 			}
 			logger.WithFields(logger.Fields{
 				"Error":  fmt.Sprintf("%v", err),
@@ -1656,8 +1656,8 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 			SetKybProfileID(kybSubmission.ID).
 			Save(ctx)
 		if err != nil {
-			if err := tx.Rollback(); err != nil {
-				logger.Errorf("Failed to rollback transaction: %v", err)
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
 			}
 			logger.WithFields(logger.Fields{
 				"Error":  fmt.Sprintf("%v", err),
@@ -1675,8 +1675,8 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		SetKybVerificationStatus(user.KybVerificationStatusPending).
 		Save(ctx)
 	if err != nil {
-		if err := tx.Rollback(); err != nil {
-			logger.Errorf("Failed to rollback transaction: %v", err)
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
 		}
 		logger.WithFields(logger.Fields{
 			"Error":  fmt.Sprintf("%v", err),
