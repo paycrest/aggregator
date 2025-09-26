@@ -201,25 +201,13 @@ func CreateLockPaymentOrder(
 
 	// Create lock payment order fields
 	lockPaymentOrder := types.LockPaymentOrderFields{
-		Token:       token,
-		Network:     network,
-		GatewayID:   event.OrderId,
-		Amount:      event.Amount,
-		Rate:        event.Rate,
-		ProtocolFee: event.ProtocolFee,
-		AmountInUSD: func() decimal.Decimal {
-			amountInUSD, err := utils.CalculatePaymentOrderAmountInUSD(event.Amount, token.Symbol, event.Rate, institution)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":  err.Error(),
-					"Token":  token.Symbol,
-					"Amount": event.Amount,
-				}).Warnf("Failed to calculate amount in USD, using fallback rate")
-				// Fallback to simple multiplication
-				return event.Amount.Mul(event.Rate)
-			}
-			return amountInUSD
-		}(),
+		Token:             token,
+		Network:           network,
+		GatewayID:         event.OrderId,
+		Amount:            event.Amount,
+		Rate:              event.Rate,
+		ProtocolFee:       event.ProtocolFee,
+		AmountInUSD:       utils.CalculatePaymentOrderAmountInUSD(event.Amount, token, institution),
 		BlockNumber:       int64(event.BlockNumber),
 		TxHash:            event.TxHash,
 		Institution:       recipient.Institution,
@@ -1122,17 +1110,14 @@ func createBasicLockPaymentOrderAndCancel(
 		Rate:        event.Rate,
 		ProtocolFee: adjustedProtocolFee,
 		AmountInUSD: func() decimal.Decimal {
-			if recipient != nil {
-				institution, err := utils.GetInstitutionByCode(ctx, recipient.Institution, true)
-				if err == nil {
-					amountInUSD, err := utils.CalculatePaymentOrderAmountInUSD(adjustedAmount, token.Symbol, event.Rate, institution)
-					if err == nil {
-						return amountInUSD
-					}
-				}
+			if recipient == nil {
+				return decimal.Zero
 			}
-			// Fallback to simple multiplication
-			return adjustedAmount.Mul(event.Rate)
+			institution, err := utils.GetInstitutionByCode(ctx, recipient.Institution, true)
+			if err != nil {
+				return decimal.Zero
+			}
+			return utils.CalculatePaymentOrderAmountInUSD(adjustedAmount, token, institution)
 		}(),
 		BlockNumber: int64(event.BlockNumber),
 		TxHash:      event.TxHash,

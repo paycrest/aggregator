@@ -21,7 +21,6 @@ import (
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
-	"github.com/paycrest/aggregator/utils"
 
 	svc "github.com/paycrest/aggregator/services"
 	orderSvc "github.com/paycrest/aggregator/services/order"
@@ -463,18 +462,8 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		return
 	}
 
-	amountInUSD, err := utils.CalculatePaymentOrderAmountInUSD(payload.Amount, token.Symbol, payload.Rate, institutionObj)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":  err.Error(),
-			"Token":  token.Symbol,
-			"Amount": payload.Amount,
-		}).Warnf("Failed to calculate amount in USD, using fallback rate")
-		// Fallback to simple multiplication
-		amountInUSD = payload.Amount.Mul(payload.Rate)
-	}
-
 	// Create payment order
+	amountInUSD := u.CalculatePaymentOrderAmountInUSD(payload.Amount, token, institutionObj)
 	paymentOrder, err := tx.PaymentOrder.
 		Create().
 		SetSenderProfile(sender).

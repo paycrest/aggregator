@@ -208,13 +208,20 @@ func AbsPercentageDeviation(trueValue, measuredValue decimal.Decimal) decimal.De
 	return deviation.Abs()
 }
 
-func CalculatePaymentOrderAmountInUSD(amount decimal.Decimal, tokenSymbol string, rate decimal.Decimal, institution *ent.Institution) (decimal.Decimal, error) {
-	liveRate, err := GetTokenRateFromQueue(tokenSymbol, amount, institution.Edges.FiatCurrency.Code, institution.Edges.FiatCurrency.MarketRate)
-	if err != nil {
-		liveRate = rate
+// CalculatePaymentOrderAmountInUSD calculates the amount in USD for a payment order
+func CalculatePaymentOrderAmountInUSD(amount decimal.Decimal, token *ent.Token, institution *ent.Institution) decimal.Decimal {
+	if token.BaseCurrency == institution.Edges.FiatCurrency.Code {
+		if institution.Edges.FiatCurrency == nil {
+			institutionCurrency, err := storage.Client.Institution.QueryFiatCurrency(institution).Only(context.Background())
+			if err != nil {
+				return amount
+			}
+			institution.Edges.FiatCurrency = institutionCurrency
+		}
+		return amount.Mul(institution.Edges.FiatCurrency.MarketRate)
 	}
 
-	return amount.Mul(liveRate), nil
+	return amount
 }
 
 // SendPaymentOrderWebhook notifies a sender when the status of a payment order changes
