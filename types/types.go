@@ -342,6 +342,7 @@ type LockPaymentOrderFields struct {
 	Amount            decimal.Decimal
 	Rate              decimal.Decimal
 	ProtocolFee       decimal.Decimal
+	AmountInUSD       decimal.Decimal
 	BlockNumber       int64
 	TxHash            string
 	Institution       string
@@ -372,6 +373,7 @@ type LockPaymentOrderResponse struct {
 	Token               string                  `json:"token"`
 	GatewayID           string                  `json:"gatewayId"`
 	Amount              decimal.Decimal         `json:"amount"`
+	AmountInUSD         decimal.Decimal         `json:"amountInUSD"`
 	Rate                decimal.Decimal         `json:"rate"`
 	BlockNumber         int64                   `json:"blockNumber"`
 	TxHash              string                  `json:"txHash"`
@@ -404,6 +406,7 @@ type LockPaymentOrderSplitOrder struct {
 type LockPaymentOrderStatusResponse struct {
 	OrderID       string                       `json:"orderId"`
 	Amount        decimal.Decimal              `json:"amount"`
+	AmountInUSD   decimal.Decimal              `json:"amountInUSD"`
 	Token         string                       `json:"token"`
 	Network       string                       `json:"network"`
 	SettlePercent decimal.Decimal              `json:"settlePercent"`
@@ -456,6 +459,7 @@ type ReceiveAddressResponse struct {
 type PaymentOrderResponse struct {
 	ID             uuid.UUID             `json:"id"`
 	Amount         decimal.Decimal       `json:"amount"`
+	AmountInUSD    decimal.Decimal       `json:"amountInUSD"`
 	AmountPaid     decimal.Decimal       `json:"amountPaid"`
 	AmountReturned decimal.Decimal       `json:"amountReturned"`
 	Token          string                `json:"token"`
@@ -481,6 +485,7 @@ type PaymentOrderResponse struct {
 type PaymentOrderWebhookData struct {
 	ID             uuid.UUID             `json:"id"`
 	Amount         decimal.Decimal       `json:"amount"`
+	AmountInUSD    decimal.Decimal       `json:"amountInUSD"`
 	AmountPaid     decimal.Decimal       `json:"amountPaid"`
 	AmountReturned decimal.Decimal       `json:"amountReturned"`
 	PercentSettled decimal.Decimal       `json:"percentSettled"`

@@ -6944,6 +6944,8 @@ type LockPaymentOrderMutation struct {
 	cancellation_reasons       *[]string
 	appendcancellation_reasons []string
 	message_hash               *string
+	amount_in_usd              *decimal.Decimal
+	addamount_in_usd           *decimal.Decimal
 	clearedFields              map[string]struct{}
 	token                      *int
 	clearedtoken               bool
@@ -7950,6 +7952,62 @@ func (m *LockPaymentOrderMutation) ResetMessageHash() {
 	delete(m.clearedFields, lockpaymentorder.FieldMessageHash)
 }
 
+// SetAmountInUsd sets the "amount_in_usd" field.
+func (m *LockPaymentOrderMutation) SetAmountInUsd(d decimal.Decimal) {
+	m.amount_in_usd = &d
+	m.addamount_in_usd = nil
+}
+
+// AmountInUsd returns the value of the "amount_in_usd" field in the mutation.
+func (m *LockPaymentOrderMutation) AmountInUsd() (r decimal.Decimal, exists bool) {
+	v := m.amount_in_usd
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAmountInUsd returns the old "amount_in_usd" field's value of the LockPaymentOrder entity.
+// If the LockPaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LockPaymentOrderMutation) OldAmountInUsd(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAmountInUsd is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAmountInUsd requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAmountInUsd: %w", err)
+	}
+	return oldValue.AmountInUsd, nil
+}
+
+// AddAmountInUsd adds d to the "amount_in_usd" field.
+func (m *LockPaymentOrderMutation) AddAmountInUsd(d decimal.Decimal) {
+	if m.addamount_in_usd != nil {
+		*m.addamount_in_usd = m.addamount_in_usd.Add(d)
+	} else {
+		m.addamount_in_usd = &d
+	}
+}
+
+// AddedAmountInUsd returns the value that was added to the "amount_in_usd" field in this mutation.
+func (m *LockPaymentOrderMutation) AddedAmountInUsd() (r decimal.Decimal, exists bool) {
+	v := m.addamount_in_usd
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAmountInUsd resets all changes to the "amount_in_usd" field.
+func (m *LockPaymentOrderMutation) ResetAmountInUsd() {
+	m.amount_in_usd = nil
+	m.addamount_in_usd = nil
+}
+
 // SetTokenID sets the "token" edge to the Token entity by id.
 func (m *LockPaymentOrderMutation) SetTokenID(id int) {
 	m.token = &id
@@ -8209,7 +8267,7 @@ func (m *LockPaymentOrderMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *LockPaymentOrderMutation) Fields() []string {
-	fields := make([]string, 0, 19)
+	fields := make([]string, 0, 20)
 	if m.created_at != nil {
 		fields = append(fields, lockpaymentorder.FieldCreatedAt)
 	}
@@ -8267,6 +8325,9 @@ func (m *LockPaymentOrderMutation) Fields() []string {
 	if m.message_hash != nil {
 		fields = append(fields, lockpaymentorder.FieldMessageHash)
 	}
+	if m.amount_in_usd != nil {
+		fields = append(fields, lockpaymentorder.FieldAmountInUsd)
+	}
 	return fields
 }
 
@@ -8313,6 +8374,8 @@ func (m *LockPaymentOrderMutation) Field(name string) (ent.Value, bool) {
 		return m.CancellationReasons()
 	case lockpaymentorder.FieldMessageHash:
 		return m.MessageHash()
+	case lockpaymentorder.FieldAmountInUsd:
+		return m.AmountInUsd()
 	}
 	return nil, false
 }
@@ -8360,6 +8423,8 @@ func (m *LockPaymentOrderMutation) OldField(ctx context.Context, name string) (e
 		return m.OldCancellationReasons(ctx)
 	case lockpaymentorder.FieldMessageHash:
 		return m.OldMessageHash(ctx)
+	case lockpaymentorder.FieldAmountInUsd:
+		return m.OldAmountInUsd(ctx)
 	}
 	return nil, fmt.Errorf("unknown LockPaymentOrder field %s", name)
 }
@@ -8502,6 +8567,13 @@ func (m *LockPaymentOrderMutation) SetField(name string, value ent.Value) error 
 		}
 		m.SetMessageHash(v)
 		return nil
+	case lockpaymentorder.FieldAmountInUsd:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAmountInUsd(v)
+		return nil
 	}
 	return fmt.Errorf("unknown LockPaymentOrder field %s", name)
 }
@@ -8528,6 +8600,9 @@ func (m *LockPaymentOrderMutation) AddedFields() []string {
 	if m.addcancellation_count != nil {
 		fields = append(fields, lockpaymentorder.FieldCancellationCount)
 	}
+	if m.addamount_in_usd != nil {
+		fields = append(fields, lockpaymentorder.FieldAmountInUsd)
+	}
 	return fields
 }
 
@@ -8548,6 +8623,8 @@ func (m *LockPaymentOrderMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedBlockNumber()
 	case lockpaymentorder.FieldCancellationCount:
 		return m.AddedCancellationCount()
+	case lockpaymentorder.FieldAmountInUsd:
+		return m.AddedAmountInUsd()
 	}
 	return nil, false
 }
@@ -8598,6 +8675,13 @@ func (m *LockPaymentOrderMutation) AddField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddCancellationCount(v)
+		return nil
+	case lockpaymentorder.FieldAmountInUsd:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAmountInUsd(v)
 		return nil
 	}
 	return fmt.Errorf("unknown LockPaymentOrder numeric field %s", name)
@@ -8715,6 +8799,9 @@ func (m *LockPaymentOrderMutation) ResetField(name string) error {
 		return nil
 	case lockpaymentorder.FieldMessageHash:
 		m.ResetMessageHash()
+		return nil
+	case lockpaymentorder.FieldAmountInUsd:
+		m.ResetAmountInUsd()
 		return nil
 	}
 	return fmt.Errorf("unknown LockPaymentOrder field %s", name)
@@ -10080,6 +10167,8 @@ type PaymentOrderMutation struct {
 	message_hash           *string
 	reference              *string
 	status                 *paymentorder.Status
+	amount_in_usd          *decimal.Decimal
+	addamount_in_usd       *decimal.Decimal
 	clearedFields          map[string]struct{}
 	sender_profile         *uuid.UUID
 	clearedsender_profile  bool
@@ -11196,6 +11285,62 @@ func (m *PaymentOrderMutation) ResetStatus() {
 	m.status = nil
 }
 
+// SetAmountInUsd sets the "amount_in_usd" field.
+func (m *PaymentOrderMutation) SetAmountInUsd(d decimal.Decimal) {
+	m.amount_in_usd = &d
+	m.addamount_in_usd = nil
+}
+
+// AmountInUsd returns the value of the "amount_in_usd" field in the mutation.
+func (m *PaymentOrderMutation) AmountInUsd() (r decimal.Decimal, exists bool) {
+	v := m.amount_in_usd
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAmountInUsd returns the old "amount_in_usd" field's value of the PaymentOrder entity.
+// If the PaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentOrderMutation) OldAmountInUsd(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAmountInUsd is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAmountInUsd requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAmountInUsd: %w", err)
+	}
+	return oldValue.AmountInUsd, nil
+}
+
+// AddAmountInUsd adds d to the "amount_in_usd" field.
+func (m *PaymentOrderMutation) AddAmountInUsd(d decimal.Decimal) {
+	if m.addamount_in_usd != nil {
+		*m.addamount_in_usd = m.addamount_in_usd.Add(d)
+	} else {
+		m.addamount_in_usd = &d
+	}
+}
+
+// AddedAmountInUsd returns the value that was added to the "amount_in_usd" field in this mutation.
+func (m *PaymentOrderMutation) AddedAmountInUsd() (r decimal.Decimal, exists bool) {
+	v := m.addamount_in_usd
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAmountInUsd resets all changes to the "amount_in_usd" field.
+func (m *PaymentOrderMutation) ResetAmountInUsd() {
+	m.amount_in_usd = nil
+	m.addamount_in_usd = nil
+}
+
 // SetSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by id.
 func (m *PaymentOrderMutation) SetSenderProfileID(id uuid.UUID) {
 	m.sender_profile = &id
@@ -11518,7 +11663,7 @@ func (m *PaymentOrderMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PaymentOrderMutation) Fields() []string {
-	fields := make([]string, 0, 20)
+	fields := make([]string, 0, 21)
 	if m.created_at != nil {
 		fields = append(fields, paymentorder.FieldCreatedAt)
 	}
@@ -11579,6 +11724,9 @@ func (m *PaymentOrderMutation) Fields() []string {
 	if m.status != nil {
 		fields = append(fields, paymentorder.FieldStatus)
 	}
+	if m.amount_in_usd != nil {
+		fields = append(fields, paymentorder.FieldAmountInUsd)
+	}
 	return fields
 }
 
@@ -11627,6 +11775,8 @@ func (m *PaymentOrderMutation) Field(name string) (ent.Value, bool) {
 		return m.Reference()
 	case paymentorder.FieldStatus:
 		return m.Status()
+	case paymentorder.FieldAmountInUsd:
+		return m.AmountInUsd()
 	}
 	return nil, false
 }
@@ -11676,6 +11826,8 @@ func (m *PaymentOrderMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldReference(ctx)
 	case paymentorder.FieldStatus:
 		return m.OldStatus(ctx)
+	case paymentorder.FieldAmountInUsd:
+		return m.OldAmountInUsd(ctx)
 	}
 	return nil, fmt.Errorf("unknown PaymentOrder field %s", name)
 }
@@ -11825,6 +11977,13 @@ func (m *PaymentOrderMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetStatus(v)
 		return nil
+	case paymentorder.FieldAmountInUsd:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAmountInUsd(v)
+		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder field %s", name)
 }
@@ -11860,6 +12019,9 @@ func (m *PaymentOrderMutation) AddedFields() []string {
 	if m.addfee_percent != nil {
 		fields = append(fields, paymentorder.FieldFeePercent)
 	}
+	if m.addamount_in_usd != nil {
+		fields = append(fields, paymentorder.FieldAmountInUsd)
+	}
 	return fields
 }
 
@@ -11886,6 +12048,8 @@ func (m *PaymentOrderMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedBlockNumber()
 	case paymentorder.FieldFeePercent:
 		return m.AddedFeePercent()
+	case paymentorder.FieldAmountInUsd:
+		return m.AddedAmountInUsd()
 	}
 	return nil, false
 }
@@ -11957,6 +12121,13 @@ func (m *PaymentOrderMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddFeePercent(v)
+		return nil
+	case paymentorder.FieldAmountInUsd:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAmountInUsd(v)
 		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder numeric field %s", name)
@@ -12089,6 +12260,9 @@ func (m *PaymentOrderMutation) ResetField(name string) error {
 		return nil
 	case paymentorder.FieldStatus:
 		m.ResetStatus()
+		return nil
+	case paymentorder.FieldAmountInUsd:
+		m.ResetAmountInUsd()
 		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder field %s", name)

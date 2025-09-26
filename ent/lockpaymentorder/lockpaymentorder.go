@@ -54,6 +54,8 @@ const (
 	FieldCancellationReasons = "cancellation_reasons"
 	// FieldMessageHash holds the string denoting the message_hash field in the database.
 	FieldMessageHash = "message_hash"
+	// FieldAmountInUsd holds the string denoting the amount_in_usd field in the database.
+	FieldAmountInUsd = "amount_in_usd"
 	// EdgeToken holds the string denoting the token edge name in mutations.
 	EdgeToken = "token"
 	// EdgeProvisionBucket holds the string denoting the provision_bucket edge name in mutations.
@@ -125,6 +127,7 @@ var Columns = []string{
 	FieldCancellationCount,
 	FieldCancellationReasons,
 	FieldMessageHash,
+	FieldAmountInUsd,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "lock_payment_orders"
@@ -291,6 +294,11 @@ func ByCancellationCount(opts ...sql.OrderTermOption) OrderOption {
 // ByMessageHash orders the results by the message_hash field.
 func ByMessageHash(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMessageHash, opts...).ToFunc()
+}
+
+// ByAmountInUsd orders the results by the amount_in_usd field.
+func ByAmountInUsd(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAmountInUsd, opts...).ToFunc()
 }
 
 // ByTokenField orders the results by token field.

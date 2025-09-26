@@ -350,6 +350,7 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 	var receipts []types.LockPaymentOrderTxReceipt
 	var settlePercent decimal.Decimal
 	var totalAmount decimal.Decimal
+	var totalAmountInUSD decimal.Decimal
 
 	for _, order := range orders {
 		for _, transaction := range order.Edges.Transactions {
@@ -377,6 +378,7 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 
 		settlePercent = settlePercent.Add(order.OrderPercent)
 		totalAmount = totalAmount.Add(order.Amount)
+		totalAmountInUSD = totalAmountInUSD.Add(order.AmountInUsd)
 	}
 
 	// Sort receipts by latest timestamp
@@ -397,6 +399,7 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 	response := &types.LockPaymentOrderStatusResponse{
 		OrderID:       orders[0].GatewayID,
 		Amount:        totalAmount,
+		AmountInUSD:   totalAmountInUSD,
 		Token:         orders[0].Edges.Token.Symbol,
 		Network:       orders[0].Edges.Token.Edges.Network.Identifier,
 		SettlePercent: settlePercent,

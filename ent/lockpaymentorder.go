@@ -61,6 +61,8 @@ type LockPaymentOrder struct {
 	CancellationReasons []string `json:"cancellation_reasons,omitempty"`
 	// MessageHash holds the value of the "message_hash" field.
 	MessageHash string `json:"message_hash,omitempty"`
+	// AmountInUsd holds the value of the "amount_in_usd" field.
+	AmountInUsd decimal.Decimal `json:"amount_in_usd,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the LockPaymentOrderQuery when eager-loading is set.
 	Edges                                LockPaymentOrderEdges `json:"edges"`
@@ -145,7 +147,7 @@ func (*LockPaymentOrder) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case lockpaymentorder.FieldMetadata, lockpaymentorder.FieldCancellationReasons:
 			values[i] = new([]byte)
-		case lockpaymentorder.FieldAmount, lockpaymentorder.FieldProtocolFee, lockpaymentorder.FieldRate, lockpaymentorder.FieldOrderPercent:
+		case lockpaymentorder.FieldAmount, lockpaymentorder.FieldProtocolFee, lockpaymentorder.FieldRate, lockpaymentorder.FieldOrderPercent, lockpaymentorder.FieldAmountInUsd:
 			values[i] = new(decimal.Decimal)
 		case lockpaymentorder.FieldBlockNumber, lockpaymentorder.FieldCancellationCount:
 			values[i] = new(sql.NullInt64)
@@ -300,6 +302,12 @@ func (lpo *LockPaymentOrder) assignValues(columns []string, values []any) error 
 			} else if value.Valid {
 				lpo.MessageHash = value.String
 			}
+		case lockpaymentorder.FieldAmountInUsd:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field amount_in_usd", values[i])
+			} else if value != nil {
+				lpo.AmountInUsd = *value
+			}
 		case lockpaymentorder.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field provider_profile_assigned_orders", values[i])
@@ -438,6 +446,9 @@ func (lpo *LockPaymentOrder) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("message_hash=")
 	builder.WriteString(lpo.MessageHash)
+	builder.WriteString(", ")
+	builder.WriteString("amount_in_usd=")
+	builder.WriteString(fmt.Sprintf("%v", lpo.AmountInUsd))
 	builder.WriteByte(')')
 	return builder.String()
 }
