@@ -506,7 +506,10 @@ func (w *EtherscanWorker) processNextRequest(ctx context.Context) error {
 				"WorkerID":  w.WorkerID,
 				"RequestID": request.ID,
 				"ErrorType": errorType,
-			}).Errorf("API error occurred: %v", err)
+				"ChainID":   request.ChainID,
+				"Address":   request.WalletAddress,
+				"Error":     err.Error(),
+			}).Errorf("Etherscan API error for chain %d", request.ChainID)
 		case ErrorTypeNetwork:
 			// Network errors are usually temporary
 			atomic.AddInt64(&networkErrorsCounter, 1)
@@ -521,7 +524,10 @@ func (w *EtherscanWorker) processNextRequest(ctx context.Context) error {
 				"WorkerID":  w.WorkerID,
 				"RequestID": request.ID,
 				"ErrorType": errorType,
-			}).Errorf("Unknown error occurred: %v", err)
+				"ChainID":   request.ChainID,
+				"Address":   request.WalletAddress,
+				"Error":     err.Error(),
+			}).Errorf("Etherscan unknown error for chain %d", request.ChainID)
 		}
 	}
 

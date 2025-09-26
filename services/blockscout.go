@@ -21,17 +21,17 @@ func NewBlockscoutService() *BlockscoutService {
 	}
 }
 
-// GetAddressTransactionHistory fetches transaction history for any address from Blockscout API
-func (s *BlockscoutService) GetAddressTransactionHistory(ctx context.Context, chainID int64, walletAddress string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
+// GetAddressTokenTransfers fetches token transfer history for any address from Blockscout API
+func (s *BlockscoutService) GetAddressTokenTransfers(ctx context.Context, chainID int64, walletAddress string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
 	// Build query parameters for Blockscout API
 	params := map[string]string{
 		"items_count": fmt.Sprintf("%d", limit),
 	}
 
-	// Note: Blockscout API doesn't support block range filtering
-	// We'll fetch more transactions and filter client-side if needed
+	// Note: Blockscout API doesn't support block range filtering for token transfers
+	// We'll fetch more token transfers and filter client-side if needed
 	if fromBlock > 0 || toBlock > 0 {
-		// Increase limit to get more transactions for client-side filtering
+		// Increase limit to get more token transfers for client-side filtering
 		if limit < 100 {
 			params["items_count"] = "100"
 		}
@@ -43,10 +43,10 @@ func (s *BlockscoutService) GetAddressTransactionHistory(ctx context.Context, ch
 		Header().AddAll(map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/json",
-	}).Build().GET("/api/v2/addresses/" + walletAddress + "/transactions").
+	}).Build().GET("/api/v2/addresses/" + walletAddress + "/token-transfers").
 		Query().AddParams(params).Send()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get transaction history from Blockscout: %w", err)
+		return nil, fmt.Errorf("failed to get token transfers from Blockscout: %w", err)
 	}
 
 	data, err := utils.ParseJSONResponse(res.RawResponse)
@@ -54,41 +54,28 @@ func (s *BlockscoutService) GetAddressTransactionHistory(ctx context.Context, ch
 		return nil, fmt.Errorf("failed to parse JSON response from Blockscout: %w", err)
 	}
 
-	// Check if the response contains transactions
+	// Check if the response contains token transfers
 	if data["items"] == nil {
 		return []map[string]interface{}{}, nil
 	}
 
-	transactions := data["items"].([]interface{})
+	tokenTransfers := data["items"].([]interface{})
 
-	// Apply client-side block range filtering if specified
-	if fromBlock > 0 || toBlock > 0 {
-		filteredTransactions := make([]interface{}, 0)
+	// Note: Token transfers don't have block_number in the same format as transactions
+	// For now, we'll return all token transfers without block filtering
+	// TODO: Implement block filtering for token transfers if needed
 
-		for _, tx := range transactions {
-			txMap := tx.(map[string]interface{})
-			blockNum, ok := txMap["block_number"].(float64)
-			if !ok {
-				continue
-			}
-
-			// Check if transaction is within the specified block range
-			if fromBlock > 0 && int64(blockNum) < fromBlock {
-				continue
-			}
-			if toBlock > 0 && int64(blockNum) > toBlock {
-				continue
-			}
-
-			filteredTransactions = append(filteredTransactions, tx)
+	result := make([]map[string]interface{}, len(tokenTransfers))
+	for i, transfer := range tokenTransfers {
+		transferMap := transfer.(map[string]interface{})
+		
+		// Normalize field names to match what the indexer expects
+		// Indexer expects "hash" field, but token transfers have "transaction_hash"
+		if txHash, exists := transferMap["transaction_hash"]; exists {
+			transferMap["hash"] = txHash
 		}
-
-		transactions = filteredTransactions
-	}
-
-	result := make([]map[string]interface{}, len(transactions))
-	for i, tx := range transactions {
-		result[i] = tx.(map[string]interface{})
+		
+		result[i] = transferMap
 	}
 
 	return result, nil

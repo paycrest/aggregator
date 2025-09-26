@@ -400,6 +400,27 @@ func (pou *PaymentOrderUpdate) SetNillableStatus(pa *paymentorder.Status) *Payme
 	return pou
 }
 
+// SetAmountInUsd sets the "amount_in_usd" field.
+func (pou *PaymentOrderUpdate) SetAmountInUsd(d decimal.Decimal) *PaymentOrderUpdate {
+	pou.mutation.ResetAmountInUsd()
+	pou.mutation.SetAmountInUsd(d)
+	return pou
+}
+
+// SetNillableAmountInUsd sets the "amount_in_usd" field if the given value is not nil.
+func (pou *PaymentOrderUpdate) SetNillableAmountInUsd(d *decimal.Decimal) *PaymentOrderUpdate {
+	if d != nil {
+		pou.SetAmountInUsd(*d)
+	}
+	return pou
+}
+
+// AddAmountInUsd adds d to the "amount_in_usd" field.
+func (pou *PaymentOrderUpdate) AddAmountInUsd(d decimal.Decimal) *PaymentOrderUpdate {
+	pou.mutation.AddAmountInUsd(d)
+	return pou
+}
+
 // SetSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by ID.
 func (pou *PaymentOrderUpdate) SetSenderProfileID(id uuid.UUID) *PaymentOrderUpdate {
 	pou.mutation.SetSenderProfileID(id)
@@ -788,6 +809,12 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := pou.mutation.Status(); ok {
 		_spec.SetField(paymentorder.FieldStatus, field.TypeEnum, value)
+	}
+	if value, ok := pou.mutation.AmountInUsd(); ok {
+		_spec.SetField(paymentorder.FieldAmountInUsd, field.TypeFloat64, value)
+	}
+	if value, ok := pou.mutation.AddedAmountInUsd(); ok {
+		_spec.AddField(paymentorder.FieldAmountInUsd, field.TypeFloat64, value)
 	}
 	if pou.mutation.SenderProfileCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1391,6 +1418,27 @@ func (pouo *PaymentOrderUpdateOne) SetNillableStatus(pa *paymentorder.Status) *P
 	return pouo
 }
 
+// SetAmountInUsd sets the "amount_in_usd" field.
+func (pouo *PaymentOrderUpdateOne) SetAmountInUsd(d decimal.Decimal) *PaymentOrderUpdateOne {
+	pouo.mutation.ResetAmountInUsd()
+	pouo.mutation.SetAmountInUsd(d)
+	return pouo
+}
+
+// SetNillableAmountInUsd sets the "amount_in_usd" field if the given value is not nil.
+func (pouo *PaymentOrderUpdateOne) SetNillableAmountInUsd(d *decimal.Decimal) *PaymentOrderUpdateOne {
+	if d != nil {
+		pouo.SetAmountInUsd(*d)
+	}
+	return pouo
+}
+
+// AddAmountInUsd adds d to the "amount_in_usd" field.
+func (pouo *PaymentOrderUpdateOne) AddAmountInUsd(d decimal.Decimal) *PaymentOrderUpdateOne {
+	pouo.mutation.AddAmountInUsd(d)
+	return pouo
+}
+
 // SetSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by ID.
 func (pouo *PaymentOrderUpdateOne) SetSenderProfileID(id uuid.UUID) *PaymentOrderUpdateOne {
 	pouo.mutation.SetSenderProfileID(id)
@@ -1809,6 +1857,12 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 	}
 	if value, ok := pouo.mutation.Status(); ok {
 		_spec.SetField(paymentorder.FieldStatus, field.TypeEnum, value)
+	}
+	if value, ok := pouo.mutation.AmountInUsd(); ok {
+		_spec.SetField(paymentorder.FieldAmountInUsd, field.TypeFloat64, value)
+	}
+	if value, ok := pouo.mutation.AddedAmountInUsd(); ok {
+		_spec.AddField(paymentorder.FieldAmountInUsd, field.TypeFloat64, value)
 	}
 	if pouo.mutation.SenderProfileCleared() {
 		edge := &sqlgraph.EdgeSpec{

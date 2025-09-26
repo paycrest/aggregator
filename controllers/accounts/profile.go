@@ -8,6 +8,7 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
+	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
@@ -16,6 +17,7 @@ import (
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
+	userkyb "github.com/paycrest/aggregator/ent/user"
 	svc "github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
@@ -681,6 +683,17 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 		tokensPayload[i] = payload
 	}
 
+	// Fetch KYB profile to get rejection comment if available
+	var kybRejectionComment *string
+	kybProfile, err := storage.Client.KYBProfile.
+		Query().
+		Where(kybprofile.HasUserWith(userkyb.IDEQ(user.ID))).
+		Only(ctx)
+
+	if err == nil && kybProfile != nil && kybProfile.KybRejectionComment != nil {
+		kybRejectionComment = kybProfile.KybRejectionComment
+	}
+
 	response := &types.SenderProfileResponse{
 		ID:                    sender.ID,
 		FirstName:             user.FirstName,
@@ -692,6 +705,7 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 		APIKey:                *apiKey,
 		IsActive:              sender.IsActive,
 		KYBVerificationStatus: user.KybVerificationStatus,
+		KYBRejectionComment:   kybRejectionComment,
 	}
 
 	linkedProvider, err := storage.Client.ProviderProfile.
@@ -769,7 +783,10 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 
 	// Get token settings, optionally filtering by currency query parameter
 	currencyFilter := ctx.Query("currency")
-	query := provider.QueryOrderTokens().WithToken().WithCurrency()
+	query := provider.QueryOrderTokens().
+		Where(providerordertoken.HasTokenWith(token.IsEnabledEQ(true))).
+		WithToken().
+		WithCurrency()
 	if currencyFilter != "" {
 		query = query.Where(providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(currencyFilter)))
 	}
@@ -799,6 +816,17 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 		tokensPayload[i] = payload
 	}
 
+	// Fetch KYB profile to get rejection comment if available
+	var kybRejectionComment *string
+	kybProfile, err := storage.Client.KYBProfile.
+		Query().
+		Where(kybprofile.HasUserWith(userkyb.IDEQ(user.ID))).
+		Only(ctx)
+
+	if err == nil && kybProfile != nil && kybProfile.KybRejectionComment != nil {
+		kybRejectionComment = kybProfile.KybRejectionComment
+	}
+
 	// Get API key
 	apiKey, err := ctrl.apiKeyService.GetAPIKey(ctx, nil, provider)
 	if err != nil {
@@ -824,5 +852,6 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 		IsActive:              provider.IsActive,
 		VisibilityMode:        provider.VisibilityMode,
 		KYBVerificationStatus: user.KybVerificationStatus,
+		KYBRejectionComment:   kybRejectionComment,
 	})
 }

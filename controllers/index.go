@@ -350,6 +350,7 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 	var receipts []types.LockPaymentOrderTxReceipt
 	var settlePercent decimal.Decimal
 	var totalAmount decimal.Decimal
+	var totalAmountInUSD decimal.Decimal
 
 	for _, order := range orders {
 		for _, transaction := range order.Edges.Transactions {
@@ -377,6 +378,7 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 
 		settlePercent = settlePercent.Add(order.OrderPercent)
 		totalAmount = totalAmount.Add(order.Amount)
+		totalAmountInUSD = totalAmountInUSD.Add(order.AmountInUsd)
 	}
 
 	// Sort receipts by latest timestamp
@@ -397,6 +399,7 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 	response := &types.LockPaymentOrderStatusResponse{
 		OrderID:       orders[0].GatewayID,
 		Amount:        totalAmount,
+		AmountInUSD:   totalAmountInUSD,
 		Token:         orders[0].Edges.Token.Symbol,
 		Network:       orders[0].Edges.Token.Edges.Network.Identifier,
 		SettlePercent: settlePercent,
@@ -962,6 +965,24 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 								"text": "Reason for Rejection",
 							},
 						},
+						{
+							"type":     "input",
+							"block_id": "comment_block",
+							"element": map[string]interface{}{
+								"type":      "plain_text_input",
+								"action_id": "comment_input",
+								"multiline": true,
+								"placeholder": map[string]interface{}{
+									"type": "plain_text",
+									"text": "Add any additional comments or details...",
+								},
+							},
+							"label": map[string]interface{}{
+								"type": "plain_text",
+								"text": "Rejection Comment",
+							},
+							"optional": true,
+						},
 					},
 				},
 			}
@@ -1048,9 +1069,11 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				return
 			}
 
-			// Update KYB Profile status (assuming you have a status field)
+			// Update KYB Profile status and clear rejection comment
 			_, err = storage.Client.KYBProfile.
-				UpdateOne(kybProfile).
+				Update().
+				Where(kybprofile.IDEQ(kybProfileUUID)).
+				ClearKybRejectionComment().
 				Save(ctx)
 			if err != nil {
 				logger.Errorf("Failed to update KYB Profile status %s: %v", kybProfileID, err)
@@ -1144,6 +1167,16 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				return
 			}
 
+			// Extract comment (optional)
+			var rejectionComment string
+			if commentBlock, exists := values["comment_block"].(map[string]interface{}); exists {
+				if commentInput, exists := commentBlock["comment_input"].(map[string]interface{}); exists {
+					if commentValue, exists := commentInput["value"].(string); exists {
+						rejectionComment = strings.TrimSpace(commentValue)
+					}
+				}
+			}
+
 			// Extract email and firstName from private_metadata
 			privateMetadata, ok := view["private_metadata"].(string)
 			if !ok {
@@ -1189,13 +1222,22 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				return
 			}
 
-			// Update KYB Profile status (assuming you have a status field)
+			// Combine reason and comment for storage
+			var finalRejectionComment string
+			if rejectionComment != "" {
+				finalRejectionComment = fmt.Sprintf("%s::%s", reasonForDecline, rejectionComment)
+			} else {
+				finalRejectionComment = reasonForDecline
+			}
+
+			// Update KYB Profile with rejection comment
 			_, err = storage.Client.KYBProfile.
 				Update().
 				Where(kybprofile.IDEQ(kybProfileUUID)).
+				SetKybRejectionComment(finalRejectionComment).
 				Save(ctx)
 			if err != nil {
-				logger.Errorf("Failed to update KYB Profile status %s: %v", kybProfileID, err)
+				logger.Errorf("Failed to update KYB Profile with rejection comment %s: %v", kybProfileID, err)
 			}
 
 			// Send rejection email
@@ -1207,7 +1249,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			}
 
 			// Send Slack feedback notification
-			err = ctrl.slackService.SendActionFeedbackNotification(firstName, email, kybProfileID, "reject", reasonForDecline)
+			err = ctrl.slackService.SendActionFeedbackNotification(firstName, email, kybProfileID, "reject", finalRejectionComment)
 			if err != nil {
 				logger.Warnf("Failed to send Slack feedback notification for KYB Profile %s: %v", kybProfileID, err)
 			}

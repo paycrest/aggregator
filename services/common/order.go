@@ -105,6 +105,7 @@ func CreateLockPaymentOrder(
 			_, updateErr := db.Client.PaymentOrder.
 				Update().
 				Where(paymentorder.IDEQ(paymentOrder.ID)).
+				SetTxHash(event.TxHash).
 				SetBlockNumber(int64(event.BlockNumber)).
 				SetGatewayID(event.OrderId).
 				SetStatus(paymentorder.StatusPending).
@@ -207,6 +208,7 @@ func CreateLockPaymentOrder(
 		Amount:            event.Amount,
 		Rate:              event.Rate,
 		ProtocolFee:       event.ProtocolFee,
+		AmountInUSD:       utils.CalculatePaymentOrderAmountInUSD(event.Amount, token, institution),
 		BlockNumber:       int64(event.BlockNumber),
 		TxHash:            event.TxHash,
 		Institution:       recipient.Institution,
@@ -360,6 +362,7 @@ func CreateLockPaymentOrder(
 			SetRate(lockPaymentOrder.Rate).
 			SetProtocolFee(lockPaymentOrder.ProtocolFee).
 			SetOrderPercent(decimal.NewFromInt(100)).
+			SetAmountInUsd(lockPaymentOrder.AmountInUSD).
 			SetBlockNumber(lockPaymentOrder.BlockNumber).
 			SetTxHash(lockPaymentOrder.TxHash).
 			SetInstitution(lockPaymentOrder.Institution).
@@ -1107,6 +1110,16 @@ func createBasicLockPaymentOrderAndCancel(
 		Amount:      adjustedAmount,
 		Rate:        event.Rate,
 		ProtocolFee: adjustedProtocolFee,
+		AmountInUSD: func() decimal.Decimal {
+			if recipient == nil {
+				return decimal.Zero
+			}
+			institution, err := utils.GetInstitutionByCode(ctx, recipient.Institution, true)
+			if err != nil {
+				return decimal.Zero
+			}
+			return utils.CalculatePaymentOrderAmountInUSD(adjustedAmount, token, institution)
+		}(),
 		BlockNumber: int64(event.BlockNumber),
 		TxHash:      event.TxHash,
 		Sender:      event.Sender,
