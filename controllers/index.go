@@ -999,30 +999,28 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				}
 			}
 
-			// Add Approve button only
+			// Add approval confirmation section
 			blocks = append(blocks, map[string]interface{}{
-				"type": "actions",
-				"elements": []map[string]interface{}{
-					{
-						"type": "button",
-						"text": map[string]interface{}{
-							"type": "plain_text",
-							"text": "Approve",
-						},
-						"action_id": "approve_kyb_" + kybProfileID,
-						"style":     "primary",
-					},
+				"type": "section",
+				"text": map[string]interface{}{
+					"type": "mrkdwn",
+					"text": "*Review Complete*\n\nIf all information looks correct, click 'Approve' to approve this KYB submission.",
 				},
 			})
 
 			modal := map[string]interface{}{
 				"trigger_id": triggerID,
 				"view": map[string]interface{}{
-					"type":        "modal",
-					"callback_id": "kyb_review_modal_" + kybProfileID,
+					"type":             "modal",
+					"callback_id":      "approve_modal_" + kybProfileID,
+					"private_metadata": fmt.Sprintf(`{"email":"%s","kyb_profile_id":"%s","firstName":"%s"}`, email, kybProfileID, firstName),
 					"title": map[string]interface{}{
 						"type": "plain_text",
-						"text": "KYB Details",
+						"text": "KYB Review",
+					},
+					"submit": map[string]interface{}{
+						"type": "plain_text",
+						"text": "Approve",
 					},
 					"blocks": blocks,
 				},
@@ -1035,7 +1033,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				return
 			}
 
-			client := &http.Client{}
+			client := &http.Client{Timeout: 5 * time.Second}
 			req, err := http.NewRequest("POST", "https://slack.com/api/views.open", bytes.NewBuffer(jsonPayload))
 			if err != nil {
 				logger.Errorf("Failed to create Slack API request for KYB Profile %s: %v", kybProfileID, err)
@@ -1063,9 +1061,14 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			}
 			defer resp.Body.Close()
 
-			if resp.StatusCode != http.StatusOK {
-				body, _ := io.ReadAll(resp.Body)
-				logger.Errorf("Slack API responded with status %d for KYB Profile %s: %s", resp.StatusCode, kybProfileID, string(body))
+			body, _ := io.ReadAll(resp.Body)
+			var s struct {
+				OK    bool   `json:"ok"`
+				Error string `json:"error"`
+			}
+			_ = json.Unmarshal(body, &s)
+			if resp.StatusCode != http.StatusOK || !s.OK {
+				logger.Errorf("Slack views.open failed for KYB %s. status=%d ok=%v err=%s body=%s", kybProfileID, resp.StatusCode, s.OK, s.Error, string(body))
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open modal"})
 				return
 			}
@@ -1181,7 +1184,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				return
 			}
 
-			client := &http.Client{}
+			client := &http.Client{Timeout: 5 * time.Second}
 			req, err := http.NewRequest("POST", "https://slack.com/api/views.open", bytes.NewBuffer(jsonPayload))
 			if err != nil {
 				logger.Errorf("Failed to create Slack API request for KYB Profile %s: %v", kybProfileID, err)
@@ -1205,83 +1208,19 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			}
 			defer resp.Body.Close()
 
-			if resp.StatusCode != http.StatusOK {
-				body, _ := io.ReadAll(resp.Body)
-				logger.Errorf("Slack API responded with status %d for KYB Profile %s: %s", resp.StatusCode, kybProfileID, string(body))
+			body, _ := io.ReadAll(resp.Body)
+			var s struct {
+				OK    bool   `json:"ok"`
+				Error string `json:"error"`
+			}
+			_ = json.Unmarshal(body, &s)
+			if resp.StatusCode != http.StatusOK || !s.OK {
+				logger.Errorf("Slack views.open failed for KYB %s. status=%d ok=%v err=%s body=%s", kybProfileID, resp.StatusCode, s.OK, s.Error, string(body))
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open modal"})
 				return
 			}
 
 			ctx.JSON(http.StatusOK, gin.H{})
-			return
-		}
-
-		// Handle approve button (from initial notification or modal)
-		if strings.HasPrefix(actionID, "approve_") || strings.HasPrefix(actionID, "approve_kyb_") {
-			if ctrl.isActionProcessed(kybProfileID, "approve") || ctrl.isActionProcessed(kybProfileID, "reject") {
-				logger.Warnf("Action already processed for KYB Profile %s", kybProfileID)
-				ctx.JSON(http.StatusOK, gin.H{"text": "This submission has already been processed."})
-				return
-			}
-
-			// Mark as processed immediately
-			ctrl.markActionProcessed(kybProfileID, "approve")
-
-			// Respond immediately to Slack to remove loading state
-			responseURL, _ := payload["response_url"].(string)
-			if responseURL != "" {
-				go func() {
-					message := map[string]interface{}{
-						"replace_original": true,
-						"text":             fmt.Sprintf("✅ *APPROVED* - KYB submission for %s (%s) from %s has been approved.", firstName, email, kybProfile.CompanyName),
-					}
-					jsonPayload, _ := json.Marshal(message)
-					if _, err := http.Post(responseURL, "application/json", bytes.NewBuffer(jsonPayload)); err != nil {
-						logger.Errorf("Failed to post response to URL: %v", err)
-					}
-				}()
-			}
-
-			// Send immediate response to Slack
-			ctx.JSON(http.StatusOK, gin.H{"text": "Approving submission..."})
-
-			// Update User KYB status
-			_, err := storage.Client.User.
-				Update().
-				Where(user.IDEQ(kybProfile.Edges.User.ID)).
-				SetKybVerificationStatus(user.KybVerificationStatusApproved).
-				Save(ctx)
-			if err != nil {
-				logger.Errorf("Failed to approve KYB for user %s (KYB Profile %s): %v", email, kybProfileID, err)
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user KYB status"})
-				return
-			}
-
-			// Update KYB Profile status and clear rejection comment
-			_, err = storage.Client.KYBProfile.
-				Update().
-				Where(kybprofile.IDEQ(kybProfileUUID)).
-				ClearKybRejectionComment().
-				Save(ctx)
-			if err != nil {
-				logger.Errorf("Failed to update KYB Profile status %s: %v", kybProfileID, err)
-			}
-
-			// Send approval email
-			resp, err := ctrl.emailService.SendKYBApprovalEmail(ctx, email, firstName)
-			if err != nil {
-				logger.Errorf("Failed to send KYB approval email to %s (KYB Profile %s): %v, response: %+v", email, kybProfileID, err, resp)
-			} else {
-				logger.Infof("KYB approval email sent successfully to %s (KYB Profile %s), message ID: %s", email, kybProfileID, resp.Id)
-			}
-
-			// Send Slack feedback notification
-			err = ctrl.slackService.SendActionFeedbackNotification(firstName, email, kybProfileID, "approve", "")
-			if err != nil {
-				logger.Warnf("Failed to send Slack feedback notification for KYB Profile %s: %v", kybProfileID, err)
-			}
-
-			logger.Infof("Processed Slack approve interaction in %v", time.Since(startTime))
 			return
 		}
 
@@ -1443,6 +1382,93 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			}
 
 			logger.Infof("Processed Slack modal submission for rejection in %v", time.Since(startTime))
+			return
+		}
+
+		if strings.HasPrefix(callbackID, "approve_modal_") {
+			kybProfileID := callbackID[len("approve_modal_"):]
+
+			// Prevent modal if already processed
+			if ctrl.isActionProcessed(kybProfileID, "approve") || ctrl.isActionProcessed(kybProfileID, "reject") {
+				logger.Warnf("Action already processed for KYB Profile %s", kybProfileID)
+				ctx.JSON(http.StatusOK, gin.H{"text": "This submission has already been processed."})
+				return
+			}
+
+			// Mark as processed immediately
+			ctrl.markActionProcessed(kybProfileID, "approve")
+
+			// Extract email and firstName from private_metadata
+			privateMetadata, ok := view["private_metadata"].(string)
+			if !ok {
+				logger.Errorf("Missing private_metadata in view for KYB Profile %s", kybProfileID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing private_metadata"})
+				return
+			}
+			var metadata map[string]interface{}
+			if err := json.Unmarshal([]byte(privateMetadata), &metadata); err != nil {
+				logger.Errorf("Error parsing private_metadata for KYB Profile %s: %v", kybProfileID, err)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid metadata"})
+				return
+			}
+			email, ok := metadata["email"].(string)
+			if !ok || email == "" {
+				logger.Errorf("Missing email in private_metadata for KYB Profile %s", kybProfileID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing email in metadata"})
+				return
+			}
+			firstName, ok := metadata["firstName"].(string)
+			if !ok {
+				logger.Warnf("Missing firstName in private_metadata for KYB Profile %s; using default", kybProfileID)
+				firstName = "User"
+			}
+
+			// Parse KYB Profile ID for database operations
+			kybProfileUUID, err := uuid.Parse(kybProfileID)
+			if err != nil {
+				logger.Errorf("Invalid KYB Profile ID format for approval: %s, error: %v", kybProfileID, err)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid KYB Profile ID format"})
+				return
+			}
+
+			// Update User KYB status
+			_, err = storage.Client.User.
+				Update().
+				Where(user.EmailEQ(email)).
+				SetKybVerificationStatus(user.KybVerificationStatusApproved).
+				Save(ctx)
+			if err != nil {
+				logger.Errorf("Failed to approve KYB for user %s (KYB Profile %s): %v", email, kybProfileID, err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user KYB status"})
+				return
+			}
+
+			// Update KYB Profile status and clear rejection comment
+			_, err = storage.Client.KYBProfile.
+				Update().
+				Where(kybprofile.IDEQ(kybProfileUUID)).
+				ClearKybRejectionComment().
+				Save(ctx)
+			if err != nil {
+				logger.Errorf("Failed to update KYB Profile status %s: %v", kybProfileID, err)
+			}
+
+			// Send approval email
+			resp, err := ctrl.emailService.SendKYBApprovalEmail(ctx, email, firstName)
+			if err != nil {
+				logger.Errorf("Failed to send KYB approval email to %s (KYB Profile %s): %v, response: %+v", email, kybProfileID, err, resp)
+			} else {
+				logger.Infof("KYB approval email sent successfully to %s (KYB Profile %s), message ID: %s", email, kybProfileID, resp.Id)
+			}
+
+			// Send Slack feedback notification
+			approvalReason := "KYB submission approved successfully"
+			err = ctrl.slackService.SendActionFeedbackNotification(firstName, email, kybProfileID, "approve", approvalReason)
+			if err != nil {
+				logger.Warnf("Failed to send Slack feedback notification for KYB Profile %s: %v", kybProfileID, err)
+			}
+
+			logger.Infof("Processed Slack modal submission for approval in %v", time.Since(startTime))
 			return
 		}
 
