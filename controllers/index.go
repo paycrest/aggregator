@@ -1603,7 +1603,7 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		if input.AmlPolicyUrl != nil {
 			updateBuilder = updateBuilder.SetAmlPolicyURL(*input.AmlPolicyUrl)
 		} else {
-			updateBuilder = updateBuilder.ClearAmlPolicyURL()
+			updateBuilder = updateBuilder.SetAmlPolicyURL("")
 		}
 		if input.KycPolicyUrl != nil {
 			updateBuilder = updateBuilder.SetKycPolicyURL(*input.KycPolicyUrl)
