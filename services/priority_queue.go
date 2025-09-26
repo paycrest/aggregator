@@ -374,20 +374,7 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types.LockPaymentOrderFields) error {
 	// Reserve balance for this order
 	currency := order.ProvisionBucket.Edges.Currency.Code
-
-	// Use AmountInUSD if available, otherwise calculate from amount and rate
-	var amount decimal.Decimal
-	if !order.AmountInUSD.IsZero() {
-		// Convert USD to local currency if needed
-		if currency != "USD" {
-			amount = order.AmountInUSD.Mul(order.ProvisionBucket.Edges.Currency.MarketRate)
-		} else {
-			amount = order.AmountInUSD
-		}
-	} else {
-		amount = order.Amount.Mul(order.Rate)
-	}
-	amount = amount.RoundBank(0)
+	amount := order.Amount.Mul(order.Rate).RoundBank(0)
 
 	// Start a transaction for the entire operation
 	tx, err := storage.Client.Tx(ctx)

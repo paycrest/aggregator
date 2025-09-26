@@ -210,18 +210,31 @@ func AbsPercentageDeviation(trueValue, measuredValue decimal.Decimal) decimal.De
 
 // CalculatePaymentOrderAmountInUSD calculates the amount in USD for a payment order
 func CalculatePaymentOrderAmountInUSD(amount decimal.Decimal, token *ent.Token, institution *ent.Institution) decimal.Decimal {
-	if token.BaseCurrency == institution.Edges.FiatCurrency.Code {
-		if institution.Edges.FiatCurrency == nil {
-			institutionCurrency, err := storage.Client.Institution.QueryFiatCurrency(institution).Only(context.Background())
-			if err != nil {
-				return amount
-			}
-			institution.Edges.FiatCurrency = institutionCurrency
-		}
-		return amount.Mul(institution.Edges.FiatCurrency.MarketRate)
-	}
+    // Guard against nil inputs
+    if token == nil || institution == nil {
+        return amount
+    }
 
-	return amount
+    // Ensure the fiat‐currency edge is loaded
+    fiatCurrency := institution.Edges.FiatCurrency
+    if fiatCurrency == nil {
+        institutionCurrency, err := storage.Client.
+            Institution.
+            QueryFiatCurrency(institution).
+            Only(context.Background())
+        if err != nil {
+            return amount
+        }
+        institution.Edges.FiatCurrency = institutionCurrency
+        fiatCurrency = institutionCurrency
+    }
+
+    // Only multiply when the token matches the institution's fiat currency
+    if fiatCurrency != nil && token.BaseCurrency == fiatCurrency.Code {
+        return amount.Mul(fiatCurrency.MarketRate)
+    }
+
+    return amount
 }
 
 // SendPaymentOrderWebhook notifies a sender when the status of a payment order changes
