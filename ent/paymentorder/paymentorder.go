@@ -56,6 +56,8 @@ const (
 	FieldReference = "reference"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
+	// FieldAmountInUsd holds the string denoting the amount_in_usd field in the database.
+	FieldAmountInUsd = "amount_in_usd"
 	// EdgeSenderProfile holds the string denoting the sender_profile edge name in mutations.
 	EdgeSenderProfile = "sender_profile"
 	// EdgeToken holds the string denoting the token edge name in mutations.
@@ -146,6 +148,7 @@ var Columns = []string{
 	FieldMessageHash,
 	FieldReference,
 	FieldStatus,
+	FieldAmountInUsd,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "payment_orders"
@@ -338,6 +341,11 @@ func ByReference(opts ...sql.OrderTermOption) OrderOption {
 // ByStatus orders the results by the status field.
 func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStatus, opts...).ToFunc()
+}
+
+// ByAmountInUsd orders the results by the amount_in_usd field.
+func ByAmountInUsd(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAmountInUsd, opts...).ToFunc()
 }
 
 // BySenderProfileField orders the results by sender_profile field.

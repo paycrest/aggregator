@@ -152,6 +152,11 @@ func Reference(v string) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldEQ(FieldReference, v))
 }
 
+// AmountInUsd applies equality check predicate on the "amount_in_usd" field. It's identical to AmountInUsdEQ.
+func AmountInUsd(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldAmountInUsd, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldEQ(FieldCreatedAt, v))
@@ -1200,6 +1205,46 @@ func StatusIn(vs ...Status) predicate.PaymentOrder {
 // StatusNotIn applies the NotIn predicate on the "status" field.
 func StatusNotIn(vs ...Status) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldNotIn(FieldStatus, vs...))
+}
+
+// AmountInUsdEQ applies the EQ predicate on the "amount_in_usd" field.
+func AmountInUsdEQ(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldAmountInUsd, v))
+}
+
+// AmountInUsdNEQ applies the NEQ predicate on the "amount_in_usd" field.
+func AmountInUsdNEQ(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNEQ(FieldAmountInUsd, v))
+}
+
+// AmountInUsdIn applies the In predicate on the "amount_in_usd" field.
+func AmountInUsdIn(vs ...decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIn(FieldAmountInUsd, vs...))
+}
+
+// AmountInUsdNotIn applies the NotIn predicate on the "amount_in_usd" field.
+func AmountInUsdNotIn(vs ...decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotIn(FieldAmountInUsd, vs...))
+}
+
+// AmountInUsdGT applies the GT predicate on the "amount_in_usd" field.
+func AmountInUsdGT(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGT(FieldAmountInUsd, v))
+}
+
+// AmountInUsdGTE applies the GTE predicate on the "amount_in_usd" field.
+func AmountInUsdGTE(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGTE(FieldAmountInUsd, v))
+}
+
+// AmountInUsdLT applies the LT predicate on the "amount_in_usd" field.
+func AmountInUsdLT(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLT(FieldAmountInUsd, v))
+}
+
+// AmountInUsdLTE applies the LTE predicate on the "amount_in_usd" field.
+func AmountInUsdLTE(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLTE(FieldAmountInUsd, v))
 }
 
 // HasSenderProfile applies the HasEdge predicate on the "sender_profile" edge.

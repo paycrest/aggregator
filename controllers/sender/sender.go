@@ -463,10 +463,12 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	}
 
 	// Create payment order
+	amountInUSD := u.CalculatePaymentOrderAmountInUSD(payload.Amount, token, institutionObj)
 	paymentOrder, err := tx.PaymentOrder.
 		Create().
 		SetSenderProfile(sender).
 		SetAmount(payload.Amount).
+		SetAmountInUsd(amountInUSD).
 		SetAmountPaid(decimal.NewFromInt(0)).
 		SetAmountReturned(decimal.NewFromInt(0)).
 		SetPercentSettled(decimal.NewFromInt(0)).
@@ -644,6 +646,7 @@ func (ctrl *SenderController) GetPaymentOrderByID(ctx *gin.Context) {
 	u.APIResponse(ctx, http.StatusOK, "success", "The order has been successfully retrieved", &types.PaymentOrderResponse{
 		ID:             paymentOrder.ID,
 		Amount:         paymentOrder.Amount,
+		AmountInUSD:    paymentOrder.AmountInUsd,
 		AmountPaid:     paymentOrder.AmountPaid,
 		AmountReturned: paymentOrder.AmountReturned,
 		Token:          paymentOrder.Edges.Token.Symbol,
@@ -811,6 +814,7 @@ func (ctrl *SenderController) GetPaymentOrders(ctx *gin.Context) {
 		orders = append(orders, types.PaymentOrderResponse{
 			ID:             paymentOrder.ID,
 			Amount:         paymentOrder.Amount,
+			AmountInUSD:    paymentOrder.AmountInUsd,
 			AmountPaid:     paymentOrder.AmountPaid,
 			AmountReturned: paymentOrder.AmountReturned,
 			Token:          paymentOrder.Edges.Token.Symbol,

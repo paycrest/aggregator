@@ -240,6 +240,12 @@ func (poc *PaymentOrderCreate) SetNillableStatus(pa *paymentorder.Status) *Payme
 	return poc
 }
 
+// SetAmountInUsd sets the "amount_in_usd" field.
+func (poc *PaymentOrderCreate) SetAmountInUsd(d decimal.Decimal) *PaymentOrderCreate {
+	poc.mutation.SetAmountInUsd(d)
+	return poc
+}
+
 // SetID sets the "id" field.
 func (poc *PaymentOrderCreate) SetID(u uuid.UUID) *PaymentOrderCreate {
 	poc.mutation.SetID(u)
@@ -518,6 +524,9 @@ func (poc *PaymentOrderCreate) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.status": %w`, err)}
 		}
 	}
+	if _, ok := poc.mutation.AmountInUsd(); !ok {
+		return &ValidationError{Name: "amount_in_usd", err: errors.New(`ent: missing required field "PaymentOrder.amount_in_usd"`)}
+	}
 	if len(poc.mutation.TokenIDs()) == 0 {
 		return &ValidationError{Name: "token", err: errors.New(`ent: missing required edge "PaymentOrder.token"`)}
 	}
@@ -636,6 +645,10 @@ func (poc *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec
 	if value, ok := poc.mutation.Status(); ok {
 		_spec.SetField(paymentorder.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
+	}
+	if value, ok := poc.mutation.AmountInUsd(); ok {
+		_spec.SetField(paymentorder.FieldAmountInUsd, field.TypeFloat64, value)
+		_node.AmountInUsd = value
 	}
 	if nodes := poc.mutation.SenderProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -1128,6 +1141,24 @@ func (u *PaymentOrderUpsert) UpdateStatus() *PaymentOrderUpsert {
 	return u
 }
 
+// SetAmountInUsd sets the "amount_in_usd" field.
+func (u *PaymentOrderUpsert) SetAmountInUsd(v decimal.Decimal) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldAmountInUsd, v)
+	return u
+}
+
+// UpdateAmountInUsd sets the "amount_in_usd" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateAmountInUsd() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldAmountInUsd)
+	return u
+}
+
+// AddAmountInUsd adds v to the "amount_in_usd" field.
+func (u *PaymentOrderUpsert) AddAmountInUsd(v decimal.Decimal) *PaymentOrderUpsert {
+	u.Add(paymentorder.FieldAmountInUsd, v)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
@@ -1554,6 +1585,27 @@ func (u *PaymentOrderUpsertOne) SetStatus(v paymentorder.Status) *PaymentOrderUp
 func (u *PaymentOrderUpsertOne) UpdateStatus() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.UpdateStatus()
+	})
+}
+
+// SetAmountInUsd sets the "amount_in_usd" field.
+func (u *PaymentOrderUpsertOne) SetAmountInUsd(v decimal.Decimal) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetAmountInUsd(v)
+	})
+}
+
+// AddAmountInUsd adds v to the "amount_in_usd" field.
+func (u *PaymentOrderUpsertOne) AddAmountInUsd(v decimal.Decimal) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.AddAmountInUsd(v)
+	})
+}
+
+// UpdateAmountInUsd sets the "amount_in_usd" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateAmountInUsd() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateAmountInUsd()
 	})
 }
 
@@ -2150,6 +2202,27 @@ func (u *PaymentOrderUpsertBulk) SetStatus(v paymentorder.Status) *PaymentOrderU
 func (u *PaymentOrderUpsertBulk) UpdateStatus() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.UpdateStatus()
+	})
+}
+
+// SetAmountInUsd sets the "amount_in_usd" field.
+func (u *PaymentOrderUpsertBulk) SetAmountInUsd(v decimal.Decimal) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetAmountInUsd(v)
+	})
+}
+
+// AddAmountInUsd adds v to the "amount_in_usd" field.
+func (u *PaymentOrderUpsertBulk) AddAmountInUsd(v decimal.Decimal) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.AddAmountInUsd(v)
+	})
+}
+
+// UpdateAmountInUsd sets the "amount_in_usd" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateAmountInUsd() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateAmountInUsd()
 	})
 }
 

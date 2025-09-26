@@ -60,6 +60,8 @@ func (PaymentOrder) Fields() []ent.Field {
 		field.Enum("status").
 			Values("initiated", "processing", "pending", "validated", "expired", "settled", "refunded").
 			Default("initiated"),
+		field.Float("amount_in_usd").
+			GoType(decimal.Decimal{}),
 	}
 }
 
