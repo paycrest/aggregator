@@ -709,6 +709,7 @@ type KYBSubmissionInput struct {
 	AmlPolicyUrl                  *string                `json:"amlPolicyUrl"`
 	KycPolicyUrl                  *string                `json:"kycPolicyUrl"`
 	BeneficialOwners              []BeneficialOwnerInput `json:"beneficialOwners" binding:"required,dive"`
+	IAgreeToPaycrestTerms         bool                   `json:"iAgreeToPaycrestTerms"`
 }
 
 // BeneficialOwnerInput represents the input structure for a beneficial owner

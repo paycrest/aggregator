@@ -383,6 +383,7 @@ func TestIndex(t *testing.T) {
 			ProofOfResidentialAddressUrl:  "https://example.com/residential-address.pdf",
 			AmlPolicyUrl:                  nil, // Optional field
 			KycPolicyUrl:                  nil, // Optional field
+			IAgreeToPaycrestTerms:         true,
 			BeneficialOwners: []types.BeneficialOwnerInput{
 				{
 					FullName:                     "John Doe",
@@ -553,6 +554,7 @@ func TestIndex(t *testing.T) {
 				ProofOfResidentialAddressUrl:  "https://example.com/new-proof-residential-address.pdf",
 				AmlPolicyUrl:                  &amlPolicyUrl,
 				KycPolicyUrl:                  &kycPolicyUrl,
+				IAgreeToPaycrestTerms:         true,
 				BeneficialOwners: []types.BeneficialOwnerInput{
 					{
 						FullName:                     "Robert Johnson",
@@ -677,6 +679,7 @@ func TestIndex(t *testing.T) {
 			invalidSubmission := types.KYBSubmissionInput{
 				MobileNumber: "+1234567890",
 				// Missing other required fields
+				IAgreeToPaycrestTerms: false, // Should cause validation failure
 			}
 
 			headers := map[string]string{
@@ -695,8 +698,29 @@ func TestIndex(t *testing.T) {
 			assert.Equal(t, "Invalid input", response.Message)
 		})
 
+		t.Run("invalid input - terms not accepted", func(t *testing.T) {
+			termsNotAcceptedSubmission := validKYBSubmission
+			termsNotAcceptedSubmission.IAgreeToPaycrestTerms = false
+
+			headers := map[string]string{
+				"Authorization": "Bearer " + token,
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/v1/kyb-submission", termsNotAcceptedSubmission, headers, router)
+			assert.NoError(t, err)
+
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Equal(t, "You must agree to Paycrest terms and conditions to proceed", response.Message)
+		})
+
 		t.Run("invalid input - invalid beneficial owner data", func(t *testing.T) {
 			invalidSubmission := validKYBSubmission
+			// Create a copy of beneficial owners to avoid modifying the original
 			invalidSubmission.BeneficialOwners = []types.BeneficialOwnerInput{
 				{
 					FullName:                     "John Doe",
