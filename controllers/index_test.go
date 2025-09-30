@@ -715,7 +715,7 @@ func TestIndex(t *testing.T) {
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
 			assert.Equal(t, "error", response.Status)
-			assert.Equal(t, "You must agree to Paycrest terms and conditions to proceed", response.Message)
+			assert.Equal(t, "Kindly accept the terms and conditions to proceed", response.Message)
 		})
 
 		t.Run("invalid input - invalid beneficial owner data", func(t *testing.T) {
