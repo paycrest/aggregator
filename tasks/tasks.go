@@ -955,7 +955,7 @@ func SubscribeToRedisKeyspaceEvents() {
 // fetchExternalRate fetches the external rate for a fiat currency
 func fetchExternalRate(currency string) (decimal.Decimal, error) {
 	currency = strings.ToUpper(currency)
-	supportedCurrencies := []string{"KES", "NGN", "GHS", "TZS", "UGX", "XOF", "BRL"}
+	supportedCurrencies := []string{"KES", "NGN", "GHS", "MWK", "TZS", "UGX", "XOF", "BRL"}
 	isSupported := false
 	for _, supported := range supportedCurrencies {
 		if currency == supported {
