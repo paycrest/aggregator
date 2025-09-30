@@ -1514,6 +1514,12 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		return
 	}
 
+	// Validate that user has agreed to Paycrest terms
+	if !input.IAcceptTerms {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Kindly accept the terms and conditions to proceed", nil)
+		return
+	}
+
 	// Get user ID from the context
 	userIDValue, exists := ctx.Get("user_id")
 	if !exists {
