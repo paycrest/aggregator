@@ -361,10 +361,6 @@ func ProcessSettledOrders(ctx context.Context, network *ent.Network, orderIds []
 			"gatewayID":   lo.GatewayID,
 		}
 	}
-	logger.WithFields(logger.Fields{
-		"OrderIDs":   orderIds,
-		"LockOrders": lockOrderDetails,
-	}).Info("Processing settled orders")
 
 	var wg sync.WaitGroup
 	for _, lockOrder := range lockOrders {
