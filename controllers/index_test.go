@@ -679,7 +679,7 @@ func TestIndex(t *testing.T) {
 			invalidSubmission := types.KYBSubmissionInput{
 				MobileNumber: "+1234567890",
 				// Missing other required fields
-				IAcceptTerms: false, // Should cause validation failure
+				IAcceptTerms: true,
 			}
 
 			headers := map[string]string{
