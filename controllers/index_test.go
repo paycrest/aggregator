@@ -383,7 +383,7 @@ func TestIndex(t *testing.T) {
 			ProofOfResidentialAddressUrl:  "https://example.com/residential-address.pdf",
 			AmlPolicyUrl:                  nil, // Optional field
 			KycPolicyUrl:                  nil, // Optional field
-			IAgreeToPaycrestTerms:         true,
+			IAcceptTerms:         true,
 			BeneficialOwners: []types.BeneficialOwnerInput{
 				{
 					FullName:                     "John Doe",
@@ -554,7 +554,7 @@ func TestIndex(t *testing.T) {
 				ProofOfResidentialAddressUrl:  "https://example.com/new-proof-residential-address.pdf",
 				AmlPolicyUrl:                  &amlPolicyUrl,
 				KycPolicyUrl:                  &kycPolicyUrl,
-				IAgreeToPaycrestTerms:         true,
+				IAcceptTerms:         true,
 				BeneficialOwners: []types.BeneficialOwnerInput{
 					{
 						FullName:                     "Robert Johnson",
@@ -679,7 +679,7 @@ func TestIndex(t *testing.T) {
 			invalidSubmission := types.KYBSubmissionInput{
 				MobileNumber: "+1234567890",
 				// Missing other required fields
-				IAgreeToPaycrestTerms: false, // Should cause validation failure
+				IAcceptTerms: false, // Should cause validation failure
 			}
 
 			headers := map[string]string{
@@ -700,7 +700,7 @@ func TestIndex(t *testing.T) {
 
 		t.Run("invalid input - terms not accepted", func(t *testing.T) {
 			termsNotAcceptedSubmission := validKYBSubmission
-			termsNotAcceptedSubmission.IAgreeToPaycrestTerms = false
+			termsNotAcceptedSubmission.IAcceptTerms = false
 
 			headers := map[string]string{
 				"Authorization": "Bearer " + token,
