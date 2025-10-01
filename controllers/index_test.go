@@ -68,7 +68,7 @@ func TestIndex(t *testing.T) {
 	router.POST("kyc/webhook", ctrl.KYCWebhook)
 	router.GET("/v1/tokens", ctrl.GetSupportedTokens)
 	router.POST("/v1/kyb-submission", middleware.JWTMiddleware, ctrl.HandleKYBSubmission)
-	router.GET("/v1/kyb/documents", middleware.JWTMiddleware, ctrl.GetKYBDocuments)
+	router.GET("/v1/kyb-submission", middleware.JWTMiddleware, ctrl.GetKYBDocuments)
 
 	t.Run("GetInstitutions By Currency", func(t *testing.T) {
 
@@ -835,7 +835,7 @@ func TestIndex(t *testing.T) {
 			}
 
 			// Make the request
-			res, err := test.PerformRequest(t, "GET", "/v1/kyb/documents", nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", "/v1/kyb-submission", nil, headers, router)
 			assert.NoError(t, err)
 
 			assert.Equal(t, http.StatusOK, res.Code)
@@ -900,7 +900,7 @@ func TestIndex(t *testing.T) {
 			}
 
 			// Make the request
-			res, err := test.PerformRequest(t, "GET", "/v1/kyb/documents", nil, approvedHeaders, router)
+			res, err := test.PerformRequest(t, "GET", "/v1/kyb-submission", nil, approvedHeaders, router)
 			assert.NoError(t, err)
 
 			assert.Equal(t, http.StatusForbidden, res.Code)
