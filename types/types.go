@@ -723,6 +723,21 @@ type BeneficialOwnerInput struct {
 	GovernmentIssuedIdType       string  `json:"governmentIssuedIdType" binding:"required,oneof=passport drivers_license national_id"`
 }
 
+// KYBDocumentsResponse represents the response structure for KYB documents retrieval
+type KYBDocumentsResponse struct {
+	MobileNumber                  string                 `json:"mobileNumber"`
+	CompanyName                   string                 `json:"companyName"`
+	RegisteredBusinessAddress     string                 `json:"registeredBusinessAddress"`
+	CertificateOfIncorporationUrl string                 `json:"certificateOfIncorporationUrl"`
+	ArticlesOfIncorporationUrl    string                 `json:"articlesOfIncorporationUrl"`
+	BusinessLicenseUrl            *string                `json:"businessLicenseUrl"`
+	ProofOfBusinessAddressUrl     string                 `json:"proofOfBusinessAddressUrl"`
+	AmlPolicyUrl                  *string                `json:"amlPolicyUrl"`
+	KycPolicyUrl                  *string                `json:"kycPolicyUrl"`
+	BeneficialOwners              []BeneficialOwnerInput `json:"beneficialOwners"`
+	RejectionComment              *string                `json:"rejectionComment,omitempty"`
+}
+
 // IndexTransactionRequest represents the request payload for indexing a specific transaction
 type IndexTransactionRequest struct {
 	TxHash  string `json:"txHash" binding:"required"`

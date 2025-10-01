@@ -55,6 +55,7 @@ func RegisterRoutes(route *gin.Engine) {
 	// KYB route
 	v1.POST("slack-interaction", middleware.SlackVerificationMiddleware, ctrl.SlackInteractionHandler)
 	v1.POST("kyb-submission", middleware.JWTMiddleware, ctrl.HandleKYBSubmission)
+	v1.GET("kyb-submission", middleware.JWTMiddleware, ctrl.GetKYBDocuments)
 
 	// KYC routes
 	v1.POST("kyc", ctrl.RequestIDVerification)

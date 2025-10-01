@@ -1758,6 +1758,95 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 	})
 }
 
+// GetKYBDocuments retrieves KYB documents for rejected users
+func (ctrl *Controller) GetKYBDocuments(ctx *gin.Context) {
+	// Get user ID from the context
+	userIDValue, exists := ctx.Get("user_id")
+	if !exists {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "User not authenticated", nil)
+		return
+	}
+
+	// Validate user ID
+	userID, err := uuid.Parse(userIDValue.(string))
+	if err != nil {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid user ID", nil)
+		return
+	}
+
+	// Fetch user record
+	userRecord, err := storage.Client.User.
+		Query().
+		Where(user.IDEQ(userID)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusNotFound, "error", "User not found", nil)
+			return
+		}
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": userID,
+		}).Error("Error: Failed to query user")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to process request", nil)
+		return
+	}
+
+	// Only return documents if status is rejected
+	if userRecord.KybVerificationStatus != user.KybVerificationStatusRejected {
+		u.APIResponse(ctx, http.StatusForbidden, "error", "Documents only available for rejected submissions", nil)
+		return
+	}
+
+	// Fetch KYB profile with beneficial owners
+	kybProfile, err := storage.Client.KYBProfile.
+		Query().
+		Where(kybprofile.HasUserWith(user.IDEQ(userRecord.ID))).
+		WithBeneficialOwners().
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusNotFound, "error", "No KYB submission found", nil)
+			return
+		}
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": userID,
+		}).Error("Error: Failed to fetch KYB profile")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch documents", nil)
+		return
+	}
+
+	// Return structured data for frontend
+	response := types.KYBDocumentsResponse{
+		MobileNumber:                  kybProfile.MobileNumber,
+		CompanyName:                   kybProfile.CompanyName,
+		RegisteredBusinessAddress:     kybProfile.RegisteredBusinessAddress,
+		CertificateOfIncorporationUrl: kybProfile.CertificateOfIncorporationURL,
+		ArticlesOfIncorporationUrl:    kybProfile.ArticlesOfIncorporationURL,
+		BusinessLicenseUrl:            kybProfile.BusinessLicenseURL,
+		ProofOfBusinessAddressUrl:     kybProfile.ProofOfBusinessAddressURL,
+		AmlPolicyUrl:                  &kybProfile.AmlPolicyURL,
+		KycPolicyUrl:                  kybProfile.KycPolicyURL,
+		BeneficialOwners:              make([]types.BeneficialOwnerInput, len(kybProfile.Edges.BeneficialOwners)),
+		RejectionComment:              kybProfile.KybRejectionComment,
+	}
+
+	for i, owner := range kybProfile.Edges.BeneficialOwners {
+		response.BeneficialOwners[i] = types.BeneficialOwnerInput{
+			FullName:                     owner.FullName,
+			ResidentialAddress:           owner.ResidentialAddress,
+			DateOfBirth:                  owner.DateOfBirth,
+			OwnershipPercentage:          owner.OwnershipPercentage,
+			GovernmentIssuedIdType:       string(owner.GovernmentIssuedIDType),
+			GovernmentIssuedIdUrl:        owner.GovernmentIssuedIDURL,
+			ProofOfResidentialAddressUrl: owner.ProofOfResidentialAddressURL,
+		}
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "KYB documents retrieved", response)
+}
+
 // InsightWebhook handles the webhook callback from thirdweb insight, including signature verification and event processing
 func (ctrl *Controller) InsightWebhook(ctx *gin.Context) {
 	// Get raw body for signature verification
