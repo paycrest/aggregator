@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"strings"
 	"sync"
@@ -395,7 +396,22 @@ func GetTronLatestBlock(endpoint string) (int64, error) {
 		return 0, fmt.Errorf("failed to get latest block: %w", err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors first (preserving original logic)
+	if res.StatusCode() >= 500 { // Return on server errors
+		return 0, fmt.Errorf("%d", res.StatusCode())
+	}
+	if res.StatusCode() >= 400 { // Return on client errors
+		return 0, fmt.Errorf("%d", res.StatusCode())
+	}
+
+	// Parse JSON response using fastshot's RawBody method
+	body, err := io.ReadAll(res.RawBody())
+	if err != nil {
+		return 0, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse JSON response: %w", err)
 	}
@@ -591,7 +607,40 @@ func SyncLockOrderFulfillments() {
 				continue
 			}
 
-			data, err := utils.ParseJSONResponse(res.RawResponse)
+			// Check for HTTP errors first (preserving original logic)
+			if res.StatusCode() >= 500 { // Return on server errors
+				logger.WithFields(logger.Fields{
+					"Error":           fmt.Sprintf("HTTP error: %d", res.StatusCode()),
+					"ProviderID":      order.Edges.Provider.ID,
+					"PayloadOrderId":  payload["orderId"],
+					"PayloadCurrency": payload["currency"],
+				}).Errorf("HTTP server error from provider")
+				continue
+			}
+			if res.StatusCode() >= 400 { // Return on client errors
+				logger.WithFields(logger.Fields{
+					"Error":           fmt.Sprintf("HTTP error: %d", res.StatusCode()),
+					"ProviderID":      order.Edges.Provider.ID,
+					"PayloadOrderId":  payload["orderId"],
+					"PayloadCurrency": payload["currency"],
+				}).Errorf("HTTP client error from provider")
+				continue
+			}
+
+			// Parse JSON response using fastshot's RawBody method
+			body, err := io.ReadAll(res.RawBody())
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":           fmt.Sprintf("failed to read response body: %v", err),
+					"ProviderID":      order.Edges.Provider.ID,
+					"PayloadOrderId":  payload["orderId"],
+					"PayloadCurrency": payload["currency"],
+				}).Errorf("failed to read response body from provider")
+				continue
+			}
+
+			var data map[string]interface{}
+			err = json.Unmarshal(body, &data)
 			if err != nil {
 				if order.Status == lockpaymentorder.StatusProcessing && order.UpdatedAt.Add(orderConf.OrderFulfillmentValidity*2).Before(time.Now()) {
 					logger.WithFields(logger.Fields{
@@ -717,7 +766,49 @@ func SyncLockOrderFulfillments() {
 						continue
 					}
 
-					data, err := utils.ParseJSONResponse(res.RawResponse)
+					// Check for HTTP errors first (preserving original logic)
+					if res.StatusCode() >= 500 { // Return on server errors
+						logger.WithFields(logger.Fields{
+							"Error":           fmt.Sprintf("HTTP error: %d", res.StatusCode()),
+							"OrderID":         order.ID.String(),
+							"ProviderID":      order.Edges.Provider.ID,
+							"PayloadOrderId":  payload["orderId"],
+							"PayloadCurrency": payload["currency"],
+							"PayloadPsp":      payload["psp"],
+							"PayloadTxId":     payload["txId"],
+						}).Errorf("HTTP server error from provider")
+						continue
+					}
+					if res.StatusCode() >= 400 { // Return on client errors
+						logger.WithFields(logger.Fields{
+							"Error":           fmt.Sprintf("HTTP error: %d", res.StatusCode()),
+							"OrderID":         order.ID.String(),
+							"ProviderID":      order.Edges.Provider.ID,
+							"PayloadOrderId":  payload["orderId"],
+							"PayloadCurrency": payload["currency"],
+							"PayloadPsp":      payload["psp"],
+							"PayloadTxId":     payload["txId"],
+						}).Errorf("HTTP client error from provider")
+						continue
+					}
+
+					// Parse JSON response using fastshot's RawBody method
+					body, err := io.ReadAll(res.RawBody())
+					if err != nil {
+						logger.WithFields(logger.Fields{
+							"Error":           fmt.Sprintf("failed to read response body: %v", err),
+							"OrderID":         order.ID.String(),
+							"ProviderID":      order.Edges.Provider.ID,
+							"PayloadOrderId":  payload["orderId"],
+							"PayloadCurrency": payload["currency"],
+							"PayloadPsp":      payload["psp"],
+							"PayloadTxId":     payload["txId"],
+						}).Errorf("failed to read response body from provider")
+						continue
+					}
+
+					var data map[string]interface{}
+					err = json.Unmarshal(body, &data)
 					if err != nil {
 						logger.WithFields(logger.Fields{
 							"Error":           fmt.Sprintf("%v", err),
@@ -979,7 +1070,22 @@ func fetchExternalRate(currency string) (decimal.Decimal, error) {
 			return decimal.Zero, fmt.Errorf("ComputeMarketRate: %w", err)
 		}
 
-		data, err := utils.ParseJSONResponse(res.RawResponse)
+		// Check for HTTP errors first (preserving original logic)
+		if res.StatusCode() >= 500 { // Return on server errors
+			return decimal.Zero, fmt.Errorf("%d", res.StatusCode())
+		}
+		if res.StatusCode() >= 400 { // Return on client errors
+			return decimal.Zero, fmt.Errorf("%d", res.StatusCode())
+		}
+
+		// Parse JSON response using fastshot's RawBody method
+		body, err := io.ReadAll(res.RawBody())
+		if err != nil {
+			return decimal.Zero, fmt.Errorf("failed to read response body: %w", err)
+		}
+
+		var data map[string]interface{}
+		err = json.Unmarshal(body, &data)
 		if err != nil {
 			return decimal.Zero, fmt.Errorf("ComputeMarketRate: %w %v", err, data)
 		}
@@ -1043,7 +1149,22 @@ func fetchExternalRate(currency string) (decimal.Decimal, error) {
 			return decimal.Zero, fmt.Errorf("ComputeMarketRate: %w", err)
 		}
 
-		resData, err := utils.ParseJSONResponse(res.RawResponse)
+		// Check for HTTP errors first (preserving original logic)
+		if res.StatusCode() >= 500 { // Return on server errors
+			return decimal.Zero, fmt.Errorf("%d", res.StatusCode())
+		}
+		if res.StatusCode() >= 400 { // Return on client errors
+			return decimal.Zero, fmt.Errorf("%d", res.StatusCode())
+		}
+
+		// Parse JSON response using fastshot's RawBody method
+		body, err := io.ReadAll(res.RawBody())
+		if err != nil {
+			return decimal.Zero, fmt.Errorf("failed to read response body: %w", err)
+		}
+
+		var resData map[string]interface{}
+		err = json.Unmarshal(body, &resData)
 		if err != nil {
 			return decimal.Zero, fmt.Errorf("ComputeMarketRate: %w", err)
 		}
@@ -1638,8 +1759,22 @@ func fetchProviderBalances(providerID string) (map[string]*types.ProviderBalance
 		return nil, fmt.Errorf("failed to call provider /info endpoint: %v", err)
 	}
 
-	// Parse JSON response
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors first (preserving original logic)
+	if res.StatusCode() >= 500 { // Return on server errors
+		return nil, fmt.Errorf("%d", res.StatusCode())
+	}
+	if res.StatusCode() >= 400 { // Return on client errors
+		return nil, fmt.Errorf("%d", res.StatusCode())
+	}
+
+	// Parse JSON response using fastshot's RawBody method
+	body, err := io.ReadAll(res.RawBody())
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse response: %v", err)
 	}

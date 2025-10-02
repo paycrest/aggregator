@@ -5,7 +5,9 @@ import (
 	"crypto/ecdsa"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"io"
 	"math/big"
 	"net/url"
 	"reflect"
@@ -230,7 +232,7 @@ func CalculatePaymentOrderAmountInUSD(amount decimal.Decimal, token *ent.Token, 
 	if fiatCurrency != nil && token.BaseCurrency == fiatCurrency.Code && !fiatCurrency.MarketRate.IsZero() {
 		return amount.Div(fiatCurrency.MarketRate)
 	}
-	
+
 	return amount
 }
 
@@ -523,8 +525,37 @@ func CallProviderWithHMAC(ctx context.Context, providerID, method, path string, 
 		return nil, fmt.Errorf("failed to make HTTP request: %v", reqErr)
 	}
 
-	// Parse JSON response
-	data, err := ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors first (preserving original logic)
+	if res.StatusCode() >= 500 { // Return on server errors
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("HTTP error: %d", res.StatusCode()),
+			"ProviderID": providerID,
+			"Path":       path,
+		}).Errorf("HTTP server error from provider")
+		return nil, fmt.Errorf("%d", res.StatusCode())
+	}
+	if res.StatusCode() >= 400 { // Return on client errors
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("HTTP error: %d", res.StatusCode()),
+			"ProviderID": providerID,
+			"Path":       path,
+		}).Errorf("HTTP client error from provider")
+		return nil, fmt.Errorf("%d", res.StatusCode())
+	}
+
+	// Parse JSON response using fastshot's RawBody method
+	body, err := io.ReadAll(res.RawBody())
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("failed to read response body: %v", err),
+			"ProviderID": providerID,
+			"Path":       path,
+		}).Errorf("failed to read response body from provider")
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal(body, &data)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),

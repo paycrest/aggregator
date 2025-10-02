@@ -3,7 +3,9 @@ package indexer
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"io"
 	"math/big"
 	"strconv"
 	"strings"
@@ -82,7 +84,22 @@ func (s *IndexerTron) indexReceiveAddressByTransaction(ctx context.Context, toke
 		return fmt.Errorf("error getting transaction info for token %s: %w", token.Symbol, err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors first (preserving original logic)
+	if res.StatusCode() >= 500 { // Return on server errors
+		return fmt.Errorf("%d", res.StatusCode())
+	}
+	if res.StatusCode() >= 400 { // Return on client errors
+		return fmt.Errorf("%d", res.StatusCode())
+	}
+
+	// Parse JSON response using fastshot's RawBody method
+	body, err := io.ReadAll(res.RawBody())
+	if err != nil {
+		return fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return fmt.Errorf("error parsing transaction response for token %s: %w", token.Symbol, err)
 	}
@@ -171,7 +188,22 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 			return eventCounts, fmt.Errorf("IndexGateway.getTransaction: %w", err)
 		}
 
-		data, err := utils.ParseJSONResponse(res.RawResponse)
+		// Check for HTTP errors first (preserving original logic)
+		if res.StatusCode() >= 500 { // Return on server errors
+			return eventCounts, fmt.Errorf("%d", res.StatusCode())
+		}
+		if res.StatusCode() >= 400 { // Return on client errors
+			return eventCounts, fmt.Errorf("%d", res.StatusCode())
+		}
+
+		// Parse JSON response using fastshot's RawBody method
+		body, err := io.ReadAll(res.RawBody())
+		if err != nil {
+			return eventCounts, fmt.Errorf("failed to read response body: %w", err)
+		}
+
+		var data map[string]interface{}
+		err = json.Unmarshal(body, &data)
 		if err != nil {
 			return eventCounts, fmt.Errorf("IndexGateway.parseJSONResponse: %w", err)
 		}
@@ -381,7 +413,22 @@ func (s *IndexerTron) indexOrderCreatedByBlockRange(ctx context.Context, network
 	if err != nil {
 		return fmt.Errorf("indexOrderCreatedByBlockRange.getEvents: %w", err)
 	}
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors first (preserving original logic)
+	if res.StatusCode() >= 500 { // Return on server errors
+		return fmt.Errorf("%d", res.StatusCode())
+	}
+	if res.StatusCode() >= 400 { // Return on client errors
+		return fmt.Errorf("%d", res.StatusCode())
+	}
+
+	// Parse JSON response using fastshot's RawBody method
+	body, err := io.ReadAll(res.RawBody())
+	if err != nil {
+		return fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return fmt.Errorf("indexOrderCreatedByBlockRange.parseJSONResponse: %w", err)
 	}
@@ -397,7 +444,22 @@ func (s *IndexerTron) indexOrderCreatedByBlockRange(ctx context.Context, network
 			if err != nil {
 				return fmt.Errorf("indexOrderCreatedByBlockRange.getTransaction: %w", err)
 			}
-			data, err := utils.ParseJSONResponse(res.RawResponse)
+			// Check for HTTP errors first (preserving original logic)
+			if res.StatusCode() >= 500 { // Return on server errors
+				return fmt.Errorf("%d", res.StatusCode())
+			}
+			if res.StatusCode() >= 400 { // Return on client errors
+				return fmt.Errorf("%d", res.StatusCode())
+			}
+
+			// Parse JSON response using fastshot's RawBody method
+			body, err := io.ReadAll(res.RawBody())
+			if err != nil {
+				return fmt.Errorf("failed to read response body: %w", err)
+			}
+
+			var data map[string]interface{}
+			err = json.Unmarshal(body, &data)
 			if err != nil {
 				return fmt.Errorf("indexOrderCreatedByBlockRange.parseJSONResponse: %w", err)
 			}
@@ -452,7 +514,22 @@ func (s *IndexerTron) indexOrderSettledByBlockRange(ctx context.Context, network
 	if err != nil {
 		return fmt.Errorf("indexOrderSettledByBlockRange.getEvents: %w", err)
 	}
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors first (preserving original logic)
+	if res.StatusCode() >= 500 { // Return on server errors
+		return fmt.Errorf("%d", res.StatusCode())
+	}
+	if res.StatusCode() >= 400 { // Return on client errors
+		return fmt.Errorf("%d", res.StatusCode())
+	}
+
+	// Parse JSON response using fastshot's RawBody method
+	body, err := io.ReadAll(res.RawBody())
+	if err != nil {
+		return fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return fmt.Errorf("indexOrderSettledByBlockRange.parseJSONResponse: %w", err)
 	}
@@ -468,7 +545,22 @@ func (s *IndexerTron) indexOrderSettledByBlockRange(ctx context.Context, network
 			if err != nil {
 				return fmt.Errorf("indexOrderSettledByBlockRange.getTransaction: %w", err)
 			}
-			data, err := utils.ParseJSONResponse(res.RawResponse)
+			// Check for HTTP errors first (preserving original logic)
+			if res.StatusCode() >= 500 { // Return on server errors
+				return fmt.Errorf("%d", res.StatusCode())
+			}
+			if res.StatusCode() >= 400 { // Return on client errors
+				return fmt.Errorf("%d", res.StatusCode())
+			}
+
+			// Parse JSON response using fastshot's RawBody method
+			body, err := io.ReadAll(res.RawBody())
+			if err != nil {
+				return fmt.Errorf("failed to read response body: %w", err)
+			}
+
+			var data map[string]interface{}
+			err = json.Unmarshal(body, &data)
 			if err != nil {
 				return fmt.Errorf("indexOrderSettledByBlockRange.parseJSONResponse: %w", err)
 			}
@@ -523,7 +615,22 @@ func (s *IndexerTron) indexOrderRefundedByBlockRange(ctx context.Context, networ
 	if err != nil {
 		return fmt.Errorf("indexOrderRefundedByBlockRange.getEvents: %w", err)
 	}
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors first (preserving original logic)
+	if res.StatusCode() >= 500 { // Return on server errors
+		return fmt.Errorf("%d", res.StatusCode())
+	}
+	if res.StatusCode() >= 400 { // Return on client errors
+		return fmt.Errorf("%d", res.StatusCode())
+	}
+
+	// Parse JSON response using fastshot's RawBody method
+	body, err := io.ReadAll(res.RawBody())
+	if err != nil {
+		return fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return fmt.Errorf("indexOrderRefundedByBlockRange.parseJSONResponse: %w", err)
 	}
@@ -539,7 +646,22 @@ func (s *IndexerTron) indexOrderRefundedByBlockRange(ctx context.Context, networ
 			if err != nil {
 				return fmt.Errorf("indexOrderRefundedByBlockRange.getTransaction: %w", err)
 			}
-			data, err := utils.ParseJSONResponse(res.RawResponse)
+			// Check for HTTP errors first (preserving original logic)
+			if res.StatusCode() >= 500 { // Return on server errors
+				return fmt.Errorf("%d", res.StatusCode())
+			}
+			if res.StatusCode() >= 400 { // Return on client errors
+				return fmt.Errorf("%d", res.StatusCode())
+			}
+
+			// Parse JSON response using fastshot's RawBody method
+			body, err := io.ReadAll(res.RawBody())
+			if err != nil {
+				return fmt.Errorf("failed to read response body: %w", err)
+			}
+
+			var data map[string]interface{}
+			err = json.Unmarshal(body, &data)
 			if err != nil {
 				return fmt.Errorf("indexOrderRefundedByBlockRange.parseJSONResponse: %w", err)
 			}

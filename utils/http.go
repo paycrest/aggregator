@@ -1,10 +1,6 @@
 package utils
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -61,33 +57,6 @@ func GetErrorData(err error) []types.ErrorData {
 		})
 	}
 	return errorData
-}
-
-// ParseJSONResponse parses a JSON response
-func ParseJSONResponse(res *http.Response) (map[string]interface{}, error) {
-	// Decode the response body into a map
-	responseBody, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var body map[string]interface{}
-	err = json.Unmarshal(responseBody, &body)
-	if err != nil {
-		// If the response is not JSON, create a custom error message
-		if strings.Contains(err.Error(), "invalid character") {
-			return nil, fmt.Errorf("received non-JSON response: %s", string(responseBody))
-		}
-	}
-
-	if res.StatusCode >= 500 { // Return on server errors
-		return body, fmt.Errorf("%s", fmt.Sprint(res.StatusCode))
-	}
-	if res.StatusCode >= 400 { // Return on client errors
-		return body, fmt.Errorf("%s", fmt.Sprint(res.StatusCode))
-	}
-
-	return body, nil
 }
 
 // Paginate parses the pagination query params and returns the offset(page) and limit(pageSize)
