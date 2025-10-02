@@ -65,17 +65,28 @@ func (s *BlockscoutService) GetAddressTokenTransfers(ctx context.Context, chainI
 	// For now, we'll return all token transfers without block filtering
 	// TODO: Implement block filtering for token transfers if needed
 
-	result := make([]map[string]interface{}, len(tokenTransfers))
-	for i, transfer := range tokenTransfers {
-		transferMap := transfer.(map[string]interface{})
-		
+	result := make([]map[string]interface{}, 0, len(tokenTransfers))
+	seen := make(map[string]struct{})
+	for _, item := range tokenTransfers {
+		transferMap, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		txHash, _ := transferMap["transaction_hash"].(string)
+		if txHash == "" {
+			continue
+		}
+		if _, exists := seen[txHash]; exists {
+			continue
+		}
+
 		// Normalize field names to match what the indexer expects
 		// Indexer expects "hash" field, but token transfers have "transaction_hash"
-		if txHash, exists := transferMap["transaction_hash"]; exists {
-			transferMap["hash"] = txHash
-		}
-		
-		result[i] = transferMap
+		transferMap["hash"] = txHash
+		seen[txHash] = struct{}{}
+
+		result = append(result, transferMap)
 	}
 
 	return result, nil
