@@ -63,7 +63,10 @@ func (s *EngineService) CreateServerWallet(ctx context.Context, label string) (s
 	}
 
 	// Parse JSON response using fastshot's RawBody method
-	body, err := io.ReadAll(res.RawBody())
+	bodyReader := res.RawBody()
+	defer bodyReader.Close()
+
+	body, err := io.ReadAll(bodyReader)
 	if err != nil {
 		return "", fmt.Errorf("failed to read response body: %w", err)
 	}
@@ -103,7 +106,10 @@ func (s *EngineService) GetLatestBlock(ctx context.Context, chainID int64) (int6
 			}
 
 			// Parse JSON response using fastshot's RawBody method
-			body, err := io.ReadAll(res.RawBody())
+			bodyReader := res.RawBody()
+			defer bodyReader.Close()
+
+			body, err := io.ReadAll(bodyReader)
 			if err != nil {
 				return 0, fmt.Errorf("failed to read response body: %w", err)
 			}
@@ -176,7 +182,10 @@ func (s *EngineService) GetContractEvents(ctx context.Context, chainID int64, co
 	}
 
 	// Parse JSON response using fastshot's RawBody method
-	body, err := io.ReadAll(res.RawBody())
+	bodyReader := res.RawBody()
+	defer bodyReader.Close()
+
+	body, err := io.ReadAll(bodyReader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
@@ -225,7 +234,10 @@ func (s *EngineService) SendTransactionBatch(ctx context.Context, chainID int64,
 	}
 
 	// Parse JSON response using fastshot's RawBody method
-	body, err := io.ReadAll(res.RawBody())
+	bodyReader := res.RawBody()
+	defer bodyReader.Close()
+
+	body, err := io.ReadAll(bodyReader)
 	if err != nil {
 		return "", fmt.Errorf("failed to read response body: %w", err)
 	}
@@ -274,7 +286,10 @@ func (s *EngineService) GetTransactionStatus(ctx context.Context, queueId string
 	}
 
 	// Parse JSON response using fastshot's RawBody method
-	body, err := io.ReadAll(res.RawBody())
+	bodyReader := res.RawBody()
+	defer bodyReader.Close()
+
+	body, err := io.ReadAll(bodyReader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
@@ -402,7 +417,10 @@ func (s *EngineService) CreateTransferWebhook(ctx context.Context, chainID int64
 	}
 
 	// Parse JSON response using fastshot's RawBody method
-	body, err := io.ReadAll(res.RawBody())
+	bodyReader := res.RawBody()
+	defer bodyReader.Close()
+
+	body, err := io.ReadAll(bodyReader)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to read response body: %w", err)
 	}
@@ -525,7 +543,10 @@ func (s *EngineService) GetWebhookByID(ctx context.Context, webhookID string, ch
 	}
 
 	// Parse JSON response using fastshot's RawBody method
-	body, err := io.ReadAll(res.RawBody())
+	bodyReader := res.RawBody()
+	defer bodyReader.Close()
+
+	body, err := io.ReadAll(bodyReader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
@@ -581,7 +602,10 @@ func (s *EngineService) UpdateWebhook(ctx context.Context, webhookID string, web
 	}
 
 	// Parse JSON response using fastshot's RawBody method
-	body, err := io.ReadAll(res.RawBody())
+	bodyReader := res.RawBody()
+	defer bodyReader.Close()
+
+	body, err := io.ReadAll(bodyReader)
 	if err != nil {
 		return fmt.Errorf("failed to read response body: %w", err)
 	}
@@ -827,7 +851,10 @@ func (s *EngineService) CreateGatewayWebhook() error {
 	}
 
 	// Parse JSON response using fastshot's RawBody method
-	body, err := io.ReadAll(res.RawBody())
+	bodyReader := res.RawBody()
+	defer bodyReader.Close()
+
+	body, err := io.ReadAll(bodyReader)
 	if err != nil {
 		return fmt.Errorf("failed to read response body: %w", err)
 	}
@@ -1056,7 +1083,10 @@ func (s *EngineService) GetAddressTransactionHistory(ctx context.Context, chainI
 	}
 
 	// Parse JSON response using fastshot's RawBody method
-	body, err := io.ReadAll(res.RawBody())
+	bodyReader := res.RawBody()
+	defer bodyReader.Close()
+
+	body, err := io.ReadAll(bodyReader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}

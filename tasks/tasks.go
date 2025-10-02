@@ -405,7 +405,10 @@ func GetTronLatestBlock(endpoint string) (int64, error) {
 	}
 
 	// Parse JSON response using fastshot's RawBody method
-	body, err := io.ReadAll(res.RawBody())
+	bodyReader := res.RawBody()
+	defer bodyReader.Close()
+
+	body, err := io.ReadAll(bodyReader)
 	if err != nil {
 		return 0, fmt.Errorf("failed to read response body: %w", err)
 	}
@@ -628,7 +631,10 @@ func SyncLockOrderFulfillments() {
 			}
 
 			// Parse JSON response using fastshot's RawBody method
-			body, err := io.ReadAll(res.RawBody())
+			bodyReader := res.RawBody()
+			defer bodyReader.Close()
+
+			body, err := io.ReadAll(bodyReader)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":           fmt.Sprintf("failed to read response body: %v", err),
@@ -793,7 +799,10 @@ func SyncLockOrderFulfillments() {
 					}
 
 					// Parse JSON response using fastshot's RawBody method
-					body, err := io.ReadAll(res.RawBody())
+					bodyReader := res.RawBody()
+					defer bodyReader.Close()
+
+					body, err := io.ReadAll(bodyReader)
 					if err != nil {
 						logger.WithFields(logger.Fields{
 							"Error":           fmt.Sprintf("failed to read response body: %v", err),
@@ -1079,7 +1088,10 @@ func fetchExternalRate(currency string) (decimal.Decimal, error) {
 		}
 
 		// Parse JSON response using fastshot's RawBody method
-		body, err := io.ReadAll(res.RawBody())
+		bodyReader := res.RawBody()
+		defer bodyReader.Close()
+
+		body, err := io.ReadAll(bodyReader)
 		if err != nil {
 			return decimal.Zero, fmt.Errorf("failed to read response body: %w", err)
 		}
@@ -1158,7 +1170,10 @@ func fetchExternalRate(currency string) (decimal.Decimal, error) {
 		}
 
 		// Parse JSON response using fastshot's RawBody method
-		body, err := io.ReadAll(res.RawBody())
+		bodyReader := res.RawBody()
+		defer bodyReader.Close()
+
+		body, err := io.ReadAll(bodyReader)
 		if err != nil {
 			return decimal.Zero, fmt.Errorf("failed to read response body: %w", err)
 		}
@@ -1768,7 +1783,10 @@ func fetchProviderBalances(providerID string) (map[string]*types.ProviderBalance
 	}
 
 	// Parse JSON response using fastshot's RawBody method
-	body, err := io.ReadAll(res.RawBody())
+	bodyReader := res.RawBody()
+	defer bodyReader.Close()
+
+	body, err := io.ReadAll(bodyReader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}

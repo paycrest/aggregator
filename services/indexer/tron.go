@@ -93,7 +93,10 @@ func (s *IndexerTron) indexReceiveAddressByTransaction(ctx context.Context, toke
 	}
 
 	// Parse JSON response using fastshot's RawBody method
-	body, err := io.ReadAll(res.RawBody())
+	bodyReader := res.RawBody()
+	defer bodyReader.Close()
+
+	body, err := io.ReadAll(bodyReader)
 	if err != nil {
 		return fmt.Errorf("failed to read response body: %w", err)
 	}
@@ -197,7 +200,10 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 		}
 
 		// Parse JSON response using fastshot's RawBody method
-		body, err := io.ReadAll(res.RawBody())
+		bodyReader := res.RawBody()
+		defer bodyReader.Close()
+
+		body, err := io.ReadAll(bodyReader)
 		if err != nil {
 			return eventCounts, fmt.Errorf("failed to read response body: %w", err)
 		}
@@ -422,7 +428,10 @@ func (s *IndexerTron) indexOrderCreatedByBlockRange(ctx context.Context, network
 	}
 
 	// Parse JSON response using fastshot's RawBody method
-	body, err := io.ReadAll(res.RawBody())
+	bodyReader := res.RawBody()
+	defer bodyReader.Close()
+
+	body, err := io.ReadAll(bodyReader)
 	if err != nil {
 		return fmt.Errorf("failed to read response body: %w", err)
 	}
@@ -453,7 +462,10 @@ func (s *IndexerTron) indexOrderCreatedByBlockRange(ctx context.Context, network
 			}
 
 			// Parse JSON response using fastshot's RawBody method
-			body, err := io.ReadAll(res.RawBody())
+			bodyReader := res.RawBody()
+			defer bodyReader.Close()
+
+			body, err := io.ReadAll(bodyReader)
 			if err != nil {
 				return fmt.Errorf("failed to read response body: %w", err)
 			}
@@ -523,7 +535,10 @@ func (s *IndexerTron) indexOrderSettledByBlockRange(ctx context.Context, network
 	}
 
 	// Parse JSON response using fastshot's RawBody method
-	body, err := io.ReadAll(res.RawBody())
+	bodyReader := res.RawBody()
+	defer bodyReader.Close()
+
+	body, err := io.ReadAll(bodyReader)
 	if err != nil {
 		return fmt.Errorf("failed to read response body: %w", err)
 	}
@@ -554,7 +569,10 @@ func (s *IndexerTron) indexOrderSettledByBlockRange(ctx context.Context, network
 			}
 
 			// Parse JSON response using fastshot's RawBody method
-			body, err := io.ReadAll(res.RawBody())
+			bodyReader := res.RawBody()
+			defer bodyReader.Close()
+
+			body, err := io.ReadAll(bodyReader)
 			if err != nil {
 				return fmt.Errorf("failed to read response body: %w", err)
 			}
@@ -624,7 +642,10 @@ func (s *IndexerTron) indexOrderRefundedByBlockRange(ctx context.Context, networ
 	}
 
 	// Parse JSON response using fastshot's RawBody method
-	body, err := io.ReadAll(res.RawBody())
+	bodyReader := res.RawBody()
+	defer bodyReader.Close()
+
+	body, err := io.ReadAll(bodyReader)
 	if err != nil {
 		return fmt.Errorf("failed to read response body: %w", err)
 	}
@@ -655,7 +676,10 @@ func (s *IndexerTron) indexOrderRefundedByBlockRange(ctx context.Context, networ
 			}
 
 			// Parse JSON response using fastshot's RawBody method
-			body, err := io.ReadAll(res.RawBody())
+			bodyReader := res.RawBody()
+			defer bodyReader.Close()
+
+			body, err := io.ReadAll(bodyReader)
 			if err != nil {
 				return fmt.Errorf("failed to read response body: %w", err)
 			}

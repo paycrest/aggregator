@@ -106,7 +106,10 @@ func (b *BrevoProvider) sendBrevoRequest(ctx context.Context, reqBody map[string
 	}
 
 	// Parse response body to extract message ID using fastshot's RawBody method
-	body, err := io.ReadAll(res.RawBody())
+	bodyReader := res.RawBody()
+	defer bodyReader.Close()
+
+	body, err := io.ReadAll(bodyReader)
 	if err != nil {
 		logger.Errorf("Failed to read response body from Brevo: %v", err)
 		return types.SendEmailResponse{}, fmt.Errorf("failed to read response body: %w", err)

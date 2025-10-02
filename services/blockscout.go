@@ -59,7 +59,10 @@ func (s *BlockscoutService) GetAddressTokenTransfers(ctx context.Context, chainI
 	}
 
 	// Parse JSON response using fastshot's RawBody method
-	body, err := io.ReadAll(res.RawBody())
+	bodyReader := res.RawBody()
+	defer bodyReader.Close()
+
+	body, err := io.ReadAll(bodyReader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}

@@ -124,7 +124,10 @@ func (s *SmileIDService) RequestVerification(ctx context.Context, req types.Veri
 	}
 
 	// Parse JSON response using fastshot's RawBody method
-	body, err := io.ReadAll(res.RawBody())
+	bodyReader := res.RawBody()
+	defer bodyReader.Close()
+
+	body, err := io.ReadAll(bodyReader)
 	if err != nil {
 		return nil, kycErrors.ErrProviderResponse{Err: fmt.Errorf("failed to read response body: %w", err)}
 	}

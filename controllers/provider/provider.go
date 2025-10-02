@@ -1174,7 +1174,10 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 	}
 
 	// Parse JSON response using fastshot's RawBody method
-	body, err := io.ReadAll(res.RawBody())
+	bodyReader := res.RawBody()
+	defer bodyReader.Close()
+
+	body, err := io.ReadAll(bodyReader)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error": fmt.Sprintf("failed to read response body: %v", err),
