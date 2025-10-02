@@ -1246,8 +1246,31 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 		if strings.HasPrefix(callbackID, "reject_modal_") {
 			kybProfileID := callbackID[len("reject_modal_"):]
 
-			// Prevent modal if already processed
-			if ctrl.isActionProcessed(kybProfileID, "approve") || ctrl.isActionProcessed(kybProfileID, "reject") {
+			// Check if this is a resubmission by looking at the user's current KYB status
+			kybProfileUUID, err := uuid.Parse(kybProfileID)
+			if err != nil {
+				logger.Errorf("Invalid KYB Profile ID format for rejection: %s, error: %v", kybProfileID, err)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid KYB Profile ID format"})
+				return
+			}
+
+			// Check current KYB status to determine if this is a resubmission
+			kyb, qerr := storage.Client.KYBProfile.
+				Query().
+				Where(kybprofile.IDEQ(kybProfileUUID)).
+				WithUser().
+				Only(ctx)
+			if qerr != nil || kyb.Edges.User == nil {
+				logger.Errorf("Failed to resolve KYB profile %s: %v", kybProfileID, qerr)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resolve KYB profile"})
+				return
+			}
+
+			// Allow processing if user status is rejected (resubmission) or if not already processed
+			userStatus := kyb.Edges.User.KybVerificationStatus
+			isResubmission := userStatus == user.KybVerificationStatusRejected
+
+			if !isResubmission && (ctrl.isActionProcessed(kybProfileID, "approve") || ctrl.isActionProcessed(kybProfileID, "reject")) {
 				logger.Warnf("Action already processed for KYB Profile %s", kybProfileID)
 				ctx.JSON(http.StatusOK, gin.H{"text": "This submission has already been processed."})
 				return
@@ -1329,13 +1352,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				firstName = "User"
 			}
 
-			// Parse KYB Profile ID for database operations
-			kybProfileUUID, err := uuid.Parse(kybProfileID)
-			if err != nil {
-				logger.Errorf("Invalid KYB Profile ID format for rejection: %s, error: %v", kybProfileID, err)
-				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid KYB Profile ID format"})
-				return
-			}
+			// KYB Profile UUID already parsed above
 
 			// Update User KYB status
 			_, err = storage.Client.User.
@@ -1388,8 +1405,31 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 		if strings.HasPrefix(callbackID, "approve_modal_") {
 			kybProfileID := callbackID[len("approve_modal_"):]
 
-			// Prevent modal if already processed
-			if ctrl.isActionProcessed(kybProfileID, "approve") || ctrl.isActionProcessed(kybProfileID, "reject") {
+			// Check if this is a resubmission by looking at the user's current KYB status
+			kybProfileUUID, err := uuid.Parse(kybProfileID)
+			if err != nil {
+				logger.Errorf("Invalid KYB Profile ID format for approval: %s, error: %v", kybProfileID, err)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid KYB Profile ID format"})
+				return
+			}
+
+			// Check current KYB status to determine if this is a resubmission
+			kyb, qerr := storage.Client.KYBProfile.
+				Query().
+				Where(kybprofile.IDEQ(kybProfileUUID)).
+				WithUser().
+				Only(ctx)
+			if qerr != nil || kyb.Edges.User == nil {
+				logger.Errorf("Failed to resolve KYB profile %s: %v", kybProfileID, qerr)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resolve KYB profile"})
+				return
+			}
+
+			// Allow processing if user status is rejected (resubmission) or if not already processed
+			userStatus := kyb.Edges.User.KybVerificationStatus
+			isResubmission := userStatus == user.KybVerificationStatusRejected
+
+			if !isResubmission && (ctrl.isActionProcessed(kybProfileID, "approve") || ctrl.isActionProcessed(kybProfileID, "reject")) {
 				logger.Warnf("Action already processed for KYB Profile %s", kybProfileID)
 				ctx.JSON(http.StatusOK, gin.H{"text": "This submission has already been processed."})
 				return
@@ -1423,25 +1463,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				firstName = "User"
 			}
 
-			// Parse KYB Profile ID for database operations
-			kybProfileUUID, err := uuid.Parse(kybProfileID)
-			if err != nil {
-				logger.Errorf("Invalid KYB Profile ID format for approval: %s, error: %v", kybProfileID, err)
-				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid KYB Profile ID format"})
-				return
-			}
-
-			// Update User KYB status using the KYB profile's user ID
-			kyb, qerr := storage.Client.KYBProfile.
-				Query().
-				Where(kybprofile.IDEQ(kybProfileUUID)).
-				WithUser().
-				Only(ctx)
-			if qerr != nil || kyb.Edges.User == nil {
-				logger.Errorf("Failed to resolve user for KYB %s: %v", kybProfileID, qerr)
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user KYB status"})
-				return
-			}
+			// Update User KYB status using the already fetched KYB profile
 			_, err = storage.Client.User.
 				UpdateOneID(kyb.Edges.User.ID).
 				SetKybVerificationStatus(user.KybVerificationStatusApproved).
@@ -1501,6 +1523,15 @@ func (ctrl *Controller) markActionProcessed(submissionID, actionType string) {
 	defer ctrl.actionMutex.Unlock()
 	key := fmt.Sprintf("%s_%s", submissionID, actionType)
 	ctrl.processedActions[key] = true
+}
+
+// clearActionProcessed clears all processed actions for a submission ID (used for resubmissions)
+func (ctrl *Controller) clearActionProcessed(submissionID string) {
+	ctrl.actionMutex.Lock()
+	defer ctrl.actionMutex.Unlock()
+	// Remove both approve and reject entries for this submission
+	delete(ctrl.processedActions, fmt.Sprintf("%s_%s", submissionID, "approve"))
+	delete(ctrl.processedActions, fmt.Sprintf("%s_%s", submissionID, "reject"))
 }
 
 // HandleKYBSubmission handles the POST request for KYB submission
@@ -1726,6 +1757,9 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update user KYB verification status", nil)
 		return
 	}
+
+	// Clear any cached action processing for this KYB profile to allow resubmission processing
+	ctrl.clearActionProcessed(kybSubmission.ID.String())
 
 	// Commit transaction
 	if err := tx.Commit(); err != nil {
