@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"sync"
@@ -13,7 +14,6 @@ import (
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/storage"
-	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 )
 
@@ -599,7 +599,22 @@ func (w *EtherscanWorker) makeEtherscanAPICall(request EtherscanRequest) ([]map[
 			res.RawResponse.StatusCode, request.ChainID, request.WalletAddress)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors first (preserving original logic)
+	if res.StatusCode() >= 500 { // Return on server errors
+		return nil, fmt.Errorf("%d", res.StatusCode())
+	}
+	if res.StatusCode() >= 400 { // Return on client errors
+		return nil, fmt.Errorf("%d", res.StatusCode())
+	}
+
+	// Parse JSON response using fastshot's RawBody method
+	body, err := io.ReadAll(res.RawBody())
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
 	}

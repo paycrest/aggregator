@@ -2,14 +2,15 @@ package email
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"strconv"
 	"time"
 
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/types"
-	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 )
 
@@ -94,8 +95,25 @@ func (b *BrevoProvider) sendBrevoRequest(ctx context.Context, reqBody map[string
 		return types.SendEmailResponse{}, fmt.Errorf("brevo API error: %d", res.RawResponse.StatusCode)
 	}
 
-	// Parse response body to extract message ID
-	responseBody, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors first (preserving original logic)
+	if res.StatusCode() >= 500 { // Return on server errors
+		logger.Errorf("HTTP server error from Brevo: %d", res.StatusCode())
+		return types.SendEmailResponse{}, fmt.Errorf("brevo server error: %d", res.StatusCode())
+	}
+	if res.StatusCode() >= 400 { // Return on client errors
+		logger.Errorf("HTTP client error from Brevo: %d", res.StatusCode())
+		return types.SendEmailResponse{}, fmt.Errorf("brevo client error: %d", res.StatusCode())
+	}
+
+	// Parse response body to extract message ID using fastshot's RawBody method
+	body, err := io.ReadAll(res.RawBody())
+	if err != nil {
+		logger.Errorf("Failed to read response body from Brevo: %v", err)
+		return types.SendEmailResponse{}, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var responseBody map[string]interface{}
+	err = json.Unmarshal(body, &responseBody)
 	if err != nil {
 		logger.Errorf("Failed to decode Brevo response: %v", err)
 		return types.SendEmailResponse{}, fmt.Errorf("brevo response parse error: %w", err)

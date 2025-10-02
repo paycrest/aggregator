@@ -1,7 +1,9 @@
 package provider
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -1155,7 +1157,34 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 		return
 	}
 
-	data, err = u.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors first (preserving original logic)
+	if res.StatusCode() >= 500 { // Return on server errors
+		logger.WithFields(logger.Fields{
+			"Error": fmt.Sprintf("HTTP error: %d", res.StatusCode()),
+		}).Errorf("HTTP server error from provider")
+		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
+		return
+	}
+	if res.StatusCode() >= 400 { // Return on client errors
+		logger.WithFields(logger.Fields{
+			"Error": fmt.Sprintf("HTTP error: %d", res.StatusCode()),
+		}).Errorf("HTTP client error from provider")
+		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
+		return
+	}
+
+	// Parse JSON response using fastshot's RawBody method
+	body, err := io.ReadAll(res.RawBody())
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error": fmt.Sprintf("failed to read response body: %v", err),
+		}).Errorf("failed to read response body from provider")
+		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
+		return
+	}
+
+	var nodeInfoData map[string]interface{}
+	err = json.Unmarshal(body, &nodeInfoData)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error": fmt.Sprintf("%v", err),
@@ -1165,7 +1194,7 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 	}
 
 	// Handle new provider response format with serviceInfo
-	dataMap, ok := data["data"].(map[string]interface{})
+	dataMap, ok := nodeInfoData["data"].(map[string]interface{})
 	if !ok {
 		logger.WithFields(logger.Fields{
 			"Error": "data field is not a map",

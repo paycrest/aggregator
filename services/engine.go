@@ -3,7 +3,9 @@ package services
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"io"
 	"math/big"
 	"regexp"
 	"strconv"
@@ -52,7 +54,22 @@ func (s *EngineService) CreateServerWallet(ctx context.Context, label string) (s
 		return "", fmt.Errorf("failed to create smart address: %w", err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors first (preserving original logic)
+	if res.StatusCode() >= 500 { // Return on server errors
+		return "", fmt.Errorf("%d", res.StatusCode())
+	}
+	if res.StatusCode() >= 400 { // Return on client errors
+		return "", fmt.Errorf("%d", res.StatusCode())
+	}
+
+	// Parse JSON response using fastshot's RawBody method
+	body, err := io.ReadAll(res.RawBody())
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse JSON response: %w", err)
 	}
@@ -77,7 +94,22 @@ func (s *EngineService) GetLatestBlock(ctx context.Context, chainID int64) (int6
 		}).Send()
 		if err == nil {
 			// ThirdWeb succeeded
-			data, err := utils.ParseJSONResponse(res.RawResponse)
+			// Check for HTTP errors first (preserving original logic)
+			if res.StatusCode() >= 500 { // Return on server errors
+				return 0, fmt.Errorf("%d", res.StatusCode())
+			}
+			if res.StatusCode() >= 400 { // Return on client errors
+				return 0, fmt.Errorf("%d", res.StatusCode())
+			}
+
+			// Parse JSON response using fastshot's RawBody method
+			body, err := io.ReadAll(res.RawBody())
+			if err != nil {
+				return 0, fmt.Errorf("failed to read response body: %w", err)
+			}
+
+			var data map[string]interface{}
+			err = json.Unmarshal(body, &data)
 			if err != nil {
 				return 0, fmt.Errorf("failed to parse JSON response: %w", err)
 			}
@@ -135,7 +167,22 @@ func (s *EngineService) GetContractEvents(ctx context.Context, chainID int64, co
 		return nil, fmt.Errorf("failed to get contract events: %w", err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors first (preserving original logic)
+	if res.StatusCode() >= 500 { // Return on server errors
+		return nil, fmt.Errorf("%d", res.StatusCode())
+	}
+	if res.StatusCode() >= 400 { // Return on client errors
+		return nil, fmt.Errorf("%d", res.StatusCode())
+	}
+
+	// Parse JSON response using fastshot's RawBody method
+	body, err := io.ReadAll(res.RawBody())
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse JSON response: %w %v", err, data)
 	}
@@ -169,7 +216,22 @@ func (s *EngineService) SendTransactionBatch(ctx context.Context, chainID int64,
 		return "", fmt.Errorf("failed to send transaction batch: %w", err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors first (preserving original logic)
+	if res.StatusCode() >= 500 { // Return on server errors
+		return "", fmt.Errorf("%d", res.StatusCode())
+	}
+	if res.StatusCode() >= 400 { // Return on client errors
+		return "", fmt.Errorf("%d", res.StatusCode())
+	}
+
+	// Parse JSON response using fastshot's RawBody method
+	body, err := io.ReadAll(res.RawBody())
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse JSON response: %w", err)
 	}
@@ -203,7 +265,22 @@ func (s *EngineService) GetTransactionStatus(ctx context.Context, queueId string
 		return nil, fmt.Errorf("failed to get transaction status: %w", err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors first (preserving original logic)
+	if res.StatusCode() >= 500 { // Return on server errors
+		return nil, fmt.Errorf("%d", res.StatusCode())
+	}
+	if res.StatusCode() >= 400 { // Return on client errors
+		return nil, fmt.Errorf("%d", res.StatusCode())
+	}
+
+	// Parse JSON response using fastshot's RawBody method
+	body, err := io.ReadAll(res.RawBody())
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
 	}
@@ -316,7 +393,22 @@ func (s *EngineService) CreateTransferWebhook(ctx context.Context, chainID int64
 		return "", "", fmt.Errorf("failed to create transfer webhook: %w", err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors first (preserving original logic)
+	if res.StatusCode() >= 500 { // Return on server errors
+		return "", "", fmt.Errorf("%d", res.StatusCode())
+	}
+	if res.StatusCode() >= 400 { // Return on client errors
+		return "", "", fmt.Errorf("%d", res.StatusCode())
+	}
+
+	// Parse JSON response using fastshot's RawBody method
+	body, err := io.ReadAll(res.RawBody())
+	if err != nil {
+		return "", "", fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to parse JSON response: %w", err)
 	}
@@ -424,7 +516,22 @@ func (s *EngineService) GetWebhookByID(ctx context.Context, webhookID string, ch
 		return nil, fmt.Errorf("failed to fetch webhook: %w", err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors first (preserving original logic)
+	if res.StatusCode() >= 500 { // Return on server errors
+		return nil, fmt.Errorf("%d", res.StatusCode())
+	}
+	if res.StatusCode() >= 400 { // Return on client errors
+		return nil, fmt.Errorf("%d", res.StatusCode())
+	}
+
+	// Parse JSON response using fastshot's RawBody method
+	body, err := io.ReadAll(res.RawBody())
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse webhook response: %w", err)
 	}
@@ -465,7 +572,22 @@ func (s *EngineService) UpdateWebhook(ctx context.Context, webhookID string, web
 		return fmt.Errorf("failed to update webhook: %w", err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors first (preserving original logic)
+	if res.StatusCode() >= 500 { // Return on server errors
+		return fmt.Errorf("%d", res.StatusCode())
+	}
+	if res.StatusCode() >= 400 { // Return on client errors
+		return fmt.Errorf("%d", res.StatusCode())
+	}
+
+	// Parse JSON response using fastshot's RawBody method
+	body, err := io.ReadAll(res.RawBody())
+	if err != nil {
+		return fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal(body, &data)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Data":       data,
@@ -697,7 +819,21 @@ func (s *EngineService) CreateGatewayWebhook() error {
 		return fmt.Errorf("failed to create gateway webhooks: %w", err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	if res.StatusCode() >= 500 { // Return on server errors
+		return fmt.Errorf("%d", res.StatusCode())
+	}
+	if res.StatusCode() >= 400 { // Return on client errors
+		return fmt.Errorf("%d", res.StatusCode())
+	}
+
+	// Parse JSON response using fastshot's RawBody method
+	body, err := io.ReadAll(res.RawBody())
+	if err != nil {
+		return fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal(body, &data)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Data":       data,
@@ -911,7 +1047,22 @@ func (s *EngineService) GetAddressTransactionHistory(ctx context.Context, chainI
 		return nil, fmt.Errorf("failed to get transaction history: %w", err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors first (preserving original logic)
+	if res.StatusCode() >= 500 { // Return on server errors
+		return nil, fmt.Errorf("%d", res.StatusCode())
+	}
+	if res.StatusCode() >= 400 { // Return on client errors
+		return nil, fmt.Errorf("%d", res.StatusCode())
+	}
+
+	// Parse JSON response using fastshot's RawBody method
+	body, err := io.ReadAll(res.RawBody())
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse JSON response: %w %v", err, data)
 	}

@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"slices"
 	"time"
 
@@ -18,7 +19,6 @@ import (
 	kycErrors "github.com/paycrest/aggregator/services/kyc/errors"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
-	"github.com/paycrest/aggregator/utils"
 )
 
 //go:embed id_types.json
@@ -115,7 +115,22 @@ func (s *SmileIDService) RequestVerification(ctx context.Context, req types.Veri
 		return nil, kycErrors.ErrProviderUnreachable{Err: err}
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors first (preserving original logic)
+	if res.StatusCode() >= 500 { // Return on server errors
+		return nil, kycErrors.ErrProviderResponse{Err: fmt.Errorf("HTTP server error: %d", res.StatusCode())}
+	}
+	if res.StatusCode() >= 400 { // Return on client errors
+		return nil, kycErrors.ErrProviderResponse{Err: fmt.Errorf("HTTP client error: %d", res.StatusCode())}
+	}
+
+	// Parse JSON response using fastshot's RawBody method
+	body, err := io.ReadAll(res.RawBody())
+	if err != nil {
+		return nil, kycErrors.ErrProviderResponse{Err: fmt.Errorf("failed to read response body: %w", err)}
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return nil, kycErrors.ErrProviderResponse{Err: fmt.Errorf("%v, %v", err, data)}
 	}

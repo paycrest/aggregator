@@ -2,11 +2,12 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"time"
 
 	fastshot "github.com/opus-domini/fast-shot"
-	"github.com/paycrest/aggregator/utils"
 )
 
 // BlockscoutService provides functionality for interacting with Blockscout API
@@ -49,7 +50,22 @@ func (s *BlockscoutService) GetAddressTokenTransfers(ctx context.Context, chainI
 		return nil, fmt.Errorf("failed to get token transfers from Blockscout: %w", err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors first (preserving original logic)
+	if res.StatusCode() >= 500 { // Return on server errors
+		return nil, fmt.Errorf("%d", res.StatusCode())
+	}
+	if res.StatusCode() >= 400 { // Return on client errors
+		return nil, fmt.Errorf("%d", res.StatusCode())
+	}
+
+	// Parse JSON response using fastshot's RawBody method
+	body, err := io.ReadAll(res.RawBody())
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse JSON response from Blockscout: %w", err)
 	}
@@ -68,13 +84,13 @@ func (s *BlockscoutService) GetAddressTokenTransfers(ctx context.Context, chainI
 	result := make([]map[string]interface{}, len(tokenTransfers))
 	for i, transfer := range tokenTransfers {
 		transferMap := transfer.(map[string]interface{})
-		
+
 		// Normalize field names to match what the indexer expects
 		// Indexer expects "hash" field, but token transfers have "transaction_hash"
 		if txHash, exists := transferMap["transaction_hash"]; exists {
 			transferMap["hash"] = txHash
 		}
-		
+
 		result[i] = transferMap
 	}
 

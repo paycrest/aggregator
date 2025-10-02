@@ -2,13 +2,14 @@ package email
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"time"
 
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/types"
-	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/sendgrid/sendgrid-go"
 	"github.com/sendgrid/sendgrid-go/helpers/mail"
@@ -89,7 +90,25 @@ func (s *SendGridProvider) SendTemplateEmail(ctx context.Context, payload types.
 		return types.SendEmailResponse{}, fmt.Errorf("sendgrid template send error: %w", err)
 	}
 
-	_, err = utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors first (preserving original logic)
+	if res.StatusCode() >= 500 { // Return on server errors
+		logger.Errorf("HTTP server error from SendGrid: %d", res.StatusCode())
+		return types.SendEmailResponse{}, fmt.Errorf("sendgrid server error: %d", res.StatusCode())
+	}
+	if res.StatusCode() >= 400 { // Return on client errors
+		logger.Errorf("HTTP client error from SendGrid: %d", res.StatusCode())
+		return types.SendEmailResponse{}, fmt.Errorf("sendgrid client error: %d", res.StatusCode())
+	}
+
+	// Parse JSON response using fastshot's RawBody method
+	body, err := io.ReadAll(res.RawBody())
+	if err != nil {
+		logger.Errorf("Failed to read response body from SendGrid: %v", err)
+		return types.SendEmailResponse{}, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal(body, &data)
 	if err != nil {
 		logger.Errorf("Failed to decode SendGrid response: %v", err)
 		return types.SendEmailResponse{}, fmt.Errorf("sendgrid response parse error: %w", err)
