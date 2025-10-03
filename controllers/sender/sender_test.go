@@ -222,6 +222,14 @@ func TestSender(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Greater(t, len(senderTokens), 0)
 
+	// Set environment variables for engine service to match our mocks
+	os.Setenv("ENGINE_BASE_URL", "https://engine.thirdweb.com")
+	os.Setenv("THIRDWEB_SECRET_KEY", "test-secret-key")
+	defer func() {
+		os.Unsetenv("ENGINE_BASE_URL")
+		os.Unsetenv("THIRDWEB_SECRET_KEY")
+	}()
+
 	// Set up test routers
 	router := gin.New()
 	router.Use(middleware.DynamicAuthMiddleware)
@@ -237,13 +245,6 @@ func TestSender(t *testing.T) {
 	var paymentOrderUUID uuid.UUID
 
 	t.Run("InitiatePaymentOrder", func(t *testing.T) {
-		// Set environment variables for engine service to match our mocks
-		os.Setenv("ENGINE_BASE_URL", "https://engine.thirdweb.com")
-		os.Setenv("THIRDWEB_SECRET_KEY", "test-secret-key")
-		defer func() {
-			os.Unsetenv("ENGINE_BASE_URL")
-			os.Unsetenv("THIRDWEB_SECRET_KEY")
-		}()
 
 		// Activate httpmock globally to intercept all HTTP calls (including fastshot)
 		httpmock.Activate()
@@ -724,7 +725,7 @@ func TestSender(t *testing.T) {
 			// Assert the totalOrders value
 			totalOrders, ok := data["totalOrders"].(float64)
 			assert.True(t, ok, "totalOrders is not of type float64")
-			assert.Equal(t, 9, int(totalOrders)) // 9 orders from setup
+			assert.Equal(t, 10, int(totalOrders)) // 9 orders from setup + 1 from InitiatePaymentOrder test
 
 			// Assert the totalOrderVolume value
 			totalOrderVolumeStr, ok := data["totalOrderVolume"].(string)
@@ -819,7 +820,7 @@ func TestSender(t *testing.T) {
 			// Assert the totalOrders value
 			totalOrders, ok := data["totalOrders"].(float64)
 			assert.True(t, ok, "totalOrders is not of type float64")
-			assert.Equal(t, 10, int(totalOrders)) // 9 from setup + 1 settled order
+			assert.Equal(t, 11, int(totalOrders)) // 9 from setup + 1 from InitiatePaymentOrder + 1 settled order
 
 			// Assert the totalOrderVolume value (100 NGN / 950 market rate ≈ 0.105 USD)
 			totalOrderVolumeStr, ok := data["totalOrderVolume"].(string)
