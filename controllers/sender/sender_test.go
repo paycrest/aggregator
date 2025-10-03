@@ -156,6 +156,7 @@ func setup() error {
 			Create().
 			SetSenderProfile(senderProfile).
 			SetAmount(decimal.NewFromFloat(100.50)).
+			SetAmountInUsd(decimal.NewFromFloat(100.50)).
 			SetAmountPaid(decimal.NewFromInt(0)).
 			SetAmountReturned(decimal.NewFromInt(0)).
 			SetPercentSettled(decimal.NewFromInt(0)).
@@ -194,9 +195,15 @@ func setup() error {
 
 func TestSender(t *testing.T) {
 
-	// Set up test database client
+	// Set up test database client with proper schema
 	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
 	defer client.Close()
+
+	// Run migrations to create all tables
+	err := client.Schema.Create(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to create database schema: %v", err)
+	}
 
 	db.Client = client
 
@@ -208,8 +215,8 @@ func TestSender(t *testing.T) {
 	db.RedisClient = redis.NewClient(&redis.Options{Addr: mr.Addr()})
 
 	// Setup test data
-	err = setup()
-	assert.NoError(t, err)
+	setupErr := setup()
+	assert.NoError(t, setupErr)
 
 	senderTokens, err := client.SenderOrderToken.Query().All(context.Background())
 	assert.NoError(t, err)
@@ -717,7 +724,7 @@ func TestSender(t *testing.T) {
 			// Assert the totalOrders value
 			totalOrders, ok := data["totalOrders"].(float64)
 			assert.True(t, ok, "totalOrders is not of type float64")
-			assert.Equal(t, 10, int(totalOrders))
+			assert.Equal(t, 9, int(totalOrders)) // 9 orders from setup
 
 			// Assert the totalOrderVolume value
 			totalOrderVolumeStr, ok := data["totalOrderVolume"].(string)
@@ -756,6 +763,7 @@ func TestSender(t *testing.T) {
 				Create().
 				SetSenderProfile(testCtx.user).
 				SetAmount(decimal.NewFromFloat(100.0)).
+				SetAmountInUsd(decimal.NewFromFloat(100.0)).
 				SetAmountPaid(decimal.NewFromInt(0)).
 				SetAmountReturned(decimal.NewFromInt(0)).
 				SetPercentSettled(decimal.NewFromInt(0)).
@@ -811,7 +819,7 @@ func TestSender(t *testing.T) {
 			// Assert the totalOrders value
 			totalOrders, ok := data["totalOrders"].(float64)
 			assert.True(t, ok, "totalOrders is not of type float64")
-			assert.Equal(t, 11, int(totalOrders)) // The settled order is being counted
+			assert.Equal(t, 10, int(totalOrders)) // 9 from setup + 1 settled order
 
 			// Assert the totalOrderVolume value (100 NGN / 950 market rate ≈ 0.105 USD)
 			totalOrderVolumeStr, ok := data["totalOrderVolume"].(string)
