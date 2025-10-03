@@ -762,9 +762,7 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 
 	// Get currencies through ProviderCurrencies
 	providerCurrencies, err := provider.QueryProviderCurrencies().
-		WithCurrency(func(fcq *ent.FiatCurrencyQuery) {
-			fcq.Where(fiatcurrency.IsEnabledEQ(true))
-		}).
+		WithCurrency().
 		All(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
@@ -779,6 +777,9 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 	currencyCodes := make([]string, len(providerCurrencies))
 	currencyAvailability := make(map[string]bool)
 	for i, pc := range providerCurrencies {
+		if !pc.Edges.Currency.IsEnabled {
+			continue
+		}
 		currencyCodes[i] = pc.Edges.Currency.Code
 		currencyAvailability[pc.Edges.Currency.Code] = pc.IsAvailable
 	}
