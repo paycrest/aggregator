@@ -317,10 +317,10 @@ func HMACVerificationMiddleware(c *gin.Context) {
 		Only(c)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			u.APIResponse(c, http.StatusNotFound, "error", "API key not found", nil)
+			u.APIResponse(c, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
 		} else {
 			logger.Errorf("error: %v", err)
-			u.APIResponse(c, http.StatusInternalServerError, "error", "Failed to fetch API key", err.Error())
+			u.APIResponse(c, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
 		}
 		c.Abort()
 		return
