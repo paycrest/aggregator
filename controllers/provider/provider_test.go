@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/google/uuid"
 	"github.com/jarcoal/httpmock"
 	_ "github.com/mattn/go-sqlite3"
@@ -124,24 +125,12 @@ func TestProvider(t *testing.T) {
 
 	db.Client = client
 
-	// Use a mock Redis client for testing
-	redisClient := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
-	})
+	// Set up in-memory Redis
+	mr, err := miniredis.Run()
+	assert.NoError(t, err)
+	defer mr.Close()
 
-	// Test Redis connection, if it fails, skip Redis operations
-	ctx := context.Background()
-	_, err = redisClient.Ping(ctx).Result()
-	if err != nil {
-		// Redis not available, set to nil to skip Redis operations
-		redisClient = nil
-	}
-
-	if redisClient != nil {
-		defer redisClient.Close()
-	}
-
-	db.RedisClient = redisClient
+	db.RedisClient = redis.NewClient(&redis.Options{Addr: mr.Addr()})
 
 	// Setup test data
 	err = setup()
@@ -1831,6 +1820,19 @@ func TestProvider(t *testing.T) {
 				"provider":   testCtx.provider,
 				"status":     "fulfilled",
 			})
+			assert.NoError(t, err)
+
+			// Create a provision bucket and associate it with the order
+			provisionBucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
+				"currency_id": testCtx.currency.ID,
+				"provider_id": testCtx.provider.ID,
+				"max_amount":  decimal.NewFromFloat(1000.0),
+				"min_amount":  decimal.NewFromFloat(1.0),
+			})
+			assert.NoError(t, err)
+
+			// Associate the provision bucket with the order
+			order, err = test.AddProvisionBucketToLockPaymentOrder(order, provisionBucket.ID)
 			assert.NoError(t, err)
 
 			tx_id := "0x123" + fmt.Sprint(rand.Intn(1000000))
