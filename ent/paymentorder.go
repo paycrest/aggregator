@@ -65,6 +65,8 @@ type PaymentOrder struct {
 	Reference string `json:"reference,omitempty"`
 	// Status holds the value of the "status" field.
 	Status paymentorder.Status `json:"status,omitempty"`
+	// AmountInUsd holds the value of the "amount_in_usd" field.
+	AmountInUsd decimal.Decimal `json:"amount_in_usd,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the PaymentOrderQuery when eager-loading is set.
 	Edges                         PaymentOrderEdges `json:"edges"`
@@ -176,7 +178,7 @@ func (*PaymentOrder) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case paymentorder.FieldAmount, paymentorder.FieldAmountPaid, paymentorder.FieldAmountReturned, paymentorder.FieldPercentSettled, paymentorder.FieldSenderFee, paymentorder.FieldNetworkFee, paymentorder.FieldRate, paymentorder.FieldFeePercent:
+		case paymentorder.FieldAmount, paymentorder.FieldAmountPaid, paymentorder.FieldAmountReturned, paymentorder.FieldPercentSettled, paymentorder.FieldSenderFee, paymentorder.FieldNetworkFee, paymentorder.FieldRate, paymentorder.FieldFeePercent, paymentorder.FieldAmountInUsd:
 			values[i] = new(decimal.Decimal)
 		case paymentorder.FieldBlockNumber:
 			values[i] = new(sql.NullInt64)
@@ -334,6 +336,12 @@ func (po *PaymentOrder) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
 				po.Status = paymentorder.Status(value.String)
+			}
+		case paymentorder.FieldAmountInUsd:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field amount_in_usd", values[i])
+			} else if value != nil {
+				po.AmountInUsd = *value
 			}
 		case paymentorder.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -493,6 +501,9 @@ func (po *PaymentOrder) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(fmt.Sprintf("%v", po.Status))
+	builder.WriteString(", ")
+	builder.WriteString("amount_in_usd=")
+	builder.WriteString(fmt.Sprintf("%v", po.AmountInUsd))
 	builder.WriteByte(')')
 	return builder.String()
 }

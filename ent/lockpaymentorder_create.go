@@ -208,6 +208,12 @@ func (lpoc *LockPaymentOrderCreate) SetNillableMessageHash(s *string) *LockPayme
 	return lpoc
 }
 
+// SetAmountInUsd sets the "amount_in_usd" field.
+func (lpoc *LockPaymentOrderCreate) SetAmountInUsd(d decimal.Decimal) *LockPaymentOrderCreate {
+	lpoc.mutation.SetAmountInUsd(d)
+	return lpoc
+}
+
 // SetID sets the "id" field.
 func (lpoc *LockPaymentOrderCreate) SetID(u uuid.UUID) *LockPaymentOrderCreate {
 	lpoc.mutation.SetID(u)
@@ -421,6 +427,9 @@ func (lpoc *LockPaymentOrderCreate) check() error {
 			return &ValidationError{Name: "message_hash", err: fmt.Errorf(`ent: validator failed for field "LockPaymentOrder.message_hash": %w`, err)}
 		}
 	}
+	if _, ok := lpoc.mutation.AmountInUsd(); !ok {
+		return &ValidationError{Name: "amount_in_usd", err: errors.New(`ent: missing required field "LockPaymentOrder.amount_in_usd"`)}
+	}
 	if len(lpoc.mutation.TokenIDs()) == 0 {
 		return &ValidationError{Name: "token", err: errors.New(`ent: missing required edge "LockPaymentOrder.token"`)}
 	}
@@ -535,6 +544,10 @@ func (lpoc *LockPaymentOrderCreate) createSpec() (*LockPaymentOrder, *sqlgraph.C
 	if value, ok := lpoc.mutation.MessageHash(); ok {
 		_spec.SetField(lockpaymentorder.FieldMessageHash, field.TypeString, value)
 		_node.MessageHash = value
+	}
+	if value, ok := lpoc.mutation.AmountInUsd(); ok {
+		_spec.SetField(lockpaymentorder.FieldAmountInUsd, field.TypeFloat64, value)
+		_node.AmountInUsd = value
 	}
 	if nodes := lpoc.mutation.TokenIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -953,6 +966,24 @@ func (u *LockPaymentOrderUpsert) ClearMessageHash() *LockPaymentOrderUpsert {
 	return u
 }
 
+// SetAmountInUsd sets the "amount_in_usd" field.
+func (u *LockPaymentOrderUpsert) SetAmountInUsd(v decimal.Decimal) *LockPaymentOrderUpsert {
+	u.Set(lockpaymentorder.FieldAmountInUsd, v)
+	return u
+}
+
+// UpdateAmountInUsd sets the "amount_in_usd" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsert) UpdateAmountInUsd() *LockPaymentOrderUpsert {
+	u.SetExcluded(lockpaymentorder.FieldAmountInUsd)
+	return u
+}
+
+// AddAmountInUsd adds v to the "amount_in_usd" field.
+func (u *LockPaymentOrderUpsert) AddAmountInUsd(v decimal.Decimal) *LockPaymentOrderUpsert {
+	u.Add(lockpaymentorder.FieldAmountInUsd, v)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
@@ -1330,6 +1361,27 @@ func (u *LockPaymentOrderUpsertOne) UpdateMessageHash() *LockPaymentOrderUpsertO
 func (u *LockPaymentOrderUpsertOne) ClearMessageHash() *LockPaymentOrderUpsertOne {
 	return u.Update(func(s *LockPaymentOrderUpsert) {
 		s.ClearMessageHash()
+	})
+}
+
+// SetAmountInUsd sets the "amount_in_usd" field.
+func (u *LockPaymentOrderUpsertOne) SetAmountInUsd(v decimal.Decimal) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetAmountInUsd(v)
+	})
+}
+
+// AddAmountInUsd adds v to the "amount_in_usd" field.
+func (u *LockPaymentOrderUpsertOne) AddAmountInUsd(v decimal.Decimal) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.AddAmountInUsd(v)
+	})
+}
+
+// UpdateAmountInUsd sets the "amount_in_usd" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertOne) UpdateAmountInUsd() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateAmountInUsd()
 	})
 }
 
@@ -1877,6 +1929,27 @@ func (u *LockPaymentOrderUpsertBulk) UpdateMessageHash() *LockPaymentOrderUpsert
 func (u *LockPaymentOrderUpsertBulk) ClearMessageHash() *LockPaymentOrderUpsertBulk {
 	return u.Update(func(s *LockPaymentOrderUpsert) {
 		s.ClearMessageHash()
+	})
+}
+
+// SetAmountInUsd sets the "amount_in_usd" field.
+func (u *LockPaymentOrderUpsertBulk) SetAmountInUsd(v decimal.Decimal) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetAmountInUsd(v)
+	})
+}
+
+// AddAmountInUsd adds v to the "amount_in_usd" field.
+func (u *LockPaymentOrderUpsertBulk) AddAmountInUsd(v decimal.Decimal) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.AddAmountInUsd(v)
+	})
+}
+
+// UpdateAmountInUsd sets the "amount_in_usd" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertBulk) UpdateAmountInUsd() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateAmountInUsd()
 	})
 }
 

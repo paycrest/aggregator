@@ -23,10 +23,8 @@ const (
 	FieldProvisionMode = "provision_mode"
 	// FieldIsActive holds the string denoting the is_active field in the database.
 	FieldIsActive = "is_active"
-	// FieldIsAvailable holds the string denoting the is_available field in the database.
-	FieldIsAvailable = "is_available"
-	// FieldIsKYBVerified holds the string denoting the iskybverified field in the database.
-	FieldIsKYBVerified = "is_kyb_verified"
+	// FieldIsKybVerified holds the string denoting the is_kyb_verified field in the database.
+	FieldIsKybVerified = "is_kyb_verified"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
 	// FieldVisibilityMode holds the string denoting the visibility_mode field in the database.
@@ -35,8 +33,8 @@ const (
 	EdgeUser = "user"
 	// EdgeAPIKey holds the string denoting the api_key edge name in mutations.
 	EdgeAPIKey = "api_key"
-	// EdgeCurrencies holds the string denoting the currencies edge name in mutations.
-	EdgeCurrencies = "currencies"
+	// EdgeProviderCurrencies holds the string denoting the provider_currencies edge name in mutations.
+	EdgeProviderCurrencies = "provider_currencies"
 	// EdgeProvisionBuckets holds the string denoting the provision_buckets edge name in mutations.
 	EdgeProvisionBuckets = "provision_buckets"
 	// EdgeOrderTokens holds the string denoting the order_tokens edge name in mutations.
@@ -61,11 +59,13 @@ const (
 	APIKeyInverseTable = "api_keys"
 	// APIKeyColumn is the table column denoting the api_key relation/edge.
 	APIKeyColumn = "provider_profile_api_key"
-	// CurrenciesTable is the table that holds the currencies relation/edge. The primary key declared below.
-	CurrenciesTable = "fiat_currency_providers"
-	// CurrenciesInverseTable is the table name for the FiatCurrency entity.
-	// It exists in this package in order to avoid circular dependency with the "fiatcurrency" package.
-	CurrenciesInverseTable = "fiat_currencies"
+	// ProviderCurrenciesTable is the table that holds the provider_currencies relation/edge.
+	ProviderCurrenciesTable = "provider_currencies"
+	// ProviderCurrenciesInverseTable is the table name for the ProviderCurrencies entity.
+	// It exists in this package in order to avoid circular dependency with the "providercurrencies" package.
+	ProviderCurrenciesInverseTable = "provider_currencies"
+	// ProviderCurrenciesColumn is the table column denoting the provider_currencies relation/edge.
+	ProviderCurrenciesColumn = "provider_profile_provider_currencies"
 	// ProvisionBucketsTable is the table that holds the provision_buckets relation/edge. The primary key declared below.
 	ProvisionBucketsTable = "provision_bucket_provider_profiles"
 	// ProvisionBucketsInverseTable is the table name for the ProvisionBucket entity.
@@ -101,8 +101,7 @@ var Columns = []string{
 	FieldHostIdentifier,
 	FieldProvisionMode,
 	FieldIsActive,
-	FieldIsAvailable,
-	FieldIsKYBVerified,
+	FieldIsKybVerified,
 	FieldUpdatedAt,
 	FieldVisibilityMode,
 }
@@ -114,9 +113,6 @@ var ForeignKeys = []string{
 }
 
 var (
-	// CurrenciesPrimaryKey and CurrenciesColumn2 are the table columns denoting the
-	// primary key for the currencies relation (M2M).
-	CurrenciesPrimaryKey = []string{"fiat_currency_id", "provider_profile_id"}
 	// ProvisionBucketsPrimaryKey and ProvisionBucketsColumn2 are the table columns denoting the
 	// primary key for the provision_buckets relation (M2M).
 	ProvisionBucketsPrimaryKey = []string{"provision_bucket_id", "provider_profile_id"}
@@ -142,10 +138,8 @@ var (
 	TradingNameValidator func(string) error
 	// DefaultIsActive holds the default value on creation for the "is_active" field.
 	DefaultIsActive bool
-	// DefaultIsAvailable holds the default value on creation for the "is_available" field.
-	DefaultIsAvailable bool
-	// DefaultIsKYBVerified holds the default value on creation for the "isKYBVerified" field.
-	DefaultIsKYBVerified bool
+	// DefaultIsKybVerified holds the default value on creation for the "is_kyb_verified" field.
+	DefaultIsKybVerified bool
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
 	DefaultUpdatedAt func() time.Time
 	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
@@ -234,14 +228,9 @@ func ByIsActive(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldIsActive, opts...).ToFunc()
 }
 
-// ByIsAvailable orders the results by the is_available field.
-func ByIsAvailable(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldIsAvailable, opts...).ToFunc()
-}
-
-// ByIsKYBVerified orders the results by the isKYBVerified field.
-func ByIsKYBVerified(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldIsKYBVerified, opts...).ToFunc()
+// ByIsKybVerified orders the results by the is_kyb_verified field.
+func ByIsKybVerified(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIsKybVerified, opts...).ToFunc()
 }
 
 // ByUpdatedAt orders the results by the updated_at field.
@@ -268,17 +257,17 @@ func ByAPIKeyField(field string, opts ...sql.OrderTermOption) OrderOption {
 	}
 }
 
-// ByCurrenciesCount orders the results by currencies count.
-func ByCurrenciesCount(opts ...sql.OrderTermOption) OrderOption {
+// ByProviderCurrenciesCount orders the results by provider_currencies count.
+func ByProviderCurrenciesCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newCurrenciesStep(), opts...)
+		sqlgraph.OrderByNeighborsCount(s, newProviderCurrenciesStep(), opts...)
 	}
 }
 
-// ByCurrencies orders the results by currencies terms.
-func ByCurrencies(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+// ByProviderCurrencies orders the results by provider_currencies terms.
+func ByProviderCurrencies(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newCurrenciesStep(), append([]sql.OrderTerm{term}, terms...)...)
+		sqlgraph.OrderByNeighborTerms(s, newProviderCurrenciesStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 
@@ -344,11 +333,11 @@ func newAPIKeyStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.O2O, false, APIKeyTable, APIKeyColumn),
 	)
 }
-func newCurrenciesStep() *sqlgraph.Step {
+func newProviderCurrenciesStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(CurrenciesInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2M, true, CurrenciesTable, CurrenciesPrimaryKey...),
+		sqlgraph.To(ProviderCurrenciesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ProviderCurrenciesTable, ProviderCurrenciesColumn),
 	)
 }
 func newProvisionBucketsStep() *sqlgraph.Step {

@@ -46,9 +46,16 @@ func RegisterRoutes(route *gin.Engine) {
 	// Reindex transaction endpoint
 	v1.GET("reindex/:network/:tx_hash_or_address", ctrl.IndexTransaction)
 
+	// Index provider address endpoint
+	v1.POST("index-provider-address", ctrl.IndexProviderAddress)
+
+	// Etherscan queue monitoring endpoint
+	v1.GET("etherscan/stats", ctrl.GetEtherscanQueueStats)
+
 	// KYB route
 	v1.POST("slack-interaction", middleware.SlackVerificationMiddleware, ctrl.SlackInteractionHandler)
 	v1.POST("kyb-submission", middleware.JWTMiddleware, ctrl.HandleKYBSubmission)
+	v1.GET("kyb-submission", middleware.JWTMiddleware, ctrl.GetKYBDocuments)
 
 	// KYC routes
 	v1.POST("kyc", ctrl.RequestIDVerification)
@@ -136,6 +143,7 @@ func providerRoutes(route *gin.Engine) {
 	v1.POST("orders/:id/decline", providerCtrl.DeclineOrder)
 	v1.POST("orders/:id/fulfill", providerCtrl.FulfillOrder)
 	v1.POST("orders/:id/cancel", providerCtrl.CancelOrder)
+	v1.POST("balances", providerCtrl.UpdateProviderBalance)
 	v1.GET("rates/:token/:fiat", providerCtrl.GetMarketRate)
 	v1.GET("stats", providerCtrl.Stats)
 	v1.GET("node-info", providerCtrl.NodeInfo)

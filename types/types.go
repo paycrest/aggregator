@@ -16,6 +16,7 @@ import (
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
+	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/user"
 	"github.com/shopspring/decimal"
@@ -110,6 +111,9 @@ type Indexer interface {
 
 	// Index receive address events
 	IndexReceiveAddress(ctx context.Context, token *ent.Token, address string, fromBlock int64, toBlock int64, txHash string) (*EventCounts, error)
+
+	// Index provider address events (OrderSettled)
+	IndexProviderAddress(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) (*EventCounts, error)
 }
 
 // KYCProvider defines the interface for KYC verification providers
@@ -246,14 +250,13 @@ type SenderProfilePayload struct {
 
 // ProviderOrderTokenPayload defines the provider setting for a token
 type ProviderOrderTokenPayload struct {
-	Currency               string                                `json:"currency" binding:"required"`
 	Symbol                 string                                `json:"symbol" binding:"required"`
 	ConversionRateType     providerordertoken.ConversionRateType `json:"conversionRateType" binding:"required,oneof=fixed floating"`
 	FixedConversionRate    decimal.Decimal                       `json:"fixedConversionRate" binding:"required,gt=0"`
 	FloatingConversionRate decimal.Decimal                       `json:"floatingConversionRate" binding:"required"`
 	MaxOrderAmount         decimal.Decimal                       `json:"maxOrderAmount" binding:"required,gt=0"`
 	MinOrderAmount         decimal.Decimal                       `json:"minOrderAmount" binding:"required,gt=0"`
-	RateSlippage           decimal.Decimal                       `json:"rateSlippage" binding:"gte=0.1"`
+	RateSlippage           decimal.Decimal                       `json:"rateSlippage" binding:"omitempty,gte=0.1"`
 	Address                string                                `json:"address" binding:"required"`
 	Network                string                                `json:"network" binding:"required"`
 }
@@ -261,29 +264,29 @@ type ProviderOrderTokenPayload struct {
 // ProviderProfilePayload is the payload for the provider profile endpoint
 type ProviderProfilePayload struct {
 	TradingName    string                      `json:"tradingName"`
-	Currencies     []string                    `json:"currencies"`
+	Currency       string                      `json:"currency" binding:"required"`
 	HostIdentifier string                      `json:"hostIdentifier"`
 	IsAvailable    bool                        `json:"isAvailable"`
-	IsActive       bool                        `json:"isActive"`
 	Tokens         []ProviderOrderTokenPayload `json:"tokens"`
 	VisibilityMode string                      `json:"visibilityMode"`
 }
 
 // ProviderProfileResponse is the response for the provider profile endpoint
 type ProviderProfileResponse struct {
-	ID                    string                      `json:"id"`
-	FirstName             string                      `json:"firstName"`
-	LastName              string                      `json:"lastName"`
-	Email                 string                      `json:"email"`
-	TradingName           string                      `json:"tradingName"`
-	Currencies            []string                    `json:"currencies"`
-	HostIdentifier        string                      `json:"hostIdentifier"`
-	IsAvailable           bool                        `json:"isAvailable"`
-	Tokens                []ProviderOrderTokenPayload `json:"tokens"`
-	APIKey                APIKeyResponse              `json:"apiKey"`
-	IsActive              bool                        `json:"isActive"`
-	VisibilityMode        string                      `json:"visibilityMode"`
-	KYBVerificationStatus user.KybVerificationStatus  `json:"kybVerificationStatus"`
+	ID                    string                         `json:"id"`
+	FirstName             string                         `json:"firstName"`
+	LastName              string                         `json:"lastName"`
+	Email                 string                         `json:"email"`
+	TradingName           string                         `json:"tradingName"`
+	Currencies            []string                       `json:"currencies"`
+	HostIdentifier        string                         `json:"hostIdentifier"`
+	CurrencyAvailability  map[string]bool                `json:"currencyAvailability"`
+	Tokens                []ProviderOrderTokenPayload    `json:"tokens"`
+	APIKey                APIKeyResponse                 `json:"apiKey"`
+	IsActive              bool                           `json:"isActive"`
+	VisibilityMode        providerprofile.VisibilityMode `json:"visibilityMode"`
+	KYBVerificationStatus user.KybVerificationStatus     `json:"kybVerificationStatus"`
+	KYBRejectionComment   *string                        `json:"kybRejectionComment,omitempty"`
 }
 
 // SenderOrderTokenResponse defines the provider setting for a token
@@ -309,6 +312,7 @@ type SenderProfileResponse struct {
 	ProviderCurrencies    []string                   `json:"providerCurrencies"`
 	IsActive              bool                       `json:"isActive"`
 	KYBVerificationStatus user.KybVerificationStatus `json:"kybVerificationStatus"`
+	KYBRejectionComment   *string                    `json:"kybRejectionComment,omitempty"`
 }
 
 // RefreshResponse is the response for the refresh endpoint
@@ -338,6 +342,7 @@ type LockPaymentOrderFields struct {
 	Amount            decimal.Decimal
 	Rate              decimal.Decimal
 	ProtocolFee       decimal.Decimal
+	AmountInUSD       decimal.Decimal
 	BlockNumber       int64
 	TxHash            string
 	Institution       string
@@ -368,6 +373,7 @@ type LockPaymentOrderResponse struct {
 	Token               string                  `json:"token"`
 	GatewayID           string                  `json:"gatewayId"`
 	Amount              decimal.Decimal         `json:"amount"`
+	AmountInUSD         decimal.Decimal         `json:"amountInUSD"`
 	Rate                decimal.Decimal         `json:"rate"`
 	BlockNumber         int64                   `json:"blockNumber"`
 	TxHash              string                  `json:"txHash"`
@@ -400,6 +406,7 @@ type LockPaymentOrderSplitOrder struct {
 type LockPaymentOrderStatusResponse struct {
 	OrderID       string                       `json:"orderId"`
 	Amount        decimal.Decimal              `json:"amount"`
+	AmountInUSD   decimal.Decimal              `json:"amountInUSD"`
 	Token         string                       `json:"token"`
 	Network       string                       `json:"network"`
 	SettlePercent decimal.Decimal              `json:"settlePercent"`
@@ -452,6 +459,7 @@ type ReceiveAddressResponse struct {
 type PaymentOrderResponse struct {
 	ID             uuid.UUID             `json:"id"`
 	Amount         decimal.Decimal       `json:"amount"`
+	AmountInUSD    decimal.Decimal       `json:"amountInUSD"`
 	AmountPaid     decimal.Decimal       `json:"amountPaid"`
 	AmountReturned decimal.Decimal       `json:"amountReturned"`
 	Token          string                `json:"token"`
@@ -477,6 +485,7 @@ type PaymentOrderResponse struct {
 type PaymentOrderWebhookData struct {
 	ID             uuid.UUID             `json:"id"`
 	Amount         decimal.Decimal       `json:"amount"`
+	AmountInUSD    decimal.Decimal       `json:"amountInUSD"`
 	AmountPaid     decimal.Decimal       `json:"amountPaid"`
 	AmountReturned decimal.Decimal       `json:"amountReturned"`
 	PercentSettled decimal.Decimal       `json:"percentSettled"`
@@ -700,6 +709,7 @@ type KYBSubmissionInput struct {
 	AmlPolicyUrl                  *string                `json:"amlPolicyUrl"`
 	KycPolicyUrl                  *string                `json:"kycPolicyUrl"`
 	BeneficialOwners              []BeneficialOwnerInput `json:"beneficialOwners" binding:"required,dive"`
+	IAcceptTerms         bool                   `json:"IAcceptTerms"`
 }
 
 // BeneficialOwnerInput represents the input structure for a beneficial owner
@@ -711,6 +721,21 @@ type BeneficialOwnerInput struct {
 	DateOfBirth                  string  `json:"dateOfBirth" binding:"required"`
 	OwnershipPercentage          float64 `json:"ownershipPercentage" binding:"required,gt=0,lte=100"`
 	GovernmentIssuedIdType       string  `json:"governmentIssuedIdType" binding:"required,oneof=passport drivers_license national_id"`
+}
+
+// KYBDocumentsResponse represents the response structure for KYB documents retrieval
+type KYBDocumentsResponse struct {
+	MobileNumber                  string                 `json:"mobileNumber"`
+	CompanyName                   string                 `json:"companyName"`
+	RegisteredBusinessAddress     string                 `json:"registeredBusinessAddress"`
+	CertificateOfIncorporationUrl string                 `json:"certificateOfIncorporationUrl"`
+	ArticlesOfIncorporationUrl    string                 `json:"articlesOfIncorporationUrl"`
+	BusinessLicenseUrl            *string                `json:"businessLicenseUrl"`
+	ProofOfBusinessAddressUrl     string                 `json:"proofOfBusinessAddressUrl"`
+	AmlPolicyUrl                  *string                `json:"amlPolicyUrl"`
+	KycPolicyUrl                  *string                `json:"kycPolicyUrl"`
+	BeneficialOwners              []BeneficialOwnerInput `json:"beneficialOwners"`
+	RejectionComment              *string                `json:"rejectionComment,omitempty"`
 }
 
 // IndexTransactionRequest represents the request payload for indexing a specific transaction
@@ -779,4 +804,37 @@ type WebhookSignatureVerification struct {
 	IsValid   bool
 	WebhookID string
 	Secret    string
+}
+
+// ProviderBalance represents a provider's balance for a specific currency
+type ProviderBalance struct {
+	AvailableBalance decimal.Decimal `json:"availableBalance"`
+	TotalBalance     decimal.Decimal `json:"totalBalance"`
+	ReservedBalance  decimal.Decimal `json:"reservedBalance"`
+	LastUpdated      time.Time       `json:"lastUpdated"`
+}
+
+// ProviderInfoResponse represents the response from provider /info endpoint
+type ProviderInfoResponse struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
+	Data    struct {
+		Balances []struct {
+			AvailableBalance string `json:"availableBalance"`
+			PSP              string `json:"psp"`
+			SnapshotTime     string `json:"snapshotTime"`
+			Status           string `json:"status"`
+			TotalBalance     string `json:"totalBalance"`
+		} `json:"balances"`
+		ServiceInfo struct {
+			Currencies  []string `json:"currencies"`
+			LastUpdated string   `json:"lastUpdated"`
+			TotalPSPs   int      `json:"totalPSPs"`
+			Version     string   `json:"version"`
+		} `json:"serviceInfo"`
+		TotalBalances map[string]struct {
+			AvailableBalance string `json:"availableBalance"`
+			TotalBalance     string `json:"totalBalance"`
+		} `json:"totalBalances"`
+	} `json:"data"`
 }

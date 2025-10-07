@@ -10,12 +10,16 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/senderprofile"
+	tokenent "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/user"
 	"github.com/paycrest/aggregator/services"
@@ -291,15 +295,15 @@ func ProcessTransfers(
 func ProcessCreatedOrders(
 	ctx context.Context,
 	network *ent.Network,
-	txHashes []string,
-	hashToEvent map[string]*types.OrderCreatedEvent,
+	orderIds []string,
+	orderIdToEvent map[string]*types.OrderCreatedEvent,
 	orderService types.OrderService,
 	priorityQueueService *services.PriorityQueueService,
 ) error {
 	var wg sync.WaitGroup
 
-	for _, txHash := range txHashes {
-		createdEvent, ok := hashToEvent[txHash]
+	for _, orderId := range orderIds {
+		createdEvent, ok := orderIdToEvent[orderId]
 		if !ok {
 			continue
 		}
@@ -347,6 +351,20 @@ func ProcessSettledOrders(ctx context.Context, network *ent.Network, orderIds []
 	if err != nil {
 		return fmt.Errorf("IndexOrderSettled.fetchLockOrders: %w", err)
 	}
+
+	lockOrderDetails := make([]map[string]interface{}, len(lockOrders))
+	for i, lo := range lockOrders {
+		lockOrderDetails[i] = map[string]interface{}{
+			"status":      lo.Status,
+			"amount":      lo.Amount,
+			"messageHash": lo.MessageHash,
+			"gatewayID":   lo.GatewayID,
+		}
+	}
+	logger.WithFields(logger.Fields{
+		"OrderIDs":   orderIds,
+		"LockOrders": lockOrderDetails,
+	}).Info("Processing settled orders")
 
 	var wg sync.WaitGroup
 	for _, lockOrder := range lockOrders {
@@ -461,6 +479,16 @@ func UpdateReceiveAddressStatus(
 		orderAmountWithFees := paymentOrder.Amount.Add(fees).Round(int32(paymentOrder.Edges.Token.Decimals))
 		transferMatchesOrderAmount := event.Value.Equal(orderAmountWithFees)
 
+		logger.WithFields(logger.Fields{
+			"paymentOrderID":             paymentOrder.ID,
+			"event":                      event,
+			"fees":                       fees,
+			"amount":                     paymentOrder.Amount,
+			"orderAmountWithFees":        orderAmountWithFees,
+			"transferMatchesOrderAmount": transferMatchesOrderAmount,
+			"receiveAddress":             receiveAddress.Address,
+		}).Info("Processing receive address status")
+
 		tx, err := db.Client.Tx(ctx)
 		if err != nil {
 			return true, fmt.Errorf("UpdateReceiveAddressStatus.db: %v", err)
@@ -474,8 +502,8 @@ func UpdateReceiveAddressStatus(
 		orderRecipient := paymentOrder.Edges.Recipient
 		if !transferMatchesOrderAmount {
 			// Update the order amount will be updated to whatever amount was sent to the receive address
-			newOrderAmount := event.Value.Sub(fees.Round(int32(paymentOrder.Edges.Token.Decimals)))
-			paymentOrderUpdate = paymentOrderUpdate.SetAmount(newOrderAmount.Round(int32(paymentOrder.Edges.Token.Decimals)))
+			newOrderAmount := event.Value.Sub(fees.Round(int32(paymentOrder.Edges.Token.Decimals)))                           // 1.99
+			paymentOrderUpdate = paymentOrderUpdate.SetAmount(newOrderAmount.Round(int32(paymentOrder.Edges.Token.Decimals))) // 1.99
 			// Update the rate with the current rate if order is older than 30 mins for a P2P order from the sender dashboard
 			if strings.HasPrefix(orderRecipient.Memo, "P#P") && orderRecipient.ProviderID != "" && paymentOrder.CreatedAt.Before(time.Now().Add(-30*time.Minute)) {
 				providerProfile, err := db.Client.ProviderProfile.
@@ -507,6 +535,15 @@ func UpdateReceiveAddressStatus(
 			}
 			transferMatchesOrderAmount = true
 		}
+		logger.WithFields(logger.Fields{
+			"paymentOrderID":             paymentOrder.ID,
+			"event":                      event,
+			"fees":                       fees,
+			"amount":                     paymentOrder.Amount,
+			"orderAmountWithFees":        orderAmountWithFees,
+			"transferMatchesOrderAmount": transferMatchesOrderAmount,
+			"receiveAddress":             receiveAddress.Address,
+		}).Info("Processing receive address status after update")
 
 		if paymentOrder.AmountPaid.GreaterThanOrEqual(decimal.Zero) && paymentOrder.AmountPaid.LessThan(orderAmountWithFees) {
 			transactionLog, err := tx.TransactionLog.
@@ -516,8 +553,13 @@ func UpdateReceiveAddressStatus(
 				SetTxHash(event.TxHash).
 				SetNetwork(paymentOrder.Edges.Token.Edges.Network.Identifier).
 				SetMetadata(map[string]interface{}{
-					"GatewayID":       paymentOrder.GatewayID,
-					"transactionData": event,
+					"GatewayID": paymentOrder.GatewayID,
+					"transactionData": map[string]interface{}{
+						"from":        event.From,
+						"to":          receiveAddress.Address,
+						"value":       event.Value.String(),
+						"blockNumber": event.BlockNumber,
+					},
 				}).
 				Save(ctx)
 			if err != nil {
@@ -541,6 +583,16 @@ func UpdateReceiveAddressStatus(
 			}
 		}
 
+		logger.WithFields(logger.Fields{
+			"paymentOrderID":             paymentOrder.ID,
+			"event":                      event,
+			"fees":                       fees,
+			"amount":                     paymentOrder.Amount,
+			"orderAmountWithFees":        orderAmountWithFees,
+			"transferMatchesOrderAmount": transferMatchesOrderAmount,
+			"receiveAddress":             receiveAddress.Address,
+		}).Info("Processing receive address status after payment order update")
+
 		if transferMatchesOrderAmount {
 			// Transfer value equals order amount with fees
 			_, err = receiveAddress.
@@ -552,6 +604,11 @@ func UpdateReceiveAddressStatus(
 				Save(ctx)
 			if err != nil {
 				return true, fmt.Errorf("UpdateReceiveAddressStatus.db: %v", err)
+			}
+
+			err = deleteTransferWebhook(ctx, event.TxHash)
+			if err != nil {
+				logger.Errorf("Failed to delete transfer webhook for transaction %s: %v", event.TxHash, err)
 			}
 
 			err = createOrder(ctx, paymentOrder.ID)
@@ -569,4 +626,66 @@ func UpdateReceiveAddressStatus(
 	}
 
 	return false, nil
+}
+
+// GetProviderAddresses gets provider addresses for a given token, network, and currency
+func GetProviderAddresses(ctx context.Context, token *ent.Token, currencyCode string) ([]string, error) {
+	providerOrderTokens, err := storage.Client.ProviderOrderToken.
+		Query().
+		Where(
+			providerordertoken.HasTokenWith(tokenent.IDEQ(token.ID)),
+			providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(currencyCode)),
+			providerordertoken.AddressNEQ(""),
+			providerordertoken.HasProviderWith(
+				providerprofile.HasProviderCurrenciesWith(
+					providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currencyCode)),
+					providercurrencies.IsAvailableEQ(true),
+				),
+				providerprofile.IsActiveEQ(true),
+			),
+		).
+		WithProvider().
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get provider order tokens: %w", err)
+	}
+
+	var addresses []string
+	for _, pot := range providerOrderTokens {
+		if pot.Address != "" {
+			addresses = append(addresses, pot.Address)
+		}
+	}
+
+	return addresses, nil
+}
+
+// GetProviderAddressFromLockOrder gets the provider address for a lock payment order
+func GetProviderAddressFromLockOrder(ctx context.Context, lockOrder *ent.LockPaymentOrder) (string, error) {
+	if lockOrder.Edges.Provider == nil {
+		return "", fmt.Errorf("lock order has no provider")
+	}
+
+	// Get the currency from the provision bucket
+	if lockOrder.Edges.ProvisionBucket == nil {
+		return "", fmt.Errorf("lock order has no provision bucket")
+	}
+
+	currencyCode := lockOrder.Edges.ProvisionBucket.Edges.Currency.Code
+
+	// Get provider order token for this provider, token, and currency
+	providerOrderToken, err := storage.Client.ProviderOrderToken.
+		Query().
+		Where(
+			providerordertoken.HasProviderWith(providerprofile.IDEQ(lockOrder.Edges.Provider.ID)),
+			providerordertoken.HasTokenWith(tokenent.IDEQ(lockOrder.Edges.Token.ID)),
+			providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(currencyCode)),
+			providerordertoken.AddressNEQ(""),
+		).
+		Only(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to get provider order token: %w", err)
+	}
+
+	return providerOrderToken.Address, nil
 }

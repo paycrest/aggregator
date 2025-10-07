@@ -10,8 +10,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
-	"github.com/paycrest/aggregator/storage"
-
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/network"
@@ -23,8 +21,10 @@ import (
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
+
 	svc "github.com/paycrest/aggregator/services"
 	orderSvc "github.com/paycrest/aggregator/services/order"
+	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	u "github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
@@ -69,11 +69,6 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		return
 	}
 	sender := senderCtx.(*ent.SenderProfile)
-
-	if !sender.IsActive && !serverConf.Debug {
-		u.APIResponse(ctx, http.StatusForbidden, "error", "Your account is not active", nil)
-		return
-	}
 
 	// Get token from DB
 	token, err := storage.Client.Token.
@@ -206,8 +201,10 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			).
 			Exist(ctx)
 		if err != nil {
-			logger.Errorf("error: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+			logger.Errorf("Reference check error: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", map[string]interface{}{
+				"context": "reference_check",
+			})
 			return
 		}
 
@@ -240,13 +237,81 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			})
 		} else {
 			logger.Errorf("Failed to fetch institution: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to validate institution", nil)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to validate institution", map[string]interface{}{
+				"context": "institution_fetch",
+			})
 		}
 		return
 	}
 
 	if !strings.EqualFold(token.BaseCurrency, institutionObj.Edges.FiatCurrency.Code) && !strings.EqualFold(token.BaseCurrency, "USD") {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("%s can only be converted to %s", token.Symbol, token.BaseCurrency), nil)
+		return
+	}
+
+	// Validate account and rate in parallel with fail fast logic before proceeding with order creation
+	type AccountResult struct {
+		accountName string
+		err         error
+	}
+
+	type RateResult struct {
+		achievableRate decimal.Decimal
+		err            error
+	}
+
+	accountChan := make(chan AccountResult, 1)
+	rateChan := make(chan RateResult, 1)
+
+	go func() {
+		accountName, err := u.ValidateAccount(ctx, payload.Recipient.Institution, payload.Recipient.AccountIdentifier)
+		accountChan <- AccountResult{accountName, err}
+	}()
+
+	go func() {
+		achievableRate, err := u.ValidateRate(ctx, token, institutionObj.Edges.FiatCurrency, payload.Amount, payload.Recipient.ProviderID, payload.Network)
+		rateChan <- RateResult{achievableRate, err}
+	}()
+
+	var accountResult AccountResult
+	var rateResult RateResult
+	var completedCount int
+
+	for completedCount < 2 {
+		select {
+		case accountResult = <-accountChan:
+			completedCount++
+			if accountResult.err != nil {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Recipient",
+					Message: fmt.Sprintf("Account validation failed: %s", accountResult.err.Error()),
+				})
+				return
+			}
+		case rateResult = <-rateChan:
+			completedCount++
+			if rateResult.err != nil {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Rate",
+					Message: fmt.Sprintf("Rate validation failed: %s", rateResult.err.Error()),
+				})
+				return
+			}
+		}
+	}
+
+	// Both validations successful
+	payload.Recipient.AccountName = accountResult.accountName
+	achievableRate := rateResult.achievableRate
+
+	// Validate that the provided rate is achievable
+	// Allow for a small tolerance (0.1%) to account for minor rate fluctuations
+	tolerance := achievableRate.Mul(decimal.NewFromFloat(0.001)) // 0.1% tolerance
+	if payload.Rate.LessThan(achievableRate.Sub(tolerance)) {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+			Field:   "Rate",
+			Message: fmt.Sprintf("Provided rate %s is not achievable. Available rate is %s", payload.Rate, achievableRate),
+		})
 		return
 	}
 
@@ -287,7 +352,9 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 				rateResponse, err := u.GetTokenRateFromQueue("USDT", normalizedAmount, institutionObj.Edges.FiatCurrency.Code, institutionObj.Edges.FiatCurrency.MarketRate)
 				if err != nil {
 					logger.Errorf("InitiatePaymentOrder.GetTokenRateFromQueue: %v", err)
-					u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+					u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", map[string]interface{}{
+						"context": "token_rate_queue",
+					})
 					return
 				}
 				normalizedAmount = payload.Amount.Div(rateResponse)
@@ -308,8 +375,10 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	if strings.HasPrefix(payload.Network, "tron") {
 		address, salt, err := ctrl.receiveAddressService.CreateTronAddress(ctx)
 		if err != nil {
-			logger.Errorf("error: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+			logger.Errorf("CreateTronAddress error: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", map[string]interface{}{
+				"context": "create_tron_address",
+			})
 			return
 		}
 
@@ -337,7 +406,9 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 				"error":   err,
 				"address": address,
 			}).Errorf("Failed to create receive address")
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", map[string]interface{}{
+				"context": "create_smart_address",
+			})
 			return
 		}
 
@@ -392,10 +463,12 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	}
 
 	// Create payment order
+	amountInUSD := u.CalculatePaymentOrderAmountInUSD(payload.Amount, token, institutionObj)
 	paymentOrder, err := tx.PaymentOrder.
 		Create().
 		SetSenderProfile(sender).
 		SetAmount(payload.Amount).
+		SetAmountInUsd(amountInUSD).
 		SetAmountPaid(decimal.NewFromInt(0)).
 		SetAmountReturned(decimal.NewFromInt(0)).
 		SetPercentSettled(decimal.NewFromInt(0)).
@@ -429,8 +502,8 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			paymentOrder.ID.String(), // Order ID for webhook name
 		)
 		if err != nil {
-			// Check if this is BNB Smart Chain (chain ID 56) which is not supported by Thirdweb
-			if token.Edges.Network.ChainID != 56 {
+			// Check if this is BNB Smart Chain (chain ID 56) or Lisk (chain ID 1135) which is not supported by Thirdweb
+			if token.Edges.Network.ChainID != 56 && token.Edges.Network.ChainID != 1135 {
 				logger.WithFields(logger.Fields{
 					"ChainID": token.Edges.Network.ChainID,
 					"Network": token.Edges.Network.Identifier,
@@ -573,6 +646,7 @@ func (ctrl *SenderController) GetPaymentOrderByID(ctx *gin.Context) {
 	u.APIResponse(ctx, http.StatusOK, "success", "The order has been successfully retrieved", &types.PaymentOrderResponse{
 		ID:             paymentOrder.ID,
 		Amount:         paymentOrder.Amount,
+		AmountInUSD:    paymentOrder.AmountInUsd,
 		AmountPaid:     paymentOrder.AmountPaid,
 		AmountReturned: paymentOrder.AmountReturned,
 		Token:          paymentOrder.Edges.Token.Symbol,
@@ -740,6 +814,7 @@ func (ctrl *SenderController) GetPaymentOrders(ctx *gin.Context) {
 		orders = append(orders, types.PaymentOrderResponse{
 			ID:             paymentOrder.ID,
 			Amount:         paymentOrder.Amount,
+			AmountInUSD:    paymentOrder.AmountInUsd,
 			AmountPaid:     paymentOrder.AmountPaid,
 			AmountReturned: paymentOrder.AmountReturned,
 			Token:          paymentOrder.Edges.Token.Symbol,

@@ -62,8 +62,8 @@ func (s *EngineService) CreateServerWallet(ctx context.Context, label string) (s
 
 // GetLatestBlock fetches the latest block number for a given chain ID
 func (s *EngineService) GetLatestBlock(ctx context.Context, chainID int64) (int64, error) {
-	// TODO: Remove once thirdweb insight supports BSC
-	if chainID != 56 {
+	// TODO: Remove once thirdweb insight supports BSC and Lisk
+	if chainID != 56 && chainID != 1135 {
 		// Try ThirdWeb first for all networks
 		res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
 			Config().SetTimeout(60 * time.Second).
@@ -182,7 +182,7 @@ func (s *EngineService) SendTransactionBatch(ctx context.Context, chainID int64,
 // GetTransactionStatus gets the status of a transaction
 func (s *EngineService) GetTransactionStatus(ctx context.Context, queueId string) (result map[string]interface{}, err error) {
 	res, err := fastshot.NewClient(s.config.BaseURL).
-		Config().SetTimeout(30 * time.Second).
+		Config().SetTimeout(60 * time.Second).
 		Header().AddAll(map[string]string{
 		"Accept":               "application/json",
 		"Content-Type":         "application/json",
@@ -277,9 +277,9 @@ func (s *EngineService) WaitForTransactionMined(ctx context.Context, queueId str
 
 // CreateTransferWebhook creates webhooks to listen to transfer events to a specific address on a specific chain
 func (s *EngineService) CreateTransferWebhook(ctx context.Context, chainID int64, contractAddress string, toAddress string, orderID string) (string, string, error) {
-	// Check if this is BNB Smart Chain (chain ID 56) - not supported by Thirdweb Insight
-	if chainID == 56 {
-		return "", "", fmt.Errorf("webhook creation not supported for BNB Smart Chain (chain ID 56) via Thirdweb API")
+	// Check if this is BNB Smart Chain (chain ID 56) or Lisk (chain ID 1135) - not supported by Thirdweb Insight
+	if chainID == 56 || chainID == 1135 {
+		return "", "", fmt.Errorf("webhook creation not supported for BNB Smart Chain (chain ID 56) or Lisk (chain ID 1135) via Thirdweb API")
 	}
 
 	webhookCallbackURL := fmt.Sprintf("%s/v1/insight/webhook", config.ServerConfig().ServerURL)
@@ -411,7 +411,7 @@ type WebhookListResponse struct {
 // GetWebhookByID fetches a webhook by its ID from thirdweb
 func (s *EngineService) GetWebhookByID(ctx context.Context, webhookID string, chainID int64) (*WebhookInfo, error) {
 	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
-		Config().SetTimeout(30 * time.Second).
+		Config().SetTimeout(60 * time.Second).
 		Header().AddAll(map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/json",
@@ -493,7 +493,7 @@ func (s *EngineService) CreateGatewayWebhook() error {
 	// Fetch networks for the current environment
 	networks, err := storage.Client.Network.
 		Query().
-		Where(networkent.ChainIDNEQ(56)).
+		Where(networkent.ChainIDNotIn(56, 1135)).
 		All(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to fetch networks: %w", err)
@@ -701,6 +701,7 @@ func (s *EngineService) CreateGatewayWebhook() error {
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Data":       data,
+			"ChainIDs":   chainIDsStrings,
 			"StatusCode": res.RawResponse.StatusCode,
 		}).Errorf("failed to parse JSON response: %v", err)
 		return fmt.Errorf("failed to parse JSON response: %v", err)
@@ -880,9 +881,9 @@ func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint st
 
 // GetAddressTransactionHistory fetches transaction history for any address from thirdweb insight API
 func (s *EngineService) GetAddressTransactionHistory(ctx context.Context, chainID int64, walletAddress string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
-	// Check if this is BNB Smart Chain (chain ID 56) - not supported by Thirdweb Insight
-	if chainID == 56 {
-		return nil, fmt.Errorf("transaction history not supported for BNB Smart Chain via Thirdweb API")
+	// Check if this is BNB Smart Chain (chain ID 56) or Linea (chain ID 1135) - not supported by Thirdweb Insight
+	if chainID == 56 || chainID == 1135 {
+		return nil, fmt.Errorf("transaction history not supported for BNB Smart Chain (chain ID 56) or Lisk (chain ID 1135) via Thirdweb API")
 	}
 
 	// Build query parameters
@@ -912,7 +913,7 @@ func (s *EngineService) GetAddressTransactionHistory(ctx context.Context, chainI
 
 	data, err := utils.ParseJSONResponse(res.RawResponse)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
+		return nil, fmt.Errorf("failed to parse JSON response: %w %v", err, data)
 	}
 
 	if data["data"] == nil {
@@ -929,34 +930,109 @@ func (s *EngineService) GetAddressTransactionHistory(ctx context.Context, chainI
 	return result, nil
 }
 
-// GetContractEventsWithFallback tries ThirdWeb first and falls back to RPC if ThirdWeb fails
+// GetContractEventsWithFallback tries RPC first and falls back to ThirdWeb if RPC fails
 func (s *EngineService) GetContractEventsWithFallback(ctx context.Context, network *ent.Network, contractAddress string, fromBlock int64, toBlock int64, topics []string, txHash string, eventPayload map[string]string) ([]interface{}, error) {
-	var err error
+	// Try RPC first
+	events, rpcErr := s.GetContractEventsRPC(ctx, network.RPCEndpoint, contractAddress, fromBlock, toBlock, topics, txHash)
+	if rpcErr == nil {
+		return events, nil
+	}
 
-	// TODO: Remove once thirdweb insight supports BSC
-	if network.ChainID != 56 {
-		// Try ThirdWeb first
-		events, err := s.GetContractEvents(ctx, network.ChainID, contractAddress, eventPayload)
-		if err == nil {
-			// ThirdWeb succeeded, return the events
+	// If RPC fails, try ThirdWeb (except for BSC and Lisk)
+	if network.ChainID != 56 && network.ChainID != 1135 {
+		events, thirdwebErr := s.GetContractEvents(ctx, network.ChainID, contractAddress, eventPayload)
+		if thirdwebErr == nil {
 			return events, nil
+		}
+		logger.WithFields(logger.Fields{
+			"Network":       network.Identifier,
+			"ChainID":       network.ChainID,
+			"Contract":      contractAddress,
+			"ThirdWebError": thirdwebErr.Error(),
+			"FallbackToRPC": false,
+		}).Errorf("Both RPC and ThirdWeb failed")
+		return nil, fmt.Errorf("both RPC and ThirdWeb failed - RPC: %w, ThirdWeb: %w", rpcErr, thirdwebErr)
+	}
+
+	return nil, fmt.Errorf("both RPC and ThirdWeb failed - RPC: %w", rpcErr)
+}
+
+// TransferToken transfers ERC-20 tokens using Thirdweb Engine API
+func (s *EngineService) TransferToken(ctx context.Context, chainID int64, fromAddress string, toAddress string, tokenAddress string, amount string, idempotencyKey string) (queueID string, err error) {
+	if tokenAddress == "" {
+		return "", fmt.Errorf("tokenAddress is required for ERC-20 transfers")
+	}
+
+	// ERC-20 transfer function ABI
+	transferABI := `[
+		{
+			"inputs": [
+				{"internalType": "address", "name": "to", "type": "address"},
+				{"internalType": "uint256", "name": "amount", "type": "uint256"}
+			],
+			"name": "transfer",
+			"outputs": [
+				{"internalType": "bool", "name": "", "type": "bool"}
+			],
+			"stateMutability": "nonpayable",
+			"type": "function"
+		}
+	]`
+
+	// Prepare the contract call parameters
+	contractParams := map[string]interface{}{
+		"contractAddress": tokenAddress,
+		"method":         "transfer",
+		"params":         []interface{}{toAddress, amount},
+		"abi":            transferABI,
+		"value":          "0", // No ETH value for ERC-20 transfers
+	}
+
+	// Prepare execution options
+	executionOptions := map[string]interface{}{
+		"chainId":         fmt.Sprintf("%d", chainID),
+		"idempotencyKey":  idempotencyKey,
+		"from":            fromAddress,
+		"type":            "auto",
+	}
+
+	// Prepare the request payload
+	payload := map[string]interface{}{
+		"executionOptions": executionOptions,
+		"params":           []map[string]interface{}{contractParams},
+		"webhookOptions":   []interface{}{}, // No webhook
+	}
+
+	res, err := fastshot.NewClient(s.config.BaseURL).
+		Config().SetTimeout(60 * time.Second).
+		Header().AddAll(map[string]string{
+		"Accept":               "application/json",
+		"Content-Type":         "application/json",
+		"x-vault-access-token": s.config.AccessToken,
+		"X-Secret-Key":         s.config.ThirdwebSecretKey,
+	}).Build().POST("/v1/write/contract").
+		Body().AsJSON(payload).Send()
+	if err != nil {
+		return "", fmt.Errorf("failed to execute token transfer: %w", err)
+	}
+
+	data, err := utils.ParseJSONResponse(res.RawResponse)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse JSON response: %w", err)
+	}
+
+	// Extract queue ID from response
+	if result, ok := data["result"].(map[string]interface{}); ok {
+		if transactions, ok := result["transactions"].([]interface{}); ok && len(transactions) > 0 {
+			if tx, ok := transactions[0].(map[string]interface{}); ok {
+				if id, ok := tx["id"].(string); ok {
+					return id, nil
+				}
+			}
 		}
 	}
 
-	// Try RPC as fallback
-	events, rpcErr := s.GetContractEventsRPC(ctx, network.RPCEndpoint, contractAddress, fromBlock, toBlock, topics, txHash)
-	if rpcErr != nil {
-		// Both ThirdWeb and RPC failed
-		logger.WithFields(logger.Fields{
-			"Network":  network.Identifier,
-			"ChainID":  network.ChainID,
-			"Contract": contractAddress,
-			"RPCError": rpcErr.Error(),
-		}).Errorf("Both ThirdWeb and RPC failed")
-		return nil, fmt.Errorf("both ThirdWeb and RPC failed - ThirdWeb: %w, RPC: %w", err, rpcErr)
-	}
-
-	return events, nil
+	return "", fmt.Errorf("failed to extract queue ID from response")
 }
 
 // ParseUserOpErrorJSON parses a UserOperation error JSON and returns the decoded error string

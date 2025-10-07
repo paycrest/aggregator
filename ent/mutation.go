@@ -26,6 +26,7 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -63,6 +64,7 @@ const (
 	TypePaymentOrder                = "PaymentOrder"
 	TypePaymentOrderRecipient       = "PaymentOrderRecipient"
 	TypePaymentWebhook              = "PaymentWebhook"
+	TypeProviderCurrencies          = "ProviderCurrencies"
 	TypeProviderOrderToken          = "ProviderOrderToken"
 	TypeProviderProfile             = "ProviderProfile"
 	TypeProviderRating              = "ProviderRating"
@@ -1419,9 +1421,9 @@ type FiatCurrencyMutation struct {
 	addmarket_rate               *decimal.Decimal
 	is_enabled                   *bool
 	clearedFields                map[string]struct{}
-	providers                    map[string]struct{}
-	removedproviders             map[string]struct{}
-	clearedproviders             bool
+	provider_currencies          map[uuid.UUID]struct{}
+	removedprovider_currencies   map[uuid.UUID]struct{}
+	clearedprovider_currencies   bool
 	provision_buckets            map[int]struct{}
 	removedprovision_buckets     map[int]struct{}
 	clearedprovision_buckets     bool
@@ -1904,58 +1906,58 @@ func (m *FiatCurrencyMutation) ResetIsEnabled() {
 	m.is_enabled = nil
 }
 
-// AddProviderIDs adds the "providers" edge to the ProviderProfile entity by ids.
-func (m *FiatCurrencyMutation) AddProviderIDs(ids ...string) {
-	if m.providers == nil {
-		m.providers = make(map[string]struct{})
+// AddProviderCurrencyIDs adds the "provider_currencies" edge to the ProviderCurrencies entity by ids.
+func (m *FiatCurrencyMutation) AddProviderCurrencyIDs(ids ...uuid.UUID) {
+	if m.provider_currencies == nil {
+		m.provider_currencies = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m.providers[ids[i]] = struct{}{}
+		m.provider_currencies[ids[i]] = struct{}{}
 	}
 }
 
-// ClearProviders clears the "providers" edge to the ProviderProfile entity.
-func (m *FiatCurrencyMutation) ClearProviders() {
-	m.clearedproviders = true
+// ClearProviderCurrencies clears the "provider_currencies" edge to the ProviderCurrencies entity.
+func (m *FiatCurrencyMutation) ClearProviderCurrencies() {
+	m.clearedprovider_currencies = true
 }
 
-// ProvidersCleared reports if the "providers" edge to the ProviderProfile entity was cleared.
-func (m *FiatCurrencyMutation) ProvidersCleared() bool {
-	return m.clearedproviders
+// ProviderCurrenciesCleared reports if the "provider_currencies" edge to the ProviderCurrencies entity was cleared.
+func (m *FiatCurrencyMutation) ProviderCurrenciesCleared() bool {
+	return m.clearedprovider_currencies
 }
 
-// RemoveProviderIDs removes the "providers" edge to the ProviderProfile entity by IDs.
-func (m *FiatCurrencyMutation) RemoveProviderIDs(ids ...string) {
-	if m.removedproviders == nil {
-		m.removedproviders = make(map[string]struct{})
+// RemoveProviderCurrencyIDs removes the "provider_currencies" edge to the ProviderCurrencies entity by IDs.
+func (m *FiatCurrencyMutation) RemoveProviderCurrencyIDs(ids ...uuid.UUID) {
+	if m.removedprovider_currencies == nil {
+		m.removedprovider_currencies = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m.providers, ids[i])
-		m.removedproviders[ids[i]] = struct{}{}
+		delete(m.provider_currencies, ids[i])
+		m.removedprovider_currencies[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedProviders returns the removed IDs of the "providers" edge to the ProviderProfile entity.
-func (m *FiatCurrencyMutation) RemovedProvidersIDs() (ids []string) {
-	for id := range m.removedproviders {
+// RemovedProviderCurrencies returns the removed IDs of the "provider_currencies" edge to the ProviderCurrencies entity.
+func (m *FiatCurrencyMutation) RemovedProviderCurrenciesIDs() (ids []uuid.UUID) {
+	for id := range m.removedprovider_currencies {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ProvidersIDs returns the "providers" edge IDs in the mutation.
-func (m *FiatCurrencyMutation) ProvidersIDs() (ids []string) {
-	for id := range m.providers {
+// ProviderCurrenciesIDs returns the "provider_currencies" edge IDs in the mutation.
+func (m *FiatCurrencyMutation) ProviderCurrenciesIDs() (ids []uuid.UUID) {
+	for id := range m.provider_currencies {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetProviders resets all changes to the "providers" edge.
-func (m *FiatCurrencyMutation) ResetProviders() {
-	m.providers = nil
-	m.clearedproviders = false
-	m.removedproviders = nil
+// ResetProviderCurrencies resets all changes to the "provider_currencies" edge.
+func (m *FiatCurrencyMutation) ResetProviderCurrencies() {
+	m.provider_currencies = nil
+	m.clearedprovider_currencies = false
+	m.removedprovider_currencies = nil
 }
 
 // AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by ids.
@@ -2417,8 +2419,8 @@ func (m *FiatCurrencyMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *FiatCurrencyMutation) AddedEdges() []string {
 	edges := make([]string, 0, 4)
-	if m.providers != nil {
-		edges = append(edges, fiatcurrency.EdgeProviders)
+	if m.provider_currencies != nil {
+		edges = append(edges, fiatcurrency.EdgeProviderCurrencies)
 	}
 	if m.provision_buckets != nil {
 		edges = append(edges, fiatcurrency.EdgeProvisionBuckets)
@@ -2436,9 +2438,9 @@ func (m *FiatCurrencyMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *FiatCurrencyMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case fiatcurrency.EdgeProviders:
-		ids := make([]ent.Value, 0, len(m.providers))
-		for id := range m.providers {
+	case fiatcurrency.EdgeProviderCurrencies:
+		ids := make([]ent.Value, 0, len(m.provider_currencies))
+		for id := range m.provider_currencies {
 			ids = append(ids, id)
 		}
 		return ids
@@ -2467,8 +2469,8 @@ func (m *FiatCurrencyMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *FiatCurrencyMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 4)
-	if m.removedproviders != nil {
-		edges = append(edges, fiatcurrency.EdgeProviders)
+	if m.removedprovider_currencies != nil {
+		edges = append(edges, fiatcurrency.EdgeProviderCurrencies)
 	}
 	if m.removedprovision_buckets != nil {
 		edges = append(edges, fiatcurrency.EdgeProvisionBuckets)
@@ -2486,9 +2488,9 @@ func (m *FiatCurrencyMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *FiatCurrencyMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case fiatcurrency.EdgeProviders:
-		ids := make([]ent.Value, 0, len(m.removedproviders))
-		for id := range m.removedproviders {
+	case fiatcurrency.EdgeProviderCurrencies:
+		ids := make([]ent.Value, 0, len(m.removedprovider_currencies))
+		for id := range m.removedprovider_currencies {
 			ids = append(ids, id)
 		}
 		return ids
@@ -2517,8 +2519,8 @@ func (m *FiatCurrencyMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *FiatCurrencyMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 4)
-	if m.clearedproviders {
-		edges = append(edges, fiatcurrency.EdgeProviders)
+	if m.clearedprovider_currencies {
+		edges = append(edges, fiatcurrency.EdgeProviderCurrencies)
 	}
 	if m.clearedprovision_buckets {
 		edges = append(edges, fiatcurrency.EdgeProvisionBuckets)
@@ -2536,8 +2538,8 @@ func (m *FiatCurrencyMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *FiatCurrencyMutation) EdgeCleared(name string) bool {
 	switch name {
-	case fiatcurrency.EdgeProviders:
-		return m.clearedproviders
+	case fiatcurrency.EdgeProviderCurrencies:
+		return m.clearedprovider_currencies
 	case fiatcurrency.EdgeProvisionBuckets:
 		return m.clearedprovision_buckets
 	case fiatcurrency.EdgeInstitutions:
@@ -2560,8 +2562,8 @@ func (m *FiatCurrencyMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *FiatCurrencyMutation) ResetEdge(name string) error {
 	switch name {
-	case fiatcurrency.EdgeProviders:
-		m.ResetProviders()
+	case fiatcurrency.EdgeProviderCurrencies:
+		m.ResetProviderCurrencies()
 		return nil
 	case fiatcurrency.EdgeProvisionBuckets:
 		m.ResetProvisionBuckets()
@@ -3966,6 +3968,7 @@ type KYBProfileMutation struct {
 	proof_of_business_address_url    *string
 	aml_policy_url                   *string
 	kyc_policy_url                   *string
+	kyb_rejection_comment            *string
 	clearedFields                    map[string]struct{}
 	beneficial_owners                map[uuid.UUID]struct{}
 	removedbeneficial_owners         map[uuid.UUID]struct{}
@@ -4516,6 +4519,55 @@ func (m *KYBProfileMutation) ResetKycPolicyURL() {
 	delete(m.clearedFields, kybprofile.FieldKycPolicyURL)
 }
 
+// SetKybRejectionComment sets the "kyb_rejection_comment" field.
+func (m *KYBProfileMutation) SetKybRejectionComment(s string) {
+	m.kyb_rejection_comment = &s
+}
+
+// KybRejectionComment returns the value of the "kyb_rejection_comment" field in the mutation.
+func (m *KYBProfileMutation) KybRejectionComment() (r string, exists bool) {
+	v := m.kyb_rejection_comment
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldKybRejectionComment returns the old "kyb_rejection_comment" field's value of the KYBProfile entity.
+// If the KYBProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *KYBProfileMutation) OldKybRejectionComment(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKybRejectionComment is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKybRejectionComment requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKybRejectionComment: %w", err)
+	}
+	return oldValue.KybRejectionComment, nil
+}
+
+// ClearKybRejectionComment clears the value of the "kyb_rejection_comment" field.
+func (m *KYBProfileMutation) ClearKybRejectionComment() {
+	m.kyb_rejection_comment = nil
+	m.clearedFields[kybprofile.FieldKybRejectionComment] = struct{}{}
+}
+
+// KybRejectionCommentCleared returns if the "kyb_rejection_comment" field was cleared in this mutation.
+func (m *KYBProfileMutation) KybRejectionCommentCleared() bool {
+	_, ok := m.clearedFields[kybprofile.FieldKybRejectionComment]
+	return ok
+}
+
+// ResetKybRejectionComment resets all changes to the "kyb_rejection_comment" field.
+func (m *KYBProfileMutation) ResetKybRejectionComment() {
+	m.kyb_rejection_comment = nil
+	delete(m.clearedFields, kybprofile.FieldKybRejectionComment)
+}
+
 // AddBeneficialOwnerIDs adds the "beneficial_owners" edge to the BeneficialOwner entity by ids.
 func (m *KYBProfileMutation) AddBeneficialOwnerIDs(ids ...uuid.UUID) {
 	if m.beneficial_owners == nil {
@@ -4643,7 +4695,7 @@ func (m *KYBProfileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *KYBProfileMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 12)
 	if m.created_at != nil {
 		fields = append(fields, kybprofile.FieldCreatedAt)
 	}
@@ -4677,6 +4729,9 @@ func (m *KYBProfileMutation) Fields() []string {
 	if m.kyc_policy_url != nil {
 		fields = append(fields, kybprofile.FieldKycPolicyURL)
 	}
+	if m.kyb_rejection_comment != nil {
+		fields = append(fields, kybprofile.FieldKybRejectionComment)
+	}
 	return fields
 }
 
@@ -4707,6 +4762,8 @@ func (m *KYBProfileMutation) Field(name string) (ent.Value, bool) {
 		return m.AmlPolicyURL()
 	case kybprofile.FieldKycPolicyURL:
 		return m.KycPolicyURL()
+	case kybprofile.FieldKybRejectionComment:
+		return m.KybRejectionComment()
 	}
 	return nil, false
 }
@@ -4738,6 +4795,8 @@ func (m *KYBProfileMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldAmlPolicyURL(ctx)
 	case kybprofile.FieldKycPolicyURL:
 		return m.OldKycPolicyURL(ctx)
+	case kybprofile.FieldKybRejectionComment:
+		return m.OldKybRejectionComment(ctx)
 	}
 	return nil, fmt.Errorf("unknown KYBProfile field %s", name)
 }
@@ -4824,6 +4883,13 @@ func (m *KYBProfileMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetKycPolicyURL(v)
 		return nil
+	case kybprofile.FieldKybRejectionComment:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetKybRejectionComment(v)
+		return nil
 	}
 	return fmt.Errorf("unknown KYBProfile field %s", name)
 }
@@ -4863,6 +4929,9 @@ func (m *KYBProfileMutation) ClearedFields() []string {
 	if m.FieldCleared(kybprofile.FieldKycPolicyURL) {
 		fields = append(fields, kybprofile.FieldKycPolicyURL)
 	}
+	if m.FieldCleared(kybprofile.FieldKybRejectionComment) {
+		fields = append(fields, kybprofile.FieldKybRejectionComment)
+	}
 	return fields
 }
 
@@ -4885,6 +4954,9 @@ func (m *KYBProfileMutation) ClearField(name string) error {
 		return nil
 	case kybprofile.FieldKycPolicyURL:
 		m.ClearKycPolicyURL()
+		return nil
+	case kybprofile.FieldKybRejectionComment:
+		m.ClearKybRejectionComment()
 		return nil
 	}
 	return fmt.Errorf("unknown KYBProfile nullable field %s", name)
@@ -4926,6 +4998,9 @@ func (m *KYBProfileMutation) ResetField(name string) error {
 		return nil
 	case kybprofile.FieldKycPolicyURL:
 		m.ResetKycPolicyURL()
+		return nil
+	case kybprofile.FieldKybRejectionComment:
+		m.ResetKybRejectionComment()
 		return nil
 	}
 	return fmt.Errorf("unknown KYBProfile field %s", name)
@@ -6869,6 +6944,8 @@ type LockPaymentOrderMutation struct {
 	cancellation_reasons       *[]string
 	appendcancellation_reasons []string
 	message_hash               *string
+	amount_in_usd              *decimal.Decimal
+	addamount_in_usd           *decimal.Decimal
 	clearedFields              map[string]struct{}
 	token                      *int
 	clearedtoken               bool
@@ -7875,6 +7952,62 @@ func (m *LockPaymentOrderMutation) ResetMessageHash() {
 	delete(m.clearedFields, lockpaymentorder.FieldMessageHash)
 }
 
+// SetAmountInUsd sets the "amount_in_usd" field.
+func (m *LockPaymentOrderMutation) SetAmountInUsd(d decimal.Decimal) {
+	m.amount_in_usd = &d
+	m.addamount_in_usd = nil
+}
+
+// AmountInUsd returns the value of the "amount_in_usd" field in the mutation.
+func (m *LockPaymentOrderMutation) AmountInUsd() (r decimal.Decimal, exists bool) {
+	v := m.amount_in_usd
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAmountInUsd returns the old "amount_in_usd" field's value of the LockPaymentOrder entity.
+// If the LockPaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LockPaymentOrderMutation) OldAmountInUsd(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAmountInUsd is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAmountInUsd requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAmountInUsd: %w", err)
+	}
+	return oldValue.AmountInUsd, nil
+}
+
+// AddAmountInUsd adds d to the "amount_in_usd" field.
+func (m *LockPaymentOrderMutation) AddAmountInUsd(d decimal.Decimal) {
+	if m.addamount_in_usd != nil {
+		*m.addamount_in_usd = m.addamount_in_usd.Add(d)
+	} else {
+		m.addamount_in_usd = &d
+	}
+}
+
+// AddedAmountInUsd returns the value that was added to the "amount_in_usd" field in this mutation.
+func (m *LockPaymentOrderMutation) AddedAmountInUsd() (r decimal.Decimal, exists bool) {
+	v := m.addamount_in_usd
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAmountInUsd resets all changes to the "amount_in_usd" field.
+func (m *LockPaymentOrderMutation) ResetAmountInUsd() {
+	m.amount_in_usd = nil
+	m.addamount_in_usd = nil
+}
+
 // SetTokenID sets the "token" edge to the Token entity by id.
 func (m *LockPaymentOrderMutation) SetTokenID(id int) {
 	m.token = &id
@@ -8134,7 +8267,7 @@ func (m *LockPaymentOrderMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *LockPaymentOrderMutation) Fields() []string {
-	fields := make([]string, 0, 19)
+	fields := make([]string, 0, 20)
 	if m.created_at != nil {
 		fields = append(fields, lockpaymentorder.FieldCreatedAt)
 	}
@@ -8192,6 +8325,9 @@ func (m *LockPaymentOrderMutation) Fields() []string {
 	if m.message_hash != nil {
 		fields = append(fields, lockpaymentorder.FieldMessageHash)
 	}
+	if m.amount_in_usd != nil {
+		fields = append(fields, lockpaymentorder.FieldAmountInUsd)
+	}
 	return fields
 }
 
@@ -8238,6 +8374,8 @@ func (m *LockPaymentOrderMutation) Field(name string) (ent.Value, bool) {
 		return m.CancellationReasons()
 	case lockpaymentorder.FieldMessageHash:
 		return m.MessageHash()
+	case lockpaymentorder.FieldAmountInUsd:
+		return m.AmountInUsd()
 	}
 	return nil, false
 }
@@ -8285,6 +8423,8 @@ func (m *LockPaymentOrderMutation) OldField(ctx context.Context, name string) (e
 		return m.OldCancellationReasons(ctx)
 	case lockpaymentorder.FieldMessageHash:
 		return m.OldMessageHash(ctx)
+	case lockpaymentorder.FieldAmountInUsd:
+		return m.OldAmountInUsd(ctx)
 	}
 	return nil, fmt.Errorf("unknown LockPaymentOrder field %s", name)
 }
@@ -8427,6 +8567,13 @@ func (m *LockPaymentOrderMutation) SetField(name string, value ent.Value) error 
 		}
 		m.SetMessageHash(v)
 		return nil
+	case lockpaymentorder.FieldAmountInUsd:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAmountInUsd(v)
+		return nil
 	}
 	return fmt.Errorf("unknown LockPaymentOrder field %s", name)
 }
@@ -8453,6 +8600,9 @@ func (m *LockPaymentOrderMutation) AddedFields() []string {
 	if m.addcancellation_count != nil {
 		fields = append(fields, lockpaymentorder.FieldCancellationCount)
 	}
+	if m.addamount_in_usd != nil {
+		fields = append(fields, lockpaymentorder.FieldAmountInUsd)
+	}
 	return fields
 }
 
@@ -8473,6 +8623,8 @@ func (m *LockPaymentOrderMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedBlockNumber()
 	case lockpaymentorder.FieldCancellationCount:
 		return m.AddedCancellationCount()
+	case lockpaymentorder.FieldAmountInUsd:
+		return m.AddedAmountInUsd()
 	}
 	return nil, false
 }
@@ -8523,6 +8675,13 @@ func (m *LockPaymentOrderMutation) AddField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddCancellationCount(v)
+		return nil
+	case lockpaymentorder.FieldAmountInUsd:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAmountInUsd(v)
 		return nil
 	}
 	return fmt.Errorf("unknown LockPaymentOrder numeric field %s", name)
@@ -8640,6 +8799,9 @@ func (m *LockPaymentOrderMutation) ResetField(name string) error {
 		return nil
 	case lockpaymentorder.FieldMessageHash:
 		m.ResetMessageHash()
+		return nil
+	case lockpaymentorder.FieldAmountInUsd:
+		m.ResetAmountInUsd()
 		return nil
 	}
 	return fmt.Errorf("unknown LockPaymentOrder field %s", name)
@@ -10005,6 +10167,8 @@ type PaymentOrderMutation struct {
 	message_hash           *string
 	reference              *string
 	status                 *paymentorder.Status
+	amount_in_usd          *decimal.Decimal
+	addamount_in_usd       *decimal.Decimal
 	clearedFields          map[string]struct{}
 	sender_profile         *uuid.UUID
 	clearedsender_profile  bool
@@ -11121,6 +11285,62 @@ func (m *PaymentOrderMutation) ResetStatus() {
 	m.status = nil
 }
 
+// SetAmountInUsd sets the "amount_in_usd" field.
+func (m *PaymentOrderMutation) SetAmountInUsd(d decimal.Decimal) {
+	m.amount_in_usd = &d
+	m.addamount_in_usd = nil
+}
+
+// AmountInUsd returns the value of the "amount_in_usd" field in the mutation.
+func (m *PaymentOrderMutation) AmountInUsd() (r decimal.Decimal, exists bool) {
+	v := m.amount_in_usd
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAmountInUsd returns the old "amount_in_usd" field's value of the PaymentOrder entity.
+// If the PaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentOrderMutation) OldAmountInUsd(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAmountInUsd is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAmountInUsd requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAmountInUsd: %w", err)
+	}
+	return oldValue.AmountInUsd, nil
+}
+
+// AddAmountInUsd adds d to the "amount_in_usd" field.
+func (m *PaymentOrderMutation) AddAmountInUsd(d decimal.Decimal) {
+	if m.addamount_in_usd != nil {
+		*m.addamount_in_usd = m.addamount_in_usd.Add(d)
+	} else {
+		m.addamount_in_usd = &d
+	}
+}
+
+// AddedAmountInUsd returns the value that was added to the "amount_in_usd" field in this mutation.
+func (m *PaymentOrderMutation) AddedAmountInUsd() (r decimal.Decimal, exists bool) {
+	v := m.addamount_in_usd
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAmountInUsd resets all changes to the "amount_in_usd" field.
+func (m *PaymentOrderMutation) ResetAmountInUsd() {
+	m.amount_in_usd = nil
+	m.addamount_in_usd = nil
+}
+
 // SetSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by id.
 func (m *PaymentOrderMutation) SetSenderProfileID(id uuid.UUID) {
 	m.sender_profile = &id
@@ -11443,7 +11663,7 @@ func (m *PaymentOrderMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PaymentOrderMutation) Fields() []string {
-	fields := make([]string, 0, 20)
+	fields := make([]string, 0, 21)
 	if m.created_at != nil {
 		fields = append(fields, paymentorder.FieldCreatedAt)
 	}
@@ -11504,6 +11724,9 @@ func (m *PaymentOrderMutation) Fields() []string {
 	if m.status != nil {
 		fields = append(fields, paymentorder.FieldStatus)
 	}
+	if m.amount_in_usd != nil {
+		fields = append(fields, paymentorder.FieldAmountInUsd)
+	}
 	return fields
 }
 
@@ -11552,6 +11775,8 @@ func (m *PaymentOrderMutation) Field(name string) (ent.Value, bool) {
 		return m.Reference()
 	case paymentorder.FieldStatus:
 		return m.Status()
+	case paymentorder.FieldAmountInUsd:
+		return m.AmountInUsd()
 	}
 	return nil, false
 }
@@ -11601,6 +11826,8 @@ func (m *PaymentOrderMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldReference(ctx)
 	case paymentorder.FieldStatus:
 		return m.OldStatus(ctx)
+	case paymentorder.FieldAmountInUsd:
+		return m.OldAmountInUsd(ctx)
 	}
 	return nil, fmt.Errorf("unknown PaymentOrder field %s", name)
 }
@@ -11750,6 +11977,13 @@ func (m *PaymentOrderMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetStatus(v)
 		return nil
+	case paymentorder.FieldAmountInUsd:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAmountInUsd(v)
+		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder field %s", name)
 }
@@ -11785,6 +12019,9 @@ func (m *PaymentOrderMutation) AddedFields() []string {
 	if m.addfee_percent != nil {
 		fields = append(fields, paymentorder.FieldFeePercent)
 	}
+	if m.addamount_in_usd != nil {
+		fields = append(fields, paymentorder.FieldAmountInUsd)
+	}
 	return fields
 }
 
@@ -11811,6 +12048,8 @@ func (m *PaymentOrderMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedBlockNumber()
 	case paymentorder.FieldFeePercent:
 		return m.AddedFeePercent()
+	case paymentorder.FieldAmountInUsd:
+		return m.AddedAmountInUsd()
 	}
 	return nil, false
 }
@@ -11882,6 +12121,13 @@ func (m *PaymentOrderMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddFeePercent(v)
+		return nil
+	case paymentorder.FieldAmountInUsd:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAmountInUsd(v)
 		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder numeric field %s", name)
@@ -12014,6 +12260,9 @@ func (m *PaymentOrderMutation) ResetField(name string) error {
 		return nil
 	case paymentorder.FieldStatus:
 		m.ResetStatus()
+		return nil
+	case paymentorder.FieldAmountInUsd:
+		m.ResetAmountInUsd()
 		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder field %s", name)
@@ -13608,6 +13857,782 @@ func (m *PaymentWebhookMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown PaymentWebhook edge %s", name)
 }
 
+// ProviderCurrenciesMutation represents an operation that mutates the ProviderCurrencies nodes in the graph.
+type ProviderCurrenciesMutation struct {
+	config
+	op                   Op
+	typ                  string
+	id                   *uuid.UUID
+	available_balance    *decimal.Decimal
+	addavailable_balance *decimal.Decimal
+	total_balance        *decimal.Decimal
+	addtotal_balance     *decimal.Decimal
+	reserved_balance     *decimal.Decimal
+	addreserved_balance  *decimal.Decimal
+	is_available         *bool
+	updated_at           *time.Time
+	clearedFields        map[string]struct{}
+	provider             *string
+	clearedprovider      bool
+	currency             *uuid.UUID
+	clearedcurrency      bool
+	done                 bool
+	oldValue             func(context.Context) (*ProviderCurrencies, error)
+	predicates           []predicate.ProviderCurrencies
+}
+
+var _ ent.Mutation = (*ProviderCurrenciesMutation)(nil)
+
+// providercurrenciesOption allows management of the mutation configuration using functional options.
+type providercurrenciesOption func(*ProviderCurrenciesMutation)
+
+// newProviderCurrenciesMutation creates new mutation for the ProviderCurrencies entity.
+func newProviderCurrenciesMutation(c config, op Op, opts ...providercurrenciesOption) *ProviderCurrenciesMutation {
+	m := &ProviderCurrenciesMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeProviderCurrencies,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withProviderCurrenciesID sets the ID field of the mutation.
+func withProviderCurrenciesID(id uuid.UUID) providercurrenciesOption {
+	return func(m *ProviderCurrenciesMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ProviderCurrencies
+		)
+		m.oldValue = func(ctx context.Context) (*ProviderCurrencies, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ProviderCurrencies.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withProviderCurrencies sets the old ProviderCurrencies of the mutation.
+func withProviderCurrencies(node *ProviderCurrencies) providercurrenciesOption {
+	return func(m *ProviderCurrenciesMutation) {
+		m.oldValue = func(context.Context) (*ProviderCurrencies, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ProviderCurrenciesMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ProviderCurrenciesMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ProviderCurrencies entities.
+func (m *ProviderCurrenciesMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ProviderCurrenciesMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ProviderCurrenciesMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ProviderCurrencies.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetAvailableBalance sets the "available_balance" field.
+func (m *ProviderCurrenciesMutation) SetAvailableBalance(d decimal.Decimal) {
+	m.available_balance = &d
+	m.addavailable_balance = nil
+}
+
+// AvailableBalance returns the value of the "available_balance" field in the mutation.
+func (m *ProviderCurrenciesMutation) AvailableBalance() (r decimal.Decimal, exists bool) {
+	v := m.available_balance
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAvailableBalance returns the old "available_balance" field's value of the ProviderCurrencies entity.
+// If the ProviderCurrencies object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderCurrenciesMutation) OldAvailableBalance(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAvailableBalance is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAvailableBalance requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAvailableBalance: %w", err)
+	}
+	return oldValue.AvailableBalance, nil
+}
+
+// AddAvailableBalance adds d to the "available_balance" field.
+func (m *ProviderCurrenciesMutation) AddAvailableBalance(d decimal.Decimal) {
+	if m.addavailable_balance != nil {
+		*m.addavailable_balance = m.addavailable_balance.Add(d)
+	} else {
+		m.addavailable_balance = &d
+	}
+}
+
+// AddedAvailableBalance returns the value that was added to the "available_balance" field in this mutation.
+func (m *ProviderCurrenciesMutation) AddedAvailableBalance() (r decimal.Decimal, exists bool) {
+	v := m.addavailable_balance
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAvailableBalance resets all changes to the "available_balance" field.
+func (m *ProviderCurrenciesMutation) ResetAvailableBalance() {
+	m.available_balance = nil
+	m.addavailable_balance = nil
+}
+
+// SetTotalBalance sets the "total_balance" field.
+func (m *ProviderCurrenciesMutation) SetTotalBalance(d decimal.Decimal) {
+	m.total_balance = &d
+	m.addtotal_balance = nil
+}
+
+// TotalBalance returns the value of the "total_balance" field in the mutation.
+func (m *ProviderCurrenciesMutation) TotalBalance() (r decimal.Decimal, exists bool) {
+	v := m.total_balance
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTotalBalance returns the old "total_balance" field's value of the ProviderCurrencies entity.
+// If the ProviderCurrencies object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderCurrenciesMutation) OldTotalBalance(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTotalBalance is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTotalBalance requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTotalBalance: %w", err)
+	}
+	return oldValue.TotalBalance, nil
+}
+
+// AddTotalBalance adds d to the "total_balance" field.
+func (m *ProviderCurrenciesMutation) AddTotalBalance(d decimal.Decimal) {
+	if m.addtotal_balance != nil {
+		*m.addtotal_balance = m.addtotal_balance.Add(d)
+	} else {
+		m.addtotal_balance = &d
+	}
+}
+
+// AddedTotalBalance returns the value that was added to the "total_balance" field in this mutation.
+func (m *ProviderCurrenciesMutation) AddedTotalBalance() (r decimal.Decimal, exists bool) {
+	v := m.addtotal_balance
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetTotalBalance resets all changes to the "total_balance" field.
+func (m *ProviderCurrenciesMutation) ResetTotalBalance() {
+	m.total_balance = nil
+	m.addtotal_balance = nil
+}
+
+// SetReservedBalance sets the "reserved_balance" field.
+func (m *ProviderCurrenciesMutation) SetReservedBalance(d decimal.Decimal) {
+	m.reserved_balance = &d
+	m.addreserved_balance = nil
+}
+
+// ReservedBalance returns the value of the "reserved_balance" field in the mutation.
+func (m *ProviderCurrenciesMutation) ReservedBalance() (r decimal.Decimal, exists bool) {
+	v := m.reserved_balance
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReservedBalance returns the old "reserved_balance" field's value of the ProviderCurrencies entity.
+// If the ProviderCurrencies object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderCurrenciesMutation) OldReservedBalance(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReservedBalance is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReservedBalance requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReservedBalance: %w", err)
+	}
+	return oldValue.ReservedBalance, nil
+}
+
+// AddReservedBalance adds d to the "reserved_balance" field.
+func (m *ProviderCurrenciesMutation) AddReservedBalance(d decimal.Decimal) {
+	if m.addreserved_balance != nil {
+		*m.addreserved_balance = m.addreserved_balance.Add(d)
+	} else {
+		m.addreserved_balance = &d
+	}
+}
+
+// AddedReservedBalance returns the value that was added to the "reserved_balance" field in this mutation.
+func (m *ProviderCurrenciesMutation) AddedReservedBalance() (r decimal.Decimal, exists bool) {
+	v := m.addreserved_balance
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetReservedBalance resets all changes to the "reserved_balance" field.
+func (m *ProviderCurrenciesMutation) ResetReservedBalance() {
+	m.reserved_balance = nil
+	m.addreserved_balance = nil
+}
+
+// SetIsAvailable sets the "is_available" field.
+func (m *ProviderCurrenciesMutation) SetIsAvailable(b bool) {
+	m.is_available = &b
+}
+
+// IsAvailable returns the value of the "is_available" field in the mutation.
+func (m *ProviderCurrenciesMutation) IsAvailable() (r bool, exists bool) {
+	v := m.is_available
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsAvailable returns the old "is_available" field's value of the ProviderCurrencies entity.
+// If the ProviderCurrencies object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderCurrenciesMutation) OldIsAvailable(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsAvailable is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsAvailable requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsAvailable: %w", err)
+	}
+	return oldValue.IsAvailable, nil
+}
+
+// ResetIsAvailable resets all changes to the "is_available" field.
+func (m *ProviderCurrenciesMutation) ResetIsAvailable() {
+	m.is_available = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *ProviderCurrenciesMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *ProviderCurrenciesMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the ProviderCurrencies entity.
+// If the ProviderCurrencies object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderCurrenciesMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *ProviderCurrenciesMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetProviderID sets the "provider" edge to the ProviderProfile entity by id.
+func (m *ProviderCurrenciesMutation) SetProviderID(id string) {
+	m.provider = &id
+}
+
+// ClearProvider clears the "provider" edge to the ProviderProfile entity.
+func (m *ProviderCurrenciesMutation) ClearProvider() {
+	m.clearedprovider = true
+}
+
+// ProviderCleared reports if the "provider" edge to the ProviderProfile entity was cleared.
+func (m *ProviderCurrenciesMutation) ProviderCleared() bool {
+	return m.clearedprovider
+}
+
+// ProviderID returns the "provider" edge ID in the mutation.
+func (m *ProviderCurrenciesMutation) ProviderID() (id string, exists bool) {
+	if m.provider != nil {
+		return *m.provider, true
+	}
+	return
+}
+
+// ProviderIDs returns the "provider" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ProviderID instead. It exists only for internal usage by the builders.
+func (m *ProviderCurrenciesMutation) ProviderIDs() (ids []string) {
+	if id := m.provider; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetProvider resets all changes to the "provider" edge.
+func (m *ProviderCurrenciesMutation) ResetProvider() {
+	m.provider = nil
+	m.clearedprovider = false
+}
+
+// SetCurrencyID sets the "currency" edge to the FiatCurrency entity by id.
+func (m *ProviderCurrenciesMutation) SetCurrencyID(id uuid.UUID) {
+	m.currency = &id
+}
+
+// ClearCurrency clears the "currency" edge to the FiatCurrency entity.
+func (m *ProviderCurrenciesMutation) ClearCurrency() {
+	m.clearedcurrency = true
+}
+
+// CurrencyCleared reports if the "currency" edge to the FiatCurrency entity was cleared.
+func (m *ProviderCurrenciesMutation) CurrencyCleared() bool {
+	return m.clearedcurrency
+}
+
+// CurrencyID returns the "currency" edge ID in the mutation.
+func (m *ProviderCurrenciesMutation) CurrencyID() (id uuid.UUID, exists bool) {
+	if m.currency != nil {
+		return *m.currency, true
+	}
+	return
+}
+
+// CurrencyIDs returns the "currency" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// CurrencyID instead. It exists only for internal usage by the builders.
+func (m *ProviderCurrenciesMutation) CurrencyIDs() (ids []uuid.UUID) {
+	if id := m.currency; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetCurrency resets all changes to the "currency" edge.
+func (m *ProviderCurrenciesMutation) ResetCurrency() {
+	m.currency = nil
+	m.clearedcurrency = false
+}
+
+// Where appends a list predicates to the ProviderCurrenciesMutation builder.
+func (m *ProviderCurrenciesMutation) Where(ps ...predicate.ProviderCurrencies) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ProviderCurrenciesMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ProviderCurrenciesMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ProviderCurrencies, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ProviderCurrenciesMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ProviderCurrenciesMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ProviderCurrencies).
+func (m *ProviderCurrenciesMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ProviderCurrenciesMutation) Fields() []string {
+	fields := make([]string, 0, 5)
+	if m.available_balance != nil {
+		fields = append(fields, providercurrencies.FieldAvailableBalance)
+	}
+	if m.total_balance != nil {
+		fields = append(fields, providercurrencies.FieldTotalBalance)
+	}
+	if m.reserved_balance != nil {
+		fields = append(fields, providercurrencies.FieldReservedBalance)
+	}
+	if m.is_available != nil {
+		fields = append(fields, providercurrencies.FieldIsAvailable)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, providercurrencies.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ProviderCurrenciesMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case providercurrencies.FieldAvailableBalance:
+		return m.AvailableBalance()
+	case providercurrencies.FieldTotalBalance:
+		return m.TotalBalance()
+	case providercurrencies.FieldReservedBalance:
+		return m.ReservedBalance()
+	case providercurrencies.FieldIsAvailable:
+		return m.IsAvailable()
+	case providercurrencies.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ProviderCurrenciesMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case providercurrencies.FieldAvailableBalance:
+		return m.OldAvailableBalance(ctx)
+	case providercurrencies.FieldTotalBalance:
+		return m.OldTotalBalance(ctx)
+	case providercurrencies.FieldReservedBalance:
+		return m.OldReservedBalance(ctx)
+	case providercurrencies.FieldIsAvailable:
+		return m.OldIsAvailable(ctx)
+	case providercurrencies.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown ProviderCurrencies field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ProviderCurrenciesMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case providercurrencies.FieldAvailableBalance:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAvailableBalance(v)
+		return nil
+	case providercurrencies.FieldTotalBalance:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTotalBalance(v)
+		return nil
+	case providercurrencies.FieldReservedBalance:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReservedBalance(v)
+		return nil
+	case providercurrencies.FieldIsAvailable:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsAvailable(v)
+		return nil
+	case providercurrencies.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderCurrencies field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ProviderCurrenciesMutation) AddedFields() []string {
+	var fields []string
+	if m.addavailable_balance != nil {
+		fields = append(fields, providercurrencies.FieldAvailableBalance)
+	}
+	if m.addtotal_balance != nil {
+		fields = append(fields, providercurrencies.FieldTotalBalance)
+	}
+	if m.addreserved_balance != nil {
+		fields = append(fields, providercurrencies.FieldReservedBalance)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ProviderCurrenciesMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case providercurrencies.FieldAvailableBalance:
+		return m.AddedAvailableBalance()
+	case providercurrencies.FieldTotalBalance:
+		return m.AddedTotalBalance()
+	case providercurrencies.FieldReservedBalance:
+		return m.AddedReservedBalance()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ProviderCurrenciesMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case providercurrencies.FieldAvailableBalance:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAvailableBalance(v)
+		return nil
+	case providercurrencies.FieldTotalBalance:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddTotalBalance(v)
+		return nil
+	case providercurrencies.FieldReservedBalance:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddReservedBalance(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderCurrencies numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ProviderCurrenciesMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ProviderCurrenciesMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ProviderCurrenciesMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown ProviderCurrencies nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ProviderCurrenciesMutation) ResetField(name string) error {
+	switch name {
+	case providercurrencies.FieldAvailableBalance:
+		m.ResetAvailableBalance()
+		return nil
+	case providercurrencies.FieldTotalBalance:
+		m.ResetTotalBalance()
+		return nil
+	case providercurrencies.FieldReservedBalance:
+		m.ResetReservedBalance()
+		return nil
+	case providercurrencies.FieldIsAvailable:
+		m.ResetIsAvailable()
+		return nil
+	case providercurrencies.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderCurrencies field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ProviderCurrenciesMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.provider != nil {
+		edges = append(edges, providercurrencies.EdgeProvider)
+	}
+	if m.currency != nil {
+		edges = append(edges, providercurrencies.EdgeCurrency)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ProviderCurrenciesMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case providercurrencies.EdgeProvider:
+		if id := m.provider; id != nil {
+			return []ent.Value{*id}
+		}
+	case providercurrencies.EdgeCurrency:
+		if id := m.currency; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ProviderCurrenciesMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ProviderCurrenciesMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ProviderCurrenciesMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedprovider {
+		edges = append(edges, providercurrencies.EdgeProvider)
+	}
+	if m.clearedcurrency {
+		edges = append(edges, providercurrencies.EdgeCurrency)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ProviderCurrenciesMutation) EdgeCleared(name string) bool {
+	switch name {
+	case providercurrencies.EdgeProvider:
+		return m.clearedprovider
+	case providercurrencies.EdgeCurrency:
+		return m.clearedcurrency
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ProviderCurrenciesMutation) ClearEdge(name string) error {
+	switch name {
+	case providercurrencies.EdgeProvider:
+		m.ClearProvider()
+		return nil
+	case providercurrencies.EdgeCurrency:
+		m.ClearCurrency()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderCurrencies unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ProviderCurrenciesMutation) ResetEdge(name string) error {
+	switch name {
+	case providercurrencies.EdgeProvider:
+		m.ResetProvider()
+		return nil
+	case providercurrencies.EdgeCurrency:
+		m.ResetCurrency()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderCurrencies edge %s", name)
+}
+
 // ProviderOrderTokenMutation represents an operation that mutates the ProviderOrderToken nodes in the graph.
 type ProviderOrderTokenMutation struct {
 	config
@@ -14207,22 +15232,9 @@ func (m *ProviderOrderTokenMutation) OldNetwork(ctx context.Context) (v string, 
 	return oldValue.Network, nil
 }
 
-// ClearNetwork clears the value of the "network" field.
-func (m *ProviderOrderTokenMutation) ClearNetwork() {
-	m.network = nil
-	m.clearedFields[providerordertoken.FieldNetwork] = struct{}{}
-}
-
-// NetworkCleared returns if the "network" field was cleared in this mutation.
-func (m *ProviderOrderTokenMutation) NetworkCleared() bool {
-	_, ok := m.clearedFields[providerordertoken.FieldNetwork]
-	return ok
-}
-
 // ResetNetwork resets all changes to the "network" field.
 func (m *ProviderOrderTokenMutation) ResetNetwork() {
 	m.network = nil
-	delete(m.clearedFields, providerordertoken.FieldNetwork)
 }
 
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by id.
@@ -14639,9 +15651,6 @@ func (m *ProviderOrderTokenMutation) ClearedFields() []string {
 	if m.FieldCleared(providerordertoken.FieldAddress) {
 		fields = append(fields, providerordertoken.FieldAddress)
 	}
-	if m.FieldCleared(providerordertoken.FieldNetwork) {
-		fields = append(fields, providerordertoken.FieldNetwork)
-	}
 	return fields
 }
 
@@ -14658,9 +15667,6 @@ func (m *ProviderOrderTokenMutation) ClearField(name string) error {
 	switch name {
 	case providerordertoken.FieldAddress:
 		m.ClearAddress()
-		return nil
-	case providerordertoken.FieldNetwork:
-		m.ClearNetwork()
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderOrderToken nullable field %s", name)
@@ -14817,39 +15823,38 @@ func (m *ProviderOrderTokenMutation) ResetEdge(name string) error {
 // ProviderProfileMutation represents an operation that mutates the ProviderProfile nodes in the graph.
 type ProviderProfileMutation struct {
 	config
-	op                       Op
-	typ                      string
-	id                       *string
-	trading_name             *string
-	host_identifier          *string
-	provision_mode           *providerprofile.ProvisionMode
-	is_active                *bool
-	is_available             *bool
-	isKYBVerified            *bool
-	updated_at               *time.Time
-	visibility_mode          *providerprofile.VisibilityMode
-	clearedFields            map[string]struct{}
-	user                     *uuid.UUID
-	cleareduser              bool
-	api_key                  *uuid.UUID
-	clearedapi_key           bool
-	currencies               map[uuid.UUID]struct{}
-	removedcurrencies        map[uuid.UUID]struct{}
-	clearedcurrencies        bool
-	provision_buckets        map[int]struct{}
-	removedprovision_buckets map[int]struct{}
-	clearedprovision_buckets bool
-	order_tokens             map[int]struct{}
-	removedorder_tokens      map[int]struct{}
-	clearedorder_tokens      bool
-	provider_rating          *int
-	clearedprovider_rating   bool
-	assigned_orders          map[uuid.UUID]struct{}
-	removedassigned_orders   map[uuid.UUID]struct{}
-	clearedassigned_orders   bool
-	done                     bool
-	oldValue                 func(context.Context) (*ProviderProfile, error)
-	predicates               []predicate.ProviderProfile
+	op                         Op
+	typ                        string
+	id                         *string
+	trading_name               *string
+	host_identifier            *string
+	provision_mode             *providerprofile.ProvisionMode
+	is_active                  *bool
+	is_kyb_verified            *bool
+	updated_at                 *time.Time
+	visibility_mode            *providerprofile.VisibilityMode
+	clearedFields              map[string]struct{}
+	user                       *uuid.UUID
+	cleareduser                bool
+	api_key                    *uuid.UUID
+	clearedapi_key             bool
+	provider_currencies        map[uuid.UUID]struct{}
+	removedprovider_currencies map[uuid.UUID]struct{}
+	clearedprovider_currencies bool
+	provision_buckets          map[int]struct{}
+	removedprovision_buckets   map[int]struct{}
+	clearedprovision_buckets   bool
+	order_tokens               map[int]struct{}
+	removedorder_tokens        map[int]struct{}
+	clearedorder_tokens        bool
+	provider_rating            *int
+	clearedprovider_rating     bool
+	assigned_orders            map[uuid.UUID]struct{}
+	removedassigned_orders     map[uuid.UUID]struct{}
+	clearedassigned_orders     bool
+	done                       bool
+	oldValue                   func(context.Context) (*ProviderProfile, error)
+	predicates                 []predicate.ProviderProfile
 }
 
 var _ ent.Mutation = (*ProviderProfileMutation)(nil)
@@ -15126,76 +16131,40 @@ func (m *ProviderProfileMutation) ResetIsActive() {
 	m.is_active = nil
 }
 
-// SetIsAvailable sets the "is_available" field.
-func (m *ProviderProfileMutation) SetIsAvailable(b bool) {
-	m.is_available = &b
+// SetIsKybVerified sets the "is_kyb_verified" field.
+func (m *ProviderProfileMutation) SetIsKybVerified(b bool) {
+	m.is_kyb_verified = &b
 }
 
-// IsAvailable returns the value of the "is_available" field in the mutation.
-func (m *ProviderProfileMutation) IsAvailable() (r bool, exists bool) {
-	v := m.is_available
+// IsKybVerified returns the value of the "is_kyb_verified" field in the mutation.
+func (m *ProviderProfileMutation) IsKybVerified() (r bool, exists bool) {
+	v := m.is_kyb_verified
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldIsAvailable returns the old "is_available" field's value of the ProviderProfile entity.
+// OldIsKybVerified returns the old "is_kyb_verified" field's value of the ProviderProfile entity.
 // If the ProviderProfile object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProviderProfileMutation) OldIsAvailable(ctx context.Context) (v bool, err error) {
+func (m *ProviderProfileMutation) OldIsKybVerified(ctx context.Context) (v bool, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldIsAvailable is only allowed on UpdateOne operations")
+		return v, errors.New("OldIsKybVerified is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldIsAvailable requires an ID field in the mutation")
+		return v, errors.New("OldIsKybVerified requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldIsAvailable: %w", err)
+		return v, fmt.Errorf("querying old value for OldIsKybVerified: %w", err)
 	}
-	return oldValue.IsAvailable, nil
+	return oldValue.IsKybVerified, nil
 }
 
-// ResetIsAvailable resets all changes to the "is_available" field.
-func (m *ProviderProfileMutation) ResetIsAvailable() {
-	m.is_available = nil
-}
-
-// SetIsKYBVerified sets the "isKYBVerified" field.
-func (m *ProviderProfileMutation) SetIsKYBVerified(b bool) {
-	m.isKYBVerified = &b
-}
-
-// IsKYBVerified returns the value of the "isKYBVerified" field in the mutation.
-func (m *ProviderProfileMutation) IsKYBVerified() (r bool, exists bool) {
-	v := m.isKYBVerified
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldIsKYBVerified returns the old "isKYBVerified" field's value of the ProviderProfile entity.
-// If the ProviderProfile object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProviderProfileMutation) OldIsKYBVerified(ctx context.Context) (v bool, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldIsKYBVerified is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldIsKYBVerified requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldIsKYBVerified: %w", err)
-	}
-	return oldValue.IsKYBVerified, nil
-}
-
-// ResetIsKYBVerified resets all changes to the "isKYBVerified" field.
-func (m *ProviderProfileMutation) ResetIsKYBVerified() {
-	m.isKYBVerified = nil
+// ResetIsKybVerified resets all changes to the "is_kyb_verified" field.
+func (m *ProviderProfileMutation) ResetIsKybVerified() {
+	m.is_kyb_verified = nil
 }
 
 // SetUpdatedAt sets the "updated_at" field.
@@ -15348,58 +16317,58 @@ func (m *ProviderProfileMutation) ResetAPIKey() {
 	m.clearedapi_key = false
 }
 
-// AddCurrencyIDs adds the "currencies" edge to the FiatCurrency entity by ids.
-func (m *ProviderProfileMutation) AddCurrencyIDs(ids ...uuid.UUID) {
-	if m.currencies == nil {
-		m.currencies = make(map[uuid.UUID]struct{})
+// AddProviderCurrencyIDs adds the "provider_currencies" edge to the ProviderCurrencies entity by ids.
+func (m *ProviderProfileMutation) AddProviderCurrencyIDs(ids ...uuid.UUID) {
+	if m.provider_currencies == nil {
+		m.provider_currencies = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m.currencies[ids[i]] = struct{}{}
+		m.provider_currencies[ids[i]] = struct{}{}
 	}
 }
 
-// ClearCurrencies clears the "currencies" edge to the FiatCurrency entity.
-func (m *ProviderProfileMutation) ClearCurrencies() {
-	m.clearedcurrencies = true
+// ClearProviderCurrencies clears the "provider_currencies" edge to the ProviderCurrencies entity.
+func (m *ProviderProfileMutation) ClearProviderCurrencies() {
+	m.clearedprovider_currencies = true
 }
 
-// CurrenciesCleared reports if the "currencies" edge to the FiatCurrency entity was cleared.
-func (m *ProviderProfileMutation) CurrenciesCleared() bool {
-	return m.clearedcurrencies
+// ProviderCurrenciesCleared reports if the "provider_currencies" edge to the ProviderCurrencies entity was cleared.
+func (m *ProviderProfileMutation) ProviderCurrenciesCleared() bool {
+	return m.clearedprovider_currencies
 }
 
-// RemoveCurrencyIDs removes the "currencies" edge to the FiatCurrency entity by IDs.
-func (m *ProviderProfileMutation) RemoveCurrencyIDs(ids ...uuid.UUID) {
-	if m.removedcurrencies == nil {
-		m.removedcurrencies = make(map[uuid.UUID]struct{})
+// RemoveProviderCurrencyIDs removes the "provider_currencies" edge to the ProviderCurrencies entity by IDs.
+func (m *ProviderProfileMutation) RemoveProviderCurrencyIDs(ids ...uuid.UUID) {
+	if m.removedprovider_currencies == nil {
+		m.removedprovider_currencies = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m.currencies, ids[i])
-		m.removedcurrencies[ids[i]] = struct{}{}
+		delete(m.provider_currencies, ids[i])
+		m.removedprovider_currencies[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedCurrencies returns the removed IDs of the "currencies" edge to the FiatCurrency entity.
-func (m *ProviderProfileMutation) RemovedCurrenciesIDs() (ids []uuid.UUID) {
-	for id := range m.removedcurrencies {
+// RemovedProviderCurrencies returns the removed IDs of the "provider_currencies" edge to the ProviderCurrencies entity.
+func (m *ProviderProfileMutation) RemovedProviderCurrenciesIDs() (ids []uuid.UUID) {
+	for id := range m.removedprovider_currencies {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// CurrenciesIDs returns the "currencies" edge IDs in the mutation.
-func (m *ProviderProfileMutation) CurrenciesIDs() (ids []uuid.UUID) {
-	for id := range m.currencies {
+// ProviderCurrenciesIDs returns the "provider_currencies" edge IDs in the mutation.
+func (m *ProviderProfileMutation) ProviderCurrenciesIDs() (ids []uuid.UUID) {
+	for id := range m.provider_currencies {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetCurrencies resets all changes to the "currencies" edge.
-func (m *ProviderProfileMutation) ResetCurrencies() {
-	m.currencies = nil
-	m.clearedcurrencies = false
-	m.removedcurrencies = nil
+// ResetProviderCurrencies resets all changes to the "provider_currencies" edge.
+func (m *ProviderProfileMutation) ResetProviderCurrencies() {
+	m.provider_currencies = nil
+	m.clearedprovider_currencies = false
+	m.removedprovider_currencies = nil
 }
 
 // AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by ids.
@@ -15637,7 +16606,7 @@ func (m *ProviderProfileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProviderProfileMutation) Fields() []string {
-	fields := make([]string, 0, 8)
+	fields := make([]string, 0, 7)
 	if m.trading_name != nil {
 		fields = append(fields, providerprofile.FieldTradingName)
 	}
@@ -15650,11 +16619,8 @@ func (m *ProviderProfileMutation) Fields() []string {
 	if m.is_active != nil {
 		fields = append(fields, providerprofile.FieldIsActive)
 	}
-	if m.is_available != nil {
-		fields = append(fields, providerprofile.FieldIsAvailable)
-	}
-	if m.isKYBVerified != nil {
-		fields = append(fields, providerprofile.FieldIsKYBVerified)
+	if m.is_kyb_verified != nil {
+		fields = append(fields, providerprofile.FieldIsKybVerified)
 	}
 	if m.updated_at != nil {
 		fields = append(fields, providerprofile.FieldUpdatedAt)
@@ -15678,10 +16644,8 @@ func (m *ProviderProfileMutation) Field(name string) (ent.Value, bool) {
 		return m.ProvisionMode()
 	case providerprofile.FieldIsActive:
 		return m.IsActive()
-	case providerprofile.FieldIsAvailable:
-		return m.IsAvailable()
-	case providerprofile.FieldIsKYBVerified:
-		return m.IsKYBVerified()
+	case providerprofile.FieldIsKybVerified:
+		return m.IsKybVerified()
 	case providerprofile.FieldUpdatedAt:
 		return m.UpdatedAt()
 	case providerprofile.FieldVisibilityMode:
@@ -15703,10 +16667,8 @@ func (m *ProviderProfileMutation) OldField(ctx context.Context, name string) (en
 		return m.OldProvisionMode(ctx)
 	case providerprofile.FieldIsActive:
 		return m.OldIsActive(ctx)
-	case providerprofile.FieldIsAvailable:
-		return m.OldIsAvailable(ctx)
-	case providerprofile.FieldIsKYBVerified:
-		return m.OldIsKYBVerified(ctx)
+	case providerprofile.FieldIsKybVerified:
+		return m.OldIsKybVerified(ctx)
 	case providerprofile.FieldUpdatedAt:
 		return m.OldUpdatedAt(ctx)
 	case providerprofile.FieldVisibilityMode:
@@ -15748,19 +16710,12 @@ func (m *ProviderProfileMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetIsActive(v)
 		return nil
-	case providerprofile.FieldIsAvailable:
+	case providerprofile.FieldIsKybVerified:
 		v, ok := value.(bool)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetIsAvailable(v)
-		return nil
-	case providerprofile.FieldIsKYBVerified:
-		v, ok := value.(bool)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetIsKYBVerified(v)
+		m.SetIsKybVerified(v)
 		return nil
 	case providerprofile.FieldUpdatedAt:
 		v, ok := value.(time.Time)
@@ -15852,11 +16807,8 @@ func (m *ProviderProfileMutation) ResetField(name string) error {
 	case providerprofile.FieldIsActive:
 		m.ResetIsActive()
 		return nil
-	case providerprofile.FieldIsAvailable:
-		m.ResetIsAvailable()
-		return nil
-	case providerprofile.FieldIsKYBVerified:
-		m.ResetIsKYBVerified()
+	case providerprofile.FieldIsKybVerified:
+		m.ResetIsKybVerified()
 		return nil
 	case providerprofile.FieldUpdatedAt:
 		m.ResetUpdatedAt()
@@ -15877,8 +16829,8 @@ func (m *ProviderProfileMutation) AddedEdges() []string {
 	if m.api_key != nil {
 		edges = append(edges, providerprofile.EdgeAPIKey)
 	}
-	if m.currencies != nil {
-		edges = append(edges, providerprofile.EdgeCurrencies)
+	if m.provider_currencies != nil {
+		edges = append(edges, providerprofile.EdgeProviderCurrencies)
 	}
 	if m.provision_buckets != nil {
 		edges = append(edges, providerprofile.EdgeProvisionBuckets)
@@ -15907,9 +16859,9 @@ func (m *ProviderProfileMutation) AddedIDs(name string) []ent.Value {
 		if id := m.api_key; id != nil {
 			return []ent.Value{*id}
 		}
-	case providerprofile.EdgeCurrencies:
-		ids := make([]ent.Value, 0, len(m.currencies))
-		for id := range m.currencies {
+	case providerprofile.EdgeProviderCurrencies:
+		ids := make([]ent.Value, 0, len(m.provider_currencies))
+		for id := range m.provider_currencies {
 			ids = append(ids, id)
 		}
 		return ids
@@ -15942,8 +16894,8 @@ func (m *ProviderProfileMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProviderProfileMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 7)
-	if m.removedcurrencies != nil {
-		edges = append(edges, providerprofile.EdgeCurrencies)
+	if m.removedprovider_currencies != nil {
+		edges = append(edges, providerprofile.EdgeProviderCurrencies)
 	}
 	if m.removedprovision_buckets != nil {
 		edges = append(edges, providerprofile.EdgeProvisionBuckets)
@@ -15961,9 +16913,9 @@ func (m *ProviderProfileMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *ProviderProfileMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case providerprofile.EdgeCurrencies:
-		ids := make([]ent.Value, 0, len(m.removedcurrencies))
-		for id := range m.removedcurrencies {
+	case providerprofile.EdgeProviderCurrencies:
+		ids := make([]ent.Value, 0, len(m.removedprovider_currencies))
+		for id := range m.removedprovider_currencies {
 			ids = append(ids, id)
 		}
 		return ids
@@ -15998,8 +16950,8 @@ func (m *ProviderProfileMutation) ClearedEdges() []string {
 	if m.clearedapi_key {
 		edges = append(edges, providerprofile.EdgeAPIKey)
 	}
-	if m.clearedcurrencies {
-		edges = append(edges, providerprofile.EdgeCurrencies)
+	if m.clearedprovider_currencies {
+		edges = append(edges, providerprofile.EdgeProviderCurrencies)
 	}
 	if m.clearedprovision_buckets {
 		edges = append(edges, providerprofile.EdgeProvisionBuckets)
@@ -16024,8 +16976,8 @@ func (m *ProviderProfileMutation) EdgeCleared(name string) bool {
 		return m.cleareduser
 	case providerprofile.EdgeAPIKey:
 		return m.clearedapi_key
-	case providerprofile.EdgeCurrencies:
-		return m.clearedcurrencies
+	case providerprofile.EdgeProviderCurrencies:
+		return m.clearedprovider_currencies
 	case providerprofile.EdgeProvisionBuckets:
 		return m.clearedprovision_buckets
 	case providerprofile.EdgeOrderTokens:
@@ -16065,8 +17017,8 @@ func (m *ProviderProfileMutation) ResetEdge(name string) error {
 	case providerprofile.EdgeAPIKey:
 		m.ResetAPIKey()
 		return nil
-	case providerprofile.EdgeCurrencies:
-		m.ResetCurrencies()
+	case providerprofile.EdgeProviderCurrencies:
+		m.ResetProviderCurrencies()
 		return nil
 	case providerprofile.EdgeProvisionBuckets:
 		m.ResetProvisionBuckets()

@@ -17,7 +17,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/paycrest/aggregator/ent/enttest"
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/migrate"
+	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
@@ -364,9 +366,8 @@ func TestProfile(t *testing.T) {
 			// Test partial update
 			payload := types.ProviderProfilePayload{
 				TradingName:    "My Trading Name",
-				Currencies:     []string{"KES"},
+				Currency:       "KES",
 				HostIdentifier: "https://example.com",
-				IsActive:       true,
 				IsAvailable:    true,
 			}
 
@@ -383,17 +384,64 @@ func TestProfile(t *testing.T) {
 
 			providerProfile, err := db.Client.ProviderProfile.
 				Query().
-				Where(providerprofile.HasUserWith(user.ID(testCtx.user.ID))).
-				WithCurrencies().
+				Where(
+					providerprofile.HasUserWith(user.ID(testCtx.user.ID)),
+					providerprofile.HasProviderCurrenciesWith(
+						providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(payload.Currency)),
+					),
+				).
+				WithProviderCurrencies(
+					func(query *ent.ProviderCurrenciesQuery) {
+						query.WithCurrency()
+					},
+				).
 				Only(context.Background())
 			assert.NoError(t, err)
 
 			assert.Equal(t, payload.TradingName, providerProfile.TradingName)
 			assert.Equal(t, payload.HostIdentifier, providerProfile.HostIdentifier)
-			assert.True(t, providerProfile.IsAvailable)
 			// assert for currencies
-			assert.Equal(t, len(providerProfile.Edges.Currencies), 1)
-			assert.Equal(t, providerProfile.Edges.Currencies[0].Code, payload.Currencies[0])
+			assert.Equal(t, len(providerProfile.Edges.ProviderCurrencies), 1)
+			assert.Equal(t, providerProfile.Edges.ProviderCurrencies[0].Edges.Currency.Code, payload.Currency)
+			// assert availability from ProviderCurrencies
+			assert.True(t, providerProfile.Edges.ProviderCurrencies[0].IsAvailable)
+		})
+
+		t.Run("with availability set to false", func(t *testing.T) {
+			payload := types.ProviderProfilePayload{
+				TradingName:    "Updated Trading Name",
+				HostIdentifier: testCtx.providerProfile.HostIdentifier,
+				Currency:       "KES",
+				IsAvailable:    false,
+			}
+
+			res := profileUpdateRequest(payload)
+
+			// Assert the response body
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Profile updated successfully", response.Message)
+
+			// Assert fields were correctly updated
+			providerProfile, err := db.Client.ProviderProfile.
+				Query().
+				Where(providerprofile.HasUserWith(user.ID(testCtx.user.ID))).
+				WithProviderCurrencies(
+					func(query *ent.ProviderCurrenciesQuery) {
+						query.WithCurrency()
+					},
+				).
+				Only(context.Background())
+			assert.NoError(t, err)
+
+			assert.Equal(t, "Updated Trading Name", providerProfile.TradingName)
+
+			// Assert availability from ProviderCurrencies
+			assert.Len(t, providerProfile.Edges.ProviderCurrencies, 1)
+			assert.False(t, providerProfile.Edges.ProviderCurrencies[0].IsAvailable)
 		})
 
 		t.Run("with token rate slippage", func(t *testing.T) {
@@ -402,9 +450,8 @@ func TestProfile(t *testing.T) {
 				payload := types.ProviderProfilePayload{
 					TradingName:    testCtx.providerProfile.TradingName,
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
-					Currencies:     []string{"KES"},
+					Currency:       "KES",
 					Tokens: []types.ProviderOrderTokenPayload{{
-						Currency:     testCtx.orderToken.Edges.Currency.Code,
 						Symbol:       testCtx.orderToken.Edges.Token.Symbol,
 						Network:      testCtx.orderToken.Network,
 						RateSlippage: decimal.NewFromFloat(25), // 25% slippage
@@ -416,16 +463,15 @@ func TestProfile(t *testing.T) {
 				var response types.Response
 				err = json.Unmarshal(res.Body.Bytes(), &response)
 				assert.NoError(t, err)
-				assert.Equal(t, "Rate slippage is too high", response.Message)
+				assert.Equal(t, "Rate slippage is too high for TST", response.Message)
 			})
 
 			t.Run("fails when rate slippage is less than 0.1", func(t *testing.T) {
 				payload := types.ProviderProfilePayload{
 					TradingName:    testCtx.providerProfile.TradingName,
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
-					Currencies:     []string{"KES"},
+					Currency:       "KES",
 					Tokens: []types.ProviderOrderTokenPayload{{
-						Currency:     testCtx.orderToken.Edges.Currency.Code,
 						Symbol:       testCtx.orderToken.Edges.Token.Symbol,
 						Network:      testCtx.orderToken.Network,
 						RateSlippage: decimal.NewFromFloat(0.09), // 0.09% slippage
@@ -437,16 +483,15 @@ func TestProfile(t *testing.T) {
 				var response types.Response
 				err = json.Unmarshal(res.Body.Bytes(), &response)
 				assert.NoError(t, err)
-				assert.Equal(t, "Rate slippage cannot be less than 0.1%", response.Message)
+				assert.Equal(t, "Rate slippage cannot be less than 0.1% for TST", response.Message)
 			})
 
 			t.Run("succeeds with valid rate slippage", func(t *testing.T) {
 				payload := types.ProviderProfilePayload{
 					TradingName:    testCtx.providerProfile.TradingName,
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
-					Currencies:     []string{"KES"},
+					Currency:       "KES",
 					Tokens: []types.ProviderOrderTokenPayload{{
-						Currency:               testCtx.orderToken.Edges.Currency.Code,
 						Symbol:                 testCtx.orderToken.Edges.Token.Symbol,
 						ConversionRateType:     testCtx.orderToken.ConversionRateType,
 						FixedConversionRate:    testCtx.orderToken.FixedConversionRate,
@@ -520,7 +565,7 @@ func TestProfile(t *testing.T) {
 				VisibilityMode: "private",
 				TradingName:    testCtx.providerProfile.TradingName,
 				HostIdentifier: testCtx.providerProfile.HostIdentifier,
-				Currencies:     []string{"KES"},
+				Currency:       "KES",
 			}
 
 			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
@@ -549,41 +594,51 @@ func TestProfile(t *testing.T) {
 				headers := map[string]string{
 					"Authorization": "Bearer " + accessToken,
 				}
-		
+
 				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
 				assert.NoError(t, err)
-		
+
 				return res
 			}
-		
+
 			t.Run("success for valid provider profile fields", func(t *testing.T) {
 				payload := types.ProviderProfilePayload{
 					TradingName:    "Updated Trading Name",
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
-					Currencies:     []string{"KES", "USD"},
+					Currency:       "KES",
 					VisibilityMode: "public",
 					IsAvailable:    true,
 				}
 				res := profileUpdateRequest(payload)
-		
+
 				// Assert the response body
 				assert.Equal(t, http.StatusOK, res.Code)
-		
+
 				var response types.Response
 				err = json.Unmarshal(res.Body.Bytes(), &response)
 				assert.NoError(t, err)
 				assert.Equal(t, "Profile updated successfully", response.Message)
-		
+
 				// Assert fields were correctly updated
 				providerProfile, err := db.Client.ProviderProfile.
 					Query().
-					Where(providerprofile.HasUserWith(user.ID(testCtx.user.ID))).
+					Where(
+						providerprofile.HasUserWith(user.ID(testCtx.user.ID)),
+						providerprofile.HasProviderCurrenciesWith(
+							providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(payload.Currency)),
+						),
+					).
+					WithProviderCurrencies().
 					Only(context.Background())
 				assert.NoError(t, err)
-		
+
 				assert.Equal(t, "Updated Trading Name", providerProfile.TradingName)
 				assert.Equal(t, "public", string(providerProfile.VisibilityMode))
-				assert.True(t, providerProfile.IsAvailable)
+
+				// Assert availability from ProviderCurrencies
+				assert.Len(t, providerProfile.Edges.ProviderCurrencies, 1)
+				assert.True(t, providerProfile.Edges.ProviderCurrencies[0].IsAvailable)
+
 			})
 		})
 
@@ -597,7 +652,7 @@ func TestProfile(t *testing.T) {
 				payload := types.ProviderProfilePayload{
 					TradingName:    "Paycrest Profile",
 					HostIdentifier: "http://example.com",
-					Currencies:     []string{"KES"},
+					Currency:       "KES",
 				}
 
 				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
@@ -614,7 +669,7 @@ func TestProfile(t *testing.T) {
 				payload := types.ProviderProfilePayload{
 					TradingName:    "Paycrest Profile",
 					HostIdentifier: "not-a-valid-url",
-					Currencies:     []string{"KES"},
+					Currency:       "KES",
 				}
 
 				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
@@ -630,7 +685,7 @@ func TestProfile(t *testing.T) {
 				payload := types.ProviderProfilePayload{
 					TradingName:    "Paycrest Profile",
 					HostIdentifier: "https://",
-					Currencies:     []string{"KES"},
+					Currency:       "KES",
 				}
 
 				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
@@ -646,7 +701,7 @@ func TestProfile(t *testing.T) {
 				payload := types.ProviderProfilePayload{
 					TradingName:    "Paycrest Profile",
 					HostIdentifier: "https://example.com",
-					Currencies:     []string{"KES"},
+					Currency:       "KES",
 				}
 
 				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
@@ -725,10 +780,14 @@ func TestProfile(t *testing.T) {
 			assert.NoError(t, err)
 
 			// Add USD to the provider profile's currencies
-			err = db.Client.ProviderProfile.
-				UpdateOneID(testCtx.providerProfile.ID).
-				AddCurrencies(usd).
-				Exec(ctx)
+			_, err = db.Client.ProviderCurrencies.
+				Create().
+				SetProviderID(testCtx.providerProfile.ID).
+				SetCurrency(usd).
+				SetAvailableBalance(decimal.Zero).
+				SetTotalBalance(decimal.Zero).
+				SetReservedBalance(decimal.Zero).
+				Save(ctx)
 			assert.NoError(t, err)
 
 			// Create a provider order token for USD
@@ -776,9 +835,6 @@ func TestProfile(t *testing.T) {
 			assert.NoError(t, err)
 			// Expect only one token when filtering by KES
 			assert.Len(t, respKES.Data.Tokens, 1)
-			if len(respKES.Data.Tokens) > 0 {
-				assert.Equal(t, "KES", respKES.Data.Tokens[0].Currency)
-			}
 
 			// Perform a GET request with no currency filter to retrieve both tokens
 			resAll, err := test.PerformRequest(t, "GET", "/settings/provider", nil, headers, router)

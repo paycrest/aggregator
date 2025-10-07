@@ -11,16 +11,19 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
+
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	userEnt "github.com/paycrest/aggregator/ent/user"
 	"github.com/paycrest/aggregator/ent/verificationtoken"
 	svc "github.com/paycrest/aggregator/services"
+	"github.com/paycrest/aggregator/services/email"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	u "github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/paycrest/aggregator/utils/token"
+	"github.com/shopspring/decimal"
 )
 
 var authConf = config.AuthConfig()
@@ -29,7 +32,7 @@ var serverConf = config.ServerConfig()
 // AuthController is the controller type for the auth endpoints
 type AuthController struct {
 	apiKeyService *svc.APIKeyService
-	emailService  *svc.EmailService
+	emailService  email.EmailServiceInterface
 	slackService  *svc.SlackService
 }
 
@@ -37,7 +40,7 @@ type AuthController struct {
 func NewAuthController() *AuthController {
 	return &AuthController{
 		apiKeyService: svc.NewAPIKeyService(),
-		emailService:  svc.NewEmailService(svc.SENDGRID_MAIL_PROVIDER),
+		emailService:  email.NewEmailServiceWithProviders(),
 		slackService:  svc.NewSlackService(serverConf.SlackWebhookURL),
 	}
 }
@@ -103,28 +106,6 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		return
 	}
 
-	// Send verification email
-	verificationToken, err := tx.VerificationToken.
-		Create().
-		SetOwner(user).
-		SetScope(verificationtoken.ScopeEmailVerification).
-		SetExpiryAt(time.Now().Add(authConf.PasswordResetLifespan)).
-		Save(ctx)
-	if err != nil {
-		logger.Errorf("Error: Failed to create verification token: %v", err)
-	}
-
-	if serverConf.Environment == "production" {
-		if verificationToken != nil {
-			if _, err := ctrl.emailService.SendVerificationEmail(ctx, verificationToken.Token, user.Email, user.FirstName); err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":  fmt.Sprintf("%v", err),
-					"UserID": user.ID,
-				}).Errorf("Failed to send verification email")
-			}
-		}
-	}
-
 	scopes := payload.Scopes
 
 	// Create a provider profile
@@ -174,7 +155,6 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 
 		provider, err := tx.ProviderProfile.
 			Create().
-			AddCurrencies(fiatCurrencies...).
 			SetVisibilityMode(providerprofile.VisibilityModePrivate).
 			SetUser(user).
 			SetProvisionMode(providerprofile.ProvisionModeAuto).
@@ -188,6 +168,31 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusInternalServerError, "error",
 				"Failed to create new user", nil)
 			return
+		}
+
+		// Create ProviderCurrencies entries for each currency
+		for _, currency := range fiatCurrencies {
+			_, err = tx.ProviderCurrencies.
+				Create().
+				SetProvider(provider).
+				SetCurrency(currency).
+				SetAvailableBalance(decimal.Zero).
+				SetTotalBalance(decimal.Zero).
+				SetReservedBalance(decimal.Zero).
+				SetIsAvailable(true).
+				Save(ctx)
+			if err != nil {
+				_ = tx.Rollback()
+				logger.WithFields(logger.Fields{
+					"Error":      fmt.Sprintf("%v", err),
+					"UserID":     user.ID,
+					"ProviderID": provider.ID,
+					"CurrencyID": currency.ID,
+				}).Errorf("Failed to create provider currency")
+				u.APIResponse(ctx, http.StatusInternalServerError, "error",
+					"Failed to create new user", nil)
+				return
+			}
 		}
 
 		// Generate the API key using the service
@@ -242,6 +247,28 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error",
 			"Failed to create new user", nil)
 		return
+	}
+
+	// Send verification email
+	verificationToken, err := db.Client.VerificationToken.
+		Create().
+		SetOwner(user).
+		SetScope(verificationtoken.ScopeEmailVerification).
+		SetExpiryAt(time.Now().Add(authConf.PasswordResetLifespan)).
+		Save(ctx)
+	if err != nil {
+		logger.Errorf("Error: Failed to create verification token: %v", err)
+	}
+
+	if serverConf.Environment == "production" {
+		if verificationToken != nil {
+			if _, err := ctrl.emailService.SendVerificationEmail(ctx, verificationToken.Token, user.Email, user.FirstName); err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":  fmt.Sprintf("%v", err),
+					"UserID": user.ID,
+				}).Errorf("Failed to send verification email")
+			}
+		}
 	}
 
 	response := &types.RegisterResponse{

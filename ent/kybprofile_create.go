@@ -132,6 +132,20 @@ func (kpc *KYBProfileCreate) SetNillableKycPolicyURL(s *string) *KYBProfileCreat
 	return kpc
 }
 
+// SetKybRejectionComment sets the "kyb_rejection_comment" field.
+func (kpc *KYBProfileCreate) SetKybRejectionComment(s string) *KYBProfileCreate {
+	kpc.mutation.SetKybRejectionComment(s)
+	return kpc
+}
+
+// SetNillableKybRejectionComment sets the "kyb_rejection_comment" field if the given value is not nil.
+func (kpc *KYBProfileCreate) SetNillableKybRejectionComment(s *string) *KYBProfileCreate {
+	if s != nil {
+		kpc.SetKybRejectionComment(*s)
+	}
+	return kpc
+}
+
 // SetID sets the "id" field.
 func (kpc *KYBProfileCreate) SetID(u uuid.UUID) *KYBProfileCreate {
 	kpc.mutation.SetID(u)
@@ -334,6 +348,10 @@ func (kpc *KYBProfileCreate) createSpec() (*KYBProfile, *sqlgraph.CreateSpec) {
 	if value, ok := kpc.mutation.KycPolicyURL(); ok {
 		_spec.SetField(kybprofile.FieldKycPolicyURL, field.TypeString, value)
 		_node.KycPolicyURL = &value
+	}
+	if value, ok := kpc.mutation.KybRejectionComment(); ok {
+		_spec.SetField(kybprofile.FieldKybRejectionComment, field.TypeString, value)
+		_node.KybRejectionComment = &value
 	}
 	if nodes := kpc.mutation.BeneficialOwnersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -558,6 +576,24 @@ func (u *KYBProfileUpsert) ClearKycPolicyURL() *KYBProfileUpsert {
 	return u
 }
 
+// SetKybRejectionComment sets the "kyb_rejection_comment" field.
+func (u *KYBProfileUpsert) SetKybRejectionComment(v string) *KYBProfileUpsert {
+	u.Set(kybprofile.FieldKybRejectionComment, v)
+	return u
+}
+
+// UpdateKybRejectionComment sets the "kyb_rejection_comment" field to the value that was provided on create.
+func (u *KYBProfileUpsert) UpdateKybRejectionComment() *KYBProfileUpsert {
+	u.SetExcluded(kybprofile.FieldKybRejectionComment)
+	return u
+}
+
+// ClearKybRejectionComment clears the value of the "kyb_rejection_comment" field.
+func (u *KYBProfileUpsert) ClearKybRejectionComment() *KYBProfileUpsert {
+	u.SetNull(kybprofile.FieldKybRejectionComment)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
@@ -767,6 +803,27 @@ func (u *KYBProfileUpsertOne) UpdateKycPolicyURL() *KYBProfileUpsertOne {
 func (u *KYBProfileUpsertOne) ClearKycPolicyURL() *KYBProfileUpsertOne {
 	return u.Update(func(s *KYBProfileUpsert) {
 		s.ClearKycPolicyURL()
+	})
+}
+
+// SetKybRejectionComment sets the "kyb_rejection_comment" field.
+func (u *KYBProfileUpsertOne) SetKybRejectionComment(v string) *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.SetKybRejectionComment(v)
+	})
+}
+
+// UpdateKybRejectionComment sets the "kyb_rejection_comment" field to the value that was provided on create.
+func (u *KYBProfileUpsertOne) UpdateKybRejectionComment() *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.UpdateKybRejectionComment()
+	})
+}
+
+// ClearKybRejectionComment clears the value of the "kyb_rejection_comment" field.
+func (u *KYBProfileUpsertOne) ClearKybRejectionComment() *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.ClearKybRejectionComment()
 	})
 }
 
@@ -1146,6 +1203,27 @@ func (u *KYBProfileUpsertBulk) UpdateKycPolicyURL() *KYBProfileUpsertBulk {
 func (u *KYBProfileUpsertBulk) ClearKycPolicyURL() *KYBProfileUpsertBulk {
 	return u.Update(func(s *KYBProfileUpsert) {
 		s.ClearKycPolicyURL()
+	})
+}
+
+// SetKybRejectionComment sets the "kyb_rejection_comment" field.
+func (u *KYBProfileUpsertBulk) SetKybRejectionComment(v string) *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.SetKybRejectionComment(v)
+	})
+}
+
+// UpdateKybRejectionComment sets the "kyb_rejection_comment" field to the value that was provided on create.
+func (u *KYBProfileUpsertBulk) UpdateKybRejectionComment() *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.UpdateKybRejectionComment()
+	})
+}
+
+// ClearKybRejectionComment clears the value of the "kyb_rejection_comment" field.
+func (u *KYBProfileUpsertBulk) ClearKybRejectionComment() *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.ClearKybRejectionComment()
 	})
 }
 

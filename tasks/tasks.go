@@ -3,6 +3,7 @@ package tasks
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"math"
 	"math/big"
@@ -24,6 +25,7 @@ import (
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
+	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
@@ -34,6 +36,7 @@ import (
 	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/common"
 	"github.com/paycrest/aggregator/services/contracts"
+	"github.com/paycrest/aggregator/services/email"
 	"github.com/paycrest/aggregator/services/indexer"
 	orderService "github.com/paycrest/aggregator/services/order"
 	"github.com/paycrest/aggregator/storage"
@@ -70,7 +73,7 @@ func RetryStaleUserOperations() error {
 		}).
 		Where(
 			paymentorder.Or(
-				paymentorder.UpdatedAtGTE(time.Now().Add(-10*time.Minute)),
+				paymentorder.UpdatedAtGTE(time.Now().Add(-5*time.Minute)),
 				paymentorder.HasRecipientWith(
 					paymentorderrecipient.MemoHasPrefix("P#P"),
 				),
@@ -95,7 +98,30 @@ func RetryStaleUserOperations() error {
 				} else {
 					service = orderService.NewOrderEVM()
 				}
-				err := service.CreateOrder(ctx, order.ID)
+
+				// Unset message hash
+				_, err = order.Update().
+					SetNillableMessageHash(nil).
+					SetStatus(paymentorder.StatusPending).
+					Save(ctx)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"OrderID": order.ID.String(),
+					}).Errorf("RetryStaleUserOperations.CreateOrder.SetMessageHash")
+				}
+
+				_, err = order.Update().
+					SetStatus(paymentorder.StatusInitiated).
+					Save(ctx)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"OrderID": order.ID.String(),
+					}).Errorf("RetryStaleUserOperations.CreateOrder.SetStatus")
+				}
+
+				err = service.CreateOrder(ctx, order.ID)
 				if err != nil {
 					logger.WithFields(logger.Fields{
 						"Error":             fmt.Sprintf("%v", err),
@@ -158,7 +184,7 @@ func RetryStaleUserOperations() error {
 		Query().
 		Where(
 			lockpaymentorder.GatewayIDNEQ(""),
-			lockpaymentorder.UpdatedAtGTE(time.Now().Add(-10*time.Minute)),
+			lockpaymentorder.UpdatedAtGTE(time.Now().Add(-5*time.Minute)),
 			lockpaymentorder.Or(
 				lockpaymentorder.And(
 					lockpaymentorder.Or(
@@ -268,7 +294,11 @@ func TaskIndexBlockchainEvents() error {
 		Query().
 		Where(
 			networkent.IsTestnetEQ(isTestnet),
-			networkent.IdentifierEQ("bnb-smart-chain"),
+			// networkent.Or(
+			// 	networkent.IdentifierEQ("bnb-smart-chain"),
+			// 	networkent.IdentifierEQ("lisk"),
+			// ),
+			networkent.Not(networkent.IdentifierHasPrefix("tron")),
 		).
 		All(ctx)
 	if err != nil {
@@ -318,6 +348,7 @@ func TaskIndexBlockchainEvents() error {
 						tq.WithNetwork()
 					}).
 					WithReceiveAddress().
+					Order(ent.Desc(paymentorder.FieldCreatedAt)).
 					All(ctx)
 				if err != nil {
 					logger.WithFields(logger.Fields{
@@ -327,9 +358,27 @@ func TaskIndexBlockchainEvents() error {
 					return
 				}
 
-				// Index Transfer events
-				for _, order := range paymentOrders {
-					_, _ = indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, order.Edges.ReceiveAddress.Address, 0, 0, "")
+				// Index Transfer events in parallel using goroutines
+				if len(paymentOrders) > 0 {
+					var wg sync.WaitGroup
+
+					for _, order := range paymentOrders {
+						wg.Add(1)
+						go func(order *ent.PaymentOrder) {
+							defer wg.Done()
+
+							_, err := indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, order.Edges.ReceiveAddress.Address, 0, 0, "")
+							if err != nil {
+								logger.WithFields(logger.Fields{
+									"Error":   fmt.Sprintf("%v", err),
+									"OrderID": order.ID.String(),
+								}).Errorf("TaskIndexBlockchainEvents.IndexReceiveAddress")
+							}
+						}(order)
+					}
+
+					// Wait for all transfer indexing to complete
+					wg.Wait()
 				}
 			}
 		}(network)
@@ -873,6 +922,7 @@ func HandleReceiveAddressValidity() error {
 				tq.WithNetwork()
 			})
 			po.WithRecipient()
+			po.WithSenderProfile()
 		}).
 		All(ctx)
 	if err != nil {
@@ -1036,7 +1086,7 @@ func SubscribeToRedisKeyspaceEvents() {
 // fetchExternalRate fetches the external rate for a fiat currency
 func fetchExternalRate(currency string) (decimal.Decimal, error) {
 	currency = strings.ToUpper(currency)
-	supportedCurrencies := []string{"KES", "NGN", "GHS", "TZS", "UGX", "XOF", "BRL"}
+	supportedCurrencies := []string{"KES", "NGN", "GHS", "MWK", "TZS", "UGX", "XOF", "BRL"}
 	isSupported := false
 	for _, supported := range supportedCurrencies {
 		if currency == supported {
@@ -1065,7 +1115,44 @@ func fetchExternalRate(currency string) (decimal.Decimal, error) {
 			return decimal.Zero, fmt.Errorf("ComputeMarketRate: %w %v", err, data)
 		}
 
-		price, err = decimal.NewFromString(data["data"].(map[string]interface{})["ticker"].(map[string]interface{})["buy"].(string))
+		// Try to use 'buy' price first, fall back to alternatives if buy is zero
+		buyPriceStr := data["data"].(map[string]interface{})["ticker"].(map[string]interface{})["buy"].(string)
+		lastPriceStr := data["data"].(map[string]interface{})["ticker"].(map[string]interface{})["last"].(string)
+		highPriceStr := data["data"].(map[string]interface{})["ticker"].(map[string]interface{})["high"].(string)
+		lowPriceStr := data["data"].(map[string]interface{})["ticker"].(map[string]interface{})["low"].(string)
+
+		var priceStr string
+		if buyPriceStr == "0.0" || buyPriceStr == "0" {
+			// Calculate midpoint between high and low
+			highPrice, err := decimal.NewFromString(highPriceStr)
+			if err != nil {
+				return decimal.Zero, fmt.Errorf("ComputeMarketRate: failed to parse high price: %w", err)
+			}
+			lowPrice, err := decimal.NewFromString(lowPriceStr)
+			if err != nil {
+				return decimal.Zero, fmt.Errorf("ComputeMarketRate: failed to parse low price: %w", err)
+			}
+
+			midpoint := highPrice.Add(lowPrice).Div(decimal.NewFromInt(2))
+
+			// Parse last price for comparison
+			lastPrice, err := decimal.NewFromString(lastPriceStr)
+			if err != nil {
+				return decimal.Zero, fmt.Errorf("ComputeMarketRate: failed to parse last price: %w", err)
+			}
+
+			// Use the lower value between midpoint and last price
+			if midpoint.LessThan(lastPrice) {
+				priceStr = midpoint.String()
+			} else {
+				priceStr = lastPrice.String()
+			}
+		} else {
+			// Use 'buy' price when available
+			priceStr = buyPriceStr
+		}
+
+		price, err = decimal.NewFromString(priceStr)
 		if err != nil {
 			return decimal.Zero, fmt.Errorf("ComputeMarketRate: %w", err)
 		}
@@ -1152,7 +1239,7 @@ func ComputeMarketRate() error {
 				),
 				providerordertoken.ConversionRateTypeEQ(providerordertoken.ConversionRateTypeFixed),
 				providerordertoken.HasProviderWith(
-					providerprofile.IsAvailableEQ(true),
+					providerprofile.IsActiveEQ(true),
 				),
 			).
 			Select(providerordertoken.FieldFixedConversionRate).
@@ -1250,16 +1337,11 @@ func RetryFailedWebhookNotifications() error {
 					return fmt.Errorf("RetryFailedWebhookNotifications.CouldNotFetchProfile: %w", err)
 				}
 
-				_, err = services.SendTemplateEmail(types.SendEmailPayload{
-					FromAddress: config.NotificationConfig().EmailFromAddress,
-					ToAddress:   profile.Edges.User.Email,
-					DynamicData: map[string]interface{}{
-						"first_name": profile.Edges.User.FirstName,
-					},
-				}, "d-da75eee4966544ad92dcd060421d4e12")
+				emailService := email.NewEmailServiceWithProviders()
+				_, err = emailService.SendWebhookFailureEmail(ctx, profile.Edges.User.Email, profile.Edges.User.FirstName)
 
 				if err != nil {
-					return fmt.Errorf("RetryFailedWebhookNotifications.SendTemplateEmail: %w", err)
+					return fmt.Errorf("RetryFailedWebhookNotifications.SendWebhookFailureEmail: %w", err)
 				}
 			}
 
@@ -1302,17 +1384,23 @@ func ResolvePaymentOrderMishaps() error {
 	}
 
 	// Process each network in parallel (EVM only)
-	for _, network := range networks {
+	for i, network := range networks {
 		// Skip Tron networks
 		if strings.HasPrefix(network.Identifier, "tron") {
 			continue
 		}
 
+		// Add a larger delay between starting goroutines to prevent overwhelming Etherscan
+		// Increased from 100ms to 500ms to respect 5 requests/second limit
+		if i > 0 {
+			time.Sleep(500 * time.Millisecond)
+		}
+
 		go func(network *ent.Network) {
 			ctx := context.Background()
 
-			// Only resolve missed transfers to receive addresses
-			resolveMissedTransfers(ctx, network)
+			// Only resolve missed Transfer and OrderCreated events
+			resolveMissedEvents(ctx, network)
 		}(network)
 	}
 
@@ -1338,10 +1426,16 @@ func IndexGatewayEvents() error {
 	}
 
 	// Process each network in parallel (EVM only)
-	for _, network := range networks {
+	for i, network := range networks {
 		// Skip Tron networks
 		if strings.HasPrefix(network.Identifier, "tron") {
 			continue
+		}
+
+		// Add a larger delay between starting goroutines to prevent overwhelming Etherscan
+		// Increased from 100ms to 500ms to respect 5 requests/second limit
+		if i > 0 {
+			time.Sleep(500 * time.Millisecond)
 		}
 
 		go func(network *ent.Network) {
@@ -1370,21 +1464,17 @@ func IndexGatewayEvents() error {
 	return nil
 }
 
-// resolveMissedTransfers resolves cases where transfers to receive addresses were missed
-func resolveMissedTransfers(ctx context.Context, network *ent.Network) {
+// resolveMissedEvents resolves cases where transfers to receive addresses were missed
+func resolveMissedEvents(ctx context.Context, network *ent.Network) {
 	// Find payment orders with missed transfers
 	orders, err := storage.Client.PaymentOrder.
 		Query().
 		Where(
 			paymentorder.StatusEQ(paymentorder.StatusInitiated),
-			paymentorder.TxHashIsNil(),
-			paymentorder.BlockNumberEQ(0),
-			paymentorder.AmountPaidEQ(decimal.Zero),
-			paymentorder.FromAddressIsNil(),
-			paymentorder.CreatedAtLTE(time.Now().Add(-5*time.Minute)),
-			paymentorder.CreatedAtGTE(time.Now().Add(-15*time.Minute)),
+			paymentorder.CreatedAtLTE(time.Now().Add(-30*time.Second)),
+			// paymentorder.CreatedAtGTE(time.Now().Add(-15*time.Minute)),
 			paymentorder.HasReceiveAddressWith(
-				receiveaddress.StatusEQ(receiveaddress.StatusUnused),
+				receiveaddress.StatusNEQ(receiveaddress.StatusExpired),
 			),
 			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
@@ -1401,7 +1491,7 @@ func resolveMissedTransfers(ctx context.Context, network *ent.Network) {
 		logger.WithFields(logger.Fields{
 			"Error":             fmt.Sprintf("%v", err),
 			"NetworkIdentifier": network.Identifier,
-		}).Errorf("ResolvePaymentOrderMishaps.resolveMissedTransfers.fetchOrders")
+		}).Errorf("ResolvePaymentOrderMishaps.resolveMissedEvents.fetchOrders")
 		return
 	}
 
@@ -1412,7 +1502,7 @@ func resolveMissedTransfers(ctx context.Context, network *ent.Network) {
 		logger.WithFields(logger.Fields{
 			"Error":             fmt.Sprintf("%v", indexerErr),
 			"NetworkIdentifier": network.Identifier,
-		}).Errorf("ResolvePaymentOrderMishaps.resolveMissedTransfers.createIndexer")
+		}).Errorf("ResolvePaymentOrderMishaps.resolveMissedEvents.createIndexer")
 		return
 	}
 	processedCount := 0
@@ -1425,7 +1515,7 @@ func resolveMissedTransfers(ctx context.Context, network *ent.Network) {
 				"ReceiveAddress":    order.Edges.ReceiveAddress.Address,
 				"OrderID":           order.ID,
 				"Progress":          fmt.Sprintf("%d/%d", i+1, len(orders)),
-			}).Infof("ResolvePaymentOrderMishaps.resolveMissedTransfers")
+			}).Infof("ResolvePaymentOrderMishaps.resolveMissedEvents")
 
 			_, err = indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, order.Edges.ReceiveAddress.Address, 0, 0, "")
 			if err != nil {
@@ -1434,7 +1524,7 @@ func resolveMissedTransfers(ctx context.Context, network *ent.Network) {
 					"NetworkIdentifier": network.Identifier,
 					"ReceiveAddress":    order.Edges.ReceiveAddress.Address,
 					"OrderID":           order.ID,
-				}).Errorf("ResolvePaymentOrderMishaps.resolveMissedTransfers.indexReceiveAddress")
+				}).Errorf("ResolvePaymentOrderMishaps.resolveMissedEvents.indexReceiveAddress")
 				errorCount++
 				continue // Continue with other orders even if one fails
 			}
@@ -1442,15 +1532,357 @@ func resolveMissedTransfers(ctx context.Context, network *ent.Network) {
 
 			// Add a small delay between requests to be respectful to the RPC node
 			if i < len(orders)-1 {
-				time.Sleep(500 * time.Millisecond)
+				time.Sleep(250 * time.Millisecond)
 			}
 		}
 	}
 }
 
+// ProcessStuckValidatedOrders processes orders stuck on validated status by indexing provider addresses
+func ProcessStuckValidatedOrders() error {
+	ctx := context.Background()
+
+	// Get all networks
+	networks, err := storage.Client.Network.Query().All(ctx)
+	if err != nil {
+		return fmt.Errorf("ProcessStuckValidatedOrders.getNetworks: %w", err)
+	}
+
+	for i, network := range networks {
+		// Add a small delay between starting goroutines to prevent overwhelming Etherscan
+		if i > 0 {
+			time.Sleep(100 * time.Millisecond)
+		}
+
+		go func(network *ent.Network) {
+			// Get stuck validated orders for this network
+			lockOrders, err := storage.Client.LockPaymentOrder.
+				Query().
+				Where(
+					lockpaymentorder.StatusEQ(lockpaymentorder.StatusValidated),
+					lockpaymentorder.HasTokenWith(
+						tokenent.HasNetworkWith(
+							networkent.IDEQ(network.ID),
+						),
+					),
+					lockpaymentorder.HasProvider(),
+					lockpaymentorder.HasProvisionBucket(),
+				).
+				WithToken(func(tq *ent.TokenQuery) {
+					tq.WithNetwork()
+				}).
+				WithProvider().
+				WithProvisionBucket(func(pb *ent.ProvisionBucketQuery) {
+					pb.WithCurrency()
+				}).
+				All(ctx)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":             fmt.Sprintf("%v", err),
+					"NetworkIdentifier": network.Identifier,
+				}).Errorf("ProcessStuckValidatedOrders.getLockOrders")
+				return
+			}
+
+			if len(lockOrders) == 0 {
+				return
+			}
+
+			logger.WithFields(logger.Fields{
+				"NetworkIdentifier": network.Identifier,
+				"OrderCount":        len(lockOrders),
+			}).Infof("Processing stuck validated orders")
+
+			// Create indexer instance
+			var indexerInstance types.Indexer
+			if strings.HasPrefix(network.Identifier, "tron") {
+				indexerInstance = indexer.NewIndexerTron()
+			} else {
+				indexerInstance, err = indexer.NewIndexerEVM()
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":             fmt.Sprintf("%v", err),
+						"NetworkIdentifier": network.Identifier,
+					}).Errorf("ProcessStuckValidatedOrders.createIndexer")
+					return
+				}
+			}
+
+			// Process each stuck order
+			for _, order := range lockOrders {
+				// Get provider address for this order
+				providerAddress, err := common.GetProviderAddressFromLockOrder(ctx, order)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":             fmt.Sprintf("%v", err),
+						"OrderID":           order.ID.String(),
+						"NetworkIdentifier": network.Identifier,
+					}).Errorf("ProcessStuckValidatedOrders.getProviderAddress")
+					continue
+				}
+
+				// Index provider address for OrderSettled events
+				_, err = indexerInstance.IndexProviderAddress(ctx, network, providerAddress, 0, 0, "")
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":             fmt.Sprintf("%v", err),
+						"OrderID":           order.ID.String(),
+						"ProviderAddress":   providerAddress,
+						"NetworkIdentifier": network.Identifier,
+					}).Errorf("ProcessStuckValidatedOrders.indexProviderAddress")
+					continue
+				}
+
+				logger.WithFields(logger.Fields{
+					"OrderID":           order.ID.String(),
+					"ProviderAddress":   providerAddress,
+					"NetworkIdentifier": network.Identifier,
+				}).Infof("Successfully indexed provider address for stuck order")
+			}
+		}(network)
+	}
+
+	return nil
+}
+
+// FetchProviderBalances fetches balance updates from all providers
+func FetchProviderBalances() error {
+	ctx := context.Background()
+	startTime := time.Now()
+
+	// Get all provider profiles
+	providers, err := storage.Client.ProviderProfile.
+		Query().
+		Where(
+			providerprofile.HostIdentifierNEQ(""),
+			providerprofile.IsActiveEQ(true),
+			providerprofile.HasProviderCurrenciesWith(
+				providercurrencies.IsAvailableEQ(true),
+			),
+		).
+		All(ctx)
+	if err != nil {
+		logger.Errorf("Failed to fetch provider profiles: %v", err)
+		return err
+	}
+
+	if len(providers) == 0 {
+		logger.Infof("No providers found, skipping balance fetch")
+		return nil
+	}
+
+	// Fetch balances for each provider in parallel
+	type balanceResult struct {
+		providerID string
+		balances   map[string]*types.ProviderBalance
+		err        error
+	}
+
+	results := make(chan balanceResult, len(providers))
+
+	for _, provider := range providers {
+		go func(p *ent.ProviderProfile) {
+			balances, err := fetchProviderBalances(p.ID)
+			results <- balanceResult{
+				providerID: p.ID,
+				balances:   balances,
+				err:        err,
+			}
+		}(provider)
+	}
+
+	// Collect results
+	successCount := 0
+	errorCount := 0
+	totalBalanceUpdates := 0
+
+	for i := 0; i < len(providers); i++ {
+		result := <-results
+		if result.err != nil {
+			logger.Errorf("Failed to fetch balances for provider %s: %v", result.providerID, result.err)
+			errorCount++
+			continue
+		}
+
+		// Update balances in database
+		for currency, balance := range result.balances {
+			err := utils.Retry(3, 2*time.Second, func() error {
+				return updateProviderBalance(result.providerID, currency, balance)
+			})
+			if err != nil {
+				logger.Errorf("Failed to update balance for provider %s currency %s: %v", result.providerID, currency, err)
+				errorCount++
+				continue
+			}
+			totalBalanceUpdates++
+		}
+
+		successCount++
+		logger.Infof("Successfully updated balances for provider %s", result.providerID)
+	}
+
+	duration := time.Since(startTime)
+	logger.Infof("Provider balance fetch completed: %d success, %d errors, %d balance updates in %v",
+		successCount, errorCount, totalBalanceUpdates, duration)
+
+	// Alert if more than 50% of providers failed
+	if errorCount > 0 && float64(errorCount)/float64(len(providers)) > 0.5 {
+		logger.Errorf("ALERT: More than 50%% of providers failed balance fetch: %d/%d", errorCount, len(providers))
+		return fmt.Errorf("more than 50%% of providers failed balance fetch: %d/%d", errorCount, len(providers))
+	}
+
+	// Alert if no balance updates were made
+	if totalBalanceUpdates == 0 {
+		logger.Warnf("ALERT: No balance updates were made during this fetch cycle")
+	}
+
+	// Log performance metrics
+	if duration > 30*time.Second {
+		logger.Warnf("ALERT: Balance fetch took longer than expected: %v", duration)
+	}
+
+	return nil
+}
+
+// fetchProviderBalances fetches balances for a specific provider
+func fetchProviderBalances(providerID string) (map[string]*types.ProviderBalance, error) {
+	// Get provider with host identifier
+	provider, err := storage.Client.ProviderProfile.
+		Query().
+		Where(providerprofile.IDEQ(providerID)).
+		Only(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get provider: %v", err)
+	}
+
+	// Check if provider has host identifier
+	if provider.HostIdentifier == "" {
+		return nil, fmt.Errorf("provider %s has no host identifier", providerID)
+	}
+
+	// Call provider /info endpoint without HMAC (endpoint doesn't require authentication)
+	res, err := fastshot.NewClient(provider.HostIdentifier).
+		Config().SetTimeout(30 * time.Second).
+		Build().GET("/info").
+		Send()
+	if err != nil {
+		return nil, fmt.Errorf("failed to call provider /info endpoint: %v", err)
+	}
+
+	// Parse JSON response
+	data, err := utils.ParseJSONResponse(res.RawResponse)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse response: %v", err)
+	}
+
+	// Parse the response data into ProviderInfoResponse using proper JSON unmarshaling
+	responseBytes, err := json.Marshal(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal response data: %v", err)
+	}
+
+	var response types.ProviderInfoResponse
+	if err := json.Unmarshal(responseBytes, &response); err != nil {
+		return nil, fmt.Errorf("failed to parse response data: %v", err)
+	}
+
+	// Convert response to ProviderBalance map
+	balances := make(map[string]*types.ProviderBalance)
+
+	// Use totalBalances from response
+	for currency, balanceData := range response.Data.TotalBalances {
+		availableBalance, err := decimal.NewFromString(balanceData.AvailableBalance)
+		if err != nil {
+			logger.Warnf("Failed to parse available balance for %s: %v", currency, err)
+			continue
+		}
+		if availableBalance.IsNegative() {
+			logger.Errorf("Negative available balance for %s: %v", currency, availableBalance)
+			continue
+		}
+
+		totalBalance, err := decimal.NewFromString(balanceData.TotalBalance)
+		if err != nil {
+			logger.Warnf("Failed to parse total balance for %s: %v", currency, err)
+			continue
+		}
+		if totalBalance.IsNegative() {
+			logger.Errorf("Negative total balance for %s: %v", currency, totalBalance)
+			continue
+		}
+
+		balances[currency] = &types.ProviderBalance{
+			AvailableBalance: availableBalance,
+			TotalBalance:     totalBalance,
+			ReservedBalance:  decimal.Zero, // Provider doesn't track reserved balance
+			LastUpdated:      time.Now(),
+		}
+	}
+
+	return balances, nil
+}
+
+// updateProviderBalance updates the balance for a specific provider and currency
+func updateProviderBalance(providerID, currency string, balance *types.ProviderBalance) error {
+	ctx := context.Background()
+	// Get or create ProviderCurrencies entry
+	providerCurrency, err := storage.Client.ProviderCurrencies.Query().
+		Where(
+			providercurrencies.HasProviderWith(providerprofile.IDEQ(providerID)),
+			providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currency)),
+		).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			// Create new entry
+			provider, err := storage.Client.ProviderProfile.Get(ctx, providerID)
+			if err != nil {
+				return fmt.Errorf("failed to get provider: %v", err)
+			}
+
+			fiatCurrency, err := storage.Client.FiatCurrency.Query().
+				Where(fiatcurrency.CodeEQ(currency)).
+				Only(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to get fiat currency: %v", err)
+			}
+
+			_, err = storage.Client.ProviderCurrencies.Create().
+				SetProvider(provider).
+				SetCurrency(fiatCurrency).
+				SetAvailableBalance(balance.AvailableBalance).
+				SetTotalBalance(balance.TotalBalance).
+				SetReservedBalance(balance.ReservedBalance).
+				SetUpdatedAt(time.Now()).
+				SetIsAvailable(true).
+				Save(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to create provider currency: %v", err)
+			}
+		} else {
+			return fmt.Errorf("failed to query provider currency: %v", err)
+		}
+	} else {
+		// Update existing entry
+		_, err = providerCurrency.Update().
+			SetAvailableBalance(balance.AvailableBalance).
+			SetTotalBalance(balance.TotalBalance).
+			SetReservedBalance(balance.ReservedBalance).
+			SetUpdatedAt(time.Now()).
+			Save(ctx)
+
+		if err != nil {
+			return fmt.Errorf("failed to update provider currency: %v", err)
+		}
+	}
+
+	return nil
+}
+
 // StartCronJobs starts cron jobs
 func StartCronJobs() {
-	scheduler := gocron.NewScheduler(time.UTC)
+	// Use the system's local timezone instead of hardcoded UTC to prevent timezone conflicts
+	scheduler := gocron.NewScheduler(time.Local)
 	priorityQueue := services.NewPriorityQueueService()
 
 	err := ComputeMarketRate()
@@ -1465,10 +1897,10 @@ func StartCronJobs() {
 		}
 	}
 
-	// Compute market rate every 10 minutes
-	_, err = scheduler.Every(10).Minutes().Do(ComputeMarketRate)
+	// Compute market rate every 9 minutes
+	_, err = scheduler.Every(9).Minutes().Do(ComputeMarketRate)
 	if err != nil {
-		logger.Errorf("StartCronJobs for ComputeMarketRate after 10 minutes: %v", err)
+		logger.Errorf("StartCronJobs for ComputeMarketRate: %v", err)
 	}
 
 	// Refresh provision bucket priority queues every X minutes
@@ -1477,44 +1909,50 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for ProcessBucketQueues: %v", err)
 	}
 
-	// Retry failed webhook notifications every 10 minutes
-	_, err = scheduler.Every(10).Minutes().Do(RetryFailedWebhookNotifications)
+	// Retry failed webhook notifications every 13 minutes
+	_, err = scheduler.Every(13).Minutes().Do(RetryFailedWebhookNotifications)
 	if err != nil {
 		logger.Errorf("StartCronJobs for RetryFailedWebhookNotifications: %v", err)
 	}
 
-	// Sync lock order fulfillments every 1 minute
-	_, err = scheduler.Every(1).Minute().Do(SyncLockOrderFulfillments)
+	// Sync lock order fulfillments every 32 seconds
+	_, err = scheduler.Every(32).Seconds().Do(SyncLockOrderFulfillments)
 	if err != nil {
 		logger.Errorf("StartCronJobs for SyncLockOrderFulfillments: %v", err)
 	}
 
-	// Handle receive address validity every 5 minutes
-	_, err = scheduler.Every(5).Minutes().Do(HandleReceiveAddressValidity)
+	// Handle receive address validity every 6 minutes
+	_, err = scheduler.Every(6).Minutes().Do(HandleReceiveAddressValidity)
 	if err != nil {
 		logger.Errorf("StartCronJobs for HandleReceiveAddressValidity: %v", err)
 	}
 
-	// Retry stale user operations every 2 minutes
-	_, err = scheduler.Every(2).Minutes().Do(RetryStaleUserOperations)
+	// Retry stale user operations every 60 seconds
+	_, err = scheduler.Every(60).Seconds().Do(RetryStaleUserOperations)
 	if err != nil {
 		logger.Errorf("StartCronJobs for RetryStaleUserOperations: %v", err)
 	}
 
-	// Resolve payment order mishaps every 90 seconds
-	_, err = scheduler.Every(90).Seconds().Do(ResolvePaymentOrderMishaps)
+	// Resolve payment order mishaps every 14 seconds
+	_, err = scheduler.Every(14).Seconds().Do(ResolvePaymentOrderMishaps)
 	if err != nil {
 		logger.Errorf("StartCronJobs for ResolvePaymentOrderMishaps: %v", err)
 	}
 
-	// Index gateway events every 31 minutes
-	_, err = scheduler.Every(31).Minutes().Do(IndexGatewayEvents)
+	// Index gateway events every 6 minutes
+	_, err = scheduler.Every(6).Minutes().Do(IndexGatewayEvents)
 	if err != nil {
 		logger.Errorf("StartCronJobs for IndexGatewayEvents: %v", err)
 	}
 
-	// Index blockchain events every 5 seconds
-	_, err = scheduler.Every(5).Seconds().Do(TaskIndexBlockchainEvents)
+	// Process stuck validated orders every 12 minutes
+	_, err = scheduler.Every(12).Minutes().Do(ProcessStuckValidatedOrders)
+	if err != nil {
+		logger.Errorf("StartCronJobs for ProcessStuckValidatedOrders: %v", err)
+	}
+
+	// Index blockchain events every 4 seconds
+	_, err = scheduler.Every(4).Seconds().Do(TaskIndexBlockchainEvents)
 	if err != nil {
 		logger.Errorf("StartCronJobs for IndexBlockchainEvents: %v", err)
 	}

@@ -20,5 +20,3 @@ assignees: ''
 
 **Notes/Assumptions**
 >* Notes or assumption that has to remain constant. 
-
-**Open Questions**

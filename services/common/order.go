@@ -17,6 +17,7 @@ import (
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -104,6 +105,7 @@ func CreateLockPaymentOrder(
 			_, updateErr := db.Client.PaymentOrder.
 				Update().
 				Where(paymentorder.IDEQ(paymentOrder.ID)).
+				SetTxHash(event.TxHash).
 				SetBlockNumber(int64(event.BlockNumber)).
 				SetGatewayID(event.OrderId).
 				SetStatus(paymentorder.StatusPending).
@@ -158,19 +160,19 @@ func CreateLockPaymentOrder(
 		WithNetwork().
 		Only(ctx)
 	if err != nil {
-		return nil
+		return createBasicLockPaymentOrderAndCancel(ctx, event, network, nil, nil, "Token lookup failed", refundOrder)
 	}
 
 	// Get order recipient from message hash
 	recipient, err := cryptoUtils.GetOrderRecipientFromMessageHash(event.MessageHash)
 	if err != nil {
-		return nil
+		return createBasicLockPaymentOrderAndCancel(ctx, event, network, token, nil, "Message hash decryption failed", refundOrder)
 	}
 
 	// Get provision bucket
 	institution, err := utils.GetInstitutionByCode(ctx, recipient.Institution, true)
 	if err != nil {
-		return nil
+		return createBasicLockPaymentOrderAndCancel(ctx, event, network, token, recipient, "Institution lookup failed", refundOrder)
 	}
 
 	currency, err := db.Client.FiatCurrency.
@@ -181,7 +183,7 @@ func CreateLockPaymentOrder(
 		).
 		Only(ctx)
 	if err != nil {
-		return nil
+		return createBasicLockPaymentOrderAndCancel(ctx, event, network, token, recipient, "Currency lookup failed", refundOrder)
 	}
 
 	event.Amount = event.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
@@ -194,6 +196,8 @@ func CreateLockPaymentOrder(
 			"Amount":   event.Amount,
 			"Currency": currency,
 		}).Errorf("failed to fetch provision bucket when creating lock payment order")
+
+		return createBasicLockPaymentOrderAndCancel(ctx, event, network, token, recipient, "Provision bucket lookup failed", refundOrder)
 	}
 
 	// Create lock payment order fields
@@ -204,6 +208,7 @@ func CreateLockPaymentOrder(
 		Amount:            event.Amount,
 		Rate:              event.Rate,
 		ProtocolFee:       event.ProtocolFee,
+		AmountInUSD:       utils.CalculatePaymentOrderAmountInUSD(event.Amount, token, institution),
 		BlockNumber:       int64(event.BlockNumber),
 		TxHash:            event.TxHash,
 		Institution:       recipient.Institution,
@@ -234,7 +239,10 @@ func CreateLockPaymentOrder(
 				providerordertoken.NetworkEQ(token.Edges.Network.Identifier),
 				providerordertoken.HasProviderWith(
 					providerprofile.IDEQ(lockPaymentOrder.ProviderID),
-					providerprofile.IsAvailableEQ(true),
+					providerprofile.HasProviderCurrenciesWith(
+						providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code)),
+						providercurrencies.IsAvailableEQ(true),
+					),
 					providerprofile.HasUserWith(user.KybVerificationStatusEQ(user.KybVerificationStatusApproved)),
 				),
 				providerordertoken.HasTokenWith(tokenent.IDEQ(token.ID)),
@@ -260,7 +268,7 @@ func CreateLockPaymentOrder(
 			}
 		}
 
-		if orderToken.Edges.Provider.VisibilityMode == providerprofile.VisibilityModePrivate {
+		if orderToken != nil && orderToken.Edges.Provider != nil && orderToken.Edges.Provider.VisibilityMode == providerprofile.VisibilityModePrivate {
 			normalizedAmount := lockPaymentOrder.Amount
 			if strings.EqualFold(token.BaseCurrency, institution.Edges.FiatCurrency.Code) && token.BaseCurrency != "USD" {
 				rateResponse, err := utils.GetTokenRateFromQueue("USDT", normalizedAmount, institution.Edges.FiatCurrency.Code, currency.MarketRate)
@@ -354,6 +362,7 @@ func CreateLockPaymentOrder(
 			SetRate(lockPaymentOrder.Rate).
 			SetProtocolFee(lockPaymentOrder.ProtocolFee).
 			SetOrderPercent(decimal.NewFromInt(100)).
+			SetAmountInUsd(lockPaymentOrder.AmountInUSD).
 			SetBlockNumber(lockPaymentOrder.BlockNumber).
 			SetTxHash(lockPaymentOrder.TxHash).
 			SetInstitution(lockPaymentOrder.Institution).
@@ -513,6 +522,45 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		return fmt.Errorf("UpdateOrderStatusRefunded.aggregator: %v", err)
 	}
 
+	// Release reserved balance for refunded orders
+	// Get the lock payment order to access provider and currency info
+	lockOrder, err := tx.LockPaymentOrder.
+		Query().
+		Where(
+			lockpaymentorder.GatewayIDEQ(event.OrderId),
+			lockpaymentorder.HasTokenWith(
+				tokenent.HasNetworkWith(
+					networkent.IdentifierEQ(network.Identifier),
+				),
+			),
+		).
+		WithProvider().
+		WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) {
+			pbq.WithCurrency()
+		}).
+		Only(ctx)
+	if err == nil && lockOrder != nil && lockOrder.Edges.Provider != nil && lockOrder.Edges.ProvisionBucket != nil && lockOrder.Edges.ProvisionBucket.Edges.Currency != nil {
+		// Only attempt balance operations if we have the required edge data
+		// Create a new balance service instance for this transaction
+		balanceService := svc.NewBalanceManagementService()
+
+		providerID := lockOrder.Edges.Provider.ID
+		currency := lockOrder.Edges.ProvisionBucket.Edges.Currency.Code
+		amount := lockOrder.Amount.Mul(lockOrder.Rate).RoundBank(0)
+
+		err = balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount, nil)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", err),
+				"OrderID":    event.OrderId,
+				"ProviderID": providerID,
+				"Currency":   currency,
+				"Amount":     amount.String(),
+			}).Errorf("failed to release reserved balance for refunded order")
+			// Don't return error here as the order status is already updated
+		}
+	}
+
 	// Sender side status update
 	if paymentOrderExists && paymentOrder.Status != paymentorder.StatusRefunded {
 		paymentOrderUpdate := tx.PaymentOrder.
@@ -543,6 +591,7 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 			return fmt.Errorf("UpdateOrderStatusRefunded.sender: %v", err)
 		}
 
+		// Update the local paymentOrder object for webhook
 		paymentOrder.Status = paymentorder.StatusRefunded
 		paymentOrder.TxHash = event.TxHash
 		paymentOrder.BlockNumber = event.BlockNumber
@@ -554,13 +603,12 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		return fmt.Errorf("UpdateOrderStatusRefunded.commit %v", err)
 	}
 
-	if paymentOrderExists && paymentOrder.Status != paymentorder.StatusRefunded {
+	if paymentOrderExists && paymentOrder.Status == paymentorder.StatusRefunded {
 		// Send webhook notification to sender
 		err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
 		if err != nil {
 			return fmt.Errorf("UpdateOrderStatusRefunded.webhook: %v", err)
 		}
-
 	}
 
 	return nil
@@ -660,6 +708,65 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 	_, err = lockPaymentOrderUpdate.Save(ctx)
 	if err != nil {
 		return fmt.Errorf("UpdateOrderStatusSettled.aggregator: %v", err)
+	}
+
+	// Update provider balance for settled orders
+	// Get the lock payment order to access provider and currency info
+	lockOrder, err := tx.LockPaymentOrder.
+		Query().
+		Where(
+			lockpaymentorder.IDEQ(splitOrderId),
+			lockpaymentorder.HasTokenWith(
+				tokenent.HasNetworkWith(
+					networkent.IdentifierEQ(network.Identifier),
+				),
+			),
+		).
+		WithProvider().
+		WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) {
+			pbq.WithCurrency()
+		}).
+		Only(ctx)
+	if err == nil && lockOrder != nil && lockOrder.Edges.Provider != nil && lockOrder.Edges.ProvisionBucket != nil && lockOrder.Edges.ProvisionBucket.Edges.Currency != nil {
+		// Only attempt balance operations if we have the required edge data
+		// Create a new balance service instance for this transaction
+		balanceService := svc.NewBalanceManagementService()
+
+		providerID := lockOrder.Edges.Provider.ID
+		currency := lockOrder.Edges.ProvisionBucket.Edges.Currency.Code
+		amount := lockOrder.Amount.Mul(lockOrder.Rate).RoundBank(0)
+
+		// Get current balance to update it appropriately
+		currentBalance, err := balanceService.GetProviderBalance(ctx, providerID, currency)
+		if err == nil && currentBalance != nil {
+			// For settlement, we only reduce the reserved balance since the available balance was already reduced during assignment
+			newReservedBalance := currentBalance.ReservedBalance.Sub(amount)
+
+			// Ensure reserved balance doesn't go negative
+			if newReservedBalance.LessThan(decimal.Zero) {
+				newReservedBalance = decimal.Zero
+			}
+
+			// For settlement, we reduce the reserved balance and total balance
+			// Available balance was already reduced during assignment
+			// Total balance is reduced because the provider has actually spent money to fulfill the order
+			newTotalBalance := currentBalance.TotalBalance.Sub(amount)
+			if newTotalBalance.LessThan(decimal.Zero) {
+				newTotalBalance = decimal.Zero
+			}
+
+			err = balanceService.UpdateProviderBalance(ctx, providerID, currency, currentBalance.AvailableBalance, newTotalBalance, newReservedBalance)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":      fmt.Sprintf("%v", err),
+					"OrderID":    event.OrderId,
+					"ProviderID": providerID,
+					"Currency":   currency,
+					"Amount":     amount.String(),
+				}).Errorf("failed to update provider balance for settled order")
+				// Don't return error here as the order status is already updated
+			}
+		}
 	}
 
 	settledPercent := decimal.NewFromInt(0)
@@ -784,10 +891,14 @@ func HandleCancellation(ctx context.Context, createdLockPaymentOrder *ent.LockPa
 			SetSender(lockPaymentOrder.Sender).
 			SetMemo(lockPaymentOrder.Memo).
 			SetMetadata(lockPaymentOrder.Metadata).
-			SetProvisionBucket(lockPaymentOrder.ProvisionBucket).
 			SetCancellationCount(3).
 			SetCancellationReasons([]string{cancellationReason}).
 			SetStatus(lockpaymentorder.StatusCancelled)
+
+		// Only set ProvisionBucket if it's not nil
+		if lockPaymentOrder.ProvisionBucket != nil {
+			orderBuilder = orderBuilder.SetProvisionBucket(lockPaymentOrder.ProvisionBucket)
+		}
 
 		if lockPaymentOrder.ProviderID != "" {
 			orderBuilder = orderBuilder.
@@ -897,7 +1008,7 @@ func HandleReceiveAddressValidity(ctx context.Context, receiveAddress *ent.Recei
 	}
 
 	if receiveAddress.Status != receiveaddress.StatusUsed {
-		validUntilIsFarGone := receiveAddress.ValidUntil.Before(time.Now().Add(-(5 * time.Minute)))
+		validUntilIsFarGone := receiveAddress.ValidUntil.Before(time.Now().Add(-(2 * time.Minute)))
 		isExpired := receiveAddress.ValidUntil.Before(time.Now())
 
 		if validUntilIsFarGone {
@@ -908,7 +1019,7 @@ func HandleReceiveAddressValidity(ctx context.Context, receiveAddress *ent.Recei
 			if err != nil {
 				return fmt.Errorf("HandleReceiveAddressValidity.db: %v", err)
 			}
-		} else if isExpired && !strings.HasPrefix(paymentOrder.Edges.Recipient.Memo, "P#P") {
+		} else if isExpired && receiveAddress.Status != receiveaddress.StatusExpired && paymentOrder.Status != paymentorder.StatusExpired && !strings.HasPrefix(paymentOrder.Edges.Recipient.Memo, "P#P") {
 			// Receive address hasn't received payment after validity period, mark status as expired
 			_, err := receiveAddress.
 				Update().
@@ -925,6 +1036,17 @@ func HandleReceiveAddressValidity(ctx context.Context, receiveAddress *ent.Recei
 				Save(ctx)
 			if err != nil {
 				return fmt.Errorf("HandleReceiveAddressValidity.db: %v", err)
+			}
+
+			// Send webhook notification for expired payment order
+			// The paymentOrder already has all necessary edges loaded from tasks.go
+			err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"OrderID":  paymentOrder.ID,
+					"SenderID": paymentOrder.Edges.SenderProfile.ID,
+					"Error":    err.Error(),
+				}).Errorf("Failed to send expired payment order webhook")
 			}
 		}
 	}
@@ -963,5 +1085,60 @@ func deleteTransferWebhook(ctx context.Context, txHash string) error {
 		return fmt.Errorf("failed to delete webhook: %w", err)
 	}
 
+	return nil
+}
+
+// createBasicLockPaymentOrderAndCancel creates a basic lock payment order and cancels it with the given reason
+func createBasicLockPaymentOrderAndCancel(
+	ctx context.Context,
+	event *types.OrderCreatedEvent,
+	network *ent.Network,
+	token *ent.Token,
+	recipient *types.PaymentOrderRecipient,
+	cancellationReason string,
+	refundOrder func(context.Context, *ent.Network, string) error,
+) error {
+	// Apply token decimal adjustment to amount and protocol fee
+	adjustedAmount := event.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
+	adjustedProtocolFee := event.ProtocolFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
+
+	// Create a basic lock payment order for cancellation
+	lockPaymentOrder := types.LockPaymentOrderFields{
+		Token:       token,
+		Network:     network,
+		GatewayID:   event.OrderId,
+		Amount:      adjustedAmount,
+		Rate:        event.Rate,
+		ProtocolFee: adjustedProtocolFee,
+		AmountInUSD: func() decimal.Decimal {
+			if recipient == nil {
+				return decimal.Zero
+			}
+			institution, err := utils.GetInstitutionByCode(ctx, recipient.Institution, true)
+			if err != nil {
+				return decimal.Zero
+			}
+			return utils.CalculatePaymentOrderAmountInUSD(adjustedAmount, token, institution)
+		}(),
+		BlockNumber: int64(event.BlockNumber),
+		TxHash:      event.TxHash,
+		Sender:      event.Sender,
+		MessageHash: event.MessageHash,
+	}
+
+	// Add recipient fields if available
+	if recipient != nil {
+		lockPaymentOrder.Institution = recipient.Institution
+		lockPaymentOrder.AccountIdentifier = recipient.AccountIdentifier
+		lockPaymentOrder.AccountName = recipient.AccountName
+		lockPaymentOrder.ProviderID = recipient.ProviderID
+		lockPaymentOrder.Memo = recipient.Memo
+		lockPaymentOrder.Metadata = recipient.Metadata
+	}
+
+	err := HandleCancellation(ctx, nil, &lockPaymentOrder, cancellationReason, refundOrder)
+	if err != nil {
+		return fmt.Errorf("failed to handle cancellation due to %s: %w", cancellationReason, err)
+	}
 	return nil
 }

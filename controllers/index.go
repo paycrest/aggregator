@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/beneficialowner"
@@ -35,6 +34,7 @@ import (
 	"github.com/paycrest/aggregator/ent/user"
 	svc "github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/common"
+	"github.com/paycrest/aggregator/services/email"
 	"github.com/paycrest/aggregator/services/indexer"
 	kycErrors "github.com/paycrest/aggregator/services/kyc/errors"
 	"github.com/paycrest/aggregator/services/kyc/smile"
@@ -64,7 +64,7 @@ type Controller struct {
 	receiveAddressService *svc.ReceiveAddressService
 	kycService            types.KYCProvider
 	slackService          *svc.SlackService
-	emailService          *svc.EmailService
+	emailService          email.EmailServiceInterface
 	cache                 map[string]bool
 	processedActions      map[string]bool
 	actionMutex           sync.RWMutex
@@ -78,7 +78,7 @@ func NewController() *Controller {
 		receiveAddressService: svc.NewReceiveAddressService(),
 		kycService:            smile.NewSmileIDService(),
 		slackService:          svc.NewSlackService(serverConf.SlackWebhookURL),
-		emailService:          svc.NewEmailService(svc.SENDGRID_MAIL_PROVIDER),
+		emailService:          email.NewEmailServiceWithProviders(),
 		cache:                 make(map[string]bool),
 		processedActions:      make(map[string]bool),
 	}
@@ -173,6 +173,11 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 			if networkFilter != "" {
 				errorMsg = fmt.Sprintf("Token %s is not supported on network %s", tokenSymbol, networkFilter)
 			}
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"Token":   tokenSymbol,
+				"Network": networkFilter,
+			}).Errorf("Failed to fetch token rate: %v", err)
 			u.APIResponse(ctx, http.StatusBadRequest, "error", errorMsg, nil)
 			return
 		}
@@ -209,305 +214,24 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 		return
 	}
 
-	// Resolve rate using extracted logic
-	rateResponse, err := ctrl.resolveRate(ctx, token, currency, tokenAmount, ctx.Query("provider_id"), networkFilter)
+	// Validate rate using extracted logic
+	rateResponse, err := u.ValidateRate(ctx, token, currency, tokenAmount, ctx.Query("provider_id"), networkFilter)
 	if err != nil {
-		// Error response is handled within resolveRate methods
+		// Return 404 if no provider found, else 500 for other errors
+		if strings.Contains(err.Error(), "no provider available") {
+			u.APIResponse(ctx, http.StatusNotFound, "error", err.Error(), nil)
+		} else {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"Token":   tokenSymbol,
+				"Network": networkFilter,
+			}).Errorf("Failed to fetch token rate: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", err.Error(), nil)
+		}
 		return
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Rate fetched successfully", rateResponse)
-}
-
-// resolveRate handles the rate resolution logic based on different scenarios
-func (ctrl *Controller) resolveRate(ctx *gin.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, providerID, networkFilter string) (decimal.Decimal, error) {
-	// Direct currency match
-	if strings.EqualFold(token.BaseCurrency, currency.Code) {
-		return decimal.NewFromInt(1), nil
-	}
-
-	// Provider-specific rate
-	if providerID != "" {
-		return ctrl.resolveProviderRate(ctx, token, currency, amount, providerID, networkFilter)
-	}
-
-	// Bucket-based rate resolution
-	return ctrl.resolveBucketRate(ctx, token, currency, amount, networkFilter)
-}
-
-// resolveProviderRate handles provider-specific rate resolution
-func (ctrl *Controller) resolveProviderRate(ctx *gin.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, providerID, networkFilter string) (decimal.Decimal, error) {
-	// Get the provider from the database
-	provider, err := storage.Client.ProviderProfile.
-		Query().
-		Where(providerprofile.IDEQ(providerID)).
-		Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Provider not found", nil)
-			return decimal.Zero, err
-		}
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider profile", nil)
-		return decimal.Zero, err
-	}
-
-	// Get the provider's order token configuration to validate min/max amounts
-	providerOrderTokenQuery := storage.Client.ProviderOrderToken.
-		Query().
-		Where(
-			providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
-			providerordertoken.HasTokenWith(tokenEnt.IDEQ(token.ID)),
-			providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(currency.Code)),
-		)
-
-	// Filter by network if provided
-	if networkFilter != "" {
-		providerOrderTokenQuery = providerOrderTokenQuery.Where(
-			providerordertoken.NetworkEQ(networkFilter),
-		)
-	}
-
-	providerOrderToken, err := providerOrderTokenQuery.First(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Provider does not support this token/currency combination", nil)
-			return decimal.Zero, err
-		}
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider configuration", nil)
-		return decimal.Zero, err
-	}
-
-	// Validate that the token amount is within the provider's min/max limits
-	if amount.LessThan(providerOrderToken.MinOrderAmount) || amount.GreaterThan(providerOrderToken.MaxOrderAmount) {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Amount must be between %s and %s for this provider", providerOrderToken.MinOrderAmount, providerOrderToken.MaxOrderAmount), nil)
-		return decimal.Zero, fmt.Errorf("amount out of range")
-	}
-
-	// Get provider-specific rate
-	rate, err := ctrl.priorityQueueService.GetProviderRate(ctx, provider, token.Symbol, currency.Code)
-	if err != nil {
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider rate", nil)
-		return decimal.Zero, err
-	}
-
-	return rate, nil
-}
-
-// resolveBucketRate handles bucket-based rate resolution
-func (ctrl *Controller) resolveBucketRate(ctx *gin.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, networkIdentifier string) (decimal.Decimal, error) {
-	// Get redis keys for provision buckets
-	keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currency.Code+"_*_*", 100).Result()
-	if err != nil {
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch rates", nil)
-		return decimal.Zero, err
-	}
-
-	// Track the best available rate and reason for logging
-	var bestRate decimal.Decimal
-	var bestRateReason string
-	var foundExactMatch bool
-
-	// Scan through the buckets to find a matching rate
-	for _, key := range keys {
-		bucketData, err := parseBucketKey(key)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Key":   key,
-				"Error": err,
-			}).Errorf("GetTokenRate.InvalidBucketKey: failed to parse bucket key")
-			continue
-		}
-
-		// Get all providers in this bucket to find the first suitable one (priority queue order)
-		providers, err := storage.RedisClient.LRange(ctx, key, 0, -1).Result()
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Key":   key,
-				"Error": err,
-			}).Errorf("GetTokenRate.FailedToGetProviders: failed to get providers from bucket")
-			continue
-		}
-
-		// Find the first provider at the top of the queue that matches our criteria
-		rate, found := ctrl.findSuitableProviderRate(providers, token.Symbol, networkIdentifier, amount, bucketData)
-		if found {
-			foundExactMatch = true
-			bestRate = rate
-			bestRateReason = fmt.Sprintf("exact match in bucket %s", key)
-			break // Found exact match, no need to continue
-		}
-
-		// Track the best available rate for logging purposes
-		if rate.GreaterThan(bestRate) {
-			bestRate = rate
-			bestRateReason = fmt.Sprintf("best available rate from bucket %s", key)
-		}
-	}
-
-	// If no exact match found, return error with details
-	if !foundExactMatch {
-		logger.WithFields(logger.Fields{
-			"Token":          token.Symbol,
-			"Currency":       currency.Code,
-			"Amount":         amount,
-			"NetworkFilter":  networkIdentifier,
-			"BestRate":       bestRate,
-			"BestRateReason": bestRateReason,
-		}).Warnf("GetTokenRate.NoSuitableProvider: no provider found for the given parameters")
-
-		u.APIResponse(ctx, http.StatusNotFound, "error",
-			fmt.Sprintf("No provider available for %s to %s conversion with amount %s on %s network",
-				token.Symbol, currency.Code, amount, networkIdentifier), nil)
-		return decimal.Zero, fmt.Errorf("no suitable provider found")
-	}
-
-	return bestRate, nil
-}
-
-// parseBucketKey parses and validates bucket key format
-type BucketData struct {
-	Currency  string
-	MinAmount decimal.Decimal
-	MaxAmount decimal.Decimal
-}
-
-func parseBucketKey(key string) (*BucketData, error) {
-	// Expected format: "bucket_{currency}_{minAmount}_{maxAmount}"
-	parts := strings.Split(key, "_")
-	if len(parts) != 4 && len(parts) != 5 {
-		return nil, fmt.Errorf("invalid bucket key format: expected 4 parts, got %d", len(parts))
-	}
-
-	if parts[0] != "bucket" {
-		return nil, fmt.Errorf("invalid bucket key prefix: expected 'bucket', got '%s'", parts[0])
-	}
-
-	currency := parts[1]
-	if currency == "" {
-		return nil, fmt.Errorf("empty currency in bucket key")
-	}
-
-	minAmount, err := decimal.NewFromString(parts[2])
-	if err != nil {
-		return nil, fmt.Errorf("invalid min amount '%s': %v", parts[2], err)
-	}
-
-	maxAmount, err := decimal.NewFromString(parts[3])
-	if err != nil {
-		return nil, fmt.Errorf("invalid max amount '%s': %v", parts[3], err)
-	}
-
-	if minAmount.GreaterThanOrEqual(maxAmount) {
-		return nil, fmt.Errorf("min amount (%s) must be less than max amount (%s)", minAmount, maxAmount)
-	}
-
-	return &BucketData{
-		Currency:  currency,
-		MinAmount: minAmount,
-		MaxAmount: maxAmount,
-	}, nil
-}
-
-// findSuitableProviderRate finds the first suitable provider rate from the provider list
-func (ctrl *Controller) findSuitableProviderRate(providers []string, tokenSymbol string, networkIdentifier string, tokenAmount decimal.Decimal, bucketData *BucketData) (decimal.Decimal, bool) {
-	var bestRate decimal.Decimal
-	var foundExactMatch bool
-
-	for _, providerData := range providers {
-		parts := strings.Split(providerData, ":")
-		if len(parts) != 5 {
-			logger.WithFields(logger.Fields{
-				"ProviderData": providerData,
-				"Token":        tokenSymbol,
-				"Currency":     bucketData.Currency,
-				"MinAmount":    bucketData.MinAmount,
-				"MaxAmount":    bucketData.MaxAmount,
-			}).Errorf("GetTokenRate.InvalidProviderData: provider data format is invalid")
-			continue
-		}
-
-		// Skip entry if token doesn't match
-		if parts[1] != tokenSymbol {
-			continue
-		}
-
-		// Skip entry if provider doesn't not have a token configured for the network
-		// TODO: Move this to redis cache. Provider's network should be in the key.
-		if networkIdentifier != "" {
-			_, err := storage.Client.ProviderOrderToken.
-				Query().
-				Where(
-					providerordertoken.HasProviderWith(
-						providerprofile.IDEQ(parts[0]),
-						providerprofile.IsAvailableEQ(true),
-					),
-					providerordertoken.HasTokenWith(tokenEnt.SymbolEQ(parts[1])),
-					providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
-					providerordertoken.NetworkEQ(networkIdentifier),
-					providerordertoken.AddressNEQ(""),
-				).Only(context.Background())
-			if err != nil {
-				if ent.IsNotFound(err) {
-					continue
-				}
-				logger.WithFields(logger.Fields{
-					"ProviderData": providerData,
-					"Error":        err,
-				}).Errorf("GetTokenRate.InvalidProviderData: failed to fetch provider configuration")
-				continue
-			}
-		}
-
-		// Parse provider order amounts
-		minOrderAmount, err := decimal.NewFromString(parts[3])
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"ProviderData": providerData,
-				"Error":        err,
-			}).Errorf("GetTokenRate.InvalidMinOrderAmount: failed to parse min order amount")
-			continue
-		}
-
-		maxOrderAmount, err := decimal.NewFromString(parts[4])
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"ProviderData": providerData,
-				"Error":        err,
-			}).Errorf("GetTokenRate.InvalidMaxOrderAmount: failed to parse max order amount")
-			continue
-		}
-
-		// Skip if order amount is not within provider's min and max order amount
-		if tokenAmount.LessThan(minOrderAmount) || tokenAmount.GreaterThan(maxOrderAmount) {
-			continue
-		}
-
-		// Parse rate
-		rate, err := decimal.NewFromString(parts[2])
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"ProviderData": providerData,
-				"Error":        err,
-			}).Errorf("GetTokenRate.InvalidRate: failed to parse rate")
-			continue
-		}
-
-		// Track the best rate we've seen (for logging purposes)
-		if rate.GreaterThan(bestRate) {
-			bestRate = rate
-		}
-
-		// Calculate fiat equivalent of the token amount
-		fiatAmount := tokenAmount.Mul(rate)
-
-		// Check if fiat amount is within the bucket range
-		if fiatAmount.GreaterThanOrEqual(bucketData.MinAmount) && fiatAmount.LessThanOrEqual(bucketData.MaxAmount) {
-			return rate, true
-		}
-	}
-
-	// Return the best rate we found (even if no exact match) for logging purposes
-	return bestRate, foundExactMatch
 }
 
 // GetSupportedTokens controller fetches supported cryptocurrency tokens
@@ -571,72 +295,8 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 		return
 	}
 
-	accountInstitution, err := storage.Client.Institution.
-		Query().
-		Where(institution.CodeEQ(payload.Institution)).
-		WithFiatCurrency(
-			func(fq *ent.FiatCurrencyQuery) {
-				fq.Where(fiatcurrency.IsEnabledEQ(true))
-			},
-		).
-		Only(ctx)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":             fmt.Sprintf("%v", err),
-			"Institution":       payload.Institution,
-			"AccountIdentifier": payload.AccountIdentifier,
-		}).Errorf("Failed to validate payload when verifying account")
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", []types.ErrorData{{
-			Field:   "Institution",
-			Message: "Institution is not supported",
-		}})
-		return
-	}
-
-	// Skip account verification for mobile money institutions
-	if accountInstitution.Type == institution.TypeMobileMoney {
-		u.APIResponse(ctx, http.StatusOK, "success", "Account name was fetched successfully", "OK")
-		return
-	}
-
-	providers, err := storage.Client.ProviderProfile.
-		Query().
-		Where(
-			providerprofile.HasCurrenciesWith(
-				fiatcurrency.CodeEQ(accountInstitution.Edges.FiatCurrency.Code),
-			),
-			providerprofile.HostIdentifierNotNil(),
-			providerprofile.IsActiveEQ(true),
-			providerprofile.IsAvailableEQ(true),
-			providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
-		).
-		All(ctx)
-	if err != nil {
-		u.APIResponse(ctx, http.StatusBadRequest, "error",
-			"Failed to verify account", fmt.Sprintf("%v", err))
-		return
-	}
-
-	var res fastshot.Response
-	var data map[string]interface{}
-	for _, provider := range providers {
-		res, err = fastshot.NewClient(provider.HostIdentifier).
-			Config().SetTimeout(30 * time.Second).
-			Build().POST("/verify_account").
-			Body().AsJSON(payload).
-			Send()
-		if err != nil {
-			continue
-		}
-
-		data, err = u.ParseJSONResponse(res.RawResponse)
-		if err != nil {
-			continue
-		}
-
-		break
-	}
-
+	// Use the abstracted ValidateAccount utility function
+	accountName, err := u.ValidateAccount(ctx, payload.Institution, payload.AccountIdentifier)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":             fmt.Sprintf("%v", err),
@@ -647,7 +307,7 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 		return
 	}
 
-	u.APIResponse(ctx, http.StatusOK, "success", "Account name was fetched successfully", data["data"].(string))
+	u.APIResponse(ctx, http.StatusOK, "success", "Account name was fetched successfully", accountName)
 }
 
 // GetLockPaymentOrderStatus controller fetches a payment order status by ID
@@ -690,6 +350,7 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 	var receipts []types.LockPaymentOrderTxReceipt
 	var settlePercent decimal.Decimal
 	var totalAmount decimal.Decimal
+	var totalAmountInUSD decimal.Decimal
 
 	for _, order := range orders {
 		for _, transaction := range order.Edges.Transactions {
@@ -717,6 +378,7 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 
 		settlePercent = settlePercent.Add(order.OrderPercent)
 		totalAmount = totalAmount.Add(order.Amount)
+		totalAmountInUSD = totalAmountInUSD.Add(order.AmountInUsd)
 	}
 
 	// Sort receipts by latest timestamp
@@ -737,6 +399,7 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 	response := &types.LockPaymentOrderStatusResponse{
 		OrderID:       orders[0].GatewayID,
 		Amount:        totalAmount,
+		AmountInUSD:   totalAmountInUSD,
 		Token:         orders[0].Edges.Token.Symbol,
 		Network:       orders[0].Edges.Token.Edges.Network.Identifier,
 		SettlePercent: settlePercent,
@@ -1124,6 +787,7 @@ func (ctrl *Controller) KYCWebhook(ctx *gin.Context) {
 // SlackInteractionHandler handles Slack interaction requests
 func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 	startTime := time.Now()
+	cnfg := config.AuthConfig()
 
 	// Parse form-encoded payload
 	payloadStr := ctx.PostForm("payload")
@@ -1169,11 +833,24 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 		}
 
 		var kybProfileID string
-		if strings.Contains(actionID, "_") {
-			kybProfileID = actionID[strings.Index(actionID, "_")+1:]
+		if strings.HasPrefix(actionID, "approve_kyb_") || strings.HasPrefix(actionID, "reject_kyb_") {
+			kybProfileID = actionID[strings.Index(actionID, "_kyb_")+5:] // Extract ID after "approve_kyb_" or "reject_kyb_"
+		} else if actionID == "review_kyb" || strings.HasPrefix(actionID, "review_kyb_") {
+			if actionID == "review_kyb" {
+				kybProfileID, ok = action["value"].(string)
+				if !ok {
+					logger.Errorf("Missing or invalid value for review_kyb action: %+v", action)
+					ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing action value"})
+					return
+				}
+			} else {
+				kybProfileID = actionID[strings.Index(actionID, "_kyb_")+5:] // Handle legacy review_kyb_<id>
+			}
+		} else if strings.HasPrefix(actionID, "approve_") || strings.HasPrefix(actionID, "reject_") {
+			kybProfileID = actionID[strings.Index(actionID, "_")+1:] // Handle legacy approve_<id>, reject_<id>
 		} else {
-			logger.Errorf("Invalid action_id format: %s", actionID)
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action_id format"})
+			logger.Errorf("Invalid action_id: %s", actionID)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action_id"})
 			return
 		}
 
@@ -1224,8 +901,184 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			firstName = "User"
 		}
 
-		// Handle reject button - only open modal
-		if strings.HasPrefix(actionID, "reject_") {
+		// Handle review button - open modal with KYB details
+		if actionID == "review_kyb" {
+			logger.Infof("Review button clicked for KYB Profile %s", kybProfileID)
+			triggerID, ok := payload["trigger_id"].(string)
+			if !ok {
+				logger.Errorf("Missing trigger_id for modal, KYB Profile ID: %s", kybProfileID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing trigger_id"})
+				return
+			}
+
+			// Build modal content with KYB details
+			var blocks []map[string]interface{}
+			blocks = append(blocks, map[string]interface{}{
+				"type": "section",
+				"text": map[string]interface{}{
+					"type": "mrkdwn",
+					"text": "*KYB Profile Details*",
+				},
+			})
+			blocks = append(blocks, map[string]interface{}{
+				"type": "section",
+				"text": map[string]interface{}{
+					"type": "mrkdwn",
+					"text": fmt.Sprintf(
+						"*Company Name*: %s\n*Mobile Number*: %s\n*Registered Business Address*: %s\n*Certificate of Incorporation*: %s\n*Articles of Incorporation*: %s\n*Proof of Business Address*: %s",
+						kybProfile.CompanyName,
+						kybProfile.MobileNumber,
+						kybProfile.RegisteredBusinessAddress,
+						kybProfile.CertificateOfIncorporationURL,
+						kybProfile.ArticlesOfIncorporationURL,
+						kybProfile.ProofOfBusinessAddressURL,
+					),
+				},
+			})
+
+			// Add optional fields
+			if kybProfile.BusinessLicenseURL != nil {
+				blocks = append(blocks, map[string]interface{}{
+					"type": "section",
+					"text": map[string]interface{}{
+						"type": "mrkdwn",
+						"text": fmt.Sprintf("*Business License*: %s", *kybProfile.BusinessLicenseURL),
+					},
+				})
+			}
+			if kybProfile.AmlPolicyURL != "" {
+				blocks = append(blocks, map[string]interface{}{
+					"type": "section",
+					"text": map[string]interface{}{
+						"type": "mrkdwn",
+						"text": fmt.Sprintf("*AML Policy*: %s", kybProfile.AmlPolicyURL),
+					},
+				})
+			}
+			if kybProfile.KycPolicyURL != nil {
+				blocks = append(blocks, map[string]interface{}{
+					"type": "section",
+					"text": map[string]interface{}{
+						"type": "mrkdwn",
+						"text": fmt.Sprintf("*KYC Policy*: %s", *kybProfile.KycPolicyURL),
+					},
+				})
+			}
+
+			// Add beneficial owners
+			if len(kybProfile.Edges.BeneficialOwners) > 0 {
+				blocks = append(blocks, map[string]interface{}{
+					"type": "section",
+					"text": map[string]interface{}{
+						"type": "mrkdwn",
+						"text": "*Beneficial Owners*",
+					},
+				})
+				for i, owner := range kybProfile.Edges.BeneficialOwners {
+					idType := "Not specified"
+					if owner.GovernmentIssuedIDType != "" {
+						idType = string(owner.GovernmentIssuedIDType)
+					}
+					blocks = append(blocks, map[string]interface{}{
+						"type": "section",
+						"text": map[string]interface{}{
+							"type": "mrkdwn",
+							"text": fmt.Sprintf(
+								"*Owner %d*\n*Full Name*: %s\n*Residential Address*: %s\n*Proof of Address*: %s\n*Government Issued ID*: %s\n*ID Type*: %s\n*Date of Birth*: %s\n*Ownership Percentage*: %.2f%%",
+								i+1,
+								owner.FullName,
+								owner.ResidentialAddress,
+								owner.ProofOfResidentialAddressURL,
+								owner.GovernmentIssuedIDURL,
+								idType,
+								owner.DateOfBirth,
+								owner.OwnershipPercentage,
+							),
+						},
+					})
+				}
+			}
+
+			// Add approval confirmation section
+			blocks = append(blocks, map[string]interface{}{
+				"type": "section",
+				"text": map[string]interface{}{
+					"type": "mrkdwn",
+					"text": "*Review Complete*\n\nIf all information looks correct, click 'Approve' to approve this KYB submission.",
+				},
+			})
+
+			modal := map[string]interface{}{
+				"trigger_id": triggerID,
+				"view": map[string]interface{}{
+					"type":             "modal",
+					"callback_id":      "approve_modal_" + kybProfileID,
+					"private_metadata": fmt.Sprintf(`{"email":"%s","kyb_profile_id":"%s","firstName":"%s"}`, email, kybProfileID, firstName),
+					"title": map[string]interface{}{
+						"type": "plain_text",
+						"text": "KYB Review",
+					},
+					"submit": map[string]interface{}{
+						"type": "plain_text",
+						"text": "Approve",
+					},
+					"blocks": blocks,
+				},
+			}
+
+			jsonPayload, err := json.Marshal(modal)
+			if err != nil {
+				logger.Errorf("Failed to marshal modal payload for KYB Profile %s: %v", kybProfileID, err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create modal"})
+				return
+			}
+
+			client := &http.Client{Timeout: 5 * time.Second}
+			req, err := http.NewRequest("POST", "https://slack.com/api/views.open", bytes.NewBuffer(jsonPayload))
+			if err != nil {
+				logger.Errorf("Failed to create Slack API request for KYB Profile %s: %v", kybProfileID, err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create modal request"})
+				return
+			}
+			req.Header.Set("Content-Type", "application/json")
+			if cnfg.SlackBotToken == "" {
+				logger.Errorf("Slack bot token not configured for KYB Profile %s", kybProfileID)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Slack bot token not configured"})
+				return
+			}
+			if !strings.HasPrefix(cnfg.SlackBotToken, "xoxb-") {
+				logger.Errorf("Invalid Slack bot token format for KYB Profile %s", kybProfileID)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid Slack bot token format"})
+				return
+			}
+			req.Header.Set("Authorization", "Bearer "+cnfg.SlackBotToken)
+
+			resp, err := client.Do(req)
+			if err != nil {
+				logger.Errorf("Failed to open Slack modal for KYB Profile %s: %v", kybProfileID, err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open modal"})
+				return
+			}
+			defer resp.Body.Close()
+
+			body, _ := io.ReadAll(resp.Body)
+			var s struct {
+				OK    bool   `json:"ok"`
+				Error string `json:"error"`
+			}
+			_ = json.Unmarshal(body, &s)
+			if resp.StatusCode != http.StatusOK || !s.OK {
+				logger.Errorf("Slack views.open failed for KYB %s. status=%d ok=%v err=%s body=%s", kybProfileID, resp.StatusCode, s.OK, s.Error, string(body))
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open modal"})
+				return
+			}
+
+			ctx.JSON(http.StatusOK, gin.H{})
+			return
+		}
+
+		// Handle reject button (from initial notification or modal) - open modal
+		if strings.HasPrefix(actionID, "reject_") || strings.HasPrefix(actionID, "reject_kyb_") {
 			logger.Infof("Reject button clicked for KYB Profile %s, action: %+v", kybProfileID, action)
 			triggerID, ok := payload["trigger_id"].(string)
 			if !ok {
@@ -1302,6 +1155,24 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 								"text": "Reason for Rejection",
 							},
 						},
+						{
+							"type":     "input",
+							"block_id": "comment_block",
+							"element": map[string]interface{}{
+								"type":      "plain_text_input",
+								"action_id": "comment_input",
+								"multiline": true,
+								"placeholder": map[string]interface{}{
+									"type": "plain_text",
+									"text": "Add any additional comments or details...",
+								},
+							},
+							"label": map[string]interface{}{
+								"type": "plain_text",
+								"text": "Rejection Comment",
+							},
+							"optional": true,
+						},
 					},
 				},
 			}
@@ -1313,7 +1184,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				return
 			}
 
-			client := &http.Client{}
+			client := &http.Client{Timeout: 5 * time.Second}
 			req, err := http.NewRequest("POST", "https://slack.com/api/views.open", bytes.NewBuffer(jsonPayload))
 			if err != nil {
 				logger.Errorf("Failed to create Slack API request for KYB Profile %s: %v", kybProfileID, err)
@@ -1337,80 +1208,19 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			}
 			defer resp.Body.Close()
 
-			if resp.StatusCode != http.StatusOK {
-				body, _ := io.ReadAll(resp.Body)
-				logger.Errorf("Slack API responded with status %d for KYB Profile %s: %s", resp.StatusCode, kybProfileID, string(body))
+			body, _ := io.ReadAll(resp.Body)
+			var s struct {
+				OK    bool   `json:"ok"`
+				Error string `json:"error"`
+			}
+			_ = json.Unmarshal(body, &s)
+			if resp.StatusCode != http.StatusOK || !s.OK {
+				logger.Errorf("Slack views.open failed for KYB %s. status=%d ok=%v err=%s body=%s", kybProfileID, resp.StatusCode, s.OK, s.Error, string(body))
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open modal"})
 				return
 			}
 
 			ctx.JSON(http.StatusOK, gin.H{})
-			return
-		}
-
-		if strings.HasPrefix(actionID, "approve_") {
-			if ctrl.isActionProcessed(kybProfileID, "approve") || ctrl.isActionProcessed(kybProfileID, "reject") {
-				logger.Warnf("Action already processed for KYB Profile %s", kybProfileID)
-				ctx.JSON(http.StatusOK, gin.H{"text": "This submission has already been processed."})
-				return
-			}
-
-			// Mark as processed immediately
-			ctrl.markActionProcessed(kybProfileID, "approve")
-
-			// Respond immediately to Slack to remove loading state
-			responseURL, _ := payload["response_url"].(string)
-			if responseURL != "" {
-				go func() {
-					message := map[string]interface{}{
-						"replace_original": true,
-						"text":             fmt.Sprintf("✅ *APPROVED* - KYB submission for %s (%s) from %s has been approved.", firstName, email, kybProfile.CompanyName),
-					}
-					jsonPayload, _ := json.Marshal(message)
-					if _, err := http.Post(responseURL, "application/json", bytes.NewBuffer(jsonPayload)); err != nil {
-						logger.Errorf("Failed to post response to URL: %v", err)
-					}
-				}()
-			}
-
-			// Send immediate response to Slack
-			ctx.JSON(http.StatusOK, gin.H{"text": "Approving submission..."})
-
-			// Update User KYB status
-			_, err := storage.Client.User.
-				Update().
-				Where(user.IDEQ(kybProfile.Edges.User.ID)).
-				SetKybVerificationStatus(user.KybVerificationStatusApproved).
-				Save(ctx)
-			if err != nil {
-				logger.Errorf("Failed to approve KYB for user %s (KYB Profile %s): %v", email, kybProfileID, err)
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user KYB status"})
-				return
-			}
-
-			// Update KYB Profile status (assuming you have a status field)
-			_, err = storage.Client.KYBProfile.
-				UpdateOne(kybProfile).
-				Save(ctx)
-			if err != nil {
-				logger.Errorf("Failed to update KYB Profile status %s: %v", kybProfileID, err)
-			}
-
-			// Send approval email
-			resp, err := ctrl.emailService.SendKYBApprovalEmail(email, firstName)
-			if err != nil {
-				logger.Errorf("Failed to send KYB approval email to %s (KYB Profile %s): %v, response: %+v", email, kybProfileID, err, resp)
-			} else {
-				logger.Infof("KYB approval email sent successfully to %s (KYB Profile %s), message ID: %s", email, kybProfileID, resp.Id)
-			}
-
-			// Send Slack feedback notification
-			err = ctrl.slackService.SendActionFeedbackNotification(firstName, email, kybProfileID, "approve", "")
-			if err != nil {
-				logger.Warnf("Failed to send Slack feedback notification for KYB Profile %s: %v", kybProfileID, err)
-			}
-
-			logger.Infof("Processed Slack approve interaction in %v", time.Since(startTime))
 			return
 		}
 
@@ -1436,8 +1246,31 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 		if strings.HasPrefix(callbackID, "reject_modal_") {
 			kybProfileID := callbackID[len("reject_modal_"):]
 
-			// Prevent modal if already processed
-			if ctrl.isActionProcessed(kybProfileID, "approve") || ctrl.isActionProcessed(kybProfileID, "reject") {
+			// Check if this is a resubmission by looking at the user's current KYB status
+			kybProfileUUID, err := uuid.Parse(kybProfileID)
+			if err != nil {
+				logger.Errorf("Invalid KYB Profile ID format for rejection: %s, error: %v", kybProfileID, err)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid KYB Profile ID format"})
+				return
+			}
+
+			// Check current KYB status to determine if this is a resubmission
+			kyb, qerr := storage.Client.KYBProfile.
+				Query().
+				Where(kybprofile.IDEQ(kybProfileUUID)).
+				WithUser().
+				Only(ctx)
+			if qerr != nil || kyb.Edges.User == nil {
+				logger.Errorf("Failed to resolve KYB profile %s: %v", kybProfileID, qerr)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resolve KYB profile"})
+				return
+			}
+
+			// Allow processing if user status is rejected (resubmission) or if not already processed
+			userStatus := kyb.Edges.User.KybVerificationStatus
+			isResubmission := userStatus == user.KybVerificationStatusRejected
+
+			if !isResubmission && (ctrl.isActionProcessed(kybProfileID, "approve") || ctrl.isActionProcessed(kybProfileID, "reject")) {
 				logger.Warnf("Action already processed for KYB Profile %s", kybProfileID)
 				ctx.JSON(http.StatusOK, gin.H{"text": "This submission has already been processed."})
 				return
@@ -1484,6 +1317,16 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				return
 			}
 
+			// Extract comment (optional)
+			var rejectionComment string
+			if commentBlock, exists := values["comment_block"].(map[string]interface{}); exists {
+				if commentInput, exists := commentBlock["comment_input"].(map[string]interface{}); exists {
+					if commentValue, exists := commentInput["value"].(string); exists {
+						rejectionComment = strings.TrimSpace(commentValue)
+					}
+				}
+			}
+
 			// Extract email and firstName from private_metadata
 			privateMetadata, ok := view["private_metadata"].(string)
 			if !ok {
@@ -1509,13 +1352,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				firstName = "User"
 			}
 
-			// Parse KYB Profile ID for database operations
-			kybProfileUUID, err := uuid.Parse(kybProfileID)
-			if err != nil {
-				logger.Errorf("Invalid KYB Profile ID format for rejection: %s, error: %v", kybProfileID, err)
-				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid KYB Profile ID format"})
-				return
-			}
+			// KYB Profile UUID already parsed above
 
 			// Update User KYB status
 			_, err = storage.Client.User.
@@ -1529,17 +1366,26 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				return
 			}
 
-			// Update KYB Profile status (assuming you have a status field)
+			// Combine reason and comment for storage
+			var finalRejectionComment string
+			if rejectionComment != "" {
+				finalRejectionComment = fmt.Sprintf("%s::%s", reasonForDecline, rejectionComment)
+			} else {
+				finalRejectionComment = reasonForDecline
+			}
+
+			// Update KYB Profile with rejection comment
 			_, err = storage.Client.KYBProfile.
 				Update().
 				Where(kybprofile.IDEQ(kybProfileUUID)).
+				SetKybRejectionComment(finalRejectionComment).
 				Save(ctx)
 			if err != nil {
-				logger.Errorf("Failed to update KYB Profile status %s: %v", kybProfileID, err)
+				logger.Errorf("Failed to update KYB Profile with rejection comment %s: %v", kybProfileID, err)
 			}
 
 			// Send rejection email
-			resp, err := ctrl.emailService.SendKYBRejectionEmail(email, firstName, reasonForDecline)
+			resp, err := ctrl.emailService.SendKYBRejectionEmail(ctx, email, firstName, reasonForDecline)
 			if err != nil {
 				logger.Errorf("Failed to send KYB rejection email to %s (KYB Profile %s): %v, response: %+v", email, kybProfileID, err, resp)
 			} else {
@@ -1547,12 +1393,113 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			}
 
 			// Send Slack feedback notification
-			err = ctrl.slackService.SendActionFeedbackNotification(firstName, email, kybProfileID, "reject", reasonForDecline)
+			err = ctrl.slackService.SendActionFeedbackNotification(firstName, email, kybProfileID, "reject", finalRejectionComment)
 			if err != nil {
 				logger.Warnf("Failed to send Slack feedback notification for KYB Profile %s: %v", kybProfileID, err)
 			}
 
 			logger.Infof("Processed Slack modal submission for rejection in %v", time.Since(startTime))
+			return
+		}
+
+		if strings.HasPrefix(callbackID, "approve_modal_") {
+			kybProfileID := callbackID[len("approve_modal_"):]
+
+			// Check if this is a resubmission by looking at the user's current KYB status
+			kybProfileUUID, err := uuid.Parse(kybProfileID)
+			if err != nil {
+				logger.Errorf("Invalid KYB Profile ID format for approval: %s, error: %v", kybProfileID, err)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid KYB Profile ID format"})
+				return
+			}
+
+			// Check current KYB status to determine if this is a resubmission
+			kyb, qerr := storage.Client.KYBProfile.
+				Query().
+				Where(kybprofile.IDEQ(kybProfileUUID)).
+				WithUser().
+				Only(ctx)
+			if qerr != nil || kyb.Edges.User == nil {
+				logger.Errorf("Failed to resolve KYB profile %s: %v", kybProfileID, qerr)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resolve KYB profile"})
+				return
+			}
+
+			// Allow processing if user status is rejected (resubmission) or if not already processed
+			userStatus := kyb.Edges.User.KybVerificationStatus
+			isResubmission := userStatus == user.KybVerificationStatusRejected
+
+			if !isResubmission && (ctrl.isActionProcessed(kybProfileID, "approve") || ctrl.isActionProcessed(kybProfileID, "reject")) {
+				logger.Warnf("Action already processed for KYB Profile %s", kybProfileID)
+				ctx.JSON(http.StatusOK, gin.H{"text": "This submission has already been processed."})
+				return
+			}
+
+			// Mark as processed immediately
+			ctrl.markActionProcessed(kybProfileID, "approve")
+
+			// Extract email and firstName from private_metadata
+			privateMetadata, ok := view["private_metadata"].(string)
+			if !ok {
+				logger.Errorf("Missing private_metadata in view for KYB Profile %s", kybProfileID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing private_metadata"})
+				return
+			}
+			var metadata map[string]interface{}
+			if err := json.Unmarshal([]byte(privateMetadata), &metadata); err != nil {
+				logger.Errorf("Error parsing private_metadata for KYB Profile %s: %v", kybProfileID, err)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid metadata"})
+				return
+			}
+			email, ok := metadata["email"].(string)
+			if !ok || email == "" {
+				logger.Errorf("Missing email in private_metadata for KYB Profile %s", kybProfileID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing email in metadata"})
+				return
+			}
+			firstName, ok := metadata["firstName"].(string)
+			if !ok {
+				logger.Warnf("Missing firstName in private_metadata for KYB Profile %s; using default", kybProfileID)
+				firstName = "User"
+			}
+
+			// Update User KYB status using the already fetched KYB profile
+			_, err = storage.Client.User.
+				UpdateOneID(kyb.Edges.User.ID).
+				SetKybVerificationStatus(user.KybVerificationStatusApproved).
+				Save(ctx)
+			if err != nil {
+				logger.Errorf("Failed to approve KYB for user %s (KYB Profile %s): %v", email, kybProfileID, err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user KYB status"})
+				return
+			}
+
+			// Update KYB Profile status and clear rejection comment
+			_, err = storage.Client.KYBProfile.
+				Update().
+				Where(kybprofile.IDEQ(kybProfileUUID)).
+				ClearKybRejectionComment().
+				Save(ctx)
+			if err != nil {
+				logger.Errorf("Failed to update KYB Profile status %s: %v", kybProfileID, err)
+			}
+
+			// Send approval email
+			resp, err := ctrl.emailService.SendKYBApprovalEmail(ctx, email, firstName)
+			if err != nil {
+				logger.Errorf("Failed to send KYB approval email to %s (KYB Profile %s): %v, response: %+v", email, kybProfileID, err, resp)
+			} else {
+				logger.Infof("KYB approval email sent successfully to %s (KYB Profile %s), message ID: %s", email, kybProfileID, resp.Id)
+			}
+
+			// Send Slack feedback notification
+			approvalReason := "KYB submission approved successfully"
+			err = ctrl.slackService.SendActionFeedbackNotification(firstName, email, kybProfileID, "approve", approvalReason)
+			if err != nil {
+				logger.Warnf("Failed to send Slack feedback notification for KYB Profile %s: %v", kybProfileID, err)
+			}
+
+			logger.Infof("Processed Slack modal submission for approval in %v", time.Since(startTime))
 			return
 		}
 
@@ -1578,6 +1525,15 @@ func (ctrl *Controller) markActionProcessed(submissionID, actionType string) {
 	ctrl.processedActions[key] = true
 }
 
+// clearActionProcessed clears all processed actions for a submission ID (used for resubmissions)
+func (ctrl *Controller) clearActionProcessed(submissionID string) {
+	ctrl.actionMutex.Lock()
+	defer ctrl.actionMutex.Unlock()
+	// Remove both approve and reject entries for this submission
+	delete(ctrl.processedActions, fmt.Sprintf("%s_%s", submissionID, "approve"))
+	delete(ctrl.processedActions, fmt.Sprintf("%s_%s", submissionID, "reject"))
+}
+
 // HandleKYBSubmission handles the POST request for KYB submission
 func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 	var input types.KYBSubmissionInput
@@ -1586,6 +1542,12 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 			"Error": fmt.Sprintf("%v", err),
 		}).Errorf("Error: Failed to bind KYB submission input")
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid input", err.Error())
+		return
+	}
+
+	// Validate that user has agreed to Paycrest terms
+	if !input.IAcceptTerms {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Kindly accept the terms and conditions to proceed", nil)
 		return
 	}
 
@@ -1621,12 +1583,13 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		return
 	}
 
-	// Check if user already has a KYB submission
+	// Check if user already has a KYB submission and get the user's status
 	existingSubmission, err := storage.Client.KYBProfile.
 		Query().
 		Where(kybprofile.HasUserWith(user.IDEQ(userRecord.ID))).
-		Exist(ctx)
-	if err != nil {
+		WithUser().
+		Only(ctx)
+	if err != nil && !ent.IsNotFound(err) {
 		logger.WithFields(logger.Fields{
 			"Error":  fmt.Sprintf("%v", err),
 			"UserID": userID,
@@ -1635,9 +1598,14 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		return
 	}
 
-	if existingSubmission {
-		u.APIResponse(ctx, http.StatusConflict, "error", "KYB submission already submitted for this user", nil)
-		return
+	// If user has existing submission, check the status
+	if existingSubmission != nil {
+		userStatus := existingSubmission.Edges.User.KybVerificationStatus
+		if userStatus == user.KybVerificationStatusPending || userStatus == user.KybVerificationStatusApproved {
+			u.APIResponse(ctx, http.StatusConflict, "error", "KYB submission already submitted for this user", nil)
+			return
+		}
+		// If status is rejected, allow resubmission by updating the existing record
 	}
 
 	// --- Begin Transaction ---
@@ -1659,30 +1627,64 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		}
 	}()
 
-	kybBuilder := tx.KYBProfile.
-		Create().
-		SetMobileNumber(input.MobileNumber).
-		SetCompanyName(input.CompanyName).
-		SetRegisteredBusinessAddress(input.RegisteredBusinessAddress).
-		SetCertificateOfIncorporationURL(input.CertificateOfIncorporationUrl).
-		SetArticlesOfIncorporationURL(input.ArticlesOfIncorporationUrl).
-		SetProofOfBusinessAddressURL(input.ProofOfBusinessAddressUrl).
-		SetUserID(userRecord.ID)
+	var kybSubmission *ent.KYBProfile
 
-	if input.BusinessLicenseUrl != nil {
-		kybBuilder.SetBusinessLicenseURL(*input.BusinessLicenseUrl)
-	}
-	if input.AmlPolicyUrl != nil {
-		kybBuilder.SetAmlPolicyURL(*input.AmlPolicyUrl)
-	}
-	if input.KycPolicyUrl != nil {
-		kybBuilder.SetKycPolicyURL(*input.KycPolicyUrl)
-	}
+	if existingSubmission != nil {
+		// Update existing rejected submission
+		updateBuilder := tx.KYBProfile.
+			UpdateOneID(existingSubmission.ID).
+			SetMobileNumber(input.MobileNumber).
+			SetCompanyName(input.CompanyName).
+			SetRegisteredBusinessAddress(input.RegisteredBusinessAddress).
+			SetCertificateOfIncorporationURL(input.CertificateOfIncorporationUrl).
+			SetArticlesOfIncorporationURL(input.ArticlesOfIncorporationUrl).
+			SetProofOfBusinessAddressURL(input.ProofOfBusinessAddressUrl)
+			// Note: Rejection comment will be cleared when admin approves the resubmission
 
-	kybSubmission, err := kybBuilder.Save(ctx)
+		if input.BusinessLicenseUrl != nil {
+			updateBuilder = updateBuilder.SetBusinessLicenseURL(*input.BusinessLicenseUrl)
+		} else {
+			updateBuilder = updateBuilder.ClearBusinessLicenseURL()
+		}
+		if input.AmlPolicyUrl != nil {
+			updateBuilder = updateBuilder.SetAmlPolicyURL(*input.AmlPolicyUrl)
+		} else {
+			updateBuilder = updateBuilder.SetAmlPolicyURL("")
+		}
+		if input.KycPolicyUrl != nil {
+			updateBuilder = updateBuilder.SetKycPolicyURL(*input.KycPolicyUrl)
+		} else {
+			updateBuilder = updateBuilder.ClearKycPolicyURL()
+		}
+
+		kybSubmission, err = updateBuilder.Save(ctx)
+	} else {
+		// Create new submission
+		kybBuilder := tx.KYBProfile.
+			Create().
+			SetMobileNumber(input.MobileNumber).
+			SetCompanyName(input.CompanyName).
+			SetRegisteredBusinessAddress(input.RegisteredBusinessAddress).
+			SetCertificateOfIncorporationURL(input.CertificateOfIncorporationUrl).
+			SetArticlesOfIncorporationURL(input.ArticlesOfIncorporationUrl).
+			SetProofOfBusinessAddressURL(input.ProofOfBusinessAddressUrl).
+			SetUserID(userRecord.ID)
+
+		if input.BusinessLicenseUrl != nil {
+			kybBuilder.SetBusinessLicenseURL(*input.BusinessLicenseUrl)
+		}
+		if input.AmlPolicyUrl != nil {
+			kybBuilder.SetAmlPolicyURL(*input.AmlPolicyUrl)
+		}
+		if input.KycPolicyUrl != nil {
+			kybBuilder.SetKycPolicyURL(*input.KycPolicyUrl)
+		}
+
+		kybSubmission, err = kybBuilder.Save(ctx)
+	}
 	if err != nil {
-		if err := tx.Rollback(); err != nil {
-			logger.Errorf("Failed to rollback transaction: %v", err)
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
 		}
 		logger.WithFields(logger.Fields{
 			"Error":  fmt.Sprintf("%v", err),
@@ -1692,6 +1694,27 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		return
 	}
 
+	// Handle beneficial owners
+	if existingSubmission != nil {
+		// Delete existing beneficial owners for update
+		_, err = tx.BeneficialOwner.
+			Delete().
+			Where(beneficialowner.HasKybProfileWith(kybprofile.IDEQ(kybSubmission.ID))).
+			Exec(ctx)
+		if err != nil {
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
+			}
+			logger.WithFields(logger.Fields{
+				"Error":  fmt.Sprintf("%v", err),
+				"UserID": userID,
+			}).Errorf("Error: Failed to delete existing beneficial owners")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update beneficial owners", nil)
+			return
+		}
+	}
+
+	// Create new beneficial owners
 	for _, owner := range input.BeneficialOwners {
 		_, err := tx.BeneficialOwner.
 			Create().
@@ -1705,8 +1728,8 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 			SetKybProfileID(kybSubmission.ID).
 			Save(ctx)
 		if err != nil {
-			if err := tx.Rollback(); err != nil {
-				logger.Errorf("Failed to rollback transaction: %v", err)
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
 			}
 			logger.WithFields(logger.Fields{
 				"Error":  fmt.Sprintf("%v", err),
@@ -1716,6 +1739,27 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 			return
 		}
 	}
+
+	// Update user's KYB verification status to pending
+	_, err = tx.User.
+		Update().
+		Where(user.IDEQ(userRecord.ID)).
+		SetKybVerificationStatus(user.KybVerificationStatusPending).
+		Save(ctx)
+	if err != nil {
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
+		}
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": userID,
+		}).Errorf("Error: Failed to update user KYB verification status")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update user KYB verification status", nil)
+		return
+	}
+
+	// Clear any cached action processing for this KYB profile to allow resubmission processing
+	ctrl.clearActionProcessed(kybSubmission.ID.String())
 
 	// Commit transaction
 	if err := tx.Commit(); err != nil {
@@ -1735,9 +1779,106 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		return
 	}
 
-	u.APIResponse(ctx, http.StatusCreated, "success", "KYB submission submitted successfully", gin.H{
+	// Determine response message based on whether it's an update or new submission
+	var message string
+	if existingSubmission != nil {
+		message = "KYB submission updated successfully"
+	} else {
+		message = "KYB submission submitted successfully"
+	}
+
+	u.APIResponse(ctx, http.StatusCreated, "success", message, gin.H{
 		"submission_id": kybSubmission.ID,
 	})
+}
+
+// GetKYBDocuments retrieves KYB documents for rejected users
+func (ctrl *Controller) GetKYBDocuments(ctx *gin.Context) {
+	// Get user ID from the context
+	userIDValue, exists := ctx.Get("user_id")
+	if !exists {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "User not authenticated", nil)
+		return
+	}
+
+	// Validate user ID
+	userID, err := uuid.Parse(userIDValue.(string))
+	if err != nil {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid user ID", nil)
+		return
+	}
+
+	// Fetch user record
+	userRecord, err := storage.Client.User.
+		Query().
+		Where(user.IDEQ(userID)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusNotFound, "error", "User not found", nil)
+			return
+		}
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": userID,
+		}).Error("Error: Failed to query user")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to process request", nil)
+		return
+	}
+
+	// Only return documents if status is rejected
+	if userRecord.KybVerificationStatus != user.KybVerificationStatusRejected {
+		u.APIResponse(ctx, http.StatusForbidden, "error", "Documents only available for rejected submissions", nil)
+		return
+	}
+
+	// Fetch KYB profile with beneficial owners
+	kybProfile, err := storage.Client.KYBProfile.
+		Query().
+		Where(kybprofile.HasUserWith(user.IDEQ(userRecord.ID))).
+		WithBeneficialOwners().
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusNotFound, "error", "No KYB submission found", nil)
+			return
+		}
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": userID,
+		}).Error("Error: Failed to fetch KYB profile")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch documents", nil)
+		return
+	}
+
+	// Return structured data for frontend
+	response := types.KYBDocumentsResponse{
+		MobileNumber:                  kybProfile.MobileNumber,
+		CompanyName:                   kybProfile.CompanyName,
+		RegisteredBusinessAddress:     kybProfile.RegisteredBusinessAddress,
+		CertificateOfIncorporationUrl: kybProfile.CertificateOfIncorporationURL,
+		ArticlesOfIncorporationUrl:    kybProfile.ArticlesOfIncorporationURL,
+		BusinessLicenseUrl:            kybProfile.BusinessLicenseURL,
+		ProofOfBusinessAddressUrl:     kybProfile.ProofOfBusinessAddressURL,
+		AmlPolicyUrl:                  &kybProfile.AmlPolicyURL,
+		KycPolicyUrl:                  kybProfile.KycPolicyURL,
+		BeneficialOwners:              make([]types.BeneficialOwnerInput, len(kybProfile.Edges.BeneficialOwners)),
+		RejectionComment:              kybProfile.KybRejectionComment,
+	}
+
+	for i, owner := range kybProfile.Edges.BeneficialOwners {
+		response.BeneficialOwners[i] = types.BeneficialOwnerInput{
+			FullName:                     owner.FullName,
+			ResidentialAddress:           owner.ResidentialAddress,
+			DateOfBirth:                  owner.DateOfBirth,
+			OwnershipPercentage:          owner.OwnershipPercentage,
+			GovernmentIssuedIdType:       string(owner.GovernmentIssuedIDType),
+			GovernmentIssuedIdUrl:        owner.GovernmentIssuedIDURL,
+			ProofOfResidentialAddressUrl: owner.ProofOfResidentialAddressURL,
+		}
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "KYB documents retrieved", response)
 }
 
 // InsightWebhook handles the webhook callback from thirdweb insight, including signature verification and event processing
@@ -1889,9 +2030,16 @@ func (ctrl *Controller) handleNewEvent(ctx *gin.Context, event types.ThirdwebWeb
 
 	// Log the event signature for debugging
 	logger.WithFields(logger.Fields{
-		"EventSignature": eventSignature,
-		"EventName":      event.Data.Decoded.Name,
-		"TxHash":         event.Data.TransactionHash,
+		"EventSignature":   eventSignature,
+		"EventName":        event.Data.Decoded.Name,
+		"TxHash":           event.Data.TransactionHash,
+		"BlockNumber":      event.Data.BlockNumber,
+		"ChainId":          event.Data.ChainID,
+		"Address":          event.Data.Address,
+		"Topics":           event.Data.Topics,
+		"Data":             event.Data.Data,
+		"IndexedParams":    event.Data.Decoded.IndexedParams,
+		"NonIndexedParams": event.Data.Decoded.NonIndexedParams,
 	}).Infof("Processing webhook event")
 
 	switch eventSignature {
@@ -2473,7 +2621,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 						"EventType":    "ReceiveAddress",
 					}).Infof("Starting transfer event indexing for receive address")
 
-					counts, err := indexerInstance.IndexReceiveAddress(ctx, token, address, fromBlock, toBlock, txHash)
+					counts, err := indexerInstance.(*indexer.IndexerEVM).IndexReceiveAddressWithBypass(ctx, token, address, fromBlock, toBlock, txHash, true)
 					if err != nil && err.Error() != "no events found" {
 						logger.WithFields(logger.Fields{
 							"Error":        fmt.Sprintf("%v", err),
@@ -2539,4 +2687,109 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", responseMsg, response)
+}
+
+// IndexProviderAddress controller indexes provider addresses for OrderSettled events
+func (ctrl *Controller) IndexProviderAddress(ctx *gin.Context) {
+	var request struct {
+		Network      string `json:"network" binding:"required"`
+		ProviderID   string `json:"providerId" binding:"required"`
+		TokenSymbol  string `json:"tokenSymbol" binding:"required"`
+		CurrencyCode string `json:"currencyCode" binding:"required"`
+		FromBlock    int64  `json:"fromBlock"`
+		ToBlock      int64  `json:"toBlock"`
+		TxHash       string `json:"txHash"`
+	}
+
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid request payload", nil)
+		return
+	}
+
+	// Get network
+	network, err := storage.Client.Network.
+		Query().
+		Where(networkent.IdentifierEQ(request.Network)).
+		Only(ctx)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Network not found", nil)
+		return
+	}
+
+	// Get token
+	token, err := storage.Client.Token.
+		Query().
+		Where(
+			tokenEnt.SymbolEQ(request.TokenSymbol),
+			tokenEnt.HasNetworkWith(networkent.IDEQ(network.ID)),
+		).
+		WithNetwork().
+		Only(ctx)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Token not found", nil)
+		return
+	}
+
+	// Get provider order token to find the provider address
+	providerOrderToken, err := storage.Client.ProviderOrderToken.
+		Query().
+		Where(
+			providerordertoken.HasProviderWith(providerprofile.IDEQ(request.ProviderID)),
+			providerordertoken.HasTokenWith(tokenEnt.IDEQ(token.ID)),
+			providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(request.CurrencyCode)),
+			providerordertoken.AddressNEQ(""),
+		).
+		Only(ctx)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Provider order token not found", nil)
+		return
+	}
+
+	// Create indexer instance
+	var indexerInstance types.Indexer
+	if strings.HasPrefix(network.Identifier, "tron") {
+		indexerInstance = indexer.NewIndexerTron()
+	} else {
+		indexerInstance, err = indexer.NewIndexerEVM()
+		if err != nil {
+			logger.Errorf("Failed to create indexer: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create indexer", nil)
+			return
+		}
+	}
+
+	// Index provider address
+	eventCounts, err := indexerInstance.IndexProviderAddress(ctx, network, providerOrderToken.Address, request.FromBlock, request.ToBlock, request.TxHash)
+	if err != nil {
+		logger.Errorf("Failed to index provider address: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to index provider address", nil)
+		return
+	}
+
+	response := types.IndexTransactionResponse{
+		Events: *eventCounts,
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Provider address indexed successfully", response)
+}
+
+// GetEtherscanQueueStats controller returns statistics about the Etherscan queue
+func (ctrl *Controller) GetEtherscanQueueStats(ctx *gin.Context) {
+	// Create Etherscan service instance
+	etherscanService, err := svc.NewEtherscanService()
+	if err != nil {
+		logger.Errorf("Error: Failed to create Etherscan service: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create Etherscan service", err.Error())
+		return
+	}
+
+	// Get queue statistics
+	stats, err := etherscanService.GetQueueStats(ctx)
+	if err != nil {
+		logger.Errorf("Error: Failed to get Etherscan queue stats: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to get queue stats", err.Error())
+		return
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Etherscan queue stats fetched successfully", stats)
 }

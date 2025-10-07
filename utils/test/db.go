@@ -195,6 +195,8 @@ func CreateTestLockPaymentOrder(overrides map[string]interface{}) (*ent.LockPaym
 	payload := map[string]interface{}{
 		"gateway_id":           "order-123",
 		"amount":               100.50,
+		"amount_in_usd":        100.50,
+		"protocol_fee":         5.0,
 		"rate":                 750.0,
 		"status":               "pending",
 		"block_number":         12345,
@@ -236,6 +238,8 @@ func CreateTestLockPaymentOrder(overrides map[string]interface{}) (*ent.LockPaym
 		Create().
 		SetGatewayID(payload["gateway_id"].(string)).
 		SetAmount(decimal.NewFromFloat(payload["amount"].(float64))).
+		SetAmountInUsd(decimal.NewFromFloat(payload["amount_in_usd"].(float64))).
+		SetProtocolFee(decimal.NewFromFloat(payload["protocol_fee"].(float64))).
 		SetRate(decimal.NewFromFloat(payload["rate"].(float64))).
 		SetStatus(lockpaymentorder.Status(payload["status"].(string))).
 		SetOrderPercent(decimal.NewFromFloat(100.0)).
@@ -267,6 +271,7 @@ func CreateTestPaymentOrder(client types.RPCClient, token *ent.Token, overrides 
 	// Default payload
 	payload := map[string]interface{}{
 		"amount":             100.50,
+		"amount_in_usd":      100.50,
 		"rate":               750.0,
 		"status":             "pending",
 		"fee_percent":        0.0,
@@ -310,6 +315,7 @@ func CreateTestPaymentOrder(client types.RPCClient, token *ent.Token, overrides 
 		Create().
 		SetSenderProfile(overrides["sender"].(*ent.SenderProfile)).
 		SetAmount(decimal.NewFromFloat(payload["amount"].(float64))).
+		SetAmountInUsd(decimal.NewFromFloat(payload["amount_in_usd"].(float64))).
 		SetAmountPaid(decimal.NewFromInt(0)).
 		SetAmountReturned(decimal.NewFromInt(0)).
 		SetPercentSettled(decimal.NewFromInt(0)).
@@ -473,9 +479,27 @@ func CreateTestProviderProfile(overrides map[string]interface{}) (*ent.ProviderP
 		SetHostIdentifier(payload["host_identifier"].(string)).
 		SetProvisionMode(providerprofile.ProvisionMode(payload["provision_mode"].(string))).
 		SetUserID(payload["user_id"].(uuid.UUID)).
-		AddCurrencyIDs(payload["currency_id"].(uuid.UUID)).
 		SetVisibilityMode(providerprofile.VisibilityMode(payload["visibility_mode"].(string))).
-		SetIsAvailable(payload["is_available"].(bool)).
+		Save(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	// Create ProviderCurrencies entry
+	currencyID := payload["currency_id"].(uuid.UUID)
+	currency, err := db.Client.FiatCurrency.Get(context.Background(), currencyID)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = db.Client.ProviderCurrencies.
+		Create().
+		SetProvider(profile).
+		SetCurrency(currency).
+		SetAvailableBalance(decimal.Zero).
+		SetTotalBalance(decimal.Zero).
+		SetReservedBalance(decimal.Zero).
+		SetIsAvailable(true).
 		Save(context.Background())
 
 	return profile, err
