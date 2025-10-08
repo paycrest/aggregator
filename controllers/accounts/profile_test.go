@@ -870,7 +870,11 @@ func TestProfile(t *testing.T) {
 			defer redisClient.Close()
 
 			// Set the global Redis client for testing
+			prevClient := db.RedisClient
 			db.RedisClient = redisClient
+			defer func() {
+				db.RedisClient = prevClient
+			}()
 
 			// Create test provision buckets and add provider to Redis queues
 			ctx := context.Background()
@@ -971,7 +975,11 @@ func TestProfile(t *testing.T) {
 			defer redisClient.Close()
 
 			// Set the global Redis client for testing
+			prevClient := db.RedisClient
 			db.RedisClient = redisClient
+			defer func() {
+				db.RedisClient = prevClient
+			}()
 
 			// Create test provision bucket and add provider to Redis queue
 			ctx := context.Background()
@@ -1048,7 +1056,11 @@ func TestProfile(t *testing.T) {
 			defer redisClient.Close()
 
 			// Set the global Redis client for testing
+			prevClient := db.RedisClient
 			db.RedisClient = redisClient
+			defer func() {
+				db.RedisClient = prevClient
+			}()
 
 			// Create test provision bucket
 			ctx := context.Background()
@@ -1111,7 +1123,11 @@ func TestProfile(t *testing.T) {
 			defer redisClient.Close()
 
 			// Set the global Redis client for testing
+			prevClient := db.RedisClient
 			db.RedisClient = redisClient
+			defer func() {
+				db.RedisClient = prevClient
+			}()
 
 			// Create test provision bucket
 			ctx := context.Background()
