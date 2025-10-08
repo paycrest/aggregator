@@ -132,17 +132,41 @@ func setupTestDB(t *testing.T) (*ent.Client, func()) {
 // ensureDatabaseSchema makes sure the database schema is properly created
 // This is especially important for tables needed by auth middleware
 func ensureDatabaseSchema(t *testing.T) {
-	// Verify schema exists, if not recreate it
-	_, err := db.Client.APIKey.Query().Count(context.Background())
-	if err != nil {
-		if strings.Contains(err.Error(), "no such table") {
-			t.Logf("Database schema missing, recreating...")
-			err = db.Client.Schema.Create(context.Background())
-			if err != nil {
-				t.Fatalf("Failed to recreate database schema: %v", err)
+	ctx := context.Background()
+
+	// Check multiple critical tables to ensure schema completeness
+	criticalTables := []struct {
+		name  string
+		check func() (int, error)
+	}{
+		{"api_keys", func() (int, error) { return db.Client.APIKey.Query().Count(ctx) }},
+		{"networks", func() (int, error) { return db.Client.Network.Query().Count(ctx) }},
+		{"users", func() (int, error) { return db.Client.User.Query().Count(ctx) }},
+		{"tokens", func() (int, error) { return db.Client.Token.Query().Count(ctx) }},
+		{"fiat_currencies", func() (int, error) { return db.Client.FiatCurrency.Query().Count(ctx) }},
+	}
+
+	for _, table := range criticalTables {
+		_, err := table.check()
+		if err != nil {
+			// Check if it's a "no such table" error
+			if strings.Contains(err.Error(), "no such table") {
+				t.Logf("Database schema missing (table: %s), recreating entire schema...", table.name)
+				err = db.Client.Schema.Create(ctx)
+				if err != nil {
+					t.Fatalf("Failed to recreate database schema: %v", err)
+				}
+
+				// After recreating schema, we need to re-run setup to populate test data
+				t.Logf("Recreating test data after schema recreation...")
+				err = setup()
+				if err != nil {
+					t.Fatalf("Failed to recreate test data after schema recreation: %v", err)
+				}
+				return // Schema and data recreated, no need to check remaining tables
+			} else {
+				t.Fatalf("Unexpected database error for table %s: %v", table.name, err)
 			}
-		} else {
-			t.Fatalf("Unexpected database error: %v", err)
 		}
 	}
 }
@@ -1716,12 +1740,8 @@ func TestProvider(t *testing.T) {
 		// Ensure database schema is properly created for all subtests
 		ensureDatabaseSchema(t)
 
-		// Reset API key for the tests
-		err := setup()
-		assert.NoError(t, err)
-
 		t.Run("Invalid Request", func(t *testing.T) {
-			// Ensure the schema is verified before running each test
+			// Ensure schema is verified before running each test
 			ensureDatabaseSchema(t)
 
 			t.Run("Invalid HMAC", func(t *testing.T) {
@@ -1771,7 +1791,7 @@ func TestProvider(t *testing.T) {
 			})
 
 			t.Run("Invalid Payload", func(t *testing.T) {
-				// Ensure the schema is verified before the test
+				// Ensure schema is verified before the test
 				ensureDatabaseSchema(t)
 
 				// Test default params
@@ -1797,7 +1817,7 @@ func TestProvider(t *testing.T) {
 			})
 
 			t.Run("Invalid Order ID", func(t *testing.T) {
-				// Ensure the schema is verified before the test
+				// Ensure schema is verified before the test
 				ensureDatabaseSchema(t)
 
 				// Test default params
@@ -1826,16 +1846,6 @@ func TestProvider(t *testing.T) {
 			})
 
 			t.Run("Order Id that doesn't Exist", func(t *testing.T) {
-				// Ensure the schema is verified before the test
-				ensureDatabaseSchema(t)
-
-				// Recreate the entire schema if needed to ensure all tables exist
-				_, err := db.Client.Network.Query().Count(context.Background())
-				if err != nil && strings.Contains(err.Error(), "no such table") {
-					// Recreate the entire schema since we can't create just one table
-					err = db.Client.Schema.Create(context.Background())
-					assert.NoError(t, err, "Failed to create schema with networks table")
-				}
 
 				order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
 					"gateway_id": uuid.New().String(),
