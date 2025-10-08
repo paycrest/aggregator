@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -111,29 +112,84 @@ func setup() error {
 	return nil
 }
 
-func TestProvider(t *testing.T) {
-
+// setupTestDB sets up a fresh test database for each test
+func setupTestDB(t *testing.T) (*ent.Client, func()) {
 	// Set up test database client with proper schema
 	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-	defer client.Close()
-
+	
 	// Run migrations to create all tables
 	err := client.Schema.Create(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to create database schema: %v", err)
 	}
 
+	// Return client and cleanup function
+	return client, func() {
+		client.Close()
+	}
+}
+
+// ensureDatabaseSchema makes sure the database schema is properly created
+// This is especially important for tables needed by auth middleware
+func ensureDatabaseSchema(t *testing.T) {
+	// Verify schema exists, if not recreate it
+	_, err := db.Client.APIKey.Query().Count(context.Background())
+	if err != nil {
+		if strings.Contains(err.Error(), "no such table") {
+			t.Logf("Database schema missing, recreating...")
+			err = db.Client.Schema.Create(context.Background())
+			if err != nil {
+				t.Fatalf("Failed to recreate database schema: %v", err)
+			}
+		} else {
+			t.Fatalf("Unexpected database error: %v", err)
+		}
+	}
+}
+
+// setupTestRedis sets up a fresh Redis client for testing
+func setupTestRedis(t *testing.T) (*redis.Client, func()) {
+	mr, err := miniredis.Run()
+	assert.NoError(t, err)
+	
+	redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	
+	return redisClient, func() {
+		mr.Close()
+	}
+}
+
+func TestProvider(t *testing.T) {
+	// Set up test database
+	client, dbCleanup := setupTestDB(t)
+	defer dbCleanup()
+	
+	// Store the original client to restore later
+	originalClient := db.Client
+	defer func() {
+		// Restore the original client after the test completes
+		db.Client = originalClient
+	}()
+	
+	// Set the test client
 	db.Client = client
 
 	// Set up in-memory Redis
-	mr, err := miniredis.Run()
-	assert.NoError(t, err)
-	defer mr.Close()
-
-	db.RedisClient = redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	redisClient, redisCleanup := setupTestRedis(t)
+	defer redisCleanup()
+	
+	// Store the original Redis client to restore later
+	originalRedisClient := db.RedisClient
+	defer func() {
+		// Restore the original Redis client after the test completes
+		db.RedisClient = originalRedisClient
+	}()
+	
+	// Set the test Redis client
+	db.RedisClient = redisClient
 
 	// Setup test data
-	err = setup()
+	err := setup()
 	assert.NoError(t, err)
 
 	// Set up test routers
@@ -1657,8 +1713,16 @@ func TestProvider(t *testing.T) {
 	})
 
 	t.Run("FulfillOrder", func(t *testing.T) {
+		// Ensure database schema is properly created for all subtests
+		ensureDatabaseSchema(t)
+		
+		// Reset API key for the tests
+		err := setup()
+		assert.NoError(t, err)
 
 		t.Run("Invalid Request", func(t *testing.T) {
+			// Ensure the schema is verified before running each test
+			ensureDatabaseSchema(t)
 
 			t.Run("Invalid HMAC", func(t *testing.T) {
 
@@ -1707,6 +1771,9 @@ func TestProvider(t *testing.T) {
 			})
 
 			t.Run("Invalid Payload", func(t *testing.T) {
+				// Ensure the schema is verified before the test
+				ensureDatabaseSchema(t)
+				
 				// Test default params
 				var payload = map[string]interface{}{
 					"timestamp": time.Now().Unix(),
@@ -1730,7 +1797,9 @@ func TestProvider(t *testing.T) {
 			})
 
 			t.Run("Invalid Order ID", func(t *testing.T) {
-
+				// Ensure the schema is verified before the test
+				ensureDatabaseSchema(t)
+				
 				// Test default params
 				var payload = map[string]interface{}{
 					"timestamp": time.Now().Unix(),
@@ -1757,6 +1826,16 @@ func TestProvider(t *testing.T) {
 			})
 
 			t.Run("Order Id that doesn't Exist", func(t *testing.T) {
+				// Ensure the schema is verified before the test
+				ensureDatabaseSchema(t)
+				
+				// Recreate the entire schema if needed to ensure all tables exist
+				_, err := db.Client.Network.Query().Count(context.Background())
+				if err != nil && strings.Contains(err.Error(), "no such table") {
+					// Recreate the entire schema since we can't create just one table
+					err = db.Client.Schema.Create(context.Background())
+					assert.NoError(t, err, "Failed to create schema with networks table")
+				}
 
 				order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
 					"gateway_id": uuid.New().String(),
