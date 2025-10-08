@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/google/uuid"
 	"github.com/jarcoal/httpmock"
 	_ "github.com/mattn/go-sqlite3"
@@ -112,22 +113,27 @@ func setup() error {
 
 func TestProvider(t *testing.T) {
 
-	// Set up test database client
+	// Set up test database client with proper schema
 	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
 	defer client.Close()
 
+	// Run migrations to create all tables
+	err := client.Schema.Create(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to create database schema: %v", err)
+	}
+
 	db.Client = client
 
-	redisClient := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
-	})
+	// Set up in-memory Redis
+	mr, err := miniredis.Run()
+	assert.NoError(t, err)
+	defer mr.Close()
 
-	defer redisClient.Close()
-
-	db.RedisClient = redisClient
+	db.RedisClient = redis.NewClient(&redis.Options{Addr: mr.Addr()})
 
 	// Setup test data
-	err := setup()
+	err = setup()
 	assert.NoError(t, err)
 
 	// Set up test routers
@@ -965,8 +971,10 @@ func TestProvider(t *testing.T) {
 					"providerId":  providerProfile.ID,
 				}
 
-				err = db.RedisClient.HSet(context.Background(), orderKey, orderRequestData).Err()
-				assert.NoError(t, err, fmt.Errorf("failed to map order to a provider in Redis: %v", err))
+				if db.RedisClient != nil {
+					err = db.RedisClient.HSet(context.Background(), orderKey, orderRequestData).Err()
+					assert.NoError(t, err, fmt.Errorf("failed to map order to a provider in Redis: %v", err))
+				}
 
 				// Test default params
 				var payload = map[string]interface{}{
@@ -1018,8 +1026,10 @@ func TestProvider(t *testing.T) {
 					"providerId":  providerProfile.ID,
 				}
 
-				err = db.RedisClient.HSet(context.Background(), orderKey, orderRequestData).Err()
-				assert.NoError(t, err, fmt.Errorf("failed to map order to a provider in Redis: %v", err))
+				if db.RedisClient != nil {
+					err = db.RedisClient.HSet(context.Background(), orderKey, orderRequestData).Err()
+					assert.NoError(t, err, fmt.Errorf("failed to map order to a provider in Redis: %v", err))
+				}
 
 				// Test default params
 				var payload = map[string]interface{}{
@@ -1062,8 +1072,10 @@ func TestProvider(t *testing.T) {
 				"providerId":  testCtx.provider.ID,
 			}
 
-			err = db.RedisClient.HSet(context.Background(), orderKey, orderRequestData).Err()
-			assert.NoError(t, err, fmt.Errorf("failed to map order to a provider in Redis: %v", err))
+			if db.RedisClient != nil {
+				err = db.RedisClient.HSet(context.Background(), orderKey, orderRequestData).Err()
+				assert.NoError(t, err, fmt.Errorf("failed to map order to a provider in Redis: %v", err))
+			}
 
 			// Test default params
 			var payload = map[string]interface{}{
@@ -1191,8 +1203,10 @@ func TestProvider(t *testing.T) {
 					"providerId":  providerProfile.ID,
 				}
 
-				err = db.RedisClient.HSet(context.Background(), orderKey, orderRequestData).Err()
-				assert.NoError(t, err, fmt.Errorf("failed to map order to a provider in Redis: %v", err))
+				if db.RedisClient != nil {
+					err = db.RedisClient.HSet(context.Background(), orderKey, orderRequestData).Err()
+					assert.NoError(t, err, fmt.Errorf("failed to map order to a provider in Redis: %v", err))
+				}
 
 				// Test default params
 				var payload = map[string]interface{}{
@@ -1244,8 +1258,10 @@ func TestProvider(t *testing.T) {
 					"providerId":  providerProfile.ID,
 				}
 
-				err = db.RedisClient.HSet(context.Background(), orderKey, orderRequestData).Err()
-				assert.NoError(t, err, fmt.Errorf("failed to map order to a provider in Redis: %v", err))
+				if db.RedisClient != nil {
+					err = db.RedisClient.HSet(context.Background(), orderKey, orderRequestData).Err()
+					assert.NoError(t, err, fmt.Errorf("failed to map order to a provider in Redis: %v", err))
+				}
 
 				// Test default params
 				var payload = map[string]interface{}{
@@ -1321,8 +1337,10 @@ func TestProvider(t *testing.T) {
 				"providerId":  testCtx.provider.ID,
 			}
 
-			err = db.RedisClient.HSet(context.Background(), orderKey, orderRequestData).Err()
-			assert.NoError(t, err, fmt.Errorf("failed to map order to a provider in Redis: %v", err))
+			if db.RedisClient != nil {
+				err = db.RedisClient.HSet(context.Background(), orderKey, orderRequestData).Err()
+				assert.NoError(t, err, fmt.Errorf("failed to map order to a provider in Redis: %v", err))
+			}
 
 			// Test default params
 			var payload = map[string]interface{}{
@@ -1475,8 +1493,10 @@ func TestProvider(t *testing.T) {
 					"providerId":  providerProfile.ID,
 				}
 
-				err = db.RedisClient.HSet(context.Background(), orderKey, orderRequestData).Err()
-				assert.NoError(t, err, fmt.Errorf("failed to map order to a provider in Redis: %v", err))
+				if db.RedisClient != nil {
+					err = db.RedisClient.HSet(context.Background(), orderKey, orderRequestData).Err()
+					assert.NoError(t, err, fmt.Errorf("failed to map order to a provider in Redis: %v", err))
+				}
 
 				// Test default params
 				var payload = map[string]interface{}{
@@ -1545,8 +1565,10 @@ func TestProvider(t *testing.T) {
 				"providerId":  testCtx.provider.ID, // Use the same provider as the order
 			}
 
-			err = db.RedisClient.HSet(context.Background(), orderKey, orderRequestData).Err()
-			assert.NoError(t, err, fmt.Errorf("failed to map order to a provider in Redis: %v", err))
+			if db.RedisClient != nil {
+				err = db.RedisClient.HSet(context.Background(), orderKey, orderRequestData).Err()
+				assert.NoError(t, err, fmt.Errorf("failed to map order to a provider in Redis: %v", err))
+			}
 
 			// Test default params
 			var payload = map[string]interface{}{
@@ -1603,8 +1625,10 @@ func TestProvider(t *testing.T) {
 				"providerId":  testCtx.provider.ID,
 			}
 
-			err = db.RedisClient.HSet(context.Background(), orderKey, orderRequestData).Err()
-			assert.NoError(t, err, fmt.Errorf("failed to map order to a provider in Redis: %v", err))
+			if db.RedisClient != nil {
+				err = db.RedisClient.HSet(context.Background(), orderKey, orderRequestData).Err()
+				assert.NoError(t, err, fmt.Errorf("failed to map order to a provider in Redis: %v", err))
+			}
 
 			// Test default params
 			var payload = map[string]interface{}{
@@ -1759,8 +1783,10 @@ func TestProvider(t *testing.T) {
 					"providerId":  providerProfile.ID,
 				}
 
-				err = db.RedisClient.HSet(context.Background(), orderKey, orderRequestData).Err()
-				assert.NoError(t, err, fmt.Errorf("failed to map order to a provider in Redis: %v", err))
+				if db.RedisClient != nil {
+					err = db.RedisClient.HSet(context.Background(), orderKey, orderRequestData).Err()
+					assert.NoError(t, err, fmt.Errorf("failed to map order to a provider in Redis: %v", err))
+				}
 
 				// Test default params
 				var payload = map[string]interface{}{
@@ -1794,6 +1820,19 @@ func TestProvider(t *testing.T) {
 				"provider":   testCtx.provider,
 				"status":     "fulfilled",
 			})
+			assert.NoError(t, err)
+
+			// Create a provision bucket and associate it with the order
+			provisionBucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
+				"currency_id": testCtx.currency.ID,
+				"provider_id": testCtx.provider.ID,
+				"max_amount":  decimal.NewFromFloat(1000.0),
+				"min_amount":  decimal.NewFromFloat(1.0),
+			})
+			assert.NoError(t, err)
+
+			// Associate the provision bucket with the order
+			order, err = test.AddProvisionBucketToLockPaymentOrder(order, provisionBucket.ID)
 			assert.NoError(t, err)
 
 			tx_id := "0x123" + fmt.Sprint(rand.Intn(1000000))

@@ -156,6 +156,7 @@ func setup() error {
 			Create().
 			SetSenderProfile(senderProfile).
 			SetAmount(decimal.NewFromFloat(100.50)).
+			SetAmountInUsd(decimal.NewFromFloat(100.50)).
 			SetAmountPaid(decimal.NewFromInt(0)).
 			SetAmountReturned(decimal.NewFromInt(0)).
 			SetPercentSettled(decimal.NewFromInt(0)).
@@ -194,9 +195,15 @@ func setup() error {
 
 func TestSender(t *testing.T) {
 
-	// Set up test database client
+	// Set up test database client with proper schema
 	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
 	defer client.Close()
+
+	// Run migrations to create all tables
+	err := client.Schema.Create(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to create database schema: %v", err)
+	}
 
 	db.Client = client
 
@@ -208,12 +215,20 @@ func TestSender(t *testing.T) {
 	db.RedisClient = redis.NewClient(&redis.Options{Addr: mr.Addr()})
 
 	// Setup test data
-	err = setup()
-	assert.NoError(t, err)
+	setupErr := setup()
+	assert.NoError(t, setupErr)
 
 	senderTokens, err := client.SenderOrderToken.Query().All(context.Background())
 	assert.NoError(t, err)
 	assert.Greater(t, len(senderTokens), 0)
+
+	// Set environment variables for engine service to match our mocks
+	os.Setenv("ENGINE_BASE_URL", "https://engine.thirdweb.com")
+	os.Setenv("THIRDWEB_SECRET_KEY", "test-secret-key")
+	defer func() {
+		os.Unsetenv("ENGINE_BASE_URL")
+		os.Unsetenv("THIRDWEB_SECRET_KEY")
+	}()
 
 	// Set up test routers
 	router := gin.New()
@@ -230,13 +245,6 @@ func TestSender(t *testing.T) {
 	var paymentOrderUUID uuid.UUID
 
 	t.Run("InitiatePaymentOrder", func(t *testing.T) {
-		// Set environment variables for engine service to match our mocks
-		os.Setenv("ENGINE_BASE_URL", "https://engine.thirdweb.com")
-		os.Setenv("THIRDWEB_SECRET_KEY", "test-secret-key")
-		defer func() {
-			os.Unsetenv("ENGINE_BASE_URL")
-			os.Unsetenv("THIRDWEB_SECRET_KEY")
-		}()
 
 		// Activate httpmock globally to intercept all HTTP calls (including fastshot)
 		httpmock.Activate()
@@ -717,7 +725,7 @@ func TestSender(t *testing.T) {
 			// Assert the totalOrders value
 			totalOrders, ok := data["totalOrders"].(float64)
 			assert.True(t, ok, "totalOrders is not of type float64")
-			assert.Equal(t, 10, int(totalOrders))
+			assert.Equal(t, 10, int(totalOrders)) // 9 orders from setup + 1 from InitiatePaymentOrder test
 
 			// Assert the totalOrderVolume value
 			totalOrderVolumeStr, ok := data["totalOrderVolume"].(string)
@@ -756,6 +764,7 @@ func TestSender(t *testing.T) {
 				Create().
 				SetSenderProfile(testCtx.user).
 				SetAmount(decimal.NewFromFloat(100.0)).
+				SetAmountInUsd(decimal.NewFromFloat(100.0)).
 				SetAmountPaid(decimal.NewFromInt(0)).
 				SetAmountReturned(decimal.NewFromInt(0)).
 				SetPercentSettled(decimal.NewFromInt(0)).
@@ -811,7 +820,7 @@ func TestSender(t *testing.T) {
 			// Assert the totalOrders value
 			totalOrders, ok := data["totalOrders"].(float64)
 			assert.True(t, ok, "totalOrders is not of type float64")
-			assert.Equal(t, 11, int(totalOrders)) // The settled order is being counted
+			assert.Equal(t, 11, int(totalOrders)) // 9 from setup + 1 from InitiatePaymentOrder + 1 settled order
 
 			// Assert the totalOrderVolume value (100 NGN / 950 market rate ≈ 0.105 USD)
 			totalOrderVolumeStr, ok := data["totalOrderVolume"].(string)

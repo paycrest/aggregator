@@ -434,6 +434,8 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				WithOrder(func(poq *ent.LockPaymentOrderQuery) {
 					poq.WithToken(func(tq *ent.TokenQuery) {
 						tq.WithNetwork()
+					}).WithProvider().WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) {
+						pbq.WithCurrency()
 					})
 				}).
 				Only(ctx)

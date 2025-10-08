@@ -957,6 +957,84 @@ func (s *EngineService) GetContractEventsWithFallback(ctx context.Context, netwo
 	return nil, fmt.Errorf("both RPC and ThirdWeb failed - RPC: %w", rpcErr)
 }
 
+// TransferToken transfers ERC-20 tokens using Thirdweb Engine API
+func (s *EngineService) TransferToken(ctx context.Context, chainID int64, fromAddress string, toAddress string, tokenAddress string, amount string, idempotencyKey string) (queueID string, err error) {
+	if tokenAddress == "" {
+		return "", fmt.Errorf("tokenAddress is required for ERC-20 transfers")
+	}
+
+	// ERC-20 transfer function ABI
+	transferABI := `[
+		{
+			"inputs": [
+				{"internalType": "address", "name": "to", "type": "address"},
+				{"internalType": "uint256", "name": "amount", "type": "uint256"}
+			],
+			"name": "transfer",
+			"outputs": [
+				{"internalType": "bool", "name": "", "type": "bool"}
+			],
+			"stateMutability": "nonpayable",
+			"type": "function"
+		}
+	]`
+
+	// Prepare the contract call parameters
+	contractParams := map[string]interface{}{
+		"contractAddress": tokenAddress,
+		"method":         "transfer",
+		"params":         []interface{}{toAddress, amount},
+		"abi":            transferABI,
+		"value":          "0", // No ETH value for ERC-20 transfers
+	}
+
+	// Prepare execution options
+	executionOptions := map[string]interface{}{
+		"chainId":         fmt.Sprintf("%d", chainID),
+		"idempotencyKey":  idempotencyKey,
+		"from":            fromAddress,
+		"type":            "auto",
+	}
+
+	// Prepare the request payload
+	payload := map[string]interface{}{
+		"executionOptions": executionOptions,
+		"params":           []map[string]interface{}{contractParams},
+		"webhookOptions":   []interface{}{}, // No webhook
+	}
+
+	res, err := fastshot.NewClient(s.config.BaseURL).
+		Config().SetTimeout(60 * time.Second).
+		Header().AddAll(map[string]string{
+		"Accept":               "application/json",
+		"Content-Type":         "application/json",
+		"x-vault-access-token": s.config.AccessToken,
+		"X-Secret-Key":         s.config.ThirdwebSecretKey,
+	}).Build().POST("/v1/write/contract").
+		Body().AsJSON(payload).Send()
+	if err != nil {
+		return "", fmt.Errorf("failed to execute token transfer: %w", err)
+	}
+
+	data, err := utils.ParseJSONResponse(res.RawResponse)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse JSON response: %w", err)
+	}
+
+	// Extract queue ID from response
+	if result, ok := data["result"].(map[string]interface{}); ok {
+		if transactions, ok := result["transactions"].([]interface{}); ok && len(transactions) > 0 {
+			if tx, ok := transactions[0].(map[string]interface{}); ok {
+				if id, ok := tx["id"].(string); ok {
+					return id, nil
+				}
+			}
+		}
+	}
+
+	return "", fmt.Errorf("failed to extract queue ID from response")
+}
+
 // ParseUserOpErrorJSON parses a UserOperation error JSON and returns the decoded error string
 func (s *EngineService) ParseUserOpErrorJSON(errorJSON map[string]interface{}) string {
 	// Extract the error object if it's nested

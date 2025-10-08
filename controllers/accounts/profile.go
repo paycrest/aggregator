@@ -762,7 +762,9 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 
 	// Get currencies through ProviderCurrencies
 	providerCurrencies, err := provider.QueryProviderCurrencies().
-		WithCurrency().
+		WithCurrency(func(fcq *ent.FiatCurrencyQuery) {
+			fcq.Where(fiatcurrency.IsEnabledEQ(true))
+		}).
 		All(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{

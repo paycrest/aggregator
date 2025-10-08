@@ -787,6 +787,7 @@ func (ctrl *Controller) KYCWebhook(ctx *gin.Context) {
 // SlackInteractionHandler handles Slack interaction requests
 func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 	startTime := time.Now()
+	cnfg := config.AuthConfig()
 
 	// Parse form-encoded payload
 	payloadStr := ctx.PostForm("payload")
@@ -832,11 +833,24 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 		}
 
 		var kybProfileID string
-		if strings.Contains(actionID, "_") {
-			kybProfileID = actionID[strings.Index(actionID, "_")+1:]
+		if strings.HasPrefix(actionID, "approve_kyb_") || strings.HasPrefix(actionID, "reject_kyb_") {
+			kybProfileID = actionID[strings.Index(actionID, "_kyb_")+5:] // Extract ID after "approve_kyb_" or "reject_kyb_"
+		} else if actionID == "review_kyb" || strings.HasPrefix(actionID, "review_kyb_") {
+			if actionID == "review_kyb" {
+				kybProfileID, ok = action["value"].(string)
+				if !ok {
+					logger.Errorf("Missing or invalid value for review_kyb action: %+v", action)
+					ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing action value"})
+					return
+				}
+			} else {
+				kybProfileID = actionID[strings.Index(actionID, "_kyb_")+5:] // Handle legacy review_kyb_<id>
+			}
+		} else if strings.HasPrefix(actionID, "approve_") || strings.HasPrefix(actionID, "reject_") {
+			kybProfileID = actionID[strings.Index(actionID, "_")+1:] // Handle legacy approve_<id>, reject_<id>
 		} else {
-			logger.Errorf("Invalid action_id format: %s", actionID)
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action_id format"})
+			logger.Errorf("Invalid action_id: %s", actionID)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action_id"})
 			return
 		}
 
@@ -887,8 +901,184 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			firstName = "User"
 		}
 
-		// Handle reject button - only open modal
-		if strings.HasPrefix(actionID, "reject_") {
+		// Handle review button - open modal with KYB details
+		if actionID == "review_kyb" {
+			logger.Infof("Review button clicked for KYB Profile %s", kybProfileID)
+			triggerID, ok := payload["trigger_id"].(string)
+			if !ok {
+				logger.Errorf("Missing trigger_id for modal, KYB Profile ID: %s", kybProfileID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing trigger_id"})
+				return
+			}
+
+			// Build modal content with KYB details
+			var blocks []map[string]interface{}
+			blocks = append(blocks, map[string]interface{}{
+				"type": "section",
+				"text": map[string]interface{}{
+					"type": "mrkdwn",
+					"text": "*KYB Profile Details*",
+				},
+			})
+			blocks = append(blocks, map[string]interface{}{
+				"type": "section",
+				"text": map[string]interface{}{
+					"type": "mrkdwn",
+					"text": fmt.Sprintf(
+						"*Company Name*: %s\n*Mobile Number*: %s\n*Registered Business Address*: %s\n*Certificate of Incorporation*: %s\n*Articles of Incorporation*: %s\n*Proof of Business Address*: %s",
+						kybProfile.CompanyName,
+						kybProfile.MobileNumber,
+						kybProfile.RegisteredBusinessAddress,
+						kybProfile.CertificateOfIncorporationURL,
+						kybProfile.ArticlesOfIncorporationURL,
+						kybProfile.ProofOfBusinessAddressURL,
+					),
+				},
+			})
+
+			// Add optional fields
+			if kybProfile.BusinessLicenseURL != nil {
+				blocks = append(blocks, map[string]interface{}{
+					"type": "section",
+					"text": map[string]interface{}{
+						"type": "mrkdwn",
+						"text": fmt.Sprintf("*Business License*: %s", *kybProfile.BusinessLicenseURL),
+					},
+				})
+			}
+			if kybProfile.AmlPolicyURL != "" {
+				blocks = append(blocks, map[string]interface{}{
+					"type": "section",
+					"text": map[string]interface{}{
+						"type": "mrkdwn",
+						"text": fmt.Sprintf("*AML Policy*: %s", kybProfile.AmlPolicyURL),
+					},
+				})
+			}
+			if kybProfile.KycPolicyURL != nil {
+				blocks = append(blocks, map[string]interface{}{
+					"type": "section",
+					"text": map[string]interface{}{
+						"type": "mrkdwn",
+						"text": fmt.Sprintf("*KYC Policy*: %s", *kybProfile.KycPolicyURL),
+					},
+				})
+			}
+
+			// Add beneficial owners
+			if len(kybProfile.Edges.BeneficialOwners) > 0 {
+				blocks = append(blocks, map[string]interface{}{
+					"type": "section",
+					"text": map[string]interface{}{
+						"type": "mrkdwn",
+						"text": "*Beneficial Owners*",
+					},
+				})
+				for i, owner := range kybProfile.Edges.BeneficialOwners {
+					idType := "Not specified"
+					if owner.GovernmentIssuedIDType != "" {
+						idType = string(owner.GovernmentIssuedIDType)
+					}
+					blocks = append(blocks, map[string]interface{}{
+						"type": "section",
+						"text": map[string]interface{}{
+							"type": "mrkdwn",
+							"text": fmt.Sprintf(
+								"*Owner %d*\n*Full Name*: %s\n*Residential Address*: %s\n*Proof of Address*: %s\n*Government Issued ID*: %s\n*ID Type*: %s\n*Date of Birth*: %s\n*Ownership Percentage*: %.2f%%",
+								i+1,
+								owner.FullName,
+								owner.ResidentialAddress,
+								owner.ProofOfResidentialAddressURL,
+								owner.GovernmentIssuedIDURL,
+								idType,
+								owner.DateOfBirth,
+								owner.OwnershipPercentage,
+							),
+						},
+					})
+				}
+			}
+
+			// Add approval confirmation section
+			blocks = append(blocks, map[string]interface{}{
+				"type": "section",
+				"text": map[string]interface{}{
+					"type": "mrkdwn",
+					"text": "*Review Complete*\n\nIf all information looks correct, click 'Approve' to approve this KYB submission.",
+				},
+			})
+
+			modal := map[string]interface{}{
+				"trigger_id": triggerID,
+				"view": map[string]interface{}{
+					"type":             "modal",
+					"callback_id":      "approve_modal_" + kybProfileID,
+					"private_metadata": fmt.Sprintf(`{"email":"%s","kyb_profile_id":"%s","firstName":"%s"}`, email, kybProfileID, firstName),
+					"title": map[string]interface{}{
+						"type": "plain_text",
+						"text": "KYB Review",
+					},
+					"submit": map[string]interface{}{
+						"type": "plain_text",
+						"text": "Approve",
+					},
+					"blocks": blocks,
+				},
+			}
+
+			jsonPayload, err := json.Marshal(modal)
+			if err != nil {
+				logger.Errorf("Failed to marshal modal payload for KYB Profile %s: %v", kybProfileID, err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create modal"})
+				return
+			}
+
+			client := &http.Client{Timeout: 5 * time.Second}
+			req, err := http.NewRequest("POST", "https://slack.com/api/views.open", bytes.NewBuffer(jsonPayload))
+			if err != nil {
+				logger.Errorf("Failed to create Slack API request for KYB Profile %s: %v", kybProfileID, err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create modal request"})
+				return
+			}
+			req.Header.Set("Content-Type", "application/json")
+			if cnfg.SlackBotToken == "" {
+				logger.Errorf("Slack bot token not configured for KYB Profile %s", kybProfileID)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Slack bot token not configured"})
+				return
+			}
+			if !strings.HasPrefix(cnfg.SlackBotToken, "xoxb-") {
+				logger.Errorf("Invalid Slack bot token format for KYB Profile %s", kybProfileID)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid Slack bot token format"})
+				return
+			}
+			req.Header.Set("Authorization", "Bearer "+cnfg.SlackBotToken)
+
+			resp, err := client.Do(req)
+			if err != nil {
+				logger.Errorf("Failed to open Slack modal for KYB Profile %s: %v", kybProfileID, err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open modal"})
+				return
+			}
+			defer resp.Body.Close()
+
+			body, _ := io.ReadAll(resp.Body)
+			var s struct {
+				OK    bool   `json:"ok"`
+				Error string `json:"error"`
+			}
+			_ = json.Unmarshal(body, &s)
+			if resp.StatusCode != http.StatusOK || !s.OK {
+				logger.Errorf("Slack views.open failed for KYB %s. status=%d ok=%v err=%s body=%s", kybProfileID, resp.StatusCode, s.OK, s.Error, string(body))
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open modal"})
+				return
+			}
+
+			ctx.JSON(http.StatusOK, gin.H{})
+			return
+		}
+
+		// Handle reject button (from initial notification or modal) - open modal
+		if strings.HasPrefix(actionID, "reject_") || strings.HasPrefix(actionID, "reject_kyb_") {
 			logger.Infof("Reject button clicked for KYB Profile %s, action: %+v", kybProfileID, action)
 			triggerID, ok := payload["trigger_id"].(string)
 			if !ok {
@@ -994,7 +1184,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				return
 			}
 
-			client := &http.Client{}
+			client := &http.Client{Timeout: 5 * time.Second}
 			req, err := http.NewRequest("POST", "https://slack.com/api/views.open", bytes.NewBuffer(jsonPayload))
 			if err != nil {
 				logger.Errorf("Failed to create Slack API request for KYB Profile %s: %v", kybProfileID, err)
@@ -1018,9 +1208,14 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			}
 			defer resp.Body.Close()
 
-			if resp.StatusCode != http.StatusOK {
-				body, _ := io.ReadAll(resp.Body)
-				logger.Errorf("Slack API responded with status %d for KYB Profile %s: %s", resp.StatusCode, kybProfileID, string(body))
+			body, _ := io.ReadAll(resp.Body)
+			var s struct {
+				OK    bool   `json:"ok"`
+				Error string `json:"error"`
+			}
+			_ = json.Unmarshal(body, &s)
+			if resp.StatusCode != http.StatusOK || !s.OK {
+				logger.Errorf("Slack views.open failed for KYB %s. status=%d ok=%v err=%s body=%s", kybProfileID, resp.StatusCode, s.OK, s.Error, string(body))
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open modal"})
 				return
 			}
@@ -1119,8 +1314,31 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 		if strings.HasPrefix(callbackID, "reject_modal_") {
 			kybProfileID := callbackID[len("reject_modal_"):]
 
-			// Prevent modal if already processed
-			if ctrl.isActionProcessed(kybProfileID, "approve") || ctrl.isActionProcessed(kybProfileID, "reject") {
+			// Check if this is a resubmission by looking at the user's current KYB status
+			kybProfileUUID, err := uuid.Parse(kybProfileID)
+			if err != nil {
+				logger.Errorf("Invalid KYB Profile ID format for rejection: %s, error: %v", kybProfileID, err)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid KYB Profile ID format"})
+				return
+			}
+
+			// Check current KYB status to determine if this is a resubmission
+			kyb, qerr := storage.Client.KYBProfile.
+				Query().
+				Where(kybprofile.IDEQ(kybProfileUUID)).
+				WithUser().
+				Only(ctx)
+			if qerr != nil || kyb.Edges.User == nil {
+				logger.Errorf("Failed to resolve KYB profile %s: %v", kybProfileID, qerr)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resolve KYB profile"})
+				return
+			}
+
+			// Allow processing if user status is rejected (resubmission) or if not already processed
+			userStatus := kyb.Edges.User.KybVerificationStatus
+			isResubmission := userStatus == user.KybVerificationStatusRejected
+
+			if !isResubmission && (ctrl.isActionProcessed(kybProfileID, "approve") || ctrl.isActionProcessed(kybProfileID, "reject")) {
 				logger.Warnf("Action already processed for KYB Profile %s", kybProfileID)
 				ctx.JSON(http.StatusOK, gin.H{"text": "This submission has already been processed."})
 				return
@@ -1202,13 +1420,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				firstName = "User"
 			}
 
-			// Parse KYB Profile ID for database operations
-			kybProfileUUID, err := uuid.Parse(kybProfileID)
-			if err != nil {
-				logger.Errorf("Invalid KYB Profile ID format for rejection: %s, error: %v", kybProfileID, err)
-				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid KYB Profile ID format"})
-				return
-			}
+			// KYB Profile UUID already parsed above
 
 			// Update User KYB status
 			_, err = storage.Client.User.
@@ -1258,6 +1470,107 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			return
 		}
 
+		if strings.HasPrefix(callbackID, "approve_modal_") {
+			kybProfileID := callbackID[len("approve_modal_"):]
+
+			// Check if this is a resubmission by looking at the user's current KYB status
+			kybProfileUUID, err := uuid.Parse(kybProfileID)
+			if err != nil {
+				logger.Errorf("Invalid KYB Profile ID format for approval: %s, error: %v", kybProfileID, err)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid KYB Profile ID format"})
+				return
+			}
+
+			// Check current KYB status to determine if this is a resubmission
+			kyb, qerr := storage.Client.KYBProfile.
+				Query().
+				Where(kybprofile.IDEQ(kybProfileUUID)).
+				WithUser().
+				Only(ctx)
+			if qerr != nil || kyb.Edges.User == nil {
+				logger.Errorf("Failed to resolve KYB profile %s: %v", kybProfileID, qerr)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resolve KYB profile"})
+				return
+			}
+
+			// Allow processing if user status is rejected (resubmission) or if not already processed
+			userStatus := kyb.Edges.User.KybVerificationStatus
+			isResubmission := userStatus == user.KybVerificationStatusRejected
+
+			if !isResubmission && (ctrl.isActionProcessed(kybProfileID, "approve") || ctrl.isActionProcessed(kybProfileID, "reject")) {
+				logger.Warnf("Action already processed for KYB Profile %s", kybProfileID)
+				ctx.JSON(http.StatusOK, gin.H{"text": "This submission has already been processed."})
+				return
+			}
+
+			// Mark as processed immediately
+			ctrl.markActionProcessed(kybProfileID, "approve")
+
+			// Extract email and firstName from private_metadata
+			privateMetadata, ok := view["private_metadata"].(string)
+			if !ok {
+				logger.Errorf("Missing private_metadata in view for KYB Profile %s", kybProfileID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing private_metadata"})
+				return
+			}
+			var metadata map[string]interface{}
+			if err := json.Unmarshal([]byte(privateMetadata), &metadata); err != nil {
+				logger.Errorf("Error parsing private_metadata for KYB Profile %s: %v", kybProfileID, err)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid metadata"})
+				return
+			}
+			email, ok := metadata["email"].(string)
+			if !ok || email == "" {
+				logger.Errorf("Missing email in private_metadata for KYB Profile %s", kybProfileID)
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing email in metadata"})
+				return
+			}
+			firstName, ok := metadata["firstName"].(string)
+			if !ok {
+				logger.Warnf("Missing firstName in private_metadata for KYB Profile %s; using default", kybProfileID)
+				firstName = "User"
+			}
+
+			// Update User KYB status using the already fetched KYB profile
+			_, err = storage.Client.User.
+				UpdateOneID(kyb.Edges.User.ID).
+				SetKybVerificationStatus(user.KybVerificationStatusApproved).
+				Save(ctx)
+			if err != nil {
+				logger.Errorf("Failed to approve KYB for user %s (KYB Profile %s): %v", email, kybProfileID, err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user KYB status"})
+				return
+			}
+
+			// Update KYB Profile status and clear rejection comment
+			_, err = storage.Client.KYBProfile.
+				Update().
+				Where(kybprofile.IDEQ(kybProfileUUID)).
+				ClearKybRejectionComment().
+				Save(ctx)
+			if err != nil {
+				logger.Errorf("Failed to update KYB Profile status %s: %v", kybProfileID, err)
+			}
+
+			// Send approval email
+			resp, err := ctrl.emailService.SendKYBApprovalEmail(ctx, email, firstName)
+			if err != nil {
+				logger.Errorf("Failed to send KYB approval email to %s (KYB Profile %s): %v, response: %+v", email, kybProfileID, err, resp)
+			} else {
+				logger.Infof("KYB approval email sent successfully to %s (KYB Profile %s), message ID: %s", email, kybProfileID, resp.Id)
+			}
+
+			// Send Slack feedback notification
+			approvalReason := "KYB submission approved successfully"
+			err = ctrl.slackService.SendActionFeedbackNotification(firstName, email, kybProfileID, "approve", approvalReason)
+			if err != nil {
+				logger.Warnf("Failed to send Slack feedback notification for KYB Profile %s: %v", kybProfileID, err)
+			}
+
+			logger.Infof("Processed Slack modal submission for approval in %v", time.Since(startTime))
+			return
+		}
+
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Unknown callback_id"})
 		return
 	}
@@ -1280,6 +1593,15 @@ func (ctrl *Controller) markActionProcessed(submissionID, actionType string) {
 	ctrl.processedActions[key] = true
 }
 
+// clearActionProcessed clears all processed actions for a submission ID (used for resubmissions)
+func (ctrl *Controller) clearActionProcessed(submissionID string) {
+	ctrl.actionMutex.Lock()
+	defer ctrl.actionMutex.Unlock()
+	// Remove both approve and reject entries for this submission
+	delete(ctrl.processedActions, fmt.Sprintf("%s_%s", submissionID, "approve"))
+	delete(ctrl.processedActions, fmt.Sprintf("%s_%s", submissionID, "reject"))
+}
+
 // HandleKYBSubmission handles the POST request for KYB submission
 func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 	var input types.KYBSubmissionInput
@@ -1288,6 +1610,12 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 			"Error": fmt.Sprintf("%v", err),
 		}).Errorf("Error: Failed to bind KYB submission input")
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid input", err.Error())
+		return
+	}
+
+	// Validate that user has agreed to Paycrest terms
+	if !input.IAcceptTerms {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Kindly accept the terms and conditions to proceed", nil)
 		return
 	}
 
@@ -1323,12 +1651,13 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		return
 	}
 
-	// Check if user already has a KYB submission
+	// Check if user already has a KYB submission and get the user's status
 	existingSubmission, err := storage.Client.KYBProfile.
 		Query().
 		Where(kybprofile.HasUserWith(user.IDEQ(userRecord.ID))).
-		Exist(ctx)
-	if err != nil {
+		WithUser().
+		Only(ctx)
+	if err != nil && !ent.IsNotFound(err) {
 		logger.WithFields(logger.Fields{
 			"Error":  fmt.Sprintf("%v", err),
 			"UserID": userID,
@@ -1337,9 +1666,14 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		return
 	}
 
-	if existingSubmission {
-		u.APIResponse(ctx, http.StatusConflict, "error", "KYB submission already submitted for this user", nil)
-		return
+	// If user has existing submission, check the status
+	if existingSubmission != nil {
+		userStatus := existingSubmission.Edges.User.KybVerificationStatus
+		if userStatus == user.KybVerificationStatusPending || userStatus == user.KybVerificationStatusApproved {
+			u.APIResponse(ctx, http.StatusConflict, "error", "KYB submission already submitted for this user", nil)
+			return
+		}
+		// If status is rejected, allow resubmission by updating the existing record
 	}
 
 	// --- Begin Transaction ---
@@ -1361,30 +1695,64 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		}
 	}()
 
-	kybBuilder := tx.KYBProfile.
-		Create().
-		SetMobileNumber(input.MobileNumber).
-		SetCompanyName(input.CompanyName).
-		SetRegisteredBusinessAddress(input.RegisteredBusinessAddress).
-		SetCertificateOfIncorporationURL(input.CertificateOfIncorporationUrl).
-		SetArticlesOfIncorporationURL(input.ArticlesOfIncorporationUrl).
-		SetProofOfBusinessAddressURL(input.ProofOfBusinessAddressUrl).
-		SetUserID(userRecord.ID)
+	var kybSubmission *ent.KYBProfile
 
-	if input.BusinessLicenseUrl != nil {
-		kybBuilder.SetBusinessLicenseURL(*input.BusinessLicenseUrl)
-	}
-	if input.AmlPolicyUrl != nil {
-		kybBuilder.SetAmlPolicyURL(*input.AmlPolicyUrl)
-	}
-	if input.KycPolicyUrl != nil {
-		kybBuilder.SetKycPolicyURL(*input.KycPolicyUrl)
-	}
+	if existingSubmission != nil {
+		// Update existing rejected submission
+		updateBuilder := tx.KYBProfile.
+			UpdateOneID(existingSubmission.ID).
+			SetMobileNumber(input.MobileNumber).
+			SetCompanyName(input.CompanyName).
+			SetRegisteredBusinessAddress(input.RegisteredBusinessAddress).
+			SetCertificateOfIncorporationURL(input.CertificateOfIncorporationUrl).
+			SetArticlesOfIncorporationURL(input.ArticlesOfIncorporationUrl).
+			SetProofOfBusinessAddressURL(input.ProofOfBusinessAddressUrl)
+			// Note: Rejection comment will be cleared when admin approves the resubmission
 
-	kybSubmission, err := kybBuilder.Save(ctx)
+		if input.BusinessLicenseUrl != nil {
+			updateBuilder = updateBuilder.SetBusinessLicenseURL(*input.BusinessLicenseUrl)
+		} else {
+			updateBuilder = updateBuilder.ClearBusinessLicenseURL()
+		}
+		if input.AmlPolicyUrl != nil {
+			updateBuilder = updateBuilder.SetAmlPolicyURL(*input.AmlPolicyUrl)
+		} else {
+			updateBuilder = updateBuilder.SetAmlPolicyURL("")
+		}
+		if input.KycPolicyUrl != nil {
+			updateBuilder = updateBuilder.SetKycPolicyURL(*input.KycPolicyUrl)
+		} else {
+			updateBuilder = updateBuilder.ClearKycPolicyURL()
+		}
+
+		kybSubmission, err = updateBuilder.Save(ctx)
+	} else {
+		// Create new submission
+		kybBuilder := tx.KYBProfile.
+			Create().
+			SetMobileNumber(input.MobileNumber).
+			SetCompanyName(input.CompanyName).
+			SetRegisteredBusinessAddress(input.RegisteredBusinessAddress).
+			SetCertificateOfIncorporationURL(input.CertificateOfIncorporationUrl).
+			SetArticlesOfIncorporationURL(input.ArticlesOfIncorporationUrl).
+			SetProofOfBusinessAddressURL(input.ProofOfBusinessAddressUrl).
+			SetUserID(userRecord.ID)
+
+		if input.BusinessLicenseUrl != nil {
+			kybBuilder.SetBusinessLicenseURL(*input.BusinessLicenseUrl)
+		}
+		if input.AmlPolicyUrl != nil {
+			kybBuilder.SetAmlPolicyURL(*input.AmlPolicyUrl)
+		}
+		if input.KycPolicyUrl != nil {
+			kybBuilder.SetKycPolicyURL(*input.KycPolicyUrl)
+		}
+
+		kybSubmission, err = kybBuilder.Save(ctx)
+	}
 	if err != nil {
-		if err := tx.Rollback(); err != nil {
-			logger.Errorf("Failed to rollback transaction: %v", err)
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
 		}
 		logger.WithFields(logger.Fields{
 			"Error":  fmt.Sprintf("%v", err),
@@ -1394,6 +1762,27 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		return
 	}
 
+	// Handle beneficial owners
+	if existingSubmission != nil {
+		// Delete existing beneficial owners for update
+		_, err = tx.BeneficialOwner.
+			Delete().
+			Where(beneficialowner.HasKybProfileWith(kybprofile.IDEQ(kybSubmission.ID))).
+			Exec(ctx)
+		if err != nil {
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
+			}
+			logger.WithFields(logger.Fields{
+				"Error":  fmt.Sprintf("%v", err),
+				"UserID": userID,
+			}).Errorf("Error: Failed to delete existing beneficial owners")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update beneficial owners", nil)
+			return
+		}
+	}
+
+	// Create new beneficial owners
 	for _, owner := range input.BeneficialOwners {
 		_, err := tx.BeneficialOwner.
 			Create().
@@ -1407,8 +1796,8 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 			SetKybProfileID(kybSubmission.ID).
 			Save(ctx)
 		if err != nil {
-			if err := tx.Rollback(); err != nil {
-				logger.Errorf("Failed to rollback transaction: %v", err)
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
 			}
 			logger.WithFields(logger.Fields{
 				"Error":  fmt.Sprintf("%v", err),
@@ -1426,8 +1815,8 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		SetKybVerificationStatus(user.KybVerificationStatusPending).
 		Save(ctx)
 	if err != nil {
-		if err := tx.Rollback(); err != nil {
-			logger.Errorf("Failed to rollback transaction: %v", err)
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
 		}
 		logger.WithFields(logger.Fields{
 			"Error":  fmt.Sprintf("%v", err),
@@ -1436,6 +1825,9 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update user KYB verification status", nil)
 		return
 	}
+
+	// Clear any cached action processing for this KYB profile to allow resubmission processing
+	ctrl.clearActionProcessed(kybSubmission.ID.String())
 
 	// Commit transaction
 	if err := tx.Commit(); err != nil {
@@ -1455,9 +1847,106 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		return
 	}
 
-	u.APIResponse(ctx, http.StatusCreated, "success", "KYB submission submitted successfully", gin.H{
+	// Determine response message based on whether it's an update or new submission
+	var message string
+	if existingSubmission != nil {
+		message = "KYB submission updated successfully"
+	} else {
+		message = "KYB submission submitted successfully"
+	}
+
+	u.APIResponse(ctx, http.StatusCreated, "success", message, gin.H{
 		"submission_id": kybSubmission.ID,
 	})
+}
+
+// GetKYBDocuments retrieves KYB documents for rejected users
+func (ctrl *Controller) GetKYBDocuments(ctx *gin.Context) {
+	// Get user ID from the context
+	userIDValue, exists := ctx.Get("user_id")
+	if !exists {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "User not authenticated", nil)
+		return
+	}
+
+	// Validate user ID
+	userID, err := uuid.Parse(userIDValue.(string))
+	if err != nil {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid user ID", nil)
+		return
+	}
+
+	// Fetch user record
+	userRecord, err := storage.Client.User.
+		Query().
+		Where(user.IDEQ(userID)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusNotFound, "error", "User not found", nil)
+			return
+		}
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": userID,
+		}).Error("Error: Failed to query user")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to process request", nil)
+		return
+	}
+
+	// Only return documents if status is rejected
+	if userRecord.KybVerificationStatus != user.KybVerificationStatusRejected {
+		u.APIResponse(ctx, http.StatusForbidden, "error", "Documents only available for rejected submissions", nil)
+		return
+	}
+
+	// Fetch KYB profile with beneficial owners
+	kybProfile, err := storage.Client.KYBProfile.
+		Query().
+		Where(kybprofile.HasUserWith(user.IDEQ(userRecord.ID))).
+		WithBeneficialOwners().
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusNotFound, "error", "No KYB submission found", nil)
+			return
+		}
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": userID,
+		}).Error("Error: Failed to fetch KYB profile")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch documents", nil)
+		return
+	}
+
+	// Return structured data for frontend
+	response := types.KYBDocumentsResponse{
+		MobileNumber:                  kybProfile.MobileNumber,
+		CompanyName:                   kybProfile.CompanyName,
+		RegisteredBusinessAddress:     kybProfile.RegisteredBusinessAddress,
+		CertificateOfIncorporationUrl: kybProfile.CertificateOfIncorporationURL,
+		ArticlesOfIncorporationUrl:    kybProfile.ArticlesOfIncorporationURL,
+		BusinessLicenseUrl:            kybProfile.BusinessLicenseURL,
+		ProofOfBusinessAddressUrl:     kybProfile.ProofOfBusinessAddressURL,
+		AmlPolicyUrl:                  &kybProfile.AmlPolicyURL,
+		KycPolicyUrl:                  kybProfile.KycPolicyURL,
+		BeneficialOwners:              make([]types.BeneficialOwnerInput, len(kybProfile.Edges.BeneficialOwners)),
+		RejectionComment:              kybProfile.KybRejectionComment,
+	}
+
+	for i, owner := range kybProfile.Edges.BeneficialOwners {
+		response.BeneficialOwners[i] = types.BeneficialOwnerInput{
+			FullName:                     owner.FullName,
+			ResidentialAddress:           owner.ResidentialAddress,
+			DateOfBirth:                  owner.DateOfBirth,
+			OwnershipPercentage:          owner.OwnershipPercentage,
+			GovernmentIssuedIdType:       string(owner.GovernmentIssuedIDType),
+			GovernmentIssuedIdUrl:        owner.GovernmentIssuedIDURL,
+			ProofOfResidentialAddressUrl: owner.ProofOfResidentialAddressURL,
+		}
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "KYB documents retrieved", response)
 }
 
 // InsightWebhook handles the webhook callback from thirdweb insight, including signature verification and event processing

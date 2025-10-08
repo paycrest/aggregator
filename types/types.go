@@ -709,6 +709,7 @@ type KYBSubmissionInput struct {
 	AmlPolicyUrl                  *string                `json:"amlPolicyUrl"`
 	KycPolicyUrl                  *string                `json:"kycPolicyUrl"`
 	BeneficialOwners              []BeneficialOwnerInput `json:"beneficialOwners" binding:"required,dive"`
+	IAcceptTerms         bool                   `json:"IAcceptTerms"`
 }
 
 // BeneficialOwnerInput represents the input structure for a beneficial owner
@@ -720,6 +721,21 @@ type BeneficialOwnerInput struct {
 	DateOfBirth                  string  `json:"dateOfBirth" binding:"required"`
 	OwnershipPercentage          float64 `json:"ownershipPercentage" binding:"required,gt=0,lte=100"`
 	GovernmentIssuedIdType       string  `json:"governmentIssuedIdType" binding:"required,oneof=passport drivers_license national_id"`
+}
+
+// KYBDocumentsResponse represents the response structure for KYB documents retrieval
+type KYBDocumentsResponse struct {
+	MobileNumber                  string                 `json:"mobileNumber"`
+	CompanyName                   string                 `json:"companyName"`
+	RegisteredBusinessAddress     string                 `json:"registeredBusinessAddress"`
+	CertificateOfIncorporationUrl string                 `json:"certificateOfIncorporationUrl"`
+	ArticlesOfIncorporationUrl    string                 `json:"articlesOfIncorporationUrl"`
+	BusinessLicenseUrl            *string                `json:"businessLicenseUrl"`
+	ProofOfBusinessAddressUrl     string                 `json:"proofOfBusinessAddressUrl"`
+	AmlPolicyUrl                  *string                `json:"amlPolicyUrl"`
+	KycPolicyUrl                  *string                `json:"kycPolicyUrl"`
+	BeneficialOwners              []BeneficialOwnerInput `json:"beneficialOwners"`
+	RejectionComment              *string                `json:"rejectionComment,omitempty"`
 }
 
 // IndexTransactionRequest represents the request payload for indexing a specific transaction
