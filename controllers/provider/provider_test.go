@@ -116,7 +116,7 @@ func setup() error {
 func setupTestDB(t *testing.T) (*ent.Client, func()) {
 	// Set up test database client with proper schema
 	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-	
+
 	// Run migrations to create all tables
 	err := client.Schema.Create(context.Background())
 	if err != nil {
@@ -151,9 +151,9 @@ func ensureDatabaseSchema(t *testing.T) {
 func setupTestRedis(t *testing.T) (*redis.Client, func()) {
 	mr, err := miniredis.Run()
 	assert.NoError(t, err)
-	
+
 	redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
-	
+
 	return redisClient, func() {
 		mr.Close()
 	}
@@ -163,28 +163,28 @@ func TestProvider(t *testing.T) {
 	// Set up test database
 	client, dbCleanup := setupTestDB(t)
 	defer dbCleanup()
-	
+
 	// Store the original client to restore later
 	originalClient := db.Client
 	defer func() {
 		// Restore the original client after the test completes
 		db.Client = originalClient
 	}()
-	
+
 	// Set the test client
 	db.Client = client
 
 	// Set up in-memory Redis
 	redisClient, redisCleanup := setupTestRedis(t)
 	defer redisCleanup()
-	
+
 	// Store the original Redis client to restore later
 	originalRedisClient := db.RedisClient
 	defer func() {
 		// Restore the original Redis client after the test completes
 		db.RedisClient = originalRedisClient
 	}()
-	
+
 	// Set the test Redis client
 	db.RedisClient = redisClient
 
@@ -1715,7 +1715,7 @@ func TestProvider(t *testing.T) {
 	t.Run("FulfillOrder", func(t *testing.T) {
 		// Ensure database schema is properly created for all subtests
 		ensureDatabaseSchema(t)
-		
+
 		// Reset API key for the tests
 		err := setup()
 		assert.NoError(t, err)
@@ -1773,7 +1773,7 @@ func TestProvider(t *testing.T) {
 			t.Run("Invalid Payload", func(t *testing.T) {
 				// Ensure the schema is verified before the test
 				ensureDatabaseSchema(t)
-				
+
 				// Test default params
 				var payload = map[string]interface{}{
 					"timestamp": time.Now().Unix(),
@@ -1799,7 +1799,7 @@ func TestProvider(t *testing.T) {
 			t.Run("Invalid Order ID", func(t *testing.T) {
 				// Ensure the schema is verified before the test
 				ensureDatabaseSchema(t)
-				
+
 				// Test default params
 				var payload = map[string]interface{}{
 					"timestamp": time.Now().Unix(),
@@ -1828,7 +1828,7 @@ func TestProvider(t *testing.T) {
 			t.Run("Order Id that doesn't Exist", func(t *testing.T) {
 				// Ensure the schema is verified before the test
 				ensureDatabaseSchema(t)
-				
+
 				// Recreate the entire schema if needed to ensure all tables exist
 				_, err := db.Client.Network.Query().Count(context.Background())
 				if err != nil && strings.Contains(err.Error(), "no such table") {
