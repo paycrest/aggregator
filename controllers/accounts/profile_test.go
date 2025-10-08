@@ -3,6 +3,7 @@ package accounts
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -15,6 +16,7 @@ import (
 	"github.com/paycrest/aggregator/types"
 	"github.com/shopspring/decimal"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/paycrest/aggregator/ent/enttest"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
@@ -28,6 +30,7 @@ import (
 	"github.com/paycrest/aggregator/ent/user"
 	"github.com/paycrest/aggregator/utils/test"
 	"github.com/paycrest/aggregator/utils/token"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -851,6 +854,319 @@ func TestProfile(t *testing.T) {
 			// Expect two tokens (one for KES and one for USD)
 			assert.Len(t, respAll.Data.Tokens, 2)
 
+		})
+	})
+
+	t.Run("UpdateProviderProfile_RedisQueueRemoval", func(t *testing.T) {
+		t.Run("Should remove provider from Redis queues when IsAvailable is set to false", func(t *testing.T) {
+			// Setup miniredis for testing
+			s := miniredis.RunT(t)
+			defer s.Close()
+
+			// Create Redis client for testing
+			redisClient := redis.NewClient(&redis.Options{
+				Addr: s.Addr(),
+			})
+			defer redisClient.Close()
+
+			// Set the global Redis client for testing
+			db.RedisClient = redisClient
+
+			// Create test provision buckets and add provider to Redis queues
+			ctx := context.Background()
+
+			// Get the currency from the existing provider profile
+			providerWithCurrencies, err := db.Client.ProviderProfile.Query().
+				Where(providerprofile.IDEQ(testCtx.providerProfile.ID)).
+				WithProviderCurrencies(func(pcq *ent.ProviderCurrenciesQuery) {
+					pcq.WithCurrency()
+				}).
+				Only(ctx)
+			assert.NoError(t, err)
+			assert.NotEmpty(t, providerWithCurrencies.Edges.ProviderCurrencies)
+
+			currency := providerWithCurrencies.Edges.ProviderCurrencies[0].Edges.Currency
+
+			// Create provision buckets
+			bucket1, err := db.Client.ProvisionBucket.Create().
+				SetMinAmount(decimal.NewFromInt(100)).
+				SetMaxAmount(decimal.NewFromInt(1000)).
+				SetCurrency(currency).
+				Save(ctx)
+			assert.NoError(t, err)
+
+			bucket2, err := db.Client.ProvisionBucket.Create().
+				SetMinAmount(decimal.NewFromInt(1000)).
+				SetMaxAmount(decimal.NewFromInt(10000)).
+				SetCurrency(currency).
+				Save(ctx)
+			assert.NoError(t, err)
+
+			// Add provider to provision buckets
+			_, err = db.Client.ProviderProfile.UpdateOneID(testCtx.providerProfile.ID).
+				AddProvisionBuckets(bucket1, bucket2).
+				Save(ctx)
+			assert.NoError(t, err)
+
+			// Add provider data to Redis queues
+			redisKey1 := fmt.Sprintf("bucket_%s_%s_%s", currency.Code, bucket1.MinAmount, bucket1.MaxAmount)
+			redisKey2 := fmt.Sprintf("bucket_%s_%s_%s", currency.Code, bucket2.MinAmount, bucket2.MaxAmount)
+
+			providerData1 := testCtx.providerProfile.ID + ":USDC:550:" + bucket1.MinAmount.String() + ":" + bucket1.MaxAmount.String()
+			providerData2 := testCtx.providerProfile.ID + ":USDC:550:" + bucket2.MinAmount.String() + ":" + bucket2.MaxAmount.String()
+
+			// Add some test data to Redis queues
+			redisClient.RPush(ctx, redisKey1, providerData1, "other_provider:USDC:550:"+bucket1.MinAmount.String()+":"+bucket1.MaxAmount.String())
+			redisClient.RPush(ctx, redisKey2, providerData2, "another_provider:USDC:550:"+bucket2.MinAmount.String()+":"+bucket2.MaxAmount.String())
+
+			// Verify provider is in Redis queues
+			queue1, err := redisClient.LRange(ctx, redisKey1, 0, -1).Result()
+			assert.NoError(t, err)
+			assert.Len(t, queue1, 2)
+			assert.Contains(t, queue1, providerData1)
+
+			queue2, err := redisClient.LRange(ctx, redisKey2, 0, -1).Result()
+			assert.NoError(t, err)
+			assert.Len(t, queue2, 2)
+			assert.Contains(t, queue2, providerData2)
+
+			// Prepare request to set IsAvailable to false
+			payload := types.ProviderProfilePayload{
+				Currency:    "KES",
+				IsAvailable: false,
+			}
+
+			// Generate access token
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Make the request
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			// Verify provider was removed from Redis queues
+			queue1After, err := redisClient.LRange(ctx, redisKey1, 0, -1).Result()
+			assert.NoError(t, err)
+			assert.Len(t, queue1After, 1) // Only other_provider should remain
+			assert.NotContains(t, queue1After, providerData1)
+
+			queue2After, err := redisClient.LRange(ctx, redisKey2, 0, -1).Result()
+			assert.NoError(t, err)
+			assert.Len(t, queue2After, 1) // Only another_provider should remain
+			assert.NotContains(t, queue2After, providerData2)
+		})
+
+		t.Run("Should not remove provider from Redis queues when IsAvailable is set to true", func(t *testing.T) {
+			// Setup miniredis for testing
+			s := miniredis.RunT(t)
+			defer s.Close()
+
+			// Create Redis client for testing
+			redisClient := redis.NewClient(&redis.Options{
+				Addr: s.Addr(),
+			})
+			defer redisClient.Close()
+
+			// Set the global Redis client for testing
+			db.RedisClient = redisClient
+
+			// Create test provision bucket and add provider to Redis queue
+			ctx := context.Background()
+
+			// Get the currency from the existing provider profile
+			providerWithCurrencies, err := db.Client.ProviderProfile.Query().
+				Where(providerprofile.IDEQ(testCtx.providerProfile.ID)).
+				WithProviderCurrencies(func(pcq *ent.ProviderCurrenciesQuery) {
+					pcq.WithCurrency()
+				}).
+				Only(ctx)
+			assert.NoError(t, err)
+			assert.NotEmpty(t, providerWithCurrencies.Edges.ProviderCurrencies)
+
+			currency := providerWithCurrencies.Edges.ProviderCurrencies[0].Edges.Currency
+
+			bucket, err := db.Client.ProvisionBucket.Create().
+				SetMinAmount(decimal.NewFromInt(100)).
+				SetMaxAmount(decimal.NewFromInt(1000)).
+				SetCurrency(currency).
+				Save(ctx)
+			assert.NoError(t, err)
+
+			// Add provider to provision bucket
+			_, err = db.Client.ProviderProfile.UpdateOneID(testCtx.providerProfile.ID).
+				AddProvisionBuckets(bucket).
+				Save(ctx)
+			assert.NoError(t, err)
+
+			// Add provider data to Redis queue
+			redisKey := fmt.Sprintf("bucket_%s_%s_%s", currency.Code, bucket.MinAmount, bucket.MaxAmount)
+			providerData := testCtx.providerProfile.ID + ":USDC:550:" + bucket.MinAmount.String() + ":" + bucket.MaxAmount.String()
+			redisClient.RPush(ctx, redisKey, providerData, "other_provider:USDC:550:"+bucket.MinAmount.String()+":"+bucket.MaxAmount.String())
+
+			// Verify provider is in Redis queue
+			queue, err := redisClient.LRange(ctx, redisKey, 0, -1).Result()
+			assert.NoError(t, err)
+			assert.Len(t, queue, 2)
+			assert.Contains(t, queue, providerData)
+
+			// Prepare request to set IsAvailable to true
+			payload := types.ProviderProfilePayload{
+				Currency:    "KES",
+				IsAvailable: true,
+			}
+
+			// Generate access token
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Make the request
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			// Verify provider is still in Redis queue
+			queueAfter, err := redisClient.LRange(ctx, redisKey, 0, -1).Result()
+			assert.NoError(t, err)
+			assert.Len(t, queueAfter, 2) // Should remain unchanged
+			assert.Contains(t, queueAfter, providerData)
+		})
+
+		t.Run("Should handle Redis errors gracefully without blocking profile update", func(t *testing.T) {
+			// Setup miniredis for testing
+			s := miniredis.RunT(t)
+			defer s.Close()
+
+			// Create Redis client for testing
+			redisClient := redis.NewClient(&redis.Options{
+				Addr: s.Addr(),
+			})
+			defer redisClient.Close()
+
+			// Set the global Redis client for testing
+			db.RedisClient = redisClient
+
+			// Create test provision bucket
+			ctx := context.Background()
+
+			// Get the currency from the existing provider profile
+			providerWithCurrencies, err := db.Client.ProviderProfile.Query().
+				Where(providerprofile.IDEQ(testCtx.providerProfile.ID)).
+				WithProviderCurrencies(func(pcq *ent.ProviderCurrenciesQuery) {
+					pcq.WithCurrency()
+				}).
+				Only(ctx)
+			assert.NoError(t, err)
+			assert.NotEmpty(t, providerWithCurrencies.Edges.ProviderCurrencies)
+
+			currency := providerWithCurrencies.Edges.ProviderCurrencies[0].Edges.Currency
+
+			bucket, err := db.Client.ProvisionBucket.Create().
+				SetMinAmount(decimal.NewFromInt(100)).
+				SetMaxAmount(decimal.NewFromInt(1000)).
+				SetCurrency(currency).
+				Save(ctx)
+			assert.NoError(t, err)
+
+			// Add provider to provision bucket
+			_, err = db.Client.ProviderProfile.UpdateOneID(testCtx.providerProfile.ID).
+				AddProvisionBuckets(bucket).
+				Save(ctx)
+			assert.NoError(t, err)
+
+			// Close Redis connection to simulate Redis error
+			redisClient.Close()
+
+			// Prepare request to set IsAvailable to false
+			payload := types.ProviderProfilePayload{
+				Currency:    "KES",
+				IsAvailable: false,
+			}
+
+			// Generate access token
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Make the request - should still succeed despite Redis error
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code) // Profile update should still succeed
+		})
+
+		t.Run("Should handle provider not found in Redis queue gracefully", func(t *testing.T) {
+			// Setup miniredis for testing
+			s := miniredis.RunT(t)
+			defer s.Close()
+
+			// Create Redis client for testing
+			redisClient := redis.NewClient(&redis.Options{
+				Addr: s.Addr(),
+			})
+			defer redisClient.Close()
+
+			// Set the global Redis client for testing
+			db.RedisClient = redisClient
+
+			// Create test provision bucket
+			ctx := context.Background()
+
+			// Get the currency from the existing provider profile
+			providerWithCurrencies, err := db.Client.ProviderProfile.Query().
+				Where(providerprofile.IDEQ(testCtx.providerProfile.ID)).
+				WithProviderCurrencies(func(pcq *ent.ProviderCurrenciesQuery) {
+					pcq.WithCurrency()
+				}).
+				Only(ctx)
+			assert.NoError(t, err)
+			assert.NotEmpty(t, providerWithCurrencies.Edges.ProviderCurrencies)
+
+			currency := providerWithCurrencies.Edges.ProviderCurrencies[0].Edges.Currency
+
+			bucket, err := db.Client.ProvisionBucket.Create().
+				SetMinAmount(decimal.NewFromInt(100)).
+				SetMaxAmount(decimal.NewFromInt(1000)).
+				SetCurrency(currency).
+				Save(ctx)
+			assert.NoError(t, err)
+
+			// Add provider to provision bucket
+			_, err = db.Client.ProviderProfile.UpdateOneID(testCtx.providerProfile.ID).
+				AddProvisionBuckets(bucket).
+				Save(ctx)
+			assert.NoError(t, err)
+
+			// Create Redis queue with different provider (provider not found scenario)
+			redisKey := fmt.Sprintf("bucket_%s_%s_%s", currency.Code, bucket.MinAmount, bucket.MaxAmount)
+			redisClient.RPush(ctx, redisKey, "other_provider:USDC:550:"+bucket.MinAmount.String()+":"+bucket.MaxAmount.String())
+
+			// Prepare request to set IsAvailable to false
+			payload := types.ProviderProfilePayload{
+				Currency:    "KES",
+				IsAvailable: false,
+			}
+
+			// Generate access token
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			// Make the request
+			res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			// Verify queue remains unchanged (provider not found, so nothing to remove)
+			queue, err := redisClient.LRange(ctx, redisKey, 0, -1).Result()
+			assert.NoError(t, err)
+			assert.Len(t, queue, 1) // Should remain unchanged
+			assert.Contains(t, queue, "other_provider:USDC:550:"+bucket.MinAmount.String()+":"+bucket.MaxAmount.String())
 		})
 	})
 }

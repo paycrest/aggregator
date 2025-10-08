@@ -621,6 +621,17 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		return
 	}
 
+	// Remove provider from Redis queues if IsAvailable is being set to false
+	if availabilityOp != nil && !availabilityOp.isAvailable {
+		err := ctrl.removeProviderFromRedisQueues(ctx, provider.ID)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", err),
+				"ProviderID": provider.ID,
+			}).Errorf("Failed to remove provider from Redis queues")
+		}
+	}
+
 	u.APIResponse(ctx, http.StatusOK, "success", "Profile updated successfully", nil)
 }
 
@@ -856,4 +867,64 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 		KYBVerificationStatus: user.KybVerificationStatus,
 		KYBRejectionComment:   kybRejectionComment,
 	})
+}
+
+// removeProviderFromRedisQueues removes a provider from all relevant Redis queues
+func (ctrl *ProfileController) removeProviderFromRedisQueues(ctx *gin.Context, providerID string) error {
+	// Get the provider with edges to access currency and provision buckets
+	provider, err := storage.Client.ProviderProfile.
+		Query().
+		Where(providerprofile.IDEQ(providerID)).
+		WithProviderCurrencies(func(pcq *ent.ProviderCurrenciesQuery) {
+			pcq.WithCurrency()
+		}).
+		WithProvisionBuckets(func(pbq *ent.ProvisionBucketQuery) {
+			pbq.WithCurrency()
+		}).
+		Only(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to fetch provider for Redis queue removal: %w", err)
+	}
+
+	// Remove provider from all relevant Redis queues
+	for _, pc := range provider.Edges.ProviderCurrencies {
+		if pc.Edges.Currency != nil {
+			for _, bucket := range provider.Edges.ProvisionBuckets {
+				if bucket.Edges.Currency != nil && bucket.Edges.Currency.Code == pc.Edges.Currency.Code {
+					redisKey := fmt.Sprintf("bucket_%s_%s_%s", bucket.Edges.Currency.Code, bucket.MinAmount, bucket.MaxAmount)
+
+					// Remove provider from Redis queue using the provided algorithm
+					for index := -1; ; index-- {
+						providerData, err := storage.RedisClient.LIndex(ctx, redisKey, int64(index)).Result()
+						if err != nil {
+							break
+						}
+
+						parts := strings.Split(providerData, ":")
+						if len(parts) != 5 {
+							logger.Errorf("invalid provider data format: %s", providerData)
+							continue
+						}
+
+						if parts[0] == providerID {
+							placeholder := "DELETED_PROVIDER"
+							_, err := storage.RedisClient.LSet(ctx, redisKey, int64(index), placeholder).Result()
+							if err != nil {
+								logger.Errorf("failed to set placeholder at index %d: %v", index, err)
+							}
+
+							_, err = storage.RedisClient.LRem(ctx, redisKey, 0, placeholder).Result()
+							if err != nil {
+								logger.Errorf("failed to remove placeholder from circular queue: %v", err)
+							}
+
+							break
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return nil
 }
