@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -82,7 +83,8 @@ func setup() error {
 	testCtx.provider = providerProfile
 
 	for i := 0; i < 10; i++ {
-		time.Sleep(time.Duration(time.Duration(rand.Intn(10)) * time.Second))
+		// Skip sleep in test mode to avoid timeout
+		// time.Sleep(time.Duration(time.Duration(rand.Intn(10)) * time.Second))
 		_, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
 			"gateway_id": uuid.New().String(),
 			"provider":   providerProfile,
@@ -90,7 +92,8 @@ func setup() error {
 		if err != nil {
 			return err
 		}
-		time.Sleep(time.Duration(time.Duration(rand.Intn(10)) * time.Second))
+		// Skip sleep in test mode to avoid timeout
+		// time.Sleep(time.Duration(time.Duration(rand.Intn(10)) * time.Second))
 
 	}
 
@@ -111,30 +114,83 @@ func setup() error {
 	return nil
 }
 
-func TestProvider(t *testing.T) {
-
-	// Set up test database client with proper schema
+// setupIsolatedTest creates a fresh database and Redis client for complete test isolation
+func setupIsolatedTest(t *testing.T) (*ent.Client, *redis.Client, func()) {
+	// Create fresh database
 	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-	defer client.Close()
-
-	// Run migrations to create all tables
 	err := client.Schema.Create(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to create database schema: %v", err)
 	}
 
-	db.Client = client
-
-	// Set up in-memory Redis
+	// Create fresh Redis
 	mr, err := miniredis.Run()
 	assert.NoError(t, err)
-	defer mr.Close()
+	redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
 
-	db.RedisClient = redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	// Store original clients
+	originalClient := db.Client
+	originalRedis := db.RedisClient
 
-	// Setup test data
+	// Set new clients
+	db.Client = client
+	db.RedisClient = redisClient
+
+	// Populate test data in the fresh database
 	err = setup()
-	assert.NoError(t, err)
+	if err != nil {
+		t.Fatalf("Failed to setup test data: %v", err)
+	}
+
+	// Return cleanup function
+	cleanup := func() {
+		client.Close()
+		mr.Close()
+		// Restore original clients, but ensure we don't leave nil clients
+		if originalClient != nil {
+			db.Client = originalClient
+		}
+		if originalRedis != nil {
+			db.RedisClient = originalRedis
+		}
+	}
+
+	return client, redisClient, cleanup
+}
+
+// ensureDatabaseSchema makes sure the database schema is properly created
+// This is especially important for tables needed by auth middleware
+func ensureDatabaseSchema(t *testing.T) {
+	ctx := context.Background()
+
+	// Check if schema exists by attempting to query a critical table
+	_, err := db.Client.APIKey.Query().Count(ctx)
+	if err != nil {
+		// Check if it's a "no such table" error
+		if strings.Contains(err.Error(), "no such table") {
+			t.Logf("Database schema missing, recreating entire schema...")
+			err = db.Client.Schema.Create(ctx)
+			if err != nil {
+				t.Fatalf("Failed to recreate database schema: %v", err)
+			}
+			t.Logf("Database schema recreated successfully")
+
+			// After recreating schema, we need to re-run setup to populate test data
+			t.Logf("Recreating test data after schema recreation...")
+			err = setup()
+			if err != nil {
+				t.Fatalf("Failed to recreate test data after schema recreation: %v", err)
+			}
+		} else {
+			t.Fatalf("Unexpected database error: %v", err)
+		}
+	}
+}
+
+func TestProvider(t *testing.T) {
+	// Set up isolated test environment (includes test data setup)
+	_, _, cleanup := setupIsolatedTest(t)
+	defer cleanup()
 
 	// Set up test routers
 	router := gin.New()
@@ -1657,11 +1713,13 @@ func TestProvider(t *testing.T) {
 	})
 
 	t.Run("FulfillOrder", func(t *testing.T) {
+		// Ensure database schema is properly created for all subtests
+		ensureDatabaseSchema(t)
 
 		t.Run("Invalid Request", func(t *testing.T) {
-
+			// Ensure schema is verified before running each test
+			ensureDatabaseSchema(t)
 			t.Run("Invalid HMAC", func(t *testing.T) {
-
 				// Test default params
 				var payload = map[string]interface{}{
 					"timestamp": time.Now().Unix(),
@@ -1684,7 +1742,6 @@ func TestProvider(t *testing.T) {
 			})
 
 			t.Run("Invalid API key or token", func(t *testing.T) {
-
 				// Test default params
 				var payload = map[string]interface{}{
 					"timestamp": time.Now().Unix(),
@@ -1707,6 +1764,9 @@ func TestProvider(t *testing.T) {
 			})
 
 			t.Run("Invalid Payload", func(t *testing.T) {
+				// Ensure schema is verified before the test
+				ensureDatabaseSchema(t)
+
 				// Test default params
 				var payload = map[string]interface{}{
 					"timestamp": time.Now().Unix(),
@@ -1730,6 +1790,8 @@ func TestProvider(t *testing.T) {
 			})
 
 			t.Run("Invalid Order ID", func(t *testing.T) {
+				// Ensure schema is verified before the test
+				ensureDatabaseSchema(t)
 
 				// Test default params
 				var payload = map[string]interface{}{
@@ -1757,6 +1819,8 @@ func TestProvider(t *testing.T) {
 			})
 
 			t.Run("Order Id that doesn't Exist", func(t *testing.T) {
+				// Ensure schema is verified before the test
+				ensureDatabaseSchema(t)
 
 				order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
 					"gateway_id": uuid.New().String(),
