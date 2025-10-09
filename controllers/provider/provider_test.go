@@ -112,21 +112,43 @@ func setup() error {
 	return nil
 }
 
-// setupTestDB sets up a fresh test database for each test
-func setupTestDB(t *testing.T) (*ent.Client, func()) {
-	// Set up test database client with proper schema
+// setupIsolatedTest creates a fresh database and Redis client for complete test isolation
+func setupIsolatedTest(t *testing.T) (*ent.Client, *redis.Client, func()) {
+	// Create fresh database
 	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-
-	// Run migrations to create all tables
 	err := client.Schema.Create(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to create database schema: %v", err)
 	}
 
-	// Return client and cleanup function
-	return client, func() {
-		client.Close()
+	// Create fresh Redis
+	mr, err := miniredis.Run()
+	assert.NoError(t, err)
+	redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+
+	// Store original clients
+	originalClient := db.Client
+	originalRedis := db.RedisClient
+
+	// Set new clients
+	db.Client = client
+	db.RedisClient = redisClient
+
+	// Populate test data in the fresh database
+	err = setup()
+	if err != nil {
+		t.Fatalf("Failed to setup test data: %v", err)
 	}
+
+	// Return cleanup function
+	cleanup := func() {
+		client.Close()
+		mr.Close()
+		db.Client = originalClient
+		db.RedisClient = originalRedis
+	}
+
+	return client, redisClient, cleanup
 }
 
 // ensureDatabaseSchema makes sure the database schema is properly created
@@ -134,87 +156,34 @@ func setupTestDB(t *testing.T) (*ent.Client, func()) {
 func ensureDatabaseSchema(t *testing.T) {
 	ctx := context.Background()
 
-	// Check multiple critical tables to ensure schema completeness
-	criticalTables := []struct {
-		name  string
-		check func() (int, error)
-	}{
-		{"api_keys", func() (int, error) { return db.Client.APIKey.Query().Count(ctx) }},
-		{"networks", func() (int, error) { return db.Client.Network.Query().Count(ctx) }},
-		{"users", func() (int, error) { return db.Client.User.Query().Count(ctx) }},
-		{"tokens", func() (int, error) { return db.Client.Token.Query().Count(ctx) }},
-		{"fiat_currencies", func() (int, error) { return db.Client.FiatCurrency.Query().Count(ctx) }},
-	}
-
-	for _, table := range criticalTables {
-		_, err := table.check()
-		if err != nil {
-			// Check if it's a "no such table" error
-			if strings.Contains(err.Error(), "no such table") {
-				t.Logf("Database schema missing (table: %s), recreating entire schema...", table.name)
-				err = db.Client.Schema.Create(ctx)
-				if err != nil {
-					t.Fatalf("Failed to recreate database schema: %v", err)
-				}
-
-				// After recreating schema, we need to re-run setup to populate test data
-				t.Logf("Recreating test data after schema recreation...")
-				err = setup()
-				if err != nil {
-					t.Fatalf("Failed to recreate test data after schema recreation: %v", err)
-				}
-				return // Schema and data recreated, no need to check remaining tables
-			} else {
-				t.Fatalf("Unexpected database error for table %s: %v", table.name, err)
+	// Check if schema exists by attempting to query a critical table
+	_, err := db.Client.APIKey.Query().Count(ctx)
+	if err != nil {
+		// Check if it's a "no such table" error
+		if strings.Contains(err.Error(), "no such table") {
+			t.Logf("Database schema missing, recreating entire schema...")
+			err = db.Client.Schema.Create(ctx)
+			if err != nil {
+				t.Fatalf("Failed to recreate database schema: %v", err)
 			}
+			t.Logf("Database schema recreated successfully")
+
+			// After recreating schema, we need to re-run setup to populate test data
+			t.Logf("Recreating test data after schema recreation...")
+			err = setup()
+			if err != nil {
+				t.Fatalf("Failed to recreate test data after schema recreation: %v", err)
+			}
+		} else {
+			t.Fatalf("Unexpected database error: %v", err)
 		}
 	}
 }
 
-// setupTestRedis sets up a fresh Redis client for testing
-func setupTestRedis(t *testing.T) (*redis.Client, func()) {
-	mr, err := miniredis.Run()
-	assert.NoError(t, err)
-
-	redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
-
-	return redisClient, func() {
-		mr.Close()
-	}
-}
-
 func TestProvider(t *testing.T) {
-	// Set up test database
-	client, dbCleanup := setupTestDB(t)
-	defer dbCleanup()
-
-	// Store the original client to restore later
-	originalClient := db.Client
-	defer func() {
-		// Restore the original client after the test completes
-		db.Client = originalClient
-	}()
-
-	// Set the test client
-	db.Client = client
-
-	// Set up in-memory Redis
-	redisClient, redisCleanup := setupTestRedis(t)
-	defer redisCleanup()
-
-	// Store the original Redis client to restore later
-	originalRedisClient := db.RedisClient
-	defer func() {
-		// Restore the original Redis client after the test completes
-		db.RedisClient = originalRedisClient
-	}()
-
-	// Set the test Redis client
-	db.RedisClient = redisClient
-
-	// Setup test data
-	err := setup()
-	assert.NoError(t, err)
+	// Set up isolated test environment (includes test data setup)
+	_, _, cleanup := setupIsolatedTest(t)
+	defer cleanup()
 
 	// Set up test routers
 	router := gin.New()
@@ -1743,9 +1712,7 @@ func TestProvider(t *testing.T) {
 		t.Run("Invalid Request", func(t *testing.T) {
 			// Ensure schema is verified before running each test
 			ensureDatabaseSchema(t)
-
 			t.Run("Invalid HMAC", func(t *testing.T) {
-
 				// Test default params
 				var payload = map[string]interface{}{
 					"timestamp": time.Now().Unix(),
@@ -1768,7 +1735,6 @@ func TestProvider(t *testing.T) {
 			})
 
 			t.Run("Invalid API key or token", func(t *testing.T) {
-
 				// Test default params
 				var payload = map[string]interface{}{
 					"timestamp": time.Now().Unix(),
@@ -1846,6 +1812,8 @@ func TestProvider(t *testing.T) {
 			})
 
 			t.Run("Order Id that doesn't Exist", func(t *testing.T) {
+				// Ensure schema is verified before the test
+				ensureDatabaseSchema(t)
 
 				order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
 					"gateway_id": uuid.New().String(),
