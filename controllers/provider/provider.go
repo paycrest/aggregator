@@ -1157,7 +1157,18 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 		return
 	}
 
-	data, err = u.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors
+	if res.Status().IsError() {
+		body, _ := res.Body().AsString()
+		logger.WithFields(logger.Fields{
+			"StatusCode": res.Status().Code(),
+			"Body":       body,
+		}).Errorf("HTTP error fetching node info")
+		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
+		return
+	}
+
+	err = res.Body().AsJSON(&data)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error": fmt.Sprintf("%v", err),

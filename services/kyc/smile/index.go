@@ -18,7 +18,6 @@ import (
 	kycErrors "github.com/paycrest/aggregator/services/kyc/errors"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
-	"github.com/paycrest/aggregator/utils"
 )
 
 //go:embed id_types.json
@@ -115,9 +114,16 @@ func (s *SmileIDService) RequestVerification(ctx context.Context, req types.Veri
 		return nil, kycErrors.ErrProviderUnreachable{Err: err}
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors
+	if res.Status().IsError() {
+		body, _ := res.Body().AsString()
+		return nil, kycErrors.ErrProviderResponse{Err: fmt.Errorf("HTTP error %d: %s", res.Status().Code(), body)}
+	}
+
+	var data map[string]interface{}
+	err = res.Body().AsJSON(&data)
 	if err != nil {
-		return nil, kycErrors.ErrProviderResponse{Err: fmt.Errorf("%v, %v", err, data)}
+		return nil, kycErrors.ErrProviderResponse{Err: err}
 	}
 
 	ivr, err = s.db.IdentityVerificationRequest.
