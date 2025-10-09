@@ -513,6 +513,10 @@ func (s *EngineService) UpdateWebhook(ctx context.Context, webhookID string, web
 		return fmt.Errorf("HTTP error %d: %s", res.Status().Code(), body)
 	}
 
+	if res.Status().Code() == 204 {
+		return nil
+	}
+
 	var data map[string]interface{}
 	err = res.Body().AsJSON(&data)
 	if err != nil {
