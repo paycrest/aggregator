@@ -9,7 +9,6 @@ import (
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/types"
-	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 )
 
@@ -89,13 +88,16 @@ func (b *BrevoProvider) sendBrevoRequest(ctx context.Context, reqBody map[string
 		return types.SendEmailResponse{}, fmt.Errorf("brevo request error: %w", err)
 	}
 
-	if res.RawResponse.StatusCode >= 400 {
-		logger.Errorf("Brevo API error: %d", res.RawResponse.StatusCode)
-		return types.SendEmailResponse{}, fmt.Errorf("brevo API error: %d", res.RawResponse.StatusCode)
+	// Check for HTTP errors
+	if res.Status().IsError() {
+		body, _ := res.Body().AsString()
+		logger.Errorf("Brevo API error: %d - %s", res.Status().Code(), body)
+		return types.SendEmailResponse{}, fmt.Errorf("brevo API error: %d", res.Status().Code())
 	}
 
 	// Parse response body to extract message ID
-	responseBody, err := utils.ParseJSONResponse(res.RawResponse)
+	var responseBody map[string]interface{}
+	err = res.Body().AsJSON(&responseBody)
 	if err != nil {
 		logger.Errorf("Failed to decode Brevo response: %v", err)
 		return types.SendEmailResponse{}, fmt.Errorf("brevo response parse error: %w", err)

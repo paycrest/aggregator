@@ -40,11 +40,10 @@ func NewEngineService() *EngineService {
 func (s *EngineService) CreateServerWallet(ctx context.Context, label string) (string, error) {
 	res, err := fastshot.NewClient(s.config.BaseURL).
 		Config().SetTimeout(30 * time.Second).
-		Header().AddAll(map[string]string{
-		"Accept":       "application/json",
-		"Content-Type": "application/json",
-		"X-Secret-Key": s.config.ThirdwebSecretKey,
-	}).Build().POST("/v1/accounts").
+		Header().Add("Accept", "application/json").
+		Header().Add("Content-Type", "application/json").
+		Header().Add("X-Secret-Key", s.config.ThirdwebSecretKey).
+		Build().POST("/v1/accounts").
 		Body().AsJSON(map[string]interface{}{
 		"label": label,
 	}).Send()
@@ -52,7 +51,14 @@ func (s *EngineService) CreateServerWallet(ctx context.Context, label string) (s
 		return "", fmt.Errorf("failed to create smart address: %w", err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors
+	if res.Status().IsError() {
+		body, _ := res.Body().AsString()
+		return "", fmt.Errorf("HTTP error %d: %s", res.Status().Code(), body)
+	}
+
+	var data map[string]interface{}
+	err = res.Body().AsJSON(&data)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse JSON response: %w", err)
 	}
@@ -67,17 +73,23 @@ func (s *EngineService) GetLatestBlock(ctx context.Context, chainID int64) (int6
 		// Try ThirdWeb first for all networks
 		res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
 			Config().SetTimeout(60 * time.Second).
-			Header().AddAll(map[string]string{
-			"Content-Type": "application/json",
-			"X-Secret-Key": s.config.ThirdwebSecretKey,
-		}).Build().GET("/v1/blocks").
+			Header().Add("Content-Type", "application/json").
+			Header().Add("X-Secret-Key", s.config.ThirdwebSecretKey).
+			Build().GET("/v1/blocks").
 			Query().AddParams(map[string]string{
 			"sort_order": "desc",
 			"limit":      "1",
 		}).Send()
 		if err == nil {
+			// Check for HTTP errors
+			if res.Status().IsError() {
+				body, _ := res.Body().AsString()
+				return 0, fmt.Errorf("HTTP error %d: %s", res.Status().Code(), body)
+			}
+
 			// ThirdWeb succeeded
-			data, err := utils.ParseJSONResponse(res.RawResponse)
+			var data map[string]interface{}
+			err = res.Body().AsJSON(&data)
 			if err != nil {
 				return 0, fmt.Errorf("failed to parse JSON response: %w", err)
 			}
@@ -125,19 +137,25 @@ func (s *EngineService) GetLatestBlock(ctx context.Context, chainID int64) (int6
 func (s *EngineService) GetContractEvents(ctx context.Context, chainID int64, contractAddress string, payload map[string]string) ([]interface{}, error) {
 	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
 		Config().SetTimeout(60 * time.Second).
-		Header().AddAll(map[string]string{
-		"Accept":       "application/json",
-		"Content-Type": "application/json",
-		"X-Secret-Key": s.config.ThirdwebSecretKey,
-	}).Build().GET(fmt.Sprintf("/v1/events/%s", contractAddress)).
+		Header().Add("Accept", "application/json").
+		Header().Add("Content-Type", "application/json").
+		Header().Add("X-Secret-Key", s.config.ThirdwebSecretKey).
+		Build().GET(fmt.Sprintf("/v1/events/%s", contractAddress)).
 		Query().AddParams(payload).Send()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get contract events: %w", err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors
+	if res.Status().IsError() {
+		body, _ := res.Body().AsString()
+		return nil, fmt.Errorf("HTTP error %d: %s", res.Status().Code(), body)
+	}
+
+	var data map[string]interface{}
+	err = res.Body().AsJSON(&data)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse JSON response: %w %v", err, data)
+		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
 	}
 
 	if data["meta"].(map[string]interface{})["total_items"].(float64) == 0 {
@@ -151,12 +169,10 @@ func (s *EngineService) GetContractEvents(ctx context.Context, chainID int64, co
 func (s *EngineService) SendTransactionBatch(ctx context.Context, chainID int64, address string, txPayload []map[string]interface{}) (queueID string, err error) {
 	res, err := fastshot.NewClient(s.config.BaseURL).
 		Config().SetTimeout(30 * time.Second).
-		Header().AddAll(map[string]string{
-		"Accept":               "application/json",
-		"Content-Type":         "application/json",
-		"x-vault-access-token": s.config.AccessToken,
-		"X-Secret-Key":         s.config.ThirdwebSecretKey,
-	}).
+		Header().Add("Accept", "application/json").
+		Header().Add("Content-Type", "application/json").
+		Header().Add("x-vault-access-token", s.config.AccessToken).
+		Header().Add("X-Secret-Key", s.config.ThirdwebSecretKey).
 		Build().POST("/v1/write/transaction").
 		Body().AsJSON(map[string]interface{}{
 		"params": txPayload,
@@ -169,7 +185,14 @@ func (s *EngineService) SendTransactionBatch(ctx context.Context, chainID int64,
 		return "", fmt.Errorf("failed to send transaction batch: %w", err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors
+	if res.Status().IsError() {
+		body, _ := res.Body().AsString()
+		return "", fmt.Errorf("HTTP error %d: %s", res.Status().Code(), body)
+	}
+
+	var data map[string]interface{}
+	err = res.Body().AsJSON(&data)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse JSON response: %w", err)
 	}
@@ -183,12 +206,10 @@ func (s *EngineService) SendTransactionBatch(ctx context.Context, chainID int64,
 func (s *EngineService) GetTransactionStatus(ctx context.Context, queueId string) (result map[string]interface{}, err error) {
 	res, err := fastshot.NewClient(s.config.BaseURL).
 		Config().SetTimeout(60 * time.Second).
-		Header().AddAll(map[string]string{
-		"Accept":               "application/json",
-		"Content-Type":         "application/json",
-		"x-vault-access-token": s.config.AccessToken,
-		"X-Secret-Key":         s.config.ThirdwebSecretKey,
-	}).
+		Header().Add("Accept", "application/json").
+		Header().Add("Content-Type", "application/json").
+		Header().Add("x-vault-access-token", s.config.AccessToken).
+		Header().Add("X-Secret-Key", s.config.ThirdwebSecretKey).
 		Build().POST("/v1/transactions/search").
 		Body().AsJSON(map[string]interface{}{
 		"filters": []map[string]interface{}{
@@ -203,7 +224,14 @@ func (s *EngineService) GetTransactionStatus(ctx context.Context, queueId string
 		return nil, fmt.Errorf("failed to get transaction status: %w", err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors
+	if res.Status().IsError() {
+		body, _ := res.Body().AsString()
+		return nil, fmt.Errorf("HTTP error %d: %s", res.Status().Code(), body)
+	}
+
+	var data map[string]interface{}
+	err = res.Body().AsJSON(&data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
 	}
@@ -306,17 +334,23 @@ func (s *EngineService) CreateTransferWebhook(ctx context.Context, chainID int64
 
 	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
 		Config().SetTimeout(30 * time.Second).
-		Header().AddAll(map[string]string{
-		"Accept":       "application/json",
-		"Content-Type": "application/json",
-		"X-Secret-Key": s.config.ThirdwebSecretKey,
-	}).Build().POST("/v1/webhooks").
+		Header().Add("Accept", "application/json").
+		Header().Add("Content-Type", "application/json").
+		Header().Add("X-Secret-Key", s.config.ThirdwebSecretKey).
+		Build().POST("/v1/webhooks").
 		Body().AsJSON(webhookPayload).Send()
 	if err != nil {
 		return "", "", fmt.Errorf("failed to create transfer webhook: %w", err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors
+	if res.Status().IsError() {
+		body, _ := res.Body().AsString()
+		return "", "", fmt.Errorf("HTTP error %d: %s", res.Status().Code(), body)
+	}
+
+	var data map[string]interface{}
+	err = res.Body().AsJSON(&data)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to parse JSON response: %w", err)
 	}
@@ -344,19 +378,18 @@ func (s *EngineService) CreateTransferWebhook(ctx context.Context, chainID int64
 func (s *EngineService) DeleteWebhook(ctx context.Context, webhookID string) error {
 	res, err := fastshot.NewClient("https://insight.thirdweb.com").
 		Config().SetTimeout(30 * time.Second).
-		Header().AddAll(map[string]string{
-		"Accept":       "application/json",
-		"Content-Type": "application/json",
-		"X-Secret-Key": s.config.ThirdwebSecretKey,
-	}).Build().DELETE(fmt.Sprintf("/v1/webhooks/%s", webhookID)).
+		Header().Add("Accept", "application/json").
+		Header().Add("Content-Type", "application/json").
+		Header().Add("X-Secret-Key", s.config.ThirdwebSecretKey).
+		Build().DELETE(fmt.Sprintf("/v1/webhooks/%s", webhookID)).
 		Send()
 	if err != nil {
 		return fmt.Errorf("failed to delete webhook: %w", err)
 	}
 
 	// Check if the response indicates success
-	if res.StatusCode() != 200 && res.StatusCode() != 204 {
-		return fmt.Errorf("failed to delete webhook: HTTP %d", res.StatusCode())
+	if res.Status().Code() != 200 && res.Status().Code() != 204 {
+		return fmt.Errorf("failed to delete webhook: HTTP %d", res.Status().Code())
 	}
 
 	return nil
@@ -412,11 +445,10 @@ type WebhookListResponse struct {
 func (s *EngineService) GetWebhookByID(ctx context.Context, webhookID string, chainID int64) (*WebhookInfo, error) {
 	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
 		Config().SetTimeout(60 * time.Second).
-		Header().AddAll(map[string]string{
-		"Accept":       "application/json",
-		"Content-Type": "application/json",
-		"X-Secret-Key": s.config.ThirdwebSecretKey,
-	}).Build().GET("/v1/webhooks").
+		Header().Add("Accept", "application/json").
+		Header().Add("Content-Type", "application/json").
+		Header().Add("X-Secret-Key", s.config.ThirdwebSecretKey).
+		Build().GET("/v1/webhooks").
 		Query().AddParams(map[string]string{
 		"webhook_id": webhookID,
 	}).Send()
@@ -424,7 +456,14 @@ func (s *EngineService) GetWebhookByID(ctx context.Context, webhookID string, ch
 		return nil, fmt.Errorf("failed to fetch webhook: %w", err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors
+	if res.Status().IsError() {
+		body, _ := res.Body().AsString()
+		return nil, fmt.Errorf("HTTP error %d: %s", res.Status().Code(), body)
+	}
+
+	var data map[string]interface{}
+	err = res.Body().AsJSON(&data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse webhook response: %w", err)
 	}
@@ -455,21 +494,31 @@ func (s *EngineService) GetWebhookByID(ctx context.Context, webhookID string, ch
 func (s *EngineService) UpdateWebhook(ctx context.Context, webhookID string, webhookPayload map[string]interface{}) error {
 	res, err := fastshot.NewClient("https://insight.thirdweb.com").
 		Config().SetTimeout(30 * time.Second).
-		Header().AddAll(map[string]string{
-		"Accept":       "application/json",
-		"Content-Type": "application/json",
-		"X-Secret-Key": s.config.ThirdwebSecretKey,
-	}).Build().PATCH(fmt.Sprintf("/v1/webhooks/%s", webhookID)).
+		Header().Add("Accept", "application/json").
+		Header().Add("Content-Type", "application/json").
+		Header().Add("X-Secret-Key", s.config.ThirdwebSecretKey).
+		Build().PATCH(fmt.Sprintf("/v1/webhooks/%s", webhookID)).
 		Body().AsJSON(webhookPayload).Send()
 	if err != nil {
 		return fmt.Errorf("failed to update webhook: %w", err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors
+	if res.Status().IsError() {
+		body, _ := res.Body().AsString()
+		logger.WithFields(logger.Fields{
+			"StatusCode": res.Status().Code(),
+			"Body":       body,
+		}).Errorf("HTTP error response")
+		return fmt.Errorf("HTTP error %d: %s", res.Status().Code(), body)
+	}
+
+	var data map[string]interface{}
+	err = res.Body().AsJSON(&data)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Data":       data,
-			"StatusCode": res.RawResponse.StatusCode,
+			"StatusCode": res.Status().Code(),
 		}).Errorf("failed to parse JSON response: %v", err)
 		return fmt.Errorf("failed to parse JSON response: %v", err)
 	}
@@ -686,23 +735,33 @@ func (s *EngineService) CreateGatewayWebhook() error {
 
 	res, err := fastshot.NewClient("https://insight.thirdweb.com").
 		Config().SetTimeout(30 * time.Second).
-		Header().AddAll(map[string]string{
-		"Accept":       "application/json",
-		"Content-Type": "application/json",
-		"X-Secret-Key": s.config.ThirdwebSecretKey,
-	}).Build().POST("/v1/webhooks").
+		Header().Add("Accept", "application/json").
+		Header().Add("Content-Type", "application/json").
+		Header().Add("X-Secret-Key", s.config.ThirdwebSecretKey).
+		Build().POST("/v1/webhooks").
 		Body().AsJSON(webhookPayload).Send()
 
 	if err != nil {
 		return fmt.Errorf("failed to create gateway webhooks: %w", err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors
+	if res.Status().IsError() {
+		body, _ := res.Body().AsString()
+		logger.WithFields(logger.Fields{
+			"StatusCode": res.Status().Code(),
+			"Body":       body,
+		}).Errorf("HTTP error creating gateway webhooks")
+		return fmt.Errorf("HTTP error %d: %s", res.Status().Code(), body)
+	}
+
+	var data map[string]interface{}
+	err = res.Body().AsJSON(&data)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Data":       data,
 			"ChainIDs":   chainIDsStrings,
-			"StatusCode": res.RawResponse.StatusCode,
+			"StatusCode": res.Status().Code(),
 		}).Errorf("failed to parse JSON response: %v", err)
 		return fmt.Errorf("failed to parse JSON response: %v", err)
 	}
@@ -901,19 +960,25 @@ func (s *EngineService) GetAddressTransactionHistory(ctx context.Context, chainI
 
 	res, err := fastshot.NewClient(fmt.Sprintf("https://%d.insight.thirdweb.com", chainID)).
 		Config().SetTimeout(60 * time.Second).
-		Header().AddAll(map[string]string{
-		"Accept":       "application/json",
-		"Content-Type": "application/json",
-		"X-Secret-Key": s.config.ThirdwebSecretKey,
-	}).Build().GET(fmt.Sprintf("/v1/wallets/%s/transactions", walletAddress)).
+		Header().Add("Accept", "application/json").
+		Header().Add("Content-Type", "application/json").
+		Header().Add("X-Secret-Key", s.config.ThirdwebSecretKey).
+		Build().GET(fmt.Sprintf("/v1/wallets/%s/transactions", walletAddress)).
 		Query().AddParams(params).Send()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get transaction history: %w", err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors
+	if res.Status().IsError() {
+		body, _ := res.Body().AsString()
+		return nil, fmt.Errorf("HTTP error %d: %s", res.Status().Code(), body)
+	}
+
+	var data map[string]interface{}
+	err = res.Body().AsJSON(&data)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse JSON response: %w %v", err, data)
+		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
 	}
 
 	if data["data"] == nil {
@@ -1005,18 +1070,24 @@ func (s *EngineService) TransferToken(ctx context.Context, chainID int64, fromAd
 
 	res, err := fastshot.NewClient(s.config.BaseURL).
 		Config().SetTimeout(60 * time.Second).
-		Header().AddAll(map[string]string{
-		"Accept":               "application/json",
-		"Content-Type":         "application/json",
-		"x-vault-access-token": s.config.AccessToken,
-		"X-Secret-Key":         s.config.ThirdwebSecretKey,
-	}).Build().POST("/v1/write/contract").
+		Header().Add("Accept", "application/json").
+		Header().Add("Content-Type", "application/json").
+		Header().Add("x-vault-access-token", s.config.AccessToken).
+		Header().Add("X-Secret-Key", s.config.ThirdwebSecretKey).
+		Build().POST("/v1/write/contract").
 		Body().AsJSON(payload).Send()
 	if err != nil {
 		return "", fmt.Errorf("failed to execute token transfer: %w", err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors
+	if res.Status().IsError() {
+		body, _ := res.Body().AsString()
+		return "", fmt.Errorf("HTTP error %d: %s", res.Status().Code(), body)
+	}
+
+	var data map[string]interface{}
+	err = res.Body().AsJSON(&data)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse JSON response: %w", err)
 	}

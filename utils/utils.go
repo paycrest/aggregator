@@ -503,7 +503,7 @@ func CallProviderWithHMAC(ctx context.Context, providerID, method, path string, 
 		Header().Add("X-Request-Signature", signature).
 		Build()
 
-	var res fastshot.Response
+	var res *fastshot.Response
 	var reqErr error
 
 	switch method {
@@ -523,8 +523,21 @@ func CallProviderWithHMAC(ctx context.Context, providerID, method, path string, 
 		return nil, fmt.Errorf("failed to make HTTP request: %v", reqErr)
 	}
 
+	// Check for HTTP errors
+	if res.Status().IsError() {
+		body, _ := res.Body().AsString()
+		logger.WithFields(logger.Fields{
+			"StatusCode": res.Status().Code(),
+			"Body":       body,
+			"ProviderID": providerID,
+			"Path":       path,
+		}).Errorf("HTTP error from provider")
+		return nil, fmt.Errorf("HTTP error %d: %s", res.Status().Code(), body)
+	}
+
 	// Parse JSON response
-	data, err := ParseJSONResponse(res.RawResponse)
+	var data map[string]interface{}
+	err = res.Body().AsJSON(&data)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),

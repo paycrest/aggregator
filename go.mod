@@ -16,14 +16,14 @@ require (
 	github.com/jarcoal/httpmock v1.3.1
 	github.com/mailgun/mailgun-go/v3 v3.6.4
 	github.com/mattn/go-sqlite3 v1.14.16
-	github.com/opus-domini/fast-shot v0.10.0
+	github.com/opus-domini/fast-shot v1.1.4
 	github.com/paycrest/tron-wallet v1.0.13
 	github.com/redis/go-redis/v9 v9.1.0
 	github.com/sendgrid/sendgrid-go v3.14.0+incompatible
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/viper v1.16.0
 	github.com/stackup-wallet/stackup-bundler v0.6.30
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 	github.com/xeipuuv/gojsonschema v1.2.0
 	google.golang.org/grpc v1.55.0
 )
@@ -84,7 +84,7 @@ require (
 	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/shengdoushi/base58 v1.0.0 // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
-	github.com/stretchr/objx v0.5.0 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/supranational/blst v0.3.11 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
