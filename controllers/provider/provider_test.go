@@ -83,7 +83,8 @@ func setup() error {
 	testCtx.provider = providerProfile
 
 	for i := 0; i < 10; i++ {
-		time.Sleep(time.Duration(time.Duration(rand.Intn(10)) * time.Second))
+		// Skip sleep in test mode to avoid timeout
+		// time.Sleep(time.Duration(time.Duration(rand.Intn(10)) * time.Second))
 		_, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
 			"gateway_id": uuid.New().String(),
 			"provider":   providerProfile,
@@ -91,7 +92,8 @@ func setup() error {
 		if err != nil {
 			return err
 		}
-		time.Sleep(time.Duration(time.Duration(rand.Intn(10)) * time.Second))
+		// Skip sleep in test mode to avoid timeout
+		// time.Sleep(time.Duration(time.Duration(rand.Intn(10)) * time.Second))
 
 	}
 
@@ -144,8 +146,22 @@ func setupIsolatedTest(t *testing.T) (*ent.Client, *redis.Client, func()) {
 	cleanup := func() {
 		client.Close()
 		mr.Close()
-		db.Client = originalClient
-		db.RedisClient = originalRedis
+		// Always restore original clients, but ensure we don't leave nil clients
+		if originalClient != nil {
+			db.Client = originalClient
+		} else {
+			// If original was nil, create a new client to avoid nil pointer issues
+			db.Client = enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+		}
+		if originalRedis != nil {
+			db.RedisClient = originalRedis
+		} else {
+			// If original was nil, create a new Redis client to avoid nil pointer issues
+			mr2, err := miniredis.Run()
+			if err == nil {
+				db.RedisClient = redis.NewClient(&redis.Options{Addr: mr2.Addr()})
+			}
+		}
 	}
 
 	return client, redisClient, cleanup
