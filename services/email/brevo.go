@@ -92,7 +92,7 @@ func (b *BrevoProvider) sendBrevoRequest(ctx context.Context, reqBody map[string
 	if res.Status().IsError() {
 		body, _ := res.Body().AsString()
 		logger.Errorf("Brevo API error: %d - %s", res.Status().Code(), body)
-		return types.SendEmailResponse{}, fmt.Errorf("brevo API error: %d", res.Status().Code(), body)
+		return types.SendEmailResponse{}, fmt.Errorf("brevo API error: %d - %s", res.Status().Code(), body)
 	}
 
 	// Parse response body to extract message ID
