@@ -8,7 +8,6 @@ import (
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/types"
-	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/sendgrid/sendgrid-go"
 	"github.com/sendgrid/sendgrid-go/helpers/mail"
@@ -89,15 +88,16 @@ func (s *SendGridProvider) SendTemplateEmail(ctx context.Context, payload types.
 		return types.SendEmailResponse{}, fmt.Errorf("sendgrid template send error: %w", err)
 	}
 
-	_, err = utils.ParseJSONResponse(res.RawResponse)
-	if err != nil {
-		logger.Errorf("Failed to decode SendGrid response: %v", err)
-		return types.SendEmailResponse{}, fmt.Errorf("sendgrid response parse error: %w", err)
+	// Check for HTTP errors
+	if res.Status().IsError() {
+		body, _ := res.Body().AsString()
+		logger.Errorf("SendGrid API error: %d - %s", res.Status().Code(), body)
+		return types.SendEmailResponse{}, fmt.Errorf("sendgrid API error: %d", res.Status().Code())
 	}
 
 	return types.SendEmailResponse{
-		Response: res.RawResponse.Header.Get("X-Message-Id"),
-		Id:       res.RawResponse.Header.Get("X-Message-Id"),
+		Response: res.Raw().Header.Get("X-Message-Id"),
+		Id:       res.Raw().Header.Get("X-Message-Id"),
 	}, nil
 }
 
