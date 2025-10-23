@@ -7,7 +7,6 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -114,7 +113,6 @@ func setup() error {
 	return nil
 }
 
-// setupIsolatedTest creates a fresh database and Redis client for complete test isolation
 func setupIsolatedTest(t *testing.T) (*ent.Client, *redis.Client, func()) {
 	// Create fresh database
 	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
@@ -142,49 +140,16 @@ func setupIsolatedTest(t *testing.T) (*ent.Client, *redis.Client, func()) {
 		t.Fatalf("Failed to setup test data: %v", err)
 	}
 
-	// Return cleanup function
+	// Return cleanup function that restores original state exactly
 	cleanup := func() {
 		client.Close()
 		mr.Close()
-		// Restore original clients, but ensure we don't leave nil clients
-		if originalClient != nil {
-			db.Client = originalClient
-		}
-		if originalRedis != nil {
-			db.RedisClient = originalRedis
-		}
+		// Restore original clients exactly (even if nil)
+		db.Client = originalClient
+		db.RedisClient = originalRedis
 	}
 
 	return client, redisClient, cleanup
-}
-
-// ensureDatabaseSchema makes sure the database schema is properly created
-// This is especially important for tables needed by auth middleware
-func ensureDatabaseSchema(t *testing.T) {
-	ctx := context.Background()
-
-	// Check if schema exists by attempting to query a critical table
-	_, err := db.Client.APIKey.Query().Count(ctx)
-	if err != nil {
-		// Check if it's a "no such table" error
-		if strings.Contains(err.Error(), "no such table") {
-			t.Logf("Database schema missing, recreating entire schema...")
-			err = db.Client.Schema.Create(ctx)
-			if err != nil {
-				t.Fatalf("Failed to recreate database schema: %v", err)
-			}
-			t.Logf("Database schema recreated successfully")
-
-			// After recreating schema, we need to re-run setup to populate test data
-			t.Logf("Recreating test data after schema recreation...")
-			err = setup()
-			if err != nil {
-				t.Fatalf("Failed to recreate test data after schema recreation: %v", err)
-			}
-		} else {
-			t.Fatalf("Unexpected database error: %v", err)
-		}
-	}
 }
 
 func TestProvider(t *testing.T) {
@@ -210,6 +175,9 @@ func TestProvider(t *testing.T) {
 	router.GET("/rates/:token/:fiat", ctrl.GetMarketRate)
 
 	t.Run("GetLockPaymentOrders", func(t *testing.T) {
+		_, _, cleanup := setupIsolatedTest(t)
+		defer cleanup()
+
 		t.Run("fetch default list", func(t *testing.T) {
 			// Test default params
 			var payload = map[string]interface{}{
@@ -523,6 +491,8 @@ func TestProvider(t *testing.T) {
 	})
 
 	t.Run("GetStats", func(t *testing.T) {
+		_, _, cleanup := setupIsolatedTest(t)
+		defer cleanup()
 		// Create a new user with no orders
 		user, err := test.CreateTestUser(map[string]interface{}{
 			"email": "no_order_user@test.com",
@@ -763,7 +733,8 @@ func TestProvider(t *testing.T) {
 	})
 
 	t.Run("NodeInfo", func(t *testing.T) {
-
+		_, _, cleanup := setupIsolatedTest(t)
+		defer cleanup()
 		t.Run("when node is healthy", func(t *testing.T) {
 			// Activate httpmock
 			httpmock.Activate()
@@ -844,6 +815,8 @@ func TestProvider(t *testing.T) {
 	})
 
 	t.Run("GetMarketRate", func(t *testing.T) {
+		_, _, cleanup := setupIsolatedTest(t)
+		defer cleanup()
 
 		t.Run("when token does not exist", func(t *testing.T) {
 
@@ -927,6 +900,8 @@ func TestProvider(t *testing.T) {
 	})
 
 	t.Run("AcceptOrder", func(t *testing.T) {
+		_, _, cleanup := setupIsolatedTest(t)
+		defer cleanup()
 
 		t.Run("Invalid Request", func(t *testing.T) {
 
@@ -1159,6 +1134,8 @@ func TestProvider(t *testing.T) {
 	})
 
 	t.Run("DeclineOrder", func(t *testing.T) {
+		_, _, cleanup := setupIsolatedTest(t)
+		defer cleanup()
 
 		t.Run("Invalid Request", func(t *testing.T) {
 
@@ -1424,12 +1401,11 @@ func TestProvider(t *testing.T) {
 	})
 
 	t.Run("CancelOrder", func(t *testing.T) {
+		_, _, cleanup := setupIsolatedTest(t)
+		defer cleanup()
 
 		t.Run("Invalid Request", func(t *testing.T) {
-
 			t.Run("Invalid HMAC", func(t *testing.T) {
-
-				// Test default params
 				var payload = map[string]interface{}{
 					"timestamp": time.Now().Unix(),
 				}
@@ -1440,8 +1416,6 @@ func TestProvider(t *testing.T) {
 
 				res, err := test.PerformRequest(t, "POST", "/orders/test/cancel", payload, headers, router)
 				assert.NoError(t, err)
-
-				// Assert the response body
 				assert.Equal(t, http.StatusUnauthorized, res.Code)
 
 				var response types.Response
@@ -1451,8 +1425,6 @@ func TestProvider(t *testing.T) {
 			})
 
 			t.Run("Invalid API key or token", func(t *testing.T) {
-
-				// Test default params
 				var payload = map[string]interface{}{
 					"timestamp": time.Now().Unix(),
 				}
@@ -1463,8 +1435,6 @@ func TestProvider(t *testing.T) {
 
 				res, err := test.PerformRequest(t, "POST", "/orders/test/cancel", payload, headers, router)
 				assert.NoError(t, err)
-
-				// Assert the response body
 				assert.Equal(t, http.StatusBadRequest, res.Code)
 
 				var response types.Response
@@ -1474,7 +1444,6 @@ func TestProvider(t *testing.T) {
 			})
 
 			t.Run("No Cancel Reason in cancel", func(t *testing.T) {
-				// Test default params
 				var payload = map[string]interface{}{
 					"timestamp": time.Now().Unix(),
 				}
@@ -1486,8 +1455,6 @@ func TestProvider(t *testing.T) {
 
 				res, err := test.PerformRequest(t, "POST", "/orders/test/cancel", payload, headers, router)
 				assert.NoError(t, err)
-
-				// Assert the response body
 				assert.Equal(t, http.StatusBadRequest, res.Code)
 
 				var response types.Response
@@ -1497,8 +1464,6 @@ func TestProvider(t *testing.T) {
 			})
 
 			t.Run("Invalid Order ID", func(t *testing.T) {
-
-				// Test default params
 				var payload = map[string]interface{}{
 					"timestamp": time.Now().Unix(),
 					"reason":    "invalid",
@@ -1512,8 +1477,6 @@ func TestProvider(t *testing.T) {
 
 				res, err := test.PerformRequest(t, "POST", "/orders/test/cancel", payload, headers, router)
 				assert.NoError(t, err)
-
-				// Assert the response body
 				assert.Equal(t, http.StatusBadRequest, res.Code)
 
 				var response types.Response
@@ -1523,7 +1486,6 @@ func TestProvider(t *testing.T) {
 			})
 
 			t.Run("Order Id that doesn't Exist", func(t *testing.T) {
-
 				order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
 					"gateway_id": uuid.New().String(),
 					"provider":   testCtx.provider,
@@ -1551,10 +1513,9 @@ func TestProvider(t *testing.T) {
 
 				if db.RedisClient != nil {
 					err = db.RedisClient.HSet(context.Background(), orderKey, orderRequestData).Err()
-					assert.NoError(t, err, fmt.Errorf("failed to map order to a provider in Redis: %v", err))
+					assert.NoError(t, err)
 				}
 
-				// Test default params
 				var payload = map[string]interface{}{
 					"timestamp": time.Now().Unix(),
 					"reason":    "invalid",
@@ -1568,8 +1529,6 @@ func TestProvider(t *testing.T) {
 
 				res, err := test.PerformRequest(t, "POST", "/orders/"+testCtx.currency.ID.String()+"/cancel", payload, headers, router)
 				assert.NoError(t, err)
-
-				// Assert the response body
 				assert.Equal(t, http.StatusNotFound, res.Code)
 
 				var response types.Response
@@ -1580,7 +1539,6 @@ func TestProvider(t *testing.T) {
 		})
 
 		t.Run("exclude Order For Provider", func(t *testing.T) {
-
 			order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
 				"gateway_id": uuid.New().String(),
 				"provider":   testCtx.provider,
@@ -1596,7 +1554,6 @@ func TestProvider(t *testing.T) {
 				Save(context.Background())
 			assert.NoError(t, err)
 
-			// Add provision bucket to the order
 			order, err = order.Update().
 				SetProvisionBucket(provisionBucket).
 				Save(context.Background())
@@ -1618,15 +1575,14 @@ func TestProvider(t *testing.T) {
 			orderRequestData := map[string]interface{}{
 				"amount":      order.Amount.Mul(order.Rate).RoundBank(0).String(),
 				"institution": order.Institution,
-				"providerId":  testCtx.provider.ID, // Use the same provider as the order
+				"providerId":  testCtx.provider.ID,
 			}
 
 			if db.RedisClient != nil {
 				err = db.RedisClient.HSet(context.Background(), orderKey, orderRequestData).Err()
-				assert.NoError(t, err, fmt.Errorf("failed to map order to a provider in Redis: %v", err))
+				assert.NoError(t, err)
 			}
 
-			// Test default params
 			var payload = map[string]interface{}{
 				"timestamp": time.Now().Unix(),
 				"reason":    "invalid",
@@ -1640,8 +1596,6 @@ func TestProvider(t *testing.T) {
 
 			res, err := test.PerformRequest(t, "POST", "/orders/"+order.ID.String()+"/cancel", payload, headers, router)
 			assert.NoError(t, err)
-
-			// Assert the response body
 			assert.Equal(t, http.StatusOK, res.Code)
 
 			var response types.Response
@@ -1651,7 +1605,6 @@ func TestProvider(t *testing.T) {
 		})
 
 		t.Run("when data is accurate", func(t *testing.T) {
-
 			order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
 				"gateway_id": uuid.New().String(),
 				"provider":   testCtx.provider,
@@ -1667,7 +1620,6 @@ func TestProvider(t *testing.T) {
 				Save(context.Background())
 			assert.NoError(t, err)
 
-			// Add provision bucket to the order
 			order, err = order.Update().
 				SetProvisionBucket(provisionBucket).
 				Save(context.Background())
@@ -1683,10 +1635,9 @@ func TestProvider(t *testing.T) {
 
 			if db.RedisClient != nil {
 				err = db.RedisClient.HSet(context.Background(), orderKey, orderRequestData).Err()
-				assert.NoError(t, err, fmt.Errorf("failed to map order to a provider in Redis: %v", err))
+				assert.NoError(t, err)
 			}
 
-			// Test default params
 			var payload = map[string]interface{}{
 				"timestamp": time.Now().Unix(),
 				"reason":    "invalid",
@@ -1700,8 +1651,6 @@ func TestProvider(t *testing.T) {
 
 			res, err := test.PerformRequest(t, "POST", "/orders/"+order.ID.String()+"/cancel", payload, headers, router)
 			assert.NoError(t, err)
-
-			// Assert the response body
 			assert.Equal(t, http.StatusOK, res.Code)
 
 			var response types.Response
@@ -1709,16 +1658,13 @@ func TestProvider(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, "Order cancelled successfully", response.Message)
 		})
-
 	})
 
 	t.Run("FulfillOrder", func(t *testing.T) {
-		// Ensure database schema is properly created for all subtests
-		ensureDatabaseSchema(t)
+		_, _, cleanup := setupIsolatedTest(t)
+		defer cleanup()
 
 		t.Run("Invalid Request", func(t *testing.T) {
-			// Ensure schema is verified before running each test
-			ensureDatabaseSchema(t)
 			t.Run("Invalid HMAC", func(t *testing.T) {
 				// Test default params
 				var payload = map[string]interface{}{
@@ -1764,8 +1710,6 @@ func TestProvider(t *testing.T) {
 			})
 
 			t.Run("Invalid Payload", func(t *testing.T) {
-				// Ensure schema is verified before the test
-				ensureDatabaseSchema(t)
 
 				// Test default params
 				var payload = map[string]interface{}{
@@ -1790,8 +1734,6 @@ func TestProvider(t *testing.T) {
 			})
 
 			t.Run("Invalid Order ID", func(t *testing.T) {
-				// Ensure schema is verified before the test
-				ensureDatabaseSchema(t)
 
 				// Test default params
 				var payload = map[string]interface{}{
@@ -1819,8 +1761,6 @@ func TestProvider(t *testing.T) {
 			})
 
 			t.Run("Order Id that doesn't Exist", func(t *testing.T) {
-				// Ensure schema is verified before the test
-				ensureDatabaseSchema(t)
 
 				order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
 					"gateway_id": uuid.New().String(),
