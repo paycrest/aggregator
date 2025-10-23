@@ -395,7 +395,14 @@ func GetTronLatestBlock(endpoint string) (int64, error) {
 		return 0, fmt.Errorf("failed to get latest block: %w", err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	// Check for HTTP errors
+	if res.Status().IsError() {
+		body, _ := res.Body().AsString()
+		return 0, fmt.Errorf("HTTP error %d: %s", res.Status().Code(), body)
+	}
+
+	var data map[string]interface{}
+	err = res.Body().AsJSON(&data)
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse JSON response: %w", err)
 	}
@@ -588,37 +595,64 @@ func SyncLockOrderFulfillments() {
 						}).Errorf("SyncLockOrderFulfillments.UpdateStatus")
 					}
 				}
-				continue
-			}
+			continue
+		}
 
-			data, err := utils.ParseJSONResponse(res.RawResponse)
-			if err != nil {
-				if order.Status == lockpaymentorder.StatusProcessing && order.UpdatedAt.Add(orderConf.OrderFulfillmentValidity*2).Before(time.Now()) {
+		// Check for HTTP errors
+		if res.Status().IsError() {
+			body, _ := res.Body().AsString()
+			if order.Status == lockpaymentorder.StatusProcessing && order.UpdatedAt.Add(orderConf.OrderFulfillmentValidity*2).Before(time.Now()) {
+				logger.WithFields(logger.Fields{
+					"Error":           fmt.Sprintf("HTTP error %d: %s", res.Status().Code(), body),
+					"ProviderID":      order.Edges.Provider.ID,
+					"PayloadOrderId":  payload["orderId"],
+					"PayloadCurrency": payload["currency"],
+				}).Errorf("HTTP error after getting trx status from provider")
+				// delete lock order to trigger re-indexing
+				err := storage.Client.LockPaymentOrder.
+					DeleteOneID(order.ID).
+					Exec(ctx)
+				if err != nil {
 					logger.WithFields(logger.Fields{
-						"Error":           fmt.Sprintf("%v", err),
-						"ProviderID":      order.Edges.Provider.ID,
-						"PayloadOrderId":  payload["orderId"],
-						"PayloadCurrency": payload["currency"],
-					}).Errorf("Failed to parse JSON response after getting trx status from provider")
-					// delete lock order to trigger re-indexing
-					err := storage.Client.LockPaymentOrder.
-						DeleteOneID(order.ID).
-						Exec(ctx)
-					if err != nil {
-						logger.WithFields(logger.Fields{
-							"Error":      fmt.Sprintf("%v", err),
-							"OrderID":    order.ID.String(),
-							"ProviderID": order.Edges.Provider.ID,
-						}).Errorf("Failed to delete order after failing to parse JSON response when getting trx status from provider")
-					}
-					continue
+						"Error":      fmt.Sprintf("%v", err),
+						"OrderID":    order.ID.String(),
+						"ProviderID": order.Edges.Provider.ID,
+					}).Errorf("Failed to delete order after HTTP error when getting trx status from provider")
 				}
 				continue
 			}
+			continue
+		}
 
-			status := data["data"].(map[string]interface{})["status"].(string)
-			psp := data["data"].(map[string]interface{})["psp"].(string)
-			txId := data["data"].(map[string]interface{})["txId"].(string)
+		var data map[string]interface{}
+		err = res.Body().AsJSON(&data)
+		if err != nil {
+			if order.Status == lockpaymentorder.StatusProcessing && order.UpdatedAt.Add(orderConf.OrderFulfillmentValidity*2).Before(time.Now()) {
+				logger.WithFields(logger.Fields{
+					"Error":           fmt.Sprintf("%v", err),
+					"ProviderID":      order.Edges.Provider.ID,
+					"PayloadOrderId":  payload["orderId"],
+					"PayloadCurrency": payload["currency"],
+				}).Errorf("Failed to parse JSON response after getting trx status from provider")
+				// delete lock order to trigger re-indexing
+				err := storage.Client.LockPaymentOrder.
+					DeleteOneID(order.ID).
+					Exec(ctx)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":      fmt.Sprintf("%v", err),
+						"OrderID":    order.ID.String(),
+						"ProviderID": order.Edges.Provider.ID,
+					}).Errorf("Failed to delete order after failing to parse JSON response when getting trx status from provider")
+				}
+				continue
+			}
+			continue
+		}
+
+		status := data["data"].(map[string]interface{})["status"].(string)
+		psp := data["data"].(map[string]interface{})["psp"].(string)
+		txId := data["data"].(map[string]interface{})["txId"].(string)
 
 			if status == "failed" {
 				_, err = storage.Client.LockOrderFulfillment.
@@ -712,26 +746,42 @@ func SyncLockOrderFulfillments() {
 						Header().Add("X-Request-Signature", signature).
 						Build().POST("/tx_status").
 						Body().AsJSON(payload).
-						Send()
-					if err != nil {
-						continue
-					}
+					Send()
+				if err != nil {
+					continue
+				}
 
-					data, err := utils.ParseJSONResponse(res.RawResponse)
-					if err != nil {
-						logger.WithFields(logger.Fields{
-							"Error":           fmt.Sprintf("%v", err),
-							"OrderID":         order.ID.String(),
-							"ProviderID":      order.Edges.Provider.ID,
-							"PayloadOrderId":  payload["orderId"],
-							"PayloadCurrency": payload["currency"],
-							"PayloadPsp":      payload["psp"],
-							"PayloadTxId":     payload["txId"],
-						}).Errorf("Failed to parse JSON response after getting trx status from provider")
-						continue
-					}
+				// Check for HTTP errors
+				if res.Status().IsError() {
+					body, _ := res.Body().AsString()
+					logger.WithFields(logger.Fields{
+						"Error":           fmt.Sprintf("HTTP error %d: %s", res.Status().Code(), body),
+						"OrderID":         order.ID.String(),
+						"ProviderID":      order.Edges.Provider.ID,
+						"PayloadOrderId":  payload["orderId"],
+						"PayloadCurrency": payload["currency"],
+						"PayloadPsp":      payload["psp"],
+						"PayloadTxId":     payload["txId"],
+					}).Errorf("HTTP error after getting trx status from provider")
+					continue
+				}
 
-					status := data["data"].(map[string]interface{})["status"].(string)
+				var data map[string]interface{}
+				err = res.Body().AsJSON(&data)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":           fmt.Sprintf("%v", err),
+						"OrderID":         order.ID.String(),
+						"ProviderID":      order.Edges.Provider.ID,
+						"PayloadOrderId":  payload["orderId"],
+						"PayloadCurrency": payload["currency"],
+						"PayloadPsp":      payload["psp"],
+						"PayloadTxId":     payload["txId"],
+					}).Errorf("Failed to parse JSON response after getting trx status from provider")
+					continue
+				}
+
+				status := data["data"].(map[string]interface{})["status"].(string)
 
 					if status == "failed" {
 						_, err = storage.Client.LockOrderFulfillment.
@@ -973,15 +1023,22 @@ func fetchExternalRate(currency string) (decimal.Decimal, error) {
 		res, err := fastshot.NewClient("https://app.quidax.io").
 			Config().SetTimeout(30*time.Second).
 			Build().GET(fmt.Sprintf("/api/v1/markets/tickers/usdt%s", strings.ToLower(currency))).
-			Retry().Set(3, 5*time.Second).
+			Retry().SetConstantBackoff(5*time.Second, 3).
 			Send()
 		if err != nil {
 			return decimal.Zero, fmt.Errorf("ComputeMarketRate: %w", err)
 		}
 
-		data, err := utils.ParseJSONResponse(res.RawResponse)
+		// Check for HTTP errors
+		if res.Status().IsError() {
+			body, _ := res.Body().AsString()
+			return decimal.Zero, fmt.Errorf("ComputeMarketRate HTTP error %d: %s", res.Status().Code(), body)
+		}
+
+		var data map[string]interface{}
+		err = res.Body().AsJSON(&data)
 		if err != nil {
-			return decimal.Zero, fmt.Errorf("ComputeMarketRate: %w %v", err, data)
+			return decimal.Zero, fmt.Errorf("ComputeMarketRate: %w", err)
 		}
 
 		// Try to use 'buy' price first, fall back to alternatives if buy is zero
@@ -1030,7 +1087,6 @@ func fetchExternalRate(currency string) (decimal.Decimal, error) {
 			Config().SetTimeout(30*time.Second).
 			Header().Add("Content-Type", "application/json").
 			Build().POST("/bapi/c2c/v2/friendly/c2c/adv/search").
-			Retry().Set(3, 5*time.Second).
 			Body().AsJSON(map[string]interface{}{
 			"asset":     "USDT",
 			"fiat":      currency,
@@ -1038,12 +1094,20 @@ func fetchExternalRate(currency string) (decimal.Decimal, error) {
 			"page":      1,
 			"rows":      20,
 		}).
+			Retry().SetConstantBackoff(5*time.Second, 3).
 			Send()
 		if err != nil {
 			return decimal.Zero, fmt.Errorf("ComputeMarketRate: %w", err)
 		}
 
-		resData, err := utils.ParseJSONResponse(res.RawResponse)
+		// Check for HTTP errors
+		if res.Status().IsError() {
+			body, _ := res.Body().AsString()
+			return decimal.Zero, fmt.Errorf("ComputeMarketRate HTTP error %d: %s", res.Status().Code(), body)
+		}
+
+		var resData map[string]interface{}
+		err = res.Body().AsJSON(&resData)
 		if err != nil {
 			return decimal.Zero, fmt.Errorf("ComputeMarketRate: %w", err)
 		}
@@ -1174,7 +1238,7 @@ func RetryFailedWebhookNotifications() error {
 			Body().AsJSON(attempt.Payload).
 			Send()
 
-		if err != nil || (body.StatusCode() >= 205) {
+		if err != nil || (body.Status().Code() >= 205) {
 			// Webhook notification failed
 			// Update attempt with next retry time
 			attemptNumber := attempt.AttemptNumber + 1
@@ -1638,8 +1702,15 @@ func fetchProviderBalances(providerID string) (map[string]*types.ProviderBalance
 		return nil, fmt.Errorf("failed to call provider /info endpoint: %v", err)
 	}
 
+	// Check for HTTP errors
+	if res.Status().IsError() {
+		body, _ := res.Body().AsString()
+		return nil, fmt.Errorf("HTTP error %d: %s", res.Status().Code(), body)
+	}
+
 	// Parse JSON response
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	var data map[string]interface{}
+	err = res.Body().AsJSON(&data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse response: %v", err)
 	}
