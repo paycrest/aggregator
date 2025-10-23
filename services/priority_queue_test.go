@@ -489,7 +489,8 @@ func TestPriorityQueueTest(t *testing.T) {
 					}, string(decryptedSecret))
 					assert.Equal(t, r.Header.Get("X-Request-Signature"), signature)
 					if strings.Contains(string(bytes), "data") && strings.Contains(string(bytes), "test") {
-						resp := httpmock.NewBytesResponse(200, nil)
+						// Return a valid JSON response body to avoid EOF error
+						resp := httpmock.NewBytesResponse(200, []byte(`{"status":"ok"}`))
 						return resp, nil
 					} else {
 						return nil, nil
