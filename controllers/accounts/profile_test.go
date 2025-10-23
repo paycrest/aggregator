@@ -1011,8 +1011,8 @@ func TestProfile(t *testing.T) {
 
 			// Add provider data to Redis queue
 			redisKey := fmt.Sprintf("bucket_%s_%s_%s", currency.Code, bucket.MinAmount, bucket.MaxAmount)
-			providerData := testCtx.providerProfile.ID + ":USDC:550:" + bucket.MinAmount.String() + ":" + bucket.MaxAmount.String()
-			redisClient.RPush(ctx, redisKey, providerData, "other_provider:USDC:550:"+bucket.MinAmount.String()+":"+bucket.MaxAmount.String())
+			providerData := testCtx.providerProfile.ID + ":" + currency.Code + ":550:" + bucket.MinAmount.String() + ":" + bucket.MaxAmount.String()
+			redisClient.RPush(ctx, redisKey, providerData, "other_provider:"+currency.Code+":550:"+bucket.MinAmount.String()+":"+bucket.MaxAmount.String())
 
 			// Verify provider is in Redis queue
 			queue, err := redisClient.LRange(ctx, redisKey, 0, -1).Result()
@@ -1159,7 +1159,7 @@ func TestProfile(t *testing.T) {
 
 			// Create Redis queue with different provider (provider not found scenario)
 			redisKey := fmt.Sprintf("bucket_%s_%s_%s", currency.Code, bucket.MinAmount, bucket.MaxAmount)
-			redisClient.RPush(ctx, redisKey, "other_provider:USDC:550:"+bucket.MinAmount.String()+":"+bucket.MaxAmount.String())
+			redisClient.RPush(ctx, redisKey, "other_provider:"+currency.Code+":550:"+bucket.MinAmount.String()+":"+bucket.MaxAmount.String())
 
 			// Prepare request to set IsAvailable to false
 			payload := types.ProviderProfilePayload{
@@ -1182,7 +1182,7 @@ func TestProfile(t *testing.T) {
 			queue, err := redisClient.LRange(ctx, redisKey, 0, -1).Result()
 			assert.NoError(t, err)
 			assert.Len(t, queue, 1) // Should remain unchanged
-			assert.Contains(t, queue, "other_provider:USDC:550:"+bucket.MinAmount.String()+":"+bucket.MaxAmount.String())
+			assert.Contains(t, queue, "other_provider:"+currency.Code+":550:"+bucket.MinAmount.String()+":"+bucket.MaxAmount.String())
 		})
 	})
 }
