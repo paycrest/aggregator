@@ -384,6 +384,7 @@ func (s *OrderEVM) settleCallData(ctx context.Context, order *ent.LockPaymentOrd
 		utils.StringToByte32(string(orderID)),
 		ethcommon.HexToAddress(token.Address),
 		uint64(orderPercent),
+		uint64(0), // rebatePercent - default to 0 for now
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to pack settle ABI: %w", err)

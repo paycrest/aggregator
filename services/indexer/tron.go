@@ -216,7 +216,7 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 				}
 				orderCreatedEvents = append(orderCreatedEvents, createdEvent)
 
-			case "98ece21e01a01cbe1d1c0dad3b053c8fbd368f99be78be958fcf1d1d13fd249a": // OrderSettled
+			case "0x57c683de2e7c8263c7f57fd108416b9bdaa7a6e7f2e4e7102c3b6f9e37f1cc37": // OrderSettled
 				unpackedEventData, err := utils.UnpackEventData(eventData["data"].(string), contracts.GatewayMetaData.ABI, "OrderSettled")
 				if err != nil {
 					logger.WithFields(logger.Fields{
@@ -229,6 +229,7 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 
 				splitOrderId := unpackedEventData[0].(string)
 				settlePercent := unpackedEventData[1].(*big.Int)
+				rebatePercent := unpackedEventData[2].(*big.Int)
 				eventOrderId := utils.ParseTopicToByte32Flexible(eventData["topics"].([]interface{})[1])
 				liquidityProvider := utils.ParseTopicToTronAddress(eventData["topics"].([]interface{})[2].(string))
 
@@ -239,6 +240,7 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 					OrderId:           fmt.Sprintf("0x%v", hex.EncodeToString(eventOrderId[:])),
 					LiquidityProvider: liquidityProvider,
 					SettlePercent:     utils.FromSubunit(settlePercent, 0),
+					RebatePercent:     utils.FromSubunit(rebatePercent, 0),
 				}
 				orderSettledEvents = append(orderSettledEvents, settledEvent)
 
@@ -474,13 +476,14 @@ func (s *IndexerTron) indexOrderSettledByBlockRange(ctx context.Context, network
 			}
 			for _, event := range data["log"].([]interface{}) {
 				eventData := event.(map[string]interface{})
-				if eventData["topics"].([]interface{})[0] == "98ece21e01a01cbe1d1c0dad3b053c8fbd368f99be78be958fcf1d1d13fd249a" {
+				if eventData["topics"].([]interface{})[0] == "57c683de2e7c8263c7f57fd108416b9bdaa7a6e7f2e4e7102c3b6f9e37f1cc37" {
 					unpackedEventData, err := utils.UnpackEventData(eventData["data"].(string), contracts.GatewayMetaData.ABI, "OrderSettled")
 					if err != nil {
 						continue
 					}
 					splitOrderId := unpackedEventData[0].(string)
 					settlePercent := unpackedEventData[1].(*big.Int)
+					rebatePercent := unpackedEventData[2].(*big.Int)
 					eventOrderId := utils.ParseTopicToByte32Flexible(eventData["topics"].([]interface{})[1])
 					liquidityProvider := utils.ParseTopicToTronAddress(eventData["topics"].([]interface{})[2].(string))
 					settledEvent := &types.OrderSettledEvent{
@@ -490,6 +493,7 @@ func (s *IndexerTron) indexOrderSettledByBlockRange(ctx context.Context, network
 						OrderId:           fmt.Sprintf("0x%v", hex.EncodeToString(eventOrderId[:])),
 						LiquidityProvider: liquidityProvider,
 						SettlePercent:     utils.FromSubunit(settlePercent, 0),
+						RebatePercent:     utils.FromSubunit(rebatePercent, 0),
 					}
 					txHashes = append(txHashes, settledEvent.TxHash)
 					hashToEvent[settledEvent.TxHash] = settledEvent

@@ -12,7 +12,7 @@ import (
 const (
 	TransferEventSignature      = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
 	OrderCreatedEventSignature  = "0x40ccd1ceb111a3c186ef9911e1b876dc1f789ed331b86097b3b8851055b6a137"
-	OrderSettledEventSignature  = "0x98ece21e01a01cbe1d1c0dad3b053c8fbd368f99be78be958fcf1d1d13fd249a"
+	OrderSettledEventSignature  = "0x57c683de2e7c8263c7f57fd108416b9bdaa7a6e7f2e4e7102c3b6f9e37f1cc37"
 	OrderRefundedEventSignature = "0x0736fe428e1747ca8d387c2e6fa1a31a0cde62d3a167c40a46ade59a3cdc828e"
 )
 
@@ -110,9 +110,9 @@ func DecodeOrderCreatedEvent(log types.Log) (map[string]interface{}, error) {
 
 // DecodeOrderSettledEvent decodes an OrderSettled event from RPC log
 func DecodeOrderSettledEvent(log types.Log) (map[string]interface{}, error) {
-	// OrderSettled event: OrderSettled(bytes32 splitOrderId, bytes32 indexed orderId, address indexed liquidityProvider, uint96 settlePercent)
+	// OrderSettled event: OrderSettled(bytes32 splitOrderId, bytes32 indexed orderId, address indexed liquidityProvider, uint64 settlePercent, uint64 rebatePercent)
 	// Topics: [eventSignature, orderId, liquidityProvider]
-	// Data: [splitOrderId, settlePercent]
+	// Data: [splitOrderId, settlePercent, rebatePercent]
 
 	if len(log.Topics) != 3 {
 		return nil, fmt.Errorf("invalid OrderSettled event: expected 3 topics, got %d", len(log.Topics))
@@ -122,13 +122,14 @@ func DecodeOrderSettledEvent(log types.Log) (map[string]interface{}, error) {
 	liquidityProvider := common.HexToAddress(log.Topics[2].Hex())
 
 	// Decode non-indexed parameters from data
-	// The data contains: splitOrderId (32 bytes) + settlePercent (12 bytes)
-	if len(log.Data) < 44 {
+	// The data contains: splitOrderId (32 bytes) + settlePercent (8 bytes) + rebatePercent (8 bytes)
+	if len(log.Data) < 48 {
 		return nil, fmt.Errorf("invalid OrderSettled event data: too short")
 	}
 
 	splitOrderId := common.BytesToHash(log.Data[:32])
-	settlePercent := new(big.Int).SetBytes(log.Data[32:64])
+	settlePercent := new(big.Int).SetBytes(log.Data[32:40])
+	rebatePercent := new(big.Int).SetBytes(log.Data[40:48])
 
 	return map[string]interface{}{
 		"indexed_params": map[string]interface{}{
@@ -138,6 +139,7 @@ func DecodeOrderSettledEvent(log types.Log) (map[string]interface{}, error) {
 		"non_indexed_params": map[string]interface{}{
 			"splitOrderId":  splitOrderId.Hex(),
 			"settlePercent": settlePercent.String(),
+			"rebatePercent": rebatePercent.String(),
 		},
 	}, nil
 }
