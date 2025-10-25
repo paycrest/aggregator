@@ -216,7 +216,7 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 				}
 				orderCreatedEvents = append(orderCreatedEvents, createdEvent)
 
-			case "0x57c683de2e7c8263c7f57fd108416b9bdaa7a6e7f2e4e7102c3b6f9e37f1cc37": // OrderSettled
+			case "57c683de2e7c8263c7f57fd108416b9bdaa7a6e7f2e4e7102c3b6f9e37f1cc37": // OrderSettled
 				unpackedEventData, err := utils.UnpackEventData(eventData["data"].(string), contracts.GatewayMetaData.ABI, "OrderSettled")
 				if err != nil {
 					logger.WithFields(logger.Fields{
