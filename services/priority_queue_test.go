@@ -1190,4 +1190,146 @@ func TestPriorityQueueTest(t *testing.T) {
 		assert.Contains(t, counts, 3, "One token should appear 3 times")
 		assert.Contains(t, counts, 2, "Other token should appear 2 times")
 	})
+
+	t.Run("TestDeterministicQueueOrder", func(t *testing.T) {
+		ctx := context.Background()
+
+		// Create 3 providers with different IDs to test deterministic ordering
+		providers := []struct {
+			email string
+			host  string
+		}{
+			{"provider-c@test.com", "https://provider-c.com"},
+			{"provider-a@test.com", "https://provider-a.com"},
+			{"provider-b@test.com", "https://provider-b.com"},
+		}
+
+		providerProfiles := []*ent.ProviderProfile{}
+
+		for _, p := range providers {
+			providerUser, err := test.CreateTestUser(map[string]interface{}{
+				"scope": "provider",
+				"email": p.email,
+			})
+			assert.NoError(t, err)
+
+			providerProfile, err := test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":         providerUser.ID,
+				"currency_id":     testCtxForPQ.currency.ID,
+				"host_identifier": p.host,
+			})
+			assert.NoError(t, err)
+
+			// Add 1 token to each provider
+			_, err = test.AddProviderOrderTokenToProvider(
+				map[string]interface{}{
+					"fixed_conversion_rate":    decimal.NewFromFloat(100),
+					"conversion_rate_type":     "fixed",
+					"floating_conversion_rate": decimal.NewFromFloat(1.0),
+					"max_order_amount":         decimal.NewFromFloat(1000),
+					"min_order_amount":         decimal.NewFromFloat(1.0),
+					"provider":                 providerProfile,
+					"currency_id":              testCtxForPQ.currency.ID,
+					"network":                  testCtxForPQ.token.Edges.Network.Identifier,
+					"token_id":                 testCtxForPQ.token.ID,
+				},
+			)
+			assert.NoError(t, err)
+
+			// Update ProviderCurrencies with sufficient balance
+			_, err = db.Client.ProviderCurrencies.
+				Update().
+				Where(providercurrencies.HasProviderWith(providerprofile.IDEQ(providerProfile.ID))).
+				Where(providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(testCtxForPQ.currency.ID))).
+				SetAvailableBalance(decimal.NewFromFloat(100000)).
+				SetTotalBalance(decimal.NewFromFloat(100000)).
+				Save(ctx)
+			assert.NoError(t, err)
+
+			providerProfiles = append(providerProfiles, providerProfile)
+		}
+
+		// Create a bucket with all providers
+		bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
+			"provider_id": providerProfiles[0].ID,
+			"min_amount":  testCtxForPQ.minAmount,
+			"max_amount":  testCtxForPQ.maxAmount,
+			"currency_id": testCtxForPQ.currency.ID,
+		})
+		assert.NoError(t, err)
+
+		// Add other providers to the bucket
+		_, err = db.Client.ProvisionBucket.
+			UpdateOneID(bucket.ID).
+			AddProviderProfileIDs(providerProfiles[1].ID, providerProfiles[2].ID).
+			Save(ctx)
+		assert.NoError(t, err)
+
+		_bucket, err := db.Client.ProvisionBucket.
+			Query().
+			Where(provisionbucket.IDEQ(bucket.ID)).
+			WithCurrency().
+			WithProviderProfiles().
+			Only(ctx)
+		assert.NoError(t, err)
+
+		// Create the queue multiple times and verify consistent ordering
+		redisKey := fmt.Sprintf("bucket_%s_%s_%s", _bucket.Edges.Currency.Code, testCtxForPQ.minAmount, testCtxForPQ.maxAmount)
+
+		// First run
+		service.CreatePriorityQueueForBucket(ctx, _bucket)
+		firstRun, err := db.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
+		assert.NoError(t, err)
+
+		// Delete and recreate
+		_, err = db.RedisClient.Del(ctx, redisKey).Result()
+		assert.NoError(t, err)
+
+		// Second run
+		service.CreatePriorityQueueForBucket(ctx, _bucket)
+		secondRun, err := db.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
+		assert.NoError(t, err)
+
+		// Delete and recreate
+		_, err = db.RedisClient.Del(ctx, redisKey).Result()
+		assert.NoError(t, err)
+
+		// Third run
+		service.CreatePriorityQueueForBucket(ctx, _bucket)
+		thirdRun, err := db.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
+		assert.NoError(t, err)
+
+		// All runs should produce identical queue order
+		assert.Equal(t, firstRun, secondRun, "First and second runs should produce identical queue order")
+		assert.Equal(t, secondRun, thirdRun, "Second and third runs should produce identical queue order")
+
+		// Verify providers are ordered deterministically (sorted by ID)
+		// Collect all provider IDs in order of appearance
+		seenProviders := []string{}
+		for _, entry := range firstRun {
+			parts := strings.Split(entry, ":")
+			if len(parts) > 0 {
+				providerID := parts[0]
+				if !containsString(seenProviders, providerID) {
+					seenProviders = append(seenProviders, providerID)
+				}
+			}
+		}
+
+		// Verify the providers appear in sorted order
+		sortedProviders := make([]string, len(seenProviders))
+		copy(sortedProviders, seenProviders)
+		sort.Strings(sortedProviders)
+		assert.Equal(t, sortedProviders, seenProviders, "Providers should appear in sorted ID order")
+	})
+}
+
+// Helper function for the test
+func containsString(slice []string, str string) bool {
+	for _, s := range slice {
+		if s == str {
+			return true
+		}
+	}
+	return false
 }

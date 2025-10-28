@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"sort"
 	"strings"
 	"time"
 
@@ -305,7 +306,15 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 	}
 
 	// Second pass: distribute slots equally by cycling through each provider's tokens
-	for providerID, entries := range providerTokenEntries {
+	// Sort provider IDs for deterministic iteration order (aids debugging and testing)
+	providerIDs := make([]string, 0, len(providerTokenEntries))
+	for providerID := range providerTokenEntries {
+		providerIDs = append(providerIDs, providerID)
+	}
+	sort.Strings(providerIDs)
+
+	for _, providerID := range providerIDs {
+		entries := providerTokenEntries[providerID]
 		numEntries := len(entries)
 		for i := 0; i < targetSlotsPerProvider; i++ {
 			// Cycle through available entries using modulo
