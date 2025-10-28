@@ -578,4 +578,616 @@ func TestPriorityQueueTest(t *testing.T) {
 	// 		close(orderRequestChan)
 	// 	})
 	// })
+
+	t.Run("TestEqualSlotDistribution", func(t *testing.T) {
+		ctx := context.Background()
+
+		// Create a second token for testing
+		token2Id, err := db.Client.Token.
+			Create().
+			SetSymbol("TST2").
+			SetContractAddress("0xd4E96eF8eee8678dBFf4d535E033Ed1a4F7605b8").
+			SetDecimals(6).
+			SetNetworkID(testCtxForPQ.token.Edges.Network.ID).
+			SetIsEnabled(true).
+			SetBaseCurrency("KES").
+			OnConflict().
+			UpdateNewValues().
+			ID(ctx)
+		assert.NoError(t, err)
+
+		token2, err := db.Client.Token.
+			Query().
+			Where(tokenEnt.IDEQ(token2Id)).
+			WithNetwork().
+			Only(ctx)
+		assert.NoError(t, err)
+
+		// Create a third token for testing
+		token3Id, err := db.Client.Token.
+			Create().
+			SetSymbol("TST3").
+			SetContractAddress("0xd4E96eF8eee8678dBFf4d535E033Ed1a4F7605b9").
+			SetDecimals(6).
+			SetNetworkID(testCtxForPQ.token.Edges.Network.ID).
+			SetIsEnabled(true).
+			SetBaseCurrency("KES").
+			OnConflict().
+			UpdateNewValues().
+			ID(ctx)
+		assert.NoError(t, err)
+
+		token3, err := db.Client.Token.
+			Query().
+			Where(tokenEnt.IDEQ(token3Id)).
+			WithNetwork().
+			Only(ctx)
+		assert.NoError(t, err)
+
+		// Create provider with multiple tokens (3 tokens)
+		multiTokenProvider, err := test.CreateTestUser(map[string]interface{}{
+			"scope": "provider",
+			"email": "multitoken@test.com",
+		})
+		assert.NoError(t, err)
+
+		multiTokenProviderProfile, err := test.CreateTestProviderProfile(map[string]interface{}{
+			"user_id":         multiTokenProvider.ID,
+			"currency_id":     testCtxForPQ.currency.ID,
+			"host_identifier": "https://multitoken.com",
+		})
+		assert.NoError(t, err)
+
+		// Add 3 tokens to multiTokenProvider
+		_, err = test.AddProviderOrderTokenToProvider(
+			map[string]interface{}{
+				"fixed_conversion_rate":    decimal.NewFromFloat(100),
+				"conversion_rate_type":     "fixed",
+				"floating_conversion_rate": decimal.NewFromFloat(1.0),
+				"max_order_amount":         decimal.NewFromFloat(1000),
+				"min_order_amount":         decimal.NewFromFloat(1.0),
+				"provider":                 multiTokenProviderProfile,
+				"currency_id":              testCtxForPQ.currency.ID,
+				"network":                  testCtxForPQ.token.Edges.Network.Identifier,
+				"token_id":                 testCtxForPQ.token.ID,
+			},
+		)
+		assert.NoError(t, err)
+
+		_, err = test.AddProviderOrderTokenToProvider(
+			map[string]interface{}{
+				"fixed_conversion_rate":    decimal.NewFromFloat(110),
+				"conversion_rate_type":     "fixed",
+				"floating_conversion_rate": decimal.NewFromFloat(1.0),
+				"max_order_amount":         decimal.NewFromFloat(1000),
+				"min_order_amount":         decimal.NewFromFloat(1.0),
+				"provider":                 multiTokenProviderProfile,
+				"currency_id":              testCtxForPQ.currency.ID,
+				"network":                  token2.Edges.Network.Identifier,
+				"token_id":                 token2.ID,
+			},
+		)
+		assert.NoError(t, err)
+
+		_, err = test.AddProviderOrderTokenToProvider(
+			map[string]interface{}{
+				"fixed_conversion_rate":    decimal.NewFromFloat(120),
+				"conversion_rate_type":     "fixed",
+				"floating_conversion_rate": decimal.NewFromFloat(1.0),
+				"max_order_amount":         decimal.NewFromFloat(1000),
+				"min_order_amount":         decimal.NewFromFloat(1.0),
+				"provider":                 multiTokenProviderProfile,
+				"currency_id":              testCtxForPQ.currency.ID,
+				"network":                  token3.Edges.Network.Identifier,
+				"token_id":                 token3.ID,
+			},
+		)
+		assert.NoError(t, err)
+
+		// Update ProviderCurrencies with sufficient balance
+		_, err = db.Client.ProviderCurrencies.
+			Update().
+			Where(providercurrencies.HasProviderWith(providerprofile.IDEQ(multiTokenProviderProfile.ID))).
+			Where(providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(testCtxForPQ.currency.ID))).
+			SetAvailableBalance(decimal.NewFromFloat(100000)).
+			SetTotalBalance(decimal.NewFromFloat(100000)).
+			Save(ctx)
+		assert.NoError(t, err)
+
+		// Create provider with single token
+		singleTokenProvider, err := test.CreateTestUser(map[string]interface{}{
+			"scope": "provider",
+			"email": "singletoken@test.com",
+		})
+		assert.NoError(t, err)
+
+		singleTokenProviderProfile, err := test.CreateTestProviderProfile(map[string]interface{}{
+			"user_id":         singleTokenProvider.ID,
+			"currency_id":     testCtxForPQ.currency.ID,
+			"host_identifier": "https://singletoken.com",
+		})
+		assert.NoError(t, err)
+
+		// Add only 1 token to singleTokenProvider
+		_, err = test.AddProviderOrderTokenToProvider(
+			map[string]interface{}{
+				"fixed_conversion_rate":    decimal.NewFromFloat(105),
+				"conversion_rate_type":     "fixed",
+				"floating_conversion_rate": decimal.NewFromFloat(1.0),
+				"max_order_amount":         decimal.NewFromFloat(1000),
+				"min_order_amount":         decimal.NewFromFloat(1.0),
+				"provider":                 singleTokenProviderProfile,
+				"currency_id":              testCtxForPQ.currency.ID,
+				"network":                  testCtxForPQ.token.Edges.Network.Identifier,
+				"token_id":                 testCtxForPQ.token.ID,
+			},
+		)
+		assert.NoError(t, err)
+
+		// Update ProviderCurrencies with sufficient balance
+		_, err = db.Client.ProviderCurrencies.
+			Update().
+			Where(providercurrencies.HasProviderWith(providerprofile.IDEQ(singleTokenProviderProfile.ID))).
+			Where(providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(testCtxForPQ.currency.ID))).
+			SetAvailableBalance(decimal.NewFromFloat(100000)).
+			SetTotalBalance(decimal.NewFromFloat(100000)).
+			Save(ctx)
+		assert.NoError(t, err)
+
+		// Create a bucket with both providers
+		bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
+			"provider_id": multiTokenProviderProfile.ID,
+			"min_amount":  testCtxForPQ.minAmount,
+			"max_amount":  testCtxForPQ.maxAmount,
+			"currency_id": testCtxForPQ.currency.ID,
+		})
+		assert.NoError(t, err)
+
+		// Add second provider to the same bucket
+		_, err = db.Client.ProvisionBucket.
+			UpdateOneID(bucket.ID).
+			AddProviderProfileIDs(singleTokenProviderProfile.ID).
+			Save(ctx)
+		assert.NoError(t, err)
+
+		_bucket, err := db.Client.ProvisionBucket.
+			Query().
+			Where(provisionbucket.IDEQ(bucket.ID)).
+			WithCurrency().
+			WithProviderProfiles().
+			Only(ctx)
+		assert.NoError(t, err)
+
+		// Create the priority queue
+		service.CreatePriorityQueueForBucket(ctx, _bucket)
+
+		redisKey := fmt.Sprintf("bucket_%s_%s_%s", _bucket.Edges.Currency.Code, testCtxForPQ.minAmount, testCtxForPQ.maxAmount)
+
+		// Verify the queue structure
+		data, err := db.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
+		assert.NoError(t, err)
+
+		// Both providers should have equal slots (3 each, matching the max token count)
+		expectedSlots := 3
+		totalExpectedSlots := expectedSlots * 2 // 2 providers
+
+		assert.Equal(t, totalExpectedSlots, len(data), "Total slots should be %d (3 slots per provider x 2 providers)", totalExpectedSlots)
+
+		// Count slots per provider
+		multiTokenSlots := 0
+		singleTokenSlots := 0
+		for _, entry := range data {
+			if strings.HasPrefix(entry, multiTokenProviderProfile.ID) {
+				multiTokenSlots++
+			} else if strings.HasPrefix(entry, singleTokenProviderProfile.ID) {
+				singleTokenSlots++
+			}
+		}
+
+		assert.Equal(t, expectedSlots, multiTokenSlots, "Multi-token provider should have exactly %d slots", expectedSlots)
+		assert.Equal(t, expectedSlots, singleTokenSlots, "Single-token provider should have exactly %d slots", expectedSlots)
+
+		// Verify that single token provider's token is repeated 3 times
+		singleTokenEntries := []string{}
+		for _, entry := range data {
+			if strings.HasPrefix(entry, singleTokenProviderProfile.ID) {
+				singleTokenEntries = append(singleTokenEntries, entry)
+			}
+		}
+
+		// All entries should be identical (same token repeated)
+		for i := 1; i < len(singleTokenEntries); i++ {
+			assert.Equal(t, singleTokenEntries[0], singleTokenEntries[i], "Single-token provider entries should be identical (cycling)")
+		}
+
+		// Verify multi-token provider has all 3 different tokens
+		multiTokenEntries := []string{}
+		tokenSymbolsFound := make(map[string]bool)
+		for _, entry := range data {
+			if strings.HasPrefix(entry, multiTokenProviderProfile.ID) {
+				multiTokenEntries = append(multiTokenEntries, entry)
+				parts := strings.Split(entry, ":")
+				if len(parts) >= 2 {
+					tokenSymbolsFound[parts[1]] = true
+				}
+			}
+		}
+
+		assert.Equal(t, 3, len(tokenSymbolsFound), "Multi-token provider should have all 3 different tokens represented")
+		assert.True(t, tokenSymbolsFound["TST"], "Should contain TST token")
+		assert.True(t, tokenSymbolsFound["TST2"], "Should contain TST2 token")
+		assert.True(t, tokenSymbolsFound["TST3"], "Should contain TST3 token")
+	})
+
+	t.Run("TestSlotCapAt20", func(t *testing.T) {
+		ctx := context.Background()
+
+		// Create a provider with many tokens (more than 20)
+		manyTokenProvider, err := test.CreateTestUser(map[string]interface{}{
+			"scope": "provider",
+			"email": "manytoken@test.com",
+		})
+		assert.NoError(t, err)
+
+		manyTokenProviderProfile, err := test.CreateTestProviderProfile(map[string]interface{}{
+			"user_id":         manyTokenProvider.ID,
+			"currency_id":     testCtxForPQ.currency.ID,
+			"host_identifier": "https://manytoken.com",
+		})
+		assert.NoError(t, err)
+
+		// Add 25 tokens to test the cap
+		for i := 0; i < 25; i++ {
+			tokenId, err := db.Client.Token.
+				Create().
+				SetSymbol(fmt.Sprintf("CAP%d", i)).
+				SetContractAddress(fmt.Sprintf("0xCAP%024d", i)).
+				SetDecimals(6).
+				SetNetworkID(testCtxForPQ.token.Edges.Network.ID).
+				SetIsEnabled(true).
+				SetBaseCurrency("KES").
+				OnConflict().
+				UpdateNewValues().
+				ID(ctx)
+			assert.NoError(t, err)
+
+			_, err = test.AddProviderOrderTokenToProvider(
+				map[string]interface{}{
+					"fixed_conversion_rate":    decimal.NewFromFloat(100 + float64(i)),
+					"conversion_rate_type":     "fixed",
+					"floating_conversion_rate": decimal.NewFromFloat(1.0),
+					"max_order_amount":         decimal.NewFromFloat(1000),
+					"min_order_amount":         decimal.NewFromFloat(1.0),
+					"provider":                 manyTokenProviderProfile,
+					"currency_id":              testCtxForPQ.currency.ID,
+					"network":                  testCtxForPQ.token.Edges.Network.Identifier,
+					"token_id":                 tokenId,
+				},
+			)
+			assert.NoError(t, err)
+		}
+
+		// Update ProviderCurrencies with sufficient balance
+		_, err = db.Client.ProviderCurrencies.
+			Update().
+			Where(providercurrencies.HasProviderWith(providerprofile.IDEQ(manyTokenProviderProfile.ID))).
+			Where(providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(testCtxForPQ.currency.ID))).
+			SetAvailableBalance(decimal.NewFromFloat(100000)).
+			SetTotalBalance(decimal.NewFromFloat(100000)).
+			Save(ctx)
+		assert.NoError(t, err)
+
+		// Create a bucket with this provider
+		bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
+			"provider_id": manyTokenProviderProfile.ID,
+			"min_amount":  testCtxForPQ.minAmount,
+			"max_amount":  testCtxForPQ.maxAmount,
+			"currency_id": testCtxForPQ.currency.ID,
+		})
+		assert.NoError(t, err)
+
+		_bucket, err := db.Client.ProvisionBucket.
+			Query().
+			Where(provisionbucket.IDEQ(bucket.ID)).
+			WithCurrency().
+			WithProviderProfiles().
+			Only(ctx)
+		assert.NoError(t, err)
+
+		// Create the priority queue
+		service.CreatePriorityQueueForBucket(ctx, _bucket)
+
+		redisKey := fmt.Sprintf("bucket_%s_%s_%s", _bucket.Edges.Currency.Code, testCtxForPQ.minAmount, testCtxForPQ.maxAmount)
+
+		// Verify the queue structure
+		data, err := db.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
+		assert.NoError(t, err)
+
+		// Should be capped at 20 slots, not 25
+		assert.Equal(t, 20, len(data), "Slots should be capped at 20 even though provider has 25 tokens")
+
+		// Count unique tokens in the queue
+		tokenSymbolsFound := make(map[string]bool)
+		for _, entry := range data {
+			parts := strings.Split(entry, ":")
+			if len(parts) >= 2 {
+				tokenSymbolsFound[parts[1]] = true
+			}
+		}
+
+		// Should have 20 unique tokens (cycling through the first 20)
+		assert.Equal(t, 20, len(tokenSymbolsFound), "Should have exactly 20 unique tokens in queue")
+	})
+
+	t.Run("TestNoValidProvidersExitEarly", func(t *testing.T) {
+		ctx := context.Background()
+
+		// Create a provider with no tokens
+		noTokenProvider, err := test.CreateTestUser(map[string]interface{}{
+			"scope": "provider",
+			"email": "notoken@test.com",
+		})
+		assert.NoError(t, err)
+
+		noTokenProviderProfile, err := test.CreateTestProviderProfile(map[string]interface{}{
+			"user_id":         noTokenProvider.ID,
+			"currency_id":     testCtxForPQ.currency.ID,
+			"host_identifier": "https://notoken.com",
+		})
+		assert.NoError(t, err)
+
+		// Update ProviderCurrencies with sufficient balance
+		_, err = db.Client.ProviderCurrencies.
+			Update().
+			Where(providercurrencies.HasProviderWith(providerprofile.IDEQ(noTokenProviderProfile.ID))).
+			Where(providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(testCtxForPQ.currency.ID))).
+			SetAvailableBalance(decimal.NewFromFloat(100000)).
+			SetTotalBalance(decimal.NewFromFloat(100000)).
+			Save(ctx)
+		assert.NoError(t, err)
+
+		// Create a bucket with this provider (no tokens)
+		bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
+			"provider_id": noTokenProviderProfile.ID,
+			"min_amount":  testCtxForPQ.minAmount,
+			"max_amount":  testCtxForPQ.maxAmount,
+			"currency_id": testCtxForPQ.currency.ID,
+		})
+		assert.NoError(t, err)
+
+		_bucket, err := db.Client.ProvisionBucket.
+			Query().
+			Where(provisionbucket.IDEQ(bucket.ID)).
+			WithCurrency().
+			WithProviderProfiles().
+			Only(ctx)
+		assert.NoError(t, err)
+
+		// Create the priority queue (should exit early)
+		service.CreatePriorityQueueForBucket(ctx, _bucket)
+
+		redisKey := fmt.Sprintf("bucket_%s_%s_%s", _bucket.Edges.Currency.Code, testCtxForPQ.minAmount, testCtxForPQ.maxAmount)
+
+		// Verify the queue is empty
+		data, err := db.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
+		assert.NoError(t, err)
+		assert.Equal(t, 0, len(data), "Queue should be empty when no valid providers exist")
+	})
+
+	t.Run("TestTwoProvidersWithDifferentTokenCounts", func(t *testing.T) {
+		ctx := context.Background()
+
+		// Create provider with 2 tokens
+		twoTokenProvider, err := test.CreateTestUser(map[string]interface{}{
+			"scope": "provider",
+			"email": "twotoken@test.com",
+		})
+		assert.NoError(t, err)
+
+		twoTokenProviderProfile, err := test.CreateTestProviderProfile(map[string]interface{}{
+			"user_id":         twoTokenProvider.ID,
+			"currency_id":     testCtxForPQ.currency.ID,
+			"host_identifier": "https://twotoken.com",
+		})
+		assert.NoError(t, err)
+
+		// Create tokens
+		token4Id, err := db.Client.Token.
+			Create().
+			SetSymbol("TST4").
+			SetContractAddress("0xd4E96eF8eee8678dBFf4d535E033Ed1a4F7605c0").
+			SetDecimals(6).
+			SetNetworkID(testCtxForPQ.token.Edges.Network.ID).
+			SetIsEnabled(true).
+			SetBaseCurrency("KES").
+			OnConflict().
+			UpdateNewValues().
+			ID(ctx)
+		assert.NoError(t, err)
+
+		token5Id, err := db.Client.Token.
+			Create().
+			SetSymbol("TST5").
+			SetContractAddress("0xd4E96eF8eee8678dBFf4d535E033Ed1a4F7605c1").
+			SetDecimals(6).
+			SetNetworkID(testCtxForPQ.token.Edges.Network.ID).
+			SetIsEnabled(true).
+			SetBaseCurrency("KES").
+			OnConflict().
+			UpdateNewValues().
+			ID(ctx)
+		assert.NoError(t, err)
+
+		// Add 2 tokens to twoTokenProvider
+		_, err = test.AddProviderOrderTokenToProvider(
+			map[string]interface{}{
+				"fixed_conversion_rate":    decimal.NewFromFloat(100),
+				"conversion_rate_type":     "fixed",
+				"floating_conversion_rate": decimal.NewFromFloat(1.0),
+				"max_order_amount":         decimal.NewFromFloat(1000),
+				"min_order_amount":         decimal.NewFromFloat(1.0),
+				"provider":                 twoTokenProviderProfile,
+				"currency_id":              testCtxForPQ.currency.ID,
+				"network":                  testCtxForPQ.token.Edges.Network.Identifier,
+				"token_id":                 token4Id,
+			},
+		)
+		assert.NoError(t, err)
+
+		_, err = test.AddProviderOrderTokenToProvider(
+			map[string]interface{}{
+				"fixed_conversion_rate":    decimal.NewFromFloat(105),
+				"conversion_rate_type":     "fixed",
+				"floating_conversion_rate": decimal.NewFromFloat(1.0),
+				"max_order_amount":         decimal.NewFromFloat(1000),
+				"min_order_amount":         decimal.NewFromFloat(1.0),
+				"provider":                 twoTokenProviderProfile,
+				"currency_id":              testCtxForPQ.currency.ID,
+				"network":                  testCtxForPQ.token.Edges.Network.Identifier,
+				"token_id":                 token5Id,
+			},
+		)
+		assert.NoError(t, err)
+
+		// Update ProviderCurrencies with sufficient balance
+		_, err = db.Client.ProviderCurrencies.
+			Update().
+			Where(providercurrencies.HasProviderWith(providerprofile.IDEQ(twoTokenProviderProfile.ID))).
+			Where(providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(testCtxForPQ.currency.ID))).
+			SetAvailableBalance(decimal.NewFromFloat(100000)).
+			SetTotalBalance(decimal.NewFromFloat(100000)).
+			Save(ctx)
+		assert.NoError(t, err)
+
+		// Create provider with 5 tokens
+		fiveTokenProvider, err := test.CreateTestUser(map[string]interface{}{
+			"scope": "provider",
+			"email": "fivetoken@test.com",
+		})
+		assert.NoError(t, err)
+
+		fiveTokenProviderProfile, err := test.CreateTestProviderProfile(map[string]interface{}{
+			"user_id":         fiveTokenProvider.ID,
+			"currency_id":     testCtxForPQ.currency.ID,
+			"host_identifier": "https://fivetoken.com",
+		})
+		assert.NoError(t, err)
+
+		// Add 5 tokens to fiveTokenProvider
+		for i := 0; i < 5; i++ {
+			tokenId, err := db.Client.Token.
+				Create().
+				SetSymbol(fmt.Sprintf("TST%d", 10+i)).
+				SetContractAddress(fmt.Sprintf("0xd4E96eF8eee8678dBFf4d535E033Ed1a4F7605%02d", 10+i)).
+				SetDecimals(6).
+				SetNetworkID(testCtxForPQ.token.Edges.Network.ID).
+				SetIsEnabled(true).
+				SetBaseCurrency("KES").
+				OnConflict().
+				UpdateNewValues().
+				ID(ctx)
+			assert.NoError(t, err)
+
+			_, err = test.AddProviderOrderTokenToProvider(
+				map[string]interface{}{
+					"fixed_conversion_rate":    decimal.NewFromFloat(100 + float64(i)),
+					"conversion_rate_type":     "fixed",
+					"floating_conversion_rate": decimal.NewFromFloat(1.0),
+					"max_order_amount":         decimal.NewFromFloat(1000),
+					"min_order_amount":         decimal.NewFromFloat(1.0),
+					"provider":                 fiveTokenProviderProfile,
+					"currency_id":              testCtxForPQ.currency.ID,
+					"network":                  testCtxForPQ.token.Edges.Network.Identifier,
+					"token_id":                 tokenId,
+				},
+			)
+			assert.NoError(t, err)
+		}
+
+		// Update ProviderCurrencies with sufficient balance
+		_, err = db.Client.ProviderCurrencies.
+			Update().
+			Where(providercurrencies.HasProviderWith(providerprofile.IDEQ(fiveTokenProviderProfile.ID))).
+			Where(providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(testCtxForPQ.currency.ID))).
+			SetAvailableBalance(decimal.NewFromFloat(100000)).
+			SetTotalBalance(decimal.NewFromFloat(100000)).
+			Save(ctx)
+		assert.NoError(t, err)
+
+		// Create a bucket with both providers
+		bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
+			"provider_id": twoTokenProviderProfile.ID,
+			"min_amount":  testCtxForPQ.minAmount,
+			"max_amount":  testCtxForPQ.maxAmount,
+			"currency_id": testCtxForPQ.currency.ID,
+		})
+		assert.NoError(t, err)
+
+		// Add second provider to the same bucket
+		_, err = db.Client.ProvisionBucket.
+			UpdateOneID(bucket.ID).
+			AddProviderProfileIDs(fiveTokenProviderProfile.ID).
+			Save(ctx)
+		assert.NoError(t, err)
+
+		_bucket, err := db.Client.ProvisionBucket.
+			Query().
+			Where(provisionbucket.IDEQ(bucket.ID)).
+			WithCurrency().
+			WithProviderProfiles().
+			Only(ctx)
+		assert.NoError(t, err)
+
+		// Create the priority queue
+		service.CreatePriorityQueueForBucket(ctx, _bucket)
+
+		redisKey := fmt.Sprintf("bucket_%s_%s_%s", _bucket.Edges.Currency.Code, testCtxForPQ.minAmount, testCtxForPQ.maxAmount)
+
+		// Verify the queue structure
+		data, err := db.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
+		assert.NoError(t, err)
+
+		// Both providers should have equal slots (5 each, matching the max token count)
+		expectedSlots := 5
+		totalExpectedSlots := expectedSlots * 2 // 2 providers
+
+		assert.Equal(t, totalExpectedSlots, len(data), "Total slots should be %d (5 slots per provider x 2 providers)", totalExpectedSlots)
+
+		// Count slots per provider
+		twoTokenSlots := 0
+		fiveTokenSlots := 0
+		for _, entry := range data {
+			if strings.HasPrefix(entry, twoTokenProviderProfile.ID) {
+				twoTokenSlots++
+			} else if strings.HasPrefix(entry, fiveTokenProviderProfile.ID) {
+				fiveTokenSlots++
+			}
+		}
+
+		assert.Equal(t, expectedSlots, twoTokenSlots, "Two-token provider should have exactly %d slots", expectedSlots)
+		assert.Equal(t, expectedSlots, fiveTokenSlots, "Five-token provider should have exactly %d slots", expectedSlots)
+
+		// Verify that two-token provider cycles through its tokens
+		twoTokenEntries := []string{}
+		tokenSymbolsInTwoToken := make(map[string]int)
+		for _, entry := range data {
+			if strings.HasPrefix(entry, twoTokenProviderProfile.ID) {
+				twoTokenEntries = append(twoTokenEntries, entry)
+				parts := strings.Split(entry, ":")
+				if len(parts) >= 2 {
+					tokenSymbolsInTwoToken[parts[1]]++
+				}
+			}
+		}
+
+		// With 2 tokens and 5 slots: should have pattern like [T1, T2, T1, T2, T1]
+		assert.Equal(t, 2, len(tokenSymbolsInTwoToken), "Two-token provider should cycle through 2 unique tokens")
+		// Token counts should be 3 and 2 (or 2 and 3)
+		counts := []int{}
+		for _, count := range tokenSymbolsInTwoToken {
+			counts = append(counts, count)
+		}
+		assert.Contains(t, counts, 3, "One token should appear 3 times")
+		assert.Contains(t, counts, 2, "Other token should appear 2 times")
+	})
 }
