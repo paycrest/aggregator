@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/paycrest/aggregator/ent"
@@ -23,6 +24,7 @@ type IndexerEVM struct {
 	engineService     *services.EngineService
 	etherscanService  *services.EtherscanService
 	blockscoutService *services.BlockscoutService
+	hederaService     *services.HederaMirrorService
 }
 
 // NewIndexerEVM creates a new instance of IndexerEVM.
@@ -56,7 +58,7 @@ func (s *IndexerEVM) IndexReceiveAddressWithBypass(ctx context.Context, token *e
 
 	if txHash != "" {
 		// Index transfer events for this specific transaction
-		counts, err := s.indexReceiveAddressByTransaction(ctx, token, txHash)
+		counts, err := s.indexReceiveAddressByTransaction(ctx, token, txHash, nil)
 		if err != nil {
 			logger.Errorf("Error processing receive address transaction %s: %v", txHash[:10]+"...", err)
 			return eventCounts, err
@@ -75,229 +77,279 @@ func (s *IndexerEVM) IndexReceiveAddressWithBypass(ctx context.Context, token *e
 }
 
 // indexReceiveAddressByTransaction processes a specific transaction for receive address transfers
-func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token *ent.Token, txHash string) (*types.EventCounts, error) {
+func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token *ent.Token, txHash string, transactions []map[string]interface{}) (*types.EventCounts, error) {
 	eventCounts := &types.EventCounts{}
-
-	// Get transfer events for this token contract in this transaction
-	transferEvents, err := s.engineService.GetContractEventsWithFallback(
-		ctx,
-		token.Edges.Network,
-		token.ContractAddress,
-		0,
-		0,
-		[]string{utils.TransferEventSignature}, // Include transfer event signature
-		txHash,
-		map[string]string{
-			"filter_transaction_hash": txHash,
-			"sort_by":                 "block_number",
-			"sort_order":              "desc",
-			"decode":                  "true",
-		},
-	)
-	if err != nil && err.Error() != "no events found" {
-		return eventCounts, fmt.Errorf("error getting transfer events for token %s in transaction %s: %w", token.Symbol, txHash[:10]+"...", err)
-	}
-
-	// Find OrderCreated events for this transaction
-	gatewayEvents, err := s.engineService.GetContractEventsWithFallback(
-		ctx,
-		token.Edges.Network,
-		token.Edges.Network.GatewayContractAddress,
-		0,
-		0,
-		[]string{utils.OrderCreatedEventSignature},
-		txHash,
-		map[string]string{
-			"filter_transaction_hash": txHash,
-			"sort_by":                 "block_number",
-			"sort_order":              "desc",
-			"decode":                  "true",
-		},
-	)
-	if err != nil && err.Error() != "no events found" {
-		return eventCounts, fmt.Errorf("error getting gateway events for transaction %s: %w", txHash[:10]+"...", err)
-	}
-
-	// Process transfer events
-	for _, event := range transferEvents {
-		eventMap := event.(map[string]interface{})
-		decoded, ok := eventMap["decoded"].(map[string]interface{})
-		if !ok || decoded == nil {
-			continue
-		}
-		// Safely extract indexed_params and non_indexed_params
-		indexedParams, ok := decoded["indexed_params"].(map[string]interface{})
-		if !ok || indexedParams == nil {
-			continue
-		}
-		nonIndexedParams, ok := decoded["non_indexed_params"].(map[string]interface{})
-		if !ok || nonIndexedParams == nil {
-			continue
-		}
-
-		// Safely extract transfer data
-		fromStr, ok := indexedParams["from"].(string)
-		if !ok || fromStr == "" {
-			continue
-		}
-		fromAddress := ethcommon.HexToAddress(fromStr).Hex()
-
-		toStr, ok := indexedParams["to"].(string)
-		if !ok || toStr == "" {
-			continue
-		}
-		toAddress := ethcommon.HexToAddress(toStr).Hex()
-
-		valueStr, ok := nonIndexedParams["value"].(string)
-		if !ok || valueStr == "" {
-			continue
-		}
-
-		// Skip if transfer is from gateway contract
-		if strings.EqualFold(fromAddress, token.Edges.Network.GatewayContractAddress) {
-			continue
-		}
-
-		// Parse transfer value
-		transferValue, err := decimal.NewFromString(valueStr)
-		if err != nil {
-			logger.Errorf("Error parsing transfer value for token %s: %v", token.Symbol, err)
-			continue
-		}
-
-		// Safely extract block_number and transaction_hash
-		blockNumberRaw, ok := eventMap["block_number"].(float64)
-		if !ok {
-			continue
-		}
-		blockNumber := int64(blockNumberRaw)
-
-		txHashFromEvent, ok := eventMap["transaction_hash"].(string)
-		if !ok || txHashFromEvent == "" {
-			continue
-		}
-
-		// Create transfer event
-		transferEvent := &types.TokenTransferEvent{
-			BlockNumber: blockNumber,
-			TxHash:      txHashFromEvent,
-			From:        fromAddress,
-			To:          toAddress,
-			Value:       transferValue.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals)))),
-		}
-
-		// Process transfer using existing logic
-		addressToEvent := map[string]*types.TokenTransferEvent{
-			toAddress: transferEvent,
-		}
-
-		err = common.ProcessTransfers(ctx, s.order, s.priorityQueue, []string{toAddress}, addressToEvent, token)
-		if err != nil {
-			logger.Errorf("Error processing transfer for token %s: %v", token.Symbol, err)
-			continue
-		}
-
-		// Increment transfer count for successful processing
-		eventCounts.Transfer++
-	}
-
-	// Process OrderCreated events
 	orderCreatedEvents := []*types.OrderCreatedEvent{}
 
-	for _, event := range gatewayEvents {
-		eventMap := event.(map[string]interface{})
-		decoded, ok := eventMap["decoded"].(map[string]interface{})
-		if !ok || decoded == nil {
-			continue
-		}
-		eventParams := decoded
-		if eventParams["non_indexed_params"] == nil {
-			continue
+	// --- Begin Hedera-specific logic ---
+	if token.Edges.Network.ChainID == 295 {
+		if transactions == nil {
+			return eventCounts, fmt.Errorf("transfer events are required for Hedera indexing")
 		}
 
-		// Safely extract block_number and transaction_hash
-		blockNumberRaw, ok := eventMap["block_number"].(float64)
-		if !ok {
-			continue
-		}
-		blockNumber := int64(blockNumberRaw)
+		for _, transactioEvents := range transactions {
+			if strings.EqualFold(transactioEvents["Topic"].(string), utils.TransferEventSignature) {
+				// Create transfer event
+				transferEvent := &types.TokenTransferEvent{
+					BlockNumber: transactioEvents["BlockNumber"].(int64),
+					TxHash:      transactioEvents["TxHash"].(string),
+					From:        transactioEvents["From"].(string),
+					To:          transactioEvents["To"].(string),
+					Value:       transactioEvents["Value"].(decimal.Decimal),
+				}
 
-		txHash, ok := eventMap["transaction_hash"].(string)
-		if !ok || txHash == "" {
-			continue
-		}
+				addressToEvent := map[string]*types.TokenTransferEvent{
+					transferEvent.To: transferEvent,
+				}
 
-		// Safely extract indexed_params and non_indexed_params
-		indexedParams, ok := eventParams["indexed_params"].(map[string]interface{})
-		if !ok || indexedParams == nil {
-			continue
+				err := common.ProcessTransfers(ctx, s.order, s.priorityQueue, []string{transferEvent.To}, addressToEvent, token)
+				if err != nil {
+					logger.Errorf("Error processing Hedera transfer for token %s: %v", token.Symbol, err)
+					continue
+				}
+				eventCounts.Transfer++
+				continue
+			}
+			if strings.EqualFold(transactioEvents["Topic"].(string), utils.OrderCreatedEventSignature) {
+				created := &types.OrderCreatedEvent{
+					BlockNumber: transactioEvents["BlockNumber"].(int64),
+					TxHash:      transactioEvents["TxHash"].(string),
+					Token:       ethcommon.HexToAddress(transactioEvents["Token"].(string)).Hex(),
+					Amount:      transactioEvents["Amount"].(decimal.Decimal),
+					ProtocolFee: transactioEvents["ProtocolFee"].(decimal.Decimal),
+					OrderId:     transactioEvents["OrderId"].(string),
+					// Rate is already decimal.Decimal from Hedera service; match EVM path: divide by 100
+					Rate:        transactioEvents["Rate"].(decimal.Decimal).Div(decimal.NewFromInt(100)),
+					MessageHash: transactioEvents["MessageHash"].(string),
+					Sender:      ethcommon.HexToAddress(transactioEvents["Sender"].(string)).Hex(),
+				}
+				orderCreatedEvents = append(orderCreatedEvents, created)
+				continue
+			}
 		}
+	}
 
-		nonIndexedParams, ok := eventParams["non_indexed_params"].(map[string]interface{})
-		if !ok || nonIndexedParams == nil {
-			continue
-		}
+	var gatewayEvents []interface{}
 
-		// Safely extract required fields
-		amountStr, ok := indexedParams["amount"].(string)
-		if !ok || amountStr == "" {
-			continue
-		}
-		orderAmount, err := decimal.NewFromString(amountStr)
-		if err != nil {
-			continue
-		}
-
-		protocolFeeStr, ok := nonIndexedParams["protocolFee"].(string)
-		if !ok || protocolFeeStr == "" {
-			continue
-		}
-		protocolFee, err := decimal.NewFromString(protocolFeeStr)
-		if err != nil {
-			continue
-		}
-
-		rateStr, ok := nonIndexedParams["rate"].(string)
-		if !ok || rateStr == "" {
-			continue
-		}
-		rate, err := decimal.NewFromString(rateStr)
-		if err != nil {
-			continue
-		}
-
-		tokenStr, ok := indexedParams["token"].(string)
-		if !ok || tokenStr == "" {
-			continue
-		}
-
-		orderIdStr, ok := nonIndexedParams["orderId"].(string)
-		if !ok || orderIdStr == "" {
-			continue
-		}
-
-		messageHashStr, ok := nonIndexedParams["messageHash"].(string)
-		if !ok || messageHashStr == "" {
-			continue
-		}
-
-		senderStr, ok := indexedParams["sender"].(string)
-		if !ok || senderStr == "" {
-			continue
+	if token.Edges.Network.ChainID != 295 {
+		// Get transfer events for this token contract in this transaction
+		transferEvents, err := s.engineService.GetContractEventsWithFallback(
+			ctx,
+			token.Edges.Network,
+			token.ContractAddress,
+			0,
+			0,
+			[]string{utils.TransferEventSignature}, // Include transfer event signature
+			txHash,
+			map[string]string{
+				"filter_transaction_hash": txHash,
+				"sort_by":                 "block_number",
+				"sort_order":              "desc",
+				"decode":                  "true",
+			},
+		)
+		if err != nil && err.Error() != "no events found" {
+			return eventCounts, fmt.Errorf("error getting transfer events for token %s in transaction %s: %w", token.Symbol, txHash[:10]+"...", err)
 		}
 
-		createdEvent := &types.OrderCreatedEvent{
-			BlockNumber: blockNumber,
-			TxHash:      txHash,
-			Token:       ethcommon.HexToAddress(tokenStr).Hex(),
-			Amount:      orderAmount,
-			ProtocolFee: protocolFee,
-			OrderId:     orderIdStr,
-			Rate:        rate.Div(decimal.NewFromInt(100)),
-			MessageHash: messageHashStr,
-			Sender:      ethcommon.HexToAddress(senderStr).Hex(),
+		// Find OrderCreated events for this transaction
+		gatewayEvents, err = s.engineService.GetContractEventsWithFallback(
+			ctx,
+			token.Edges.Network,
+			token.Edges.Network.GatewayContractAddress,
+			0,
+			0,
+			[]string{utils.OrderCreatedEventSignature},
+			txHash,
+			map[string]string{
+				"filter_transaction_hash": txHash,
+				"sort_by":                 "block_number",
+				"sort_order":              "desc",
+				"decode":                  "true",
+			},
+		)
+		if err != nil && err.Error() != "no events found" {
+			return eventCounts, fmt.Errorf("error getting gateway events for transaction %s: %w", txHash[:10]+"...", err)
 		}
-		orderCreatedEvents = append(orderCreatedEvents, createdEvent)
+
+		// Process transfer events
+		for _, event := range transferEvents {
+			eventMap := event.(map[string]interface{})
+			decoded, ok := eventMap["decoded"].(map[string]interface{})
+			if !ok || decoded == nil {
+				continue
+			}
+			// Safely extract indexed_params and non_indexed_params
+			indexedParams, ok := decoded["indexed_params"].(map[string]interface{})
+			if !ok || indexedParams == nil {
+				continue
+			}
+			nonIndexedParams, ok := decoded["non_indexed_params"].(map[string]interface{})
+			if !ok || nonIndexedParams == nil {
+				continue
+			}
+
+			// Safely extract transfer data
+			fromStr, ok := indexedParams["from"].(string)
+			if !ok || fromStr == "" {
+				continue
+			}
+			fromAddress := ethcommon.HexToAddress(fromStr).Hex()
+
+			toStr, ok := indexedParams["to"].(string)
+			if !ok || toStr == "" {
+				continue
+			}
+			toAddress := ethcommon.HexToAddress(toStr).Hex()
+
+			valueStr, ok := nonIndexedParams["value"].(string)
+			if !ok || valueStr == "" {
+				continue
+			}
+
+			// Skip if transfer is from gateway contract
+			if strings.EqualFold(fromAddress, token.Edges.Network.GatewayContractAddress) {
+				continue
+			}
+
+			// Parse transfer value
+			transferValue, err := decimal.NewFromString(valueStr)
+			if err != nil {
+				logger.Errorf("Error parsing transfer value for token %s: %v", token.Symbol, err)
+				continue
+			}
+
+			// Safely extract block_number and transaction_hash
+			blockNumberRaw, ok := eventMap["block_number"].(float64)
+			if !ok {
+				continue
+			}
+			blockNumber := int64(blockNumberRaw)
+
+			txHashFromEvent, ok := eventMap["transaction_hash"].(string)
+			if !ok || txHashFromEvent == "" {
+				continue
+			}
+
+			// Create transfer event
+			transferEvent := &types.TokenTransferEvent{
+				BlockNumber: blockNumber,
+				TxHash:      txHashFromEvent,
+				From:        fromAddress,
+				To:          toAddress,
+				Value:       transferValue.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals)))),
+			}
+
+			// Process transfer using existing logic
+			addressToEvent := map[string]*types.TokenTransferEvent{
+				toAddress: transferEvent,
+			}
+
+			err = common.ProcessTransfers(ctx, s.order, s.priorityQueue, []string{toAddress}, addressToEvent, token)
+			if err != nil {
+				logger.Errorf("Error processing transfer for token %s: %v", token.Symbol, err)
+				continue
+			}
+
+			// Increment transfer count for successful processing
+			eventCounts.Transfer++
+		}
+		
+		for _, event := range gatewayEvents {
+			eventMap := event.(map[string]interface{})
+			decoded, ok := eventMap["decoded"].(map[string]interface{})
+			if !ok || decoded == nil {
+				continue
+			}
+			eventParams := decoded
+			if eventParams["non_indexed_params"] == nil {
+				continue
+			}
+	
+			// Safely extract block_number and transaction_hash
+			blockNumberRaw, ok := eventMap["block_number"].(float64)
+			if !ok {
+				continue
+			}
+			blockNumber := int64(blockNumberRaw)
+	
+			txHash, ok := eventMap["transaction_hash"].(string)
+			if !ok || txHash == "" {
+				continue
+			}
+	
+			// Safely extract indexed_params and non_indexed_params
+			indexedParams, ok := eventParams["indexed_params"].(map[string]interface{})
+			if !ok || indexedParams == nil {
+				continue
+			}
+	
+			nonIndexedParams, ok := eventParams["non_indexed_params"].(map[string]interface{})
+			if !ok || nonIndexedParams == nil {
+				continue
+			}
+	
+			// Safely extract required fields
+			amountStr, ok := indexedParams["amount"].(string)
+			if !ok || amountStr == "" {
+				continue
+			}
+			orderAmount, err := decimal.NewFromString(amountStr)
+			if err != nil {
+				continue
+			}
+	
+			protocolFeeStr, ok := nonIndexedParams["protocolFee"].(string)
+			if !ok || protocolFeeStr == "" {
+				continue
+			}
+			protocolFee, err := decimal.NewFromString(protocolFeeStr)
+			if err != nil {
+				continue
+			}
+	
+			rateStr, ok := nonIndexedParams["rate"].(string)
+			if !ok || rateStr == "" {
+				continue
+			}
+			rate, err := decimal.NewFromString(rateStr)
+			if err != nil {
+				continue
+			}
+	
+			tokenStr, ok := indexedParams["token"].(string)
+			if !ok || tokenStr == "" {
+				continue
+			}
+	
+			orderIdStr, ok := nonIndexedParams["orderId"].(string)
+			if !ok || orderIdStr == "" {
+				continue
+			}
+	
+			messageHashStr, ok := nonIndexedParams["messageHash"].(string)
+			if !ok || messageHashStr == "" {
+				continue
+			}
+	
+			senderStr, ok := indexedParams["sender"].(string)
+			if !ok || senderStr == "" {
+				continue
+			}
+	
+			createdEvent := &types.OrderCreatedEvent{
+				BlockNumber: blockNumber,
+				TxHash:      txHash,
+				Token:       ethcommon.HexToAddress(tokenStr).Hex(),
+				Amount:      orderAmount,
+				ProtocolFee: protocolFee,
+				OrderId:     orderIdStr,
+				Rate:        rate.Div(decimal.NewFromInt(100)),
+				MessageHash: messageHashStr,
+				Sender:      ethcommon.HexToAddress(senderStr).Hex(),
+			}
+			orderCreatedEvents = append(orderCreatedEvents, createdEvent)
+		}
 	}
 
 	// Process OrderCreated events
@@ -308,7 +360,7 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 			orderIds = append(orderIds, event.OrderId)
 			orderIdToEvent[event.OrderId] = event
 		}
-		err = common.ProcessCreatedOrders(ctx, token.Edges.Network, orderIds, orderIdToEvent, s.order, s.priorityQueue)
+		err := common.ProcessCreatedOrders(ctx, token.Edges.Network, orderIds, orderIdToEvent, s.order, s.priorityQueue)
 		if err != nil {
 			logger.Errorf("Failed to process OrderCreated events: %v", err)
 		} else {
@@ -323,23 +375,23 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 }
 
 // getAddressTransactionHistoryWithFallback tries etherscan first and falls back to engine or blockscout
-func (s *IndexerEVM) getAddressTransactionHistoryWithFallback(ctx context.Context, chainID int64, address string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
-	return s.getAddressTransactionHistoryWithFallbackAndBypass(ctx, chainID, address, limit, fromBlock, toBlock, false)
+func (s *IndexerEVM) getAddressTransactionHistoryWithFallback(ctx context.Context, token *ent.Token, chainID int64, address string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
+	return s.getAddressTransactionHistoryWithFallbackAndBypass(ctx, token, chainID, address, limit, fromBlock, toBlock, false)
 }
 
 // getAddressTransactionHistoryImmediate tries etherscan immediately without queuing and falls back to engine or blockscout
 // This is used for reindexing requests that need immediate processing
-func (s *IndexerEVM) getAddressTransactionHistoryImmediate(ctx context.Context, chainID int64, address string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
-	return s.getAddressTransactionHistoryWithFallbackAndBypass(ctx, chainID, address, limit, fromBlock, toBlock, true)
+func (s *IndexerEVM) getAddressTransactionHistoryImmediate(ctx context.Context, token *ent.Token, address string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
+	return s.getAddressTransactionHistoryWithFallbackAndBypass(ctx, token, token.Edges.Network.ChainID, address, limit, fromBlock, toBlock, true)
 }
 
 // getAddressTransactionHistoryWithFallbackAndBypass tries etherscan first and falls back to engine or blockscout
 // with option to bypass queue for immediate processing
-func (s *IndexerEVM) getAddressTransactionHistoryWithFallbackAndBypass(ctx context.Context, chainID int64, address string, limit int, fromBlock int64, toBlock int64, bypassQueue bool) ([]map[string]interface{}, error) {
+func (s *IndexerEVM) getAddressTransactionHistoryWithFallbackAndBypass(ctx context.Context, token *ent.Token, chainID int64, address string, limit int, fromBlock int64, toBlock int64, bypassQueue bool) ([]map[string]interface{}, error) {
 	var err error
 
 	// Try etherscan first (except for Lisk which is not supported)
-	if chainID != 1135 {
+	if chainID != 1135 && chainID != 295 {
 		var transactions []map[string]interface{}
 		if bypassQueue {
 			transactions, err = s.etherscanService.GetAddressTransactionHistoryImmediate(ctx, chainID, address, limit, fromBlock, toBlock)
@@ -352,6 +404,17 @@ func (s *IndexerEVM) getAddressTransactionHistoryWithFallbackAndBypass(ctx conte
 		}
 		// Log the error but continue to fallback
 		logger.Warnf("Etherscan failed for chain %d, falling back to Engine: %v", chainID, err)
+	}
+
+	if chainID == 295 {
+		fifteenSeconds := time.Now().Unix() - 15
+			transactions, hederaErr := s.hederaService.GetContractEventsBySignature(token, []string{utils.TransferEventSignature, utils.OrderCreatedEventSignature}, address, fmt.Sprintf("gte:%d", fifteenSeconds))
+		if hederaErr == nil {
+			// Hedera succeeded, return the token transfers
+			return transactions, nil
+		}
+		// Log the error but continue to fallback
+		logger.Warnf("Hedera failed for chain %d, falling back to Engine: %v", chainID, err)
 	}
 
 	// For Lisk (chain ID 1135), use Blockscout service
@@ -410,9 +473,9 @@ func (s *IndexerEVM) indexReceiveAddressByUserAddressWithBypass(ctx context.Cont
 	var transactions []map[string]interface{}
 	var err error
 	if bypassQueue {
-		transactions, err = s.getAddressTransactionHistoryImmediate(ctx, token.Edges.Network.ChainID, userAddress, limit, fromBlock, toBlock)
+		transactions, err = s.getAddressTransactionHistoryImmediate(ctx, token, userAddress, limit, fromBlock, toBlock)
 	} else {
-		transactions, err = s.getAddressTransactionHistoryWithFallback(ctx, token.Edges.Network.ChainID, userAddress, limit, fromBlock, toBlock)
+		transactions, err = s.getAddressTransactionHistoryWithFallback(ctx, token, token.Edges.Network.ChainID, userAddress, limit, fromBlock, toBlock)
 	}
 	if err != nil {
 		return eventCounts, fmt.Errorf("failed to get transaction history: %w", err)
@@ -440,7 +503,7 @@ func (s *IndexerEVM) indexReceiveAddressByUserAddressWithBypass(ctx context.Cont
 		}
 
 		// Index transfer events for this specific transaction
-		counts, err := s.indexReceiveAddressByTransaction(ctx, token, txHash)
+		counts, err := s.indexReceiveAddressByTransaction(ctx, token, txHash, transactions)
 		if err != nil {
 			logger.Errorf("Error processing transaction %s: %v", txHash[:10]+"...", err)
 			continue // Skip transactions with errors
@@ -459,7 +522,7 @@ func (s *IndexerEVM) IndexGateway(ctx context.Context, network *ent.Network, add
 
 	if txHash != "" {
 		// Index gateway events for this specific transaction
-		counts, err := s.indexGatewayByTransaction(ctx, network, txHash)
+		counts, err := s.indexGatewayByTransaction(ctx, network, txHash, nil)
 		if err != nil {
 			logger.Errorf("Error processing gateway transaction %s: %v", txHash[:10]+"...", err)
 			return eventCounts, err
@@ -519,7 +582,7 @@ func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network 
 	}
 
 	// Get gateway contract's transaction history with fallback
-	transactions, err := s.getAddressTransactionHistoryWithFallback(ctx, network.ChainID, address, limit, fromBlock, toBlock)
+	transactions, err := s.getAddressTransactionHistoryWithFallback(ctx, nil, network.ChainID, address, limit, fromBlock, toBlock)
 	if err != nil {
 		return fmt.Errorf("failed to get gateway transaction history: %w", err)
 	}
@@ -546,7 +609,7 @@ func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network 
 		}
 
 		// Index gateway events for this specific transaction
-		_, err := s.indexGatewayByTransaction(ctx, network, txHash)
+		_, err := s.indexGatewayByTransaction(ctx, network, txHash, transactions)
 		if err != nil {
 			logger.Errorf("Error processing gateway transaction %s: %v", txHash[:10]+"...", err)
 			continue // Skip transactions with errors
@@ -557,229 +620,285 @@ func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network 
 }
 
 // indexGatewayByTransaction processes a specific transaction for gateway events
-func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent.Network, txHash string) (*types.EventCounts, error) {
+func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent.Network, txHash string, transactionsEvents []map[string]interface{}) (*types.EventCounts, error) {
 	eventCounts := &types.EventCounts{}
-
-	// Use GetContractEventsWithFallback to try Thirdweb first and fall back to RPC
-	eventPayload := map[string]string{
-		"filter_transaction_hash": txHash,
-		"sort_by":                 "block_number",
-		"sort_order":              "desc",
-		"decode":                  "true",
-	}
-
-	events, err := s.engineService.GetContractEventsWithFallback(
-		ctx,
-		network,
-		network.GatewayContractAddress,
-		0,
-		0,
-		[]string{}, // No specific topics filter
-		txHash,
-		eventPayload,
-	)
-	if err != nil {
-		if err.Error() == "no events found" {
-			return eventCounts, nil // No gateway events found for this transaction
-		}
-		return eventCounts, fmt.Errorf("error getting gateway events for transaction %s: %w", txHash[:10]+"...", err)
-	}
-
+	
 	// Process all events in a single pass
 	orderCreatedEvents := []*types.OrderCreatedEvent{}
 	orderSettledEvents := []*types.OrderSettledEvent{}
 	orderRefundedEvents := []*types.OrderRefundedEvent{}
 
-	for _, event := range events {
-		eventMap := event.(map[string]interface{})
-		decoded, ok := eventMap["decoded"].(map[string]interface{})
-		if !ok || decoded == nil {
-			continue
+	if network.ChainID == 295 {
+		if transactionsEvents == nil {
+			return eventCounts, fmt.Errorf("transactions are required for Hedera indexing")
 		}
-		eventParams := decoded
-		if eventParams["non_indexed_params"] == nil {
-			continue
-		}
+	
+		// Build OrderCreated events from Hedera response (filter by txHash)
+		for _, transactionEvent := range transactionsEvents {
+			// Topic is set by Hedera helper
+			topic, _ := transactionEvent["Topic"].(string)
+			eventTxHash, _ := transactionEvent["TxHash"].(string)
 
-		// Get event name from the first topic (event signature)
-		topicsInterface := eventMap["topics"]
-		var eventSignature string
-
-		// Handle both []string and []interface{} cases
-		switch topics := topicsInterface.(type) {
-		case []string:
-			if len(topics) == 0 {
-				continue
+			if strings.EqualFold(topic, utils.OrderCreatedEventSignature) {
+				created := &types.OrderCreatedEvent{
+					BlockNumber: transactionEvent["BlockNumber"].(int64),
+					TxHash:      eventTxHash,
+					Token:       ethcommon.HexToAddress(transactionEvent["Token"].(string)).Hex(),
+					Amount:      transactionEvent["Amount"].(decimal.Decimal),
+					ProtocolFee: transactionEvent["ProtocolFee"].(decimal.Decimal),
+					OrderId:     transactionEvent["OrderId"].(string),
+					Rate:        transactionEvent["Rate"].(decimal.Decimal).Div(decimal.NewFromInt(100)),
+					MessageHash: transactionEvent["MessageHash"].(string),
+					Sender:      ethcommon.HexToAddress(transactionEvent["Sender"].(string)).Hex(),
+				}
+				orderCreatedEvents = append(orderCreatedEvents, created)
 			}
-			eventSignature = topics[0]
-		case []interface{}:
-			if len(topics) == 0 {
-				continue
+			if strings.EqualFold(topic, utils.OrderSettledEventSignature) {
+				settlePercent, _ := transactionEvent["SettlePercent"].(decimal.Decimal)
+				splitOrderId, _ := transactionEvent["SplitOrderId"].(string)
+				orderId, _ := transactionEvent["OrderId"].(string)
+				liquidityProvider, _ := transactionEvent["LiquidityProvider"].(string)
+				settledEvent := &types.OrderSettledEvent{
+					BlockNumber:       transactionEvent["BlockNumber"].(int64),
+					TxHash:            transactionEvent["TxHash"].(string),
+					SplitOrderId:      splitOrderId,
+					OrderId:           orderId,
+					LiquidityProvider: liquidityProvider,
+					SettlePercent:     settlePercent,
+				}
+				orderSettledEvents = append(orderSettledEvents, settledEvent)
 			}
-			if topicStr, ok := topics[0].(string); ok {
-				eventSignature = topicStr
-			} else {
-				continue
+			if strings.EqualFold(topic, utils.OrderRefundedEventSignature) {
+				fee, _ := transactionEvent["Fee"].(decimal.Decimal)
+				orderId, _ := transactionEvent["OrderId"].(string)
+				refundedEvent := &types.OrderRefundedEvent{
+					BlockNumber: transactionEvent["BlockNumber"].(int64),
+					TxHash:      transactionEvent["TxHash"].(string),
+					Fee:         fee,
+					OrderId:     orderId,
+				}
+				orderRefundedEvents = append(orderRefundedEvents, refundedEvent)
 			}
-		default:
-			logger.Warnf("Unknown topics type: %T", topicsInterface)
-			continue
 		}
+	}
 
-		if network.ChainID != 56 && network.ChainID != 1135 {
-			// Log the event signature being processed
-			logger.WithFields(logger.Fields{
-				"EventSignature": eventSignature,
-				"TxHash":         txHash,
-				"BlockNumber":    int64(eventMap["block_number"].(float64)),
-			}).Infof("Processing event signature")
-		}
-
-		// Safely extract block_number and transaction_hash
-		blockNumberRaw, ok := eventMap["block_number"].(float64)
-		if !ok {
-			continue
-		}
-		blockNumber := int64(blockNumberRaw)
-
-		txHashFromEvent, ok := eventMap["transaction_hash"].(string)
-		if !ok || txHashFromEvent == "" {
-			continue
-		}
-
-		// Safely extract indexed_params and non_indexed_params
-		indexedParams, ok := eventParams["indexed_params"].(map[string]interface{})
-		if !ok || indexedParams == nil {
-			continue
-		}
-
-		nonIndexedParams, ok := eventParams["non_indexed_params"].(map[string]interface{})
-		if !ok || nonIndexedParams == nil {
-			continue
+	if network.ChainID != 295 {
+		// Use GetContractEventsWithFallback to try Thirdweb first and fall back to RPC
+		eventPayload := map[string]string{
+			"filter_transaction_hash": txHash,
+			"sort_by":                 "block_number",
+			"sort_order":              "desc",
+			"decode":                  "true",
 		}
 
-		switch eventSignature {
-		case utils.OrderCreatedEventSignature:
-			// Safely extract required fields for OrderCreated
-			amountStr, ok := indexedParams["amount"].(string)
-			if !ok || amountStr == "" {
+		events, err := s.engineService.GetContractEventsWithFallback(
+			ctx,
+			network,
+			network.GatewayContractAddress,
+			0,
+			0,
+			[]string{}, // No specific topics filter
+			txHash,
+			eventPayload,
+		)
+		if err != nil {
+			if err.Error() == "no events found" {
+				return eventCounts, nil // No gateway events found for this transaction
+			}
+			return eventCounts, fmt.Errorf("error getting gateway events for transaction %s: %w", txHash[:10]+"...", err)
+		}
+
+		for _, event := range events {
+			eventMap := event.(map[string]interface{})
+			decoded, ok := eventMap["decoded"].(map[string]interface{})
+			if !ok || decoded == nil {
 				continue
 			}
-			orderAmount, err := decimal.NewFromString(amountStr)
-			if err != nil {
+			eventParams := decoded
+			if eventParams["non_indexed_params"] == nil {
 				continue
 			}
 
-			protocolFeeStr, ok := nonIndexedParams["protocolFee"].(string)
-			if !ok || protocolFeeStr == "" {
-				continue
-			}
-			protocolFee, err := decimal.NewFromString(protocolFeeStr)
-			if err != nil {
+			// Get event name from the first topic (event signature)
+			topicsInterface := eventMap["topics"]
+			var eventSignature string
+
+			// Handle both []string and []interface{} cases
+			switch topics := topicsInterface.(type) {
+			case []string:
+				if len(topics) == 0 {
+					continue
+				}
+				eventSignature = topics[0]
+			case []interface{}:
+				if len(topics) == 0 {
+					continue
+				}
+				if topicStr, ok := topics[0].(string); ok {
+					eventSignature = topicStr
+				} else {
+					continue
+				}
+			default:
+				logger.Warnf("Unknown topics type: %T", topicsInterface)
 				continue
 			}
 
-			rateStr, ok := nonIndexedParams["rate"].(string)
-			if !ok || rateStr == "" {
+			if network.ChainID != 56 && network.ChainID != 1135 {
+				// Log the event signature being processed
+				logger.WithFields(logger.Fields{
+					"EventSignature": eventSignature,
+					"TxHash":         txHash,
+					"BlockNumber":    int64(eventMap["block_number"].(float64)),
+				}).Infof("Processing event signature")
+			}
+
+			// Safely extract block_number and transaction_hash
+			blockNumberRaw, ok := eventMap["block_number"].(float64)
+			if !ok {
 				continue
 			}
-			rate, err := decimal.NewFromString(rateStr)
-			if err != nil {
+			blockNumber := int64(blockNumberRaw)
+
+			txHashFromEvent, ok := eventMap["transaction_hash"].(string)
+			if !ok || txHashFromEvent == "" {
 				continue
 			}
 
-			tokenStr, ok := indexedParams["token"].(string)
-			if !ok || tokenStr == "" {
+			// Safely extract indexed_params and non_indexed_params
+			indexedParams, ok := eventParams["indexed_params"].(map[string]interface{})
+			if !ok || indexedParams == nil {
 				continue
 			}
 
-			orderIdStr, ok := nonIndexedParams["orderId"].(string)
-			if !ok || orderIdStr == "" {
+			nonIndexedParams, ok := eventParams["non_indexed_params"].(map[string]interface{})
+			if !ok || nonIndexedParams == nil {
 				continue
 			}
 
-			messageHashStr, ok := nonIndexedParams["messageHash"].(string)
-			if !ok || messageHashStr == "" {
-				continue
-			}
+			switch eventSignature {
+			case utils.OrderCreatedEventSignature:
+				// Safely extract required fields for OrderCreated
+				amountStr, ok := indexedParams["amount"].(string)
+				if !ok || amountStr == "" {
+					continue
+				}
+				orderAmount, err := decimal.NewFromString(amountStr)
+				if err != nil {
+					continue
+				}
 
-			senderStr, ok := indexedParams["sender"].(string)
-			if !ok || senderStr == "" {
-				continue
-			}
+				protocolFeeStr, ok := nonIndexedParams["protocolFee"].(string)
+				if !ok || protocolFeeStr == "" {
+					continue
+				}
+				protocolFee, err := decimal.NewFromString(protocolFeeStr)
+				if err != nil {
+					continue
+				}
 
-			createdEvent := &types.OrderCreatedEvent{
-				BlockNumber: blockNumber,
-				TxHash:      txHashFromEvent,
-				Token:       ethcommon.HexToAddress(tokenStr).Hex(),
-				Amount:      orderAmount,
-				ProtocolFee: protocolFee,
-				OrderId:     orderIdStr,
-				Rate:        rate.Div(decimal.NewFromInt(100)),
-				MessageHash: messageHashStr,
-				Sender:      ethcommon.HexToAddress(senderStr).Hex(),
-			}
-			orderCreatedEvents = append(orderCreatedEvents, createdEvent)
+				rateStr, ok := nonIndexedParams["rate"].(string)
+				if !ok || rateStr == "" {
+					continue
+				}
+				rate, err := decimal.NewFromString(rateStr)
+				if err != nil {
+					continue
+				}
 
-		case utils.OrderSettledEventSignature:
-			// Safely extract required fields for OrderSettled
-			settlePercentStr, ok := nonIndexedParams["settlePercent"].(string)
-			if !ok || settlePercentStr == "" {
-				continue
-			}
-			settlePercent, err := decimal.NewFromString(settlePercentStr)
-			if err != nil {
-				continue
-			}
+				tokenStr, ok := indexedParams["token"].(string)
+				if !ok || tokenStr == "" {
+					continue
+				}
 
-			splitOrderIdStr, ok := nonIndexedParams["splitOrderId"].(string)
-			if !ok || splitOrderIdStr == "" {
-				continue
-			}
+				orderIdStr, ok := nonIndexedParams["orderId"].(string)
+				if !ok || orderIdStr == "" {
+					continue
+				}
 
-			orderIdStr, ok := indexedParams["orderId"].(string)
-			if !ok || orderIdStr == "" {
-				continue
-			}
+				messageHashStr, ok := nonIndexedParams["messageHash"].(string)
+				if !ok || messageHashStr == "" {
+					continue
+				}
 
-			liquidityProviderStr, ok := indexedParams["liquidityProvider"].(string)
-			if !ok || liquidityProviderStr == "" {
-				continue
-			}
+				senderStr, ok := indexedParams["sender"].(string)
+				if !ok || senderStr == "" {
+					continue
+				}
 
-			settledEvent := &types.OrderSettledEvent{
-				BlockNumber:       blockNumber,
-				TxHash:            txHashFromEvent,
-				SplitOrderId:      splitOrderIdStr,
-				OrderId:           orderIdStr,
-				LiquidityProvider: ethcommon.HexToAddress(liquidityProviderStr).Hex(),
-				SettlePercent:     settlePercent,
-			}
-			orderSettledEvents = append(orderSettledEvents, settledEvent)
+				createdEvent := &types.OrderCreatedEvent{
+					BlockNumber: blockNumber,
+					TxHash:      txHashFromEvent,
+					Token:       ethcommon.HexToAddress(tokenStr).Hex(),
+					Amount:      orderAmount,
+					ProtocolFee: protocolFee,
+					OrderId:     orderIdStr,
+					Rate:        rate.Div(decimal.NewFromInt(100)),
+					MessageHash: messageHashStr,
+					Sender:      ethcommon.HexToAddress(senderStr).Hex(),
+				}
+				orderCreatedEvents = append(orderCreatedEvents, createdEvent)
 
-		case utils.OrderRefundedEventSignature:
-			// Safely extract required fields for OrderRefunded
-			feeStr, ok := nonIndexedParams["fee"].(string)
-			if !ok || feeStr == "" {
-				continue
-			}
-			fee, err := decimal.NewFromString(feeStr)
-			if err != nil {
-				continue
-			}
+			case utils.OrderSettledEventSignature:
+				// Safely extract required fields for OrderSettled
+				settlePercentStr, ok := nonIndexedParams["settlePercent"].(string)
+				if !ok || settlePercentStr == "" {
+					continue
+				}
+				settlePercent, err := decimal.NewFromString(settlePercentStr)
+				if err != nil {
+					continue
+				}
 
-			orderIdStr, ok := indexedParams["orderId"].(string)
-			if !ok || orderIdStr == "" {
-				continue
-			}
+				splitOrderIdStr, ok := nonIndexedParams["splitOrderId"].(string)
+				if !ok || splitOrderIdStr == "" {
+					continue
+				}
 
-			refundedEvent := &types.OrderRefundedEvent{
-				BlockNumber: blockNumber,
-				TxHash:      txHashFromEvent,
-				OrderId:     orderIdStr,
-				Fee:         fee,
+				orderIdStr, ok := indexedParams["orderId"].(string)
+				if !ok || orderIdStr == "" {
+					continue
+				}
+
+				liquidityProviderStr, ok := indexedParams["liquidityProvider"].(string)
+				if !ok || liquidityProviderStr == "" {
+					continue
+				}
+
+				settledEvent := &types.OrderSettledEvent{
+					BlockNumber:       blockNumber,
+					TxHash:            txHashFromEvent,
+					SplitOrderId:      splitOrderIdStr,
+					OrderId:           orderIdStr,
+					LiquidityProvider: ethcommon.HexToAddress(liquidityProviderStr).Hex(),
+					SettlePercent:     settlePercent,
+				}
+				orderSettledEvents = append(orderSettledEvents, settledEvent)
+
+			case utils.OrderRefundedEventSignature:
+				// Safely extract required fields for OrderRefunded
+				feeStr, ok := nonIndexedParams["fee"].(string)
+				if !ok || feeStr == "" {
+					continue
+				}
+				fee, err := decimal.NewFromString(feeStr)
+				if err != nil {
+					continue
+				}
+
+				orderIdStr, ok := indexedParams["orderId"].(string)
+				if !ok || orderIdStr == "" {
+					continue
+				}
+
+				refundedEvent := &types.OrderRefundedEvent{
+					BlockNumber: blockNumber,
+					TxHash:      txHashFromEvent,
+					OrderId:     orderIdStr,
+					Fee:         fee,
+				}
+				orderRefundedEvents = append(orderRefundedEvents, refundedEvent)
 			}
-			orderRefundedEvents = append(orderRefundedEvents, refundedEvent)
 		}
 	}
 
@@ -791,7 +910,7 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 			orderIds = append(orderIds, event.OrderId)
 			orderIdToEvent[event.OrderId] = event
 		}
-		err = common.ProcessCreatedOrders(ctx, network, orderIds, orderIdToEvent, s.order, s.priorityQueue)
+		err := common.ProcessCreatedOrders(ctx, network, orderIds, orderIdToEvent, s.order, s.priorityQueue)
 		if err != nil {
 			logger.Errorf("Failed to process OrderCreated events: %v", err)
 		} else {
@@ -810,7 +929,7 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 			orderIds = append(orderIds, event.OrderId)
 			orderIdToEvent[event.OrderId] = event
 		}
-		err = common.ProcessSettledOrders(ctx, network, orderIds, orderIdToEvent)
+		err := common.ProcessSettledOrders(ctx, network, orderIds, orderIdToEvent)
 		if err != nil {
 			logger.Errorf("Failed to process OrderSettled events: %v", err)
 		} else {
@@ -829,7 +948,7 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 			orderIds = append(orderIds, event.OrderId)
 			orderIdToEvent[event.OrderId] = event
 		}
-		err = common.ProcessRefundedOrders(ctx, network, orderIds, orderIdToEvent)
+		err := common.ProcessRefundedOrders(ctx, network, orderIds, orderIdToEvent)
 		if err != nil {
 			logger.Errorf("Failed to process OrderRefunded events: %v", err)
 		} else {
@@ -992,7 +1111,7 @@ func (s *IndexerEVM) indexProviderAddressByAddress(ctx context.Context, network 
 	}
 
 	// Get provider address's transaction history with fallback
-	transactions, err := s.getAddressTransactionHistoryWithFallback(ctx, network.ChainID, providerAddress, limit, fromBlock, toBlock)
+	transactions, err := s.getAddressTransactionHistoryWithFallback(ctx, nil, network.ChainID, providerAddress, limit, fromBlock, toBlock)
 	if err != nil {
 		return fmt.Errorf("failed to get provider transaction history: %w", err)
 	}
