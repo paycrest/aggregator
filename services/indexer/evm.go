@@ -32,7 +32,7 @@ func NewIndexerEVM() (types.Indexer, error) {
 	orderService := order.NewOrderEVM()
 	engineService := services.NewEngineService()
 	etherscanService, err := services.NewEtherscanService()
-	hederaService, err := services.NewHederaMirrorService("")
+	hederaService := services.NewHederaMirrorService("")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create EtherscanService: %w", err)
 	}
