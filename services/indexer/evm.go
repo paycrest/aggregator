@@ -77,24 +77,24 @@ func (s *IndexerEVM) IndexReceiveAddressWithBypass(ctx context.Context, token *e
 }
 
 // indexReceiveAddressByTransaction processes a specific transaction for receive address transfers
-func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token *ent.Token, txHash string, transactioEvents map[string]interface{}) (*types.EventCounts, error) {
+func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token *ent.Token, txHash string, transactionEvents map[string]interface{}) (*types.EventCounts, error) {
 	eventCounts := &types.EventCounts{}
 	orderCreatedEvents := []*types.OrderCreatedEvent{}
 
 	// --- Begin Hedera-specific logic ---
 	if token.Edges.Network.ChainID == 295 {
-		if transactioEvents == nil {
+		if transactionEvents == nil {
 			return eventCounts, fmt.Errorf("transfer events are required for Hedera indexing")
 		}
 
-		if strings.EqualFold(transactioEvents["Topic"].(string), utils.TransferEventSignature) {
+		if strings.EqualFold(transactionEvents["Topic"].(string), utils.TransferEventSignature) {
 			// Create transfer event
 			transferEvent := &types.TokenTransferEvent{
-				BlockNumber: transactioEvents["BlockNumber"].(int64),
-				TxHash:      transactioEvents["TxHash"].(string),
-				From:        transactioEvents["From"].(string),
-				To:          transactioEvents["To"].(string),
-				Value:       transactioEvents["Value"].(decimal.Decimal),
+				BlockNumber: transactionEvents["BlockNumber"].(int64),
+				TxHash:      transactionEvents["TxHash"].(string),
+				From:        transactionEvents["From"].(string),
+				To:          transactionEvents["To"].(string),
+				Value:       transactionEvents["Value"].(decimal.Decimal),
 			}
 
 			addressToEvent := map[string]*types.TokenTransferEvent{
@@ -107,18 +107,18 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 			}
 			eventCounts.Transfer++
 		}
-		if strings.EqualFold(transactioEvents["Topic"].(string), utils.OrderCreatedEventSignature) {
+		if strings.EqualFold(transactionEvents["Topic"].(string), utils.OrderCreatedEventSignature) {
 			created := &types.OrderCreatedEvent{
-				BlockNumber: transactioEvents["BlockNumber"].(int64),
-				TxHash:      transactioEvents["TxHash"].(string),
-				Token:       ethcommon.HexToAddress(transactioEvents["Token"].(string)).Hex(),
-				Amount:      transactioEvents["Amount"].(decimal.Decimal),
-				ProtocolFee: transactioEvents["ProtocolFee"].(decimal.Decimal),
-				OrderId:     transactioEvents["OrderId"].(string),
+				BlockNumber: transactionEvents["BlockNumber"].(int64),
+				TxHash:      transactionEvents["TxHash"].(string),
+				Token:       ethcommon.HexToAddress(transactionEvents["Token"].(string)).Hex(),
+				Amount:      transactionEvents["Amount"].(decimal.Decimal),
+				ProtocolFee: transactionEvents["ProtocolFee"].(decimal.Decimal),
+				OrderId:     transactionEvents["OrderId"].(string),
 				// Rate is already decimal.Decimal from Hedera service; match EVM path: divide by 100
-				Rate:        transactioEvents["Rate"].(decimal.Decimal).Div(decimal.NewFromInt(100)),
-				MessageHash: transactioEvents["MessageHash"].(string),
-				Sender:      ethcommon.HexToAddress(transactioEvents["Sender"].(string)).Hex(),
+				Rate:        transactionEvents["Rate"].(decimal.Decimal).Div(decimal.NewFromInt(100)),
+				MessageHash: transactionEvents["MessageHash"].(string),
+				Sender:      ethcommon.HexToAddress(transactionEvents["Sender"].(string)).Hex(),
 			}
 			orderCreatedEvents = append(orderCreatedEvents, created)
 		}
