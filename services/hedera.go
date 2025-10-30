@@ -3,7 +3,7 @@ package services
 import (
 	"encoding/hex"
 	"fmt"
-	// "math/big"
+	"math/big"
 	"strings"
 	"time"
 
@@ -21,7 +21,7 @@ type HederaMirrorService struct {
 
 // NewHederaMirrorService creates a new instance of HederaMirrorService
 // If baseURL is empty, it defaults to Hedera mainnet mirror node.
-func NewHederaMirrorService(baseURL string, apiKey string) *HederaMirrorService {
+func NewHederaMirrorService(baseURL string) *HederaMirrorService {
 	if baseURL == "" {
 		baseURL = "https://mainnet.mirrornode.hedera.com/api/v1"
 	}
