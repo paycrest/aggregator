@@ -10,12 +10,13 @@ import (
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/utils"
+	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/shopspring/decimal"
 )
 
 // HederaMirrorService provides functionality for interacting with Hedera Mirror Node API
 type HederaMirrorService struct {
-	baseURL              string
+	baseURL string
 }
 
 // NewHederaMirrorService creates a new instance of HederaMirrorService
@@ -25,28 +26,15 @@ func NewHederaMirrorService(baseURL string, apiKey string) *HederaMirrorService 
 		baseURL = "https://mainnet.mirrornode.hedera.com/api/v1"
 	}
 	return &HederaMirrorService{
-		baseURL:              baseURL,
+		baseURL: baseURL,
 	}
 }
 
-func (s *HederaMirrorService) getContractLogs(contractAddress string, timestamp string, topic0Signatures []string) ([]map[string]interface{}, error) {
+func (s *HederaMirrorService) getContractLogs(contractAddress string, topic0Signatures []string) ([]map[string]interface{}, error) {
 	url := fmt.Sprintf("%s/contracts/%s/results/logs", s.baseURL, contractAddress)
+	url += fmt.Sprintf("?timestamp=gte:%d", time.Now().Unix() - 60)
 
-	// Build query parameters
-	params := []string{}
-
-	if timestamp != "" {
-		params = append(params, fmt.Sprintf("timestamp=%s", timestamp))
-	}
-
-	// Add multiple topic0 parameters for filtering
-	for _, sig := range topic0Signatures {
-		params = append(params, fmt.Sprintf("topic0=%s", sig))
-	}
-
-	if len(params) > 0 {
-		url += "?" + strings.Join(params, "&")
-	}
+	logger.Infof("Fetching Hedera logs from URL: %s", url)
 
 	res, err := fastshot.NewClient(url).
 		Config().SetTimeout(60 * time.Second).
@@ -58,13 +46,24 @@ func (s *HederaMirrorService) getContractLogs(contractAddress string, timestamp 
 		return nil, fmt.Errorf("failed to fetch Hedera logs: %w", err)
 	}
 
+	logger.Infof("Hedera logs response status: %s (Code: %d)", res.RawResponse.Status, res.RawResponse.StatusCode)
+
 	data, err := utils.ParseJSONResponse(res.RawResponse)
+	
 	if err != nil {
+		logger.Errorf("Failed to parse Hedera logs response: %v", err)
 		return nil, fmt.Errorf("failed to parse Hedera logs response: %w", err)
 	}
 
-	// Extract logs
+	// Log parsed response data
 	logsAny, ok := data["logs"].([]interface{})
+	logCount := 0
+	if ok && logsAny != nil {
+		logCount = len(logsAny)
+	}
+	logger.Infof("Hedera logs response: Found %d logs, Full response: %+v", logCount, data)
+
+	// Extract logs
 	if !ok || logsAny == nil {
 		return []map[string]interface{}{}, nil
 	}
@@ -79,8 +78,9 @@ func (s *HederaMirrorService) getContractLogs(contractAddress string, timestamp 
 	return logs, nil
 }
 
-func (s *HederaMirrorService) GetContractEventsBySignature(token *ent.Token, eventSignatures []string, matchAddress string, timestamp string) ([]map[string]interface{}, error) {
+func (s *HederaMirrorService) GetContractEventsBySignature(token *ent.Token, eventSignatures []string, matchAddress string) ([]map[string]interface{}, error) {
 	var allFiltered []map[string]interface{}
+	logger.Infof("Getting Hedera contract events by signature for token %s", token.Symbol)
 
 	// Check if TransferEventSignature is in the list
 	hasTransfer := false
@@ -96,10 +96,11 @@ func (s *HederaMirrorService) GetContractEventsBySignature(token *ent.Token, eve
 
 	// Query transfer events from token contract if included
 	if hasTransfer {
-		transferLogs, err := s.getContractLogs(token.ContractAddress, timestamp, []string{utils.TransferEventSignature})
+		transferLogs, err := s.getContractLogs(token.ContractAddress, []string{utils.TransferEventSignature})
 		if err != nil {
 			return nil, fmt.Errorf("failed to get transfer logs: %w", err)
 		}
+		logger.Infof("Transfer logs: %+v", transferLogs)
 
 		// Process transfer events
 		for _, log := range transferLogs {
@@ -117,18 +118,23 @@ func (s *HederaMirrorService) GetContractEventsBySignature(token *ent.Token, eve
 			if matchAddress != "" {
 				matched := false
 				for i := 1; i < len(topics); i++ {
-					if ts, ok := topics[i].(string); ok && strings.EqualFold(ts, matchAddress) {
-						matched = true
-						break
+					if ts, ok := topics[i].(string); ok {
+						if len(ts) == 66 && strings.HasPrefix(ts, "0x") {
+							extractedAddr := "0x" + ts[len(ts)-40:]
+							if strings.EqualFold(extractedAddr, matchAddress) {
+								matched = true
+								break
+							}
+						}
 					}
 				}
 				if !matched {
 					continue
 				}
 			}
-
 			filteredEvent := transferEvent(log, token)
 			if filteredEvent != nil {
+				logger.Infof("Transfer event: %+v", filteredEvent)
 				allFiltered = append(allFiltered, filteredEvent)
 			}
 		}
@@ -143,7 +149,7 @@ func (s *HederaMirrorService) GetContractEventsBySignature(token *ent.Token, eve
 			utils.OrderSettledEventSignature,
 			utils.OrderRefundedEventSignature,
 		)
-		gatewayLogs, err := s.getContractLogs(token.Edges.Network.GatewayContractAddress, timestamp, allgatewaySignatures)
+		gatewayLogs, err := s.getContractLogs(token.Edges.Network.GatewayContractAddress, allgatewaySignatures)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get gateway logs: %w", err)
 		}
@@ -193,29 +199,26 @@ func transferEvent(log map[string]interface{}, token *ent.Token) map[string]inte
 	if bn, ok := log["block_number"].(float64); ok {
 		blockNumber = int64(bn)
 	}
+
 	txHash, _ := log["transaction_hash"].(string)
 
-	fromStr, ok := topics[1].(string)
-	if !ok || fromStr == "" {
-		return nil
-	}
-	toStr, ok := topics[2].(string)
-	if !ok || toStr == "" {
-		return nil
-	}
-	amountHex, ok := log["data"].(string)
-	if !ok || amountHex == "" {
-		return nil
-	}
-	if len(amountHex) >= 3 && strings.HasPrefix(amountHex, "0x") {
-		amountHex = amountHex[2:]
+	fromTopic := topics[1].(string)
+
+	if len(fromTopic) == 66 && strings.HasPrefix(fromTopic, "0x") {
+		fromTopic = "0x" + fromTopic[len(fromTopic)-40:]
 	}
 
-	bigIntAmount := new(big.Int)
-	_, ok = bigIntAmount.SetString(amountHex, 16)
-	if !ok {
-		return nil
+	toTopic := topics[2].(string)
+
+	if len(toTopic) == 66 && strings.HasPrefix(toTopic, "0x") {
+		toTopic = "0x" + toTopic[len(toTopic)-40:]
 	}
+
+	amountHex := log["data"].(string)
+
+	bigIntAmount := new(big.Int)
+	bigIntAmount.SetString(amountHex, 16)
+
 	value := decimal.NewFromBigInt(bigIntAmount, 0)
 	// normalize by token decimals
 	normalized := value.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
@@ -224,8 +227,8 @@ func transferEvent(log map[string]interface{}, token *ent.Token) map[string]inte
 		"Topic":       topics[0].(string),
 		"BlockNumber": blockNumber,
 		"TxHash":      txHash,
-		"From":        fromStr,
-		"To":          toStr,
+		"From":        fromTopic,
+		"To":          toTopic,
 		"Value":       normalized,
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/paycrest/aggregator/ent"
@@ -402,8 +401,8 @@ func (s *IndexerEVM) getAddressTransactionHistoryWithFallbackAndBypass(ctx conte
 	}
 
 	if chainID == 295 {
-		fifteenSeconds := time.Now().Unix() - 15
-		transactions, hederaErr := s.hederaService.GetContractEventsBySignature(token, []string{utils.TransferEventSignature, utils.OrderCreatedEventSignature}, address, fmt.Sprintf("gte:%d", fifteenSeconds))
+		logger.Infof("Getting Hedera transaction history for chain %d", chainID)
+		transactions, hederaErr := s.hederaService.GetContractEventsBySignature(token, []string{utils.TransferEventSignature, utils.OrderCreatedEventSignature}, address)
 		if hederaErr == nil {
 			// Hedera succeeded, return the token transfers
 			return transactions, nil
@@ -413,7 +412,7 @@ func (s *IndexerEVM) getAddressTransactionHistoryWithFallbackAndBypass(ctx conte
 	}
 
 	// For Lisk (chain ID 1135), use Blockscout service
-	if chainID == 1135 {
+	if chainID == 1135 && chainID != 295 {
 		transactions, err := s.blockscoutService.GetAddressTokenTransfers(ctx, chainID, address, limit, fromBlock, toBlock)
 		if err == nil {
 			// Blockscout succeeded, return the token transfers
@@ -425,7 +424,7 @@ func (s *IndexerEVM) getAddressTransactionHistoryWithFallbackAndBypass(ctx conte
 
 	// Try engine service as fallback
 	// Note: Engine doesn't support chain ID 56 (BNB Smart Chain) and 1135 (Lisk)
-	if chainID != 56 && chainID != 1135 {
+	if chainID != 56 && chainID != 1135 && chainID != 295 {
 		transactions, engineErr := s.engineService.GetAddressTransactionHistory(ctx, chainID, address, limit, fromBlock, toBlock)
 		if engineErr != nil {
 			logger.Errorf("Engine failed for chain %d: %v", chainID, engineErr)
