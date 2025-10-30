@@ -16,7 +16,6 @@ import (
 // HederaMirrorService provides functionality for interacting with Hedera Mirror Node API
 type HederaMirrorService struct {
 	baseURL              string
-	tokenContractAddress string
 }
 
 // NewHederaMirrorService creates a new instance of HederaMirrorService
@@ -27,7 +26,6 @@ func NewHederaMirrorService(baseURL string, apiKey string) *HederaMirrorService 
 	}
 	return &HederaMirrorService{
 		baseURL:              baseURL,
-		tokenContractAddress: "0x000000000000000000000000000000000006f89a",
 	}
 }
 
