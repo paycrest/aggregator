@@ -33,6 +33,7 @@ func NewIndexerEVM() (types.Indexer, error) {
 	orderService := order.NewOrderEVM()
 	engineService := services.NewEngineService()
 	etherscanService, err := services.NewEtherscanService()
+	hederaService := services.NewHederaMirrorService("")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create EtherscanService: %w", err)
 	}
@@ -44,6 +45,7 @@ func NewIndexerEVM() (types.Indexer, error) {
 		engineService:     engineService,
 		etherscanService:  etherscanService,
 		blockscoutService: blockscoutService,
+		hederaService:     hederaService,
 	}, nil
 }
 
@@ -402,8 +404,8 @@ func (s *IndexerEVM) getAddressTransactionHistoryWithFallbackAndBypass(ctx conte
 	}
 
 	if chainID == 295 {
-		fifteenSeconds := time.Now().Unix() - 15
-		transactions, hederaErr := s.hederaService.GetContractEventsBySignature(token, []string{utils.TransferEventSignature, utils.OrderCreatedEventSignature}, address, fmt.Sprintf("gte:%d", fifteenSeconds))
+		logger.Infof("Getting Hedera transaction history for chain %d", chainID)
+		transactions, hederaErr := s.hederaService.GetContractEventsBySignature(token, []string{utils.TransferEventSignature, utils.OrderCreatedEventSignature}, address)
 		if hederaErr == nil {
 			// Hedera succeeded, return the token transfers
 			return transactions, nil
@@ -425,7 +427,7 @@ func (s *IndexerEVM) getAddressTransactionHistoryWithFallbackAndBypass(ctx conte
 
 	// Try engine service as fallback
 	// Note: Engine doesn't support chain ID 56 (BNB Smart Chain) and 1135 (Lisk)
-	if chainID != 56 && chainID != 1135 {
+	if chainID != 56 && chainID != 1135 && chainID != 295 {
 		transactions, engineErr := s.engineService.GetAddressTransactionHistory(ctx, chainID, address, limit, fromBlock, toBlock)
 		if engineErr != nil {
 			logger.Errorf("Engine failed for chain %d: %v", chainID, engineErr)
