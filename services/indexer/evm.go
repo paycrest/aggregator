@@ -412,7 +412,7 @@ func (s *IndexerEVM) getAddressTransactionHistoryWithFallbackAndBypass(ctx conte
 	}
 
 	// For Lisk (chain ID 1135), use Blockscout service
-	if chainID == 1135 && chainID != 295 {
+	if chainID == 1135 {
 		transactions, err := s.blockscoutService.GetAddressTokenTransfers(ctx, chainID, address, limit, fromBlock, toBlock)
 		if err == nil {
 			// Blockscout succeeded, return the token transfers
