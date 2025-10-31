@@ -32,7 +32,7 @@ func NewIndexerEVM() (types.Indexer, error) {
 	orderService := order.NewOrderEVM()
 	engineService := services.NewEngineService()
 	etherscanService, err := services.NewEtherscanService()
-	hederaService := services.NewHederaMirrorService("")
+	hederaService := services.NewHederaMirrorService()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create EtherscanService: %w", err)
 	}
@@ -250,7 +250,7 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 			// Increment transfer count for successful processing
 			eventCounts.Transfer++
 		}
-		
+
 		for _, event := range gatewayEvents {
 			eventMap := event.(map[string]interface{})
 			decoded, ok := eventMap["decoded"].(map[string]interface{})
@@ -261,30 +261,30 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 			if eventParams["non_indexed_params"] == nil {
 				continue
 			}
-	
+
 			// Safely extract block_number and transaction_hash
 			blockNumberRaw, ok := eventMap["block_number"].(float64)
 			if !ok {
 				continue
 			}
 			blockNumber := int64(blockNumberRaw)
-	
+
 			txHash, ok := eventMap["transaction_hash"].(string)
 			if !ok || txHash == "" {
 				continue
 			}
-	
+
 			// Safely extract indexed_params and non_indexed_params
 			indexedParams, ok := eventParams["indexed_params"].(map[string]interface{})
 			if !ok || indexedParams == nil {
 				continue
 			}
-	
+
 			nonIndexedParams, ok := eventParams["non_indexed_params"].(map[string]interface{})
 			if !ok || nonIndexedParams == nil {
 				continue
 			}
-	
+
 			// Safely extract required fields
 			amountStr, ok := indexedParams["amount"].(string)
 			if !ok || amountStr == "" {
@@ -294,7 +294,7 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 			if err != nil {
 				continue
 			}
-	
+
 			protocolFeeStr, ok := nonIndexedParams["protocolFee"].(string)
 			if !ok || protocolFeeStr == "" {
 				continue
@@ -303,7 +303,7 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 			if err != nil {
 				continue
 			}
-	
+
 			rateStr, ok := nonIndexedParams["rate"].(string)
 			if !ok || rateStr == "" {
 				continue
@@ -312,27 +312,27 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 			if err != nil {
 				continue
 			}
-	
+
 			tokenStr, ok := indexedParams["token"].(string)
 			if !ok || tokenStr == "" {
 				continue
 			}
-	
+
 			orderIdStr, ok := nonIndexedParams["orderId"].(string)
 			if !ok || orderIdStr == "" {
 				continue
 			}
-	
+
 			messageHashStr, ok := nonIndexedParams["messageHash"].(string)
 			if !ok || messageHashStr == "" {
 				continue
 			}
-	
+
 			senderStr, ok := indexedParams["sender"].(string)
 			if !ok || senderStr == "" {
 				continue
 			}
-	
+
 			createdEvent := &types.OrderCreatedEvent{
 				BlockNumber: blockNumber,
 				TxHash:      txHash,
@@ -618,7 +618,7 @@ func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network 
 // indexGatewayByTransaction processes a specific transaction for gateway events
 func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent.Network, txHash string, transactionEvent map[string]interface{}) (*types.EventCounts, error) {
 	eventCounts := &types.EventCounts{}
-	
+
 	// Process all events in a single pass
 	orderCreatedEvents := []*types.OrderCreatedEvent{}
 	orderSettledEvents := []*types.OrderSettledEvent{}
@@ -628,7 +628,7 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 		if transactionEvent == nil {
 			return eventCounts, fmt.Errorf("transactions are required for Hedera indexing")
 		}
-	
+
 		// Build OrderCreated events from Hedera response (filter by txHash)
 		// Topic is set by Hedera helper
 		topic, _ := transactionEvent["Topic"].(string)
