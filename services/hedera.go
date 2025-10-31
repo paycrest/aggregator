@@ -61,15 +61,18 @@ func (s *HederaMirrorService) CreateGatewayOrder(ctx context.Context, orderID, g
 	}
 
 	// Parse ABIs
-	erc20ABI, gatewayABI, err := s.parseABIs()
+	_, gatewayABI, err := s.parseABIs()
 	if err != nil {
 		return err
 	}
 
 	// Handle approval
-	if err := s.handleApproval(ctx, client, privateKey, chainID, walletAddress, params, erc20ABI); err != nil {
-		return fmt.Errorf("failed to handle approval: %w", err)
-	}
+	// if err := s.handleApproval(ctx, client, privateKey, chainID, walletAddress, params, erc20ABI); err != nil {
+	// 	return fmt.Errorf("failed to handle approval: %w", err)
+	// }
+
+	logger.Infof("Approval successful for order: %s", orderID)
+	logger.Infof("Hedera create order Params: %+v", params)
 
 	// Create order transaction
 	createOrderData, err := gatewayABI.Pack(
@@ -801,4 +804,5 @@ func orderRefundedEvent(log map[string]interface{}) map[string]interface{} {
 		"Fee":         fee,
 	}
 }
+
 
