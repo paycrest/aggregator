@@ -404,13 +404,19 @@ func (s *IndexerEVM) getAddressTransactionHistoryWithFallbackAndBypass(ctx conte
 
 	if chainID == 295 {
 		logger.Infof("Getting Hedera transaction history for chain %d", chainID)
+		if s.hederaService == nil {
+			return nil, fmt.Errorf("hederaService is not initialized")
+		}
+		if token == nil {
+			return nil, fmt.Errorf("token is required for Hedera transaction history")
+		}
 		transactions, hederaErr := s.hederaService.GetContractEventsBySignature(token, []string{utils.TransferEventSignature, utils.OrderCreatedEventSignature}, address)
 		if hederaErr == nil {
 			// Hedera succeeded, return the token transfers
 			return transactions, nil
 		}
 		// Log the error but continue to fallback
-		logger.Warnf("Hedera failed for chain %d, falling back to Engine: %v", chainID, err)
+		logger.Warnf("Hedera failed for chain %d, falling back to Engine: %v", chainID, hederaErr)
 	}
 
 	// For Lisk (chain ID 1135), use Blockscout service
