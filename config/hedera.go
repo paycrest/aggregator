@@ -15,8 +15,5 @@ type HederaConfiguration struct {
 func HederaConfig() *HederaConfiguration {
 	return &HederaConfiguration{
 		PrivateKey:      viper.GetString("HEDERA_PRIVATE_KEY"),
-		GatewayContract: viper.GetString("HEDERA_GATEWAY_CONTRACT"),
-		RPCURL:          viper.GetString("HEDERA_RPC_URL"),
-		MirrorNodeURL:   viper.GetString("HEDERA_MIRROR_NODE_URL"),
 	}
 }

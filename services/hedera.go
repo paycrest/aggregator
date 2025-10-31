@@ -18,21 +18,10 @@ import (
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/services/contracts"
 	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/shopspring/decimal"
-)
-
-const (
-	// ERC20 ABI for approve, balanceOf, and allowance functions
-	hederaERC20ABI = `[{"constant":false,"inputs":[{"name":"spender","type":"address"},{"name":"amount","type":"uint256"}],"name":"approve","outputs":[{"name":"","type":"bool"}],"type":"function"},{"constant":true,"inputs":[{"name":"account","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"type":"function"},{"constant":true,"inputs":[{"name":"owner","type":"address"},{"name":"spender","type":"address"}],"name":"allowance","outputs":[{"name":"","type":"uint256"}],"type":"function"}]`
-
-	// Gateway ABI for createOrder and settle functions
-	hederaGatewayABI = `[
-		{"inputs":[{"internalType":"address","name":"_token","type":"address"},{"internalType":"uint256","name":"_amount","type":"uint256"},{"internalType":"uint96","name":"_rate","type":"uint96"},{"internalType":"address","name":"_senderFeeRecipient","type":"address"},{"internalType":"uint256","name":"_senderFee","type":"uint256"},{"internalType":"address","name":"_refundAddress","type":"address"},{"internalType":"string","name":"messageHash","type":"string"}],"name":"createOrder","outputs":[{"internalType":"bytes32","name":"orderId","type":"bytes32"}],"stateMutability":"nonpayable","type":"function"},
-		{"inputs":[{"internalType":"bytes32","name":"splitOrderId","type":"bytes32"},{"internalType":"bytes32","name":"orderId","type":"bytes32"},{"internalType":"address","name":"liquidityProvider","type":"address"},{"internalType":"uint64","name":"settlePercent","type":"uint64"}],"name":"settle","outputs":[],"stateMutability":"nonpayable","type":"function"},
-		{"inputs":[{"internalType":"uint256","name":"fee","type":"uint256"},{"internalType":"bytes32","name":"orderId","type":"bytes32"}],"name":"refund","outputs":[],"stateMutability":"nonpayable","type":"function"}
-	]`
 )
 
 type HederaMirrorService struct {
@@ -119,7 +108,7 @@ func (s *HederaMirrorService) CreateGatewayOrder(ctx context.Context, orderID st
 }
 
 // SettleOrder settles a lock order on the Hedera gateway contract
-func (s *HederaMirrorService) SettleOrder(ctx context.Context, settleData []byte, txPayload map[string]interface{}) error {
+func (s *HederaMirrorService) SettleOrder(ctx context.Context, txPayload map[string]interface{}) error {
 	logger.Infof("Settling order on Hedera")
 
 	// Setup client and wallet
@@ -133,7 +122,7 @@ func (s *HederaMirrorService) SettleOrder(ctx context.Context, settleData []byte
 	gatewayAddress := common.HexToAddress(txPayload["to"].(string))
 
 	// Send transaction
-	settleTxHash, err := s.sendTransaction(ctx, client, privateKey, chainID, walletAddress, gatewayAddress, settleData)
+	settleTxHash, err := s.sendTransaction(ctx, client, privateKey, chainID, walletAddress, gatewayAddress, txPayload["data"].([]byte))
 	if err != nil {
 		return fmt.Errorf("failed to send settle transaction: %w", err)
 	}
@@ -155,7 +144,7 @@ func (s *HederaMirrorService) SettleOrder(ctx context.Context, settleData []byte
 }
 
 // RefundOrder refunds an order on the Hedera gateway contract
-func (s *HederaMirrorService) RefundOrder(ctx context.Context, refundData []byte) error {
+func (s *HederaMirrorService) RefundOrder(ctx context.Context, txPayload map[string]interface{}) error {
 	logger.Infof("Refunding order on Hedera")
 
 	// Setup client and wallet
@@ -165,15 +154,13 @@ func (s *HederaMirrorService) RefundOrder(ctx context.Context, refundData []byte
 	}
 	defer client.Close()
 
-	// Get gateway address from config
-	hederaConfig := config.HederaConfig()
-	gatewayAddress := common.HexToAddress(hederaConfig.GatewayContract)
+	gatewayAddress := common.HexToAddress(txPayload["to"].(string))
 	if gatewayAddress == (common.Address{}) {
 		return fmt.Errorf("HEDERA_GATEWAY_CONTRACT not set in configuration")
 	}
 
 	// Send transaction
-	refundTxHash, err := s.sendTransaction(ctx, client, privateKey, chainID, walletAddress, gatewayAddress, refundData)
+	refundTxHash, err := s.sendTransaction(ctx, client, privateKey, chainID, walletAddress, gatewayAddress, txPayload["data"].([]byte))
 	if err != nil {
 		return fmt.Errorf("failed to send refund transaction: %w", err)
 	}
@@ -249,12 +236,14 @@ func (s *HederaMirrorService) setupClient(ctx context.Context) (*ethclient.Clien
 
 // parseABIs parses and returns the ERC20 and Gateway ABIs
 func (s *HederaMirrorService) parseABIs() (*abi.ABI, *abi.ABI, error) {
-	erc20ABI, err := abi.JSON(strings.NewReader(hederaERC20ABI))
+	// Parse ERC20 ABI from generated contract
+	erc20ABI, err := abi.JSON(strings.NewReader(contracts.ERC20TokenMetaData.ABI))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to parse ERC20 ABI: %w", err)
 	}
 
-	gatewayABI, err := abi.JSON(strings.NewReader(hederaGatewayABI))
+	// Parse Gateway ABI from generated contract
+	gatewayABI, err := abi.JSON(strings.NewReader(contracts.GatewayMetaData.ABI))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to parse Gateway ABI: %w", err)
 	}
