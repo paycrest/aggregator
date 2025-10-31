@@ -7,9 +7,12 @@ import (
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/paycrest/aggregator/ent"
+	networkent "github.com/paycrest/aggregator/ent/network"
+	tokenent "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/common"
 	"github.com/paycrest/aggregator/services/order"
+	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
@@ -408,8 +411,30 @@ func (s *IndexerEVM) getAddressTransactionHistoryWithFallbackAndBypass(ctx conte
 			return nil, fmt.Errorf("hederaService is not initialized")
 		}
 		if token == nil {
-			return nil, fmt.Errorf("token is required for Hedera transaction history")
+			// Get USDC token from the network
+			network, err := storage.Client.Network.
+				Query().
+				Where(networkent.ChainIDEQ(chainID)).
+				WithTokens().
+				Only(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to find network for chain ID %d: %w", chainID, err)
+			}
+
+			usdcToken, err := storage.Client.Token.
+				Query().
+				Where(
+					tokenent.SymbolEQ("USDC"),
+					tokenent.HasNetworkWith(networkent.IDEQ(network.ID)),
+				).
+				WithNetwork().
+				First(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to find USDC token for chain ID %d: %w", chainID, err)
+			}
+			token = usdcToken
 		}
+
 		transactions, hederaErr := s.hederaService.GetContractEventsBySignature(token, []string{utils.TransferEventSignature, utils.OrderCreatedEventSignature}, address)
 		if hederaErr == nil {
 			// Hedera succeeded, return the token transfers
