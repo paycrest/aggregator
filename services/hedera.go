@@ -620,9 +620,16 @@ func transferEvent(log map[string]interface{}, token *ent.Token) map[string]inte
 	}
 
 	amountHex := log["data"].(string)
-
-	bigIntAmount := new(big.Int)
-	bigIntAmount.SetString(amountHex, 16)
+	if strings.HasPrefix(amountHex, "0x") {
+	    amountHex = amountHex[2:]
+	}
+	
+	bigIntVal := new(big.Int)
+	bigIntAmount, ok := bigIntVal.SetString(amountHex, 16)
+	if !ok {
+    	// Handle the error: invalid hex string
+    	return nil // or log an error
+	}
 
 	value := decimal.NewFromBigInt(bigIntAmount, 0)
 	// normalize by token decimals
@@ -794,3 +801,4 @@ func orderRefundedEvent(log map[string]interface{}) map[string]interface{} {
 		"Fee":         fee,
 	}
 }
+
