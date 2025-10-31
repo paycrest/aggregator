@@ -465,7 +465,7 @@ func DynamicAuthMiddleware(c *gin.Context) {
 func OnlySenderMiddleware(c *gin.Context) {
 	scope, ok := c.Get("sender")
 
-	if !ok && scope == nil {
+	if !ok || scope == nil {
 		u.APIResponse(c, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
 		c.Abort()
 		return
@@ -478,7 +478,7 @@ func OnlySenderMiddleware(c *gin.Context) {
 func OnlyProviderMiddleware(c *gin.Context) {
 	scope, ok := c.Get("provider")
 
-	if !ok && scope == nil {
+	if !ok || scope == nil {
 		u.APIResponse(c, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
 		c.Abort()
 		return
