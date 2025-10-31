@@ -405,6 +405,45 @@ func (s *IndexerEVM) getAddressTransactionHistoryWithFallbackAndBypass(ctx conte
 		logger.Warnf("Etherscan failed for chain %d, falling back to Engine: %v", chainID, err)
 	}
 
+	if chainID == 295 {
+		logger.Infof("Getting Hedera transaction history for chain %d", chainID)
+		if s.hederaService == nil {
+			return nil, fmt.Errorf("hederaService is not initialized")
+		}
+		
+		// Get USDC token from the network
+		network, err := storage.Client.Network.
+			Query().
+			Where(networkent.ChainIDEQ(chainID)).
+			WithTokens().
+			Only(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to find network for chain ID %d: %w", chainID, err)
+		}
+
+		usdcToken, err := storage.Client.Token.
+			Query().
+			Where(
+				tokenent.SymbolEQ("USDC"),
+				tokenent.HasNetworkWith(networkent.IDEQ(network.ID)),
+			).
+			WithNetwork().
+			First(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to find USDC token for chain ID %d: %w", chainID, err)
+		}
+		token = usdcToken
+		logger.Infof("Getting Hedera transaction history for chain %d, token %s", chainID, token.Symbol)
+		
+		transactions, hederaErr := s.hederaService.GetContractEventsBySignature(token, []string{utils.TransferEventSignature, utils.OrderCreatedEventSignature}, address)
+		if hederaErr == nil {
+			// Hedera succeeded, return the token transfers
+			return transactions, nil
+		}
+		// Log the error but continue to fallback
+		logger.Warnf("Hedera failed for chain %d, falling back to Engine: %v", chainID, hederaErr)
+	}
+
 	// For Lisk (chain ID 1135), use Blockscout service
 	if chainID == 1135 {
 		transactions, err := s.blockscoutService.GetAddressTokenTransfers(ctx, chainID, address, limit, fromBlock, toBlock)
