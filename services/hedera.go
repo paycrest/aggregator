@@ -14,25 +14,20 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// HederaMirrorService provides functionality for interacting with Hedera Mirror Node API
 type HederaMirrorService struct {
 	baseURL string
 }
 
 // NewHederaMirrorService creates a new instance of HederaMirrorService
-// If baseURL is empty, it defaults to Hedera mainnet mirror node.
-func NewHederaMirrorService(baseURL string) *HederaMirrorService {
-	if baseURL == "" {
-		baseURL = "https://mainnet.mirrornode.hedera.com/api/v1"
-	}
+func NewHederaMirrorService() *HederaMirrorService {
 	return &HederaMirrorService{
-		baseURL: baseURL,
+		baseURL: "https://mainnet.mirrornode.hedera.com/api/v1",
 	}
 }
 
 func (s *HederaMirrorService) getContractLogs(contractAddress string, topic0Signatures []string) ([]map[string]interface{}, error) {
 	url := fmt.Sprintf("%s/contracts/%s/results/logs", s.baseURL, contractAddress)
-	url += fmt.Sprintf("?timestamp=gte:%d", time.Now().Unix() - 60)
+	url += fmt.Sprintf("?timestamp=gte:%d", time.Now().Unix()-60)
 
 	logger.Infof("Fetching Hedera logs from URL: %s", url)
 
@@ -49,7 +44,7 @@ func (s *HederaMirrorService) getContractLogs(contractAddress string, topic0Sign
 	logger.Infof("Hedera logs response status: %s (Code: %d)", res.RawResponse.Status, res.RawResponse.StatusCode)
 
 	data, err := utils.ParseJSONResponse(res.RawResponse)
-	
+
 	if err != nil {
 		logger.Errorf("Failed to parse Hedera logs response: %v", err)
 		return nil, fmt.Errorf("failed to parse Hedera logs response: %w", err)
