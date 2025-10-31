@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
-	"os"
 	"strings"
 	"time"
 
@@ -17,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	fastshot "github.com/opus-domini/fast-shot"
+	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
@@ -165,10 +165,11 @@ func (s *HederaMirrorService) RefundOrder(ctx context.Context, refundData []byte
 	}
 	defer client.Close()
 
-	// Get gateway address
-	gatewayAddress := common.HexToAddress(os.Getenv("HEDERA_GATEWAY_CONTRACT"))
+	// Get gateway address from config
+	hederaConfig := config.HederaConfig()
+	gatewayAddress := common.HexToAddress(hederaConfig.GatewayContract)
 	if gatewayAddress == (common.Address{}) {
-		return fmt.Errorf("HEDERA_GATEWAY_CONTRACT not set")
+		return fmt.Errorf("HEDERA_GATEWAY_CONTRACT not set in configuration")
 	}
 
 	// Send transaction
@@ -221,11 +222,12 @@ func (s *HederaMirrorService) setupClient(ctx context.Context) (*ethclient.Clien
 		return nil, nil, common.Address{}, nil, fmt.Errorf("failed to get chain ID: %w", err)
 	}
 
-	// Get private key from environment
-	privateKeyHex := os.Getenv("HEDERA_PRIVATE_KEY")
+	// Get private key from config
+	hederaConfig := config.HederaConfig()
+	privateKeyHex := hederaConfig.PrivateKey
 	if privateKeyHex == "" {
 		client.Close()
-		return nil, nil, common.Address{}, nil, fmt.Errorf("HEDERA_PRIVATE_KEY not set")
+		return nil, nil, common.Address{}, nil, fmt.Errorf("HEDERA_PRIVATE_KEY not set in configuration")
 	}
 
 	privateKey, err := crypto.HexToECDSA(privateKeyHex)
@@ -263,10 +265,13 @@ func (s *HederaMirrorService) parseABIs() (*abi.ABI, *abi.ABI, error) {
 // extractOrderParams extracts and validates order parameters from orderData map
 func (s *HederaMirrorService) extractOrderParams(orderData map[string]interface{}) (*orderParams, error) {
 	tokenAddress := common.HexToAddress(orderData["token"].(string))
-	gatewayAddress := common.HexToAddress(os.Getenv("HEDERA_GATEWAY_CONTRACT"))
+
+	// Get gateway address from config
+	hederaConfig := config.HederaConfig()
+	gatewayAddress := common.HexToAddress(hederaConfig.GatewayContract)
 
 	if gatewayAddress == (common.Address{}) {
-		return nil, fmt.Errorf("HEDERA_GATEWAY_CONTRACT not set")
+		return nil, fmt.Errorf("HEDERA_GATEWAY_CONTRACT not set in configuration")
 	}
 
 	amount, ok := orderData["amount"].(decimal.Decimal)
@@ -370,29 +375,6 @@ func (s *HederaMirrorService) handleApproval(
 	}
 
 	return nil
-}
-
-// stringToBytes32 converts a string (order ID) to bytes32 format
-func (s *HederaMirrorService) stringToBytes32(str string) ([32]byte, error) {
-	var bytes32 [32]byte
-
-	// Remove 0x prefix if present
-	if strings.HasPrefix(str, "0x") {
-		str = str[2:]
-	}
-
-	// Remove dashes if UUID format
-	str = strings.ReplaceAll(str, "-", "")
-
-	// Decode hex string
-	decoded, err := hex.DecodeString(str)
-	if err != nil {
-		return bytes32, fmt.Errorf("failed to decode hex string: %w", err)
-	}
-
-	// Copy to bytes32 array
-	copy(bytes32[:], decoded)
-	return bytes32, nil
 }
 
 // sendTransaction creates, signs, and sends a transaction
