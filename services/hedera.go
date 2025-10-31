@@ -124,8 +124,19 @@ func (s *HederaMirrorService) SettleOrder(ctx context.Context, txPayload map[str
 	// Get gateway address
 	gatewayAddress := common.HexToAddress(txPayload["to"].(string))
 
+	// Convert hex string data to bytes
+	dataStr, ok := txPayload["data"].(string)
+	if !ok {
+		return fmt.Errorf("invalid data type in txPayload, expected string")
+	}
+	dataStr = strings.TrimPrefix(dataStr, "0x")
+	dataBytes, err := hex.DecodeString(dataStr)
+	if err != nil {
+		return fmt.Errorf("failed to decode hex data: %w", err)
+	}
+
 	// Send transaction
-	settleTxHash, err := s.sendTransaction(ctx, client, privateKey, chainID, walletAddress, gatewayAddress, txPayload["data"].([]byte))
+	settleTxHash, err := s.sendTransaction(ctx, client, privateKey, chainID, walletAddress, gatewayAddress, dataBytes)
 	if err != nil {
 		return fmt.Errorf("failed to send settle transaction: %w", err)
 	}
@@ -162,8 +173,19 @@ func (s *HederaMirrorService) RefundOrder(ctx context.Context, txPayload map[str
 		return fmt.Errorf("HEDERA_GATEWAY_CONTRACT not set in configuration")
 	}
 
+	// Convert hex string data to bytes
+	dataStr, ok := txPayload["data"].(string)
+	if !ok {
+		return fmt.Errorf("invalid data type in txPayload, expected string")
+	}
+	dataStr = strings.TrimPrefix(dataStr, "0x")
+	dataBytes, err := hex.DecodeString(dataStr)
+	if err != nil {
+		return fmt.Errorf("failed to decode hex data: %w", err)
+	}
+
 	// Send transaction
-	refundTxHash, err := s.sendTransaction(ctx, client, privateKey, chainID, walletAddress, gatewayAddress, txPayload["data"].([]byte))
+	refundTxHash, err := s.sendTransaction(ctx, client, privateKey, chainID, walletAddress, gatewayAddress, dataBytes)
 	if err != nil {
 		return fmt.Errorf("failed to send refund transaction: %w", err)
 	}
@@ -309,64 +331,64 @@ func (s *HederaMirrorService) extractOrderParams(gatewayContractAddress string, 
 }
 
 // handleApproval checks allowance and approves if needed
-func (s *HederaMirrorService) handleApproval(
-	ctx context.Context,
-	client *ethclient.Client,
-	privateKey *ecdsa.PrivateKey,
-	chainID *big.Int,
-	walletAddress common.Address,
-	params *orderParams,
-	erc20ABI *abi.ABI,
-) error {
-	// Check allowance
-	logger.Infof("Checking allowance for gateway contract")
-	allowanceData, err := erc20ABI.Pack("allowance", walletAddress, params.gatewayAddress)
-	if err != nil {
-		return fmt.Errorf("failed to pack allowance call: %w", err)
-	}
+// func (s *HederaMirrorService) handleApproval(
+// 	ctx context.Context,
+// 	client *ethclient.Client,
+// 	privateKey *ecdsa.PrivateKey,
+// 	chainID *big.Int,
+// 	walletAddress common.Address,
+// 	params *orderParams,
+// 	erc20ABI *abi.ABI,
+// ) error {
+// 	// Check allowance
+// 	logger.Infof("Checking allowance for gateway contract")
+// 	allowanceData, err := erc20ABI.Pack("allowance", walletAddress, params.gatewayAddress)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to pack allowance call: %w", err)
+// 	}
 
-	allowanceResult, err := client.CallContract(ctx, ethereum.CallMsg{
-		To:   &params.tokenAddress,
-		Data: allowanceData,
-	}, nil)
-	if err != nil {
-		return fmt.Errorf("failed to call allowance: %w", err)
-	}
+// 	allowanceResult, err := client.CallContract(ctx, ethereum.CallMsg{
+// 		To:   &params.tokenAddress,
+// 		Data: allowanceData,
+// 	}, nil)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to call allowance: %w", err)
+// 	}
 
-	currentAllowance := new(big.Int).SetBytes(allowanceResult)
-	logger.Infof("Current allowance: %s, needed: %s", currentAllowance.String(), params.totalAmount.String())
+// 	currentAllowance := new(big.Int).SetBytes(allowanceResult)
+// 	logger.Infof("Current allowance: %s, needed: %s", currentAllowance.String(), params.totalAmount.String())
 
-	// Approve if needed
-	if currentAllowance.Cmp(params.totalAmount) < 0 {
-		logger.Infof("Approving gateway to spend %s tokens", params.totalAmount.String())
+// 	// Approve if needed
+// 	if currentAllowance.Cmp(params.totalAmount) < 0 {
+// 		logger.Infof("Approving gateway to spend %s tokens", params.totalAmount.String())
 
-		approveData, err := erc20ABI.Pack("approve", params.gatewayAddress, params.totalAmount)
-		if err != nil {
-			return fmt.Errorf("failed to pack approve call: %w", err)
-		}
+// 		approveData, err := erc20ABI.Pack("approve", params.gatewayAddress, params.totalAmount)
+// 		if err != nil {
+// 			return fmt.Errorf("failed to pack approve call: %w", err)
+// 		}
 
-		approveTxHash, err := s.sendTransaction(ctx, client, privateKey, chainID, walletAddress, params.tokenAddress, approveData)
-		if err != nil {
-			return fmt.Errorf("failed to send approve transaction: %w", err)
-		}
+// 		approveTxHash, err := s.sendTransaction(ctx, client, privateKey, chainID, walletAddress, params.tokenAddress, approveData)
+// 		if err != nil {
+// 			return fmt.Errorf("failed to send approve transaction: %w", err)
+// 		}
 
-		logger.Infof("Approve transaction sent: %s", approveTxHash.Hex())
+// 		logger.Infof("Approve transaction sent: %s", approveTxHash.Hex())
 
-		// Wait for approval confirmation
-		receipt, err := s.waitForReceipt(ctx, client, approveTxHash)
-		if err != nil {
-			return fmt.Errorf("failed to wait for approve receipt: %w", err)
-		}
+// 		// Wait for approval confirmation
+// 		receipt, err := s.waitForReceipt(ctx, client, approveTxHash)
+// 		if err != nil {
+// 			return fmt.Errorf("failed to wait for approve receipt: %w", err)
+// 		}
 
-		if receipt.Status == 0 {
-			return fmt.Errorf("approve transaction failed")
-		}
+// 		if receipt.Status == 0 {
+// 			return fmt.Errorf("approve transaction failed")
+// 		}
 
-		logger.Infof("Approval confirmed in block %d", receipt.BlockNumber.Uint64())
-	}
+// 		logger.Infof("Approval confirmed in block %d", receipt.BlockNumber.Uint64())
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 // sendTransaction creates, signs, and sends a transaction
 func (s *HederaMirrorService) sendTransaction(
@@ -623,15 +645,13 @@ func transferEvent(log map[string]interface{}, token *ent.Token) map[string]inte
 	}
 
 	amountHex := log["data"].(string)
-	if strings.HasPrefix(amountHex, "0x") {
-	    amountHex = amountHex[2:]
-	}
-	
+	amountHex = strings.TrimPrefix(amountHex, "0x")
+
 	bigIntVal := new(big.Int)
 	bigIntAmount, ok := bigIntVal.SetString(amountHex, 16)
 	if !ok {
-    	// Handle the error: invalid hex string
-    	return nil // or log an error
+		// Handle the error: invalid hex string
+		return nil // or log an error
 	}
 
 	value := decimal.NewFromBigInt(bigIntAmount, 0)
@@ -672,9 +692,7 @@ func orderCreatedEvent(log map[string]interface{}, token *ent.Token) map[string]
 	if !ok || amountTopicHex == "" {
 		return nil
 	}
-	if strings.HasPrefix(amountTopicHex, "0x") {
-		amountTopicHex = amountTopicHex[2:]
-	}
+	amountTopicHex = strings.TrimPrefix(amountTopicHex, "0x")
 	amountBig := new(big.Int)
 	_, ok = amountBig.SetString(amountTopicHex, 16)
 	if !ok {
@@ -683,9 +701,7 @@ func orderCreatedEvent(log map[string]interface{}, token *ent.Token) map[string]
 	amountDec := decimal.NewFromBigInt(amountBig, 0).Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
 
 	dataHex, _ := log["data"].(string)
-	if strings.HasPrefix(dataHex, "0x") {
-		dataHex = dataHex[2:]
-	}
+	dataHex = strings.TrimPrefix(dataHex, "0x")
 	dataBytes, err := hex.DecodeString(dataHex)
 	if err != nil {
 		return nil
@@ -746,9 +762,7 @@ func orderSettledEvent(log map[string]interface{}) map[string]interface{} {
 
 	// Data: splitOrderId (32 bytes) + settlePercent (left-padded 32 bytes)
 	dataHex, _ := log["data"].(string)
-	if strings.HasPrefix(dataHex, "0x") {
-		dataHex = dataHex[2:]
-	}
+	dataHex = strings.TrimPrefix(dataHex, "0x")
 	dataBytes, err := hex.DecodeString(dataHex)
 	if err != nil || len(dataBytes) < 64 { // need at least 64 bytes
 		return nil
@@ -786,9 +800,7 @@ func orderRefundedEvent(log map[string]interface{}) map[string]interface{} {
 	}
 
 	dataHex, _ := log["data"].(string)
-	if strings.HasPrefix(dataHex, "0x") {
-		dataHex = dataHex[2:]
-	}
+	dataHex = strings.TrimPrefix(dataHex, "0x")
 	dataBytes, err := hex.DecodeString(dataHex)
 	if err != nil || len(dataBytes) == 0 {
 		return nil
@@ -804,5 +816,3 @@ func orderRefundedEvent(log map[string]interface{}) map[string]interface{} {
 		"Fee":         fee,
 	}
 }
-
-
