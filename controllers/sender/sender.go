@@ -41,15 +41,16 @@ type SenderController struct {
 
 // NewSenderController creates a new instance of SenderController
 func NewSenderController() *SenderController {
-
 	return &SenderController{
 		receiveAddressService: svc.NewReceiveAddressService(),
 		orderService:          orderSvc.NewOrderEVM(),
 	}
 }
 
-var serverConf = config.ServerConfig()
-var orderConf = config.OrderConfig()
+var (
+	serverConf = config.ServerConfig()
+	orderConf  = config.OrderConfig()
+)
 
 // InitiatePaymentOrder controller creates a payment order
 func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
@@ -372,7 +373,27 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 
 	// Generate receive address
 	var receiveAddress *ent.ReceiveAddress
-	if strings.HasPrefix(payload.Network, "tron") {
+
+	if token.Edges.Network.ChainID == 295 {
+		hederaService := svc.NewHederaMirrorService()
+		
+		address := hederaService.CreateReceiveAddress()
+
+		receiveAddress, err = storage.Client.ReceiveAddress.
+			Create().
+			SetAddress(address).
+			SetStatus(receiveaddress.StatusUnused).
+			SetValidUntil(time.Now().Add(orderConf.ReceiveAddressValidity)).
+			Save(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"error":   err,
+				"address": address,
+			}).Errorf("Failed to create receive address for Hedera")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+			return
+		}
+	} else if strings.HasPrefix(payload.Network, "tron") {
 		address, salt, err := ctrl.receiveAddressService.CreateTronAddress(ctx)
 		if err != nil {
 			logger.Errorf("CreateTronAddress error: %v", err)
@@ -629,7 +650,6 @@ func (ctrl *SenderController) GetPaymentOrderByID(ctx *gin.Context) {
 			TxHash:    transaction.TxHash,
 			CreatedAt: transaction.CreatedAt,
 		})
-
 	}
 
 	institution, err := storage.Client.Institution.
