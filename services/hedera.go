@@ -39,12 +39,12 @@ func NewHederaMirrorService() *HederaMirrorService {
 
 // CreateReceiveAddress returns the hardcoded Hedera receive address for payment orders
 func (s *HederaMirrorService) CreateReceiveAddress() string {
-	return "0x587baDdd9343CA12701b15C21711c55C5B89dbfC"
+	return config.HederaConfig().ReceiveAddress
 }
 
 // CreateGatewayOrder creates an order on the Hedera gateway contract
 // This function handles the complete flow: approval + order creation
-func (s *HederaMirrorService) CreateGatewayOrder(ctx context.Context, orderID string, orderData map[string]interface{}) error {
+func (s *HederaMirrorService) CreateGatewayOrder(ctx context.Context, orderID, gatewayAddress string, orderData map[string]interface{}) error {
 	logger.Infof("Creating gateway order %s on Hedera", orderID)
 
 	// Setup client and wallet
@@ -55,7 +55,7 @@ func (s *HederaMirrorService) CreateGatewayOrder(ctx context.Context, orderID st
 	defer client.Close()
 
 	// Extract and validate order parameters
-	params, err := s.extractOrderParams(orderData)
+	params, err := s.extractOrderParams(gatewayAddress, orderData)
 	if err != nil {
 		return fmt.Errorf("failed to extract order params: %w", err)
 	}
@@ -252,12 +252,11 @@ func (s *HederaMirrorService) parseABIs() (*abi.ABI, *abi.ABI, error) {
 }
 
 // extractOrderParams extracts and validates order parameters from orderData map
-func (s *HederaMirrorService) extractOrderParams(orderData map[string]interface{}) (*orderParams, error) {
+func (s *HederaMirrorService) extractOrderParams(gatewayContractAddress string, orderData map[string]interface{}) (*orderParams, error) {
 	tokenAddress := common.HexToAddress(orderData["token"].(string))
 
 	// Get gateway address from config
-	hederaConfig := config.HederaConfig()
-	gatewayAddress := common.HexToAddress(hederaConfig.GatewayContract)
+	gatewayAddress := common.HexToAddress(gatewayContractAddress)
 
 	if gatewayAddress == (common.Address{}) {
 		return nil, fmt.Errorf("HEDERA_GATEWAY_CONTRACT not set in configuration")
@@ -490,8 +489,10 @@ func (s *HederaMirrorService) GetContractEventsBySignature(token *ent.Token, eve
 	hasTransfer := false
 	var gatewaySignatures []string
 
+	gatewayContract := token.Edges.Network.GatewayContractAddress
+
 	for _, sig := range eventSignatures {
-		if strings.EqualFold(sig, utils.TransferEventSignature) {
+		if strings.EqualFold(sig, utils.TransferEventSignature) && matchAddress != gatewayContract {
 			hasTransfer = true
 		} else {
 			gatewaySignatures = append(gatewaySignatures, sig)

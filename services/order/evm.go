@@ -169,7 +169,7 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 			"messageHash":        encryptedOrderRecipient,
 		}
 
-		err = hederaService.CreateGatewayOrder(ctx, orderID.String(), orderData)
+		err = hederaService.CreateGatewayOrder(ctx, orderID.String(), order.Edges.Token.Edges.Network.GatewayContractAddress, orderData)
 		if err != nil {
 			return fmt.Errorf("%s - CreateOrder.createGatewayOrder: %w", orderIDPrefix, err)
 		}

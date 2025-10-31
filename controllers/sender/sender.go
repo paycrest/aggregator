@@ -373,8 +373,10 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 
 	// Generate receive address
 	var receiveAddress *ent.ReceiveAddress
+
 	if token.Edges.Network.ChainID == 295 {
 		hederaService := svc.NewHederaMirrorService()
+		
 		address := hederaService.CreateReceiveAddress()
 
 		receiveAddress, err = storage.Client.ReceiveAddress.
