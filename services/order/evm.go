@@ -243,7 +243,6 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 		return fmt.Errorf("%s - RefundOrder.refundCallData: %w", orderIDPrefix, err)
 	}
 
-	
 	// Refund order
 	txPayload := map[string]interface{}{
 		"to":    lockOrder.Edges.Token.Edges.Network.GatewayContractAddress,

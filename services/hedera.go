@@ -816,4 +816,3 @@ func orderRefundedEvent(log map[string]interface{}) map[string]interface{} {
 		"Fee":         fee,
 	}
 }
-
