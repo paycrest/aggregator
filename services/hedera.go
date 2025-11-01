@@ -411,7 +411,7 @@ func (s *HederaMirrorService) sendTransaction(
 	}
 
 	// Estimate gas
-	gasLimit := uint64(300000) // Default
+	gasLimit := uint64(500000) // Default
 	estimatedGas, err := client.EstimateGas(ctx, ethereum.CallMsg{
 		From:     from,
 		To:       &to,
@@ -816,3 +816,4 @@ func orderRefundedEvent(log map[string]interface{}) map[string]interface{} {
 		"Fee":         fee,
 	}
 }
+
