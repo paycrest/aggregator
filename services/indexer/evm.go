@@ -7,9 +7,12 @@ import (
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/paycrest/aggregator/ent"
+	networkent "github.com/paycrest/aggregator/ent/network"
+	tokenent "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/common"
 	"github.com/paycrest/aggregator/services/order"
+	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
@@ -23,6 +26,7 @@ type IndexerEVM struct {
 	engineService     *services.EngineService
 	etherscanService  *services.EtherscanService
 	blockscoutService *services.BlockscoutService
+	hederaService     *services.HederaMirrorService
 }
 
 // NewIndexerEVM creates a new instance of IndexerEVM.
@@ -35,6 +39,7 @@ func NewIndexerEVM() (types.Indexer, error) {
 		return nil, fmt.Errorf("failed to create EtherscanService: %w", err)
 	}
 	blockscoutService := services.NewBlockscoutService()
+	hederaService := services.NewHederaMirrorService()
 
 	return &IndexerEVM{
 		priorityQueue:     priorityQueue,
@@ -42,6 +47,7 @@ func NewIndexerEVM() (types.Indexer, error) {
 		engineService:     engineService,
 		etherscanService:  etherscanService,
 		blockscoutService: blockscoutService,
+		hederaService:     hederaService,
 	}, nil
 }
 
@@ -56,7 +62,7 @@ func (s *IndexerEVM) IndexReceiveAddressWithBypass(ctx context.Context, token *e
 
 	if txHash != "" {
 		// Index transfer events for this specific transaction
-		counts, err := s.indexReceiveAddressByTransaction(ctx, token, txHash)
+		counts, err := s.indexReceiveAddressByTransaction(ctx, token, txHash, nil)
 		if err != nil {
 			logger.Errorf("Error processing receive address transaction %s: %v", txHash[:10]+"...", err)
 			return eventCounts, err
@@ -75,229 +81,274 @@ func (s *IndexerEVM) IndexReceiveAddressWithBypass(ctx context.Context, token *e
 }
 
 // indexReceiveAddressByTransaction processes a specific transaction for receive address transfers
-func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token *ent.Token, txHash string) (*types.EventCounts, error) {
+func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token *ent.Token, txHash string, transactionEvents map[string]interface{}) (*types.EventCounts, error) {
 	eventCounts := &types.EventCounts{}
-
-	// Get transfer events for this token contract in this transaction
-	transferEvents, err := s.engineService.GetContractEventsWithFallback(
-		ctx,
-		token.Edges.Network,
-		token.ContractAddress,
-		0,
-		0,
-		[]string{utils.TransferEventSignature}, // Include transfer event signature
-		txHash,
-		map[string]string{
-			"filter_transaction_hash": txHash,
-			"sort_by":                 "block_number",
-			"sort_order":              "desc",
-			"decode":                  "true",
-		},
-	)
-	if err != nil && err.Error() != "no events found" {
-		return eventCounts, fmt.Errorf("error getting transfer events for token %s in transaction %s: %w", token.Symbol, txHash[:10]+"...", err)
-	}
-
-	// Find OrderCreated events for this transaction
-	gatewayEvents, err := s.engineService.GetContractEventsWithFallback(
-		ctx,
-		token.Edges.Network,
-		token.Edges.Network.GatewayContractAddress,
-		0,
-		0,
-		[]string{utils.OrderCreatedEventSignature},
-		txHash,
-		map[string]string{
-			"filter_transaction_hash": txHash,
-			"sort_by":                 "block_number",
-			"sort_order":              "desc",
-			"decode":                  "true",
-		},
-	)
-	if err != nil && err.Error() != "no events found" {
-		return eventCounts, fmt.Errorf("error getting gateway events for transaction %s: %w", txHash[:10]+"...", err)
-	}
-
-	// Process transfer events
-	for _, event := range transferEvents {
-		eventMap := event.(map[string]interface{})
-		decoded, ok := eventMap["decoded"].(map[string]interface{})
-		if !ok || decoded == nil {
-			continue
-		}
-		// Safely extract indexed_params and non_indexed_params
-		indexedParams, ok := decoded["indexed_params"].(map[string]interface{})
-		if !ok || indexedParams == nil {
-			continue
-		}
-		nonIndexedParams, ok := decoded["non_indexed_params"].(map[string]interface{})
-		if !ok || nonIndexedParams == nil {
-			continue
-		}
-
-		// Safely extract transfer data
-		fromStr, ok := indexedParams["from"].(string)
-		if !ok || fromStr == "" {
-			continue
-		}
-		fromAddress := ethcommon.HexToAddress(fromStr).Hex()
-
-		toStr, ok := indexedParams["to"].(string)
-		if !ok || toStr == "" {
-			continue
-		}
-		toAddress := ethcommon.HexToAddress(toStr).Hex()
-
-		valueStr, ok := nonIndexedParams["value"].(string)
-		if !ok || valueStr == "" {
-			continue
-		}
-
-		// Skip if transfer is from gateway contract
-		if strings.EqualFold(fromAddress, token.Edges.Network.GatewayContractAddress) {
-			continue
-		}
-
-		// Parse transfer value
-		transferValue, err := decimal.NewFromString(valueStr)
-		if err != nil {
-			logger.Errorf("Error parsing transfer value for token %s: %v", token.Symbol, err)
-			continue
-		}
-
-		// Safely extract block_number and transaction_hash
-		blockNumberRaw, ok := eventMap["block_number"].(float64)
-		if !ok {
-			continue
-		}
-		blockNumber := int64(blockNumberRaw)
-
-		txHashFromEvent, ok := eventMap["transaction_hash"].(string)
-		if !ok || txHashFromEvent == "" {
-			continue
-		}
-
-		// Create transfer event
-		transferEvent := &types.TokenTransferEvent{
-			BlockNumber: blockNumber,
-			TxHash:      txHashFromEvent,
-			From:        fromAddress,
-			To:          toAddress,
-			Value:       transferValue.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals)))),
-		}
-
-		// Process transfer using existing logic
-		addressToEvent := map[string]*types.TokenTransferEvent{
-			toAddress: transferEvent,
-		}
-
-		err = common.ProcessTransfers(ctx, s.order, s.priorityQueue, []string{toAddress}, addressToEvent, token)
-		if err != nil {
-			logger.Errorf("Error processing transfer for token %s: %v", token.Symbol, err)
-			continue
-		}
-
-		// Increment transfer count for successful processing
-		eventCounts.Transfer++
-	}
-
-	// Process OrderCreated events
 	orderCreatedEvents := []*types.OrderCreatedEvent{}
 
-	for _, event := range gatewayEvents {
-		eventMap := event.(map[string]interface{})
-		decoded, ok := eventMap["decoded"].(map[string]interface{})
-		if !ok || decoded == nil {
-			continue
-		}
-		eventParams := decoded
-		if eventParams["non_indexed_params"] == nil {
-			continue
+	// --- Begin Hedera-specific logic ---
+	if token.Edges.Network.ChainID == 295 {
+		if transactionEvents == nil {
+			return eventCounts, fmt.Errorf("transfer events are required for Hedera indexing")
 		}
 
-		// Safely extract block_number and transaction_hash
-		blockNumberRaw, ok := eventMap["block_number"].(float64)
-		if !ok {
-			continue
-		}
-		blockNumber := int64(blockNumberRaw)
+		if strings.EqualFold(transactionEvents["Topic"].(string), utils.TransferEventSignature) {
+			// Create transfer event
+			transferEvent := &types.TokenTransferEvent{
+				BlockNumber: transactionEvents["BlockNumber"].(int64),
+				TxHash:      transactionEvents["TxHash"].(string),
+				From:        transactionEvents["From"].(string),
+				To:          transactionEvents["To"].(string),
+				Value:       transactionEvents["Value"].(decimal.Decimal),
+			}
 
-		txHash, ok := eventMap["transaction_hash"].(string)
-		if !ok || txHash == "" {
-			continue
-		}
+			addressToEvent := map[string]*types.TokenTransferEvent{
+				transferEvent.To: transferEvent,
+			}
 
-		// Safely extract indexed_params and non_indexed_params
-		indexedParams, ok := eventParams["indexed_params"].(map[string]interface{})
-		if !ok || indexedParams == nil {
-			continue
+			err := common.ProcessTransfers(ctx, s.order, s.priorityQueue, []string{transferEvent.To}, addressToEvent, token)
+			if err != nil {
+				logger.Errorf("Error processing Hedera transfer for token %s: %v", token.Symbol, err)
+			}
+			eventCounts.Transfer++
 		}
+		if strings.EqualFold(transactionEvents["Topic"].(string), utils.OrderCreatedEventSignature) {
+			created := &types.OrderCreatedEvent{
+				BlockNumber: transactionEvents["BlockNumber"].(int64),
+				TxHash:      transactionEvents["TxHash"].(string),
+				Token:       ethcommon.HexToAddress(transactionEvents["Token"].(string)).Hex(),
+				Amount:      transactionEvents["Amount"].(decimal.Decimal),
+				ProtocolFee: transactionEvents["ProtocolFee"].(decimal.Decimal),
+				OrderId:     transactionEvents["OrderId"].(string),
+				// Rate is already decimal.Decimal from Hedera service; match EVM path: divide by 100
+				Rate:        transactionEvents["Rate"].(decimal.Decimal).Div(decimal.NewFromInt(100)),
+				MessageHash: transactionEvents["MessageHash"].(string),
+				Sender:      ethcommon.HexToAddress(transactionEvents["Sender"].(string)).Hex(),
+			}
+			orderCreatedEvents = append(orderCreatedEvents, created)
+		}
+	}
 
-		nonIndexedParams, ok := eventParams["non_indexed_params"].(map[string]interface{})
-		if !ok || nonIndexedParams == nil {
-			continue
-		}
+	var gatewayEvents []interface{}
 
-		// Safely extract required fields
-		amountStr, ok := indexedParams["amount"].(string)
-		if !ok || amountStr == "" {
-			continue
-		}
-		orderAmount, err := decimal.NewFromString(amountStr)
-		if err != nil {
-			continue
-		}
-
-		protocolFeeStr, ok := nonIndexedParams["protocolFee"].(string)
-		if !ok || protocolFeeStr == "" {
-			continue
-		}
-		protocolFee, err := decimal.NewFromString(protocolFeeStr)
-		if err != nil {
-			continue
-		}
-
-		rateStr, ok := nonIndexedParams["rate"].(string)
-		if !ok || rateStr == "" {
-			continue
-		}
-		rate, err := decimal.NewFromString(rateStr)
-		if err != nil {
-			continue
-		}
-
-		tokenStr, ok := indexedParams["token"].(string)
-		if !ok || tokenStr == "" {
-			continue
-		}
-
-		orderIdStr, ok := nonIndexedParams["orderId"].(string)
-		if !ok || orderIdStr == "" {
-			continue
-		}
-
-		messageHashStr, ok := nonIndexedParams["messageHash"].(string)
-		if !ok || messageHashStr == "" {
-			continue
+	if token.Edges.Network.ChainID != 295 {
+		// Get transfer events for this token contract in this transaction
+		transferEvents, err := s.engineService.GetContractEventsWithFallback(
+			ctx,
+			token.Edges.Network,
+			token.ContractAddress,
+			0,
+			0,
+			[]string{utils.TransferEventSignature}, // Include transfer event signature
+			txHash,
+			map[string]string{
+				"filter_transaction_hash": txHash,
+				"sort_by":                 "block_number",
+				"sort_order":              "desc",
+				"decode":                  "true",
+			},
+		)
+		if err != nil && err.Error() != "no events found" {
+			return eventCounts, fmt.Errorf("error getting transfer events for token %s in transaction %s: %w", token.Symbol, txHash[:10]+"...", err)
 		}
 
-		senderStr, ok := indexedParams["sender"].(string)
-		if !ok || senderStr == "" {
-			continue
+		// Find OrderCreated events for this transaction
+		gatewayEvents, err = s.engineService.GetContractEventsWithFallback(
+			ctx,
+			token.Edges.Network,
+			token.Edges.Network.GatewayContractAddress,
+			0,
+			0,
+			[]string{utils.OrderCreatedEventSignature},
+			txHash,
+			map[string]string{
+				"filter_transaction_hash": txHash,
+				"sort_by":                 "block_number",
+				"sort_order":              "desc",
+				"decode":                  "true",
+			},
+		)
+		if err != nil && err.Error() != "no events found" {
+			return eventCounts, fmt.Errorf("error getting gateway events for transaction %s: %w", txHash[:10]+"...", err)
 		}
 
-		createdEvent := &types.OrderCreatedEvent{
-			BlockNumber: blockNumber,
-			TxHash:      txHash,
-			Token:       ethcommon.HexToAddress(tokenStr).Hex(),
-			Amount:      orderAmount,
-			ProtocolFee: protocolFee,
-			OrderId:     orderIdStr,
-			Rate:        rate.Div(decimal.NewFromInt(100)),
-			MessageHash: messageHashStr,
-			Sender:      ethcommon.HexToAddress(senderStr).Hex(),
+		// Process transfer events
+		for _, event := range transferEvents {
+			eventMap := event.(map[string]interface{})
+			decoded, ok := eventMap["decoded"].(map[string]interface{})
+			if !ok || decoded == nil {
+				continue
+			}
+			// Safely extract indexed_params and non_indexed_params
+			indexedParams, ok := decoded["indexed_params"].(map[string]interface{})
+			if !ok || indexedParams == nil {
+				continue
+			}
+			nonIndexedParams, ok := decoded["non_indexed_params"].(map[string]interface{})
+			if !ok || nonIndexedParams == nil {
+				continue
+			}
+
+			// Safely extract transfer data
+			fromStr, ok := indexedParams["from"].(string)
+			if !ok || fromStr == "" {
+				continue
+			}
+			fromAddress := ethcommon.HexToAddress(fromStr).Hex()
+
+			toStr, ok := indexedParams["to"].(string)
+			if !ok || toStr == "" {
+				continue
+			}
+			toAddress := ethcommon.HexToAddress(toStr).Hex()
+
+			valueStr, ok := nonIndexedParams["value"].(string)
+			if !ok || valueStr == "" {
+				continue
+			}
+
+			// Skip if transfer is from gateway contract
+			if strings.EqualFold(fromAddress, token.Edges.Network.GatewayContractAddress) {
+				continue
+			}
+
+			// Parse transfer value
+			transferValue, err := decimal.NewFromString(valueStr)
+			if err != nil {
+				logger.Errorf("Error parsing transfer value for token %s: %v", token.Symbol, err)
+				continue
+			}
+
+			// Safely extract block_number and transaction_hash
+			blockNumberRaw, ok := eventMap["block_number"].(float64)
+			if !ok {
+				continue
+			}
+			blockNumber := int64(blockNumberRaw)
+
+			txHashFromEvent, ok := eventMap["transaction_hash"].(string)
+			if !ok || txHashFromEvent == "" {
+				continue
+			}
+
+			// Create transfer event
+			transferEvent := &types.TokenTransferEvent{
+				BlockNumber: blockNumber,
+				TxHash:      txHashFromEvent,
+				From:        fromAddress,
+				To:          toAddress,
+				Value:       transferValue.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals)))),
+			}
+
+			// Process transfer using existing logic
+			addressToEvent := map[string]*types.TokenTransferEvent{
+				toAddress: transferEvent,
+			}
+
+			err = common.ProcessTransfers(ctx, s.order, s.priorityQueue, []string{toAddress}, addressToEvent, token)
+			if err != nil {
+				logger.Errorf("Error processing transfer for token %s: %v", token.Symbol, err)
+				continue
+			}
+
+			// Increment transfer count for successful processing
+			eventCounts.Transfer++
 		}
-		orderCreatedEvents = append(orderCreatedEvents, createdEvent)
+
+		for _, event := range gatewayEvents {
+			eventMap := event.(map[string]interface{})
+			decoded, ok := eventMap["decoded"].(map[string]interface{})
+			if !ok || decoded == nil {
+				continue
+			}
+			eventParams := decoded
+			if eventParams["non_indexed_params"] == nil {
+				continue
+			}
+
+			// Safely extract block_number and transaction_hash
+			blockNumberRaw, ok := eventMap["block_number"].(float64)
+			if !ok {
+				continue
+			}
+			blockNumber := int64(blockNumberRaw)
+
+			txHash, ok := eventMap["transaction_hash"].(string)
+			if !ok || txHash == "" {
+				continue
+			}
+
+			// Safely extract indexed_params and non_indexed_params
+			indexedParams, ok := eventParams["indexed_params"].(map[string]interface{})
+			if !ok || indexedParams == nil {
+				continue
+			}
+
+			nonIndexedParams, ok := eventParams["non_indexed_params"].(map[string]interface{})
+			if !ok || nonIndexedParams == nil {
+				continue
+			}
+
+			// Safely extract required fields
+			amountStr, ok := indexedParams["amount"].(string)
+			if !ok || amountStr == "" {
+				continue
+			}
+			orderAmount, err := decimal.NewFromString(amountStr)
+			if err != nil {
+				continue
+			}
+
+			protocolFeeStr, ok := nonIndexedParams["protocolFee"].(string)
+			if !ok || protocolFeeStr == "" {
+				continue
+			}
+			protocolFee, err := decimal.NewFromString(protocolFeeStr)
+			if err != nil {
+				continue
+			}
+
+			rateStr, ok := nonIndexedParams["rate"].(string)
+			if !ok || rateStr == "" {
+				continue
+			}
+			rate, err := decimal.NewFromString(rateStr)
+			if err != nil {
+				continue
+			}
+
+			tokenStr, ok := indexedParams["token"].(string)
+			if !ok || tokenStr == "" {
+				continue
+			}
+
+			orderIdStr, ok := nonIndexedParams["orderId"].(string)
+			if !ok || orderIdStr == "" {
+				continue
+			}
+
+			messageHashStr, ok := nonIndexedParams["messageHash"].(string)
+			if !ok || messageHashStr == "" {
+				continue
+			}
+
+			senderStr, ok := indexedParams["sender"].(string)
+			if !ok || senderStr == "" {
+				continue
+			}
+
+			createdEvent := &types.OrderCreatedEvent{
+				BlockNumber: blockNumber,
+				TxHash:      txHash,
+				Token:       ethcommon.HexToAddress(tokenStr).Hex(),
+				Amount:      orderAmount,
+				ProtocolFee: protocolFee,
+				OrderId:     orderIdStr,
+				Rate:        rate.Div(decimal.NewFromInt(100)),
+				MessageHash: messageHashStr,
+				Sender:      ethcommon.HexToAddress(senderStr).Hex(),
+			}
+			orderCreatedEvents = append(orderCreatedEvents, createdEvent)
+		}
 	}
 
 	// Process OrderCreated events
@@ -308,7 +359,7 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 			orderIds = append(orderIds, event.OrderId)
 			orderIdToEvent[event.OrderId] = event
 		}
-		err = common.ProcessCreatedOrders(ctx, token.Edges.Network, orderIds, orderIdToEvent, s.order, s.priorityQueue)
+		err := common.ProcessCreatedOrders(ctx, token.Edges.Network, orderIds, orderIdToEvent, s.order, s.priorityQueue)
 		if err != nil {
 			logger.Errorf("Failed to process OrderCreated events: %v", err)
 		} else {
@@ -323,23 +374,23 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 }
 
 // getAddressTransactionHistoryWithFallback tries etherscan first and falls back to engine or blockscout
-func (s *IndexerEVM) getAddressTransactionHistoryWithFallback(ctx context.Context, chainID int64, address string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
-	return s.getAddressTransactionHistoryWithFallbackAndBypass(ctx, chainID, address, limit, fromBlock, toBlock, false)
+func (s *IndexerEVM) getAddressTransactionHistoryWithFallback(ctx context.Context, token *ent.Token, chainID int64, address string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
+	return s.getAddressTransactionHistoryWithFallbackAndBypass(ctx, token, chainID, address, limit, fromBlock, toBlock, false)
 }
 
 // getAddressTransactionHistoryImmediate tries etherscan immediately without queuing and falls back to engine or blockscout
 // This is used for reindexing requests that need immediate processing
-func (s *IndexerEVM) getAddressTransactionHistoryImmediate(ctx context.Context, chainID int64, address string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
-	return s.getAddressTransactionHistoryWithFallbackAndBypass(ctx, chainID, address, limit, fromBlock, toBlock, true)
+func (s *IndexerEVM) getAddressTransactionHistoryImmediate(ctx context.Context, token *ent.Token, address string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
+	return s.getAddressTransactionHistoryWithFallbackAndBypass(ctx, token, token.Edges.Network.ChainID, address, limit, fromBlock, toBlock, true)
 }
 
 // getAddressTransactionHistoryWithFallbackAndBypass tries etherscan first and falls back to engine or blockscout
 // with option to bypass queue for immediate processing
-func (s *IndexerEVM) getAddressTransactionHistoryWithFallbackAndBypass(ctx context.Context, chainID int64, address string, limit int, fromBlock int64, toBlock int64, bypassQueue bool) ([]map[string]interface{}, error) {
+func (s *IndexerEVM) getAddressTransactionHistoryWithFallbackAndBypass(ctx context.Context, token *ent.Token, chainID int64, address string, limit int, fromBlock int64, toBlock int64, bypassQueue bool) ([]map[string]interface{}, error) {
 	var err error
 
-	// Try etherscan first (except for Lisk which is not supported)
-	if chainID != 1135 {
+	// Try etherscan first (except for Lisk and Hedera which are not supported)
+	if chainID != 1135 && chainID != 295 {
 		var transactions []map[string]interface{}
 		if bypassQueue {
 			transactions, err = s.etherscanService.GetAddressTransactionHistoryImmediate(ctx, chainID, address, limit, fromBlock, toBlock)
@@ -354,6 +405,45 @@ func (s *IndexerEVM) getAddressTransactionHistoryWithFallbackAndBypass(ctx conte
 		logger.Warnf("Etherscan failed for chain %d, falling back to Engine: %v", chainID, err)
 	}
 
+	if chainID == 295 {
+		logger.Infof("Getting Hedera transaction history for chain %d", chainID)
+		if s.hederaService == nil {
+			return nil, fmt.Errorf("hederaService is not initialized")
+		}
+		
+		// Get USDC token from the network
+		network, err := storage.Client.Network.
+			Query().
+			Where(networkent.ChainIDEQ(chainID)).
+			WithTokens().
+			Only(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to find network for chain ID %d: %w", chainID, err)
+		}
+
+		usdcToken, err := storage.Client.Token.
+			Query().
+			Where(
+				tokenent.SymbolEQ("USDC"),
+				tokenent.HasNetworkWith(networkent.IDEQ(network.ID)),
+			).
+			WithNetwork().
+			First(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to find USDC token for chain ID %d: %w", chainID, err)
+		}
+		token = usdcToken
+		logger.Infof("Getting Hedera transaction history for chain %d, token %s", chainID, token.Symbol)
+		
+		transactions, hederaErr := s.hederaService.GetContractEventsBySignature(token, []string{utils.TransferEventSignature, utils.OrderCreatedEventSignature}, address)
+		if hederaErr == nil {
+			// Hedera succeeded, return the token transfers
+			return transactions, nil
+		}
+		// Log the error but continue to fallback
+		logger.Warnf("Hedera failed for chain %d, falling back to Engine: %v", chainID, hederaErr)
+	}
+
 	// For Lisk (chain ID 1135), use Blockscout service
 	if chainID == 1135 {
 		transactions, err := s.blockscoutService.GetAddressTokenTransfers(ctx, chainID, address, limit, fromBlock, toBlock)
@@ -365,9 +455,63 @@ func (s *IndexerEVM) getAddressTransactionHistoryWithFallbackAndBypass(ctx conte
 		logger.Warnf("Blockscout failed for chain %d, falling back to Engine: %v", chainID, err)
 	}
 
+	// For Hedera (chain ID 295), use Hedera Mirror Node service
+	if chainID == 295 {
+		logger.Infof("Getting Hedera transaction history for chain %d", chainID)
+		if s.hederaService == nil {
+			return nil, fmt.Errorf("hederaService is not initialized")
+		}
+
+		// Get network and USDC token from the database
+		var hederaToken *ent.Token
+		if token != nil {
+			hederaToken = token
+			network, err := token.QueryNetwork().Only(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get network for token: %w", err)
+			}
+			// Ensure token has network edge loaded
+			hederaToken.Edges.Network = network
+		} else {
+			// Query network first, then USDC token for gateway events
+			network, err := storage.Client.Network.
+				Query().
+				Where(networkent.ChainIDEQ(chainID)).
+				WithTokens().
+				Only(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to find network for chain ID %d: %w", chainID, err)
+			}
+
+			// Query USDC token for this network
+			usdcToken, err := network.QueryTokens().
+				Where(tokenent.SymbolEQ("USDC")).
+				WithNetwork().
+				First(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to find USDC token for chain ID %d: %w", chainID, err)
+			}
+			hederaToken = usdcToken
+		}
+
+		logger.Infof("Getting Hedera transaction history for chain %d, token %s", chainID, hederaToken.Symbol)
+
+		transactions, hederaErr := s.hederaService.GetContractEventsBySignature(
+			hederaToken,
+			[]string{utils.TransferEventSignature, utils.OrderCreatedEventSignature},
+			address,
+		)
+		if hederaErr == nil {
+			// Hedera succeeded, return the events
+			return transactions, nil
+		}
+		// Log the error but continue to fallback
+		logger.Warnf("Hedera failed for chain %d, falling back to Engine: %v", chainID, hederaErr)
+	}
+
 	// Try engine service as fallback
-	// Note: Engine doesn't support chain ID 56 (BNB Smart Chain) and 1135 (Lisk)
-	if chainID != 56 && chainID != 1135 {
+	// Note: Engine doesn't support chain ID 56 (BNB Smart Chain), 1135 (Lisk), and 295 (Hedera)
+	if chainID != 56 && chainID != 1135 && chainID != 295 {
 		transactions, engineErr := s.engineService.GetAddressTransactionHistory(ctx, chainID, address, limit, fromBlock, toBlock)
 		if engineErr != nil {
 			logger.Errorf("Engine failed for chain %d: %v", chainID, engineErr)
@@ -388,6 +532,68 @@ func (s *IndexerEVM) getAddressTransactionHistoryWithFallbackAndBypass(ctx conte
 func (s *IndexerEVM) indexReceiveAddressByUserAddressWithBypass(ctx context.Context, token *ent.Token, userAddress string, fromBlock int64, toBlock int64, bypassQueue bool) (*types.EventCounts, error) {
 	eventCounts := &types.EventCounts{}
 
+	// Handle Hedera network separately
+	if token.Edges.Network.ChainID == 295 {
+		logger.Infof("Processing Hedera transactions for address: %s", userAddress)
+
+		// Get contract events from Hedera Mirror Node
+		transactions, err := s.hederaService.GetContractEventsBySignature(
+			token,
+			[]string{utils.TransferEventSignature},
+			userAddress,
+		)
+		if err != nil {
+			return eventCounts, fmt.Errorf("failed to get Hedera transaction history: %w", err)
+		}
+
+		if len(transactions) == 0 {
+			logger.Infof("No Hedera transactions found for address: %s", userAddress)
+			return eventCounts, nil
+		}
+
+		logger.Infof("Processing %d Hedera transfer events for address: %s", len(transactions), userAddress)
+
+		// Process Hedera transfer events
+		unknownAddresses := []string{}
+		addressToEvent := make(map[string]*types.TokenTransferEvent)
+
+		for _, tx := range transactions {
+			topic, ok := tx["Topic"].(string)
+			if !ok || !strings.EqualFold(topic, utils.TransferEventSignature) {
+				continue
+			}
+
+			toAddress, ok := tx["To"].(string)
+			if !ok || toAddress == "" {
+				continue
+			}
+
+			// Create transfer event from Hedera data
+			transferEvent := &types.TokenTransferEvent{
+				BlockNumber: tx["BlockNumber"].(int64),
+				TxHash:      tx["TxHash"].(string),
+				From:        tx["From"].(string),
+				To:          toAddress,
+				Value:       tx["Value"].(decimal.Decimal),
+			}
+
+			unknownAddresses = append(unknownAddresses, toAddress)
+			addressToEvent[toAddress] = transferEvent
+			eventCounts.Transfer++
+		}
+
+		// Process transfers through the standard flow
+		if len(unknownAddresses) > 0 {
+			err := common.ProcessTransfers(ctx, s.order, s.priorityQueue, unknownAddresses, addressToEvent, token)
+			if err != nil {
+				return eventCounts, fmt.Errorf("failed to process Hedera transfers: %w", err)
+			}
+		}
+
+		return eventCounts, nil
+	}
+
+	// Standard EVM processing
 	// Determine parameters based on whether block range is provided
 	var limit int
 	var logMessage string
@@ -410,9 +616,9 @@ func (s *IndexerEVM) indexReceiveAddressByUserAddressWithBypass(ctx context.Cont
 	var transactions []map[string]interface{}
 	var err error
 	if bypassQueue {
-		transactions, err = s.getAddressTransactionHistoryImmediate(ctx, token.Edges.Network.ChainID, userAddress, limit, fromBlock, toBlock)
+		transactions, err = s.getAddressTransactionHistoryImmediate(ctx, token, userAddress, limit, fromBlock, toBlock)
 	} else {
-		transactions, err = s.getAddressTransactionHistoryWithFallback(ctx, token.Edges.Network.ChainID, userAddress, limit, fromBlock, toBlock)
+		transactions, err = s.getAddressTransactionHistoryWithFallback(ctx, token, token.Edges.Network.ChainID, userAddress, limit, fromBlock, toBlock)
 	}
 	if err != nil {
 		return eventCounts, fmt.Errorf("failed to get transaction history: %w", err)
@@ -440,7 +646,7 @@ func (s *IndexerEVM) indexReceiveAddressByUserAddressWithBypass(ctx context.Cont
 		}
 
 		// Index transfer events for this specific transaction
-		counts, err := s.indexReceiveAddressByTransaction(ctx, token, txHash)
+		counts, err := s.indexReceiveAddressByTransaction(ctx, token, txHash, tx)
 		if err != nil {
 			logger.Errorf("Error processing transaction %s: %v", txHash[:10]+"...", err)
 			continue // Skip transactions with errors
@@ -459,7 +665,7 @@ func (s *IndexerEVM) IndexGateway(ctx context.Context, network *ent.Network, add
 
 	if txHash != "" {
 		// Index gateway events for this specific transaction
-		counts, err := s.indexGatewayByTransaction(ctx, network, txHash)
+		counts, err := s.indexGatewayByTransaction(ctx, network, txHash, nil)
 		if err != nil {
 			logger.Errorf("Error processing gateway transaction %s: %v", txHash[:10]+"...", err)
 			return eventCounts, err
@@ -519,7 +725,7 @@ func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network 
 	}
 
 	// Get gateway contract's transaction history with fallback
-	transactions, err := s.getAddressTransactionHistoryWithFallback(ctx, network.ChainID, address, limit, fromBlock, toBlock)
+	transactions, err := s.getAddressTransactionHistoryWithFallback(ctx, nil, network.ChainID, address, limit, fromBlock, toBlock)
 	if err != nil {
 		return fmt.Errorf("failed to get gateway transaction history: %w", err)
 	}
@@ -546,7 +752,7 @@ func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network 
 		}
 
 		// Index gateway events for this specific transaction
-		_, err := s.indexGatewayByTransaction(ctx, network, txHash)
+		_, err := s.indexGatewayByTransaction(ctx, network, txHash, tx)
 		if err != nil {
 			logger.Errorf("Error processing gateway transaction %s: %v", txHash[:10]+"...", err)
 			continue // Skip transactions with errors
@@ -557,8 +763,13 @@ func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network 
 }
 
 // indexGatewayByTransaction processes a specific transaction for gateway events
-func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent.Network, txHash string) (*types.EventCounts, error) {
+func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent.Network, txHash string, transactionEvent map[string]interface{}) (*types.EventCounts, error) {
 	eventCounts := &types.EventCounts{}
+
+	// Process all events in a single pass
+	orderCreatedEvents := []*types.OrderCreatedEvent{}
+	orderSettledEvents := []*types.OrderSettledEvent{}
+	orderRefundedEvents := []*types.OrderRefundedEvent{}
 
 	// Use GetContractEventsWithFallback to try Thirdweb first and fall back to RPC
 	eventPayload := map[string]string{
@@ -584,11 +795,6 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 		}
 		return eventCounts, fmt.Errorf("error getting gateway events for transaction %s: %w", txHash[:10]+"...", err)
 	}
-
-	// Process all events in a single pass
-	orderCreatedEvents := []*types.OrderCreatedEvent{}
-	orderSettledEvents := []*types.OrderSettledEvent{}
-	orderRefundedEvents := []*types.OrderRefundedEvent{}
 
 	for _, event := range events {
 		eventMap := event.(map[string]interface{})
@@ -791,7 +997,7 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 			orderIds = append(orderIds, event.OrderId)
 			orderIdToEvent[event.OrderId] = event
 		}
-		err = common.ProcessCreatedOrders(ctx, network, orderIds, orderIdToEvent, s.order, s.priorityQueue)
+		err := common.ProcessCreatedOrders(ctx, network, orderIds, orderIdToEvent, s.order, s.priorityQueue)
 		if err != nil {
 			logger.Errorf("Failed to process OrderCreated events: %v", err)
 		} else {
@@ -810,7 +1016,7 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 			orderIds = append(orderIds, event.OrderId)
 			orderIdToEvent[event.OrderId] = event
 		}
-		err = common.ProcessSettledOrders(ctx, network, orderIds, orderIdToEvent)
+		err := common.ProcessSettledOrders(ctx, network, orderIds, orderIdToEvent)
 		if err != nil {
 			logger.Errorf("Failed to process OrderSettled events: %v", err)
 		} else {
@@ -829,7 +1035,7 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 			orderIds = append(orderIds, event.OrderId)
 			orderIdToEvent[event.OrderId] = event
 		}
-		err = common.ProcessRefundedOrders(ctx, network, orderIds, orderIdToEvent)
+		err := common.ProcessRefundedOrders(ctx, network, orderIds, orderIdToEvent)
 		if err != nil {
 			logger.Errorf("Failed to process OrderRefunded events: %v", err)
 		} else {
@@ -992,7 +1198,7 @@ func (s *IndexerEVM) indexProviderAddressByAddress(ctx context.Context, network 
 	}
 
 	// Get provider address's transaction history with fallback
-	transactions, err := s.getAddressTransactionHistoryWithFallback(ctx, network.ChainID, providerAddress, limit, fromBlock, toBlock)
+	transactions, err := s.getAddressTransactionHistoryWithFallback(ctx, nil, network.ChainID, providerAddress, limit, fromBlock, toBlock)
 	if err != nil {
 		return fmt.Errorf("failed to get provider transaction history: %w", err)
 	}
