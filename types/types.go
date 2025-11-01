@@ -87,6 +87,7 @@ type OrderSettledEvent struct {
 	OrderId           string
 	LiquidityProvider string
 	SettlePercent     decimal.Decimal
+	RebatePercent     decimal.Decimal
 }
 
 // OrderRefundedEvent represents a order refunded event.

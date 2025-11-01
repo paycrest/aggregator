@@ -938,6 +938,15 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 				continue
 			}
 
+			rebatePercentStr, ok := nonIndexedParams["rebatePercent"].(string)
+			if !ok || rebatePercentStr == "" {
+				continue
+			}
+			rebatePercent, err := decimal.NewFromString(rebatePercentStr)
+			if err != nil {
+				continue
+			}
+
 			splitOrderIdStr, ok := nonIndexedParams["splitOrderId"].(string)
 			if !ok || splitOrderIdStr == "" {
 				continue
@@ -960,6 +969,7 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 				OrderId:           orderIdStr,
 				LiquidityProvider: ethcommon.HexToAddress(liquidityProviderStr).Hex(),
 				SettlePercent:     settlePercent,
+				RebatePercent:     rebatePercent,
 			}
 			orderSettledEvents = append(orderSettledEvents, settledEvent)
 

@@ -610,6 +610,7 @@ func (s *OrderTron) settleCallData(ctx context.Context, order *ent.LockPaymentOr
 		utils.StringToByte32(string(orderID)),
 		common.HexToAddress(providerAddress),
 		uint64(orderPercent),
+		uint64(0), // rebatePercent - default to 0 for now
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to pack settle ABI: %w", err)
