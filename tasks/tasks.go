@@ -980,6 +980,7 @@ func fetchExternalRate(currency string) (decimal.Decimal, error) {
 
 	// Read the response body manually since we need to parse an array, not an object
 	responseBody, err := io.ReadAll(res.RawResponse.Body)
+	defer res.RawResponse.Body.Close()
 	if err != nil {
 		return decimal.Zero, fmt.Errorf("ComputeMarketRate: failed to read response body: %w", err)
 	}
