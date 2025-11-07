@@ -1055,12 +1055,77 @@ func (ctrl *SenderController) SearchPaymentOrders(ctx *gin.Context) {
 		return
 	}
 
-	// Transform to response format
-	orders, err := ctrl.transformPaymentOrders(ctx, paymentOrders)
+	// Batch fetch institutions to avoid N+1 queries
+	institutionCodes := make(map[string]bool)
+	for _, paymentOrder := range paymentOrders {
+		if paymentOrder.Edges.Recipient != nil {
+			institutionCodes[paymentOrder.Edges.Recipient.Institution] = true
+		}
+	}
+	
+	// Convert map keys to slice
+	codes := make([]string, 0, len(institutionCodes))
+	for code := range institutionCodes {
+		codes = append(codes, code)
+	}
+	
+	// Fetch all institutions in one query
+	institutions, err := storage.Client.Institution.
+		Query().
+		Where(institution.CodeIn(codes...)).
+		WithFiatCurrency().
+		All(ctx)
 	if err != nil {
-		logger.Errorf("Failed to transform payment orders: %v", err)
+		logger.Errorf("Failed to fetch institutions: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search payment orders", nil)
 		return
+	}
+	
+	// Create institution lookup map
+	institutionMap := make(map[string]*ent.Institution)
+	for _, inst := range institutions {
+		institutionMap[inst.Code] = inst
+	}
+
+	// Transform to response format inline (no separate transform method)
+	var orders []types.PaymentOrderResponse
+	for _, paymentOrder := range paymentOrders {
+		institution := institutionMap[paymentOrder.Edges.Recipient.Institution]
+		if institution == nil {
+			logger.Errorf("Institution not found for code: %s", paymentOrder.Edges.Recipient.Institution)
+			continue // Skip this order
+		}
+
+		orders = append(orders, types.PaymentOrderResponse{
+			ID:             paymentOrder.ID,
+			Amount:         paymentOrder.Amount,
+			AmountInUSD:    paymentOrder.AmountInUsd,
+			AmountPaid:     paymentOrder.AmountPaid,
+			AmountReturned: paymentOrder.AmountReturned,
+			Token:          paymentOrder.Edges.Token.Symbol,
+			SenderFee:      paymentOrder.SenderFee,
+			TransactionFee: paymentOrder.NetworkFee,
+			Rate:           paymentOrder.Rate,
+			Network:        paymentOrder.Edges.Token.Edges.Network.Identifier,
+			Recipient: types.PaymentOrderRecipient{
+				Currency:          institution.Edges.FiatCurrency.Code,
+				Institution:       institution.Name,
+				AccountIdentifier: paymentOrder.Edges.Recipient.AccountIdentifier,
+				AccountName:       paymentOrder.Edges.Recipient.AccountName,
+				ProviderID:        paymentOrder.Edges.Recipient.ProviderID,
+				Memo:              paymentOrder.Edges.Recipient.Memo,
+			},
+			FromAddress:    paymentOrder.FromAddress,
+			ReturnAddress:  paymentOrder.ReturnAddress,
+			ReceiveAddress: paymentOrder.ReceiveAddressText,
+			FeeAddress:     paymentOrder.FeeAddress,
+			Reference:      paymentOrder.Reference,
+			GatewayID:      paymentOrder.GatewayID,
+			CreatedAt:      paymentOrder.CreatedAt,
+			UpdatedAt:      paymentOrder.UpdatedAt,
+			TxHash:         paymentOrder.TxHash,
+			Status:         paymentOrder.Status,
+		})
 	}
 
 	// Return all results
@@ -1217,16 +1282,44 @@ func (ctrl *SenderController) ExportPaymentOrdersCSV(ctx *gin.Context) {
 		return
 	}
 
+	// Batch fetch institutions to avoid N+1 queries in CSV export
+	institutionCodes := make(map[string]bool)
+	for _, paymentOrder := range paymentOrders {
+		if paymentOrder.Edges.Recipient != nil {
+			institutionCodes[paymentOrder.Edges.Recipient.Institution] = true
+		}
+	}
+	
+	// Convert map keys to slice
+	codes := make([]string, 0, len(institutionCodes))
+	for code := range institutionCodes {
+		codes = append(codes, code)
+	}
+	
+	// Fetch all institutions in one query
+	institutions, err := storage.Client.Institution.
+		Query().
+		Where(institution.CodeIn(codes...)).
+		WithFiatCurrency().
+		All(ctx)
+	if err != nil {
+		logger.Errorf("Failed to fetch institutions for export: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to export payment orders", nil)
+		return
+	}
+	
+	// Create institution lookup map
+	institutionMap := make(map[string]*ent.Institution)
+	for _, inst := range institutions {
+		institutionMap[inst.Code] = inst
+	}
+
 	// Write data rows
 	for _, paymentOrder := range paymentOrders {
-		// Get institution data
-		institution, err := storage.Client.Institution.
-			Query().
-			Where(institution.CodeEQ(paymentOrder.Edges.Recipient.Institution)).
-			WithFiatCurrency().
-			Only(ctx)
-		if err != nil {
-			logger.Errorf("Failed to fetch institution for export: %v", err)
+		// Get institution from pre-fetched map
+		institution := institutionMap[paymentOrder.Edges.Recipient.Institution]
+		if institution == nil {
+			logger.Errorf("Institution not found for code: %s", paymentOrder.Edges.Recipient.Institution)
 			continue // Skip this row but continue with others
 		}
 
@@ -1266,51 +1359,4 @@ func (ctrl *SenderController) ExportPaymentOrdersCSV(ctx *gin.Context) {
 	logger.Infof("Successfully exported %d payment orders for sender %s", len(paymentOrders), sender.ID)
 }
 
-// transformPaymentOrders converts ent payment orders to response format
-func (ctrl *SenderController) transformPaymentOrders(ctx *gin.Context, paymentOrders []*ent.PaymentOrder) ([]types.PaymentOrderResponse, error) {
-	var orders []types.PaymentOrderResponse
 
-	for _, paymentOrder := range paymentOrders {
-		institution, err := storage.Client.Institution.
-			Query().
-			Where(institution.CodeEQ(paymentOrder.Edges.Recipient.Institution)).
-			WithFiatCurrency().
-			Only(ctx)
-		if err != nil {
-			return nil, err
-		}
-
-		orders = append(orders, types.PaymentOrderResponse{
-			ID:             paymentOrder.ID,
-			Amount:         paymentOrder.Amount,
-			AmountInUSD:    paymentOrder.AmountInUsd,
-			AmountPaid:     paymentOrder.AmountPaid,
-			AmountReturned: paymentOrder.AmountReturned,
-			Token:          paymentOrder.Edges.Token.Symbol,
-			SenderFee:      paymentOrder.SenderFee,
-			TransactionFee: paymentOrder.NetworkFee,
-			Rate:           paymentOrder.Rate,
-			Network:        paymentOrder.Edges.Token.Edges.Network.Identifier,
-			Recipient: types.PaymentOrderRecipient{
-				Currency:          institution.Edges.FiatCurrency.Code,
-				Institution:       institution.Name,
-				AccountIdentifier: paymentOrder.Edges.Recipient.AccountIdentifier,
-				AccountName:       paymentOrder.Edges.Recipient.AccountName,
-				ProviderID:        paymentOrder.Edges.Recipient.ProviderID,
-				Memo:              paymentOrder.Edges.Recipient.Memo,
-			},
-			FromAddress:    paymentOrder.FromAddress,
-			ReturnAddress:  paymentOrder.ReturnAddress,
-			ReceiveAddress: paymentOrder.ReceiveAddressText,
-			FeeAddress:     paymentOrder.FeeAddress,
-			Reference:      paymentOrder.Reference,
-			GatewayID:      paymentOrder.GatewayID,
-			CreatedAt:      paymentOrder.CreatedAt,
-			UpdatedAt:      paymentOrder.UpdatedAt,
-			TxHash:         paymentOrder.TxHash,
-			Status:         paymentOrder.Status,
-		})
-	}
-
-	return orders, nil
-}

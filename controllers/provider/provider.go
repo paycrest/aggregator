@@ -1454,8 +1454,28 @@ func (ctrl *ProviderController) SearchLockPaymentOrders(ctx *gin.Context) {
 		return
 	}
 
-	// Transform to response format
-	orders := ctrl.transformLockPaymentOrders(lockPaymentOrders)
+	// Transform to response format inline (no separate transform method)
+	var orders []types.LockPaymentOrderResponse
+	for _, order := range lockPaymentOrders {
+		orders = append(orders, types.LockPaymentOrderResponse{
+			ID:                  order.ID,
+			Token:               order.Edges.Token.Symbol,
+			GatewayID:           order.GatewayID,
+			Amount:              order.Amount,
+			AmountInUSD:         order.AmountInUsd,
+			Rate:                order.Rate,
+			Institution:         order.Institution,
+			AccountIdentifier:   order.AccountIdentifier,
+			AccountName:         order.AccountName,
+			TxHash:              order.TxHash,
+			Status:              order.Status,
+			Memo:                order.Memo,
+			Network:             order.Edges.Token.Edges.Network.Identifier,
+			CancellationReasons: order.CancellationReasons,
+			UpdatedAt:           order.UpdatedAt,
+			CreatedAt:           order.CreatedAt,
+		})
+	}
 
 	// Return all results
 	u.APIResponse(ctx, http.StatusOK, "success", "Lock payment orders searched successfully", map[string]interface{}{
@@ -1639,30 +1659,4 @@ func (ctrl *ProviderController) ExportLockPaymentOrdersCSV(ctx *gin.Context) {
 	logger.Infof("Successfully exported %d lock payment orders for provider %s", len(lockPaymentOrders), provider.ID)
 }
 
-// transformLockPaymentOrders converts ent lock payment orders to response format
-func (ctrl *ProviderController) transformLockPaymentOrders(lockPaymentOrders []*ent.LockPaymentOrder) []types.LockPaymentOrderResponse {
-	var orders []types.LockPaymentOrderResponse
 
-	for _, order := range lockPaymentOrders {
-		orders = append(orders, types.LockPaymentOrderResponse{
-			ID:                  order.ID,
-			Token:               order.Edges.Token.Symbol,
-			GatewayID:           order.GatewayID,
-			Amount:              order.Amount,
-			AmountInUSD:         order.AmountInUsd,
-			Rate:                order.Rate,
-			Institution:         order.Institution,
-			AccountIdentifier:   order.AccountIdentifier,
-			AccountName:         order.AccountName,
-			TxHash:              order.TxHash,
-			Status:              order.Status,
-			Memo:                order.Memo,
-			Network:             order.Edges.Token.Edges.Network.Identifier,
-			CancellationReasons: order.CancellationReasons,
-			UpdatedAt:           order.UpdatedAt,
-			CreatedAt:           order.CreatedAt,
-		})
-	}
-
-	return orders
-}
