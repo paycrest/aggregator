@@ -1180,6 +1180,15 @@ func (ctrl *SenderController) ExportPaymentOrdersCSV(ctx *gin.Context) {
 		toDate = &parsedToDate
 	}
 
+	// Validate date range - ensure fromDate is not after toDate
+	if fromDate != nil && toDate != nil && fromDate.After(*toDate) {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid date range", types.ErrorData{
+			Field:   "from",
+			Message: "From date cannot be after to date",
+		})
+		return
+	}
+
 	// Set export limit
 	maxExportLimit := 10000
 	if limit := ctx.Query("limit"); limit != "" {
