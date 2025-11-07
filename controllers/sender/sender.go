@@ -1,9 +1,11 @@
 package sender
 
 import (
+	"encoding/csv"
 	"fmt"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +16,7 @@ import (
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	providerprofile "github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
@@ -960,4 +963,354 @@ func (ctrl *SenderController) Stats(ctx *gin.Context) {
 		TotalOrderVolume: w[0].Sum.Add(localStablecoinSum),
 		TotalFeeEarnings: w[0].SumFieldSenderFee.Add(localStablecoinSenderFee),
 	})
+}
+
+// SearchPaymentOrders controller provides text search functionality for payment orders
+func (ctrl *SenderController) SearchPaymentOrders(ctx *gin.Context) {
+	// Get sender profile from the context
+	senderCtx, ok := ctx.Get("sender")
+	if !ok {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
+		return
+	}
+	sender := senderCtx.(*ent.SenderProfile)
+
+	// Get search query
+	searchText := strings.TrimSpace(ctx.Query("search"))
+	if searchText == "" {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Search query is required", types.ErrorData{
+			Field:   "search",
+			Message: "Search parameter cannot be empty",
+		})
+		return
+	}
+
+	// Build base query
+	paymentOrderQuery := storage.Client.PaymentOrder.Query().Where(
+		paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)),
+	)
+
+	// Apply text search across all relevant fields
+	paymentOrderQuery = paymentOrderQuery.Where(
+		paymentorder.Or(
+			// Direct payment order fields
+			paymentorder.ReferenceContains(searchText),
+			paymentorder.TxHashContains(searchText),
+			paymentorder.GatewayIDContains(searchText),
+			paymentorder.ReceiveAddressTextContains(searchText),
+			paymentorder.FromAddressContains(searchText),
+			paymentorder.ReturnAddressContains(searchText),
+			paymentorder.FeeAddressContains(searchText),
+			// Search in recipient fields
+			paymentorder.HasRecipientWith(
+				paymentorderrecipient.Or(
+					paymentorderrecipient.AccountIdentifierContains(searchText),
+					paymentorderrecipient.AccountNameContains(searchText),
+					paymentorderrecipient.MemoContains(searchText),
+					paymentorderrecipient.InstitutionContains(searchText),
+				),
+			),
+			// Search in token symbol
+			paymentorder.HasTokenWith(
+				tokenEnt.SymbolContains(searchText),
+			),
+			// Search in network identifier
+			paymentorder.HasTokenWith(
+				tokenEnt.HasNetworkWith(
+					network.IdentifierContains(searchText),
+				),
+			),
+		),
+	)
+
+	// Get total count
+	count, err := paymentOrderQuery.Count(ctx)
+	if err != nil {
+		logger.Errorf("Failed to count payment orders: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search payment orders", nil)
+		return
+	}
+
+	// Set reasonable limit to prevent memory issues
+	maxSearchResults := 10000
+	if count > maxSearchResults {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", 
+			fmt.Sprintf("Search returned too many results (%d). Maximum allowed is %d. Please use a more specific search term.", 
+				count, maxSearchResults), nil)
+		return
+	}
+
+	// Execute query with default ordering (most recent first)
+	paymentOrders, err := paymentOrderQuery.
+		WithRecipient().
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
+		Limit(maxSearchResults).
+		Order(ent.Desc(paymentorder.FieldCreatedAt), ent.Desc(paymentorder.FieldID)).
+		All(ctx)
+	if err != nil {
+		logger.Errorf("Failed to fetch payment orders: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search payment orders", nil)
+		return
+	}
+
+	// Transform to response format
+	orders, err := ctrl.transformPaymentOrders(ctx, paymentOrders)
+	if err != nil {
+		logger.Errorf("Failed to transform payment orders: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search payment orders", nil)
+		return
+	}
+
+	// Return all results
+	u.APIResponse(ctx, http.StatusOK, "success", "Payment orders searched successfully", map[string]interface{}{
+		"total_records": count,
+		"search_query":  searchText,
+		"orders":        orders,
+	})
+}
+
+// ExportPaymentOrdersCSV exports payment orders as CSV within a date range
+func (ctrl *SenderController) ExportPaymentOrdersCSV(ctx *gin.Context) {
+	// Get sender profile from the context
+	senderCtx, ok := ctx.Get("sender")
+	if !ok {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
+		return
+	}
+	sender := senderCtx.(*ent.SenderProfile)
+
+	// Parse date range parameters
+	fromDateStr := ctx.Query("from")
+	toDateStr := ctx.Query("to")
+	
+	var fromDate, toDate *time.Time
+	
+	// Parse from date
+	if fromDateStr != "" {
+		parsedFromDate, err := time.Parse("2006-01-02", fromDateStr)
+		if err != nil {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid from date format", types.ErrorData{
+				Field:   "from",
+				Message: "Expected format: YYYY-MM-DD",
+			})
+			return
+		}
+		fromDate = &parsedFromDate
+	}
+	
+	// Parse to date
+	if toDateStr != "" {
+		parsedToDate, err := time.Parse("2006-01-02", toDateStr)
+		if err != nil {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid to date format", types.ErrorData{
+				Field:   "to",
+				Message: "Expected format: YYYY-MM-DD",
+			})
+			return
+		}
+		// Set to end of day
+		parsedToDate = parsedToDate.Add(23*time.Hour + 59*time.Minute + 59*time.Second)
+		toDate = &parsedToDate
+	}
+
+	// Set export limit
+	maxExportLimit := 10000
+	if limit := ctx.Query("limit"); limit != "" {
+		if parsedLimit, err := strconv.Atoi(limit); err == nil && parsedLimit > 0 && parsedLimit <= maxExportLimit {
+			maxExportLimit = parsedLimit
+		}
+	}
+
+	// Build query for user's orders with date range filter
+	paymentOrderQuery := storage.Client.PaymentOrder.Query().Where(
+		paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)),
+	)
+	
+	// Apply date range filters
+	if fromDate != nil {
+		paymentOrderQuery = paymentOrderQuery.Where(paymentorder.CreatedAtGTE(*fromDate))
+	}
+	if toDate != nil {
+		paymentOrderQuery = paymentOrderQuery.Where(paymentorder.CreatedAtLTE(*toDate))
+	}
+
+	// Get total count first
+	count, err := paymentOrderQuery.Count(ctx)
+	if err != nil {
+		logger.Errorf("Failed to count payment orders for export: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to export payment orders", nil)
+		return
+	}
+
+	if count == 0 {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "No orders found in the specified date range", nil)
+		return
+	}
+
+	// Check if export is too large
+	if count > maxExportLimit {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", 
+			fmt.Sprintf("Export too large. Found %d orders, maximum allowed is %d. Please use a smaller date range.", 
+				count, maxExportLimit), nil)
+		return
+	}
+
+	// Execute query with eager loading
+	paymentOrders, err := paymentOrderQuery.
+		WithRecipient().
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
+		Limit(maxExportLimit).
+		Order(ent.Desc(paymentorder.FieldCreatedAt), ent.Desc(paymentorder.FieldID)).
+		All(ctx)
+	if err != nil {
+		logger.Errorf("Failed to fetch payment orders for export: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to export payment orders", nil)
+		return
+	}
+
+	// Set CSV headers
+	timestamp := time.Now().Format("2006-01-02_15-04-05")
+	filename := fmt.Sprintf("payment_orders_%s.csv", timestamp)
+	
+	ctx.Header("Content-Type", "text/csv")
+	ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	ctx.Header("X-Total-Count", strconv.Itoa(count))
+
+	// Create CSV writer
+	writer := csv.NewWriter(ctx.Writer)
+	defer writer.Flush()
+
+	// Write CSV header
+	csvHeaders := []string{
+		"Order ID",
+		"Reference",
+		"Amount",
+		"Amount (USD)",
+		"Amount Paid",
+		"Token",
+		"Network",
+		"Rate",
+		"Sender Fee",
+		"Transaction Fee",
+		"Status",
+		"Recipient Institution",
+		"Recipient Currency", 
+		"Recipient Account",
+		"Recipient Name",
+		"From Address",
+		"Receive Address",
+		"Return Address",
+		"Fee Address",
+		"Transaction Hash",
+		"Gateway ID",
+		"Created At",
+		"Updated At",
+	}
+
+	if err := writer.Write(csvHeaders); err != nil {
+		logger.Errorf("Failed to write CSV headers: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to export payment orders", nil)
+		return
+	}
+
+	// Write data rows
+	for _, paymentOrder := range paymentOrders {
+		// Get institution data
+		institution, err := storage.Client.Institution.
+			Query().
+			Where(institution.CodeEQ(paymentOrder.Edges.Recipient.Institution)).
+			WithFiatCurrency().
+			Only(ctx)
+		if err != nil {
+			logger.Errorf("Failed to fetch institution for export: %v", err)
+			continue // Skip this row but continue with others
+		}
+
+		row := []string{
+			paymentOrder.ID.String(),
+			paymentOrder.Reference,
+			paymentOrder.Amount.String(),
+			paymentOrder.AmountInUsd.String(),
+			paymentOrder.AmountPaid.String(),
+			paymentOrder.Edges.Token.Symbol,
+			paymentOrder.Edges.Token.Edges.Network.Identifier,
+			paymentOrder.Rate.String(),
+			paymentOrder.SenderFee.String(),
+			paymentOrder.NetworkFee.String(),
+			string(paymentOrder.Status),
+			institution.Name,
+			institution.Edges.FiatCurrency.Code,
+			paymentOrder.Edges.Recipient.AccountIdentifier,
+			paymentOrder.Edges.Recipient.AccountName,
+			paymentOrder.FromAddress,
+			paymentOrder.ReceiveAddressText,
+			paymentOrder.ReturnAddress,
+			paymentOrder.FeeAddress,
+			paymentOrder.TxHash,
+			paymentOrder.GatewayID,
+			paymentOrder.CreatedAt.Format("2006-01-02 15:04:05"),
+			paymentOrder.UpdatedAt.Format("2006-01-02 15:04:05"),
+		}
+
+		if err := writer.Write(row); err != nil {
+			logger.Errorf("Failed to write CSV row: %v", err)
+			// Continue writing other rows
+		}
+	}
+
+	// CSV is automatically sent as response through ctx.Writer
+	logger.Infof("Successfully exported %d payment orders for sender %s", len(paymentOrders), sender.ID)
+}
+
+// transformPaymentOrders converts ent payment orders to response format
+func (ctrl *SenderController) transformPaymentOrders(ctx *gin.Context, paymentOrders []*ent.PaymentOrder) ([]types.PaymentOrderResponse, error) {
+	var orders []types.PaymentOrderResponse
+
+	for _, paymentOrder := range paymentOrders {
+		institution, err := storage.Client.Institution.
+			Query().
+			Where(institution.CodeEQ(paymentOrder.Edges.Recipient.Institution)).
+			WithFiatCurrency().
+			Only(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		orders = append(orders, types.PaymentOrderResponse{
+			ID:             paymentOrder.ID,
+			Amount:         paymentOrder.Amount,
+			AmountInUSD:    paymentOrder.AmountInUsd,
+			AmountPaid:     paymentOrder.AmountPaid,
+			AmountReturned: paymentOrder.AmountReturned,
+			Token:          paymentOrder.Edges.Token.Symbol,
+			SenderFee:      paymentOrder.SenderFee,
+			TransactionFee: paymentOrder.NetworkFee,
+			Rate:           paymentOrder.Rate,
+			Network:        paymentOrder.Edges.Token.Edges.Network.Identifier,
+			Recipient: types.PaymentOrderRecipient{
+				Currency:          institution.Edges.FiatCurrency.Code,
+				Institution:       institution.Name,
+				AccountIdentifier: paymentOrder.Edges.Recipient.AccountIdentifier,
+				AccountName:       paymentOrder.Edges.Recipient.AccountName,
+				ProviderID:        paymentOrder.Edges.Recipient.ProviderID,
+				Memo:              paymentOrder.Edges.Recipient.Memo,
+			},
+			FromAddress:    paymentOrder.FromAddress,
+			ReturnAddress:  paymentOrder.ReturnAddress,
+			ReceiveAddress: paymentOrder.ReceiveAddressText,
+			FeeAddress:     paymentOrder.FeeAddress,
+			Reference:      paymentOrder.Reference,
+			GatewayID:      paymentOrder.GatewayID,
+			CreatedAt:      paymentOrder.CreatedAt,
+			UpdatedAt:      paymentOrder.UpdatedAt,
+			TxHash:         paymentOrder.TxHash,
+			Status:         paymentOrder.Status,
+		})
+	}
+
+	return orders, nil
 }

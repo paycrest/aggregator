@@ -128,6 +128,8 @@ func senderRoutes(route *gin.Engine) {
 	v1.POST("orders", senderCtrl.InitiatePaymentOrder)
 	v1.GET("orders/:id", senderCtrl.GetPaymentOrderByID)
 	v1.GET("orders", senderCtrl.GetPaymentOrders)
+	v1.GET("orders/search", senderCtrl.SearchPaymentOrders)
+	v1.GET("orders/export", senderCtrl.ExportPaymentOrdersCSV)
 	v1.GET("stats", senderCtrl.Stats)
 }
 
@@ -139,6 +141,8 @@ func providerRoutes(route *gin.Engine) {
 	v1.Use(middleware.OnlyProviderMiddleware)
 
 	v1.GET("orders", providerCtrl.GetLockPaymentOrders)
+	v1.GET("orders/search", providerCtrl.SearchLockPaymentOrders)
+	v1.GET("orders/export", providerCtrl.ExportLockPaymentOrdersCSV)
 	v1.POST("orders/:id/accept", providerCtrl.AcceptOrder)
 	v1.POST("orders/:id/decline", providerCtrl.DeclineOrder)
 	v1.POST("orders/:id/fulfill", providerCtrl.FulfillOrder)

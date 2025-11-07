@@ -1,8 +1,10 @@
 package provider
 
 import (
+	"encoding/csv"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -1377,4 +1379,290 @@ func (ctrl *ProviderController) UpdateProviderBalance(ctx *gin.Context) {
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Balance updated successfully", nil)
+}
+
+// SearchLockPaymentOrders controller provides text search functionality for lock payment orders
+func (ctrl *ProviderController) SearchLockPaymentOrders(ctx *gin.Context) {
+	// Get provider profile from the context
+	providerCtx, ok := ctx.Get("provider")
+	if !ok {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
+		return
+	}
+	provider := providerCtx.(*ent.ProviderProfile)
+
+	// Get search query
+	searchText := strings.TrimSpace(ctx.Query("search"))
+	if searchText == "" {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Search query is required", types.ErrorData{
+			Field:   "search",
+			Message: "Search parameter cannot be empty",
+		})
+		return
+	}
+
+	// Build base query
+	lockPaymentOrderQuery := storage.Client.LockPaymentOrder.Query().Where(
+		lockpaymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+	)
+
+	// Apply text search across all relevant fields
+	lockPaymentOrderQuery = lockPaymentOrderQuery.Where(
+		lockpaymentorder.Or(
+			// Direct lock payment order fields
+			lockpaymentorder.GatewayIDContains(searchText),
+			lockpaymentorder.TxHashContains(searchText),
+			lockpaymentorder.InstitutionContains(searchText),
+			lockpaymentorder.AccountIdentifierContains(searchText),
+			lockpaymentorder.AccountNameContains(searchText),
+			lockpaymentorder.MemoContains(searchText),
+			// Search in token symbol
+			lockpaymentorder.HasTokenWith(
+				token.SymbolContains(searchText),
+			),
+		),
+	)
+
+	// Get total count
+	count, err := lockPaymentOrderQuery.Count(ctx)
+	if err != nil {
+		logger.Errorf("Failed to count lock payment orders: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search lock payment orders", nil)
+		return
+	}
+
+	// Set reasonable limit to prevent memory issues
+	maxSearchResults := 10000
+	if count > maxSearchResults {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", 
+			fmt.Sprintf("Search returned too many results (%d). Maximum allowed is %d. Please use a more specific search term.", 
+				count, maxSearchResults), nil)
+		return
+	}
+
+	// Execute query with default ordering (most recent first)
+	lockPaymentOrders, err := lockPaymentOrderQuery.
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
+		Limit(maxSearchResults).
+		Order(ent.Desc(lockpaymentorder.FieldCreatedAt), ent.Desc(lockpaymentorder.FieldID)).
+		All(ctx)
+	if err != nil {
+		logger.Errorf("Failed to fetch lock payment orders: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search lock payment orders", nil)
+		return
+	}
+
+	// Transform to response format
+	orders := ctrl.transformLockPaymentOrders(lockPaymentOrders)
+
+	// Return all results
+	u.APIResponse(ctx, http.StatusOK, "success", "Lock payment orders searched successfully", map[string]interface{}{
+		"total_records": count,
+		"search_query":  searchText,
+		"orders":        orders,
+	})
+}
+
+// ExportLockPaymentOrdersCSV exports lock payment orders as CSV within a date range
+func (ctrl *ProviderController) ExportLockPaymentOrdersCSV(ctx *gin.Context) {
+	// Get provider profile from the context
+	providerCtx, ok := ctx.Get("provider")
+	if !ok {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
+		return
+	}
+	provider := providerCtx.(*ent.ProviderProfile)
+
+	// Parse date range parameters
+	fromDateStr := ctx.Query("from")
+	toDateStr := ctx.Query("to")
+	
+	var fromDate, toDate *time.Time
+	
+	// Parse from date
+	if fromDateStr != "" {
+		parsedFromDate, err := time.Parse("2006-01-02", fromDateStr)
+		if err != nil {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid from date format", types.ErrorData{
+				Field:   "from",
+				Message: "Expected format: YYYY-MM-DD",
+			})
+			return
+		}
+		fromDate = &parsedFromDate
+	}
+	
+	// Parse to date
+	if toDateStr != "" {
+		parsedToDate, err := time.Parse("2006-01-02", toDateStr)
+		if err != nil {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid to date format", types.ErrorData{
+				Field:   "to",
+				Message: "Expected format: YYYY-MM-DD",
+			})
+			return
+		}
+		// Set to end of day
+		parsedToDate = parsedToDate.Add(23*time.Hour + 59*time.Minute + 59*time.Second)
+		toDate = &parsedToDate
+	}
+
+	// Set export limit
+	maxExportLimit := 10000
+	if limit := ctx.Query("limit"); limit != "" {
+		if parsedLimit, err := strconv.Atoi(limit); err == nil && parsedLimit > 0 && parsedLimit <= maxExportLimit {
+			maxExportLimit = parsedLimit
+		}
+	}
+
+	// Build query for provider's orders with date range filter
+	lockPaymentOrderQuery := storage.Client.LockPaymentOrder.Query().Where(
+		lockpaymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+	)
+	
+	// Apply date range filters
+	if fromDate != nil {
+		lockPaymentOrderQuery = lockPaymentOrderQuery.Where(lockpaymentorder.CreatedAtGTE(*fromDate))
+	}
+	if toDate != nil {
+		lockPaymentOrderQuery = lockPaymentOrderQuery.Where(lockpaymentorder.CreatedAtLTE(*toDate))
+	}
+
+	// Get total count first
+	count, err := lockPaymentOrderQuery.Count(ctx)
+	if err != nil {
+		logger.Errorf("Failed to count lock payment orders for export: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to export lock payment orders", nil)
+		return
+	}
+
+	if count == 0 {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "No orders found in the specified date range", nil)
+		return
+	}
+
+	// Check if export is too large
+	if count > maxExportLimit {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", 
+			fmt.Sprintf("Export too large. Found %d orders, maximum allowed is %d. Please use a smaller date range.", 
+				count, maxExportLimit), nil)
+		return
+	}
+
+	// Execute query with eager loading
+	lockPaymentOrders, err := lockPaymentOrderQuery.
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
+		Limit(maxExportLimit).
+		Order(ent.Desc(lockpaymentorder.FieldCreatedAt), ent.Desc(lockpaymentorder.FieldID)).
+		All(ctx)
+	if err != nil {
+		logger.Errorf("Failed to fetch lock payment orders for export: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to export lock payment orders", nil)
+		return
+	}
+
+	// Set CSV headers
+	timestamp := time.Now().Format("2006-01-02_15-04-05")
+	filename := fmt.Sprintf("lock_payment_orders_%s.csv", timestamp)
+	
+	ctx.Header("Content-Type", "text/csv")
+	ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	ctx.Header("X-Total-Count", strconv.Itoa(count))
+
+	// Create CSV writer
+	writer := csv.NewWriter(ctx.Writer)
+	defer writer.Flush()
+
+	// Write CSV header
+	csvHeaders := []string{
+		"Order ID",
+		"Gateway ID",
+		"Amount",
+		"Amount (USD)",
+		"Token",
+		"Network",
+		"Rate",
+		"Status",
+		"Institution",
+		"Account Identifier",
+		"Account Name",
+		"Memo",
+		"Transaction Hash",
+		"Cancellation Reasons",
+		"Cancellation Count",
+		"Created At",
+		"Updated At",
+	}
+
+	if err := writer.Write(csvHeaders); err != nil {
+		logger.Errorf("Failed to write CSV headers: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to export lock payment orders", nil)
+		return
+	}
+
+	// Write data rows
+	for _, lockPaymentOrder := range lockPaymentOrders {
+		// Convert cancellation reasons slice to string
+		cancellationReasons := strings.Join(lockPaymentOrder.CancellationReasons, "; ")
+
+		row := []string{
+			lockPaymentOrder.ID.String(),
+			lockPaymentOrder.GatewayID,
+			lockPaymentOrder.Amount.String(),
+			lockPaymentOrder.AmountInUsd.String(),
+			lockPaymentOrder.Edges.Token.Symbol,
+			lockPaymentOrder.Edges.Token.Edges.Network.Identifier,
+			lockPaymentOrder.Rate.String(),
+			string(lockPaymentOrder.Status),
+			lockPaymentOrder.Institution,
+			lockPaymentOrder.AccountIdentifier,
+			lockPaymentOrder.AccountName,
+			lockPaymentOrder.Memo,
+			lockPaymentOrder.TxHash,
+			cancellationReasons,
+			strconv.Itoa(lockPaymentOrder.CancellationCount),
+			lockPaymentOrder.CreatedAt.Format("2006-01-02 15:04:05"),
+			lockPaymentOrder.UpdatedAt.Format("2006-01-02 15:04:05"),
+		}
+
+		if err := writer.Write(row); err != nil {
+			logger.Errorf("Failed to write CSV row: %v", err)
+			// Continue writing other rows
+		}
+	}
+
+	// CSV is automatically sent as response through ctx.Writer
+	logger.Infof("Successfully exported %d lock payment orders for provider %s", len(lockPaymentOrders), provider.ID)
+}
+
+// transformLockPaymentOrders converts ent lock payment orders to response format
+func (ctrl *ProviderController) transformLockPaymentOrders(lockPaymentOrders []*ent.LockPaymentOrder) []types.LockPaymentOrderResponse {
+	var orders []types.LockPaymentOrderResponse
+
+	for _, order := range lockPaymentOrders {
+		orders = append(orders, types.LockPaymentOrderResponse{
+			ID:                  order.ID,
+			Token:               order.Edges.Token.Symbol,
+			GatewayID:           order.GatewayID,
+			Amount:              order.Amount,
+			AmountInUSD:         order.AmountInUsd,
+			Rate:                order.Rate,
+			Institution:         order.Institution,
+			AccountIdentifier:   order.AccountIdentifier,
+			AccountName:         order.AccountName,
+			TxHash:              order.TxHash,
+			Status:              order.Status,
+			Memo:                order.Memo,
+			Network:             order.Edges.Token.Edges.Network.Identifier,
+			CancellationReasons: order.CancellationReasons,
+			UpdatedAt:           order.UpdatedAt,
+			CreatedAt:           order.CreatedAt,
+		})
+	}
+
+	return orders
 }
