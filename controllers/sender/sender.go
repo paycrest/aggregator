@@ -1246,7 +1246,38 @@ func (ctrl *SenderController) ExportPaymentOrdersCSV(ctx *gin.Context) {
 		return
 	}
 
-	// Set CSV headers
+	institutionCodes := make(map[string]bool)
+	for _, paymentOrder := range paymentOrders {
+		if paymentOrder.Edges.Recipient != nil {
+			institutionCodes[paymentOrder.Edges.Recipient.Institution] = true
+		}
+	}
+	
+	// Convert map keys to slice
+	codes := make([]string, 0, len(institutionCodes))
+	for code := range institutionCodes {
+		codes = append(codes, code)
+	}
+	
+	// Fetch all institutions in one query
+	institutions, err := storage.Client.Institution.
+		Query().
+		Where(institution.CodeIn(codes...)).
+		WithFiatCurrency().
+		All(ctx)
+	if err != nil {
+		logger.Errorf("Failed to fetch institutions for export: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to export payment orders", nil)
+		return
+	}
+	
+	// Create institution lookup map
+	institutionMap := make(map[string]*ent.Institution)
+	for _, inst := range institutions {
+		institutionMap[inst.Code] = inst
+	}
+
+	// set CSV headers
 	timestamp := time.Now().Format("2006-01-02_15-04-05")
 	filename := fmt.Sprintf("payment_orders_%s.csv", timestamp)
 	
@@ -1289,38 +1320,6 @@ func (ctrl *SenderController) ExportPaymentOrdersCSV(ctx *gin.Context) {
 		logger.Errorf("Failed to write CSV headers: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to export payment orders", nil)
 		return
-	}
-
-	// Batch fetch institutions to avoid N+1 queries in CSV export
-	institutionCodes := make(map[string]bool)
-	for _, paymentOrder := range paymentOrders {
-		if paymentOrder.Edges.Recipient != nil {
-			institutionCodes[paymentOrder.Edges.Recipient.Institution] = true
-		}
-	}
-	
-	// Convert map keys to slice
-	codes := make([]string, 0, len(institutionCodes))
-	for code := range institutionCodes {
-		codes = append(codes, code)
-	}
-	
-	// Fetch all institutions in one query
-	institutions, err := storage.Client.Institution.
-		Query().
-		Where(institution.CodeIn(codes...)).
-		WithFiatCurrency().
-		All(ctx)
-	if err != nil {
-		logger.Errorf("Failed to fetch institutions for export: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to export payment orders", nil)
-		return
-	}
-	
-	// Create institution lookup map
-	institutionMap := make(map[string]*ent.Institution)
-	for _, inst := range institutions {
-		institutionMap[inst.Code] = inst
 	}
 
 	// Write data rows
