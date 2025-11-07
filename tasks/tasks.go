@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"strings"
 	"sync"
@@ -1017,126 +1018,51 @@ func fetchExternalRate(currency string) (decimal.Decimal, error) {
 		return decimal.Zero, fmt.Errorf("ComputeMarketRate: currency not supported")
 	}
 
-	// Fetch rates from third-party APIs
-	var price decimal.Decimal
-	if currency == "NGN" {
-		res, err := fastshot.NewClient("https://app.quidax.io").
-			Config().SetTimeout(30*time.Second).
-			Build().GET(fmt.Sprintf("/api/v1/markets/tickers/usdt%s", strings.ToLower(currency))).
-			Retry().SetConstantBackoff(5*time.Second, 3).
-			Send()
-		if err != nil {
-			return decimal.Zero, fmt.Errorf("ComputeMarketRate: %w", err)
-		}
-
-		// Check for HTTP errors
-		if res.Status().IsError() {
-			body, _ := res.Body().AsString()
-			return decimal.Zero, fmt.Errorf("ComputeMarketRate HTTP error %d: %s", res.Status().Code(), body)
-		}
-
-		var data map[string]interface{}
-		err = res.Body().AsJSON(&data)
-		if err != nil {
-			return decimal.Zero, fmt.Errorf("ComputeMarketRate: %w", err)
-		}
-
-		// Try to use 'buy' price first, fall back to alternatives if buy is zero
-		buyPriceStr := data["data"].(map[string]interface{})["ticker"].(map[string]interface{})["buy"].(string)
-		lastPriceStr := data["data"].(map[string]interface{})["ticker"].(map[string]interface{})["last"].(string)
-		highPriceStr := data["data"].(map[string]interface{})["ticker"].(map[string]interface{})["high"].(string)
-		lowPriceStr := data["data"].(map[string]interface{})["ticker"].(map[string]interface{})["low"].(string)
-
-		var priceStr string
-		if buyPriceStr == "0.0" || buyPriceStr == "0" {
-			// Calculate midpoint between high and low
-			highPrice, err := decimal.NewFromString(highPriceStr)
-			if err != nil {
-				return decimal.Zero, fmt.Errorf("ComputeMarketRate: failed to parse high price: %w", err)
-			}
-			lowPrice, err := decimal.NewFromString(lowPriceStr)
-			if err != nil {
-				return decimal.Zero, fmt.Errorf("ComputeMarketRate: failed to parse low price: %w", err)
-			}
-
-			midpoint := highPrice.Add(lowPrice).Div(decimal.NewFromInt(2))
-
-			// Parse last price for comparison
-			lastPrice, err := decimal.NewFromString(lastPriceStr)
-			if err != nil {
-				return decimal.Zero, fmt.Errorf("ComputeMarketRate: failed to parse last price: %w", err)
-			}
-
-			// Use the lower value between midpoint and last price
-			if midpoint.LessThan(lastPrice) {
-				priceStr = midpoint.String()
-			} else {
-				priceStr = lastPrice.String()
-			}
-		} else {
-			// Use 'buy' price when available
-			priceStr = buyPriceStr
-		}
-
-		price, err = decimal.NewFromString(priceStr)
-		if err != nil {
-			return decimal.Zero, fmt.Errorf("ComputeMarketRate: %w", err)
-		}
-	} else {
-		res, err := fastshot.NewClient("https://p2p.binance.com").
-			Config().SetTimeout(30*time.Second).
-			Header().Add("Content-Type", "application/json").
-			Build().POST("/bapi/c2c/v2/friendly/c2c/adv/search").
-			Body().AsJSON(map[string]interface{}{
-			"asset":     "USDT",
-			"fiat":      currency,
-			"tradeType": "SELL",
-			"page":      1,
-			"rows":      20,
-		}).
-			Retry().SetConstantBackoff(5*time.Second, 3).
-			Send()
-		if err != nil {
-			return decimal.Zero, fmt.Errorf("ComputeMarketRate: %w", err)
-		}
-
-		// Check for HTTP errors
-		if res.Status().IsError() {
-			body, _ := res.Body().AsString()
-			return decimal.Zero, fmt.Errorf("ComputeMarketRate HTTP error %d: %s", res.Status().Code(), body)
-		}
-
-		var resData map[string]interface{}
-		err = res.Body().AsJSON(&resData)
-		if err != nil {
-			return decimal.Zero, fmt.Errorf("ComputeMarketRate: %w", err)
-		}
-
-		// Access the data array
-		data, ok := resData["data"].([]interface{})
-		if !ok || len(data) == 0 {
-			return decimal.Zero, fmt.Errorf("ComputeMarketRate: No data in the response")
-		}
-
-		// Loop through the data array and extract prices
-		var prices []decimal.Decimal
-		for _, item := range data {
-			adv, ok := item.(map[string]interface{})["adv"].(map[string]interface{})
-			if !ok {
-				continue
-			}
-
-			price, err := decimal.NewFromString(adv["price"].(string))
-			if err != nil {
-				continue
-			}
-
-			prices = append(prices, price)
-		}
-
-		// Calculate and return the median
-		price = utils.Median(prices)
+	// Fetch rates from noblocks rates API
+	res, err := fastshot.NewClient("https://api.rates.noblocks.xyz").
+		Config().SetTimeout(30*time.Second).
+		Build().GET(fmt.Sprintf("/rates/usdt/%s", strings.ToLower(currency))).
+		Retry().Set(3, 5*time.Second).
+		Send()
+	if err != nil {
+		return decimal.Zero, fmt.Errorf("ComputeMarketRate: %w", err)
 	}
+
+	// Read the response body manually since we need to parse an array, not an object
+	responseBody, err := io.ReadAll(res.RawResponse.Body)
+	defer res.RawResponse.Body.Close()
+	if err != nil {
+		return decimal.Zero, fmt.Errorf("ComputeMarketRate: failed to read response body: %w", err)
+	}
+
+	var dataArray []map[string]interface{}
+	err = json.Unmarshal(responseBody, &dataArray)
+	if err != nil {
+		return decimal.Zero, fmt.Errorf("ComputeMarketRate: failed to parse JSON response: %w", err)
+	}
+
+	// Check if we have data
+	if len(dataArray) == 0 {
+		return decimal.Zero, fmt.Errorf("ComputeMarketRate: No data in the response")
+	}
+
+	// Get the first rate object
+	rateData := dataArray[0]
+
+	// Extract buy and sell rates
+	buyRate, ok := rateData["buyRate"].(float64)
+	if !ok {
+		return decimal.Zero, fmt.Errorf("ComputeMarketRate: Invalid buyRate format")
+	}
+
+	sellRate, ok := rateData["sellRate"].(float64)
+	if !ok {
+		return decimal.Zero, fmt.Errorf("ComputeMarketRate: Invalid sellRate format")
+	}
+
+	// Calculate the average of buy and sell rates for the external rate
+	avgRate := (buyRate + sellRate) / 2
+	price := decimal.NewFromFloat(avgRate)
 
 	return price, nil
 }
