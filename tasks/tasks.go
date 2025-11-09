@@ -486,7 +486,6 @@ func SyncLockOrderFulfillments() {
 						lockpaymentorder.HasFulfillmentsWith(
 							lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusPending),
 							lockorderfulfillment.UpdatedAtLTE(time.Now().Add(-orderConf.OrderFulfillmentValidity)),
-							lockorderfulfillment.Not(lockorderfulfillment.UpdatedAtGT(time.Now().Add(-orderConf.OrderFulfillmentValidity))),
 						),
 						lockpaymentorder.HasFulfillmentsWith(
 							lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusSuccess),
@@ -724,6 +723,26 @@ func SyncLockOrderFulfillments() {
 
 					data, err := utils.ParseJSONResponse(res.RawResponse)
 					if err != nil {
+						// Check if it's a 400 error and fulfillment is older than 5 minutes
+						if res.RawResponse.StatusCode == 400 {
+							if time.Since(fulfillment.CreatedAt) > 5*time.Minute {
+								// Mark fulfillment as failed
+								_, updateErr := storage.Client.LockOrderFulfillment.
+									UpdateOneID(fulfillment.ID).
+									SetValidationStatus(lockorderfulfillment.ValidationStatusFailed).
+									SetValidationError("Failed to get transaction status after 5 minutes").
+									Save(ctx)
+								if updateErr != nil {
+									logger.WithFields(logger.Fields{
+										"Error":         fmt.Sprintf("%v", updateErr),
+										"OrderID":       order.ID.String(),
+										"FulfillmentID": fulfillment.ID,
+									}).Errorf("Failed to mark fulfillment as failed after 5 minutes")
+								}
+								continue
+							}
+						}
+
 						logger.WithFields(logger.Fields{
 							"Error":           fmt.Sprintf("%v", err),
 							"OrderID":         order.ID.String(),
