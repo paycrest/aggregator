@@ -2234,6 +2234,11 @@ func (ctrl *Controller) handleOrderSettledEvent(ctx *gin.Context, event types.Th
 		return fmt.Errorf("invalid settle percent: %w", err)
 	}
 
+	rebatePercent, err := decimal.NewFromString(nonIndexedParams["rebatePercent"].(string))
+	if err != nil {
+		return fmt.Errorf("invalid rebate percent: %w", err)
+	}
+
 	// Create order settled event
 	settledEvent := &types.OrderSettledEvent{
 		BlockNumber:       event.Data.BlockNumber,
@@ -2242,6 +2247,7 @@ func (ctrl *Controller) handleOrderSettledEvent(ctx *gin.Context, event types.Th
 		OrderId:           indexedParams["orderId"].(string),
 		LiquidityProvider: ethcommon.HexToAddress(indexedParams["liquidityProvider"].(string)).Hex(),
 		SettlePercent:     settlePercent,
+		RebatePercent:     rebatePercent,
 	}
 
 	// Process settled order using existing logic
