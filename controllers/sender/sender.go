@@ -250,6 +250,16 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		return
 	}
 
+
+	isLocalTransfer := strings.EqualFold(token.BaseCurrency, institutionObj.Edges.FiatCurrency.Code)
+	if isLocalTransfer && feePercent.IsZero() {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+			Field:   "FeePercent",
+			Message: fmt.Sprintf("Sender fee must be greater than zero for local currency order from (%s to %s)", token.Symbol, institutionObj.Edges.FiatCurrency.Code),
+		})
+		return
+	}
+
 	// Validate account and rate in parallel with fail fast logic before proceeding with order creation
 	type AccountResult struct {
 		accountName string
