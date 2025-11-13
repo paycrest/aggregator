@@ -241,8 +241,6 @@ func TestSender(t *testing.T) {
 	router.POST("/sender/orders", ctrl.InitiatePaymentOrder)
 	router.GET("/sender/orders/:id", ctrl.GetPaymentOrderByID)
 	router.GET("/sender/orders", ctrl.GetPaymentOrders)
-	router.GET("/sender/orders/search", ctrl.SearchPaymentOrders)
-	router.GET("/sender/orders/export", ctrl.ExportPaymentOrdersCSV)
 	router.GET("/sender/stats", ctrl.Stats)
 
 	var paymentOrderUUID uuid.UUID
@@ -849,6 +847,7 @@ func TestSender(t *testing.T) {
 	t.Run("SearchPaymentOrders", func(t *testing.T) {
 		t.Run("should return error when search query is empty", func(t *testing.T) {
 			var payload = map[string]interface{}{
+				"search":    "",
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -858,7 +857,7 @@ func TestSender(t *testing.T) {
 				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders/search?timestamp=%v", payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?search=&timestamp=%v", payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusBadRequest, res.Code)
 
@@ -880,20 +879,19 @@ func TestSender(t *testing.T) {
 				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders/search?search=%v&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?search=%v&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusOK, res.Code)
 
 			var response types.Response
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
-			assert.Equal(t, "Payment orders searched successfully", response.Message)
+			assert.Equal(t, "Payment orders found successfully", response.Message)
 
 			data, ok := response.Data.(map[string]interface{})
 			assert.True(t, ok, "response.Data should be map[string]interface{}")
 			assert.NotNil(t, data, "response.Data should not be nil")
-			assert.Equal(t, "12kjdf-kjn33_REF", data["search_query"])
-			assert.Equal(t, 1.0, data["total_records"])
+			assert.Equal(t, 1.0, data["total"])
 
 			orders, ok := data["orders"].([]interface{})
 			assert.True(t, ok, "orders should be []interface{}")
@@ -915,20 +913,19 @@ func TestSender(t *testing.T) {
 				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders/search?search=%v&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?search=%v&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusOK, res.Code)
 
 			var response types.Response
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
-			assert.Equal(t, "Payment orders searched successfully", response.Message)
+			assert.Equal(t, "Payment orders found successfully", response.Message)
 
 			data, ok := response.Data.(map[string]interface{})
 			assert.True(t, ok, "response.Data should be map[string]interface{}")
 			assert.NotNil(t, data, "response.Data should not be nil")
-			assert.Equal(t, "1234567890", data["search_query"])
-			assert.Greater(t, data["total_records"], 0.0)
+			assert.Greater(t, data["total"], 0.0)
 
 			orders, ok := data["orders"].([]interface{})
 			assert.True(t, ok, "orders should be []interface{}")
@@ -947,20 +944,19 @@ func TestSender(t *testing.T) {
 				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders/search?search=%v&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?search=%v&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusOK, res.Code)
 
 			var response types.Response
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
-			assert.Equal(t, "Payment orders searched successfully", response.Message)
+			assert.Equal(t, "Payment orders found successfully", response.Message)
 
 			data, ok := response.Data.(map[string]interface{})
 			assert.True(t, ok, "response.Data should be map[string]interface{}")
 			assert.NotNil(t, data, "response.Data should not be nil")
-			assert.Equal(t, "TST", data["search_query"])
-			assert.Greater(t, data["total_records"], 0.0)
+			assert.Greater(t, data["total"], 0.0)
 
 			orders, ok := data["orders"].([]interface{})
 			assert.True(t, ok, "orders should be []interface{}")
@@ -985,20 +981,19 @@ func TestSender(t *testing.T) {
 				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders/search?search=%v&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?search=%v&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusOK, res.Code)
 
 			var response types.Response
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
-			assert.Equal(t, "Payment orders searched successfully", response.Message)
+			assert.Equal(t, "Payment orders found successfully", response.Message)
 
 			data, ok := response.Data.(map[string]interface{})
 			assert.True(t, ok, "response.Data should be map[string]interface{}")
 			assert.NotNil(t, data, "response.Data should not be nil")
-			assert.Equal(t, "nonexistent_search_term", data["search_query"])
-			assert.Equal(t, 0.0, data["total_records"])
+			assert.Equal(t, 0.0, data["total"])
 
 			// Handle empty orders array - could be nil or empty array
 			if ordersData := data["orders"]; ordersData != nil {
@@ -1083,7 +1078,7 @@ func TestSender(t *testing.T) {
 				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders/search?search=%v&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?search=%v&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusOK, res.Code)
 
@@ -1092,7 +1087,7 @@ func TestSender(t *testing.T) {
 			assert.NoError(t, err)
 
 			data := response.Data.(map[string]interface{})
-			assert.Equal(t, 0.0, data["total_records"])
+			assert.Equal(t, 0.0, data["total"])
 
 			// Search using second sender's credentials - should find their order
 			payload2 := map[string]interface{}{
@@ -1106,7 +1101,7 @@ func TestSender(t *testing.T) {
 				"Authorization": "HMAC " + apiKey2.ID.String() + ":" + signature2,
 			}
 
-			res2, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders/search?search=%v&timestamp=%v", payload2["search"], payload2["timestamp"]), nil, headers2, router)
+			res2, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?search=%v&timestamp=%v", payload2["search"], payload2["timestamp"]), nil, headers2, router)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusOK, res2.Code)
 
@@ -1115,7 +1110,7 @@ func TestSender(t *testing.T) {
 			assert.NoError(t, err)
 
 			data2 := response2.Data.(map[string]interface{})
-			assert.Equal(t, 1.0, data2["total_records"])
+			assert.Equal(t, 1.0, data2["total"])
 
 			orders := data2["orders"].([]interface{})
 			order := orders[0].(map[string]interface{})
@@ -1132,6 +1127,7 @@ func TestSender(t *testing.T) {
 			var payload = map[string]interface{}{
 				"from":      today,
 				"to":        tomorrow,
+				"export":    "csv",
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -1141,7 +1137,7 @@ func TestSender(t *testing.T) {
 				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders/export?from=%s&to=%s&timestamp=%v", payload["from"], payload["to"], payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?from=%s&to=%s&timestamp=%v&export=csv", payload["from"], payload["to"], payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusOK, res.Code)
 
@@ -1171,6 +1167,7 @@ func TestSender(t *testing.T) {
 				"from":      today,
 				"to":        tomorrow,
 				"limit":     "50", // Use a limit higher than expected orders to avoid validation error
+				"export":    "csv",
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -1180,7 +1177,7 @@ func TestSender(t *testing.T) {
 				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders/export?from=%s&to=%s&limit=%s&timestamp=%v", payload["from"], payload["to"], payload["limit"], payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?from=%s&to=%s&limit=%s&timestamp=%v&export=csv", payload["from"], payload["to"], payload["limit"], payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 
 			if res.Code != http.StatusOK {
@@ -1205,6 +1202,7 @@ func TestSender(t *testing.T) {
 				"from":      today,
 				"to":        tomorrow,
 				"limit":     "1", // Very small limit to trigger validation
+				"export":    "csv",
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -1214,7 +1212,7 @@ func TestSender(t *testing.T) {
 				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders/export?from=%s&to=%s&limit=%s&timestamp=%v", payload["from"], payload["to"], payload["limit"], payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?from=%s&to=%s&limit=%s&timestamp=%v&export=csv", payload["from"], payload["to"], payload["limit"], payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusBadRequest, res.Code)
 
@@ -1227,6 +1225,7 @@ func TestSender(t *testing.T) {
 		t.Run("should return error for invalid date format", func(t *testing.T) {
 			var payload = map[string]interface{}{
 				"from":      "invalid-date",
+				"export":    "csv",
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -1236,7 +1235,7 @@ func TestSender(t *testing.T) {
 				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders/export?from=%s&timestamp=%v", payload["from"], payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?from=%s&timestamp=%v&export=csv", payload["from"], payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusBadRequest, res.Code)
 
@@ -1254,6 +1253,7 @@ func TestSender(t *testing.T) {
 			var payload = map[string]interface{}{
 				"from":      futureDate,
 				"to":        farFuture,
+				"export":    "csv",
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -1263,7 +1263,7 @@ func TestSender(t *testing.T) {
 				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders/export?from=%s&to=%s&timestamp=%v", payload["from"], payload["to"], payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?from=%s&to=%s&timestamp=%v&export=csv", payload["from"], payload["to"], payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 
 			if res.Code != http.StatusBadRequest {
@@ -1280,6 +1280,7 @@ func TestSender(t *testing.T) {
 
 		t.Run("should export all orders when no date range specified", func(t *testing.T) {
 			var payload = map[string]interface{}{
+				"export":    "csv",
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -1289,7 +1290,7 @@ func TestSender(t *testing.T) {
 				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders/export?timestamp=%v", payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?timestamp=%v&export=csv", payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusOK, res.Code)
 
@@ -1328,6 +1329,7 @@ func TestSender(t *testing.T) {
 			var payload = map[string]interface{}{
 				"from":      today,
 				"to":        tomorrow,
+				"export":    "csv",
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -1337,7 +1339,7 @@ func TestSender(t *testing.T) {
 				"Authorization": "HMAC " + apiKey2.ID.String() + ":" + signature,
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders/export?from=%s&to=%s&timestamp=%v", today, tomorrow, payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?from=%s&to=%s&timestamp=%v&export=csv", today, tomorrow, payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 
 			// Should get empty result or no orders found error since second sender has no orders in date range
