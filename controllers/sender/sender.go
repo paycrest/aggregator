@@ -21,8 +21,6 @@ import (
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
-	"github.com/paycrest/aggregator/utils"
-
 	svc "github.com/paycrest/aggregator/services"
 	orderSvc "github.com/paycrest/aggregator/services/order"
 	"github.com/paycrest/aggregator/storage"
@@ -352,7 +350,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 
 		provider := orderToken.Edges.Provider
 
-		if utils.DetermineOrderType(provider, amountInUSD) == paymentorder.OrderTypeOtc {
+		if u.DetermineOrderType(provider, amountInUSD) == paymentorder.OrderTypeOtc {
 			orderType = paymentorder.OrderTypeOtc
 			logger.Infof("Order classified as OTC (USD amount: %s, provider: %s)", amountInUSD.String(), provider.ID)
 		}
