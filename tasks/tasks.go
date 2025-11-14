@@ -185,7 +185,10 @@ func RetryStaleUserOperations() error {
 		Query().
 		Where(
 			lockpaymentorder.GatewayIDNEQ(""),
-			lockpaymentorder.UpdatedAtGTE(time.Now().Add(-5*time.Minute)),
+			lockpaymentorder.UpdatedAtGTE(time.Now().Add(-5*time.Minute)),			
+			lockpaymentorder.StatusNEQ(lockpaymentorder.StatusValidated),
+			lockpaymentorder.StatusNEQ(lockpaymentorder.StatusSettled),
+			lockpaymentorder.StatusNEQ(lockpaymentorder.StatusRefunded),
 			lockpaymentorder.Or(
 				lockpaymentorder.And(
 					lockpaymentorder.Or(
