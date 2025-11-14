@@ -149,6 +149,6 @@ func providerRoutes(route *gin.Engine) {
 	v1.GET("node-info", providerCtrl.NodeInfo)
 
 	// NEW OTC Configuration routes
-	v1.PUT("/otc-config", providerCtrl.UpdateOTCConfiguration)
-	v1.GET("/otc-config", providerCtrl.GetOTCConfiguration)
+	v1.PUT("otc-config", providerCtrl.UpdateOTCConfiguration)
+	v1.GET("otc-config", providerCtrl.GetOTCConfiguration)
 }
