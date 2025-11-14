@@ -710,7 +710,7 @@ type KYBSubmissionInput struct {
 	AmlPolicyUrl                  *string                `json:"amlPolicyUrl"`
 	KycPolicyUrl                  *string                `json:"kycPolicyUrl"`
 	BeneficialOwners              []BeneficialOwnerInput `json:"beneficialOwners" binding:"required,dive"`
-	IAcceptTerms         bool                   `json:"IAcceptTerms"`
+	IAcceptTerms                  bool                   `json:"IAcceptTerms"`
 }
 
 // BeneficialOwnerInput represents the input structure for a beneficial owner
@@ -838,4 +838,18 @@ type ProviderInfoResponse struct {
 			TotalBalance     string `json:"totalBalance"`
 		} `json:"totalBalances"`
 	} `json:"data"`
+}
+
+// OTCConfigurationPayload represents the request payload for OTC configuration
+type OTCConfigurationPayload struct {
+	IsOTCEnabled bool   `json:"is_otc_enabled"`
+	MinOTCValue  string `json:"min_otc_value"`
+	MaxOTCValue  string `json:"max_otc_value"`
+}
+
+// OTCConfigurationResponse represents the response for OTC configuration
+type OTCConfigurationResponse struct {
+	IsOTCEnabled bool            `json:"is_otc_enabled"`
+	MinOTCValue  decimal.Decimal `json:"min_otc_value"`
+	MaxOTCValue  decimal.Decimal `json:"max_otc_value"`
 }

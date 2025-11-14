@@ -63,6 +63,8 @@ type LockPaymentOrder struct {
 	MessageHash string `json:"message_hash,omitempty"`
 	// AmountInUsd holds the value of the "amount_in_usd" field.
 	AmountInUsd decimal.Decimal `json:"amount_in_usd,omitempty"`
+	// OrderType holds the value of the "order_type" field.
+	OrderType lockpaymentorder.OrderType `json:"order_type,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the LockPaymentOrderQuery when eager-loading is set.
 	Edges                                LockPaymentOrderEdges `json:"edges"`
@@ -151,7 +153,7 @@ func (*LockPaymentOrder) scanValues(columns []string) ([]any, error) {
 			values[i] = new(decimal.Decimal)
 		case lockpaymentorder.FieldBlockNumber, lockpaymentorder.FieldCancellationCount:
 			values[i] = new(sql.NullInt64)
-		case lockpaymentorder.FieldGatewayID, lockpaymentorder.FieldSender, lockpaymentorder.FieldTxHash, lockpaymentorder.FieldStatus, lockpaymentorder.FieldInstitution, lockpaymentorder.FieldAccountIdentifier, lockpaymentorder.FieldAccountName, lockpaymentorder.FieldMemo, lockpaymentorder.FieldMessageHash:
+		case lockpaymentorder.FieldGatewayID, lockpaymentorder.FieldSender, lockpaymentorder.FieldTxHash, lockpaymentorder.FieldStatus, lockpaymentorder.FieldInstitution, lockpaymentorder.FieldAccountIdentifier, lockpaymentorder.FieldAccountName, lockpaymentorder.FieldMemo, lockpaymentorder.FieldMessageHash, lockpaymentorder.FieldOrderType:
 			values[i] = new(sql.NullString)
 		case lockpaymentorder.FieldCreatedAt, lockpaymentorder.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -308,6 +310,12 @@ func (lpo *LockPaymentOrder) assignValues(columns []string, values []any) error 
 			} else if value != nil {
 				lpo.AmountInUsd = *value
 			}
+		case lockpaymentorder.FieldOrderType:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field order_type", values[i])
+			} else if value.Valid {
+				lpo.OrderType = lockpaymentorder.OrderType(value.String)
+			}
 		case lockpaymentorder.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field provider_profile_assigned_orders", values[i])
@@ -449,6 +457,9 @@ func (lpo *LockPaymentOrder) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("amount_in_usd=")
 	builder.WriteString(fmt.Sprintf("%v", lpo.AmountInUsd))
+	builder.WriteString(", ")
+	builder.WriteString("order_type=")
+	builder.WriteString(fmt.Sprintf("%v", lpo.OrderType))
 	builder.WriteByte(')')
 	return builder.String()
 }

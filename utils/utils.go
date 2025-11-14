@@ -230,7 +230,7 @@ func CalculatePaymentOrderAmountInUSD(amount decimal.Decimal, token *ent.Token, 
 	if fiatCurrency != nil && token.BaseCurrency == fiatCurrency.Code && !fiatCurrency.MarketRate.IsZero() {
 		return amount.Div(fiatCurrency.MarketRate)
 	}
-	
+
 	return amount
 }
 
@@ -1229,4 +1229,18 @@ func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier str
 	}
 
 	return "", fmt.Errorf("failed to verify account with any provider")
+}
+
+// DetermineOrderType determines the order type based on the provider and fiat amount.
+func DetermineOrderType(provider *ent.ProviderProfile, fiatAmount decimal.Decimal) paymentorder.OrderType {
+    if provider == nil || !provider.IsOtcEnabled {
+        return paymentorder.OrderTypeRegular
+    }
+    if provider.MinOtcValue.IsZero() || provider.MaxOtcValue.IsZero() || provider.MinOtcValue.GreaterThan(provider.MaxOtcValue) {
+        return paymentorder.OrderTypeRegular
+    }
+    if fiatAmount.GreaterThanOrEqual(provider.MinOtcValue) && fiatAmount.LessThanOrEqual(provider.MaxOtcValue) {
+        return paymentorder.OrderTypeOtc
+    }
+    return paymentorder.OrderTypeRegular
 }

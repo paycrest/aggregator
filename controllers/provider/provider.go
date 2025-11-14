@@ -190,7 +190,6 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	// Get provider profile from the context
 	providerCtx, ok := ctx.Get("provider")
 	if !ok {
-		logger.Infof("Invalid API key or token")
 		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
 		return
 	}
@@ -199,7 +198,6 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	// Parse the Order ID string into a UUID
 	orderID, err := uuid.Parse(ctx.Param("id"))
 	if err != nil {
-		logger.Infof("Error parsing order ID: %v", err)
 		logger.Errorf("error parsing order ID: %v", err)
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
 		return
@@ -229,7 +227,6 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 
 	tx, err := storage.Client.Tx(ctx)
 	if err != nil {
-		logger.Infof("Error starting transaction: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 		return
 	}
@@ -250,7 +247,6 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 			return
 		} else {
-			logger.Infof("Creating transaction log for order %s with provider %s", orderID, provider.ID)
 			transactionLog, err = tx.TransactionLog.
 				Create().
 				SetStatus(transactionlog.StatusOrderProcessing).
@@ -260,7 +256,6 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 					}).
 				Save(ctx)
 			if err != nil {
-				logger.Infof("Error creating transaction log for order %s with provider %s: %v", orderID, provider.ID, err)
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 				return
 			}
@@ -274,19 +269,15 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		SetProviderID(provider.ID)
 
 	if transactionLog != nil {
-		logger.Infof("Adding transaction log to order %s", orderID)
 		orderBuilder = orderBuilder.AddTransactions(transactionLog)
 	}
 
 	order, err := orderBuilder.Save(ctx)
 	if err != nil {
-		logger.Infof("Error updating lock order status: %v", err)
 		logger.Errorf("%s - error.AcceptOrder: %v", orderID, err)
 		if ent.IsNotFound(err) {
-			logger.Infof("Order not found: %v", err)
 			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found", nil)
 		} else {
-			logger.Infof("Error updating lock order status: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 		}
 		return
@@ -294,12 +285,10 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 
 	// Commit transaction
 	if err := tx.Commit(); err != nil {
-		logger.Infof("Error committing transaction: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 		return
 	}
 
-	logger.Infof("Order request accepted successfully for order %s", orderID)
 	u.APIResponse(ctx, http.StatusCreated, "success", "Order request accepted successfully", &types.AcceptOrderResponse{
 		ID:                orderID,
 		Amount:            order.Amount.Mul(order.Rate).RoundBank(0),
@@ -1377,4 +1366,137 @@ func (ctrl *ProviderController) UpdateProviderBalance(ctx *gin.Context) {
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Balance updated successfully", nil)
+}
+
+// UpdateOTCConfiguration handles the update of provider OTC configuration
+func (ctrl *ProviderController) UpdateOTCConfiguration(ctx *gin.Context) {
+	providerCtx, ok := ctx.Get("provider")
+	if !ok {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
+		return
+	}
+	provider := providerCtx.(*ent.ProviderProfile)
+
+	var payload types.OTCConfigurationPayload
+	if err := ctx.ShouldBindJSON(&payload); err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"ProviderID": provider.ID,
+		}).Errorf("Failed to bind OTC configuration payload: %v", err)
+		u.APIResponse(ctx, http.StatusBadRequest, "error",
+			"Failed to validate payload", u.GetErrorData(err))
+		return
+	}
+
+	var minValue, maxValue decimal.Decimal
+
+	if payload.IsOTCEnabled {
+		// Parse min value
+		if payload.MinOTCValue == "" {
+			u.APIResponse(ctx, http.StatusBadRequest, "error",
+				"min_otc_value is required when OTC is enabled", []types.ErrorData{
+					{Field: "min_otc_value", Message: "Value is required and must be greater than zero"},
+				})
+			return
+		}
+
+		var err error
+		minValue, err = decimal.NewFromString(payload.MinOTCValue)
+		if err != nil {
+			u.APIResponse(ctx, http.StatusBadRequest, "error",
+				"Invalid min_otc_value format", []types.ErrorData{
+					{Field: "min_otc_value", Message: "Invalid decimal format"},
+				})
+			return
+		}
+
+		// Parse max value
+		if payload.MaxOTCValue == "" {
+			u.APIResponse(ctx, http.StatusBadRequest, "error",
+				"max_otc_value is required when OTC is enabled", []types.ErrorData{
+					{Field: "max_otc_value", Message: "Value is required and must be greater than zero"},
+				})
+			return
+		}
+
+		maxValue, err = decimal.NewFromString(payload.MaxOTCValue)
+		if err != nil {
+			u.APIResponse(ctx, http.StatusBadRequest, "error",
+				"Invalid max_otc_value format", []types.ErrorData{
+					{Field: "max_otc_value", Message: "Invalid decimal format"},
+				})
+			return
+		}
+
+		// Validate values
+		if minValue.GreaterThanOrEqual(maxValue) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error",
+				"min_otc_value must be less than max_otc_value", []types.ErrorData{
+					{Field: "min_otc_value", Message: "Must be less than max_otc_value"},
+				})
+			return
+		}
+
+		if minValue.LessThanOrEqual(decimal.Zero) || maxValue.LessThanOrEqual(decimal.Zero) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error",
+				"OTC values must be positive", []types.ErrorData{
+					{Field: "min_otc_value", Message: "Value must be positive"},
+					{Field: "max_otc_value", Message: "Value must be positive"},
+				})
+			return
+		}
+	} else {
+		minValue = decimal.Zero
+		maxValue = decimal.Zero
+	}
+
+	// Update DB
+	_, err := storage.Client.ProviderProfile.
+		UpdateOneID(provider.ID).
+		SetIsOtcEnabled(payload.IsOTCEnabled).
+		SetMinOtcValue(minValue).
+		SetMaxOtcValue(maxValue).
+		Save(ctx)
+
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"ProviderID": provider.ID,
+		}).Errorf("Failed to update OTC configuration: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update OTC configuration", nil)
+		return
+	}
+
+	response := types.OTCConfigurationResponse{
+		IsOTCEnabled: payload.IsOTCEnabled,
+		MinOTCValue:  minValue,
+		MaxOTCValue:  maxValue,
+	}
+
+	logger.WithFields(logger.Fields{
+		"ProviderID":   provider.ID,
+		"IsOTCEnabled": payload.IsOTCEnabled,
+		"MinOTCValue":  minValue.String(),
+		"MaxOTCValue":  maxValue.String(),
+	}).Info("OTC configuration updated successfully")
+
+	u.APIResponse(ctx, http.StatusOK, "success", "OTC configuration updated successfully", response)
+}
+
+// GetOTCConfiguration retrieves the current OTC configuration for a provider
+func (ctrl *ProviderController) GetOTCConfiguration(ctx *gin.Context) {
+	providerCtx, ok := ctx.Get("provider")
+	if !ok {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
+		return
+	}
+	provider := providerCtx.(*ent.ProviderProfile)
+
+	response := types.OTCConfigurationResponse{
+		IsOTCEnabled: provider.IsOtcEnabled,
+		MinOTCValue:  provider.MinOtcValue,
+		MaxOTCValue:  provider.MaxOtcValue,
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "OTC configuration retrieved successfully", response)
 }

@@ -29,6 +29,12 @@ const (
 	FieldUpdatedAt = "updated_at"
 	// FieldVisibilityMode holds the string denoting the visibility_mode field in the database.
 	FieldVisibilityMode = "visibility_mode"
+	// FieldIsOtcEnabled holds the string denoting the is_otc_enabled field in the database.
+	FieldIsOtcEnabled = "is_otc_enabled"
+	// FieldMinOtcValue holds the string denoting the min_otc_value field in the database.
+	FieldMinOtcValue = "min_otc_value"
+	// FieldMaxOtcValue holds the string denoting the max_otc_value field in the database.
+	FieldMaxOtcValue = "max_otc_value"
 	// EdgeUser holds the string denoting the user edge name in mutations.
 	EdgeUser = "user"
 	// EdgeAPIKey holds the string denoting the api_key edge name in mutations.
@@ -104,6 +110,9 @@ var Columns = []string{
 	FieldIsKybVerified,
 	FieldUpdatedAt,
 	FieldVisibilityMode,
+	FieldIsOtcEnabled,
+	FieldMinOtcValue,
+	FieldMaxOtcValue,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "provider_profiles"
@@ -144,6 +153,8 @@ var (
 	DefaultUpdatedAt func() time.Time
 	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
 	UpdateDefaultUpdatedAt func() time.Time
+	// DefaultIsOtcEnabled holds the default value on creation for the "is_otc_enabled" field.
+	DefaultIsOtcEnabled bool
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() string
 )
@@ -241,6 +252,21 @@ func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByVisibilityMode orders the results by the visibility_mode field.
 func ByVisibilityMode(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldVisibilityMode, opts...).ToFunc()
+}
+
+// ByIsOtcEnabled orders the results by the is_otc_enabled field.
+func ByIsOtcEnabled(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIsOtcEnabled, opts...).ToFunc()
+}
+
+// ByMinOtcValue orders the results by the min_otc_value field.
+func ByMinOtcValue(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMinOtcValue, opts...).ToFunc()
+}
+
+// ByMaxOtcValue orders the results by the max_otc_value field.
+func ByMaxOtcValue(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMaxOtcValue, opts...).ToFunc()
 }
 
 // ByUserField orders the results by user field.

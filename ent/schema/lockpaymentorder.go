@@ -60,6 +60,9 @@ func (LockPaymentOrder) Fields() []ent.Field {
 			Optional(),
 		field.Float("amount_in_usd").
 			GoType(decimal.Decimal{}),
+		field.Enum("order_type").
+			Values("otc", "regular").
+			Default("regular"),
 	}
 }
 

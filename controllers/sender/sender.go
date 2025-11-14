@@ -21,7 +21,6 @@ import (
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
-
 	svc "github.com/paycrest/aggregator/services"
 	orderSvc "github.com/paycrest/aggregator/services/order"
 	"github.com/paycrest/aggregator/storage"
@@ -316,6 +315,9 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		return
 	}
 
+	amountInUSD := u.CalculatePaymentOrderAmountInUSD(payload.Amount, token, institutionObj)
+	orderType := paymentorder.OrderTypeRegular
+
 	if payload.Recipient.ProviderID != "" {
 		orderToken, err := storage.Client.ProviderOrderToken.
 			Query().
@@ -346,6 +348,12 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			return
 		}
 
+		provider := orderToken.Edges.Provider
+
+		if u.DetermineOrderType(provider, amountInUSD) == paymentorder.OrderTypeOtc {
+			orderType = paymentorder.OrderTypeOtc
+			logger.Infof("Order classified as OTC (USD amount: %s, provider: %s)", amountInUSD.String(), provider.ID)
+		}
 		// Validate amount for private orders
 		if orderToken.Edges.Provider.VisibilityMode == providerprofile.VisibilityModePrivate {
 			normalizedAmount := payload.Amount
@@ -376,7 +384,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 
 	if token.Edges.Network.ChainID == 295 {
 		hederaService := svc.NewHederaMirrorService()
-		
+
 		address := hederaService.CreateReceiveAddress()
 
 		receiveAddress, err = storage.Client.ReceiveAddress.
@@ -484,7 +492,6 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	}
 
 	// Create payment order
-	amountInUSD := u.CalculatePaymentOrderAmountInUSD(payload.Amount, token, institutionObj)
 	paymentOrder, err := tx.PaymentOrder.
 		Create().
 		SetSenderProfile(sender).
@@ -503,6 +510,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		SetFeeAddress(feeAddress).
 		SetReturnAddress(returnAddress).
 		SetReference(payload.Reference).
+		SetOrderType(orderType).
 		AddTransactions(transactionLog).
 		Save(ctx)
 	if err != nil {

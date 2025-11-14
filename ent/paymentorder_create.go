@@ -246,6 +246,20 @@ func (poc *PaymentOrderCreate) SetAmountInUsd(d decimal.Decimal) *PaymentOrderCr
 	return poc
 }
 
+// SetOrderType sets the "order_type" field.
+func (poc *PaymentOrderCreate) SetOrderType(pt paymentorder.OrderType) *PaymentOrderCreate {
+	poc.mutation.SetOrderType(pt)
+	return poc
+}
+
+// SetNillableOrderType sets the "order_type" field if the given value is not nil.
+func (poc *PaymentOrderCreate) SetNillableOrderType(pt *paymentorder.OrderType) *PaymentOrderCreate {
+	if pt != nil {
+		poc.SetOrderType(*pt)
+	}
+	return poc
+}
+
 // SetID sets the "id" field.
 func (poc *PaymentOrderCreate) SetID(u uuid.UUID) *PaymentOrderCreate {
 	poc.mutation.SetID(u)
@@ -432,6 +446,10 @@ func (poc *PaymentOrderCreate) defaults() {
 		v := paymentorder.DefaultStatus
 		poc.mutation.SetStatus(v)
 	}
+	if _, ok := poc.mutation.OrderType(); !ok {
+		v := paymentorder.DefaultOrderType
+		poc.mutation.SetOrderType(v)
+	}
 	if _, ok := poc.mutation.ID(); !ok {
 		v := paymentorder.DefaultID()
 		poc.mutation.SetID(v)
@@ -526,6 +544,14 @@ func (poc *PaymentOrderCreate) check() error {
 	}
 	if _, ok := poc.mutation.AmountInUsd(); !ok {
 		return &ValidationError{Name: "amount_in_usd", err: errors.New(`ent: missing required field "PaymentOrder.amount_in_usd"`)}
+	}
+	if _, ok := poc.mutation.OrderType(); !ok {
+		return &ValidationError{Name: "order_type", err: errors.New(`ent: missing required field "PaymentOrder.order_type"`)}
+	}
+	if v, ok := poc.mutation.OrderType(); ok {
+		if err := paymentorder.OrderTypeValidator(v); err != nil {
+			return &ValidationError{Name: "order_type", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.order_type": %w`, err)}
+		}
 	}
 	if len(poc.mutation.TokenIDs()) == 0 {
 		return &ValidationError{Name: "token", err: errors.New(`ent: missing required edge "PaymentOrder.token"`)}
@@ -649,6 +675,10 @@ func (poc *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec
 	if value, ok := poc.mutation.AmountInUsd(); ok {
 		_spec.SetField(paymentorder.FieldAmountInUsd, field.TypeFloat64, value)
 		_node.AmountInUsd = value
+	}
+	if value, ok := poc.mutation.OrderType(); ok {
+		_spec.SetField(paymentorder.FieldOrderType, field.TypeEnum, value)
+		_node.OrderType = value
 	}
 	if nodes := poc.mutation.SenderProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -1159,6 +1189,18 @@ func (u *PaymentOrderUpsert) AddAmountInUsd(v decimal.Decimal) *PaymentOrderUpse
 	return u
 }
 
+// SetOrderType sets the "order_type" field.
+func (u *PaymentOrderUpsert) SetOrderType(v paymentorder.OrderType) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldOrderType, v)
+	return u
+}
+
+// UpdateOrderType sets the "order_type" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateOrderType() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldOrderType)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
@@ -1606,6 +1648,20 @@ func (u *PaymentOrderUpsertOne) AddAmountInUsd(v decimal.Decimal) *PaymentOrderU
 func (u *PaymentOrderUpsertOne) UpdateAmountInUsd() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.UpdateAmountInUsd()
+	})
+}
+
+// SetOrderType sets the "order_type" field.
+func (u *PaymentOrderUpsertOne) SetOrderType(v paymentorder.OrderType) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetOrderType(v)
+	})
+}
+
+// UpdateOrderType sets the "order_type" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateOrderType() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateOrderType()
 	})
 }
 
@@ -2223,6 +2279,20 @@ func (u *PaymentOrderUpsertBulk) AddAmountInUsd(v decimal.Decimal) *PaymentOrder
 func (u *PaymentOrderUpsertBulk) UpdateAmountInUsd() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.UpdateAmountInUsd()
+	})
+}
+
+// SetOrderType sets the "order_type" field.
+func (u *PaymentOrderUpsertBulk) SetOrderType(v paymentorder.OrderType) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetOrderType(v)
+	})
+}
+
+// UpdateOrderType sets the "order_type" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateOrderType() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateOrderType()
 	})
 }
 
