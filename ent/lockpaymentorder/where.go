@@ -1092,6 +1092,26 @@ func AmountInUsdLTE(v decimal.Decimal) predicate.LockPaymentOrder {
 	return predicate.LockPaymentOrder(sql.FieldLTE(FieldAmountInUsd, v))
 }
 
+// OrderTypeEQ applies the EQ predicate on the "order_type" field.
+func OrderTypeEQ(v OrderType) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldEQ(FieldOrderType, v))
+}
+
+// OrderTypeNEQ applies the NEQ predicate on the "order_type" field.
+func OrderTypeNEQ(v OrderType) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldNEQ(FieldOrderType, v))
+}
+
+// OrderTypeIn applies the In predicate on the "order_type" field.
+func OrderTypeIn(vs ...OrderType) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldIn(FieldOrderType, vs...))
+}
+
+// OrderTypeNotIn applies the NotIn predicate on the "order_type" field.
+func OrderTypeNotIn(vs ...OrderType) predicate.LockPaymentOrder {
+	return predicate.LockPaymentOrder(sql.FieldNotIn(FieldOrderType, vs...))
+}
+
 // HasToken applies the HasEdge predicate on the "token" edge.
 func HasToken() predicate.LockPaymentOrder {
 	return predicate.LockPaymentOrder(func(s *sql.Selector) {

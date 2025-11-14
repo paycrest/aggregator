@@ -410,6 +410,10 @@ func init() {
 	providerprofile.DefaultUpdatedAt = providerprofileDescUpdatedAt.Default.(func() time.Time)
 	// providerprofile.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	providerprofile.UpdateDefaultUpdatedAt = providerprofileDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// providerprofileDescIsOtcEnabled is the schema descriptor for is_otc_enabled field.
+	providerprofileDescIsOtcEnabled := providerprofileFields[8].Descriptor()
+	// providerprofile.DefaultIsOtcEnabled holds the default value on creation for the is_otc_enabled field.
+	providerprofile.DefaultIsOtcEnabled = providerprofileDescIsOtcEnabled.Default.(bool)
 	// providerprofileDescID is the schema descriptor for id field.
 	providerprofileDescID := providerprofileFields[0].Descriptor()
 	// providerprofile.DefaultID holds the default value on creation for the id field.

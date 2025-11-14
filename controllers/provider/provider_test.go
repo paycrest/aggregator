@@ -24,6 +24,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/paycrest/aggregator/ent/enttest"
+	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/utils/test"
 	"github.com/paycrest/aggregator/utils/token"
 	"github.com/stretchr/testify/assert"
@@ -73,8 +74,9 @@ func setup() error {
 	testCtx.token = token
 
 	providerProfile, err := test.CreateTestProviderProfile(map[string]interface{}{
-		"user_id":     testCtx.user.ID,
-		"currency_id": currency.ID,
+		"user_id":        testCtx.user.ID,
+		"currency_id":    currency.ID,
+		"is_otc_enabled": true,
 	})
 	if err != nil {
 		return err
@@ -173,6 +175,8 @@ func TestProvider(t *testing.T) {
 	router.POST("/orders/:id/fulfill", ctrl.FulfillOrder)
 	router.POST("/orders/:id/cancel", ctrl.CancelOrder)
 	router.GET("/rates/:token/:fiat", ctrl.GetMarketRate)
+	router.PUT("/otc-config", ctrl.UpdateOTCConfiguration)
+	router.GET("/otc-config", ctrl.GetOTCConfiguration)
 
 	t.Run("GetLockPaymentOrders", func(t *testing.T) {
 		_, _, cleanup := setupIsolatedTest(t)
@@ -1031,54 +1035,43 @@ func TestProvider(t *testing.T) {
 			})
 
 			t.Run("Order Id that doesn't Exist", func(t *testing.T) {
-
 				order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
 					"gateway_id": uuid.New().String(),
 					"provider":   testCtx.provider,
 				})
 				assert.NoError(t, err)
-
 				orderKey := fmt.Sprintf("order_request_%s", order.ID)
-
 				user, err := test.CreateTestUser(map[string]interface{}{
 					"email": "order_not_found2@test.com",
 				})
 				assert.NoError(t, err)
-
 				providerProfile, err := test.CreateTestProviderProfile(map[string]interface{}{
 					"user_id":     user.ID,
 					"currency_id": testCtx.currency.ID,
 				})
 				assert.NoError(t, err)
-
 				orderRequestData := map[string]interface{}{
 					"amount":      order.Amount.Mul(order.Rate).RoundBank(0).String(),
 					"institution": order.Institution,
-					"providerId":  providerProfile.ID,
+					"providerId":  providerProfile.ID, // Mismatched providerId to trigger Redis check
 				}
-
 				if db.RedisClient != nil {
 					err = db.RedisClient.HSet(context.Background(), orderKey, orderRequestData).Err()
 					assert.NoError(t, err, fmt.Errorf("failed to map order to a provider in Redis: %v", err))
 				}
-
 				// Test default params
 				var payload = map[string]interface{}{
 					"timestamp": time.Now().Unix(),
 				}
-
 				signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
-
 				headers := map[string]string{
 					"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
 				}
-
-				res, err := test.PerformRequest(t, "POST", "/orders/"+testCtx.currency.ID.String()+"/accept", payload, headers, router)
+				// <-- FIXED: Use order.ID.String() as :id param to hit Redis mismatch, not DB not-found
+				res, err := test.PerformRequest(t, "POST", "/orders/"+order.ID.String()+"/accept", payload, headers, router)
 				assert.NoError(t, err)
-
 				// Assert the response body
 				assert.Equal(t, http.StatusNotFound, res.Code)
-
 				var response types.Response
 				err = json.Unmarshal(res.Body.Bytes(), &response)
 				assert.NoError(t, err)
@@ -1872,6 +1865,207 @@ func TestProvider(t *testing.T) {
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
 			assert.Equal(t, "Order fulfilled successfully", response.Message)
+		})
+	})
+
+	t.Run("OTCConfiguration", func(t *testing.T) {
+		_, _, cleanup := setupIsolatedTest(t)
+		defer cleanup()
+		t.Run("UpdateOTCConfiguration", func(t *testing.T) {
+			t.Run("valid enabled config", func(t *testing.T) {
+				timestamp := time.Now().Unix()
+				bodyPayload := map[string]interface{}{
+					"timestamp":      timestamp,
+					"is_otc_enabled": true,
+					"min_otc_value":  "5000",
+					"max_otc_value":  "50000",
+				}
+				signature := token.GenerateHMACSignature(bodyPayload, testCtx.apiKeySecret)
+				headers := map[string]string{
+					"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+					"Content-Type":  "application/json",
+				}
+				url := "/otc-config"
+				res, err := test.PerformRequest(t, "PUT", url, bodyPayload, headers, router)
+				assert.NoError(t, err)
+				if res.Code != http.StatusOK {
+					t.Logf("Response body: %s", res.Body.String())
+				}
+				assert.Equal(t, http.StatusOK, res.Code)
+				var response types.Response
+				err = json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, "OTC configuration updated successfully", response.Message)
+				// Verify saved in DB
+				savedProvider, err := db.Client.ProviderProfile.Query().Where(providerprofile.IDEQ(testCtx.provider.ID)).Only(context.Background())
+				assert.NoError(t, err)
+				assert.True(t, savedProvider.IsOtcEnabled)
+				assert.Equal(t, "5000", savedProvider.MinOtcValue.String())
+				assert.Equal(t, "50000", savedProvider.MaxOtcValue.String())
+			})
+			t.Run("valid disabled config", func(t *testing.T) {
+				timestamp := time.Now().Unix()
+				bodyPayload := map[string]interface{}{
+					"timestamp":      timestamp,
+					"is_otc_enabled": false,
+				}
+				signature := token.GenerateHMACSignature(bodyPayload, testCtx.apiKeySecret)
+				headers := map[string]string{
+					"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+					"Content-Type":  "application/json",
+				}
+				url := "/otc-config"
+				res, err := test.PerformRequest(t, "PUT", url, bodyPayload, headers, router)
+				assert.NoError(t, err)
+				assert.Equal(t, http.StatusOK, res.Code)
+				var response types.Response
+				err = json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, "OTC configuration updated successfully", response.Message)
+				// Verify saved in DB
+				savedProvider, err := db.Client.ProviderProfile.Query().Where(providerprofile.IDEQ(testCtx.provider.ID)).Only(context.Background())
+				assert.NoError(t, err)
+				assert.False(t, savedProvider.IsOtcEnabled)
+				assert.True(t, savedProvider.MinOtcValue.IsZero())
+				assert.True(t, savedProvider.MaxOtcValue.IsZero())
+			})
+			t.Run("invalid range (min >= max)", func(t *testing.T) {
+				timestamp := time.Now().Unix()
+				bodyPayload := map[string]interface{}{
+					"timestamp":      timestamp,
+					"is_otc_enabled": true,
+					"min_otc_value":  "6000",
+					"max_otc_value":  "5000",
+				}
+				signature := token.GenerateHMACSignature(bodyPayload, testCtx.apiKeySecret)
+				headers := map[string]string{
+					"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+					"Content-Type":  "application/json",
+				}
+				url := "/otc-config"
+				res, err := test.PerformRequest(t, "PUT", url, bodyPayload, headers, router)
+				assert.NoError(t, err)
+				assert.Equal(t, http.StatusBadRequest, res.Code)
+				var response types.Response
+				err = json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Contains(t, response.Message, "min_otc_value must be less than max_otc_value")
+			})
+			t.Run("invalid zero value when enabled", func(t *testing.T) {
+				timestamp := time.Now().Unix()
+				bodyPayload := map[string]interface{}{
+					"timestamp":      timestamp,
+					"is_otc_enabled": true,
+					"min_otc_value":  "0",
+					"max_otc_value":  "50000",
+				}
+				signature := token.GenerateHMACSignature(bodyPayload, testCtx.apiKeySecret)
+				headers := map[string]string{
+					"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+					"Content-Type":  "application/json",
+				}
+				url := "/otc-config"
+				res, err := test.PerformRequest(t, "PUT", url, bodyPayload, headers, router)
+				assert.NoError(t, err)
+				assert.Equal(t, http.StatusBadRequest, res.Code)
+				var response types.Response
+				err = json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Contains(t, response.Message, "OTC values must be positive")
+			})
+			t.Run("missing min/max when enabled", func(t *testing.T) {
+				timestamp := time.Now().Unix()
+				bodyPayload := map[string]interface{}{
+					"timestamp":      timestamp,
+					"is_otc_enabled": true,
+				}
+				signature := token.GenerateHMACSignature(bodyPayload, testCtx.apiKeySecret)
+				headers := map[string]string{
+					"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+					"Content-Type":  "application/json",
+				}
+				url := "/otc-config"
+				res, err := test.PerformRequest(t, "PUT", url, bodyPayload, headers, router)
+				assert.NoError(t, err)
+				assert.Equal(t, http.StatusBadRequest, res.Code)
+				var response types.Response
+				err = json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Contains(t, response.Message, "min_otc_value is required when OTC is enabled")
+			})
+		})
+		t.Run("GetOTCConfiguration", func(t *testing.T) {
+			_, err := db.Client.ProviderProfile.UpdateOneID(testCtx.provider.ID).SetIsOtcEnabled(true).Save(context.Background())
+			assert.NoError(t, err)
+			timestamp := time.Now().Unix()
+			updateBody := map[string]interface{}{
+				"timestamp":      timestamp,
+				"is_otc_enabled": true,
+				"min_otc_value":  "5000",
+				"max_otc_value":  "50000",
+			}
+			updateSig := token.GenerateHMACSignature(updateBody, testCtx.apiKeySecret)
+			updateHeaders := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + updateSig,
+				"Content-Type":  "application/json",
+			}
+			updateURL := "/otc-config"
+			_, err = test.PerformRequest(t, "PUT", updateURL, updateBody, updateHeaders, router)
+			assert.NoError(t, err)
+			getTimestamp := time.Now().Unix()
+			getURL := fmt.Sprintf("/otc-config?timestamp=%d", getTimestamp)
+			getPayload := map[string]interface{}{
+				"timestamp": getTimestamp,
+			}
+			getSig := token.GenerateHMACSignature(getPayload, testCtx.apiKeySecret)
+			getHeaders := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + getSig,
+			}
+			res, err := test.PerformRequest(t, "GET", getURL, nil, getHeaders, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "OTC configuration retrieved successfully", response.Message)
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok)
+			assert.Equal(t, true, data["is_otc_enabled"])
+			assert.Equal(t, "5000", data["min_otc_value"])
+			assert.Equal(t, "50000", data["max_otc_value"])
+			disableTimestamp := time.Now().Unix()
+			disableBody := map[string]interface{}{
+				"timestamp":      disableTimestamp,
+				"is_otc_enabled": false,
+			}
+			disableSig := token.GenerateHMACSignature(disableBody, testCtx.apiKeySecret)
+			disableHeaders := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + disableSig,
+				"Content-Type":  "application/json",
+			}
+			disableURL := "/otc-config"
+			_, err = test.PerformRequest(t, "PUT", disableURL, disableBody, disableHeaders, router)
+			assert.NoError(t, err)
+			finalTimestamp := time.Now().Unix()
+			finalURL := fmt.Sprintf("/otc-config?timestamp=%d", finalTimestamp)
+			finalHMAC := map[string]interface{}{
+				"timestamp": finalTimestamp,
+			}
+			finalSig := token.GenerateHMACSignature(finalHMAC, testCtx.apiKeySecret)
+			finalHeaders := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + finalSig,
+			}
+			getRes, err := test.PerformRequest(t, "GET", finalURL, nil, finalHeaders, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, getRes.Code)
+			var disabledResponse types.Response
+			err = json.Unmarshal(getRes.Body.Bytes(), &disabledResponse)
+			assert.NoError(t, err)
+			disabledData, ok := disabledResponse.Data.(map[string]interface{})
+			assert.True(t, ok)
+			assert.Equal(t, false, disabledData["is_otc_enabled"])
+			assert.Equal(t, "0", disabledData["min_otc_value"])
+			assert.Equal(t, "0", disabledData["max_otc_value"])
 		})
 	})
 
