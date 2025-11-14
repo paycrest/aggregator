@@ -1231,25 +1231,16 @@ func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier str
 	return "", fmt.Errorf("failed to verify account with any provider")
 }
 
-// OrderType represents the classification of an order as OTC or regular.
-type OrderType string
-
-const (
-	OrderTypeOTC     OrderType = "OTC"
-	OrderTypeRegular OrderType = "Regular"
-)
-
 // DetermineOrderType determines the order type based on the provider and fiat amount.
-// Returns Ent's paymentorder.OrderType for direct DB compatibility.
 func DetermineOrderType(provider *ent.ProviderProfile, fiatAmount decimal.Decimal) paymentorder.OrderType {
-	if !provider.IsOtcEnabled {
-		return paymentorder.OrderTypeRegular
-	}
-	if provider.MinOtcValue.IsZero() || provider.MaxOtcValue.IsZero() {
-		return paymentorder.OrderTypeRegular
-	}
-	if fiatAmount.GreaterThanOrEqual(provider.MinOtcValue) && fiatAmount.LessThanOrEqual(provider.MaxOtcValue) {
-		return paymentorder.OrderTypeOtc
-	}
-	return paymentorder.OrderTypeRegular
+    if provider == nil || !provider.IsOtcEnabled {
+        return paymentorder.OrderTypeRegular
+    }
+    if provider.MinOtcValue.IsZero() || provider.MaxOtcValue.IsZero() || provider.MinOtcValue.GreaterThan(provider.MaxOtcValue) {
+        return paymentorder.OrderTypeRegular
+    }
+    if fiatAmount.GreaterThanOrEqual(provider.MinOtcValue) && fiatAmount.LessThanOrEqual(provider.MaxOtcValue) {
+        return paymentorder.OrderTypeOtc
+    }
+    return paymentorder.OrderTypeRegular
 }
