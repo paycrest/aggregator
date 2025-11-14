@@ -495,6 +495,30 @@ var (
 			},
 		},
 	}
+	// ProviderPayoutAccountsColumns holds the columns for the "provider_payout_accounts" table.
+	ProviderPayoutAccountsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "institution", Type: field.TypeString, Size: 100},
+		{Name: "account_identifier", Type: field.TypeString, Size: 200},
+		{Name: "account_name", Type: field.TypeString, Nullable: true, Size: 200},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "provider_profile_provider_payout_accounts", Type: field.TypeString},
+	}
+	// ProviderPayoutAccountsTable holds the schema information for the "provider_payout_accounts" table.
+	ProviderPayoutAccountsTable = &schema.Table{
+		Name:       "provider_payout_accounts",
+		Columns:    ProviderPayoutAccountsColumns,
+		PrimaryKey: []*schema.Column{ProviderPayoutAccountsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "provider_payout_accounts_provider_profiles_provider_payout_accounts",
+				Columns:    []*schema.Column{ProviderPayoutAccountsColumns[6]},
+				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
 	// ProviderProfilesColumns holds the columns for the "provider_profiles" table.
 	ProviderProfilesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString, Unique: true},
@@ -825,6 +849,7 @@ var (
 		PaymentWebhooksTable,
 		ProviderCurrenciesTable,
 		ProviderOrderTokensTable,
+		ProviderPayoutAccountsTable,
 		ProviderProfilesTable,
 		ProviderRatingsTable,
 		ProvisionBucketsTable,
@@ -863,6 +888,7 @@ func init() {
 	ProviderOrderTokensTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
 	ProviderOrderTokensTable.ForeignKeys[1].RefTable = ProviderProfilesTable
 	ProviderOrderTokensTable.ForeignKeys[2].RefTable = TokensTable
+	ProviderPayoutAccountsTable.ForeignKeys[0].RefTable = ProviderProfilesTable
 	ProviderProfilesTable.ForeignKeys[0].RefTable = UsersTable
 	ProviderRatingsTable.ForeignKeys[0].RefTable = ProviderProfilesTable
 	ProvisionBucketsTable.ForeignKeys[0].RefTable = FiatCurrenciesTable

@@ -58,9 +58,11 @@ type ProviderProfileEdges struct {
 	ProviderRating *ProviderRating `json:"provider_rating,omitempty"`
 	// AssignedOrders holds the value of the assigned_orders edge.
 	AssignedOrders []*LockPaymentOrder `json:"assigned_orders,omitempty"`
+	// ProviderPayoutAccounts holds the value of the provider_payout_accounts edge.
+	ProviderPayoutAccounts []*ProviderPayoutAccount `json:"provider_payout_accounts,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [7]bool
+	loadedTypes [8]bool
 }
 
 // UserOrErr returns the User value or an error if the edge
@@ -130,6 +132,15 @@ func (e ProviderProfileEdges) AssignedOrdersOrErr() ([]*LockPaymentOrder, error)
 		return e.AssignedOrders, nil
 	}
 	return nil, &NotLoadedError{edge: "assigned_orders"}
+}
+
+// ProviderPayoutAccountsOrErr returns the ProviderPayoutAccounts value or an error if the edge
+// was not loaded in eager-loading.
+func (e ProviderProfileEdges) ProviderPayoutAccountsOrErr() ([]*ProviderPayoutAccount, error) {
+	if e.loadedTypes[7] {
+		return e.ProviderPayoutAccounts, nil
+	}
+	return nil, &NotLoadedError{edge: "provider_payout_accounts"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -261,6 +272,11 @@ func (pp *ProviderProfile) QueryProviderRating() *ProviderRatingQuery {
 // QueryAssignedOrders queries the "assigned_orders" edge of the ProviderProfile entity.
 func (pp *ProviderProfile) QueryAssignedOrders() *LockPaymentOrderQuery {
 	return NewProviderProfileClient(pp.config).QueryAssignedOrders(pp)
+}
+
+// QueryProviderPayoutAccounts queries the "provider_payout_accounts" edge of the ProviderProfile entity.
+func (pp *ProviderProfile) QueryProviderPayoutAccounts() *ProviderPayoutAccountQuery {
+	return NewProviderProfileClient(pp.config).QueryProviderPayoutAccounts(pp)
 }
 
 // Update returns a builder for updating this ProviderProfile.

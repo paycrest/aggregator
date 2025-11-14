@@ -43,6 +43,8 @@ const (
 	EdgeProviderRating = "provider_rating"
 	// EdgeAssignedOrders holds the string denoting the assigned_orders edge name in mutations.
 	EdgeAssignedOrders = "assigned_orders"
+	// EdgeProviderPayoutAccounts holds the string denoting the provider_payout_accounts edge name in mutations.
+	EdgeProviderPayoutAccounts = "provider_payout_accounts"
 	// Table holds the table name of the providerprofile in the database.
 	Table = "provider_profiles"
 	// UserTable is the table that holds the user relation/edge.
@@ -92,6 +94,13 @@ const (
 	AssignedOrdersInverseTable = "lock_payment_orders"
 	// AssignedOrdersColumn is the table column denoting the assigned_orders relation/edge.
 	AssignedOrdersColumn = "provider_profile_assigned_orders"
+	// ProviderPayoutAccountsTable is the table that holds the provider_payout_accounts relation/edge.
+	ProviderPayoutAccountsTable = "provider_payout_accounts"
+	// ProviderPayoutAccountsInverseTable is the table name for the ProviderPayoutAccount entity.
+	// It exists in this package in order to avoid circular dependency with the "providerpayoutaccount" package.
+	ProviderPayoutAccountsInverseTable = "provider_payout_accounts"
+	// ProviderPayoutAccountsColumn is the table column denoting the provider_payout_accounts relation/edge.
+	ProviderPayoutAccountsColumn = "provider_profile_provider_payout_accounts"
 )
 
 // Columns holds all SQL columns for providerprofile fields.
@@ -319,6 +328,20 @@ func ByAssignedOrders(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newAssignedOrdersStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByProviderPayoutAccountsCount orders the results by provider_payout_accounts count.
+func ByProviderPayoutAccountsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newProviderPayoutAccountsStep(), opts...)
+	}
+}
+
+// ByProviderPayoutAccounts orders the results by provider_payout_accounts terms.
+func ByProviderPayoutAccounts(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProviderPayoutAccountsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newUserStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -366,5 +389,12 @@ func newAssignedOrdersStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(AssignedOrdersInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, AssignedOrdersTable, AssignedOrdersColumn),
+	)
+}
+func newProviderPayoutAccountsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProviderPayoutAccountsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ProviderPayoutAccountsTable, ProviderPayoutAccountsColumn),
 	)
 }

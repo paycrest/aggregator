@@ -16,6 +16,7 @@ import (
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerpayoutaccount"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
@@ -1377,4 +1378,217 @@ func (ctrl *ProviderController) UpdateProviderBalance(ctx *gin.Context) {
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Balance updated successfully", nil)
+}
+
+// CreatePayoutAccount controller creates a new payout account for the provider
+func (ctrl *ProviderController) CreatePayoutAccount(ctx *gin.Context) {
+	var payload types.CreatePayoutAccountPayload
+
+	// Parse the request payload
+	if err := ctx.ShouldBindJSON(&payload); err != nil {
+		logger.WithFields(logger.Fields{
+			"Error": fmt.Sprintf("%v", err),
+		}).Errorf("Failed to bind payload to JSON: %v", err)
+		u.APIResponse(ctx, http.StatusBadRequest, "error",
+			"Failed to validate payload", u.GetErrorData(err))
+		return
+	}
+
+	// Get provider profile from the context
+	providerCtx, ok := ctx.Get("provider")
+	if !ok {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
+		return
+	}
+	provider := providerCtx.(*ent.ProviderProfile)
+
+	// Validate institution exists
+	institutionExists, err := storage.Client.Institution.
+		Query().
+		Where(institution.CodeEQ(payload.Institution)).
+		Exist(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":       fmt.Sprintf("%v", err),
+			"Institution": payload.Institution,
+		}).Errorf("Failed to validate institution: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create payout account", nil)
+		return
+	}
+	if !institutionExists {
+		u.APIResponse(ctx, http.StatusBadRequest, "error",
+			fmt.Sprintf("Institution %s is not supported", payload.Institution), nil)
+		return
+	}
+
+	// Check if account already exists for this provider
+	exists, err := storage.Client.ProviderPayoutAccount.
+		Query().
+		Where(
+			providerpayoutaccount.AccountIdentifierEQ(payload.AccountIdentifier),
+			providerpayoutaccount.InstitutionEQ(payload.Institution),
+			providerpayoutaccount.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+		).
+		Exist(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":             fmt.Sprintf("%v", err),
+			"AccountIdentifier": payload.AccountIdentifier,
+			"Institution":       payload.Institution,
+			"ProviderID":        provider.ID,
+		}).Errorf("Failed to check for existing payout account: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create payout account", nil)
+		return
+	}
+	if exists {
+		u.APIResponse(ctx, http.StatusConflict, "error",
+			"A payout account with this account identifier and institution already exists", nil)
+		return
+	}
+
+	// Create the payout account
+	createBuilder := storage.Client.ProviderPayoutAccount.
+		Create().
+		SetAccountIdentifier(payload.AccountIdentifier).
+		SetInstitution(payload.Institution).
+		SetProviderID(provider.ID)
+
+	// Set account name if provided
+	if payload.AccountName != "" {
+		createBuilder = createBuilder.SetAccountName(payload.AccountName)
+	}
+
+	payoutAccount, err := createBuilder.Save(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":       fmt.Sprintf("%v", err),
+			"ProviderID":  provider.ID,
+			"Institution": payload.Institution,
+		}).Errorf("Failed to create payout account: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create payout account", nil)
+		return
+	}
+
+	u.APIResponse(ctx, http.StatusCreated, "success", "Payout account created successfully", &types.PayoutAccountResponse{
+		ID:                payoutAccount.ID,
+		AccountIdentifier: payoutAccount.AccountIdentifier,
+		AccountName:       payoutAccount.AccountName,
+		Institution:       payoutAccount.Institution,
+		CreatedAt:         payoutAccount.CreatedAt,
+		UpdatedAt:         payoutAccount.UpdatedAt,
+	})
+}
+
+// ListPayoutAccounts controller lists all payout accounts for the provider
+func (ctrl *ProviderController) ListPayoutAccounts(ctx *gin.Context) {
+	// Get provider profile from the context
+	providerCtx, ok := ctx.Get("provider")
+	if !ok {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
+		return
+	}
+	provider := providerCtx.(*ent.ProviderProfile)
+
+	// Optional institution filter
+	institution := ctx.Query("institution")
+
+	// Build query
+	query := storage.Client.ProviderPayoutAccount.
+		Query().
+		Where(providerpayoutaccount.HasProviderWith(providerprofile.IDEQ(provider.ID)))
+
+	// Apply institution filter if provided
+	if institution != "" {
+		query = query.Where(providerpayoutaccount.InstitutionEQ(institution))
+	}
+
+	// Fetch all payout accounts
+	payoutAccounts, err := query.
+		Order(ent.Desc(providerpayoutaccount.FieldCreatedAt)).
+		All(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"ProviderID": provider.ID,
+		}).Errorf("Failed to fetch payout accounts: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch payout accounts", nil)
+		return
+	}
+
+	accounts := []types.PayoutAccountResponse{}
+	for _, account := range payoutAccounts {
+		accounts = append(accounts, types.PayoutAccountResponse{
+			ID:                account.ID,
+			AccountIdentifier: account.AccountIdentifier,
+			AccountName:       account.AccountName,
+			Institution:       account.Institution,
+			CreatedAt:         account.CreatedAt,
+			UpdatedAt:         account.UpdatedAt,
+		})
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Payout accounts retrieved successfully", &types.PayoutAccountListResponse{
+		TotalRecords: len(accounts),
+		Accounts:     accounts,
+	})
+}
+
+// DeletePayoutAccount controller deletes a payout account
+func (ctrl *ProviderController) DeletePayoutAccount(ctx *gin.Context) {
+	// Get provider profile from the context
+	providerCtx, ok := ctx.Get("provider")
+	if !ok {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
+		return
+	}
+	provider := providerCtx.(*ent.ProviderProfile)
+
+	// Parse the account ID from URL parameter
+	accountID, err := uuid.Parse(ctx.Param("id"))
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":     fmt.Sprintf("%v", err),
+			"AccountID": ctx.Param("id"),
+		}).Errorf("Failed to parse account ID: %v", err)
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid account ID", nil)
+		return
+	}
+
+	// Verify the account exists and belongs to the provider
+	account, err := storage.Client.ProviderPayoutAccount.
+		Query().
+		Where(
+			providerpayoutaccount.IDEQ(accountID),
+			providerpayoutaccount.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+		).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusNotFound, "error", "Payout account not found", nil)
+			return
+		}
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"AccountID":  accountID.String(),
+			"ProviderID": provider.ID,
+		}).Errorf("Failed to fetch payout account: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to delete payout account", nil)
+		return
+	}
+
+	// Delete the account
+	err = storage.Client.ProviderPayoutAccount.
+		DeleteOneID(account.ID).
+		Exec(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"AccountID":  accountID.String(),
+			"ProviderID": provider.ID,
+		}).Errorf("Failed to delete payout account: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to delete payout account", nil)
+		return
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Payout account deleted successfully", nil)
 }

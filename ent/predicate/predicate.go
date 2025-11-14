@@ -51,6 +51,9 @@ type ProviderCurrencies func(*sql.Selector)
 // ProviderOrderToken is the predicate function for providerordertoken builders.
 type ProviderOrderToken func(*sql.Selector)
 
+// ProviderPayoutAccount is the predicate function for providerpayoutaccount builders.
+type ProviderPayoutAccount func(*sql.Selector)
+
 // ProviderProfile is the predicate function for providerprofile builders.
 type ProviderProfile func(*sql.Selector)
 

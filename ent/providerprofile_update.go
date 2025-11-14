@@ -17,6 +17,7 @@ import (
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
+	"github.com/paycrest/aggregator/ent/providerpayoutaccount"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -235,6 +236,21 @@ func (ppu *ProviderProfileUpdate) AddAssignedOrders(l ...*LockPaymentOrder) *Pro
 	return ppu.AddAssignedOrderIDs(ids...)
 }
 
+// AddProviderPayoutAccountIDs adds the "provider_payout_accounts" edge to the ProviderPayoutAccount entity by IDs.
+func (ppu *ProviderProfileUpdate) AddProviderPayoutAccountIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
+	ppu.mutation.AddProviderPayoutAccountIDs(ids...)
+	return ppu
+}
+
+// AddProviderPayoutAccounts adds the "provider_payout_accounts" edges to the ProviderPayoutAccount entity.
+func (ppu *ProviderProfileUpdate) AddProviderPayoutAccounts(p ...*ProviderPayoutAccount) *ProviderProfileUpdate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return ppu.AddProviderPayoutAccountIDs(ids...)
+}
+
 // Mutation returns the ProviderProfileMutation object of the builder.
 func (ppu *ProviderProfileUpdate) Mutation() *ProviderProfileMutation {
 	return ppu.mutation
@@ -334,6 +350,27 @@ func (ppu *ProviderProfileUpdate) RemoveAssignedOrders(l ...*LockPaymentOrder) *
 		ids[i] = l[i].ID
 	}
 	return ppu.RemoveAssignedOrderIDs(ids...)
+}
+
+// ClearProviderPayoutAccounts clears all "provider_payout_accounts" edges to the ProviderPayoutAccount entity.
+func (ppu *ProviderProfileUpdate) ClearProviderPayoutAccounts() *ProviderProfileUpdate {
+	ppu.mutation.ClearProviderPayoutAccounts()
+	return ppu
+}
+
+// RemoveProviderPayoutAccountIDs removes the "provider_payout_accounts" edge to ProviderPayoutAccount entities by IDs.
+func (ppu *ProviderProfileUpdate) RemoveProviderPayoutAccountIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
+	ppu.mutation.RemoveProviderPayoutAccountIDs(ids...)
+	return ppu
+}
+
+// RemoveProviderPayoutAccounts removes "provider_payout_accounts" edges to ProviderPayoutAccount entities.
+func (ppu *ProviderProfileUpdate) RemoveProviderPayoutAccounts(p ...*ProviderPayoutAccount) *ProviderProfileUpdate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return ppu.RemoveProviderPayoutAccountIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -672,6 +709,51 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if ppu.mutation.ProviderPayoutAccountsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.ProviderPayoutAccountsTable,
+			Columns: []string{providerprofile.ProviderPayoutAccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerpayoutaccount.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ppu.mutation.RemovedProviderPayoutAccountsIDs(); len(nodes) > 0 && !ppu.mutation.ProviderPayoutAccountsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.ProviderPayoutAccountsTable,
+			Columns: []string{providerprofile.ProviderPayoutAccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerpayoutaccount.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ppu.mutation.ProviderPayoutAccountsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.ProviderPayoutAccountsTable,
+			Columns: []string{providerprofile.ProviderPayoutAccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerpayoutaccount.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, ppu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{providerprofile.Label}
@@ -892,6 +974,21 @@ func (ppuo *ProviderProfileUpdateOne) AddAssignedOrders(l ...*LockPaymentOrder) 
 	return ppuo.AddAssignedOrderIDs(ids...)
 }
 
+// AddProviderPayoutAccountIDs adds the "provider_payout_accounts" edge to the ProviderPayoutAccount entity by IDs.
+func (ppuo *ProviderProfileUpdateOne) AddProviderPayoutAccountIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
+	ppuo.mutation.AddProviderPayoutAccountIDs(ids...)
+	return ppuo
+}
+
+// AddProviderPayoutAccounts adds the "provider_payout_accounts" edges to the ProviderPayoutAccount entity.
+func (ppuo *ProviderProfileUpdateOne) AddProviderPayoutAccounts(p ...*ProviderPayoutAccount) *ProviderProfileUpdateOne {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return ppuo.AddProviderPayoutAccountIDs(ids...)
+}
+
 // Mutation returns the ProviderProfileMutation object of the builder.
 func (ppuo *ProviderProfileUpdateOne) Mutation() *ProviderProfileMutation {
 	return ppuo.mutation
@@ -991,6 +1088,27 @@ func (ppuo *ProviderProfileUpdateOne) RemoveAssignedOrders(l ...*LockPaymentOrde
 		ids[i] = l[i].ID
 	}
 	return ppuo.RemoveAssignedOrderIDs(ids...)
+}
+
+// ClearProviderPayoutAccounts clears all "provider_payout_accounts" edges to the ProviderPayoutAccount entity.
+func (ppuo *ProviderProfileUpdateOne) ClearProviderPayoutAccounts() *ProviderProfileUpdateOne {
+	ppuo.mutation.ClearProviderPayoutAccounts()
+	return ppuo
+}
+
+// RemoveProviderPayoutAccountIDs removes the "provider_payout_accounts" edge to ProviderPayoutAccount entities by IDs.
+func (ppuo *ProviderProfileUpdateOne) RemoveProviderPayoutAccountIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
+	ppuo.mutation.RemoveProviderPayoutAccountIDs(ids...)
+	return ppuo
+}
+
+// RemoveProviderPayoutAccounts removes "provider_payout_accounts" edges to ProviderPayoutAccount entities.
+func (ppuo *ProviderProfileUpdateOne) RemoveProviderPayoutAccounts(p ...*ProviderPayoutAccount) *ProviderProfileUpdateOne {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return ppuo.RemoveProviderPayoutAccountIDs(ids...)
 }
 
 // Where appends a list predicates to the ProviderProfileUpdate builder.
@@ -1352,6 +1470,51 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if ppuo.mutation.ProviderPayoutAccountsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.ProviderPayoutAccountsTable,
+			Columns: []string{providerprofile.ProviderPayoutAccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerpayoutaccount.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ppuo.mutation.RemovedProviderPayoutAccountsIDs(); len(nodes) > 0 && !ppuo.mutation.ProviderPayoutAccountsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.ProviderPayoutAccountsTable,
+			Columns: []string{providerprofile.ProviderPayoutAccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerpayoutaccount.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ppuo.mutation.ProviderPayoutAccountsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.ProviderPayoutAccountsTable,
+			Columns: []string{providerprofile.ProviderPayoutAccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerpayoutaccount.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
