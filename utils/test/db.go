@@ -768,3 +768,34 @@ func CreateMessageHash(orderRequestData map[string]interface{}) common.Hash {
 	prefix := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(orderRequestData), orderRequestData)
 	return crypto.Keccak256Hash([]byte(prefix))
 }
+
+// CreateTestProviderPayoutAccount creates a test ProviderPayoutAccount
+func CreateTestProviderPayoutAccount(m map[string]interface{}) (*ent.ProviderPayoutAccount, error) {
+	provider := m["provider"].(*ent.ProviderProfile)
+	institution := m["institution"].(string)
+	identifier := m["account_identifier"].(string)
+	name := ""
+	if n, ok := m["account_name"]; ok {
+		name = n.(string)
+	}
+
+	return db.Client.ProviderPayoutAccount.Create().
+		SetProvider(provider).
+		SetInstitution(institution).
+		SetAccountIdentifier(identifier).
+		SetAccountName(name).
+		Save(context.Background())
+}
+
+// CreateTestInstitution creates a test institution entity for use in tests.
+func CreateTestInstitution(m map[string]interface{}) (*ent.Institution, error) {
+	code := m["code"].(string)
+	name := m["name"].(string)
+	fiatCurrencyID := m["fiat_currency"].(uuid.UUID)
+
+	return db.Client.Institution.Create().
+		SetCode(code).
+		SetName(name).
+		SetFiatCurrencyID(fiatCurrencyID).
+		Save(context.Background())
+}

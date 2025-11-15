@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"strconv"
 	"testing"
 	"time"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/paycrest/aggregator/ent/enttest"
+	"github.com/paycrest/aggregator/ent/providerpayoutaccount"
 	"github.com/paycrest/aggregator/utils/test"
 	"github.com/paycrest/aggregator/utils/token"
 	"github.com/stretchr/testify/assert"
@@ -173,6 +175,9 @@ func TestProvider(t *testing.T) {
 	router.POST("/orders/:id/fulfill", ctrl.FulfillOrder)
 	router.POST("/orders/:id/cancel", ctrl.CancelOrder)
 	router.GET("/rates/:token/:fiat", ctrl.GetMarketRate)
+	router.POST("/payout-accounts", ctrl.CreatePayoutAccount)
+	router.GET("/payout-accounts", ctrl.ListPayoutAccounts)
+	router.DELETE("/payout-accounts/:id", ctrl.DeletePayoutAccount)
 
 	t.Run("GetLockPaymentOrders", func(t *testing.T) {
 		_, _, cleanup := setupIsolatedTest(t)
@@ -1872,6 +1877,283 @@ func TestProvider(t *testing.T) {
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
 			assert.Equal(t, "Order fulfilled successfully", response.Message)
+		})
+	})
+
+	t.Run("PayoutAccounts", func(t *testing.T) {
+		_, _, cleanup := setupIsolatedTest(t)
+		defer cleanup()
+
+		institution, err := test.CreateTestInstitution(map[string]interface{}{
+			"code":          "ZENITH",
+			"name":          "Zenith Bank",
+			"fiat_currency": testCtx.currency.ID,
+		})
+		assert.NoError(t, err)
+
+		// Helper to build HMAC-signed request for POST (timestamp in body)
+		signPost := func(basePayload map[string]interface{}) (map[string]interface{}, map[string]string) {
+			ts := time.Now().Unix()
+			payload := make(map[string]interface{}, len(basePayload)+1)
+			for k, v := range basePayload {
+				payload[k] = v
+			}
+			payload["timestamp"] = ts
+			sigPayload := make(map[string]interface{}, len(payload)) // Full payload for sig
+			for k, v := range payload {
+				sigPayload[k] = v
+			}
+			sig := token.GenerateHMACSignature(sigPayload, testCtx.apiKeySecret)
+			return payload, map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + sig,
+				"Client-Type":   "backend",
+			}
+		}
+
+		// Helper for GET/DELETE (timestamp in query, signs full query)
+		signQuery := func(queryParams map[string]string) (string, map[string]string) {
+			ts := time.Now().Unix()
+			sigPayload := map[string]interface{}{"timestamp": ts} 
+			for k, v := range queryParams {
+				sigPayload[k] = v // Add all params
+			}
+			sig := token.GenerateHMACSignature(sigPayload, testCtx.apiKeySecret)
+			queryStr := fmt.Sprintf("timestamp=%d", ts)
+			for k, v := range queryParams {
+				queryStr += "&" + url.QueryEscape(k) + "=" + url.QueryEscape(v)
+			}
+			return queryStr, map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + sig,
+				"Client-Type":   "backend",
+			}
+		}
+
+		t.Run("ListPayoutAccounts", func(t *testing.T) {
+			_, err := test.CreateTestProviderPayoutAccount(map[string]interface{}{
+				"provider":           testCtx.provider,
+				"institution":        institution.Code,
+				"account_identifier": "1234567890",
+				"account_name":       "Account A",
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestProviderPayoutAccount(map[string]interface{}{
+				"provider":           testCtx.provider,
+				"institution":        institution.Code,
+				"account_identifier": "0987654321",
+				"account_name":       "Account B",
+			})
+			assert.NoError(t, err)
+
+			t.Run("without filter", func(t *testing.T) {
+				queryStr, headers := signQuery(map[string]string{})
+				url := "/payout-accounts?" + queryStr
+				res, err := test.PerformRequest(t,
+					"GET", url,
+					nil, headers, router,
+				)
+				assert.NoError(t, err)
+				assert.Equal(t, http.StatusOK, res.Code)
+
+				var resp types.Response
+				assert.NoError(t, json.Unmarshal(res.Body.Bytes(), &resp))
+				assert.Equal(t, "Payout accounts retrieved successfully", resp.Message)
+
+				list, ok := resp.Data.(map[string]interface{})
+				assert.True(t, ok)
+				assert.Equal(t, float64(2), list["totalRecords"])
+				accountsIface, ok := list["accounts"]
+				assert.True(t, ok)
+				accounts, ok := accountsIface.([]interface{})
+				assert.True(t, ok)
+				assert.Len(t, accounts, 2)
+			})
+
+			t.Run("with institution filter", func(t *testing.T) {
+				queryStr, headers := signQuery(map[string]string{"institution": institution.Code})
+				url := "/payout-accounts?" + queryStr
+				res, err := test.PerformRequest(t,
+					"GET", url,
+					nil, headers, router,
+				)
+				assert.NoError(t, err)
+				assert.Equal(t, http.StatusOK, res.Code)
+
+				var resp types.Response
+				assert.NoError(t, json.Unmarshal(res.Body.Bytes(), &resp))
+				list, ok := resp.Data.(map[string]interface{})
+				assert.True(t, ok)
+				assert.Equal(t, float64(2), list["totalRecords"])
+			})
+
+			t.Run("unknown institution returns empty list", func(t *testing.T) {
+				queryStr, headers := signQuery(map[string]string{"institution": "UNKNOWN"})
+				url := "/payout-accounts?" + queryStr
+				res, err := test.PerformRequest(t,
+					"GET", url,
+					nil, headers, router,
+				)
+				assert.NoError(t, err)
+				assert.Equal(t, http.StatusOK, res.Code)
+
+				var resp types.Response
+				assert.NoError(t, json.Unmarshal(res.Body.Bytes(), &resp))
+				list, ok := resp.Data.(map[string]interface{})
+				assert.True(t, ok)
+				assert.Equal(t, float64(0), list["totalRecords"])
+				accountsIface, ok := list["accounts"]
+				assert.True(t, ok)
+				accounts, ok := accountsIface.([]interface{})
+				assert.True(t, ok)
+				assert.Empty(t, accounts)
+			})
+		})
+
+		t.Run("CreatePayoutAccount", func(t *testing.T) {
+			t.Run("success", func(t *testing.T) {
+				payload, headers := signPost(map[string]interface{}{
+					"institution":       "ZENITH",
+					"accountIdentifier": "0123456789",
+					"accountName":       "John Doe Savings",
+				})
+
+				res, err := test.PerformRequest(t,
+					"POST", "/payout-accounts",
+					payload, headers, router,
+				)
+				assert.NoError(t, err)
+				assert.Equal(t, http.StatusCreated, res.Code)
+
+				var resp types.Response
+				assert.NoError(t, json.Unmarshal(res.Body.Bytes(), &resp))
+				assert.Equal(t, "Payout account created successfully", resp.Message)
+
+				data, ok := resp.Data.(map[string]interface{})
+				assert.True(t, ok)
+				assert.Equal(t, "0123456789", data["accountIdentifier"])
+				assert.Equal(t, "ZENITH", data["institution"])
+				assert.Equal(t, "John Doe Savings", data["accountName"])
+			})
+
+			t.Run("duplicate account", func(t *testing.T) {
+				payload1, headers1 := signPost(map[string]interface{}{
+					"institution":       institution.Code,
+					"accountIdentifier": "1111111111",
+				})
+				res1, err := test.PerformRequest(t, "POST", "/payout-accounts", payload1, headers1, router)
+				assert.NoError(t, err)
+				assert.Equal(t, http.StatusCreated, res1.Code)
+
+				payload2, headers2 := signPost(map[string]interface{}{
+					"institution":       institution.Code,
+					"accountIdentifier": "1111111111",
+				})
+				res, err := test.PerformRequest(t,
+					"POST", "/payout-accounts",
+					payload2, headers2, router,
+				)
+				assert.NoError(t, err)
+				assert.Equal(t, http.StatusConflict, res.Code)
+
+				var resp types.Response
+				assert.NoError(t, json.Unmarshal(res.Body.Bytes(), &resp))
+				assert.Contains(t, resp.Message, "already exists")
+			})
+
+			t.Run("unsupported institution", func(t *testing.T) {
+				payload, headers := signPost(map[string]interface{}{
+					"institution":       "FAKEBANK",
+					"accountIdentifier": "9999999999",
+				})
+				res, err := test.PerformRequest(t,
+					"POST", "/payout-accounts",
+					payload, headers, router,
+				)
+				assert.NoError(t, err)
+				assert.Equal(t, http.StatusBadRequest, res.Code)
+
+				var resp types.Response
+				assert.NoError(t, json.Unmarshal(res.Body.Bytes(), &resp))
+				assert.Contains(t, resp.Message, "not supported")
+			})
+		})
+
+		t.Run("DeletePayoutAccount", func(t *testing.T) {
+			account, err := test.CreateTestProviderPayoutAccount(map[string]interface{}{
+				"provider":           testCtx.provider,
+				"institution":        institution.Code,
+				"account_identifier": "5555555555",
+			})
+			assert.NoError(t, err)
+
+			t.Run("success", func(t *testing.T) {
+				queryStr, headers := signQuery(map[string]string{})
+				url := fmt.Sprintf("/payout-accounts/%s?%s", account.ID, queryStr)
+				res, err := test.PerformRequest(t,
+					"DELETE", url,
+					nil, headers, router,
+				)
+				assert.NoError(t, err)
+				assert.Equal(t, http.StatusOK, res.Code)
+
+				var resp types.Response
+				assert.NoError(t, json.Unmarshal(res.Body.Bytes(), &resp))
+				assert.Equal(t, "Payout account deleted successfully", resp.Message)
+
+				// Verify it is really gone
+				exists, _ := db.Client.ProviderPayoutAccount.Query().
+					Where(providerpayoutaccount.IDEQ(account.ID)).
+					Exist(context.Background())
+				assert.False(t, exists)
+			})
+
+			t.Run("not found (wrong provider)", func(t *testing.T) {
+				// Create a different user for the other provider (avoids unique constraint on user → provider)
+				uniqueEmail := "other_" + uuid.New().String()[:8] + "@example.com"
+				otherUser, err := test.CreateTestUser(map[string]interface{}{"email": uniqueEmail})
+				assert.NoError(t, err)
+
+				// Create account for another provider
+				otherProvider, err := test.CreateTestProviderProfile(map[string]interface{}{
+					"user_id":     otherUser.ID,
+					"currency_id": testCtx.currency.ID,
+				})
+				assert.NoError(t, err)
+				otherAccount, err := test.CreateTestProviderPayoutAccount(map[string]interface{}{
+					"provider":           otherProvider,
+					"institution":        institution.Code,
+					"account_identifier": "fake_other_id",
+				})
+				assert.NoError(t, err)
+
+				queryStr, headers := signQuery(map[string]string{})
+				url := fmt.Sprintf("/payout-accounts/%s?%s", otherAccount.ID, queryStr)
+				res, err := test.PerformRequest(t,
+					"DELETE", url,
+					nil, headers, router,
+				)
+				assert.NoError(t, err)
+				assert.Equal(t, http.StatusNotFound, res.Code)
+
+				var resp types.Response
+				assert.NoError(t, json.Unmarshal(res.Body.Bytes(), &resp))
+				assert.Equal(t, "Payout account not found", resp.Message)
+			})
+
+			t.Run("invalid UUID", func(t *testing.T) {
+				queryStr, headers := signQuery(map[string]string{})
+				url := fmt.Sprintf("/payout-accounts/invalid-uuid?%s", queryStr)
+				res, err := test.PerformRequest(t,
+					"DELETE", url,
+					nil, headers, router,
+				)
+				assert.NoError(t, err)
+				assert.Equal(t, http.StatusBadRequest, res.Code)
+
+				var resp types.Response
+				assert.NoError(t, json.Unmarshal(res.Body.Bytes(), &resp))
+				assert.Equal(t, "Invalid account ID", resp.Message)
+			})
 		})
 	})
 

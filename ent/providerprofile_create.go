@@ -17,6 +17,7 @@ import (
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
+	"github.com/paycrest/aggregator/ent/providerpayoutaccount"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -250,6 +251,21 @@ func (ppc *ProviderProfileCreate) AddAssignedOrders(l ...*LockPaymentOrder) *Pro
 		ids[i] = l[i].ID
 	}
 	return ppc.AddAssignedOrderIDs(ids...)
+}
+
+// AddProviderPayoutAccountIDs adds the "provider_payout_accounts" edge to the ProviderPayoutAccount entity by IDs.
+func (ppc *ProviderProfileCreate) AddProviderPayoutAccountIDs(ids ...uuid.UUID) *ProviderProfileCreate {
+	ppc.mutation.AddProviderPayoutAccountIDs(ids...)
+	return ppc
+}
+
+// AddProviderPayoutAccounts adds the "provider_payout_accounts" edges to the ProviderPayoutAccount entity.
+func (ppc *ProviderProfileCreate) AddProviderPayoutAccounts(p ...*ProviderPayoutAccount) *ProviderProfileCreate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return ppc.AddProviderPayoutAccountIDs(ids...)
 }
 
 // Mutation returns the ProviderProfileMutation object of the builder.
@@ -518,6 +534,22 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := ppc.mutation.ProviderPayoutAccountsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.ProviderPayoutAccountsTable,
+			Columns: []string{providerprofile.ProviderPayoutAccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerpayoutaccount.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

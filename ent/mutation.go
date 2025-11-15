@@ -28,6 +28,7 @@ import (
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
+	"github.com/paycrest/aggregator/ent/providerpayoutaccount"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -66,6 +67,7 @@ const (
 	TypePaymentWebhook              = "PaymentWebhook"
 	TypeProviderCurrencies          = "ProviderCurrencies"
 	TypeProviderOrderToken          = "ProviderOrderToken"
+	TypeProviderPayoutAccount       = "ProviderPayoutAccount"
 	TypeProviderProfile             = "ProviderProfile"
 	TypeProviderRating              = "ProviderRating"
 	TypeProvisionBucket             = "ProvisionBucket"
@@ -15820,41 +15822,681 @@ func (m *ProviderOrderTokenMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown ProviderOrderToken edge %s", name)
 }
 
+// ProviderPayoutAccountMutation represents an operation that mutates the ProviderPayoutAccount nodes in the graph.
+type ProviderPayoutAccountMutation struct {
+	config
+	op                 Op
+	typ                string
+	id                 *uuid.UUID
+	institution        *string
+	account_identifier *string
+	account_name       *string
+	created_at         *time.Time
+	updated_at         *time.Time
+	clearedFields      map[string]struct{}
+	provider           *string
+	clearedprovider    bool
+	done               bool
+	oldValue           func(context.Context) (*ProviderPayoutAccount, error)
+	predicates         []predicate.ProviderPayoutAccount
+}
+
+var _ ent.Mutation = (*ProviderPayoutAccountMutation)(nil)
+
+// providerpayoutaccountOption allows management of the mutation configuration using functional options.
+type providerpayoutaccountOption func(*ProviderPayoutAccountMutation)
+
+// newProviderPayoutAccountMutation creates new mutation for the ProviderPayoutAccount entity.
+func newProviderPayoutAccountMutation(c config, op Op, opts ...providerpayoutaccountOption) *ProviderPayoutAccountMutation {
+	m := &ProviderPayoutAccountMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeProviderPayoutAccount,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withProviderPayoutAccountID sets the ID field of the mutation.
+func withProviderPayoutAccountID(id uuid.UUID) providerpayoutaccountOption {
+	return func(m *ProviderPayoutAccountMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ProviderPayoutAccount
+		)
+		m.oldValue = func(ctx context.Context) (*ProviderPayoutAccount, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ProviderPayoutAccount.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withProviderPayoutAccount sets the old ProviderPayoutAccount of the mutation.
+func withProviderPayoutAccount(node *ProviderPayoutAccount) providerpayoutaccountOption {
+	return func(m *ProviderPayoutAccountMutation) {
+		m.oldValue = func(context.Context) (*ProviderPayoutAccount, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ProviderPayoutAccountMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ProviderPayoutAccountMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ProviderPayoutAccount entities.
+func (m *ProviderPayoutAccountMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ProviderPayoutAccountMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ProviderPayoutAccountMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ProviderPayoutAccount.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetInstitution sets the "institution" field.
+func (m *ProviderPayoutAccountMutation) SetInstitution(s string) {
+	m.institution = &s
+}
+
+// Institution returns the value of the "institution" field in the mutation.
+func (m *ProviderPayoutAccountMutation) Institution() (r string, exists bool) {
+	v := m.institution
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInstitution returns the old "institution" field's value of the ProviderPayoutAccount entity.
+// If the ProviderPayoutAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderPayoutAccountMutation) OldInstitution(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInstitution is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInstitution requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInstitution: %w", err)
+	}
+	return oldValue.Institution, nil
+}
+
+// ResetInstitution resets all changes to the "institution" field.
+func (m *ProviderPayoutAccountMutation) ResetInstitution() {
+	m.institution = nil
+}
+
+// SetAccountIdentifier sets the "account_identifier" field.
+func (m *ProviderPayoutAccountMutation) SetAccountIdentifier(s string) {
+	m.account_identifier = &s
+}
+
+// AccountIdentifier returns the value of the "account_identifier" field in the mutation.
+func (m *ProviderPayoutAccountMutation) AccountIdentifier() (r string, exists bool) {
+	v := m.account_identifier
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAccountIdentifier returns the old "account_identifier" field's value of the ProviderPayoutAccount entity.
+// If the ProviderPayoutAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderPayoutAccountMutation) OldAccountIdentifier(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAccountIdentifier is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAccountIdentifier requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAccountIdentifier: %w", err)
+	}
+	return oldValue.AccountIdentifier, nil
+}
+
+// ResetAccountIdentifier resets all changes to the "account_identifier" field.
+func (m *ProviderPayoutAccountMutation) ResetAccountIdentifier() {
+	m.account_identifier = nil
+}
+
+// SetAccountName sets the "account_name" field.
+func (m *ProviderPayoutAccountMutation) SetAccountName(s string) {
+	m.account_name = &s
+}
+
+// AccountName returns the value of the "account_name" field in the mutation.
+func (m *ProviderPayoutAccountMutation) AccountName() (r string, exists bool) {
+	v := m.account_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAccountName returns the old "account_name" field's value of the ProviderPayoutAccount entity.
+// If the ProviderPayoutAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderPayoutAccountMutation) OldAccountName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAccountName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAccountName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAccountName: %w", err)
+	}
+	return oldValue.AccountName, nil
+}
+
+// ClearAccountName clears the value of the "account_name" field.
+func (m *ProviderPayoutAccountMutation) ClearAccountName() {
+	m.account_name = nil
+	m.clearedFields[providerpayoutaccount.FieldAccountName] = struct{}{}
+}
+
+// AccountNameCleared returns if the "account_name" field was cleared in this mutation.
+func (m *ProviderPayoutAccountMutation) AccountNameCleared() bool {
+	_, ok := m.clearedFields[providerpayoutaccount.FieldAccountName]
+	return ok
+}
+
+// ResetAccountName resets all changes to the "account_name" field.
+func (m *ProviderPayoutAccountMutation) ResetAccountName() {
+	m.account_name = nil
+	delete(m.clearedFields, providerpayoutaccount.FieldAccountName)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *ProviderPayoutAccountMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *ProviderPayoutAccountMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the ProviderPayoutAccount entity.
+// If the ProviderPayoutAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderPayoutAccountMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *ProviderPayoutAccountMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *ProviderPayoutAccountMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *ProviderPayoutAccountMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the ProviderPayoutAccount entity.
+// If the ProviderPayoutAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderPayoutAccountMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *ProviderPayoutAccountMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetProviderID sets the "provider" edge to the ProviderProfile entity by id.
+func (m *ProviderPayoutAccountMutation) SetProviderID(id string) {
+	m.provider = &id
+}
+
+// ClearProvider clears the "provider" edge to the ProviderProfile entity.
+func (m *ProviderPayoutAccountMutation) ClearProvider() {
+	m.clearedprovider = true
+}
+
+// ProviderCleared reports if the "provider" edge to the ProviderProfile entity was cleared.
+func (m *ProviderPayoutAccountMutation) ProviderCleared() bool {
+	return m.clearedprovider
+}
+
+// ProviderID returns the "provider" edge ID in the mutation.
+func (m *ProviderPayoutAccountMutation) ProviderID() (id string, exists bool) {
+	if m.provider != nil {
+		return *m.provider, true
+	}
+	return
+}
+
+// ProviderIDs returns the "provider" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ProviderID instead. It exists only for internal usage by the builders.
+func (m *ProviderPayoutAccountMutation) ProviderIDs() (ids []string) {
+	if id := m.provider; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetProvider resets all changes to the "provider" edge.
+func (m *ProviderPayoutAccountMutation) ResetProvider() {
+	m.provider = nil
+	m.clearedprovider = false
+}
+
+// Where appends a list predicates to the ProviderPayoutAccountMutation builder.
+func (m *ProviderPayoutAccountMutation) Where(ps ...predicate.ProviderPayoutAccount) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ProviderPayoutAccountMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ProviderPayoutAccountMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ProviderPayoutAccount, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ProviderPayoutAccountMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ProviderPayoutAccountMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ProviderPayoutAccount).
+func (m *ProviderPayoutAccountMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ProviderPayoutAccountMutation) Fields() []string {
+	fields := make([]string, 0, 5)
+	if m.institution != nil {
+		fields = append(fields, providerpayoutaccount.FieldInstitution)
+	}
+	if m.account_identifier != nil {
+		fields = append(fields, providerpayoutaccount.FieldAccountIdentifier)
+	}
+	if m.account_name != nil {
+		fields = append(fields, providerpayoutaccount.FieldAccountName)
+	}
+	if m.created_at != nil {
+		fields = append(fields, providerpayoutaccount.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, providerpayoutaccount.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ProviderPayoutAccountMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case providerpayoutaccount.FieldInstitution:
+		return m.Institution()
+	case providerpayoutaccount.FieldAccountIdentifier:
+		return m.AccountIdentifier()
+	case providerpayoutaccount.FieldAccountName:
+		return m.AccountName()
+	case providerpayoutaccount.FieldCreatedAt:
+		return m.CreatedAt()
+	case providerpayoutaccount.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ProviderPayoutAccountMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case providerpayoutaccount.FieldInstitution:
+		return m.OldInstitution(ctx)
+	case providerpayoutaccount.FieldAccountIdentifier:
+		return m.OldAccountIdentifier(ctx)
+	case providerpayoutaccount.FieldAccountName:
+		return m.OldAccountName(ctx)
+	case providerpayoutaccount.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case providerpayoutaccount.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown ProviderPayoutAccount field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ProviderPayoutAccountMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case providerpayoutaccount.FieldInstitution:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInstitution(v)
+		return nil
+	case providerpayoutaccount.FieldAccountIdentifier:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAccountIdentifier(v)
+		return nil
+	case providerpayoutaccount.FieldAccountName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAccountName(v)
+		return nil
+	case providerpayoutaccount.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case providerpayoutaccount.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderPayoutAccount field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ProviderPayoutAccountMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ProviderPayoutAccountMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ProviderPayoutAccountMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown ProviderPayoutAccount numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ProviderPayoutAccountMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(providerpayoutaccount.FieldAccountName) {
+		fields = append(fields, providerpayoutaccount.FieldAccountName)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ProviderPayoutAccountMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ProviderPayoutAccountMutation) ClearField(name string) error {
+	switch name {
+	case providerpayoutaccount.FieldAccountName:
+		m.ClearAccountName()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderPayoutAccount nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ProviderPayoutAccountMutation) ResetField(name string) error {
+	switch name {
+	case providerpayoutaccount.FieldInstitution:
+		m.ResetInstitution()
+		return nil
+	case providerpayoutaccount.FieldAccountIdentifier:
+		m.ResetAccountIdentifier()
+		return nil
+	case providerpayoutaccount.FieldAccountName:
+		m.ResetAccountName()
+		return nil
+	case providerpayoutaccount.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case providerpayoutaccount.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderPayoutAccount field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ProviderPayoutAccountMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.provider != nil {
+		edges = append(edges, providerpayoutaccount.EdgeProvider)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ProviderPayoutAccountMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case providerpayoutaccount.EdgeProvider:
+		if id := m.provider; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ProviderPayoutAccountMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ProviderPayoutAccountMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ProviderPayoutAccountMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedprovider {
+		edges = append(edges, providerpayoutaccount.EdgeProvider)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ProviderPayoutAccountMutation) EdgeCleared(name string) bool {
+	switch name {
+	case providerpayoutaccount.EdgeProvider:
+		return m.clearedprovider
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ProviderPayoutAccountMutation) ClearEdge(name string) error {
+	switch name {
+	case providerpayoutaccount.EdgeProvider:
+		m.ClearProvider()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderPayoutAccount unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ProviderPayoutAccountMutation) ResetEdge(name string) error {
+	switch name {
+	case providerpayoutaccount.EdgeProvider:
+		m.ResetProvider()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderPayoutAccount edge %s", name)
+}
+
 // ProviderProfileMutation represents an operation that mutates the ProviderProfile nodes in the graph.
 type ProviderProfileMutation struct {
 	config
-	op                         Op
-	typ                        string
-	id                         *string
-	trading_name               *string
-	host_identifier            *string
-	provision_mode             *providerprofile.ProvisionMode
-	is_active                  *bool
-	is_kyb_verified            *bool
-	updated_at                 *time.Time
-	visibility_mode            *providerprofile.VisibilityMode
-	clearedFields              map[string]struct{}
-	user                       *uuid.UUID
-	cleareduser                bool
-	api_key                    *uuid.UUID
-	clearedapi_key             bool
-	provider_currencies        map[uuid.UUID]struct{}
-	removedprovider_currencies map[uuid.UUID]struct{}
-	clearedprovider_currencies bool
-	provision_buckets          map[int]struct{}
-	removedprovision_buckets   map[int]struct{}
-	clearedprovision_buckets   bool
-	order_tokens               map[int]struct{}
-	removedorder_tokens        map[int]struct{}
-	clearedorder_tokens        bool
-	provider_rating            *int
-	clearedprovider_rating     bool
-	assigned_orders            map[uuid.UUID]struct{}
-	removedassigned_orders     map[uuid.UUID]struct{}
-	clearedassigned_orders     bool
-	done                       bool
-	oldValue                   func(context.Context) (*ProviderProfile, error)
-	predicates                 []predicate.ProviderProfile
+	op                              Op
+	typ                             string
+	id                              *string
+	trading_name                    *string
+	host_identifier                 *string
+	provision_mode                  *providerprofile.ProvisionMode
+	is_active                       *bool
+	is_kyb_verified                 *bool
+	updated_at                      *time.Time
+	visibility_mode                 *providerprofile.VisibilityMode
+	clearedFields                   map[string]struct{}
+	user                            *uuid.UUID
+	cleareduser                     bool
+	api_key                         *uuid.UUID
+	clearedapi_key                  bool
+	provider_currencies             map[uuid.UUID]struct{}
+	removedprovider_currencies      map[uuid.UUID]struct{}
+	clearedprovider_currencies      bool
+	provision_buckets               map[int]struct{}
+	removedprovision_buckets        map[int]struct{}
+	clearedprovision_buckets        bool
+	order_tokens                    map[int]struct{}
+	removedorder_tokens             map[int]struct{}
+	clearedorder_tokens             bool
+	provider_rating                 *int
+	clearedprovider_rating          bool
+	assigned_orders                 map[uuid.UUID]struct{}
+	removedassigned_orders          map[uuid.UUID]struct{}
+	clearedassigned_orders          bool
+	provider_payout_accounts        map[uuid.UUID]struct{}
+	removedprovider_payout_accounts map[uuid.UUID]struct{}
+	clearedprovider_payout_accounts bool
+	done                            bool
+	oldValue                        func(context.Context) (*ProviderProfile, error)
+	predicates                      []predicate.ProviderProfile
 }
 
 var _ ent.Mutation = (*ProviderProfileMutation)(nil)
@@ -16572,6 +17214,60 @@ func (m *ProviderProfileMutation) ResetAssignedOrders() {
 	m.removedassigned_orders = nil
 }
 
+// AddProviderPayoutAccountIDs adds the "provider_payout_accounts" edge to the ProviderPayoutAccount entity by ids.
+func (m *ProviderProfileMutation) AddProviderPayoutAccountIDs(ids ...uuid.UUID) {
+	if m.provider_payout_accounts == nil {
+		m.provider_payout_accounts = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.provider_payout_accounts[ids[i]] = struct{}{}
+	}
+}
+
+// ClearProviderPayoutAccounts clears the "provider_payout_accounts" edge to the ProviderPayoutAccount entity.
+func (m *ProviderProfileMutation) ClearProviderPayoutAccounts() {
+	m.clearedprovider_payout_accounts = true
+}
+
+// ProviderPayoutAccountsCleared reports if the "provider_payout_accounts" edge to the ProviderPayoutAccount entity was cleared.
+func (m *ProviderProfileMutation) ProviderPayoutAccountsCleared() bool {
+	return m.clearedprovider_payout_accounts
+}
+
+// RemoveProviderPayoutAccountIDs removes the "provider_payout_accounts" edge to the ProviderPayoutAccount entity by IDs.
+func (m *ProviderProfileMutation) RemoveProviderPayoutAccountIDs(ids ...uuid.UUID) {
+	if m.removedprovider_payout_accounts == nil {
+		m.removedprovider_payout_accounts = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.provider_payout_accounts, ids[i])
+		m.removedprovider_payout_accounts[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedProviderPayoutAccounts returns the removed IDs of the "provider_payout_accounts" edge to the ProviderPayoutAccount entity.
+func (m *ProviderProfileMutation) RemovedProviderPayoutAccountsIDs() (ids []uuid.UUID) {
+	for id := range m.removedprovider_payout_accounts {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ProviderPayoutAccountsIDs returns the "provider_payout_accounts" edge IDs in the mutation.
+func (m *ProviderProfileMutation) ProviderPayoutAccountsIDs() (ids []uuid.UUID) {
+	for id := range m.provider_payout_accounts {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetProviderPayoutAccounts resets all changes to the "provider_payout_accounts" edge.
+func (m *ProviderProfileMutation) ResetProviderPayoutAccounts() {
+	m.provider_payout_accounts = nil
+	m.clearedprovider_payout_accounts = false
+	m.removedprovider_payout_accounts = nil
+}
+
 // Where appends a list predicates to the ProviderProfileMutation builder.
 func (m *ProviderProfileMutation) Where(ps ...predicate.ProviderProfile) {
 	m.predicates = append(m.predicates, ps...)
@@ -16822,7 +17518,7 @@ func (m *ProviderProfileMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ProviderProfileMutation) AddedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.user != nil {
 		edges = append(edges, providerprofile.EdgeUser)
 	}
@@ -16843,6 +17539,9 @@ func (m *ProviderProfileMutation) AddedEdges() []string {
 	}
 	if m.assigned_orders != nil {
 		edges = append(edges, providerprofile.EdgeAssignedOrders)
+	}
+	if m.provider_payout_accounts != nil {
+		edges = append(edges, providerprofile.EdgeProviderPayoutAccounts)
 	}
 	return edges
 }
@@ -16887,13 +17586,19 @@ func (m *ProviderProfileMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case providerprofile.EdgeProviderPayoutAccounts:
+		ids := make([]ent.Value, 0, len(m.provider_payout_accounts))
+		for id := range m.provider_payout_accounts {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProviderProfileMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.removedprovider_currencies != nil {
 		edges = append(edges, providerprofile.EdgeProviderCurrencies)
 	}
@@ -16905,6 +17610,9 @@ func (m *ProviderProfileMutation) RemovedEdges() []string {
 	}
 	if m.removedassigned_orders != nil {
 		edges = append(edges, providerprofile.EdgeAssignedOrders)
+	}
+	if m.removedprovider_payout_accounts != nil {
+		edges = append(edges, providerprofile.EdgeProviderPayoutAccounts)
 	}
 	return edges
 }
@@ -16937,13 +17645,19 @@ func (m *ProviderProfileMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case providerprofile.EdgeProviderPayoutAccounts:
+		ids := make([]ent.Value, 0, len(m.removedprovider_payout_accounts))
+		for id := range m.removedprovider_payout_accounts {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ProviderProfileMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.cleareduser {
 		edges = append(edges, providerprofile.EdgeUser)
 	}
@@ -16964,6 +17678,9 @@ func (m *ProviderProfileMutation) ClearedEdges() []string {
 	}
 	if m.clearedassigned_orders {
 		edges = append(edges, providerprofile.EdgeAssignedOrders)
+	}
+	if m.clearedprovider_payout_accounts {
+		edges = append(edges, providerprofile.EdgeProviderPayoutAccounts)
 	}
 	return edges
 }
@@ -16986,6 +17703,8 @@ func (m *ProviderProfileMutation) EdgeCleared(name string) bool {
 		return m.clearedprovider_rating
 	case providerprofile.EdgeAssignedOrders:
 		return m.clearedassigned_orders
+	case providerprofile.EdgeProviderPayoutAccounts:
+		return m.clearedprovider_payout_accounts
 	}
 	return false
 }
@@ -17031,6 +17750,9 @@ func (m *ProviderProfileMutation) ResetEdge(name string) error {
 		return nil
 	case providerprofile.EdgeAssignedOrders:
 		m.ResetAssignedOrders()
+		return nil
+	case providerprofile.EdgeProviderPayoutAccounts:
+		m.ResetProviderPayoutAccounts()
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderProfile edge %s", name)

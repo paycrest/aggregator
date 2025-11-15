@@ -710,7 +710,7 @@ type KYBSubmissionInput struct {
 	AmlPolicyUrl                  *string                `json:"amlPolicyUrl"`
 	KycPolicyUrl                  *string                `json:"kycPolicyUrl"`
 	BeneficialOwners              []BeneficialOwnerInput `json:"beneficialOwners" binding:"required,dive"`
-	IAcceptTerms         bool                   `json:"IAcceptTerms"`
+	IAcceptTerms                  bool                   `json:"IAcceptTerms"`
 }
 
 // BeneficialOwnerInput represents the input structure for a beneficial owner
@@ -838,4 +838,27 @@ type ProviderInfoResponse struct {
 			TotalBalance     string `json:"totalBalance"`
 		} `json:"totalBalances"`
 	} `json:"data"`
+}
+
+// CreatePayoutAccountPayload represents the request payload for creating a payout account
+type CreatePayoutAccountPayload struct {
+	AccountIdentifier string `json:"accountIdentifier" binding:"required,min=1,max=200"`
+	AccountName       string `json:"accountName" binding:"omitempty,max=200"`
+	Institution       string `json:"institution" binding:"required,min=1,max=100"`
+}
+
+// PayoutAccountResponse represents a single payout account
+type PayoutAccountResponse struct {
+	ID                uuid.UUID `json:"id"`
+	AccountIdentifier string    `json:"accountIdentifier"`
+	AccountName       string    `json:"accountName,omitempty"`
+	Institution       string    `json:"institution"`
+	CreatedAt         time.Time `json:"createdAt"`
+	UpdatedAt         time.Time `json:"updatedAt"`
+}
+
+// PayoutAccountListResponse represents a list of payout accounts
+type PayoutAccountListResponse struct {
+	TotalRecords int                     `json:"totalRecords"`
+	Accounts     []PayoutAccountResponse `json:"accounts"`
 }

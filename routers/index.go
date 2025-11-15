@@ -147,4 +147,7 @@ func providerRoutes(route *gin.Engine) {
 	v1.GET("rates/:token/:fiat", providerCtrl.GetMarketRate)
 	v1.GET("stats", providerCtrl.Stats)
 	v1.GET("node-info", providerCtrl.NodeInfo)
+	v1.POST("payout-accounts", providerCtrl.CreatePayoutAccount)
+	v1.GET("payout-accounts", providerCtrl.ListPayoutAccounts)
+	v1.DELETE("payout-accounts/:id", providerCtrl.DeletePayoutAccount)
 }
