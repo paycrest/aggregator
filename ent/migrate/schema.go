@@ -518,6 +518,13 @@ var (
 				OnDelete:   schema.Cascade,
 			},
 		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "providerpayoutaccount_institution_account_identifier_provider_profile_provider_payout_accounts",
+				Unique:  true,
+				Columns: []*schema.Column{ProviderPayoutAccountsColumns[1], ProviderPayoutAccountsColumns[2], ProviderPayoutAccountsColumns[6]},
+			},
+		},
 	}
 	// ProviderProfilesColumns holds the columns for the "provider_profiles" table.
 	ProviderProfilesColumns = []*schema.Column{

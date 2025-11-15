@@ -7,6 +7,7 @@ import (
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
 )
 
@@ -45,5 +46,14 @@ func (ProviderPayoutAccount) Edges() []ent.Edge {
 			Unique().
 			Required().
 			Annotations(entsql.OnDelete(entsql.Cascade)),
+	}
+}
+
+// Indexes of the ProviderPayoutAccount (enforces uniqueness per AC #2).
+func (ProviderPayoutAccount) Indexes() []ent.Index {
+	return []ent.Index{
+		index.Fields("institution", "account_identifier").
+			Edges("provider").
+			Unique(),
 	}
 }

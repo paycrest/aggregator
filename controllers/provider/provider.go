@@ -1433,7 +1433,6 @@ func (ctrl *ProviderController) CreatePayoutAccount(ctx *gin.Context) {
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":             fmt.Sprintf("%v", err),
-			"AccountIdentifier": payload.AccountIdentifier,
 			"Institution":       payload.Institution,
 			"ProviderID":        provider.ID,
 		}).Errorf("Failed to check for existing payout account: %v", err)
