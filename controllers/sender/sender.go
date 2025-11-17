@@ -596,6 +596,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			SenderFee:      senderFee,
 			TransactionFee: token.Edges.Network.Fee,
 			Reference:      paymentOrder.Reference,
+			OrderType:      string(orderType),
 		})
 }
 

@@ -454,6 +454,7 @@ type ReceiveAddressResponse struct {
 	SenderFee      decimal.Decimal `json:"senderFee"`
 	TransactionFee decimal.Decimal `json:"transactionFee"`
 	Reference      string          `json:"reference"`
+	OrderType      string          `json:"orderType"`
 }
 
 // PaymentOrderResponse is the response type for a payment order
