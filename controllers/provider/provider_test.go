@@ -165,9 +165,7 @@ func TestProvider(t *testing.T) {
 
 	// Create a new instance of the SenderController with the mock service
 	ctrl := NewProviderController()
-	router.GET("/orders", ctrl.GetLockPaymentOrders)
-	router.GET("/orders/search", ctrl.SearchLockPaymentOrders)
-	router.GET("/orders/export", ctrl.ExportLockPaymentOrdersCSV)
+	router.GET("/orders", ctrl.GetLockPaymentOrders)  // Now handles search and export
 	router.GET("/stats", ctrl.Stats)
 	router.GET("/node-info", ctrl.NodeInfo)
 	router.GET("/orders/:id", ctrl.GetLockPaymentOrderByID)
@@ -185,6 +183,7 @@ func TestProvider(t *testing.T) {
 			// Test default params
 			var payload = map[string]interface{}{
 				"currency":  "NGN",
+
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -227,6 +226,7 @@ func TestProvider(t *testing.T) {
 			assert.NoError(t, err)
 
 			var payload = map[string]interface{}{
+
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -282,6 +282,7 @@ func TestProvider(t *testing.T) {
 			assert.NoError(t, err)
 
 			var payload = map[string]interface{}{
+
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -329,6 +330,7 @@ func TestProvider(t *testing.T) {
 			assert.NoError(t, err)
 
 			var payload = map[string]interface{}{
+
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -364,6 +366,7 @@ func TestProvider(t *testing.T) {
 			var payload = map[string]interface{}{
 				"status":    "pending",
 				"currency":  "NGN",
+
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -404,6 +407,7 @@ func TestProvider(t *testing.T) {
 				"page":      strconv.Itoa(page),
 				"pageSize":  strconv.Itoa(pageSize),
 				"currency":  "NGN",
+
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -442,6 +446,7 @@ func TestProvider(t *testing.T) {
 			var payload = map[string]interface{}{
 				"ordering":  "desc",
 				"currency":  "NGN",
+
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -533,6 +538,7 @@ func TestProvider(t *testing.T) {
 			// Test default params
 			var payload = map[string]interface{}{
 				"currency":  "NGN",
+
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -576,6 +582,7 @@ func TestProvider(t *testing.T) {
 			// Test default params
 			var payload = map[string]interface{}{
 				"currency":  "NGN",
+
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -624,6 +631,7 @@ func TestProvider(t *testing.T) {
 			// Use the provider's assigned currency (created in setup)
 			var payload = map[string]interface{}{
 				"currency":  "NGN",
+
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -653,6 +661,7 @@ func TestProvider(t *testing.T) {
 			// Use an invalid currency code, e.g., "XYZ"
 			var payload = map[string]interface{}{
 				"currency":  "NGN",
+
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -684,6 +693,7 @@ func TestProvider(t *testing.T) {
 			assert.NoError(t, err)
 			var payload = map[string]interface{}{
 				"currency":  "NGN",
+
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -760,6 +770,7 @@ func TestProvider(t *testing.T) {
 
 			// Test default params
 			var payload = map[string]interface{}{
+
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -795,6 +806,7 @@ func TestProvider(t *testing.T) {
 
 			// Test default params
 			var payload = map[string]interface{}{
+
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -825,6 +837,7 @@ func TestProvider(t *testing.T) {
 
 			// Test default params
 			var payload = map[string]interface{}{
+
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -850,6 +863,7 @@ func TestProvider(t *testing.T) {
 
 			// Test default params
 			var payload = map[string]interface{}{
+
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -875,6 +889,7 @@ func TestProvider(t *testing.T) {
 
 			// Test default params
 			var payload = map[string]interface{}{
+
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -912,7 +927,8 @@ func TestProvider(t *testing.T) {
 
 				// Test default params
 				var payload = map[string]interface{}{
-					"timestamp": time.Now().Unix(),
+
+				"timestamp": time.Now().Unix(),
 				}
 
 				headers := map[string]string{
@@ -935,7 +951,8 @@ func TestProvider(t *testing.T) {
 
 				// Test default params
 				var payload = map[string]interface{}{
-					"timestamp": time.Now().Unix(),
+
+				"timestamp": time.Now().Unix(),
 				}
 
 				headers := map[string]string{
@@ -958,7 +975,8 @@ func TestProvider(t *testing.T) {
 
 				// Test default params
 				var payload = map[string]interface{}{
-					"timestamp": time.Now().Unix(),
+
+				"timestamp": time.Now().Unix(),
 				}
 				signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
 
@@ -1012,7 +1030,8 @@ func TestProvider(t *testing.T) {
 
 				// Test default params
 				var payload = map[string]interface{}{
-					"timestamp": time.Now().Unix(),
+
+				"timestamp": time.Now().Unix(),
 				}
 
 				signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
@@ -1067,7 +1086,8 @@ func TestProvider(t *testing.T) {
 
 				// Test default params
 				var payload = map[string]interface{}{
-					"timestamp": time.Now().Unix(),
+
+				"timestamp": time.Now().Unix(),
 				}
 
 				signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
@@ -1113,6 +1133,7 @@ func TestProvider(t *testing.T) {
 
 			// Test default params
 			var payload = map[string]interface{}{
+
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -1146,7 +1167,8 @@ func TestProvider(t *testing.T) {
 
 				// Test default params
 				var payload = map[string]interface{}{
-					"timestamp": time.Now().Unix(),
+
+				"timestamp": time.Now().Unix(),
 				}
 
 				headers := map[string]string{
@@ -1169,7 +1191,8 @@ func TestProvider(t *testing.T) {
 
 				// Test default params
 				var payload = map[string]interface{}{
-					"timestamp": time.Now().Unix(),
+
+				"timestamp": time.Now().Unix(),
 				}
 
 				headers := map[string]string{
@@ -1192,7 +1215,8 @@ func TestProvider(t *testing.T) {
 
 				// Test default params
 				var payload = map[string]interface{}{
-					"timestamp": time.Now().Unix(),
+
+				"timestamp": time.Now().Unix(),
 				}
 				signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
 
@@ -1246,7 +1270,8 @@ func TestProvider(t *testing.T) {
 
 				// Test default params
 				var payload = map[string]interface{}{
-					"timestamp": time.Now().Unix(),
+
+				"timestamp": time.Now().Unix(),
 				}
 
 				signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
@@ -1301,7 +1326,8 @@ func TestProvider(t *testing.T) {
 
 				// Test default params
 				var payload = map[string]interface{}{
-					"timestamp": time.Now().Unix(),
+
+				"timestamp": time.Now().Unix(),
 				}
 
 				signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
@@ -1334,7 +1360,8 @@ func TestProvider(t *testing.T) {
 
 				// Test default params
 				var payload = map[string]interface{}{
-					"timestamp": time.Now().Unix(),
+
+				"timestamp": time.Now().Unix(),
 				}
 
 				signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
@@ -1380,6 +1407,7 @@ func TestProvider(t *testing.T) {
 
 			// Test default params
 			var payload = map[string]interface{}{
+
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -1410,7 +1438,8 @@ func TestProvider(t *testing.T) {
 		t.Run("Invalid Request", func(t *testing.T) {
 			t.Run("Invalid HMAC", func(t *testing.T) {
 				var payload = map[string]interface{}{
-					"timestamp": time.Now().Unix(),
+
+				"timestamp": time.Now().Unix(),
 				}
 
 				headers := map[string]string{
@@ -1429,7 +1458,8 @@ func TestProvider(t *testing.T) {
 
 			t.Run("Invalid API key or token", func(t *testing.T) {
 				var payload = map[string]interface{}{
-					"timestamp": time.Now().Unix(),
+
+				"timestamp": time.Now().Unix(),
 				}
 
 				headers := map[string]string{
@@ -1448,7 +1478,8 @@ func TestProvider(t *testing.T) {
 
 			t.Run("No Cancel Reason in cancel", func(t *testing.T) {
 				var payload = map[string]interface{}{
-					"timestamp": time.Now().Unix(),
+
+				"timestamp": time.Now().Unix(),
 				}
 				signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
 
@@ -1468,7 +1499,8 @@ func TestProvider(t *testing.T) {
 
 			t.Run("Invalid Order ID", func(t *testing.T) {
 				var payload = map[string]interface{}{
-					"timestamp": time.Now().Unix(),
+
+				"timestamp": time.Now().Unix(),
 					"reason":    "invalid",
 				}
 
@@ -1520,7 +1552,8 @@ func TestProvider(t *testing.T) {
 				}
 
 				var payload = map[string]interface{}{
-					"timestamp": time.Now().Unix(),
+
+				"timestamp": time.Now().Unix(),
 					"reason":    "invalid",
 				}
 
@@ -1587,6 +1620,7 @@ func TestProvider(t *testing.T) {
 			}
 
 			var payload = map[string]interface{}{
+
 				"timestamp": time.Now().Unix(),
 				"reason":    "invalid",
 			}
@@ -1642,6 +1676,7 @@ func TestProvider(t *testing.T) {
 			}
 
 			var payload = map[string]interface{}{
+
 				"timestamp": time.Now().Unix(),
 				"reason":    "invalid",
 			}
@@ -1671,7 +1706,8 @@ func TestProvider(t *testing.T) {
 			t.Run("Invalid HMAC", func(t *testing.T) {
 				// Test default params
 				var payload = map[string]interface{}{
-					"timestamp": time.Now().Unix(),
+
+				"timestamp": time.Now().Unix(),
 				}
 
 				headers := map[string]string{
@@ -1693,7 +1729,8 @@ func TestProvider(t *testing.T) {
 			t.Run("Invalid API key or token", func(t *testing.T) {
 				// Test default params
 				var payload = map[string]interface{}{
-					"timestamp": time.Now().Unix(),
+
+				"timestamp": time.Now().Unix(),
 				}
 
 				headers := map[string]string{
@@ -1716,7 +1753,8 @@ func TestProvider(t *testing.T) {
 
 				// Test default params
 				var payload = map[string]interface{}{
-					"timestamp": time.Now().Unix(),
+
+				"timestamp": time.Now().Unix(),
 				}
 				signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
 
@@ -1740,7 +1778,8 @@ func TestProvider(t *testing.T) {
 
 				// Test default params
 				var payload = map[string]interface{}{
-					"timestamp": time.Now().Unix(),
+
+				"timestamp": time.Now().Unix(),
 					"txId":      "0x1232",
 					"psp":       "psp-name",
 				}
@@ -1797,7 +1836,8 @@ func TestProvider(t *testing.T) {
 
 				// Test default params
 				var payload = map[string]interface{}{
-					"timestamp": time.Now().Unix(),
+
+				"timestamp": time.Now().Unix(),
 					"txId":      "0x1232",
 					"psp":       "psp-name",
 				}
@@ -1882,7 +1922,7 @@ func TestProvider(t *testing.T) {
 		_, _, cleanup := setupIsolatedTest(t)
 		defer cleanup()
 
-		t.Run("should return error when search query is empty", func(t *testing.T) {
+		t.Run("should return error when neither search nor currency is provided", func(t *testing.T) {
 			var payload = map[string]interface{}{
 				"timestamp": time.Now().Unix(),
 			}
@@ -1894,14 +1934,14 @@ func TestProvider(t *testing.T) {
 				"Client-Type":   "backend",
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders/search?timestamp=%v", payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?timestamp=%v", payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusBadRequest, res.Code)
 
 			var response types.Response
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
-			assert.Equal(t, "Search query is required", response.Message)
+			assert.Equal(t, "Currency is required", response.Message)
 		})
 
 		t.Run("should search by gateway ID", func(t *testing.T) {
@@ -1915,6 +1955,7 @@ func TestProvider(t *testing.T) {
 
 			var payload = map[string]interface{}{
 				"search":    gatewayID,
+
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -1925,20 +1966,19 @@ func TestProvider(t *testing.T) {
 				"Client-Type":   "backend",
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders/search?search=%s&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?search=%s&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusOK, res.Code)
 
 			var response types.Response
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
-			assert.Equal(t, "Lock payment orders searched successfully", response.Message)
+			assert.Equal(t, "Orders successfully retrieved", response.Message)
 
 			data, ok := response.Data.(map[string]interface{})
 			assert.True(t, ok, "response.Data should be map[string]interface{}")
 			assert.NotNil(t, data, "response.Data should not be nil")
-			assert.Equal(t, gatewayID, data["search_query"])
-			assert.Equal(t, 1.0, data["total_records"])
+			assert.Equal(t, 1.0, data["total"])
 
 			orders, ok := data["orders"].([]interface{})
 			assert.True(t, ok, "orders should be []interface{}")
@@ -1961,6 +2001,7 @@ func TestProvider(t *testing.T) {
 
 			var payload = map[string]interface{}{
 				"search":    accountIdentifier,
+
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -1971,20 +2012,19 @@ func TestProvider(t *testing.T) {
 				"Client-Type":   "backend",
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders/search?search=%s&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?search=%s&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusOK, res.Code)
 
 			var response types.Response
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
-			assert.Equal(t, "Lock payment orders searched successfully", response.Message)
+			assert.Equal(t, "Orders successfully retrieved", response.Message)
 
 			data, ok := response.Data.(map[string]interface{})
 			assert.True(t, ok, "response.Data should be map[string]interface{}")
 			assert.NotNil(t, data, "response.Data should not be nil")
-			assert.Equal(t, accountIdentifier, data["search_query"])
-			assert.Equal(t, 1.0, data["total_records"])
+			assert.Equal(t, 1.0, data["total"])
 
 			orders, ok := data["orders"].([]interface{})
 			assert.True(t, ok, "orders should be []interface{}")
@@ -1998,6 +2038,7 @@ func TestProvider(t *testing.T) {
 		t.Run("should search by token symbol", func(t *testing.T) {
 			var payload = map[string]interface{}{
 				"search":    testCtx.token.Symbol,
+
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -2008,20 +2049,19 @@ func TestProvider(t *testing.T) {
 				"Client-Type":   "backend",
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders/search?search=%s&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?search=%s&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusOK, res.Code)
 
 			var response types.Response
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
-			assert.Equal(t, "Lock payment orders searched successfully", response.Message)
+			assert.Equal(t, "Orders successfully retrieved", response.Message)
 
 			data, ok := response.Data.(map[string]interface{})
 			assert.True(t, ok, "response.Data should be map[string]interface{}")
 			assert.NotNil(t, data, "response.Data should not be nil")
-			assert.Equal(t, testCtx.token.Symbol, data["search_query"])
-			assert.Greater(t, data["total_records"], 0.0)
+			assert.Greater(t, data["total"], 0.0)
 
 			orders, ok := data["orders"].([]interface{})
 			assert.True(t, ok, "orders should be []interface{}")
@@ -2037,6 +2077,7 @@ func TestProvider(t *testing.T) {
 		t.Run("should return empty results for non-matching search", func(t *testing.T) {
 			var payload = map[string]interface{}{
 				"search":    "nonexistent_search_term",
+
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -2047,20 +2088,19 @@ func TestProvider(t *testing.T) {
 				"Client-Type":   "backend",
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders/search?search=%s&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?search=%s&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusOK, res.Code)
 
 			var response types.Response
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
-			assert.Equal(t, "Lock payment orders searched successfully", response.Message)
+			assert.Equal(t, "Orders successfully retrieved", response.Message)
 
 			data, ok := response.Data.(map[string]interface{})
 			assert.True(t, ok, "response.Data should be map[string]interface{}")
 			assert.NotNil(t, data, "response.Data should not be nil")
-			assert.Equal(t, "nonexistent_search_term", data["search_query"])
-			assert.Equal(t, 0.0, data["total_records"])
+			assert.Equal(t, 0.0, data["total"])
 
 			// Handle empty orders array - could be nil or empty array
 			if ordersData := data["orders"]; ordersData != nil {
@@ -2103,6 +2143,7 @@ func TestProvider(t *testing.T) {
 			// Search using first provider's credentials - should not find second provider's order
 			var payload = map[string]interface{}{
 				"search":    uniqueGatewayID,
+
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -2113,7 +2154,7 @@ func TestProvider(t *testing.T) {
 				"Client-Type":   "backend",
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders/search?search=%s&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?search=%s&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusOK, res.Code)
 
@@ -2122,11 +2163,12 @@ func TestProvider(t *testing.T) {
 			assert.NoError(t, err)
 
 			data := response.Data.(map[string]interface{})
-			assert.Equal(t, 0.0, data["total_records"])
+			assert.Equal(t, 0.0, data["total"])
 
 			// Search using second provider's credentials - should find their order
 			payload2 := map[string]interface{}{
 				"search":    uniqueGatewayID,
+
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -2137,7 +2179,7 @@ func TestProvider(t *testing.T) {
 				"Client-Type":   "backend",
 			}
 
-			res2, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders/search?search=%s&timestamp=%v", payload2["search"], payload2["timestamp"]), nil, headers2, router)
+			res2, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?search=%s&timestamp=%v", payload2["search"], payload2["timestamp"]), nil, headers2, router)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusOK, res2.Code)
 
@@ -2146,7 +2188,7 @@ func TestProvider(t *testing.T) {
 			assert.NoError(t, err)
 
 			data2 := response2.Data.(map[string]interface{})
-			assert.Equal(t, 1.0, data2["total_records"])
+			assert.Equal(t, 1.0, data2["total"])
 
 			orders := data2["orders"].([]interface{})
 			order := orders[0].(map[string]interface{})
@@ -2164,6 +2206,7 @@ func TestProvider(t *testing.T) {
 			tomorrow := time.Now().Add(24 * time.Hour).Format("2006-01-02")
 
 			var payload = map[string]interface{}{
+				"export":    "csv",
 				"from":      today,
 				"to":        tomorrow,
 				"timestamp": time.Now().Unix(),
@@ -2176,7 +2219,7 @@ func TestProvider(t *testing.T) {
 				"Client-Type":   "backend",
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders/export?from=%s&to=%s&timestamp=%v", payload["from"], payload["to"], payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?export=csv&from=%s&to=%s&timestamp=%v", payload["from"], payload["to"], payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusOK, res.Code)
 
@@ -2205,6 +2248,7 @@ func TestProvider(t *testing.T) {
 				"from":      futureDate,
 				"to":        dayAfterFuture,
 				"limit":     "3",
+				"export": "csv",
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -2215,7 +2259,7 @@ func TestProvider(t *testing.T) {
 				"Client-Type":   "backend",
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders/export?from=%s&to=%s&limit=%s&timestamp=%v", payload["from"], payload["to"], payload["limit"], payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?export=csv&from=%s&to=%s&limit=%s&timestamp=%v", payload["from"], payload["to"], payload["limit"], payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 
 			// Should return bad request since no orders found in future date range
@@ -2236,6 +2280,7 @@ func TestProvider(t *testing.T) {
 				"from":      today,
 				"to":        tomorrow,
 				"limit":     "2", // Very small limit to ensure we exceed it
+				"export": "csv",
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -2246,7 +2291,7 @@ func TestProvider(t *testing.T) {
 				"Client-Type":   "backend",
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders/export?from=%s&to=%s&limit=%s&timestamp=%v", payload["from"], payload["to"], payload["limit"], payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?export=csv&from=%s&to=%s&limit=%s&timestamp=%v", payload["from"], payload["to"], payload["limit"], payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusBadRequest, res.Code)
 
@@ -2259,6 +2304,7 @@ func TestProvider(t *testing.T) {
 		t.Run("should return error for invalid date format", func(t *testing.T) {
 			var payload = map[string]interface{}{
 				"from":      "invalid-date",
+				"export": "csv",
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -2269,7 +2315,7 @@ func TestProvider(t *testing.T) {
 				"Client-Type":   "backend",
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders/export?from=%s&timestamp=%v", payload["from"], payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?export=csv&from=%s&timestamp=%v", payload["from"], payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusBadRequest, res.Code)
 
@@ -2287,6 +2333,7 @@ func TestProvider(t *testing.T) {
 			var payload = map[string]interface{}{
 				"from":      futureDate,
 				"to":        farFuture,
+				"export": "csv",
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -2297,7 +2344,7 @@ func TestProvider(t *testing.T) {
 				"Client-Type":   "backend",
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders/export?from=%s&to=%s&timestamp=%v", payload["from"], payload["to"], payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?export=csv&from=%s&to=%s&timestamp=%v", payload["from"], payload["to"], payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusBadRequest, res.Code)
 
@@ -2309,6 +2356,7 @@ func TestProvider(t *testing.T) {
 
 		t.Run("should export all orders when no date range specified", func(t *testing.T) {
 			var payload = map[string]interface{}{
+				"export": "csv",
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -2319,7 +2367,7 @@ func TestProvider(t *testing.T) {
 				"Client-Type":   "backend",
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders/export?timestamp=%v", payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?export=csv&timestamp=%v", payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusOK, res.Code)
 
@@ -2358,6 +2406,7 @@ func TestProvider(t *testing.T) {
 			var payload = map[string]interface{}{
 				"from":      today,
 				"to":        tomorrow,
+				"export": "csv",
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -2368,7 +2417,7 @@ func TestProvider(t *testing.T) {
 				"Client-Type":   "backend",
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders/export?from=%s&to=%s&timestamp=%v", payload["from"], payload["to"], payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?export=csv&from=%s&to=%s&timestamp=%v", payload["from"], payload["to"], payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 
 			// Should get no orders found error since second provider has no orders
@@ -2398,6 +2447,7 @@ func TestProvider(t *testing.T) {
 			var payload = map[string]interface{}{
 				"from":      today,
 				"to":        tomorrow,
+				"export": "csv",
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -2408,7 +2458,7 @@ func TestProvider(t *testing.T) {
 				"Client-Type":   "backend",
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders/export?from=%s&to=%s&timestamp=%v", today, tomorrow, payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?export=csv&from=%s&to=%s&timestamp=%v", today, tomorrow, payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 
 			if res.Code != http.StatusOK {
