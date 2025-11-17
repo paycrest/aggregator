@@ -10,12 +10,12 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
-	"github.com/paycrest/aggregator/ent/providerpayoutaccount"
+	"github.com/paycrest/aggregator/ent/providerbankaccount"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 )
 
-// ProviderPayoutAccount is the model entity for the ProviderPayoutAccount schema.
-type ProviderPayoutAccount struct {
+// ProviderBankAccount is the model entity for the ProviderBankAccount schema.
+type ProviderBankAccount struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
@@ -30,14 +30,14 @@ type ProviderPayoutAccount struct {
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
-	// The values are being populated by the ProviderPayoutAccountQuery when eager-loading is set.
-	Edges                                     ProviderPayoutAccountEdges `json:"edges"`
-	provider_profile_provider_payout_accounts *string
-	selectValues                              sql.SelectValues
+	// The values are being populated by the ProviderBankAccountQuery when eager-loading is set.
+	Edges                                   ProviderBankAccountEdges `json:"edges"`
+	provider_profile_provider_bank_accounts *string
+	selectValues                            sql.SelectValues
 }
 
-// ProviderPayoutAccountEdges holds the relations/edges for other nodes in the graph.
-type ProviderPayoutAccountEdges struct {
+// ProviderBankAccountEdges holds the relations/edges for other nodes in the graph.
+type ProviderBankAccountEdges struct {
 	// Provider holds the value of the provider edge.
 	Provider *ProviderProfile `json:"provider,omitempty"`
 	// loadedTypes holds the information for reporting if a
@@ -47,7 +47,7 @@ type ProviderPayoutAccountEdges struct {
 
 // ProviderOrErr returns the Provider value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e ProviderPayoutAccountEdges) ProviderOrErr() (*ProviderProfile, error) {
+func (e ProviderBankAccountEdges) ProviderOrErr() (*ProviderProfile, error) {
 	if e.Provider != nil {
 		return e.Provider, nil
 	} else if e.loadedTypes[0] {
@@ -57,17 +57,17 @@ func (e ProviderPayoutAccountEdges) ProviderOrErr() (*ProviderProfile, error) {
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*ProviderPayoutAccount) scanValues(columns []string) ([]any, error) {
+func (*ProviderBankAccount) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case providerpayoutaccount.FieldInstitution, providerpayoutaccount.FieldAccountIdentifier, providerpayoutaccount.FieldAccountName:
+		case providerbankaccount.FieldInstitution, providerbankaccount.FieldAccountIdentifier, providerbankaccount.FieldAccountName:
 			values[i] = new(sql.NullString)
-		case providerpayoutaccount.FieldCreatedAt, providerpayoutaccount.FieldUpdatedAt:
+		case providerbankaccount.FieldCreatedAt, providerbankaccount.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
-		case providerpayoutaccount.FieldID:
+		case providerbankaccount.FieldID:
 			values[i] = new(uuid.UUID)
-		case providerpayoutaccount.ForeignKeys[0]: // provider_profile_provider_payout_accounts
+		case providerbankaccount.ForeignKeys[0]: // provider_profile_provider_bank_accounts
 			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -77,114 +77,114 @@ func (*ProviderPayoutAccount) scanValues(columns []string) ([]any, error) {
 }
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
-// to the ProviderPayoutAccount fields.
-func (ppa *ProviderPayoutAccount) assignValues(columns []string, values []any) error {
+// to the ProviderBankAccount fields.
+func (pba *ProviderBankAccount) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
 	for i := range columns {
 		switch columns[i] {
-		case providerpayoutaccount.FieldID:
+		case providerbankaccount.FieldID:
 			if value, ok := values[i].(*uuid.UUID); !ok {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
-				ppa.ID = *value
+				pba.ID = *value
 			}
-		case providerpayoutaccount.FieldInstitution:
+		case providerbankaccount.FieldInstitution:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field institution", values[i])
 			} else if value.Valid {
-				ppa.Institution = value.String
+				pba.Institution = value.String
 			}
-		case providerpayoutaccount.FieldAccountIdentifier:
+		case providerbankaccount.FieldAccountIdentifier:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field account_identifier", values[i])
 			} else if value.Valid {
-				ppa.AccountIdentifier = value.String
+				pba.AccountIdentifier = value.String
 			}
-		case providerpayoutaccount.FieldAccountName:
+		case providerbankaccount.FieldAccountName:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field account_name", values[i])
 			} else if value.Valid {
-				ppa.AccountName = value.String
+				pba.AccountName = value.String
 			}
-		case providerpayoutaccount.FieldCreatedAt:
+		case providerbankaccount.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
-				ppa.CreatedAt = value.Time
+				pba.CreatedAt = value.Time
 			}
-		case providerpayoutaccount.FieldUpdatedAt:
+		case providerbankaccount.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
-				ppa.UpdatedAt = value.Time
+				pba.UpdatedAt = value.Time
 			}
-		case providerpayoutaccount.ForeignKeys[0]:
+		case providerbankaccount.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field provider_profile_provider_payout_accounts", values[i])
+				return fmt.Errorf("unexpected type %T for field provider_profile_provider_bank_accounts", values[i])
 			} else if value.Valid {
-				ppa.provider_profile_provider_payout_accounts = new(string)
-				*ppa.provider_profile_provider_payout_accounts = value.String
+				pba.provider_profile_provider_bank_accounts = new(string)
+				*pba.provider_profile_provider_bank_accounts = value.String
 			}
 		default:
-			ppa.selectValues.Set(columns[i], values[i])
+			pba.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
-// Value returns the ent.Value that was dynamically selected and assigned to the ProviderPayoutAccount.
+// Value returns the ent.Value that was dynamically selected and assigned to the ProviderBankAccount.
 // This includes values selected through modifiers, order, etc.
-func (ppa *ProviderPayoutAccount) Value(name string) (ent.Value, error) {
-	return ppa.selectValues.Get(name)
+func (pba *ProviderBankAccount) Value(name string) (ent.Value, error) {
+	return pba.selectValues.Get(name)
 }
 
-// QueryProvider queries the "provider" edge of the ProviderPayoutAccount entity.
-func (ppa *ProviderPayoutAccount) QueryProvider() *ProviderProfileQuery {
-	return NewProviderPayoutAccountClient(ppa.config).QueryProvider(ppa)
+// QueryProvider queries the "provider" edge of the ProviderBankAccount entity.
+func (pba *ProviderBankAccount) QueryProvider() *ProviderProfileQuery {
+	return NewProviderBankAccountClient(pba.config).QueryProvider(pba)
 }
 
-// Update returns a builder for updating this ProviderPayoutAccount.
-// Note that you need to call ProviderPayoutAccount.Unwrap() before calling this method if this ProviderPayoutAccount
+// Update returns a builder for updating this ProviderBankAccount.
+// Note that you need to call ProviderBankAccount.Unwrap() before calling this method if this ProviderBankAccount
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (ppa *ProviderPayoutAccount) Update() *ProviderPayoutAccountUpdateOne {
-	return NewProviderPayoutAccountClient(ppa.config).UpdateOne(ppa)
+func (pba *ProviderBankAccount) Update() *ProviderBankAccountUpdateOne {
+	return NewProviderBankAccountClient(pba.config).UpdateOne(pba)
 }
 
-// Unwrap unwraps the ProviderPayoutAccount entity that was returned from a transaction after it was closed,
+// Unwrap unwraps the ProviderBankAccount entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (ppa *ProviderPayoutAccount) Unwrap() *ProviderPayoutAccount {
-	_tx, ok := ppa.config.driver.(*txDriver)
+func (pba *ProviderBankAccount) Unwrap() *ProviderBankAccount {
+	_tx, ok := pba.config.driver.(*txDriver)
 	if !ok {
-		panic("ent: ProviderPayoutAccount is not a transactional entity")
+		panic("ent: ProviderBankAccount is not a transactional entity")
 	}
-	ppa.config.driver = _tx.drv
-	return ppa
+	pba.config.driver = _tx.drv
+	return pba
 }
 
 // String implements the fmt.Stringer.
-func (ppa *ProviderPayoutAccount) String() string {
+func (pba *ProviderBankAccount) String() string {
 	var builder strings.Builder
-	builder.WriteString("ProviderPayoutAccount(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", ppa.ID))
+	builder.WriteString("ProviderBankAccount(")
+	builder.WriteString(fmt.Sprintf("id=%v, ", pba.ID))
 	builder.WriteString("institution=")
-	builder.WriteString(ppa.Institution)
+	builder.WriteString(pba.Institution)
 	builder.WriteString(", ")
 	builder.WriteString("account_identifier=")
-	builder.WriteString(ppa.AccountIdentifier)
+	builder.WriteString(pba.AccountIdentifier)
 	builder.WriteString(", ")
 	builder.WriteString("account_name=")
-	builder.WriteString(ppa.AccountName)
+	builder.WriteString(pba.AccountName)
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
-	builder.WriteString(ppa.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(pba.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
-	builder.WriteString(ppa.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(pba.UpdatedAt.Format(time.ANSIC))
 	builder.WriteByte(')')
 	return builder.String()
 }
 
-// ProviderPayoutAccounts is a parsable slice of ProviderPayoutAccount.
-type ProviderPayoutAccounts []*ProviderPayoutAccount
+// ProviderBankAccounts is a parsable slice of ProviderBankAccount.
+type ProviderBankAccounts []*ProviderBankAccount

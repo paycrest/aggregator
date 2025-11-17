@@ -501,21 +501,21 @@ func HasAssignedOrdersWith(preds ...predicate.LockPaymentOrder) predicate.Provid
 	})
 }
 
-// HasProviderPayoutAccounts applies the HasEdge predicate on the "provider_payout_accounts" edge.
-func HasProviderPayoutAccounts() predicate.ProviderProfile {
+// HasProviderBankAccounts applies the HasEdge predicate on the "provider_bank_accounts" edge.
+func HasProviderBankAccounts() predicate.ProviderProfile {
 	return predicate.ProviderProfile(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, ProviderPayoutAccountsTable, ProviderPayoutAccountsColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, ProviderBankAccountsTable, ProviderBankAccountsColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasProviderPayoutAccountsWith applies the HasEdge predicate on the "provider_payout_accounts" edge with a given conditions (other predicates).
-func HasProviderPayoutAccountsWith(preds ...predicate.ProviderPayoutAccount) predicate.ProviderProfile {
+// HasProviderBankAccountsWith applies the HasEdge predicate on the "provider_bank_accounts" edge with a given conditions (other predicates).
+func HasProviderBankAccountsWith(preds ...predicate.ProviderBankAccount) predicate.ProviderProfile {
 	return predicate.ProviderProfile(func(s *sql.Selector) {
-		step := newProviderPayoutAccountsStep()
+		step := newProviderBankAccountsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

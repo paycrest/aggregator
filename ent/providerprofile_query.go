@@ -16,9 +16,9 @@ import (
 	"github.com/paycrest/aggregator/ent/apikey"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/providerbankaccount"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
-	"github.com/paycrest/aggregator/ent/providerpayoutaccount"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -28,19 +28,19 @@ import (
 // ProviderProfileQuery is the builder for querying ProviderProfile entities.
 type ProviderProfileQuery struct {
 	config
-	ctx                        *QueryContext
-	order                      []providerprofile.OrderOption
-	inters                     []Interceptor
-	predicates                 []predicate.ProviderProfile
-	withUser                   *UserQuery
-	withAPIKey                 *APIKeyQuery
-	withProviderCurrencies     *ProviderCurrenciesQuery
-	withProvisionBuckets       *ProvisionBucketQuery
-	withOrderTokens            *ProviderOrderTokenQuery
-	withProviderRating         *ProviderRatingQuery
-	withAssignedOrders         *LockPaymentOrderQuery
-	withProviderPayoutAccounts *ProviderPayoutAccountQuery
-	withFKs                    bool
+	ctx                      *QueryContext
+	order                    []providerprofile.OrderOption
+	inters                   []Interceptor
+	predicates               []predicate.ProviderProfile
+	withUser                 *UserQuery
+	withAPIKey               *APIKeyQuery
+	withProviderCurrencies   *ProviderCurrenciesQuery
+	withProvisionBuckets     *ProvisionBucketQuery
+	withOrderTokens          *ProviderOrderTokenQuery
+	withProviderRating       *ProviderRatingQuery
+	withAssignedOrders       *LockPaymentOrderQuery
+	withProviderBankAccounts *ProviderBankAccountQuery
+	withFKs                  bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -231,9 +231,9 @@ func (ppq *ProviderProfileQuery) QueryAssignedOrders() *LockPaymentOrderQuery {
 	return query
 }
 
-// QueryProviderPayoutAccounts chains the current query on the "provider_payout_accounts" edge.
-func (ppq *ProviderProfileQuery) QueryProviderPayoutAccounts() *ProviderPayoutAccountQuery {
-	query := (&ProviderPayoutAccountClient{config: ppq.config}).Query()
+// QueryProviderBankAccounts chains the current query on the "provider_bank_accounts" edge.
+func (ppq *ProviderProfileQuery) QueryProviderBankAccounts() *ProviderBankAccountQuery {
+	query := (&ProviderBankAccountClient{config: ppq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := ppq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -244,8 +244,8 @@ func (ppq *ProviderProfileQuery) QueryProviderPayoutAccounts() *ProviderPayoutAc
 		}
 		step := sqlgraph.NewStep(
 			sqlgraph.From(providerprofile.Table, providerprofile.FieldID, selector),
-			sqlgraph.To(providerpayoutaccount.Table, providerpayoutaccount.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.ProviderPayoutAccountsTable, providerprofile.ProviderPayoutAccountsColumn),
+			sqlgraph.To(providerbankaccount.Table, providerbankaccount.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.ProviderBankAccountsTable, providerprofile.ProviderBankAccountsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(ppq.driver.Dialect(), step)
 		return fromU, nil
@@ -440,19 +440,19 @@ func (ppq *ProviderProfileQuery) Clone() *ProviderProfileQuery {
 		return nil
 	}
 	return &ProviderProfileQuery{
-		config:                     ppq.config,
-		ctx:                        ppq.ctx.Clone(),
-		order:                      append([]providerprofile.OrderOption{}, ppq.order...),
-		inters:                     append([]Interceptor{}, ppq.inters...),
-		predicates:                 append([]predicate.ProviderProfile{}, ppq.predicates...),
-		withUser:                   ppq.withUser.Clone(),
-		withAPIKey:                 ppq.withAPIKey.Clone(),
-		withProviderCurrencies:     ppq.withProviderCurrencies.Clone(),
-		withProvisionBuckets:       ppq.withProvisionBuckets.Clone(),
-		withOrderTokens:            ppq.withOrderTokens.Clone(),
-		withProviderRating:         ppq.withProviderRating.Clone(),
-		withAssignedOrders:         ppq.withAssignedOrders.Clone(),
-		withProviderPayoutAccounts: ppq.withProviderPayoutAccounts.Clone(),
+		config:                   ppq.config,
+		ctx:                      ppq.ctx.Clone(),
+		order:                    append([]providerprofile.OrderOption{}, ppq.order...),
+		inters:                   append([]Interceptor{}, ppq.inters...),
+		predicates:               append([]predicate.ProviderProfile{}, ppq.predicates...),
+		withUser:                 ppq.withUser.Clone(),
+		withAPIKey:               ppq.withAPIKey.Clone(),
+		withProviderCurrencies:   ppq.withProviderCurrencies.Clone(),
+		withProvisionBuckets:     ppq.withProvisionBuckets.Clone(),
+		withOrderTokens:          ppq.withOrderTokens.Clone(),
+		withProviderRating:       ppq.withProviderRating.Clone(),
+		withAssignedOrders:       ppq.withAssignedOrders.Clone(),
+		withProviderBankAccounts: ppq.withProviderBankAccounts.Clone(),
 		// clone intermediate query.
 		sql:  ppq.sql.Clone(),
 		path: ppq.path,
@@ -536,14 +536,14 @@ func (ppq *ProviderProfileQuery) WithAssignedOrders(opts ...func(*LockPaymentOrd
 	return ppq
 }
 
-// WithProviderPayoutAccounts tells the query-builder to eager-load the nodes that are connected to
-// the "provider_payout_accounts" edge. The optional arguments are used to configure the query builder of the edge.
-func (ppq *ProviderProfileQuery) WithProviderPayoutAccounts(opts ...func(*ProviderPayoutAccountQuery)) *ProviderProfileQuery {
-	query := (&ProviderPayoutAccountClient{config: ppq.config}).Query()
+// WithProviderBankAccounts tells the query-builder to eager-load the nodes that are connected to
+// the "provider_bank_accounts" edge. The optional arguments are used to configure the query builder of the edge.
+func (ppq *ProviderProfileQuery) WithProviderBankAccounts(opts ...func(*ProviderBankAccountQuery)) *ProviderProfileQuery {
+	query := (&ProviderBankAccountClient{config: ppq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	ppq.withProviderPayoutAccounts = query
+	ppq.withProviderBankAccounts = query
 	return ppq
 }
 
@@ -634,7 +634,7 @@ func (ppq *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 			ppq.withOrderTokens != nil,
 			ppq.withProviderRating != nil,
 			ppq.withAssignedOrders != nil,
-			ppq.withProviderPayoutAccounts != nil,
+			ppq.withProviderBankAccounts != nil,
 		}
 	)
 	if ppq.withUser != nil {
@@ -713,11 +713,11 @@ func (ppq *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 			return nil, err
 		}
 	}
-	if query := ppq.withProviderPayoutAccounts; query != nil {
-		if err := ppq.loadProviderPayoutAccounts(ctx, query, nodes,
-			func(n *ProviderProfile) { n.Edges.ProviderPayoutAccounts = []*ProviderPayoutAccount{} },
-			func(n *ProviderProfile, e *ProviderPayoutAccount) {
-				n.Edges.ProviderPayoutAccounts = append(n.Edges.ProviderPayoutAccounts, e)
+	if query := ppq.withProviderBankAccounts; query != nil {
+		if err := ppq.loadProviderBankAccounts(ctx, query, nodes,
+			func(n *ProviderProfile) { n.Edges.ProviderBankAccounts = []*ProviderBankAccount{} },
+			func(n *ProviderProfile, e *ProviderBankAccount) {
+				n.Edges.ProviderBankAccounts = append(n.Edges.ProviderBankAccounts, e)
 			}); err != nil {
 			return nil, err
 		}
@@ -967,7 +967,7 @@ func (ppq *ProviderProfileQuery) loadAssignedOrders(ctx context.Context, query *
 	}
 	return nil
 }
-func (ppq *ProviderProfileQuery) loadProviderPayoutAccounts(ctx context.Context, query *ProviderPayoutAccountQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *ProviderPayoutAccount)) error {
+func (ppq *ProviderProfileQuery) loadProviderBankAccounts(ctx context.Context, query *ProviderBankAccountQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *ProviderBankAccount)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[string]*ProviderProfile)
 	for i := range nodes {
@@ -978,21 +978,21 @@ func (ppq *ProviderProfileQuery) loadProviderPayoutAccounts(ctx context.Context,
 		}
 	}
 	query.withFKs = true
-	query.Where(predicate.ProviderPayoutAccount(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(providerprofile.ProviderPayoutAccountsColumn), fks...))
+	query.Where(predicate.ProviderBankAccount(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(providerprofile.ProviderBankAccountsColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.provider_profile_provider_payout_accounts
+		fk := n.provider_profile_provider_bank_accounts
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "provider_profile_provider_payout_accounts" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "provider_profile_provider_bank_accounts" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "provider_profile_provider_payout_accounts" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "provider_profile_provider_bank_accounts" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

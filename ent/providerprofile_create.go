@@ -15,9 +15,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/apikey"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
+	"github.com/paycrest/aggregator/ent/providerbankaccount"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
-	"github.com/paycrest/aggregator/ent/providerpayoutaccount"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -253,19 +253,19 @@ func (ppc *ProviderProfileCreate) AddAssignedOrders(l ...*LockPaymentOrder) *Pro
 	return ppc.AddAssignedOrderIDs(ids...)
 }
 
-// AddProviderPayoutAccountIDs adds the "provider_payout_accounts" edge to the ProviderPayoutAccount entity by IDs.
-func (ppc *ProviderProfileCreate) AddProviderPayoutAccountIDs(ids ...uuid.UUID) *ProviderProfileCreate {
-	ppc.mutation.AddProviderPayoutAccountIDs(ids...)
+// AddProviderBankAccountIDs adds the "provider_bank_accounts" edge to the ProviderBankAccount entity by IDs.
+func (ppc *ProviderProfileCreate) AddProviderBankAccountIDs(ids ...uuid.UUID) *ProviderProfileCreate {
+	ppc.mutation.AddProviderBankAccountIDs(ids...)
 	return ppc
 }
 
-// AddProviderPayoutAccounts adds the "provider_payout_accounts" edges to the ProviderPayoutAccount entity.
-func (ppc *ProviderProfileCreate) AddProviderPayoutAccounts(p ...*ProviderPayoutAccount) *ProviderProfileCreate {
+// AddProviderBankAccounts adds the "provider_bank_accounts" edges to the ProviderBankAccount entity.
+func (ppc *ProviderProfileCreate) AddProviderBankAccounts(p ...*ProviderBankAccount) *ProviderProfileCreate {
 	ids := make([]uuid.UUID, len(p))
 	for i := range p {
 		ids[i] = p[i].ID
 	}
-	return ppc.AddProviderPayoutAccountIDs(ids...)
+	return ppc.AddProviderBankAccountIDs(ids...)
 }
 
 // Mutation returns the ProviderProfileMutation object of the builder.
@@ -541,15 +541,15 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ppc.mutation.ProviderPayoutAccountsIDs(); len(nodes) > 0 {
+	if nodes := ppc.mutation.ProviderBankAccountsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   providerprofile.ProviderPayoutAccountsTable,
-			Columns: []string{providerprofile.ProviderPayoutAccountsColumn},
+			Table:   providerprofile.ProviderBankAccountsTable,
+			Columns: []string{providerprofile.ProviderBankAccountsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerpayoutaccount.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(providerbankaccount.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

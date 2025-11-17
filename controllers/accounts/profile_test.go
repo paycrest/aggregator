@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/routers/middleware"
@@ -19,6 +20,7 @@ import (
 	"github.com/paycrest/aggregator/ent/enttest"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/migrate"
+	"github.com/paycrest/aggregator/ent/providerbankaccount"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -148,6 +150,24 @@ func TestProfile(t *testing.T) {
 		middleware.JWTMiddleware,
 		middleware.OnlyProviderMiddleware,
 		ctrl.UpdateProviderProfile,
+	)
+	router.POST(
+		"/settings/provider/bank-accounts",
+		middleware.JWTMiddleware,
+		middleware.OnlyProviderMiddleware,
+		ctrl.CreateBankAccount,
+	)
+	router.GET(
+		"/settings/provider/bank-accounts",
+		middleware.JWTMiddleware,
+		middleware.OnlyProviderMiddleware,
+		ctrl.ListBankAccounts,
+	)
+	router.DELETE(
+		"/settings/provider/bank-accounts/:id",
+		middleware.JWTMiddleware,
+		middleware.OnlyProviderMiddleware,
+		ctrl.DeleteBankAccount,
 	)
 
 	t.Run("UpdateSenderProfile", func(t *testing.T) {
@@ -851,6 +871,399 @@ func TestProfile(t *testing.T) {
 			// Expect two tokens (one for KES and one for USD)
 			assert.Len(t, respAll.Data.Tokens, 2)
 
+		})
+	})
+	t.Run("CreateBankAccount", func(t *testing.T) {
+		ctx := context.Background()
+
+		institution, err := db.Client.Institution.
+			Create().
+			SetCode("ZENITH").
+			SetName("Zenith Bank").
+			SetType("bank").
+			Save(ctx)
+		assert.NoError(t, err)
+
+		accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+		headers := map[string]string{
+			"Authorization": "Bearer " + accessToken,
+		}
+
+		t.Run("successfully creates a bank account", func(t *testing.T) {
+			payload := types.CreateBankAccountPayload{
+				AccountIdentifier: "1234567890",
+				AccountName:       "John Doe",
+				Institution:       institution.Code,
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/settings/provider/bank-accounts", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusCreated, res.Code)
+
+			var response struct {
+				Data    types.BankAccountResponse `json:"data"`
+				Message string                    `json:"message"`
+				Status  string                    `json:"status"`
+			}
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Bank account created successfully", response.Message)
+			assert.Equal(t, "success", response.Status)
+			assert.Equal(t, payload.AccountIdentifier, response.Data.AccountIdentifier)
+			assert.Equal(t, payload.AccountName, response.Data.AccountName)
+			assert.Equal(t, payload.Institution, response.Data.Institution)
+			assert.NotEqual(t, uuid.Nil, response.Data.ID)
+		})
+
+		t.Run("successfully creates a bank account without account name", func(t *testing.T) {
+			payload := types.CreateBankAccountPayload{
+				AccountIdentifier: "0987654321",
+				Institution:       institution.Code,
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/settings/provider/bank-accounts", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusCreated, res.Code)
+
+			var response struct {
+				Data    types.BankAccountResponse `json:"data"`
+				Message string                    `json:"message"`
+				Status  string                    `json:"status"`
+			}
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "success", response.Status)
+			assert.Equal(t, payload.AccountIdentifier, response.Data.AccountIdentifier)
+			assert.Empty(t, response.Data.AccountName)
+		})
+
+		t.Run("fails with invalid payload", func(t *testing.T) {
+			payload := map[string]interface{}{
+				"account_identifier": "",
+				"institution":        "",
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/settings/provider/bank-accounts", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Equal(t, "Failed to validate payload", response.Message)
+		})
+
+		t.Run("fails with unsupported institution", func(t *testing.T) {
+			payload := types.CreateBankAccountPayload{
+				AccountIdentifier: "1111111111",
+				Institution:       "UNSUPPORTED_BANK",
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/settings/provider/bank-accounts", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Contains(t, response.Message, "is not supported")
+		})
+
+		t.Run("fails when duplicate account exists", func(t *testing.T) {
+			payload := types.CreateBankAccountPayload{
+				AccountIdentifier: "2222222222",
+				Institution:       institution.Code,
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/settings/provider/bank-accounts", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusCreated, res.Code)
+
+			res, err = test.PerformRequest(t, "POST", "/settings/provider/bank-accounts", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusConflict, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Contains(t, response.Message, "already exists")
+		})
+
+		t.Run("fails without authentication", func(t *testing.T) {
+			payload := types.CreateBankAccountPayload{
+				AccountIdentifier: "3333333333",
+				Institution:       institution.Code,
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/settings/provider/bank-accounts", payload, nil, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusUnauthorized, res.Code)
+		})
+
+		t.Run("allows same account at different institutions", func(t *testing.T) {
+			anotherInstitution, err := db.Client.Institution.
+				Create().
+				SetCode("GTB").
+				SetName("Guaranty Trust Bank").
+				SetType("bank").
+				Save(ctx)
+			assert.NoError(t, err)
+
+			payload := types.CreateBankAccountPayload{
+				AccountIdentifier: "1234567890", 
+				Institution:       anotherInstitution.Code,
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/settings/provider/bank-accounts", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusCreated, res.Code)
+
+			var response struct {
+				Data    types.BankAccountResponse `json:"data"`
+				Message string                    `json:"message"`
+				Status  string                    `json:"status"`
+			}
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "success", response.Status)
+			assert.Equal(t, anotherInstitution.Code, response.Data.Institution)
+		})
+	})
+
+	t.Run("ListBankAccounts", func(t *testing.T) {
+		ctx := context.Background()
+
+		institution1, err := db.Client.Institution.
+			Create().
+			SetCode("WEMA").
+			SetName("Wema Bank").
+			SetType("bank").
+			Save(ctx)
+		assert.NoError(t, err)
+
+		institution2, err := db.Client.Institution.
+			Create().
+			SetCode("FIRST_BANK").
+			SetName("First Bank").
+			SetType("bank").
+			Save(ctx)
+		assert.NoError(t, err)
+
+		// Create test bank accounts
+		_, err = db.Client.ProviderBankAccount.
+			Create().
+			SetAccountIdentifier("4444444444").
+			SetAccountName("Account One").
+			SetInstitution(institution1.Code).
+			SetProviderID(testCtx.providerProfile.ID).
+			Save(ctx)
+		assert.NoError(t, err)
+
+		_, err = db.Client.ProviderBankAccount.
+			Create().
+			SetAccountIdentifier("5555555555").
+			SetAccountName("Account Two").
+			SetInstitution(institution2.Code).
+			SetProviderID(testCtx.providerProfile.ID).
+			Save(ctx)
+		assert.NoError(t, err)
+
+		accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+		headers := map[string]string{
+			"Authorization": "Bearer " + accessToken,
+		}
+
+		t.Run("successfully lists all bank accounts", func(t *testing.T) {
+			res, err := test.PerformRequest(t, "GET", "/settings/provider/bank-accounts", nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response struct {
+				Data    types.BankAccountListResponse `json:"data"`
+				Message string                        `json:"message"`
+				Status  string                        `json:"status"`
+			}
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "success", response.Status)
+			assert.Equal(t, "Bank accounts retrieved successfully", response.Message)
+			assert.GreaterOrEqual(t, response.Data.TotalRecords, 2)
+			assert.GreaterOrEqual(t, len(response.Data.Accounts), 2)
+		})
+
+		t.Run("successfully filters by institution", func(t *testing.T) {
+			res, err := test.PerformRequest(t, "GET", "/settings/provider/bank-accounts?institution="+institution1.Code, nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response struct {
+				Data    types.BankAccountListResponse `json:"data"`
+				Message string                        `json:"message"`
+				Status  string                        `json:"status"`
+			}
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "success", response.Status)
+
+			// Verify all returned accounts are from the filtered institution
+			for _, account := range response.Data.Accounts {
+				assert.Equal(t, institution1.Code, account.Institution)
+			}
+		})
+
+		t.Run("returns empty list when no accounts match filter", func(t *testing.T) {
+			res, err := test.PerformRequest(t, "GET", "/settings/provider/bank-accounts?institution=NONEXISTENT", nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response struct {
+				Data    types.BankAccountListResponse `json:"data"`
+				Message string                        `json:"message"`
+				Status  string                        `json:"status"`
+			}
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "success", response.Status)
+			assert.Equal(t, 0, response.Data.TotalRecords)
+			assert.Empty(t, response.Data.Accounts)
+		})
+
+		t.Run("fails without authentication", func(t *testing.T) {
+			res, err := test.PerformRequest(t, "GET", "/settings/provider/bank-accounts", nil, nil, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusUnauthorized, res.Code)
+		})
+	})
+
+	t.Run("DeleteBankAccount", func(t *testing.T) {
+		ctx := context.Background()
+
+		// Create a test institution
+		institution, err := db.Client.Institution.
+			Create().
+			SetCode("ACCESS").
+			SetName("Access Bank").
+			SetType("bank").
+			Save(ctx)
+		assert.NoError(t, err)
+
+		accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+		headers := map[string]string{
+			"Authorization": "Bearer " + accessToken,
+		}
+
+		t.Run("successfully deletes a bank account", func(t *testing.T) {
+			// Create an account to delete
+			account, err := db.Client.ProviderBankAccount.
+				Create().
+				SetAccountIdentifier("6666666666").
+				SetAccountName("Account to Delete").
+				SetInstitution(institution.Code).
+				SetProviderID(testCtx.providerProfile.ID).
+				Save(ctx)
+			assert.NoError(t, err)
+
+			res, err := test.PerformRequest(t, "DELETE", "/settings/provider/bank-accounts/"+account.ID.String(), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "success", response.Status)
+			assert.Equal(t, "Bank account deleted successfully", response.Message)
+
+			// Verify the account was deleted
+			exists, err := db.Client.ProviderBankAccount.
+				Query().
+				Where(providerbankaccount.IDEQ(account.ID)).
+				Exist(ctx)
+			assert.NoError(t, err)
+			assert.False(t, exists)
+		})
+
+		t.Run("fails with invalid account ID format", func(t *testing.T) {
+			res, err := test.PerformRequest(t, "DELETE", "/settings/provider/bank-accounts/invalid-uuid", nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Equal(t, "Invalid account ID", response.Message)
+		})
+
+		t.Run("fails when account does not exist", func(t *testing.T) {
+			nonExistentID := uuid.New()
+			res, err := test.PerformRequest(t, "DELETE", "/settings/provider/bank-accounts/"+nonExistentID.String(), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusNotFound, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Equal(t, "Bank account not found", response.Message)
+		})
+
+		t.Run("fails when account belongs to different provider", func(t *testing.T) {
+			// Create another provider
+			otherUser, err := test.CreateTestUser(map[string]interface{}{
+				"scope": "provider",
+				"email": "otherprovider@test.com",
+			})
+			assert.NoError(t, err)
+
+			currency, err := db.Client.FiatCurrency.
+				Query().
+				Where(fiatcurrency.CodeEQ("KES")).
+				Only(ctx)
+			assert.NoError(t, err)
+
+			otherProvider, err := test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     otherUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			// Create an account for the other provider
+			otherAccount, err := db.Client.ProviderBankAccount.
+				Create().
+				SetAccountIdentifier("7777777777").
+				SetInstitution(institution.Code).
+				SetProviderID(otherProvider.ID).
+				Save(ctx)
+			assert.NoError(t, err)
+
+			// Try to delete the other provider's account
+			res, err := test.PerformRequest(t, "DELETE", "/settings/provider/bank-accounts/"+otherAccount.ID.String(), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusNotFound, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Equal(t, "Bank account not found", response.Message)
+
+			// Verify the account still exists
+			exists, err := db.Client.ProviderBankAccount.
+				Query().
+				Where(providerbankaccount.IDEQ(otherAccount.ID)).
+				Exist(ctx)
+			assert.NoError(t, err)
+			assert.True(t, exists)
+		})
+
+		t.Run("fails without authentication", func(t *testing.T) {
+			accountID := uuid.New()
+			res, err := test.PerformRequest(t, "DELETE", "/settings/provider/bank-accounts/"+accountID.String(), nil, nil, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusUnauthorized, res.Code)
 		})
 	})
 }

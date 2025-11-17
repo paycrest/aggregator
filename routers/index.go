@@ -101,7 +101,27 @@ func authRoutes(route *gin.Engine) {
 		middleware.OnlyProviderMiddleware,
 		profileCtrl.UpdateProviderProfile,
 	)
-
+	v1.POST(
+		"settings/provider/bank-accounts",
+		middleware.OnlyWebMiddleware,
+		middleware.JWTMiddleware,
+		middleware.OnlyProviderMiddleware,
+		profileCtrl.CreateBankAccount,
+	)
+	v1.GET(
+		"settings/provider/bank-accounts",
+		middleware.OnlyWebMiddleware,
+		middleware.JWTMiddleware,
+		middleware.OnlyProviderMiddleware,
+		profileCtrl.ListBankAccounts,
+	)
+	v1.DELETE(
+		"settings/provider/bank-accounts/:id",
+		middleware.OnlyWebMiddleware,
+		middleware.JWTMiddleware,
+		middleware.OnlyProviderMiddleware,
+		profileCtrl.DeleteBankAccount,
+	)
 	v1.GET(
 		"settings/sender",
 		middleware.OnlyWebMiddleware,
@@ -147,7 +167,4 @@ func providerRoutes(route *gin.Engine) {
 	v1.GET("rates/:token/:fiat", providerCtrl.GetMarketRate)
 	v1.GET("stats", providerCtrl.Stats)
 	v1.GET("node-info", providerCtrl.NodeInfo)
-	v1.POST("payout-accounts", providerCtrl.CreatePayoutAccount)
-	v1.GET("payout-accounts", providerCtrl.ListPayoutAccounts)
-	v1.DELETE("payout-accounts/:id", providerCtrl.DeletePayoutAccount)
 }

@@ -29,9 +29,9 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
+	"github.com/paycrest/aggregator/ent/providerbankaccount"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
-	"github.com/paycrest/aggregator/ent/providerpayoutaccount"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -76,12 +76,12 @@ type Client struct {
 	PaymentOrderRecipient *PaymentOrderRecipientClient
 	// PaymentWebhook is the client for interacting with the PaymentWebhook builders.
 	PaymentWebhook *PaymentWebhookClient
+	// ProviderBankAccount is the client for interacting with the ProviderBankAccount builders.
+	ProviderBankAccount *ProviderBankAccountClient
 	// ProviderCurrencies is the client for interacting with the ProviderCurrencies builders.
 	ProviderCurrencies *ProviderCurrenciesClient
 	// ProviderOrderToken is the client for interacting with the ProviderOrderToken builders.
 	ProviderOrderToken *ProviderOrderTokenClient
-	// ProviderPayoutAccount is the client for interacting with the ProviderPayoutAccount builders.
-	ProviderPayoutAccount *ProviderPayoutAccountClient
 	// ProviderProfile is the client for interacting with the ProviderProfile builders.
 	ProviderProfile *ProviderProfileClient
 	// ProviderRating is the client for interacting with the ProviderRating builders.
@@ -128,9 +128,9 @@ func (c *Client) init() {
 	c.PaymentOrder = NewPaymentOrderClient(c.config)
 	c.PaymentOrderRecipient = NewPaymentOrderRecipientClient(c.config)
 	c.PaymentWebhook = NewPaymentWebhookClient(c.config)
+	c.ProviderBankAccount = NewProviderBankAccountClient(c.config)
 	c.ProviderCurrencies = NewProviderCurrenciesClient(c.config)
 	c.ProviderOrderToken = NewProviderOrderTokenClient(c.config)
-	c.ProviderPayoutAccount = NewProviderPayoutAccountClient(c.config)
 	c.ProviderProfile = NewProviderProfileClient(c.config)
 	c.ProviderRating = NewProviderRatingClient(c.config)
 	c.ProvisionBucket = NewProvisionBucketClient(c.config)
@@ -247,9 +247,9 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		PaymentOrder:                NewPaymentOrderClient(cfg),
 		PaymentOrderRecipient:       NewPaymentOrderRecipientClient(cfg),
 		PaymentWebhook:              NewPaymentWebhookClient(cfg),
+		ProviderBankAccount:         NewProviderBankAccountClient(cfg),
 		ProviderCurrencies:          NewProviderCurrenciesClient(cfg),
 		ProviderOrderToken:          NewProviderOrderTokenClient(cfg),
-		ProviderPayoutAccount:       NewProviderPayoutAccountClient(cfg),
 		ProviderProfile:             NewProviderProfileClient(cfg),
 		ProviderRating:              NewProviderRatingClient(cfg),
 		ProvisionBucket:             NewProvisionBucketClient(cfg),
@@ -293,9 +293,9 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		PaymentOrder:                NewPaymentOrderClient(cfg),
 		PaymentOrderRecipient:       NewPaymentOrderRecipientClient(cfg),
 		PaymentWebhook:              NewPaymentWebhookClient(cfg),
+		ProviderBankAccount:         NewProviderBankAccountClient(cfg),
 		ProviderCurrencies:          NewProviderCurrenciesClient(cfg),
 		ProviderOrderToken:          NewProviderOrderTokenClient(cfg),
-		ProviderPayoutAccount:       NewProviderPayoutAccountClient(cfg),
 		ProviderProfile:             NewProviderProfileClient(cfg),
 		ProviderRating:              NewProviderRatingClient(cfg),
 		ProvisionBucket:             NewProvisionBucketClient(cfg),
@@ -339,10 +339,10 @@ func (c *Client) Use(hooks ...Hook) {
 		c.APIKey, c.BeneficialOwner, c.FiatCurrency, c.IdentityVerificationRequest,
 		c.Institution, c.KYBProfile, c.LinkedAddress, c.LockOrderFulfillment,
 		c.LockPaymentOrder, c.Network, c.PaymentOrder, c.PaymentOrderRecipient,
-		c.PaymentWebhook, c.ProviderCurrencies, c.ProviderOrderToken,
-		c.ProviderPayoutAccount, c.ProviderProfile, c.ProviderRating,
-		c.ProvisionBucket, c.ReceiveAddress, c.SenderOrderToken, c.SenderProfile,
-		c.Token, c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
+		c.PaymentWebhook, c.ProviderBankAccount, c.ProviderCurrencies,
+		c.ProviderOrderToken, c.ProviderProfile, c.ProviderRating, c.ProvisionBucket,
+		c.ReceiveAddress, c.SenderOrderToken, c.SenderProfile, c.Token,
+		c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
 	} {
 		n.Use(hooks...)
 	}
@@ -355,10 +355,10 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.APIKey, c.BeneficialOwner, c.FiatCurrency, c.IdentityVerificationRequest,
 		c.Institution, c.KYBProfile, c.LinkedAddress, c.LockOrderFulfillment,
 		c.LockPaymentOrder, c.Network, c.PaymentOrder, c.PaymentOrderRecipient,
-		c.PaymentWebhook, c.ProviderCurrencies, c.ProviderOrderToken,
-		c.ProviderPayoutAccount, c.ProviderProfile, c.ProviderRating,
-		c.ProvisionBucket, c.ReceiveAddress, c.SenderOrderToken, c.SenderProfile,
-		c.Token, c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
+		c.PaymentWebhook, c.ProviderBankAccount, c.ProviderCurrencies,
+		c.ProviderOrderToken, c.ProviderProfile, c.ProviderRating, c.ProvisionBucket,
+		c.ReceiveAddress, c.SenderOrderToken, c.SenderProfile, c.Token,
+		c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -393,12 +393,12 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.PaymentOrderRecipient.mutate(ctx, m)
 	case *PaymentWebhookMutation:
 		return c.PaymentWebhook.mutate(ctx, m)
+	case *ProviderBankAccountMutation:
+		return c.ProviderBankAccount.mutate(ctx, m)
 	case *ProviderCurrenciesMutation:
 		return c.ProviderCurrencies.mutate(ctx, m)
 	case *ProviderOrderTokenMutation:
 		return c.ProviderOrderToken.mutate(ctx, m)
-	case *ProviderPayoutAccountMutation:
-		return c.ProviderPayoutAccount.mutate(ctx, m)
 	case *ProviderProfileMutation:
 		return c.ProviderProfile.mutate(ctx, m)
 	case *ProviderRatingMutation:
@@ -2635,6 +2635,155 @@ func (c *PaymentWebhookClient) mutate(ctx context.Context, m *PaymentWebhookMuta
 	}
 }
 
+// ProviderBankAccountClient is a client for the ProviderBankAccount schema.
+type ProviderBankAccountClient struct {
+	config
+}
+
+// NewProviderBankAccountClient returns a client for the ProviderBankAccount from the given config.
+func NewProviderBankAccountClient(c config) *ProviderBankAccountClient {
+	return &ProviderBankAccountClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `providerbankaccount.Hooks(f(g(h())))`.
+func (c *ProviderBankAccountClient) Use(hooks ...Hook) {
+	c.hooks.ProviderBankAccount = append(c.hooks.ProviderBankAccount, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `providerbankaccount.Intercept(f(g(h())))`.
+func (c *ProviderBankAccountClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ProviderBankAccount = append(c.inters.ProviderBankAccount, interceptors...)
+}
+
+// Create returns a builder for creating a ProviderBankAccount entity.
+func (c *ProviderBankAccountClient) Create() *ProviderBankAccountCreate {
+	mutation := newProviderBankAccountMutation(c.config, OpCreate)
+	return &ProviderBankAccountCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ProviderBankAccount entities.
+func (c *ProviderBankAccountClient) CreateBulk(builders ...*ProviderBankAccountCreate) *ProviderBankAccountCreateBulk {
+	return &ProviderBankAccountCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ProviderBankAccountClient) MapCreateBulk(slice any, setFunc func(*ProviderBankAccountCreate, int)) *ProviderBankAccountCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ProviderBankAccountCreateBulk{err: fmt.Errorf("calling to ProviderBankAccountClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ProviderBankAccountCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ProviderBankAccountCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ProviderBankAccount.
+func (c *ProviderBankAccountClient) Update() *ProviderBankAccountUpdate {
+	mutation := newProviderBankAccountMutation(c.config, OpUpdate)
+	return &ProviderBankAccountUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ProviderBankAccountClient) UpdateOne(pba *ProviderBankAccount) *ProviderBankAccountUpdateOne {
+	mutation := newProviderBankAccountMutation(c.config, OpUpdateOne, withProviderBankAccount(pba))
+	return &ProviderBankAccountUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ProviderBankAccountClient) UpdateOneID(id uuid.UUID) *ProviderBankAccountUpdateOne {
+	mutation := newProviderBankAccountMutation(c.config, OpUpdateOne, withProviderBankAccountID(id))
+	return &ProviderBankAccountUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ProviderBankAccount.
+func (c *ProviderBankAccountClient) Delete() *ProviderBankAccountDelete {
+	mutation := newProviderBankAccountMutation(c.config, OpDelete)
+	return &ProviderBankAccountDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ProviderBankAccountClient) DeleteOne(pba *ProviderBankAccount) *ProviderBankAccountDeleteOne {
+	return c.DeleteOneID(pba.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ProviderBankAccountClient) DeleteOneID(id uuid.UUID) *ProviderBankAccountDeleteOne {
+	builder := c.Delete().Where(providerbankaccount.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ProviderBankAccountDeleteOne{builder}
+}
+
+// Query returns a query builder for ProviderBankAccount.
+func (c *ProviderBankAccountClient) Query() *ProviderBankAccountQuery {
+	return &ProviderBankAccountQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeProviderBankAccount},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ProviderBankAccount entity by its id.
+func (c *ProviderBankAccountClient) Get(ctx context.Context, id uuid.UUID) (*ProviderBankAccount, error) {
+	return c.Query().Where(providerbankaccount.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ProviderBankAccountClient) GetX(ctx context.Context, id uuid.UUID) *ProviderBankAccount {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryProvider queries the provider edge of a ProviderBankAccount.
+func (c *ProviderBankAccountClient) QueryProvider(pba *ProviderBankAccount) *ProviderProfileQuery {
+	query := (&ProviderProfileClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := pba.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(providerbankaccount.Table, providerbankaccount.FieldID, id),
+			sqlgraph.To(providerprofile.Table, providerprofile.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, providerbankaccount.ProviderTable, providerbankaccount.ProviderColumn),
+		)
+		fromV = sqlgraph.Neighbors(pba.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ProviderBankAccountClient) Hooks() []Hook {
+	return c.hooks.ProviderBankAccount
+}
+
+// Interceptors returns the client interceptors.
+func (c *ProviderBankAccountClient) Interceptors() []Interceptor {
+	return c.inters.ProviderBankAccount
+}
+
+func (c *ProviderBankAccountClient) mutate(ctx context.Context, m *ProviderBankAccountMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ProviderBankAccountCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ProviderBankAccountUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ProviderBankAccountUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ProviderBankAccountDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ProviderBankAccount mutation op: %q", m.Op())
+	}
+}
+
 // ProviderCurrenciesClient is a client for the ProviderCurrencies schema.
 type ProviderCurrenciesClient struct {
 	config
@@ -2981,155 +3130,6 @@ func (c *ProviderOrderTokenClient) mutate(ctx context.Context, m *ProviderOrderT
 	}
 }
 
-// ProviderPayoutAccountClient is a client for the ProviderPayoutAccount schema.
-type ProviderPayoutAccountClient struct {
-	config
-}
-
-// NewProviderPayoutAccountClient returns a client for the ProviderPayoutAccount from the given config.
-func NewProviderPayoutAccountClient(c config) *ProviderPayoutAccountClient {
-	return &ProviderPayoutAccountClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `providerpayoutaccount.Hooks(f(g(h())))`.
-func (c *ProviderPayoutAccountClient) Use(hooks ...Hook) {
-	c.hooks.ProviderPayoutAccount = append(c.hooks.ProviderPayoutAccount, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `providerpayoutaccount.Intercept(f(g(h())))`.
-func (c *ProviderPayoutAccountClient) Intercept(interceptors ...Interceptor) {
-	c.inters.ProviderPayoutAccount = append(c.inters.ProviderPayoutAccount, interceptors...)
-}
-
-// Create returns a builder for creating a ProviderPayoutAccount entity.
-func (c *ProviderPayoutAccountClient) Create() *ProviderPayoutAccountCreate {
-	mutation := newProviderPayoutAccountMutation(c.config, OpCreate)
-	return &ProviderPayoutAccountCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of ProviderPayoutAccount entities.
-func (c *ProviderPayoutAccountClient) CreateBulk(builders ...*ProviderPayoutAccountCreate) *ProviderPayoutAccountCreateBulk {
-	return &ProviderPayoutAccountCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *ProviderPayoutAccountClient) MapCreateBulk(slice any, setFunc func(*ProviderPayoutAccountCreate, int)) *ProviderPayoutAccountCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &ProviderPayoutAccountCreateBulk{err: fmt.Errorf("calling to ProviderPayoutAccountClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*ProviderPayoutAccountCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &ProviderPayoutAccountCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for ProviderPayoutAccount.
-func (c *ProviderPayoutAccountClient) Update() *ProviderPayoutAccountUpdate {
-	mutation := newProviderPayoutAccountMutation(c.config, OpUpdate)
-	return &ProviderPayoutAccountUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *ProviderPayoutAccountClient) UpdateOne(ppa *ProviderPayoutAccount) *ProviderPayoutAccountUpdateOne {
-	mutation := newProviderPayoutAccountMutation(c.config, OpUpdateOne, withProviderPayoutAccount(ppa))
-	return &ProviderPayoutAccountUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *ProviderPayoutAccountClient) UpdateOneID(id uuid.UUID) *ProviderPayoutAccountUpdateOne {
-	mutation := newProviderPayoutAccountMutation(c.config, OpUpdateOne, withProviderPayoutAccountID(id))
-	return &ProviderPayoutAccountUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for ProviderPayoutAccount.
-func (c *ProviderPayoutAccountClient) Delete() *ProviderPayoutAccountDelete {
-	mutation := newProviderPayoutAccountMutation(c.config, OpDelete)
-	return &ProviderPayoutAccountDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *ProviderPayoutAccountClient) DeleteOne(ppa *ProviderPayoutAccount) *ProviderPayoutAccountDeleteOne {
-	return c.DeleteOneID(ppa.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *ProviderPayoutAccountClient) DeleteOneID(id uuid.UUID) *ProviderPayoutAccountDeleteOne {
-	builder := c.Delete().Where(providerpayoutaccount.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &ProviderPayoutAccountDeleteOne{builder}
-}
-
-// Query returns a query builder for ProviderPayoutAccount.
-func (c *ProviderPayoutAccountClient) Query() *ProviderPayoutAccountQuery {
-	return &ProviderPayoutAccountQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeProviderPayoutAccount},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a ProviderPayoutAccount entity by its id.
-func (c *ProviderPayoutAccountClient) Get(ctx context.Context, id uuid.UUID) (*ProviderPayoutAccount, error) {
-	return c.Query().Where(providerpayoutaccount.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *ProviderPayoutAccountClient) GetX(ctx context.Context, id uuid.UUID) *ProviderPayoutAccount {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QueryProvider queries the provider edge of a ProviderPayoutAccount.
-func (c *ProviderPayoutAccountClient) QueryProvider(ppa *ProviderPayoutAccount) *ProviderProfileQuery {
-	query := (&ProviderProfileClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := ppa.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(providerpayoutaccount.Table, providerpayoutaccount.FieldID, id),
-			sqlgraph.To(providerprofile.Table, providerprofile.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, providerpayoutaccount.ProviderTable, providerpayoutaccount.ProviderColumn),
-		)
-		fromV = sqlgraph.Neighbors(ppa.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *ProviderPayoutAccountClient) Hooks() []Hook {
-	return c.hooks.ProviderPayoutAccount
-}
-
-// Interceptors returns the client interceptors.
-func (c *ProviderPayoutAccountClient) Interceptors() []Interceptor {
-	return c.inters.ProviderPayoutAccount
-}
-
-func (c *ProviderPayoutAccountClient) mutate(ctx context.Context, m *ProviderPayoutAccountMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&ProviderPayoutAccountCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&ProviderPayoutAccountUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&ProviderPayoutAccountUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&ProviderPayoutAccountDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("ent: unknown ProviderPayoutAccount mutation op: %q", m.Op())
-	}
-}
-
 // ProviderProfileClient is a client for the ProviderProfile schema.
 type ProviderProfileClient struct {
 	config
@@ -3350,15 +3350,15 @@ func (c *ProviderProfileClient) QueryAssignedOrders(pp *ProviderProfile) *LockPa
 	return query
 }
 
-// QueryProviderPayoutAccounts queries the provider_payout_accounts edge of a ProviderProfile.
-func (c *ProviderProfileClient) QueryProviderPayoutAccounts(pp *ProviderProfile) *ProviderPayoutAccountQuery {
-	query := (&ProviderPayoutAccountClient{config: c.config}).Query()
+// QueryProviderBankAccounts queries the provider_bank_accounts edge of a ProviderProfile.
+func (c *ProviderProfileClient) QueryProviderBankAccounts(pp *ProviderProfile) *ProviderBankAccountQuery {
+	query := (&ProviderBankAccountClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := pp.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(providerprofile.Table, providerprofile.FieldID, id),
-			sqlgraph.To(providerpayoutaccount.Table, providerpayoutaccount.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.ProviderPayoutAccountsTable, providerprofile.ProviderPayoutAccountsColumn),
+			sqlgraph.To(providerbankaccount.Table, providerbankaccount.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.ProviderBankAccountsTable, providerprofile.ProviderBankAccountsColumn),
 		)
 		fromV = sqlgraph.Neighbors(pp.driver.Dialect(), step)
 		return fromV, nil
@@ -5080,16 +5080,16 @@ type (
 	hooks struct {
 		APIKey, BeneficialOwner, FiatCurrency, IdentityVerificationRequest, Institution,
 		KYBProfile, LinkedAddress, LockOrderFulfillment, LockPaymentOrder, Network,
-		PaymentOrder, PaymentOrderRecipient, PaymentWebhook, ProviderCurrencies,
-		ProviderOrderToken, ProviderPayoutAccount, ProviderProfile, ProviderRating,
+		PaymentOrder, PaymentOrderRecipient, PaymentWebhook, ProviderBankAccount,
+		ProviderCurrencies, ProviderOrderToken, ProviderProfile, ProviderRating,
 		ProvisionBucket, ReceiveAddress, SenderOrderToken, SenderProfile, Token,
 		TransactionLog, User, VerificationToken, WebhookRetryAttempt []ent.Hook
 	}
 	inters struct {
 		APIKey, BeneficialOwner, FiatCurrency, IdentityVerificationRequest, Institution,
 		KYBProfile, LinkedAddress, LockOrderFulfillment, LockPaymentOrder, Network,
-		PaymentOrder, PaymentOrderRecipient, PaymentWebhook, ProviderCurrencies,
-		ProviderOrderToken, ProviderPayoutAccount, ProviderProfile, ProviderRating,
+		PaymentOrder, PaymentOrderRecipient, PaymentWebhook, ProviderBankAccount,
+		ProviderCurrencies, ProviderOrderToken, ProviderProfile, ProviderRating,
 		ProvisionBucket, ReceiveAddress, SenderOrderToken, SenderProfile, Token,
 		TransactionLog, User, VerificationToken, WebhookRetryAttempt []ent.Interceptor
 	}

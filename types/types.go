@@ -841,14 +841,14 @@ type ProviderInfoResponse struct {
 }
 
 // CreatePayoutAccountPayload represents the request payload for creating a payout account
-type CreatePayoutAccountPayload struct {
+type CreateBankAccountPayload struct {
 	AccountIdentifier string `json:"accountIdentifier" binding:"required,min=1,max=200"`
 	AccountName       string `json:"accountName" binding:"omitempty,max=200"`
 	Institution       string `json:"institution" binding:"required,min=1,max=100"`
 }
 
 // PayoutAccountResponse represents a single payout account
-type PayoutAccountResponse struct {
+type BankAccountResponse struct {
 	ID                uuid.UUID `json:"id"`
 	AccountIdentifier string    `json:"accountIdentifier"`
 	AccountName       string    `json:"accountName,omitempty"`
@@ -858,7 +858,7 @@ type PayoutAccountResponse struct {
 }
 
 // PayoutAccountListResponse represents a list of payout accounts
-type PayoutAccountListResponse struct {
+type BankAccountListResponse struct {
 	TotalRecords int                     `json:"totalRecords"`
-	Accounts     []PayoutAccountResponse `json:"accounts"`
+	Accounts     []BankAccountResponse `json:"accounts"`
 }

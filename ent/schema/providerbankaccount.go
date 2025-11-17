@@ -11,13 +11,13 @@ import (
 	"github.com/google/uuid"
 )
 
-// ProviderPayoutAccount holds the schema definition for the ProviderPayoutAccount entity.
-type ProviderPayoutAccount struct {
+// ProviderBankAccount holds the schema definition for the ProviderBankAccount entity.
+type ProviderBankAccount struct {
 	ent.Schema
 }
 
-// Fields of the ProviderPayoutAccount.
-func (ProviderPayoutAccount) Fields() []ent.Field {
+// Fields of the ProviderBankAccount.
+func (ProviderBankAccount) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).
 			Default(uuid.New),
@@ -38,19 +38,19 @@ func (ProviderPayoutAccount) Fields() []ent.Field {
 	}
 }
 
-// Edges of the ProviderPayoutAccount.
-func (ProviderPayoutAccount) Edges() []ent.Edge {
+// Edges of the ProviderBankAccount.
+func (ProviderBankAccount) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("provider", ProviderProfile.Type).
-			Ref("provider_payout_accounts").
+			Ref("provider_bank_accounts").
 			Unique().
 			Required().
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }
 
-// Indexes of the ProviderPayoutAccount (enforces uniqueness per AC #2).
-func (ProviderPayoutAccount) Indexes() []ent.Index {
+// Indexes of the ProviderBankAccount (enforces uniqueness per AC #2).
+func (ProviderBankAccount) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("institution", "account_identifier").
 			Edges("provider").

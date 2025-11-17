@@ -18,9 +18,9 @@ import (
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
+	"github.com/paycrest/aggregator/ent/providerbankaccount"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
-	"github.com/paycrest/aggregator/ent/providerpayoutaccount"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -360,6 +360,62 @@ func init() {
 	paymentwebhookDescID := paymentwebhookFields[0].Descriptor()
 	// paymentwebhook.DefaultID holds the default value on creation for the id field.
 	paymentwebhook.DefaultID = paymentwebhookDescID.Default.(func() uuid.UUID)
+	providerbankaccountFields := schema.ProviderBankAccount{}.Fields()
+	_ = providerbankaccountFields
+	// providerbankaccountDescInstitution is the schema descriptor for institution field.
+	providerbankaccountDescInstitution := providerbankaccountFields[1].Descriptor()
+	// providerbankaccount.InstitutionValidator is a validator for the "institution" field. It is called by the builders before save.
+	providerbankaccount.InstitutionValidator = func() func(string) error {
+		validators := providerbankaccountDescInstitution.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(institution string) error {
+			for _, fn := range fns {
+				if err := fn(institution); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// providerbankaccountDescAccountIdentifier is the schema descriptor for account_identifier field.
+	providerbankaccountDescAccountIdentifier := providerbankaccountFields[2].Descriptor()
+	// providerbankaccount.AccountIdentifierValidator is a validator for the "account_identifier" field. It is called by the builders before save.
+	providerbankaccount.AccountIdentifierValidator = func() func(string) error {
+		validators := providerbankaccountDescAccountIdentifier.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(account_identifier string) error {
+			for _, fn := range fns {
+				if err := fn(account_identifier); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// providerbankaccountDescAccountName is the schema descriptor for account_name field.
+	providerbankaccountDescAccountName := providerbankaccountFields[3].Descriptor()
+	// providerbankaccount.AccountNameValidator is a validator for the "account_name" field. It is called by the builders before save.
+	providerbankaccount.AccountNameValidator = providerbankaccountDescAccountName.Validators[0].(func(string) error)
+	// providerbankaccountDescCreatedAt is the schema descriptor for created_at field.
+	providerbankaccountDescCreatedAt := providerbankaccountFields[4].Descriptor()
+	// providerbankaccount.DefaultCreatedAt holds the default value on creation for the created_at field.
+	providerbankaccount.DefaultCreatedAt = providerbankaccountDescCreatedAt.Default.(func() time.Time)
+	// providerbankaccountDescUpdatedAt is the schema descriptor for updated_at field.
+	providerbankaccountDescUpdatedAt := providerbankaccountFields[5].Descriptor()
+	// providerbankaccount.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	providerbankaccount.DefaultUpdatedAt = providerbankaccountDescUpdatedAt.Default.(func() time.Time)
+	// providerbankaccount.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	providerbankaccount.UpdateDefaultUpdatedAt = providerbankaccountDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// providerbankaccountDescID is the schema descriptor for id field.
+	providerbankaccountDescID := providerbankaccountFields[0].Descriptor()
+	// providerbankaccount.DefaultID holds the default value on creation for the id field.
+	providerbankaccount.DefaultID = providerbankaccountDescID.Default.(func() uuid.UUID)
 	providercurrenciesFields := schema.ProviderCurrencies{}.Fields()
 	_ = providercurrenciesFields
 	// providercurrenciesDescIsAvailable is the schema descriptor for is_available field.
@@ -391,62 +447,6 @@ func init() {
 	providerordertoken.DefaultUpdatedAt = providerordertokenDescUpdatedAt.Default.(func() time.Time)
 	// providerordertoken.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	providerordertoken.UpdateDefaultUpdatedAt = providerordertokenDescUpdatedAt.UpdateDefault.(func() time.Time)
-	providerpayoutaccountFields := schema.ProviderPayoutAccount{}.Fields()
-	_ = providerpayoutaccountFields
-	// providerpayoutaccountDescInstitution is the schema descriptor for institution field.
-	providerpayoutaccountDescInstitution := providerpayoutaccountFields[1].Descriptor()
-	// providerpayoutaccount.InstitutionValidator is a validator for the "institution" field. It is called by the builders before save.
-	providerpayoutaccount.InstitutionValidator = func() func(string) error {
-		validators := providerpayoutaccountDescInstitution.Validators
-		fns := [...]func(string) error{
-			validators[0].(func(string) error),
-			validators[1].(func(string) error),
-		}
-		return func(institution string) error {
-			for _, fn := range fns {
-				if err := fn(institution); err != nil {
-					return err
-				}
-			}
-			return nil
-		}
-	}()
-	// providerpayoutaccountDescAccountIdentifier is the schema descriptor for account_identifier field.
-	providerpayoutaccountDescAccountIdentifier := providerpayoutaccountFields[2].Descriptor()
-	// providerpayoutaccount.AccountIdentifierValidator is a validator for the "account_identifier" field. It is called by the builders before save.
-	providerpayoutaccount.AccountIdentifierValidator = func() func(string) error {
-		validators := providerpayoutaccountDescAccountIdentifier.Validators
-		fns := [...]func(string) error{
-			validators[0].(func(string) error),
-			validators[1].(func(string) error),
-		}
-		return func(account_identifier string) error {
-			for _, fn := range fns {
-				if err := fn(account_identifier); err != nil {
-					return err
-				}
-			}
-			return nil
-		}
-	}()
-	// providerpayoutaccountDescAccountName is the schema descriptor for account_name field.
-	providerpayoutaccountDescAccountName := providerpayoutaccountFields[3].Descriptor()
-	// providerpayoutaccount.AccountNameValidator is a validator for the "account_name" field. It is called by the builders before save.
-	providerpayoutaccount.AccountNameValidator = providerpayoutaccountDescAccountName.Validators[0].(func(string) error)
-	// providerpayoutaccountDescCreatedAt is the schema descriptor for created_at field.
-	providerpayoutaccountDescCreatedAt := providerpayoutaccountFields[4].Descriptor()
-	// providerpayoutaccount.DefaultCreatedAt holds the default value on creation for the created_at field.
-	providerpayoutaccount.DefaultCreatedAt = providerpayoutaccountDescCreatedAt.Default.(func() time.Time)
-	// providerpayoutaccountDescUpdatedAt is the schema descriptor for updated_at field.
-	providerpayoutaccountDescUpdatedAt := providerpayoutaccountFields[5].Descriptor()
-	// providerpayoutaccount.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	providerpayoutaccount.DefaultUpdatedAt = providerpayoutaccountDescUpdatedAt.Default.(func() time.Time)
-	// providerpayoutaccount.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	providerpayoutaccount.UpdateDefaultUpdatedAt = providerpayoutaccountDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// providerpayoutaccountDescID is the schema descriptor for id field.
-	providerpayoutaccountDescID := providerpayoutaccountFields[0].Descriptor()
-	// providerpayoutaccount.DefaultID holds the default value on creation for the id field.
-	providerpayoutaccount.DefaultID = providerpayoutaccountDescID.Default.(func() uuid.UUID)
 	providerprofileFields := schema.ProviderProfile{}.Fields()
 	_ = providerprofileFields
 	// providerprofileDescTradingName is the schema descriptor for trading_name field.
