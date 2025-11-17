@@ -969,6 +969,7 @@ func (ctrl *ProfileController) CreateBankAccount(ctx *gin.Context) {
 			}).Errorf("Failed to create bank account: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create bank account", nil)
 		}
+		return
 	}
 
 	u.APIResponse(ctx, http.StatusCreated, "success", "Bank account created successfully", &types.BankAccountResponse{
