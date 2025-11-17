@@ -20,7 +20,6 @@ import (
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
-	userEnt "github.com/paycrest/aggregator/ent/user"
 	userkyb "github.com/paycrest/aggregator/ent/user"
 	svc "github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/storage"
@@ -887,7 +886,7 @@ func (ctrl *ProfileController) CreateBankAccount(ctx *gin.Context) {
 	// Fetch provider profile
 	provider, err := storage.Client.ProviderProfile.
 		Query().
-		Where(providerprofile.HasUserWith(userEnt.IDEQ(userID))).
+		Where(providerprofile.HasUserWith(userkyb.IDEQ(userID))).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -932,10 +931,9 @@ func (ctrl *ProfileController) CreateBankAccount(ctx *gin.Context) {
 		Exist(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"Error":             fmt.Sprintf("%v", err),
-			"AccountIdentifier": payload.AccountIdentifier,
-			"Institution":       payload.Institution,
-			"ProviderID":        provider.ID,
+			"Error":       fmt.Sprintf("%v", err),
+			"Institution": payload.Institution,
+			"ProviderID":  provider.ID,
 		}).Errorf("Failed to check for existing bank account: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create bank account", nil)
 		return
@@ -960,13 +958,17 @@ func (ctrl *ProfileController) CreateBankAccount(ctx *gin.Context) {
 
 	bankAccount, err := createBuilder.Save(ctx)
 	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":       fmt.Sprintf("%v", err),
-			"ProviderID":  provider.ID,
-			"Institution": payload.Institution,
-		}).Errorf("Failed to create bank account: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create bank account", nil)
-		return
+		if ent.IsConstraintError(err) {
+			u.APIResponse(ctx, http.StatusConflict, "error",
+				"A bank account with this account identifier and institution already exists", nil)
+		} else {
+			logger.WithFields(logger.Fields{
+				"Error":       fmt.Sprintf("%v", err),
+				"ProviderID":  provider.ID,
+				"Institution": payload.Institution,
+			}).Errorf("Failed to create bank account: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create bank account", nil)
+		}
 	}
 
 	u.APIResponse(ctx, http.StatusCreated, "success", "Bank account created successfully", &types.BankAccountResponse{
@@ -992,7 +994,7 @@ func (ctrl *ProfileController) ListBankAccounts(ctx *gin.Context) {
 	// Fetch provider profile
 	provider, err := storage.Client.ProviderProfile.
 		Query().
-		Where(providerprofile.HasUserWith(userEnt.IDEQ(userID))).
+		Where(providerprofile.HasUserWith(userkyb.IDEQ(userID))).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -1064,7 +1066,7 @@ func (ctrl *ProfileController) DeleteBankAccount(ctx *gin.Context) {
 	// Fetch provider profile
 	provider, err := storage.Client.ProviderProfile.
 		Query().
-		Where(providerprofile.HasUserWith(userEnt.IDEQ(userID))).
+		Where(providerprofile.HasUserWith(userkyb.IDEQ(userID))).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
