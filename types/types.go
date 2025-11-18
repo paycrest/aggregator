@@ -602,6 +602,12 @@ type SenderPaymentOrderList struct {
 	Orders       []PaymentOrderResponse `json:"orders"`
 }
 
+// SenderPaymentOrderSearchList is the response for search payment orders endpoint
+type SenderPaymentOrderSearchList struct {
+	TotalRecords int                    `json:"total"`
+	Orders       []PaymentOrderResponse `json:"orders"`
+}
+
 // ChangePasswordPayload is the payload for the change password endpoint
 type ChangePasswordPayload struct {
 	OldPassword string `json:"oldPassword" binding:"required,min=6,max=20"`
