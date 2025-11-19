@@ -452,14 +452,31 @@ func (ctrl *ProviderController) handleExportLockPaymentOrders(ctx *gin.Context, 
 		return
 	}
 
+	institutionMap := make(map[string]string)
+	uniqueInstitutions := make(map[string]bool)
+
+	for _, order := range lockPaymentOrders {
+		if order.Institution != "" {
+			uniqueInstitutions[order.Institution] = true
+		}
+	}
+
+	for code := range uniqueInstitutions {
+		institution, err := u.GetInstitutionByCode(ctx, code, false)
+		if err != nil {
+			// Use raw code as fallback
+			institutionMap[code] = code
+		} else {
+			institutionMap[code] = institution.Name
+		}
+	}
+
 	// Write data rows
 	for _, lockPaymentOrder := range lockPaymentOrders {
-		var bankName string
-		institution, err := u.GetInstitutionByCode(ctx, lockPaymentOrder.Institution, false)
-		if err != nil {
-			bankName = lockPaymentOrder.Institution
-		} else {
-			bankName = institution.Name
+		// Look up bank name from pre-fetched map
+		bankName := lockPaymentOrder.Institution
+		if name, exists := institutionMap[lockPaymentOrder.Institution]; exists {
+			bankName = name
 		}
 
 		var currencyCode string
@@ -489,7 +506,6 @@ func (ctrl *ProviderController) handleExportLockPaymentOrders(ctx *gin.Context, 
 			// Continue writing other rows
 		}
 	}
-
 	// CSV is automatically sent as response through ctx.Writer
 	logger.Infof("Successfully exported %d lock payment orders for provider %s", len(lockPaymentOrders), provider.ID)
 }
