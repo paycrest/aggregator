@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
@@ -271,6 +270,14 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 	var tokenOperations []TokenOperation
 	var validationErrors []types.ErrorData
 
+	type BankAccountOperation struct {
+		Payload         types.BankAccountPayload
+		IsUpdate        bool
+		ExistingAccount *ent.ProviderBankAccount
+	}
+
+	var bankAccountOps []BankAccountOperation
+
 	// Validate all tokens first
 	for _, tokenPayload := range payload.Tokens {
 		// Check if token is supported
@@ -423,6 +430,57 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			Rate:          rate,
 			IsUpdate:      isUpdate,
 			ExistingToken: existingToken,
+		})
+	}
+
+	// Validate all bank accounts (same pattern as tokens)
+	for _, bankAccountPayload := range payload.BankAccounts {
+		// Validate institution exists
+		institutionExists, err := storage.Client.Institution.
+			Query().
+			Where(institution.CodeEQ(bankAccountPayload.Institution)).
+			Exist(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":       fmt.Sprintf("%v", err),
+				"Institution": bankAccountPayload.Institution,
+			}).Errorf("Failed to validate institution")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+			return
+		}
+		if !institutionExists {
+			validationErrors = append(validationErrors, types.ErrorData{
+				Field:   "BankAccounts",
+				Message: fmt.Sprintf("Institution %s is not supported", bankAccountPayload.Institution),
+			})
+			continue
+		}
+
+		// Check if account already exists (upsert check)
+		existingAccount, err := storage.Client.ProviderBankAccount.
+			Query().
+			Where(
+				providerbankaccount.AccountIdentifierEQ(bankAccountPayload.AccountIdentifier),
+				providerbankaccount.InstitutionEQ(bankAccountPayload.Institution),
+				providerbankaccount.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+			).
+			Only(ctx)
+
+		isUpdate := err == nil
+		if err != nil && !ent.IsNotFound(err) {
+			logger.WithFields(logger.Fields{
+				"Error":             fmt.Sprintf("%v", err),
+				"AccountIdentifier": bankAccountPayload.AccountIdentifier,
+				"Institution":       bankAccountPayload.Institution,
+			}).Errorf("Failed to check for existing bank account")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+			return
+		}
+
+		bankAccountOps = append(bankAccountOps, BankAccountOperation{
+			Payload:         bankAccountPayload,
+			IsUpdate:        isUpdate,
+			ExistingAccount: existingAccount,
 		})
 	}
 
@@ -582,6 +640,62 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			return
 		}
 		allBuckets = append(allBuckets, buckets...)
+	}
+
+	// Process all bank account operations (same pattern as tokens)
+	for _, op := range bankAccountOps {
+		if op.IsUpdate {
+			// Update existing account
+			updateBuilder := tx.ProviderBankAccount.
+				UpdateOneID(op.ExistingAccount.ID).
+				SetAccountIdentifier(op.Payload.AccountIdentifier).
+				SetInstitution(op.Payload.Institution)
+
+			// Update account name if provided
+			if op.Payload.AccountName != "" {
+				updateBuilder = updateBuilder.SetAccountName(op.Payload.AccountName)
+			}
+
+			_, err := updateBuilder.Save(ctx)
+			if err != nil {
+				if rollbackErr := tx.Rollback(); rollbackErr != nil {
+					logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
+				}
+				logger.WithFields(logger.Fields{
+					"Error":             fmt.Sprintf("%v", err),
+					"AccountIdentifier": op.Payload.AccountIdentifier,
+					"Institution":       op.Payload.Institution,
+				}).Errorf("Failed to update bank account")
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+				return
+			}
+		} else {
+			// Create new account
+			createBuilder := tx.ProviderBankAccount.
+				Create().
+				SetAccountIdentifier(op.Payload.AccountIdentifier).
+				SetInstitution(op.Payload.Institution).
+				SetProviderID(provider.ID)
+
+			// Set account name if provided
+			if op.Payload.AccountName != "" {
+				createBuilder = createBuilder.SetAccountName(op.Payload.AccountName)
+			}
+
+			_, err := createBuilder.Save(ctx)
+			if err != nil {
+				if rollbackErr := tx.Rollback(); rollbackErr != nil {
+					logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
+				}
+				logger.WithFields(logger.Fields{
+					"Error":             fmt.Sprintf("%v", err),
+					"AccountIdentifier": op.Payload.AccountIdentifier,
+					"Institution":       op.Payload.Institution,
+				}).Errorf("Failed to create bank account")
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+				return
+			}
+		}
 	}
 
 	// Deduplicate buckets to prevent duplicate many-to-many edges
@@ -805,6 +919,30 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 		return
 	}
 
+	bankAccounts, err := provider.QueryProviderBankAccounts().
+		Order(ent.Desc(providerbankaccount.FieldCreatedAt)).
+		All(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"ProviderID": provider.ID,
+		}).Errorf("Failed to fetch bank accounts for provider")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)
+		return
+	}
+
+	bankAccountsPayload := make([]types.BankAccountResponse, len(bankAccounts))
+	for i, account := range bankAccounts {
+		bankAccountsPayload[i] = types.BankAccountResponse{
+			ID:                account.ID,
+			AccountIdentifier: account.AccountIdentifier,
+			AccountName:       account.AccountName,
+			Institution:       account.Institution,
+			CreatedAt:         account.CreatedAt,
+			UpdatedAt:         account.UpdatedAt,
+		}
+	}
+
 	tokensPayload := make([]types.ProviderOrderTokenPayload, len(orderTokens))
 	for i, orderToken := range orderTokens {
 		payload := types.ProviderOrderTokenPayload{
@@ -853,281 +991,11 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 		HostIdentifier:        provider.HostIdentifier,
 		CurrencyAvailability:  currencyAvailability,
 		Tokens:                tokensPayload,
+		BankAccounts:          bankAccountsPayload,
 		APIKey:                *apiKey,
 		IsActive:              provider.IsActive,
 		VisibilityMode:        provider.VisibilityMode,
 		KYBVerificationStatus: user.KybVerificationStatus,
 		KYBRejectionComment:   kybRejectionComment,
 	})
-}
-
-// CreateBankAccount creates a new bank account for the provider
-func (ctrl *ProfileController) CreateBankAccount(ctx *gin.Context) {
-	var payload types.CreateBankAccountPayload
-
-	// Parse the request payload
-	if err := ctx.ShouldBindJSON(&payload); err != nil {
-		logger.WithFields(logger.Fields{
-			"Error": fmt.Sprintf("%v", err),
-		}).Errorf("Failed to bind payload to JSON: %v", err)
-		u.APIResponse(ctx, http.StatusBadRequest, "error",
-			"Failed to validate payload", u.GetErrorData(err))
-		return
-	}
-
-	// Get user ID from JWT context
-	userIDStr := ctx.GetString("user_id")
-	userID, err := uuid.Parse(userIDStr)
-	if err != nil {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid user ID", nil)
-		return
-	}
-
-	// Fetch provider profile
-	provider, err := storage.Client.ProviderProfile.
-		Query().
-		Where(providerprofile.HasUserWith(userkyb.IDEQ(userID))).
-		Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			u.APIResponse(ctx, http.StatusNotFound, "error", "Provider profile not found", nil)
-			return
-		}
-		logger.WithFields(logger.Fields{
-			"Error":  fmt.Sprintf("%v", err),
-			"UserID": userID,
-		}).Errorf("Failed to fetch provider profile")
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create bank account", nil)
-		return
-	}
-
-	// Validate institution exists
-	institutionExists, err := storage.Client.Institution.
-		Query().
-		Where(institution.CodeEQ(payload.Institution)).
-		Exist(ctx)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":       fmt.Sprintf("%v", err),
-			"Institution": payload.Institution,
-		}).Errorf("Failed to validate institution: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create bank account", nil)
-		return
-	}
-	if !institutionExists {
-		u.APIResponse(ctx, http.StatusBadRequest, "error",
-			fmt.Sprintf("Institution %s is not supported", payload.Institution), nil)
-		return
-	}
-
-	// Check if account already exists for this provider
-	exists, err := storage.Client.ProviderBankAccount.
-		Query().
-		Where(
-			providerbankaccount.AccountIdentifierEQ(payload.AccountIdentifier),
-			providerbankaccount.InstitutionEQ(payload.Institution),
-			providerbankaccount.HasProviderWith(providerprofile.IDEQ(provider.ID)),
-		).
-		Exist(ctx)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":       fmt.Sprintf("%v", err),
-			"Institution": payload.Institution,
-			"ProviderID":  provider.ID,
-		}).Errorf("Failed to check for existing bank account: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create bank account", nil)
-		return
-	}
-	if exists {
-		u.APIResponse(ctx, http.StatusConflict, "error",
-			"A bank account with this account identifier and institution already exists", nil)
-		return
-	}
-
-	// Create the bank account
-	createBuilder := storage.Client.ProviderBankAccount.
-		Create().
-		SetAccountIdentifier(payload.AccountIdentifier).
-		SetInstitution(payload.Institution).
-		SetProviderID(provider.ID)
-
-	// Set account name if provided
-	if payload.AccountName != "" {
-		createBuilder = createBuilder.SetAccountName(payload.AccountName)
-	}
-
-	bankAccount, err := createBuilder.Save(ctx)
-	if err != nil {
-		if ent.IsConstraintError(err) {
-			u.APIResponse(ctx, http.StatusConflict, "error",
-				"A bank account with this account identifier and institution already exists", nil)
-		} else {
-			logger.WithFields(logger.Fields{
-				"Error":       fmt.Sprintf("%v", err),
-				"ProviderID":  provider.ID,
-				"Institution": payload.Institution,
-			}).Errorf("Failed to create bank account: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create bank account", nil)
-		}
-		return
-	}
-
-	u.APIResponse(ctx, http.StatusCreated, "success", "Bank account created successfully", &types.BankAccountResponse{
-		ID:                bankAccount.ID,
-		AccountIdentifier: bankAccount.AccountIdentifier,
-		AccountName:       bankAccount.AccountName,
-		Institution:       bankAccount.Institution,
-		CreatedAt:         bankAccount.CreatedAt,
-		UpdatedAt:         bankAccount.UpdatedAt,
-	})
-}
-
-// ListBankAccounts lists all bank accounts for the provider
-func (ctrl *ProfileController) ListBankAccounts(ctx *gin.Context) {
-	// Get user ID from JWT context
-	userIDStr := ctx.GetString("user_id")
-	userID, err := uuid.Parse(userIDStr)
-	if err != nil {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid user ID", nil)
-		return
-	}
-
-	// Fetch provider profile
-	provider, err := storage.Client.ProviderProfile.
-		Query().
-		Where(providerprofile.HasUserWith(userkyb.IDEQ(userID))).
-		Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			u.APIResponse(ctx, http.StatusNotFound, "error", "Provider profile not found", nil)
-			return
-		}
-		logger.WithFields(logger.Fields{
-			"Error":  fmt.Sprintf("%v", err),
-			"UserID": userID,
-		}).Errorf("Failed to fetch provider profile")
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to list bank accounts", nil)
-		return
-	}
-
-	// Optional institution filter
-	institution := ctx.Query("institution")
-
-	// Build query
-	query := storage.Client.ProviderBankAccount.
-		Query().
-		Where(providerbankaccount.HasProviderWith(providerprofile.IDEQ(provider.ID)))
-
-	// Apply institution filter if provided
-	if institution != "" {
-		query = query.Where(providerbankaccount.InstitutionEQ(institution))
-	}
-
-	// Fetch all bank accounts
-	bankAccounts, err := query.
-		Order(ent.Desc(providerbankaccount.FieldCreatedAt)).
-		All(ctx)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":      fmt.Sprintf("%v", err),
-			"ProviderID": provider.ID,
-		}).Errorf("Failed to fetch bank accounts: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch bank accounts", nil)
-		return
-	}
-
-	accounts := []types.BankAccountResponse{}
-	for _, account := range bankAccounts {
-		accounts = append(accounts, types.BankAccountResponse{
-			ID:                account.ID,
-			AccountIdentifier: account.AccountIdentifier,
-			AccountName:       account.AccountName,
-			Institution:       account.Institution,
-			CreatedAt:         account.CreatedAt,
-			UpdatedAt:         account.UpdatedAt,
-		})
-	}
-
-	u.APIResponse(ctx, http.StatusOK, "success", "Bank accounts retrieved successfully", &types.BankAccountListResponse{
-		TotalRecords: len(accounts),
-		Accounts:     accounts,
-	})
-}
-
-// DeleteBankAccount deletes a bank account
-func (ctrl *ProfileController) DeleteBankAccount(ctx *gin.Context) {
-	// Get user ID from JWT context
-	userIDStr := ctx.GetString("user_id")
-	userID, err := uuid.Parse(userIDStr)
-	if err != nil {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid user ID", nil)
-		return
-	}
-
-	// Fetch provider profile
-	provider, err := storage.Client.ProviderProfile.
-		Query().
-		Where(providerprofile.HasUserWith(userkyb.IDEQ(userID))).
-		Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			u.APIResponse(ctx, http.StatusNotFound, "error", "Provider profile not found", nil)
-			return
-		}
-		logger.WithFields(logger.Fields{
-			"Error":  fmt.Sprintf("%v", err),
-			"UserID": userID,
-		}).Errorf("Failed to fetch provider profile")
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to delete bank account", nil)
-		return
-	}
-
-	// Parse the account ID from URL parameter
-	accountID, err := uuid.Parse(ctx.Param("id"))
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":     fmt.Sprintf("%v", err),
-			"AccountID": ctx.Param("id"),
-		}).Errorf("Failed to parse account ID: %v", err)
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid account ID", nil)
-		return
-	}
-
-	// Verify the account exists and belongs to the provider
-	account, err := storage.Client.ProviderBankAccount.
-		Query().
-		Where(
-			providerbankaccount.IDEQ(accountID),
-			providerbankaccount.HasProviderWith(providerprofile.IDEQ(provider.ID)),
-		).
-		Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			u.APIResponse(ctx, http.StatusNotFound, "error", "Bank account not found", nil)
-			return
-		}
-		logger.WithFields(logger.Fields{
-			"Error":      fmt.Sprintf("%v", err),
-			"AccountID":  accountID.String(),
-			"ProviderID": provider.ID,
-		}).Errorf("Failed to fetch bank account: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to delete bank account", nil)
-		return
-	}
-
-	// Delete the account
-	err = storage.Client.ProviderBankAccount.
-		DeleteOneID(account.ID).
-		Exec(ctx)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":      fmt.Sprintf("%v", err),
-			"AccountID":  accountID.String(),
-			"ProviderID": provider.ID,
-		}).Errorf("Failed to delete bank account: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to delete bank account", nil)
-		return
-	}
-
-	u.APIResponse(ctx, http.StatusOK, "success", "Bank account deleted successfully", nil)
 }

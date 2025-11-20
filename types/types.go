@@ -269,7 +269,15 @@ type ProviderProfilePayload struct {
 	HostIdentifier string                      `json:"hostIdentifier"`
 	IsAvailable    bool                        `json:"isAvailable"`
 	Tokens         []ProviderOrderTokenPayload `json:"tokens"`
+	BankAccounts   []BankAccountPayload        `json:"bankAccounts"` 
 	VisibilityMode string                      `json:"visibilityMode"`
+}
+
+// bank account payload
+type BankAccountPayload struct {
+	AccountIdentifier string `json:"accountIdentifier" binding:"required"`
+	AccountName       string `json:"accountName"`
+	Institution       string `json:"institution" binding:"required"`
 }
 
 // ProviderProfileResponse is the response for the provider profile endpoint
@@ -283,6 +291,7 @@ type ProviderProfileResponse struct {
 	HostIdentifier        string                         `json:"hostIdentifier"`
 	CurrencyAvailability  map[string]bool                `json:"currencyAvailability"`
 	Tokens                []ProviderOrderTokenPayload    `json:"tokens"`
+	BankAccounts          []BankAccountResponse          `json:"bankAccounts"`
 	APIKey                APIKeyResponse                 `json:"apiKey"`
 	IsActive              bool                           `json:"isActive"`
 	VisibilityMode        providerprofile.VisibilityMode `json:"visibilityMode"`
@@ -846,12 +855,12 @@ type ProviderInfoResponse struct {
 	} `json:"data"`
 }
 
-// CreatePayoutAccountPayload represents the request payload for creating a payout account
-type CreateBankAccountPayload struct {
-	AccountIdentifier string `json:"accountIdentifier" binding:"required,min=1,max=200"`
-	AccountName       string `json:"accountName" binding:"omitempty,max=200"`
-	Institution       string `json:"institution" binding:"required,min=1,max=100"`
-}
+// // CreatePayoutAccountPayload represents the request payload for creating a payout account
+// type CreateBankAccountPayload struct {
+// 	AccountIdentifier string `json:"accountIdentifier" binding:"required,min=1,max=200"`
+// 	AccountName       string `json:"accountName" binding:"omitempty,max=200"`
+// 	Institution       string `json:"institution" binding:"required,min=1,max=100"`
+// }
 
 // PayoutAccountResponse represents a single payout account
 type BankAccountResponse struct {
@@ -863,8 +872,8 @@ type BankAccountResponse struct {
 	UpdatedAt         time.Time `json:"updatedAt"`
 }
 
-// PayoutAccountListResponse represents a list of payout accounts
-type BankAccountListResponse struct {
-	TotalRecords int                     `json:"totalRecords"`
-	Accounts     []BankAccountResponse `json:"accounts"`
-}
+// // PayoutAccountListResponse represents a list of payout accounts
+// type BankAccountListResponse struct {
+// 	TotalRecords int                     `json:"totalRecords"`
+// 	Accounts     []BankAccountResponse `json:"accounts"`
+// }

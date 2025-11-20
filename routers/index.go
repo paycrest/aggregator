@@ -101,27 +101,6 @@ func authRoutes(route *gin.Engine) {
 		middleware.OnlyProviderMiddleware,
 		profileCtrl.UpdateProviderProfile,
 	)
-	v1.POST(
-		"settings/provider/bank-accounts",
-		middleware.OnlyWebMiddleware,
-		middleware.JWTMiddleware,
-		middleware.OnlyProviderMiddleware,
-		profileCtrl.CreateBankAccount,
-	)
-	v1.GET(
-		"settings/provider/bank-accounts",
-		middleware.OnlyWebMiddleware,
-		middleware.JWTMiddleware,
-		middleware.OnlyProviderMiddleware,
-		profileCtrl.ListBankAccounts,
-	)
-	v1.DELETE(
-		"settings/provider/bank-accounts/:id",
-		middleware.OnlyWebMiddleware,
-		middleware.JWTMiddleware,
-		middleware.OnlyProviderMiddleware,
-		profileCtrl.DeleteBankAccount,
-	)
 	v1.GET(
 		"settings/sender",
 		middleware.OnlyWebMiddleware,
