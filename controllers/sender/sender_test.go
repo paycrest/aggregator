@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -840,6 +841,524 @@ func TestSender(t *testing.T) {
 			diff := totalFeeEarnings.Sub(expectedFee).Abs()
 			tolerance := decimal.NewFromFloat(0.000001)
 			assert.True(t, diff.LessThanOrEqual(tolerance), "Fee difference %s exceeds tolerance %s", diff.String(), tolerance.String())
+		})
+	})
+
+	t.Run("SearchPaymentOrders", func(t *testing.T) {
+		t.Run("should return error when search query is empty", func(t *testing.T) {
+			var payload = map[string]interface{}{
+				"search":    "",
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?search=&timestamp=%v", payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Search query is required", response.Message)
+		})
+
+		t.Run("should search by reference", func(t *testing.T) {
+			var payload = map[string]interface{}{
+				"search":    "12kjdf-kjn33_REF",
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?search=%v&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Payment orders found successfully", response.Message)
+
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok, "response.Data should be map[string]interface{}")
+			assert.NotNil(t, data, "response.Data should not be nil")
+			assert.Equal(t, 1.0, data["total"])
+
+			orders, ok := data["orders"].([]interface{})
+			assert.True(t, ok, "orders should be []interface{}")
+			assert.Equal(t, 1, len(orders))
+
+			order := orders[0].(map[string]interface{})
+			assert.Equal(t, "12kjdf-kjn33_REF", order["reference"])
+		})
+
+		t.Run("should search by account identifier", func(t *testing.T) {
+			var payload = map[string]interface{}{
+				"search":    "1234567890",
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?search=%v&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Payment orders found successfully", response.Message)
+
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok, "response.Data should be map[string]interface{}")
+			assert.NotNil(t, data, "response.Data should not be nil")
+			assert.Greater(t, data["total"], 0.0)
+
+			orders, ok := data["orders"].([]interface{})
+			assert.True(t, ok, "orders should be []interface{}")
+			assert.Greater(t, len(orders), 0)
+		})
+
+		t.Run("should search by token symbol", func(t *testing.T) {
+			var payload = map[string]interface{}{
+				"search":    "TST",
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?search=%v&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Payment orders found successfully", response.Message)
+
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok, "response.Data should be map[string]interface{}")
+			assert.NotNil(t, data, "response.Data should not be nil")
+			assert.Greater(t, data["total"], 0.0)
+
+			orders, ok := data["orders"].([]interface{})
+			assert.True(t, ok, "orders should be []interface{}")
+			assert.Greater(t, len(orders), 0)
+
+			// Verify all orders have TST token
+			for _, orderInterface := range orders {
+				order := orderInterface.(map[string]interface{})
+				assert.Equal(t, "TST", order["token"])
+			}
+		})
+
+		t.Run("should return empty results for non-matching search", func(t *testing.T) {
+			var payload = map[string]interface{}{
+				"search":    "nonexistent_search_term",
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?search=%v&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Payment orders found successfully", response.Message)
+
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok, "response.Data should be map[string]interface{}")
+			assert.NotNil(t, data, "response.Data should not be nil")
+			assert.Equal(t, 0.0, data["total"])
+
+			// Handle empty orders array - could be nil or empty array
+			if ordersData := data["orders"]; ordersData != nil {
+				orders, ok := ordersData.([]interface{})
+				assert.True(t, ok, "orders should be []interface{}")
+				assert.Equal(t, 0, len(orders))
+			}
+		})
+
+		t.Run("should only return orders for authenticated sender", func(t *testing.T) {
+			// Create another sender with orders
+			user2, err := test.CreateTestUser(map[string]interface{}{
+				"email": "another_sender@test.com",
+			})
+			assert.NoError(t, err)
+
+			senderProfile2, err := test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id":     user2.ID,
+				"fee_percent": "3",
+			})
+			assert.NoError(t, err)
+
+			apiKeyService := services.NewAPIKeyService()
+			apiKey2, secretKey2, err := apiKeyService.GenerateAPIKey(
+				context.Background(),
+				nil,
+				senderProfile2,
+				nil,
+			)
+			assert.NoError(t, err)
+
+			// Create payment order for second sender
+			receiveAddress2, err := db.Client.ReceiveAddress.
+				Create().
+				SetAddress("0x9999999999999999999999999999999999999999").
+				SetSalt([]byte("salt_another")).
+				SetStatus("unused").
+				SetValidUntil(time.Now().Add(time.Hour)).
+				Save(context.Background())
+			assert.NoError(t, err)
+
+			paymentOrder2, err := db.Client.PaymentOrder.
+				Create().
+				SetSenderProfile(senderProfile2).
+				SetAmount(decimal.NewFromFloat(200.0)).
+				SetAmountInUsd(decimal.NewFromFloat(200.0)).
+				SetAmountPaid(decimal.NewFromInt(0)).
+				SetAmountReturned(decimal.NewFromInt(0)).
+				SetPercentSettled(decimal.NewFromInt(0)).
+				SetNetworkFee(testCtx.token.Edges.Network.Fee).
+				SetSenderFee(decimal.NewFromFloat(0)).
+				SetToken(testCtx.token).
+				SetRate(decimal.NewFromFloat(750.0)).
+				SetReceiveAddress(receiveAddress2).
+				SetReceiveAddressText(receiveAddress2.Address).
+				SetFeePercent(decimal.NewFromFloat(0)).
+				SetFeeAddress("0x1234567890123456789012345678901234567890").
+				SetReturnAddress("0x0987654321098765432109876543210987654321").
+				SetReference("unique_ref_second_sender").
+				SetStatus("pending").
+				Save(context.Background())
+			assert.NoError(t, err)
+
+			_, err = db.Client.PaymentOrderRecipient.
+				Create().
+				SetInstitution("MOMONGPC").
+				SetAccountIdentifier("9876543210").
+				SetAccountName("Second Sender Account").
+				SetPaymentOrder(paymentOrder2).
+				Save(context.Background())
+			assert.NoError(t, err)
+
+			// Search using first sender's credentials - should not find second sender's order
+			var payload = map[string]interface{}{
+				"search":    "unique_ref_second_sender",
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?search=%v&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+
+			data := response.Data.(map[string]interface{})
+			assert.Equal(t, 0.0, data["total"])
+
+			// Search using second sender's credentials - should find their order
+			payload2 := map[string]interface{}{
+				"search":    "unique_ref_second_sender",
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature2 := token.GenerateHMACSignature(payload2, secretKey2)
+
+			headers2 := map[string]string{
+				"Authorization": "HMAC " + apiKey2.ID.String() + ":" + signature2,
+			}
+
+			res2, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?search=%v&timestamp=%v", payload2["search"], payload2["timestamp"]), nil, headers2, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res2.Code)
+
+			var response2 types.Response
+			err = json.Unmarshal(res2.Body.Bytes(), &response2)
+			assert.NoError(t, err)
+
+			data2 := response2.Data.(map[string]interface{})
+			assert.Equal(t, 1.0, data2["total"])
+
+			orders := data2["orders"].([]interface{})
+			order := orders[0].(map[string]interface{})
+			assert.Equal(t, "unique_ref_second_sender", order["reference"])
+		})
+	})
+
+	t.Run("ExportPaymentOrdersCSV", func(t *testing.T) {
+		t.Run("should export CSV with date range", func(t *testing.T) {
+			// Test with date range covering today
+			today := time.Now().Format("2006-01-02")
+			tomorrow := time.Now().Add(24 * time.Hour).Format("2006-01-02")
+
+			var payload = map[string]interface{}{
+				"from":      today,
+				"to":        tomorrow,
+				"export":    "csv",
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?from=%s&to=%s&timestamp=%v&export=csv", payload["from"], payload["to"], payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			// Check CSV headers
+			assert.Equal(t, "text/csv", res.Header().Get("Content-Type"))
+			assert.Contains(t, res.Header().Get("Content-Disposition"), "attachment; filename=payment_orders_")
+			assert.NotEmpty(t, res.Header().Get("X-Total-Count"))
+
+			// Check CSV content
+			csvContent := res.Body.String()
+			assert.Contains(t, csvContent, "Order ID,Reference,Amount,Amount (USD)")
+			assert.Contains(t, csvContent, "Token,Network,Rate,Sender Fee")
+
+			// Should contain the order with reference we created
+			assert.Contains(t, csvContent, "12kjdf-kjn33_REF")
+			assert.Contains(t, csvContent, "TST")
+			assert.Contains(t, csvContent, testCtx.networkIdentifier)
+		})
+
+		t.Run("should export CSV with limit", func(t *testing.T) {
+			// Test with limit that's higher than the number of orders that exist
+			// This tests the limit parameter functionality without hitting the validation error
+			today := time.Now().Format("2006-01-02")
+			tomorrow := time.Now().Add(24 * time.Hour).Format("2006-01-02")
+
+			var payload = map[string]interface{}{
+				"from":      today,
+				"to":        tomorrow,
+				"limit":     "50", // Use a limit higher than expected orders to avoid validation error
+				"export":    "csv",
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?from=%s&to=%s&limit=%s&timestamp=%v&export=csv", payload["from"], payload["to"], payload["limit"], payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+
+			if res.Code != http.StatusOK {
+				t.Logf("Response Status: %d", res.Code)
+				t.Logf("Response Body: %s", res.Body.String())
+			}
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			csvContent := res.Body.String()
+			lines := strings.Split(strings.TrimSpace(csvContent), "\n")
+			// Should have header + some data rows, all within the limit of 50
+			assert.GreaterOrEqual(t, len(lines), 2) // At least header + 1 data row
+			assert.LessOrEqual(t, len(lines), 51) // Header + max 50 data rows
+		})
+
+		t.Run("should return error when export exceeds limit", func(t *testing.T) {
+			// Test with a very small limit to trigger the validation error
+			today := time.Now().Format("2006-01-02")
+			tomorrow := time.Now().Add(24 * time.Hour).Format("2006-01-02")
+
+			var payload = map[string]interface{}{
+				"from":      today,
+				"to":        tomorrow,
+				"limit":     "1", // Very small limit to trigger validation
+				"export":    "csv",
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?from=%s&to=%s&limit=%s&timestamp=%v&export=csv", payload["from"], payload["to"], payload["limit"], payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Contains(t, response.Message, "Export too large")
+		})
+
+		t.Run("should return error for invalid date format", func(t *testing.T) {
+			var payload = map[string]interface{}{
+				"from":      "invalid-date",
+				"export":    "csv",
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?from=%s&timestamp=%v&export=csv", payload["from"], payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Invalid from date format", response.Message)
+		})
+
+		t.Run("should return error when no orders found", func(t *testing.T) {
+			// Use date range from future
+			futureDate := time.Now().Add(365 * 24 * time.Hour).Format("2006-01-02")
+			farFuture := time.Now().Add(370 * 24 * time.Hour).Format("2006-01-02")
+
+			var payload = map[string]interface{}{
+				"from":      futureDate,
+				"to":        farFuture,
+				"export":    "csv",
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?from=%s&to=%s&timestamp=%v&export=csv", payload["from"], payload["to"], payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+
+			if res.Code != http.StatusBadRequest {
+				t.Logf("Response Status: %d", res.Code)
+				t.Logf("Response Body: %s", res.Body.String())
+			}
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "No orders found in the specified date range", response.Message)
+		})
+
+		t.Run("should export all orders when no date range specified", func(t *testing.T) {
+			var payload = map[string]interface{}{
+				"export":    "csv",
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?timestamp=%v&export=csv", payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			csvContent := res.Body.String()
+			lines := strings.Split(strings.TrimSpace(csvContent), "\n")
+			// Should have header + data rows for all orders (at least 11: 10 from setup + 1 from InitiatePaymentOrder + others from tests)
+			assert.GreaterOrEqual(t, len(lines), 12)
+		})
+
+		t.Run("should only export orders for authenticated sender", func(t *testing.T) {
+			// Create another sender with orders (if not already created)
+			user2, err := test.CreateTestUser(map[string]interface{}{
+				"email": "export_sender2@test.com",
+			})
+			assert.NoError(t, err)
+
+			senderProfile2, err := test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id":     user2.ID,
+				"fee_percent": "3",
+			})
+			assert.NoError(t, err)
+
+			apiKeyService := services.NewAPIKeyService()
+			apiKey2, secretKey2, err := apiKeyService.GenerateAPIKey(
+				context.Background(),
+				nil,
+				senderProfile2,
+				nil,
+			)
+			assert.NoError(t, err)
+
+			// Export using second sender's credentials
+			today := time.Now().Format("2006-01-02")
+			tomorrow := time.Now().Add(24 * time.Hour).Format("2006-01-02")
+
+			var payload = map[string]interface{}{
+				"from":      today,
+				"to":        tomorrow,
+				"export":    "csv",
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, secretKey2)
+
+			headers := map[string]string{
+				"Authorization": "HMAC " + apiKey2.ID.String() + ":" + signature,
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?from=%s&to=%s&timestamp=%v&export=csv", today, tomorrow, payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+
+			// Should get empty result or no orders found error since second sender has no orders in date range
+			if res.Code == http.StatusOK {
+				csvContent := res.Body.String()
+				lines := strings.Split(strings.TrimSpace(csvContent), "\n")
+				// Should only have header row
+				assert.Equal(t, 1, len(lines))
+			} else {
+				if res.Code != http.StatusBadRequest {
+					t.Logf("Response Status: %d", res.Code)
+					t.Logf("Response Body: %s", res.Body.String())
+				}
+				assert.Equal(t, http.StatusBadRequest, res.Code)
+				var response types.Response
+				err = json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, "No orders found in the specified date range", response.Message)
+			}
 		})
 	})
 }
