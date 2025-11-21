@@ -480,8 +480,6 @@ func CreateTestProviderProfile(overrides map[string]interface{}) (*ent.ProviderP
 		SetProvisionMode(providerprofile.ProvisionMode(payload["provision_mode"].(string))).
 		SetUserID(payload["user_id"].(uuid.UUID)).
 		SetVisibilityMode(providerprofile.VisibilityMode(payload["visibility_mode"].(string))).
-		SetMinOtcValue(decimal.NewFromFloat(5000.0)).
-		SetMaxOtcValue(decimal.NewFromFloat(50000.0)).
 		Save(context.Background())
 	if err != nil {
 		return nil, err

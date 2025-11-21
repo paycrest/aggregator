@@ -21,7 +21,6 @@ import (
 	"github.com/paycrest/aggregator/ent/providerrating"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/user"
-	"github.com/shopspring/decimal"
 )
 
 // ProviderProfileCreate is the builder for creating a ProviderProfile entity.
@@ -127,32 +126,6 @@ func (ppc *ProviderProfileCreate) SetNillableVisibilityMode(pm *providerprofile.
 	if pm != nil {
 		ppc.SetVisibilityMode(*pm)
 	}
-	return ppc
-}
-
-// SetIsOtcEnabled sets the "is_otc_enabled" field.
-func (ppc *ProviderProfileCreate) SetIsOtcEnabled(b bool) *ProviderProfileCreate {
-	ppc.mutation.SetIsOtcEnabled(b)
-	return ppc
-}
-
-// SetNillableIsOtcEnabled sets the "is_otc_enabled" field if the given value is not nil.
-func (ppc *ProviderProfileCreate) SetNillableIsOtcEnabled(b *bool) *ProviderProfileCreate {
-	if b != nil {
-		ppc.SetIsOtcEnabled(*b)
-	}
-	return ppc
-}
-
-// SetMinOtcValue sets the "min_otc_value" field.
-func (ppc *ProviderProfileCreate) SetMinOtcValue(d decimal.Decimal) *ProviderProfileCreate {
-	ppc.mutation.SetMinOtcValue(d)
-	return ppc
-}
-
-// SetMaxOtcValue sets the "max_otc_value" field.
-func (ppc *ProviderProfileCreate) SetMaxOtcValue(d decimal.Decimal) *ProviderProfileCreate {
-	ppc.mutation.SetMaxOtcValue(d)
 	return ppc
 }
 
@@ -334,10 +307,6 @@ func (ppc *ProviderProfileCreate) defaults() {
 		v := providerprofile.DefaultVisibilityMode
 		ppc.mutation.SetVisibilityMode(v)
 	}
-	if _, ok := ppc.mutation.IsOtcEnabled(); !ok {
-		v := providerprofile.DefaultIsOtcEnabled
-		ppc.mutation.SetIsOtcEnabled(v)
-	}
 	if _, ok := ppc.mutation.ID(); !ok {
 		v := providerprofile.DefaultID()
 		ppc.mutation.SetID(v)
@@ -375,15 +344,6 @@ func (ppc *ProviderProfileCreate) check() error {
 		if err := providerprofile.VisibilityModeValidator(v); err != nil {
 			return &ValidationError{Name: "visibility_mode", err: fmt.Errorf(`ent: validator failed for field "ProviderProfile.visibility_mode": %w`, err)}
 		}
-	}
-	if _, ok := ppc.mutation.IsOtcEnabled(); !ok {
-		return &ValidationError{Name: "is_otc_enabled", err: errors.New(`ent: missing required field "ProviderProfile.is_otc_enabled"`)}
-	}
-	if _, ok := ppc.mutation.MinOtcValue(); !ok {
-		return &ValidationError{Name: "min_otc_value", err: errors.New(`ent: missing required field "ProviderProfile.min_otc_value"`)}
-	}
-	if _, ok := ppc.mutation.MaxOtcValue(); !ok {
-		return &ValidationError{Name: "max_otc_value", err: errors.New(`ent: missing required field "ProviderProfile.max_otc_value"`)}
 	}
 	if len(ppc.mutation.UserIDs()) == 0 {
 		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "ProviderProfile.user"`)}
@@ -451,18 +411,6 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 	if value, ok := ppc.mutation.VisibilityMode(); ok {
 		_spec.SetField(providerprofile.FieldVisibilityMode, field.TypeEnum, value)
 		_node.VisibilityMode = value
-	}
-	if value, ok := ppc.mutation.IsOtcEnabled(); ok {
-		_spec.SetField(providerprofile.FieldIsOtcEnabled, field.TypeBool, value)
-		_node.IsOtcEnabled = value
-	}
-	if value, ok := ppc.mutation.MinOtcValue(); ok {
-		_spec.SetField(providerprofile.FieldMinOtcValue, field.TypeFloat64, value)
-		_node.MinOtcValue = value
-	}
-	if value, ok := ppc.mutation.MaxOtcValue(); ok {
-		_spec.SetField(providerprofile.FieldMaxOtcValue, field.TypeFloat64, value)
-		_node.MaxOtcValue = value
 	}
 	if nodes := ppc.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -725,54 +673,6 @@ func (u *ProviderProfileUpsert) UpdateVisibilityMode() *ProviderProfileUpsert {
 	return u
 }
 
-// SetIsOtcEnabled sets the "is_otc_enabled" field.
-func (u *ProviderProfileUpsert) SetIsOtcEnabled(v bool) *ProviderProfileUpsert {
-	u.Set(providerprofile.FieldIsOtcEnabled, v)
-	return u
-}
-
-// UpdateIsOtcEnabled sets the "is_otc_enabled" field to the value that was provided on create.
-func (u *ProviderProfileUpsert) UpdateIsOtcEnabled() *ProviderProfileUpsert {
-	u.SetExcluded(providerprofile.FieldIsOtcEnabled)
-	return u
-}
-
-// SetMinOtcValue sets the "min_otc_value" field.
-func (u *ProviderProfileUpsert) SetMinOtcValue(v decimal.Decimal) *ProviderProfileUpsert {
-	u.Set(providerprofile.FieldMinOtcValue, v)
-	return u
-}
-
-// UpdateMinOtcValue sets the "min_otc_value" field to the value that was provided on create.
-func (u *ProviderProfileUpsert) UpdateMinOtcValue() *ProviderProfileUpsert {
-	u.SetExcluded(providerprofile.FieldMinOtcValue)
-	return u
-}
-
-// AddMinOtcValue adds v to the "min_otc_value" field.
-func (u *ProviderProfileUpsert) AddMinOtcValue(v decimal.Decimal) *ProviderProfileUpsert {
-	u.Add(providerprofile.FieldMinOtcValue, v)
-	return u
-}
-
-// SetMaxOtcValue sets the "max_otc_value" field.
-func (u *ProviderProfileUpsert) SetMaxOtcValue(v decimal.Decimal) *ProviderProfileUpsert {
-	u.Set(providerprofile.FieldMaxOtcValue, v)
-	return u
-}
-
-// UpdateMaxOtcValue sets the "max_otc_value" field to the value that was provided on create.
-func (u *ProviderProfileUpsert) UpdateMaxOtcValue() *ProviderProfileUpsert {
-	u.SetExcluded(providerprofile.FieldMaxOtcValue)
-	return u
-}
-
-// AddMaxOtcValue adds v to the "max_otc_value" field.
-func (u *ProviderProfileUpsert) AddMaxOtcValue(v decimal.Decimal) *ProviderProfileUpsert {
-	u.Add(providerprofile.FieldMaxOtcValue, v)
-	return u
-}
-
 // UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
@@ -930,62 +830,6 @@ func (u *ProviderProfileUpsertOne) SetVisibilityMode(v providerprofile.Visibilit
 func (u *ProviderProfileUpsertOne) UpdateVisibilityMode() *ProviderProfileUpsertOne {
 	return u.Update(func(s *ProviderProfileUpsert) {
 		s.UpdateVisibilityMode()
-	})
-}
-
-// SetIsOtcEnabled sets the "is_otc_enabled" field.
-func (u *ProviderProfileUpsertOne) SetIsOtcEnabled(v bool) *ProviderProfileUpsertOne {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.SetIsOtcEnabled(v)
-	})
-}
-
-// UpdateIsOtcEnabled sets the "is_otc_enabled" field to the value that was provided on create.
-func (u *ProviderProfileUpsertOne) UpdateIsOtcEnabled() *ProviderProfileUpsertOne {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.UpdateIsOtcEnabled()
-	})
-}
-
-// SetMinOtcValue sets the "min_otc_value" field.
-func (u *ProviderProfileUpsertOne) SetMinOtcValue(v decimal.Decimal) *ProviderProfileUpsertOne {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.SetMinOtcValue(v)
-	})
-}
-
-// AddMinOtcValue adds v to the "min_otc_value" field.
-func (u *ProviderProfileUpsertOne) AddMinOtcValue(v decimal.Decimal) *ProviderProfileUpsertOne {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.AddMinOtcValue(v)
-	})
-}
-
-// UpdateMinOtcValue sets the "min_otc_value" field to the value that was provided on create.
-func (u *ProviderProfileUpsertOne) UpdateMinOtcValue() *ProviderProfileUpsertOne {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.UpdateMinOtcValue()
-	})
-}
-
-// SetMaxOtcValue sets the "max_otc_value" field.
-func (u *ProviderProfileUpsertOne) SetMaxOtcValue(v decimal.Decimal) *ProviderProfileUpsertOne {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.SetMaxOtcValue(v)
-	})
-}
-
-// AddMaxOtcValue adds v to the "max_otc_value" field.
-func (u *ProviderProfileUpsertOne) AddMaxOtcValue(v decimal.Decimal) *ProviderProfileUpsertOne {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.AddMaxOtcValue(v)
-	})
-}
-
-// UpdateMaxOtcValue sets the "max_otc_value" field to the value that was provided on create.
-func (u *ProviderProfileUpsertOne) UpdateMaxOtcValue() *ProviderProfileUpsertOne {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.UpdateMaxOtcValue()
 	})
 }
 
@@ -1313,62 +1157,6 @@ func (u *ProviderProfileUpsertBulk) SetVisibilityMode(v providerprofile.Visibili
 func (u *ProviderProfileUpsertBulk) UpdateVisibilityMode() *ProviderProfileUpsertBulk {
 	return u.Update(func(s *ProviderProfileUpsert) {
 		s.UpdateVisibilityMode()
-	})
-}
-
-// SetIsOtcEnabled sets the "is_otc_enabled" field.
-func (u *ProviderProfileUpsertBulk) SetIsOtcEnabled(v bool) *ProviderProfileUpsertBulk {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.SetIsOtcEnabled(v)
-	})
-}
-
-// UpdateIsOtcEnabled sets the "is_otc_enabled" field to the value that was provided on create.
-func (u *ProviderProfileUpsertBulk) UpdateIsOtcEnabled() *ProviderProfileUpsertBulk {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.UpdateIsOtcEnabled()
-	})
-}
-
-// SetMinOtcValue sets the "min_otc_value" field.
-func (u *ProviderProfileUpsertBulk) SetMinOtcValue(v decimal.Decimal) *ProviderProfileUpsertBulk {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.SetMinOtcValue(v)
-	})
-}
-
-// AddMinOtcValue adds v to the "min_otc_value" field.
-func (u *ProviderProfileUpsertBulk) AddMinOtcValue(v decimal.Decimal) *ProviderProfileUpsertBulk {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.AddMinOtcValue(v)
-	})
-}
-
-// UpdateMinOtcValue sets the "min_otc_value" field to the value that was provided on create.
-func (u *ProviderProfileUpsertBulk) UpdateMinOtcValue() *ProviderProfileUpsertBulk {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.UpdateMinOtcValue()
-	})
-}
-
-// SetMaxOtcValue sets the "max_otc_value" field.
-func (u *ProviderProfileUpsertBulk) SetMaxOtcValue(v decimal.Decimal) *ProviderProfileUpsertBulk {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.SetMaxOtcValue(v)
-	})
-}
-
-// AddMaxOtcValue adds v to the "max_otc_value" field.
-func (u *ProviderProfileUpsertBulk) AddMaxOtcValue(v decimal.Decimal) *ProviderProfileUpsertBulk {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.AddMaxOtcValue(v)
-	})
-}
-
-// UpdateMaxOtcValue sets the "max_otc_value" field to the value that was provided on create.
-func (u *ProviderProfileUpsertBulk) UpdateMaxOtcValue() *ProviderProfileUpsertBulk {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.UpdateMaxOtcValue()
 	})
 }
 

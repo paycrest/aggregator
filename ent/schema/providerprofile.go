@@ -9,7 +9,6 @@ import (
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
-	"github.com/shopspring/decimal"
 )
 
 // ProviderProfile holds the schema definition for the ProviderProfile entity.
@@ -39,12 +38,6 @@ func (ProviderProfile) Fields() []ent.Field {
 		field.Enum("visibility_mode").
 			Values("private", "public").
 			Default("public"),
-		field.Bool("is_otc_enabled").
-			Default(false),
-		field.Float("min_otc_value").
-			GoType(decimal.Decimal{}),
-		field.Float("max_otc_value").
-			GoType(decimal.Decimal{}),
 	}
 }
 

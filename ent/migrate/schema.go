@@ -457,6 +457,8 @@ var (
 		{Name: "conversion_rate_type", Type: field.TypeEnum, Enums: []string{"fixed", "floating"}},
 		{Name: "max_order_amount", Type: field.TypeFloat64},
 		{Name: "min_order_amount", Type: field.TypeFloat64},
+		{Name: "max_order_amount_otc", Type: field.TypeFloat64, Nullable: true},
+		{Name: "min_order_amount_otc", Type: field.TypeFloat64, Nullable: true},
 		{Name: "rate_slippage", Type: field.TypeFloat64},
 		{Name: "address", Type: field.TypeString, Nullable: true},
 		{Name: "network", Type: field.TypeString},
@@ -472,19 +474,19 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "provider_order_tokens_fiat_currencies_provider_order_tokens",
-				Columns:    []*schema.Column{ProviderOrderTokensColumns[11]},
+				Columns:    []*schema.Column{ProviderOrderTokensColumns[13]},
 				RefColumns: []*schema.Column{FiatCurrenciesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "provider_order_tokens_provider_profiles_order_tokens",
-				Columns:    []*schema.Column{ProviderOrderTokensColumns[12]},
+				Columns:    []*schema.Column{ProviderOrderTokensColumns[14]},
 				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "provider_order_tokens_tokens_provider_order_tokens",
-				Columns:    []*schema.Column{ProviderOrderTokensColumns[13]},
+				Columns:    []*schema.Column{ProviderOrderTokensColumns[15]},
 				RefColumns: []*schema.Column{TokensColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -493,7 +495,7 @@ var (
 			{
 				Name:    "providerordertoken_network_provider_profile_order_tokens_token_provider_order_tokens_fiat_currency_provider_order_tokens",
 				Unique:  true,
-				Columns: []*schema.Column{ProviderOrderTokensColumns[10], ProviderOrderTokensColumns[12], ProviderOrderTokensColumns[13], ProviderOrderTokensColumns[11]},
+				Columns: []*schema.Column{ProviderOrderTokensColumns[12], ProviderOrderTokensColumns[14], ProviderOrderTokensColumns[15], ProviderOrderTokensColumns[13]},
 			},
 		},
 	}
@@ -507,9 +509,6 @@ var (
 		{Name: "is_kyb_verified", Type: field.TypeBool, Default: false},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "visibility_mode", Type: field.TypeEnum, Enums: []string{"private", "public"}, Default: "public"},
-		{Name: "is_otc_enabled", Type: field.TypeBool, Default: false},
-		{Name: "min_otc_value", Type: field.TypeFloat64},
-		{Name: "max_otc_value", Type: field.TypeFloat64},
 		{Name: "user_provider_profile", Type: field.TypeUUID, Unique: true},
 	}
 	// ProviderProfilesTable holds the schema information for the "provider_profiles" table.
@@ -520,7 +519,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "provider_profiles_users_provider_profile",
-				Columns:    []*schema.Column{ProviderProfilesColumns[11]},
+				Columns:    []*schema.Column{ProviderProfilesColumns[8]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Cascade,
 			},

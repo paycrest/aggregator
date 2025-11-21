@@ -20,7 +20,6 @@ import (
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
-	"github.com/shopspring/decimal"
 )
 
 // ProviderProfileUpdate is the builder for updating ProviderProfile entities.
@@ -135,62 +134,6 @@ func (ppu *ProviderProfileUpdate) SetNillableVisibilityMode(pm *providerprofile.
 	if pm != nil {
 		ppu.SetVisibilityMode(*pm)
 	}
-	return ppu
-}
-
-// SetIsOtcEnabled sets the "is_otc_enabled" field.
-func (ppu *ProviderProfileUpdate) SetIsOtcEnabled(b bool) *ProviderProfileUpdate {
-	ppu.mutation.SetIsOtcEnabled(b)
-	return ppu
-}
-
-// SetNillableIsOtcEnabled sets the "is_otc_enabled" field if the given value is not nil.
-func (ppu *ProviderProfileUpdate) SetNillableIsOtcEnabled(b *bool) *ProviderProfileUpdate {
-	if b != nil {
-		ppu.SetIsOtcEnabled(*b)
-	}
-	return ppu
-}
-
-// SetMinOtcValue sets the "min_otc_value" field.
-func (ppu *ProviderProfileUpdate) SetMinOtcValue(d decimal.Decimal) *ProviderProfileUpdate {
-	ppu.mutation.ResetMinOtcValue()
-	ppu.mutation.SetMinOtcValue(d)
-	return ppu
-}
-
-// SetNillableMinOtcValue sets the "min_otc_value" field if the given value is not nil.
-func (ppu *ProviderProfileUpdate) SetNillableMinOtcValue(d *decimal.Decimal) *ProviderProfileUpdate {
-	if d != nil {
-		ppu.SetMinOtcValue(*d)
-	}
-	return ppu
-}
-
-// AddMinOtcValue adds d to the "min_otc_value" field.
-func (ppu *ProviderProfileUpdate) AddMinOtcValue(d decimal.Decimal) *ProviderProfileUpdate {
-	ppu.mutation.AddMinOtcValue(d)
-	return ppu
-}
-
-// SetMaxOtcValue sets the "max_otc_value" field.
-func (ppu *ProviderProfileUpdate) SetMaxOtcValue(d decimal.Decimal) *ProviderProfileUpdate {
-	ppu.mutation.ResetMaxOtcValue()
-	ppu.mutation.SetMaxOtcValue(d)
-	return ppu
-}
-
-// SetNillableMaxOtcValue sets the "max_otc_value" field if the given value is not nil.
-func (ppu *ProviderProfileUpdate) SetNillableMaxOtcValue(d *decimal.Decimal) *ProviderProfileUpdate {
-	if d != nil {
-		ppu.SetMaxOtcValue(*d)
-	}
-	return ppu
-}
-
-// AddMaxOtcValue adds d to the "max_otc_value" field.
-func (ppu *ProviderProfileUpdate) AddMaxOtcValue(d decimal.Decimal) *ProviderProfileUpdate {
-	ppu.mutation.AddMaxOtcValue(d)
 	return ppu
 }
 
@@ -490,21 +433,6 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 	}
 	if value, ok := ppu.mutation.VisibilityMode(); ok {
 		_spec.SetField(providerprofile.FieldVisibilityMode, field.TypeEnum, value)
-	}
-	if value, ok := ppu.mutation.IsOtcEnabled(); ok {
-		_spec.SetField(providerprofile.FieldIsOtcEnabled, field.TypeBool, value)
-	}
-	if value, ok := ppu.mutation.MinOtcValue(); ok {
-		_spec.SetField(providerprofile.FieldMinOtcValue, field.TypeFloat64, value)
-	}
-	if value, ok := ppu.mutation.AddedMinOtcValue(); ok {
-		_spec.AddField(providerprofile.FieldMinOtcValue, field.TypeFloat64, value)
-	}
-	if value, ok := ppu.mutation.MaxOtcValue(); ok {
-		_spec.SetField(providerprofile.FieldMaxOtcValue, field.TypeFloat64, value)
-	}
-	if value, ok := ppu.mutation.AddedMaxOtcValue(); ok {
-		_spec.AddField(providerprofile.FieldMaxOtcValue, field.TypeFloat64, value)
 	}
 	if ppu.mutation.APIKeyCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -866,62 +794,6 @@ func (ppuo *ProviderProfileUpdateOne) SetNillableVisibilityMode(pm *providerprof
 	return ppuo
 }
 
-// SetIsOtcEnabled sets the "is_otc_enabled" field.
-func (ppuo *ProviderProfileUpdateOne) SetIsOtcEnabled(b bool) *ProviderProfileUpdateOne {
-	ppuo.mutation.SetIsOtcEnabled(b)
-	return ppuo
-}
-
-// SetNillableIsOtcEnabled sets the "is_otc_enabled" field if the given value is not nil.
-func (ppuo *ProviderProfileUpdateOne) SetNillableIsOtcEnabled(b *bool) *ProviderProfileUpdateOne {
-	if b != nil {
-		ppuo.SetIsOtcEnabled(*b)
-	}
-	return ppuo
-}
-
-// SetMinOtcValue sets the "min_otc_value" field.
-func (ppuo *ProviderProfileUpdateOne) SetMinOtcValue(d decimal.Decimal) *ProviderProfileUpdateOne {
-	ppuo.mutation.ResetMinOtcValue()
-	ppuo.mutation.SetMinOtcValue(d)
-	return ppuo
-}
-
-// SetNillableMinOtcValue sets the "min_otc_value" field if the given value is not nil.
-func (ppuo *ProviderProfileUpdateOne) SetNillableMinOtcValue(d *decimal.Decimal) *ProviderProfileUpdateOne {
-	if d != nil {
-		ppuo.SetMinOtcValue(*d)
-	}
-	return ppuo
-}
-
-// AddMinOtcValue adds d to the "min_otc_value" field.
-func (ppuo *ProviderProfileUpdateOne) AddMinOtcValue(d decimal.Decimal) *ProviderProfileUpdateOne {
-	ppuo.mutation.AddMinOtcValue(d)
-	return ppuo
-}
-
-// SetMaxOtcValue sets the "max_otc_value" field.
-func (ppuo *ProviderProfileUpdateOne) SetMaxOtcValue(d decimal.Decimal) *ProviderProfileUpdateOne {
-	ppuo.mutation.ResetMaxOtcValue()
-	ppuo.mutation.SetMaxOtcValue(d)
-	return ppuo
-}
-
-// SetNillableMaxOtcValue sets the "max_otc_value" field if the given value is not nil.
-func (ppuo *ProviderProfileUpdateOne) SetNillableMaxOtcValue(d *decimal.Decimal) *ProviderProfileUpdateOne {
-	if d != nil {
-		ppuo.SetMaxOtcValue(*d)
-	}
-	return ppuo
-}
-
-// AddMaxOtcValue adds d to the "max_otc_value" field.
-func (ppuo *ProviderProfileUpdateOne) AddMaxOtcValue(d decimal.Decimal) *ProviderProfileUpdateOne {
-	ppuo.mutation.AddMaxOtcValue(d)
-	return ppuo
-}
-
 // SetAPIKeyID sets the "api_key" edge to the APIKey entity by ID.
 func (ppuo *ProviderProfileUpdateOne) SetAPIKeyID(id uuid.UUID) *ProviderProfileUpdateOne {
 	ppuo.mutation.SetAPIKeyID(id)
@@ -1248,21 +1120,6 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 	}
 	if value, ok := ppuo.mutation.VisibilityMode(); ok {
 		_spec.SetField(providerprofile.FieldVisibilityMode, field.TypeEnum, value)
-	}
-	if value, ok := ppuo.mutation.IsOtcEnabled(); ok {
-		_spec.SetField(providerprofile.FieldIsOtcEnabled, field.TypeBool, value)
-	}
-	if value, ok := ppuo.mutation.MinOtcValue(); ok {
-		_spec.SetField(providerprofile.FieldMinOtcValue, field.TypeFloat64, value)
-	}
-	if value, ok := ppuo.mutation.AddedMinOtcValue(); ok {
-		_spec.AddField(providerprofile.FieldMinOtcValue, field.TypeFloat64, value)
-	}
-	if value, ok := ppuo.mutation.MaxOtcValue(); ok {
-		_spec.SetField(providerprofile.FieldMaxOtcValue, field.TypeFloat64, value)
-	}
-	if value, ok := ppuo.mutation.AddedMaxOtcValue(); ok {
-		_spec.AddField(providerprofile.FieldMaxOtcValue, field.TypeFloat64, value)
 	}
 	if ppuo.mutation.APIKeyCleared() {
 		edge := &sqlgraph.EdgeSpec{

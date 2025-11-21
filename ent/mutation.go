@@ -14758,6 +14758,10 @@ type ProviderOrderTokenMutation struct {
 	addmax_order_amount         *decimal.Decimal
 	min_order_amount            *decimal.Decimal
 	addmin_order_amount         *decimal.Decimal
+	max_order_amount_otc        *decimal.Decimal
+	addmax_order_amount_otc     *decimal.Decimal
+	min_order_amount_otc        *decimal.Decimal
+	addmin_order_amount_otc     *decimal.Decimal
 	rate_slippage               *decimal.Decimal
 	addrate_slippage            *decimal.Decimal
 	address                     *string
@@ -15204,6 +15208,146 @@ func (m *ProviderOrderTokenMutation) ResetMinOrderAmount() {
 	m.addmin_order_amount = nil
 }
 
+// SetMaxOrderAmountOtc sets the "max_order_amount_otc" field.
+func (m *ProviderOrderTokenMutation) SetMaxOrderAmountOtc(d decimal.Decimal) {
+	m.max_order_amount_otc = &d
+	m.addmax_order_amount_otc = nil
+}
+
+// MaxOrderAmountOtc returns the value of the "max_order_amount_otc" field in the mutation.
+func (m *ProviderOrderTokenMutation) MaxOrderAmountOtc() (r decimal.Decimal, exists bool) {
+	v := m.max_order_amount_otc
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMaxOrderAmountOtc returns the old "max_order_amount_otc" field's value of the ProviderOrderToken entity.
+// If the ProviderOrderToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderOrderTokenMutation) OldMaxOrderAmountOtc(ctx context.Context) (v *decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMaxOrderAmountOtc is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMaxOrderAmountOtc requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMaxOrderAmountOtc: %w", err)
+	}
+	return oldValue.MaxOrderAmountOtc, nil
+}
+
+// AddMaxOrderAmountOtc adds d to the "max_order_amount_otc" field.
+func (m *ProviderOrderTokenMutation) AddMaxOrderAmountOtc(d decimal.Decimal) {
+	if m.addmax_order_amount_otc != nil {
+		*m.addmax_order_amount_otc = m.addmax_order_amount_otc.Add(d)
+	} else {
+		m.addmax_order_amount_otc = &d
+	}
+}
+
+// AddedMaxOrderAmountOtc returns the value that was added to the "max_order_amount_otc" field in this mutation.
+func (m *ProviderOrderTokenMutation) AddedMaxOrderAmountOtc() (r decimal.Decimal, exists bool) {
+	v := m.addmax_order_amount_otc
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearMaxOrderAmountOtc clears the value of the "max_order_amount_otc" field.
+func (m *ProviderOrderTokenMutation) ClearMaxOrderAmountOtc() {
+	m.max_order_amount_otc = nil
+	m.addmax_order_amount_otc = nil
+	m.clearedFields[providerordertoken.FieldMaxOrderAmountOtc] = struct{}{}
+}
+
+// MaxOrderAmountOtcCleared returns if the "max_order_amount_otc" field was cleared in this mutation.
+func (m *ProviderOrderTokenMutation) MaxOrderAmountOtcCleared() bool {
+	_, ok := m.clearedFields[providerordertoken.FieldMaxOrderAmountOtc]
+	return ok
+}
+
+// ResetMaxOrderAmountOtc resets all changes to the "max_order_amount_otc" field.
+func (m *ProviderOrderTokenMutation) ResetMaxOrderAmountOtc() {
+	m.max_order_amount_otc = nil
+	m.addmax_order_amount_otc = nil
+	delete(m.clearedFields, providerordertoken.FieldMaxOrderAmountOtc)
+}
+
+// SetMinOrderAmountOtc sets the "min_order_amount_otc" field.
+func (m *ProviderOrderTokenMutation) SetMinOrderAmountOtc(d decimal.Decimal) {
+	m.min_order_amount_otc = &d
+	m.addmin_order_amount_otc = nil
+}
+
+// MinOrderAmountOtc returns the value of the "min_order_amount_otc" field in the mutation.
+func (m *ProviderOrderTokenMutation) MinOrderAmountOtc() (r decimal.Decimal, exists bool) {
+	v := m.min_order_amount_otc
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMinOrderAmountOtc returns the old "min_order_amount_otc" field's value of the ProviderOrderToken entity.
+// If the ProviderOrderToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderOrderTokenMutation) OldMinOrderAmountOtc(ctx context.Context) (v *decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMinOrderAmountOtc is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMinOrderAmountOtc requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMinOrderAmountOtc: %w", err)
+	}
+	return oldValue.MinOrderAmountOtc, nil
+}
+
+// AddMinOrderAmountOtc adds d to the "min_order_amount_otc" field.
+func (m *ProviderOrderTokenMutation) AddMinOrderAmountOtc(d decimal.Decimal) {
+	if m.addmin_order_amount_otc != nil {
+		*m.addmin_order_amount_otc = m.addmin_order_amount_otc.Add(d)
+	} else {
+		m.addmin_order_amount_otc = &d
+	}
+}
+
+// AddedMinOrderAmountOtc returns the value that was added to the "min_order_amount_otc" field in this mutation.
+func (m *ProviderOrderTokenMutation) AddedMinOrderAmountOtc() (r decimal.Decimal, exists bool) {
+	v := m.addmin_order_amount_otc
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearMinOrderAmountOtc clears the value of the "min_order_amount_otc" field.
+func (m *ProviderOrderTokenMutation) ClearMinOrderAmountOtc() {
+	m.min_order_amount_otc = nil
+	m.addmin_order_amount_otc = nil
+	m.clearedFields[providerordertoken.FieldMinOrderAmountOtc] = struct{}{}
+}
+
+// MinOrderAmountOtcCleared returns if the "min_order_amount_otc" field was cleared in this mutation.
+func (m *ProviderOrderTokenMutation) MinOrderAmountOtcCleared() bool {
+	_, ok := m.clearedFields[providerordertoken.FieldMinOrderAmountOtc]
+	return ok
+}
+
+// ResetMinOrderAmountOtc resets all changes to the "min_order_amount_otc" field.
+func (m *ProviderOrderTokenMutation) ResetMinOrderAmountOtc() {
+	m.min_order_amount_otc = nil
+	m.addmin_order_amount_otc = nil
+	delete(m.clearedFields, providerordertoken.FieldMinOrderAmountOtc)
+}
+
 // SetRateSlippage sets the "rate_slippage" field.
 func (m *ProviderOrderTokenMutation) SetRateSlippage(d decimal.Decimal) {
 	m.rate_slippage = &d
@@ -15496,7 +15640,7 @@ func (m *ProviderOrderTokenMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProviderOrderTokenMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 12)
 	if m.created_at != nil {
 		fields = append(fields, providerordertoken.FieldCreatedAt)
 	}
@@ -15517,6 +15661,12 @@ func (m *ProviderOrderTokenMutation) Fields() []string {
 	}
 	if m.min_order_amount != nil {
 		fields = append(fields, providerordertoken.FieldMinOrderAmount)
+	}
+	if m.max_order_amount_otc != nil {
+		fields = append(fields, providerordertoken.FieldMaxOrderAmountOtc)
+	}
+	if m.min_order_amount_otc != nil {
+		fields = append(fields, providerordertoken.FieldMinOrderAmountOtc)
 	}
 	if m.rate_slippage != nil {
 		fields = append(fields, providerordertoken.FieldRateSlippage)
@@ -15549,6 +15699,10 @@ func (m *ProviderOrderTokenMutation) Field(name string) (ent.Value, bool) {
 		return m.MaxOrderAmount()
 	case providerordertoken.FieldMinOrderAmount:
 		return m.MinOrderAmount()
+	case providerordertoken.FieldMaxOrderAmountOtc:
+		return m.MaxOrderAmountOtc()
+	case providerordertoken.FieldMinOrderAmountOtc:
+		return m.MinOrderAmountOtc()
 	case providerordertoken.FieldRateSlippage:
 		return m.RateSlippage()
 	case providerordertoken.FieldAddress:
@@ -15578,6 +15732,10 @@ func (m *ProviderOrderTokenMutation) OldField(ctx context.Context, name string) 
 		return m.OldMaxOrderAmount(ctx)
 	case providerordertoken.FieldMinOrderAmount:
 		return m.OldMinOrderAmount(ctx)
+	case providerordertoken.FieldMaxOrderAmountOtc:
+		return m.OldMaxOrderAmountOtc(ctx)
+	case providerordertoken.FieldMinOrderAmountOtc:
+		return m.OldMinOrderAmountOtc(ctx)
 	case providerordertoken.FieldRateSlippage:
 		return m.OldRateSlippage(ctx)
 	case providerordertoken.FieldAddress:
@@ -15642,6 +15800,20 @@ func (m *ProviderOrderTokenMutation) SetField(name string, value ent.Value) erro
 		}
 		m.SetMinOrderAmount(v)
 		return nil
+	case providerordertoken.FieldMaxOrderAmountOtc:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMaxOrderAmountOtc(v)
+		return nil
+	case providerordertoken.FieldMinOrderAmountOtc:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMinOrderAmountOtc(v)
+		return nil
 	case providerordertoken.FieldRateSlippage:
 		v, ok := value.(decimal.Decimal)
 		if !ok {
@@ -15683,6 +15855,12 @@ func (m *ProviderOrderTokenMutation) AddedFields() []string {
 	if m.addmin_order_amount != nil {
 		fields = append(fields, providerordertoken.FieldMinOrderAmount)
 	}
+	if m.addmax_order_amount_otc != nil {
+		fields = append(fields, providerordertoken.FieldMaxOrderAmountOtc)
+	}
+	if m.addmin_order_amount_otc != nil {
+		fields = append(fields, providerordertoken.FieldMinOrderAmountOtc)
+	}
 	if m.addrate_slippage != nil {
 		fields = append(fields, providerordertoken.FieldRateSlippage)
 	}
@@ -15702,6 +15880,10 @@ func (m *ProviderOrderTokenMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedMaxOrderAmount()
 	case providerordertoken.FieldMinOrderAmount:
 		return m.AddedMinOrderAmount()
+	case providerordertoken.FieldMaxOrderAmountOtc:
+		return m.AddedMaxOrderAmountOtc()
+	case providerordertoken.FieldMinOrderAmountOtc:
+		return m.AddedMinOrderAmountOtc()
 	case providerordertoken.FieldRateSlippage:
 		return m.AddedRateSlippage()
 	}
@@ -15741,6 +15923,20 @@ func (m *ProviderOrderTokenMutation) AddField(name string, value ent.Value) erro
 		}
 		m.AddMinOrderAmount(v)
 		return nil
+	case providerordertoken.FieldMaxOrderAmountOtc:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddMaxOrderAmountOtc(v)
+		return nil
+	case providerordertoken.FieldMinOrderAmountOtc:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddMinOrderAmountOtc(v)
+		return nil
 	case providerordertoken.FieldRateSlippage:
 		v, ok := value.(decimal.Decimal)
 		if !ok {
@@ -15756,6 +15952,12 @@ func (m *ProviderOrderTokenMutation) AddField(name string, value ent.Value) erro
 // mutation.
 func (m *ProviderOrderTokenMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(providerordertoken.FieldMaxOrderAmountOtc) {
+		fields = append(fields, providerordertoken.FieldMaxOrderAmountOtc)
+	}
+	if m.FieldCleared(providerordertoken.FieldMinOrderAmountOtc) {
+		fields = append(fields, providerordertoken.FieldMinOrderAmountOtc)
+	}
 	if m.FieldCleared(providerordertoken.FieldAddress) {
 		fields = append(fields, providerordertoken.FieldAddress)
 	}
@@ -15773,6 +15975,12 @@ func (m *ProviderOrderTokenMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *ProviderOrderTokenMutation) ClearField(name string) error {
 	switch name {
+	case providerordertoken.FieldMaxOrderAmountOtc:
+		m.ClearMaxOrderAmountOtc()
+		return nil
+	case providerordertoken.FieldMinOrderAmountOtc:
+		m.ClearMinOrderAmountOtc()
+		return nil
 	case providerordertoken.FieldAddress:
 		m.ClearAddress()
 		return nil
@@ -15804,6 +16012,12 @@ func (m *ProviderOrderTokenMutation) ResetField(name string) error {
 		return nil
 	case providerordertoken.FieldMinOrderAmount:
 		m.ResetMinOrderAmount()
+		return nil
+	case providerordertoken.FieldMaxOrderAmountOtc:
+		m.ResetMaxOrderAmountOtc()
+		return nil
+	case providerordertoken.FieldMinOrderAmountOtc:
+		m.ResetMinOrderAmountOtc()
 		return nil
 	case providerordertoken.FieldRateSlippage:
 		m.ResetRateSlippage()
@@ -15941,11 +16155,6 @@ type ProviderProfileMutation struct {
 	is_kyb_verified            *bool
 	updated_at                 *time.Time
 	visibility_mode            *providerprofile.VisibilityMode
-	is_otc_enabled             *bool
-	min_otc_value              *decimal.Decimal
-	addmin_otc_value           *decimal.Decimal
-	max_otc_value              *decimal.Decimal
-	addmax_otc_value           *decimal.Decimal
 	clearedFields              map[string]struct{}
 	user                       *uuid.UUID
 	cleareduser                bool
@@ -16352,154 +16561,6 @@ func (m *ProviderProfileMutation) ResetVisibilityMode() {
 	m.visibility_mode = nil
 }
 
-// SetIsOtcEnabled sets the "is_otc_enabled" field.
-func (m *ProviderProfileMutation) SetIsOtcEnabled(b bool) {
-	m.is_otc_enabled = &b
-}
-
-// IsOtcEnabled returns the value of the "is_otc_enabled" field in the mutation.
-func (m *ProviderProfileMutation) IsOtcEnabled() (r bool, exists bool) {
-	v := m.is_otc_enabled
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldIsOtcEnabled returns the old "is_otc_enabled" field's value of the ProviderProfile entity.
-// If the ProviderProfile object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProviderProfileMutation) OldIsOtcEnabled(ctx context.Context) (v bool, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldIsOtcEnabled is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldIsOtcEnabled requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldIsOtcEnabled: %w", err)
-	}
-	return oldValue.IsOtcEnabled, nil
-}
-
-// ResetIsOtcEnabled resets all changes to the "is_otc_enabled" field.
-func (m *ProviderProfileMutation) ResetIsOtcEnabled() {
-	m.is_otc_enabled = nil
-}
-
-// SetMinOtcValue sets the "min_otc_value" field.
-func (m *ProviderProfileMutation) SetMinOtcValue(d decimal.Decimal) {
-	m.min_otc_value = &d
-	m.addmin_otc_value = nil
-}
-
-// MinOtcValue returns the value of the "min_otc_value" field in the mutation.
-func (m *ProviderProfileMutation) MinOtcValue() (r decimal.Decimal, exists bool) {
-	v := m.min_otc_value
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldMinOtcValue returns the old "min_otc_value" field's value of the ProviderProfile entity.
-// If the ProviderProfile object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProviderProfileMutation) OldMinOtcValue(ctx context.Context) (v decimal.Decimal, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldMinOtcValue is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldMinOtcValue requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldMinOtcValue: %w", err)
-	}
-	return oldValue.MinOtcValue, nil
-}
-
-// AddMinOtcValue adds d to the "min_otc_value" field.
-func (m *ProviderProfileMutation) AddMinOtcValue(d decimal.Decimal) {
-	if m.addmin_otc_value != nil {
-		*m.addmin_otc_value = m.addmin_otc_value.Add(d)
-	} else {
-		m.addmin_otc_value = &d
-	}
-}
-
-// AddedMinOtcValue returns the value that was added to the "min_otc_value" field in this mutation.
-func (m *ProviderProfileMutation) AddedMinOtcValue() (r decimal.Decimal, exists bool) {
-	v := m.addmin_otc_value
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ResetMinOtcValue resets all changes to the "min_otc_value" field.
-func (m *ProviderProfileMutation) ResetMinOtcValue() {
-	m.min_otc_value = nil
-	m.addmin_otc_value = nil
-}
-
-// SetMaxOtcValue sets the "max_otc_value" field.
-func (m *ProviderProfileMutation) SetMaxOtcValue(d decimal.Decimal) {
-	m.max_otc_value = &d
-	m.addmax_otc_value = nil
-}
-
-// MaxOtcValue returns the value of the "max_otc_value" field in the mutation.
-func (m *ProviderProfileMutation) MaxOtcValue() (r decimal.Decimal, exists bool) {
-	v := m.max_otc_value
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldMaxOtcValue returns the old "max_otc_value" field's value of the ProviderProfile entity.
-// If the ProviderProfile object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProviderProfileMutation) OldMaxOtcValue(ctx context.Context) (v decimal.Decimal, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldMaxOtcValue is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldMaxOtcValue requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldMaxOtcValue: %w", err)
-	}
-	return oldValue.MaxOtcValue, nil
-}
-
-// AddMaxOtcValue adds d to the "max_otc_value" field.
-func (m *ProviderProfileMutation) AddMaxOtcValue(d decimal.Decimal) {
-	if m.addmax_otc_value != nil {
-		*m.addmax_otc_value = m.addmax_otc_value.Add(d)
-	} else {
-		m.addmax_otc_value = &d
-	}
-}
-
-// AddedMaxOtcValue returns the value that was added to the "max_otc_value" field in this mutation.
-func (m *ProviderProfileMutation) AddedMaxOtcValue() (r decimal.Decimal, exists bool) {
-	v := m.addmax_otc_value
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ResetMaxOtcValue resets all changes to the "max_otc_value" field.
-func (m *ProviderProfileMutation) ResetMaxOtcValue() {
-	m.max_otc_value = nil
-	m.addmax_otc_value = nil
-}
-
 // SetUserID sets the "user" edge to the User entity by id.
 func (m *ProviderProfileMutation) SetUserID(id uuid.UUID) {
 	m.user = &id
@@ -16867,7 +16928,7 @@ func (m *ProviderProfileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProviderProfileMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 7)
 	if m.trading_name != nil {
 		fields = append(fields, providerprofile.FieldTradingName)
 	}
@@ -16888,15 +16949,6 @@ func (m *ProviderProfileMutation) Fields() []string {
 	}
 	if m.visibility_mode != nil {
 		fields = append(fields, providerprofile.FieldVisibilityMode)
-	}
-	if m.is_otc_enabled != nil {
-		fields = append(fields, providerprofile.FieldIsOtcEnabled)
-	}
-	if m.min_otc_value != nil {
-		fields = append(fields, providerprofile.FieldMinOtcValue)
-	}
-	if m.max_otc_value != nil {
-		fields = append(fields, providerprofile.FieldMaxOtcValue)
 	}
 	return fields
 }
@@ -16920,12 +16972,6 @@ func (m *ProviderProfileMutation) Field(name string) (ent.Value, bool) {
 		return m.UpdatedAt()
 	case providerprofile.FieldVisibilityMode:
 		return m.VisibilityMode()
-	case providerprofile.FieldIsOtcEnabled:
-		return m.IsOtcEnabled()
-	case providerprofile.FieldMinOtcValue:
-		return m.MinOtcValue()
-	case providerprofile.FieldMaxOtcValue:
-		return m.MaxOtcValue()
 	}
 	return nil, false
 }
@@ -16949,12 +16995,6 @@ func (m *ProviderProfileMutation) OldField(ctx context.Context, name string) (en
 		return m.OldUpdatedAt(ctx)
 	case providerprofile.FieldVisibilityMode:
 		return m.OldVisibilityMode(ctx)
-	case providerprofile.FieldIsOtcEnabled:
-		return m.OldIsOtcEnabled(ctx)
-	case providerprofile.FieldMinOtcValue:
-		return m.OldMinOtcValue(ctx)
-	case providerprofile.FieldMaxOtcValue:
-		return m.OldMaxOtcValue(ctx)
 	}
 	return nil, fmt.Errorf("unknown ProviderProfile field %s", name)
 }
@@ -17013,27 +17053,6 @@ func (m *ProviderProfileMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetVisibilityMode(v)
 		return nil
-	case providerprofile.FieldIsOtcEnabled:
-		v, ok := value.(bool)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetIsOtcEnabled(v)
-		return nil
-	case providerprofile.FieldMinOtcValue:
-		v, ok := value.(decimal.Decimal)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetMinOtcValue(v)
-		return nil
-	case providerprofile.FieldMaxOtcValue:
-		v, ok := value.(decimal.Decimal)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetMaxOtcValue(v)
-		return nil
 	}
 	return fmt.Errorf("unknown ProviderProfile field %s", name)
 }
@@ -17041,26 +17060,13 @@ func (m *ProviderProfileMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *ProviderProfileMutation) AddedFields() []string {
-	var fields []string
-	if m.addmin_otc_value != nil {
-		fields = append(fields, providerprofile.FieldMinOtcValue)
-	}
-	if m.addmax_otc_value != nil {
-		fields = append(fields, providerprofile.FieldMaxOtcValue)
-	}
-	return fields
+	return nil
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *ProviderProfileMutation) AddedField(name string) (ent.Value, bool) {
-	switch name {
-	case providerprofile.FieldMinOtcValue:
-		return m.AddedMinOtcValue()
-	case providerprofile.FieldMaxOtcValue:
-		return m.AddedMaxOtcValue()
-	}
 	return nil, false
 }
 
@@ -17069,20 +17075,6 @@ func (m *ProviderProfileMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *ProviderProfileMutation) AddField(name string, value ent.Value) error {
 	switch name {
-	case providerprofile.FieldMinOtcValue:
-		v, ok := value.(decimal.Decimal)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddMinOtcValue(v)
-		return nil
-	case providerprofile.FieldMaxOtcValue:
-		v, ok := value.(decimal.Decimal)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddMaxOtcValue(v)
-		return nil
 	}
 	return fmt.Errorf("unknown ProviderProfile numeric field %s", name)
 }
@@ -17145,15 +17137,6 @@ func (m *ProviderProfileMutation) ResetField(name string) error {
 		return nil
 	case providerprofile.FieldVisibilityMode:
 		m.ResetVisibilityMode()
-		return nil
-	case providerprofile.FieldIsOtcEnabled:
-		m.ResetIsOtcEnabled()
-		return nil
-	case providerprofile.FieldMinOtcValue:
-		m.ResetMinOtcValue()
-		return nil
-	case providerprofile.FieldMaxOtcValue:
-		m.ResetMaxOtcValue()
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderProfile field %s", name)

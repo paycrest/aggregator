@@ -8,7 +8,6 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/paycrest/aggregator/ent/predicate"
-	"github.com/shopspring/decimal"
 )
 
 // ID filters vertices based on their ID field.
@@ -89,21 +88,6 @@ func IsKybVerified(v bool) predicate.ProviderProfile {
 // UpdatedAt applies equality check predicate on the "updated_at" field. It's identical to UpdatedAtEQ.
 func UpdatedAt(v time.Time) predicate.ProviderProfile {
 	return predicate.ProviderProfile(sql.FieldEQ(FieldUpdatedAt, v))
-}
-
-// IsOtcEnabled applies equality check predicate on the "is_otc_enabled" field. It's identical to IsOtcEnabledEQ.
-func IsOtcEnabled(v bool) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldEQ(FieldIsOtcEnabled, v))
-}
-
-// MinOtcValue applies equality check predicate on the "min_otc_value" field. It's identical to MinOtcValueEQ.
-func MinOtcValue(v decimal.Decimal) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldEQ(FieldMinOtcValue, v))
-}
-
-// MaxOtcValue applies equality check predicate on the "max_otc_value" field. It's identical to MaxOtcValueEQ.
-func MaxOtcValue(v decimal.Decimal) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldEQ(FieldMaxOtcValue, v))
 }
 
 // TradingNameEQ applies the EQ predicate on the "trading_name" field.
@@ -354,96 +338,6 @@ func VisibilityModeIn(vs ...VisibilityMode) predicate.ProviderProfile {
 // VisibilityModeNotIn applies the NotIn predicate on the "visibility_mode" field.
 func VisibilityModeNotIn(vs ...VisibilityMode) predicate.ProviderProfile {
 	return predicate.ProviderProfile(sql.FieldNotIn(FieldVisibilityMode, vs...))
-}
-
-// IsOtcEnabledEQ applies the EQ predicate on the "is_otc_enabled" field.
-func IsOtcEnabledEQ(v bool) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldEQ(FieldIsOtcEnabled, v))
-}
-
-// IsOtcEnabledNEQ applies the NEQ predicate on the "is_otc_enabled" field.
-func IsOtcEnabledNEQ(v bool) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldNEQ(FieldIsOtcEnabled, v))
-}
-
-// MinOtcValueEQ applies the EQ predicate on the "min_otc_value" field.
-func MinOtcValueEQ(v decimal.Decimal) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldEQ(FieldMinOtcValue, v))
-}
-
-// MinOtcValueNEQ applies the NEQ predicate on the "min_otc_value" field.
-func MinOtcValueNEQ(v decimal.Decimal) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldNEQ(FieldMinOtcValue, v))
-}
-
-// MinOtcValueIn applies the In predicate on the "min_otc_value" field.
-func MinOtcValueIn(vs ...decimal.Decimal) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldIn(FieldMinOtcValue, vs...))
-}
-
-// MinOtcValueNotIn applies the NotIn predicate on the "min_otc_value" field.
-func MinOtcValueNotIn(vs ...decimal.Decimal) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldNotIn(FieldMinOtcValue, vs...))
-}
-
-// MinOtcValueGT applies the GT predicate on the "min_otc_value" field.
-func MinOtcValueGT(v decimal.Decimal) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldGT(FieldMinOtcValue, v))
-}
-
-// MinOtcValueGTE applies the GTE predicate on the "min_otc_value" field.
-func MinOtcValueGTE(v decimal.Decimal) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldGTE(FieldMinOtcValue, v))
-}
-
-// MinOtcValueLT applies the LT predicate on the "min_otc_value" field.
-func MinOtcValueLT(v decimal.Decimal) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldLT(FieldMinOtcValue, v))
-}
-
-// MinOtcValueLTE applies the LTE predicate on the "min_otc_value" field.
-func MinOtcValueLTE(v decimal.Decimal) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldLTE(FieldMinOtcValue, v))
-}
-
-// MaxOtcValueEQ applies the EQ predicate on the "max_otc_value" field.
-func MaxOtcValueEQ(v decimal.Decimal) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldEQ(FieldMaxOtcValue, v))
-}
-
-// MaxOtcValueNEQ applies the NEQ predicate on the "max_otc_value" field.
-func MaxOtcValueNEQ(v decimal.Decimal) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldNEQ(FieldMaxOtcValue, v))
-}
-
-// MaxOtcValueIn applies the In predicate on the "max_otc_value" field.
-func MaxOtcValueIn(vs ...decimal.Decimal) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldIn(FieldMaxOtcValue, vs...))
-}
-
-// MaxOtcValueNotIn applies the NotIn predicate on the "max_otc_value" field.
-func MaxOtcValueNotIn(vs ...decimal.Decimal) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldNotIn(FieldMaxOtcValue, vs...))
-}
-
-// MaxOtcValueGT applies the GT predicate on the "max_otc_value" field.
-func MaxOtcValueGT(v decimal.Decimal) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldGT(FieldMaxOtcValue, v))
-}
-
-// MaxOtcValueGTE applies the GTE predicate on the "max_otc_value" field.
-func MaxOtcValueGTE(v decimal.Decimal) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldGTE(FieldMaxOtcValue, v))
-}
-
-// MaxOtcValueLT applies the LT predicate on the "max_otc_value" field.
-func MaxOtcValueLT(v decimal.Decimal) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldLT(FieldMaxOtcValue, v))
-}
-
-// MaxOtcValueLTE applies the LTE predicate on the "max_otc_value" field.
-func MaxOtcValueLTE(v decimal.Decimal) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldLTE(FieldMaxOtcValue, v))
 }
 
 // HasUser applies the HasEdge predicate on the "user" edge.

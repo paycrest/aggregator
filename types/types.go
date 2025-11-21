@@ -257,6 +257,8 @@ type ProviderOrderTokenPayload struct {
 	FloatingConversionRate decimal.Decimal                       `json:"floatingConversionRate" binding:"required"`
 	MaxOrderAmount         decimal.Decimal                       `json:"maxOrderAmount" binding:"required,gt=0"`
 	MinOrderAmount         decimal.Decimal                       `json:"minOrderAmount" binding:"required,gt=0"`
+	MaxOrderAmountOTC      *decimal.Decimal                      `json:"maxOrderAmountOtc,omitempty" binding:"omitempty,gte=0"`
+	MinOrderAmountOTC      *decimal.Decimal                      `json:"minOrderAmountOtc,omitempty" binding:"omitempty,gte=0"`
 	RateSlippage           decimal.Decimal                       `json:"rateSlippage" binding:"omitempty,gte=0.1"`
 	Address                string                                `json:"address" binding:"required"`
 	Network                string                                `json:"network" binding:"required"`
@@ -270,9 +272,6 @@ type ProviderProfilePayload struct {
 	IsAvailable    bool                        `json:"isAvailable"`
 	Tokens         []ProviderOrderTokenPayload `json:"tokens"`
 	VisibilityMode string                      `json:"visibilityMode"`
-	IsOTCEnabled   bool                        `json:"is_otc_enabled"`
-	MinOTCValue    decimal.Decimal             `json:"min_otc_value"`
-	MaxOTCValue    decimal.Decimal             `json:"max_otc_value"`
 }
 
 // ProviderProfileResponse is the response for the provider profile endpoint
@@ -291,9 +290,6 @@ type ProviderProfileResponse struct {
 	VisibilityMode        providerprofile.VisibilityMode `json:"visibilityMode"`
 	KYBVerificationStatus user.KybVerificationStatus     `json:"kybVerificationStatus"`
 	KYBRejectionComment   *string                        `json:"kybRejectionComment,omitempty"`
-	IsOTCEnabled          bool                           `json:"is_otc_enabled"`
-	MinOTCValue           decimal.Decimal                `json:"min_otc_value"`
-	MaxOTCValue           decimal.Decimal                `json:"max_otc_value"`
 }
 
 // SenderOrderTokenResponse defines the provider setting for a token

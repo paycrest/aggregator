@@ -1231,16 +1231,18 @@ func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier str
 	return "", fmt.Errorf("failed to verify account with any provider")
 }
 
-// DetermineOrderType determines the order type based on the provider and fiat amount.
-func DetermineOrderType(provider *ent.ProviderProfile, fiatAmount decimal.Decimal) paymentorder.OrderType {
-    if provider == nil || !provider.IsOtcEnabled {
-        return paymentorder.OrderTypeRegular
-    }
-    if provider.MinOtcValue.IsZero() || provider.MaxOtcValue.IsZero() || provider.MinOtcValue.GreaterThan(provider.MaxOtcValue) {
-        return paymentorder.OrderTypeRegular
-    }
-    if fiatAmount.GreaterThanOrEqual(provider.MinOtcValue) && fiatAmount.LessThanOrEqual(provider.MaxOtcValue) {
-        return paymentorder.OrderTypeOtc
-    }
-    return paymentorder.OrderTypeRegular
+// DetermineOrderType determines the order type based on the order token OTC config and fiat amount.
+func DetermineOrderType(orderToken *ent.ProviderOrderToken, fiatAmount decimal.Decimal) paymentorder.OrderType {
+	if orderToken == nil {
+		return paymentorder.OrderTypeRegular
+	}
+	minOTC := orderToken.MinOrderAmountOtc
+	maxOTC := orderToken.MaxOrderAmountOtc
+	if minOTC == nil || maxOTC == nil || minOTC.IsZero() || maxOTC.IsZero() || minOTC.GreaterThan(*maxOTC) {
+		return paymentorder.OrderTypeRegular
+	}
+	if fiatAmount.GreaterThanOrEqual(*minOTC) && fiatAmount.LessThanOrEqual(*maxOTC) {
+		return paymentorder.OrderTypeOtc
+	}
+	return paymentorder.OrderTypeRegular
 }

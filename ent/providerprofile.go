@@ -14,7 +14,6 @@ import (
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
 	"github.com/paycrest/aggregator/ent/user"
-	"github.com/shopspring/decimal"
 )
 
 // ProviderProfile is the model entity for the ProviderProfile schema.
@@ -36,12 +35,6 @@ type ProviderProfile struct {
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// VisibilityMode holds the value of the "visibility_mode" field.
 	VisibilityMode providerprofile.VisibilityMode `json:"visibility_mode,omitempty"`
-	// IsOtcEnabled holds the value of the "is_otc_enabled" field.
-	IsOtcEnabled bool `json:"is_otc_enabled,omitempty"`
-	// MinOtcValue holds the value of the "min_otc_value" field.
-	MinOtcValue decimal.Decimal `json:"min_otc_value,omitempty"`
-	// MaxOtcValue holds the value of the "max_otc_value" field.
-	MaxOtcValue decimal.Decimal `json:"max_otc_value,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ProviderProfileQuery when eager-loading is set.
 	Edges                 ProviderProfileEdges `json:"edges"`
@@ -144,9 +137,7 @@ func (*ProviderProfile) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case providerprofile.FieldMinOtcValue, providerprofile.FieldMaxOtcValue:
-			values[i] = new(decimal.Decimal)
-		case providerprofile.FieldIsActive, providerprofile.FieldIsKybVerified, providerprofile.FieldIsOtcEnabled:
+		case providerprofile.FieldIsActive, providerprofile.FieldIsKybVerified:
 			values[i] = new(sql.NullBool)
 		case providerprofile.FieldID, providerprofile.FieldTradingName, providerprofile.FieldHostIdentifier, providerprofile.FieldProvisionMode, providerprofile.FieldVisibilityMode:
 			values[i] = new(sql.NullString)
@@ -216,24 +207,6 @@ func (pp *ProviderProfile) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field visibility_mode", values[i])
 			} else if value.Valid {
 				pp.VisibilityMode = providerprofile.VisibilityMode(value.String)
-			}
-		case providerprofile.FieldIsOtcEnabled:
-			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field is_otc_enabled", values[i])
-			} else if value.Valid {
-				pp.IsOtcEnabled = value.Bool
-			}
-		case providerprofile.FieldMinOtcValue:
-			if value, ok := values[i].(*decimal.Decimal); !ok {
-				return fmt.Errorf("unexpected type %T for field min_otc_value", values[i])
-			} else if value != nil {
-				pp.MinOtcValue = *value
-			}
-		case providerprofile.FieldMaxOtcValue:
-			if value, ok := values[i].(*decimal.Decimal); !ok {
-				return fmt.Errorf("unexpected type %T for field max_otc_value", values[i])
-			} else if value != nil {
-				pp.MaxOtcValue = *value
 			}
 		case providerprofile.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -333,15 +306,6 @@ func (pp *ProviderProfile) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("visibility_mode=")
 	builder.WriteString(fmt.Sprintf("%v", pp.VisibilityMode))
-	builder.WriteString(", ")
-	builder.WriteString("is_otc_enabled=")
-	builder.WriteString(fmt.Sprintf("%v", pp.IsOtcEnabled))
-	builder.WriteString(", ")
-	builder.WriteString("min_otc_value=")
-	builder.WriteString(fmt.Sprintf("%v", pp.MinOtcValue))
-	builder.WriteString(", ")
-	builder.WriteString("max_otc_value=")
-	builder.WriteString(fmt.Sprintf("%v", pp.MaxOtcValue))
 	builder.WriteByte(')')
 	return builder.String()
 }

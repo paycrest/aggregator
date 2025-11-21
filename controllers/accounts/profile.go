@@ -492,48 +492,6 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		txUpdate.SetVisibilityMode(providerprofile.VisibilityMode(payload.VisibilityMode))
 	}
 
-	// Validate OTC Configuration
-	if payload.IsOTCEnabled {
-		if payload.MinOTCValue.LessThanOrEqual(decimal.Zero) {
-			if rollbackErr := tx.Rollback(); rollbackErr != nil {
-				logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
-			}
-			u.APIResponse(ctx, http.StatusBadRequest, "error",
-				"min_otc_value must be positive when OTC is enabled", []types.ErrorData{{
-					Field:   "min_otc_value",
-					Message: "Must be a positive value",
-				}})
-			return
-		}
-		if payload.MaxOTCValue.LessThanOrEqual(decimal.Zero) {
-			if rollbackErr := tx.Rollback(); rollbackErr != nil {
-				logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
-			}
-			u.APIResponse(ctx, http.StatusBadRequest, "error",
-				"max_otc_value must be positive when OTC is enabled", []types.ErrorData{{
-					Field:   "max_otc_value",
-					Message: "Must be a positive value",
-				}})
-			return
-		}
-		if payload.MinOTCValue.GreaterThanOrEqual(payload.MaxOTCValue) {
-			if rollbackErr := tx.Rollback(); rollbackErr != nil {
-				logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
-			}
-			u.APIResponse(ctx, http.StatusBadRequest, "error",
-				"min_otc_value must be less than max_otc_value", []types.ErrorData{{
-					Field:   "min_otc_value",
-					Message: "Must be less than max_otc_value",
-				}})
-			return
-		}
-	}
-
-	// Update OTC Configuration
-	txUpdate.SetIsOtcEnabled(payload.IsOTCEnabled)
-	txUpdate.SetMinOtcValue(payload.MinOTCValue)
-	txUpdate.SetMaxOtcValue(payload.MaxOTCValue)
-
 	var allBuckets []*ent.ProvisionBucket
 
 	// Process all token operations
@@ -551,6 +509,8 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				SetFloatingConversionRate(op.TokenPayload.FloatingConversionRate).
 				SetMaxOrderAmount(op.TokenPayload.MaxOrderAmount).
 				SetMinOrderAmount(op.TokenPayload.MinOrderAmount).
+				SetNillableMaxOrderAmountOtc(op.TokenPayload.MaxOrderAmountOTC).
+				SetNillableMinOrderAmountOtc(op.TokenPayload.MinOrderAmountOTC).
 				Save(ctx)
 			if err != nil {
 				if rollbackErr := tx.Rollback(); rollbackErr != nil {
@@ -573,6 +533,8 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				SetFloatingConversionRate(op.TokenPayload.FloatingConversionRate).
 				SetMaxOrderAmount(op.TokenPayload.MaxOrderAmount).
 				SetMinOrderAmount(op.TokenPayload.MinOrderAmount).
+				SetNillableMaxOrderAmountOtc(op.TokenPayload.MaxOrderAmountOTC).
+				SetNillableMinOrderAmountOtc(op.TokenPayload.MinOrderAmountOTC).
 				SetAddress(op.TokenPayload.Address).
 				SetNetwork(op.TokenPayload.Network).
 				SetProviderID(provider.ID).
@@ -853,6 +815,8 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 			FloatingConversionRate: orderToken.FloatingConversionRate,
 			MaxOrderAmount:         orderToken.MaxOrderAmount,
 			MinOrderAmount:         orderToken.MinOrderAmount,
+			MaxOrderAmountOTC:      orderToken.MaxOrderAmountOtc,
+			MinOrderAmountOTC:      orderToken.MinOrderAmountOtc,
 			RateSlippage:           orderToken.RateSlippage,
 			Address:                orderToken.Address,
 			Network:                orderToken.Network,
@@ -897,8 +861,5 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 		VisibilityMode:        provider.VisibilityMode,
 		KYBVerificationStatus: user.KybVerificationStatus,
 		KYBRejectionComment:   kybRejectionComment,
-		IsOTCEnabled:          provider.IsOtcEnabled,
-		MinOTCValue:           provider.MinOtcValue,
-		MaxOTCValue:           provider.MaxOtcValue,
 	})
 }
