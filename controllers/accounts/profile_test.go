@@ -719,6 +719,60 @@ func TestProfile(t *testing.T) {
 				assert.Equal(t, "https://example.com", providerProfile.HostIdentifier)
 			})
 		})
+
+		t.Run("with OTC configuration", func(t *testing.T) {
+			t.Run("succeeds with valid enabled config", func(t *testing.T) {
+				minOTC := decimal.NewFromInt(5000)
+				maxOTC := decimal.NewFromInt(50000)
+				payload := types.ProviderProfilePayload{
+					TradingName:  testCtx.providerProfile.TradingName,
+					Currency:     "KES",
+					IsOTCEnabled: true,
+					MinOTCValue:  minOTC,
+					MaxOTCValue:  maxOTC,
+				}
+
+				res := profileUpdateRequest(payload)
+				assert.Equal(t, http.StatusOK, res.Code)
+
+				var response types.Response
+				err = json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, "Profile updated successfully", response.Message)
+
+				// Verify saved in DB
+				savedProvider, err := db.Client.ProviderProfile.Query().Where(providerprofile.IDEQ(testCtx.providerProfile.ID)).Only(context.Background())
+				assert.NoError(t, err)
+				assert.True(t, savedProvider.IsOtcEnabled)
+				assert.Equal(t, "5000", savedProvider.MinOtcValue.String())
+				assert.Equal(t, "50000", savedProvider.MaxOtcValue.String())
+			})
+
+			t.Run("succeeds with disabled config", func(t *testing.T) {
+				payload := types.ProviderProfilePayload{
+					TradingName:  testCtx.providerProfile.TradingName,
+					Currency:     "KES",
+					IsOTCEnabled: false,
+					MinOTCValue:  decimal.Zero,
+					MaxOTCValue:  decimal.Zero,
+				}
+
+				res := profileUpdateRequest(payload)
+				assert.Equal(t, http.StatusOK, res.Code)
+
+				var response types.Response
+				err = json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, "Profile updated successfully", response.Message)
+
+				// Verify saved in DB
+				savedProvider, err := db.Client.ProviderProfile.Query().Where(providerprofile.IDEQ(testCtx.providerProfile.ID)).Only(context.Background())
+				assert.NoError(t, err)
+				assert.False(t, savedProvider.IsOtcEnabled)
+				assert.True(t, savedProvider.MinOtcValue.IsZero())
+				assert.True(t, savedProvider.MaxOtcValue.IsZero())
+			})
+		})
 	})
 
 	t.Run("GetSenderProfile", func(t *testing.T) {
@@ -851,6 +905,53 @@ func TestProfile(t *testing.T) {
 			// Expect two tokens (one for KES and one for USD)
 			assert.Len(t, respAll.Data.Tokens, 2)
 
+		})
+
+		t.Run("returns OTC configuration", func(t *testing.T) {
+			// Set OTC configuration on the provider profile
+			minOTC := decimal.NewFromInt(5000)
+			maxOTC := decimal.NewFromInt(50000)
+			_, err := db.Client.ProviderProfile.UpdateOneID(testCtx.providerProfile.ID).
+				SetIsOtcEnabled(true).
+				SetMinOtcValue(minOTC).
+				SetMaxOtcValue(maxOTC).
+				Save(context.Background())
+			assert.NoError(t, err)
+
+			// Ensure API key exists for the provider
+			apiKeyService := services.NewAPIKeyService()
+			_, _, err = apiKeyService.GenerateAPIKey(
+				context.Background(),
+				nil,
+				nil,
+				testCtx.providerProfile,
+			)
+			// Ignore if already exists
+			if err != nil && err.Error() != "API key already exists" {
+				assert.NoError(t, err)
+			}
+
+			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			res, err := test.PerformRequest(t, "GET", "/settings/provider", nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var resp struct {
+				Data    types.ProviderProfileResponse `json:"data"`
+				Message string                        `json:"message"`
+				Status  string                        `json:"status"`
+			}
+			err = json.Unmarshal(res.Body.Bytes(), &resp)
+			assert.NoError(t, err)
+
+			// Verify OTC configuration is returned
+			assert.True(t, resp.Data.IsOTCEnabled)
+			assert.Equal(t, "5000", resp.Data.MinOTCValue.String())
+			assert.Equal(t, "50000", resp.Data.MaxOTCValue.String())
 		})
 	})
 }

@@ -270,6 +270,9 @@ type ProviderProfilePayload struct {
 	IsAvailable    bool                        `json:"isAvailable"`
 	Tokens         []ProviderOrderTokenPayload `json:"tokens"`
 	VisibilityMode string                      `json:"visibilityMode"`
+	IsOTCEnabled   bool                        `json:"is_otc_enabled"`
+	MinOTCValue    decimal.Decimal             `json:"min_otc_value"`
+	MaxOTCValue    decimal.Decimal             `json:"max_otc_value"`
 }
 
 // ProviderProfileResponse is the response for the provider profile endpoint
@@ -288,6 +291,9 @@ type ProviderProfileResponse struct {
 	VisibilityMode        providerprofile.VisibilityMode `json:"visibilityMode"`
 	KYBVerificationStatus user.KybVerificationStatus     `json:"kybVerificationStatus"`
 	KYBRejectionComment   *string                        `json:"kybRejectionComment,omitempty"`
+	IsOTCEnabled          bool                           `json:"is_otc_enabled"`
+	MinOTCValue           decimal.Decimal                `json:"min_otc_value"`
+	MaxOTCValue           decimal.Decimal                `json:"max_otc_value"`
 }
 
 // SenderOrderTokenResponse defines the provider setting for a token
@@ -839,18 +845,4 @@ type ProviderInfoResponse struct {
 			TotalBalance     string `json:"totalBalance"`
 		} `json:"totalBalances"`
 	} `json:"data"`
-}
-
-// OTCConfigurationPayload represents the request payload for OTC configuration
-type OTCConfigurationPayload struct {
-	IsOTCEnabled bool   `json:"is_otc_enabled"`
-	MinOTCValue  string `json:"min_otc_value"`
-	MaxOTCValue  string `json:"max_otc_value"`
-}
-
-// OTCConfigurationResponse represents the response for OTC configuration
-type OTCConfigurationResponse struct {
-	IsOTCEnabled bool            `json:"is_otc_enabled"`
-	MinOTCValue  decimal.Decimal `json:"min_otc_value"`
-	MaxOTCValue  decimal.Decimal `json:"max_otc_value"`
 }

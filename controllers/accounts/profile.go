@@ -492,6 +492,11 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		txUpdate.SetVisibilityMode(providerprofile.VisibilityMode(payload.VisibilityMode))
 	}
 
+	// Update OTC Configuration
+	txUpdate.SetIsOtcEnabled(payload.IsOTCEnabled)
+	txUpdate.SetMinOtcValue(payload.MinOTCValue)
+	txUpdate.SetMaxOtcValue(payload.MaxOTCValue)
+
 	var allBuckets []*ent.ProvisionBucket
 
 	// Process all token operations
@@ -855,5 +860,8 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 		VisibilityMode:        provider.VisibilityMode,
 		KYBVerificationStatus: user.KybVerificationStatus,
 		KYBRejectionComment:   kybRejectionComment,
+		IsOTCEnabled:          provider.IsOtcEnabled,
+		MinOTCValue:           provider.MinOtcValue,
+		MaxOTCValue:           provider.MaxOtcValue,
 	})
 }
