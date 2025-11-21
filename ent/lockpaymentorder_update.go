@@ -363,6 +363,20 @@ func (lpou *LockPaymentOrderUpdate) AddAmountInUsd(d decimal.Decimal) *LockPayme
 	return lpou
 }
 
+// SetOrderType sets the "order_type" field.
+func (lpou *LockPaymentOrderUpdate) SetOrderType(lt lockpaymentorder.OrderType) *LockPaymentOrderUpdate {
+	lpou.mutation.SetOrderType(lt)
+	return lpou
+}
+
+// SetNillableOrderType sets the "order_type" field if the given value is not nil.
+func (lpou *LockPaymentOrderUpdate) SetNillableOrderType(lt *lockpaymentorder.OrderType) *LockPaymentOrderUpdate {
+	if lt != nil {
+		lpou.SetOrderType(*lt)
+	}
+	return lpou
+}
+
 // SetTokenID sets the "token" edge to the Token entity by ID.
 func (lpou *LockPaymentOrderUpdate) SetTokenID(id int) *LockPaymentOrderUpdate {
 	lpou.mutation.SetTokenID(id)
@@ -560,6 +574,11 @@ func (lpou *LockPaymentOrderUpdate) check() error {
 			return &ValidationError{Name: "message_hash", err: fmt.Errorf(`ent: validator failed for field "LockPaymentOrder.message_hash": %w`, err)}
 		}
 	}
+	if v, ok := lpou.mutation.OrderType(); ok {
+		if err := lockpaymentorder.OrderTypeValidator(v); err != nil {
+			return &ValidationError{Name: "order_type", err: fmt.Errorf(`ent: validator failed for field "LockPaymentOrder.order_type": %w`, err)}
+		}
+	}
 	if lpou.mutation.TokenCleared() && len(lpou.mutation.TokenIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "LockPaymentOrder.token"`)
 	}
@@ -675,6 +694,9 @@ func (lpou *LockPaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err err
 	}
 	if value, ok := lpou.mutation.AddedAmountInUsd(); ok {
 		_spec.AddField(lockpaymentorder.FieldAmountInUsd, field.TypeFloat64, value)
+	}
+	if value, ok := lpou.mutation.OrderType(); ok {
+		_spec.SetField(lockpaymentorder.FieldOrderType, field.TypeEnum, value)
 	}
 	if lpou.mutation.TokenCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1200,6 +1222,20 @@ func (lpouo *LockPaymentOrderUpdateOne) AddAmountInUsd(d decimal.Decimal) *LockP
 	return lpouo
 }
 
+// SetOrderType sets the "order_type" field.
+func (lpouo *LockPaymentOrderUpdateOne) SetOrderType(lt lockpaymentorder.OrderType) *LockPaymentOrderUpdateOne {
+	lpouo.mutation.SetOrderType(lt)
+	return lpouo
+}
+
+// SetNillableOrderType sets the "order_type" field if the given value is not nil.
+func (lpouo *LockPaymentOrderUpdateOne) SetNillableOrderType(lt *lockpaymentorder.OrderType) *LockPaymentOrderUpdateOne {
+	if lt != nil {
+		lpouo.SetOrderType(*lt)
+	}
+	return lpouo
+}
+
 // SetTokenID sets the "token" edge to the Token entity by ID.
 func (lpouo *LockPaymentOrderUpdateOne) SetTokenID(id int) *LockPaymentOrderUpdateOne {
 	lpouo.mutation.SetTokenID(id)
@@ -1410,6 +1446,11 @@ func (lpouo *LockPaymentOrderUpdateOne) check() error {
 			return &ValidationError{Name: "message_hash", err: fmt.Errorf(`ent: validator failed for field "LockPaymentOrder.message_hash": %w`, err)}
 		}
 	}
+	if v, ok := lpouo.mutation.OrderType(); ok {
+		if err := lockpaymentorder.OrderTypeValidator(v); err != nil {
+			return &ValidationError{Name: "order_type", err: fmt.Errorf(`ent: validator failed for field "LockPaymentOrder.order_type": %w`, err)}
+		}
+	}
 	if lpouo.mutation.TokenCleared() && len(lpouo.mutation.TokenIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "LockPaymentOrder.token"`)
 	}
@@ -1542,6 +1583,9 @@ func (lpouo *LockPaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *Loc
 	}
 	if value, ok := lpouo.mutation.AddedAmountInUsd(); ok {
 		_spec.AddField(lockpaymentorder.FieldAmountInUsd, field.TypeFloat64, value)
+	}
+	if value, ok := lpouo.mutation.OrderType(); ok {
+		_spec.SetField(lockpaymentorder.FieldOrderType, field.TypeEnum, value)
 	}
 	if lpouo.mutation.TokenCleared() {
 		edge := &sqlgraph.EdgeSpec{

@@ -257,6 +257,8 @@ type ProviderOrderTokenPayload struct {
 	FloatingConversionRate decimal.Decimal                       `json:"floatingConversionRate" binding:"required"`
 	MaxOrderAmount         decimal.Decimal                       `json:"maxOrderAmount" binding:"required,gt=0"`
 	MinOrderAmount         decimal.Decimal                       `json:"minOrderAmount" binding:"required,gt=0"`
+	MaxOrderAmountOTC      *decimal.Decimal                      `json:"maxOrderAmountOtc,omitempty" binding:"omitempty,gte=0"`
+	MinOrderAmountOTC      *decimal.Decimal                      `json:"minOrderAmountOtc,omitempty" binding:"omitempty,gte=0"`
 	RateSlippage           decimal.Decimal                       `json:"rateSlippage" binding:"omitempty,gte=0.1"`
 	Address                string                                `json:"address" binding:"required"`
 	Network                string                                `json:"network" binding:"required"`
@@ -454,6 +456,7 @@ type ReceiveAddressResponse struct {
 	SenderFee      decimal.Decimal `json:"senderFee"`
 	TransactionFee decimal.Decimal `json:"transactionFee"`
 	Reference      string          `json:"reference"`
+	OrderType      string          `json:"orderType"`
 }
 
 // PaymentOrderResponse is the response type for a payment order
@@ -716,7 +719,7 @@ type KYBSubmissionInput struct {
 	AmlPolicyUrl                  *string                `json:"amlPolicyUrl"`
 	KycPolicyUrl                  *string                `json:"kycPolicyUrl"`
 	BeneficialOwners              []BeneficialOwnerInput `json:"beneficialOwners" binding:"required,dive"`
-	IAcceptTerms         bool                   `json:"IAcceptTerms"`
+	IAcceptTerms                  bool                   `json:"IAcceptTerms"`
 }
 
 // BeneficialOwnerInput represents the input structure for a beneficial owner

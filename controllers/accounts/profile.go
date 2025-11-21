@@ -509,6 +509,8 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				SetFloatingConversionRate(op.TokenPayload.FloatingConversionRate).
 				SetMaxOrderAmount(op.TokenPayload.MaxOrderAmount).
 				SetMinOrderAmount(op.TokenPayload.MinOrderAmount).
+				SetNillableMaxOrderAmountOtc(op.TokenPayload.MaxOrderAmountOTC).
+				SetNillableMinOrderAmountOtc(op.TokenPayload.MinOrderAmountOTC).
 				Save(ctx)
 			if err != nil {
 				if rollbackErr := tx.Rollback(); rollbackErr != nil {
@@ -531,6 +533,8 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				SetFloatingConversionRate(op.TokenPayload.FloatingConversionRate).
 				SetMaxOrderAmount(op.TokenPayload.MaxOrderAmount).
 				SetMinOrderAmount(op.TokenPayload.MinOrderAmount).
+				SetNillableMaxOrderAmountOtc(op.TokenPayload.MaxOrderAmountOTC).
+				SetNillableMinOrderAmountOtc(op.TokenPayload.MinOrderAmountOTC).
 				SetAddress(op.TokenPayload.Address).
 				SetNetwork(op.TokenPayload.Network).
 				SetProviderID(provider.ID).
@@ -811,6 +815,8 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 			FloatingConversionRate: orderToken.FloatingConversionRate,
 			MaxOrderAmount:         orderToken.MaxOrderAmount,
 			MinOrderAmount:         orderToken.MinOrderAmount,
+			MaxOrderAmountOTC:      orderToken.MaxOrderAmountOtc,
+			MinOrderAmountOTC:      orderToken.MinOrderAmountOtc,
 			RateSlippage:           orderToken.RateSlippage,
 			Address:                orderToken.Address,
 			Network:                orderToken.Network,

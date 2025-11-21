@@ -33,6 +33,14 @@ func (ProviderOrderToken) Fields() []ent.Field {
 			GoType(decimal.Decimal{}),
 		field.Float("min_order_amount").
 			GoType(decimal.Decimal{}),
+		field.Float("max_order_amount_otc").
+			GoType(decimal.Decimal{}).
+			Optional().
+			Nillable(),
+		field.Float("min_order_amount_otc").
+			GoType(decimal.Decimal{}).
+			Optional().
+			Nillable(),
 		field.Float("rate_slippage").
 			GoType(decimal.Decimal{}),
 		field.String("address").Optional(),

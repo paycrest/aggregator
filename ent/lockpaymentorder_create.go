@@ -214,6 +214,20 @@ func (lpoc *LockPaymentOrderCreate) SetAmountInUsd(d decimal.Decimal) *LockPayme
 	return lpoc
 }
 
+// SetOrderType sets the "order_type" field.
+func (lpoc *LockPaymentOrderCreate) SetOrderType(lt lockpaymentorder.OrderType) *LockPaymentOrderCreate {
+	lpoc.mutation.SetOrderType(lt)
+	return lpoc
+}
+
+// SetNillableOrderType sets the "order_type" field if the given value is not nil.
+func (lpoc *LockPaymentOrderCreate) SetNillableOrderType(lt *lockpaymentorder.OrderType) *LockPaymentOrderCreate {
+	if lt != nil {
+		lpoc.SetOrderType(*lt)
+	}
+	return lpoc
+}
+
 // SetID sets the "id" field.
 func (lpoc *LockPaymentOrderCreate) SetID(u uuid.UUID) *LockPaymentOrderCreate {
 	lpoc.mutation.SetID(u)
@@ -362,6 +376,10 @@ func (lpoc *LockPaymentOrderCreate) defaults() {
 		v := lockpaymentorder.DefaultCancellationReasons
 		lpoc.mutation.SetCancellationReasons(v)
 	}
+	if _, ok := lpoc.mutation.OrderType(); !ok {
+		v := lockpaymentorder.DefaultOrderType
+		lpoc.mutation.SetOrderType(v)
+	}
 	if _, ok := lpoc.mutation.ID(); !ok {
 		v := lockpaymentorder.DefaultID()
 		lpoc.mutation.SetID(v)
@@ -429,6 +447,14 @@ func (lpoc *LockPaymentOrderCreate) check() error {
 	}
 	if _, ok := lpoc.mutation.AmountInUsd(); !ok {
 		return &ValidationError{Name: "amount_in_usd", err: errors.New(`ent: missing required field "LockPaymentOrder.amount_in_usd"`)}
+	}
+	if _, ok := lpoc.mutation.OrderType(); !ok {
+		return &ValidationError{Name: "order_type", err: errors.New(`ent: missing required field "LockPaymentOrder.order_type"`)}
+	}
+	if v, ok := lpoc.mutation.OrderType(); ok {
+		if err := lockpaymentorder.OrderTypeValidator(v); err != nil {
+			return &ValidationError{Name: "order_type", err: fmt.Errorf(`ent: validator failed for field "LockPaymentOrder.order_type": %w`, err)}
+		}
 	}
 	if len(lpoc.mutation.TokenIDs()) == 0 {
 		return &ValidationError{Name: "token", err: errors.New(`ent: missing required edge "LockPaymentOrder.token"`)}
@@ -548,6 +574,10 @@ func (lpoc *LockPaymentOrderCreate) createSpec() (*LockPaymentOrder, *sqlgraph.C
 	if value, ok := lpoc.mutation.AmountInUsd(); ok {
 		_spec.SetField(lockpaymentorder.FieldAmountInUsd, field.TypeFloat64, value)
 		_node.AmountInUsd = value
+	}
+	if value, ok := lpoc.mutation.OrderType(); ok {
+		_spec.SetField(lockpaymentorder.FieldOrderType, field.TypeEnum, value)
+		_node.OrderType = value
 	}
 	if nodes := lpoc.mutation.TokenIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -984,6 +1014,18 @@ func (u *LockPaymentOrderUpsert) AddAmountInUsd(v decimal.Decimal) *LockPaymentO
 	return u
 }
 
+// SetOrderType sets the "order_type" field.
+func (u *LockPaymentOrderUpsert) SetOrderType(v lockpaymentorder.OrderType) *LockPaymentOrderUpsert {
+	u.Set(lockpaymentorder.FieldOrderType, v)
+	return u
+}
+
+// UpdateOrderType sets the "order_type" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsert) UpdateOrderType() *LockPaymentOrderUpsert {
+	u.SetExcluded(lockpaymentorder.FieldOrderType)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
@@ -1382,6 +1424,20 @@ func (u *LockPaymentOrderUpsertOne) AddAmountInUsd(v decimal.Decimal) *LockPayme
 func (u *LockPaymentOrderUpsertOne) UpdateAmountInUsd() *LockPaymentOrderUpsertOne {
 	return u.Update(func(s *LockPaymentOrderUpsert) {
 		s.UpdateAmountInUsd()
+	})
+}
+
+// SetOrderType sets the "order_type" field.
+func (u *LockPaymentOrderUpsertOne) SetOrderType(v lockpaymentorder.OrderType) *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetOrderType(v)
+	})
+}
+
+// UpdateOrderType sets the "order_type" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertOne) UpdateOrderType() *LockPaymentOrderUpsertOne {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateOrderType()
 	})
 }
 
@@ -1950,6 +2006,20 @@ func (u *LockPaymentOrderUpsertBulk) AddAmountInUsd(v decimal.Decimal) *LockPaym
 func (u *LockPaymentOrderUpsertBulk) UpdateAmountInUsd() *LockPaymentOrderUpsertBulk {
 	return u.Update(func(s *LockPaymentOrderUpsert) {
 		s.UpdateAmountInUsd()
+	})
+}
+
+// SetOrderType sets the "order_type" field.
+func (u *LockPaymentOrderUpsertBulk) SetOrderType(v lockpaymentorder.OrderType) *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.SetOrderType(v)
+	})
+}
+
+// UpdateOrderType sets the "order_type" field to the value that was provided on create.
+func (u *LockPaymentOrderUpsertBulk) UpdateOrderType() *LockPaymentOrderUpsertBulk {
+	return u.Update(func(s *LockPaymentOrderUpsert) {
+		s.UpdateOrderType()
 	})
 }
 

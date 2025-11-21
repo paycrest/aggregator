@@ -137,6 +137,60 @@ func (potu *ProviderOrderTokenUpdate) AddMinOrderAmount(d decimal.Decimal) *Prov
 	return potu
 }
 
+// SetMaxOrderAmountOtc sets the "max_order_amount_otc" field.
+func (potu *ProviderOrderTokenUpdate) SetMaxOrderAmountOtc(d decimal.Decimal) *ProviderOrderTokenUpdate {
+	potu.mutation.ResetMaxOrderAmountOtc()
+	potu.mutation.SetMaxOrderAmountOtc(d)
+	return potu
+}
+
+// SetNillableMaxOrderAmountOtc sets the "max_order_amount_otc" field if the given value is not nil.
+func (potu *ProviderOrderTokenUpdate) SetNillableMaxOrderAmountOtc(d *decimal.Decimal) *ProviderOrderTokenUpdate {
+	if d != nil {
+		potu.SetMaxOrderAmountOtc(*d)
+	}
+	return potu
+}
+
+// AddMaxOrderAmountOtc adds d to the "max_order_amount_otc" field.
+func (potu *ProviderOrderTokenUpdate) AddMaxOrderAmountOtc(d decimal.Decimal) *ProviderOrderTokenUpdate {
+	potu.mutation.AddMaxOrderAmountOtc(d)
+	return potu
+}
+
+// ClearMaxOrderAmountOtc clears the value of the "max_order_amount_otc" field.
+func (potu *ProviderOrderTokenUpdate) ClearMaxOrderAmountOtc() *ProviderOrderTokenUpdate {
+	potu.mutation.ClearMaxOrderAmountOtc()
+	return potu
+}
+
+// SetMinOrderAmountOtc sets the "min_order_amount_otc" field.
+func (potu *ProviderOrderTokenUpdate) SetMinOrderAmountOtc(d decimal.Decimal) *ProviderOrderTokenUpdate {
+	potu.mutation.ResetMinOrderAmountOtc()
+	potu.mutation.SetMinOrderAmountOtc(d)
+	return potu
+}
+
+// SetNillableMinOrderAmountOtc sets the "min_order_amount_otc" field if the given value is not nil.
+func (potu *ProviderOrderTokenUpdate) SetNillableMinOrderAmountOtc(d *decimal.Decimal) *ProviderOrderTokenUpdate {
+	if d != nil {
+		potu.SetMinOrderAmountOtc(*d)
+	}
+	return potu
+}
+
+// AddMinOrderAmountOtc adds d to the "min_order_amount_otc" field.
+func (potu *ProviderOrderTokenUpdate) AddMinOrderAmountOtc(d decimal.Decimal) *ProviderOrderTokenUpdate {
+	potu.mutation.AddMinOrderAmountOtc(d)
+	return potu
+}
+
+// ClearMinOrderAmountOtc clears the value of the "min_order_amount_otc" field.
+func (potu *ProviderOrderTokenUpdate) ClearMinOrderAmountOtc() *ProviderOrderTokenUpdate {
+	potu.mutation.ClearMinOrderAmountOtc()
+	return potu
+}
+
 // SetRateSlippage sets the "rate_slippage" field.
 func (potu *ProviderOrderTokenUpdate) SetRateSlippage(d decimal.Decimal) *ProviderOrderTokenUpdate {
 	potu.mutation.ResetRateSlippage()
@@ -344,6 +398,24 @@ func (potu *ProviderOrderTokenUpdate) sqlSave(ctx context.Context) (n int, err e
 	}
 	if value, ok := potu.mutation.AddedMinOrderAmount(); ok {
 		_spec.AddField(providerordertoken.FieldMinOrderAmount, field.TypeFloat64, value)
+	}
+	if value, ok := potu.mutation.MaxOrderAmountOtc(); ok {
+		_spec.SetField(providerordertoken.FieldMaxOrderAmountOtc, field.TypeFloat64, value)
+	}
+	if value, ok := potu.mutation.AddedMaxOrderAmountOtc(); ok {
+		_spec.AddField(providerordertoken.FieldMaxOrderAmountOtc, field.TypeFloat64, value)
+	}
+	if potu.mutation.MaxOrderAmountOtcCleared() {
+		_spec.ClearField(providerordertoken.FieldMaxOrderAmountOtc, field.TypeFloat64)
+	}
+	if value, ok := potu.mutation.MinOrderAmountOtc(); ok {
+		_spec.SetField(providerordertoken.FieldMinOrderAmountOtc, field.TypeFloat64, value)
+	}
+	if value, ok := potu.mutation.AddedMinOrderAmountOtc(); ok {
+		_spec.AddField(providerordertoken.FieldMinOrderAmountOtc, field.TypeFloat64, value)
+	}
+	if potu.mutation.MinOrderAmountOtcCleared() {
+		_spec.ClearField(providerordertoken.FieldMinOrderAmountOtc, field.TypeFloat64)
 	}
 	if value, ok := potu.mutation.RateSlippage(); ok {
 		_spec.SetField(providerordertoken.FieldRateSlippage, field.TypeFloat64, value)
@@ -568,6 +640,60 @@ func (potuo *ProviderOrderTokenUpdateOne) SetNillableMinOrderAmount(d *decimal.D
 // AddMinOrderAmount adds d to the "min_order_amount" field.
 func (potuo *ProviderOrderTokenUpdateOne) AddMinOrderAmount(d decimal.Decimal) *ProviderOrderTokenUpdateOne {
 	potuo.mutation.AddMinOrderAmount(d)
+	return potuo
+}
+
+// SetMaxOrderAmountOtc sets the "max_order_amount_otc" field.
+func (potuo *ProviderOrderTokenUpdateOne) SetMaxOrderAmountOtc(d decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	potuo.mutation.ResetMaxOrderAmountOtc()
+	potuo.mutation.SetMaxOrderAmountOtc(d)
+	return potuo
+}
+
+// SetNillableMaxOrderAmountOtc sets the "max_order_amount_otc" field if the given value is not nil.
+func (potuo *ProviderOrderTokenUpdateOne) SetNillableMaxOrderAmountOtc(d *decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	if d != nil {
+		potuo.SetMaxOrderAmountOtc(*d)
+	}
+	return potuo
+}
+
+// AddMaxOrderAmountOtc adds d to the "max_order_amount_otc" field.
+func (potuo *ProviderOrderTokenUpdateOne) AddMaxOrderAmountOtc(d decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	potuo.mutation.AddMaxOrderAmountOtc(d)
+	return potuo
+}
+
+// ClearMaxOrderAmountOtc clears the value of the "max_order_amount_otc" field.
+func (potuo *ProviderOrderTokenUpdateOne) ClearMaxOrderAmountOtc() *ProviderOrderTokenUpdateOne {
+	potuo.mutation.ClearMaxOrderAmountOtc()
+	return potuo
+}
+
+// SetMinOrderAmountOtc sets the "min_order_amount_otc" field.
+func (potuo *ProviderOrderTokenUpdateOne) SetMinOrderAmountOtc(d decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	potuo.mutation.ResetMinOrderAmountOtc()
+	potuo.mutation.SetMinOrderAmountOtc(d)
+	return potuo
+}
+
+// SetNillableMinOrderAmountOtc sets the "min_order_amount_otc" field if the given value is not nil.
+func (potuo *ProviderOrderTokenUpdateOne) SetNillableMinOrderAmountOtc(d *decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	if d != nil {
+		potuo.SetMinOrderAmountOtc(*d)
+	}
+	return potuo
+}
+
+// AddMinOrderAmountOtc adds d to the "min_order_amount_otc" field.
+func (potuo *ProviderOrderTokenUpdateOne) AddMinOrderAmountOtc(d decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	potuo.mutation.AddMinOrderAmountOtc(d)
+	return potuo
+}
+
+// ClearMinOrderAmountOtc clears the value of the "min_order_amount_otc" field.
+func (potuo *ProviderOrderTokenUpdateOne) ClearMinOrderAmountOtc() *ProviderOrderTokenUpdateOne {
+	potuo.mutation.ClearMinOrderAmountOtc()
 	return potuo
 }
 
@@ -808,6 +934,24 @@ func (potuo *ProviderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *P
 	}
 	if value, ok := potuo.mutation.AddedMinOrderAmount(); ok {
 		_spec.AddField(providerordertoken.FieldMinOrderAmount, field.TypeFloat64, value)
+	}
+	if value, ok := potuo.mutation.MaxOrderAmountOtc(); ok {
+		_spec.SetField(providerordertoken.FieldMaxOrderAmountOtc, field.TypeFloat64, value)
+	}
+	if value, ok := potuo.mutation.AddedMaxOrderAmountOtc(); ok {
+		_spec.AddField(providerordertoken.FieldMaxOrderAmountOtc, field.TypeFloat64, value)
+	}
+	if potuo.mutation.MaxOrderAmountOtcCleared() {
+		_spec.ClearField(providerordertoken.FieldMaxOrderAmountOtc, field.TypeFloat64)
+	}
+	if value, ok := potuo.mutation.MinOrderAmountOtc(); ok {
+		_spec.SetField(providerordertoken.FieldMinOrderAmountOtc, field.TypeFloat64, value)
+	}
+	if value, ok := potuo.mutation.AddedMinOrderAmountOtc(); ok {
+		_spec.AddField(providerordertoken.FieldMinOrderAmountOtc, field.TypeFloat64, value)
+	}
+	if potuo.mutation.MinOrderAmountOtcCleared() {
+		_spec.ClearField(providerordertoken.FieldMinOrderAmountOtc, field.TypeFloat64)
 	}
 	if value, ok := potuo.mutation.RateSlippage(); ok {
 		_spec.SetField(providerordertoken.FieldRateSlippage, field.TypeFloat64, value)

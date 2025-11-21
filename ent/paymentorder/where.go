@@ -1247,6 +1247,26 @@ func AmountInUsdLTE(v decimal.Decimal) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldLTE(FieldAmountInUsd, v))
 }
 
+// OrderTypeEQ applies the EQ predicate on the "order_type" field.
+func OrderTypeEQ(v OrderType) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldOrderType, v))
+}
+
+// OrderTypeNEQ applies the NEQ predicate on the "order_type" field.
+func OrderTypeNEQ(v OrderType) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNEQ(FieldOrderType, v))
+}
+
+// OrderTypeIn applies the In predicate on the "order_type" field.
+func OrderTypeIn(vs ...OrderType) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIn(FieldOrderType, vs...))
+}
+
+// OrderTypeNotIn applies the NotIn predicate on the "order_type" field.
+func OrderTypeNotIn(vs ...OrderType) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotIn(FieldOrderType, vs...))
+}
+
 // HasSenderProfile applies the HasEdge predicate on the "sender_profile" edge.
 func HasSenderProfile() predicate.PaymentOrder {
 	return predicate.PaymentOrder(func(s *sql.Selector) {

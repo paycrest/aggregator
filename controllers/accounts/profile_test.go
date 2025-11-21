@@ -452,7 +452,7 @@ func TestProfile(t *testing.T) {
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
 					Currency:       "KES",
 					Tokens: []types.ProviderOrderTokenPayload{{
-						Symbol:       testCtx.orderToken.Edges.Token.Symbol,
+						Symbol:       testCtx.token.Symbol,
 						Network:      testCtx.orderToken.Network,
 						RateSlippage: decimal.NewFromFloat(25), // 25% slippage
 					}},
@@ -472,7 +472,7 @@ func TestProfile(t *testing.T) {
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
 					Currency:       "KES",
 					Tokens: []types.ProviderOrderTokenPayload{{
-						Symbol:       testCtx.orderToken.Edges.Token.Symbol,
+						Symbol:       testCtx.token.Symbol,
 						Network:      testCtx.orderToken.Network,
 						RateSlippage: decimal.NewFromFloat(0.09), // 0.09% slippage
 					}},
@@ -492,7 +492,7 @@ func TestProfile(t *testing.T) {
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
 					Currency:       "KES",
 					Tokens: []types.ProviderOrderTokenPayload{{
-						Symbol:                 testCtx.orderToken.Edges.Token.Symbol,
+						Symbol:                 testCtx.token.Symbol,
 						ConversionRateType:     testCtx.orderToken.ConversionRateType,
 						FixedConversionRate:    testCtx.orderToken.FixedConversionRate,
 						FloatingConversionRate: testCtx.orderToken.FloatingConversionRate,

@@ -29,6 +29,10 @@ const (
 	FieldMaxOrderAmount = "max_order_amount"
 	// FieldMinOrderAmount holds the string denoting the min_order_amount field in the database.
 	FieldMinOrderAmount = "min_order_amount"
+	// FieldMaxOrderAmountOtc holds the string denoting the max_order_amount_otc field in the database.
+	FieldMaxOrderAmountOtc = "max_order_amount_otc"
+	// FieldMinOrderAmountOtc holds the string denoting the min_order_amount_otc field in the database.
+	FieldMinOrderAmountOtc = "min_order_amount_otc"
 	// FieldRateSlippage holds the string denoting the rate_slippage field in the database.
 	FieldRateSlippage = "rate_slippage"
 	// FieldAddress holds the string denoting the address field in the database.
@@ -76,6 +80,8 @@ var Columns = []string{
 	FieldConversionRateType,
 	FieldMaxOrderAmount,
 	FieldMinOrderAmount,
+	FieldMaxOrderAmountOtc,
+	FieldMinOrderAmountOtc,
 	FieldRateSlippage,
 	FieldAddress,
 	FieldNetwork,
@@ -177,6 +183,16 @@ func ByMaxOrderAmount(opts ...sql.OrderTermOption) OrderOption {
 // ByMinOrderAmount orders the results by the min_order_amount field.
 func ByMinOrderAmount(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMinOrderAmount, opts...).ToFunc()
+}
+
+// ByMaxOrderAmountOtc orders the results by the max_order_amount_otc field.
+func ByMaxOrderAmountOtc(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMaxOrderAmountOtc, opts...).ToFunc()
+}
+
+// ByMinOrderAmountOtc orders the results by the min_order_amount_otc field.
+func ByMinOrderAmountOtc(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMinOrderAmountOtc, opts...).ToFunc()
 }
 
 // ByRateSlippage orders the results by the rate_slippage field.
