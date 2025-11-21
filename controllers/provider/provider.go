@@ -434,9 +434,10 @@ func (ctrl *ProviderController) handleExportLockPaymentOrders(ctx *gin.Context, 
 		"Token Amount",
 		"Token",
 		"Network",
+		"Amount (USD)",
 		"Rate",
 		"Status",
-		"Bank Name",
+		"Institution",
 		"Account Identifier",
 		"Account Name",
 		"Currency",
@@ -473,10 +474,10 @@ func (ctrl *ProviderController) handleExportLockPaymentOrders(ctx *gin.Context, 
 
 	// Write data rows
 	for _, lockPaymentOrder := range lockPaymentOrders {
-		// Look up bank name from pre-fetched map
-		bankName := lockPaymentOrder.Institution
+		// Look up institution name from pre-fetched map
+		institutionName := lockPaymentOrder.Institution
 		if name, exists := institutionMap[lockPaymentOrder.Institution]; exists {
-			bankName = name
+			institutionName = name
 		}
 
 		var currencyCode string
@@ -489,9 +490,10 @@ func (ctrl *ProviderController) handleExportLockPaymentOrders(ctx *gin.Context, 
 			lockPaymentOrder.Amount.String(),
 			lockPaymentOrder.Edges.Token.Symbol,
 			lockPaymentOrder.Edges.Token.Edges.Network.Identifier,
+			lockPaymentOrder.AmountInUsd.String(),
 			lockPaymentOrder.Rate.String(),
 			string(lockPaymentOrder.Status),
-			bankName,
+			institutionName,
 			lockPaymentOrder.AccountIdentifier,
 			lockPaymentOrder.AccountName,
 			currencyCode,
