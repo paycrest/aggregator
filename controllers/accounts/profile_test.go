@@ -772,6 +772,114 @@ func TestProfile(t *testing.T) {
 				assert.True(t, savedProvider.MinOtcValue.IsZero())
 				assert.True(t, savedProvider.MaxOtcValue.IsZero())
 			})
+
+			t.Run("fails with invalid range (min >= max)", func(t *testing.T) {
+				payload := types.ProviderProfilePayload{
+					TradingName:  testCtx.providerProfile.TradingName,
+					Currency:     "KES",
+					IsOTCEnabled: true,
+					MinOTCValue:  decimal.NewFromInt(50000),
+					MaxOTCValue:  decimal.NewFromInt(5000), // min > max
+				}
+
+				res := profileUpdateRequest(payload)
+				assert.Equal(t, http.StatusBadRequest, res.Code)
+
+				var response types.Response
+				err = json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Contains(t, response.Message, "min_otc_value must be less than max_otc_value")
+			})
+
+			t.Run("fails with equal min and max values", func(t *testing.T) {
+				payload := types.ProviderProfilePayload{
+					TradingName:  testCtx.providerProfile.TradingName,
+					Currency:     "KES",
+					IsOTCEnabled: true,
+					MinOTCValue:  decimal.NewFromInt(5000),
+					MaxOTCValue:  decimal.NewFromInt(5000), // min == max
+				}
+
+				res := profileUpdateRequest(payload)
+				assert.Equal(t, http.StatusBadRequest, res.Code)
+
+				var response types.Response
+				err = json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Contains(t, response.Message, "min_otc_value must be less than max_otc_value")
+			})
+
+			t.Run("fails with negative min value", func(t *testing.T) {
+				payload := types.ProviderProfilePayload{
+					TradingName:  testCtx.providerProfile.TradingName,
+					Currency:     "KES",
+					IsOTCEnabled: true,
+					MinOTCValue:  decimal.NewFromInt(-1000),
+					MaxOTCValue:  decimal.NewFromInt(50000),
+				}
+
+				res := profileUpdateRequest(payload)
+				assert.Equal(t, http.StatusBadRequest, res.Code)
+
+				var response types.Response
+				err = json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Contains(t, response.Message, "min_otc_value must be positive")
+			})
+
+			t.Run("fails with negative max value", func(t *testing.T) {
+				payload := types.ProviderProfilePayload{
+					TradingName:  testCtx.providerProfile.TradingName,
+					Currency:     "KES",
+					IsOTCEnabled: true,
+					MinOTCValue:  decimal.NewFromInt(1000),
+					MaxOTCValue:  decimal.NewFromInt(-50000),
+				}
+
+				res := profileUpdateRequest(payload)
+				assert.Equal(t, http.StatusBadRequest, res.Code)
+
+				var response types.Response
+				err = json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Contains(t, response.Message, "max_otc_value must be positive")
+			})
+
+			t.Run("fails with zero min value when OTC enabled", func(t *testing.T) {
+				payload := types.ProviderProfilePayload{
+					TradingName:  testCtx.providerProfile.TradingName,
+					Currency:     "KES",
+					IsOTCEnabled: true,
+					MinOTCValue:  decimal.Zero,
+					MaxOTCValue:  decimal.NewFromInt(50000),
+				}
+
+				res := profileUpdateRequest(payload)
+				assert.Equal(t, http.StatusBadRequest, res.Code)
+
+				var response types.Response
+				err = json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Contains(t, response.Message, "min_otc_value must be positive")
+			})
+
+			t.Run("fails with zero max value when OTC enabled", func(t *testing.T) {
+				payload := types.ProviderProfilePayload{
+					TradingName:  testCtx.providerProfile.TradingName,
+					Currency:     "KES",
+					IsOTCEnabled: true,
+					MinOTCValue:  decimal.NewFromInt(5000),
+					MaxOTCValue:  decimal.Zero,
+				}
+
+				res := profileUpdateRequest(payload)
+				assert.Equal(t, http.StatusBadRequest, res.Code)
+
+				var response types.Response
+				err = json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Contains(t, response.Message, "max_otc_value must be positive")
+			})
 		})
 	})
 

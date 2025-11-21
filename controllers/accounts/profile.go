@@ -492,6 +492,43 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		txUpdate.SetVisibilityMode(providerprofile.VisibilityMode(payload.VisibilityMode))
 	}
 
+	// Validate OTC Configuration
+	if payload.IsOTCEnabled {
+		if payload.MinOTCValue.LessThanOrEqual(decimal.Zero) {
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
+			}
+			u.APIResponse(ctx, http.StatusBadRequest, "error",
+				"min_otc_value must be positive when OTC is enabled", []types.ErrorData{{
+					Field:   "min_otc_value",
+					Message: "Must be a positive value",
+				}})
+			return
+		}
+		if payload.MaxOTCValue.LessThanOrEqual(decimal.Zero) {
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
+			}
+			u.APIResponse(ctx, http.StatusBadRequest, "error",
+				"max_otc_value must be positive when OTC is enabled", []types.ErrorData{{
+					Field:   "max_otc_value",
+					Message: "Must be a positive value",
+				}})
+			return
+		}
+		if payload.MinOTCValue.GreaterThanOrEqual(payload.MaxOTCValue) {
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
+			}
+			u.APIResponse(ctx, http.StatusBadRequest, "error",
+				"min_otc_value must be less than max_otc_value", []types.ErrorData{{
+					Field:   "min_otc_value",
+					Message: "Must be less than max_otc_value",
+				}})
+			return
+		}
+	}
+
 	// Update OTC Configuration
 	txUpdate.SetIsOtcEnabled(payload.IsOTCEnabled)
 	txUpdate.SetMinOtcValue(payload.MinOTCValue)
