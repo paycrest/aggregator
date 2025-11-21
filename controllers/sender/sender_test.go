@@ -1078,7 +1078,7 @@ func TestSender(t *testing.T) {
 			// Check CSV content
 			csvContent := res.Body.String()
 			assert.Contains(t, csvContent, "Order ID,Reference,Token Amount")
-			assert.Contains(t, csvContent, "Token,Network,Rate,Sender Fee")
+			assert.Contains(t, csvContent, "Token,Network,Amount (USD),Rate,Sender Fee")
 
 			// Should contain the order with reference we created
 			assert.Contains(t, csvContent, "12kjdf-kjn33_REF")
