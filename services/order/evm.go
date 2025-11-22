@@ -154,29 +154,6 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 		return fmt.Errorf("%s - CreateOrder.updateStatus: %w", orderIDPrefix, err)
 	}
 
-	// Check if this is a Hedera chain order
-	if order.Edges.Token.Edges.Network.ChainID == 295 {
-		// For Hedera, call CreateGatewayOrder instead of SendTransactionBatch
-		hederaService := services.NewHederaMirrorService()
-
-		orderData := map[string]interface{}{
-			"token":              order.Edges.Token.ContractAddress,
-			"amount":             order.Amount,
-			"rate":               order.Rate,
-			"senderFeeRecipient": order.FeeAddress,
-			"senderFee":          order.SenderFee,
-			"refundAddress":      order.ReturnAddress,
-			"messageHash":        encryptedOrderRecipient,
-		}
-
-		err = hederaService.CreateGatewayOrder(ctx, orderID.String(), order.Edges.Token.Edges.Network.GatewayContractAddress, orderData)
-		if err != nil {
-			return fmt.Errorf("%s - CreateOrder.createGatewayOrder: %w", orderIDPrefix, err)
-		}
-
-		return nil
-	}
-
 	createOrderData, err := s.createOrderCallData(order, encryptedOrderRecipient)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.createOrderCallData: %w", orderIDPrefix, err)
@@ -250,19 +227,6 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 		"value": "0",
 	}
 
-	// Check if this is a Hedera chain order
-	if lockOrder.Edges.Token.Edges.Network.ChainID == 295 {
-		// For Hedera, call RefundOrder with the refund calldata
-		hederaService := services.NewHederaMirrorService()
-
-		err = hederaService.RefundOrder(ctx, txPayload)
-		if err != nil {
-			return fmt.Errorf("%s - RefundOrder.hederaRefundOrder: %w", orderIDPrefix, err)
-		}
-
-		return nil
-	}
-
 	_, err = s.engineService.SendTransactionBatch(ctx, lockOrder.Edges.Token.Edges.Network.ChainID, cryptoConf.AggregatorSmartAccount, []map[string]interface{}{txPayload})
 	if err != nil {
 		return fmt.Errorf("%s - RefundOrder.sendTransaction: %w", orderIDPrefix, err)
@@ -307,19 +271,6 @@ func (s *OrderEVM) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 		"to":    order.Edges.Token.Edges.Network.GatewayContractAddress,
 		"data":  fmt.Sprintf("0x%x", settleOrderData),
 		"value": "0",
-	}
-
-	// Check if this is a Hedera chain order
-	if order.Edges.Token.Edges.Network.ChainID == 295 {
-		// For Hedera, call SettleOrder with the settle calldata
-		hederaService := services.NewHederaMirrorService()
-
-		err = hederaService.SettleOrder(ctx, txPayload)
-		if err != nil {
-			return fmt.Errorf("%s - SettleOrder.hederaSettleOrder: %w", orderIDPrefix, err)
-		}
-
-		return nil
 	}
 
 	_, err = s.engineService.SendTransactionBatch(ctx, order.Edges.Token.Edges.Network.ChainID, cryptoConf.AggregatorSmartAccount, []map[string]interface{}{txPayload})
