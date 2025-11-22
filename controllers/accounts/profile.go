@@ -11,8 +11,8 @@ import (
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/network"
-	"github.com/paycrest/aggregator/ent/providerbankaccount"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -270,13 +270,13 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 	var tokenOperations []TokenOperation
 	var validationErrors []types.ErrorData
 
-	type BankAccountOperation struct {
-		Payload         types.BankAccountPayload
+	type FiatAccountOperation struct {
+		Payload         types.FiatAccountPayload
 		IsUpdate        bool
-		ExistingAccount *ent.ProviderBankAccount
+		ExistingAccount *ent.ProviderFiatAccount
 	}
 
-	var bankAccountOps []BankAccountOperation
+	var fiatAccountOps []FiatAccountOperation
 
 	// Validate all tokens first
 	for _, tokenPayload := range payload.Tokens {
@@ -433,36 +433,36 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		})
 	}
 
-	// Validate all bank accounts (same pattern as tokens)
-	for _, bankAccountPayload := range payload.BankAccounts {
+	// Validate all fiat accounts (same pattern as tokens)
+	for _, fiatAccountPayload := range payload.FiatAccounts {
 		// Validate institution exists
 		institutionExists, err := storage.Client.Institution.
 			Query().
-			Where(institution.CodeEQ(bankAccountPayload.Institution)).
+			Where(institution.CodeEQ(fiatAccountPayload.Institution)).
 			Exist(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":       fmt.Sprintf("%v", err),
-				"Institution": bankAccountPayload.Institution,
+				"Institution": fiatAccountPayload.Institution,
 			}).Errorf("Failed to validate institution")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 			return
 		}
 		if !institutionExists {
 			validationErrors = append(validationErrors, types.ErrorData{
-				Field:   "BankAccounts",
-				Message: fmt.Sprintf("Institution %s is not supported", bankAccountPayload.Institution),
+				Field:   "FiatAccounts",
+				Message: fmt.Sprintf("Institution %s is not supported", fiatAccountPayload.Institution),
 			})
 			continue
 		}
 
 		// Check if account already exists (upsert check)
-		existingAccount, err := storage.Client.ProviderBankAccount.
+		existingAccount, err := storage.Client.ProviderFiatAccount.
 			Query().
 			Where(
-				providerbankaccount.AccountIdentifierEQ(bankAccountPayload.AccountIdentifier),
-				providerbankaccount.InstitutionEQ(bankAccountPayload.Institution),
-				providerbankaccount.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+				providerfiataccount.AccountIdentifierEQ(fiatAccountPayload.AccountIdentifier),
+				providerfiataccount.InstitutionEQ(fiatAccountPayload.Institution),
+				providerfiataccount.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 			).
 			Only(ctx)
 
@@ -470,15 +470,14 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		if err != nil && !ent.IsNotFound(err) {
 			logger.WithFields(logger.Fields{
 				"Error":             fmt.Sprintf("%v", err),
-				"AccountIdentifier": bankAccountPayload.AccountIdentifier,
-				"Institution":       bankAccountPayload.Institution,
-			}).Errorf("Failed to check for existing bank account")
+				"Institution":       fiatAccountPayload.Institution,
+			}).Errorf("Failed to check for existing fiat account")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 			return
 		}
 
-		bankAccountOps = append(bankAccountOps, BankAccountOperation{
-			Payload:         bankAccountPayload,
+		fiatAccountOps = append(fiatAccountOps, FiatAccountOperation{
+			Payload:         fiatAccountPayload,
 			IsUpdate:        isUpdate,
 			ExistingAccount: existingAccount,
 		})
@@ -642,11 +641,11 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		allBuckets = append(allBuckets, buckets...)
 	}
 
-	// Process all bank account operations (same pattern as tokens)
-	for _, op := range bankAccountOps {
+	// Process all fiat account operations (same pattern as tokens)
+	for _, op := range fiatAccountOps {
 		if op.IsUpdate {
 			// Update existing account
-			updateBuilder := tx.ProviderBankAccount.
+			updateBuilder := tx.ProviderFiatAccount.
 				UpdateOneID(op.ExistingAccount.ID).
 				SetAccountIdentifier(op.Payload.AccountIdentifier).
 				SetInstitution(op.Payload.Institution)
@@ -663,15 +662,14 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				}
 				logger.WithFields(logger.Fields{
 					"Error":             fmt.Sprintf("%v", err),
-					"AccountIdentifier": op.Payload.AccountIdentifier,
 					"Institution":       op.Payload.Institution,
-				}).Errorf("Failed to update bank account")
+				}).Errorf("Failed to update fiat account")
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 				return
 			}
 		} else {
 			// Create new account
-			createBuilder := tx.ProviderBankAccount.
+			createBuilder := tx.ProviderFiatAccount.
 				Create().
 				SetAccountIdentifier(op.Payload.AccountIdentifier).
 				SetInstitution(op.Payload.Institution).
@@ -689,9 +687,8 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				}
 				logger.WithFields(logger.Fields{
 					"Error":             fmt.Sprintf("%v", err),
-					"AccountIdentifier": op.Payload.AccountIdentifier,
 					"Institution":       op.Payload.Institution,
-				}).Errorf("Failed to create bank account")
+				}).Errorf("Failed to create fiat account")
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 				return
 			}
@@ -919,21 +916,21 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 		return
 	}
 
-	bankAccounts, err := provider.QueryProviderBankAccounts().
-		Order(ent.Desc(providerbankaccount.FieldCreatedAt)).
+	fiatAccounts, err := provider.QueryProviderFiatAccounts().
+		Order(ent.Desc(providerfiataccount.FieldCreatedAt)).
 		All(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
 			"ProviderID": provider.ID,
-		}).Errorf("Failed to fetch bank accounts for provider")
+		}).Errorf("Failed to fetch fiat accounts for provider")
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)
 		return
 	}
 
-	bankAccountsPayload := make([]types.BankAccountResponse, len(bankAccounts))
-	for i, account := range bankAccounts {
-		bankAccountsPayload[i] = types.BankAccountResponse{
+	fiatAccountsPayload := make([]types.FiatAccountResponse, len(fiatAccounts))
+	for i, account := range fiatAccounts {
+		fiatAccountsPayload[i] = types.FiatAccountResponse{
 			ID:                account.ID,
 			AccountIdentifier: account.AccountIdentifier,
 			AccountName:       account.AccountName,
@@ -991,7 +988,7 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 		HostIdentifier:        provider.HostIdentifier,
 		CurrencyAvailability:  currencyAvailability,
 		Tokens:                tokensPayload,
-		BankAccounts:          bankAccountsPayload,
+		FiatAccounts:          fiatAccountsPayload,
 		APIKey:                *apiKey,
 		IsActive:              provider.IsActive,
 		VisibilityMode:        provider.VisibilityMode,

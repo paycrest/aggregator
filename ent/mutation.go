@@ -26,8 +26,8 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/predicate"
-	"github.com/paycrest/aggregator/ent/providerbankaccount"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -65,8 +65,8 @@ const (
 	TypePaymentOrder                = "PaymentOrder"
 	TypePaymentOrderRecipient       = "PaymentOrderRecipient"
 	TypePaymentWebhook              = "PaymentWebhook"
-	TypeProviderBankAccount         = "ProviderBankAccount"
 	TypeProviderCurrencies          = "ProviderCurrencies"
+	TypeProviderFiatAccount         = "ProviderFiatAccount"
 	TypeProviderOrderToken          = "ProviderOrderToken"
 	TypeProviderProfile             = "ProviderProfile"
 	TypeProviderRating              = "ProviderRating"
@@ -13859,643 +13859,6 @@ func (m *PaymentWebhookMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown PaymentWebhook edge %s", name)
 }
 
-// ProviderBankAccountMutation represents an operation that mutates the ProviderBankAccount nodes in the graph.
-type ProviderBankAccountMutation struct {
-	config
-	op                 Op
-	typ                string
-	id                 *uuid.UUID
-	institution        *string
-	account_identifier *string
-	account_name       *string
-	created_at         *time.Time
-	updated_at         *time.Time
-	clearedFields      map[string]struct{}
-	provider           *string
-	clearedprovider    bool
-	done               bool
-	oldValue           func(context.Context) (*ProviderBankAccount, error)
-	predicates         []predicate.ProviderBankAccount
-}
-
-var _ ent.Mutation = (*ProviderBankAccountMutation)(nil)
-
-// providerbankaccountOption allows management of the mutation configuration using functional options.
-type providerbankaccountOption func(*ProviderBankAccountMutation)
-
-// newProviderBankAccountMutation creates new mutation for the ProviderBankAccount entity.
-func newProviderBankAccountMutation(c config, op Op, opts ...providerbankaccountOption) *ProviderBankAccountMutation {
-	m := &ProviderBankAccountMutation{
-		config:        c,
-		op:            op,
-		typ:           TypeProviderBankAccount,
-		clearedFields: make(map[string]struct{}),
-	}
-	for _, opt := range opts {
-		opt(m)
-	}
-	return m
-}
-
-// withProviderBankAccountID sets the ID field of the mutation.
-func withProviderBankAccountID(id uuid.UUID) providerbankaccountOption {
-	return func(m *ProviderBankAccountMutation) {
-		var (
-			err   error
-			once  sync.Once
-			value *ProviderBankAccount
-		)
-		m.oldValue = func(ctx context.Context) (*ProviderBankAccount, error) {
-			once.Do(func() {
-				if m.done {
-					err = errors.New("querying old values post mutation is not allowed")
-				} else {
-					value, err = m.Client().ProviderBankAccount.Get(ctx, id)
-				}
-			})
-			return value, err
-		}
-		m.id = &id
-	}
-}
-
-// withProviderBankAccount sets the old ProviderBankAccount of the mutation.
-func withProviderBankAccount(node *ProviderBankAccount) providerbankaccountOption {
-	return func(m *ProviderBankAccountMutation) {
-		m.oldValue = func(context.Context) (*ProviderBankAccount, error) {
-			return node, nil
-		}
-		m.id = &node.ID
-	}
-}
-
-// Client returns a new `ent.Client` from the mutation. If the mutation was
-// executed in a transaction (ent.Tx), a transactional client is returned.
-func (m ProviderBankAccountMutation) Client() *Client {
-	client := &Client{config: m.config}
-	client.init()
-	return client
-}
-
-// Tx returns an `ent.Tx` for mutations that were executed in transactions;
-// it returns an error otherwise.
-func (m ProviderBankAccountMutation) Tx() (*Tx, error) {
-	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, errors.New("ent: mutation is not running in a transaction")
-	}
-	tx := &Tx{config: m.config}
-	tx.init()
-	return tx, nil
-}
-
-// SetID sets the value of the id field. Note that this
-// operation is only accepted on creation of ProviderBankAccount entities.
-func (m *ProviderBankAccountMutation) SetID(id uuid.UUID) {
-	m.id = &id
-}
-
-// ID returns the ID value in the mutation. Note that the ID is only available
-// if it was provided to the builder or after it was returned from the database.
-func (m *ProviderBankAccountMutation) ID() (id uuid.UUID, exists bool) {
-	if m.id == nil {
-		return
-	}
-	return *m.id, true
-}
-
-// IDs queries the database and returns the entity ids that match the mutation's predicate.
-// That means, if the mutation is applied within a transaction with an isolation level such
-// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
-// or updated by the mutation.
-func (m *ProviderBankAccountMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	switch {
-	case m.op.Is(OpUpdateOne | OpDeleteOne):
-		id, exists := m.ID()
-		if exists {
-			return []uuid.UUID{id}, nil
-		}
-		fallthrough
-	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().ProviderBankAccount.Query().Where(m.predicates...).IDs(ctx)
-	default:
-		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
-	}
-}
-
-// SetInstitution sets the "institution" field.
-func (m *ProviderBankAccountMutation) SetInstitution(s string) {
-	m.institution = &s
-}
-
-// Institution returns the value of the "institution" field in the mutation.
-func (m *ProviderBankAccountMutation) Institution() (r string, exists bool) {
-	v := m.institution
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldInstitution returns the old "institution" field's value of the ProviderBankAccount entity.
-// If the ProviderBankAccount object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProviderBankAccountMutation) OldInstitution(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldInstitution is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldInstitution requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldInstitution: %w", err)
-	}
-	return oldValue.Institution, nil
-}
-
-// ResetInstitution resets all changes to the "institution" field.
-func (m *ProviderBankAccountMutation) ResetInstitution() {
-	m.institution = nil
-}
-
-// SetAccountIdentifier sets the "account_identifier" field.
-func (m *ProviderBankAccountMutation) SetAccountIdentifier(s string) {
-	m.account_identifier = &s
-}
-
-// AccountIdentifier returns the value of the "account_identifier" field in the mutation.
-func (m *ProviderBankAccountMutation) AccountIdentifier() (r string, exists bool) {
-	v := m.account_identifier
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldAccountIdentifier returns the old "account_identifier" field's value of the ProviderBankAccount entity.
-// If the ProviderBankAccount object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProviderBankAccountMutation) OldAccountIdentifier(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldAccountIdentifier is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldAccountIdentifier requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldAccountIdentifier: %w", err)
-	}
-	return oldValue.AccountIdentifier, nil
-}
-
-// ResetAccountIdentifier resets all changes to the "account_identifier" field.
-func (m *ProviderBankAccountMutation) ResetAccountIdentifier() {
-	m.account_identifier = nil
-}
-
-// SetAccountName sets the "account_name" field.
-func (m *ProviderBankAccountMutation) SetAccountName(s string) {
-	m.account_name = &s
-}
-
-// AccountName returns the value of the "account_name" field in the mutation.
-func (m *ProviderBankAccountMutation) AccountName() (r string, exists bool) {
-	v := m.account_name
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldAccountName returns the old "account_name" field's value of the ProviderBankAccount entity.
-// If the ProviderBankAccount object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProviderBankAccountMutation) OldAccountName(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldAccountName is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldAccountName requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldAccountName: %w", err)
-	}
-	return oldValue.AccountName, nil
-}
-
-// ClearAccountName clears the value of the "account_name" field.
-func (m *ProviderBankAccountMutation) ClearAccountName() {
-	m.account_name = nil
-	m.clearedFields[providerbankaccount.FieldAccountName] = struct{}{}
-}
-
-// AccountNameCleared returns if the "account_name" field was cleared in this mutation.
-func (m *ProviderBankAccountMutation) AccountNameCleared() bool {
-	_, ok := m.clearedFields[providerbankaccount.FieldAccountName]
-	return ok
-}
-
-// ResetAccountName resets all changes to the "account_name" field.
-func (m *ProviderBankAccountMutation) ResetAccountName() {
-	m.account_name = nil
-	delete(m.clearedFields, providerbankaccount.FieldAccountName)
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (m *ProviderBankAccountMutation) SetCreatedAt(t time.Time) {
-	m.created_at = &t
-}
-
-// CreatedAt returns the value of the "created_at" field in the mutation.
-func (m *ProviderBankAccountMutation) CreatedAt() (r time.Time, exists bool) {
-	v := m.created_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCreatedAt returns the old "created_at" field's value of the ProviderBankAccount entity.
-// If the ProviderBankAccount object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProviderBankAccountMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
-	}
-	return oldValue.CreatedAt, nil
-}
-
-// ResetCreatedAt resets all changes to the "created_at" field.
-func (m *ProviderBankAccountMutation) ResetCreatedAt() {
-	m.created_at = nil
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (m *ProviderBankAccountMutation) SetUpdatedAt(t time.Time) {
-	m.updated_at = &t
-}
-
-// UpdatedAt returns the value of the "updated_at" field in the mutation.
-func (m *ProviderBankAccountMutation) UpdatedAt() (r time.Time, exists bool) {
-	v := m.updated_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldUpdatedAt returns the old "updated_at" field's value of the ProviderBankAccount entity.
-// If the ProviderBankAccount object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProviderBankAccountMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
-	}
-	return oldValue.UpdatedAt, nil
-}
-
-// ResetUpdatedAt resets all changes to the "updated_at" field.
-func (m *ProviderBankAccountMutation) ResetUpdatedAt() {
-	m.updated_at = nil
-}
-
-// SetProviderID sets the "provider" edge to the ProviderProfile entity by id.
-func (m *ProviderBankAccountMutation) SetProviderID(id string) {
-	m.provider = &id
-}
-
-// ClearProvider clears the "provider" edge to the ProviderProfile entity.
-func (m *ProviderBankAccountMutation) ClearProvider() {
-	m.clearedprovider = true
-}
-
-// ProviderCleared reports if the "provider" edge to the ProviderProfile entity was cleared.
-func (m *ProviderBankAccountMutation) ProviderCleared() bool {
-	return m.clearedprovider
-}
-
-// ProviderID returns the "provider" edge ID in the mutation.
-func (m *ProviderBankAccountMutation) ProviderID() (id string, exists bool) {
-	if m.provider != nil {
-		return *m.provider, true
-	}
-	return
-}
-
-// ProviderIDs returns the "provider" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProviderID instead. It exists only for internal usage by the builders.
-func (m *ProviderBankAccountMutation) ProviderIDs() (ids []string) {
-	if id := m.provider; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetProvider resets all changes to the "provider" edge.
-func (m *ProviderBankAccountMutation) ResetProvider() {
-	m.provider = nil
-	m.clearedprovider = false
-}
-
-// Where appends a list predicates to the ProviderBankAccountMutation builder.
-func (m *ProviderBankAccountMutation) Where(ps ...predicate.ProviderBankAccount) {
-	m.predicates = append(m.predicates, ps...)
-}
-
-// WhereP appends storage-level predicates to the ProviderBankAccountMutation builder. Using this method,
-// users can use type-assertion to append predicates that do not depend on any generated package.
-func (m *ProviderBankAccountMutation) WhereP(ps ...func(*sql.Selector)) {
-	p := make([]predicate.ProviderBankAccount, len(ps))
-	for i := range ps {
-		p[i] = ps[i]
-	}
-	m.Where(p...)
-}
-
-// Op returns the operation name.
-func (m *ProviderBankAccountMutation) Op() Op {
-	return m.op
-}
-
-// SetOp allows setting the mutation operation.
-func (m *ProviderBankAccountMutation) SetOp(op Op) {
-	m.op = op
-}
-
-// Type returns the node type of this mutation (ProviderBankAccount).
-func (m *ProviderBankAccountMutation) Type() string {
-	return m.typ
-}
-
-// Fields returns all fields that were changed during this mutation. Note that in
-// order to get all numeric fields that were incremented/decremented, call
-// AddedFields().
-func (m *ProviderBankAccountMutation) Fields() []string {
-	fields := make([]string, 0, 5)
-	if m.institution != nil {
-		fields = append(fields, providerbankaccount.FieldInstitution)
-	}
-	if m.account_identifier != nil {
-		fields = append(fields, providerbankaccount.FieldAccountIdentifier)
-	}
-	if m.account_name != nil {
-		fields = append(fields, providerbankaccount.FieldAccountName)
-	}
-	if m.created_at != nil {
-		fields = append(fields, providerbankaccount.FieldCreatedAt)
-	}
-	if m.updated_at != nil {
-		fields = append(fields, providerbankaccount.FieldUpdatedAt)
-	}
-	return fields
-}
-
-// Field returns the value of a field with the given name. The second boolean
-// return value indicates that this field was not set, or was not defined in the
-// schema.
-func (m *ProviderBankAccountMutation) Field(name string) (ent.Value, bool) {
-	switch name {
-	case providerbankaccount.FieldInstitution:
-		return m.Institution()
-	case providerbankaccount.FieldAccountIdentifier:
-		return m.AccountIdentifier()
-	case providerbankaccount.FieldAccountName:
-		return m.AccountName()
-	case providerbankaccount.FieldCreatedAt:
-		return m.CreatedAt()
-	case providerbankaccount.FieldUpdatedAt:
-		return m.UpdatedAt()
-	}
-	return nil, false
-}
-
-// OldField returns the old value of the field from the database. An error is
-// returned if the mutation operation is not UpdateOne, or the query to the
-// database failed.
-func (m *ProviderBankAccountMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
-	switch name {
-	case providerbankaccount.FieldInstitution:
-		return m.OldInstitution(ctx)
-	case providerbankaccount.FieldAccountIdentifier:
-		return m.OldAccountIdentifier(ctx)
-	case providerbankaccount.FieldAccountName:
-		return m.OldAccountName(ctx)
-	case providerbankaccount.FieldCreatedAt:
-		return m.OldCreatedAt(ctx)
-	case providerbankaccount.FieldUpdatedAt:
-		return m.OldUpdatedAt(ctx)
-	}
-	return nil, fmt.Errorf("unknown ProviderBankAccount field %s", name)
-}
-
-// SetField sets the value of a field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *ProviderBankAccountMutation) SetField(name string, value ent.Value) error {
-	switch name {
-	case providerbankaccount.FieldInstitution:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetInstitution(v)
-		return nil
-	case providerbankaccount.FieldAccountIdentifier:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetAccountIdentifier(v)
-		return nil
-	case providerbankaccount.FieldAccountName:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetAccountName(v)
-		return nil
-	case providerbankaccount.FieldCreatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCreatedAt(v)
-		return nil
-	case providerbankaccount.FieldUpdatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetUpdatedAt(v)
-		return nil
-	}
-	return fmt.Errorf("unknown ProviderBankAccount field %s", name)
-}
-
-// AddedFields returns all numeric fields that were incremented/decremented during
-// this mutation.
-func (m *ProviderBankAccountMutation) AddedFields() []string {
-	return nil
-}
-
-// AddedField returns the numeric value that was incremented/decremented on a field
-// with the given name. The second boolean return value indicates that this field
-// was not set, or was not defined in the schema.
-func (m *ProviderBankAccountMutation) AddedField(name string) (ent.Value, bool) {
-	return nil, false
-}
-
-// AddField adds the value to the field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *ProviderBankAccountMutation) AddField(name string, value ent.Value) error {
-	switch name {
-	}
-	return fmt.Errorf("unknown ProviderBankAccount numeric field %s", name)
-}
-
-// ClearedFields returns all nullable fields that were cleared during this
-// mutation.
-func (m *ProviderBankAccountMutation) ClearedFields() []string {
-	var fields []string
-	if m.FieldCleared(providerbankaccount.FieldAccountName) {
-		fields = append(fields, providerbankaccount.FieldAccountName)
-	}
-	return fields
-}
-
-// FieldCleared returns a boolean indicating if a field with the given name was
-// cleared in this mutation.
-func (m *ProviderBankAccountMutation) FieldCleared(name string) bool {
-	_, ok := m.clearedFields[name]
-	return ok
-}
-
-// ClearField clears the value of the field with the given name. It returns an
-// error if the field is not defined in the schema.
-func (m *ProviderBankAccountMutation) ClearField(name string) error {
-	switch name {
-	case providerbankaccount.FieldAccountName:
-		m.ClearAccountName()
-		return nil
-	}
-	return fmt.Errorf("unknown ProviderBankAccount nullable field %s", name)
-}
-
-// ResetField resets all changes in the mutation for the field with the given name.
-// It returns an error if the field is not defined in the schema.
-func (m *ProviderBankAccountMutation) ResetField(name string) error {
-	switch name {
-	case providerbankaccount.FieldInstitution:
-		m.ResetInstitution()
-		return nil
-	case providerbankaccount.FieldAccountIdentifier:
-		m.ResetAccountIdentifier()
-		return nil
-	case providerbankaccount.FieldAccountName:
-		m.ResetAccountName()
-		return nil
-	case providerbankaccount.FieldCreatedAt:
-		m.ResetCreatedAt()
-		return nil
-	case providerbankaccount.FieldUpdatedAt:
-		m.ResetUpdatedAt()
-		return nil
-	}
-	return fmt.Errorf("unknown ProviderBankAccount field %s", name)
-}
-
-// AddedEdges returns all edge names that were set/added in this mutation.
-func (m *ProviderBankAccountMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.provider != nil {
-		edges = append(edges, providerbankaccount.EdgeProvider)
-	}
-	return edges
-}
-
-// AddedIDs returns all IDs (to other nodes) that were added for the given edge
-// name in this mutation.
-func (m *ProviderBankAccountMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case providerbankaccount.EdgeProvider:
-		if id := m.provider; id != nil {
-			return []ent.Value{*id}
-		}
-	}
-	return nil
-}
-
-// RemovedEdges returns all edge names that were removed in this mutation.
-func (m *ProviderBankAccountMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
-	return edges
-}
-
-// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
-// the given name in this mutation.
-func (m *ProviderBankAccountMutation) RemovedIDs(name string) []ent.Value {
-	return nil
-}
-
-// ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *ProviderBankAccountMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.clearedprovider {
-		edges = append(edges, providerbankaccount.EdgeProvider)
-	}
-	return edges
-}
-
-// EdgeCleared returns a boolean which indicates if the edge with the given name
-// was cleared in this mutation.
-func (m *ProviderBankAccountMutation) EdgeCleared(name string) bool {
-	switch name {
-	case providerbankaccount.EdgeProvider:
-		return m.clearedprovider
-	}
-	return false
-}
-
-// ClearEdge clears the value of the edge with the given name. It returns an error
-// if that edge is not defined in the schema.
-func (m *ProviderBankAccountMutation) ClearEdge(name string) error {
-	switch name {
-	case providerbankaccount.EdgeProvider:
-		m.ClearProvider()
-		return nil
-	}
-	return fmt.Errorf("unknown ProviderBankAccount unique edge %s", name)
-}
-
-// ResetEdge resets all changes to the edge with the given name in this mutation.
-// It returns an error if the edge is not defined in the schema.
-func (m *ProviderBankAccountMutation) ResetEdge(name string) error {
-	switch name {
-	case providerbankaccount.EdgeProvider:
-		m.ResetProvider()
-		return nil
-	}
-	return fmt.Errorf("unknown ProviderBankAccount edge %s", name)
-}
-
 // ProviderCurrenciesMutation represents an operation that mutates the ProviderCurrencies nodes in the graph.
 type ProviderCurrenciesMutation struct {
 	config
@@ -15270,6 +14633,643 @@ func (m *ProviderCurrenciesMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderCurrencies edge %s", name)
+}
+
+// ProviderFiatAccountMutation represents an operation that mutates the ProviderFiatAccount nodes in the graph.
+type ProviderFiatAccountMutation struct {
+	config
+	op                 Op
+	typ                string
+	id                 *uuid.UUID
+	institution        *string
+	account_identifier *string
+	account_name       *string
+	created_at         *time.Time
+	updated_at         *time.Time
+	clearedFields      map[string]struct{}
+	provider           *string
+	clearedprovider    bool
+	done               bool
+	oldValue           func(context.Context) (*ProviderFiatAccount, error)
+	predicates         []predicate.ProviderFiatAccount
+}
+
+var _ ent.Mutation = (*ProviderFiatAccountMutation)(nil)
+
+// providerfiataccountOption allows management of the mutation configuration using functional options.
+type providerfiataccountOption func(*ProviderFiatAccountMutation)
+
+// newProviderFiatAccountMutation creates new mutation for the ProviderFiatAccount entity.
+func newProviderFiatAccountMutation(c config, op Op, opts ...providerfiataccountOption) *ProviderFiatAccountMutation {
+	m := &ProviderFiatAccountMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeProviderFiatAccount,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withProviderFiatAccountID sets the ID field of the mutation.
+func withProviderFiatAccountID(id uuid.UUID) providerfiataccountOption {
+	return func(m *ProviderFiatAccountMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ProviderFiatAccount
+		)
+		m.oldValue = func(ctx context.Context) (*ProviderFiatAccount, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ProviderFiatAccount.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withProviderFiatAccount sets the old ProviderFiatAccount of the mutation.
+func withProviderFiatAccount(node *ProviderFiatAccount) providerfiataccountOption {
+	return func(m *ProviderFiatAccountMutation) {
+		m.oldValue = func(context.Context) (*ProviderFiatAccount, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ProviderFiatAccountMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ProviderFiatAccountMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ProviderFiatAccount entities.
+func (m *ProviderFiatAccountMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ProviderFiatAccountMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ProviderFiatAccountMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ProviderFiatAccount.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetInstitution sets the "institution" field.
+func (m *ProviderFiatAccountMutation) SetInstitution(s string) {
+	m.institution = &s
+}
+
+// Institution returns the value of the "institution" field in the mutation.
+func (m *ProviderFiatAccountMutation) Institution() (r string, exists bool) {
+	v := m.institution
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInstitution returns the old "institution" field's value of the ProviderFiatAccount entity.
+// If the ProviderFiatAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderFiatAccountMutation) OldInstitution(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInstitution is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInstitution requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInstitution: %w", err)
+	}
+	return oldValue.Institution, nil
+}
+
+// ResetInstitution resets all changes to the "institution" field.
+func (m *ProviderFiatAccountMutation) ResetInstitution() {
+	m.institution = nil
+}
+
+// SetAccountIdentifier sets the "account_identifier" field.
+func (m *ProviderFiatAccountMutation) SetAccountIdentifier(s string) {
+	m.account_identifier = &s
+}
+
+// AccountIdentifier returns the value of the "account_identifier" field in the mutation.
+func (m *ProviderFiatAccountMutation) AccountIdentifier() (r string, exists bool) {
+	v := m.account_identifier
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAccountIdentifier returns the old "account_identifier" field's value of the ProviderFiatAccount entity.
+// If the ProviderFiatAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderFiatAccountMutation) OldAccountIdentifier(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAccountIdentifier is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAccountIdentifier requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAccountIdentifier: %w", err)
+	}
+	return oldValue.AccountIdentifier, nil
+}
+
+// ResetAccountIdentifier resets all changes to the "account_identifier" field.
+func (m *ProviderFiatAccountMutation) ResetAccountIdentifier() {
+	m.account_identifier = nil
+}
+
+// SetAccountName sets the "account_name" field.
+func (m *ProviderFiatAccountMutation) SetAccountName(s string) {
+	m.account_name = &s
+}
+
+// AccountName returns the value of the "account_name" field in the mutation.
+func (m *ProviderFiatAccountMutation) AccountName() (r string, exists bool) {
+	v := m.account_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAccountName returns the old "account_name" field's value of the ProviderFiatAccount entity.
+// If the ProviderFiatAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderFiatAccountMutation) OldAccountName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAccountName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAccountName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAccountName: %w", err)
+	}
+	return oldValue.AccountName, nil
+}
+
+// ClearAccountName clears the value of the "account_name" field.
+func (m *ProviderFiatAccountMutation) ClearAccountName() {
+	m.account_name = nil
+	m.clearedFields[providerfiataccount.FieldAccountName] = struct{}{}
+}
+
+// AccountNameCleared returns if the "account_name" field was cleared in this mutation.
+func (m *ProviderFiatAccountMutation) AccountNameCleared() bool {
+	_, ok := m.clearedFields[providerfiataccount.FieldAccountName]
+	return ok
+}
+
+// ResetAccountName resets all changes to the "account_name" field.
+func (m *ProviderFiatAccountMutation) ResetAccountName() {
+	m.account_name = nil
+	delete(m.clearedFields, providerfiataccount.FieldAccountName)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *ProviderFiatAccountMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *ProviderFiatAccountMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the ProviderFiatAccount entity.
+// If the ProviderFiatAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderFiatAccountMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *ProviderFiatAccountMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *ProviderFiatAccountMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *ProviderFiatAccountMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the ProviderFiatAccount entity.
+// If the ProviderFiatAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderFiatAccountMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *ProviderFiatAccountMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetProviderID sets the "provider" edge to the ProviderProfile entity by id.
+func (m *ProviderFiatAccountMutation) SetProviderID(id string) {
+	m.provider = &id
+}
+
+// ClearProvider clears the "provider" edge to the ProviderProfile entity.
+func (m *ProviderFiatAccountMutation) ClearProvider() {
+	m.clearedprovider = true
+}
+
+// ProviderCleared reports if the "provider" edge to the ProviderProfile entity was cleared.
+func (m *ProviderFiatAccountMutation) ProviderCleared() bool {
+	return m.clearedprovider
+}
+
+// ProviderID returns the "provider" edge ID in the mutation.
+func (m *ProviderFiatAccountMutation) ProviderID() (id string, exists bool) {
+	if m.provider != nil {
+		return *m.provider, true
+	}
+	return
+}
+
+// ProviderIDs returns the "provider" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ProviderID instead. It exists only for internal usage by the builders.
+func (m *ProviderFiatAccountMutation) ProviderIDs() (ids []string) {
+	if id := m.provider; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetProvider resets all changes to the "provider" edge.
+func (m *ProviderFiatAccountMutation) ResetProvider() {
+	m.provider = nil
+	m.clearedprovider = false
+}
+
+// Where appends a list predicates to the ProviderFiatAccountMutation builder.
+func (m *ProviderFiatAccountMutation) Where(ps ...predicate.ProviderFiatAccount) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ProviderFiatAccountMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ProviderFiatAccountMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ProviderFiatAccount, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ProviderFiatAccountMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ProviderFiatAccountMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ProviderFiatAccount).
+func (m *ProviderFiatAccountMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ProviderFiatAccountMutation) Fields() []string {
+	fields := make([]string, 0, 5)
+	if m.institution != nil {
+		fields = append(fields, providerfiataccount.FieldInstitution)
+	}
+	if m.account_identifier != nil {
+		fields = append(fields, providerfiataccount.FieldAccountIdentifier)
+	}
+	if m.account_name != nil {
+		fields = append(fields, providerfiataccount.FieldAccountName)
+	}
+	if m.created_at != nil {
+		fields = append(fields, providerfiataccount.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, providerfiataccount.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ProviderFiatAccountMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case providerfiataccount.FieldInstitution:
+		return m.Institution()
+	case providerfiataccount.FieldAccountIdentifier:
+		return m.AccountIdentifier()
+	case providerfiataccount.FieldAccountName:
+		return m.AccountName()
+	case providerfiataccount.FieldCreatedAt:
+		return m.CreatedAt()
+	case providerfiataccount.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ProviderFiatAccountMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case providerfiataccount.FieldInstitution:
+		return m.OldInstitution(ctx)
+	case providerfiataccount.FieldAccountIdentifier:
+		return m.OldAccountIdentifier(ctx)
+	case providerfiataccount.FieldAccountName:
+		return m.OldAccountName(ctx)
+	case providerfiataccount.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case providerfiataccount.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown ProviderFiatAccount field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ProviderFiatAccountMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case providerfiataccount.FieldInstitution:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInstitution(v)
+		return nil
+	case providerfiataccount.FieldAccountIdentifier:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAccountIdentifier(v)
+		return nil
+	case providerfiataccount.FieldAccountName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAccountName(v)
+		return nil
+	case providerfiataccount.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case providerfiataccount.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderFiatAccount field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ProviderFiatAccountMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ProviderFiatAccountMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ProviderFiatAccountMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown ProviderFiatAccount numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ProviderFiatAccountMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(providerfiataccount.FieldAccountName) {
+		fields = append(fields, providerfiataccount.FieldAccountName)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ProviderFiatAccountMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ProviderFiatAccountMutation) ClearField(name string) error {
+	switch name {
+	case providerfiataccount.FieldAccountName:
+		m.ClearAccountName()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderFiatAccount nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ProviderFiatAccountMutation) ResetField(name string) error {
+	switch name {
+	case providerfiataccount.FieldInstitution:
+		m.ResetInstitution()
+		return nil
+	case providerfiataccount.FieldAccountIdentifier:
+		m.ResetAccountIdentifier()
+		return nil
+	case providerfiataccount.FieldAccountName:
+		m.ResetAccountName()
+		return nil
+	case providerfiataccount.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case providerfiataccount.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderFiatAccount field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ProviderFiatAccountMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.provider != nil {
+		edges = append(edges, providerfiataccount.EdgeProvider)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ProviderFiatAccountMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case providerfiataccount.EdgeProvider:
+		if id := m.provider; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ProviderFiatAccountMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ProviderFiatAccountMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ProviderFiatAccountMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedprovider {
+		edges = append(edges, providerfiataccount.EdgeProvider)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ProviderFiatAccountMutation) EdgeCleared(name string) bool {
+	switch name {
+	case providerfiataccount.EdgeProvider:
+		return m.clearedprovider
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ProviderFiatAccountMutation) ClearEdge(name string) error {
+	switch name {
+	case providerfiataccount.EdgeProvider:
+		m.ClearProvider()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderFiatAccount unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ProviderFiatAccountMutation) ResetEdge(name string) error {
+	switch name {
+	case providerfiataccount.EdgeProvider:
+		m.ResetProvider()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderFiatAccount edge %s", name)
 }
 
 // ProviderOrderTokenMutation represents an operation that mutates the ProviderOrderToken nodes in the graph.
@@ -16491,9 +16491,9 @@ type ProviderProfileMutation struct {
 	assigned_orders               map[uuid.UUID]struct{}
 	removedassigned_orders        map[uuid.UUID]struct{}
 	clearedassigned_orders        bool
-	provider_bank_accounts        map[uuid.UUID]struct{}
-	removedprovider_bank_accounts map[uuid.UUID]struct{}
-	clearedprovider_bank_accounts bool
+	provider_fiat_accounts        map[uuid.UUID]struct{}
+	removedprovider_fiat_accounts map[uuid.UUID]struct{}
+	clearedprovider_fiat_accounts bool
 	done                          bool
 	oldValue                      func(context.Context) (*ProviderProfile, error)
 	predicates                    []predicate.ProviderProfile
@@ -17214,58 +17214,58 @@ func (m *ProviderProfileMutation) ResetAssignedOrders() {
 	m.removedassigned_orders = nil
 }
 
-// AddProviderBankAccountIDs adds the "provider_bank_accounts" edge to the ProviderBankAccount entity by ids.
-func (m *ProviderProfileMutation) AddProviderBankAccountIDs(ids ...uuid.UUID) {
-	if m.provider_bank_accounts == nil {
-		m.provider_bank_accounts = make(map[uuid.UUID]struct{})
+// AddProviderFiatAccountIDs adds the "provider_fiat_accounts" edge to the ProviderFiatAccount entity by ids.
+func (m *ProviderProfileMutation) AddProviderFiatAccountIDs(ids ...uuid.UUID) {
+	if m.provider_fiat_accounts == nil {
+		m.provider_fiat_accounts = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m.provider_bank_accounts[ids[i]] = struct{}{}
+		m.provider_fiat_accounts[ids[i]] = struct{}{}
 	}
 }
 
-// ClearProviderBankAccounts clears the "provider_bank_accounts" edge to the ProviderBankAccount entity.
-func (m *ProviderProfileMutation) ClearProviderBankAccounts() {
-	m.clearedprovider_bank_accounts = true
+// ClearProviderFiatAccounts clears the "provider_fiat_accounts" edge to the ProviderFiatAccount entity.
+func (m *ProviderProfileMutation) ClearProviderFiatAccounts() {
+	m.clearedprovider_fiat_accounts = true
 }
 
-// ProviderBankAccountsCleared reports if the "provider_bank_accounts" edge to the ProviderBankAccount entity was cleared.
-func (m *ProviderProfileMutation) ProviderBankAccountsCleared() bool {
-	return m.clearedprovider_bank_accounts
+// ProviderFiatAccountsCleared reports if the "provider_fiat_accounts" edge to the ProviderFiatAccount entity was cleared.
+func (m *ProviderProfileMutation) ProviderFiatAccountsCleared() bool {
+	return m.clearedprovider_fiat_accounts
 }
 
-// RemoveProviderBankAccountIDs removes the "provider_bank_accounts" edge to the ProviderBankAccount entity by IDs.
-func (m *ProviderProfileMutation) RemoveProviderBankAccountIDs(ids ...uuid.UUID) {
-	if m.removedprovider_bank_accounts == nil {
-		m.removedprovider_bank_accounts = make(map[uuid.UUID]struct{})
+// RemoveProviderFiatAccountIDs removes the "provider_fiat_accounts" edge to the ProviderFiatAccount entity by IDs.
+func (m *ProviderProfileMutation) RemoveProviderFiatAccountIDs(ids ...uuid.UUID) {
+	if m.removedprovider_fiat_accounts == nil {
+		m.removedprovider_fiat_accounts = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m.provider_bank_accounts, ids[i])
-		m.removedprovider_bank_accounts[ids[i]] = struct{}{}
+		delete(m.provider_fiat_accounts, ids[i])
+		m.removedprovider_fiat_accounts[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedProviderBankAccounts returns the removed IDs of the "provider_bank_accounts" edge to the ProviderBankAccount entity.
-func (m *ProviderProfileMutation) RemovedProviderBankAccountsIDs() (ids []uuid.UUID) {
-	for id := range m.removedprovider_bank_accounts {
+// RemovedProviderFiatAccounts returns the removed IDs of the "provider_fiat_accounts" edge to the ProviderFiatAccount entity.
+func (m *ProviderProfileMutation) RemovedProviderFiatAccountsIDs() (ids []uuid.UUID) {
+	for id := range m.removedprovider_fiat_accounts {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ProviderBankAccountsIDs returns the "provider_bank_accounts" edge IDs in the mutation.
-func (m *ProviderProfileMutation) ProviderBankAccountsIDs() (ids []uuid.UUID) {
-	for id := range m.provider_bank_accounts {
+// ProviderFiatAccountsIDs returns the "provider_fiat_accounts" edge IDs in the mutation.
+func (m *ProviderProfileMutation) ProviderFiatAccountsIDs() (ids []uuid.UUID) {
+	for id := range m.provider_fiat_accounts {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetProviderBankAccounts resets all changes to the "provider_bank_accounts" edge.
-func (m *ProviderProfileMutation) ResetProviderBankAccounts() {
-	m.provider_bank_accounts = nil
-	m.clearedprovider_bank_accounts = false
-	m.removedprovider_bank_accounts = nil
+// ResetProviderFiatAccounts resets all changes to the "provider_fiat_accounts" edge.
+func (m *ProviderProfileMutation) ResetProviderFiatAccounts() {
+	m.provider_fiat_accounts = nil
+	m.clearedprovider_fiat_accounts = false
+	m.removedprovider_fiat_accounts = nil
 }
 
 // Where appends a list predicates to the ProviderProfileMutation builder.
@@ -17540,8 +17540,8 @@ func (m *ProviderProfileMutation) AddedEdges() []string {
 	if m.assigned_orders != nil {
 		edges = append(edges, providerprofile.EdgeAssignedOrders)
 	}
-	if m.provider_bank_accounts != nil {
-		edges = append(edges, providerprofile.EdgeProviderBankAccounts)
+	if m.provider_fiat_accounts != nil {
+		edges = append(edges, providerprofile.EdgeProviderFiatAccounts)
 	}
 	return edges
 }
@@ -17586,9 +17586,9 @@ func (m *ProviderProfileMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case providerprofile.EdgeProviderBankAccounts:
-		ids := make([]ent.Value, 0, len(m.provider_bank_accounts))
-		for id := range m.provider_bank_accounts {
+	case providerprofile.EdgeProviderFiatAccounts:
+		ids := make([]ent.Value, 0, len(m.provider_fiat_accounts))
+		for id := range m.provider_fiat_accounts {
 			ids = append(ids, id)
 		}
 		return ids
@@ -17611,8 +17611,8 @@ func (m *ProviderProfileMutation) RemovedEdges() []string {
 	if m.removedassigned_orders != nil {
 		edges = append(edges, providerprofile.EdgeAssignedOrders)
 	}
-	if m.removedprovider_bank_accounts != nil {
-		edges = append(edges, providerprofile.EdgeProviderBankAccounts)
+	if m.removedprovider_fiat_accounts != nil {
+		edges = append(edges, providerprofile.EdgeProviderFiatAccounts)
 	}
 	return edges
 }
@@ -17645,9 +17645,9 @@ func (m *ProviderProfileMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case providerprofile.EdgeProviderBankAccounts:
-		ids := make([]ent.Value, 0, len(m.removedprovider_bank_accounts))
-		for id := range m.removedprovider_bank_accounts {
+	case providerprofile.EdgeProviderFiatAccounts:
+		ids := make([]ent.Value, 0, len(m.removedprovider_fiat_accounts))
+		for id := range m.removedprovider_fiat_accounts {
 			ids = append(ids, id)
 		}
 		return ids
@@ -17679,8 +17679,8 @@ func (m *ProviderProfileMutation) ClearedEdges() []string {
 	if m.clearedassigned_orders {
 		edges = append(edges, providerprofile.EdgeAssignedOrders)
 	}
-	if m.clearedprovider_bank_accounts {
-		edges = append(edges, providerprofile.EdgeProviderBankAccounts)
+	if m.clearedprovider_fiat_accounts {
+		edges = append(edges, providerprofile.EdgeProviderFiatAccounts)
 	}
 	return edges
 }
@@ -17703,8 +17703,8 @@ func (m *ProviderProfileMutation) EdgeCleared(name string) bool {
 		return m.clearedprovider_rating
 	case providerprofile.EdgeAssignedOrders:
 		return m.clearedassigned_orders
-	case providerprofile.EdgeProviderBankAccounts:
-		return m.clearedprovider_bank_accounts
+	case providerprofile.EdgeProviderFiatAccounts:
+		return m.clearedprovider_fiat_accounts
 	}
 	return false
 }
@@ -17751,8 +17751,8 @@ func (m *ProviderProfileMutation) ResetEdge(name string) error {
 	case providerprofile.EdgeAssignedOrders:
 		m.ResetAssignedOrders()
 		return nil
-	case providerprofile.EdgeProviderBankAccounts:
-		m.ResetProviderBankAccounts()
+	case providerprofile.EdgeProviderFiatAccounts:
+		m.ResetProviderFiatAccounts()
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderProfile edge %s", name)

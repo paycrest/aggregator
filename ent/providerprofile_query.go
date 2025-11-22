@@ -16,8 +16,8 @@ import (
 	"github.com/paycrest/aggregator/ent/apikey"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/predicate"
-	"github.com/paycrest/aggregator/ent/providerbankaccount"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -39,7 +39,7 @@ type ProviderProfileQuery struct {
 	withOrderTokens          *ProviderOrderTokenQuery
 	withProviderRating       *ProviderRatingQuery
 	withAssignedOrders       *LockPaymentOrderQuery
-	withProviderBankAccounts *ProviderBankAccountQuery
+	withProviderFiatAccounts *ProviderFiatAccountQuery
 	withFKs                  bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -231,9 +231,9 @@ func (ppq *ProviderProfileQuery) QueryAssignedOrders() *LockPaymentOrderQuery {
 	return query
 }
 
-// QueryProviderBankAccounts chains the current query on the "provider_bank_accounts" edge.
-func (ppq *ProviderProfileQuery) QueryProviderBankAccounts() *ProviderBankAccountQuery {
-	query := (&ProviderBankAccountClient{config: ppq.config}).Query()
+// QueryProviderFiatAccounts chains the current query on the "provider_fiat_accounts" edge.
+func (ppq *ProviderProfileQuery) QueryProviderFiatAccounts() *ProviderFiatAccountQuery {
+	query := (&ProviderFiatAccountClient{config: ppq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := ppq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -244,8 +244,8 @@ func (ppq *ProviderProfileQuery) QueryProviderBankAccounts() *ProviderBankAccoun
 		}
 		step := sqlgraph.NewStep(
 			sqlgraph.From(providerprofile.Table, providerprofile.FieldID, selector),
-			sqlgraph.To(providerbankaccount.Table, providerbankaccount.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.ProviderBankAccountsTable, providerprofile.ProviderBankAccountsColumn),
+			sqlgraph.To(providerfiataccount.Table, providerfiataccount.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.ProviderFiatAccountsTable, providerprofile.ProviderFiatAccountsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(ppq.driver.Dialect(), step)
 		return fromU, nil
@@ -452,7 +452,7 @@ func (ppq *ProviderProfileQuery) Clone() *ProviderProfileQuery {
 		withOrderTokens:          ppq.withOrderTokens.Clone(),
 		withProviderRating:       ppq.withProviderRating.Clone(),
 		withAssignedOrders:       ppq.withAssignedOrders.Clone(),
-		withProviderBankAccounts: ppq.withProviderBankAccounts.Clone(),
+		withProviderFiatAccounts: ppq.withProviderFiatAccounts.Clone(),
 		// clone intermediate query.
 		sql:  ppq.sql.Clone(),
 		path: ppq.path,
@@ -536,14 +536,14 @@ func (ppq *ProviderProfileQuery) WithAssignedOrders(opts ...func(*LockPaymentOrd
 	return ppq
 }
 
-// WithProviderBankAccounts tells the query-builder to eager-load the nodes that are connected to
-// the "provider_bank_accounts" edge. The optional arguments are used to configure the query builder of the edge.
-func (ppq *ProviderProfileQuery) WithProviderBankAccounts(opts ...func(*ProviderBankAccountQuery)) *ProviderProfileQuery {
-	query := (&ProviderBankAccountClient{config: ppq.config}).Query()
+// WithProviderFiatAccounts tells the query-builder to eager-load the nodes that are connected to
+// the "provider_fiat_accounts" edge. The optional arguments are used to configure the query builder of the edge.
+func (ppq *ProviderProfileQuery) WithProviderFiatAccounts(opts ...func(*ProviderFiatAccountQuery)) *ProviderProfileQuery {
+	query := (&ProviderFiatAccountClient{config: ppq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	ppq.withProviderBankAccounts = query
+	ppq.withProviderFiatAccounts = query
 	return ppq
 }
 
@@ -634,7 +634,7 @@ func (ppq *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 			ppq.withOrderTokens != nil,
 			ppq.withProviderRating != nil,
 			ppq.withAssignedOrders != nil,
-			ppq.withProviderBankAccounts != nil,
+			ppq.withProviderFiatAccounts != nil,
 		}
 	)
 	if ppq.withUser != nil {
@@ -713,11 +713,11 @@ func (ppq *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 			return nil, err
 		}
 	}
-	if query := ppq.withProviderBankAccounts; query != nil {
-		if err := ppq.loadProviderBankAccounts(ctx, query, nodes,
-			func(n *ProviderProfile) { n.Edges.ProviderBankAccounts = []*ProviderBankAccount{} },
-			func(n *ProviderProfile, e *ProviderBankAccount) {
-				n.Edges.ProviderBankAccounts = append(n.Edges.ProviderBankAccounts, e)
+	if query := ppq.withProviderFiatAccounts; query != nil {
+		if err := ppq.loadProviderFiatAccounts(ctx, query, nodes,
+			func(n *ProviderProfile) { n.Edges.ProviderFiatAccounts = []*ProviderFiatAccount{} },
+			func(n *ProviderProfile, e *ProviderFiatAccount) {
+				n.Edges.ProviderFiatAccounts = append(n.Edges.ProviderFiatAccounts, e)
 			}); err != nil {
 			return nil, err
 		}
@@ -967,7 +967,7 @@ func (ppq *ProviderProfileQuery) loadAssignedOrders(ctx context.Context, query *
 	}
 	return nil
 }
-func (ppq *ProviderProfileQuery) loadProviderBankAccounts(ctx context.Context, query *ProviderBankAccountQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *ProviderBankAccount)) error {
+func (ppq *ProviderProfileQuery) loadProviderFiatAccounts(ctx context.Context, query *ProviderFiatAccountQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *ProviderFiatAccount)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[string]*ProviderProfile)
 	for i := range nodes {
@@ -978,21 +978,21 @@ func (ppq *ProviderProfileQuery) loadProviderBankAccounts(ctx context.Context, q
 		}
 	}
 	query.withFKs = true
-	query.Where(predicate.ProviderBankAccount(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(providerprofile.ProviderBankAccountsColumn), fks...))
+	query.Where(predicate.ProviderFiatAccount(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(providerprofile.ProviderFiatAccountsColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.provider_profile_provider_bank_accounts
+		fk := n.provider_profile_provider_fiat_accounts
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "provider_profile_provider_bank_accounts" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "provider_profile_provider_fiat_accounts" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "provider_profile_provider_bank_accounts" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "provider_profile_provider_fiat_accounts" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

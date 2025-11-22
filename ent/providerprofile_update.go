@@ -15,8 +15,8 @@ import (
 	"github.com/paycrest/aggregator/ent/apikey"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/predicate"
-	"github.com/paycrest/aggregator/ent/providerbankaccount"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -236,19 +236,19 @@ func (ppu *ProviderProfileUpdate) AddAssignedOrders(l ...*LockPaymentOrder) *Pro
 	return ppu.AddAssignedOrderIDs(ids...)
 }
 
-// AddProviderBankAccountIDs adds the "provider_bank_accounts" edge to the ProviderBankAccount entity by IDs.
-func (ppu *ProviderProfileUpdate) AddProviderBankAccountIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
-	ppu.mutation.AddProviderBankAccountIDs(ids...)
+// AddProviderFiatAccountIDs adds the "provider_fiat_accounts" edge to the ProviderFiatAccount entity by IDs.
+func (ppu *ProviderProfileUpdate) AddProviderFiatAccountIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
+	ppu.mutation.AddProviderFiatAccountIDs(ids...)
 	return ppu
 }
 
-// AddProviderBankAccounts adds the "provider_bank_accounts" edges to the ProviderBankAccount entity.
-func (ppu *ProviderProfileUpdate) AddProviderBankAccounts(p ...*ProviderBankAccount) *ProviderProfileUpdate {
+// AddProviderFiatAccounts adds the "provider_fiat_accounts" edges to the ProviderFiatAccount entity.
+func (ppu *ProviderProfileUpdate) AddProviderFiatAccounts(p ...*ProviderFiatAccount) *ProviderProfileUpdate {
 	ids := make([]uuid.UUID, len(p))
 	for i := range p {
 		ids[i] = p[i].ID
 	}
-	return ppu.AddProviderBankAccountIDs(ids...)
+	return ppu.AddProviderFiatAccountIDs(ids...)
 }
 
 // Mutation returns the ProviderProfileMutation object of the builder.
@@ -352,25 +352,25 @@ func (ppu *ProviderProfileUpdate) RemoveAssignedOrders(l ...*LockPaymentOrder) *
 	return ppu.RemoveAssignedOrderIDs(ids...)
 }
 
-// ClearProviderBankAccounts clears all "provider_bank_accounts" edges to the ProviderBankAccount entity.
-func (ppu *ProviderProfileUpdate) ClearProviderBankAccounts() *ProviderProfileUpdate {
-	ppu.mutation.ClearProviderBankAccounts()
+// ClearProviderFiatAccounts clears all "provider_fiat_accounts" edges to the ProviderFiatAccount entity.
+func (ppu *ProviderProfileUpdate) ClearProviderFiatAccounts() *ProviderProfileUpdate {
+	ppu.mutation.ClearProviderFiatAccounts()
 	return ppu
 }
 
-// RemoveProviderBankAccountIDs removes the "provider_bank_accounts" edge to ProviderBankAccount entities by IDs.
-func (ppu *ProviderProfileUpdate) RemoveProviderBankAccountIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
-	ppu.mutation.RemoveProviderBankAccountIDs(ids...)
+// RemoveProviderFiatAccountIDs removes the "provider_fiat_accounts" edge to ProviderFiatAccount entities by IDs.
+func (ppu *ProviderProfileUpdate) RemoveProviderFiatAccountIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
+	ppu.mutation.RemoveProviderFiatAccountIDs(ids...)
 	return ppu
 }
 
-// RemoveProviderBankAccounts removes "provider_bank_accounts" edges to ProviderBankAccount entities.
-func (ppu *ProviderProfileUpdate) RemoveProviderBankAccounts(p ...*ProviderBankAccount) *ProviderProfileUpdate {
+// RemoveProviderFiatAccounts removes "provider_fiat_accounts" edges to ProviderFiatAccount entities.
+func (ppu *ProviderProfileUpdate) RemoveProviderFiatAccounts(p ...*ProviderFiatAccount) *ProviderProfileUpdate {
 	ids := make([]uuid.UUID, len(p))
 	for i := range p {
 		ids[i] = p[i].ID
 	}
-	return ppu.RemoveProviderBankAccountIDs(ids...)
+	return ppu.RemoveProviderFiatAccountIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -709,28 +709,28 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if ppu.mutation.ProviderBankAccountsCleared() {
+	if ppu.mutation.ProviderFiatAccountsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   providerprofile.ProviderBankAccountsTable,
-			Columns: []string{providerprofile.ProviderBankAccountsColumn},
+			Table:   providerprofile.ProviderFiatAccountsTable,
+			Columns: []string{providerprofile.ProviderFiatAccountsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerbankaccount.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(providerfiataccount.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppu.mutation.RemovedProviderBankAccountsIDs(); len(nodes) > 0 && !ppu.mutation.ProviderBankAccountsCleared() {
+	if nodes := ppu.mutation.RemovedProviderFiatAccountsIDs(); len(nodes) > 0 && !ppu.mutation.ProviderFiatAccountsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   providerprofile.ProviderBankAccountsTable,
-			Columns: []string{providerprofile.ProviderBankAccountsColumn},
+			Table:   providerprofile.ProviderFiatAccountsTable,
+			Columns: []string{providerprofile.ProviderFiatAccountsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerbankaccount.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(providerfiataccount.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -738,15 +738,15 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppu.mutation.ProviderBankAccountsIDs(); len(nodes) > 0 {
+	if nodes := ppu.mutation.ProviderFiatAccountsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   providerprofile.ProviderBankAccountsTable,
-			Columns: []string{providerprofile.ProviderBankAccountsColumn},
+			Table:   providerprofile.ProviderFiatAccountsTable,
+			Columns: []string{providerprofile.ProviderFiatAccountsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerbankaccount.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(providerfiataccount.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -974,19 +974,19 @@ func (ppuo *ProviderProfileUpdateOne) AddAssignedOrders(l ...*LockPaymentOrder) 
 	return ppuo.AddAssignedOrderIDs(ids...)
 }
 
-// AddProviderBankAccountIDs adds the "provider_bank_accounts" edge to the ProviderBankAccount entity by IDs.
-func (ppuo *ProviderProfileUpdateOne) AddProviderBankAccountIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
-	ppuo.mutation.AddProviderBankAccountIDs(ids...)
+// AddProviderFiatAccountIDs adds the "provider_fiat_accounts" edge to the ProviderFiatAccount entity by IDs.
+func (ppuo *ProviderProfileUpdateOne) AddProviderFiatAccountIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
+	ppuo.mutation.AddProviderFiatAccountIDs(ids...)
 	return ppuo
 }
 
-// AddProviderBankAccounts adds the "provider_bank_accounts" edges to the ProviderBankAccount entity.
-func (ppuo *ProviderProfileUpdateOne) AddProviderBankAccounts(p ...*ProviderBankAccount) *ProviderProfileUpdateOne {
+// AddProviderFiatAccounts adds the "provider_fiat_accounts" edges to the ProviderFiatAccount entity.
+func (ppuo *ProviderProfileUpdateOne) AddProviderFiatAccounts(p ...*ProviderFiatAccount) *ProviderProfileUpdateOne {
 	ids := make([]uuid.UUID, len(p))
 	for i := range p {
 		ids[i] = p[i].ID
 	}
-	return ppuo.AddProviderBankAccountIDs(ids...)
+	return ppuo.AddProviderFiatAccountIDs(ids...)
 }
 
 // Mutation returns the ProviderProfileMutation object of the builder.
@@ -1090,25 +1090,25 @@ func (ppuo *ProviderProfileUpdateOne) RemoveAssignedOrders(l ...*LockPaymentOrde
 	return ppuo.RemoveAssignedOrderIDs(ids...)
 }
 
-// ClearProviderBankAccounts clears all "provider_bank_accounts" edges to the ProviderBankAccount entity.
-func (ppuo *ProviderProfileUpdateOne) ClearProviderBankAccounts() *ProviderProfileUpdateOne {
-	ppuo.mutation.ClearProviderBankAccounts()
+// ClearProviderFiatAccounts clears all "provider_fiat_accounts" edges to the ProviderFiatAccount entity.
+func (ppuo *ProviderProfileUpdateOne) ClearProviderFiatAccounts() *ProviderProfileUpdateOne {
+	ppuo.mutation.ClearProviderFiatAccounts()
 	return ppuo
 }
 
-// RemoveProviderBankAccountIDs removes the "provider_bank_accounts" edge to ProviderBankAccount entities by IDs.
-func (ppuo *ProviderProfileUpdateOne) RemoveProviderBankAccountIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
-	ppuo.mutation.RemoveProviderBankAccountIDs(ids...)
+// RemoveProviderFiatAccountIDs removes the "provider_fiat_accounts" edge to ProviderFiatAccount entities by IDs.
+func (ppuo *ProviderProfileUpdateOne) RemoveProviderFiatAccountIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
+	ppuo.mutation.RemoveProviderFiatAccountIDs(ids...)
 	return ppuo
 }
 
-// RemoveProviderBankAccounts removes "provider_bank_accounts" edges to ProviderBankAccount entities.
-func (ppuo *ProviderProfileUpdateOne) RemoveProviderBankAccounts(p ...*ProviderBankAccount) *ProviderProfileUpdateOne {
+// RemoveProviderFiatAccounts removes "provider_fiat_accounts" edges to ProviderFiatAccount entities.
+func (ppuo *ProviderProfileUpdateOne) RemoveProviderFiatAccounts(p ...*ProviderFiatAccount) *ProviderProfileUpdateOne {
 	ids := make([]uuid.UUID, len(p))
 	for i := range p {
 		ids[i] = p[i].ID
 	}
-	return ppuo.RemoveProviderBankAccountIDs(ids...)
+	return ppuo.RemoveProviderFiatAccountIDs(ids...)
 }
 
 // Where appends a list predicates to the ProviderProfileUpdate builder.
@@ -1477,28 +1477,28 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if ppuo.mutation.ProviderBankAccountsCleared() {
+	if ppuo.mutation.ProviderFiatAccountsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   providerprofile.ProviderBankAccountsTable,
-			Columns: []string{providerprofile.ProviderBankAccountsColumn},
+			Table:   providerprofile.ProviderFiatAccountsTable,
+			Columns: []string{providerprofile.ProviderFiatAccountsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerbankaccount.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(providerfiataccount.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppuo.mutation.RemovedProviderBankAccountsIDs(); len(nodes) > 0 && !ppuo.mutation.ProviderBankAccountsCleared() {
+	if nodes := ppuo.mutation.RemovedProviderFiatAccountsIDs(); len(nodes) > 0 && !ppuo.mutation.ProviderFiatAccountsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   providerprofile.ProviderBankAccountsTable,
-			Columns: []string{providerprofile.ProviderBankAccountsColumn},
+			Table:   providerprofile.ProviderFiatAccountsTable,
+			Columns: []string{providerprofile.ProviderFiatAccountsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerbankaccount.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(providerfiataccount.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1506,15 +1506,15 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppuo.mutation.ProviderBankAccountsIDs(); len(nodes) > 0 {
+	if nodes := ppuo.mutation.ProviderFiatAccountsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   providerprofile.ProviderBankAccountsTable,
-			Columns: []string{providerprofile.ProviderBankAccountsColumn},
+			Table:   providerprofile.ProviderFiatAccountsTable,
+			Columns: []string{providerprofile.ProviderFiatAccountsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerbankaccount.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(providerfiataccount.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

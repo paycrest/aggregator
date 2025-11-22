@@ -407,37 +407,6 @@ var (
 			},
 		},
 	}
-	// ProviderBankAccountsColumns holds the columns for the "provider_bank_accounts" table.
-	ProviderBankAccountsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID},
-		{Name: "institution", Type: field.TypeString, Size: 100},
-		{Name: "account_identifier", Type: field.TypeString, Size: 200},
-		{Name: "account_name", Type: field.TypeString, Nullable: true, Size: 200},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "provider_profile_provider_bank_accounts", Type: field.TypeString},
-	}
-	// ProviderBankAccountsTable holds the schema information for the "provider_bank_accounts" table.
-	ProviderBankAccountsTable = &schema.Table{
-		Name:       "provider_bank_accounts",
-		Columns:    ProviderBankAccountsColumns,
-		PrimaryKey: []*schema.Column{ProviderBankAccountsColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "provider_bank_accounts_provider_profiles_provider_bank_accounts",
-				Columns:    []*schema.Column{ProviderBankAccountsColumns[6]},
-				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "providerbankaccount_institution_account_identifier_provider_profile_provider_bank_accounts",
-				Unique:  true,
-				Columns: []*schema.Column{ProviderBankAccountsColumns[1], ProviderBankAccountsColumns[2], ProviderBankAccountsColumns[6]},
-			},
-		},
-	}
 	// ProviderCurrenciesColumns holds the columns for the "provider_currencies" table.
 	ProviderCurrenciesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -473,6 +442,37 @@ var (
 				Name:    "providercurrencies_provider_profile_provider_currencies_fiat_currency_provider_currencies",
 				Unique:  true,
 				Columns: []*schema.Column{ProviderCurrenciesColumns[7], ProviderCurrenciesColumns[6]},
+			},
+		},
+	}
+	// ProviderFiatAccountsColumns holds the columns for the "provider_fiat_accounts" table.
+	ProviderFiatAccountsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "institution", Type: field.TypeString, Size: 100},
+		{Name: "account_identifier", Type: field.TypeString, Size: 200},
+		{Name: "account_name", Type: field.TypeString, Nullable: true, Size: 200},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "provider_profile_provider_fiat_accounts", Type: field.TypeString},
+	}
+	// ProviderFiatAccountsTable holds the schema information for the "provider_fiat_accounts" table.
+	ProviderFiatAccountsTable = &schema.Table{
+		Name:       "provider_fiat_accounts",
+		Columns:    ProviderFiatAccountsColumns,
+		PrimaryKey: []*schema.Column{ProviderFiatAccountsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "provider_fiat_accounts_provider_profiles_provider_fiat_accounts",
+				Columns:    []*schema.Column{ProviderFiatAccountsColumns[6]},
+				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "providerfiataccount_institution_account_identifier_provider_profile_provider_fiat_accounts",
+				Unique:  true,
+				Columns: []*schema.Column{ProviderFiatAccountsColumns[1], ProviderFiatAccountsColumns[2], ProviderFiatAccountsColumns[6]},
 			},
 		},
 	}
@@ -854,8 +854,8 @@ var (
 		PaymentOrdersTable,
 		PaymentOrderRecipientsTable,
 		PaymentWebhooksTable,
-		ProviderBankAccountsTable,
 		ProviderCurrenciesTable,
+		ProviderFiatAccountsTable,
 		ProviderOrderTokensTable,
 		ProviderProfilesTable,
 		ProviderRatingsTable,
@@ -890,9 +890,9 @@ func init() {
 	PaymentOrderRecipientsTable.ForeignKeys[0].RefTable = PaymentOrdersTable
 	PaymentWebhooksTable.ForeignKeys[0].RefTable = NetworksTable
 	PaymentWebhooksTable.ForeignKeys[1].RefTable = PaymentOrdersTable
-	ProviderBankAccountsTable.ForeignKeys[0].RefTable = ProviderProfilesTable
 	ProviderCurrenciesTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
 	ProviderCurrenciesTable.ForeignKeys[1].RefTable = ProviderProfilesTable
+	ProviderFiatAccountsTable.ForeignKeys[0].RefTable = ProviderProfilesTable
 	ProviderOrderTokensTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
 	ProviderOrderTokensTable.ForeignKeys[1].RefTable = ProviderProfilesTable
 	ProviderOrderTokensTable.ForeignKeys[2].RefTable = TokensTable

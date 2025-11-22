@@ -58,8 +58,8 @@ type ProviderProfileEdges struct {
 	ProviderRating *ProviderRating `json:"provider_rating,omitempty"`
 	// AssignedOrders holds the value of the assigned_orders edge.
 	AssignedOrders []*LockPaymentOrder `json:"assigned_orders,omitempty"`
-	// ProviderBankAccounts holds the value of the provider_bank_accounts edge.
-	ProviderBankAccounts []*ProviderBankAccount `json:"provider_bank_accounts,omitempty"`
+	// ProviderFiatAccounts holds the value of the provider_fiat_accounts edge.
+	ProviderFiatAccounts []*ProviderFiatAccount `json:"provider_fiat_accounts,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [8]bool
@@ -134,13 +134,13 @@ func (e ProviderProfileEdges) AssignedOrdersOrErr() ([]*LockPaymentOrder, error)
 	return nil, &NotLoadedError{edge: "assigned_orders"}
 }
 
-// ProviderBankAccountsOrErr returns the ProviderBankAccounts value or an error if the edge
+// ProviderFiatAccountsOrErr returns the ProviderFiatAccounts value or an error if the edge
 // was not loaded in eager-loading.
-func (e ProviderProfileEdges) ProviderBankAccountsOrErr() ([]*ProviderBankAccount, error) {
+func (e ProviderProfileEdges) ProviderFiatAccountsOrErr() ([]*ProviderFiatAccount, error) {
 	if e.loadedTypes[7] {
-		return e.ProviderBankAccounts, nil
+		return e.ProviderFiatAccounts, nil
 	}
-	return nil, &NotLoadedError{edge: "provider_bank_accounts"}
+	return nil, &NotLoadedError{edge: "provider_fiat_accounts"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -274,9 +274,9 @@ func (pp *ProviderProfile) QueryAssignedOrders() *LockPaymentOrderQuery {
 	return NewProviderProfileClient(pp.config).QueryAssignedOrders(pp)
 }
 
-// QueryProviderBankAccounts queries the "provider_bank_accounts" edge of the ProviderProfile entity.
-func (pp *ProviderProfile) QueryProviderBankAccounts() *ProviderBankAccountQuery {
-	return NewProviderProfileClient(pp.config).QueryProviderBankAccounts(pp)
+// QueryProviderFiatAccounts queries the "provider_fiat_accounts" edge of the ProviderProfile entity.
+func (pp *ProviderProfile) QueryProviderFiatAccounts() *ProviderFiatAccountQuery {
+	return NewProviderProfileClient(pp.config).QueryProviderFiatAccounts(pp)
 }
 
 // Update returns a builder for updating this ProviderProfile.

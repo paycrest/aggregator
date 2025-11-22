@@ -15,8 +15,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/apikey"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
-	"github.com/paycrest/aggregator/ent/providerbankaccount"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -253,19 +253,19 @@ func (ppc *ProviderProfileCreate) AddAssignedOrders(l ...*LockPaymentOrder) *Pro
 	return ppc.AddAssignedOrderIDs(ids...)
 }
 
-// AddProviderBankAccountIDs adds the "provider_bank_accounts" edge to the ProviderBankAccount entity by IDs.
-func (ppc *ProviderProfileCreate) AddProviderBankAccountIDs(ids ...uuid.UUID) *ProviderProfileCreate {
-	ppc.mutation.AddProviderBankAccountIDs(ids...)
+// AddProviderFiatAccountIDs adds the "provider_fiat_accounts" edge to the ProviderFiatAccount entity by IDs.
+func (ppc *ProviderProfileCreate) AddProviderFiatAccountIDs(ids ...uuid.UUID) *ProviderProfileCreate {
+	ppc.mutation.AddProviderFiatAccountIDs(ids...)
 	return ppc
 }
 
-// AddProviderBankAccounts adds the "provider_bank_accounts" edges to the ProviderBankAccount entity.
-func (ppc *ProviderProfileCreate) AddProviderBankAccounts(p ...*ProviderBankAccount) *ProviderProfileCreate {
+// AddProviderFiatAccounts adds the "provider_fiat_accounts" edges to the ProviderFiatAccount entity.
+func (ppc *ProviderProfileCreate) AddProviderFiatAccounts(p ...*ProviderFiatAccount) *ProviderProfileCreate {
 	ids := make([]uuid.UUID, len(p))
 	for i := range p {
 		ids[i] = p[i].ID
 	}
-	return ppc.AddProviderBankAccountIDs(ids...)
+	return ppc.AddProviderFiatAccountIDs(ids...)
 }
 
 // Mutation returns the ProviderProfileMutation object of the builder.
@@ -541,15 +541,15 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ppc.mutation.ProviderBankAccountsIDs(); len(nodes) > 0 {
+	if nodes := ppc.mutation.ProviderFiatAccountsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   providerprofile.ProviderBankAccountsTable,
-			Columns: []string{providerprofile.ProviderBankAccountsColumn},
+			Table:   providerprofile.ProviderFiatAccountsTable,
+			Columns: []string{providerprofile.ProviderFiatAccountsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerbankaccount.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(providerfiataccount.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

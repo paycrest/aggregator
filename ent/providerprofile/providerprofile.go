@@ -43,8 +43,8 @@ const (
 	EdgeProviderRating = "provider_rating"
 	// EdgeAssignedOrders holds the string denoting the assigned_orders edge name in mutations.
 	EdgeAssignedOrders = "assigned_orders"
-	// EdgeProviderBankAccounts holds the string denoting the provider_bank_accounts edge name in mutations.
-	EdgeProviderBankAccounts = "provider_bank_accounts"
+	// EdgeProviderFiatAccounts holds the string denoting the provider_fiat_accounts edge name in mutations.
+	EdgeProviderFiatAccounts = "provider_fiat_accounts"
 	// Table holds the table name of the providerprofile in the database.
 	Table = "provider_profiles"
 	// UserTable is the table that holds the user relation/edge.
@@ -94,13 +94,13 @@ const (
 	AssignedOrdersInverseTable = "lock_payment_orders"
 	// AssignedOrdersColumn is the table column denoting the assigned_orders relation/edge.
 	AssignedOrdersColumn = "provider_profile_assigned_orders"
-	// ProviderBankAccountsTable is the table that holds the provider_bank_accounts relation/edge.
-	ProviderBankAccountsTable = "provider_bank_accounts"
-	// ProviderBankAccountsInverseTable is the table name for the ProviderBankAccount entity.
-	// It exists in this package in order to avoid circular dependency with the "providerbankaccount" package.
-	ProviderBankAccountsInverseTable = "provider_bank_accounts"
-	// ProviderBankAccountsColumn is the table column denoting the provider_bank_accounts relation/edge.
-	ProviderBankAccountsColumn = "provider_profile_provider_bank_accounts"
+	// ProviderFiatAccountsTable is the table that holds the provider_fiat_accounts relation/edge.
+	ProviderFiatAccountsTable = "provider_fiat_accounts"
+	// ProviderFiatAccountsInverseTable is the table name for the ProviderFiatAccount entity.
+	// It exists in this package in order to avoid circular dependency with the "providerfiataccount" package.
+	ProviderFiatAccountsInverseTable = "provider_fiat_accounts"
+	// ProviderFiatAccountsColumn is the table column denoting the provider_fiat_accounts relation/edge.
+	ProviderFiatAccountsColumn = "provider_profile_provider_fiat_accounts"
 )
 
 // Columns holds all SQL columns for providerprofile fields.
@@ -329,17 +329,17 @@ func ByAssignedOrders(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
-// ByProviderBankAccountsCount orders the results by provider_bank_accounts count.
-func ByProviderBankAccountsCount(opts ...sql.OrderTermOption) OrderOption {
+// ByProviderFiatAccountsCount orders the results by provider_fiat_accounts count.
+func ByProviderFiatAccountsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newProviderBankAccountsStep(), opts...)
+		sqlgraph.OrderByNeighborsCount(s, newProviderFiatAccountsStep(), opts...)
 	}
 }
 
-// ByProviderBankAccounts orders the results by provider_bank_accounts terms.
-func ByProviderBankAccounts(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+// ByProviderFiatAccounts orders the results by provider_fiat_accounts terms.
+func ByProviderFiatAccounts(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newProviderBankAccountsStep(), append([]sql.OrderTerm{term}, terms...)...)
+		sqlgraph.OrderByNeighborTerms(s, newProviderFiatAccountsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 func newUserStep() *sqlgraph.Step {
@@ -391,10 +391,10 @@ func newAssignedOrdersStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.O2M, false, AssignedOrdersTable, AssignedOrdersColumn),
 	)
 }
-func newProviderBankAccountsStep() *sqlgraph.Step {
+func newProviderFiatAccountsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(ProviderBankAccountsInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, ProviderBankAccountsTable, ProviderBankAccountsColumn),
+		sqlgraph.To(ProviderFiatAccountsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ProviderFiatAccountsTable, ProviderFiatAccountsColumn),
 	)
 }
