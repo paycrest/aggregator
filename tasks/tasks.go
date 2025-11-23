@@ -53,6 +53,56 @@ import (
 var orderConf = config.OrderConfig()
 var serverConf = config.ServerConfig()
 
+// Indexing coordination: track addresses currently being indexed to prevent duplicate work
+var (
+	indexingAddresses sync.Map // address_chainID -> time.Time (when indexing started)
+	recentlyIndexed   sync.Map // address_chainID -> time.Time (when last indexed)
+
+	// Minimum time between indexing same address (3 minutes)
+	indexingCooldown = 3 * time.Minute
+
+	// Maximum time an address can be "in progress" before considering it stale (5 minutes)
+	indexingTimeout = 5 * time.Minute
+
+	// Cleanup interval for stale entries in indexing maps
+	indexingCleanupInterval = 10 * time.Minute
+)
+
+// cleanupIndexingMaps removes stale entries from indexing coordination maps
+func cleanupIndexingMaps() {
+	now := time.Now()
+	var cleanedIndexing, cleanedRecent int
+
+	// Clean up stale "in progress" entries
+	indexingAddresses.Range(func(key, value interface{}) bool {
+		if startTime, ok := value.(time.Time); ok {
+			if now.Sub(startTime) > indexingTimeout {
+				indexingAddresses.Delete(key)
+				cleanedIndexing++
+			}
+		}
+		return true
+	})
+
+	// Clean up old "recently indexed" entries (older than cooldown + 1 hour buffer)
+	recentlyIndexed.Range(func(key, value interface{}) bool {
+		if lastIndexed, ok := value.(time.Time); ok {
+			if now.Sub(lastIndexed) > indexingCooldown+1*time.Hour {
+				recentlyIndexed.Delete(key)
+				cleanedRecent++
+			}
+		}
+		return true
+	})
+
+	if cleanedIndexing > 0 || cleanedRecent > 0 {
+		logger.WithFields(logger.Fields{
+			"CleanedIndexing": cleanedIndexing,
+			"CleanedRecent":   cleanedRecent,
+		}).Debugf("Cleaned up stale indexing map entries")
+	}
+}
+
 // RetryStaleUserOperations retries stale user operations
 // TODO: Fetch failed orders from a separate db table and process them
 func RetryStaleUserOperations() error {
@@ -185,7 +235,7 @@ func RetryStaleUserOperations() error {
 		Query().
 		Where(
 			lockpaymentorder.GatewayIDNEQ(""),
-			lockpaymentorder.UpdatedAtGTE(time.Now().Add(-5*time.Minute)),			
+			lockpaymentorder.UpdatedAtGTE(time.Now().Add(-5*time.Minute)),
 			lockpaymentorder.StatusNEQ(lockpaymentorder.StatusValidated),
 			lockpaymentorder.StatusNEQ(lockpaymentorder.StatusSettled),
 			lockpaymentorder.StatusNEQ(lockpaymentorder.StatusRefunded),
@@ -331,6 +381,8 @@ func TaskIndexBlockchainEvents() error {
 				_, _ = indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
 
 				// Find payment orders with missed transfers
+				// Prioritize recent orders (created in last 30 minutes) - most likely to have transfers
+				recentCutoff := time.Now().Add(-30 * time.Minute)
 				paymentOrders, err := storage.Client.PaymentOrder.
 					Query().
 					Where(
@@ -339,6 +391,7 @@ func TaskIndexBlockchainEvents() error {
 						paymentorder.BlockNumberEQ(0),
 						paymentorder.AmountPaidEQ(decimal.Zero),
 						paymentorder.FromAddressIsNil(),
+						paymentorder.CreatedAtGTE(recentCutoff), // Focus on recent orders
 						paymentorder.HasReceiveAddressWith(
 							receiveaddress.StatusEQ(receiveaddress.StatusUnused),
 						),
@@ -353,6 +406,7 @@ func TaskIndexBlockchainEvents() error {
 					}).
 					WithReceiveAddress().
 					Order(ent.Desc(paymentorder.FieldCreatedAt)).
+					Limit(50). // Limit to 50 most recent to avoid processing too many at once
 					All(ctx)
 				if err != nil {
 					logger.WithFields(logger.Fields{
@@ -367,18 +421,55 @@ func TaskIndexBlockchainEvents() error {
 					var wg sync.WaitGroup
 
 					for _, order := range paymentOrders {
-						wg.Add(1)
-						go func(order *ent.PaymentOrder) {
-							defer wg.Done()
+						if order.Edges.ReceiveAddress == nil {
+							continue
+						}
 
-							_, err := indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, order.Edges.ReceiveAddress.Address, 0, 0, "")
+						address := order.Edges.ReceiveAddress.Address
+						chainID := network.ChainID
+						indexKey := fmt.Sprintf("%s_%d", address, chainID)
+
+						// Check if address is currently being indexed by another task
+						if _, indexing := indexingAddresses.Load(indexKey); indexing {
+							// Check if indexing started too long ago (stale)
+							if startTime, ok := indexingAddresses.Load(indexKey); ok {
+								if time.Since(startTime.(time.Time)) > indexingTimeout {
+									indexingAddresses.Delete(indexKey) // Remove stale entry
+								} else {
+									continue // Skip, already being indexed
+								}
+							}
+						}
+
+						// Check if address was recently indexed (within cooldown period)
+						if lastIndexed, indexed := recentlyIndexed.Load(indexKey); indexed {
+							if time.Since(lastIndexed.(time.Time)) < indexingCooldown {
+								continue // Skip, recently indexed
+							}
+						}
+
+						// Mark as being indexed
+						indexingAddresses.Store(indexKey, time.Now())
+
+						wg.Add(1)
+						go func(order *ent.PaymentOrder, addr string, key string) {
+							defer wg.Done()
+							defer indexingAddresses.Delete(key) // Remove from indexing map when done
+
+							// Check circuit breaker before indexing (if Etherscan service is available)
+							// Note: This is a best-effort check, actual circuit breaker is in etherscan service
+
+							_, err := indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, addr, 0, 0, "")
 							if err != nil {
 								logger.WithFields(logger.Fields{
 									"Error":   fmt.Sprintf("%v", err),
 									"OrderID": order.ID.String(),
 								}).Errorf("TaskIndexBlockchainEvents.IndexReceiveAddress")
+							} else {
+								// Mark as recently indexed on success
+								recentlyIndexed.Store(key, time.Now())
 							}
-						}(order)
+						}(order, address, indexKey)
 					}
 
 					// Wait for all transfer indexing to complete
@@ -1429,12 +1520,17 @@ func IndexGatewayEvents() error {
 // resolveMissedEvents resolves cases where transfers to receive addresses were missed
 func resolveMissedEvents(ctx context.Context, network *ent.Network) {
 	// Find payment orders with missed transfers
+	// Focus on orders older than 30 seconds but created in last 2 hours (sweet spot for missed transfers)
+	now := time.Now()
+	recentCutoff := now.Add(-2 * time.Hour)
+	oldEnoughCutoff := now.Add(-30 * time.Second)
+
 	orders, err := storage.Client.PaymentOrder.
 		Query().
 		Where(
 			paymentorder.StatusEQ(paymentorder.StatusInitiated),
-			paymentorder.CreatedAtLTE(time.Now().Add(-30*time.Second)),
-			// paymentorder.CreatedAtGTE(time.Now().Add(-15*time.Minute)),
+			paymentorder.CreatedAtLTE(oldEnoughCutoff), // At least 30 seconds old
+			paymentorder.CreatedAtGTE(recentCutoff),    // But within last 2 hours
 			paymentorder.HasReceiveAddressWith(
 				receiveaddress.StatusNEQ(receiveaddress.StatusExpired),
 			),
@@ -1448,6 +1544,8 @@ func resolveMissedEvents(ctx context.Context, network *ent.Network) {
 			tq.WithNetwork()
 		}).
 		WithReceiveAddress().
+		Order(ent.Desc(paymentorder.FieldCreatedAt)).
+		Limit(100). // Limit to avoid processing too many at once
 		All(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
@@ -1471,32 +1569,79 @@ func resolveMissedEvents(ctx context.Context, network *ent.Network) {
 	errorCount := 0
 
 	for i, order := range orders {
-		if order.Edges.ReceiveAddress != nil {
+		if order.Edges.ReceiveAddress == nil {
+			continue
+		}
+
+		address := order.Edges.ReceiveAddress.Address
+		chainID := network.ChainID
+		indexKey := fmt.Sprintf("%s_%d", address, chainID)
+
+		// Check if address is currently being indexed by another task
+		if _, indexing := indexingAddresses.Load(indexKey); indexing {
+			// Check if indexing started too long ago (stale)
+			if startTime, ok := indexingAddresses.Load(indexKey); ok {
+				if time.Since(startTime.(time.Time)) > indexingTimeout {
+					indexingAddresses.Delete(indexKey) // Remove stale entry
+				} else {
+					continue // Skip, already being indexed
+				}
+			}
+		}
+
+		// Check if address was recently indexed (within cooldown period)
+		if lastIndexed, indexed := recentlyIndexed.Load(indexKey); indexed {
+			if time.Since(lastIndexed.(time.Time)) < indexingCooldown {
+				continue // Skip, recently indexed
+			}
+		}
+
+		// Mark as being indexed
+		indexingAddresses.Store(indexKey, time.Now())
+
+		// Log progress selectively: all for small batches (<=10), first/last/every 50th for larger batches
+		// This provides visibility without excessive logging during bulk operations
+		shouldLog := len(orders) <= 10 || i == 0 || i == len(orders)-1 || (i+1)%50 == 0
+		if shouldLog {
 			logger.WithFields(logger.Fields{
 				"NetworkIdentifier": network.Identifier,
-				"ReceiveAddress":    order.Edges.ReceiveAddress.Address,
+				"ReceiveAddress":    address,
 				"OrderID":           order.ID,
 				"Progress":          fmt.Sprintf("%d/%d", i+1, len(orders)),
 			}).Infof("ResolvePaymentOrderMishaps.resolveMissedEvents")
-
-			_, err = indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, order.Edges.ReceiveAddress.Address, 0, 0, "")
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":             fmt.Sprintf("%v", err),
-					"NetworkIdentifier": network.Identifier,
-					"ReceiveAddress":    order.Edges.ReceiveAddress.Address,
-					"OrderID":           order.ID,
-				}).Errorf("ResolvePaymentOrderMishaps.resolveMissedEvents.indexReceiveAddress")
-				errorCount++
-				continue // Continue with other orders even if one fails
-			}
-			processedCount++
-
-			// Add a small delay between requests to be respectful to the RPC node
-			if i < len(orders)-1 {
-				time.Sleep(250 * time.Millisecond)
-			}
 		}
+
+		_, err = indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, address, 0, 0, "")
+
+		// Remove from indexing map when done
+		indexingAddresses.Delete(indexKey)
+
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":             fmt.Sprintf("%v", err),
+				"NetworkIdentifier": network.Identifier,
+				"ReceiveAddress":    address,
+				"OrderID":           order.ID,
+			}).Errorf("ResolvePaymentOrderMishaps.resolveMissedEvents.indexReceiveAddress")
+			errorCount++
+			continue // Continue with other orders even if one fails
+		}
+
+		// Mark as recently indexed on success
+		recentlyIndexed.Store(indexKey, time.Now())
+		processedCount++
+
+		// Removed 250ms delay - queue handles rate limiting, no need for artificial delay
+	}
+
+	// Log summary at end instead of logging every order
+	if len(orders) > 0 {
+		logger.WithFields(logger.Fields{
+			"NetworkIdentifier": network.Identifier,
+			"TotalOrders":       len(orders),
+			"Processed":         processedCount,
+			"Errors":            errorCount,
+		}).Infof("ResolvePaymentOrderMishaps.resolveMissedEvents completed")
 	}
 }
 
@@ -1913,8 +2058,9 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for ProcessStuckValidatedOrders: %v", err)
 	}
 
-	// Index blockchain events every 4 seconds
-	_, err = scheduler.Every(4).Seconds().Do(TaskIndexBlockchainEvents)
+	// Index blockchain events every 10 seconds (increased from 4s to reduce load while maintaining coverage)
+	// Recent orders are prioritized, so less frequent runs still catch transfers quickly
+	_, err = scheduler.Every(10).Seconds().Do(TaskIndexBlockchainEvents)
 	if err != nil {
 		logger.Errorf("StartCronJobs for IndexBlockchainEvents: %v", err)
 	}
@@ -1923,6 +2069,12 @@ func StartCronJobs() {
 	_, err = scheduler.Every(RefundsInterval).Minutes().Do(ProcessExpiredOrdersRefunds)
 	if err != nil {
 		logger.Errorf("StartCronJobs for ProcessExpiredOrdersRefunds: %v", err)
+	}
+
+	// Cleanup stale entries in indexing coordination maps
+	_, err = scheduler.Every(indexingCleanupInterval).Do(cleanupIndexingMaps)
+	if err != nil {
+		logger.Errorf("StartCronJobs for cleanupIndexingMaps: %v", err)
 	}
 
 	// Start scheduler
