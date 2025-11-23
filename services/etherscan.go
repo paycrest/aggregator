@@ -142,17 +142,21 @@ func (w *EtherscanWorker) isExhausted() bool {
 
 // QueueStats represents statistics about the Etherscan queue and workers
 type QueueStats struct {
-	QueueLength      int64 `json:"queue_length"`
-	TotalProcessed   int64 `json:"total_processed"`
-	TotalErrors      int64 `json:"total_errors"`
-	ActiveWorkers    int   `json:"active_workers"`
-	RateLimit        int   `json:"rate_limit"`
-	WorkerActive     bool  `json:"worker_active"`
-	PendingRequests  int   `json:"pending_requests"`
-	RateLimitErrors  int64 `json:"rate_limit_errors"`
-	DailyLimitErrors int64 `json:"daily_limit_errors"`
-	APIErrors        int64 `json:"api_errors"`
-	NetworkErrors    int64 `json:"network_errors"`
+	QueueLength       int64     `json:"queue_length"`
+	TotalProcessed    int64     `json:"total_processed"`
+	TotalErrors       int64     `json:"total_errors"`
+	ActiveWorkers     int       `json:"active_workers"`
+	RateLimit         int       `json:"rate_limit"`
+	WorkerActive      bool      `json:"worker_active"`
+	PendingRequests   int       `json:"pending_requests"`
+	RateLimitErrors   int64     `json:"rate_limit_errors"`
+	DailyLimitErrors  int64     `json:"daily_limit_errors"`
+	APIErrors         int64     `json:"api_errors"`
+	NetworkErrors     int64     `json:"network_errors"`
+	DailyCalls        int64     `json:"daily_calls"`
+	DailyLimit        int64     `json:"daily_limit"`
+	DailyUsagePercent float64   `json:"daily_usage_percent"`
+	NextResetTime     time.Time `json:"next_reset_time"`
 }
 
 // EtherscanService provides functionality for interacting with Etherscan API
@@ -170,13 +174,26 @@ var (
 	// Request tracking using sync.Map instead of channels
 	pendingRequests sync.Map
 
+	// Request deduplication: track queued request IDs to prevent duplicates
+	queuedRequestIDs sync.Map
+
 	// Circuit breaker configuration
 	circuitBreakerThreshold = 5
 	circuitBreakerTimeout   = 30 * time.Second
 
+	// Chain-specific circuit breakers to avoid wasting API calls on failing chains
+	chainCircuitBreakers sync.Map // chainID -> *ChainCircuitBreaker
+
 	// Request cleanup configuration
-	requestCleanupInterval = 1 * time.Minute
+	// Cleanup runs every 5 minutes - workers handle most cleanup naturally, so less frequent cleanup is sufficient
+	requestCleanupInterval = 5 * time.Minute
 	requestTimeout         = 60 * time.Second
+
+	// Daily limit tracking (configured via ETHERSCAN_DAILY_LIMIT env var)
+	dailyLimitCalls       int64 // Set from config, defaults to 100k for Free tier
+	dailyCallsCounter     int64 // Atomic counter for calls made today
+	dailyLimitResetTime   time.Time
+	lastDailyLimitWarning time.Time // Throttle daily limit warnings
 
 	// Error type counters for monitoring
 	rateLimitErrorsCounter  int64
@@ -184,6 +201,26 @@ var (
 	apiErrorsCounter        int64
 	networkErrorsCounter    int64
 )
+
+// ChainCircuitBreaker tracks circuit breaker state per chain
+type ChainCircuitBreaker struct {
+	ChainID           int64
+	ConsecutiveErrors int64
+	LastFailure       time.Time
+	Open              bool
+	Mutex             sync.RWMutex
+}
+
+// getChainCircuitBreaker gets or creates a circuit breaker for a specific chain
+func getChainCircuitBreaker(chainID int64) *ChainCircuitBreaker {
+	if cb, exists := chainCircuitBreakers.Load(chainID); exists {
+		return cb.(*ChainCircuitBreaker)
+	}
+
+	cb := &ChainCircuitBreaker{ChainID: chainID}
+	chainCircuitBreakers.Store(chainID, cb)
+	return cb
+}
 
 // NewEtherscanService creates a new instance of EtherscanService
 func NewEtherscanService() (*EtherscanService, error) {
@@ -195,8 +232,16 @@ func NewEtherscanService() (*EtherscanService, error) {
 	// Start the background workers only once
 	workerStarted.Do(func() {
 		workerCtx, workerCancel = context.WithCancel(context.Background())
+		// Initialize daily limit from config
+		if etherscanConfig.DailyLimit > 0 {
+			atomic.StoreInt64(&dailyLimitCalls, int64(etherscanConfig.DailyLimit))
+		} else {
+			// Fallback to 100k if not configured
+			atomic.StoreInt64(&dailyLimitCalls, 100000)
+		}
 		startMultiKeyEtherscanWorkers(workerCtx, etherscanConfig.ApiKey)
 		go startRequestCleanup(workerCtx)
+		go startDailyLimitReset(workerCtx)
 	})
 
 	return &EtherscanService{
@@ -228,6 +273,13 @@ func startMultiKeyEtherscanWorkers(ctx context.Context, apiKeys string) {
 		"Keys":      cleanKeys,
 	}).Info("Starting multi-key Etherscan workers")
 
+	// Get rate limit from config (default: 3 req/sec for free tier, override in prod with a paid plan)
+	etherscanConfig := config.EtherscanConfig()
+	rateLimit := etherscanConfig.RateLimit
+	if rateLimit <= 0 {
+		rateLimit = 3 // Safety fallback to 3 req/sec if somehow 0 or negative
+	}
+
 	// Create a worker for each API key
 	workerMutex.Lock()
 	workers = make([]*EtherscanWorker, len(cleanKeys))
@@ -237,8 +289,8 @@ func startMultiKeyEtherscanWorkers(ctx context.Context, apiKeys string) {
 		worker := &EtherscanWorker{
 			APIKey:    apiKey,
 			WorkerID:  i,
-			RateLimit: 5, // Default rate limit, will be overridden by chain config
-			Interval:  time.Duration(1000/5) * time.Millisecond,
+			RateLimit: rateLimit, // Use configured rate limit (default: 3 free tier, set to a paid plan value in prod)
+			Interval:  time.Duration(1000/rateLimit) * time.Millisecond,
 		}
 
 		workerMutex.Lock()
@@ -250,8 +302,9 @@ func startMultiKeyEtherscanWorkers(ctx context.Context, apiKeys string) {
 	}
 
 	logger.WithFields(logger.Fields{
-		"TotalWorkers": len(cleanKeys),
-		"TotalRate":    len(cleanKeys) * 5,
+		"TotalWorkers":  len(cleanKeys),
+		"TotalRate":     len(cleanKeys) * rateLimit,
+		"RatePerWorker": rateLimit,
 	}).Info("Multi-key Etherscan workers started successfully")
 }
 
@@ -267,7 +320,65 @@ func startRequestCleanup(ctx context.Context) {
 		case <-ticker.C:
 			cleanupStaleRequests()
 			cleanupStaleQueueEntries(ctx)
+			cleanupQueuedRequestIDs()
 		}
+	}
+}
+
+// startDailyLimitReset resets daily call counter at midnight UTC
+func startDailyLimitReset(ctx context.Context) {
+	// Calculate time until next midnight UTC
+	now := time.Now().UTC()
+	nextMidnight := now.Truncate(24 * time.Hour).Add(24 * time.Hour)
+	initialDelay := nextMidnight.Sub(now)
+
+	// Set initial reset time
+	dailyLimitResetTime = nextMidnight
+
+	// Wait until midnight
+	time.Sleep(initialDelay)
+
+	// Reset counter and schedule next reset
+	ticker := time.NewTicker(24 * time.Hour)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			atomic.StoreInt64(&dailyCallsCounter, 0)
+			dailyLimitResetTime = time.Now().UTC().Truncate(24 * time.Hour).Add(24 * time.Hour)
+			logger.Infof("Daily Etherscan API call counter reset. Limit: %d calls", atomic.LoadInt64(&dailyLimitCalls))
+		}
+	}
+}
+
+// cleanupQueuedRequestIDs removes old entries from queuedRequestIDs map
+func cleanupQueuedRequestIDs() {
+	now := time.Now()
+	var cleaned int
+
+	queuedRequestIDs.Range(func(key, value interface{}) bool {
+		queuedAt, ok := value.(time.Time)
+		if !ok {
+			queuedRequestIDs.Delete(key)
+			cleaned++
+			return true
+		}
+
+		// Remove entries older than requestTimeout
+		if now.Sub(queuedAt) > requestTimeout {
+			queuedRequestIDs.Delete(key)
+			cleaned++
+		}
+		return true
+	})
+
+	if cleaned > 0 {
+		logger.WithFields(logger.Fields{
+			"CleanedIDs": cleaned,
+		}).Debugf("Cleaned up queued request IDs")
 	}
 }
 
@@ -301,32 +412,53 @@ func cleanupStaleRequests() {
 }
 
 // cleanupStaleQueueEntries removes old requests from Redis queue
+// Optimized: Only checks a limited number of items from the front of the queue
+// instead of loading the entire queue into memory
 func cleanupStaleQueueEntries(ctx context.Context) {
 	queueKey := "etherscan_queue"
 
-	// Get all items in queue without removing them
-	items, err := storage.RedisClient.LRange(ctx, queueKey, 0, -1).Result()
+	// Only check first 100 items to avoid loading entire queue (O(n) operation)
+	// Stale items will naturally be processed and removed by workers
+	maxCheckItems := 100
+	items, err := storage.RedisClient.LRange(ctx, queueKey, 0, int64(maxCheckItems-1)).Result()
 	if err != nil {
 		logger.Errorf("Failed to get queue items for cleanup: %v", err)
 		return
 	}
 
+	if len(items) == 0 {
+		return
+	}
+
 	var staleCount int
+	now := time.Now()
+
+	// Process items from front of queue (oldest first)
 	for _, item := range items {
 		var request EtherscanRequest
-		if json.Unmarshal([]byte(item), &request) == nil {
-			if time.Since(request.CreatedAt) > requestTimeout {
-				// Remove this specific stale item
-				if err := storage.RedisClient.LRem(ctx, queueKey, 1, item).Err(); err == nil {
-					staleCount++
-				}
+		if json.Unmarshal([]byte(item), &request) != nil {
+			continue
+		}
+
+		// Check if request is stale
+		if now.Sub(request.CreatedAt) > requestTimeout {
+			// Remove this specific stale item using LRem
+			// Note: LRem removes matching elements, so we need to be careful
+			// Since we're checking from front, this is safe
+			if err := storage.RedisClient.LRem(ctx, queueKey, 1, item).Err(); err == nil {
+				staleCount++
 			}
+		} else {
+			// Since queue is FIFO, if we hit a non-stale item, we can stop
+			// (all older items would have been stale)
+			break
 		}
 	}
 
 	if staleCount > 0 {
 		logger.WithFields(logger.Fields{
 			"StaleRequests": staleCount,
+			"CheckedItems":  len(items),
 		}).Infof("Cleaned up stale queue entries")
 	}
 }
@@ -342,6 +474,9 @@ func (w *EtherscanWorker) start(ctx context.Context) {
 		"RateLimit": w.RateLimit,
 		"Interval":  w.Interval,
 	}).Info("Etherscan worker started")
+
+	consecutiveEmptyPolls := 0
+	maxEmptyPolls := 10 // After 10 empty polls, increase polling interval
 
 	for {
 		select {
@@ -361,6 +496,16 @@ func (w *EtherscanWorker) start(ctx context.Context) {
 				continue
 			}
 
+			// Check daily limit before processing
+			dailyLimit := atomic.LoadInt64(&dailyLimitCalls)
+			if atomic.LoadInt64(&dailyCallsCounter) >= dailyLimit {
+				logger.Warnf("Daily Etherscan API limit reached (%d/%d). Worker %d paused until reset.",
+					atomic.LoadInt64(&dailyCallsCounter), dailyLimit, w.WorkerID)
+				// Wait until next reset
+				time.Sleep(time.Until(dailyLimitResetTime))
+				continue
+			}
+
 			// Use dynamic interval based on backoff
 			currentInterval := w.Interval
 			w.Mutex.RLock()
@@ -369,28 +514,68 @@ func (w *EtherscanWorker) start(ctx context.Context) {
 			}
 			w.Mutex.RUnlock()
 
-			// Reset ticker with current interval
-			ticker.Reset(currentInterval)
-
 			// Process one request from the queue
-			if err := w.processNextRequest(ctx); err != nil {
-				if err.Error() != "no requests in queue" {
-					w.recordError()
-					logger.WithFields(logger.Fields{
-						"WorkerID": w.WorkerID,
-						"Error":    fmt.Sprintf("%v", err),
-					}).Errorf("Failed to process Etherscan request")
+			err := w.processNextRequest(ctx)
+			if err != nil {
+				if err.Error() == "no requests in queue" {
+					consecutiveEmptyPolls++
+					// If queue is empty, increase polling interval to reduce CPU/Redis load
+					if consecutiveEmptyPolls >= maxEmptyPolls {
+						// Poll every 1 second when queue is consistently empty
+						ticker.Reset(1 * time.Second)
+					}
+					continue
 				}
+				// Reset empty poll counter on error
+				consecutiveEmptyPolls = 0
+				ticker.Reset(currentInterval)
+				w.recordError()
+				logger.WithFields(logger.Fields{
+					"WorkerID": w.WorkerID,
+					"Error":    fmt.Sprintf("%v", err),
+				}).Errorf("Failed to process Etherscan request")
 			} else {
+				// Reset empty poll counter and interval on success
+				consecutiveEmptyPolls = 0
+				ticker.Reset(currentInterval)
 				w.recordSuccess()
 
-				// Log stats every 100 processed requests
-				if w.Processed%100 == 0 {
+				// Increment daily call counter
+				atomic.AddInt64(&dailyCallsCounter, 1)
+
+				// Log worker stats periodically to monitor health without excessive logging
+				// At 10 req/sec, logs approximately every 2 minutes
+				if w.Processed%1000 == 0 {
+					dailyCalls := atomic.LoadInt64(&dailyCallsCounter)
+					dailyLimit := atomic.LoadInt64(&dailyLimitCalls)
 					logger.WithFields(logger.Fields{
-						"WorkerID":  w.WorkerID,
-						"Processed": w.Processed,
-						"Errors":    w.Errors,
+						"WorkerID":   w.WorkerID,
+						"Processed":  w.Processed,
+						"Errors":     w.Errors,
+						"DailyCalls": dailyCalls,
+						"DailyLimit": dailyLimit,
 					}).Infof("Etherscan worker stats")
+				}
+
+				// Warn if approaching daily limit - only at thresholds (80%, 90%, 95%) and throttled
+				dailyCalls := atomic.LoadInt64(&dailyCallsCounter)
+				dailyLimit := atomic.LoadInt64(&dailyLimitCalls)
+				if dailyLimit > 0 {
+					usagePercent := float64(dailyCalls) / float64(dailyLimit) * 100
+					// Warn at specific thresholds to provide actionable alerts without log spam
+					shouldWarn := (usagePercent >= 80 && usagePercent < 90) ||
+						(usagePercent >= 90 && usagePercent < 95) ||
+						(usagePercent >= 95)
+
+					if shouldWarn {
+						now := time.Now()
+						// Throttle warnings to once per 5 minutes to keep log volume manageable
+						if now.Sub(lastDailyLimitWarning) >= 5*time.Minute {
+							lastDailyLimitWarning = now
+							logger.Warnf("Approaching daily Etherscan API limit: %d/%d calls used (%.1f%%)",
+								dailyCalls, dailyLimit, usagePercent)
+						}
+					}
 				}
 			}
 		}
@@ -463,6 +648,22 @@ func (w *EtherscanWorker) processNextRequest(ctx context.Context) error {
 		return fmt.Errorf("failed to unmarshal request: %w", err)
 	}
 
+	// Check if request was cancelled before processing
+	if reqCtxValue, exists := pendingRequests.Load(request.ID); exists {
+		if reqCtx, ok := reqCtxValue.(*RequestContext); ok {
+			if reqCtx.Context.Err() != nil {
+				// Request was cancelled, clean up and skip
+				pendingRequests.Delete(request.ID)
+				queuedRequestIDs.Delete(request.ID)
+				logger.WithFields(logger.Fields{
+					"WorkerID":  w.WorkerID,
+					"RequestID": request.ID,
+				}).Debugf("Skipping cancelled request")
+				return nil
+			}
+		}
+	}
+
 	// Check if request is too old
 	if time.Since(request.CreatedAt) > requestTimeout {
 		logger.WithFields(logger.Fields{
@@ -473,8 +674,61 @@ func (w *EtherscanWorker) processNextRequest(ctx context.Context) error {
 		return nil
 	}
 
+	// Check chain-specific circuit breaker before making API call
+	chainCB := getChainCircuitBreaker(request.ChainID)
+	chainCB.Mutex.RLock()
+	if chainCB.Open && time.Since(chainCB.LastFailure) < circuitBreakerTimeout {
+		chainCB.Mutex.RUnlock()
+		// Circuit breaker is open for this chain, skip to avoid wasting API call
+		logger.WithFields(logger.Fields{
+			"WorkerID":  w.WorkerID,
+			"RequestID": request.ID,
+			"ChainID":   request.ChainID,
+		}).Warnf("Skipping request - circuit breaker open for chain")
+		// Notify the pending request of the error
+		if reqCtxValue, exists := pendingRequests.Load(request.ID); exists {
+			if reqCtx, ok := reqCtxValue.(*RequestContext); ok {
+				select {
+				case reqCtx.Response <- &EtherscanResponse{
+					Data:  nil,
+					Error: fmt.Errorf("circuit breaker open for chain %d", request.ChainID),
+				}:
+				default:
+				}
+				reqCtx.Cancel()
+				close(reqCtx.Done)
+				pendingRequests.Delete(request.ID)
+				queuedRequestIDs.Delete(request.ID)
+			}
+		}
+		return nil
+	}
+	chainCB.Mutex.RUnlock()
+
 	// Make the actual API call using this worker's API key
 	data, err := w.makeEtherscanAPICall(request)
+
+	// Update chain-specific circuit breaker based on result (chainCB already declared above)
+	if err != nil {
+		// Record error in chain circuit breaker
+		chainCB.Mutex.Lock()
+		chainCB.ConsecutiveErrors++
+		chainCB.LastFailure = time.Now()
+		if chainCB.ConsecutiveErrors >= int64(circuitBreakerThreshold) {
+			chainCB.Open = true
+			logger.WithFields(logger.Fields{
+				"ChainID":           request.ChainID,
+				"ConsecutiveErrors": chainCB.ConsecutiveErrors,
+			}).Warnf("Circuit breaker opened for chain %d", request.ChainID)
+		}
+		chainCB.Mutex.Unlock()
+	} else {
+		// Reset chain circuit breaker on success
+		chainCB.Mutex.Lock()
+		chainCB.ConsecutiveErrors = 0
+		chainCB.Open = false
+		chainCB.Mutex.Unlock()
+	}
 
 	// Smart error handling based on error type
 	if err != nil {
@@ -551,6 +805,7 @@ func (w *EtherscanWorker) processNextRequest(ctx context.Context) error {
 			reqCtx.Cancel()
 			close(reqCtx.Done)
 			pendingRequests.Delete(request.ID)
+			queuedRequestIDs.Delete(request.ID)
 		}
 	}
 
@@ -740,6 +995,39 @@ func (s *EtherscanService) GetAddressTransactionHistory(ctx context.Context, cha
 		Done:      doneChan,
 	}
 
+	// Check for duplicate request - if same request ID is already queued, reuse existing pending request
+	if existingCtx, exists := pendingRequests.Load(requestID); exists {
+		// Request already pending, reuse the existing request context
+		existingReqCtx, ok := existingCtx.(*RequestContext)
+		if ok {
+			logger.WithFields(logger.Fields{
+				"RequestID": requestID,
+			}).Debugf("Duplicate request detected, reusing existing request")
+			// Wait for the existing request's response
+			select {
+			case response := <-existingReqCtx.Response:
+				if response.Error != nil {
+					return nil, response.Error
+				}
+				return response.Data, nil
+			case <-reqCtx.Done():
+				return nil, reqCtx.Err()
+			case <-existingReqCtx.Context.Done():
+				return nil, existingReqCtx.Context.Err()
+			}
+		}
+	}
+
+	// Check if request ID is already in queue (but not yet processed)
+	if _, queued := queuedRequestIDs.LoadOrStore(requestID, time.Now()); queued {
+		// Request is queued but not yet in pendingRequests, wait a bit and check again
+		// This handles race condition where request is queued but worker hasn't picked it up yet
+		logger.WithFields(logger.Fields{
+			"RequestID": requestID,
+		}).Debugf("Request already queued, waiting for processing")
+		// Fall through to wait for response below
+	}
+
 	// Track the pending request
 	pendingRequests.Store(requestID, requestContext)
 
@@ -758,12 +1046,14 @@ func (s *EtherscanService) GetAddressTransactionHistory(ctx context.Context, cha
 	// Serialize and queue the request
 	requestData, err := json.Marshal(request)
 	if err != nil {
+		queuedRequestIDs.Delete(requestID)
 		pendingRequests.Delete(requestID)
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
 	// Add to queue
 	if err := storage.RedisClient.RPush(ctx, "etherscan_queue", requestData).Err(); err != nil {
+		queuedRequestIDs.Delete(requestID)
 		pendingRequests.Delete(requestID)
 		return nil, fmt.Errorf("failed to queue request: %w", err)
 	}
@@ -778,6 +1068,7 @@ func (s *EtherscanService) GetAddressTransactionHistory(ctx context.Context, cha
 	case <-reqCtx.Done():
 		// Context was cancelled or timed out
 		pendingRequests.Delete(requestID)
+		queuedRequestIDs.Delete(requestID)
 		return nil, reqCtx.Err()
 	case <-doneChan:
 		// Request was completed and cleaned up
@@ -861,20 +1152,38 @@ func (s *EtherscanService) GetQueueStats(ctx context.Context) (*QueueStats, erro
 	})
 
 	// Calculate total rate limit across all workers
-	totalRateLimit := activeWorkers * 5 // Default 5 req/sec per worker
+	// Get rate limit from service config (already loaded)
+	var rateLimitPerWorker int
+	if s.config != nil && s.config.RateLimit > 0 {
+		rateLimitPerWorker = s.config.RateLimit
+	} else {
+		rateLimitPerWorker = 3 // Default to 3 req/sec for free tier
+	}
+	totalRateLimit := activeWorkers * rateLimitPerWorker
+
+	dailyCalls := atomic.LoadInt64(&dailyCallsCounter)
+	dailyLimit := atomic.LoadInt64(&dailyLimitCalls)
+	var dailyUsagePercent float64
+	if dailyLimit > 0 {
+		dailyUsagePercent = float64(dailyCalls) / float64(dailyLimit) * 100
+	}
 
 	return &QueueStats{
-		QueueLength:      queueLength,
-		TotalProcessed:   totalProcessed,
-		TotalErrors:      totalErrors,
-		ActiveWorkers:    activeWorkers,
-		RateLimit:        totalRateLimit,
-		WorkerActive:     activeWorkers > 0,
-		PendingRequests:  pendingCount,
-		RateLimitErrors:  atomic.LoadInt64(&rateLimitErrorsCounter),
-		DailyLimitErrors: atomic.LoadInt64(&dailyLimitErrorsCounter),
-		APIErrors:        atomic.LoadInt64(&apiErrorsCounter),
-		NetworkErrors:    atomic.LoadInt64(&networkErrorsCounter),
+		QueueLength:       queueLength,
+		TotalProcessed:    totalProcessed,
+		TotalErrors:       totalErrors,
+		ActiveWorkers:     activeWorkers,
+		RateLimit:         totalRateLimit,
+		WorkerActive:      activeWorkers > 0,
+		PendingRequests:   pendingCount,
+		RateLimitErrors:   atomic.LoadInt64(&rateLimitErrorsCounter),
+		DailyLimitErrors:  atomic.LoadInt64(&dailyLimitErrorsCounter),
+		APIErrors:         atomic.LoadInt64(&apiErrorsCounter),
+		NetworkErrors:     atomic.LoadInt64(&networkErrorsCounter),
+		DailyCalls:        dailyCalls,
+		DailyLimit:        dailyLimit,
+		DailyUsagePercent: dailyUsagePercent,
+		NextResetTime:     dailyLimitResetTime,
 	}, nil
 }
 
