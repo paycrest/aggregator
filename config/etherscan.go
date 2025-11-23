@@ -1,7 +1,13 @@
 package config
 
 import (
+	"sync"
+
 	"github.com/spf13/viper"
+)
+
+var (
+	etherscanConfigOnce sync.Once
 )
 
 // EtherscanConfiguration holds the configuration for Etherscan API integration
@@ -13,8 +19,11 @@ type EtherscanConfiguration struct {
 
 // EtherscanConfig returns the Etherscan configuration
 func EtherscanConfig() *EtherscanConfiguration {
-	viper.SetDefault("ETHERSCAN_RATE_LIMIT", 3)
-	viper.SetDefault("ETHERSCAN_DAILY_LIMIT", 100000) // Default: 100k for Free tier
+	// Set defaults only once, even when called concurrently from multiple goroutines
+	etherscanConfigOnce.Do(func() {
+		viper.SetDefault("ETHERSCAN_RATE_LIMIT", 3)
+		viper.SetDefault("ETHERSCAN_DAILY_LIMIT", 100000) // Default: 100k for Free tier
+	})
 
 	return &EtherscanConfiguration{
 		ApiKey:     viper.GetString("ETHERSCAN_API_KEY"),
