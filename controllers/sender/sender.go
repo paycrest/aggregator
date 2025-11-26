@@ -385,26 +385,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	// Generate receive address
 	var receiveAddress *ent.ReceiveAddress
 
-	if token.Edges.Network.ChainID == 295 {
-		hederaService := svc.NewHederaMirrorService()
-
-		address := hederaService.CreateReceiveAddress()
-
-		receiveAddress, err = storage.Client.ReceiveAddress.
-			Create().
-			SetAddress(address).
-			SetStatus(receiveaddress.StatusUnused).
-			SetValidUntil(time.Now().Add(orderConf.ReceiveAddressValidity)).
-			Save(ctx)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"error":   err,
-				"address": address,
-			}).Errorf("Failed to create receive address for Hedera")
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
-			return
-		}
-	} else if strings.HasPrefix(payload.Network, "tron") {
+	if strings.HasPrefix(payload.Network, "tron") {
 		address, salt, err := ctrl.receiveAddressService.CreateTronAddress(ctx)
 		if err != nil {
 			logger.Errorf("CreateTronAddress error: %v", err)
