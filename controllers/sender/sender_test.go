@@ -246,6 +246,151 @@ func TestSender(t *testing.T) {
 	var paymentOrderUUID uuid.UUID
 
 	t.Run("InitiatePaymentOrder", func(t *testing.T) {
+		t.Run("should reject zero amount", func(t *testing.T) {
+			// Fetch network from db
+			network, err := db.Client.Network.
+				Query().
+				Where(network.IdentifierEQ(testCtx.networkIdentifier)).
+				Only(context.Background())
+			assert.NoError(t, err)
+
+			payload := map[string]interface{}{
+				"amount":  "0",
+				"token":   testCtx.token.Symbol,
+				"rate":    "750",
+				"network": network.Identifier,
+				"recipient": map[string]interface{}{
+					"institution":       "MOMONGPC",
+					"accountIdentifier": "1234567890",
+					"accountName":       "John Doe",
+					"memo":              "Test memo",
+				},
+			}
+
+			headers := map[string]string{
+				"API-Key": testCtx.apiKey.ID.String(),
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/sender/orders", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Contains(t, response.Message, "Failed to validate payload")
+		})
+
+		t.Run("should reject negative amount", func(t *testing.T) {
+			// Fetch network from db
+			network, err := db.Client.Network.
+				Query().
+				Where(network.IdentifierEQ(testCtx.networkIdentifier)).
+				Only(context.Background())
+			assert.NoError(t, err)
+
+			payload := map[string]interface{}{
+				"amount":  "-100",
+				"token":   testCtx.token.Symbol,
+				"rate":    "750",
+				"network": network.Identifier,
+				"recipient": map[string]interface{}{
+					"institution":       "MOMONGPC",
+					"accountIdentifier": "1234567890",
+					"accountName":       "John Doe",
+					"memo":              "Test memo",
+				},
+			}
+
+			headers := map[string]string{
+				"API-Key": testCtx.apiKey.ID.String(),
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/sender/orders", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Contains(t, response.Message, "Failed to validate payload")
+		})
+
+		t.Run("should reject zero rate", func(t *testing.T) {
+			// Fetch network from db
+			network, err := db.Client.Network.
+				Query().
+				Where(network.IdentifierEQ(testCtx.networkIdentifier)).
+				Only(context.Background())
+			assert.NoError(t, err)
+
+			payload := map[string]interface{}{
+				"amount":  "100",
+				"token":   testCtx.token.Symbol,
+				"rate":    "0",
+				"network": network.Identifier,
+				"recipient": map[string]interface{}{
+					"institution":       "MOMONGPC",
+					"accountIdentifier": "1234567890",
+					"accountName":       "John Doe",
+					"memo":              "Test memo",
+				},
+			}
+
+			headers := map[string]string{
+				"API-Key": testCtx.apiKey.ID.String(),
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/sender/orders", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Contains(t, response.Message, "Failed to validate payload")
+		})
+
+		t.Run("should reject negative rate", func(t *testing.T) {
+			// Fetch network from db
+			network, err := db.Client.Network.
+				Query().
+				Where(network.IdentifierEQ(testCtx.networkIdentifier)).
+				Only(context.Background())
+			assert.NoError(t, err)
+
+			payload := map[string]interface{}{
+				"amount":  "100",
+				"token":   testCtx.token.Symbol,
+				"rate":    "-750",
+				"network": network.Identifier,
+				"recipient": map[string]interface{}{
+					"institution":       "MOMONGPC",
+					"accountIdentifier": "1234567890",
+					"accountName":       "John Doe",
+					"memo":              "Test memo",
+				},
+			}
+
+			headers := map[string]string{
+				"API-Key": testCtx.apiKey.ID.String(),
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/sender/orders", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Contains(t, response.Message, "Failed to validate payload")
+		})
+
+		t.Run("should successfully create order with valid amount", func(t *testing.T) {
 
 		// Activate httpmock globally to intercept all HTTP calls (including fastshot)
 		httpmock.Activate()
@@ -354,6 +499,7 @@ func TestSender(t *testing.T) {
 		assert.Equal(t, paymentOrder.Edges.Recipient.Institution, payload["recipient"].(map[string]interface{})["institution"])
 		assert.Equal(t, data["senderFee"], "5")
 		assert.Equal(t, data["transactionFee"], network.Fee.String())
+		})
 
 		t.Run("Check Transaction Logs", func(t *testing.T) {
 			ts := time.Now().Unix()
@@ -363,7 +509,7 @@ func TestSender(t *testing.T) {
 				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + sig,
 			}
 
-			res, err = test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders/%s?timestamp=%v", paymentOrderUUID.String(), ts), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders/%s?timestamp=%v", paymentOrderUUID.String(), ts), nil, headers, router)
 			assert.NoError(t, err)
 
 			type Response struct {
