@@ -411,16 +411,6 @@ func MaxOrderAmountOtcLTE(v decimal.Decimal) predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(sql.FieldLTE(FieldMaxOrderAmountOtc, v))
 }
 
-// MaxOrderAmountOtcIsNil applies the IsNil predicate on the "max_order_amount_otc" field.
-func MaxOrderAmountOtcIsNil() predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldIsNull(FieldMaxOrderAmountOtc))
-}
-
-// MaxOrderAmountOtcNotNil applies the NotNil predicate on the "max_order_amount_otc" field.
-func MaxOrderAmountOtcNotNil() predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldNotNull(FieldMaxOrderAmountOtc))
-}
-
 // MinOrderAmountOtcEQ applies the EQ predicate on the "min_order_amount_otc" field.
 func MinOrderAmountOtcEQ(v decimal.Decimal) predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(sql.FieldEQ(FieldMinOrderAmountOtc, v))
@@ -459,16 +449,6 @@ func MinOrderAmountOtcLT(v decimal.Decimal) predicate.ProviderOrderToken {
 // MinOrderAmountOtcLTE applies the LTE predicate on the "min_order_amount_otc" field.
 func MinOrderAmountOtcLTE(v decimal.Decimal) predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(sql.FieldLTE(FieldMinOrderAmountOtc, v))
-}
-
-// MinOrderAmountOtcIsNil applies the IsNil predicate on the "min_order_amount_otc" field.
-func MinOrderAmountOtcIsNil() predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldIsNull(FieldMinOrderAmountOtc))
-}
-
-// MinOrderAmountOtcNotNil applies the NotNil predicate on the "min_order_amount_otc" field.
-func MinOrderAmountOtcNotNil() predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldNotNull(FieldMinOrderAmountOtc))
 }
 
 // RateSlippageEQ applies the EQ predicate on the "rate_slippage" field.

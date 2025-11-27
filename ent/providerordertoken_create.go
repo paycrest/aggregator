@@ -91,25 +91,9 @@ func (potc *ProviderOrderTokenCreate) SetMaxOrderAmountOtc(d decimal.Decimal) *P
 	return potc
 }
 
-// SetNillableMaxOrderAmountOtc sets the "max_order_amount_otc" field if the given value is not nil.
-func (potc *ProviderOrderTokenCreate) SetNillableMaxOrderAmountOtc(d *decimal.Decimal) *ProviderOrderTokenCreate {
-	if d != nil {
-		potc.SetMaxOrderAmountOtc(*d)
-	}
-	return potc
-}
-
 // SetMinOrderAmountOtc sets the "min_order_amount_otc" field.
 func (potc *ProviderOrderTokenCreate) SetMinOrderAmountOtc(d decimal.Decimal) *ProviderOrderTokenCreate {
 	potc.mutation.SetMinOrderAmountOtc(d)
-	return potc
-}
-
-// SetNillableMinOrderAmountOtc sets the "min_order_amount_otc" field if the given value is not nil.
-func (potc *ProviderOrderTokenCreate) SetNillableMinOrderAmountOtc(d *decimal.Decimal) *ProviderOrderTokenCreate {
-	if d != nil {
-		potc.SetMinOrderAmountOtc(*d)
-	}
 	return potc
 }
 
@@ -245,6 +229,12 @@ func (potc *ProviderOrderTokenCreate) check() error {
 	if _, ok := potc.mutation.MinOrderAmount(); !ok {
 		return &ValidationError{Name: "min_order_amount", err: errors.New(`ent: missing required field "ProviderOrderToken.min_order_amount"`)}
 	}
+	if _, ok := potc.mutation.MaxOrderAmountOtc(); !ok {
+		return &ValidationError{Name: "max_order_amount_otc", err: errors.New(`ent: missing required field "ProviderOrderToken.max_order_amount_otc"`)}
+	}
+	if _, ok := potc.mutation.MinOrderAmountOtc(); !ok {
+		return &ValidationError{Name: "min_order_amount_otc", err: errors.New(`ent: missing required field "ProviderOrderToken.min_order_amount_otc"`)}
+	}
 	if _, ok := potc.mutation.RateSlippage(); !ok {
 		return &ValidationError{Name: "rate_slippage", err: errors.New(`ent: missing required field "ProviderOrderToken.rate_slippage"`)}
 	}
@@ -317,11 +307,11 @@ func (potc *ProviderOrderTokenCreate) createSpec() (*ProviderOrderToken, *sqlgra
 	}
 	if value, ok := potc.mutation.MaxOrderAmountOtc(); ok {
 		_spec.SetField(providerordertoken.FieldMaxOrderAmountOtc, field.TypeFloat64, value)
-		_node.MaxOrderAmountOtc = &value
+		_node.MaxOrderAmountOtc = value
 	}
 	if value, ok := potc.mutation.MinOrderAmountOtc(); ok {
 		_spec.SetField(providerordertoken.FieldMinOrderAmountOtc, field.TypeFloat64, value)
-		_node.MinOrderAmountOtc = &value
+		_node.MinOrderAmountOtc = value
 	}
 	if value, ok := potc.mutation.RateSlippage(); ok {
 		_spec.SetField(providerordertoken.FieldRateSlippage, field.TypeFloat64, value)
@@ -552,12 +542,6 @@ func (u *ProviderOrderTokenUpsert) AddMaxOrderAmountOtc(v decimal.Decimal) *Prov
 	return u
 }
 
-// ClearMaxOrderAmountOtc clears the value of the "max_order_amount_otc" field.
-func (u *ProviderOrderTokenUpsert) ClearMaxOrderAmountOtc() *ProviderOrderTokenUpsert {
-	u.SetNull(providerordertoken.FieldMaxOrderAmountOtc)
-	return u
-}
-
 // SetMinOrderAmountOtc sets the "min_order_amount_otc" field.
 func (u *ProviderOrderTokenUpsert) SetMinOrderAmountOtc(v decimal.Decimal) *ProviderOrderTokenUpsert {
 	u.Set(providerordertoken.FieldMinOrderAmountOtc, v)
@@ -573,12 +557,6 @@ func (u *ProviderOrderTokenUpsert) UpdateMinOrderAmountOtc() *ProviderOrderToken
 // AddMinOrderAmountOtc adds v to the "min_order_amount_otc" field.
 func (u *ProviderOrderTokenUpsert) AddMinOrderAmountOtc(v decimal.Decimal) *ProviderOrderTokenUpsert {
 	u.Add(providerordertoken.FieldMinOrderAmountOtc, v)
-	return u
-}
-
-// ClearMinOrderAmountOtc clears the value of the "min_order_amount_otc" field.
-func (u *ProviderOrderTokenUpsert) ClearMinOrderAmountOtc() *ProviderOrderTokenUpsert {
-	u.SetNull(providerordertoken.FieldMinOrderAmountOtc)
 	return u
 }
 
@@ -808,13 +786,6 @@ func (u *ProviderOrderTokenUpsertOne) UpdateMaxOrderAmountOtc() *ProviderOrderTo
 	})
 }
 
-// ClearMaxOrderAmountOtc clears the value of the "max_order_amount_otc" field.
-func (u *ProviderOrderTokenUpsertOne) ClearMaxOrderAmountOtc() *ProviderOrderTokenUpsertOne {
-	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.ClearMaxOrderAmountOtc()
-	})
-}
-
 // SetMinOrderAmountOtc sets the "min_order_amount_otc" field.
 func (u *ProviderOrderTokenUpsertOne) SetMinOrderAmountOtc(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
@@ -833,13 +804,6 @@ func (u *ProviderOrderTokenUpsertOne) AddMinOrderAmountOtc(v decimal.Decimal) *P
 func (u *ProviderOrderTokenUpsertOne) UpdateMinOrderAmountOtc() *ProviderOrderTokenUpsertOne {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
 		s.UpdateMinOrderAmountOtc()
-	})
-}
-
-// ClearMinOrderAmountOtc clears the value of the "min_order_amount_otc" field.
-func (u *ProviderOrderTokenUpsertOne) ClearMinOrderAmountOtc() *ProviderOrderTokenUpsertOne {
-	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.ClearMinOrderAmountOtc()
 	})
 }
 
@@ -1243,13 +1207,6 @@ func (u *ProviderOrderTokenUpsertBulk) UpdateMaxOrderAmountOtc() *ProviderOrderT
 	})
 }
 
-// ClearMaxOrderAmountOtc clears the value of the "max_order_amount_otc" field.
-func (u *ProviderOrderTokenUpsertBulk) ClearMaxOrderAmountOtc() *ProviderOrderTokenUpsertBulk {
-	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.ClearMaxOrderAmountOtc()
-	})
-}
-
 // SetMinOrderAmountOtc sets the "min_order_amount_otc" field.
 func (u *ProviderOrderTokenUpsertBulk) SetMinOrderAmountOtc(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
@@ -1268,13 +1225,6 @@ func (u *ProviderOrderTokenUpsertBulk) AddMinOrderAmountOtc(v decimal.Decimal) *
 func (u *ProviderOrderTokenUpsertBulk) UpdateMinOrderAmountOtc() *ProviderOrderTokenUpsertBulk {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
 		s.UpdateMinOrderAmountOtc()
-	})
-}
-
-// ClearMinOrderAmountOtc clears the value of the "min_order_amount_otc" field.
-func (u *ProviderOrderTokenUpsertBulk) ClearMinOrderAmountOtc() *ProviderOrderTokenUpsertBulk {
-	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.ClearMinOrderAmountOtc()
 	})
 }
 

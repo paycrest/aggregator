@@ -1238,10 +1238,10 @@ func DetermineOrderType(orderToken *ent.ProviderOrderToken, fiatAmount decimal.D
 	}
 	minOTC := orderToken.MinOrderAmountOtc
 	maxOTC := orderToken.MaxOrderAmountOtc
-	if minOTC == nil || maxOTC == nil || minOTC.IsZero() || maxOTC.IsZero() || minOTC.GreaterThan(*maxOTC) {
+	if minOTC.IsZero() || maxOTC.IsZero() || minOTC.GreaterThan(maxOTC) {
 		return paymentorder.OrderTypeRegular
 	}
-	if fiatAmount.GreaterThanOrEqual(*minOTC) && fiatAmount.LessThanOrEqual(*maxOTC) {
+	if fiatAmount.GreaterThanOrEqual(minOTC) && fiatAmount.LessThanOrEqual(maxOTC) {
 		return paymentorder.OrderTypeOtc
 	}
 	return paymentorder.OrderTypeRegular

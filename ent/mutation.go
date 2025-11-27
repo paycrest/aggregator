@@ -15226,7 +15226,7 @@ func (m *ProviderOrderTokenMutation) MaxOrderAmountOtc() (r decimal.Decimal, exi
 // OldMaxOrderAmountOtc returns the old "max_order_amount_otc" field's value of the ProviderOrderToken entity.
 // If the ProviderOrderToken object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProviderOrderTokenMutation) OldMaxOrderAmountOtc(ctx context.Context) (v *decimal.Decimal, err error) {
+func (m *ProviderOrderTokenMutation) OldMaxOrderAmountOtc(ctx context.Context) (v decimal.Decimal, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldMaxOrderAmountOtc is only allowed on UpdateOne operations")
 	}
@@ -15258,24 +15258,10 @@ func (m *ProviderOrderTokenMutation) AddedMaxOrderAmountOtc() (r decimal.Decimal
 	return *v, true
 }
 
-// ClearMaxOrderAmountOtc clears the value of the "max_order_amount_otc" field.
-func (m *ProviderOrderTokenMutation) ClearMaxOrderAmountOtc() {
-	m.max_order_amount_otc = nil
-	m.addmax_order_amount_otc = nil
-	m.clearedFields[providerordertoken.FieldMaxOrderAmountOtc] = struct{}{}
-}
-
-// MaxOrderAmountOtcCleared returns if the "max_order_amount_otc" field was cleared in this mutation.
-func (m *ProviderOrderTokenMutation) MaxOrderAmountOtcCleared() bool {
-	_, ok := m.clearedFields[providerordertoken.FieldMaxOrderAmountOtc]
-	return ok
-}
-
 // ResetMaxOrderAmountOtc resets all changes to the "max_order_amount_otc" field.
 func (m *ProviderOrderTokenMutation) ResetMaxOrderAmountOtc() {
 	m.max_order_amount_otc = nil
 	m.addmax_order_amount_otc = nil
-	delete(m.clearedFields, providerordertoken.FieldMaxOrderAmountOtc)
 }
 
 // SetMinOrderAmountOtc sets the "min_order_amount_otc" field.
@@ -15296,7 +15282,7 @@ func (m *ProviderOrderTokenMutation) MinOrderAmountOtc() (r decimal.Decimal, exi
 // OldMinOrderAmountOtc returns the old "min_order_amount_otc" field's value of the ProviderOrderToken entity.
 // If the ProviderOrderToken object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProviderOrderTokenMutation) OldMinOrderAmountOtc(ctx context.Context) (v *decimal.Decimal, err error) {
+func (m *ProviderOrderTokenMutation) OldMinOrderAmountOtc(ctx context.Context) (v decimal.Decimal, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldMinOrderAmountOtc is only allowed on UpdateOne operations")
 	}
@@ -15328,24 +15314,10 @@ func (m *ProviderOrderTokenMutation) AddedMinOrderAmountOtc() (r decimal.Decimal
 	return *v, true
 }
 
-// ClearMinOrderAmountOtc clears the value of the "min_order_amount_otc" field.
-func (m *ProviderOrderTokenMutation) ClearMinOrderAmountOtc() {
-	m.min_order_amount_otc = nil
-	m.addmin_order_amount_otc = nil
-	m.clearedFields[providerordertoken.FieldMinOrderAmountOtc] = struct{}{}
-}
-
-// MinOrderAmountOtcCleared returns if the "min_order_amount_otc" field was cleared in this mutation.
-func (m *ProviderOrderTokenMutation) MinOrderAmountOtcCleared() bool {
-	_, ok := m.clearedFields[providerordertoken.FieldMinOrderAmountOtc]
-	return ok
-}
-
 // ResetMinOrderAmountOtc resets all changes to the "min_order_amount_otc" field.
 func (m *ProviderOrderTokenMutation) ResetMinOrderAmountOtc() {
 	m.min_order_amount_otc = nil
 	m.addmin_order_amount_otc = nil
-	delete(m.clearedFields, providerordertoken.FieldMinOrderAmountOtc)
 }
 
 // SetRateSlippage sets the "rate_slippage" field.
@@ -15952,12 +15924,6 @@ func (m *ProviderOrderTokenMutation) AddField(name string, value ent.Value) erro
 // mutation.
 func (m *ProviderOrderTokenMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(providerordertoken.FieldMaxOrderAmountOtc) {
-		fields = append(fields, providerordertoken.FieldMaxOrderAmountOtc)
-	}
-	if m.FieldCleared(providerordertoken.FieldMinOrderAmountOtc) {
-		fields = append(fields, providerordertoken.FieldMinOrderAmountOtc)
-	}
 	if m.FieldCleared(providerordertoken.FieldAddress) {
 		fields = append(fields, providerordertoken.FieldAddress)
 	}
@@ -15975,12 +15941,6 @@ func (m *ProviderOrderTokenMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *ProviderOrderTokenMutation) ClearField(name string) error {
 	switch name {
-	case providerordertoken.FieldMaxOrderAmountOtc:
-		m.ClearMaxOrderAmountOtc()
-		return nil
-	case providerordertoken.FieldMinOrderAmountOtc:
-		m.ClearMinOrderAmountOtc()
-		return nil
 	case providerordertoken.FieldAddress:
 		m.ClearAddress()
 		return nil

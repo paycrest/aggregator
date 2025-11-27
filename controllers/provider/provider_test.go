@@ -1087,7 +1087,6 @@ func TestProvider(t *testing.T) {
 				headers := map[string]string{
 					"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
 				}
-				// <-- FIXED: Use order.ID.String() as :id param to hit Redis mismatch, not DB not-found
 				res, err := test.PerformRequest(t, "POST", "/orders/"+order.ID.String()+"/accept", payload, headers, router)
 				assert.NoError(t, err)
 				// Assert the response body

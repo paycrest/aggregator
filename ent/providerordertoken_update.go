@@ -158,12 +158,6 @@ func (potu *ProviderOrderTokenUpdate) AddMaxOrderAmountOtc(d decimal.Decimal) *P
 	return potu
 }
 
-// ClearMaxOrderAmountOtc clears the value of the "max_order_amount_otc" field.
-func (potu *ProviderOrderTokenUpdate) ClearMaxOrderAmountOtc() *ProviderOrderTokenUpdate {
-	potu.mutation.ClearMaxOrderAmountOtc()
-	return potu
-}
-
 // SetMinOrderAmountOtc sets the "min_order_amount_otc" field.
 func (potu *ProviderOrderTokenUpdate) SetMinOrderAmountOtc(d decimal.Decimal) *ProviderOrderTokenUpdate {
 	potu.mutation.ResetMinOrderAmountOtc()
@@ -182,12 +176,6 @@ func (potu *ProviderOrderTokenUpdate) SetNillableMinOrderAmountOtc(d *decimal.De
 // AddMinOrderAmountOtc adds d to the "min_order_amount_otc" field.
 func (potu *ProviderOrderTokenUpdate) AddMinOrderAmountOtc(d decimal.Decimal) *ProviderOrderTokenUpdate {
 	potu.mutation.AddMinOrderAmountOtc(d)
-	return potu
-}
-
-// ClearMinOrderAmountOtc clears the value of the "min_order_amount_otc" field.
-func (potu *ProviderOrderTokenUpdate) ClearMinOrderAmountOtc() *ProviderOrderTokenUpdate {
-	potu.mutation.ClearMinOrderAmountOtc()
 	return potu
 }
 
@@ -405,17 +393,11 @@ func (potu *ProviderOrderTokenUpdate) sqlSave(ctx context.Context) (n int, err e
 	if value, ok := potu.mutation.AddedMaxOrderAmountOtc(); ok {
 		_spec.AddField(providerordertoken.FieldMaxOrderAmountOtc, field.TypeFloat64, value)
 	}
-	if potu.mutation.MaxOrderAmountOtcCleared() {
-		_spec.ClearField(providerordertoken.FieldMaxOrderAmountOtc, field.TypeFloat64)
-	}
 	if value, ok := potu.mutation.MinOrderAmountOtc(); ok {
 		_spec.SetField(providerordertoken.FieldMinOrderAmountOtc, field.TypeFloat64, value)
 	}
 	if value, ok := potu.mutation.AddedMinOrderAmountOtc(); ok {
 		_spec.AddField(providerordertoken.FieldMinOrderAmountOtc, field.TypeFloat64, value)
-	}
-	if potu.mutation.MinOrderAmountOtcCleared() {
-		_spec.ClearField(providerordertoken.FieldMinOrderAmountOtc, field.TypeFloat64)
 	}
 	if value, ok := potu.mutation.RateSlippage(); ok {
 		_spec.SetField(providerordertoken.FieldRateSlippage, field.TypeFloat64, value)
@@ -664,12 +646,6 @@ func (potuo *ProviderOrderTokenUpdateOne) AddMaxOrderAmountOtc(d decimal.Decimal
 	return potuo
 }
 
-// ClearMaxOrderAmountOtc clears the value of the "max_order_amount_otc" field.
-func (potuo *ProviderOrderTokenUpdateOne) ClearMaxOrderAmountOtc() *ProviderOrderTokenUpdateOne {
-	potuo.mutation.ClearMaxOrderAmountOtc()
-	return potuo
-}
-
 // SetMinOrderAmountOtc sets the "min_order_amount_otc" field.
 func (potuo *ProviderOrderTokenUpdateOne) SetMinOrderAmountOtc(d decimal.Decimal) *ProviderOrderTokenUpdateOne {
 	potuo.mutation.ResetMinOrderAmountOtc()
@@ -688,12 +664,6 @@ func (potuo *ProviderOrderTokenUpdateOne) SetNillableMinOrderAmountOtc(d *decima
 // AddMinOrderAmountOtc adds d to the "min_order_amount_otc" field.
 func (potuo *ProviderOrderTokenUpdateOne) AddMinOrderAmountOtc(d decimal.Decimal) *ProviderOrderTokenUpdateOne {
 	potuo.mutation.AddMinOrderAmountOtc(d)
-	return potuo
-}
-
-// ClearMinOrderAmountOtc clears the value of the "min_order_amount_otc" field.
-func (potuo *ProviderOrderTokenUpdateOne) ClearMinOrderAmountOtc() *ProviderOrderTokenUpdateOne {
-	potuo.mutation.ClearMinOrderAmountOtc()
 	return potuo
 }
 
@@ -941,17 +911,11 @@ func (potuo *ProviderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *P
 	if value, ok := potuo.mutation.AddedMaxOrderAmountOtc(); ok {
 		_spec.AddField(providerordertoken.FieldMaxOrderAmountOtc, field.TypeFloat64, value)
 	}
-	if potuo.mutation.MaxOrderAmountOtcCleared() {
-		_spec.ClearField(providerordertoken.FieldMaxOrderAmountOtc, field.TypeFloat64)
-	}
 	if value, ok := potuo.mutation.MinOrderAmountOtc(); ok {
 		_spec.SetField(providerordertoken.FieldMinOrderAmountOtc, field.TypeFloat64, value)
 	}
 	if value, ok := potuo.mutation.AddedMinOrderAmountOtc(); ok {
 		_spec.AddField(providerordertoken.FieldMinOrderAmountOtc, field.TypeFloat64, value)
-	}
-	if potuo.mutation.MinOrderAmountOtcCleared() {
-		_spec.ClearField(providerordertoken.FieldMinOrderAmountOtc, field.TypeFloat64)
 	}
 	if value, ok := potuo.mutation.RateSlippage(); ok {
 		_spec.SetField(providerordertoken.FieldRateSlippage, field.TypeFloat64, value)
