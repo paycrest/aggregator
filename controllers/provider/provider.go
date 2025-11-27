@@ -524,7 +524,6 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	// Get provider profile from the context
 	providerCtx, ok := ctx.Get("provider")
 	if !ok {
-		logger.Infof("Invalid API key or token")
 		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
 		return
 	}
@@ -533,7 +532,6 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	// Parse the Order ID string into a UUID
 	orderID, err := uuid.Parse(ctx.Param("id"))
 	if err != nil {
-		logger.Infof("Error parsing order ID: %v", err)
 		logger.Errorf("error parsing order ID: %v", err)
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
 		return
@@ -563,7 +561,6 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 
 	tx, err := storage.Client.Tx(ctx)
 	if err != nil {
-		logger.Infof("Error starting transaction: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 		return
 	}
@@ -584,7 +581,6 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 			return
 		} else {
-			logger.Infof("Creating transaction log for order %s with provider %s", orderID, provider.ID)
 			transactionLog, err = tx.TransactionLog.
 				Create().
 				SetStatus(transactionlog.StatusOrderProcessing).
@@ -594,7 +590,6 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 					}).
 				Save(ctx)
 			if err != nil {
-				logger.Infof("Error creating transaction log for order %s with provider %s: %v", orderID, provider.ID, err)
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 				return
 			}
@@ -608,19 +603,15 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		SetProviderID(provider.ID)
 
 	if transactionLog != nil {
-		logger.Infof("Adding transaction log to order %s", orderID)
 		orderBuilder = orderBuilder.AddTransactions(transactionLog)
 	}
 
 	order, err := orderBuilder.Save(ctx)
 	if err != nil {
-		logger.Infof("Error updating lock order status: %v", err)
 		logger.Errorf("%s - error.AcceptOrder: %v", orderID, err)
 		if ent.IsNotFound(err) {
-			logger.Infof("Order not found: %v", err)
 			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found", nil)
 		} else {
-			logger.Infof("Error updating lock order status: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 		}
 		return
@@ -628,12 +619,10 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 
 	// Commit transaction
 	if err := tx.Commit(); err != nil {
-		logger.Infof("Error committing transaction: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 		return
 	}
 
-	logger.Infof("Order request accepted successfully for order %s", orderID)
 	u.APIResponse(ctx, http.StatusCreated, "success", "Order request accepted successfully", &types.AcceptOrderResponse{
 		ID:                orderID,
 		Amount:            order.Amount.Mul(order.Rate).RoundBank(0),
@@ -1712,5 +1701,3 @@ func (ctrl *ProviderController) UpdateProviderBalance(ctx *gin.Context) {
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Balance updated successfully", nil)
 }
-
-

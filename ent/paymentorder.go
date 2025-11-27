@@ -67,6 +67,8 @@ type PaymentOrder struct {
 	Status paymentorder.Status `json:"status,omitempty"`
 	// AmountInUsd holds the value of the "amount_in_usd" field.
 	AmountInUsd decimal.Decimal `json:"amount_in_usd,omitempty"`
+	// OrderType holds the value of the "order_type" field.
+	OrderType paymentorder.OrderType `json:"order_type,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the PaymentOrderQuery when eager-loading is set.
 	Edges                         PaymentOrderEdges `json:"edges"`
@@ -182,7 +184,7 @@ func (*PaymentOrder) scanValues(columns []string) ([]any, error) {
 			values[i] = new(decimal.Decimal)
 		case paymentorder.FieldBlockNumber:
 			values[i] = new(sql.NullInt64)
-		case paymentorder.FieldTxHash, paymentorder.FieldFromAddress, paymentorder.FieldReturnAddress, paymentorder.FieldReceiveAddressText, paymentorder.FieldFeeAddress, paymentorder.FieldGatewayID, paymentorder.FieldMessageHash, paymentorder.FieldReference, paymentorder.FieldStatus:
+		case paymentorder.FieldTxHash, paymentorder.FieldFromAddress, paymentorder.FieldReturnAddress, paymentorder.FieldReceiveAddressText, paymentorder.FieldFeeAddress, paymentorder.FieldGatewayID, paymentorder.FieldMessageHash, paymentorder.FieldReference, paymentorder.FieldStatus, paymentorder.FieldOrderType:
 			values[i] = new(sql.NullString)
 		case paymentorder.FieldCreatedAt, paymentorder.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -342,6 +344,12 @@ func (po *PaymentOrder) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field amount_in_usd", values[i])
 			} else if value != nil {
 				po.AmountInUsd = *value
+			}
+		case paymentorder.FieldOrderType:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field order_type", values[i])
+			} else if value.Valid {
+				po.OrderType = paymentorder.OrderType(value.String)
 			}
 		case paymentorder.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -504,6 +512,9 @@ func (po *PaymentOrder) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("amount_in_usd=")
 	builder.WriteString(fmt.Sprintf("%v", po.AmountInUsd))
+	builder.WriteString(", ")
+	builder.WriteString("order_type=")
+	builder.WriteString(fmt.Sprintf("%v", po.OrderType))
 	builder.WriteByte(')')
 	return builder.String()
 }

@@ -86,6 +86,16 @@ func MinOrderAmount(v decimal.Decimal) predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(sql.FieldEQ(FieldMinOrderAmount, v))
 }
 
+// MaxOrderAmountOtc applies equality check predicate on the "max_order_amount_otc" field. It's identical to MaxOrderAmountOtcEQ.
+func MaxOrderAmountOtc(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldMaxOrderAmountOtc, v))
+}
+
+// MinOrderAmountOtc applies equality check predicate on the "min_order_amount_otc" field. It's identical to MinOrderAmountOtcEQ.
+func MinOrderAmountOtc(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldMinOrderAmountOtc, v))
+}
+
 // RateSlippage applies equality check predicate on the "rate_slippage" field. It's identical to RateSlippageEQ.
 func RateSlippage(v decimal.Decimal) predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(sql.FieldEQ(FieldRateSlippage, v))
@@ -359,6 +369,86 @@ func MinOrderAmountLT(v decimal.Decimal) predicate.ProviderOrderToken {
 // MinOrderAmountLTE applies the LTE predicate on the "min_order_amount" field.
 func MinOrderAmountLTE(v decimal.Decimal) predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(sql.FieldLTE(FieldMinOrderAmount, v))
+}
+
+// MaxOrderAmountOtcEQ applies the EQ predicate on the "max_order_amount_otc" field.
+func MaxOrderAmountOtcEQ(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldMaxOrderAmountOtc, v))
+}
+
+// MaxOrderAmountOtcNEQ applies the NEQ predicate on the "max_order_amount_otc" field.
+func MaxOrderAmountOtcNEQ(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNEQ(FieldMaxOrderAmountOtc, v))
+}
+
+// MaxOrderAmountOtcIn applies the In predicate on the "max_order_amount_otc" field.
+func MaxOrderAmountOtcIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldIn(FieldMaxOrderAmountOtc, vs...))
+}
+
+// MaxOrderAmountOtcNotIn applies the NotIn predicate on the "max_order_amount_otc" field.
+func MaxOrderAmountOtcNotIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNotIn(FieldMaxOrderAmountOtc, vs...))
+}
+
+// MaxOrderAmountOtcGT applies the GT predicate on the "max_order_amount_otc" field.
+func MaxOrderAmountOtcGT(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGT(FieldMaxOrderAmountOtc, v))
+}
+
+// MaxOrderAmountOtcGTE applies the GTE predicate on the "max_order_amount_otc" field.
+func MaxOrderAmountOtcGTE(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGTE(FieldMaxOrderAmountOtc, v))
+}
+
+// MaxOrderAmountOtcLT applies the LT predicate on the "max_order_amount_otc" field.
+func MaxOrderAmountOtcLT(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLT(FieldMaxOrderAmountOtc, v))
+}
+
+// MaxOrderAmountOtcLTE applies the LTE predicate on the "max_order_amount_otc" field.
+func MaxOrderAmountOtcLTE(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLTE(FieldMaxOrderAmountOtc, v))
+}
+
+// MinOrderAmountOtcEQ applies the EQ predicate on the "min_order_amount_otc" field.
+func MinOrderAmountOtcEQ(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldMinOrderAmountOtc, v))
+}
+
+// MinOrderAmountOtcNEQ applies the NEQ predicate on the "min_order_amount_otc" field.
+func MinOrderAmountOtcNEQ(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNEQ(FieldMinOrderAmountOtc, v))
+}
+
+// MinOrderAmountOtcIn applies the In predicate on the "min_order_amount_otc" field.
+func MinOrderAmountOtcIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldIn(FieldMinOrderAmountOtc, vs...))
+}
+
+// MinOrderAmountOtcNotIn applies the NotIn predicate on the "min_order_amount_otc" field.
+func MinOrderAmountOtcNotIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNotIn(FieldMinOrderAmountOtc, vs...))
+}
+
+// MinOrderAmountOtcGT applies the GT predicate on the "min_order_amount_otc" field.
+func MinOrderAmountOtcGT(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGT(FieldMinOrderAmountOtc, v))
+}
+
+// MinOrderAmountOtcGTE applies the GTE predicate on the "min_order_amount_otc" field.
+func MinOrderAmountOtcGTE(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGTE(FieldMinOrderAmountOtc, v))
+}
+
+// MinOrderAmountOtcLT applies the LT predicate on the "min_order_amount_otc" field.
+func MinOrderAmountOtcLT(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLT(FieldMinOrderAmountOtc, v))
+}
+
+// MinOrderAmountOtcLTE applies the LTE predicate on the "min_order_amount_otc" field.
+func MinOrderAmountOtcLTE(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLTE(FieldMinOrderAmountOtc, v))
 }
 
 // RateSlippageEQ applies the EQ predicate on the "rate_slippage" field.

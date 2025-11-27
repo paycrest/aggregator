@@ -58,6 +58,8 @@ const (
 	FieldStatus = "status"
 	// FieldAmountInUsd holds the string denoting the amount_in_usd field in the database.
 	FieldAmountInUsd = "amount_in_usd"
+	// FieldOrderType holds the string denoting the order_type field in the database.
+	FieldOrderType = "order_type"
 	// EdgeSenderProfile holds the string denoting the sender_profile edge name in mutations.
 	EdgeSenderProfile = "sender_profile"
 	// EdgeToken holds the string denoting the token edge name in mutations.
@@ -149,6 +151,7 @@ var Columns = []string{
 	FieldReference,
 	FieldStatus,
 	FieldAmountInUsd,
+	FieldOrderType,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "payment_orders"
@@ -232,6 +235,32 @@ func StatusValidator(s Status) error {
 		return nil
 	default:
 		return fmt.Errorf("paymentorder: invalid enum value for status field: %q", s)
+	}
+}
+
+// OrderType defines the type for the "order_type" enum field.
+type OrderType string
+
+// OrderTypeRegular is the default value of the OrderType enum.
+const DefaultOrderType = OrderTypeRegular
+
+// OrderType values.
+const (
+	OrderTypeOtc     OrderType = "otc"
+	OrderTypeRegular OrderType = "regular"
+)
+
+func (ot OrderType) String() string {
+	return string(ot)
+}
+
+// OrderTypeValidator is a validator for the "order_type" field enum values. It is called by the builders before save.
+func OrderTypeValidator(ot OrderType) error {
+	switch ot {
+	case OrderTypeOtc, OrderTypeRegular:
+		return nil
+	default:
+		return fmt.Errorf("paymentorder: invalid enum value for order_type field: %q", ot)
 	}
 }
 
@@ -346,6 +375,11 @@ func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 // ByAmountInUsd orders the results by the amount_in_usd field.
 func ByAmountInUsd(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAmountInUsd, opts...).ToFunc()
+}
+
+// ByOrderType orders the results by the order_type field.
+func ByOrderType(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOrderType, opts...).ToFunc()
 }
 
 // BySenderProfileField orders the results by sender_profile field.
