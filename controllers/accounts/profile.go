@@ -178,6 +178,7 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 				SetTokenID(networksToTokenId[address.Network]).
 				SetRefundAddress(address.RefundAddress).
 				SetFeePercent(tokenPayload.FeePercent).
+				SetNillableMaxFeeCap(tokenPayload.MaxFeeCap).
 				SetFeeAddress(address.FeeAddress).
 				Save(ctx)
 			if err != nil {
@@ -784,6 +785,7 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 			Symbol:        token.Edges.Token.Symbol,
 			RefundAddress: token.RefundAddress,
 			FeePercent:    token.FeePercent,
+			MaxFeeCap:     token.MaxFeeCap,
 			FeeAddress:    token.FeeAddress,
 			Network:       token.Edges.Token.Edges.Network.Identifier,
 		}

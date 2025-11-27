@@ -634,6 +634,7 @@ var (
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "fee_percent", Type: field.TypeFloat64},
+		{Name: "max_fee_cap", Type: field.TypeFloat64, Nullable: true},
 		{Name: "fee_address", Type: field.TypeString, Size: 60},
 		{Name: "refund_address", Type: field.TypeString, Size: 60},
 		{Name: "sender_profile_order_tokens", Type: field.TypeUUID},
@@ -647,13 +648,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "sender_order_tokens_sender_profiles_order_tokens",
-				Columns:    []*schema.Column{SenderOrderTokensColumns[6]},
+				Columns:    []*schema.Column{SenderOrderTokensColumns[7]},
 				RefColumns: []*schema.Column{SenderProfilesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "sender_order_tokens_tokens_sender_order_tokens",
-				Columns:    []*schema.Column{SenderOrderTokensColumns[7]},
+				Columns:    []*schema.Column{SenderOrderTokensColumns[8]},
 				RefColumns: []*schema.Column{TokensColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -662,7 +663,7 @@ var (
 			{
 				Name:    "senderordertoken_sender_profile_order_tokens_token_sender_order_tokens",
 				Unique:  true,
-				Columns: []*schema.Column{SenderOrderTokensColumns[6], SenderOrderTokensColumns[7]},
+				Columns: []*schema.Column{SenderOrderTokensColumns[7], SenderOrderTokensColumns[8]},
 			},
 		},
 	}
