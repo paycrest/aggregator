@@ -14933,22 +14933,9 @@ func (m *ProviderFiatAccountMutation) OldAccountName(ctx context.Context) (v str
 	return oldValue.AccountName, nil
 }
 
-// ClearAccountName clears the value of the "account_name" field.
-func (m *ProviderFiatAccountMutation) ClearAccountName() {
-	m.account_name = nil
-	m.clearedFields[providerfiataccount.FieldAccountName] = struct{}{}
-}
-
-// AccountNameCleared returns if the "account_name" field was cleared in this mutation.
-func (m *ProviderFiatAccountMutation) AccountNameCleared() bool {
-	_, ok := m.clearedFields[providerfiataccount.FieldAccountName]
-	return ok
-}
-
 // ResetAccountName resets all changes to the "account_name" field.
 func (m *ProviderFiatAccountMutation) ResetAccountName() {
 	m.account_name = nil
-	delete(m.clearedFields, providerfiataccount.FieldAccountName)
 }
 
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by id.
@@ -15150,11 +15137,7 @@ func (m *ProviderFiatAccountMutation) AddField(name string, value ent.Value) err
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
 func (m *ProviderFiatAccountMutation) ClearedFields() []string {
-	var fields []string
-	if m.FieldCleared(providerfiataccount.FieldAccountName) {
-		fields = append(fields, providerfiataccount.FieldAccountName)
-	}
-	return fields
+	return nil
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
@@ -15167,11 +15150,6 @@ func (m *ProviderFiatAccountMutation) FieldCleared(name string) bool {
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
 func (m *ProviderFiatAccountMutation) ClearField(name string) error {
-	switch name {
-	case providerfiataccount.FieldAccountName:
-		m.ClearAccountName()
-		return nil
-	}
 	return fmt.Errorf("unknown ProviderFiatAccount nullable field %s", name)
 }
 

@@ -346,16 +346,6 @@ func AccountNameHasSuffix(v string) predicate.ProviderFiatAccount {
 	return predicate.ProviderFiatAccount(sql.FieldHasSuffix(FieldAccountName, v))
 }
 
-// AccountNameIsNil applies the IsNil predicate on the "account_name" field.
-func AccountNameIsNil() predicate.ProviderFiatAccount {
-	return predicate.ProviderFiatAccount(sql.FieldIsNull(FieldAccountName))
-}
-
-// AccountNameNotNil applies the NotNil predicate on the "account_name" field.
-func AccountNameNotNil() predicate.ProviderFiatAccount {
-	return predicate.ProviderFiatAccount(sql.FieldNotNull(FieldAccountName))
-}
-
 // AccountNameEqualFold applies the EqualFold predicate on the "account_name" field.
 func AccountNameEqualFold(v string) predicate.ProviderFiatAccount {
 	return predicate.ProviderFiatAccount(sql.FieldEqualFold(FieldAccountName, v))

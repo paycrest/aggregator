@@ -71,14 +71,6 @@ func (pfac *ProviderFiatAccountCreate) SetAccountName(s string) *ProviderFiatAcc
 	return pfac
 }
 
-// SetNillableAccountName sets the "account_name" field if the given value is not nil.
-func (pfac *ProviderFiatAccountCreate) SetNillableAccountName(s *string) *ProviderFiatAccountCreate {
-	if s != nil {
-		pfac.SetAccountName(*s)
-	}
-	return pfac
-}
-
 // SetID sets the "id" field.
 func (pfac *ProviderFiatAccountCreate) SetID(u uuid.UUID) *ProviderFiatAccountCreate {
 	pfac.mutation.SetID(u)
@@ -176,6 +168,9 @@ func (pfac *ProviderFiatAccountCreate) check() error {
 		if err := providerfiataccount.AccountIdentifierValidator(v); err != nil {
 			return &ValidationError{Name: "account_identifier", err: fmt.Errorf(`ent: validator failed for field "ProviderFiatAccount.account_identifier": %w`, err)}
 		}
+	}
+	if _, ok := pfac.mutation.AccountName(); !ok {
+		return &ValidationError{Name: "account_name", err: errors.New(`ent: missing required field "ProviderFiatAccount.account_name"`)}
 	}
 	if v, ok := pfac.mutation.AccountName(); ok {
 		if err := providerfiataccount.AccountNameValidator(v); err != nil {
@@ -358,12 +353,6 @@ func (u *ProviderFiatAccountUpsert) UpdateAccountName() *ProviderFiatAccountUpse
 	return u
 }
 
-// ClearAccountName clears the value of the "account_name" field.
-func (u *ProviderFiatAccountUpsert) ClearAccountName() *ProviderFiatAccountUpsert {
-	u.SetNull(providerfiataccount.FieldAccountName)
-	return u
-}
-
 // UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
@@ -468,13 +457,6 @@ func (u *ProviderFiatAccountUpsertOne) SetAccountName(v string) *ProviderFiatAcc
 func (u *ProviderFiatAccountUpsertOne) UpdateAccountName() *ProviderFiatAccountUpsertOne {
 	return u.Update(func(s *ProviderFiatAccountUpsert) {
 		s.UpdateAccountName()
-	})
-}
-
-// ClearAccountName clears the value of the "account_name" field.
-func (u *ProviderFiatAccountUpsertOne) ClearAccountName() *ProviderFiatAccountUpsertOne {
-	return u.Update(func(s *ProviderFiatAccountUpsert) {
-		s.ClearAccountName()
 	})
 }
 
@@ -749,13 +731,6 @@ func (u *ProviderFiatAccountUpsertBulk) SetAccountName(v string) *ProviderFiatAc
 func (u *ProviderFiatAccountUpsertBulk) UpdateAccountName() *ProviderFiatAccountUpsertBulk {
 	return u.Update(func(s *ProviderFiatAccountUpsert) {
 		s.UpdateAccountName()
-	})
-}
-
-// ClearAccountName clears the value of the "account_name" field.
-func (u *ProviderFiatAccountUpsertBulk) ClearAccountName() *ProviderFiatAccountUpsertBulk {
-	return u.Update(func(s *ProviderFiatAccountUpsert) {
-		s.ClearAccountName()
 	})
 }
 

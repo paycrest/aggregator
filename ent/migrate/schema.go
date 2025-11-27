@@ -452,7 +452,7 @@ var (
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "institution", Type: field.TypeString, Size: 100},
 		{Name: "account_identifier", Type: field.TypeString, Size: 200},
-		{Name: "account_name", Type: field.TypeString, Nullable: true, Size: 200},
+		{Name: "account_name", Type: field.TypeString, Size: 200},
 		{Name: "provider_profile_fiat_accounts", Type: field.TypeString},
 	}
 	// ProviderFiatAccountsTable holds the schema information for the "provider_fiat_accounts" table.

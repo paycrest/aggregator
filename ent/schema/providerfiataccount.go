@@ -34,7 +34,7 @@ func (ProviderFiatAccount) Fields() []ent.Field {
 			NotEmpty(),
 		field.String("account_name").
 			MaxLen(200).
-			Optional(),
+			NotEmpty(),
 	}
 }
 

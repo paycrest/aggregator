@@ -45,7 +45,7 @@ CREATE TABLE "provider_fiat_accounts" (
   "updated_at" timestamptz NOT NULL,
   "institution" character varying NOT NULL,
   "account_identifier" character varying NOT NULL,
-  "account_name" character varying NULL,
+  "account_name" character varying NOT NULL,
   "provider_profile_fiat_accounts" character varying NOT NULL,
   PRIMARY KEY ("id"),
   CONSTRAINT "provider_fiat_accounts_provider_profiles_fiat_accounts" FOREIGN KEY ("provider_profile_fiat_accounts") REFERENCES "provider_profiles" ("id") ON UPDATE NO ACTION ON DELETE CASCADE

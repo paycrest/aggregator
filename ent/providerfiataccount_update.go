@@ -77,12 +77,6 @@ func (pfau *ProviderFiatAccountUpdate) SetNillableAccountName(s *string) *Provid
 	return pfau
 }
 
-// ClearAccountName clears the value of the "account_name" field.
-func (pfau *ProviderFiatAccountUpdate) ClearAccountName() *ProviderFiatAccountUpdate {
-	pfau.mutation.ClearAccountName()
-	return pfau
-}
-
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
 func (pfau *ProviderFiatAccountUpdate) SetProviderID(id string) *ProviderFiatAccountUpdate {
 	pfau.mutation.SetProviderID(id)
@@ -188,9 +182,6 @@ func (pfau *ProviderFiatAccountUpdate) sqlSave(ctx context.Context) (n int, err 
 	if value, ok := pfau.mutation.AccountName(); ok {
 		_spec.SetField(providerfiataccount.FieldAccountName, field.TypeString, value)
 	}
-	if pfau.mutation.AccountNameCleared() {
-		_spec.ClearField(providerfiataccount.FieldAccountName, field.TypeString)
-	}
 	if pfau.mutation.ProviderCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -285,12 +276,6 @@ func (pfauo *ProviderFiatAccountUpdateOne) SetNillableAccountName(s *string) *Pr
 	if s != nil {
 		pfauo.SetAccountName(*s)
 	}
-	return pfauo
-}
-
-// ClearAccountName clears the value of the "account_name" field.
-func (pfauo *ProviderFiatAccountUpdateOne) ClearAccountName() *ProviderFiatAccountUpdateOne {
-	pfauo.mutation.ClearAccountName()
 	return pfauo
 }
 
@@ -428,9 +413,6 @@ func (pfauo *ProviderFiatAccountUpdateOne) sqlSave(ctx context.Context) (_node *
 	}
 	if value, ok := pfauo.mutation.AccountName(); ok {
 		_spec.SetField(providerfiataccount.FieldAccountName, field.TypeString, value)
-	}
-	if pfauo.mutation.AccountNameCleared() {
-		_spec.ClearField(providerfiataccount.FieldAccountName, field.TypeString)
 	}
 	if pfauo.mutation.ProviderCleared() {
 		edge := &sqlgraph.EdgeSpec{

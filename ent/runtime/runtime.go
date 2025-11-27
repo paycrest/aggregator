@@ -430,7 +430,21 @@ func init() {
 	// providerfiataccountDescAccountName is the schema descriptor for account_name field.
 	providerfiataccountDescAccountName := providerfiataccountFields[3].Descriptor()
 	// providerfiataccount.AccountNameValidator is a validator for the "account_name" field. It is called by the builders before save.
-	providerfiataccount.AccountNameValidator = providerfiataccountDescAccountName.Validators[0].(func(string) error)
+	providerfiataccount.AccountNameValidator = func() func(string) error {
+		validators := providerfiataccountDescAccountName.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(account_name string) error {
+			for _, fn := range fns {
+				if err := fn(account_name); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
 	// providerfiataccountDescID is the schema descriptor for id field.
 	providerfiataccountDescID := providerfiataccountFields[0].Descriptor()
 	// providerfiataccount.DefaultID holds the default value on creation for the id field.
