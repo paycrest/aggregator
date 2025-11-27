@@ -17,6 +17,7 @@ import (
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
+	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	providerprofile "github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
@@ -721,7 +722,11 @@ func (ctrl *SenderController) GetPaymentOrders(ctx *gin.Context) {
 	// Check if this is an export request
 	export := ctx.Query("export")
 	isExport := export == "csv" || export == "true"
-	
+
+	fromDateStr := ctx.Query("from")
+	toDateStr := ctx.Query("to")
+
+
 	// Check if this is a search request
 	searchParam := ctx.Query("search")
 	searchText := strings.TrimSpace(searchParam)
@@ -736,6 +741,10 @@ func (ctrl *SenderController) GetPaymentOrders(ctx *gin.Context) {
 	
 	// Handle export request
 	if isExport {
+		if fromDateStr == "" || toDateStr == "" {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Both 'from' and 'to' date parameters are required for export", nil)
+			return
+		}
 		ctrl.handleExportPaymentOrders(ctx, sender)
 		return
 	}
@@ -819,36 +828,29 @@ func (ctrl *SenderController) handleSearchPaymentOrders(ctx *gin.Context, sender
 	)
 
 	// Apply text search across all relevant fields
-	paymentOrderQuery = paymentOrderQuery.Where(
-		paymentorder.Or(
-			// Direct payment order fields
-			paymentorder.ReferenceContains(searchText),
-			paymentorder.TxHashContains(searchText),
-			paymentorder.GatewayIDContains(searchText),
-			paymentorder.ReceiveAddressTextContains(searchText),
-			paymentorder.FromAddressContains(searchText),
-			paymentorder.ReturnAddressContains(searchText),
-			paymentorder.FeeAddressContains(searchText),
-			// Search in recipient fields
-			paymentorder.HasRecipientWith(
-				paymentorderrecipient.Or(
-					paymentorderrecipient.AccountIdentifierContains(searchText),
-					paymentorderrecipient.AccountNameContains(searchText),
-					paymentorderrecipient.MemoContains(searchText),
-					paymentorderrecipient.InstitutionContains(searchText),
-				),
-			),
-			// Search in token symbol
-			paymentorder.HasTokenWith(
-				tokenEnt.SymbolContains(searchText),
-			),
-			// Search in network identifier
-			paymentorder.HasTokenWith(
-				tokenEnt.HasNetworkWith(
-					network.IdentifierContains(searchText),
-				),
+	var searchPredicates []predicate.PaymentOrder
+	
+	// Try to parse search text as UUID for exact ID match
+	if searchUUID, err := uuid.Parse(searchText); err == nil {
+		searchPredicates = append(searchPredicates, paymentorder.IDEQ(searchUUID))
+	}
+	
+	searchPredicates = append(searchPredicates,
+		paymentorder.ReceiveAddressTextContains(searchText),
+		paymentorder.FromAddressContains(searchText),
+		paymentorder.ReturnAddressContains(searchText),
+		paymentorder.HasRecipientWith(
+			paymentorderrecipient.Or(
+				paymentorderrecipient.AccountIdentifierContains(searchText),
+				paymentorderrecipient.AccountNameContains(searchText),
+				paymentorderrecipient.MemoContains(searchText),
+				paymentorderrecipient.InstitutionContains(searchText),
 			),
 		),
+	)
+	
+	paymentOrderQuery = paymentOrderQuery.Where(
+		paymentorder.Or(searchPredicates...),
 	)
 
 	// Get total count
@@ -1189,11 +1191,10 @@ func (ctrl *SenderController) generateCSVResponse(ctx *gin.Context, paymentOrder
 	csvHeaders := []string{
 		"Order ID",
 		"Reference",
-		"Amount",
-		"Amount (USD)",
-		"Amount Paid",
+		"Token Amount",
 		"Token",
 		"Network",
+		"Amount (USD)",
 		"Rate",
 		"Sender Fee",
 		"Transaction Fee",
@@ -1207,7 +1208,6 @@ func (ctrl *SenderController) generateCSVResponse(ctx *gin.Context, paymentOrder
 		"Return Address",
 		"Fee Address",
 		"Transaction Hash",
-		"Gateway ID",
 		"Created At",
 		"Updated At",
 	}
@@ -1231,10 +1231,9 @@ func (ctrl *SenderController) generateCSVResponse(ctx *gin.Context, paymentOrder
 			paymentOrder.ID.String(),
 			paymentOrder.Reference,
 			paymentOrder.Amount.String(),
-			paymentOrder.AmountInUsd.String(),
-			paymentOrder.AmountPaid.String(),
 			paymentOrder.Edges.Token.Symbol,
 			paymentOrder.Edges.Token.Edges.Network.Identifier,
+			paymentOrder.AmountInUsd.String(),
 			paymentOrder.Rate.String(),
 			paymentOrder.SenderFee.String(),
 			paymentOrder.NetworkFee.String(),
@@ -1248,7 +1247,6 @@ func (ctrl *SenderController) generateCSVResponse(ctx *gin.Context, paymentOrder
 			paymentOrder.ReturnAddress,
 			paymentOrder.FeeAddress,
 			paymentOrder.TxHash,
-			paymentOrder.GatewayID,
 			paymentOrder.CreatedAt.Format("2006-01-02 15:04:05"),
 			paymentOrder.UpdatedAt.Format("2006-01-02 15:04:05"),
 		}

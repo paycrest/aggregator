@@ -17,6 +17,7 @@ import (
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/token"
@@ -59,7 +60,10 @@ func (ctrl *ProviderController) GetLockPaymentOrders(ctx *gin.Context) {
 	// Check if this is an export request
 	export := ctx.Query("export")
 	isExport := export == "csv" || export == "true"
-	
+	fromDateStr := ctx.Query("from")
+	toDateStr := ctx.Query("to")
+
+
 	// Check if this is a search request
 	searchParam := ctx.Query("search")
 	searchText := strings.TrimSpace(searchParam)
@@ -74,6 +78,10 @@ func (ctrl *ProviderController) GetLockPaymentOrders(ctx *gin.Context) {
 	
 	// Handle export request
 	if isExport {
+		if fromDateStr == "" || toDateStr == "" {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Both 'from' and 'to' date parameters are required for export", nil)
+			return
+		}
 		ctrl.handleExportLockPaymentOrders(ctx, provider)
 		return
 	}
@@ -232,20 +240,20 @@ func (ctrl *ProviderController) handleSearchLockPaymentOrders(ctx *gin.Context, 
 	)
 
 	// Apply text search across all relevant fields
+	var searchPredicates []predicate.LockPaymentOrder
+	
+	// Try to parse search text as UUID for exact ID match
+	if searchUUID, err := uuid.Parse(searchText); err == nil {
+		searchPredicates = append(searchPredicates, lockpaymentorder.IDEQ(searchUUID))
+	}
+
+	searchPredicates = append(searchPredicates,
+		lockpaymentorder.AccountIdentifierContains(searchText),
+		lockpaymentorder.AccountNameContains(searchText),
+	)
+	
 	lockPaymentOrderQuery = lockPaymentOrderQuery.Where(
-		lockpaymentorder.Or(
-			// Direct lock payment order fields
-			lockpaymentorder.GatewayIDContains(searchText),
-			lockpaymentorder.TxHashContains(searchText),
-			lockpaymentorder.InstitutionContains(searchText),
-			lockpaymentorder.AccountIdentifierContains(searchText),
-			lockpaymentorder.AccountNameContains(searchText),
-			lockpaymentorder.MemoContains(searchText),
-			// Search in token symbol
-			lockpaymentorder.HasTokenWith(
-				token.SymbolContains(searchText),
-			),
-		),
+		lockpaymentorder.Or(searchPredicates...),
 	)
 
 	// Get total count
@@ -403,6 +411,9 @@ func (ctrl *ProviderController) handleExportLockPaymentOrders(ctx *gin.Context, 
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
+		WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) {
+			pbq.WithCurrency()
+		}).
 		Limit(maxExportLimit).
 		Order(ent.Desc(lockpaymentorder.FieldCreatedAt), ent.Desc(lockpaymentorder.FieldID)).
 		All(ctx)
@@ -427,20 +438,18 @@ func (ctrl *ProviderController) handleExportLockPaymentOrders(ctx *gin.Context, 
 	// Write CSV header
 	csvHeaders := []string{
 		"Order ID",
-		"Gateway ID",
-		"Amount",
-		"Amount (USD)",
+		"Token Amount",
 		"Token",
 		"Network",
 		"Rate",
+		"Fiat Amount",
 		"Status",
 		"Institution",
 		"Account Identifier",
 		"Account Name",
+		"Currency",
 		"Memo",
 		"Transaction Hash",
-		"Cancellation Reasons",
-		"Cancellation Count",
 		"Created At",
 		"Updated At",
 	}
@@ -451,27 +460,52 @@ func (ctrl *ProviderController) handleExportLockPaymentOrders(ctx *gin.Context, 
 		return
 	}
 
+	institutionMap := make(map[string]string)
+	uniqueInstitutions := make(map[string]bool)
+
+	for _, order := range lockPaymentOrders {
+		if order.Institution != "" {
+			uniqueInstitutions[order.Institution] = true
+		}
+	}
+
+	for code := range uniqueInstitutions {
+		institution, err := u.GetInstitutionByCode(ctx, code, false)
+		if err != nil {
+			// Use raw code as fallback
+			institutionMap[code] = code
+		} else {
+			institutionMap[code] = institution.Name
+		}
+	}
+
 	// Write data rows
 	for _, lockPaymentOrder := range lockPaymentOrders {
-		// Convert cancellation reasons slice to string
-		cancellationReasons := strings.Join(lockPaymentOrder.CancellationReasons, "; ")
+		// Look up institution name from pre-fetched map
+		institutionName := lockPaymentOrder.Institution
+		if name, exists := institutionMap[lockPaymentOrder.Institution]; exists {
+			institutionName = name
+		}
+
+		var currencyCode string
+		if lockPaymentOrder.Edges.ProvisionBucket != nil && lockPaymentOrder.Edges.ProvisionBucket.Edges.Currency != nil {
+			currencyCode = lockPaymentOrder.Edges.ProvisionBucket.Edges.Currency.Code
+		}
 
 		row := []string{
 			lockPaymentOrder.ID.String(),
-			lockPaymentOrder.GatewayID,
 			lockPaymentOrder.Amount.String(),
-			lockPaymentOrder.AmountInUsd.String(),
 			lockPaymentOrder.Edges.Token.Symbol,
 			lockPaymentOrder.Edges.Token.Edges.Network.Identifier,
 			lockPaymentOrder.Rate.String(),
+			lockPaymentOrder.Rate.Mul(lockPaymentOrder.Amount).String(),
 			string(lockPaymentOrder.Status),
-			lockPaymentOrder.Institution,
+			institutionName,
 			lockPaymentOrder.AccountIdentifier,
 			lockPaymentOrder.AccountName,
+			currencyCode,
 			lockPaymentOrder.Memo,
 			lockPaymentOrder.TxHash,
-			cancellationReasons,
-			strconv.Itoa(lockPaymentOrder.CancellationCount),
 			lockPaymentOrder.CreatedAt.Format("2006-01-02 15:04:05"),
 			lockPaymentOrder.UpdatedAt.Format("2006-01-02 15:04:05"),
 		}
@@ -481,7 +515,6 @@ func (ctrl *ProviderController) handleExportLockPaymentOrders(ctx *gin.Context, 
 			// Continue writing other rows
 		}
 	}
-
 	// CSV is automatically sent as response through ctx.Writer
 	logger.Infof("Successfully exported %d lock payment orders for provider %s", len(lockPaymentOrders), provider.ID)
 }
