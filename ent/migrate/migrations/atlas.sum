@@ -1,4 +1,4 @@
-h1:MLbq7PV4rBz8vfvusW0KdlVDd52HsI8Cd9nJsMOKFGo=
+h1:ZPzFzn+GRQ8efATKUdSxMbACsXRNuxZxjhyseIxl4Tc=
 20240118234246_initial.sql h1:dYuYBqns33WT+3p8VQvbKUP62k3k6w6h8S+FqNqgSvU=
 20240130122324_order_from_address.sql h1:mMVI2iBUd1roIYLUqu0d2jZ7+B6exppRN8qqn+aIHx4=
 20240202010744_fees_on_order.sql h1:P7ngxZKqDKefBM5vk6M3kbWeMPVwbZ4MZVcLBjEfS34=
@@ -65,4 +65,4 @@ h1:MLbq7PV4rBz8vfvusW0KdlVDd52HsI8Cd9nJsMOKFGo=
 20250925000000_add_kyb_rejection_comment.sql h1:0B5UopQ9X9TT5E44QtRs5dTSpIZ1cEiUfP75PeDVfts=
 20250929152701_mwk_institutions.sql h1:ZcHuR4TlJobqippQLU85vgiLXX120O/Kj8eW87El8Xw=
 20251127160716_provider_fiat_accounts.sql h1:sMYAz1alpFpIi6QSfUJTjhJ5UejbsQycFS7XkZcH03s=
-20251127162259_add_min_max_otc.sql h1:lNr8UNs5aJmREBCJewiepLcz/tXRKVbuNabj7I3SDY4=
+20251127162259_add_min_max_otc.sql h1:fWw2k6GSDGF0IWbw81AbVymRnHxvoGRtW+EnpSEEv9E=

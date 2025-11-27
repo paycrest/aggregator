@@ -244,7 +244,7 @@ type SenderOrderTokenPayload struct {
 
 // SenderProfilePayload is the payload for the sender profile endpoint
 type SenderProfilePayload struct {
-	WebhookURL      string                    `json:"webhookURL"`
+	WebhookURL      string                    `json:"webhookUrl"`
 	DomainWhitelist []string                  `json:"domainWhitelist"`
 	Tokens          []SenderOrderTokenPayload `json:"tokens"`
 }
@@ -271,7 +271,7 @@ type ProviderProfilePayload struct {
 	HostIdentifier string                      `json:"hostIdentifier"`
 	IsAvailable    bool                        `json:"isAvailable"`
 	Tokens         []ProviderOrderTokenPayload `json:"tokens"`
-	FiatAccounts   []FiatAccountPayload        `json:"fiatAccounts"` 
+	FiatAccounts   []FiatAccountPayload        `json:"fiatAccounts"`
 	VisibilityMode string                      `json:"visibilityMode"`
 }
 
@@ -395,7 +395,7 @@ type LockPaymentOrderResponse struct {
 	Token               string                  `json:"token"`
 	GatewayID           string                  `json:"gatewayId"`
 	Amount              decimal.Decimal         `json:"amount"`
-	AmountInUSD         decimal.Decimal         `json:"amountInUSD"`
+	AmountInUSD         decimal.Decimal         `json:"amountInUsd"`
 	Rate                decimal.Decimal         `json:"rate"`
 	BlockNumber         int64                   `json:"blockNumber"`
 	TxHash              string                  `json:"txHash"`
@@ -428,7 +428,7 @@ type LockPaymentOrderSplitOrder struct {
 type LockPaymentOrderStatusResponse struct {
 	OrderID       string                       `json:"orderId"`
 	Amount        decimal.Decimal              `json:"amount"`
-	AmountInUSD   decimal.Decimal              `json:"amountInUSD"`
+	AmountInUSD   decimal.Decimal              `json:"amountInUsd"`
 	Token         string                       `json:"token"`
 	Network       string                       `json:"network"`
 	SettlePercent decimal.Decimal              `json:"settlePercent"`
@@ -482,7 +482,7 @@ type ReceiveAddressResponse struct {
 type PaymentOrderResponse struct {
 	ID             uuid.UUID             `json:"id"`
 	Amount         decimal.Decimal       `json:"amount"`
-	AmountInUSD    decimal.Decimal       `json:"amountInUSD"`
+	AmountInUSD    decimal.Decimal       `json:"amountInUsd"`
 	AmountPaid     decimal.Decimal       `json:"amountPaid"`
 	AmountReturned decimal.Decimal       `json:"amountReturned"`
 	Token          string                `json:"token"`
@@ -508,7 +508,7 @@ type PaymentOrderResponse struct {
 type PaymentOrderWebhookData struct {
 	ID             uuid.UUID             `json:"id"`
 	Amount         decimal.Decimal       `json:"amount"`
-	AmountInUSD    decimal.Decimal       `json:"amountInUSD"`
+	AmountInUSD    decimal.Decimal       `json:"amountInUsd"`
 	AmountPaid     decimal.Decimal       `json:"amountPaid"`
 	AmountReturned decimal.Decimal       `json:"amountReturned"`
 	PercentSettled decimal.Decimal       `json:"percentSettled"`
