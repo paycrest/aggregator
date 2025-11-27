@@ -257,8 +257,8 @@ type ProviderOrderTokenPayload struct {
 	FloatingConversionRate decimal.Decimal                       `json:"floatingConversionRate" binding:"required"`
 	MaxOrderAmount         decimal.Decimal                       `json:"maxOrderAmount" binding:"required,gt=0"`
 	MinOrderAmount         decimal.Decimal                       `json:"minOrderAmount" binding:"required,gt=0"`
-	MaxOrderAmountOTC      decimal.Decimal                       `json:"maxOrderAmountOtc,omitempty" binding:"omitempty,gte=0"`
-	MinOrderAmountOTC      decimal.Decimal                       `json:"minOrderAmountOtc,omitempty" binding:"omitempty,gte=0"`
+	MaxOrderAmountOTC      decimal.Decimal                       `json:"maxOrderAmountOtc" binding:"required,gte=0"`
+	MinOrderAmountOTC      decimal.Decimal                       `json:"minOrderAmountOtc" binding:"required,gte=0"`
 	RateSlippage           decimal.Decimal                       `json:"rateSlippage" binding:"omitempty,gte=0.1"`
 	Address                string                                `json:"address" binding:"required"`
 	Network                string                                `json:"network" binding:"required"`
