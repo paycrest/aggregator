@@ -60,7 +60,10 @@ func (ctrl *ProviderController) GetLockPaymentOrders(ctx *gin.Context) {
 	// Check if this is an export request
 	export := ctx.Query("export")
 	isExport := export == "csv" || export == "true"
-	
+	fromDateStr := ctx.Query("from")
+	toDateStr := ctx.Query("to")
+
+
 	// Check if this is a search request
 	searchParam := ctx.Query("search")
 	searchText := strings.TrimSpace(searchParam)
@@ -75,6 +78,13 @@ func (ctrl *ProviderController) GetLockPaymentOrders(ctx *gin.Context) {
 	
 	// Handle export request
 	if isExport {
+		if fromDateStr == "" || toDateStr == "" {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Date range is required for export", types.ErrorData{
+				Field:   "from,to",
+				Message: "Both 'from' and 'to' date parameters are required for export",
+			})
+			return
+		}
 		ctrl.handleExportLockPaymentOrders(ctx, provider)
 		return
 	}

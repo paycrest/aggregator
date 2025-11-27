@@ -1154,6 +1154,7 @@ func TestSender(t *testing.T) {
 		t.Run("should return error for invalid date format", func(t *testing.T) {
 			var payload = map[string]interface{}{
 				"from":      "invalid-date",
+				"to":		"2024-12-31",
 				"export":    "csv",
 				"timestamp": time.Now().Unix(),
 			}
@@ -1164,7 +1165,7 @@ func TestSender(t *testing.T) {
 				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?from=%s&timestamp=%v&export=csv", payload["from"], payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?from=%s&to=%s&timestamp=%v&export=csv", payload["from"], payload["to"], payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusBadRequest, res.Code)
 
@@ -1205,28 +1206,6 @@ func TestSender(t *testing.T) {
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
 			assert.Equal(t, "No orders found in the specified date range", response.Message)
-		})
-
-		t.Run("should export all orders when no date range specified", func(t *testing.T) {
-			var payload = map[string]interface{}{
-				"export":    "csv",
-				"timestamp": time.Now().Unix(),
-			}
-
-			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
-
-			headers := map[string]string{
-				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
-			}
-
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?timestamp=%v&export=csv", payload["timestamp"]), nil, headers, router)
-			assert.NoError(t, err)
-			assert.Equal(t, http.StatusOK, res.Code)
-
-			csvContent := res.Body.String()
-			lines := strings.Split(strings.TrimSpace(csvContent), "\n")
-			// Should have header + data rows for all orders (at least 11: 10 from setup + 1 from InitiatePaymentOrder + others from tests)
-			assert.GreaterOrEqual(t, len(lines), 12)
 		})
 
 		t.Run("should only export orders for authenticated sender", func(t *testing.T) {

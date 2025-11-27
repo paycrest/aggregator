@@ -7,7 +7,6 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -2221,6 +2220,7 @@ func TestProvider(t *testing.T) {
 		t.Run("should return error for invalid date format", func(t *testing.T) {
 			var payload = map[string]interface{}{
 				"from":      "invalid-date",
+				"to":        "2023-13-40",
 				"export": "csv",
 				"timestamp": time.Now().Unix(),
 			}
@@ -2232,7 +2232,7 @@ func TestProvider(t *testing.T) {
 				"Client-Type":   "backend",
 			}
 
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?export=csv&from=%s&timestamp=%v", payload["from"], payload["timestamp"]), nil, headers, router)
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?export=csv&from=%s&to=%s&timestamp=%v", payload["from"], payload["to"], payload["timestamp"]), nil, headers, router)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusBadRequest, res.Code)
 
@@ -2269,29 +2269,6 @@ func TestProvider(t *testing.T) {
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
 			assert.Equal(t, "No orders found in the specified date range", response.Message)
-		})
-
-		t.Run("should export all orders when no date range specified", func(t *testing.T) {
-			var payload = map[string]interface{}{
-				"export": "csv",
-				"timestamp": time.Now().Unix(),
-			}
-
-			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
-
-			headers := map[string]string{
-				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
-				"Client-Type":   "backend",
-			}
-
-			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?export=csv&timestamp=%v", payload["timestamp"]), nil, headers, router)
-			assert.NoError(t, err)
-			assert.Equal(t, http.StatusOK, res.Code)
-
-			csvContent := res.Body.String()
-			lines := strings.Split(strings.TrimSpace(csvContent), "\n")
-			// Should have header + data rows for all orders (at least from setup)
-			assert.GreaterOrEqual(t, len(lines), 11) // 1 header + 10 from setup
 		})
 
 		t.Run("should only export orders for authenticated provider", func(t *testing.T) {
