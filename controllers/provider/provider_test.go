@@ -2148,7 +2148,7 @@ func TestProvider(t *testing.T) {
 			// Check CSV content
 			csvContent := res.Body.String()
 			assert.Contains(t, csvContent, "Order ID,Token Amount")
-			assert.Contains(t, csvContent, "Token,Network,Amount (USD),Rate,Status")
+			assert.Contains(t, csvContent, "Token,Network,Rate,Fiat Amount,Status")
 			assert.Contains(t, csvContent, "Institution,Account Identifier,Account Name")
 
 			// Should contain data from test orders
