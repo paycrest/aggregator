@@ -79,10 +79,7 @@ func (ctrl *ProviderController) GetLockPaymentOrders(ctx *gin.Context) {
 	// Handle export request
 	if isExport {
 		if fromDateStr == "" || toDateStr == "" {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Date range is required for export", types.ErrorData{
-				Field:   "from,to",
-				Message: "Both 'from' and 'to' date parameters are required for export",
-			})
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Both 'from' and 'to' date parameters are required for export", nil)
 			return
 		}
 		ctrl.handleExportLockPaymentOrders(ctx, provider)
