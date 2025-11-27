@@ -29,6 +29,12 @@ func (pfau *ProviderFiatAccountUpdate) Where(ps ...predicate.ProviderFiatAccount
 	return pfau
 }
 
+// SetUpdatedAt sets the "updated_at" field.
+func (pfau *ProviderFiatAccountUpdate) SetUpdatedAt(t time.Time) *ProviderFiatAccountUpdate {
+	pfau.mutation.SetUpdatedAt(t)
+	return pfau
+}
+
 // SetInstitution sets the "institution" field.
 func (pfau *ProviderFiatAccountUpdate) SetInstitution(s string) *ProviderFiatAccountUpdate {
 	pfau.mutation.SetInstitution(s)
@@ -74,26 +80,6 @@ func (pfau *ProviderFiatAccountUpdate) SetNillableAccountName(s *string) *Provid
 // ClearAccountName clears the value of the "account_name" field.
 func (pfau *ProviderFiatAccountUpdate) ClearAccountName() *ProviderFiatAccountUpdate {
 	pfau.mutation.ClearAccountName()
-	return pfau
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (pfau *ProviderFiatAccountUpdate) SetCreatedAt(t time.Time) *ProviderFiatAccountUpdate {
-	pfau.mutation.SetCreatedAt(t)
-	return pfau
-}
-
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (pfau *ProviderFiatAccountUpdate) SetNillableCreatedAt(t *time.Time) *ProviderFiatAccountUpdate {
-	if t != nil {
-		pfau.SetCreatedAt(*t)
-	}
-	return pfau
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (pfau *ProviderFiatAccountUpdate) SetUpdatedAt(t time.Time) *ProviderFiatAccountUpdate {
-	pfau.mutation.SetUpdatedAt(t)
 	return pfau
 }
 
@@ -190,6 +176,9 @@ func (pfau *ProviderFiatAccountUpdate) sqlSave(ctx context.Context) (n int, err 
 			}
 		}
 	}
+	if value, ok := pfau.mutation.UpdatedAt(); ok {
+		_spec.SetField(providerfiataccount.FieldUpdatedAt, field.TypeTime, value)
+	}
 	if value, ok := pfau.mutation.Institution(); ok {
 		_spec.SetField(providerfiataccount.FieldInstitution, field.TypeString, value)
 	}
@@ -201,12 +190,6 @@ func (pfau *ProviderFiatAccountUpdate) sqlSave(ctx context.Context) (n int, err 
 	}
 	if pfau.mutation.AccountNameCleared() {
 		_spec.ClearField(providerfiataccount.FieldAccountName, field.TypeString)
-	}
-	if value, ok := pfau.mutation.CreatedAt(); ok {
-		_spec.SetField(providerfiataccount.FieldCreatedAt, field.TypeTime, value)
-	}
-	if value, ok := pfau.mutation.UpdatedAt(); ok {
-		_spec.SetField(providerfiataccount.FieldUpdatedAt, field.TypeTime, value)
 	}
 	if pfau.mutation.ProviderCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -257,6 +240,12 @@ type ProviderFiatAccountUpdateOne struct {
 	mutation *ProviderFiatAccountMutation
 }
 
+// SetUpdatedAt sets the "updated_at" field.
+func (pfauo *ProviderFiatAccountUpdateOne) SetUpdatedAt(t time.Time) *ProviderFiatAccountUpdateOne {
+	pfauo.mutation.SetUpdatedAt(t)
+	return pfauo
+}
+
 // SetInstitution sets the "institution" field.
 func (pfauo *ProviderFiatAccountUpdateOne) SetInstitution(s string) *ProviderFiatAccountUpdateOne {
 	pfauo.mutation.SetInstitution(s)
@@ -302,26 +291,6 @@ func (pfauo *ProviderFiatAccountUpdateOne) SetNillableAccountName(s *string) *Pr
 // ClearAccountName clears the value of the "account_name" field.
 func (pfauo *ProviderFiatAccountUpdateOne) ClearAccountName() *ProviderFiatAccountUpdateOne {
 	pfauo.mutation.ClearAccountName()
-	return pfauo
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (pfauo *ProviderFiatAccountUpdateOne) SetCreatedAt(t time.Time) *ProviderFiatAccountUpdateOne {
-	pfauo.mutation.SetCreatedAt(t)
-	return pfauo
-}
-
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (pfauo *ProviderFiatAccountUpdateOne) SetNillableCreatedAt(t *time.Time) *ProviderFiatAccountUpdateOne {
-	if t != nil {
-		pfauo.SetCreatedAt(*t)
-	}
-	return pfauo
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (pfauo *ProviderFiatAccountUpdateOne) SetUpdatedAt(t time.Time) *ProviderFiatAccountUpdateOne {
-	pfauo.mutation.SetUpdatedAt(t)
 	return pfauo
 }
 
@@ -448,6 +417,9 @@ func (pfauo *ProviderFiatAccountUpdateOne) sqlSave(ctx context.Context) (_node *
 			}
 		}
 	}
+	if value, ok := pfauo.mutation.UpdatedAt(); ok {
+		_spec.SetField(providerfiataccount.FieldUpdatedAt, field.TypeTime, value)
+	}
 	if value, ok := pfauo.mutation.Institution(); ok {
 		_spec.SetField(providerfiataccount.FieldInstitution, field.TypeString, value)
 	}
@@ -459,12 +431,6 @@ func (pfauo *ProviderFiatAccountUpdateOne) sqlSave(ctx context.Context) (_node *
 	}
 	if pfauo.mutation.AccountNameCleared() {
 		_spec.ClearField(providerfiataccount.FieldAccountName, field.TypeString)
-	}
-	if value, ok := pfauo.mutation.CreatedAt(); ok {
-		_spec.SetField(providerfiataccount.FieldCreatedAt, field.TypeTime, value)
-	}
-	if value, ok := pfauo.mutation.UpdatedAt(); ok {
-		_spec.SetField(providerfiataccount.FieldUpdatedAt, field.TypeTime, value)
 	}
 	if pfauo.mutation.ProviderCleared() {
 		edge := &sqlgraph.EdgeSpec{

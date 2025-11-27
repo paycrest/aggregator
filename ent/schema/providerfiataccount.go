@@ -1,8 +1,6 @@
 package schema
 
 import (
-	"time"
-
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
@@ -14,6 +12,13 @@ import (
 // ProviderFiatAccount holds the schema definition for the ProviderFiatAccount entity.
 type ProviderFiatAccount struct {
 	ent.Schema
+}
+
+// Mixin of the ProviderFiatAccount.
+func (ProviderFiatAccount) Mixin() []ent.Mixin {
+	return []ent.Mixin{
+		TimeMixin{},
+	}
 }
 
 // Fields of the ProviderFiatAccount  .
@@ -30,11 +35,6 @@ func (ProviderFiatAccount) Fields() []ent.Field {
 		field.String("account_name").
 			MaxLen(200).
 			Optional(),
-		field.Time("created_at").
-			Default(time.Now),
-		field.Time("updated_at").
-			Default(time.Now).
-			UpdateDefault(time.Now),
 	}
 }
 
@@ -42,7 +42,7 @@ func (ProviderFiatAccount) Fields() []ent.Field {
 func (ProviderFiatAccount) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("provider", ProviderProfile.Type).
-			Ref("provider_fiat_accounts").
+			Ref("fiat_accounts").
 			Unique().
 			Required().
 			Annotations(entsql.OnDelete(entsql.Cascade)),

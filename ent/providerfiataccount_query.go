@@ -300,12 +300,12 @@ func (pfaq *ProviderFiatAccountQuery) WithProvider(opts ...func(*ProviderProfile
 // Example:
 //
 //	var v []struct {
-//		Institution string `json:"institution,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.ProviderFiatAccount.Query().
-//		GroupBy(providerfiataccount.FieldInstitution).
+//		GroupBy(providerfiataccount.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (pfaq *ProviderFiatAccountQuery) GroupBy(field string, fields ...string) *ProviderFiatAccountGroupBy {
@@ -323,11 +323,11 @@ func (pfaq *ProviderFiatAccountQuery) GroupBy(field string, fields ...string) *P
 // Example:
 //
 //	var v []struct {
-//		Institution string `json:"institution,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //	}
 //
 //	client.ProviderFiatAccount.Query().
-//		Select(providerfiataccount.FieldInstitution).
+//		Select(providerfiataccount.FieldCreatedAt).
 //		Scan(ctx, &v)
 func (pfaq *ProviderFiatAccountQuery) Select(fields ...string) *ProviderFiatAccountSelect {
 	pfaq.ctx.Fields = append(pfaq.ctx.Fields, fields...)
@@ -414,10 +414,10 @@ func (pfaq *ProviderFiatAccountQuery) loadProvider(ctx context.Context, query *P
 	ids := make([]string, 0, len(nodes))
 	nodeids := make(map[string][]*ProviderFiatAccount)
 	for i := range nodes {
-		if nodes[i].provider_profile_provider_fiat_accounts == nil {
+		if nodes[i].provider_profile_fiat_accounts == nil {
 			continue
 		}
-		fk := *nodes[i].provider_profile_provider_fiat_accounts
+		fk := *nodes[i].provider_profile_fiat_accounts
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -434,7 +434,7 @@ func (pfaq *ProviderFiatAccountQuery) loadProvider(ctx context.Context, query *P
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provider_profile_provider_fiat_accounts" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provider_profile_fiat_accounts" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

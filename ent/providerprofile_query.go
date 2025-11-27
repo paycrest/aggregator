@@ -28,19 +28,19 @@ import (
 // ProviderProfileQuery is the builder for querying ProviderProfile entities.
 type ProviderProfileQuery struct {
 	config
-	ctx                      *QueryContext
-	order                    []providerprofile.OrderOption
-	inters                   []Interceptor
-	predicates               []predicate.ProviderProfile
-	withUser                 *UserQuery
-	withAPIKey               *APIKeyQuery
-	withProviderCurrencies   *ProviderCurrenciesQuery
-	withProvisionBuckets     *ProvisionBucketQuery
-	withOrderTokens          *ProviderOrderTokenQuery
-	withProviderRating       *ProviderRatingQuery
-	withAssignedOrders       *LockPaymentOrderQuery
-	withProviderFiatAccounts *ProviderFiatAccountQuery
-	withFKs                  bool
+	ctx                    *QueryContext
+	order                  []providerprofile.OrderOption
+	inters                 []Interceptor
+	predicates             []predicate.ProviderProfile
+	withUser               *UserQuery
+	withAPIKey             *APIKeyQuery
+	withProviderCurrencies *ProviderCurrenciesQuery
+	withProvisionBuckets   *ProvisionBucketQuery
+	withOrderTokens        *ProviderOrderTokenQuery
+	withProviderRating     *ProviderRatingQuery
+	withAssignedOrders     *LockPaymentOrderQuery
+	withFiatAccounts       *ProviderFiatAccountQuery
+	withFKs                bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -231,8 +231,8 @@ func (ppq *ProviderProfileQuery) QueryAssignedOrders() *LockPaymentOrderQuery {
 	return query
 }
 
-// QueryProviderFiatAccounts chains the current query on the "provider_fiat_accounts" edge.
-func (ppq *ProviderProfileQuery) QueryProviderFiatAccounts() *ProviderFiatAccountQuery {
+// QueryFiatAccounts chains the current query on the "fiat_accounts" edge.
+func (ppq *ProviderProfileQuery) QueryFiatAccounts() *ProviderFiatAccountQuery {
 	query := (&ProviderFiatAccountClient{config: ppq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := ppq.prepareQuery(ctx); err != nil {
@@ -245,7 +245,7 @@ func (ppq *ProviderProfileQuery) QueryProviderFiatAccounts() *ProviderFiatAccoun
 		step := sqlgraph.NewStep(
 			sqlgraph.From(providerprofile.Table, providerprofile.FieldID, selector),
 			sqlgraph.To(providerfiataccount.Table, providerfiataccount.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.ProviderFiatAccountsTable, providerprofile.ProviderFiatAccountsColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.FiatAccountsTable, providerprofile.FiatAccountsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(ppq.driver.Dialect(), step)
 		return fromU, nil
@@ -440,19 +440,19 @@ func (ppq *ProviderProfileQuery) Clone() *ProviderProfileQuery {
 		return nil
 	}
 	return &ProviderProfileQuery{
-		config:                   ppq.config,
-		ctx:                      ppq.ctx.Clone(),
-		order:                    append([]providerprofile.OrderOption{}, ppq.order...),
-		inters:                   append([]Interceptor{}, ppq.inters...),
-		predicates:               append([]predicate.ProviderProfile{}, ppq.predicates...),
-		withUser:                 ppq.withUser.Clone(),
-		withAPIKey:               ppq.withAPIKey.Clone(),
-		withProviderCurrencies:   ppq.withProviderCurrencies.Clone(),
-		withProvisionBuckets:     ppq.withProvisionBuckets.Clone(),
-		withOrderTokens:          ppq.withOrderTokens.Clone(),
-		withProviderRating:       ppq.withProviderRating.Clone(),
-		withAssignedOrders:       ppq.withAssignedOrders.Clone(),
-		withProviderFiatAccounts: ppq.withProviderFiatAccounts.Clone(),
+		config:                 ppq.config,
+		ctx:                    ppq.ctx.Clone(),
+		order:                  append([]providerprofile.OrderOption{}, ppq.order...),
+		inters:                 append([]Interceptor{}, ppq.inters...),
+		predicates:             append([]predicate.ProviderProfile{}, ppq.predicates...),
+		withUser:               ppq.withUser.Clone(),
+		withAPIKey:             ppq.withAPIKey.Clone(),
+		withProviderCurrencies: ppq.withProviderCurrencies.Clone(),
+		withProvisionBuckets:   ppq.withProvisionBuckets.Clone(),
+		withOrderTokens:        ppq.withOrderTokens.Clone(),
+		withProviderRating:     ppq.withProviderRating.Clone(),
+		withAssignedOrders:     ppq.withAssignedOrders.Clone(),
+		withFiatAccounts:       ppq.withFiatAccounts.Clone(),
 		// clone intermediate query.
 		sql:  ppq.sql.Clone(),
 		path: ppq.path,
@@ -536,14 +536,14 @@ func (ppq *ProviderProfileQuery) WithAssignedOrders(opts ...func(*LockPaymentOrd
 	return ppq
 }
 
-// WithProviderFiatAccounts tells the query-builder to eager-load the nodes that are connected to
-// the "provider_fiat_accounts" edge. The optional arguments are used to configure the query builder of the edge.
-func (ppq *ProviderProfileQuery) WithProviderFiatAccounts(opts ...func(*ProviderFiatAccountQuery)) *ProviderProfileQuery {
+// WithFiatAccounts tells the query-builder to eager-load the nodes that are connected to
+// the "fiat_accounts" edge. The optional arguments are used to configure the query builder of the edge.
+func (ppq *ProviderProfileQuery) WithFiatAccounts(opts ...func(*ProviderFiatAccountQuery)) *ProviderProfileQuery {
 	query := (&ProviderFiatAccountClient{config: ppq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	ppq.withProviderFiatAccounts = query
+	ppq.withFiatAccounts = query
 	return ppq
 }
 
@@ -634,7 +634,7 @@ func (ppq *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 			ppq.withOrderTokens != nil,
 			ppq.withProviderRating != nil,
 			ppq.withAssignedOrders != nil,
-			ppq.withProviderFiatAccounts != nil,
+			ppq.withFiatAccounts != nil,
 		}
 	)
 	if ppq.withUser != nil {
@@ -713,11 +713,11 @@ func (ppq *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 			return nil, err
 		}
 	}
-	if query := ppq.withProviderFiatAccounts; query != nil {
-		if err := ppq.loadProviderFiatAccounts(ctx, query, nodes,
-			func(n *ProviderProfile) { n.Edges.ProviderFiatAccounts = []*ProviderFiatAccount{} },
+	if query := ppq.withFiatAccounts; query != nil {
+		if err := ppq.loadFiatAccounts(ctx, query, nodes,
+			func(n *ProviderProfile) { n.Edges.FiatAccounts = []*ProviderFiatAccount{} },
 			func(n *ProviderProfile, e *ProviderFiatAccount) {
-				n.Edges.ProviderFiatAccounts = append(n.Edges.ProviderFiatAccounts, e)
+				n.Edges.FiatAccounts = append(n.Edges.FiatAccounts, e)
 			}); err != nil {
 			return nil, err
 		}
@@ -967,7 +967,7 @@ func (ppq *ProviderProfileQuery) loadAssignedOrders(ctx context.Context, query *
 	}
 	return nil
 }
-func (ppq *ProviderProfileQuery) loadProviderFiatAccounts(ctx context.Context, query *ProviderFiatAccountQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *ProviderFiatAccount)) error {
+func (ppq *ProviderProfileQuery) loadFiatAccounts(ctx context.Context, query *ProviderFiatAccountQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *ProviderFiatAccount)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[string]*ProviderProfile)
 	for i := range nodes {
@@ -979,20 +979,20 @@ func (ppq *ProviderProfileQuery) loadProviderFiatAccounts(ctx context.Context, q
 	}
 	query.withFKs = true
 	query.Where(predicate.ProviderFiatAccount(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(providerprofile.ProviderFiatAccountsColumn), fks...))
+		s.Where(sql.InValues(s.C(providerprofile.FiatAccountsColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.provider_profile_provider_fiat_accounts
+		fk := n.provider_profile_fiat_accounts
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "provider_profile_provider_fiat_accounts" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "provider_profile_fiat_accounts" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "provider_profile_provider_fiat_accounts" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "provider_profile_fiat_accounts" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

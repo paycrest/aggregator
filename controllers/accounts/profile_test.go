@@ -787,33 +787,6 @@ func TestProfile(t *testing.T) {
 				assert.Equal(t, zenithBank.Code, account.Institution)
 			})
 
-			t.Run("creates fiat account without account name", func(t *testing.T) {
-				payload := types.ProviderProfilePayload{
-					TradingName:    testCtx.providerProfile.TradingName,
-					HostIdentifier: testCtx.providerProfile.HostIdentifier,
-					Currency:       "KES",
-					FiatAccounts: []types.FiatAccountPayload{
-						{
-							AccountIdentifier: "9876543210",
-							Institution:       zenithBank.Code,
-						},
-					},
-				}
-
-				res := profileUpdateRequest(payload)
-				assert.Equal(t, http.StatusOK, res.Code)
-
-				// Verify account was created without name
-				account, err := db.Client.ProviderFiatAccount.
-					Query().
-					Where(
-						providerfiataccount.AccountIdentifierEQ("9876543210"),
-					).
-					Only(ctx)
-				assert.NoError(t, err)
-				assert.Empty(t, account.AccountName)
-			})
-
 			t.Run("updates existing fiat account (upsert)", func(t *testing.T) {
 				// First create an account
 				payload := types.ProviderProfilePayload{
@@ -973,10 +946,12 @@ func TestProfile(t *testing.T) {
 					FiatAccounts: []types.FiatAccountPayload{
 						{
 							AccountIdentifier: "7777777777",
+							AccountName:       "Valid Account",
 							Institution:       zenithBank.Code,
 						},
 						{
 							AccountIdentifier: "8888888888",
+							AccountName:       "Invalid Bank Account",
 							Institution:       "INVALID_BANK",
 						},
 					},

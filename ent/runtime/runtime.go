@@ -376,8 +376,21 @@ func init() {
 	providercurrenciesDescID := providercurrenciesFields[0].Descriptor()
 	// providercurrencies.DefaultID holds the default value on creation for the id field.
 	providercurrencies.DefaultID = providercurrenciesDescID.Default.(func() uuid.UUID)
+	providerfiataccountMixin := schema.ProviderFiatAccount{}.Mixin()
+	providerfiataccountMixinFields0 := providerfiataccountMixin[0].Fields()
+	_ = providerfiataccountMixinFields0
 	providerfiataccountFields := schema.ProviderFiatAccount{}.Fields()
 	_ = providerfiataccountFields
+	// providerfiataccountDescCreatedAt is the schema descriptor for created_at field.
+	providerfiataccountDescCreatedAt := providerfiataccountMixinFields0[0].Descriptor()
+	// providerfiataccount.DefaultCreatedAt holds the default value on creation for the created_at field.
+	providerfiataccount.DefaultCreatedAt = providerfiataccountDescCreatedAt.Default.(func() time.Time)
+	// providerfiataccountDescUpdatedAt is the schema descriptor for updated_at field.
+	providerfiataccountDescUpdatedAt := providerfiataccountMixinFields0[1].Descriptor()
+	// providerfiataccount.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	providerfiataccount.DefaultUpdatedAt = providerfiataccountDescUpdatedAt.Default.(func() time.Time)
+	// providerfiataccount.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	providerfiataccount.UpdateDefaultUpdatedAt = providerfiataccountDescUpdatedAt.UpdateDefault.(func() time.Time)
 	// providerfiataccountDescInstitution is the schema descriptor for institution field.
 	providerfiataccountDescInstitution := providerfiataccountFields[1].Descriptor()
 	// providerfiataccount.InstitutionValidator is a validator for the "institution" field. It is called by the builders before save.
@@ -418,16 +431,6 @@ func init() {
 	providerfiataccountDescAccountName := providerfiataccountFields[3].Descriptor()
 	// providerfiataccount.AccountNameValidator is a validator for the "account_name" field. It is called by the builders before save.
 	providerfiataccount.AccountNameValidator = providerfiataccountDescAccountName.Validators[0].(func(string) error)
-	// providerfiataccountDescCreatedAt is the schema descriptor for created_at field.
-	providerfiataccountDescCreatedAt := providerfiataccountFields[4].Descriptor()
-	// providerfiataccount.DefaultCreatedAt holds the default value on creation for the created_at field.
-	providerfiataccount.DefaultCreatedAt = providerfiataccountDescCreatedAt.Default.(func() time.Time)
-	// providerfiataccountDescUpdatedAt is the schema descriptor for updated_at field.
-	providerfiataccountDescUpdatedAt := providerfiataccountFields[5].Descriptor()
-	// providerfiataccount.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	providerfiataccount.DefaultUpdatedAt = providerfiataccountDescUpdatedAt.Default.(func() time.Time)
-	// providerfiataccount.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	providerfiataccount.UpdateDefaultUpdatedAt = providerfiataccountDescUpdatedAt.UpdateDefault.(func() time.Time)
 	// providerfiataccountDescID is the schema descriptor for id field.
 	providerfiataccountDescID := providerfiataccountFields[0].Descriptor()
 	// providerfiataccount.DefaultID holds the default value on creation for the id field.

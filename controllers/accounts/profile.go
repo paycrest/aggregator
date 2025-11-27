@@ -645,17 +645,12 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 	for _, op := range fiatAccountOps {
 		if op.IsUpdate {
 			// Update existing account
-			updateBuilder := tx.ProviderFiatAccount.
+			_, err := tx.ProviderFiatAccount.
 				UpdateOneID(op.ExistingAccount.ID).
 				SetAccountIdentifier(op.Payload.AccountIdentifier).
-				SetInstitution(op.Payload.Institution)
-
-			// Update account name if provided
-			if op.Payload.AccountName != "" {
-				updateBuilder = updateBuilder.SetAccountName(op.Payload.AccountName)
-			}
-
-			_, err := updateBuilder.Save(ctx)
+				SetAccountName(op.Payload.AccountName).
+				SetInstitution(op.Payload.Institution).
+				Save(ctx)
 			if err != nil {
 				if rollbackErr := tx.Rollback(); rollbackErr != nil {
 					logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
@@ -669,18 +664,13 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			}
 		} else {
 			// Create new account
-			createBuilder := tx.ProviderFiatAccount.
+			_, err := tx.ProviderFiatAccount.
 				Create().
 				SetAccountIdentifier(op.Payload.AccountIdentifier).
+				SetAccountName(op.Payload.AccountName).
 				SetInstitution(op.Payload.Institution).
-				SetProviderID(provider.ID)
-
-			// Set account name if provided
-			if op.Payload.AccountName != "" {
-				createBuilder = createBuilder.SetAccountName(op.Payload.AccountName)
-			}
-
-			_, err := createBuilder.Save(ctx)
+				SetProviderID(provider.ID).
+				Save(ctx)
 			if err != nil {
 				if rollbackErr := tx.Rollback(); rollbackErr != nil {
 					logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
@@ -916,7 +906,7 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 		return
 	}
 
-	fiatAccounts, err := provider.QueryProviderFiatAccounts().
+	fiatAccounts, err := provider.QueryFiatAccounts().
 		Order(ent.Desc(providerfiataccount.FieldCreatedAt)).
 		All(ctx)
 	if err != nil {

@@ -276,7 +276,7 @@ type ProviderProfilePayload struct {
 // bank account payload
 type FiatAccountPayload struct {
 	AccountIdentifier string `json:"accountIdentifier" binding:"required"`
-	AccountName       string `json:"accountName"`
+	AccountName       string `json:"accountName" binding:"required"`
 	Institution       string `json:"institution" binding:"required"`
 }
 
@@ -284,7 +284,7 @@ type FiatAccountPayload struct {
 type FiatAccountResponse struct {
 	ID                uuid.UUID `json:"id"`
 	AccountIdentifier string    `json:"accountIdentifier"`
-	AccountName       string    `json:"accountName,omitempty"`
+	AccountName       string    `json:"accountName"`
 	Institution       string    `json:"institution"`
 	CreatedAt         time.Time `json:"createdAt"`
 	UpdatedAt         time.Time `json:"updatedAt"`

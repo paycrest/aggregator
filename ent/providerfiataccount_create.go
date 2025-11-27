@@ -25,32 +25,6 @@ type ProviderFiatAccountCreate struct {
 	conflict []sql.ConflictOption
 }
 
-// SetInstitution sets the "institution" field.
-func (pfac *ProviderFiatAccountCreate) SetInstitution(s string) *ProviderFiatAccountCreate {
-	pfac.mutation.SetInstitution(s)
-	return pfac
-}
-
-// SetAccountIdentifier sets the "account_identifier" field.
-func (pfac *ProviderFiatAccountCreate) SetAccountIdentifier(s string) *ProviderFiatAccountCreate {
-	pfac.mutation.SetAccountIdentifier(s)
-	return pfac
-}
-
-// SetAccountName sets the "account_name" field.
-func (pfac *ProviderFiatAccountCreate) SetAccountName(s string) *ProviderFiatAccountCreate {
-	pfac.mutation.SetAccountName(s)
-	return pfac
-}
-
-// SetNillableAccountName sets the "account_name" field if the given value is not nil.
-func (pfac *ProviderFiatAccountCreate) SetNillableAccountName(s *string) *ProviderFiatAccountCreate {
-	if s != nil {
-		pfac.SetAccountName(*s)
-	}
-	return pfac
-}
-
 // SetCreatedAt sets the "created_at" field.
 func (pfac *ProviderFiatAccountCreate) SetCreatedAt(t time.Time) *ProviderFiatAccountCreate {
 	pfac.mutation.SetCreatedAt(t)
@@ -75,6 +49,32 @@ func (pfac *ProviderFiatAccountCreate) SetUpdatedAt(t time.Time) *ProviderFiatAc
 func (pfac *ProviderFiatAccountCreate) SetNillableUpdatedAt(t *time.Time) *ProviderFiatAccountCreate {
 	if t != nil {
 		pfac.SetUpdatedAt(*t)
+	}
+	return pfac
+}
+
+// SetInstitution sets the "institution" field.
+func (pfac *ProviderFiatAccountCreate) SetInstitution(s string) *ProviderFiatAccountCreate {
+	pfac.mutation.SetInstitution(s)
+	return pfac
+}
+
+// SetAccountIdentifier sets the "account_identifier" field.
+func (pfac *ProviderFiatAccountCreate) SetAccountIdentifier(s string) *ProviderFiatAccountCreate {
+	pfac.mutation.SetAccountIdentifier(s)
+	return pfac
+}
+
+// SetAccountName sets the "account_name" field.
+func (pfac *ProviderFiatAccountCreate) SetAccountName(s string) *ProviderFiatAccountCreate {
+	pfac.mutation.SetAccountName(s)
+	return pfac
+}
+
+// SetNillableAccountName sets the "account_name" field if the given value is not nil.
+func (pfac *ProviderFiatAccountCreate) SetNillableAccountName(s *string) *ProviderFiatAccountCreate {
+	if s != nil {
+		pfac.SetAccountName(*s)
 	}
 	return pfac
 }
@@ -155,6 +155,12 @@ func (pfac *ProviderFiatAccountCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (pfac *ProviderFiatAccountCreate) check() error {
+	if _, ok := pfac.mutation.CreatedAt(); !ok {
+		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "ProviderFiatAccount.created_at"`)}
+	}
+	if _, ok := pfac.mutation.UpdatedAt(); !ok {
+		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ProviderFiatAccount.updated_at"`)}
+	}
 	if _, ok := pfac.mutation.Institution(); !ok {
 		return &ValidationError{Name: "institution", err: errors.New(`ent: missing required field "ProviderFiatAccount.institution"`)}
 	}
@@ -175,12 +181,6 @@ func (pfac *ProviderFiatAccountCreate) check() error {
 		if err := providerfiataccount.AccountNameValidator(v); err != nil {
 			return &ValidationError{Name: "account_name", err: fmt.Errorf(`ent: validator failed for field "ProviderFiatAccount.account_name": %w`, err)}
 		}
-	}
-	if _, ok := pfac.mutation.CreatedAt(); !ok {
-		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "ProviderFiatAccount.created_at"`)}
-	}
-	if _, ok := pfac.mutation.UpdatedAt(); !ok {
-		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ProviderFiatAccount.updated_at"`)}
 	}
 	if len(pfac.mutation.ProviderIDs()) == 0 {
 		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required edge "ProviderFiatAccount.provider"`)}
@@ -221,6 +221,14 @@ func (pfac *ProviderFiatAccountCreate) createSpec() (*ProviderFiatAccount, *sqlg
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
+	if value, ok := pfac.mutation.CreatedAt(); ok {
+		_spec.SetField(providerfiataccount.FieldCreatedAt, field.TypeTime, value)
+		_node.CreatedAt = value
+	}
+	if value, ok := pfac.mutation.UpdatedAt(); ok {
+		_spec.SetField(providerfiataccount.FieldUpdatedAt, field.TypeTime, value)
+		_node.UpdatedAt = value
+	}
 	if value, ok := pfac.mutation.Institution(); ok {
 		_spec.SetField(providerfiataccount.FieldInstitution, field.TypeString, value)
 		_node.Institution = value
@@ -232,14 +240,6 @@ func (pfac *ProviderFiatAccountCreate) createSpec() (*ProviderFiatAccount, *sqlg
 	if value, ok := pfac.mutation.AccountName(); ok {
 		_spec.SetField(providerfiataccount.FieldAccountName, field.TypeString, value)
 		_node.AccountName = value
-	}
-	if value, ok := pfac.mutation.CreatedAt(); ok {
-		_spec.SetField(providerfiataccount.FieldCreatedAt, field.TypeTime, value)
-		_node.CreatedAt = value
-	}
-	if value, ok := pfac.mutation.UpdatedAt(); ok {
-		_spec.SetField(providerfiataccount.FieldUpdatedAt, field.TypeTime, value)
-		_node.UpdatedAt = value
 	}
 	if nodes := pfac.mutation.ProviderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -255,7 +255,7 @@ func (pfac *ProviderFiatAccountCreate) createSpec() (*ProviderFiatAccount, *sqlg
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.provider_profile_provider_fiat_accounts = &nodes[0]
+		_node.provider_profile_fiat_accounts = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
@@ -265,7 +265,7 @@ func (pfac *ProviderFiatAccountCreate) createSpec() (*ProviderFiatAccount, *sqlg
 // of the `INSERT` statement. For example:
 //
 //	client.ProviderFiatAccount.Create().
-//		SetInstitution(v).
+//		SetCreatedAt(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -274,7 +274,7 @@ func (pfac *ProviderFiatAccountCreate) createSpec() (*ProviderFiatAccount, *sqlg
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.ProviderFiatAccountUpsert) {
-//			SetInstitution(v+v).
+//			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
 func (pfac *ProviderFiatAccountCreate) OnConflict(opts ...sql.ConflictOption) *ProviderFiatAccountUpsertOne {
@@ -309,6 +309,18 @@ type (
 		*sql.UpdateSet
 	}
 )
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *ProviderFiatAccountUpsert) SetUpdatedAt(v time.Time) *ProviderFiatAccountUpsert {
+	u.Set(providerfiataccount.FieldUpdatedAt, v)
+	return u
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *ProviderFiatAccountUpsert) UpdateUpdatedAt() *ProviderFiatAccountUpsert {
+	u.SetExcluded(providerfiataccount.FieldUpdatedAt)
+	return u
+}
 
 // SetInstitution sets the "institution" field.
 func (u *ProviderFiatAccountUpsert) SetInstitution(v string) *ProviderFiatAccountUpsert {
@@ -352,30 +364,6 @@ func (u *ProviderFiatAccountUpsert) ClearAccountName() *ProviderFiatAccountUpser
 	return u
 }
 
-// SetCreatedAt sets the "created_at" field.
-func (u *ProviderFiatAccountUpsert) SetCreatedAt(v time.Time) *ProviderFiatAccountUpsert {
-	u.Set(providerfiataccount.FieldCreatedAt, v)
-	return u
-}
-
-// UpdateCreatedAt sets the "created_at" field to the value that was provided on create.
-func (u *ProviderFiatAccountUpsert) UpdateCreatedAt() *ProviderFiatAccountUpsert {
-	u.SetExcluded(providerfiataccount.FieldCreatedAt)
-	return u
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *ProviderFiatAccountUpsert) SetUpdatedAt(v time.Time) *ProviderFiatAccountUpsert {
-	u.Set(providerfiataccount.FieldUpdatedAt, v)
-	return u
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *ProviderFiatAccountUpsert) UpdateUpdatedAt() *ProviderFiatAccountUpsert {
-	u.SetExcluded(providerfiataccount.FieldUpdatedAt)
-	return u
-}
-
 // UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
@@ -392,6 +380,9 @@ func (u *ProviderFiatAccountUpsertOne) UpdateNewValues() *ProviderFiatAccountUps
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
 		if _, exists := u.create.mutation.ID(); exists {
 			s.SetIgnore(providerfiataccount.FieldID)
+		}
+		if _, exists := u.create.mutation.CreatedAt(); exists {
+			s.SetIgnore(providerfiataccount.FieldCreatedAt)
 		}
 	}))
 	return u
@@ -422,6 +413,20 @@ func (u *ProviderFiatAccountUpsertOne) Update(set func(*ProviderFiatAccountUpser
 		set(&ProviderFiatAccountUpsert{UpdateSet: update})
 	}))
 	return u
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *ProviderFiatAccountUpsertOne) SetUpdatedAt(v time.Time) *ProviderFiatAccountUpsertOne {
+	return u.Update(func(s *ProviderFiatAccountUpsert) {
+		s.SetUpdatedAt(v)
+	})
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *ProviderFiatAccountUpsertOne) UpdateUpdatedAt() *ProviderFiatAccountUpsertOne {
+	return u.Update(func(s *ProviderFiatAccountUpsert) {
+		s.UpdateUpdatedAt()
+	})
 }
 
 // SetInstitution sets the "institution" field.
@@ -470,34 +475,6 @@ func (u *ProviderFiatAccountUpsertOne) UpdateAccountName() *ProviderFiatAccountU
 func (u *ProviderFiatAccountUpsertOne) ClearAccountName() *ProviderFiatAccountUpsertOne {
 	return u.Update(func(s *ProviderFiatAccountUpsert) {
 		s.ClearAccountName()
-	})
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (u *ProviderFiatAccountUpsertOne) SetCreatedAt(v time.Time) *ProviderFiatAccountUpsertOne {
-	return u.Update(func(s *ProviderFiatAccountUpsert) {
-		s.SetCreatedAt(v)
-	})
-}
-
-// UpdateCreatedAt sets the "created_at" field to the value that was provided on create.
-func (u *ProviderFiatAccountUpsertOne) UpdateCreatedAt() *ProviderFiatAccountUpsertOne {
-	return u.Update(func(s *ProviderFiatAccountUpsert) {
-		s.UpdateCreatedAt()
-	})
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *ProviderFiatAccountUpsertOne) SetUpdatedAt(v time.Time) *ProviderFiatAccountUpsertOne {
-	return u.Update(func(s *ProviderFiatAccountUpsert) {
-		s.SetUpdatedAt(v)
-	})
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *ProviderFiatAccountUpsertOne) UpdateUpdatedAt() *ProviderFiatAccountUpsertOne {
-	return u.Update(func(s *ProviderFiatAccountUpsert) {
-		s.UpdateUpdatedAt()
 	})
 }
 
@@ -637,7 +614,7 @@ func (pfacb *ProviderFiatAccountCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.ProviderFiatAccountUpsert) {
-//			SetInstitution(v+v).
+//			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
 func (pfacb *ProviderFiatAccountCreateBulk) OnConflict(opts ...sql.ConflictOption) *ProviderFiatAccountUpsertBulk {
@@ -684,6 +661,9 @@ func (u *ProviderFiatAccountUpsertBulk) UpdateNewValues() *ProviderFiatAccountUp
 			if _, exists := b.mutation.ID(); exists {
 				s.SetIgnore(providerfiataccount.FieldID)
 			}
+			if _, exists := b.mutation.CreatedAt(); exists {
+				s.SetIgnore(providerfiataccount.FieldCreatedAt)
+			}
 		}
 	}))
 	return u
@@ -714,6 +694,20 @@ func (u *ProviderFiatAccountUpsertBulk) Update(set func(*ProviderFiatAccountUpse
 		set(&ProviderFiatAccountUpsert{UpdateSet: update})
 	}))
 	return u
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (u *ProviderFiatAccountUpsertBulk) SetUpdatedAt(v time.Time) *ProviderFiatAccountUpsertBulk {
+	return u.Update(func(s *ProviderFiatAccountUpsert) {
+		s.SetUpdatedAt(v)
+	})
+}
+
+// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
+func (u *ProviderFiatAccountUpsertBulk) UpdateUpdatedAt() *ProviderFiatAccountUpsertBulk {
+	return u.Update(func(s *ProviderFiatAccountUpsert) {
+		s.UpdateUpdatedAt()
+	})
 }
 
 // SetInstitution sets the "institution" field.
@@ -762,34 +756,6 @@ func (u *ProviderFiatAccountUpsertBulk) UpdateAccountName() *ProviderFiatAccount
 func (u *ProviderFiatAccountUpsertBulk) ClearAccountName() *ProviderFiatAccountUpsertBulk {
 	return u.Update(func(s *ProviderFiatAccountUpsert) {
 		s.ClearAccountName()
-	})
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (u *ProviderFiatAccountUpsertBulk) SetCreatedAt(v time.Time) *ProviderFiatAccountUpsertBulk {
-	return u.Update(func(s *ProviderFiatAccountUpsert) {
-		s.SetCreatedAt(v)
-	})
-}
-
-// UpdateCreatedAt sets the "created_at" field to the value that was provided on create.
-func (u *ProviderFiatAccountUpsertBulk) UpdateCreatedAt() *ProviderFiatAccountUpsertBulk {
-	return u.Update(func(s *ProviderFiatAccountUpsert) {
-		s.UpdateCreatedAt()
-	})
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *ProviderFiatAccountUpsertBulk) SetUpdatedAt(v time.Time) *ProviderFiatAccountUpsertBulk {
-	return u.Update(func(s *ProviderFiatAccountUpsert) {
-		s.SetUpdatedAt(v)
-	})
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *ProviderFiatAccountUpsertBulk) UpdateUpdatedAt() *ProviderFiatAccountUpsertBulk {
-	return u.Update(func(s *ProviderFiatAccountUpsert) {
-		s.UpdateUpdatedAt()
 	})
 }
 

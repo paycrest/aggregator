@@ -3350,15 +3350,15 @@ func (c *ProviderProfileClient) QueryAssignedOrders(pp *ProviderProfile) *LockPa
 	return query
 }
 
-// QueryProviderFiatAccounts queries the provider_fiat_accounts edge of a ProviderProfile.
-func (c *ProviderProfileClient) QueryProviderFiatAccounts(pp *ProviderProfile) *ProviderFiatAccountQuery {
+// QueryFiatAccounts queries the fiat_accounts edge of a ProviderProfile.
+func (c *ProviderProfileClient) QueryFiatAccounts(pp *ProviderProfile) *ProviderFiatAccountQuery {
 	query := (&ProviderFiatAccountClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := pp.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(providerprofile.Table, providerprofile.FieldID, id),
 			sqlgraph.To(providerfiataccount.Table, providerfiataccount.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.ProviderFiatAccountsTable, providerprofile.ProviderFiatAccountsColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.FiatAccountsTable, providerprofile.FiatAccountsColumn),
 		)
 		fromV = sqlgraph.Neighbors(pp.driver.Dialect(), step)
 		return fromV, nil

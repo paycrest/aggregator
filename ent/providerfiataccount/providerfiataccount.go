@@ -15,16 +15,16 @@ const (
 	Label = "provider_fiat_account"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
+	// FieldCreatedAt holds the string denoting the created_at field in the database.
+	FieldCreatedAt = "created_at"
+	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
+	FieldUpdatedAt = "updated_at"
 	// FieldInstitution holds the string denoting the institution field in the database.
 	FieldInstitution = "institution"
 	// FieldAccountIdentifier holds the string denoting the account_identifier field in the database.
 	FieldAccountIdentifier = "account_identifier"
 	// FieldAccountName holds the string denoting the account_name field in the database.
 	FieldAccountName = "account_name"
-	// FieldCreatedAt holds the string denoting the created_at field in the database.
-	FieldCreatedAt = "created_at"
-	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
-	FieldUpdatedAt = "updated_at"
 	// EdgeProvider holds the string denoting the provider edge name in mutations.
 	EdgeProvider = "provider"
 	// Table holds the table name of the providerfiataccount in the database.
@@ -35,23 +35,23 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "providerprofile" package.
 	ProviderInverseTable = "provider_profiles"
 	// ProviderColumn is the table column denoting the provider relation/edge.
-	ProviderColumn = "provider_profile_provider_fiat_accounts"
+	ProviderColumn = "provider_profile_fiat_accounts"
 )
 
 // Columns holds all SQL columns for providerfiataccount fields.
 var Columns = []string{
 	FieldID,
+	FieldCreatedAt,
+	FieldUpdatedAt,
 	FieldInstitution,
 	FieldAccountIdentifier,
 	FieldAccountName,
-	FieldCreatedAt,
-	FieldUpdatedAt,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "provider_fiat_accounts"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"provider_profile_provider_fiat_accounts",
+	"provider_profile_fiat_accounts",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -70,18 +70,18 @@ func ValidColumn(column string) bool {
 }
 
 var (
-	// InstitutionValidator is a validator for the "institution" field. It is called by the builders before save.
-	InstitutionValidator func(string) error
-	// AccountIdentifierValidator is a validator for the "account_identifier" field. It is called by the builders before save.
-	AccountIdentifierValidator func(string) error
-	// AccountNameValidator is a validator for the "account_name" field. It is called by the builders before save.
-	AccountNameValidator func(string) error
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
 	DefaultUpdatedAt func() time.Time
 	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
 	UpdateDefaultUpdatedAt func() time.Time
+	// InstitutionValidator is a validator for the "institution" field. It is called by the builders before save.
+	InstitutionValidator func(string) error
+	// AccountIdentifierValidator is a validator for the "account_identifier" field. It is called by the builders before save.
+	AccountIdentifierValidator func(string) error
+	// AccountNameValidator is a validator for the "account_name" field. It is called by the builders before save.
+	AccountNameValidator func(string) error
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -92,6 +92,16 @@ type OrderOption func(*sql.Selector)
 // ByID orders the results by the id field.
 func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByCreatedAt orders the results by the created_at field.
+func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
+}
+
+// ByUpdatedAt orders the results by the updated_at field.
+func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
 }
 
 // ByInstitution orders the results by the institution field.
@@ -107,16 +117,6 @@ func ByAccountIdentifier(opts ...sql.OrderTermOption) OrderOption {
 // ByAccountName orders the results by the account_name field.
 func ByAccountName(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAccountName, opts...).ToFunc()
-}
-
-// ByCreatedAt orders the results by the created_at field.
-func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
-}
-
-// ByUpdatedAt orders the results by the updated_at field.
-func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
 }
 
 // ByProviderField orders the results by provider field.

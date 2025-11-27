@@ -253,19 +253,19 @@ func (ppc *ProviderProfileCreate) AddAssignedOrders(l ...*LockPaymentOrder) *Pro
 	return ppc.AddAssignedOrderIDs(ids...)
 }
 
-// AddProviderFiatAccountIDs adds the "provider_fiat_accounts" edge to the ProviderFiatAccount entity by IDs.
-func (ppc *ProviderProfileCreate) AddProviderFiatAccountIDs(ids ...uuid.UUID) *ProviderProfileCreate {
-	ppc.mutation.AddProviderFiatAccountIDs(ids...)
+// AddFiatAccountIDs adds the "fiat_accounts" edge to the ProviderFiatAccount entity by IDs.
+func (ppc *ProviderProfileCreate) AddFiatAccountIDs(ids ...uuid.UUID) *ProviderProfileCreate {
+	ppc.mutation.AddFiatAccountIDs(ids...)
 	return ppc
 }
 
-// AddProviderFiatAccounts adds the "provider_fiat_accounts" edges to the ProviderFiatAccount entity.
-func (ppc *ProviderProfileCreate) AddProviderFiatAccounts(p ...*ProviderFiatAccount) *ProviderProfileCreate {
+// AddFiatAccounts adds the "fiat_accounts" edges to the ProviderFiatAccount entity.
+func (ppc *ProviderProfileCreate) AddFiatAccounts(p ...*ProviderFiatAccount) *ProviderProfileCreate {
 	ids := make([]uuid.UUID, len(p))
 	for i := range p {
 		ids[i] = p[i].ID
 	}
-	return ppc.AddProviderFiatAccountIDs(ids...)
+	return ppc.AddFiatAccountIDs(ids...)
 }
 
 // Mutation returns the ProviderProfileMutation object of the builder.
@@ -541,12 +541,12 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ppc.mutation.ProviderFiatAccountsIDs(); len(nodes) > 0 {
+	if nodes := ppc.mutation.FiatAccountsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   providerprofile.ProviderFiatAccountsTable,
-			Columns: []string{providerprofile.ProviderFiatAccountsColumn},
+			Table:   providerprofile.FiatAccountsTable,
+			Columns: []string{providerprofile.FiatAccountsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerfiataccount.FieldID, field.TypeUUID),

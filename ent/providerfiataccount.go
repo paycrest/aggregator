@@ -19,21 +19,21 @@ type ProviderFiatAccount struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
+	// CreatedAt holds the value of the "created_at" field.
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	// UpdatedAt holds the value of the "updated_at" field.
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// Institution holds the value of the "institution" field.
 	Institution string `json:"institution,omitempty"`
 	// AccountIdentifier holds the value of the "account_identifier" field.
 	AccountIdentifier string `json:"account_identifier,omitempty"`
 	// AccountName holds the value of the "account_name" field.
 	AccountName string `json:"account_name,omitempty"`
-	// CreatedAt holds the value of the "created_at" field.
-	CreatedAt time.Time `json:"created_at,omitempty"`
-	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ProviderFiatAccountQuery when eager-loading is set.
-	Edges                                   ProviderFiatAccountEdges `json:"edges"`
-	provider_profile_provider_fiat_accounts *string
-	selectValues                            sql.SelectValues
+	Edges                          ProviderFiatAccountEdges `json:"edges"`
+	provider_profile_fiat_accounts *string
+	selectValues                   sql.SelectValues
 }
 
 // ProviderFiatAccountEdges holds the relations/edges for other nodes in the graph.
@@ -67,7 +67,7 @@ func (*ProviderFiatAccount) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullTime)
 		case providerfiataccount.FieldID:
 			values[i] = new(uuid.UUID)
-		case providerfiataccount.ForeignKeys[0]: // provider_profile_provider_fiat_accounts
+		case providerfiataccount.ForeignKeys[0]: // provider_profile_fiat_accounts
 			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -90,6 +90,18 @@ func (pfa *ProviderFiatAccount) assignValues(columns []string, values []any) err
 			} else if value != nil {
 				pfa.ID = *value
 			}
+		case providerfiataccount.FieldCreatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field created_at", values[i])
+			} else if value.Valid {
+				pfa.CreatedAt = value.Time
+			}
+		case providerfiataccount.FieldUpdatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
+			} else if value.Valid {
+				pfa.UpdatedAt = value.Time
+			}
 		case providerfiataccount.FieldInstitution:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field institution", values[i])
@@ -108,24 +120,12 @@ func (pfa *ProviderFiatAccount) assignValues(columns []string, values []any) err
 			} else if value.Valid {
 				pfa.AccountName = value.String
 			}
-		case providerfiataccount.FieldCreatedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field created_at", values[i])
-			} else if value.Valid {
-				pfa.CreatedAt = value.Time
-			}
-		case providerfiataccount.FieldUpdatedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
-			} else if value.Valid {
-				pfa.UpdatedAt = value.Time
-			}
 		case providerfiataccount.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field provider_profile_provider_fiat_accounts", values[i])
+				return fmt.Errorf("unexpected type %T for field provider_profile_fiat_accounts", values[i])
 			} else if value.Valid {
-				pfa.provider_profile_provider_fiat_accounts = new(string)
-				*pfa.provider_profile_provider_fiat_accounts = value.String
+				pfa.provider_profile_fiat_accounts = new(string)
+				*pfa.provider_profile_fiat_accounts = value.String
 			}
 		default:
 			pfa.selectValues.Set(columns[i], values[i])
@@ -168,6 +168,12 @@ func (pfa *ProviderFiatAccount) String() string {
 	var builder strings.Builder
 	builder.WriteString("ProviderFiatAccount(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", pfa.ID))
+	builder.WriteString("created_at=")
+	builder.WriteString(pfa.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("updated_at=")
+	builder.WriteString(pfa.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
 	builder.WriteString("institution=")
 	builder.WriteString(pfa.Institution)
 	builder.WriteString(", ")
@@ -176,12 +182,6 @@ func (pfa *ProviderFiatAccount) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("account_name=")
 	builder.WriteString(pfa.AccountName)
-	builder.WriteString(", ")
-	builder.WriteString("created_at=")
-	builder.WriteString(pfa.CreatedAt.Format(time.ANSIC))
-	builder.WriteString(", ")
-	builder.WriteString("updated_at=")
-	builder.WriteString(pfa.UpdatedAt.Format(time.ANSIC))
 	builder.WriteByte(')')
 	return builder.String()
 }
