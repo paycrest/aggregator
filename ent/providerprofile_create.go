@@ -16,6 +16,7 @@ import (
 	"github.com/paycrest/aggregator/ent/apikey"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -250,6 +251,21 @@ func (ppc *ProviderProfileCreate) AddAssignedOrders(l ...*LockPaymentOrder) *Pro
 		ids[i] = l[i].ID
 	}
 	return ppc.AddAssignedOrderIDs(ids...)
+}
+
+// AddFiatAccountIDs adds the "fiat_accounts" edge to the ProviderFiatAccount entity by IDs.
+func (ppc *ProviderProfileCreate) AddFiatAccountIDs(ids ...uuid.UUID) *ProviderProfileCreate {
+	ppc.mutation.AddFiatAccountIDs(ids...)
+	return ppc
+}
+
+// AddFiatAccounts adds the "fiat_accounts" edges to the ProviderFiatAccount entity.
+func (ppc *ProviderProfileCreate) AddFiatAccounts(p ...*ProviderFiatAccount) *ProviderProfileCreate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return ppc.AddFiatAccountIDs(ids...)
 }
 
 // Mutation returns the ProviderProfileMutation object of the builder.
@@ -518,6 +534,22 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := ppc.mutation.FiatAccountsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.FiatAccountsTable,
+			Columns: []string{providerprofile.FiatAccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerfiataccount.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

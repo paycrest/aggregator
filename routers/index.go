@@ -101,7 +101,6 @@ func authRoutes(route *gin.Engine) {
 		middleware.OnlyProviderMiddleware,
 		profileCtrl.UpdateProviderProfile,
 	)
-
 	v1.GET(
 		"settings/sender",
 		middleware.OnlyWebMiddleware,

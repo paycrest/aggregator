@@ -269,7 +269,25 @@ type ProviderProfilePayload struct {
 	HostIdentifier string                      `json:"hostIdentifier"`
 	IsAvailable    bool                        `json:"isAvailable"`
 	Tokens         []ProviderOrderTokenPayload `json:"tokens"`
+	FiatAccounts   []FiatAccountPayload        `json:"fiatAccounts"` 
 	VisibilityMode string                      `json:"visibilityMode"`
+}
+
+// bank account payload
+type FiatAccountPayload struct {
+	AccountIdentifier string `json:"accountIdentifier" binding:"required"`
+	AccountName       string `json:"accountName" binding:"required"`
+	Institution       string `json:"institution" binding:"required"`
+}
+
+// PayoutAccountResponse represents a single payout account
+type FiatAccountResponse struct {
+	ID                uuid.UUID `json:"id"`
+	AccountIdentifier string    `json:"accountIdentifier"`
+	AccountName       string    `json:"accountName"`
+	Institution       string    `json:"institution"`
+	CreatedAt         time.Time `json:"createdAt"`
+	UpdatedAt         time.Time `json:"updatedAt"`
 }
 
 // ProviderProfileResponse is the response for the provider profile endpoint
@@ -283,6 +301,7 @@ type ProviderProfileResponse struct {
 	HostIdentifier        string                         `json:"hostIdentifier"`
 	CurrencyAvailability  map[string]bool                `json:"currencyAvailability"`
 	Tokens                []ProviderOrderTokenPayload    `json:"tokens"`
+	FiatAccounts          []FiatAccountResponse          `json:"fiatAccounts"`
 	APIKey                APIKeyResponse                 `json:"apiKey"`
 	IsActive              bool                           `json:"isActive"`
 	VisibilityMode        providerprofile.VisibilityMode `json:"visibilityMode"`
@@ -716,7 +735,7 @@ type KYBSubmissionInput struct {
 	AmlPolicyUrl                  *string                `json:"amlPolicyUrl"`
 	KycPolicyUrl                  *string                `json:"kycPolicyUrl"`
 	BeneficialOwners              []BeneficialOwnerInput `json:"beneficialOwners" binding:"required,dive"`
-	IAcceptTerms         bool                   `json:"IAcceptTerms"`
+	IAcceptTerms                  bool                   `json:"IAcceptTerms"`
 }
 
 // BeneficialOwnerInput represents the input structure for a beneficial owner
