@@ -19,6 +19,7 @@ import (
 	"github.com/paycrest/aggregator/ent/enttest"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/migrate"
+	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -725,6 +726,294 @@ func TestProfile(t *testing.T) {
 				assert.Equal(t, "https://example.com", providerProfile.HostIdentifier)
 			})
 		})
+
+		t.Run("with bank accounts", func(t *testing.T) {
+			ctx := context.Background()
+
+			// Create test institutions
+			zenithBank, err := db.Client.Institution.
+				Create().
+				SetCode("ZENITH").
+				SetName("Zenith Bank").
+				SetType("bank").
+				Save(ctx)
+			assert.NoError(t, err)
+
+			gtBank, err := db.Client.Institution.
+				Create().
+				SetCode("GTB").
+				SetName("Guaranty Trust Bank").
+				SetType("bank").
+				Save(ctx)
+			assert.NoError(t, err)
+
+			profileUpdateRequest := func(payload types.ProviderProfilePayload) *httptest.ResponseRecorder {
+				accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+				headers := map[string]string{
+					"Authorization": "Bearer " + accessToken,
+				}
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				return res
+			}
+
+			t.Run("creates new fiat account", func(t *testing.T) {
+				payload := types.ProviderProfilePayload{
+					TradingName:    testCtx.providerProfile.TradingName,
+					HostIdentifier: testCtx.providerProfile.HostIdentifier,
+					Currency:       "KES",
+					FiatAccounts: []types.FiatAccountPayload{
+						{
+							AccountIdentifier: "1234567890",
+							AccountName:       "John Doe",
+							Institution:       zenithBank.Code,
+						},
+					},
+				}
+
+				res := profileUpdateRequest(payload)
+				assert.Equal(t, http.StatusOK, res.Code)
+
+				var response types.Response
+				err := json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, "Profile updated successfully", response.Message)
+
+				// Verify account was created
+				account, err := db.Client.ProviderFiatAccount.
+					Query().
+					Where(
+						providerfiataccount.AccountIdentifierEQ("1234567890"),
+						providerfiataccount.InstitutionEQ(zenithBank.Code),
+						providerfiataccount.HasProviderWith(providerprofile.IDEQ(testCtx.providerProfile.ID)),
+					).
+					Only(ctx)
+				assert.NoError(t, err)
+				assert.Equal(t, "John Doe", account.AccountName)
+				assert.Equal(t, zenithBank.Code, account.Institution)
+			})
+
+			t.Run("updates existing fiat account (upsert)", func(t *testing.T) {
+				// First create an account
+				payload := types.ProviderProfilePayload{
+					TradingName:    testCtx.providerProfile.TradingName,
+					HostIdentifier: testCtx.providerProfile.HostIdentifier,
+					Currency:       "KES",
+					FiatAccounts: []types.FiatAccountPayload{
+						{
+							AccountIdentifier: "1111111111",
+							AccountName:       "Original Name",
+							Institution:       zenithBank.Code,
+						},
+					},
+				}
+				res := profileUpdateRequest(payload)
+				assert.Equal(t, http.StatusOK, res.Code)
+
+				// Get the account ID
+				originalAccount, err := db.Client.ProviderFiatAccount.
+					Query().
+					Where(
+						providerfiataccount.AccountIdentifierEQ("1111111111"),
+					).
+					Only(ctx)
+				assert.NoError(t, err)
+
+				// Then update the same account (same institution + account_identifier)
+				payload.FiatAccounts[0].AccountName = "Updated Name"
+				res = profileUpdateRequest(payload)
+				assert.Equal(t, http.StatusOK, res.Code)
+
+				// Verify it was updated, not duplicated
+				updatedAccount, err := db.Client.ProviderFiatAccount.
+					Query().
+					Where(
+						providerfiataccount.AccountIdentifierEQ("1111111111"),
+					).
+					Only(ctx)
+				assert.NoError(t, err)
+				assert.Equal(t, "Updated Name", updatedAccount.AccountName)
+				assert.Equal(t, originalAccount.ID, updatedAccount.ID) // Same ID = updated, not new
+
+				// Verify no duplicate was created
+				count, err := db.Client.ProviderFiatAccount.
+					Query().
+					Where(
+						providerfiataccount.AccountIdentifierEQ("1111111111"),
+					).
+					Count(ctx)
+				assert.NoError(t, err)
+				assert.Equal(t, 1, count)
+			})
+
+			t.Run("creates multiple fiat accounts at once", func(t *testing.T) {
+				payload := types.ProviderProfilePayload{
+					TradingName:    testCtx.providerProfile.TradingName,
+					HostIdentifier: testCtx.providerProfile.HostIdentifier,
+					Currency:       "KES",
+					FiatAccounts: []types.FiatAccountPayload{
+						{
+							AccountIdentifier: "2222222222",
+							AccountName:       "Account One",
+							Institution:       zenithBank.Code,
+						},
+						{
+							AccountIdentifier: "3333333333",
+							AccountName:       "Account Two",
+							Institution:       gtBank.Code,
+						},
+					},
+				}
+
+				res := profileUpdateRequest(payload)
+				assert.Equal(t, http.StatusOK, res.Code)
+
+				// Verify both accounts were created
+				accounts, err := db.Client.ProviderFiatAccount.
+					Query().
+					Where(
+						providerfiataccount.HasProviderWith(providerprofile.IDEQ(testCtx.providerProfile.ID)),
+						providerfiataccount.AccountIdentifierIn("2222222222", "3333333333"),
+					).
+					All(ctx)
+				assert.NoError(t, err)
+				assert.Len(t, accounts, 2)
+			})
+
+			t.Run("allows same account number at different institutions", func(t *testing.T) {
+				payload := types.ProviderProfilePayload{
+					TradingName:    testCtx.providerProfile.TradingName,
+					HostIdentifier: testCtx.providerProfile.HostIdentifier,
+					Currency:       "KES",
+					FiatAccounts: []types.FiatAccountPayload{
+						{
+							AccountIdentifier: "5555555555",
+							AccountName:       "Same Number Zenith",
+							Institution:       zenithBank.Code,
+						},
+						{
+							AccountIdentifier: "5555555555",
+							AccountName:       "Same Number GTB",
+							Institution:       gtBank.Code,
+						},
+					},
+				}
+
+				res := profileUpdateRequest(payload)
+				assert.Equal(t, http.StatusOK, res.Code)
+
+				// Verify both accounts exist with same number but different institutions
+				accounts, err := db.Client.ProviderFiatAccount.
+					Query().
+					Where(
+						providerfiataccount.AccountIdentifierEQ("5555555555"),
+					).
+					All(ctx)
+				assert.NoError(t, err)
+				assert.Len(t, accounts, 2)
+
+				// Verify institutions are different
+				institutions := make(map[string]bool)
+				for _, acc := range accounts {
+					institutions[acc.Institution] = true
+				}
+				assert.True(t, institutions[zenithBank.Code])
+				assert.True(t, institutions[gtBank.Code])
+			})
+
+			t.Run("fails with unsupported institution", func(t *testing.T) {
+				payload := types.ProviderProfilePayload{
+					TradingName:    testCtx.providerProfile.TradingName,
+					HostIdentifier: testCtx.providerProfile.HostIdentifier,
+					Currency:       "KES",
+					FiatAccounts: []types.FiatAccountPayload{
+						{
+							AccountIdentifier: "6666666666",
+							AccountName:       "Invalid Bank",
+							Institution:       "UNSUPPORTED_BANK",
+						},
+					},
+				}
+
+				res := profileUpdateRequest(payload)
+				assert.Equal(t, http.StatusBadRequest, res.Code)
+
+				var response types.Response
+				err := json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Contains(t, response.Message, "Institution UNSUPPORTED_BANK is not supported")
+			})
+
+			t.Run("handles mixed valid and invalid fiat accounts", func(t *testing.T) {
+				payload := types.ProviderProfilePayload{
+					TradingName:    testCtx.providerProfile.TradingName,
+					HostIdentifier: testCtx.providerProfile.HostIdentifier,
+					Currency:       "KES",
+					FiatAccounts: []types.FiatAccountPayload{
+						{
+							AccountIdentifier: "7777777777",
+							AccountName:       "Valid Account",
+							Institution:       zenithBank.Code,
+						},
+						{
+							AccountIdentifier: "8888888888",
+							AccountName:       "Invalid Bank Account",
+							Institution:       "INVALID_BANK",
+						},
+					},
+				}
+
+				res := profileUpdateRequest(payload)
+				assert.Equal(t, http.StatusBadRequest, res.Code)
+
+				// Verify no accounts were created (transaction rolled back)
+				count, err := db.Client.ProviderFiatAccount.
+					Query().
+					Where(
+						providerfiataccount.AccountIdentifierIn("7777777777", "8888888888"),
+					).
+					Count(ctx)
+				assert.NoError(t, err)
+				assert.Equal(t, 0, count)
+			})
+
+			t.Run("updates profile and fiat accounts in same transaction", func(t *testing.T) {
+				payload := types.ProviderProfilePayload{
+					TradingName:    "Updated Trading Name",
+					HostIdentifier: testCtx.providerProfile.HostIdentifier,
+					Currency:       "KES",
+					IsAvailable:    true,
+					FiatAccounts: []types.FiatAccountPayload{
+						{
+							AccountIdentifier: "4444444444",
+							AccountName:       "Transaction Test",
+							Institution:       zenithBank.Code,
+						},
+					},
+				}
+
+				res := profileUpdateRequest(payload)
+				assert.Equal(t, http.StatusOK, res.Code)
+
+				// Verify profile was updated
+				profile, err := db.Client.ProviderProfile.
+					Query().
+					Where(providerprofile.IDEQ(testCtx.providerProfile.ID)).
+					Only(ctx)
+				assert.NoError(t, err)
+				assert.Equal(t, "Updated Trading Name", profile.TradingName)
+
+				// Verify fiat account was created
+				account, err := db.Client.ProviderFiatAccount.
+					Query().
+					Where(
+						providerfiataccount.AccountIdentifierEQ("4444444444"),
+					).
+					Only(ctx)
+				assert.NoError(t, err)
+				assert.Equal(t, "Transaction Test", account.AccountName)
+			})
+		})
 	})
 
 	t.Run("GetSenderProfile", func(t *testing.T) {
@@ -860,5 +1149,85 @@ func TestProfile(t *testing.T) {
 			assert.Len(t, respAll.Data.Tokens, 2)
 
 		})
+	})
+
+	t.Run("GetProviderProfile returns fiat accounts", func(t *testing.T) {
+		ctx := context.Background()
+
+		// Create test institutions
+		wemaBank, err := db.Client.Institution.
+			Create().
+			SetCode("WEMA").
+			SetName("Wema Bank").
+			SetType("bank").
+			Save(ctx)
+		assert.NoError(t, err)
+
+		firstBank, err := db.Client.Institution.
+			Create().
+			SetCode("FIRST_BANK").
+			SetName("First Bank").
+			SetType("bank").
+			Save(ctx)
+		assert.NoError(t, err)
+
+		// Create test bank accounts
+		_, err = db.Client.ProviderFiatAccount.
+			Create().
+			SetAccountIdentifier("1111222233").
+			SetAccountName("Test Account 1").
+			SetInstitution(wemaBank.Code).
+			SetProviderID(testCtx.providerProfile.ID).
+			Save(ctx)
+		assert.NoError(t, err)
+
+		_, err = db.Client.ProviderFiatAccount.
+			Create().
+			SetAccountIdentifier("4444555566").
+			SetAccountName("Test Account 2").
+			SetInstitution(firstBank.Code).
+			SetProviderID(testCtx.providerProfile.ID).
+			Save(ctx)
+		assert.NoError(t, err)
+
+		// Prepare GET request
+		accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+		headers := map[string]string{
+			"Authorization": "Bearer " + accessToken,
+		}
+
+		res, err := test.PerformRequest(t, "GET", "/settings/provider", nil, headers, router)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, res.Code)
+
+		var response struct {
+			Data    types.ProviderProfileResponse `json:"data"`
+			Message string                        `json:"message"`
+			Status  string                        `json:"status"`
+		}
+		err = json.Unmarshal(res.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Equal(t, "success", response.Status)
+
+		// Verify bank accounts are included in response
+		assert.GreaterOrEqual(t, len(response.Data.FiatAccounts), 2)
+
+		// Verify account details
+		accountMap := make(map[string]types.FiatAccountResponse)
+		for _, acc := range response.Data.FiatAccounts {
+			accountMap[acc.AccountIdentifier] = acc
+		}
+
+		// Check first account
+		account1, exists := accountMap["1111222233"]
+		assert.True(t, exists)
+		assert.Equal(t, "Test Account 1", account1.AccountName)
+		assert.Equal(t, wemaBank.Code, account1.Institution)
+
+		// Check second account
+		account2, exists := accountMap["4444555566"]
+		assert.True(t, exists)
+		assert.Equal(t, "Test Account 2", account2.AccountName)
+		assert.Equal(t, firstBank.Code, account2.Institution)
 	})
 }
