@@ -445,6 +445,37 @@ var (
 			},
 		},
 	}
+	// ProviderFiatAccountsColumns holds the columns for the "provider_fiat_accounts" table.
+	ProviderFiatAccountsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "institution", Type: field.TypeString, Size: 100},
+		{Name: "account_identifier", Type: field.TypeString, Size: 200},
+		{Name: "account_name", Type: field.TypeString, Size: 200},
+		{Name: "provider_profile_fiat_accounts", Type: field.TypeString},
+	}
+	// ProviderFiatAccountsTable holds the schema information for the "provider_fiat_accounts" table.
+	ProviderFiatAccountsTable = &schema.Table{
+		Name:       "provider_fiat_accounts",
+		Columns:    ProviderFiatAccountsColumns,
+		PrimaryKey: []*schema.Column{ProviderFiatAccountsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "provider_fiat_accounts_provider_profiles_fiat_accounts",
+				Columns:    []*schema.Column{ProviderFiatAccountsColumns[6]},
+				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "providerfiataccount_institution_account_identifier_provider_profile_fiat_accounts",
+				Unique:  true,
+				Columns: []*schema.Column{ProviderFiatAccountsColumns[3], ProviderFiatAccountsColumns[4], ProviderFiatAccountsColumns[6]},
+			},
+		},
+	}
 	// ProviderOrderTokensColumns holds the columns for the "provider_order_tokens" table.
 	ProviderOrderTokensColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -824,6 +855,7 @@ var (
 		PaymentOrderRecipientsTable,
 		PaymentWebhooksTable,
 		ProviderCurrenciesTable,
+		ProviderFiatAccountsTable,
 		ProviderOrderTokensTable,
 		ProviderProfilesTable,
 		ProviderRatingsTable,
@@ -860,6 +892,7 @@ func init() {
 	PaymentWebhooksTable.ForeignKeys[1].RefTable = PaymentOrdersTable
 	ProviderCurrenciesTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
 	ProviderCurrenciesTable.ForeignKeys[1].RefTable = ProviderProfilesTable
+	ProviderFiatAccountsTable.ForeignKeys[0].RefTable = ProviderProfilesTable
 	ProviderOrderTokensTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
 	ProviderOrderTokensTable.ForeignKeys[1].RefTable = ProviderProfilesTable
 	ProviderOrderTokensTable.ForeignKeys[2].RefTable = TokensTable

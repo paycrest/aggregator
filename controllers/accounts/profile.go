@@ -8,9 +8,11 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
+	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -268,6 +270,14 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 	var tokenOperations []TokenOperation
 	var validationErrors []types.ErrorData
 
+	type FiatAccountOperation struct {
+		Payload         types.FiatAccountPayload
+		IsUpdate        bool
+		ExistingAccount *ent.ProviderFiatAccount
+	}
+
+	var fiatAccountOps []FiatAccountOperation
+
 	// Validate all tokens first
 	for _, tokenPayload := range payload.Tokens {
 		// Check if token is supported
@@ -420,6 +430,56 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			Rate:          rate,
 			IsUpdate:      isUpdate,
 			ExistingToken: existingToken,
+		})
+	}
+
+	// Validate all fiat accounts (same pattern as tokens)
+	for _, fiatAccountPayload := range payload.FiatAccounts {
+		// Validate institution exists
+		institutionExists, err := storage.Client.Institution.
+			Query().
+			Where(institution.CodeEQ(fiatAccountPayload.Institution)).
+			Exist(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":       fmt.Sprintf("%v", err),
+				"Institution": fiatAccountPayload.Institution,
+			}).Errorf("Failed to validate institution")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+			return
+		}
+		if !institutionExists {
+			validationErrors = append(validationErrors, types.ErrorData{
+				Field:   "FiatAccounts",
+				Message: fmt.Sprintf("Institution %s is not supported", fiatAccountPayload.Institution),
+			})
+			continue
+		}
+
+		// Check if account already exists (upsert check)
+		existingAccount, err := storage.Client.ProviderFiatAccount.
+			Query().
+			Where(
+				providerfiataccount.AccountIdentifierEQ(fiatAccountPayload.AccountIdentifier),
+				providerfiataccount.InstitutionEQ(fiatAccountPayload.Institution),
+				providerfiataccount.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+			).
+			Only(ctx)
+
+		isUpdate := err == nil
+		if err != nil && !ent.IsNotFound(err) {
+			logger.WithFields(logger.Fields{
+				"Error":             fmt.Sprintf("%v", err),
+				"Institution":       fiatAccountPayload.Institution,
+			}).Errorf("Failed to check for existing fiat account")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+			return
+		}
+
+		fiatAccountOps = append(fiatAccountOps, FiatAccountOperation{
+			Payload:         fiatAccountPayload,
+			IsUpdate:        isUpdate,
+			ExistingAccount: existingAccount,
 		})
 	}
 
@@ -579,6 +639,50 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			return
 		}
 		allBuckets = append(allBuckets, buckets...)
+	}
+
+	// Process all fiat account operations (same pattern as tokens)
+	for _, op := range fiatAccountOps {
+		if op.IsUpdate {
+			// Update existing account
+			_, err := tx.ProviderFiatAccount.
+				UpdateOneID(op.ExistingAccount.ID).
+				SetAccountIdentifier(op.Payload.AccountIdentifier).
+				SetAccountName(op.Payload.AccountName).
+				SetInstitution(op.Payload.Institution).
+				Save(ctx)
+			if err != nil {
+				if rollbackErr := tx.Rollback(); rollbackErr != nil {
+					logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
+				}
+				logger.WithFields(logger.Fields{
+					"Error":             fmt.Sprintf("%v", err),
+					"Institution":       op.Payload.Institution,
+				}).Errorf("Failed to update fiat account")
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+				return
+			}
+		} else {
+			// Create new account
+			_, err := tx.ProviderFiatAccount.
+				Create().
+				SetAccountIdentifier(op.Payload.AccountIdentifier).
+				SetAccountName(op.Payload.AccountName).
+				SetInstitution(op.Payload.Institution).
+				SetProviderID(provider.ID).
+				Save(ctx)
+			if err != nil {
+				if rollbackErr := tx.Rollback(); rollbackErr != nil {
+					logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
+				}
+				logger.WithFields(logger.Fields{
+					"Error":             fmt.Sprintf("%v", err),
+					"Institution":       op.Payload.Institution,
+				}).Errorf("Failed to create fiat account")
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+				return
+			}
+		}
 	}
 
 	// Deduplicate buckets to prevent duplicate many-to-many edges
@@ -803,6 +907,30 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 		return
 	}
 
+	fiatAccounts, err := provider.QueryFiatAccounts().
+		Order(ent.Desc(providerfiataccount.FieldCreatedAt)).
+		All(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"ProviderID": provider.ID,
+		}).Errorf("Failed to fetch fiat accounts for provider")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)
+		return
+	}
+
+	fiatAccountsPayload := make([]types.FiatAccountResponse, len(fiatAccounts))
+	for i, account := range fiatAccounts {
+		fiatAccountsPayload[i] = types.FiatAccountResponse{
+			ID:                account.ID,
+			AccountIdentifier: account.AccountIdentifier,
+			AccountName:       account.AccountName,
+			Institution:       account.Institution,
+			CreatedAt:         account.CreatedAt,
+			UpdatedAt:         account.UpdatedAt,
+		}
+	}
+
 	tokensPayload := make([]types.ProviderOrderTokenPayload, len(orderTokens))
 	for i, orderToken := range orderTokens {
 		payload := types.ProviderOrderTokenPayload{
@@ -851,6 +979,7 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 		HostIdentifier:        provider.HostIdentifier,
 		CurrencyAvailability:  currencyAvailability,
 		Tokens:                tokensPayload,
+		FiatAccounts:          fiatAccountsPayload,
 		APIKey:                *apiKey,
 		IsActive:              provider.IsActive,
 		VisibilityMode:        provider.VisibilityMode,
