@@ -73,8 +73,9 @@ func setup() error {
 	testCtx.token = token
 
 	providerProfile, err := test.CreateTestProviderProfile(map[string]interface{}{
-		"user_id":     testCtx.user.ID,
-		"currency_id": currency.ID,
+		"user_id":        testCtx.user.ID,
+		"currency_id":    currency.ID,
+		"is_otc_enabled": true,
 	})
 	if err != nil {
 		return err
@@ -1052,55 +1053,43 @@ func TestProvider(t *testing.T) {
 			})
 
 			t.Run("Order Id that doesn't Exist", func(t *testing.T) {
-
 				order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
 					"gateway_id": uuid.New().String(),
 					"provider":   testCtx.provider,
 				})
 				assert.NoError(t, err)
-
 				orderKey := fmt.Sprintf("order_request_%s", order.ID)
-
 				user, err := test.CreateTestUser(map[string]interface{}{
 					"email": "order_not_found2@test.com",
 				})
 				assert.NoError(t, err)
-
 				providerProfile, err := test.CreateTestProviderProfile(map[string]interface{}{
 					"user_id":     user.ID,
 					"currency_id": testCtx.currency.ID,
 				})
 				assert.NoError(t, err)
-
 				orderRequestData := map[string]interface{}{
 					"amount":      order.Amount.Mul(order.Rate).RoundBank(0).String(),
 					"institution": order.Institution,
-					"providerId":  providerProfile.ID,
+					"providerId":  providerProfile.ID, // Mismatched providerId to trigger Redis check
 				}
-
 				if db.RedisClient != nil {
 					err = db.RedisClient.HSet(context.Background(), orderKey, orderRequestData).Err()
 					assert.NoError(t, err, fmt.Errorf("failed to map order to a provider in Redis: %v", err))
 				}
-
 				// Test default params
 				var payload = map[string]interface{}{
 
 				"timestamp": time.Now().Unix(),
 				}
-
 				signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
-
 				headers := map[string]string{
 					"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
 				}
-
-				res, err := test.PerformRequest(t, "POST", "/orders/"+testCtx.currency.ID.String()+"/accept", payload, headers, router)
+				res, err := test.PerformRequest(t, "POST", "/orders/"+order.ID.String()+"/accept", payload, headers, router)
 				assert.NoError(t, err)
-
 				// Assert the response body
 				assert.Equal(t, http.StatusNotFound, res.Code)
-
 				var response types.Response
 				err = json.Unmarshal(res.Body.Bytes(), &response)
 				assert.NoError(t, err)

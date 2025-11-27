@@ -6948,6 +6948,7 @@ type LockPaymentOrderMutation struct {
 	message_hash               *string
 	amount_in_usd              *decimal.Decimal
 	addamount_in_usd           *decimal.Decimal
+	order_type                 *lockpaymentorder.OrderType
 	clearedFields              map[string]struct{}
 	token                      *int
 	clearedtoken               bool
@@ -8010,6 +8011,42 @@ func (m *LockPaymentOrderMutation) ResetAmountInUsd() {
 	m.addamount_in_usd = nil
 }
 
+// SetOrderType sets the "order_type" field.
+func (m *LockPaymentOrderMutation) SetOrderType(lt lockpaymentorder.OrderType) {
+	m.order_type = &lt
+}
+
+// OrderType returns the value of the "order_type" field in the mutation.
+func (m *LockPaymentOrderMutation) OrderType() (r lockpaymentorder.OrderType, exists bool) {
+	v := m.order_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOrderType returns the old "order_type" field's value of the LockPaymentOrder entity.
+// If the LockPaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LockPaymentOrderMutation) OldOrderType(ctx context.Context) (v lockpaymentorder.OrderType, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOrderType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOrderType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOrderType: %w", err)
+	}
+	return oldValue.OrderType, nil
+}
+
+// ResetOrderType resets all changes to the "order_type" field.
+func (m *LockPaymentOrderMutation) ResetOrderType() {
+	m.order_type = nil
+}
+
 // SetTokenID sets the "token" edge to the Token entity by id.
 func (m *LockPaymentOrderMutation) SetTokenID(id int) {
 	m.token = &id
@@ -8269,7 +8306,7 @@ func (m *LockPaymentOrderMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *LockPaymentOrderMutation) Fields() []string {
-	fields := make([]string, 0, 20)
+	fields := make([]string, 0, 21)
 	if m.created_at != nil {
 		fields = append(fields, lockpaymentorder.FieldCreatedAt)
 	}
@@ -8330,6 +8367,9 @@ func (m *LockPaymentOrderMutation) Fields() []string {
 	if m.amount_in_usd != nil {
 		fields = append(fields, lockpaymentorder.FieldAmountInUsd)
 	}
+	if m.order_type != nil {
+		fields = append(fields, lockpaymentorder.FieldOrderType)
+	}
 	return fields
 }
 
@@ -8378,6 +8418,8 @@ func (m *LockPaymentOrderMutation) Field(name string) (ent.Value, bool) {
 		return m.MessageHash()
 	case lockpaymentorder.FieldAmountInUsd:
 		return m.AmountInUsd()
+	case lockpaymentorder.FieldOrderType:
+		return m.OrderType()
 	}
 	return nil, false
 }
@@ -8427,6 +8469,8 @@ func (m *LockPaymentOrderMutation) OldField(ctx context.Context, name string) (e
 		return m.OldMessageHash(ctx)
 	case lockpaymentorder.FieldAmountInUsd:
 		return m.OldAmountInUsd(ctx)
+	case lockpaymentorder.FieldOrderType:
+		return m.OldOrderType(ctx)
 	}
 	return nil, fmt.Errorf("unknown LockPaymentOrder field %s", name)
 }
@@ -8575,6 +8619,13 @@ func (m *LockPaymentOrderMutation) SetField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetAmountInUsd(v)
+		return nil
+	case lockpaymentorder.FieldOrderType:
+		v, ok := value.(lockpaymentorder.OrderType)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOrderType(v)
 		return nil
 	}
 	return fmt.Errorf("unknown LockPaymentOrder field %s", name)
@@ -8804,6 +8855,9 @@ func (m *LockPaymentOrderMutation) ResetField(name string) error {
 		return nil
 	case lockpaymentorder.FieldAmountInUsd:
 		m.ResetAmountInUsd()
+		return nil
+	case lockpaymentorder.FieldOrderType:
+		m.ResetOrderType()
 		return nil
 	}
 	return fmt.Errorf("unknown LockPaymentOrder field %s", name)
@@ -10171,6 +10225,7 @@ type PaymentOrderMutation struct {
 	status                 *paymentorder.Status
 	amount_in_usd          *decimal.Decimal
 	addamount_in_usd       *decimal.Decimal
+	order_type             *paymentorder.OrderType
 	clearedFields          map[string]struct{}
 	sender_profile         *uuid.UUID
 	clearedsender_profile  bool
@@ -11343,6 +11398,42 @@ func (m *PaymentOrderMutation) ResetAmountInUsd() {
 	m.addamount_in_usd = nil
 }
 
+// SetOrderType sets the "order_type" field.
+func (m *PaymentOrderMutation) SetOrderType(pt paymentorder.OrderType) {
+	m.order_type = &pt
+}
+
+// OrderType returns the value of the "order_type" field in the mutation.
+func (m *PaymentOrderMutation) OrderType() (r paymentorder.OrderType, exists bool) {
+	v := m.order_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOrderType returns the old "order_type" field's value of the PaymentOrder entity.
+// If the PaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentOrderMutation) OldOrderType(ctx context.Context) (v paymentorder.OrderType, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOrderType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOrderType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOrderType: %w", err)
+	}
+	return oldValue.OrderType, nil
+}
+
+// ResetOrderType resets all changes to the "order_type" field.
+func (m *PaymentOrderMutation) ResetOrderType() {
+	m.order_type = nil
+}
+
 // SetSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by id.
 func (m *PaymentOrderMutation) SetSenderProfileID(id uuid.UUID) {
 	m.sender_profile = &id
@@ -11665,7 +11756,7 @@ func (m *PaymentOrderMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PaymentOrderMutation) Fields() []string {
-	fields := make([]string, 0, 21)
+	fields := make([]string, 0, 22)
 	if m.created_at != nil {
 		fields = append(fields, paymentorder.FieldCreatedAt)
 	}
@@ -11729,6 +11820,9 @@ func (m *PaymentOrderMutation) Fields() []string {
 	if m.amount_in_usd != nil {
 		fields = append(fields, paymentorder.FieldAmountInUsd)
 	}
+	if m.order_type != nil {
+		fields = append(fields, paymentorder.FieldOrderType)
+	}
 	return fields
 }
 
@@ -11779,6 +11873,8 @@ func (m *PaymentOrderMutation) Field(name string) (ent.Value, bool) {
 		return m.Status()
 	case paymentorder.FieldAmountInUsd:
 		return m.AmountInUsd()
+	case paymentorder.FieldOrderType:
+		return m.OrderType()
 	}
 	return nil, false
 }
@@ -11830,6 +11926,8 @@ func (m *PaymentOrderMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldStatus(ctx)
 	case paymentorder.FieldAmountInUsd:
 		return m.OldAmountInUsd(ctx)
+	case paymentorder.FieldOrderType:
+		return m.OldOrderType(ctx)
 	}
 	return nil, fmt.Errorf("unknown PaymentOrder field %s", name)
 }
@@ -11985,6 +12083,13 @@ func (m *PaymentOrderMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetAmountInUsd(v)
+		return nil
+	case paymentorder.FieldOrderType:
+		v, ok := value.(paymentorder.OrderType)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOrderType(v)
 		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder field %s", name)
@@ -12265,6 +12370,9 @@ func (m *PaymentOrderMutation) ResetField(name string) error {
 		return nil
 	case paymentorder.FieldAmountInUsd:
 		m.ResetAmountInUsd()
+		return nil
+	case paymentorder.FieldOrderType:
+		m.ResetOrderType()
 		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder field %s", name)
@@ -15267,6 +15375,10 @@ type ProviderOrderTokenMutation struct {
 	addmax_order_amount         *decimal.Decimal
 	min_order_amount            *decimal.Decimal
 	addmin_order_amount         *decimal.Decimal
+	max_order_amount_otc        *decimal.Decimal
+	addmax_order_amount_otc     *decimal.Decimal
+	min_order_amount_otc        *decimal.Decimal
+	addmin_order_amount_otc     *decimal.Decimal
 	rate_slippage               *decimal.Decimal
 	addrate_slippage            *decimal.Decimal
 	address                     *string
@@ -15713,6 +15825,118 @@ func (m *ProviderOrderTokenMutation) ResetMinOrderAmount() {
 	m.addmin_order_amount = nil
 }
 
+// SetMaxOrderAmountOtc sets the "max_order_amount_otc" field.
+func (m *ProviderOrderTokenMutation) SetMaxOrderAmountOtc(d decimal.Decimal) {
+	m.max_order_amount_otc = &d
+	m.addmax_order_amount_otc = nil
+}
+
+// MaxOrderAmountOtc returns the value of the "max_order_amount_otc" field in the mutation.
+func (m *ProviderOrderTokenMutation) MaxOrderAmountOtc() (r decimal.Decimal, exists bool) {
+	v := m.max_order_amount_otc
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMaxOrderAmountOtc returns the old "max_order_amount_otc" field's value of the ProviderOrderToken entity.
+// If the ProviderOrderToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderOrderTokenMutation) OldMaxOrderAmountOtc(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMaxOrderAmountOtc is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMaxOrderAmountOtc requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMaxOrderAmountOtc: %w", err)
+	}
+	return oldValue.MaxOrderAmountOtc, nil
+}
+
+// AddMaxOrderAmountOtc adds d to the "max_order_amount_otc" field.
+func (m *ProviderOrderTokenMutation) AddMaxOrderAmountOtc(d decimal.Decimal) {
+	if m.addmax_order_amount_otc != nil {
+		*m.addmax_order_amount_otc = m.addmax_order_amount_otc.Add(d)
+	} else {
+		m.addmax_order_amount_otc = &d
+	}
+}
+
+// AddedMaxOrderAmountOtc returns the value that was added to the "max_order_amount_otc" field in this mutation.
+func (m *ProviderOrderTokenMutation) AddedMaxOrderAmountOtc() (r decimal.Decimal, exists bool) {
+	v := m.addmax_order_amount_otc
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetMaxOrderAmountOtc resets all changes to the "max_order_amount_otc" field.
+func (m *ProviderOrderTokenMutation) ResetMaxOrderAmountOtc() {
+	m.max_order_amount_otc = nil
+	m.addmax_order_amount_otc = nil
+}
+
+// SetMinOrderAmountOtc sets the "min_order_amount_otc" field.
+func (m *ProviderOrderTokenMutation) SetMinOrderAmountOtc(d decimal.Decimal) {
+	m.min_order_amount_otc = &d
+	m.addmin_order_amount_otc = nil
+}
+
+// MinOrderAmountOtc returns the value of the "min_order_amount_otc" field in the mutation.
+func (m *ProviderOrderTokenMutation) MinOrderAmountOtc() (r decimal.Decimal, exists bool) {
+	v := m.min_order_amount_otc
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMinOrderAmountOtc returns the old "min_order_amount_otc" field's value of the ProviderOrderToken entity.
+// If the ProviderOrderToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderOrderTokenMutation) OldMinOrderAmountOtc(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMinOrderAmountOtc is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMinOrderAmountOtc requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMinOrderAmountOtc: %w", err)
+	}
+	return oldValue.MinOrderAmountOtc, nil
+}
+
+// AddMinOrderAmountOtc adds d to the "min_order_amount_otc" field.
+func (m *ProviderOrderTokenMutation) AddMinOrderAmountOtc(d decimal.Decimal) {
+	if m.addmin_order_amount_otc != nil {
+		*m.addmin_order_amount_otc = m.addmin_order_amount_otc.Add(d)
+	} else {
+		m.addmin_order_amount_otc = &d
+	}
+}
+
+// AddedMinOrderAmountOtc returns the value that was added to the "min_order_amount_otc" field in this mutation.
+func (m *ProviderOrderTokenMutation) AddedMinOrderAmountOtc() (r decimal.Decimal, exists bool) {
+	v := m.addmin_order_amount_otc
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetMinOrderAmountOtc resets all changes to the "min_order_amount_otc" field.
+func (m *ProviderOrderTokenMutation) ResetMinOrderAmountOtc() {
+	m.min_order_amount_otc = nil
+	m.addmin_order_amount_otc = nil
+}
+
 // SetRateSlippage sets the "rate_slippage" field.
 func (m *ProviderOrderTokenMutation) SetRateSlippage(d decimal.Decimal) {
 	m.rate_slippage = &d
@@ -16005,7 +16229,7 @@ func (m *ProviderOrderTokenMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProviderOrderTokenMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 12)
 	if m.created_at != nil {
 		fields = append(fields, providerordertoken.FieldCreatedAt)
 	}
@@ -16026,6 +16250,12 @@ func (m *ProviderOrderTokenMutation) Fields() []string {
 	}
 	if m.min_order_amount != nil {
 		fields = append(fields, providerordertoken.FieldMinOrderAmount)
+	}
+	if m.max_order_amount_otc != nil {
+		fields = append(fields, providerordertoken.FieldMaxOrderAmountOtc)
+	}
+	if m.min_order_amount_otc != nil {
+		fields = append(fields, providerordertoken.FieldMinOrderAmountOtc)
 	}
 	if m.rate_slippage != nil {
 		fields = append(fields, providerordertoken.FieldRateSlippage)
@@ -16058,6 +16288,10 @@ func (m *ProviderOrderTokenMutation) Field(name string) (ent.Value, bool) {
 		return m.MaxOrderAmount()
 	case providerordertoken.FieldMinOrderAmount:
 		return m.MinOrderAmount()
+	case providerordertoken.FieldMaxOrderAmountOtc:
+		return m.MaxOrderAmountOtc()
+	case providerordertoken.FieldMinOrderAmountOtc:
+		return m.MinOrderAmountOtc()
 	case providerordertoken.FieldRateSlippage:
 		return m.RateSlippage()
 	case providerordertoken.FieldAddress:
@@ -16087,6 +16321,10 @@ func (m *ProviderOrderTokenMutation) OldField(ctx context.Context, name string) 
 		return m.OldMaxOrderAmount(ctx)
 	case providerordertoken.FieldMinOrderAmount:
 		return m.OldMinOrderAmount(ctx)
+	case providerordertoken.FieldMaxOrderAmountOtc:
+		return m.OldMaxOrderAmountOtc(ctx)
+	case providerordertoken.FieldMinOrderAmountOtc:
+		return m.OldMinOrderAmountOtc(ctx)
 	case providerordertoken.FieldRateSlippage:
 		return m.OldRateSlippage(ctx)
 	case providerordertoken.FieldAddress:
@@ -16151,6 +16389,20 @@ func (m *ProviderOrderTokenMutation) SetField(name string, value ent.Value) erro
 		}
 		m.SetMinOrderAmount(v)
 		return nil
+	case providerordertoken.FieldMaxOrderAmountOtc:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMaxOrderAmountOtc(v)
+		return nil
+	case providerordertoken.FieldMinOrderAmountOtc:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMinOrderAmountOtc(v)
+		return nil
 	case providerordertoken.FieldRateSlippage:
 		v, ok := value.(decimal.Decimal)
 		if !ok {
@@ -16192,6 +16444,12 @@ func (m *ProviderOrderTokenMutation) AddedFields() []string {
 	if m.addmin_order_amount != nil {
 		fields = append(fields, providerordertoken.FieldMinOrderAmount)
 	}
+	if m.addmax_order_amount_otc != nil {
+		fields = append(fields, providerordertoken.FieldMaxOrderAmountOtc)
+	}
+	if m.addmin_order_amount_otc != nil {
+		fields = append(fields, providerordertoken.FieldMinOrderAmountOtc)
+	}
 	if m.addrate_slippage != nil {
 		fields = append(fields, providerordertoken.FieldRateSlippage)
 	}
@@ -16211,6 +16469,10 @@ func (m *ProviderOrderTokenMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedMaxOrderAmount()
 	case providerordertoken.FieldMinOrderAmount:
 		return m.AddedMinOrderAmount()
+	case providerordertoken.FieldMaxOrderAmountOtc:
+		return m.AddedMaxOrderAmountOtc()
+	case providerordertoken.FieldMinOrderAmountOtc:
+		return m.AddedMinOrderAmountOtc()
 	case providerordertoken.FieldRateSlippage:
 		return m.AddedRateSlippage()
 	}
@@ -16249,6 +16511,20 @@ func (m *ProviderOrderTokenMutation) AddField(name string, value ent.Value) erro
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddMinOrderAmount(v)
+		return nil
+	case providerordertoken.FieldMaxOrderAmountOtc:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddMaxOrderAmountOtc(v)
+		return nil
+	case providerordertoken.FieldMinOrderAmountOtc:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddMinOrderAmountOtc(v)
 		return nil
 	case providerordertoken.FieldRateSlippage:
 		v, ok := value.(decimal.Decimal)
@@ -16313,6 +16589,12 @@ func (m *ProviderOrderTokenMutation) ResetField(name string) error {
 		return nil
 	case providerordertoken.FieldMinOrderAmount:
 		m.ResetMinOrderAmount()
+		return nil
+	case providerordertoken.FieldMaxOrderAmountOtc:
+		m.ResetMaxOrderAmountOtc()
+		return nil
+	case providerordertoken.FieldMinOrderAmountOtc:
+		m.ResetMinOrderAmountOtc()
 		return nil
 	case providerordertoken.FieldRateSlippage:
 		m.ResetRateSlippage()

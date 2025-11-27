@@ -453,9 +453,11 @@ func TestProfile(t *testing.T) {
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
 					Currency:       "KES",
 					Tokens: []types.ProviderOrderTokenPayload{{
-						Symbol:       testCtx.orderToken.Edges.Token.Symbol,
-						Network:      testCtx.orderToken.Network,
-						RateSlippage: decimal.NewFromFloat(25), // 25% slippage
+						Symbol:           testCtx.token.Symbol,
+						Network:          testCtx.orderToken.Network,
+						RateSlippage:     decimal.NewFromFloat(25), // 25% slippage
+						MaxOrderAmountOTC: decimal.Zero,
+						MinOrderAmountOTC: decimal.Zero,
 					}},
 				}
 				res := profileUpdateRequest(payload)
@@ -473,9 +475,11 @@ func TestProfile(t *testing.T) {
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
 					Currency:       "KES",
 					Tokens: []types.ProviderOrderTokenPayload{{
-						Symbol:       testCtx.orderToken.Edges.Token.Symbol,
-						Network:      testCtx.orderToken.Network,
-						RateSlippage: decimal.NewFromFloat(0.09), // 0.09% slippage
+						Symbol:           testCtx.token.Symbol,
+						Network:          testCtx.orderToken.Network,
+						RateSlippage:     decimal.NewFromFloat(0.09), // 0.09% slippage
+						MaxOrderAmountOTC: decimal.Zero,
+						MinOrderAmountOTC: decimal.Zero,
 					}},
 				}
 				res := profileUpdateRequest(payload)
@@ -493,7 +497,7 @@ func TestProfile(t *testing.T) {
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
 					Currency:       "KES",
 					Tokens: []types.ProviderOrderTokenPayload{{
-						Symbol:                 testCtx.orderToken.Edges.Token.Symbol,
+						Symbol:                 testCtx.token.Symbol,
 						ConversionRateType:     testCtx.orderToken.ConversionRateType,
 						FixedConversionRate:    testCtx.orderToken.FixedConversionRate,
 						FloatingConversionRate: testCtx.orderToken.FloatingConversionRate,
@@ -501,6 +505,8 @@ func TestProfile(t *testing.T) {
 						MinOrderAmount:         testCtx.orderToken.MinOrderAmount,
 						Network:                testCtx.orderToken.Network,
 						RateSlippage:           decimal.NewFromFloat(5), // 5% slippage
+						MaxOrderAmountOTC:      decimal.Zero,
+						MinOrderAmountOTC:      decimal.Zero,
 					}},
 				}
 				res := profileUpdateRequest(payload)
@@ -1090,6 +1096,8 @@ func TestProfile(t *testing.T) {
 				SetFloatingConversionRate(decimal.NewFromInt(2)).
 				SetMaxOrderAmount(decimal.NewFromInt(200)).
 				SetMinOrderAmount(decimal.NewFromInt(10)).
+				SetMaxOrderAmountOtc(decimal.Zero).
+				SetMinOrderAmountOtc(decimal.Zero).
 				SetAddress("address_usd").
 				SetNetwork("polygon").
 				SetRateSlippage(decimal.NewFromInt(0)).
