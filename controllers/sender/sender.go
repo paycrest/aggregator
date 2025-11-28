@@ -479,7 +479,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 
 	// Apply max fee cap if configured
 	senderFee := calculatedFee
-	if senderOrderToken.MaxFeeCap != nil {
+	if senderOrderToken.MaxFeeCap != nil && senderOrderToken.MaxFeeCap.GreaterThan(decimal.Zero) {
 		if calculatedFee.GreaterThan(*senderOrderToken.MaxFeeCap) {
 			senderFee = *senderOrderToken.MaxFeeCap
 		}
