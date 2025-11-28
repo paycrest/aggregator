@@ -92,6 +92,14 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 	hasConfiguredToken := false
 
 	for _, tokenPayload := range payload.Tokens {
+		// Validate MaxFeeCap if provided
+		if tokenPayload.MaxFeeCap != nil && tokenPayload.MaxFeeCap.LessThanOrEqual(decimal.Zero) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", []types.ErrorData{{
+				Field:   "MaxFeeCap",
+				Message: "MaxFeeCap must be a positive value",
+			}})
+			return
+		}
 
 		if len(tokenPayload.Addresses) == 0 {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("No wallet address provided for %s token", tokenPayload.Symbol), nil)
