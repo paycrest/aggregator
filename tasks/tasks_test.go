@@ -130,7 +130,9 @@ func TestTasks(t *testing.T) {
 
 	// Setup test data
 	err := setup()
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
 
 	t.Run("RetryFailedWebhookNotifications", func(t *testing.T) {
 		httpmock.Activate()
