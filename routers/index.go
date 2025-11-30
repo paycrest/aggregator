@@ -124,6 +124,9 @@ func senderRoutes(route *gin.Engine) {
 	v1.Use(middleware.DynamicAuthMiddleware)
 	v1.Use(middleware.OnlySenderMiddleware)
 
+	// Add domain whitelist middleware for sender routes
+	v1.Use(middleware.DomainWhitelistMiddleware())
+
 	v1.POST("orders", senderCtrl.InitiatePaymentOrder)
 	v1.GET("orders/:id", senderCtrl.GetPaymentOrderByID)
 	v1.GET("orders", senderCtrl.GetPaymentOrders)
