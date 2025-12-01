@@ -26,9 +26,7 @@ func (SenderOrderToken) Fields() []ent.Field {
 		field.Float("fee_percent").
 			GoType(decimal.Decimal{}),
 		field.Float("max_fee_cap").
-			GoType(decimal.Decimal{}).
-			Optional().
-			Nillable(),
+			GoType(decimal.Decimal{}),
 		field.String("fee_address").MaxLen(60),
 		field.String("refund_address").MaxLen(60),
 	}

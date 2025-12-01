@@ -374,7 +374,7 @@ func TestProfile(t *testing.T) {
 				{
 					Symbol:     testCtx.token.Symbol,
 					FeePercent: decimal.NewFromInt(5),
-					MaxFeeCap:  &maxFeeCap,
+					MaxFeeCap:  maxFeeCap,
 					Addresses: []types.SenderOrderAddressPayload{
 						{
 							Network:       testCtx.token.Edges.Network.Identifier,
@@ -402,11 +402,10 @@ func TestProfile(t *testing.T) {
 				).
 				Only(context.Background())
 			assert.NoError(t, err)
-			assert.NotNil(t, senderOrderToken.MaxFeeCap)
-			assert.Equal(t, maxFeeCap, *senderOrderToken.MaxFeeCap)
+			assert.Equal(t, maxFeeCap, senderOrderToken.MaxFeeCap)
 		})
 
-		t.Run("without MaxFeeCap (optional field)", func(t *testing.T) {
+		t.Run("without MaxFeeCap (uses zero to mean no cap)", func(t *testing.T) {
 			testUser, err := test.CreateTestUser(map[string]interface{}{
 				"scope": "sender",
 				"email": "nomaxfeecap@test.com",
@@ -429,7 +428,7 @@ func TestProfile(t *testing.T) {
 				{
 					Symbol:     testCtx.token.Symbol,
 					FeePercent: decimal.NewFromInt(5),
-					MaxFeeCap:  nil, // Not provided
+					MaxFeeCap:  decimal.Zero, // Zero means no cap
 					Addresses: []types.SenderOrderAddressPayload{
 						{
 							Network:       testCtx.token.Edges.Network.Identifier,
@@ -448,7 +447,7 @@ func TestProfile(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusOK, res.Code)
 
-			// Verify MaxFeeCap is nil (not set)
+			// Verify MaxFeeCap is zero (meaning no cap)
 			senderOrderToken, err := db.Client.SenderOrderToken.
 				Query().
 				Where(
@@ -457,7 +456,7 @@ func TestProfile(t *testing.T) {
 				).
 				Only(context.Background())
 			assert.NoError(t, err)
-			assert.Nil(t, senderOrderToken.MaxFeeCap)
+			assert.True(t, senderOrderToken.MaxFeeCap.IsZero(), "MaxFeeCap should be zero (no cap)")
 		})
 
 	})
@@ -1204,7 +1203,7 @@ func TestProfile(t *testing.T) {
 			{
 				Symbol:     testCtx.token.Symbol,
 				FeePercent: decimal.NewFromInt(3),
-				MaxFeeCap:  &maxFeeCap,
+				MaxFeeCap:  maxFeeCap,
 				Addresses: []types.SenderOrderAddressPayload{
 					{
 						Network:       testCtx.token.Edges.Network.Identifier,
@@ -1242,8 +1241,7 @@ func TestProfile(t *testing.T) {
 		for _, token := range response.Data.Tokens {
 			if token.Symbol == testCtx.token.Symbol {
 				foundToken = true
-				assert.NotNil(t, token.MaxFeeCap, "MaxFeeCap should be present in response")
-				assert.Equal(t, maxFeeCap, *token.MaxFeeCap)
+				assert.Equal(t, maxFeeCap, token.MaxFeeCap, "MaxFeeCap should be present in response")
 				break
 			}
 		}

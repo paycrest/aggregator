@@ -634,7 +634,7 @@ var (
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "fee_percent", Type: field.TypeFloat64},
-		{Name: "max_fee_cap", Type: field.TypeFloat64, Nullable: true},
+		{Name: "max_fee_cap", Type: field.TypeFloat64},
 		{Name: "fee_address", Type: field.TypeString, Size: 60},
 		{Name: "refund_address", Type: field.TypeString, Size: 60},
 		{Name: "sender_profile_order_tokens", Type: field.TypeUUID},

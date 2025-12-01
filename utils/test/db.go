@@ -439,6 +439,7 @@ func CreateTestSenderProfile(overrides map[string]interface{}) (*ent.SenderProfi
 				SetTokenID(_token.ID).
 				SetRefundAddress(payload["refund_address"].(string)).
 				SetFeePercent(feePercent).
+				SetMaxFeeCap(decimal.Zero). // Default to zero (no cap)
 				SetFeeAddress(payload["fee_address"].(string)).
 				Save(context.Background())
 			if err != nil {

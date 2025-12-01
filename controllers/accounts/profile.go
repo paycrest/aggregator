@@ -92,11 +92,11 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 	hasConfiguredToken := false
 
 	for _, tokenPayload := range payload.Tokens {
-		// Validate MaxFeeCap if provided
-		if tokenPayload.MaxFeeCap != nil && tokenPayload.MaxFeeCap.LessThanOrEqual(decimal.Zero) {
+		// Validate MaxFeeCap (must be positive, zero means no cap)
+		if tokenPayload.MaxFeeCap.LessThan(decimal.Zero) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", []types.ErrorData{{
 				Field:   "MaxFeeCap",
-				Message: "MaxFeeCap must be a positive value",
+				Message: "MaxFeeCap must be zero or a positive value",
 			}})
 			return
 		}
@@ -186,7 +186,7 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 				SetTokenID(networksToTokenId[address.Network]).
 				SetRefundAddress(address.RefundAddress).
 				SetFeePercent(tokenPayload.FeePercent).
-				SetNillableMaxFeeCap(tokenPayload.MaxFeeCap).
+				SetMaxFeeCap(tokenPayload.MaxFeeCap).
 				SetFeeAddress(address.FeeAddress).
 				Save(ctx)
 			if err != nil {

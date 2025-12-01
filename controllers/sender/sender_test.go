@@ -960,7 +960,7 @@ func TestSender(t *testing.T) {
 			})
 			assert.NoError(t, err)
 
-			// Verify MaxFeeCap is not set (should be nil)
+			// Verify MaxFeeCap is zero (meaning no cap)
 			senderOrderToken, err := db.Client.SenderOrderToken.
 				Query().
 				Where(
@@ -969,7 +969,7 @@ func TestSender(t *testing.T) {
 				).
 				Only(context.Background())
 			assert.NoError(t, err)
-			assert.Nil(t, senderOrderToken.MaxFeeCap, "MaxFeeCap should be nil when not set")
+			assert.True(t, senderOrderToken.MaxFeeCap.IsZero(), "MaxFeeCap should be zero (no cap) when not set")
 
 			// Generate API key
 			apiKeyService := services.NewAPIKeyService()

@@ -246,16 +246,6 @@ func MaxFeeCapLTE(v decimal.Decimal) predicate.SenderOrderToken {
 	return predicate.SenderOrderToken(sql.FieldLTE(FieldMaxFeeCap, v))
 }
 
-// MaxFeeCapIsNil applies the IsNil predicate on the "max_fee_cap" field.
-func MaxFeeCapIsNil() predicate.SenderOrderToken {
-	return predicate.SenderOrderToken(sql.FieldIsNull(FieldMaxFeeCap))
-}
-
-// MaxFeeCapNotNil applies the NotNil predicate on the "max_fee_cap" field.
-func MaxFeeCapNotNil() predicate.SenderOrderToken {
-	return predicate.SenderOrderToken(sql.FieldNotNull(FieldMaxFeeCap))
-}
-
 // FeeAddressEQ applies the EQ predicate on the "fee_address" field.
 func FeeAddressEQ(v string) predicate.SenderOrderToken {
 	return predicate.SenderOrderToken(sql.FieldEQ(FieldFeeAddress, v))

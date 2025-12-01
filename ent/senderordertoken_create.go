@@ -66,14 +66,6 @@ func (sotc *SenderOrderTokenCreate) SetMaxFeeCap(d decimal.Decimal) *SenderOrder
 	return sotc
 }
 
-// SetNillableMaxFeeCap sets the "max_fee_cap" field if the given value is not nil.
-func (sotc *SenderOrderTokenCreate) SetNillableMaxFeeCap(d *decimal.Decimal) *SenderOrderTokenCreate {
-	if d != nil {
-		sotc.SetMaxFeeCap(*d)
-	}
-	return sotc
-}
-
 // SetFeeAddress sets the "fee_address" field.
 func (sotc *SenderOrderTokenCreate) SetFeeAddress(s string) *SenderOrderTokenCreate {
 	sotc.mutation.SetFeeAddress(s)
@@ -164,6 +156,9 @@ func (sotc *SenderOrderTokenCreate) check() error {
 	if _, ok := sotc.mutation.FeePercent(); !ok {
 		return &ValidationError{Name: "fee_percent", err: errors.New(`ent: missing required field "SenderOrderToken.fee_percent"`)}
 	}
+	if _, ok := sotc.mutation.MaxFeeCap(); !ok {
+		return &ValidationError{Name: "max_fee_cap", err: errors.New(`ent: missing required field "SenderOrderToken.max_fee_cap"`)}
+	}
 	if _, ok := sotc.mutation.FeeAddress(); !ok {
 		return &ValidationError{Name: "fee_address", err: errors.New(`ent: missing required field "SenderOrderToken.fee_address"`)}
 	}
@@ -227,7 +222,7 @@ func (sotc *SenderOrderTokenCreate) createSpec() (*SenderOrderToken, *sqlgraph.C
 	}
 	if value, ok := sotc.mutation.MaxFeeCap(); ok {
 		_spec.SetField(senderordertoken.FieldMaxFeeCap, field.TypeFloat64, value)
-		_node.MaxFeeCap = &value
+		_node.MaxFeeCap = value
 	}
 	if value, ok := sotc.mutation.FeeAddress(); ok {
 		_spec.SetField(senderordertoken.FieldFeeAddress, field.TypeString, value)
@@ -371,12 +366,6 @@ func (u *SenderOrderTokenUpsert) AddMaxFeeCap(v decimal.Decimal) *SenderOrderTok
 	return u
 }
 
-// ClearMaxFeeCap clears the value of the "max_fee_cap" field.
-func (u *SenderOrderTokenUpsert) ClearMaxFeeCap() *SenderOrderTokenUpsert {
-	u.SetNull(senderordertoken.FieldMaxFeeCap)
-	return u
-}
-
 // SetFeeAddress sets the "fee_address" field.
 func (u *SenderOrderTokenUpsert) SetFeeAddress(v string) *SenderOrderTokenUpsert {
 	u.Set(senderordertoken.FieldFeeAddress, v)
@@ -499,13 +488,6 @@ func (u *SenderOrderTokenUpsertOne) AddMaxFeeCap(v decimal.Decimal) *SenderOrder
 func (u *SenderOrderTokenUpsertOne) UpdateMaxFeeCap() *SenderOrderTokenUpsertOne {
 	return u.Update(func(s *SenderOrderTokenUpsert) {
 		s.UpdateMaxFeeCap()
-	})
-}
-
-// ClearMaxFeeCap clears the value of the "max_fee_cap" field.
-func (u *SenderOrderTokenUpsertOne) ClearMaxFeeCap() *SenderOrderTokenUpsertOne {
-	return u.Update(func(s *SenderOrderTokenUpsert) {
-		s.ClearMaxFeeCap()
 	})
 }
 
@@ -801,13 +783,6 @@ func (u *SenderOrderTokenUpsertBulk) AddMaxFeeCap(v decimal.Decimal) *SenderOrde
 func (u *SenderOrderTokenUpsertBulk) UpdateMaxFeeCap() *SenderOrderTokenUpsertBulk {
 	return u.Update(func(s *SenderOrderTokenUpsert) {
 		s.UpdateMaxFeeCap()
-	})
-}
-
-// ClearMaxFeeCap clears the value of the "max_fee_cap" field.
-func (u *SenderOrderTokenUpsertBulk) ClearMaxFeeCap() *SenderOrderTokenUpsertBulk {
-	return u.Update(func(s *SenderOrderTokenUpsert) {
-		s.ClearMaxFeeCap()
 	})
 }
 

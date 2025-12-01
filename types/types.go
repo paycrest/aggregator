@@ -239,7 +239,7 @@ type SenderOrderAddressPayload struct {
 type SenderOrderTokenPayload struct {
 	Symbol     string                      `json:"symbol" binding:"required"`
 	FeePercent decimal.Decimal             `json:"feePercent" binding:"required"`
-	MaxFeeCap  *decimal.Decimal            `json:"maxFeeCap,omitempty"`
+	MaxFeeCap  decimal.Decimal             `json:"maxFeeCap" binding:"required,gte=0"`
 	Addresses  []SenderOrderAddressPayload `json:"addresses"`
 }
 
@@ -316,7 +316,7 @@ type ProviderProfileResponse struct {
 type SenderOrderTokenResponse struct {
 	Symbol        string          `json:"symbol" binding:"required"`
 	FeePercent    decimal.Decimal `json:"feePercent" binding:"required"`
-	MaxFeeCap     *decimal.Decimal `json:"maxFeeCap,omitempty"`
+	MaxFeeCap     decimal.Decimal `json:"maxFeeCap"`
 	Network       string          `json:"network" binding:"required"`
 	FeeAddress    string          `json:"feeAddress" binding:"required"`
 	RefundAddress string          `json:"refundAddress" binding:"required"`

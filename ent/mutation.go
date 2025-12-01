@@ -20521,7 +20521,7 @@ func (m *SenderOrderTokenMutation) MaxFeeCap() (r decimal.Decimal, exists bool) 
 // OldMaxFeeCap returns the old "max_fee_cap" field's value of the SenderOrderToken entity.
 // If the SenderOrderToken object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *SenderOrderTokenMutation) OldMaxFeeCap(ctx context.Context) (v *decimal.Decimal, err error) {
+func (m *SenderOrderTokenMutation) OldMaxFeeCap(ctx context.Context) (v decimal.Decimal, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldMaxFeeCap is only allowed on UpdateOne operations")
 	}
@@ -20553,24 +20553,10 @@ func (m *SenderOrderTokenMutation) AddedMaxFeeCap() (r decimal.Decimal, exists b
 	return *v, true
 }
 
-// ClearMaxFeeCap clears the value of the "max_fee_cap" field.
-func (m *SenderOrderTokenMutation) ClearMaxFeeCap() {
-	m.max_fee_cap = nil
-	m.addmax_fee_cap = nil
-	m.clearedFields[senderordertoken.FieldMaxFeeCap] = struct{}{}
-}
-
-// MaxFeeCapCleared returns if the "max_fee_cap" field was cleared in this mutation.
-func (m *SenderOrderTokenMutation) MaxFeeCapCleared() bool {
-	_, ok := m.clearedFields[senderordertoken.FieldMaxFeeCap]
-	return ok
-}
-
 // ResetMaxFeeCap resets all changes to the "max_fee_cap" field.
 func (m *SenderOrderTokenMutation) ResetMaxFeeCap() {
 	m.max_fee_cap = nil
 	m.addmax_fee_cap = nil
-	delete(m.clearedFields, senderordertoken.FieldMaxFeeCap)
 }
 
 // SetFeeAddress sets the "fee_address" field.
@@ -20924,11 +20910,7 @@ func (m *SenderOrderTokenMutation) AddField(name string, value ent.Value) error 
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
 func (m *SenderOrderTokenMutation) ClearedFields() []string {
-	var fields []string
-	if m.FieldCleared(senderordertoken.FieldMaxFeeCap) {
-		fields = append(fields, senderordertoken.FieldMaxFeeCap)
-	}
-	return fields
+	return nil
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
@@ -20941,11 +20923,6 @@ func (m *SenderOrderTokenMutation) FieldCleared(name string) bool {
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
 func (m *SenderOrderTokenMutation) ClearField(name string) error {
-	switch name {
-	case senderordertoken.FieldMaxFeeCap:
-		m.ClearMaxFeeCap()
-		return nil
-	}
 	return fmt.Errorf("unknown SenderOrderToken nullable field %s", name)
 }
 

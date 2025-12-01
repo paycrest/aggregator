@@ -80,12 +80,6 @@ func (sotu *SenderOrderTokenUpdate) AddMaxFeeCap(d decimal.Decimal) *SenderOrder
 	return sotu
 }
 
-// ClearMaxFeeCap clears the value of the "max_fee_cap" field.
-func (sotu *SenderOrderTokenUpdate) ClearMaxFeeCap() *SenderOrderTokenUpdate {
-	sotu.mutation.ClearMaxFeeCap()
-	return sotu
-}
-
 // SetFeeAddress sets the "fee_address" field.
 func (sotu *SenderOrderTokenUpdate) SetFeeAddress(s string) *SenderOrderTokenUpdate {
 	sotu.mutation.SetFeeAddress(s)
@@ -237,9 +231,6 @@ func (sotu *SenderOrderTokenUpdate) sqlSave(ctx context.Context) (n int, err err
 	if value, ok := sotu.mutation.AddedMaxFeeCap(); ok {
 		_spec.AddField(senderordertoken.FieldMaxFeeCap, field.TypeFloat64, value)
 	}
-	if sotu.mutation.MaxFeeCapCleared() {
-		_spec.ClearField(senderordertoken.FieldMaxFeeCap, field.TypeFloat64)
-	}
 	if value, ok := sotu.mutation.FeeAddress(); ok {
 		_spec.SetField(senderordertoken.FieldFeeAddress, field.TypeString, value)
 	}
@@ -369,12 +360,6 @@ func (sotuo *SenderOrderTokenUpdateOne) SetNillableMaxFeeCap(d *decimal.Decimal)
 // AddMaxFeeCap adds d to the "max_fee_cap" field.
 func (sotuo *SenderOrderTokenUpdateOne) AddMaxFeeCap(d decimal.Decimal) *SenderOrderTokenUpdateOne {
 	sotuo.mutation.AddMaxFeeCap(d)
-	return sotuo
-}
-
-// ClearMaxFeeCap clears the value of the "max_fee_cap" field.
-func (sotuo *SenderOrderTokenUpdateOne) ClearMaxFeeCap() *SenderOrderTokenUpdateOne {
-	sotuo.mutation.ClearMaxFeeCap()
 	return sotuo
 }
 
@@ -558,9 +543,6 @@ func (sotuo *SenderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *Sen
 	}
 	if value, ok := sotuo.mutation.AddedMaxFeeCap(); ok {
 		_spec.AddField(senderordertoken.FieldMaxFeeCap, field.TypeFloat64, value)
-	}
-	if sotuo.mutation.MaxFeeCapCleared() {
-		_spec.ClearField(senderordertoken.FieldMaxFeeCap, field.TypeFloat64)
 	}
 	if value, ok := sotuo.mutation.FeeAddress(); ok {
 		_spec.SetField(senderordertoken.FieldFeeAddress, field.TypeString, value)
