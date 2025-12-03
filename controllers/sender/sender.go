@@ -14,12 +14,12 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
+	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
+	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
 	"github.com/paycrest/aggregator/ent/predicate"
-	"github.com/paycrest/aggregator/ent/providerordertoken"
-	providerprofile "github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
@@ -278,8 +278,8 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	}
 
 	type RateResult struct {
-		achievableRate decimal.Decimal
-		err            error
+		rateResult u.RateValidationResult
+		err        error
 	}
 
 	accountChan := make(chan AccountResult, 1)
@@ -291,8 +291,8 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	}()
 
 	go func() {
-		achievableRate, err := u.ValidateRate(ctx, token, institutionObj.Edges.FiatCurrency, payload.Amount, payload.Recipient.ProviderID, payload.Network)
-		rateChan <- RateResult{achievableRate, err}
+		rateResult, err := u.ValidateRate(ctx, token, institutionObj.Edges.FiatCurrency, payload.Amount, payload.Recipient.ProviderID, payload.Network)
+		rateChan <- RateResult{rateResult, err}
 	}()
 
 	var accountResult AccountResult
@@ -324,7 +324,8 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 
 	// Both validations successful
 	payload.Recipient.AccountName = accountResult.accountName
-	achievableRate := rateResult.achievableRate
+	rateValidationResult := rateResult.rateResult
+	achievableRate := rateValidationResult.Rate
 
 	// Validate that the provided rate is achievable
 	// Allow for a small tolerance (0.1%) to account for minor rate fluctuations
@@ -338,68 +339,9 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	}
 
 	amountInUSD := u.CalculatePaymentOrderAmountInUSD(payload.Amount, token, institutionObj)
-	orderType := paymentorder.OrderTypeRegular
 
-	if payload.Recipient.ProviderID != "" {
-		orderToken, err := storage.Client.ProviderOrderToken.
-			Query().
-			Where(
-				providerordertoken.NetworkEQ(token.Edges.Network.Identifier),
-				providerordertoken.HasProviderWith(
-					providerprofile.IDEQ(payload.Recipient.ProviderID),
-				),
-				providerordertoken.HasTokenWith(
-					tokenEnt.IDEQ(token.ID),
-				),
-				providerordertoken.HasCurrencyWith(
-					fiatcurrency.CodeEQ(institutionObj.Edges.FiatCurrency.Code),
-				),
-			).
-			WithProvider().
-			Only(ctx)
-		if err != nil {
-			if ent.IsNotFound(err) {
-				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
-					Field:   "Recipient",
-					Message: "The specified provider does not support the selected token",
-				})
-			} else {
-				logger.Errorf("Failed to fetch provider settings: %v", err)
-				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider settings", nil)
-			}
-			return
-		}
-
-		provider := orderToken.Edges.Provider
-
-		if u.DetermineOrderType(orderToken, amountInUSD) == paymentorder.OrderTypeOtc {
-			orderType = paymentorder.OrderTypeOtc
-			logger.Infof("Order classified as OTC (USD amount: %s, provider: %s)", amountInUSD.String(), provider.ID)
-		}
-		// Validate amount for private orders
-		if orderToken.Edges.Provider.VisibilityMode == providerprofile.VisibilityModePrivate {
-			normalizedAmount := payload.Amount
-			if strings.EqualFold(token.BaseCurrency, institutionObj.Edges.FiatCurrency.Code) && token.BaseCurrency != "USD" {
-				rateResponse, err := u.GetTokenRateFromQueue("USDT", normalizedAmount, institutionObj.Edges.FiatCurrency.Code, institutionObj.Edges.FiatCurrency.MarketRate)
-				if err != nil {
-					logger.Errorf("InitiatePaymentOrder.GetTokenRateFromQueue: %v", err)
-					u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", map[string]interface{}{
-						"context": "token_rate_queue",
-					})
-					return
-				}
-				normalizedAmount = payload.Amount.Div(rateResponse)
-			}
-
-			if normalizedAmount.LessThan(orderToken.MinOrderAmount) {
-				u.APIResponse(ctx, http.StatusBadRequest, "error", "The amount is below the minimum order amount for the specified provider", nil)
-				return
-			} else if normalizedAmount.GreaterThan(orderToken.MaxOrderAmount) {
-				u.APIResponse(ctx, http.StatusBadRequest, "error", "The amount is beyond the maximum order amount for the specified provider", nil)
-				return
-			}
-		}
-	}
+	// Use order type from ValidateRate result (already determined based on OTC limits)
+	orderType := rateValidationResult.OrderType
 
 	// Generate receive address
 	var receiveAddress *ent.ReceiveAddress
@@ -734,19 +676,18 @@ func (ctrl *SenderController) GetPaymentOrders(ctx *gin.Context) {
 	fromDateStr := ctx.Query("from")
 	toDateStr := ctx.Query("to")
 
-
 	// Check if this is a search request
 	searchParam := ctx.Query("search")
 	searchText := strings.TrimSpace(searchParam)
 	hasSearchParam := ctx.Request.URL.Query().Has("search")
 	isSearch := searchText != ""
-	
+
 	// Handle empty search query error
 	if hasSearchParam && !isSearch {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Search query is required", nil)
 		return
 	}
-	
+
 	// Handle export request
 	if isExport {
 		if fromDateStr == "" || toDateStr == "" {
@@ -756,13 +697,13 @@ func (ctrl *SenderController) GetPaymentOrders(ctx *gin.Context) {
 		ctrl.handleExportPaymentOrders(ctx, sender)
 		return
 	}
-	
+
 	// Handle search request
 	if isSearch {
 		ctrl.handleSearchPaymentOrders(ctx, sender, searchText)
 		return
 	}
-	
+
 	// Handle normal listing
 	ctrl.handleListPaymentOrders(ctx, sender)
 }
@@ -837,12 +778,12 @@ func (ctrl *SenderController) handleSearchPaymentOrders(ctx *gin.Context, sender
 
 	// Apply text search across all relevant fields
 	var searchPredicates []predicate.PaymentOrder
-	
+
 	// Try to parse search text as UUID for exact ID match
 	if searchUUID, err := uuid.Parse(searchText); err == nil {
 		searchPredicates = append(searchPredicates, paymentorder.IDEQ(searchUUID))
 	}
-	
+
 	searchPredicates = append(searchPredicates,
 		paymentorder.ReceiveAddressTextContains(searchText),
 		paymentorder.FromAddressContains(searchText),
@@ -856,7 +797,7 @@ func (ctrl *SenderController) handleSearchPaymentOrders(ctx *gin.Context, sender
 			),
 		),
 	)
-	
+
 	paymentOrderQuery = paymentOrderQuery.Where(
 		paymentorder.Or(searchPredicates...),
 	)
@@ -872,8 +813,8 @@ func (ctrl *SenderController) handleSearchPaymentOrders(ctx *gin.Context, sender
 	// Set reasonable limit to prevent memory issues
 	maxSearchResults := 10000
 	if count > maxSearchResults {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", 
-			fmt.Sprintf("Search returned too many results (%d). Maximum allowed is %d. Please use a more specific search term.", 
+		u.APIResponse(ctx, http.StatusBadRequest, "error",
+			fmt.Sprintf("Search returned too many results (%d). Maximum allowed is %d. Please use a more specific search term.",
 				count, maxSearchResults), nil)
 		return
 	}
@@ -911,9 +852,9 @@ func (ctrl *SenderController) handleExportPaymentOrders(ctx *gin.Context, sender
 	// Parse date range parameters
 	fromDateStr := ctx.Query("from")
 	toDateStr := ctx.Query("to")
-	
+
 	var fromDate, toDate *time.Time
-	
+
 	// Parse from date
 	if fromDateStr != "" {
 		parsedFromDate, err := time.Parse("2006-01-02", fromDateStr)
@@ -926,7 +867,7 @@ func (ctrl *SenderController) handleExportPaymentOrders(ctx *gin.Context, sender
 		}
 		fromDate = &parsedFromDate
 	}
-	
+
 	// Parse to date
 	if toDateStr != "" {
 		parsedToDate, err := time.Parse("2006-01-02", toDateStr)
@@ -998,7 +939,7 @@ func (ctrl *SenderController) handleExportPaymentOrders(ctx *gin.Context, sender
 
 	// Validate export size against limit
 	if limit > 0 && count > limit {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", 
+		u.APIResponse(ctx, http.StatusBadRequest, "error",
 			fmt.Sprintf("Export too large. Found %d orders but limit is %d", count, limit), nil)
 		return
 	}
@@ -1083,13 +1024,13 @@ func (ctrl *SenderController) buildPaymentOrderResponses(ctx *gin.Context, payme
 			institutionCodes[paymentOrder.Edges.Recipient.Institution] = true
 		}
 	}
-	
+
 	// Convert map keys to slice
 	codes := make([]string, 0, len(institutionCodes))
 	for code := range institutionCodes {
 		codes = append(codes, code)
 	}
-	
+
 	// Fetch all institutions in one query
 	institutions, err := storage.Client.Institution.
 		Query().
@@ -1099,7 +1040,7 @@ func (ctrl *SenderController) buildPaymentOrderResponses(ctx *gin.Context, payme
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch institutions: %v", err)
 	}
-	
+
 	// Create institution lookup map
 	institutionMap := make(map[string]*ent.Institution)
 	for _, inst := range institutions {
@@ -1158,13 +1099,13 @@ func (ctrl *SenderController) generateCSVResponse(ctx *gin.Context, paymentOrder
 			institutionCodes[paymentOrder.Edges.Recipient.Institution] = true
 		}
 	}
-	
+
 	// Convert map keys to slice
 	codes := make([]string, 0, len(institutionCodes))
 	for code := range institutionCodes {
 		codes = append(codes, code)
 	}
-	
+
 	// Fetch all institutions in one query
 	institutions, err := storage.Client.Institution.
 		Query().
@@ -1176,7 +1117,7 @@ func (ctrl *SenderController) generateCSVResponse(ctx *gin.Context, paymentOrder
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to export payment orders", nil)
 		return
 	}
-	
+
 	// Create institution lookup map
 	institutionMap := make(map[string]*ent.Institution)
 	for _, inst := range institutions {
@@ -1186,7 +1127,7 @@ func (ctrl *SenderController) generateCSVResponse(ctx *gin.Context, paymentOrder
 	// Set CSV headers
 	timestamp := time.Now().Format("2006-01-02_15-04-05")
 	filename := fmt.Sprintf("payment_orders_%s.csv", timestamp)
-	
+
 	ctx.Header("Content-Type", "text/csv")
 	ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
 	ctx.Header("X-Total-Count", strconv.Itoa(len(paymentOrders)))
@@ -1208,7 +1149,7 @@ func (ctrl *SenderController) generateCSVResponse(ctx *gin.Context, paymentOrder
 		"Transaction Fee",
 		"Status",
 		"Recipient Institution",
-		"Recipient Currency", 
+		"Recipient Currency",
 		"Recipient Account",
 		"Recipient Name",
 		"From Address",
@@ -1360,4 +1301,189 @@ func (ctrl *SenderController) Stats(ctx *gin.Context) {
 	})
 }
 
+// ValidateOrder controller validates an order (allows sender to validate fulfilled orders when they've received value)
+func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
+	// Get sender profile from the context
+	senderCtx, ok := ctx.Get("sender")
+	if !ok {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
+		return
+	}
+	sender := senderCtx.(*ent.SenderProfile)
 
+	// Parse the PaymentOrder ID string into a UUID
+	paymentOrderID, err := uuid.Parse(ctx.Param("id"))
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":    fmt.Sprintf("%v", err),
+			"Order ID": ctx.Param("id"),
+		}).Errorf("Error parsing order ID: %v", err)
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
+		return
+	}
+
+	// Fetch payment order and verify it belongs to sender
+	paymentOrder, err := storage.Client.PaymentOrder.
+		Query().
+		Where(
+			paymentorder.IDEQ(paymentOrderID),
+			paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)),
+		).
+		WithSenderProfile().
+		WithRecipient().
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found or does not belong to sender", nil)
+			return
+		}
+		logger.WithFields(logger.Fields{
+			"Error":    fmt.Sprintf("%v", err),
+			"Order ID": paymentOrderID.String(),
+		}).Errorf("Failed to fetch payment order: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch order", nil)
+		return
+	}
+
+	// Verify payment order has message hash
+	if paymentOrder.MessageHash == "" {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Order message hash not found", nil)
+		return
+	}
+
+	// Fetch lock payment order using message hash and verify it's fulfilled and has successful fulfillment
+	lockOrder, err := storage.Client.LockPaymentOrder.
+		Query().
+		Where(
+			lockpaymentorder.MessageHashEQ(paymentOrder.MessageHash),
+			lockpaymentorder.StatusEQ(lockpaymentorder.StatusFulfilled),
+		).
+		WithFulfillments(func(fq *ent.LockOrderFulfillmentQuery) {
+			fq.Where(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusSuccess))
+		}).
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusNotFound, "error", "Lock order not found or not eligible for validation", nil)
+			return
+		}
+		logger.WithFields(logger.Fields{
+			"Error":          fmt.Sprintf("%v", err),
+			"PaymentOrderID": paymentOrderID.String(),
+			"MessageHash":    paymentOrder.MessageHash,
+		}).Errorf("Failed to fetch lock payment order: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch lock order", nil)
+		return
+	}
+
+	// Verify fulfillment exists and has success status
+	if len(lockOrder.Edges.Fulfillments) == 0 {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Order fulfillment not found or not successful", nil)
+		return
+	}
+
+	fulfillment := lockOrder.Edges.Fulfillments[0]
+	if fulfillment.ValidationStatus != lockorderfulfillment.ValidationStatusSuccess {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Order fulfillment must have success status", nil)
+		return
+	}
+
+	// Check if order is already validated
+	if lockOrder.Status == lockpaymentorder.StatusValidated {
+		u.APIResponse(ctx, http.StatusOK, "success", "Order already validated", nil)
+		return
+	}
+
+	// Start a database transaction to ensure consistency
+	tx, err := storage.Client.Tx(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":          fmt.Sprintf("%v", err),
+			"PaymentOrderID": paymentOrderID.String(),
+		}).Errorf("Failed to start transaction: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to validate order", nil)
+		return
+	}
+
+	// Create transaction log within transaction
+	transactionLog, err := tx.TransactionLog.Create().
+		SetStatus(transactionlog.StatusOrderValidated).
+		SetNetwork(lockOrder.Edges.Token.Edges.Network.Identifier).
+		SetMetadata(map[string]interface{}{
+			"TransactionID": fulfillment.TxID,
+			"PSP":           fulfillment.Psp,
+		}).
+		Save(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":          fmt.Sprintf("%v", err),
+			"PaymentOrderID": paymentOrderID.String(),
+			"Network":        lockOrder.Edges.Token.Edges.Network.Identifier,
+		}).Errorf("Failed to create transaction log: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to validate order", nil)
+		_ = tx.Rollback()
+		return
+	}
+
+	// Update lock order status within transaction
+	_, err = tx.LockPaymentOrder.
+		Update().
+		Where(lockpaymentorder.IDEQ(lockOrder.ID)).
+		SetStatus(lockpaymentorder.StatusValidated).
+		AddTransactions(transactionLog).
+		Save(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":          fmt.Sprintf("%v", err),
+			"PaymentOrderID": paymentOrderID.String(),
+			"LockOrderID":    lockOrder.ID.String(),
+		}).Errorf("Failed to update lock order status: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to validate order", nil)
+		_ = tx.Rollback()
+		return
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":          fmt.Sprintf("%v", err),
+			"PaymentOrderID": paymentOrderID.String(),
+		}).Errorf("Failed to commit transaction: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to validate order", nil)
+		return
+	}
+
+	// Clean up order exclude list from Redis (best effort, don't fail if it errors)
+	orderKey := fmt.Sprintf("order_exclude_list_%s", lockOrder.ID)
+	_ = storage.RedisClient.Del(ctx, orderKey).Err()
+
+	// Update payment order status and send webhook notification
+	_, err = paymentOrder.Update().
+		SetStatus(paymentorder.StatusValidated).
+		Save(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":          fmt.Sprintf("%v", err),
+			"PaymentOrderID": paymentOrderID.String(),
+		}).Errorf("Failed to update payment order status: %v", err)
+		// Don't fail the request if payment order update fails
+	} else {
+		paymentOrder.Status = paymentorder.StatusValidated
+		err = u.SendPaymentOrderWebhook(ctx, paymentOrder)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":          fmt.Sprintf("%v", err),
+				"PaymentOrderID": paymentOrderID.String(),
+			}).Errorf("Failed to send webhook notification to sender: %v", err)
+			// Don't fail the request if webhook fails
+		}
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Order validated successfully", nil)
+}
