@@ -1328,6 +1328,7 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 		Where(
 			paymentorder.IDEQ(paymentOrderID),
 			paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)),
+			paymentorder.OrderTypeEQ(paymentorder.OrderTypeOtc),
 		).
 		WithSenderProfile().
 		WithRecipient().
@@ -1360,6 +1361,7 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 		Where(
 			lockpaymentorder.MessageHashEQ(paymentOrder.MessageHash),
 			lockpaymentorder.StatusIn(lockpaymentorder.StatusFulfilled, lockpaymentorder.StatusValidated),
+			lockpaymentorder.OrderTypeEQ(lockpaymentorder.OrderTypeOtc),
 		).
 		WithFulfillments(func(fq *ent.LockOrderFulfillmentQuery) {
 			fq.Where(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusSuccess))
@@ -1449,6 +1451,23 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 		return
 	}
 
+	// Update payment order status within the same transaction
+	_, err = tx.PaymentOrder.
+		Update().
+		Where(paymentorder.IDEQ(paymentOrder.ID)).
+		SetStatus(paymentorder.StatusValidated).
+		Save(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":          fmt.Sprintf("%v", err),
+			"PaymentOrderID": paymentOrderID.String(),
+			"LockOrderID":    lockOrder.ID.String(),
+		}).Errorf("Failed to update payment order status within transaction: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to validate order", nil)
+		_ = tx.Rollback()
+		return
+	}
+
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
 		logger.WithFields(logger.Fields{
@@ -1463,26 +1482,15 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 	orderKey := fmt.Sprintf("order_exclude_list_%s", lockOrder.ID)
 	_ = storage.RedisClient.Del(ctx, orderKey).Err()
 
-	// Update payment order status and send webhook notification
-	_, err = paymentOrder.Update().
-		SetStatus(paymentorder.StatusValidated).
-		Save(ctx)
+	// Update paymentOrder.Status for webhook (transaction already committed)
+	paymentOrder.Status = paymentorder.StatusValidated
+	err = u.SendPaymentOrderWebhook(ctx, paymentOrder)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":          fmt.Sprintf("%v", err),
 			"PaymentOrderID": paymentOrderID.String(),
-		}).Errorf("Failed to update payment order status: %v", err)
-		// Don't fail the request if payment order update fails
-	} else {
-		paymentOrder.Status = paymentorder.StatusValidated
-		err = u.SendPaymentOrderWebhook(ctx, paymentOrder)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":          fmt.Sprintf("%v", err),
-				"PaymentOrderID": paymentOrderID.String(),
-			}).Errorf("Failed to send webhook notification to sender: %v", err)
-			// Don't fail the request if webhook fails
-		}
+		}).Errorf("Failed to send webhook notification to sender: %v", err)
+		// Don't fail the request if webhook fails
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Order validated successfully", nil)

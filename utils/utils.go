@@ -866,7 +866,11 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 			return RateValidationResult{}, fmt.Errorf("amount exceeds maximum order amount (%s) for this provider", providerOrderToken.MaxOrderAmount)
 		}
 		if amount.LessThan(providerOrderToken.MinOrderAmountOtc) || amount.GreaterThan(providerOrderToken.MaxOrderAmountOtc) {
-			return RateValidationResult{}, fmt.Errorf("amount exceeds maximum order amount (%s) for this provider", providerOrderToken.MaxOrderAmount)
+			if amount.LessThan(providerOrderToken.MinOrderAmountOtc) {
+				return RateValidationResult{}, fmt.Errorf("amount is below minimum order amount (%s) for this provider", providerOrderToken.MinOrderAmountOtc)
+			} else {
+				return RateValidationResult{}, fmt.Errorf("amount exceeds maximum order amount (%s) for this provider", providerOrderToken.MaxOrderAmountOtc)
+			}
 		}
 		// Amount is within OTC limits - allow it (order will be classified as OTC)
 	} else {
@@ -1386,24 +1390,20 @@ func DetermineOrderType(orderToken *ent.ProviderOrderToken, tokenAmount decimal.
 		return paymentorder.OrderTypeRegular
 	}
 
-	// Check if amount exceeds regular max - OTC is only used as a fallback for amounts above regular max
+	// Check if amount is within regular limits
 	if tokenAmount.LessThanOrEqual(orderToken.MaxOrderAmount) {
 		return paymentorder.OrderTypeRegular
 	}
 
-	// Amount exceeds regular max - check if it falls within OTC limits
+	// Amount exceeds regular max - check if OTC is configured
 	minOTC := orderToken.MinOrderAmountOtc
 	maxOTC := orderToken.MaxOrderAmountOtc
 	if minOTC.IsZero() || maxOTC.IsZero() || minOTC.GreaterThan(maxOTC) {
-		// OTC limits not configured - cannot be OTC
+		// OTC limits not configured - cannot be OTC, return regular (will fail validation)
 		return paymentorder.OrderTypeRegular
 	}
 
-	// Check if amount is within OTC limits
-	if tokenAmount.GreaterThanOrEqual(minOTC) && tokenAmount.LessThanOrEqual(maxOTC) {
-		return paymentorder.OrderTypeOtc
-	}
-
-	// Amount exceeds regular max but outside OTC limits - still regular (will fail validation)
-	return paymentorder.OrderTypeRegular
+	// OTC limits are configured - any amount exceeding regular max should be treated as OTC attempt
+	// Validation will catch if it's outside the valid OTC range (gap between MaxOrderAmount and MinOrderAmountOtc, or > MaxOrderAmountOtc)
+	return paymentorder.OrderTypeOtc
 }
