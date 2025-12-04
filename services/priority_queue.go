@@ -427,6 +427,30 @@ func (s *PriorityQueueService) assignOtcOrder(ctx context.Context, order types.L
 	return nil
 }
 
+// addProviderToExcludeList adds a provider to the order exclude list with TTL
+// This is a best-effort operation - errors are logged but don't fail the operation
+func (s *PriorityQueueService) addProviderToExcludeList(ctx context.Context, orderID string, providerID string, ttl time.Duration) {
+	orderKey := fmt.Sprintf("order_exclude_list_%s", orderID)
+	_, err := storage.RedisClient.RPush(ctx, orderKey, providerID).Result()
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"OrderID":    orderID,
+			"ProviderID": providerID,
+		}).Errorf("failed to push provider to order exclude list")
+		return
+	}
+
+	// Set TTL for the exclude list (2x order request validity since orders can be reassigned)
+	err = storage.RedisClient.ExpireAt(ctx, orderKey, time.Now().Add(ttl)).Err()
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":    fmt.Sprintf("%v", err),
+			"OrderKey": orderKey,
+		}).Errorf("failed to set TTL for order exclude list")
+	}
+}
+
 // sendOrderRequest sends an order request to a provider
 func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types.LockPaymentOrderFields) error {
 	// Reserve balance for this order
@@ -678,6 +702,14 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 			// For OTC orders, skip balance check and assign order to provider
 			if order.OrderType == "otc" {
 				if err := s.assignOtcOrder(ctx, order); err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":      fmt.Sprintf("%v", err),
+						"OrderID":    order.ID.String(),
+						"ProviderID": order.ProviderID,
+					}).Errorf("failed to assign OTC order to provider when matching rate")
+
+					// Add provider to exclude list before continuing to next provider
+					s.addProviderToExcludeList(ctx, order.ID.String(), order.ProviderID, orderConf.OrderRequestValidityOtc*2)
 					continue
 				}
 				break
@@ -706,27 +738,8 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 						"orderIDPrefix": orderIDPrefix,
 					}).Errorf("failed to send order request to specific provider when matching rate")
 
-					// Push provider ID to order exclude list
-					orderKey := fmt.Sprintf("order_exclude_list_%s", order.ID)
-					_, err = storage.RedisClient.RPush(ctx, orderKey, order.ProviderID).Result()
-					if err != nil {
-						logger.WithFields(logger.Fields{
-							"Error":         fmt.Sprintf("%v", err),
-							"OrderID":       order.ID.String(),
-							"ProviderID":    order.ProviderID,
-							"redisKey":      redisKey,
-							"orderIDPrefix": orderIDPrefix,
-						}).Errorf("failed to push provider to order exclude list when matching rate")
-					} else {
-						// Set TTL for the exclude list (2x order request validity since orders can be reassigned)
-						err = storage.RedisClient.ExpireAt(ctx, orderKey, time.Now().Add(orderConf.OrderRequestValidity*2)).Err()
-						if err != nil {
-							logger.WithFields(logger.Fields{
-								"Error":    fmt.Sprintf("%v", err),
-								"OrderKey": orderKey,
-							}).Errorf("failed to set TTL for order exclude list")
-						}
-					}
+					// Add provider to exclude list before reassigning
+					s.addProviderToExcludeList(ctx, order.ID.String(), order.ProviderID, orderConf.OrderRequestValidity*2)
 
 					// Note: Balance cleanup is now handled in sendOrderRequest via defer
 					// Reassign the lock payment order to another provider

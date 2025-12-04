@@ -1359,7 +1359,7 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 		Query().
 		Where(
 			lockpaymentorder.MessageHashEQ(paymentOrder.MessageHash),
-			lockpaymentorder.StatusEQ(lockpaymentorder.StatusFulfilled),
+			lockpaymentorder.StatusIn(lockpaymentorder.StatusFulfilled, lockpaymentorder.StatusValidated),
 		).
 		WithFulfillments(func(fq *ent.LockOrderFulfillmentQuery) {
 			fq.Where(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusSuccess))
