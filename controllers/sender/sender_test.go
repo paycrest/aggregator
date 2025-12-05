@@ -104,13 +104,71 @@ func setup() error {
 	}
 
 	// Create test provider with NGN currency support
-	_, err = test.CreateTestProviderProfile(map[string]interface{}{
+	providerProfile, err := test.CreateTestProviderProfile(map[string]interface{}{
 		"user_id":     user.ID,
 		"currency_id": currency.ID,
 		"is_active":   true,
 	})
 	if err != nil {
 		return fmt.Errorf("CreateTestProviderProfile.sender_test: %w", err)
+	}
+
+	// Create ProviderOrderToken for rate validation
+	providerOrderToken, err := test.AddProviderOrderTokenToProvider(map[string]interface{}{
+		"provider":              providerProfile,
+		"token_id":              int(tokenId),
+		"currency_id":           currency.ID,
+		"fixed_conversion_rate": decimal.NewFromFloat(750.0), // Match test payload rate
+		"conversion_rate_type":  "fixed",
+		"max_order_amount":      decimal.NewFromFloat(10000.0),
+		"min_order_amount":      decimal.NewFromFloat(1.0),
+		"max_order_amount_otc":  decimal.NewFromFloat(10000.0),
+		"min_order_amount_otc":  decimal.NewFromFloat(100.0),
+		"address":               "0x1234567890123456789012345678901234567890",
+		"network":               testCtx.networkIdentifier,
+	})
+	if err != nil {
+		return fmt.Errorf("AddProviderOrderTokenToProvider.sender_test: %w", err)
+	}
+
+	// Create ProvisionBucket for bucket-based rate validation
+	bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
+		"provider_id": providerProfile.ID,
+		"currency_id": currency.ID,
+		"min_amount":  decimal.NewFromFloat(1.0),
+		"max_amount":  decimal.NewFromFloat(10000.0),
+	})
+	if err != nil {
+		return fmt.Errorf("CreateTestProvisionBucket.sender_test: %w", err)
+	}
+
+	// Update ProviderCurrencies to have sufficient balance for validation
+	_, err = db.Client.ProviderCurrencies.
+		Update().
+		Where(
+			providercurrencies.HasProviderWith(providerprofile.IDEQ(providerProfile.ID)),
+			providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currency.Code)),
+		).
+		SetAvailableBalance(decimal.NewFromFloat(1000000.0)).
+		SetTotalBalance(decimal.NewFromFloat(1000000.0)).
+		SetIsAvailable(true).
+		Save(context.Background())
+	if err != nil {
+		return fmt.Errorf("UpdateProviderCurrencies.sender_test: %w", err)
+	}
+
+	// Populate Redis bucket with provider data for validateBucketRate
+	redisKey := fmt.Sprintf("bucket_%s_%s_%s", currency.Code, bucket.MinAmount, bucket.MaxAmount)
+	providerData := fmt.Sprintf("%s:%s:%s:%s:%s",
+		providerProfile.ID,
+		token.Symbol,
+		providerOrderToken.FixedConversionRate.String(),
+		providerOrderToken.MinOrderAmount.String(),
+		providerOrderToken.MaxOrderAmount.String(),
+	)
+	err = db.RedisClient.RPush(context.Background(), redisKey, providerData).Err()
+	if err != nil {
+		return fmt.Errorf("PopulateRedisBucket.sender_test: %w", err)
 	}
 
 	senderProfile, err := test.CreateTestSenderProfile(map[string]interface{}{
@@ -443,7 +501,7 @@ func TestSender(t *testing.T) {
 				Query().
 				Where(network.IdentifierEQ(testCtx.networkIdentifier)).
 				Only(context.Background())
-			assert.NoError(t, err)	
+			assert.NoError(t, err)
 
 			payload := map[string]interface{}{
 				"amount":  "100",
@@ -567,7 +625,7 @@ func TestSender(t *testing.T) {
 				})
 				assert.NoError(t, err)
 			} else {
-				currency = currencies[0] 
+				currency = currencies[0]
 			}
 
 			// Create provider profile (required for order matching)
@@ -679,7 +737,7 @@ func TestSender(t *testing.T) {
 			headers := map[string]string{
 				"API-Key": apiKey.ID.String(),
 			}
-			
+
 			res, err := test.PerformRequest(t, "POST", "/sender/orders", payload, headers, router)
 			assert.NoError(t, err)
 
@@ -928,8 +986,8 @@ func TestSender(t *testing.T) {
 					providercurrencies.HasProviderWith(providerprofile.IDEQ(providerProfile.ID)),
 					providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(currency.ID)),
 				).
-					SetAvailableBalance(decimal.NewFromFloat(100000)).
-					SetTotalBalance(decimal.NewFromFloat(100000)).
+				SetAvailableBalance(decimal.NewFromFloat(100000)).
+				SetTotalBalance(decimal.NewFromFloat(100000)).
 				Save(context.Background())
 			assert.NoError(t, err, "Failed to update provider currency balance")
 

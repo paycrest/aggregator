@@ -74,6 +74,10 @@ func CreateLockPaymentOrder(
 		return nil
 	}
 
+	// Fetch PaymentOrder synchronously once (for orderType determination and async update)
+	var paymentOrder *ent.PaymentOrder
+	var paymentOrderErr error
+
 	// Update payment order with the gateway ID asynchronously
 	// This ensures the payment order is updated without blocking the main flow
 	go func() {
@@ -82,23 +86,24 @@ func CreateLockPaymentOrder(
 		retryDelay := 500 * time.Millisecond
 
 		err := utils.Retry(maxRetries, retryDelay, func() error {
-			paymentOrder, fetchErr := db.Client.PaymentOrder.
+			paymentOrder, paymentOrderErr = db.Client.PaymentOrder.
 				Query().
 				Where(
 					paymentorder.MessageHashEQ(event.MessageHash),
 				).
 				Only(ctx)
-			if fetchErr != nil {
-				if ent.IsNotFound(fetchErr) {
-					return fetchErr // Return error to trigger retry
+			if paymentOrderErr != nil {
+				if ent.IsNotFound(paymentOrderErr) {
+					return paymentOrderErr // Return error to trigger retry
+				} else {
+					// Other error occurred, log and return error to trigger retry
+					logger.WithFields(logger.Fields{
+						"MessageHash": event.MessageHash,
+						"TxHash":      event.TxHash,
+						"Error":       paymentOrderErr.Error(),
+					}).Errorf("Failed to fetch payment order")
+					return paymentOrderErr
 				}
-				// Other error occurred, don't retry
-				logger.WithFields(logger.Fields{
-					"MessageHash": event.MessageHash,
-					"TxHash":      event.TxHash,
-					"Error":       fetchErr.Error(),
-				}).Errorf("Failed to fetch payment order")
-				return fetchErr
 			}
 
 			// Payment order found, update it
@@ -220,6 +225,7 @@ func CreateLockPaymentOrder(
 		MessageHash:       event.MessageHash,
 		Metadata:          recipient.Metadata,
 		ProvisionBucket:   provisionBucket,
+		OrderType:         "regular",
 	}
 
 	if isLessThanMin {
@@ -228,6 +234,65 @@ func CreateLockPaymentOrder(
 			return fmt.Errorf("failed to handle cancellation: %w", err)
 		}
 		return nil
+	}
+
+	// Determine order type - always validate rate to ensure we're working with current rates, limits, and provider availability
+	// This is important because there may be a delay between order creation and indexing, during which rates/limits may have changed
+	var rateResult utils.RateValidationResult
+	paymentOrder, paymentOrderErr = db.Client.PaymentOrder.
+		Query().
+		Where(
+			paymentorder.MessageHashEQ(event.MessageHash),
+		).
+		Only(ctx)
+	rateResult, rateErr := utils.ValidateRate(
+		ctx,
+		token,
+		currency,
+		event.Amount,
+		lockPaymentOrder.ProviderID,
+		token.Edges.Network.Identifier,
+	)
+
+	if rateErr != nil {
+		// Rate validation failed - cancel the order
+		err := HandleCancellation(ctx, nil, &lockPaymentOrder, fmt.Sprintf("Rate validation failed: %s", rateErr.Error()), refundOrder)
+		if err != nil {
+			return fmt.Errorf("failed to handle cancellation: %w", err)
+		}
+		return nil
+	}
+
+	// Check if event rate is within 0.1% tolerance of validated rate
+	tolerance := rateResult.Rate.Mul(decimal.NewFromFloat(0.001)) // 0.1% tolerance
+	rateDiff := event.Rate.Sub(rateResult.Rate).Abs()
+
+	if rateDiff.GreaterThan(tolerance) {
+		// Rate is outside tolerance - cancel the order
+		err := HandleCancellation(ctx, nil, &lockPaymentOrder, "Rate validation failed", refundOrder)
+		if err != nil {
+			return fmt.Errorf("failed to handle cancellation: %w", err)
+		}
+		return nil
+	}
+
+	// Use order type from ValidateRate result (always use current validation)
+	lockPaymentOrder.OrderType = rateResult.OrderType.String()
+
+	// If PaymentOrder exists, log a warning if order type differs (for debugging)
+	if paymentOrderErr == nil && paymentOrder != nil {
+		if paymentOrder.OrderType.String() != lockPaymentOrder.OrderType {
+			logger.WithFields(logger.Fields{
+				"MessageHash":      event.MessageHash,
+				"PaymentOrderType": paymentOrder.OrderType.String(),
+				"ValidatedType":    lockPaymentOrder.OrderType,
+			}).Warnf("Order type changed between PaymentOrder creation and indexing")
+		}
+	}
+
+	// If order type is OTC, set provider ID from rate result
+	if lockPaymentOrder.OrderType == "otc" && rateResult.ProviderID != "" {
+		lockPaymentOrder.ProviderID = rateResult.ProviderID
 	}
 
 	// Handle private order checks
@@ -268,29 +333,9 @@ func CreateLockPaymentOrder(
 			}
 		}
 
+		// Check if provider is private - private orders don't require provision buckets
 		if orderToken != nil && orderToken.Edges.Provider != nil && orderToken.Edges.Provider.VisibilityMode == providerprofile.VisibilityModePrivate {
-			normalizedAmount := lockPaymentOrder.Amount
-			if strings.EqualFold(token.BaseCurrency, institution.Edges.FiatCurrency.Code) && token.BaseCurrency != "USD" {
-				rateResponse, err := utils.GetTokenRateFromQueue("USDT", normalizedAmount, institution.Edges.FiatCurrency.Code, currency.MarketRate)
-				if err != nil {
-					return fmt.Errorf("failed to get token rate: %w", err)
-				}
-				normalizedAmount = lockPaymentOrder.Amount.Div(rateResponse)
-			}
-
-			if normalizedAmount.GreaterThan(orderToken.MaxOrderAmount) {
-				err := HandleCancellation(ctx, nil, &lockPaymentOrder, "Amount is greater than the maximum order amount of the provider", refundOrder)
-				if err != nil {
-					return fmt.Errorf("%s - failed to cancel order: %w", lockPaymentOrder.GatewayID, err)
-				}
-				return nil
-			} else if normalizedAmount.LessThan(orderToken.MinOrderAmount) {
-				err := HandleCancellation(ctx, nil, &lockPaymentOrder, "Amount is less than the minimum order amount of the provider", refundOrder)
-				if err != nil {
-					return fmt.Errorf("%s - failed to cancel order: %w", lockPaymentOrder.GatewayID, err)
-				}
-				return nil
-			}
+			isPrivate = true
 		}
 	}
 
@@ -373,7 +418,8 @@ func CreateLockPaymentOrder(
 			SetSender(lockPaymentOrder.Sender).
 			SetMemo(lockPaymentOrder.Memo).
 			SetMetadata(lockPaymentOrder.Metadata).
-			SetProvisionBucket(lockPaymentOrder.ProvisionBucket)
+			SetProvisionBucket(lockPaymentOrder.ProvisionBucket).
+			SetOrderType(lockpaymentorder.OrderType(lockPaymentOrder.OrderType))
 
 		if lockPaymentOrder.ProviderID != "" {
 			orderBuilder = orderBuilder.SetProviderID(lockPaymentOrder.ProviderID)
@@ -603,6 +649,12 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		return fmt.Errorf("UpdateOrderStatusRefunded.commit %v", err)
 	}
 
+	// Clean up order exclude list from Redis (best effort, don't fail if it errors)
+	if lockOrder != nil {
+		orderKey := fmt.Sprintf("order_exclude_list_%s", lockOrder.ID)
+		_ = db.RedisClient.Del(ctx, orderKey).Err()
+	}
+
 	if paymentOrderExists && paymentOrder.Status == paymentorder.StatusRefunded {
 		// Send webhook notification to sender
 		err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
@@ -811,6 +863,12 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("UpdateOrderStatusSettled.sender %v", err)
+	}
+
+	// Clean up order exclude list from Redis (best effort, don't fail if it errors)
+	if lockOrder != nil {
+		orderKey := fmt.Sprintf("order_exclude_list_%s", lockOrder.ID)
+		_ = db.RedisClient.Del(ctx, orderKey).Err()
 	}
 
 	if paymentOrderExists && paymentOrder.Status != paymentorder.StatusSettled {

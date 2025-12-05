@@ -177,18 +177,41 @@ func RetryStaleUserOperations() error {
 	}(ctx)
 
 	// Refund order process
+	// OTC orders use separate refund timeout
+	otcRefundTimeout := orderConf.OrderRefundTimeoutOtc
+	regularRefundTimeout := orderConf.OrderRefundTimeout
+
 	lockOrders, err = storage.Client.LockPaymentOrder.
 		Query().
 		Where(
 			lockpaymentorder.GatewayIDNEQ(""),
 			lockpaymentorder.UpdatedAtGTE(time.Now().Add(-5*time.Minute)),
 			lockpaymentorder.Or(
+				// Regular orders with normal refund timeout
 				lockpaymentorder.And(
+					lockpaymentorder.OrderTypeEQ(lockpaymentorder.OrderTypeRegular),
 					lockpaymentorder.Or(
 						lockpaymentorder.StatusEQ(lockpaymentorder.StatusPending),
 						lockpaymentorder.StatusEQ(lockpaymentorder.StatusCancelled),
 					),
-					lockpaymentorder.CreatedAtLTE(time.Now().Add(-orderConf.OrderRefundTimeout)),
+					lockpaymentorder.CreatedAtLTE(time.Now().Add(-regularRefundTimeout)),
+					lockpaymentorder.Or(
+						lockpaymentorder.Not(lockpaymentorder.HasFulfillments()),
+						lockpaymentorder.HasFulfillmentsWith(
+							lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusFailed),
+							lockorderfulfillment.Not(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusSuccess)),
+							lockorderfulfillment.Not(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusPending)),
+						),
+					),
+				),
+				// OTC orders with 15x refund timeout
+				lockpaymentorder.And(
+					lockpaymentorder.OrderTypeEQ(lockpaymentorder.OrderTypeOtc),
+					lockpaymentorder.Or(
+						lockpaymentorder.StatusEQ(lockpaymentorder.StatusPending),
+						lockpaymentorder.StatusEQ(lockpaymentorder.StatusCancelled),
+					),
+					lockpaymentorder.CreatedAtLTE(time.Now().Add(-otcRefundTimeout)),
 					lockpaymentorder.Or(
 						lockpaymentorder.Not(lockpaymentorder.HasFulfillments()),
 						lockpaymentorder.HasFulfillmentsWith(
@@ -413,6 +436,14 @@ func reassignCancelledOrder(ctx context.Context, order *ent.LockPaymentOrder, fu
 		if err != nil {
 			return
 		}
+		// Set TTL for the exclude list (2x order request validity since orders can be reassigned)
+		err = storage.RedisClient.ExpireAt(ctx, orderKey, time.Now().Add(orderConf.OrderRequestValidity*2)).Err()
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"OrderID": order.ID.String(),
+			}).Errorf("failed to set TTL for order exclude list")
+		}
 
 		_, err = storage.Client.LockPaymentOrder.
 			UpdateOneID(order.ID).
@@ -461,15 +492,18 @@ func reassignCancelledOrder(ctx context.Context, order *ent.LockPaymentOrder, fu
 }
 
 // SyncLockOrderFulfillments syncs lock order fulfillments
+// Only processes regular orders
+// TODO: refactor this to process OTC orders as well when OTC fulfillment validation is automated
 func SyncLockOrderFulfillments() {
 	// ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	// defer cancel()
 	ctx := context.Background()
 
-	// Query unvalidated lock orders.
+	// Query unvalidated lock orders (regular orders only - exclude OTC)
 	lockOrders, err := storage.Client.LockPaymentOrder.
 		Query().
 		Where(
+			lockpaymentorder.OrderTypeEQ(lockpaymentorder.OrderTypeRegular), // Only regular orders
 			lockpaymentorder.Or(
 				lockpaymentorder.And(
 					lockpaymentorder.StatusEQ(lockpaymentorder.StatusFulfilled),
@@ -839,18 +873,30 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 				lockpaymentorder.IDEQ(orderUUID),
 			).
 			WithProvisionBucket().
+			WithProvider().
+			WithToken(func(tq *ent.TokenQuery) {
+				tq.WithNetwork()
+			}).
 			Only(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":   fmt.Sprintf("%v", err),
-				"OrderID": order.ID.String(),
+				"OrderID": orderUUID.String(),
 				"UUID":    orderUUID,
 			}).Errorf("ReassignStaleOrderRequest: Failed to get order from database")
 			continue
 		}
 
+		// Extract provider ID from relation if available
+		providerID := ""
+		if order.Edges.Provider != nil {
+			providerID = order.Edges.Provider.ID
+		}
+
+		// Build order fields for reassignment
 		orderFields := types.LockPaymentOrderFields{
 			ID:                order.ID,
+			OrderType:         string(order.OrderType),
 			GatewayID:         order.GatewayID,
 			Amount:            order.Amount,
 			Rate:              order.Rate,
@@ -859,7 +905,17 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 			AccountIdentifier: order.AccountIdentifier,
 			AccountName:       order.AccountName,
 			Memo:              order.Memo,
+			ProviderID:        providerID,
+			MessageHash:       order.MessageHash,
 			ProvisionBucket:   order.Edges.ProvisionBucket,
+		}
+
+		// Include token and network if available
+		if order.Edges.Token != nil {
+			orderFields.Token = order.Edges.Token
+			if order.Edges.Token.Edges.Network != nil {
+				orderFields.Network = order.Edges.Token.Edges.Network
+			}
 		}
 
 		// Assign the order to a provider
