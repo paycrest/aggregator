@@ -60,6 +60,12 @@ func (sotc *SenderOrderTokenCreate) SetFeePercent(d decimal.Decimal) *SenderOrde
 	return sotc
 }
 
+// SetMaxFeeCap sets the "max_fee_cap" field.
+func (sotc *SenderOrderTokenCreate) SetMaxFeeCap(d decimal.Decimal) *SenderOrderTokenCreate {
+	sotc.mutation.SetMaxFeeCap(d)
+	return sotc
+}
+
 // SetFeeAddress sets the "fee_address" field.
 func (sotc *SenderOrderTokenCreate) SetFeeAddress(s string) *SenderOrderTokenCreate {
 	sotc.mutation.SetFeeAddress(s)
@@ -150,6 +156,9 @@ func (sotc *SenderOrderTokenCreate) check() error {
 	if _, ok := sotc.mutation.FeePercent(); !ok {
 		return &ValidationError{Name: "fee_percent", err: errors.New(`ent: missing required field "SenderOrderToken.fee_percent"`)}
 	}
+	if _, ok := sotc.mutation.MaxFeeCap(); !ok {
+		return &ValidationError{Name: "max_fee_cap", err: errors.New(`ent: missing required field "SenderOrderToken.max_fee_cap"`)}
+	}
 	if _, ok := sotc.mutation.FeeAddress(); !ok {
 		return &ValidationError{Name: "fee_address", err: errors.New(`ent: missing required field "SenderOrderToken.fee_address"`)}
 	}
@@ -210,6 +219,10 @@ func (sotc *SenderOrderTokenCreate) createSpec() (*SenderOrderToken, *sqlgraph.C
 	if value, ok := sotc.mutation.FeePercent(); ok {
 		_spec.SetField(senderordertoken.FieldFeePercent, field.TypeFloat64, value)
 		_node.FeePercent = value
+	}
+	if value, ok := sotc.mutation.MaxFeeCap(); ok {
+		_spec.SetField(senderordertoken.FieldMaxFeeCap, field.TypeFloat64, value)
+		_node.MaxFeeCap = value
 	}
 	if value, ok := sotc.mutation.FeeAddress(); ok {
 		_spec.SetField(senderordertoken.FieldFeeAddress, field.TypeString, value)
@@ -335,6 +348,24 @@ func (u *SenderOrderTokenUpsert) AddFeePercent(v decimal.Decimal) *SenderOrderTo
 	return u
 }
 
+// SetMaxFeeCap sets the "max_fee_cap" field.
+func (u *SenderOrderTokenUpsert) SetMaxFeeCap(v decimal.Decimal) *SenderOrderTokenUpsert {
+	u.Set(senderordertoken.FieldMaxFeeCap, v)
+	return u
+}
+
+// UpdateMaxFeeCap sets the "max_fee_cap" field to the value that was provided on create.
+func (u *SenderOrderTokenUpsert) UpdateMaxFeeCap() *SenderOrderTokenUpsert {
+	u.SetExcluded(senderordertoken.FieldMaxFeeCap)
+	return u
+}
+
+// AddMaxFeeCap adds v to the "max_fee_cap" field.
+func (u *SenderOrderTokenUpsert) AddMaxFeeCap(v decimal.Decimal) *SenderOrderTokenUpsert {
+	u.Add(senderordertoken.FieldMaxFeeCap, v)
+	return u
+}
+
 // SetFeeAddress sets the "fee_address" field.
 func (u *SenderOrderTokenUpsert) SetFeeAddress(v string) *SenderOrderTokenUpsert {
 	u.Set(senderordertoken.FieldFeeAddress, v)
@@ -436,6 +467,27 @@ func (u *SenderOrderTokenUpsertOne) AddFeePercent(v decimal.Decimal) *SenderOrde
 func (u *SenderOrderTokenUpsertOne) UpdateFeePercent() *SenderOrderTokenUpsertOne {
 	return u.Update(func(s *SenderOrderTokenUpsert) {
 		s.UpdateFeePercent()
+	})
+}
+
+// SetMaxFeeCap sets the "max_fee_cap" field.
+func (u *SenderOrderTokenUpsertOne) SetMaxFeeCap(v decimal.Decimal) *SenderOrderTokenUpsertOne {
+	return u.Update(func(s *SenderOrderTokenUpsert) {
+		s.SetMaxFeeCap(v)
+	})
+}
+
+// AddMaxFeeCap adds v to the "max_fee_cap" field.
+func (u *SenderOrderTokenUpsertOne) AddMaxFeeCap(v decimal.Decimal) *SenderOrderTokenUpsertOne {
+	return u.Update(func(s *SenderOrderTokenUpsert) {
+		s.AddMaxFeeCap(v)
+	})
+}
+
+// UpdateMaxFeeCap sets the "max_fee_cap" field to the value that was provided on create.
+func (u *SenderOrderTokenUpsertOne) UpdateMaxFeeCap() *SenderOrderTokenUpsertOne {
+	return u.Update(func(s *SenderOrderTokenUpsert) {
+		s.UpdateMaxFeeCap()
 	})
 }
 
@@ -710,6 +762,27 @@ func (u *SenderOrderTokenUpsertBulk) AddFeePercent(v decimal.Decimal) *SenderOrd
 func (u *SenderOrderTokenUpsertBulk) UpdateFeePercent() *SenderOrderTokenUpsertBulk {
 	return u.Update(func(s *SenderOrderTokenUpsert) {
 		s.UpdateFeePercent()
+	})
+}
+
+// SetMaxFeeCap sets the "max_fee_cap" field.
+func (u *SenderOrderTokenUpsertBulk) SetMaxFeeCap(v decimal.Decimal) *SenderOrderTokenUpsertBulk {
+	return u.Update(func(s *SenderOrderTokenUpsert) {
+		s.SetMaxFeeCap(v)
+	})
+}
+
+// AddMaxFeeCap adds v to the "max_fee_cap" field.
+func (u *SenderOrderTokenUpsertBulk) AddMaxFeeCap(v decimal.Decimal) *SenderOrderTokenUpsertBulk {
+	return u.Update(func(s *SenderOrderTokenUpsert) {
+		s.AddMaxFeeCap(v)
+	})
+}
+
+// UpdateMaxFeeCap sets the "max_fee_cap" field to the value that was provided on create.
+func (u *SenderOrderTokenUpsertBulk) UpdateMaxFeeCap() *SenderOrderTokenUpsertBulk {
+	return u.Update(func(s *SenderOrderTokenUpsert) {
+		s.UpdateMaxFeeCap()
 	})
 }
 
