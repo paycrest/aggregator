@@ -1006,7 +1006,7 @@ func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.Fia
 		}
 
 		// Find the first provider at the top of the queue that matches our criteria
-		result := findSuitableProviderRate(providers, token.Symbol, networkIdentifier, amount, bucketData)
+		result := findSuitableProviderRate(ctx, providers, token.Symbol, networkIdentifier, amount, bucketData)
 		if result.Found {
 			foundExactMatch = true
 			bestRate = result.Rate
@@ -1102,10 +1102,9 @@ type ProviderRateResult struct {
 // findSuitableProviderRate finds the first suitable provider rate from the provider list
 // Returns the rate, provider ID, order type, and a boolean indicating if an exact match was found
 // An exact match means: amount within limits, within bucket range, and provider has sufficient balance
-func findSuitableProviderRate(providers []string, tokenSymbol string, networkIdentifier string, tokenAmount decimal.Decimal, bucketData *BucketData) ProviderRateResult {
+func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymbol string, networkIdentifier string, tokenAmount decimal.Decimal, bucketData *BucketData) ProviderRateResult {
 	var bestRate decimal.Decimal
 	var foundExactMatch bool
-	ctx := context.Background()
 
 	// Track reasons for debugging when no match is found
 	var skipReasons []string
