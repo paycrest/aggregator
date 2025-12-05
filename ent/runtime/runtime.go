@@ -544,11 +544,11 @@ func init() {
 	// senderordertoken.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	senderordertoken.UpdateDefaultUpdatedAt = senderordertokenDescUpdatedAt.UpdateDefault.(func() time.Time)
 	// senderordertokenDescFeeAddress is the schema descriptor for fee_address field.
-	senderordertokenDescFeeAddress := senderordertokenFields[1].Descriptor()
+	senderordertokenDescFeeAddress := senderordertokenFields[2].Descriptor()
 	// senderordertoken.FeeAddressValidator is a validator for the "fee_address" field. It is called by the builders before save.
 	senderordertoken.FeeAddressValidator = senderordertokenDescFeeAddress.Validators[0].(func(string) error)
 	// senderordertokenDescRefundAddress is the schema descriptor for refund_address field.
-	senderordertokenDescRefundAddress := senderordertokenFields[2].Descriptor()
+	senderordertokenDescRefundAddress := senderordertokenFields[3].Descriptor()
 	// senderordertoken.RefundAddressValidator is a validator for the "refund_address" field. It is called by the builders before save.
 	senderordertoken.RefundAddressValidator = senderordertokenDescRefundAddress.Validators[0].(func(string) error)
 	senderprofileFields := schema.SenderProfile{}.Fields()

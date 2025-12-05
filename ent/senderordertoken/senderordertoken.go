@@ -20,6 +20,8 @@ const (
 	FieldUpdatedAt = "updated_at"
 	// FieldFeePercent holds the string denoting the fee_percent field in the database.
 	FieldFeePercent = "fee_percent"
+	// FieldMaxFeeCap holds the string denoting the max_fee_cap field in the database.
+	FieldMaxFeeCap = "max_fee_cap"
 	// FieldFeeAddress holds the string denoting the fee_address field in the database.
 	FieldFeeAddress = "fee_address"
 	// FieldRefundAddress holds the string denoting the refund_address field in the database.
@@ -52,6 +54,7 @@ var Columns = []string{
 	FieldCreatedAt,
 	FieldUpdatedAt,
 	FieldFeePercent,
+	FieldMaxFeeCap,
 	FieldFeeAddress,
 	FieldRefundAddress,
 }
@@ -112,6 +115,11 @@ func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByFeePercent orders the results by the fee_percent field.
 func ByFeePercent(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldFeePercent, opts...).ToFunc()
+}
+
+// ByMaxFeeCap orders the results by the max_fee_cap field.
+func ByMaxFeeCap(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMaxFeeCap, opts...).ToFunc()
 }
 
 // ByFeeAddress orders the results by the fee_address field.

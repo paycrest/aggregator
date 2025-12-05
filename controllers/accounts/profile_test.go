@@ -350,7 +350,117 @@ func TestProfile(t *testing.T) {
 			assert.True(t, senderProfile.IsActive)
 		})
 
+		t.Run("with MaxFeeCap", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{
+				"scope": "sender",
+				"email": "maxfeecap@test.com",
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"domain_whitelist": []string{"example.com"},
+				"user_id":          testUser.ID,
+				"token":            testCtx.token.Symbol,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			maxFeeCap := decimal.NewFromFloat(10.5)
+			tokenPayload := []types.SenderOrderTokenPayload{
+				{
+					Symbol:     testCtx.token.Symbol,
+					FeePercent: decimal.NewFromInt(5),
+					MaxFeeCap:  maxFeeCap,
+					Addresses: []types.SenderOrderAddressPayload{
+						{
+							Network:       testCtx.token.Edges.Network.Identifier,
+							FeeAddress:    "0xD4EB9067111F81b9bAabE06E2b8ebBaDADEd5DAf",
+							RefundAddress: "0xD4EB9067111F81b9bAabE06E2b8ebBaDADEd5DA0",
+						},
+					},
+				},
+			}
+
+			payload := types.SenderProfilePayload{
+				Tokens: tokenPayload,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			// Verify MaxFeeCap was saved
+			senderOrderToken, err := db.Client.SenderOrderToken.
+				Query().
+				Where(
+					senderordertoken.HasSenderWith(senderprofile.HasUserWith(user.ID(testUser.ID))),
+					senderordertoken.HasTokenWith(tokenDB.IDEQ(testCtx.token.ID)),
+				).
+				Only(context.Background())
+			assert.NoError(t, err)
+			assert.Equal(t, maxFeeCap, senderOrderToken.MaxFeeCap)
+		})
+
+		t.Run("without MaxFeeCap (uses zero to mean no cap)", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{
+				"scope": "sender",
+				"email": "nomaxfeecap@test.com",
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"domain_whitelist": []string{"example.com"},
+				"user_id":          testUser.ID,
+				"token":            testCtx.token.Symbol,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			tokenPayload := []types.SenderOrderTokenPayload{
+				{
+					Symbol:     testCtx.token.Symbol,
+					FeePercent: decimal.NewFromInt(5),
+					MaxFeeCap:  decimal.Zero, // Zero means no cap
+					Addresses: []types.SenderOrderAddressPayload{
+						{
+							Network:       testCtx.token.Edges.Network.Identifier,
+							FeeAddress:    "0xD4EB9067111F81b9bAabE06E2b8ebBaDADEd5DAf",
+							RefundAddress: "0xD4EB9067111F81b9bAabE06E2b8ebBaDADEd5DA0",
+						},
+					},
+				},
+			}
+
+			payload := types.SenderProfilePayload{
+				Tokens: tokenPayload,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			// Verify MaxFeeCap is zero (meaning no cap)
+			senderOrderToken, err := db.Client.SenderOrderToken.
+				Query().
+				Where(
+					senderordertoken.HasSenderWith(senderprofile.HasUserWith(user.ID(testUser.ID))),
+					senderordertoken.HasTokenWith(tokenDB.IDEQ(testCtx.token.ID)),
+				).
+				Only(context.Background())
+			assert.NoError(t, err)
+			assert.True(t, senderOrderToken.MaxFeeCap.IsZero(), "MaxFeeCap should be zero (no cap)")
+		})
+
 	})
+
 
 	t.Run("UpdateProviderProfile", func(t *testing.T) {
 		profileUpdateRequest := func(payload types.ProviderProfilePayload) *httptest.ResponseRecorder {
@@ -1057,6 +1167,85 @@ func TestProfile(t *testing.T) {
 		assert.NotNil(t, response.Data, "response.Data is nil")
 		assert.Greater(t, len(response.Data.Tokens), 0)
 		assert.Contains(t, response.Data.WebhookURL, "https://example.com")
+	})
+
+	t.Run("GetSenderProfile returns MaxFeeCap", func(t *testing.T) {
+		testUser, err := test.CreateTestUser(map[string]interface{}{
+			"email": "maxfeecap_get@test.com",
+			"scope": "sender",
+		})
+		assert.NoError(t, err)
+
+		sender, err := test.CreateTestSenderProfile(map[string]interface{}{
+			"domain_whitelist": []string{"mydomain.com"},
+			"user_id":          testUser.ID,
+			"token":            testCtx.token.Symbol,
+		})
+		assert.NoError(t, err)
+
+		apiKeyService := services.NewAPIKeyService()
+		_, _, err = apiKeyService.GenerateAPIKey(
+			context.Background(),
+			nil,
+			sender,
+			nil,
+		)
+		assert.NoError(t, err)
+
+		// Update profile with MaxFeeCap
+		maxFeeCap := decimal.NewFromFloat(15.75)
+		accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+		headers := map[string]string{
+			"Authorization": "Bearer " + accessToken,
+		}
+
+		tokenPayload := []types.SenderOrderTokenPayload{
+			{
+				Symbol:     testCtx.token.Symbol,
+				FeePercent: decimal.NewFromInt(3),
+				MaxFeeCap:  maxFeeCap,
+				Addresses: []types.SenderOrderAddressPayload{
+					{
+						Network:       testCtx.token.Edges.Network.Identifier,
+						FeeAddress:    "0xD4EB9067111F81b9bAabE06E2b8ebBaDADEd5DAf",
+						RefundAddress: "0xD4EB9067111F81b9bAabE06E2b8ebBaDADEd5DA0",
+					},
+				},
+			},
+		}
+
+		payload := types.SenderProfilePayload{
+			Tokens: tokenPayload,
+		}
+
+		_, err = test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+		assert.NoError(t, err)
+
+		// Get profile and verify MaxFeeCap is returned
+		res, err := test.PerformRequest(t, "GET", "/settings/sender", nil, headers, router)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, res.Code)
+
+		var response struct {
+			Data    types.SenderProfileResponse
+			Message string
+		}
+		err = json.Unmarshal(res.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Equal(t, "Profile retrieved successfully", response.Message)
+		assert.NotNil(t, response.Data, "response.Data is nil")
+		assert.Greater(t, len(response.Data.Tokens), 0)
+
+		// Verify MaxFeeCap is in the response
+		foundToken := false
+		for _, token := range response.Data.Tokens {
+			if token.Symbol == testCtx.token.Symbol {
+				foundToken = true
+				assert.Equal(t, maxFeeCap, token.MaxFeeCap, "MaxFeeCap should be present in response")
+				break
+			}
+		}
+		assert.True(t, foundToken, "Token should be found in response")
 	})
 
 	t.Run("GetProviderProfile", func(t *testing.T) {

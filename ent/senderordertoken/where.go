@@ -71,6 +71,11 @@ func FeePercent(v decimal.Decimal) predicate.SenderOrderToken {
 	return predicate.SenderOrderToken(sql.FieldEQ(FieldFeePercent, v))
 }
 
+// MaxFeeCap applies equality check predicate on the "max_fee_cap" field. It's identical to MaxFeeCapEQ.
+func MaxFeeCap(v decimal.Decimal) predicate.SenderOrderToken {
+	return predicate.SenderOrderToken(sql.FieldEQ(FieldMaxFeeCap, v))
+}
+
 // FeeAddress applies equality check predicate on the "fee_address" field. It's identical to FeeAddressEQ.
 func FeeAddress(v string) predicate.SenderOrderToken {
 	return predicate.SenderOrderToken(sql.FieldEQ(FieldFeeAddress, v))
@@ -199,6 +204,46 @@ func FeePercentLT(v decimal.Decimal) predicate.SenderOrderToken {
 // FeePercentLTE applies the LTE predicate on the "fee_percent" field.
 func FeePercentLTE(v decimal.Decimal) predicate.SenderOrderToken {
 	return predicate.SenderOrderToken(sql.FieldLTE(FieldFeePercent, v))
+}
+
+// MaxFeeCapEQ applies the EQ predicate on the "max_fee_cap" field.
+func MaxFeeCapEQ(v decimal.Decimal) predicate.SenderOrderToken {
+	return predicate.SenderOrderToken(sql.FieldEQ(FieldMaxFeeCap, v))
+}
+
+// MaxFeeCapNEQ applies the NEQ predicate on the "max_fee_cap" field.
+func MaxFeeCapNEQ(v decimal.Decimal) predicate.SenderOrderToken {
+	return predicate.SenderOrderToken(sql.FieldNEQ(FieldMaxFeeCap, v))
+}
+
+// MaxFeeCapIn applies the In predicate on the "max_fee_cap" field.
+func MaxFeeCapIn(vs ...decimal.Decimal) predicate.SenderOrderToken {
+	return predicate.SenderOrderToken(sql.FieldIn(FieldMaxFeeCap, vs...))
+}
+
+// MaxFeeCapNotIn applies the NotIn predicate on the "max_fee_cap" field.
+func MaxFeeCapNotIn(vs ...decimal.Decimal) predicate.SenderOrderToken {
+	return predicate.SenderOrderToken(sql.FieldNotIn(FieldMaxFeeCap, vs...))
+}
+
+// MaxFeeCapGT applies the GT predicate on the "max_fee_cap" field.
+func MaxFeeCapGT(v decimal.Decimal) predicate.SenderOrderToken {
+	return predicate.SenderOrderToken(sql.FieldGT(FieldMaxFeeCap, v))
+}
+
+// MaxFeeCapGTE applies the GTE predicate on the "max_fee_cap" field.
+func MaxFeeCapGTE(v decimal.Decimal) predicate.SenderOrderToken {
+	return predicate.SenderOrderToken(sql.FieldGTE(FieldMaxFeeCap, v))
+}
+
+// MaxFeeCapLT applies the LT predicate on the "max_fee_cap" field.
+func MaxFeeCapLT(v decimal.Decimal) predicate.SenderOrderToken {
+	return predicate.SenderOrderToken(sql.FieldLT(FieldMaxFeeCap, v))
+}
+
+// MaxFeeCapLTE applies the LTE predicate on the "max_fee_cap" field.
+func MaxFeeCapLTE(v decimal.Decimal) predicate.SenderOrderToken {
+	return predicate.SenderOrderToken(sql.FieldLTE(FieldMaxFeeCap, v))
 }
 
 // FeeAddressEQ applies the EQ predicate on the "fee_address" field.

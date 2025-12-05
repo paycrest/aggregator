@@ -20263,6 +20263,8 @@ type SenderOrderTokenMutation struct {
 	updated_at     *time.Time
 	fee_percent    *decimal.Decimal
 	addfee_percent *decimal.Decimal
+	max_fee_cap    *decimal.Decimal
+	addmax_fee_cap *decimal.Decimal
 	fee_address    *string
 	refund_address *string
 	clearedFields  map[string]struct{}
@@ -20501,6 +20503,62 @@ func (m *SenderOrderTokenMutation) ResetFeePercent() {
 	m.addfee_percent = nil
 }
 
+// SetMaxFeeCap sets the "max_fee_cap" field.
+func (m *SenderOrderTokenMutation) SetMaxFeeCap(d decimal.Decimal) {
+	m.max_fee_cap = &d
+	m.addmax_fee_cap = nil
+}
+
+// MaxFeeCap returns the value of the "max_fee_cap" field in the mutation.
+func (m *SenderOrderTokenMutation) MaxFeeCap() (r decimal.Decimal, exists bool) {
+	v := m.max_fee_cap
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMaxFeeCap returns the old "max_fee_cap" field's value of the SenderOrderToken entity.
+// If the SenderOrderToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SenderOrderTokenMutation) OldMaxFeeCap(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMaxFeeCap is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMaxFeeCap requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMaxFeeCap: %w", err)
+	}
+	return oldValue.MaxFeeCap, nil
+}
+
+// AddMaxFeeCap adds d to the "max_fee_cap" field.
+func (m *SenderOrderTokenMutation) AddMaxFeeCap(d decimal.Decimal) {
+	if m.addmax_fee_cap != nil {
+		*m.addmax_fee_cap = m.addmax_fee_cap.Add(d)
+	} else {
+		m.addmax_fee_cap = &d
+	}
+}
+
+// AddedMaxFeeCap returns the value that was added to the "max_fee_cap" field in this mutation.
+func (m *SenderOrderTokenMutation) AddedMaxFeeCap() (r decimal.Decimal, exists bool) {
+	v := m.addmax_fee_cap
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetMaxFeeCap resets all changes to the "max_fee_cap" field.
+func (m *SenderOrderTokenMutation) ResetMaxFeeCap() {
+	m.max_fee_cap = nil
+	m.addmax_fee_cap = nil
+}
+
 // SetFeeAddress sets the "fee_address" field.
 func (m *SenderOrderTokenMutation) SetFeeAddress(s string) {
 	m.fee_address = &s
@@ -20685,7 +20743,7 @@ func (m *SenderOrderTokenMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *SenderOrderTokenMutation) Fields() []string {
-	fields := make([]string, 0, 5)
+	fields := make([]string, 0, 6)
 	if m.created_at != nil {
 		fields = append(fields, senderordertoken.FieldCreatedAt)
 	}
@@ -20694,6 +20752,9 @@ func (m *SenderOrderTokenMutation) Fields() []string {
 	}
 	if m.fee_percent != nil {
 		fields = append(fields, senderordertoken.FieldFeePercent)
+	}
+	if m.max_fee_cap != nil {
+		fields = append(fields, senderordertoken.FieldMaxFeeCap)
 	}
 	if m.fee_address != nil {
 		fields = append(fields, senderordertoken.FieldFeeAddress)
@@ -20715,6 +20776,8 @@ func (m *SenderOrderTokenMutation) Field(name string) (ent.Value, bool) {
 		return m.UpdatedAt()
 	case senderordertoken.FieldFeePercent:
 		return m.FeePercent()
+	case senderordertoken.FieldMaxFeeCap:
+		return m.MaxFeeCap()
 	case senderordertoken.FieldFeeAddress:
 		return m.FeeAddress()
 	case senderordertoken.FieldRefundAddress:
@@ -20734,6 +20797,8 @@ func (m *SenderOrderTokenMutation) OldField(ctx context.Context, name string) (e
 		return m.OldUpdatedAt(ctx)
 	case senderordertoken.FieldFeePercent:
 		return m.OldFeePercent(ctx)
+	case senderordertoken.FieldMaxFeeCap:
+		return m.OldMaxFeeCap(ctx)
 	case senderordertoken.FieldFeeAddress:
 		return m.OldFeeAddress(ctx)
 	case senderordertoken.FieldRefundAddress:
@@ -20768,6 +20833,13 @@ func (m *SenderOrderTokenMutation) SetField(name string, value ent.Value) error 
 		}
 		m.SetFeePercent(v)
 		return nil
+	case senderordertoken.FieldMaxFeeCap:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMaxFeeCap(v)
+		return nil
 	case senderordertoken.FieldFeeAddress:
 		v, ok := value.(string)
 		if !ok {
@@ -20793,6 +20865,9 @@ func (m *SenderOrderTokenMutation) AddedFields() []string {
 	if m.addfee_percent != nil {
 		fields = append(fields, senderordertoken.FieldFeePercent)
 	}
+	if m.addmax_fee_cap != nil {
+		fields = append(fields, senderordertoken.FieldMaxFeeCap)
+	}
 	return fields
 }
 
@@ -20803,6 +20878,8 @@ func (m *SenderOrderTokenMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case senderordertoken.FieldFeePercent:
 		return m.AddedFeePercent()
+	case senderordertoken.FieldMaxFeeCap:
+		return m.AddedMaxFeeCap()
 	}
 	return nil, false
 }
@@ -20818,6 +20895,13 @@ func (m *SenderOrderTokenMutation) AddField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddFeePercent(v)
+		return nil
+	case senderordertoken.FieldMaxFeeCap:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddMaxFeeCap(v)
 		return nil
 	}
 	return fmt.Errorf("unknown SenderOrderToken numeric field %s", name)
@@ -20854,6 +20938,9 @@ func (m *SenderOrderTokenMutation) ResetField(name string) error {
 		return nil
 	case senderordertoken.FieldFeePercent:
 		m.ResetFeePercent()
+		return nil
+	case senderordertoken.FieldMaxFeeCap:
+		m.ResetMaxFeeCap()
 		return nil
 	case senderordertoken.FieldFeeAddress:
 		m.ResetFeeAddress()

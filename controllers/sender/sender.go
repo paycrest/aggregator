@@ -474,7 +474,16 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		return
 	}
 
-	senderFee := feePercent.Mul(payload.Amount).Div(decimal.NewFromInt(100)).Round(4)
+	// Calculate fee based on percentage
+	calculatedFee := feePercent.Mul(payload.Amount).Div(decimal.NewFromInt(100)).Round(4)
+
+	// Apply max fee cap if configured (zero means no cap)
+	senderFee := calculatedFee
+	if senderOrderToken.MaxFeeCap.GreaterThan(decimal.Zero) {
+		if calculatedFee.GreaterThan(senderOrderToken.MaxFeeCap) {
+			senderFee = senderOrderToken.MaxFeeCap
+		}
+	}
 
 	// Create transaction Log
 	transactionLog, err := tx.TransactionLog.
