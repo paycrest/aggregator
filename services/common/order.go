@@ -1169,27 +1169,27 @@ func UpdateOrderSenderFee(ctx context.Context, messageHash string, senderFee dec
 	return nil
 }
 
-// UpdateOrderNetworkFee updates the network fee for a payment order
-func UpdateOrderNetworkFee(ctx context.Context, messageHash string, networkFee decimal.Decimal) error {
+// UpdateOrderProtocolFee updates the protocol fee for a lock payment order
+func UpdateOrderProtocolFee(ctx context.Context, messageHash string, protocolFee decimal.Decimal) error {
 	tx, err := db.Client.Tx(ctx)
 	if err != nil {
-		return fmt.Errorf("UpdateOrderNetworkFee.db: %v", err)
+		return fmt.Errorf("UpdateOrderProtocolFee.db: %v", err)
 	}
 	defer tx.Rollback()
 
-	// Update payment order network fee
-	_, err = tx.PaymentOrder.
+	// Update lock payment order protocol fee
+	_, err = tx.LockPaymentOrder.
 		Update().
-		Where(paymentorder.MessageHashEQ(messageHash)).
-		SetNetworkFee(networkFee).
+		Where(lockpaymentorder.MessageHashEQ(messageHash)).
+		SetProtocolFee(protocolFee).
 		Save(ctx)
 	if err != nil {
-		return fmt.Errorf("UpdateOrderNetworkFee.updatePaymentOrder: %v", err)
+		return fmt.Errorf("UpdateOrderProtocolFee.updateLockPaymentOrder: %v", err)
 	}
 
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("UpdateOrderNetworkFee.commit: %v", err)
+		return fmt.Errorf("UpdateOrderProtocolFee.commit: %v", err)
 	}
 
 	return nil

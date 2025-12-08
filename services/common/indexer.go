@@ -726,12 +726,6 @@ func ProcessFeeEvents(ctx context.Context, network *ent.Network, localFeeEvents 
 		return fmt.Errorf("ProcessFeeEvents.fetchLockOrders: %w", err)
 	}
 
-	logger.WithFields(logger.Fields{
-		"OrderIDs":        allOrderIds,
-		"LockOrdersFound": len(lockOrders),
-		"LocalEvents":     len(localFeeEvents),
-		"FxEvents":        len(fxFeeEvents),
-	}).Info("Processing fee split events")
 
 	var wg sync.WaitGroup
 	for _, lockOrder := range lockOrders {
@@ -755,23 +749,22 @@ func ProcessFeeEvents(ctx context.Context, network *ent.Network, localFeeEvents 
 					}
 				}
 
-				// Update network fee from providerAmount + aggregatorAmount
-				totalNetworkFee := localEvent.ProviderAmount.Add(localEvent.AggregatorAmount)
-				if !totalNetworkFee.IsZero() {
-					err := UpdateOrderNetworkFee(ctx, lo.MessageHash, totalNetworkFee)
+				// Update protocol fee from aggregatorAmount (fees collected by the protocol)
+				if !localEvent.AggregatorAmount.IsZero() {
+					err := UpdateOrderProtocolFee(ctx, lo.MessageHash, localEvent.AggregatorAmount)
 					if err != nil {
 						logger.WithFields(logger.Fields{
-							"Error":       fmt.Sprintf("%v", err),
-							"MessageHash": lo.MessageHash,
-							"TxHash":      localEvent.TxHash,
-							"Network":     network.Identifier,
-							"NetworkFee":  totalNetworkFee.String(),
-						}).Errorf("Failed to update network fee from LocalTransferFeeSplit event for %s", network.Identifier)
+							"Error":        fmt.Sprintf("%v", err),
+							"MessageHash":  lo.MessageHash,
+							"TxHash":       localEvent.TxHash,
+							"Network":      network.Identifier,
+							"ProtocolFee":  localEvent.AggregatorAmount.String(),
+						}).Errorf("Failed to update protocol fee from LocalTransferFeeSplit event for %s", network.Identifier)
 					}
 				}
 			}
 
-			// Check for FxTransferFeeSplit event (FX transfers)
+			// Check for FxTransferFeeSplit event (FX transfers) - also uses LocalTransferFeeSplit data
 			if fxEvent, ok := fxEventMap[lo.GatewayID]; ok {
 				// Update sender fee from senderAmount
 				if !fxEvent.SenderAmount.IsZero() {
@@ -787,17 +780,17 @@ func ProcessFeeEvents(ctx context.Context, network *ent.Network, localFeeEvents 
 					}
 				}
 
-				// Update network fee from aggregatorAmount (FX transfers only have aggregator fee)
+				// Update protocol fee from aggregatorAmount (FX transfers)
 				if !fxEvent.AggregatorAmount.IsZero() {
-					err := UpdateOrderNetworkFee(ctx, lo.MessageHash, fxEvent.AggregatorAmount)
+					err := UpdateOrderProtocolFee(ctx, lo.MessageHash, fxEvent.AggregatorAmount)
 					if err != nil {
 						logger.WithFields(logger.Fields{
-							"Error":       fmt.Sprintf("%v", err),
-							"MessageHash": lo.MessageHash,
-							"TxHash":      fxEvent.TxHash,
-							"Network":     network.Identifier,
-							"NetworkFee":  fxEvent.AggregatorAmount.String(),
-						}).Errorf("Failed to update network fee from FxTransferFeeSplit event for %s", network.Identifier)
+							"Error":        fmt.Sprintf("%v", err),
+							"MessageHash":  lo.MessageHash,
+							"TxHash":       fxEvent.TxHash,
+							"Network":      network.Identifier,
+							"ProtocolFee":  fxEvent.AggregatorAmount.String(),
+						}).Errorf("Failed to update protocol fee from FxTransferFeeSplit event for %s", network.Identifier)
 					}
 				}
 			}
