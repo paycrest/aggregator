@@ -690,24 +690,18 @@ func GetProviderAddressFromLockOrder(ctx context.Context, lockOrder *ent.LockPay
 	return providerOrderToken.Address, nil
 }
 
-// ProcessFeeEvents processes both LocalTransferFeeSplit and FxTransferFeeSplit events
-// These events contain orderId and fee amounts, allowing proper fee recording per order
-func ProcessFeeEvents(ctx context.Context, network *ent.Network, localFeeEvents []*types.LocalTransferFeeSplitEvent, fxFeeEvents []*types.FxTransferFeeSplitEvent) error {
+// ProcessFeeEvents processes LocalTransferFeeSplit  events
+// This event contains orderId and fee amounts, allowing proper fee recording per order
+func ProcessFeeEvents(ctx context.Context, network *ent.Network, localFeeEvents []*types.LocalTransferFeeSplitEvent) error {
 	// Collect all order IDs from both event types
-	allOrderIds := make([]string, 0, len(localFeeEvents)+len(fxFeeEvents))
-	
+	allOrderIds := make([]string, 0, len(localFeeEvents))
+
 	// Map order IDs to events
 	localEventMap := make(map[string]*types.LocalTransferFeeSplitEvent)
-	fxEventMap := make(map[string]*types.FxTransferFeeSplitEvent)
 	
 	for _, event := range localFeeEvents {
 		allOrderIds = append(allOrderIds, event.OrderId)
 		localEventMap[event.OrderId] = event
-	}
-	
-	for _, event := range fxFeeEvents {
-		allOrderIds = append(allOrderIds, event.OrderId)
-		fxEventMap[event.OrderId] = event
 	}
 
 	if len(allOrderIds) == 0 {
