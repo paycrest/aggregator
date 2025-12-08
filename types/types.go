@@ -98,6 +98,24 @@ type OrderRefundedEvent struct {
 	OrderId     string
 }
 
+// SenderFeeTransferredEvent represents a sender fee transferred event.
+type SenderFeeTransferredEvent struct {
+	BlockNumber int64
+	TxHash      string
+	Sender      string
+	Amount      decimal.Decimal
+}
+
+// LocalTransferFeeSplitEvent represents a local transfer fee split event.
+type LocalTransferFeeSplitEvent struct {
+	BlockNumber        int64
+	TxHash             string
+	OrderId            string
+	SenderAmount       decimal.Decimal
+	ProviderAmount     decimal.Decimal
+	AggregatorAmount   decimal.Decimal
+}
+
 // OrderService provides an interface for the OrderService
 type OrderService interface {
 	CreateOrder(ctx context.Context, orderID uuid.UUID) error

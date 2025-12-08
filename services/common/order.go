@@ -1142,3 +1142,67 @@ func createBasicLockPaymentOrderAndCancel(
 	}
 	return nil
 }
+
+// UpdateOrderSenderFee updates the sender fee for a payment order
+func UpdateOrderSenderFee(ctx context.Context, messageHash string, senderFee decimal.Decimal) error {
+	tx, err := db.Client.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("UpdateOrderSenderFee.db: %v", err)
+	}
+	defer tx.Rollback()
+
+	// Update payment order sender fee
+	updatedRows, err := tx.PaymentOrder.
+		Update().
+		Where(paymentorder.MessageHashEQ(messageHash)).
+		SetSenderFee(senderFee).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("UpdateOrderSenderFee.updatePaymentOrder: %v", err)
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("UpdateOrderSenderFee.commit: %v", err)
+	}
+
+	logger.WithFields(logger.Fields{
+		"MessageHash":          messageHash,
+		"SenderFee":            senderFee.String(),
+		"PaymentOrdersUpdated": updatedRows,
+	}).Info("Updated order sender fee from blockchain event")
+
+	return nil
+}
+
+// UpdateOrderNetworkFee updates the network fee for a payment order
+func UpdateOrderNetworkFee(ctx context.Context, messageHash string, networkFee decimal.Decimal) error {
+	tx, err := db.Client.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("UpdateOrderNetworkFee.db: %v", err)
+	}
+	defer tx.Rollback()
+
+	// Update payment order network fee
+	updatedRows, err := tx.PaymentOrder.
+		Update().
+		Where(paymentorder.MessageHashEQ(messageHash)).
+		SetNetworkFee(networkFee).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("UpdateOrderNetworkFee.updatePaymentOrder: %v", err)
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("UpdateOrderNetworkFee.commit: %v", err)
+	}
+
+	logger.WithFields(logger.Fields{
+		"MessageHash":          messageHash,
+		"NetworkFee":           networkFee.String(),
+		"PaymentOrdersUpdated": updatedRows,
+	}).Info("Updated order network fee from blockchain event")
+
+	return nil
+}

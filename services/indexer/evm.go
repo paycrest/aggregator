@@ -564,6 +564,8 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 	orderCreatedEvents := []*types.OrderCreatedEvent{}
 	orderSettledEvents := []*types.OrderSettledEvent{}
 	orderRefundedEvents := []*types.OrderRefundedEvent{}
+	senderFeeTransferredEvents := []*types.SenderFeeTransferredEvent{}
+	localTransferFeeSplitEvents := []*types.LocalTransferFeeSplitEvent{}
 
 	// Use GetContractEventsWithFallback to try Thirdweb first and fall back to RPC
 	eventPayload := map[string]string{
@@ -790,6 +792,74 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 				Fee:         fee,
 			}
 			orderRefundedEvents = append(orderRefundedEvents, refundedEvent)
+
+		case utils.SenderFeeTransferredEventSignature:
+			// Safely extract required fields for SenderFeeTransferred
+			senderStr, ok := indexedParams["sender"].(string)
+			if !ok || senderStr == "" {
+				continue
+			}
+
+			amountStr, ok := indexedParams["amount"].(string)
+			if !ok || amountStr == "" {
+				continue
+			}
+			amount, err := decimal.NewFromString(amountStr)
+			if err != nil {
+				continue
+			}
+
+			senderFeeEvent := &types.SenderFeeTransferredEvent{
+				BlockNumber: blockNumber,
+				TxHash:      txHashFromEvent,
+				Sender:      ethcommon.HexToAddress(senderStr).Hex(),
+				Amount:      amount,
+			}
+			senderFeeTransferredEvents = append(senderFeeTransferredEvents, senderFeeEvent)
+
+		case utils.LocalTransferFeeSplitEventSignature:
+			// Safely extract required fields for LocalTransferFeeSplit
+			orderIdStr, ok := indexedParams["orderId"].(string)
+			if !ok || orderIdStr == "" {
+				continue
+			}
+
+			senderAmountStr, ok := nonIndexedParams["senderAmount"].(string)
+			if !ok || senderAmountStr == "" {
+				continue
+			}
+			senderAmount, err := decimal.NewFromString(senderAmountStr)
+			if err != nil {
+				continue
+			}
+
+			providerAmountStr, ok := nonIndexedParams["providerAmount"].(string)
+			if !ok || providerAmountStr == "" {
+				continue
+			}
+			providerAmount, err := decimal.NewFromString(providerAmountStr)
+			if err != nil {
+				continue
+			}
+
+			aggregatorAmountStr, ok := nonIndexedParams["aggregatorAmount"].(string)
+			if !ok || aggregatorAmountStr == "" {
+				continue
+			}
+			aggregatorAmount, err := decimal.NewFromString(aggregatorAmountStr)
+			if err != nil {
+				continue
+			}
+
+			localFeeSplitEvent := &types.LocalTransferFeeSplitEvent{
+				BlockNumber:      blockNumber,
+				TxHash:           txHashFromEvent,
+				OrderId:          orderIdStr,
+				SenderAmount:     senderAmount,
+				ProviderAmount:   providerAmount,
+				AggregatorAmount: aggregatorAmount,
+			}
+			localTransferFeeSplitEvents = append(localTransferFeeSplitEvents, localFeeSplitEvent)
 		}
 	}
 
@@ -849,6 +919,42 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 		}
 	}
 	eventCounts.OrderRefunded = len(orderRefundedEvents)
+
+	// Process SenderFeeTransferred events
+	if len(senderFeeTransferredEvents) > 0 {
+		senderAddresses := []string{}
+		senderToEvents := make(map[string][]*types.SenderFeeTransferredEvent)
+		for _, event := range senderFeeTransferredEvents {
+			senderAddresses = append(senderAddresses, event.Sender)
+			senderToEvents[event.Sender] = append(senderToEvents[event.Sender], event)
+		}
+		err := common.ProcessSenderFeeTransferredEvents(ctx, network, senderAddresses, senderToEvents)
+		if err != nil {
+			logger.Errorf("Failed to process SenderFeeTransferred events: %v", err)
+		} else {
+			if network.ChainID != 56 && network.ChainID != 1135 {
+				logger.Infof("Successfully processed %d SenderFeeTransferred events", len(senderFeeTransferredEvents))
+			}
+		}
+	}
+
+	// Process LocalTransferFeeSplit events
+	if len(localTransferFeeSplitEvents) > 0 {
+		orderIds := []string{}
+		orderIdToEvent := make(map[string]*types.LocalTransferFeeSplitEvent)
+		for _, event := range localTransferFeeSplitEvents {
+			orderIds = append(orderIds, event.OrderId)
+			orderIdToEvent[event.OrderId] = event
+		}
+		err := common.ProcessLocalTransferFeeSplitEvents(ctx, network, orderIds, orderIdToEvent)
+		if err != nil {
+			logger.Errorf("Failed to process LocalTransferFeeSplit events: %v", err)
+		} else {
+			if network.ChainID != 56 && network.ChainID != 1135 {
+				logger.Infof("Successfully processed %d LocalTransferFeeSplit events", len(localTransferFeeSplitEvents))
+			}
+		}
+	}
 
 	return eventCounts, nil
 }
