@@ -116,6 +116,15 @@ type LocalTransferFeeSplitEvent struct {
 	AggregatorAmount   decimal.Decimal
 }
 
+// FxTransferFeeSplitEvent represents a foreign exchange transfer fee split event.
+type FxTransferFeeSplitEvent struct {
+	BlockNumber      int64
+	TxHash           string
+	OrderId          string
+	SenderAmount     decimal.Decimal
+	AggregatorAmount decimal.Decimal
+}
+
 // OrderService provides an interface for the OrderService
 type OrderService interface {
 	CreateOrder(ctx context.Context, orderID uuid.UUID) error
