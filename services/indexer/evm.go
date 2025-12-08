@@ -955,16 +955,16 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 	}
 	eventCounts.OrderRefunded = len(orderRefundedEvents)
 
-	// Process fee events (LocalTransferFeeSplit and FxTransferFeeSplit) together
+	// Process fee events (LocalTransferFeeSplit)
 	// Note: SenderFeeTransferred events are deprecated as they don't contain order correlation
-	if len(localTransferFeeSplitEvents) > 0 || len(fxTransferFeeSplitEvents) > 0 {
-		err := common.ProcessFeeEvents(ctx, network, localTransferFeeSplitEvents, fxTransferFeeSplitEvents)
+	if len(localTransferFeeSplitEvents) > 0 {
+		err := common.ProcessFeeEvents(ctx, network, localTransferFeeSplitEvents)
 		if err != nil {
 			logger.Errorf("Failed to process fee events: %v", err)
 		} else {
 			if network.ChainID != 56 && network.ChainID != 1135 {
 				logger.Infof("Successfully processed %d LocalTransferFeeSplit and %d FxTransferFeeSplit events", 
-					len(localTransferFeeSplitEvents), len(fxTransferFeeSplitEvents))
+					len(localTransferFeeSplitEvents))
 			}
 		}
 	}
