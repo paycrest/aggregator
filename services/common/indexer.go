@@ -704,7 +704,9 @@ func ProcessFeeEvents(ctx context.Context, network *ent.Network, localFeeEvents 
 			allOrderIds = append(allOrderIds, event.OrderId)
 			localEventMap[event.OrderId] = event
 		}
-	} else if (len(fxFeeEvents) != 0) {
+	}
+	
+	if (len(fxFeeEvents) != 0) {
 		for _, event := range fxFeeEvents {
 			allOrderIds = append(allOrderIds, event.OrderId)
 			fxEventMap[event.OrderId] = event
@@ -765,7 +767,7 @@ func ProcessFeeEvents(ctx context.Context, network *ent.Network, localFeeEvents 
 				}
 			}
 
-			// Check for LocalTransferFeeSplit event (local transfers)
+			// Check for fxTransferFeeSplit event (fx transfers)
 			if fxEvent, ok := fxEventMap[lo.GatewayID]; ok {
 				// Update sender fee from senderAmount
 				if !fxEvent.SenderAmount.IsZero() {
