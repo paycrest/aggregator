@@ -696,10 +696,6 @@ func ProcessFeeEvents(ctx context.Context, network *ent.Network, localFeeEvents 
 	// Collect all order IDs from both event types (one of both would be nil at a time)
 	allOrderIds := make([]string, 0, len(localFeeEvents) + len(fxFeeEvents))
 
-	if len(allOrderIds) == 0 {
-		return nil
-	}
-
 	localEventMap := make(map[string]*types.LocalTransferFeeSplitEvent)
 	fxEventMap := make(map[string]*types.FxTransferFeeSplitEvent)
 
@@ -713,6 +709,10 @@ func ProcessFeeEvents(ctx context.Context, network *ent.Network, localFeeEvents 
 			allOrderIds = append(allOrderIds, event.OrderId)
 			fxEventMap[event.OrderId] = event
 		}
+	}
+
+	if len(allOrderIds) == 0 {
+		return nil
 	}
 
 	// Find orders by gateway order IDs
