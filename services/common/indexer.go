@@ -692,20 +692,27 @@ func GetProviderAddressFromLockOrder(ctx context.Context, lockOrder *ent.LockPay
 
 // ProcessFeeEvents processes LocalTransferFeeSplit  events
 // This event contains orderId and fee amounts, allowing proper fee recording per order
-func ProcessFeeEvents(ctx context.Context, network *ent.Network, localFeeEvents []*types.LocalTransferFeeSplitEvent) error {
-	// Collect all order IDs from both event types
-	allOrderIds := make([]string, 0, len(localFeeEvents))
-
-	// Map order IDs to events
-	localEventMap := make(map[string]*types.LocalTransferFeeSplitEvent)
-	
-	for _, event := range localFeeEvents {
-		allOrderIds = append(allOrderIds, event.OrderId)
-		localEventMap[event.OrderId] = event
-	}
+func ProcessFeeEvents(ctx context.Context, network *ent.Network, localFeeEvents []*types.LocalTransferFeeSplitEvent, fxFeeEvents []*types.FxTransferFeeSplitEvent) error {
+	// Collect all order IDs from both event types (one of both would be nil at a time)
+	allOrderIds := make([]string, 0, len(localFeeEvents) + len(fxFeeEvents))
 
 	if len(allOrderIds) == 0 {
 		return nil
+	}
+
+	localEventMap := make(map[string]*types.LocalTransferFeeSplitEvent)
+	fxEventMap := make(map[string]*types.FxTransferFeeSplitEvent)
+
+	if (len(localFeeEvents) != 0) {
+		for _, event := range localFeeEvents {
+			allOrderIds = append(allOrderIds, event.OrderId)
+			localEventMap[event.OrderId] = event
+		}
+	} else if (len(fxFeeEvents) != 0) {
+		for _, event := range fxFeeEvents {
+			allOrderIds = append(allOrderIds, event.OrderId)
+			fxEventMap[event.OrderId] = event
+		}
 	}
 
 	// Find orders by gateway order IDs
@@ -754,6 +761,37 @@ func ProcessFeeEvents(ctx context.Context, network *ent.Network, localFeeEvents 
 							"Network":      network.Identifier,
 							"ProtocolFee":  localEvent.AggregatorAmount.String(),
 						}).Errorf("Failed to update protocol fee from LocalTransferFeeSplit event for %s", network.Identifier)
+					}
+				}
+			}
+
+			// Check for LocalTransferFeeSplit event (local transfers)
+			if fxEvent, ok := fxEventMap[lo.GatewayID]; ok {
+				// Update sender fee from senderAmount
+				if !fxEvent.SenderAmount.IsZero() {
+					err := UpdateOrderSenderFee(ctx, lo.MessageHash, fxEvent.SenderAmount)
+					if err != nil {
+						logger.WithFields(logger.Fields{
+							"Error":       fmt.Sprintf("%v", err),
+							"MessageHash": lo.MessageHash,
+							"TxHash":      fxEvent.TxHash,
+							"Network":     network.Identifier,
+							"SenderFee":   fxEvent.SenderAmount.String(),
+						}).Errorf("Failed to update sender fee from fxTransferFeeSplit event for %s", network.Identifier)
+					}
+				}
+
+				// Update protocol fee from aggregatorAmount (fees collected by the protocol)
+				if !fxEvent.AggregatorAmount.IsZero() {
+					err := UpdateOrderProtocolFee(ctx, lo.MessageHash, fxEvent.AggregatorAmount)
+					if err != nil {
+						logger.WithFields(logger.Fields{
+							"Error":        fmt.Sprintf("%v", err),
+							"MessageHash":  lo.MessageHash,
+							"TxHash":       fxEvent.TxHash,
+							"Network":      network.Identifier,
+							"ProtocolFee":  fxEvent.AggregatorAmount.String(),
+						}).Errorf("Failed to update protocol fee from fxTransferFeeSplit event for %s", network.Identifier)
 					}
 				}
 			}

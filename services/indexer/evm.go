@@ -564,7 +564,6 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 	orderCreatedEvents := []*types.OrderCreatedEvent{}
 	orderSettledEvents := []*types.OrderSettledEvent{}
 	orderRefundedEvents := []*types.OrderRefundedEvent{}
-	senderFeeTransferredEvents := []*types.SenderFeeTransferredEvent{}
 	localTransferFeeSplitEvents := []*types.LocalTransferFeeSplitEvent{}
 	fxTransferFeeSplitEvents := []*types.FxTransferFeeSplitEvent{}
 
@@ -794,30 +793,6 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 			}
 			orderRefundedEvents = append(orderRefundedEvents, refundedEvent)
 
-		case utils.SenderFeeTransferredEventSignature:
-			// Safely extract required fields for SenderFeeTransferred
-			senderStr, ok := indexedParams["sender"].(string)
-			if !ok || senderStr == "" {
-				continue
-			}
-
-			amountStr, ok := indexedParams["amount"].(string)
-			if !ok || amountStr == "" {
-				continue
-			}
-			amount, err := decimal.NewFromString(amountStr)
-			if err != nil {
-				continue
-			}
-
-			senderFeeEvent := &types.SenderFeeTransferredEvent{
-				BlockNumber: blockNumber,
-				TxHash:      txHashFromEvent,
-				Sender:      ethcommon.HexToAddress(senderStr).Hex(),
-				Amount:      amount,
-			}
-			senderFeeTransferredEvents = append(senderFeeTransferredEvents, senderFeeEvent)
-
 		case utils.LocalTransferFeeSplitEventSignature:
 			// Safely extract required fields for LocalTransferFeeSplit
 			orderIdStr, ok := indexedParams["orderId"].(string)
@@ -955,17 +930,19 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 	}
 	eventCounts.OrderRefunded = len(orderRefundedEvents)
 
-	// Process fee events (LocalTransferFeeSplit)
-	// Note: SenderFeeTransferred events are deprecated as they don't contain order correlation
+	// Process fee events (LocalTransferFeeSplit and fxTransferFeeSplit)
 	if len(localTransferFeeSplitEvents) > 0 {
-		err := common.ProcessFeeEvents(ctx, network, localTransferFeeSplitEvents)
+		err := common.ProcessFeeEvents(ctx, network, localTransferFeeSplitEvents, nil)
 		if err != nil {
 			logger.Errorf("Failed to process fee events: %v", err)
-		} else {
-			if network.ChainID != 56 && network.ChainID != 1135 {
-				logger.Infof("Successfully processed %d LocalTransferFeeSplit and %d FxTransferFeeSplit events", 
-					len(localTransferFeeSplitEvents))
-			}
+		}
+	} 
+	
+	
+	if len(fxTransferFeeSplitEvents) > 0 {
+		err := common.ProcessFeeEvents(ctx, network, nil, fxTransferFeeSplitEvents)
+		if err != nil {
+			logger.Errorf("Failed to process FX fee events: %v", err)
 		}
 	}
 
