@@ -20,6 +20,9 @@ import (
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/user"
 	"github.com/shopspring/decimal"
+	"github.com/NethermindEth/juno/core/felt"
+	"github.com/NethermindEth/starknet.go/account"
+	"github.com/NethermindEth/starknet.go/rpc"
 )
 
 // RPCClient is an interface for interacting with the blockchain.
@@ -48,7 +51,6 @@ func (e *ethRPC) Commit() common.Hash {
 
 // Helper function to create client
 func NewEthClient(endpoint string) (RPCClient, error) {
-
 	ethClient, err := ethclient.Dial(endpoint)
 	if err != nil {
 		return nil, err
@@ -830,6 +832,11 @@ type ThirdwebDecodedEvent struct {
 	NonIndexedParams map[string]interface{} `json:"non_indexed_params"`
 }
 
+// StarknetEventsData represents the structure for Starknet event data
+type StarknetEventsData struct {
+	Events             rpc.EmittedEvent            `json:"events"`
+}
+
 // WebhookSignatureVerification represents the result of signature verification
 type WebhookSignatureVerification struct {
 	IsValid   bool
@@ -868,4 +875,10 @@ type ProviderInfoResponse struct {
 			TotalBalance     string `json:"totalBalance"`
 		} `json:"totalBalances"`
 	} `json:"data"`
+}
+
+type StarknetDeterministicAccountInfo struct {
+	Salt       *felt.Felt
+	PublicKey  *felt.Felt
+	NewAccount *account.Account
 }
