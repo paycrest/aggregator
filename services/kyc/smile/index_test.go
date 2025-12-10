@@ -45,8 +45,8 @@ func generateValidSignature(t *testing.T, walletAddress, nonce string) string {
 }
 
 func TestSmileIDService(t *testing.T) {
-	// Set up test database client
-	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+	// Set up test database client with shared in-memory schema
+	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
 	defer client.Close()
 
 	db.Client = client

@@ -1366,9 +1366,6 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 		WithFulfillments(func(fq *ent.LockOrderFulfillmentQuery) {
 			fq.Where(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusSuccess))
 		}).
-		WithToken(func(tq *ent.TokenQuery) {
-			tq.WithNetwork()
-		}).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {

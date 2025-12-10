@@ -13,6 +13,8 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/enttest"
+	"github.com/paycrest/aggregator/ent/paymentorder"
+	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/webhookretryattempt"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
@@ -37,19 +39,45 @@ func setup() error {
 
 	testCtx.user = user
 
-	// Set up test blockchain client
-	backend, err := test.SetUpTestBlockchain()
+	// Create Network first (skip blockchain connection)
+	networkId, err := db.Client.Network.
+		Create().
+		SetIdentifier("localhost").
+		SetChainID(int64(56)). // Use BNB Smart Chain to skip webhook creation
+		SetRPCEndpoint("ws://localhost:8545").
+		SetBlockTime(decimal.NewFromFloat(3.0)).
+		SetFee(decimal.NewFromFloat(0.1)).
+		SetIsTestnet(true).
+		OnConflict().
+		UpdateNewValues().
+		ID(context.Background())
 	if err != nil {
-		return err
+		return fmt.Errorf("CreateNetwork.tasks_test: %w", err)
 	}
 
-	// Create a test token
-	token, err := test.CreateERC20Token(backend, map[string]interface{}{
-		"identifier":     "localhost",
-		"deployContract": false,
-	})
+	// Create token directly without blockchain
+	tokenId, err := db.Client.Token.
+		Create().
+		SetSymbol("TST").
+		SetContractAddress("0xd4E96eF8eee8678dBFf4d535E033Ed1a4F7605b7").
+		SetDecimals(6).
+		SetNetworkID(networkId).
+		SetIsEnabled(true).
+		SetBaseCurrency("NGN").
+		OnConflict().
+		UpdateNewValues().
+		ID(context.Background())
 	if err != nil {
-		return fmt.Errorf("CreateERC20Token.tasks_test: %w", err)
+		return fmt.Errorf("CreateToken.tasks_test: %w", err)
+	}
+
+	token, err := db.Client.Token.
+		Query().
+		Where(tokenEnt.IDEQ(tokenId)).
+		WithNetwork().
+		Only(context.Background())
+	if err != nil {
+		return fmt.Errorf("GetToken.tasks_test: %w", err)
 	}
 
 	senderProfile, err := test.CreateTestSenderProfile(map[string]interface{}{
@@ -62,11 +90,41 @@ func setup() error {
 	}
 	testCtx.sender = senderProfile
 
-	paymentOrder, err := test.CreateTestPaymentOrder(backend, token, map[string]interface{}{
-		"sender": senderProfile,
-	})
+	// Create payment order directly without blockchain dependency
+	paymentOrder, err := db.Client.PaymentOrder.
+		Create().
+		SetSenderProfile(senderProfile).
+		SetAmount(decimal.NewFromFloat(100.50)).
+		SetAmountInUsd(decimal.NewFromFloat(100.50)).
+		SetAmountPaid(decimal.Zero).
+		SetAmountReturned(decimal.Zero).
+		SetPercentSettled(decimal.Zero).
+		SetNetworkFee(token.Edges.Network.Fee).
+		SetSenderFee(decimal.NewFromFloat(5.0)).
+		SetToken(token).
+		SetRate(decimal.NewFromFloat(750.0)).
+		SetReceiveAddressText("0x1234567890123456789012345678901234567890").
+		SetFeePercent(decimal.NewFromFloat(5.0)).
+		SetFeeAddress("0x1234567890123456789012345678901234567890").
+		SetReturnAddress("0x0987654321098765432109876543210987654321").
+		SetStatus(paymentorder.StatusPending).
+		Save(context.Background())
 	if err != nil {
-		return fmt.Errorf("CreateTestSenderProfile.tasks_test: %w", err)
+		return fmt.Errorf("CreatePaymentOrder.tasks_test: %w", err)
+	}
+
+	// Create payment order recipient
+	_, err = db.Client.PaymentOrderRecipient.
+		Create().
+		SetInstitution("ABNGNGLA").
+		SetAccountIdentifier("1234567890").
+		SetAccountName("Test Account").
+		SetProviderID("").
+		SetMemo("Shola Kehinde - rent for May 2021").
+		SetPaymentOrder(paymentOrder).
+		Save(context.Background())
+	if err != nil {
+		return fmt.Errorf("CreatePaymentOrderRecipient.tasks_test: %w", err)
 	}
 
 	// Create the payload
@@ -122,14 +180,20 @@ func setup() error {
 
 func TestTasks(t *testing.T) {
 
-	// Set up test database client
-	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+	// Set up test database client with shared in-memory schema
+	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
 	defer client.Close()
+
+	// Run migrations to create all tables
+	err := client.Schema.Create(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to create database schema: %v", err)
+	}
 
 	db.Client = client
 
 	// Setup test data
-	err := setup()
+	err = setup()
 	assert.NoError(t, err)
 
 	t.Run("RetryFailedWebhookNotifications", func(t *testing.T) {
@@ -143,7 +207,24 @@ func TestTasks(t *testing.T) {
 			},
 		)
 
-		// Register mock email response
+		// Register mock email response for Brevo (primary provider)
+		httpmock.RegisterResponder("POST", "https://api.brevo.com/v3/smtp/email",
+			func(r *http.Request) (*http.Response, error) {
+				bytes, err := io.ReadAll(r.Body)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				// Assert email response contains userEmail and Name
+				assert.Contains(t, string(bytes), testCtx.user.Email)
+				assert.Contains(t, string(bytes), testCtx.user.FirstName)
+
+				resp := httpmock.NewBytesResponse(201, nil)
+				return resp, nil
+			},
+		)
+
+		// Register mock email response for SendGrid (fallback provider)
 		httpmock.RegisterResponder("POST", "https://api.sendgrid.com/v3/mail/send",
 			func(r *http.Request) (*http.Response, error) {
 				bytes, err := io.ReadAll(r.Body)

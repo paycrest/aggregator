@@ -23,8 +23,8 @@ func TestUserOp(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Initialize SQLite database using enttest.Open (in-memory)
-	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+	// Initialize SQLite database using enttest.Open (in-memory with shared cache)
+	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
 	defer client.Close()
 
 	// Set the global client in storage package

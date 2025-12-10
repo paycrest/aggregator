@@ -456,6 +456,7 @@ func (ctrl *AuthController) ResendVerificationToken(ctx *gin.Context) {
 	user, userErr := db.Client.User.Query().Where(userEnt.EmailEQ(payload.Email)).Only(ctx)
 	if userErr != nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid credential", userErr.Error())
+		return
 	}
 
 	// Generate VerificationToken.
@@ -550,6 +551,7 @@ func (ctrl *AuthController) ResetPasswordToken(ctx *gin.Context) {
 		Only(ctx)
 	if userErr != nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Email does not belong to any user", nil)
+		return
 	}
 
 	// Generate password reset token.

@@ -132,7 +132,7 @@ func CreateERC20Token(client types.RPCClient, overrides map[string]interface{}) 
 }
 
 // CreateTRC20Token creates a test token with default or custom values
-func CreateTRC20Token(client types.RPCClient, overrides map[string]interface{}) (*ent.Token, error) {
+func CreateTRC20Token(overrides map[string]interface{}) (*ent.Token, error) {
 
 	// Default payload
 	payload := map[string]interface{}{
@@ -636,37 +636,73 @@ func CreateTestFiatCurrency(overrides map[string]interface{}) (*ent.FiatCurrency
 	var institutions []*ent.Institution
 	var err error
 	if payload["code"] == "KES" {
-		institutions, err = db.Client.Institution.CreateBulk(
-			db.Client.Institution.
+		// Check if institutions already exist
+		mpesa, err := db.Client.Institution.Query().Where(institution.CodeEQ("MPESAKES")).Only(context.Background())
+		if err != nil && !ent.IsNotFound(err) {
+			return nil, err
+		}
+		if ent.IsNotFound(err) {
+			mpesa, err = db.Client.Institution.
 				Create().
 				SetName("M-Pesa").
 				SetCode("MPESAKES").
-				SetType(institution.TypeMobileMoney),
-			db.Client.Institution.
-				Create().
-				SetName("Equity Bank").
-				SetCode("EQTYKES"),
-		).Save(context.Background())
+				SetType(institution.TypeMobileMoney).
+				Save(context.Background())
+			if err != nil {
+				return nil, err
+			}
+		}
 
-		if err != nil {
+		equity, err := db.Client.Institution.Query().Where(institution.CodeEQ("EQTYKES")).Only(context.Background())
+		if err != nil && !ent.IsNotFound(err) {
 			return nil, err
 		}
+		if ent.IsNotFound(err) {
+			equity, err = db.Client.Institution.
+				Create().
+				SetName("Equity Bank").
+				SetCode("EQTYKES").
+				Save(context.Background())
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		institutions = []*ent.Institution{mpesa, equity}
 	} else {
-		institutions, err = db.Client.Institution.CreateBulk(
-			db.Client.Institution.
+		// Check if institutions already exist
+		mtn, err := db.Client.Institution.Query().Where(institution.CodeEQ("MOMONGPC")).Only(context.Background())
+		if err != nil && !ent.IsNotFound(err) {
+			return nil, err
+		}
+		if ent.IsNotFound(err) {
+			mtn, err = db.Client.Institution.
 				Create().
 				SetName("MTN Momo").
 				SetCode("MOMONGPC").
-				SetType(institution.TypeMobileMoney),
-			db.Client.Institution.
-				Create().
-				SetName("Access Bank").
-				SetCode("ABNGNGLA"),
-		).Save(context.Background())
+				SetType(institution.TypeMobileMoney).
+				Save(context.Background())
+			if err != nil {
+				return nil, err
+			}
+		}
 
-		if err != nil {
+		access, err := db.Client.Institution.Query().Where(institution.CodeEQ("ABNGNGLA")).Only(context.Background())
+		if err != nil && !ent.IsNotFound(err) {
 			return nil, err
 		}
+		if ent.IsNotFound(err) {
+			access, err = db.Client.Institution.
+				Create().
+				SetName("Access Bank").
+				SetCode("ABNGNGLA").
+				Save(context.Background())
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		institutions = []*ent.Institution{mtn, access}
 	}
 
 	currency, err := db.Client.FiatCurrency.

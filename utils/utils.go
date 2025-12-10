@@ -1269,6 +1269,7 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 				}
 				return ProviderRateResult{Found: false}
 			}
+
 			// Determine order type for this provider
 			orderType := DetermineOrderType(providerOrderToken, tokenAmount)
 
