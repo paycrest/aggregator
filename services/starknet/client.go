@@ -1,3 +1,4 @@
+// Package starknet provides a client for interacting with Starknet blockchain.
 package starknet
 
 import (
@@ -26,7 +27,7 @@ import (
 type Client struct {
 	providerClient  *rpc.Provider
 	paymasterClient *paymaster.Paymaster
-	AggregatorSalt  string
+	AggregatorSeed  string
 }
 
 var starknetConf = config.StarknetConfig()
@@ -63,7 +64,7 @@ func NewClient(ctx context.Context) (*Client, error) {
 	return &Client{
 		providerClient:  providerClient,
 		paymasterClient: paymasterClient,
-		AggregatorSalt:  starknetConf.StarknetAggregatorSalt,
+		AggregatorSeed:  starknetConf.StarknetAggregatorSeed,
 	}, nil
 }
 
@@ -99,7 +100,7 @@ func (c *Client) GetEvents(ctx context.Context, accountAddress *felt.Felt, fromB
 	}
 
 	orderSettledSelectorFelt, _ := utils.HexToFelt(u.OrderSettledStarknetSelector)
-	
+
 	var eventSignatures [][]*felt.Felt
 	if len(topics) > 0 && topics[0] == transferSelectorFelt {
 		eventSignatures = [][]*felt.Felt{{transferSelectorFelt}}
@@ -160,7 +161,7 @@ func (c *Client) GetTransactionReceipt(ctx context.Context, txHash, accountAddre
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse transfer selector felt: %w", err)
 	}
-	
+
 	orderSettledSelectorFelt, _ := utils.HexToFelt(u.OrderSettledStarknetSelector)
 	var eventSignatures []felt.Felt
 	if len(topics) > 0 && topics[0] == transferSelectorFelt {
@@ -477,40 +478,29 @@ func (c *Client) BuildRefundOrderCall(
 }
 
 func (c *Client) GenerateDeterministicAccount(seed string) (*types.StarknetDeterministicAccountInfo, error) {
-	// Validate that exactly one of seed or salt is provided
-	if seed == "" {
-		return nil, fmt.Errorf("seed must be provided")
-	}
-
 	// This assume that all accounts inclusive with aggregator use the same class hash
 	accountClassHash, err := utils.HexToFelt(starknetConf.AccountClassHash)
 	if err != nil {
 		return nil, fmt.Errorf("invalid account class hash: %w", err)
 	}
 
-	var privateKey *big.Int
-
-	if seed != "" {
-		sum := sha256.Sum256([]byte(seed))
-		privateKey = new(big.Int).SetBytes(sum[:])
-
-	} else {
+	if seed == "" {
 		seed, err = generateSecureSeed()
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate secure seed: %w", err)
 		}
-
-		privateKeySeed := sha256.Sum256([]byte(seed))
-		privateKey = new(big.Int).SetBytes(privateKeySeed[:])
 	}
+
+	// Always derive everything from seed for consistency
+	privateKeySeed := sha256.Sum256([]byte(seed))
+	privateKey := new(big.Int).SetBytes(privateKeySeed[:])
 
 	publicKeyBig, _ := curve.PrivateKeyToPoint(privateKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate deterministic key: %w", err)
-	}
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to derive public key: %w", err)
+	// }
 	publicKey := new(felt.Felt).SetBigInt(publicKeyBig)
 
-	// Generate deterministic salt from seed
 	saltBytes := sha256.Sum256([]byte(fmt.Sprintf("%s-paycrest", seed)))
 	saltFelt := new(felt.Felt).SetBytes(saltBytes[:])
 

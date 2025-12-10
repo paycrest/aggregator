@@ -72,10 +72,14 @@ type Controller struct {
 
 // NewController creates a new instance of AuthController with injected services
 func NewController() *Controller {
+	receiveaddressSvc, err := svc.NewReceiveAddressService()
+	if err != nil {
+		logger.Fatalf("Failed to initialize ReceiveAddressService: %v", err)
+	}
 	return &Controller{
 		orderService:          orderSvc.NewOrderEVM(),
 		priorityQueueService:  svc.NewPriorityQueueService(),
-		receiveAddressService: svc.NewReceiveAddressService(),
+		receiveAddressService: receiveaddressSvc,
 		kycService:            smile.NewSmileIDService(),
 		slackService:          svc.NewSlackService(serverConf.SlackWebhookURL),
 		emailService:          email.NewEmailServiceWithProviders(),
@@ -2434,7 +2438,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 	if strings.HasPrefix(network.Identifier, "tron") {
 		indexerInstance = indexer.NewIndexerTron()
 	} else if strings.HasPrefix(network.Identifier, "starknet") {
-		indexerInstance, indexerErr = indexer.NewIndexerStarknet()
+		indexerInstance, indexerErr = indexer.NewIndexerStarknet(ctx)
 		if indexerErr != nil {
 			logger.WithFields(logger.Fields{
 				"Error":        fmt.Sprintf("%v", indexerErr),
@@ -2766,7 +2770,7 @@ func (ctrl *Controller) IndexProviderAddress(ctx *gin.Context) {
 	if strings.HasPrefix(network.Identifier, "tron") {
 		indexerInstance = indexer.NewIndexerTron()
 	} else if strings.HasPrefix(network.Identifier, "starknet") {
-		indexerInstance, err = indexer.NewIndexerStarknet()
+		indexerInstance, err = indexer.NewIndexerStarknet(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":   fmt.Sprintf("%v", err),
@@ -2783,21 +2787,6 @@ func (ctrl *Controller) IndexProviderAddress(ctx *gin.Context) {
 				"Network": network.Identifier,
 			}).Errorf("Failed to create EVM indexer")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initialize indexer", nil)
-			return
-		}
-	}
-			logger.WithFields(logger.Fields{
-				"Error":   fmt.Sprintf("%v", err),
-				"Network": network.Identifier,
-			}).Errorf("Failed to create Starknet indexer")
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initialize indexer", nil)
-			return
-		}
-	} else {
-			indexerInstance, err = indexer.NewIndexerEVM()
-		if err != nil {
-			logger.Errorf("Failed to create indexer: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create indexer", nil)
 			return
 		}
 	}

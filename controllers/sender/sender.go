@@ -43,11 +43,15 @@ type SenderController struct {
 }
 
 // NewSenderController creates a new instance of SenderController
-func NewSenderController() *SenderController {
-	return &SenderController{
-		receiveAddressService: svc.NewReceiveAddressService(),
-		orderService:          orderSvc.NewOrderEVM(),
+func NewSenderController() (*SenderController, error) {
+	receiveAddressService, err := svc.NewReceiveAddressService()
+	if err != nil {
+		return nil, err
 	}
+	return &SenderController{
+		receiveAddressService: receiveAddressService,
+		orderService:          orderSvc.NewOrderEVM(),
+	}, nil
 }
 
 var (
@@ -429,6 +433,30 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 			return
 		}
+	} else if strings.HasPrefix(payload.Network, "starknet") {
+		address, salt, err := ctrl.receiveAddressService.CreateStarknetAddress(ctx)
+		if err != nil {
+			logger.Errorf("CreateStarknetAddress error: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", map[string]interface{}{
+				"context": "create_starknet_address",
+			})
+			return
+		}
+		receiveAddress, err = storage.Client.ReceiveAddress.
+			Create().
+			SetAddress(address).
+			SetSalt(salt).
+			SetStatus(receiveaddress.StatusUnused).
+			SetValidUntil(time.Now().Add(orderConf.ReceiveAddressValidity)).
+			Save(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"error":   err,
+				"address": address,
+			}).Errorf("Failed to create receive address")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+			return
+		}
 	} else {
 		// Generate unique label for smart address
 		uniqueLabel := fmt.Sprintf("payment_order_%d_%s", time.Now().UnixNano(), uuid.New().String()[:8])
@@ -533,7 +561,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	}
 
 	// Create webhook for the smart address to monitor transfers (only for EVM networks)
-	if !strings.HasPrefix(payload.Network, "tron") {
+	if !strings.HasPrefix(payload.Network, "tron") && !strings.HasPrefix(payload.Network, "starknet") {
 		engineService := svc.NewEngineService()
 		webhookID, webhookSecret, err := engineService.CreateTransferWebhook(
 			ctx,

@@ -276,7 +276,10 @@ func TestSender(t *testing.T) {
 	router.Use(middleware.OnlySenderMiddleware)
 
 	// Create a new instance of the SenderController with the mock service
-	ctrl := NewSenderController()
+	ctrl, err := NewSenderController()
+	if err != nil {
+		t.Fatalf("Failed to create SenderController: %v", err)
+	}
 	router.POST("/sender/orders", ctrl.InitiatePaymentOrder)
 	router.GET("/sender/orders/:id", ctrl.GetPaymentOrderByID)
 	router.GET("/sender/orders", ctrl.GetPaymentOrders)
