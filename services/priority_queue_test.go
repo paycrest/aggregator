@@ -457,12 +457,13 @@ func setupForPQ() error {
 }
 
 func TestPriorityQueueTest(t *testing.T) {
-	// Set up test database client with shared in-memory schema and a single connection to avoid locks
+	// Set up test database client with shared in-memory schema
+	// Use 2 connections to allow transaction and query to run concurrently (prevents deadlock)
 	dbConn, err := sql.Open("sqlite3", "file:ent?mode=memory&cache=shared&_fk=1&_busy_timeout=5000")
 	if err != nil {
 		t.Fatalf("Failed to open sqlite DB: %v", err)
 	}
-	dbConn.SetMaxOpenConns(1)
+	dbConn.SetMaxOpenConns(2)
 	defer dbConn.Close()
 
 	drv := entsql.OpenDB(dialect.SQLite, dbConn)

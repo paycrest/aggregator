@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"testing"
 	"time"
@@ -212,7 +211,7 @@ func TestTasks(t *testing.T) {
 			func(r *http.Request) (*http.Response, error) {
 				bytes, err := io.ReadAll(r.Body)
 				if err != nil {
-					log.Fatal(err)
+					t.Fatal(err)
 				}
 
 				// Assert email response contains userEmail and Name
@@ -229,7 +228,7 @@ func TestTasks(t *testing.T) {
 			func(r *http.Request) (*http.Response, error) {
 				bytes, err := io.ReadAll(r.Body)
 				if err != nil {
-					log.Fatal(err)
+					t.Fatal(err)
 				}
 
 				// Assert email response contains userEmail and Name

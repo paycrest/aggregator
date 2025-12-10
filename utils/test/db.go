@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
@@ -636,75 +637,90 @@ func CreateTestFiatCurrency(overrides map[string]interface{}) (*ent.FiatCurrency
 	var institutions []*ent.Institution
 	var err error
 	if payload["code"] == "KES" {
-		// Check if institutions already exist
-		mpesa, err := db.Client.Institution.Query().Where(institution.CodeEQ("MPESAKES")).Only(context.Background())
-		if err != nil && !ent.IsNotFound(err) {
+		// Use OnConflict to handle race conditions in parallel tests
+		_, err = db.Client.Institution.
+			Create().
+			SetName("M-Pesa").
+			SetCode("MPESAKES").
+			SetType(institution.TypeMobileMoney).
+			OnConflictColumns("code").
+			UpdateNewValues().
+			ID(context.Background())
+		if err != nil {
 			return nil, err
 		}
-		if ent.IsNotFound(err) {
-			mpesa, err = db.Client.Institution.
-				Create().
-				SetName("M-Pesa").
-				SetCode("MPESAKES").
-				SetType(institution.TypeMobileMoney).
-				Save(context.Background())
-			if err != nil {
-				return nil, err
-			}
+		mpesa, err := db.Client.Institution.Query().Where(institution.CodeEQ("MPESAKES")).Only(context.Background())
+		if err != nil {
+			return nil, err
 		}
 
-		equity, err := db.Client.Institution.Query().Where(institution.CodeEQ("EQTYKES")).Only(context.Background())
-		if err != nil && !ent.IsNotFound(err) {
+		_, err = db.Client.Institution.
+			Create().
+			SetName("Equity Bank").
+			SetCode("EQTYKES").
+			OnConflictColumns("code").
+			UpdateNewValues().
+			ID(context.Background())
+		if err != nil {
 			return nil, err
 		}
-		if ent.IsNotFound(err) {
-			equity, err = db.Client.Institution.
-				Create().
-				SetName("Equity Bank").
-				SetCode("EQTYKES").
-				Save(context.Background())
-			if err != nil {
-				return nil, err
-			}
+		equity, err := db.Client.Institution.Query().Where(institution.CodeEQ("EQTYKES")).Only(context.Background())
+		if err != nil {
+			return nil, err
 		}
 
 		institutions = []*ent.Institution{mpesa, equity}
 	} else {
-		// Check if institutions already exist
-		mtn, err := db.Client.Institution.Query().Where(institution.CodeEQ("MOMONGPC")).Only(context.Background())
-		if err != nil && !ent.IsNotFound(err) {
+		// Use OnConflict to handle race conditions in parallel tests
+		_, err = db.Client.Institution.
+			Create().
+			SetName("MTN Momo").
+			SetCode("MOMONGPC").
+			SetType(institution.TypeMobileMoney).
+			OnConflictColumns("code").
+			UpdateNewValues().
+			ID(context.Background())
+		if err != nil {
 			return nil, err
 		}
-		if ent.IsNotFound(err) {
-			mtn, err = db.Client.Institution.
-				Create().
-				SetName("MTN Momo").
-				SetCode("MOMONGPC").
-				SetType(institution.TypeMobileMoney).
-				Save(context.Background())
-			if err != nil {
-				return nil, err
-			}
+		mtn, err := db.Client.Institution.Query().Where(institution.CodeEQ("MOMONGPC")).Only(context.Background())
+		if err != nil {
+			return nil, err
 		}
 
-		access, err := db.Client.Institution.Query().Where(institution.CodeEQ("ABNGNGLA")).Only(context.Background())
-		if err != nil && !ent.IsNotFound(err) {
+		_, err = db.Client.Institution.
+			Create().
+			SetName("Access Bank").
+			SetCode("ABNGNGLA").
+			OnConflictColumns("code").
+			UpdateNewValues().
+			ID(context.Background())
+		if err != nil {
 			return nil, err
 		}
-		if ent.IsNotFound(err) {
-			access, err = db.Client.Institution.
-				Create().
-				SetName("Access Bank").
-				SetCode("ABNGNGLA").
-				Save(context.Background())
-			if err != nil {
-				return nil, err
-			}
+		access, err := db.Client.Institution.Query().Where(institution.CodeEQ("ABNGNGLA")).Only(context.Background())
+		if err != nil {
+			return nil, err
 		}
 
 		institutions = []*ent.Institution{mtn, access}
 	}
 
+	// Check if currency already exists
+	existingCurrency, err := db.Client.FiatCurrency.
+		Query().
+		Where(fiatcurrency.CodeEQ(payload["code"].(string))).
+		WithInstitutions().
+		Only(context.Background())
+	if err != nil && !ent.IsNotFound(err) {
+		return nil, err
+	}
+	if err == nil {
+		// Currency already exists, return it
+		return existingCurrency, nil
+	}
+
+	// Currency doesn't exist, create it
 	currency, err := db.Client.FiatCurrency.
 		Create().
 		SetCode(payload["code"].(string)).

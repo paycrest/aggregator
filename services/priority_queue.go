@@ -384,8 +384,24 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 
 // assignOtcOrder assigns an OTC order to a provider and creates a Redis key for reassignment
 func (s *PriorityQueueService) assignOtcOrder(ctx context.Context, order types.LockPaymentOrderFields) error {
+	// Start a transaction for the entire operation
+	tx, err := storage.Client.Tx(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"OrderID":    order.ID.String(),
+			"ProviderID": order.ProviderID,
+		}).Errorf("Failed to start transaction for OTC order assignment")
+		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
 	// Assign OTC order to provider (no balance reservation, no provision node request)
-	_, err := storage.Client.LockPaymentOrder.
+	_, err = tx.LockPaymentOrder.
 		Update().
 		Where(lockpaymentorder.IDEQ(order.ID)).
 		SetProviderID(order.ProviderID).
@@ -412,16 +428,29 @@ func (s *PriorityQueueService) assignOtcOrder(ctx context.Context, order types.L
 			"ProviderID": order.ProviderID,
 			"OrderKey":   orderKey,
 		}).Errorf("Failed to create Redis key for OTC order")
-		// Don't fail the assignment if Redis fails
-	} else {
-		// Set TTL for OTC order request (uses separate OTC validity timeout)
-		err = storage.RedisClient.ExpireAt(ctx, orderKey, time.Now().Add(orderConf.OrderRequestValidityOtc)).Err()
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":    fmt.Sprintf("%v", err),
-				"OrderKey": orderKey,
-			}).Errorf("Failed to set TTL for OTC order request")
-		}
+		return err
+	}
+
+	// Set TTL for OTC order request (uses separate OTC validity timeout)
+	err = storage.RedisClient.ExpireAt(ctx, orderKey, time.Now().Add(orderConf.OrderRequestValidityOtc)).Err()
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"OrderID":    order.ID.String(),
+			"ProviderID": order.ProviderID,
+			"OrderKey":   orderKey,
+		}).Errorf("Failed to set TTL for OTC order request")
+		return err
+	}
+
+	// Commit the transaction if everything succeeded
+	if err := tx.Commit(); err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"OrderID":    order.ID.String(),
+			"ProviderID": order.ProviderID,
+		}).Errorf("Failed to commit OTC order assignment transaction")
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return nil

@@ -144,8 +144,10 @@ func setup() error {
 }
 
 func setupIsolatedTest(t *testing.T) (*ent.Client, *redis.Client, func()) {
-	// Create fresh database with shared in-memory schema
-	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
+	// Create fresh database with unique name per test to avoid locking issues
+	// Use test name + timestamp to ensure uniqueness
+	dbName := fmt.Sprintf("file:test_%s_%d?mode=memory&cache=shared&_fk=1&_busy_timeout=5000", t.Name(), time.Now().UnixNano())
+	client := enttest.Open(t, "sqlite3", dbName)
 	err := client.Schema.Create(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to create database schema: %v", err)
@@ -172,11 +174,25 @@ func setupIsolatedTest(t *testing.T) (*ent.Client, *redis.Client, func()) {
 
 	// Return cleanup function that restores original state exactly
 	cleanup := func() {
-		client.Close()
-		mr.Close()
-		// Restore original clients exactly (even if nil)
+		// Restore original clients first to prevent new operations
 		db.Client = originalClient
 		db.RedisClient = originalRedis
+
+		// Close connections with a small delay to ensure all operations complete
+		// This helps prevent "database table is locked" errors
+		time.Sleep(10 * time.Millisecond)
+
+		// Close the client (this closes all connections)
+		if err := client.Close(); err != nil {
+			t.Logf("Warning: error closing database client: %v", err)
+		}
+
+		// Close Redis
+		if err := redisClient.Close(); err != nil {
+			t.Logf("Warning: error closing redis client: %v", err)
+		}
+
+		mr.Close()
 	}
 
 	return client, redisClient, cleanup
@@ -639,7 +655,8 @@ func TestProvider(t *testing.T) {
 			// Assert the totalOrders value
 			totalOrders, ok := data["totalOrders"].(float64)
 			assert.True(t, ok, "totalOrders is not of type float64")
-			assert.Equal(t, 13, int(totalOrders))
+			// setup() seeds 10 lock payment orders for the provider context
+			assert.Equal(t, 10, int(totalOrders))
 
 			// Assert the totalFiatVolume value
 			totalFiatVolumeStr, ok := data["totalFiatVolume"].(string)
@@ -689,8 +706,7 @@ func TestProvider(t *testing.T) {
 		t.Run("with invalid currency filter", func(t *testing.T) {
 			// Use an invalid currency code, e.g., "XYZ"
 			var payload = map[string]interface{}{
-				"currency": "NGN",
-
+				"currency":  "XYZ",
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -701,7 +717,7 @@ func TestProvider(t *testing.T) {
 				"Client-Type":   "backend",
 			}
 
-			url := fmt.Sprintf("/stats?currency=%s&timestamp=%v", "NGN", payload["timestamp"])
+			url := fmt.Sprintf("/stats?currency=%s&timestamp=%v", "XYZ", payload["timestamp"])
 			res, err := test.PerformRequest(t, "GET", url, nil, headers, router)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusBadRequest, res.Code)
@@ -750,7 +766,8 @@ func TestProvider(t *testing.T) {
 			// Assert the totalOrders value
 			totalOrders, ok := data["totalOrders"].(float64)
 			assert.True(t, ok, "totalOrders is not of type float64")
-			assert.Equal(t, 14, int(totalOrders))
+			// count includes all statuses; setup seeds 10 + this settled order makes 11
+			assert.Equal(t, 11, int(totalOrders))
 
 			// Assert the totalFiatVolume value
 			totalFiatVolumeStr, ok := data["totalFiatVolume"].(string)
