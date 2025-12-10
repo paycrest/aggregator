@@ -46,8 +46,10 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-var orderConf = config.OrderConfig()
-var serverConf = config.ServerConfig()
+var (
+	orderConf  = config.OrderConfig()
+	serverConf = config.ServerConfig()
+)
 
 // RetryStaleUserOperations retries stale user operations
 // TODO: Fetch failed orders from a separate db table and process them
@@ -92,6 +94,15 @@ func RetryStaleUserOperations() error {
 				var service types.OrderService
 				if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {
 					service = orderService.NewOrderTron()
+				} else if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "starknet") {
+					service, err = orderService.NewOrderStarknet(ctx)
+					if err != nil {
+						logger.WithFields(logger.Fields{
+							"Error":   fmt.Sprintf("%v", err),
+							"OrderID": order.ID.String(),
+						}).Errorf("RetryStaleUserOperations.CreateOrder.NewOrderStarknet")
+						continue
+					}
 				} else {
 					service = orderService.NewOrderEVM()
 				}
@@ -160,10 +171,19 @@ func RetryStaleUserOperations() error {
 			var service types.OrderService
 			if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {
 				service = orderService.NewOrderTron()
+			} else if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "starknet") {
+				service, err = orderService.NewOrderStarknet(ctx)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"OrderID": order.ID.String(),
+					}).Errorf("RetryStaleUserOperations.SettleOrder.NewOrderStarknet")
+					continue
+				}
 			} else {
 				service = orderService.NewOrderEVM()
 			}
-			err := service.SettleOrder(ctx, order.ID)
+			err = service.SettleOrder(ctx, order.ID)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":             fmt.Sprintf("%v", err),
@@ -226,6 +246,15 @@ func RetryStaleUserOperations() error {
 			var service types.OrderService
 			if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {
 				service = orderService.NewOrderTron()
+			} else if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "starknet") {
+				service, err = orderService.NewOrderStarknet(ctx)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"OrderID": order.ID.String(),
+					}).Errorf("RetryStaleUserOperations.RefundOrder.NewOrderStarknet")
+					continue
+				}
 			} else {
 				service = orderService.NewOrderEVM()
 			}
@@ -312,6 +341,23 @@ func TaskIndexBlockchainEvents() error {
 			if strings.HasPrefix(network.Identifier, "tron") {
 				indexerInstance = indexer.NewIndexerTron()
 				_, _ = indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
+			} else if strings.HasPrefix(network.Identifier, "starknet") {
+				indexerInstance, err = indexer.NewIndexerStarknet(ctx)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":             fmt.Sprintf("%v", err),
+						"NetworkIdentifier": network.Identifier,
+					}).Errorf("TaskIndexBlockchainEvents.createIndexer")
+					return
+				}
+				_, _ = indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
+				err = processedMissedPaymentOrdersTransfer(ctx, network, indexerInstance)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":             fmt.Sprintf("%v", err),
+						"NetworkIdentifier": network.Identifier,
+					}).Errorf("TaskIndexBlockchainEvents.processedMissedPaymentOrdersTransfer")
+				}
 			} else {
 				indexerInstance, err = indexer.NewIndexerEVM()
 				if err != nil {
@@ -322,63 +368,74 @@ func TaskIndexBlockchainEvents() error {
 					return
 				}
 				_, _ = indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
-
-				// Find payment orders with missed transfers
-				paymentOrders, err := storage.Client.PaymentOrder.
-					Query().
-					Where(
-						paymentorder.StatusEQ(paymentorder.StatusInitiated),
-						paymentorder.TxHashIsNil(),
-						paymentorder.BlockNumberEQ(0),
-						paymentorder.AmountPaidEQ(decimal.Zero),
-						paymentorder.FromAddressIsNil(),
-						paymentorder.HasReceiveAddressWith(
-							receiveaddress.StatusEQ(receiveaddress.StatusUnused),
-						),
-						paymentorder.HasTokenWith(
-							tokenent.HasNetworkWith(
-								networkent.IDEQ(network.ID),
-							),
-						),
-					).
-					WithToken(func(tq *ent.TokenQuery) {
-						tq.WithNetwork()
-					}).
-					WithReceiveAddress().
-					Order(ent.Desc(paymentorder.FieldCreatedAt)).
-					All(ctx)
+				
+				err = processedMissedPaymentOrdersTransfer(ctx, network, indexerInstance)
 				if err != nil {
 					logger.WithFields(logger.Fields{
 						"Error":             fmt.Sprintf("%v", err),
 						"NetworkIdentifier": network.Identifier,
-					}).Errorf("TaskIndexBlockchainEvents.fetchPaymentOrders")
-					return
-				}
-
-				// Index Transfer events in parallel using goroutines
-				if len(paymentOrders) > 0 {
-					var wg sync.WaitGroup
-
-					for _, order := range paymentOrders {
-						wg.Add(1)
-						go func(order *ent.PaymentOrder) {
-							defer wg.Done()
-
-							_, err := indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, order.Edges.ReceiveAddress.Address, 0, 0, "")
-							if err != nil {
-								logger.WithFields(logger.Fields{
-									"Error":   fmt.Sprintf("%v", err),
-									"OrderID": order.ID.String(),
-								}).Errorf("TaskIndexBlockchainEvents.IndexReceiveAddress")
-							}
-						}(order)
-					}
-
-					// Wait for all transfer indexing to complete
-					wg.Wait()
+					}).Errorf("TaskIndexBlockchainEvents.processedMissedPaymentOrdersTransfer")
 				}
 			}
 		}(network)
+	}
+	return nil
+}
+
+func processedMissedPaymentOrdersTransfer(ctx context.Context, network *ent.Network, indexerInstance types.Indexer) error {
+	// Find payment orders with missed transfers
+	paymentOrders, err := storage.Client.PaymentOrder.
+		Query().
+		Where(
+			paymentorder.StatusEQ(paymentorder.StatusInitiated),
+			paymentorder.TxHashIsNil(),
+			paymentorder.BlockNumberEQ(0),
+			paymentorder.AmountPaidEQ(decimal.Zero),
+			paymentorder.FromAddressIsNil(),
+			paymentorder.HasReceiveAddressWith(
+				receiveaddress.StatusEQ(receiveaddress.StatusUnused),
+			),
+			paymentorder.HasTokenWith(
+				tokenent.HasNetworkWith(
+					networkent.IDEQ(network.ID),
+				),
+			),
+		).
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
+		WithReceiveAddress().
+		Order(ent.Desc(paymentorder.FieldCreatedAt)).
+		All(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":             fmt.Sprintf("%v", err),
+			"NetworkIdentifier": network.Identifier,
+		}).Errorf("TaskIndexBlockchainEvents.fetchPaymentOrders")
+		return err
+	}
+
+	// Index Transfer events in parallel using goroutines
+	if len(paymentOrders) > 0 {
+		var wg sync.WaitGroup
+
+		for _, order := range paymentOrders {
+			wg.Add(1)
+			go func(order *ent.PaymentOrder) {
+				defer wg.Done()
+
+				_, err := indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, order.Edges.ReceiveAddress.Address, 0, 0, "")
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"OrderID": order.ID.String(),
+					}).Errorf("TaskIndexBlockchainEvents.IndexReceiveAddress")
+				}
+			}(order)
+		}
+
+		// Wait for all transfer indexing to complete
+		wg.Wait()
 	}
 	return nil
 }
@@ -1148,7 +1205,6 @@ func RetryFailedWebhookNotifications() error {
 
 				emailService := email.NewEmailServiceWithProviders()
 				_, err = emailService.SendWebhookFailureEmail(ctx, profile.Edges.User.Email, profile.Edges.User.FirstName)
-
 				if err != nil {
 					return fmt.Errorf("RetryFailedWebhookNotifications.SendWebhookFailureEmail: %w", err)
 				}
@@ -1192,18 +1248,23 @@ func ResolvePaymentOrderMishaps() error {
 		return fmt.Errorf("ResolvePaymentOrderMishaps.fetchNetworks: %w", err)
 	}
 
-	// Process each network in parallel (EVM only)
-	for i, network := range networks {
-		// Skip Tron networks
-		if strings.HasPrefix(network.Identifier, "tron") {
-			continue
-		}
+    // Process each network in parallel
+    for i, network := range networks {
+        // Skip Tron networks (Tron has different transaction model)
+        if strings.HasPrefix(network.Identifier, "tron") {
+            continue
+        }
 
-		// Add a larger delay between starting goroutines to prevent overwhelming Etherscan
-		// Increased from 100ms to 500ms to respect 5 requests/second limit
-		if i > 0 {
-			time.Sleep(500 * time.Millisecond)
-		}
+        // Add delay between starting goroutines to prevent overwhelming APIs
+        // For Starknet, use longer delay due to different RPC requirements
+        delay := 500 * time.Millisecond
+        if strings.HasPrefix(network.Identifier, "starknet") {
+            delay = 1 * time.Second
+        }
+        
+        if i > 0 {
+            time.Sleep(delay)
+        }
 
 		go func(network *ent.Network) {
 			ctx := context.Background()
@@ -1234,117 +1295,156 @@ func IndexGatewayEvents() error {
 		return fmt.Errorf("IndexGatewayEvents.fetchNetworks: %w", err)
 	}
 
-	// Process each network in parallel (EVM only)
-	for i, network := range networks {
-		// Skip Tron networks
-		if strings.HasPrefix(network.Identifier, "tron") {
-			continue
-		}
+    // Process each network in parallel
+    for i, network := range networks {
+        // Skip Tron networks (Tron has different transaction model)
+        if strings.HasPrefix(network.Identifier, "tron") {
+            continue
+        }
 
-		// Add a larger delay between starting goroutines to prevent overwhelming Etherscan
-		// Increased from 100ms to 500ms to respect 5 requests/second limit
-		if i > 0 {
-			time.Sleep(500 * time.Millisecond)
-		}
+        // Add delay between starting goroutines to prevent overwhelming APIs
+        // For Starknet, use longer delay due to different RPC requirements
+        delay := 500 * time.Millisecond
+        if strings.HasPrefix(network.Identifier, "starknet") {
+            delay = 1 * time.Second
+        }
+        
+        if i > 0 {
+            time.Sleep(delay)
+        }
 
 		go func(network *ent.Network) {
 			ctx := context.Background()
 
-			// Index gateway events by fetching last 20 transactions of the gateway contract
-			indexerInstance, indexerErr := indexer.NewIndexerEVM()
-			if indexerErr != nil {
-				logger.WithFields(logger.Fields{
-					"Error":             fmt.Sprintf("%v", indexerErr),
-					"NetworkIdentifier": network.Identifier,
-				}).Errorf("IndexGatewayEvents.createIndexer")
-				return
-			}
-			_, err := indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":             fmt.Sprintf("%v", err),
-					"NetworkIdentifier": network.Identifier,
-				}).Errorf("IndexGatewayEvents.indexGateway")
-				return
-			}
-		}(network)
-	}
+            // Create appropriate indexer for the network
+            var indexerInstance types.Indexer
+            var indexerErr error
+
+            if strings.HasPrefix(network.Identifier, "starknet") {
+                indexerInstance, indexerErr = indexer.NewIndexerStarknet(ctx)
+            } else {
+                indexerInstance, indexerErr = indexer.NewIndexerEVM()
+            }
+
+            if indexerErr != nil {
+                logger.WithFields(logger.Fields{
+                    "Error":             fmt.Sprintf("%v", indexerErr),
+                    "NetworkIdentifier": network.Identifier,
+                }).Errorf("IndexGatewayEvents.createIndexer")
+                return
+            }
+
+            // Index gateway events
+            _, err := indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
+            if err != nil {
+                logger.WithFields(logger.Fields{
+                    "Error":             fmt.Sprintf("%v", err),
+                    "NetworkIdentifier": network.Identifier,
+                }).Errorf("IndexGatewayEvents.indexGateway")
+                return
+            }
+        }(network)
+    }
 
 	return nil
 }
 
 // resolveMissedEvents resolves cases where transfers to receive addresses were missed
 func resolveMissedEvents(ctx context.Context, network *ent.Network) {
-	// Find payment orders with missed transfers
-	orders, err := storage.Client.PaymentOrder.
-		Query().
-		Where(
-			paymentorder.StatusEQ(paymentorder.StatusInitiated),
-			paymentorder.CreatedAtLTE(time.Now().Add(-30*time.Second)),
-			// paymentorder.CreatedAtGTE(time.Now().Add(-15*time.Minute)),
-			paymentorder.HasReceiveAddressWith(
-				receiveaddress.StatusNEQ(receiveaddress.StatusExpired),
-			),
-			paymentorder.HasTokenWith(
-				tokenent.HasNetworkWith(
-					networkent.IDEQ(network.ID),
-				),
-			),
-		).
-		WithToken(func(tq *ent.TokenQuery) {
-			tq.WithNetwork()
-		}).
-		WithReceiveAddress().
-		All(ctx)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":             fmt.Sprintf("%v", err),
-			"NetworkIdentifier": network.Identifier,
-		}).Errorf("ResolvePaymentOrderMishaps.resolveMissedEvents.fetchOrders")
-		return
-	}
+    // Find payment orders with missed transfers
+    orders, err := storage.Client.PaymentOrder.
+        Query().
+        Where(
+            paymentorder.StatusEQ(paymentorder.StatusInitiated),
+            paymentorder.CreatedAtLTE(time.Now().Add(-30*time.Second)),
+            paymentorder.HasReceiveAddressWith(
+                receiveaddress.StatusNEQ(receiveaddress.StatusExpired),
+            ),
+            paymentorder.HasTokenWith(
+                tokenent.HasNetworkWith(
+                    networkent.IDEQ(network.ID),
+                ),
+            ),
+        ).
+        WithToken(func(tq *ent.TokenQuery) {
+            tq.WithNetwork()
+        }).
+        WithReceiveAddress().
+        All(ctx)
+    if err != nil {
+        logger.WithFields(logger.Fields{
+            "Error":             fmt.Sprintf("%v", err),
+            "NetworkIdentifier": network.Identifier,
+        }).Errorf("ResolvePaymentOrderMishaps.resolveMissedEvents.fetchOrders")
+        return
+    }
 
-	// For missed transfers, we need to check each order's specific receive address
-	// Process sequentially to avoid overwhelming the RPC node and for better error handling
-	indexerInstance, indexerErr := indexer.NewIndexerEVM()
-	if indexerErr != nil {
-		logger.WithFields(logger.Fields{
-			"Error":             fmt.Sprintf("%v", indexerErr),
-			"NetworkIdentifier": network.Identifier,
-		}).Errorf("ResolvePaymentOrderMishaps.resolveMissedEvents.createIndexer")
-		return
-	}
-	processedCount := 0
-	errorCount := 0
+    if len(orders) == 0 {
+        return
+    }
 
-	for i, order := range orders {
-		if order.Edges.ReceiveAddress != nil {
-			logger.WithFields(logger.Fields{
-				"NetworkIdentifier": network.Identifier,
-				"ReceiveAddress":    order.Edges.ReceiveAddress.Address,
-				"OrderID":           order.ID,
-				"Progress":          fmt.Sprintf("%d/%d", i+1, len(orders)),
-			}).Infof("ResolvePaymentOrderMishaps.resolveMissedEvents")
+    // Create appropriate indexer for the network
+    var indexerInstance types.Indexer
+    var indexerErr error
 
-			_, err = indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, order.Edges.ReceiveAddress.Address, 0, 0, "")
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":             fmt.Sprintf("%v", err),
-					"NetworkIdentifier": network.Identifier,
-					"ReceiveAddress":    order.Edges.ReceiveAddress.Address,
-					"OrderID":           order.ID,
-				}).Errorf("ResolvePaymentOrderMishaps.resolveMissedEvents.indexReceiveAddress")
-				errorCount++
-				continue // Continue with other orders even if one fails
-			}
-			processedCount++
+    if strings.HasPrefix(network.Identifier, "starknet") {
+        indexerInstance, indexerErr = indexer.NewIndexerStarknet(ctx)
+    } else {
+        indexerInstance, indexerErr = indexer.NewIndexerEVM()
+    }
 
-			// Add a small delay between requests to be respectful to the RPC node
-			if i < len(orders)-1 {
-				time.Sleep(250 * time.Millisecond)
-			}
-		}
-	}
+    if indexerErr != nil {
+        logger.WithFields(logger.Fields{
+            "Error":             fmt.Sprintf("%v", indexerErr),
+            "NetworkIdentifier": network.Identifier,
+        }).Errorf("ResolvePaymentOrderMishaps.resolveMissedEvents.createIndexer")
+        return
+    }
+
+    processedCount := 0
+    errorCount := 0
+
+    // Determine delay based on network type
+    delay := 250 * time.Millisecond
+    if strings.HasPrefix(network.Identifier, "starknet") {
+        delay = 500 * time.Millisecond // Longer delay for Starknet
+    }
+
+    for i, order := range orders {
+        if order.Edges.ReceiveAddress != nil {
+            logger.WithFields(logger.Fields{
+                "NetworkIdentifier": network.Identifier,
+                "ReceiveAddress":    order.Edges.ReceiveAddress.Address,
+                "OrderID":           order.ID,
+                "Progress":          fmt.Sprintf("%d/%d", i+1, len(orders)),
+            }).Infof("ResolvePaymentOrderMishaps.resolveMissedEvents")
+
+            _, err = indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, order.Edges.ReceiveAddress.Address, 0, 0, "")
+            if err != nil {
+                logger.WithFields(logger.Fields{
+                    "Error":             fmt.Sprintf("%v", err),
+                    "NetworkIdentifier": network.Identifier,
+                    "ReceiveAddress":    order.Edges.ReceiveAddress.Address,
+                    "OrderID":           order.ID,
+                }).Errorf("ResolvePaymentOrderMishaps.resolveMissedEvents.indexReceiveAddress")
+                errorCount++
+                continue
+            }
+            processedCount++
+
+            // Add delay between requests
+            if i < len(orders)-1 {
+                time.Sleep(delay)
+            }
+        }
+    }
+
+    logger.WithFields(logger.Fields{
+        "NetworkIdentifier": network.Identifier,
+        "ProcessedCount":    processedCount,
+        "ErrorCount":        errorCount,
+        "TotalOrders":       len(orders),
+    }).Infof("ResolvePaymentOrderMishaps.resolveMissedEvents.completed")
 }
 
 // ProcessStuckValidatedOrders processes orders stuck on validated status by indexing provider addresses
@@ -1357,41 +1457,48 @@ func ProcessStuckValidatedOrders() error {
 		return fmt.Errorf("ProcessStuckValidatedOrders.getNetworks: %w", err)
 	}
 
-	for i, network := range networks {
-		// Add a small delay between starting goroutines to prevent overwhelming Etherscan
-		if i > 0 {
-			time.Sleep(100 * time.Millisecond)
-		}
+    for i, network := range networks {
+        // Add delay between starting goroutines
+        delay := 100 * time.Millisecond
+        if strings.HasPrefix(network.Identifier, "starknet") {
+            delay = 500 * time.Millisecond
+        }
+        
+        if i > 0 {
+            time.Sleep(delay)
+        }
 
-		go func(network *ent.Network) {
-			// Get stuck validated orders for this network
-			lockOrders, err := storage.Client.LockPaymentOrder.
-				Query().
-				Where(
-					lockpaymentorder.StatusEQ(lockpaymentorder.StatusValidated),
-					lockpaymentorder.HasTokenWith(
-						tokenent.HasNetworkWith(
-							networkent.IDEQ(network.ID),
-						),
-					),
-					lockpaymentorder.HasProvider(),
-					lockpaymentorder.HasProvisionBucket(),
-				).
-				WithToken(func(tq *ent.TokenQuery) {
-					tq.WithNetwork()
-				}).
-				WithProvider().
-				WithProvisionBucket(func(pb *ent.ProvisionBucketQuery) {
-					pb.WithCurrency()
-				}).
-				All(ctx)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":             fmt.Sprintf("%v", err),
-					"NetworkIdentifier": network.Identifier,
-				}).Errorf("ProcessStuckValidatedOrders.getLockOrders")
-				return
-			}
+        go func(network *ent.Network) {
+            ctx := context.Background()
+            
+            // Get stuck validated orders for this network
+            lockOrders, err := storage.Client.LockPaymentOrder.
+                Query().
+                Where(
+                    lockpaymentorder.StatusEQ(lockpaymentorder.StatusValidated),
+                    lockpaymentorder.HasTokenWith(
+                        tokenent.HasNetworkWith(
+                            networkent.IDEQ(network.ID),
+                        ),
+                    ),
+                    lockpaymentorder.HasProvider(),
+                    lockpaymentorder.HasProvisionBucket(),
+                ).
+                WithToken(func(tq *ent.TokenQuery) {
+                    tq.WithNetwork()
+                }).
+                WithProvider().
+                WithProvisionBucket(func(pb *ent.ProvisionBucketQuery) {
+                    pb.WithCurrency()
+                }).
+                All(ctx)
+            if err != nil {
+                logger.WithFields(logger.Fields{
+                    "Error":             fmt.Sprintf("%v", err),
+                    "NetworkIdentifier": network.Identifier,
+                }).Errorf("ProcessStuckValidatedOrders.getLockOrders")
+                return
+            }
 
 			if len(lockOrders) == 0 {
 				return
@@ -1402,54 +1509,63 @@ func ProcessStuckValidatedOrders() error {
 				"OrderCount":        len(lockOrders),
 			}).Infof("Processing stuck validated orders")
 
-			// Create indexer instance
-			var indexerInstance types.Indexer
-			if strings.HasPrefix(network.Identifier, "tron") {
-				indexerInstance = indexer.NewIndexerTron()
-			} else {
-				indexerInstance, err = indexer.NewIndexerEVM()
-				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":             fmt.Sprintf("%v", err),
-						"NetworkIdentifier": network.Identifier,
-					}).Errorf("ProcessStuckValidatedOrders.createIndexer")
-					return
-				}
-			}
+            // Create appropriate indexer for the network
+            var indexerInstance types.Indexer
+            if strings.HasPrefix(network.Identifier, "tron") {
+                indexerInstance = indexer.NewIndexerTron()
+            } else if strings.HasPrefix(network.Identifier, "starknet") {
+                indexerInstance, err = indexer.NewIndexerStarknet(ctx)
+                if err != nil {
+                    logger.WithFields(logger.Fields{
+                        "Error":             fmt.Sprintf("%v", err),
+                        "NetworkIdentifier": network.Identifier,
+                    }).Errorf("ProcessStuckValidatedOrders.createIndexer")
+                    return
+                }
+            } else {
+                indexerInstance, err = indexer.NewIndexerEVM()
+                if err != nil {
+                    logger.WithFields(logger.Fields{
+                        "Error":             fmt.Sprintf("%v", err),
+                        "NetworkIdentifier": network.Identifier,
+                    }).Errorf("ProcessStuckValidatedOrders.createIndexer")
+                    return
+                }
+            }
 
-			// Process each stuck order
-			for _, order := range lockOrders {
-				// Get provider address for this order
-				providerAddress, err := common.GetProviderAddressFromLockOrder(ctx, order)
-				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":             fmt.Sprintf("%v", err),
-						"OrderID":           order.ID.String(),
-						"NetworkIdentifier": network.Identifier,
-					}).Errorf("ProcessStuckValidatedOrders.getProviderAddress")
-					continue
-				}
+            // Process each stuck order
+            for _, order := range lockOrders {
+                // Get provider address for this order
+                providerAddress, err := common.GetProviderAddressFromLockOrder(ctx, order)
+                if err != nil {
+                    logger.WithFields(logger.Fields{
+                        "Error":             fmt.Sprintf("%v", err),
+                        "OrderID":           order.ID.String(),
+                        "NetworkIdentifier": network.Identifier,
+                    }).Errorf("ProcessStuckValidatedOrders.getProviderAddress")
+                    continue
+                }
 
-				// Index provider address for OrderSettled events
-				_, err = indexerInstance.IndexProviderAddress(ctx, network, providerAddress, 0, 0, "")
-				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":             fmt.Sprintf("%v", err),
-						"OrderID":           order.ID.String(),
-						"ProviderAddress":   providerAddress,
-						"NetworkIdentifier": network.Identifier,
-					}).Errorf("ProcessStuckValidatedOrders.indexProviderAddress")
-					continue
-				}
+                // Index provider address for OrderSettled events
+                _, err = indexerInstance.IndexProviderAddress(ctx, network, providerAddress, 0, 0, "")
+                if err != nil {
+                    logger.WithFields(logger.Fields{
+                        "Error":             fmt.Sprintf("%v", err),
+                        "OrderID":           order.ID.String(),
+                        "ProviderAddress":   providerAddress,
+                        "NetworkIdentifier": network.Identifier,
+                    }).Errorf("ProcessStuckValidatedOrders.indexProviderAddress")
+                    continue
+                }
 
-				logger.WithFields(logger.Fields{
-					"OrderID":           order.ID.String(),
-					"ProviderAddress":   providerAddress,
-					"NetworkIdentifier": network.Identifier,
-				}).Infof("Successfully indexed provider address for stuck order")
-			}
-		}(network)
-	}
+                logger.WithFields(logger.Fields{
+                    "OrderID":           order.ID.String(),
+                    "ProviderAddress":   providerAddress,
+                    "NetworkIdentifier": network.Identifier,
+                }).Infof("Successfully indexed provider address for stuck order")
+            }
+        }(network)
+    }
 
 	return nil
 }
@@ -1679,7 +1795,6 @@ func updateProviderBalance(providerID, currency string, balance *types.ProviderB
 			SetReservedBalance(balance.ReservedBalance).
 			SetUpdatedAt(time.Now()).
 			Save(ctx)
-
 		if err != nil {
 			return fmt.Errorf("failed to update provider currency: %v", err)
 		}

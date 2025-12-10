@@ -88,21 +88,25 @@ func (c *Client) GetBlockNumber(ctx context.Context) (uint64, error) {
 }
 
 // GetEvents fetches events from the blockchain
-func (c *Client) GetEvents(ctx context.Context, accountAddress *felt.Felt, fromBlock int64, toBlock int64, topics []*felt.Felt, chunkSize int) ([]interface{}, error) {
+func (c *Client) GetEvents(ctx context.Context, accountAddress *felt.Felt, fromBlock int64, toBlock int64, topics []*felt.Felt, chunkSize int) ([]map[string]interface{}, error) {
 	if fromBlock < 0 || toBlock < 0 || fromBlock > toBlock {
 		return nil, fmt.Errorf("invalid block range: fromBlock=%d, toBlock=%d", fromBlock, toBlock)
 	}
-	eventSignatures := [][]*felt.Felt{}
+
 	transferSelectorFelt, err := utils.HexToFelt(u.TransferStarknetSelector)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse transfer selector felt: %w", err)
 	}
 
+	orderSettledSelectorFelt, _ := utils.HexToFelt(u.OrderSettledStarknetSelector)
+	
+	var eventSignatures [][]*felt.Felt
 	if len(topics) > 0 && topics[0] == transferSelectorFelt {
 		eventSignatures = [][]*felt.Felt{{transferSelectorFelt}}
+	} else if topics[0] == orderSettledSelectorFelt {
+		eventSignatures = [][]*felt.Felt{{orderSettledSelectorFelt}}
 	} else {
 		orderCreatedSelectorFelt, _ := utils.HexToFelt(u.OrderCreatedStarknetSelector)
-		orderSettledSelectorFelt, _ := utils.HexToFelt(u.OrderSettledStarknetSelector)
 		orderRefundedSelectorFelt, _ := utils.HexToFelt(u.OrderRefundedStarknetSelector)
 
 		eventSignatures = [][]*felt.Felt{
@@ -134,7 +138,7 @@ func (c *Client) GetEvents(ctx context.Context, accountAddress *felt.Felt, fromB
 		return nil, fmt.Errorf("failed to get events: %w", err)
 	}
 
-	var events []interface{}
+	var events []map[string]interface{}
 	for _, event := range eventsChunk.Events {
 		processedEvents, err := c.processEvent(event)
 		if err != nil {
@@ -147,23 +151,25 @@ func (c *Client) GetEvents(ctx context.Context, accountAddress *felt.Felt, fromB
 }
 
 // GetTransactionReceipt retrieves transaction receipt
-func (c *Client) GetTransactionReceipt(ctx context.Context, txHash, accountAddress *felt.Felt, topics []*felt.Felt) ([]interface{}, error) {
+func (c *Client) GetTransactionReceipt(ctx context.Context, txHash, accountAddress *felt.Felt, topics []*felt.Felt) ([]map[string]interface{}, error) {
 	if txHash == nil {
 		return nil, fmt.Errorf("transaction hash is nil")
 	}
 
-	eventSignatures := []felt.Felt{}
 	transferSelectorFelt, err := utils.HexToFelt(u.TransferStarknetSelector)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse transfer selector felt: %w", err)
 	}
-
+	
+	orderSettledSelectorFelt, _ := utils.HexToFelt(u.OrderSettledStarknetSelector)
+	var eventSignatures []felt.Felt
 	if len(topics) > 0 && topics[0] == transferSelectorFelt {
 		// If transfer event signature is provided, filter for transfer events
 		eventSignatures = []felt.Felt{*transferSelectorFelt}
+	} else if topics[0] == orderSettledSelectorFelt {
+		eventSignatures = []felt.Felt{*orderSettledSelectorFelt}
 	} else {
 		orderCreatedSelectorFelt, _ := utils.HexToFelt(u.OrderCreatedStarknetSelector)
-		orderSettledSelectorFelt, _ := utils.HexToFelt(u.OrderSettledStarknetSelector)
 		orderRefundedSelectorFelt, _ := utils.HexToFelt(u.OrderRefundedStarknetSelector)
 
 		// Default to gateway event signatures
@@ -204,7 +210,7 @@ func (c *Client) GetTransactionReceipt(ctx context.Context, txHash, accountAddre
 		}
 	}
 
-	var events []interface{}
+	var events []map[string]interface{}
 	for _, event := range logs {
 		processedEvents, err := c.processEvent(event.Events)
 		if err != nil {
@@ -548,7 +554,7 @@ func (c *Client) PaymasterExecuteTransaction(
 	return executeResp, nil
 }
 
-func (c *Client) processEvent(event rpc.EmittedEvent) (interface{}, error) {
+func (c *Client) processEvent(event rpc.EmittedEvent) (map[string]interface{}, error) {
 	if len(event.Keys) == 0 {
 		return nil, fmt.Errorf("event has no keys")
 	}
@@ -580,7 +586,7 @@ func (c *Client) processEvent(event rpc.EmittedEvent) (interface{}, error) {
 }
 
 // handleOrderCreated processes OrderCreated events
-func (c *Client) handleOrderCreated(emittedEvent rpc.EmittedEvent) (interface{}, error) {
+func (c *Client) handleOrderCreated(emittedEvent rpc.EmittedEvent) (map[string]interface{}, error) {
 	// Keys: [event_selector, sender, token, amount]
 	// Data: [protocol_fee, order_id, rate, message_hash...]
 
@@ -641,7 +647,7 @@ func (c *Client) handleOrderCreated(emittedEvent rpc.EmittedEvent) (interface{},
 }
 
 // handleOrderSettled processes OrderSettled events
-func (c *Client) handleOrderSettled(emittedEvent rpc.EmittedEvent) (interface{}, error) {
+func (c *Client) handleOrderSettled(emittedEvent rpc.EmittedEvent) (map[string]interface{}, error) {
 	// Keys: [event_selector, order_id, liquidity_provider]
 	// Data: [split_order_id, settle_percent, rebate_percent]
 
@@ -682,7 +688,7 @@ func (c *Client) handleOrderSettled(emittedEvent rpc.EmittedEvent) (interface{},
 }
 
 // handleOrderRefunded processes OrderRefunded events
-func (c *Client) handleOrderRefunded(emittedEvent rpc.EmittedEvent) (interface{}, error) {
+func (c *Client) handleOrderRefunded(emittedEvent rpc.EmittedEvent) (map[string]interface{}, error) {
 	// Keys: [event_selector, order_id]
 	// Data: [fee_low, fee_high]
 
@@ -720,7 +726,7 @@ func (c *Client) handleOrderRefunded(emittedEvent rpc.EmittedEvent) (interface{}
 }
 
 // handleTransfer processes ERC20 Transfer events
-func (c *Client) handleTransfer(emittedEvent rpc.EmittedEvent) (interface{}, error) {
+func (c *Client) handleTransfer(emittedEvent rpc.EmittedEvent) (map[string]interface{}, error) {
 	// Keys: [event_selector, from, to, value_low, value_high]
 	// Data: [] (empty - all data is in keys for Transfer event on Starknet)
 
