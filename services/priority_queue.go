@@ -421,7 +421,8 @@ func (s *PriorityQueueService) assignOtcOrder(ctx context.Context, order types.L
 	orderRequestData := map[string]interface{}{
 		"type": "otc",
 	}
-	if err := storage.RedisClient.HSet(ctx, orderKey, orderRequestData).Err(); err != nil {
+	err = storage.RedisClient.HSet(ctx, orderKey, orderRequestData).Err()
+	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
 			"OrderID":    order.ID.String(),
@@ -444,7 +445,8 @@ func (s *PriorityQueueService) assignOtcOrder(ctx context.Context, order types.L
 	}
 
 	// Commit the transaction if everything succeeded
-	if err := tx.Commit(); err != nil {
+	err = tx.Commit()
+	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
 			"OrderID":    order.ID.String(),
@@ -528,7 +530,8 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 		"providerId":  order.ProviderID,
 	}
 
-	if err := storage.RedisClient.HSet(ctx, orderKey, orderRequestData).Err(); err != nil {
+	err = storage.RedisClient.HSet(ctx, orderKey, orderRequestData).Err()
+	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
 			"OrderID":    order.ID.String(),
@@ -545,11 +548,13 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 			"Error":    fmt.Sprintf("%v", err),
 			"OrderKey": orderKey,
 		}).Errorf("Failed to set TTL for order request")
+		return err
 	}
 
 	// Notify the provider
 	orderRequestData["orderId"] = order.ID
-	if err := s.notifyProvider(ctx, orderRequestData); err != nil {
+	err = s.notifyProvider(ctx, orderRequestData)
+	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
 			"OrderID":    order.ID.String(),
@@ -559,7 +564,8 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 	}
 
 	// Commit the transaction if everything succeeded
-	if err := tx.Commit(); err != nil {
+	err = tx.Commit()
+	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
 			"OrderID":    order.ID.String(),

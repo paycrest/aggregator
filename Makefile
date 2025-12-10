@@ -34,8 +34,5 @@ seed:
 test:
 	go test -v ./...
 
-start-rpc:
-	ganache -m "$(HD_WALLET_MNEMONIC)" --chain.chainId 1337 -l 21000000
-
 test-coverage:
 	go test $(go list ./... | grep -v /ent | grep -v /config | grep -v /database | grep -v /routers)  -coverprofile=coverage.out ./...

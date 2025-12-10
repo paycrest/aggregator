@@ -25,7 +25,6 @@ import (
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
 	db "github.com/paycrest/aggregator/storage"
-	"github.com/paycrest/aggregator/types"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 )
@@ -63,36 +62,25 @@ func CreateTestUser(overrides map[string]interface{}) (*ent.User, error) {
 }
 
 // CreateERC20Token creates a test token with default or custom values
-func CreateERC20Token(client types.RPCClient, overrides map[string]interface{}) (*ent.Token, error) {
+func CreateERC20Token(overrides map[string]interface{}) (*ent.Token, error) {
 
 	// Default payload
 	payload := map[string]interface{}{
-		"symbol":         "TST",
-		"decimals":       6,
-		"networkRPC":     "ws://localhost:8545",
-		"is_enabled":     true,
-		"identifier":     "localhost",
-		"chainID":        int64(1337),
-		"deployContract": true,
+		"symbol":     "TST",
+		"decimals":   6,
+		"networkRPC": "ws://localhost:8545",
+		"is_enabled": true,
+		"identifier": "localhost",
+		"chainID":    int64(1337),
 	}
-
-	var contractAddress string
 
 	// Apply overrides
 	for key, value := range overrides {
 		payload[key] = value
 	}
 
-	if payload["deployContract"].(bool) {
-		// Deploy ERC20 token contract
-		deployedTokenAddress, err := DeployERC20Contract(client)
-		if err != nil {
-			return nil, err
-		}
-		contractAddress = deployedTokenAddress.Hex()
-	} else {
-		contractAddress = "0xd4E96eF8eee8678dBFf4d535E033Ed1a4F7605b7"
-	}
+	// Use a fixed test contract address
+	contractAddress := "0xd4E96eF8eee8678dBFf4d535E033Ed1a4F7605b7"
 
 	// Create Network
 	networkId, err := db.Client.Network.
@@ -224,10 +212,7 @@ func CreateTestLockPaymentOrder(overrides map[string]interface{}) (*ent.LockPaym
 
 	if payload["token_id"].(int) == 0 {
 		// Create test token
-		backend, _ := SetUpTestBlockchain()
-		token, err := CreateERC20Token(backend, map[string]interface{}{
-			"deployContract": false,
-		})
+		token, err := CreateERC20Token(map[string]interface{}{})
 		if err != nil {
 			return nil, err
 		}
@@ -268,7 +253,7 @@ func CreateTestLockPaymentOrder(overrides map[string]interface{}) (*ent.LockPaym
 }
 
 // CreateTestPaymentOrder creates a test PaymentOrder with default or custom values for sender
-func CreateTestPaymentOrder(client types.RPCClient, token *ent.Token, overrides map[string]interface{}) (*ent.PaymentOrder, error) {
+func CreateTestPaymentOrder(token *ent.Token, overrides map[string]interface{}) (*ent.PaymentOrder, error) {
 	// Default payload
 	payload := map[string]interface{}{
 		"amount":             100.50,
@@ -290,12 +275,9 @@ func CreateTestPaymentOrder(client types.RPCClient, token *ent.Token, overrides 
 		payload[key] = value
 	}
 
-	// Create smart address
-	address, salt, err := CreateSmartAddress(
-		context.Background(), client)
-	if err != nil {
-		return nil, err
-	}
+	// Generate a test address and salt (no blockchain deployment)
+	address := "0x" + strings.Repeat("a", 40) // Fake address
+	salt := []byte("test-salt-encrypted")
 
 	// Create receive address
 	receiveAddress, err := db.Client.ReceiveAddress.
@@ -539,10 +521,7 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 
 	if payload["token_id"].(int) == 0 {
 		// Create test token
-		backend, _ := SetUpTestBlockchain()
-		token, err := CreateERC20Token(backend, map[string]interface{}{
-			"deployContract": false,
-		})
+		token, err := CreateERC20Token(map[string]interface{}{})
 		if err != nil {
 			return nil, err
 		}

@@ -254,6 +254,15 @@ func CreateLockPaymentOrder(
 		token.Edges.Network.Identifier,
 	)
 
+	if rateResult.Rate == decimal.NewFromInt(1) && lockPaymentOrder.Rate != decimal.NewFromInt(1) {
+		// Rate validation failed - cancel the order
+		err := HandleCancellation(ctx, nil, &lockPaymentOrder, "Rate validation failed", refundOrder)
+		if err != nil {
+			return fmt.Errorf("failed to handle cancellation: %w", err)
+		}
+		return nil
+	}
+
 	if rateErr != nil {
 		// Rate validation failed - cancel the order
 		err := HandleCancellation(ctx, nil, &lockPaymentOrder, fmt.Sprintf("Rate validation failed: %s", rateErr.Error()), refundOrder)
