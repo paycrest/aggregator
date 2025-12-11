@@ -12,6 +12,7 @@ type RedisConfiguration struct {
 	Port     string
 	Password string
 	DB       int
+    CacheVersion string
 }
 
 // RedisConfig retrieves the Redis configuration
@@ -21,6 +22,7 @@ func RedisConfig() RedisConfiguration {
 		Port:     viper.GetString("REDIS_PORT"),
 		Password: viper.GetString("REDIS_PASSWORD"),
 		DB:       viper.GetInt("REDIS_DB"),
+        CacheVersion: viper.GetString("CACHE_VERSION"),
 	}
 }
 
