@@ -923,7 +923,9 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			}).
 			Only(ctx)
 		if err == nil && paymentOrder != nil {
-			updatedPaymentOrder, err := paymentOrder.Update().
+			_, err = storage.Client.PaymentOrder.
+				Update().
+				Where(paymentorder.MessageHashEQ(fulfillment.Edges.Order.MessageHash)).
 				SetStatus(paymentorder.StatusValidated).
 				Save(ctx)
 			if err != nil {
@@ -934,7 +936,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				}).Errorf("Failed to update payment order status: %v", err)
 			} else {
 				// Ensure in-memory status reflects persisted change before webhook
-				paymentOrder.Status = updatedPaymentOrder.Status
+				paymentOrder.Status = paymentorder.StatusValidated
 			}
 
 			err = u.SendPaymentOrderWebhook(ctx, paymentOrder)
