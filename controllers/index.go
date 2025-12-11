@@ -26,6 +26,7 @@ import (
 	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	networkent "github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -2051,6 +2052,10 @@ func (ctrl *Controller) handleNewEvent(ctx *gin.Context, event types.ThirdwebWeb
 		return ctrl.handleOrderSettledEvent(ctx, event)
 	case utils.OrderRefundedEventSignature:
 		return ctrl.handleOrderRefundedEvent(ctx, event)
+	case utils.LocalTransferFeeSplitEventSignature:
+		return ctrl.handleLocalTransferFeeSplitEvent(ctx, event)
+	case utils.FxTransferFeeSplitEventSignature:
+		return ctrl.handleFxTransferFeeSplitEvent(ctx, event)
 	default:
 		// Fallback to using decoded name if signature doesn't match
 		switch event.Data.Decoded.Name {
@@ -2321,6 +2326,142 @@ func (ctrl *Controller) handleOrderRefundedEvent(ctx *gin.Context, event types.T
 	err = common.UpdateOrderStatusRefunded(ctx, network, refundedEvent, lockOrder.MessageHash)
 	if err != nil {
 		return fmt.Errorf("failed to process refunded order: %w", err)
+	}
+
+	return nil
+}
+
+// handleLocalTransferFeeSplitEvent processes LocalTransferFeeSplit events from webhook
+func (ctrl *Controller) handleLocalTransferFeeSplitEvent(ctx *gin.Context, event types.ThirdwebWebhookEvent) error {
+	// Extract fee data from decoded event
+	indexedParams := event.Data.Decoded.IndexedParams
+	nonIndexedParams := event.Data.Decoded.NonIndexedParams
+
+	// Get message hash and amounts
+	messageHash, ok := indexedParams["messageHash"].(string)
+	if !ok {
+		return fmt.Errorf("missing messageHash in LocalTransferFeeSplit event")
+	}
+
+	senderAmountStr, ok := nonIndexedParams["senderAmount"].(string)
+	if !ok {
+		return fmt.Errorf("missing senderAmount in LocalTransferFeeSplit event")
+	}
+
+	aggregatorAmountStr, ok := nonIndexedParams["aggregatorAmount"].(string)
+	if !ok {
+		return fmt.Errorf("missing aggregatorAmount in LocalTransferFeeSplit event")
+	}
+
+	// Parse amounts
+	senderAmount, err := decimal.NewFromString(senderAmountStr)
+	if err != nil {
+		return fmt.Errorf("invalid senderAmount: %w", err)
+	}
+
+	aggregatorAmount, err := decimal.NewFromString(aggregatorAmountStr)
+	if err != nil {
+		return fmt.Errorf("invalid aggregatorAmount: %w", err)
+	}
+
+	// Update sender fee in PaymentOrder if not zero
+	if !senderAmount.IsZero() {
+		_, err := storage.Client.PaymentOrder.Update().
+			Where(paymentorder.MessageHashEQ(messageHash)).
+			SetSenderFee(senderAmount).
+			Save(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":       fmt.Sprintf("%v", err),
+				"MessageHash": messageHash,
+				"TxHash":      event.Data.TransactionHash,
+				"SenderFee":   senderAmountStr,
+			}).Errorf("Failed to update sender fee from LocalTransferFeeSplit event")
+		}
+	}
+
+	// Update protocol fee in LockPaymentOrder if not zero
+	if !aggregatorAmount.IsZero() {
+		_, err := storage.Client.LockPaymentOrder.Update().
+			Where(lockpaymentorder.MessageHashEQ(messageHash)).
+			SetProtocolFee(aggregatorAmount).
+			Save(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":        fmt.Sprintf("%v", err),
+				"MessageHash":  messageHash,
+				"TxHash":       event.Data.TransactionHash,
+				"ProtocolFee":  aggregatorAmountStr,
+			}).Errorf("Failed to update protocol fee from LocalTransferFeeSplit event")
+		}
+	}
+
+	return nil
+}
+
+// handleFxTransferFeeSplitEvent processes FxTransferFeeSplit events from webhook
+func (ctrl *Controller) handleFxTransferFeeSplitEvent(ctx *gin.Context, event types.ThirdwebWebhookEvent) error {
+	// Extract fee data from decoded event
+	indexedParams := event.Data.Decoded.IndexedParams
+	nonIndexedParams := event.Data.Decoded.NonIndexedParams
+
+	// Get message hash and amounts
+	messageHash, ok := indexedParams["messageHash"].(string)
+	if !ok {
+		return fmt.Errorf("missing messageHash in FxTransferFeeSplit event")
+	}
+
+	senderAmountStr, ok := nonIndexedParams["senderAmount"].(string)
+	if !ok {
+		return fmt.Errorf("missing senderAmount in FxTransferFeeSplit event")
+	}
+
+	aggregatorAmountStr, ok := nonIndexedParams["aggregatorAmount"].(string)
+	if !ok {
+		return fmt.Errorf("missing aggregatorAmount in FxTransferFeeSplit event")
+	}
+
+	// Parse amounts
+	senderAmount, err := decimal.NewFromString(senderAmountStr)
+	if err != nil {
+		return fmt.Errorf("invalid senderAmount: %w", err)
+	}
+
+	aggregatorAmount, err := decimal.NewFromString(aggregatorAmountStr)
+	if err != nil {
+		return fmt.Errorf("invalid aggregatorAmount: %w", err)
+	}
+
+	// Update sender fee in PaymentOrder if not zero
+	if !senderAmount.IsZero() {
+		_, err := storage.Client.PaymentOrder.Update().
+			Where(paymentorder.MessageHashEQ(messageHash)).
+			SetSenderFee(senderAmount).
+			Save(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":       fmt.Sprintf("%v", err),
+				"MessageHash": messageHash,
+				"TxHash":      event.Data.TransactionHash,
+				"SenderFee":   senderAmountStr,
+			}).Errorf("Failed to update sender fee from FxTransferFeeSplit event")
+		}
+	}
+
+	// Update protocol fee in LockPaymentOrder if not zero
+	if !aggregatorAmount.IsZero() {
+		_, err := storage.Client.LockPaymentOrder.Update().
+			Where(lockpaymentorder.MessageHashEQ(messageHash)).
+			SetProtocolFee(aggregatorAmount).
+			Save(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":        fmt.Sprintf("%v", err),
+				"MessageHash":  messageHash,
+				"TxHash":       event.Data.TransactionHash,
+				"ProtocolFee":  aggregatorAmountStr,
+			}).Errorf("Failed to update protocol fee from FxTransferFeeSplit event")
+		}
 	}
 
 	return nil

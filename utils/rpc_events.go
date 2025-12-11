@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -211,6 +212,10 @@ func ProcessRPCEvents(events []interface{}, eventSignature string) error {
 				decoded, err = DecodeOrderSettledEvent(mockLog)
 			case OrderRefundedEventSignature:
 				decoded, err = DecodeOrderRefundedEvent(mockLog)
+			case LocalTransferFeeSplitEventSignature:
+				decoded, err = DecodeLocalTransferFeeSplitEvent(mockLog)
+			case FxTransferFeeSplitEventSignature:
+				decoded, err = DecodeFxTransferFeeSplitEvent(mockLog)
 			default:
 				continue
 			}
@@ -269,6 +274,10 @@ func ProcessRPCEventsBySignature(events []interface{}) error {
 				decoded, err = DecodeOrderSettledEvent(mockLog)
 			case OrderRefundedEventSignature:
 				decoded, err = DecodeOrderRefundedEvent(mockLog)
+			case LocalTransferFeeSplitEventSignature:
+				decoded, err = DecodeLocalTransferFeeSplitEvent(mockLog)
+			case FxTransferFeeSplitEventSignature:
+				decoded, err = DecodeFxTransferFeeSplitEvent(mockLog)
 			default:
 				continue
 			}
@@ -282,4 +291,62 @@ func ProcessRPCEventsBySignature(events []interface{}) error {
 	}
 
 	return nil
+}
+
+// DecodeLocalTransferFeeSplitEvent decodes a LocalTransferFeeSplit event from RPC log
+func DecodeLocalTransferFeeSplitEvent(log types.Log) (map[string]interface{}, error) {
+	if len(log.Topics) != 2 {
+		return nil, fmt.Errorf("invalid LocalTransferFeeSplit event: expected 2 topics, got %d", len(log.Topics))
+	}
+
+	// Decode messageHash from indexed parameter (topic[1])
+	messageHashBytes := log.Topics[1].Bytes()
+	messageHash := strings.Trim(string(messageHashBytes), "\x00")
+
+	// Decode amounts from data
+	if len(log.Data) < 64 {
+		return nil, fmt.Errorf("invalid LocalTransferFeeSplit event data: too short")
+	}
+
+	senderAmount := new(big.Int).SetBytes(log.Data[:32])
+	aggregatorAmount := new(big.Int).SetBytes(log.Data[32:64])
+
+	return map[string]interface{}{
+		"indexed_params": map[string]interface{}{
+			"messageHash": messageHash,
+		},
+		"non_indexed_params": map[string]interface{}{
+			"senderAmount":     senderAmount.String(),
+			"aggregatorAmount": aggregatorAmount.String(),
+		},
+	}, nil
+}
+
+// DecodeFxTransferFeeSplitEvent decodes a FxTransferFeeSplit event from RPC log
+func DecodeFxTransferFeeSplitEvent(log types.Log) (map[string]interface{}, error) {
+	if len(log.Topics) != 2 {
+		return nil, fmt.Errorf("invalid FxTransferFeeSplit event: expected 2 topics, got %d", len(log.Topics))
+	}
+
+	// Decode messageHash from indexed parameter (topic[1])
+	messageHashBytes := log.Topics[1].Bytes()
+	messageHash := strings.Trim(string(messageHashBytes), "\x00")
+
+	// Decode amounts from data
+	if len(log.Data) < 64 {
+		return nil, fmt.Errorf("invalid FxTransferFeeSplit event data: too short")
+	}
+
+	senderAmount := new(big.Int).SetBytes(log.Data[:32])
+	aggregatorAmount := new(big.Int).SetBytes(log.Data[32:64])
+
+	return map[string]interface{}{
+		"indexed_params": map[string]interface{}{
+			"messageHash": messageHash,
+		},
+		"non_indexed_params": map[string]interface{}{
+			"senderAmount":     senderAmount.String(),
+			"aggregatorAmount": aggregatorAmount.String(),
+		},
+	}, nil
 }
