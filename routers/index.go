@@ -101,7 +101,6 @@ func authRoutes(route *gin.Engine) {
 		middleware.OnlyProviderMiddleware,
 		profileCtrl.UpdateProviderProfile,
 	)
-
 	v1.GET(
 		"settings/sender",
 		middleware.OnlyWebMiddleware,
@@ -128,6 +127,7 @@ func senderRoutes(route *gin.Engine) {
 	v1.POST("orders", senderCtrl.InitiatePaymentOrder)
 	v1.GET("orders/:id", senderCtrl.GetPaymentOrderByID)
 	v1.GET("orders", senderCtrl.GetPaymentOrders)
+	v1.POST("orders/:id/validate", senderCtrl.ValidateOrder)
 	v1.GET("stats", senderCtrl.Stats)
 }
 

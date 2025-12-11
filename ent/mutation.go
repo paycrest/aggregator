@@ -27,6 +27,7 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -65,6 +66,7 @@ const (
 	TypePaymentOrderRecipient       = "PaymentOrderRecipient"
 	TypePaymentWebhook              = "PaymentWebhook"
 	TypeProviderCurrencies          = "ProviderCurrencies"
+	TypeProviderFiatAccount         = "ProviderFiatAccount"
 	TypeProviderOrderToken          = "ProviderOrderToken"
 	TypeProviderProfile             = "ProviderProfile"
 	TypeProviderRating              = "ProviderRating"
@@ -6946,6 +6948,7 @@ type LockPaymentOrderMutation struct {
 	message_hash               *string
 	amount_in_usd              *decimal.Decimal
 	addamount_in_usd           *decimal.Decimal
+	order_type                 *lockpaymentorder.OrderType
 	clearedFields              map[string]struct{}
 	token                      *int
 	clearedtoken               bool
@@ -8008,6 +8011,42 @@ func (m *LockPaymentOrderMutation) ResetAmountInUsd() {
 	m.addamount_in_usd = nil
 }
 
+// SetOrderType sets the "order_type" field.
+func (m *LockPaymentOrderMutation) SetOrderType(lt lockpaymentorder.OrderType) {
+	m.order_type = &lt
+}
+
+// OrderType returns the value of the "order_type" field in the mutation.
+func (m *LockPaymentOrderMutation) OrderType() (r lockpaymentorder.OrderType, exists bool) {
+	v := m.order_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOrderType returns the old "order_type" field's value of the LockPaymentOrder entity.
+// If the LockPaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LockPaymentOrderMutation) OldOrderType(ctx context.Context) (v lockpaymentorder.OrderType, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOrderType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOrderType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOrderType: %w", err)
+	}
+	return oldValue.OrderType, nil
+}
+
+// ResetOrderType resets all changes to the "order_type" field.
+func (m *LockPaymentOrderMutation) ResetOrderType() {
+	m.order_type = nil
+}
+
 // SetTokenID sets the "token" edge to the Token entity by id.
 func (m *LockPaymentOrderMutation) SetTokenID(id int) {
 	m.token = &id
@@ -8267,7 +8306,7 @@ func (m *LockPaymentOrderMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *LockPaymentOrderMutation) Fields() []string {
-	fields := make([]string, 0, 20)
+	fields := make([]string, 0, 21)
 	if m.created_at != nil {
 		fields = append(fields, lockpaymentorder.FieldCreatedAt)
 	}
@@ -8328,6 +8367,9 @@ func (m *LockPaymentOrderMutation) Fields() []string {
 	if m.amount_in_usd != nil {
 		fields = append(fields, lockpaymentorder.FieldAmountInUsd)
 	}
+	if m.order_type != nil {
+		fields = append(fields, lockpaymentorder.FieldOrderType)
+	}
 	return fields
 }
 
@@ -8376,6 +8418,8 @@ func (m *LockPaymentOrderMutation) Field(name string) (ent.Value, bool) {
 		return m.MessageHash()
 	case lockpaymentorder.FieldAmountInUsd:
 		return m.AmountInUsd()
+	case lockpaymentorder.FieldOrderType:
+		return m.OrderType()
 	}
 	return nil, false
 }
@@ -8425,6 +8469,8 @@ func (m *LockPaymentOrderMutation) OldField(ctx context.Context, name string) (e
 		return m.OldMessageHash(ctx)
 	case lockpaymentorder.FieldAmountInUsd:
 		return m.OldAmountInUsd(ctx)
+	case lockpaymentorder.FieldOrderType:
+		return m.OldOrderType(ctx)
 	}
 	return nil, fmt.Errorf("unknown LockPaymentOrder field %s", name)
 }
@@ -8573,6 +8619,13 @@ func (m *LockPaymentOrderMutation) SetField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetAmountInUsd(v)
+		return nil
+	case lockpaymentorder.FieldOrderType:
+		v, ok := value.(lockpaymentorder.OrderType)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOrderType(v)
 		return nil
 	}
 	return fmt.Errorf("unknown LockPaymentOrder field %s", name)
@@ -8802,6 +8855,9 @@ func (m *LockPaymentOrderMutation) ResetField(name string) error {
 		return nil
 	case lockpaymentorder.FieldAmountInUsd:
 		m.ResetAmountInUsd()
+		return nil
+	case lockpaymentorder.FieldOrderType:
+		m.ResetOrderType()
 		return nil
 	}
 	return fmt.Errorf("unknown LockPaymentOrder field %s", name)
@@ -10169,6 +10225,7 @@ type PaymentOrderMutation struct {
 	status                 *paymentorder.Status
 	amount_in_usd          *decimal.Decimal
 	addamount_in_usd       *decimal.Decimal
+	order_type             *paymentorder.OrderType
 	clearedFields          map[string]struct{}
 	sender_profile         *uuid.UUID
 	clearedsender_profile  bool
@@ -11341,6 +11398,42 @@ func (m *PaymentOrderMutation) ResetAmountInUsd() {
 	m.addamount_in_usd = nil
 }
 
+// SetOrderType sets the "order_type" field.
+func (m *PaymentOrderMutation) SetOrderType(pt paymentorder.OrderType) {
+	m.order_type = &pt
+}
+
+// OrderType returns the value of the "order_type" field in the mutation.
+func (m *PaymentOrderMutation) OrderType() (r paymentorder.OrderType, exists bool) {
+	v := m.order_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOrderType returns the old "order_type" field's value of the PaymentOrder entity.
+// If the PaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentOrderMutation) OldOrderType(ctx context.Context) (v paymentorder.OrderType, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOrderType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOrderType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOrderType: %w", err)
+	}
+	return oldValue.OrderType, nil
+}
+
+// ResetOrderType resets all changes to the "order_type" field.
+func (m *PaymentOrderMutation) ResetOrderType() {
+	m.order_type = nil
+}
+
 // SetSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by id.
 func (m *PaymentOrderMutation) SetSenderProfileID(id uuid.UUID) {
 	m.sender_profile = &id
@@ -11663,7 +11756,7 @@ func (m *PaymentOrderMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PaymentOrderMutation) Fields() []string {
-	fields := make([]string, 0, 21)
+	fields := make([]string, 0, 22)
 	if m.created_at != nil {
 		fields = append(fields, paymentorder.FieldCreatedAt)
 	}
@@ -11727,6 +11820,9 @@ func (m *PaymentOrderMutation) Fields() []string {
 	if m.amount_in_usd != nil {
 		fields = append(fields, paymentorder.FieldAmountInUsd)
 	}
+	if m.order_type != nil {
+		fields = append(fields, paymentorder.FieldOrderType)
+	}
 	return fields
 }
 
@@ -11777,6 +11873,8 @@ func (m *PaymentOrderMutation) Field(name string) (ent.Value, bool) {
 		return m.Status()
 	case paymentorder.FieldAmountInUsd:
 		return m.AmountInUsd()
+	case paymentorder.FieldOrderType:
+		return m.OrderType()
 	}
 	return nil, false
 }
@@ -11828,6 +11926,8 @@ func (m *PaymentOrderMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldStatus(ctx)
 	case paymentorder.FieldAmountInUsd:
 		return m.OldAmountInUsd(ctx)
+	case paymentorder.FieldOrderType:
+		return m.OldOrderType(ctx)
 	}
 	return nil, fmt.Errorf("unknown PaymentOrder field %s", name)
 }
@@ -11983,6 +12083,13 @@ func (m *PaymentOrderMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetAmountInUsd(v)
+		return nil
+	case paymentorder.FieldOrderType:
+		v, ok := value.(paymentorder.OrderType)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOrderType(v)
 		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder field %s", name)
@@ -12263,6 +12370,9 @@ func (m *PaymentOrderMutation) ResetField(name string) error {
 		return nil
 	case paymentorder.FieldAmountInUsd:
 		m.ResetAmountInUsd()
+		return nil
+	case paymentorder.FieldOrderType:
+		m.ResetOrderType()
 		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder field %s", name)
@@ -14633,6 +14743,621 @@ func (m *ProviderCurrenciesMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown ProviderCurrencies edge %s", name)
 }
 
+// ProviderFiatAccountMutation represents an operation that mutates the ProviderFiatAccount nodes in the graph.
+type ProviderFiatAccountMutation struct {
+	config
+	op                 Op
+	typ                string
+	id                 *uuid.UUID
+	created_at         *time.Time
+	updated_at         *time.Time
+	institution        *string
+	account_identifier *string
+	account_name       *string
+	clearedFields      map[string]struct{}
+	provider           *string
+	clearedprovider    bool
+	done               bool
+	oldValue           func(context.Context) (*ProviderFiatAccount, error)
+	predicates         []predicate.ProviderFiatAccount
+}
+
+var _ ent.Mutation = (*ProviderFiatAccountMutation)(nil)
+
+// providerfiataccountOption allows management of the mutation configuration using functional options.
+type providerfiataccountOption func(*ProviderFiatAccountMutation)
+
+// newProviderFiatAccountMutation creates new mutation for the ProviderFiatAccount entity.
+func newProviderFiatAccountMutation(c config, op Op, opts ...providerfiataccountOption) *ProviderFiatAccountMutation {
+	m := &ProviderFiatAccountMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeProviderFiatAccount,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withProviderFiatAccountID sets the ID field of the mutation.
+func withProviderFiatAccountID(id uuid.UUID) providerfiataccountOption {
+	return func(m *ProviderFiatAccountMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ProviderFiatAccount
+		)
+		m.oldValue = func(ctx context.Context) (*ProviderFiatAccount, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ProviderFiatAccount.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withProviderFiatAccount sets the old ProviderFiatAccount of the mutation.
+func withProviderFiatAccount(node *ProviderFiatAccount) providerfiataccountOption {
+	return func(m *ProviderFiatAccountMutation) {
+		m.oldValue = func(context.Context) (*ProviderFiatAccount, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ProviderFiatAccountMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ProviderFiatAccountMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ProviderFiatAccount entities.
+func (m *ProviderFiatAccountMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ProviderFiatAccountMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ProviderFiatAccountMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ProviderFiatAccount.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *ProviderFiatAccountMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *ProviderFiatAccountMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the ProviderFiatAccount entity.
+// If the ProviderFiatAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderFiatAccountMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *ProviderFiatAccountMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *ProviderFiatAccountMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *ProviderFiatAccountMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the ProviderFiatAccount entity.
+// If the ProviderFiatAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderFiatAccountMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *ProviderFiatAccountMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetInstitution sets the "institution" field.
+func (m *ProviderFiatAccountMutation) SetInstitution(s string) {
+	m.institution = &s
+}
+
+// Institution returns the value of the "institution" field in the mutation.
+func (m *ProviderFiatAccountMutation) Institution() (r string, exists bool) {
+	v := m.institution
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInstitution returns the old "institution" field's value of the ProviderFiatAccount entity.
+// If the ProviderFiatAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderFiatAccountMutation) OldInstitution(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInstitution is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInstitution requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInstitution: %w", err)
+	}
+	return oldValue.Institution, nil
+}
+
+// ResetInstitution resets all changes to the "institution" field.
+func (m *ProviderFiatAccountMutation) ResetInstitution() {
+	m.institution = nil
+}
+
+// SetAccountIdentifier sets the "account_identifier" field.
+func (m *ProviderFiatAccountMutation) SetAccountIdentifier(s string) {
+	m.account_identifier = &s
+}
+
+// AccountIdentifier returns the value of the "account_identifier" field in the mutation.
+func (m *ProviderFiatAccountMutation) AccountIdentifier() (r string, exists bool) {
+	v := m.account_identifier
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAccountIdentifier returns the old "account_identifier" field's value of the ProviderFiatAccount entity.
+// If the ProviderFiatAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderFiatAccountMutation) OldAccountIdentifier(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAccountIdentifier is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAccountIdentifier requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAccountIdentifier: %w", err)
+	}
+	return oldValue.AccountIdentifier, nil
+}
+
+// ResetAccountIdentifier resets all changes to the "account_identifier" field.
+func (m *ProviderFiatAccountMutation) ResetAccountIdentifier() {
+	m.account_identifier = nil
+}
+
+// SetAccountName sets the "account_name" field.
+func (m *ProviderFiatAccountMutation) SetAccountName(s string) {
+	m.account_name = &s
+}
+
+// AccountName returns the value of the "account_name" field in the mutation.
+func (m *ProviderFiatAccountMutation) AccountName() (r string, exists bool) {
+	v := m.account_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAccountName returns the old "account_name" field's value of the ProviderFiatAccount entity.
+// If the ProviderFiatAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderFiatAccountMutation) OldAccountName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAccountName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAccountName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAccountName: %w", err)
+	}
+	return oldValue.AccountName, nil
+}
+
+// ResetAccountName resets all changes to the "account_name" field.
+func (m *ProviderFiatAccountMutation) ResetAccountName() {
+	m.account_name = nil
+}
+
+// SetProviderID sets the "provider" edge to the ProviderProfile entity by id.
+func (m *ProviderFiatAccountMutation) SetProviderID(id string) {
+	m.provider = &id
+}
+
+// ClearProvider clears the "provider" edge to the ProviderProfile entity.
+func (m *ProviderFiatAccountMutation) ClearProvider() {
+	m.clearedprovider = true
+}
+
+// ProviderCleared reports if the "provider" edge to the ProviderProfile entity was cleared.
+func (m *ProviderFiatAccountMutation) ProviderCleared() bool {
+	return m.clearedprovider
+}
+
+// ProviderID returns the "provider" edge ID in the mutation.
+func (m *ProviderFiatAccountMutation) ProviderID() (id string, exists bool) {
+	if m.provider != nil {
+		return *m.provider, true
+	}
+	return
+}
+
+// ProviderIDs returns the "provider" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ProviderID instead. It exists only for internal usage by the builders.
+func (m *ProviderFiatAccountMutation) ProviderIDs() (ids []string) {
+	if id := m.provider; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetProvider resets all changes to the "provider" edge.
+func (m *ProviderFiatAccountMutation) ResetProvider() {
+	m.provider = nil
+	m.clearedprovider = false
+}
+
+// Where appends a list predicates to the ProviderFiatAccountMutation builder.
+func (m *ProviderFiatAccountMutation) Where(ps ...predicate.ProviderFiatAccount) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ProviderFiatAccountMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ProviderFiatAccountMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ProviderFiatAccount, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ProviderFiatAccountMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ProviderFiatAccountMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ProviderFiatAccount).
+func (m *ProviderFiatAccountMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ProviderFiatAccountMutation) Fields() []string {
+	fields := make([]string, 0, 5)
+	if m.created_at != nil {
+		fields = append(fields, providerfiataccount.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, providerfiataccount.FieldUpdatedAt)
+	}
+	if m.institution != nil {
+		fields = append(fields, providerfiataccount.FieldInstitution)
+	}
+	if m.account_identifier != nil {
+		fields = append(fields, providerfiataccount.FieldAccountIdentifier)
+	}
+	if m.account_name != nil {
+		fields = append(fields, providerfiataccount.FieldAccountName)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ProviderFiatAccountMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case providerfiataccount.FieldCreatedAt:
+		return m.CreatedAt()
+	case providerfiataccount.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case providerfiataccount.FieldInstitution:
+		return m.Institution()
+	case providerfiataccount.FieldAccountIdentifier:
+		return m.AccountIdentifier()
+	case providerfiataccount.FieldAccountName:
+		return m.AccountName()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ProviderFiatAccountMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case providerfiataccount.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case providerfiataccount.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case providerfiataccount.FieldInstitution:
+		return m.OldInstitution(ctx)
+	case providerfiataccount.FieldAccountIdentifier:
+		return m.OldAccountIdentifier(ctx)
+	case providerfiataccount.FieldAccountName:
+		return m.OldAccountName(ctx)
+	}
+	return nil, fmt.Errorf("unknown ProviderFiatAccount field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ProviderFiatAccountMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case providerfiataccount.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case providerfiataccount.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case providerfiataccount.FieldInstitution:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInstitution(v)
+		return nil
+	case providerfiataccount.FieldAccountIdentifier:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAccountIdentifier(v)
+		return nil
+	case providerfiataccount.FieldAccountName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAccountName(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderFiatAccount field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ProviderFiatAccountMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ProviderFiatAccountMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ProviderFiatAccountMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown ProviderFiatAccount numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ProviderFiatAccountMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ProviderFiatAccountMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ProviderFiatAccountMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown ProviderFiatAccount nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ProviderFiatAccountMutation) ResetField(name string) error {
+	switch name {
+	case providerfiataccount.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case providerfiataccount.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case providerfiataccount.FieldInstitution:
+		m.ResetInstitution()
+		return nil
+	case providerfiataccount.FieldAccountIdentifier:
+		m.ResetAccountIdentifier()
+		return nil
+	case providerfiataccount.FieldAccountName:
+		m.ResetAccountName()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderFiatAccount field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ProviderFiatAccountMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.provider != nil {
+		edges = append(edges, providerfiataccount.EdgeProvider)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ProviderFiatAccountMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case providerfiataccount.EdgeProvider:
+		if id := m.provider; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ProviderFiatAccountMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ProviderFiatAccountMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ProviderFiatAccountMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedprovider {
+		edges = append(edges, providerfiataccount.EdgeProvider)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ProviderFiatAccountMutation) EdgeCleared(name string) bool {
+	switch name {
+	case providerfiataccount.EdgeProvider:
+		return m.clearedprovider
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ProviderFiatAccountMutation) ClearEdge(name string) error {
+	switch name {
+	case providerfiataccount.EdgeProvider:
+		m.ClearProvider()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderFiatAccount unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ProviderFiatAccountMutation) ResetEdge(name string) error {
+	switch name {
+	case providerfiataccount.EdgeProvider:
+		m.ResetProvider()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderFiatAccount edge %s", name)
+}
+
 // ProviderOrderTokenMutation represents an operation that mutates the ProviderOrderToken nodes in the graph.
 type ProviderOrderTokenMutation struct {
 	config
@@ -14650,6 +15375,10 @@ type ProviderOrderTokenMutation struct {
 	addmax_order_amount         *decimal.Decimal
 	min_order_amount            *decimal.Decimal
 	addmin_order_amount         *decimal.Decimal
+	max_order_amount_otc        *decimal.Decimal
+	addmax_order_amount_otc     *decimal.Decimal
+	min_order_amount_otc        *decimal.Decimal
+	addmin_order_amount_otc     *decimal.Decimal
 	rate_slippage               *decimal.Decimal
 	addrate_slippage            *decimal.Decimal
 	address                     *string
@@ -15096,6 +15825,118 @@ func (m *ProviderOrderTokenMutation) ResetMinOrderAmount() {
 	m.addmin_order_amount = nil
 }
 
+// SetMaxOrderAmountOtc sets the "max_order_amount_otc" field.
+func (m *ProviderOrderTokenMutation) SetMaxOrderAmountOtc(d decimal.Decimal) {
+	m.max_order_amount_otc = &d
+	m.addmax_order_amount_otc = nil
+}
+
+// MaxOrderAmountOtc returns the value of the "max_order_amount_otc" field in the mutation.
+func (m *ProviderOrderTokenMutation) MaxOrderAmountOtc() (r decimal.Decimal, exists bool) {
+	v := m.max_order_amount_otc
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMaxOrderAmountOtc returns the old "max_order_amount_otc" field's value of the ProviderOrderToken entity.
+// If the ProviderOrderToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderOrderTokenMutation) OldMaxOrderAmountOtc(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMaxOrderAmountOtc is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMaxOrderAmountOtc requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMaxOrderAmountOtc: %w", err)
+	}
+	return oldValue.MaxOrderAmountOtc, nil
+}
+
+// AddMaxOrderAmountOtc adds d to the "max_order_amount_otc" field.
+func (m *ProviderOrderTokenMutation) AddMaxOrderAmountOtc(d decimal.Decimal) {
+	if m.addmax_order_amount_otc != nil {
+		*m.addmax_order_amount_otc = m.addmax_order_amount_otc.Add(d)
+	} else {
+		m.addmax_order_amount_otc = &d
+	}
+}
+
+// AddedMaxOrderAmountOtc returns the value that was added to the "max_order_amount_otc" field in this mutation.
+func (m *ProviderOrderTokenMutation) AddedMaxOrderAmountOtc() (r decimal.Decimal, exists bool) {
+	v := m.addmax_order_amount_otc
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetMaxOrderAmountOtc resets all changes to the "max_order_amount_otc" field.
+func (m *ProviderOrderTokenMutation) ResetMaxOrderAmountOtc() {
+	m.max_order_amount_otc = nil
+	m.addmax_order_amount_otc = nil
+}
+
+// SetMinOrderAmountOtc sets the "min_order_amount_otc" field.
+func (m *ProviderOrderTokenMutation) SetMinOrderAmountOtc(d decimal.Decimal) {
+	m.min_order_amount_otc = &d
+	m.addmin_order_amount_otc = nil
+}
+
+// MinOrderAmountOtc returns the value of the "min_order_amount_otc" field in the mutation.
+func (m *ProviderOrderTokenMutation) MinOrderAmountOtc() (r decimal.Decimal, exists bool) {
+	v := m.min_order_amount_otc
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMinOrderAmountOtc returns the old "min_order_amount_otc" field's value of the ProviderOrderToken entity.
+// If the ProviderOrderToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderOrderTokenMutation) OldMinOrderAmountOtc(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMinOrderAmountOtc is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMinOrderAmountOtc requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMinOrderAmountOtc: %w", err)
+	}
+	return oldValue.MinOrderAmountOtc, nil
+}
+
+// AddMinOrderAmountOtc adds d to the "min_order_amount_otc" field.
+func (m *ProviderOrderTokenMutation) AddMinOrderAmountOtc(d decimal.Decimal) {
+	if m.addmin_order_amount_otc != nil {
+		*m.addmin_order_amount_otc = m.addmin_order_amount_otc.Add(d)
+	} else {
+		m.addmin_order_amount_otc = &d
+	}
+}
+
+// AddedMinOrderAmountOtc returns the value that was added to the "min_order_amount_otc" field in this mutation.
+func (m *ProviderOrderTokenMutation) AddedMinOrderAmountOtc() (r decimal.Decimal, exists bool) {
+	v := m.addmin_order_amount_otc
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetMinOrderAmountOtc resets all changes to the "min_order_amount_otc" field.
+func (m *ProviderOrderTokenMutation) ResetMinOrderAmountOtc() {
+	m.min_order_amount_otc = nil
+	m.addmin_order_amount_otc = nil
+}
+
 // SetRateSlippage sets the "rate_slippage" field.
 func (m *ProviderOrderTokenMutation) SetRateSlippage(d decimal.Decimal) {
 	m.rate_slippage = &d
@@ -15388,7 +16229,7 @@ func (m *ProviderOrderTokenMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProviderOrderTokenMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 12)
 	if m.created_at != nil {
 		fields = append(fields, providerordertoken.FieldCreatedAt)
 	}
@@ -15409,6 +16250,12 @@ func (m *ProviderOrderTokenMutation) Fields() []string {
 	}
 	if m.min_order_amount != nil {
 		fields = append(fields, providerordertoken.FieldMinOrderAmount)
+	}
+	if m.max_order_amount_otc != nil {
+		fields = append(fields, providerordertoken.FieldMaxOrderAmountOtc)
+	}
+	if m.min_order_amount_otc != nil {
+		fields = append(fields, providerordertoken.FieldMinOrderAmountOtc)
 	}
 	if m.rate_slippage != nil {
 		fields = append(fields, providerordertoken.FieldRateSlippage)
@@ -15441,6 +16288,10 @@ func (m *ProviderOrderTokenMutation) Field(name string) (ent.Value, bool) {
 		return m.MaxOrderAmount()
 	case providerordertoken.FieldMinOrderAmount:
 		return m.MinOrderAmount()
+	case providerordertoken.FieldMaxOrderAmountOtc:
+		return m.MaxOrderAmountOtc()
+	case providerordertoken.FieldMinOrderAmountOtc:
+		return m.MinOrderAmountOtc()
 	case providerordertoken.FieldRateSlippage:
 		return m.RateSlippage()
 	case providerordertoken.FieldAddress:
@@ -15470,6 +16321,10 @@ func (m *ProviderOrderTokenMutation) OldField(ctx context.Context, name string) 
 		return m.OldMaxOrderAmount(ctx)
 	case providerordertoken.FieldMinOrderAmount:
 		return m.OldMinOrderAmount(ctx)
+	case providerordertoken.FieldMaxOrderAmountOtc:
+		return m.OldMaxOrderAmountOtc(ctx)
+	case providerordertoken.FieldMinOrderAmountOtc:
+		return m.OldMinOrderAmountOtc(ctx)
 	case providerordertoken.FieldRateSlippage:
 		return m.OldRateSlippage(ctx)
 	case providerordertoken.FieldAddress:
@@ -15534,6 +16389,20 @@ func (m *ProviderOrderTokenMutation) SetField(name string, value ent.Value) erro
 		}
 		m.SetMinOrderAmount(v)
 		return nil
+	case providerordertoken.FieldMaxOrderAmountOtc:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMaxOrderAmountOtc(v)
+		return nil
+	case providerordertoken.FieldMinOrderAmountOtc:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMinOrderAmountOtc(v)
+		return nil
 	case providerordertoken.FieldRateSlippage:
 		v, ok := value.(decimal.Decimal)
 		if !ok {
@@ -15575,6 +16444,12 @@ func (m *ProviderOrderTokenMutation) AddedFields() []string {
 	if m.addmin_order_amount != nil {
 		fields = append(fields, providerordertoken.FieldMinOrderAmount)
 	}
+	if m.addmax_order_amount_otc != nil {
+		fields = append(fields, providerordertoken.FieldMaxOrderAmountOtc)
+	}
+	if m.addmin_order_amount_otc != nil {
+		fields = append(fields, providerordertoken.FieldMinOrderAmountOtc)
+	}
 	if m.addrate_slippage != nil {
 		fields = append(fields, providerordertoken.FieldRateSlippage)
 	}
@@ -15594,6 +16469,10 @@ func (m *ProviderOrderTokenMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedMaxOrderAmount()
 	case providerordertoken.FieldMinOrderAmount:
 		return m.AddedMinOrderAmount()
+	case providerordertoken.FieldMaxOrderAmountOtc:
+		return m.AddedMaxOrderAmountOtc()
+	case providerordertoken.FieldMinOrderAmountOtc:
+		return m.AddedMinOrderAmountOtc()
 	case providerordertoken.FieldRateSlippage:
 		return m.AddedRateSlippage()
 	}
@@ -15632,6 +16511,20 @@ func (m *ProviderOrderTokenMutation) AddField(name string, value ent.Value) erro
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddMinOrderAmount(v)
+		return nil
+	case providerordertoken.FieldMaxOrderAmountOtc:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddMaxOrderAmountOtc(v)
+		return nil
+	case providerordertoken.FieldMinOrderAmountOtc:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddMinOrderAmountOtc(v)
 		return nil
 	case providerordertoken.FieldRateSlippage:
 		v, ok := value.(decimal.Decimal)
@@ -15696,6 +16589,12 @@ func (m *ProviderOrderTokenMutation) ResetField(name string) error {
 		return nil
 	case providerordertoken.FieldMinOrderAmount:
 		m.ResetMinOrderAmount()
+		return nil
+	case providerordertoken.FieldMaxOrderAmountOtc:
+		m.ResetMaxOrderAmountOtc()
+		return nil
+	case providerordertoken.FieldMinOrderAmountOtc:
+		m.ResetMinOrderAmountOtc()
 		return nil
 	case providerordertoken.FieldRateSlippage:
 		m.ResetRateSlippage()
@@ -15852,6 +16751,9 @@ type ProviderProfileMutation struct {
 	assigned_orders            map[uuid.UUID]struct{}
 	removedassigned_orders     map[uuid.UUID]struct{}
 	clearedassigned_orders     bool
+	fiat_accounts              map[uuid.UUID]struct{}
+	removedfiat_accounts       map[uuid.UUID]struct{}
+	clearedfiat_accounts       bool
 	done                       bool
 	oldValue                   func(context.Context) (*ProviderProfile, error)
 	predicates                 []predicate.ProviderProfile
@@ -16572,6 +17474,60 @@ func (m *ProviderProfileMutation) ResetAssignedOrders() {
 	m.removedassigned_orders = nil
 }
 
+// AddFiatAccountIDs adds the "fiat_accounts" edge to the ProviderFiatAccount entity by ids.
+func (m *ProviderProfileMutation) AddFiatAccountIDs(ids ...uuid.UUID) {
+	if m.fiat_accounts == nil {
+		m.fiat_accounts = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.fiat_accounts[ids[i]] = struct{}{}
+	}
+}
+
+// ClearFiatAccounts clears the "fiat_accounts" edge to the ProviderFiatAccount entity.
+func (m *ProviderProfileMutation) ClearFiatAccounts() {
+	m.clearedfiat_accounts = true
+}
+
+// FiatAccountsCleared reports if the "fiat_accounts" edge to the ProviderFiatAccount entity was cleared.
+func (m *ProviderProfileMutation) FiatAccountsCleared() bool {
+	return m.clearedfiat_accounts
+}
+
+// RemoveFiatAccountIDs removes the "fiat_accounts" edge to the ProviderFiatAccount entity by IDs.
+func (m *ProviderProfileMutation) RemoveFiatAccountIDs(ids ...uuid.UUID) {
+	if m.removedfiat_accounts == nil {
+		m.removedfiat_accounts = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.fiat_accounts, ids[i])
+		m.removedfiat_accounts[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedFiatAccounts returns the removed IDs of the "fiat_accounts" edge to the ProviderFiatAccount entity.
+func (m *ProviderProfileMutation) RemovedFiatAccountsIDs() (ids []uuid.UUID) {
+	for id := range m.removedfiat_accounts {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// FiatAccountsIDs returns the "fiat_accounts" edge IDs in the mutation.
+func (m *ProviderProfileMutation) FiatAccountsIDs() (ids []uuid.UUID) {
+	for id := range m.fiat_accounts {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetFiatAccounts resets all changes to the "fiat_accounts" edge.
+func (m *ProviderProfileMutation) ResetFiatAccounts() {
+	m.fiat_accounts = nil
+	m.clearedfiat_accounts = false
+	m.removedfiat_accounts = nil
+}
+
 // Where appends a list predicates to the ProviderProfileMutation builder.
 func (m *ProviderProfileMutation) Where(ps ...predicate.ProviderProfile) {
 	m.predicates = append(m.predicates, ps...)
@@ -16822,7 +17778,7 @@ func (m *ProviderProfileMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ProviderProfileMutation) AddedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.user != nil {
 		edges = append(edges, providerprofile.EdgeUser)
 	}
@@ -16843,6 +17799,9 @@ func (m *ProviderProfileMutation) AddedEdges() []string {
 	}
 	if m.assigned_orders != nil {
 		edges = append(edges, providerprofile.EdgeAssignedOrders)
+	}
+	if m.fiat_accounts != nil {
+		edges = append(edges, providerprofile.EdgeFiatAccounts)
 	}
 	return edges
 }
@@ -16887,13 +17846,19 @@ func (m *ProviderProfileMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case providerprofile.EdgeFiatAccounts:
+		ids := make([]ent.Value, 0, len(m.fiat_accounts))
+		for id := range m.fiat_accounts {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProviderProfileMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.removedprovider_currencies != nil {
 		edges = append(edges, providerprofile.EdgeProviderCurrencies)
 	}
@@ -16905,6 +17870,9 @@ func (m *ProviderProfileMutation) RemovedEdges() []string {
 	}
 	if m.removedassigned_orders != nil {
 		edges = append(edges, providerprofile.EdgeAssignedOrders)
+	}
+	if m.removedfiat_accounts != nil {
+		edges = append(edges, providerprofile.EdgeFiatAccounts)
 	}
 	return edges
 }
@@ -16937,13 +17905,19 @@ func (m *ProviderProfileMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case providerprofile.EdgeFiatAccounts:
+		ids := make([]ent.Value, 0, len(m.removedfiat_accounts))
+		for id := range m.removedfiat_accounts {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ProviderProfileMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.cleareduser {
 		edges = append(edges, providerprofile.EdgeUser)
 	}
@@ -16964,6 +17938,9 @@ func (m *ProviderProfileMutation) ClearedEdges() []string {
 	}
 	if m.clearedassigned_orders {
 		edges = append(edges, providerprofile.EdgeAssignedOrders)
+	}
+	if m.clearedfiat_accounts {
+		edges = append(edges, providerprofile.EdgeFiatAccounts)
 	}
 	return edges
 }
@@ -16986,6 +17963,8 @@ func (m *ProviderProfileMutation) EdgeCleared(name string) bool {
 		return m.clearedprovider_rating
 	case providerprofile.EdgeAssignedOrders:
 		return m.clearedassigned_orders
+	case providerprofile.EdgeFiatAccounts:
+		return m.clearedfiat_accounts
 	}
 	return false
 }
@@ -17031,6 +18010,9 @@ func (m *ProviderProfileMutation) ResetEdge(name string) error {
 		return nil
 	case providerprofile.EdgeAssignedOrders:
 		m.ResetAssignedOrders()
+		return nil
+	case providerprofile.EdgeFiatAccounts:
+		m.ResetFiatAccounts()
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderProfile edge %s", name)
@@ -19281,6 +20263,8 @@ type SenderOrderTokenMutation struct {
 	updated_at     *time.Time
 	fee_percent    *decimal.Decimal
 	addfee_percent *decimal.Decimal
+	max_fee_cap    *decimal.Decimal
+	addmax_fee_cap *decimal.Decimal
 	fee_address    *string
 	refund_address *string
 	clearedFields  map[string]struct{}
@@ -19519,6 +20503,62 @@ func (m *SenderOrderTokenMutation) ResetFeePercent() {
 	m.addfee_percent = nil
 }
 
+// SetMaxFeeCap sets the "max_fee_cap" field.
+func (m *SenderOrderTokenMutation) SetMaxFeeCap(d decimal.Decimal) {
+	m.max_fee_cap = &d
+	m.addmax_fee_cap = nil
+}
+
+// MaxFeeCap returns the value of the "max_fee_cap" field in the mutation.
+func (m *SenderOrderTokenMutation) MaxFeeCap() (r decimal.Decimal, exists bool) {
+	v := m.max_fee_cap
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMaxFeeCap returns the old "max_fee_cap" field's value of the SenderOrderToken entity.
+// If the SenderOrderToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SenderOrderTokenMutation) OldMaxFeeCap(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMaxFeeCap is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMaxFeeCap requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMaxFeeCap: %w", err)
+	}
+	return oldValue.MaxFeeCap, nil
+}
+
+// AddMaxFeeCap adds d to the "max_fee_cap" field.
+func (m *SenderOrderTokenMutation) AddMaxFeeCap(d decimal.Decimal) {
+	if m.addmax_fee_cap != nil {
+		*m.addmax_fee_cap = m.addmax_fee_cap.Add(d)
+	} else {
+		m.addmax_fee_cap = &d
+	}
+}
+
+// AddedMaxFeeCap returns the value that was added to the "max_fee_cap" field in this mutation.
+func (m *SenderOrderTokenMutation) AddedMaxFeeCap() (r decimal.Decimal, exists bool) {
+	v := m.addmax_fee_cap
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetMaxFeeCap resets all changes to the "max_fee_cap" field.
+func (m *SenderOrderTokenMutation) ResetMaxFeeCap() {
+	m.max_fee_cap = nil
+	m.addmax_fee_cap = nil
+}
+
 // SetFeeAddress sets the "fee_address" field.
 func (m *SenderOrderTokenMutation) SetFeeAddress(s string) {
 	m.fee_address = &s
@@ -19703,7 +20743,7 @@ func (m *SenderOrderTokenMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *SenderOrderTokenMutation) Fields() []string {
-	fields := make([]string, 0, 5)
+	fields := make([]string, 0, 6)
 	if m.created_at != nil {
 		fields = append(fields, senderordertoken.FieldCreatedAt)
 	}
@@ -19712,6 +20752,9 @@ func (m *SenderOrderTokenMutation) Fields() []string {
 	}
 	if m.fee_percent != nil {
 		fields = append(fields, senderordertoken.FieldFeePercent)
+	}
+	if m.max_fee_cap != nil {
+		fields = append(fields, senderordertoken.FieldMaxFeeCap)
 	}
 	if m.fee_address != nil {
 		fields = append(fields, senderordertoken.FieldFeeAddress)
@@ -19733,6 +20776,8 @@ func (m *SenderOrderTokenMutation) Field(name string) (ent.Value, bool) {
 		return m.UpdatedAt()
 	case senderordertoken.FieldFeePercent:
 		return m.FeePercent()
+	case senderordertoken.FieldMaxFeeCap:
+		return m.MaxFeeCap()
 	case senderordertoken.FieldFeeAddress:
 		return m.FeeAddress()
 	case senderordertoken.FieldRefundAddress:
@@ -19752,6 +20797,8 @@ func (m *SenderOrderTokenMutation) OldField(ctx context.Context, name string) (e
 		return m.OldUpdatedAt(ctx)
 	case senderordertoken.FieldFeePercent:
 		return m.OldFeePercent(ctx)
+	case senderordertoken.FieldMaxFeeCap:
+		return m.OldMaxFeeCap(ctx)
 	case senderordertoken.FieldFeeAddress:
 		return m.OldFeeAddress(ctx)
 	case senderordertoken.FieldRefundAddress:
@@ -19786,6 +20833,13 @@ func (m *SenderOrderTokenMutation) SetField(name string, value ent.Value) error 
 		}
 		m.SetFeePercent(v)
 		return nil
+	case senderordertoken.FieldMaxFeeCap:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMaxFeeCap(v)
+		return nil
 	case senderordertoken.FieldFeeAddress:
 		v, ok := value.(string)
 		if !ok {
@@ -19811,6 +20865,9 @@ func (m *SenderOrderTokenMutation) AddedFields() []string {
 	if m.addfee_percent != nil {
 		fields = append(fields, senderordertoken.FieldFeePercent)
 	}
+	if m.addmax_fee_cap != nil {
+		fields = append(fields, senderordertoken.FieldMaxFeeCap)
+	}
 	return fields
 }
 
@@ -19821,6 +20878,8 @@ func (m *SenderOrderTokenMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case senderordertoken.FieldFeePercent:
 		return m.AddedFeePercent()
+	case senderordertoken.FieldMaxFeeCap:
+		return m.AddedMaxFeeCap()
 	}
 	return nil, false
 }
@@ -19836,6 +20895,13 @@ func (m *SenderOrderTokenMutation) AddField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddFeePercent(v)
+		return nil
+	case senderordertoken.FieldMaxFeeCap:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddMaxFeeCap(v)
 		return nil
 	}
 	return fmt.Errorf("unknown SenderOrderToken numeric field %s", name)
@@ -19872,6 +20938,9 @@ func (m *SenderOrderTokenMutation) ResetField(name string) error {
 		return nil
 	case senderordertoken.FieldFeePercent:
 		m.ResetFeePercent()
+		return nil
+	case senderordertoken.FieldMaxFeeCap:
+		m.ResetMaxFeeCap()
 		return nil
 	case senderordertoken.FieldFeeAddress:
 		m.ResetFeeAddress()

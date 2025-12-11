@@ -17,6 +17,7 @@ import (
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/token"
@@ -59,31 +60,37 @@ func (ctrl *ProviderController) GetLockPaymentOrders(ctx *gin.Context) {
 	// Check if this is an export request
 	export := ctx.Query("export")
 	isExport := export == "csv" || export == "true"
-	
+	fromDateStr := ctx.Query("from")
+	toDateStr := ctx.Query("to")
+
 	// Check if this is a search request
 	searchParam := ctx.Query("search")
 	searchText := strings.TrimSpace(searchParam)
 	hasSearchParam := ctx.Request.URL.Query().Has("search")
 	isSearch := searchText != ""
-	
+
 	// Handle empty search query error
 	if hasSearchParam && !isSearch {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Search query is required", nil)
 		return
 	}
-	
+
 	// Handle export request
 	if isExport {
+		if fromDateStr == "" || toDateStr == "" {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Both 'from' and 'to' date parameters are required for export", nil)
+			return
+		}
 		ctrl.handleExportLockPaymentOrders(ctx, provider)
 		return
 	}
-	
+
 	// Handle search request
 	if isSearch {
 		ctrl.handleSearchLockPaymentOrders(ctx, provider, searchText)
 		return
 	}
-	
+
 	// Handle normal listing
 	ctrl.handleListLockPaymentOrders(ctx, provider)
 }
@@ -232,20 +239,20 @@ func (ctrl *ProviderController) handleSearchLockPaymentOrders(ctx *gin.Context, 
 	)
 
 	// Apply text search across all relevant fields
+	var searchPredicates []predicate.LockPaymentOrder
+
+	// Try to parse search text as UUID for exact ID match
+	if searchUUID, err := uuid.Parse(searchText); err == nil {
+		searchPredicates = append(searchPredicates, lockpaymentorder.IDEQ(searchUUID))
+	}
+
+	searchPredicates = append(searchPredicates,
+		lockpaymentorder.AccountIdentifierContains(searchText),
+		lockpaymentorder.AccountNameContains(searchText),
+	)
+
 	lockPaymentOrderQuery = lockPaymentOrderQuery.Where(
-		lockpaymentorder.Or(
-			// Direct lock payment order fields
-			lockpaymentorder.GatewayIDContains(searchText),
-			lockpaymentorder.TxHashContains(searchText),
-			lockpaymentorder.InstitutionContains(searchText),
-			lockpaymentorder.AccountIdentifierContains(searchText),
-			lockpaymentorder.AccountNameContains(searchText),
-			lockpaymentorder.MemoContains(searchText),
-			// Search in token symbol
-			lockpaymentorder.HasTokenWith(
-				token.SymbolContains(searchText),
-			),
-		),
+		lockpaymentorder.Or(searchPredicates...),
 	)
 
 	// Get total count
@@ -259,8 +266,8 @@ func (ctrl *ProviderController) handleSearchLockPaymentOrders(ctx *gin.Context, 
 	// Set reasonable limit to prevent memory issues
 	maxSearchResults := 10000
 	if count > maxSearchResults {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", 
-			fmt.Sprintf("Search returned too many results (%d). Maximum allowed is %d. Please use a more specific search term.", 
+		u.APIResponse(ctx, http.StatusBadRequest, "error",
+			fmt.Sprintf("Search returned too many results (%d). Maximum allowed is %d. Please use a more specific search term.",
 				count, maxSearchResults), nil)
 		return
 	}
@@ -316,9 +323,9 @@ func (ctrl *ProviderController) handleExportLockPaymentOrders(ctx *gin.Context, 
 	// Parse date range parameters
 	fromDateStr := ctx.Query("from")
 	toDateStr := ctx.Query("to")
-	
+
 	var fromDate, toDate *time.Time
-	
+
 	// Parse from date
 	if fromDateStr != "" {
 		parsedFromDate, err := time.Parse("2006-01-02", fromDateStr)
@@ -331,7 +338,7 @@ func (ctrl *ProviderController) handleExportLockPaymentOrders(ctx *gin.Context, 
 		}
 		fromDate = &parsedFromDate
 	}
-	
+
 	// Parse to date
 	if toDateStr != "" {
 		parsedToDate, err := time.Parse("2006-01-02", toDateStr)
@@ -368,7 +375,7 @@ func (ctrl *ProviderController) handleExportLockPaymentOrders(ctx *gin.Context, 
 	lockPaymentOrderQuery := storage.Client.LockPaymentOrder.Query().Where(
 		lockpaymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 	)
-	
+
 	// Apply date range filters
 	if fromDate != nil {
 		lockPaymentOrderQuery = lockPaymentOrderQuery.Where(lockpaymentorder.CreatedAtGTE(*fromDate))
@@ -392,8 +399,8 @@ func (ctrl *ProviderController) handleExportLockPaymentOrders(ctx *gin.Context, 
 
 	// Check if export is too large
 	if count > maxExportLimit {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", 
-			fmt.Sprintf("Export too large. Found %d orders, maximum allowed is %d. Please use a smaller date range.", 
+		u.APIResponse(ctx, http.StatusBadRequest, "error",
+			fmt.Sprintf("Export too large. Found %d orders, maximum allowed is %d. Please use a smaller date range.",
 				count, maxExportLimit), nil)
 		return
 	}
@@ -402,6 +409,9 @@ func (ctrl *ProviderController) handleExportLockPaymentOrders(ctx *gin.Context, 
 	lockPaymentOrders, err := lockPaymentOrderQuery.
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
+		}).
+		WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) {
+			pbq.WithCurrency()
 		}).
 		Limit(maxExportLimit).
 		Order(ent.Desc(lockpaymentorder.FieldCreatedAt), ent.Desc(lockpaymentorder.FieldID)).
@@ -415,7 +425,7 @@ func (ctrl *ProviderController) handleExportLockPaymentOrders(ctx *gin.Context, 
 	// Set CSV headers
 	timestamp := time.Now().Format("2006-01-02_15-04-05")
 	filename := fmt.Sprintf("lock_payment_orders_%s.csv", timestamp)
-	
+
 	ctx.Header("Content-Type", "text/csv")
 	ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
 	ctx.Header("X-Total-Count", strconv.Itoa(count))
@@ -427,20 +437,18 @@ func (ctrl *ProviderController) handleExportLockPaymentOrders(ctx *gin.Context, 
 	// Write CSV header
 	csvHeaders := []string{
 		"Order ID",
-		"Gateway ID",
-		"Amount",
-		"Amount (USD)",
+		"Token Amount",
 		"Token",
 		"Network",
 		"Rate",
+		"Fiat Amount",
 		"Status",
 		"Institution",
 		"Account Identifier",
 		"Account Name",
+		"Currency",
 		"Memo",
 		"Transaction Hash",
-		"Cancellation Reasons",
-		"Cancellation Count",
 		"Created At",
 		"Updated At",
 	}
@@ -451,27 +459,52 @@ func (ctrl *ProviderController) handleExportLockPaymentOrders(ctx *gin.Context, 
 		return
 	}
 
+	institutionMap := make(map[string]string)
+	uniqueInstitutions := make(map[string]bool)
+
+	for _, order := range lockPaymentOrders {
+		if order.Institution != "" {
+			uniqueInstitutions[order.Institution] = true
+		}
+	}
+
+	for code := range uniqueInstitutions {
+		institution, err := u.GetInstitutionByCode(ctx, code, false)
+		if err != nil {
+			// Use raw code as fallback
+			institutionMap[code] = code
+		} else {
+			institutionMap[code] = institution.Name
+		}
+	}
+
 	// Write data rows
 	for _, lockPaymentOrder := range lockPaymentOrders {
-		// Convert cancellation reasons slice to string
-		cancellationReasons := strings.Join(lockPaymentOrder.CancellationReasons, "; ")
+		// Look up institution name from pre-fetched map
+		institutionName := lockPaymentOrder.Institution
+		if name, exists := institutionMap[lockPaymentOrder.Institution]; exists {
+			institutionName = name
+		}
+
+		var currencyCode string
+		if lockPaymentOrder.Edges.ProvisionBucket != nil && lockPaymentOrder.Edges.ProvisionBucket.Edges.Currency != nil {
+			currencyCode = lockPaymentOrder.Edges.ProvisionBucket.Edges.Currency.Code
+		}
 
 		row := []string{
 			lockPaymentOrder.ID.String(),
-			lockPaymentOrder.GatewayID,
 			lockPaymentOrder.Amount.String(),
-			lockPaymentOrder.AmountInUsd.String(),
 			lockPaymentOrder.Edges.Token.Symbol,
 			lockPaymentOrder.Edges.Token.Edges.Network.Identifier,
 			lockPaymentOrder.Rate.String(),
+			lockPaymentOrder.Rate.Mul(lockPaymentOrder.Amount).String(),
 			string(lockPaymentOrder.Status),
-			lockPaymentOrder.Institution,
+			institutionName,
 			lockPaymentOrder.AccountIdentifier,
 			lockPaymentOrder.AccountName,
+			currencyCode,
 			lockPaymentOrder.Memo,
 			lockPaymentOrder.TxHash,
-			cancellationReasons,
-			strconv.Itoa(lockPaymentOrder.CancellationCount),
 			lockPaymentOrder.CreatedAt.Format("2006-01-02 15:04:05"),
 			lockPaymentOrder.UpdatedAt.Format("2006-01-02 15:04:05"),
 		}
@@ -481,7 +514,6 @@ func (ctrl *ProviderController) handleExportLockPaymentOrders(ctx *gin.Context, 
 			// Continue writing other rows
 		}
 	}
-
 	// CSV is automatically sent as response through ctx.Writer
 	logger.Infof("Successfully exported %d lock payment orders for provider %s", len(lockPaymentOrders), provider.ID)
 }
@@ -491,7 +523,6 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	// Get provider profile from the context
 	providerCtx, ok := ctx.Get("provider")
 	if !ok {
-		logger.Infof("Invalid API key or token")
 		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
 		return
 	}
@@ -500,7 +531,6 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	// Parse the Order ID string into a UUID
 	orderID, err := uuid.Parse(ctx.Param("id"))
 	if err != nil {
-		logger.Infof("Error parsing order ID: %v", err)
 		logger.Errorf("error parsing order ID: %v", err)
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
 		return
@@ -530,7 +560,6 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 
 	tx, err := storage.Client.Tx(ctx)
 	if err != nil {
-		logger.Infof("Error starting transaction: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 		return
 	}
@@ -551,7 +580,6 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 			return
 		} else {
-			logger.Infof("Creating transaction log for order %s with provider %s", orderID, provider.ID)
 			transactionLog, err = tx.TransactionLog.
 				Create().
 				SetStatus(transactionlog.StatusOrderProcessing).
@@ -561,7 +589,6 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 					}).
 				Save(ctx)
 			if err != nil {
-				logger.Infof("Error creating transaction log for order %s with provider %s: %v", orderID, provider.ID, err)
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 				return
 			}
@@ -575,19 +602,15 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		SetProviderID(provider.ID)
 
 	if transactionLog != nil {
-		logger.Infof("Adding transaction log to order %s", orderID)
 		orderBuilder = orderBuilder.AddTransactions(transactionLog)
 	}
 
 	order, err := orderBuilder.Save(ctx)
 	if err != nil {
-		logger.Infof("Error updating lock order status: %v", err)
 		logger.Errorf("%s - error.AcceptOrder: %v", orderID, err)
 		if ent.IsNotFound(err) {
-			logger.Infof("Order not found: %v", err)
 			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found", nil)
 		} else {
-			logger.Infof("Error updating lock order status: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 		}
 		return
@@ -595,12 +618,10 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 
 	// Commit transaction
 	if err := tx.Commit(); err != nil {
-		logger.Infof("Error committing transaction: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 		return
 	}
 
-	logger.Infof("Order request accepted successfully for order %s", orderID)
 	u.APIResponse(ctx, http.StatusCreated, "success", "Order request accepted successfully", &types.AcceptOrderResponse{
 		ID:                orderID,
 		Amount:            order.Amount.Mul(order.Rate).RoundBank(0),
@@ -661,6 +682,12 @@ func (ctrl *ProviderController) DeclineOrder(ctx *gin.Context) {
 		return
 	}
 
+	// Set TTL for the exclude list (2x order request validity since orders can be reassigned)
+	err = storage.RedisClient.ExpireAt(ctx, orderKey, time.Now().Add(orderConf.OrderRequestValidity*2)).Err()
+	if err != nil {
+		logger.Errorf("error setting TTL for order %s exclude_list on Redis: %v", orderID, err)
+	}
+
 	u.APIResponse(ctx, http.StatusOK, "success", "Order request declined successfully", nil)
 }
 
@@ -682,11 +709,12 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 	}
 
 	// Get provider profile from the context
-	_, ok := ctx.Get("provider")
+	providerCtx, ok := ctx.Get("provider")
 	if !ok {
 		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
 		return
 	}
+	provider := providerCtx.(*ent.ProviderProfile)
 
 	// Parse the Order ID string into a UUID
 	orderID, err := uuid.Parse(ctx.Param("id"))
@@ -769,6 +797,12 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 			return
 		}
+	}
+
+	// Verify the order belongs to the authenticated provider (applies to all validation statuses)
+	if fulfillment.Edges.Order.Edges.Provider == nil || fulfillment.Edges.Order.Edges.Provider.ID != provider.ID {
+		u.APIResponse(ctx, http.StatusForbidden, "error", "Order does not belong to provider", nil)
+		return
 	}
 
 	switch payload.ValidationStatus {
@@ -873,6 +907,10 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
 			return
 		}
+
+		// Clean up order exclude list from Redis (best effort, don't fail if it errors)
+		orderKey := fmt.Sprintf("order_exclude_list_%s", orderID)
+		_ = storage.RedisClient.Del(ctx, orderKey).Err()
 
 		// Mark payment order as validated and send webhook notification to sender
 		paymentOrder, err := storage.Client.PaymentOrder.
@@ -1186,6 +1224,12 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 		}).Errorf("Failed to push provider %s to order %s exclude_list on Redis: %v", provider.ID, orderID, err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to decline order request", nil)
 		return
+	}
+
+	// Set TTL for the exclude list (2x order request validity since orders can be reassigned)
+	err = storage.RedisClient.ExpireAt(ctx, orderKey, time.Now().Add(orderConf.OrderRequestValidity*2)).Err()
+	if err != nil {
+		logger.Errorf("error setting TTL for order %s exclude_list on Redis: %v", orderID, err)
 	}
 
 	// TODO: Reassign order to another provider in background
@@ -1679,5 +1723,3 @@ func (ctrl *ProviderController) UpdateProviderBalance(ctx *gin.Context) {
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Balance updated successfully", nil)
 }
-
-

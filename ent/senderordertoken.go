@@ -27,6 +27,8 @@ type SenderOrderToken struct {
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// FeePercent holds the value of the "fee_percent" field.
 	FeePercent decimal.Decimal `json:"fee_percent,omitempty"`
+	// MaxFeeCap holds the value of the "max_fee_cap" field.
+	MaxFeeCap decimal.Decimal `json:"max_fee_cap,omitempty"`
 	// FeeAddress holds the value of the "fee_address" field.
 	FeeAddress string `json:"fee_address,omitempty"`
 	// RefundAddress holds the value of the "refund_address" field.
@@ -77,7 +79,7 @@ func (*SenderOrderToken) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case senderordertoken.FieldFeePercent:
+		case senderordertoken.FieldFeePercent, senderordertoken.FieldMaxFeeCap:
 			values[i] = new(decimal.Decimal)
 		case senderordertoken.FieldID:
 			values[i] = new(sql.NullInt64)
@@ -127,6 +129,12 @@ func (sot *SenderOrderToken) assignValues(columns []string, values []any) error 
 				return fmt.Errorf("unexpected type %T for field fee_percent", values[i])
 			} else if value != nil {
 				sot.FeePercent = *value
+			}
+		case senderordertoken.FieldMaxFeeCap:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field max_fee_cap", values[i])
+			} else if value != nil {
+				sot.MaxFeeCap = *value
 			}
 		case senderordertoken.FieldFeeAddress:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -208,6 +216,9 @@ func (sot *SenderOrderToken) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("fee_percent=")
 	builder.WriteString(fmt.Sprintf("%v", sot.FeePercent))
+	builder.WriteString(", ")
+	builder.WriteString("max_fee_cap=")
+	builder.WriteString(fmt.Sprintf("%v", sot.MaxFeeCap))
 	builder.WriteString(", ")
 	builder.WriteString("fee_address=")
 	builder.WriteString(sot.FeeAddress)

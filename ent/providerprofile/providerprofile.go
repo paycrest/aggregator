@@ -43,6 +43,8 @@ const (
 	EdgeProviderRating = "provider_rating"
 	// EdgeAssignedOrders holds the string denoting the assigned_orders edge name in mutations.
 	EdgeAssignedOrders = "assigned_orders"
+	// EdgeFiatAccounts holds the string denoting the fiat_accounts edge name in mutations.
+	EdgeFiatAccounts = "fiat_accounts"
 	// Table holds the table name of the providerprofile in the database.
 	Table = "provider_profiles"
 	// UserTable is the table that holds the user relation/edge.
@@ -92,6 +94,13 @@ const (
 	AssignedOrdersInverseTable = "lock_payment_orders"
 	// AssignedOrdersColumn is the table column denoting the assigned_orders relation/edge.
 	AssignedOrdersColumn = "provider_profile_assigned_orders"
+	// FiatAccountsTable is the table that holds the fiat_accounts relation/edge.
+	FiatAccountsTable = "provider_fiat_accounts"
+	// FiatAccountsInverseTable is the table name for the ProviderFiatAccount entity.
+	// It exists in this package in order to avoid circular dependency with the "providerfiataccount" package.
+	FiatAccountsInverseTable = "provider_fiat_accounts"
+	// FiatAccountsColumn is the table column denoting the fiat_accounts relation/edge.
+	FiatAccountsColumn = "provider_profile_fiat_accounts"
 )
 
 // Columns holds all SQL columns for providerprofile fields.
@@ -319,6 +328,20 @@ func ByAssignedOrders(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newAssignedOrdersStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByFiatAccountsCount orders the results by fiat_accounts count.
+func ByFiatAccountsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newFiatAccountsStep(), opts...)
+	}
+}
+
+// ByFiatAccounts orders the results by fiat_accounts terms.
+func ByFiatAccounts(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newFiatAccountsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newUserStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -366,5 +389,12 @@ func newAssignedOrdersStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(AssignedOrdersInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, AssignedOrdersTable, AssignedOrdersColumn),
+	)
+}
+func newFiatAccountsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(FiatAccountsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, FiatAccountsTable, FiatAccountsColumn),
 	)
 }

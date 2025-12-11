@@ -3,6 +3,7 @@ package accounts
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -20,6 +21,7 @@ import (
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/migrate"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
@@ -36,25 +38,48 @@ var testCtx = struct {
 	providerProfile *ent.ProviderProfile
 	token           *ent.Token
 	orderToken      *ent.ProviderOrderToken
-	client          types.RPCClient
 }{}
 
 func setup() error {
-	// Set up test blockchain client
-	client, err := test.SetUpTestBlockchain()
+	// Create Network first (skip blockchain connection)
+	networkId, err := db.Client.Network.
+		Create().
+		SetIdentifier("localhost").
+		SetChainID(int64(56)). // Use BNB Smart Chain to skip webhook creation
+		SetRPCEndpoint("ws://localhost:8545").
+		SetBlockTime(decimal.NewFromFloat(3.0)).
+		SetFee(decimal.NewFromFloat(0.1)).
+		SetIsTestnet(true).
+		OnConflict().
+		UpdateNewValues().
+		ID(context.Background())
 	if err != nil {
-		return err
+		return fmt.Errorf("CreateNetwork.profile_test: %w", err)
 	}
 
-	testCtx.client = client
-	// Create a test token
-	token, err := test.CreateERC20Token(
-		client,
-		map[string]interface{}{
-			"deployContract": false,
-		})
+	// Create token directly without blockchain
+	tokenId, err := db.Client.Token.
+		Create().
+		SetSymbol("TST").
+		SetContractAddress("0xd4E96eF8eee8678dBFf4d535E033Ed1a4F7605b7").
+		SetDecimals(6).
+		SetNetworkID(networkId).
+		SetIsEnabled(true).
+		SetBaseCurrency("KES").
+		OnConflict().
+		UpdateNewValues().
+		ID(context.Background())
 	if err != nil {
-		return err
+		return fmt.Errorf("CreateToken.profile_test: %w", err)
+	}
+
+	token, err := db.Client.Token.
+		Query().
+		Where(tokenDB.IDEQ(tokenId)).
+		WithNetwork().
+		Only(context.Background())
+	if err != nil {
+		return fmt.Errorf("GetToken.profile_test: %w", err)
 	}
 	testCtx.token = token
 
@@ -106,8 +131,8 @@ func setup() error {
 }
 
 func TestProfile(t *testing.T) {
-	// Set up test database client
-	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+	// Set up test database client with shared in-memory schema
+	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
 	defer client.Close()
 
 	// Run schema migrations
@@ -275,7 +300,7 @@ func TestProfile(t *testing.T) {
 			tokenPayload[0].Addresses = tokenAddresses
 
 			// setup TRC token
-			tronToken, err := test.CreateTRC20Token(testCtx.client, map[string]interface{}{})
+			tronToken, err := test.CreateTRC20Token(map[string]interface{}{})
 			assert.NoError(t, err)
 			assert.NotEqual(t, "localhost", tronToken.Edges.Network.Identifier)
 
@@ -347,6 +372,115 @@ func TestProfile(t *testing.T) {
 			})
 			assert.Contains(t, senderProfile.DomainWhitelist, "mydomain.com")
 			assert.True(t, senderProfile.IsActive)
+		})
+
+		t.Run("with MaxFeeCap", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{
+				"scope": "sender",
+				"email": "maxfeecap@test.com",
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"domain_whitelist": []string{"example.com"},
+				"user_id":          testUser.ID,
+				"token":            testCtx.token.Symbol,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			maxFeeCap := decimal.NewFromFloat(10.5)
+			tokenPayload := []types.SenderOrderTokenPayload{
+				{
+					Symbol:     testCtx.token.Symbol,
+					FeePercent: decimal.NewFromInt(5),
+					MaxFeeCap:  maxFeeCap,
+					Addresses: []types.SenderOrderAddressPayload{
+						{
+							Network:       testCtx.token.Edges.Network.Identifier,
+							FeeAddress:    "0xD4EB9067111F81b9bAabE06E2b8ebBaDADEd5DAf",
+							RefundAddress: "0xD4EB9067111F81b9bAabE06E2b8ebBaDADEd5DA0",
+						},
+					},
+				},
+			}
+
+			payload := types.SenderProfilePayload{
+				Tokens: tokenPayload,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			// Verify MaxFeeCap was saved
+			senderOrderToken, err := db.Client.SenderOrderToken.
+				Query().
+				Where(
+					senderordertoken.HasSenderWith(senderprofile.HasUserWith(user.ID(testUser.ID))),
+					senderordertoken.HasTokenWith(tokenDB.IDEQ(testCtx.token.ID)),
+				).
+				Only(context.Background())
+			assert.NoError(t, err)
+			assert.Equal(t, maxFeeCap, senderOrderToken.MaxFeeCap)
+		})
+
+		t.Run("without MaxFeeCap (uses zero to mean no cap)", func(t *testing.T) {
+			testUser, err := test.CreateTestUser(map[string]interface{}{
+				"scope": "sender",
+				"email": "nomaxfeecap@test.com",
+			})
+			assert.NoError(t, err)
+
+			_, err = test.CreateTestSenderProfile(map[string]interface{}{
+				"domain_whitelist": []string{"example.com"},
+				"user_id":          testUser.ID,
+				"token":            testCtx.token.Symbol,
+			})
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{
+				"Authorization": "Bearer " + accessToken,
+			}
+
+			tokenPayload := []types.SenderOrderTokenPayload{
+				{
+					Symbol:     testCtx.token.Symbol,
+					FeePercent: decimal.NewFromInt(5),
+					MaxFeeCap:  decimal.Zero, // Zero means no cap
+					Addresses: []types.SenderOrderAddressPayload{
+						{
+							Network:       testCtx.token.Edges.Network.Identifier,
+							FeeAddress:    "0xD4EB9067111F81b9bAabE06E2b8ebBaDADEd5DAf",
+							RefundAddress: "0xD4EB9067111F81b9bAabE06E2b8ebBaDADEd5DA0",
+						},
+					},
+				},
+			}
+
+			payload := types.SenderProfilePayload{
+				Tokens: tokenPayload,
+			}
+
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			// Verify MaxFeeCap is zero (meaning no cap)
+			senderOrderToken, err := db.Client.SenderOrderToken.
+				Query().
+				Where(
+					senderordertoken.HasSenderWith(senderprofile.HasUserWith(user.ID(testUser.ID))),
+					senderordertoken.HasTokenWith(tokenDB.IDEQ(testCtx.token.ID)),
+				).
+				Only(context.Background())
+			assert.NoError(t, err)
+			assert.True(t, senderOrderToken.MaxFeeCap.IsZero(), "MaxFeeCap should be zero (no cap)")
 		})
 
 	})
@@ -452,9 +586,11 @@ func TestProfile(t *testing.T) {
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
 					Currency:       "KES",
 					Tokens: []types.ProviderOrderTokenPayload{{
-						Symbol:       testCtx.orderToken.Edges.Token.Symbol,
-						Network:      testCtx.orderToken.Network,
-						RateSlippage: decimal.NewFromFloat(25), // 25% slippage
+						Symbol:            testCtx.token.Symbol,
+						Network:           testCtx.orderToken.Network,
+						RateSlippage:      decimal.NewFromFloat(25), // 25% slippage
+						MaxOrderAmountOTC: decimal.Zero,
+						MinOrderAmountOTC: decimal.Zero,
 					}},
 				}
 				res := profileUpdateRequest(payload)
@@ -472,9 +608,11 @@ func TestProfile(t *testing.T) {
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
 					Currency:       "KES",
 					Tokens: []types.ProviderOrderTokenPayload{{
-						Symbol:       testCtx.orderToken.Edges.Token.Symbol,
-						Network:      testCtx.orderToken.Network,
-						RateSlippage: decimal.NewFromFloat(0.09), // 0.09% slippage
+						Symbol:            testCtx.token.Symbol,
+						Network:           testCtx.orderToken.Network,
+						RateSlippage:      decimal.NewFromFloat(0.09), // 0.09% slippage
+						MaxOrderAmountOTC: decimal.Zero,
+						MinOrderAmountOTC: decimal.Zero,
 					}},
 				}
 				res := profileUpdateRequest(payload)
@@ -492,7 +630,7 @@ func TestProfile(t *testing.T) {
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
 					Currency:       "KES",
 					Tokens: []types.ProviderOrderTokenPayload{{
-						Symbol:                 testCtx.orderToken.Edges.Token.Symbol,
+						Symbol:                 testCtx.token.Symbol,
 						ConversionRateType:     testCtx.orderToken.ConversionRateType,
 						FixedConversionRate:    testCtx.orderToken.FixedConversionRate,
 						FloatingConversionRate: testCtx.orderToken.FloatingConversionRate,
@@ -500,6 +638,8 @@ func TestProfile(t *testing.T) {
 						MinOrderAmount:         testCtx.orderToken.MinOrderAmount,
 						Network:                testCtx.orderToken.Network,
 						RateSlippage:           decimal.NewFromFloat(5), // 5% slippage
+						MaxOrderAmountOTC:      decimal.Zero,
+						MinOrderAmountOTC:      decimal.Zero,
 					}},
 				}
 				res := profileUpdateRequest(payload)
@@ -719,6 +859,294 @@ func TestProfile(t *testing.T) {
 				assert.Equal(t, "https://example.com", providerProfile.HostIdentifier)
 			})
 		})
+
+		t.Run("with bank accounts", func(t *testing.T) {
+			ctx := context.Background()
+
+			// Create test institutions
+			zenithBank, err := db.Client.Institution.
+				Create().
+				SetCode("ZENITH").
+				SetName("Zenith Bank").
+				SetType("bank").
+				Save(ctx)
+			assert.NoError(t, err)
+
+			gtBank, err := db.Client.Institution.
+				Create().
+				SetCode("GTB").
+				SetName("Guaranty Trust Bank").
+				SetType("bank").
+				Save(ctx)
+			assert.NoError(t, err)
+
+			profileUpdateRequest := func(payload types.ProviderProfilePayload) *httptest.ResponseRecorder {
+				accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+				headers := map[string]string{
+					"Authorization": "Bearer " + accessToken,
+				}
+				res, err := test.PerformRequest(t, "PATCH", "/settings/provider", payload, headers, router)
+				assert.NoError(t, err)
+				return res
+			}
+
+			t.Run("creates new fiat account", func(t *testing.T) {
+				payload := types.ProviderProfilePayload{
+					TradingName:    testCtx.providerProfile.TradingName,
+					HostIdentifier: testCtx.providerProfile.HostIdentifier,
+					Currency:       "KES",
+					FiatAccounts: []types.FiatAccountPayload{
+						{
+							AccountIdentifier: "1234567890",
+							AccountName:       "John Doe",
+							Institution:       zenithBank.Code,
+						},
+					},
+				}
+
+				res := profileUpdateRequest(payload)
+				assert.Equal(t, http.StatusOK, res.Code)
+
+				var response types.Response
+				err := json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, "Profile updated successfully", response.Message)
+
+				// Verify account was created
+				account, err := db.Client.ProviderFiatAccount.
+					Query().
+					Where(
+						providerfiataccount.AccountIdentifierEQ("1234567890"),
+						providerfiataccount.InstitutionEQ(zenithBank.Code),
+						providerfiataccount.HasProviderWith(providerprofile.IDEQ(testCtx.providerProfile.ID)),
+					).
+					Only(ctx)
+				assert.NoError(t, err)
+				assert.Equal(t, "John Doe", account.AccountName)
+				assert.Equal(t, zenithBank.Code, account.Institution)
+			})
+
+			t.Run("updates existing fiat account (upsert)", func(t *testing.T) {
+				// First create an account
+				payload := types.ProviderProfilePayload{
+					TradingName:    testCtx.providerProfile.TradingName,
+					HostIdentifier: testCtx.providerProfile.HostIdentifier,
+					Currency:       "KES",
+					FiatAccounts: []types.FiatAccountPayload{
+						{
+							AccountIdentifier: "1111111111",
+							AccountName:       "Original Name",
+							Institution:       zenithBank.Code,
+						},
+					},
+				}
+				res := profileUpdateRequest(payload)
+				assert.Equal(t, http.StatusOK, res.Code)
+
+				// Get the account ID
+				originalAccount, err := db.Client.ProviderFiatAccount.
+					Query().
+					Where(
+						providerfiataccount.AccountIdentifierEQ("1111111111"),
+					).
+					Only(ctx)
+				assert.NoError(t, err)
+
+				// Then update the same account (same institution + account_identifier)
+				payload.FiatAccounts[0].AccountName = "Updated Name"
+				res = profileUpdateRequest(payload)
+				assert.Equal(t, http.StatusOK, res.Code)
+
+				// Verify it was updated, not duplicated
+				updatedAccount, err := db.Client.ProviderFiatAccount.
+					Query().
+					Where(
+						providerfiataccount.AccountIdentifierEQ("1111111111"),
+					).
+					Only(ctx)
+				assert.NoError(t, err)
+				assert.Equal(t, "Updated Name", updatedAccount.AccountName)
+				assert.Equal(t, originalAccount.ID, updatedAccount.ID) // Same ID = updated, not new
+
+				// Verify no duplicate was created
+				count, err := db.Client.ProviderFiatAccount.
+					Query().
+					Where(
+						providerfiataccount.AccountIdentifierEQ("1111111111"),
+					).
+					Count(ctx)
+				assert.NoError(t, err)
+				assert.Equal(t, 1, count)
+			})
+
+			t.Run("creates multiple fiat accounts at once", func(t *testing.T) {
+				payload := types.ProviderProfilePayload{
+					TradingName:    testCtx.providerProfile.TradingName,
+					HostIdentifier: testCtx.providerProfile.HostIdentifier,
+					Currency:       "KES",
+					FiatAccounts: []types.FiatAccountPayload{
+						{
+							AccountIdentifier: "2222222222",
+							AccountName:       "Account One",
+							Institution:       zenithBank.Code,
+						},
+						{
+							AccountIdentifier: "3333333333",
+							AccountName:       "Account Two",
+							Institution:       gtBank.Code,
+						},
+					},
+				}
+
+				res := profileUpdateRequest(payload)
+				assert.Equal(t, http.StatusOK, res.Code)
+
+				// Verify both accounts were created
+				accounts, err := db.Client.ProviderFiatAccount.
+					Query().
+					Where(
+						providerfiataccount.HasProviderWith(providerprofile.IDEQ(testCtx.providerProfile.ID)),
+						providerfiataccount.AccountIdentifierIn("2222222222", "3333333333"),
+					).
+					All(ctx)
+				assert.NoError(t, err)
+				assert.Len(t, accounts, 2)
+			})
+
+			t.Run("allows same account number at different institutions", func(t *testing.T) {
+				payload := types.ProviderProfilePayload{
+					TradingName:    testCtx.providerProfile.TradingName,
+					HostIdentifier: testCtx.providerProfile.HostIdentifier,
+					Currency:       "KES",
+					FiatAccounts: []types.FiatAccountPayload{
+						{
+							AccountIdentifier: "5555555555",
+							AccountName:       "Same Number Zenith",
+							Institution:       zenithBank.Code,
+						},
+						{
+							AccountIdentifier: "5555555555",
+							AccountName:       "Same Number GTB",
+							Institution:       gtBank.Code,
+						},
+					},
+				}
+
+				res := profileUpdateRequest(payload)
+				assert.Equal(t, http.StatusOK, res.Code)
+
+				// Verify both accounts exist with same number but different institutions
+				accounts, err := db.Client.ProviderFiatAccount.
+					Query().
+					Where(
+						providerfiataccount.AccountIdentifierEQ("5555555555"),
+					).
+					All(ctx)
+				assert.NoError(t, err)
+				assert.Len(t, accounts, 2)
+
+				// Verify institutions are different
+				institutions := make(map[string]bool)
+				for _, acc := range accounts {
+					institutions[acc.Institution] = true
+				}
+				assert.True(t, institutions[zenithBank.Code])
+				assert.True(t, institutions[gtBank.Code])
+			})
+
+			t.Run("fails with unsupported institution", func(t *testing.T) {
+				payload := types.ProviderProfilePayload{
+					TradingName:    testCtx.providerProfile.TradingName,
+					HostIdentifier: testCtx.providerProfile.HostIdentifier,
+					Currency:       "KES",
+					FiatAccounts: []types.FiatAccountPayload{
+						{
+							AccountIdentifier: "6666666666",
+							AccountName:       "Invalid Bank",
+							Institution:       "UNSUPPORTED_BANK",
+						},
+					},
+				}
+
+				res := profileUpdateRequest(payload)
+				assert.Equal(t, http.StatusBadRequest, res.Code)
+
+				var response types.Response
+				err := json.Unmarshal(res.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Contains(t, response.Message, "Institution UNSUPPORTED_BANK is not supported")
+			})
+
+			t.Run("handles mixed valid and invalid fiat accounts", func(t *testing.T) {
+				payload := types.ProviderProfilePayload{
+					TradingName:    testCtx.providerProfile.TradingName,
+					HostIdentifier: testCtx.providerProfile.HostIdentifier,
+					Currency:       "KES",
+					FiatAccounts: []types.FiatAccountPayload{
+						{
+							AccountIdentifier: "7777777777",
+							AccountName:       "Valid Account",
+							Institution:       zenithBank.Code,
+						},
+						{
+							AccountIdentifier: "8888888888",
+							AccountName:       "Invalid Bank Account",
+							Institution:       "INVALID_BANK",
+						},
+					},
+				}
+
+				res := profileUpdateRequest(payload)
+				assert.Equal(t, http.StatusBadRequest, res.Code)
+
+				// Verify no accounts were created (transaction rolled back)
+				count, err := db.Client.ProviderFiatAccount.
+					Query().
+					Where(
+						providerfiataccount.AccountIdentifierIn("7777777777", "8888888888"),
+					).
+					Count(ctx)
+				assert.NoError(t, err)
+				assert.Equal(t, 0, count)
+			})
+
+			t.Run("updates profile and fiat accounts in same transaction", func(t *testing.T) {
+				payload := types.ProviderProfilePayload{
+					TradingName:    "Updated Trading Name",
+					HostIdentifier: testCtx.providerProfile.HostIdentifier,
+					Currency:       "KES",
+					IsAvailable:    true,
+					FiatAccounts: []types.FiatAccountPayload{
+						{
+							AccountIdentifier: "4444444444",
+							AccountName:       "Transaction Test",
+							Institution:       zenithBank.Code,
+						},
+					},
+				}
+
+				res := profileUpdateRequest(payload)
+				assert.Equal(t, http.StatusOK, res.Code)
+
+				// Verify profile was updated
+				profile, err := db.Client.ProviderProfile.
+					Query().
+					Where(providerprofile.IDEQ(testCtx.providerProfile.ID)).
+					Only(ctx)
+				assert.NoError(t, err)
+				assert.Equal(t, "Updated Trading Name", profile.TradingName)
+
+				// Verify fiat account was created
+				account, err := db.Client.ProviderFiatAccount.
+					Query().
+					Where(
+						providerfiataccount.AccountIdentifierEQ("4444444444"),
+					).
+					Only(ctx)
+				assert.NoError(t, err)
+				assert.Equal(t, "Transaction Test", account.AccountName)
+			})
+		})
 	})
 
 	t.Run("GetSenderProfile", func(t *testing.T) {
@@ -764,6 +1192,85 @@ func TestProfile(t *testing.T) {
 		assert.Contains(t, response.Data.WebhookURL, "https://example.com")
 	})
 
+	t.Run("GetSenderProfile returns MaxFeeCap", func(t *testing.T) {
+		testUser, err := test.CreateTestUser(map[string]interface{}{
+			"email": "maxfeecap_get@test.com",
+			"scope": "sender",
+		})
+		assert.NoError(t, err)
+
+		sender, err := test.CreateTestSenderProfile(map[string]interface{}{
+			"domain_whitelist": []string{"mydomain.com"},
+			"user_id":          testUser.ID,
+			"token":            testCtx.token.Symbol,
+		})
+		assert.NoError(t, err)
+
+		apiKeyService := services.NewAPIKeyService()
+		_, _, err = apiKeyService.GenerateAPIKey(
+			context.Background(),
+			nil,
+			sender,
+			nil,
+		)
+		assert.NoError(t, err)
+
+		// Update profile with MaxFeeCap
+		maxFeeCap := decimal.NewFromFloat(15.75)
+		accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+		headers := map[string]string{
+			"Authorization": "Bearer " + accessToken,
+		}
+
+		tokenPayload := []types.SenderOrderTokenPayload{
+			{
+				Symbol:     testCtx.token.Symbol,
+				FeePercent: decimal.NewFromInt(3),
+				MaxFeeCap:  maxFeeCap,
+				Addresses: []types.SenderOrderAddressPayload{
+					{
+						Network:       testCtx.token.Edges.Network.Identifier,
+						FeeAddress:    "0xD4EB9067111F81b9bAabE06E2b8ebBaDADEd5DAf",
+						RefundAddress: "0xD4EB9067111F81b9bAabE06E2b8ebBaDADEd5DA0",
+					},
+				},
+			},
+		}
+
+		payload := types.SenderProfilePayload{
+			Tokens: tokenPayload,
+		}
+
+		_, err = test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+		assert.NoError(t, err)
+
+		// Get profile and verify MaxFeeCap is returned
+		res, err := test.PerformRequest(t, "GET", "/settings/sender", nil, headers, router)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, res.Code)
+
+		var response struct {
+			Data    types.SenderProfileResponse
+			Message string
+		}
+		err = json.Unmarshal(res.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Equal(t, "Profile retrieved successfully", response.Message)
+		assert.NotNil(t, response.Data, "response.Data is nil")
+		assert.Greater(t, len(response.Data.Tokens), 0)
+
+		// Verify MaxFeeCap is in the response
+		foundToken := false
+		for _, token := range response.Data.Tokens {
+			if token.Symbol == testCtx.token.Symbol {
+				foundToken = true
+				assert.Equal(t, maxFeeCap, token.MaxFeeCap, "MaxFeeCap should be present in response")
+				break
+			}
+		}
+		assert.True(t, foundToken, "Token should be found in response")
+	})
+
 	t.Run("GetProviderProfile", func(t *testing.T) {
 		t.Run("with currency filter", func(t *testing.T) {
 			ctx := context.Background()
@@ -801,6 +1308,8 @@ func TestProfile(t *testing.T) {
 				SetFloatingConversionRate(decimal.NewFromInt(2)).
 				SetMaxOrderAmount(decimal.NewFromInt(200)).
 				SetMinOrderAmount(decimal.NewFromInt(10)).
+				SetMaxOrderAmountOtc(decimal.Zero).
+				SetMinOrderAmountOtc(decimal.Zero).
 				SetAddress("address_usd").
 				SetNetwork("polygon").
 				SetRateSlippage(decimal.NewFromInt(0)).
@@ -852,5 +1361,85 @@ func TestProfile(t *testing.T) {
 			assert.Len(t, respAll.Data.Tokens, 2)
 
 		})
+	})
+
+	t.Run("GetProviderProfile returns fiat accounts", func(t *testing.T) {
+		ctx := context.Background()
+
+		// Create test institutions
+		wemaBank, err := db.Client.Institution.
+			Create().
+			SetCode("WEMA").
+			SetName("Wema Bank").
+			SetType("bank").
+			Save(ctx)
+		assert.NoError(t, err)
+
+		firstBank, err := db.Client.Institution.
+			Create().
+			SetCode("FIRST_BANK").
+			SetName("First Bank").
+			SetType("bank").
+			Save(ctx)
+		assert.NoError(t, err)
+
+		// Create test bank accounts
+		_, err = db.Client.ProviderFiatAccount.
+			Create().
+			SetAccountIdentifier("1111222233").
+			SetAccountName("Test Account 1").
+			SetInstitution(wemaBank.Code).
+			SetProviderID(testCtx.providerProfile.ID).
+			Save(ctx)
+		assert.NoError(t, err)
+
+		_, err = db.Client.ProviderFiatAccount.
+			Create().
+			SetAccountIdentifier("4444555566").
+			SetAccountName("Test Account 2").
+			SetInstitution(firstBank.Code).
+			SetProviderID(testCtx.providerProfile.ID).
+			Save(ctx)
+		assert.NoError(t, err)
+
+		// Prepare GET request
+		accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
+		headers := map[string]string{
+			"Authorization": "Bearer " + accessToken,
+		}
+
+		res, err := test.PerformRequest(t, "GET", "/settings/provider", nil, headers, router)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, res.Code)
+
+		var response struct {
+			Data    types.ProviderProfileResponse `json:"data"`
+			Message string                        `json:"message"`
+			Status  string                        `json:"status"`
+		}
+		err = json.Unmarshal(res.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Equal(t, "success", response.Status)
+
+		// Verify bank accounts are included in response
+		assert.GreaterOrEqual(t, len(response.Data.FiatAccounts), 2)
+
+		// Verify account details
+		accountMap := make(map[string]types.FiatAccountResponse)
+		for _, acc := range response.Data.FiatAccounts {
+			accountMap[acc.AccountIdentifier] = acc
+		}
+
+		// Check first account
+		account1, exists := accountMap["1111222233"]
+		assert.True(t, exists)
+		assert.Equal(t, "Test Account 1", account1.AccountName)
+		assert.Equal(t, wemaBank.Code, account1.Institution)
+
+		// Check second account
+		account2, exists := accountMap["4444555566"]
+		assert.True(t, exists)
+		assert.Equal(t, "Test Account 2", account2.AccountName)
+		assert.Equal(t, firstBank.Code, account2.Institution)
 	})
 }

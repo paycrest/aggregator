@@ -421,6 +421,20 @@ func (pou *PaymentOrderUpdate) AddAmountInUsd(d decimal.Decimal) *PaymentOrderUp
 	return pou
 }
 
+// SetOrderType sets the "order_type" field.
+func (pou *PaymentOrderUpdate) SetOrderType(pt paymentorder.OrderType) *PaymentOrderUpdate {
+	pou.mutation.SetOrderType(pt)
+	return pou
+}
+
+// SetNillableOrderType sets the "order_type" field if the given value is not nil.
+func (pou *PaymentOrderUpdate) SetNillableOrderType(pt *paymentorder.OrderType) *PaymentOrderUpdate {
+	if pt != nil {
+		pou.SetOrderType(*pt)
+	}
+	return pou
+}
+
 // SetSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by ID.
 func (pou *PaymentOrderUpdate) SetSenderProfileID(id uuid.UUID) *PaymentOrderUpdate {
 	pou.mutation.SetSenderProfileID(id)
@@ -687,6 +701,11 @@ func (pou *PaymentOrderUpdate) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.status": %w`, err)}
 		}
 	}
+	if v, ok := pou.mutation.OrderType(); ok {
+		if err := paymentorder.OrderTypeValidator(v); err != nil {
+			return &ValidationError{Name: "order_type", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.order_type": %w`, err)}
+		}
+	}
 	if pou.mutation.TokenCleared() && len(pou.mutation.TokenIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "PaymentOrder.token"`)
 	}
@@ -815,6 +834,9 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := pou.mutation.AddedAmountInUsd(); ok {
 		_spec.AddField(paymentorder.FieldAmountInUsd, field.TypeFloat64, value)
+	}
+	if value, ok := pou.mutation.OrderType(); ok {
+		_spec.SetField(paymentorder.FieldOrderType, field.TypeEnum, value)
 	}
 	if pou.mutation.SenderProfileCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1439,6 +1461,20 @@ func (pouo *PaymentOrderUpdateOne) AddAmountInUsd(d decimal.Decimal) *PaymentOrd
 	return pouo
 }
 
+// SetOrderType sets the "order_type" field.
+func (pouo *PaymentOrderUpdateOne) SetOrderType(pt paymentorder.OrderType) *PaymentOrderUpdateOne {
+	pouo.mutation.SetOrderType(pt)
+	return pouo
+}
+
+// SetNillableOrderType sets the "order_type" field if the given value is not nil.
+func (pouo *PaymentOrderUpdateOne) SetNillableOrderType(pt *paymentorder.OrderType) *PaymentOrderUpdateOne {
+	if pt != nil {
+		pouo.SetOrderType(*pt)
+	}
+	return pouo
+}
+
 // SetSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by ID.
 func (pouo *PaymentOrderUpdateOne) SetSenderProfileID(id uuid.UUID) *PaymentOrderUpdateOne {
 	pouo.mutation.SetSenderProfileID(id)
@@ -1718,6 +1754,11 @@ func (pouo *PaymentOrderUpdateOne) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.status": %w`, err)}
 		}
 	}
+	if v, ok := pouo.mutation.OrderType(); ok {
+		if err := paymentorder.OrderTypeValidator(v); err != nil {
+			return &ValidationError{Name: "order_type", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.order_type": %w`, err)}
+		}
+	}
 	if pouo.mutation.TokenCleared() && len(pouo.mutation.TokenIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "PaymentOrder.token"`)
 	}
@@ -1863,6 +1904,9 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 	}
 	if value, ok := pouo.mutation.AddedAmountInUsd(); ok {
 		_spec.AddField(paymentorder.FieldAmountInUsd, field.TypeFloat64, value)
+	}
+	if value, ok := pouo.mutation.OrderType(); ok {
+		_spec.SetField(paymentorder.FieldOrderType, field.TypeEnum, value)
 	}
 	if pouo.mutation.SenderProfileCleared() {
 		edge := &sqlgraph.EdgeSpec{

@@ -36,6 +36,10 @@ type ProviderOrderToken struct {
 	MaxOrderAmount decimal.Decimal `json:"max_order_amount,omitempty"`
 	// MinOrderAmount holds the value of the "min_order_amount" field.
 	MinOrderAmount decimal.Decimal `json:"min_order_amount,omitempty"`
+	// MaxOrderAmountOtc holds the value of the "max_order_amount_otc" field.
+	MaxOrderAmountOtc decimal.Decimal `json:"max_order_amount_otc,omitempty"`
+	// MinOrderAmountOtc holds the value of the "min_order_amount_otc" field.
+	MinOrderAmountOtc decimal.Decimal `json:"min_order_amount_otc,omitempty"`
 	// RateSlippage holds the value of the "rate_slippage" field.
 	RateSlippage decimal.Decimal `json:"rate_slippage,omitempty"`
 	// Address holds the value of the "address" field.
@@ -102,7 +106,7 @@ func (*ProviderOrderToken) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case providerordertoken.FieldFixedConversionRate, providerordertoken.FieldFloatingConversionRate, providerordertoken.FieldMaxOrderAmount, providerordertoken.FieldMinOrderAmount, providerordertoken.FieldRateSlippage:
+		case providerordertoken.FieldFixedConversionRate, providerordertoken.FieldFloatingConversionRate, providerordertoken.FieldMaxOrderAmount, providerordertoken.FieldMinOrderAmount, providerordertoken.FieldMaxOrderAmountOtc, providerordertoken.FieldMinOrderAmountOtc, providerordertoken.FieldRateSlippage:
 			values[i] = new(decimal.Decimal)
 		case providerordertoken.FieldID:
 			values[i] = new(sql.NullInt64)
@@ -178,6 +182,18 @@ func (pot *ProviderOrderToken) assignValues(columns []string, values []any) erro
 				return fmt.Errorf("unexpected type %T for field min_order_amount", values[i])
 			} else if value != nil {
 				pot.MinOrderAmount = *value
+			}
+		case providerordertoken.FieldMaxOrderAmountOtc:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field max_order_amount_otc", values[i])
+			} else if value != nil {
+				pot.MaxOrderAmountOtc = *value
+			}
+		case providerordertoken.FieldMinOrderAmountOtc:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field min_order_amount_otc", values[i])
+			} else if value != nil {
+				pot.MinOrderAmountOtc = *value
 			}
 		case providerordertoken.FieldRateSlippage:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
@@ -289,6 +305,12 @@ func (pot *ProviderOrderToken) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("min_order_amount=")
 	builder.WriteString(fmt.Sprintf("%v", pot.MinOrderAmount))
+	builder.WriteString(", ")
+	builder.WriteString("max_order_amount_otc=")
+	builder.WriteString(fmt.Sprintf("%v", pot.MaxOrderAmountOtc))
+	builder.WriteString(", ")
+	builder.WriteString("min_order_amount_otc=")
+	builder.WriteString(fmt.Sprintf("%v", pot.MinOrderAmountOtc))
 	builder.WriteString(", ")
 	builder.WriteString("rate_slippage=")
 	builder.WriteString(fmt.Sprintf("%v", pot.RateSlippage))

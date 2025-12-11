@@ -85,6 +85,18 @@ func (potc *ProviderOrderTokenCreate) SetMinOrderAmount(d decimal.Decimal) *Prov
 	return potc
 }
 
+// SetMaxOrderAmountOtc sets the "max_order_amount_otc" field.
+func (potc *ProviderOrderTokenCreate) SetMaxOrderAmountOtc(d decimal.Decimal) *ProviderOrderTokenCreate {
+	potc.mutation.SetMaxOrderAmountOtc(d)
+	return potc
+}
+
+// SetMinOrderAmountOtc sets the "min_order_amount_otc" field.
+func (potc *ProviderOrderTokenCreate) SetMinOrderAmountOtc(d decimal.Decimal) *ProviderOrderTokenCreate {
+	potc.mutation.SetMinOrderAmountOtc(d)
+	return potc
+}
+
 // SetRateSlippage sets the "rate_slippage" field.
 func (potc *ProviderOrderTokenCreate) SetRateSlippage(d decimal.Decimal) *ProviderOrderTokenCreate {
 	potc.mutation.SetRateSlippage(d)
@@ -217,6 +229,12 @@ func (potc *ProviderOrderTokenCreate) check() error {
 	if _, ok := potc.mutation.MinOrderAmount(); !ok {
 		return &ValidationError{Name: "min_order_amount", err: errors.New(`ent: missing required field "ProviderOrderToken.min_order_amount"`)}
 	}
+	if _, ok := potc.mutation.MaxOrderAmountOtc(); !ok {
+		return &ValidationError{Name: "max_order_amount_otc", err: errors.New(`ent: missing required field "ProviderOrderToken.max_order_amount_otc"`)}
+	}
+	if _, ok := potc.mutation.MinOrderAmountOtc(); !ok {
+		return &ValidationError{Name: "min_order_amount_otc", err: errors.New(`ent: missing required field "ProviderOrderToken.min_order_amount_otc"`)}
+	}
 	if _, ok := potc.mutation.RateSlippage(); !ok {
 		return &ValidationError{Name: "rate_slippage", err: errors.New(`ent: missing required field "ProviderOrderToken.rate_slippage"`)}
 	}
@@ -286,6 +304,14 @@ func (potc *ProviderOrderTokenCreate) createSpec() (*ProviderOrderToken, *sqlgra
 	if value, ok := potc.mutation.MinOrderAmount(); ok {
 		_spec.SetField(providerordertoken.FieldMinOrderAmount, field.TypeFloat64, value)
 		_node.MinOrderAmount = value
+	}
+	if value, ok := potc.mutation.MaxOrderAmountOtc(); ok {
+		_spec.SetField(providerordertoken.FieldMaxOrderAmountOtc, field.TypeFloat64, value)
+		_node.MaxOrderAmountOtc = value
+	}
+	if value, ok := potc.mutation.MinOrderAmountOtc(); ok {
+		_spec.SetField(providerordertoken.FieldMinOrderAmountOtc, field.TypeFloat64, value)
+		_node.MinOrderAmountOtc = value
 	}
 	if value, ok := potc.mutation.RateSlippage(); ok {
 		_spec.SetField(providerordertoken.FieldRateSlippage, field.TypeFloat64, value)
@@ -498,6 +524,42 @@ func (u *ProviderOrderTokenUpsert) AddMinOrderAmount(v decimal.Decimal) *Provide
 	return u
 }
 
+// SetMaxOrderAmountOtc sets the "max_order_amount_otc" field.
+func (u *ProviderOrderTokenUpsert) SetMaxOrderAmountOtc(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Set(providerordertoken.FieldMaxOrderAmountOtc, v)
+	return u
+}
+
+// UpdateMaxOrderAmountOtc sets the "max_order_amount_otc" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsert) UpdateMaxOrderAmountOtc() *ProviderOrderTokenUpsert {
+	u.SetExcluded(providerordertoken.FieldMaxOrderAmountOtc)
+	return u
+}
+
+// AddMaxOrderAmountOtc adds v to the "max_order_amount_otc" field.
+func (u *ProviderOrderTokenUpsert) AddMaxOrderAmountOtc(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Add(providerordertoken.FieldMaxOrderAmountOtc, v)
+	return u
+}
+
+// SetMinOrderAmountOtc sets the "min_order_amount_otc" field.
+func (u *ProviderOrderTokenUpsert) SetMinOrderAmountOtc(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Set(providerordertoken.FieldMinOrderAmountOtc, v)
+	return u
+}
+
+// UpdateMinOrderAmountOtc sets the "min_order_amount_otc" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsert) UpdateMinOrderAmountOtc() *ProviderOrderTokenUpsert {
+	u.SetExcluded(providerordertoken.FieldMinOrderAmountOtc)
+	return u
+}
+
+// AddMinOrderAmountOtc adds v to the "min_order_amount_otc" field.
+func (u *ProviderOrderTokenUpsert) AddMinOrderAmountOtc(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Add(providerordertoken.FieldMinOrderAmountOtc, v)
+	return u
+}
+
 // SetRateSlippage sets the "rate_slippage" field.
 func (u *ProviderOrderTokenUpsert) SetRateSlippage(v decimal.Decimal) *ProviderOrderTokenUpsert {
 	u.Set(providerordertoken.FieldRateSlippage, v)
@@ -700,6 +762,48 @@ func (u *ProviderOrderTokenUpsertOne) AddMinOrderAmount(v decimal.Decimal) *Prov
 func (u *ProviderOrderTokenUpsertOne) UpdateMinOrderAmount() *ProviderOrderTokenUpsertOne {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
 		s.UpdateMinOrderAmount()
+	})
+}
+
+// SetMaxOrderAmountOtc sets the "max_order_amount_otc" field.
+func (u *ProviderOrderTokenUpsertOne) SetMaxOrderAmountOtc(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetMaxOrderAmountOtc(v)
+	})
+}
+
+// AddMaxOrderAmountOtc adds v to the "max_order_amount_otc" field.
+func (u *ProviderOrderTokenUpsertOne) AddMaxOrderAmountOtc(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.AddMaxOrderAmountOtc(v)
+	})
+}
+
+// UpdateMaxOrderAmountOtc sets the "max_order_amount_otc" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertOne) UpdateMaxOrderAmountOtc() *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateMaxOrderAmountOtc()
+	})
+}
+
+// SetMinOrderAmountOtc sets the "min_order_amount_otc" field.
+func (u *ProviderOrderTokenUpsertOne) SetMinOrderAmountOtc(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetMinOrderAmountOtc(v)
+	})
+}
+
+// AddMinOrderAmountOtc adds v to the "min_order_amount_otc" field.
+func (u *ProviderOrderTokenUpsertOne) AddMinOrderAmountOtc(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.AddMinOrderAmountOtc(v)
+	})
+}
+
+// UpdateMinOrderAmountOtc sets the "min_order_amount_otc" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertOne) UpdateMinOrderAmountOtc() *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateMinOrderAmountOtc()
 	})
 }
 
@@ -1079,6 +1183,48 @@ func (u *ProviderOrderTokenUpsertBulk) AddMinOrderAmount(v decimal.Decimal) *Pro
 func (u *ProviderOrderTokenUpsertBulk) UpdateMinOrderAmount() *ProviderOrderTokenUpsertBulk {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
 		s.UpdateMinOrderAmount()
+	})
+}
+
+// SetMaxOrderAmountOtc sets the "max_order_amount_otc" field.
+func (u *ProviderOrderTokenUpsertBulk) SetMaxOrderAmountOtc(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetMaxOrderAmountOtc(v)
+	})
+}
+
+// AddMaxOrderAmountOtc adds v to the "max_order_amount_otc" field.
+func (u *ProviderOrderTokenUpsertBulk) AddMaxOrderAmountOtc(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.AddMaxOrderAmountOtc(v)
+	})
+}
+
+// UpdateMaxOrderAmountOtc sets the "max_order_amount_otc" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertBulk) UpdateMaxOrderAmountOtc() *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateMaxOrderAmountOtc()
+	})
+}
+
+// SetMinOrderAmountOtc sets the "min_order_amount_otc" field.
+func (u *ProviderOrderTokenUpsertBulk) SetMinOrderAmountOtc(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetMinOrderAmountOtc(v)
+	})
+}
+
+// AddMinOrderAmountOtc adds v to the "min_order_amount_otc" field.
+func (u *ProviderOrderTokenUpsertBulk) AddMinOrderAmountOtc(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.AddMinOrderAmountOtc(v)
+	})
+}
+
+// UpdateMinOrderAmountOtc sets the "min_order_amount_otc" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertBulk) UpdateMinOrderAmountOtc() *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateMinOrderAmountOtc()
 	})
 }
 

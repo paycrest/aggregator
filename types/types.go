@@ -239,12 +239,13 @@ type SenderOrderAddressPayload struct {
 type SenderOrderTokenPayload struct {
 	Symbol     string                      `json:"symbol" binding:"required"`
 	FeePercent decimal.Decimal             `json:"feePercent" binding:"required"`
+	MaxFeeCap  decimal.Decimal             `json:"maxFeeCap" binding:"required,gte=0"`
 	Addresses  []SenderOrderAddressPayload `json:"addresses"`
 }
 
 // SenderProfilePayload is the payload for the sender profile endpoint
 type SenderProfilePayload struct {
-	WebhookURL      string                    `json:"webhookURL"`
+	WebhookURL      string                    `json:"webhookUrl"`
 	DomainWhitelist []string                  `json:"domainWhitelist"`
 	Tokens          []SenderOrderTokenPayload `json:"tokens"`
 }
@@ -257,6 +258,8 @@ type ProviderOrderTokenPayload struct {
 	FloatingConversionRate decimal.Decimal                       `json:"floatingConversionRate" binding:"required"`
 	MaxOrderAmount         decimal.Decimal                       `json:"maxOrderAmount" binding:"required,gt=0"`
 	MinOrderAmount         decimal.Decimal                       `json:"minOrderAmount" binding:"required,gt=0"`
+	MaxOrderAmountOTC      decimal.Decimal                       `json:"maxOrderAmountOtc" binding:"required,gte=0"`
+	MinOrderAmountOTC      decimal.Decimal                       `json:"minOrderAmountOtc" binding:"required,gte=0"`
 	RateSlippage           decimal.Decimal                       `json:"rateSlippage" binding:"omitempty,gte=0.1"`
 	Address                string                                `json:"address" binding:"required"`
 	Network                string                                `json:"network" binding:"required"`
@@ -269,7 +272,25 @@ type ProviderProfilePayload struct {
 	HostIdentifier string                      `json:"hostIdentifier"`
 	IsAvailable    bool                        `json:"isAvailable"`
 	Tokens         []ProviderOrderTokenPayload `json:"tokens"`
+	FiatAccounts   []FiatAccountPayload        `json:"fiatAccounts"`
 	VisibilityMode string                      `json:"visibilityMode"`
+}
+
+// bank account payload
+type FiatAccountPayload struct {
+	AccountIdentifier string `json:"accountIdentifier" binding:"required"`
+	AccountName       string `json:"accountName" binding:"required"`
+	Institution       string `json:"institution" binding:"required"`
+}
+
+// PayoutAccountResponse represents a single payout account
+type FiatAccountResponse struct {
+	ID                uuid.UUID `json:"id"`
+	AccountIdentifier string    `json:"accountIdentifier"`
+	AccountName       string    `json:"accountName"`
+	Institution       string    `json:"institution"`
+	CreatedAt         time.Time `json:"createdAt"`
+	UpdatedAt         time.Time `json:"updatedAt"`
 }
 
 // ProviderProfileResponse is the response for the provider profile endpoint
@@ -283,6 +304,7 @@ type ProviderProfileResponse struct {
 	HostIdentifier        string                         `json:"hostIdentifier"`
 	CurrencyAvailability  map[string]bool                `json:"currencyAvailability"`
 	Tokens                []ProviderOrderTokenPayload    `json:"tokens"`
+	FiatAccounts          []FiatAccountResponse          `json:"fiatAccounts"`
 	APIKey                APIKeyResponse                 `json:"apiKey"`
 	IsActive              bool                           `json:"isActive"`
 	VisibilityMode        providerprofile.VisibilityMode `json:"visibilityMode"`
@@ -294,6 +316,7 @@ type ProviderProfileResponse struct {
 type SenderOrderTokenResponse struct {
 	Symbol        string          `json:"symbol" binding:"required"`
 	FeePercent    decimal.Decimal `json:"feePercent" binding:"required"`
+	MaxFeeCap     decimal.Decimal `json:"maxFeeCap"`
 	Network       string          `json:"network" binding:"required"`
 	FeeAddress    string          `json:"feeAddress" binding:"required"`
 	RefundAddress string          `json:"refundAddress" binding:"required"`
@@ -337,6 +360,7 @@ type ERC20Transfer struct {
 // LockPaymentOrderFields is the fields for a lock payment order
 type LockPaymentOrderFields struct {
 	ID                uuid.UUID
+	OrderType         string
 	Token             *ent.Token
 	Network           *ent.Network
 	GatewayID         string
@@ -374,7 +398,7 @@ type LockPaymentOrderResponse struct {
 	Token               string                  `json:"token"`
 	GatewayID           string                  `json:"gatewayId"`
 	Amount              decimal.Decimal         `json:"amount"`
-	AmountInUSD         decimal.Decimal         `json:"amountInUSD"`
+	AmountInUSD         decimal.Decimal         `json:"amountInUsd"`
 	Rate                decimal.Decimal         `json:"rate"`
 	BlockNumber         int64                   `json:"blockNumber"`
 	TxHash              string                  `json:"txHash"`
@@ -407,7 +431,7 @@ type LockPaymentOrderSplitOrder struct {
 type LockPaymentOrderStatusResponse struct {
 	OrderID       string                       `json:"orderId"`
 	Amount        decimal.Decimal              `json:"amount"`
-	AmountInUSD   decimal.Decimal              `json:"amountInUSD"`
+	AmountInUSD   decimal.Decimal              `json:"amountInUsd"`
 	Token         string                       `json:"token"`
 	Network       string                       `json:"network"`
 	SettlePercent decimal.Decimal              `json:"settlePercent"`
@@ -454,13 +478,14 @@ type ReceiveAddressResponse struct {
 	SenderFee      decimal.Decimal `json:"senderFee"`
 	TransactionFee decimal.Decimal `json:"transactionFee"`
 	Reference      string          `json:"reference"`
+	OrderType      string          `json:"orderType"`
 }
 
 // PaymentOrderResponse is the response type for a payment order
 type PaymentOrderResponse struct {
 	ID             uuid.UUID             `json:"id"`
 	Amount         decimal.Decimal       `json:"amount"`
-	AmountInUSD    decimal.Decimal       `json:"amountInUSD"`
+	AmountInUSD    decimal.Decimal       `json:"amountInUsd"`
 	AmountPaid     decimal.Decimal       `json:"amountPaid"`
 	AmountReturned decimal.Decimal       `json:"amountReturned"`
 	Token          string                `json:"token"`
@@ -486,7 +511,7 @@ type PaymentOrderResponse struct {
 type PaymentOrderWebhookData struct {
 	ID             uuid.UUID             `json:"id"`
 	Amount         decimal.Decimal       `json:"amount"`
-	AmountInUSD    decimal.Decimal       `json:"amountInUSD"`
+	AmountInUSD    decimal.Decimal       `json:"amountInUsd"`
 	AmountPaid     decimal.Decimal       `json:"amountPaid"`
 	AmountReturned decimal.Decimal       `json:"amountReturned"`
 	PercentSettled decimal.Decimal       `json:"percentSettled"`
@@ -541,6 +566,12 @@ type MarketRateResponse struct {
 	MaximumRate decimal.Decimal `json:"maximumRate"`
 }
 
+// RateMetadata contains optional metadata for rate responses
+type RateMetadata struct {
+	OrderType            string `json:"orderType"`            // "regular" or "otc"
+	RefundTimeoutMinutes int    `json:"refundTimeoutMinutes"` // Minutes until automatic refund
+}
+
 type ResendTokenPayload struct {
 	Scope string `json:"scope" binding:"required,oneof=emailVerification resetPassword"`
 	Email string `json:"email" binding:"required,email"`
@@ -564,9 +595,10 @@ type SupportedCurrencies struct {
 
 // Response is the struct for an API response
 type Response struct {
-	Status  string      `json:"status"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data"`
+	Status   string      `json:"status"`
+	Message  string      `json:"message"`
+	Data     interface{} `json:"data"`
+	Metadata interface{} `json:"metadata,omitempty"` // Optional metadata for additional information
 }
 
 // ErrorData is the struct for error data i.e when Status is "error"
@@ -716,7 +748,7 @@ type KYBSubmissionInput struct {
 	AmlPolicyUrl                  *string                `json:"amlPolicyUrl"`
 	KycPolicyUrl                  *string                `json:"kycPolicyUrl"`
 	BeneficialOwners              []BeneficialOwnerInput `json:"beneficialOwners" binding:"required,dive"`
-	IAcceptTerms         bool                   `json:"IAcceptTerms"`
+	IAcceptTerms                  bool                   `json:"IAcceptTerms"`
 }
 
 // BeneficialOwnerInput represents the input structure for a beneficial owner

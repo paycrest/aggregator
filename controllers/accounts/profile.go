@@ -8,9 +8,11 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
+	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -90,6 +92,14 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 	hasConfiguredToken := false
 
 	for _, tokenPayload := range payload.Tokens {
+		// Validate MaxFeeCap (must be positive, zero means no cap)
+		if tokenPayload.MaxFeeCap.LessThan(decimal.Zero) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", []types.ErrorData{{
+				Field:   "MaxFeeCap",
+				Message: "MaxFeeCap must be zero or a positive value",
+			}})
+			return
+		}
 
 		if len(tokenPayload.Addresses) == 0 {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("No wallet address provided for %s token", tokenPayload.Symbol), nil)
@@ -176,6 +186,7 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 				SetTokenID(networksToTokenId[address.Network]).
 				SetRefundAddress(address.RefundAddress).
 				SetFeePercent(tokenPayload.FeePercent).
+				SetMaxFeeCap(tokenPayload.MaxFeeCap).
 				SetFeeAddress(address.FeeAddress).
 				Save(ctx)
 			if err != nil {
@@ -267,6 +278,14 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 
 	var tokenOperations []TokenOperation
 	var validationErrors []types.ErrorData
+
+	type FiatAccountOperation struct {
+		Payload         types.FiatAccountPayload
+		IsUpdate        bool
+		ExistingAccount *ent.ProviderFiatAccount
+	}
+
+	var fiatAccountOps []FiatAccountOperation
 
 	// Validate all tokens first
 	for _, tokenPayload := range payload.Tokens {
@@ -423,6 +442,56 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		})
 	}
 
+	// Validate all fiat accounts (same pattern as tokens)
+	for _, fiatAccountPayload := range payload.FiatAccounts {
+		// Validate institution exists
+		institutionExists, err := storage.Client.Institution.
+			Query().
+			Where(institution.CodeEQ(fiatAccountPayload.Institution)).
+			Exist(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":       fmt.Sprintf("%v", err),
+				"Institution": fiatAccountPayload.Institution,
+			}).Errorf("Failed to validate institution")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+			return
+		}
+		if !institutionExists {
+			validationErrors = append(validationErrors, types.ErrorData{
+				Field:   "FiatAccounts",
+				Message: fmt.Sprintf("Institution %s is not supported", fiatAccountPayload.Institution),
+			})
+			continue
+		}
+
+		// Check if account already exists (upsert check)
+		existingAccount, err := storage.Client.ProviderFiatAccount.
+			Query().
+			Where(
+				providerfiataccount.AccountIdentifierEQ(fiatAccountPayload.AccountIdentifier),
+				providerfiataccount.InstitutionEQ(fiatAccountPayload.Institution),
+				providerfiataccount.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+			).
+			Only(ctx)
+
+		isUpdate := err == nil
+		if err != nil && !ent.IsNotFound(err) {
+			logger.WithFields(logger.Fields{
+				"Error":             fmt.Sprintf("%v", err),
+				"Institution":       fiatAccountPayload.Institution,
+			}).Errorf("Failed to check for existing fiat account")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+			return
+		}
+
+		fiatAccountOps = append(fiatAccountOps, FiatAccountOperation{
+			Payload:         fiatAccountPayload,
+			IsUpdate:        isUpdate,
+			ExistingAccount: existingAccount,
+		})
+	}
+
 	// Return validation errors if any
 	if len(validationErrors) > 0 {
 		var mainMessage string
@@ -509,6 +578,8 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				SetFloatingConversionRate(op.TokenPayload.FloatingConversionRate).
 				SetMaxOrderAmount(op.TokenPayload.MaxOrderAmount).
 				SetMinOrderAmount(op.TokenPayload.MinOrderAmount).
+				SetMaxOrderAmountOtc(op.TokenPayload.MaxOrderAmountOTC).
+				SetMinOrderAmountOtc(op.TokenPayload.MinOrderAmountOTC).
 				Save(ctx)
 			if err != nil {
 				if rollbackErr := tx.Rollback(); rollbackErr != nil {
@@ -531,6 +602,8 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				SetFloatingConversionRate(op.TokenPayload.FloatingConversionRate).
 				SetMaxOrderAmount(op.TokenPayload.MaxOrderAmount).
 				SetMinOrderAmount(op.TokenPayload.MinOrderAmount).
+				SetMaxOrderAmountOtc(op.TokenPayload.MaxOrderAmountOTC).
+				SetMinOrderAmountOtc(op.TokenPayload.MinOrderAmountOTC).
 				SetAddress(op.TokenPayload.Address).
 				SetNetwork(op.TokenPayload.Network).
 				SetProviderID(provider.ID).
@@ -579,6 +652,50 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			return
 		}
 		allBuckets = append(allBuckets, buckets...)
+	}
+
+	// Process all fiat account operations (same pattern as tokens)
+	for _, op := range fiatAccountOps {
+		if op.IsUpdate {
+			// Update existing account
+			_, err := tx.ProviderFiatAccount.
+				UpdateOneID(op.ExistingAccount.ID).
+				SetAccountIdentifier(op.Payload.AccountIdentifier).
+				SetAccountName(op.Payload.AccountName).
+				SetInstitution(op.Payload.Institution).
+				Save(ctx)
+			if err != nil {
+				if rollbackErr := tx.Rollback(); rollbackErr != nil {
+					logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
+				}
+				logger.WithFields(logger.Fields{
+					"Error":             fmt.Sprintf("%v", err),
+					"Institution":       op.Payload.Institution,
+				}).Errorf("Failed to update fiat account")
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+				return
+			}
+		} else {
+			// Create new account
+			_, err := tx.ProviderFiatAccount.
+				Create().
+				SetAccountIdentifier(op.Payload.AccountIdentifier).
+				SetAccountName(op.Payload.AccountName).
+				SetInstitution(op.Payload.Institution).
+				SetProviderID(provider.ID).
+				Save(ctx)
+			if err != nil {
+				if rollbackErr := tx.Rollback(); rollbackErr != nil {
+					logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
+				}
+				logger.WithFields(logger.Fields{
+					"Error":             fmt.Sprintf("%v", err),
+					"Institution":       op.Payload.Institution,
+				}).Errorf("Failed to create fiat account")
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+				return
+			}
+		}
 	}
 
 	// Deduplicate buckets to prevent duplicate many-to-many edges
@@ -676,6 +793,7 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 			Symbol:        token.Edges.Token.Symbol,
 			RefundAddress: token.RefundAddress,
 			FeePercent:    token.FeePercent,
+			MaxFeeCap:     token.MaxFeeCap,
 			FeeAddress:    token.FeeAddress,
 			Network:       token.Edges.Token.Edges.Network.Identifier,
 		}
@@ -803,6 +921,30 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 		return
 	}
 
+	fiatAccounts, err := provider.QueryFiatAccounts().
+		Order(ent.Desc(providerfiataccount.FieldCreatedAt)).
+		All(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"ProviderID": provider.ID,
+		}).Errorf("Failed to fetch fiat accounts for provider")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)
+		return
+	}
+
+	fiatAccountsPayload := make([]types.FiatAccountResponse, len(fiatAccounts))
+	for i, account := range fiatAccounts {
+		fiatAccountsPayload[i] = types.FiatAccountResponse{
+			ID:                account.ID,
+			AccountIdentifier: account.AccountIdentifier,
+			AccountName:       account.AccountName,
+			Institution:       account.Institution,
+			CreatedAt:         account.CreatedAt,
+			UpdatedAt:         account.UpdatedAt,
+		}
+	}
+
 	tokensPayload := make([]types.ProviderOrderTokenPayload, len(orderTokens))
 	for i, orderToken := range orderTokens {
 		payload := types.ProviderOrderTokenPayload{
@@ -812,6 +954,8 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 			FloatingConversionRate: orderToken.FloatingConversionRate,
 			MaxOrderAmount:         orderToken.MaxOrderAmount,
 			MinOrderAmount:         orderToken.MinOrderAmount,
+			MaxOrderAmountOTC:      orderToken.MaxOrderAmountOtc,
+			MinOrderAmountOTC:      orderToken.MinOrderAmountOtc,
 			RateSlippage:           orderToken.RateSlippage,
 			Address:                orderToken.Address,
 			Network:                orderToken.Network,
@@ -851,6 +995,7 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 		HostIdentifier:        provider.HostIdentifier,
 		CurrencyAvailability:  currencyAvailability,
 		Tokens:                tokensPayload,
+		FiatAccounts:          fiatAccountsPayload,
 		APIKey:                *apiKey,
 		IsActive:              provider.IsActive,
 		VisibilityMode:        provider.VisibilityMode,
