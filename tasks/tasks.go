@@ -2058,9 +2058,8 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for ProcessStuckValidatedOrders: %v", err)
 	}
 
-	// Index blockchain events every 10 seconds (increased from 4s to reduce load while maintaining coverage)
-	// Recent orders are prioritized, so less frequent runs still catch transfers quickly
-	_, err = scheduler.Every(10).Seconds().Do(TaskIndexBlockchainEvents)
+	// Index blockchain events every 4 seconds
+	_, err = scheduler.Every(4).Seconds().Do(TaskIndexBlockchainEvents)
 	if err != nil {
 		logger.Errorf("StartCronJobs for IndexBlockchainEvents: %v", err)
 	}
