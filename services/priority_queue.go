@@ -464,6 +464,8 @@ func (s *PriorityQueueService) assignOtcOrder(ctx context.Context, order types.L
 			"OrderID":    order.ID.String(),
 			"ProviderID": order.ProviderID,
 		}).Errorf("Failed to commit OTC order assignment transaction")
+		// Cleanup Redis key since DB transaction failed
+		_ = storage.RedisClient.Del(ctx, orderKey).Err()
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
@@ -599,6 +601,8 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 			"OrderID":    order.ID.String(),
 			"ProviderID": order.ProviderID,
 		}).Errorf("Failed to commit order processing transaction")
+		// Cleanup Redis key since DB transaction failed
+		_ = storage.RedisClient.Del(ctx, orderKey).Err()
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
