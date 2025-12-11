@@ -101,8 +101,8 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 					providerordertoken.HasProviderWith(
 						providerprofile.HasUserWith(user.KybVerificationStatusEQ(user.KybVerificationStatusApproved)),
 					),
-					providerordertoken.MinOrderAmountGTE(bucket.MinAmount),
-					providerordertoken.MaxOrderAmountLTE(bucket.MaxAmount),
+					providerordertoken.MinOrderAmountLTE(bucket.MinAmount),
+					providerordertoken.MaxOrderAmountGTE(bucket.MaxAmount),
 				).
 				WithProvider().
 				All(ctx)
