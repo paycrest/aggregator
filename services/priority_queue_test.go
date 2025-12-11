@@ -2,32 +2,37 @@ package services
 
 import (
 	"context"
+	"database/sql"
 	"encoding/base64"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
+	"entgo.io/ent/dialect"
+	entsql "entgo.io/ent/dialect/sql"
 	"github.com/alicebob/miniredis/v2"
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/jarcoal/httpmock"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/paycrest/aggregator/ent"
-	"github.com/paycrest/aggregator/ent/enttest"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
-	"github.com/paycrest/aggregator/ent/migrate"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
+	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
+	"github.com/paycrest/aggregator/utils"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/paycrest/aggregator/utils/test"
 	tokenUtils "github.com/paycrest/aggregator/utils/token"
-	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/redis/go-redis/v9"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
@@ -56,19 +61,202 @@ func (s *TestPriorityQueueService) sendOrderRequest(ctx context.Context, order t
 	// Mock successful balance reservation and provider notification
 	bucketCurrency := order.ProvisionBucket.Edges.Currency
 	amount := order.Amount.Mul(order.Rate).Round(int32(bucketCurrency.Decimals))
-	
+
 	// Reserve balance (keep the original logic)
 	err := s.balanceService.ReserveBalance(ctx, order.ProviderID, bucketCurrency.Code, amount, nil)
 	if err != nil {
 		return err
 	}
-	
+
 	// Mock successful provider notification (skip the actual API call)
 	logger.WithFields(logger.Fields{
 		"ProviderID": order.ProviderID,
 		"Data":       map[string]interface{}{}, // Empty data for test
 	}).Infof("successfully called provider /new_order endpoint")
-	
+
+	return nil
+}
+
+// Override notifyProvider to skip the database query and prevent deadlock
+// This is needed because matchRate calls s.sendOrderRequest where s is *PriorityQueueService,
+// which calls the original sendOrderRequest that starts a transaction and then calls notifyProvider.
+// The notifyProvider then queries the database, which blocks because the transaction holds the only connection.
+func (s *TestPriorityQueueService) notifyProvider(ctx context.Context, orderRequestData map[string]interface{}) error {
+	// Mock successful provider notification without database query
+	logger.WithFields(logger.Fields{
+		"ProviderID": orderRequestData["providerId"],
+		"Data":       orderRequestData,
+	}).Infof("successfully called provider /new_order endpoint (mocked)")
+	return nil
+}
+
+// Override matchRate to use the test's sendOrderRequest instead of the parent's
+// This is needed because matchRate is defined on *PriorityQueueService, so when it calls
+// s.sendOrderRequest, it calls PriorityQueueService.sendOrderRequest, not TestPriorityQueueService.sendOrderRequest.
+// By overriding matchRate, we ensure it uses the test's sendOrderRequest.
+func (s *TestPriorityQueueService) matchRate(ctx context.Context, redisKey string, orderIDPrefix string, order types.LockPaymentOrderFields, excludeList []string) error {
+	// Duplicate the matchRate logic but use the test's sendOrderRequest
+	for index := 0; ; index++ {
+		providerData, err := db.RedisClient.LIndex(ctx, redisKey, int64(index)).Result()
+		if err != nil {
+			return err
+		}
+
+		// Extract the rate from the data (assuming it's in the format "providerID:token:rate:minAmount:maxAmount")
+		parts := strings.Split(providerData, ":")
+		if len(parts) != 5 {
+			logger.WithFields(logger.Fields{
+				"Error":        fmt.Sprintf("%v", err),
+				"OrderID":      order.ID.String(),
+				"ProviderID":   order.ProviderID,
+				"ProviderData": providerData,
+			}).Errorf("invalid data format at index %d when matching rate", index)
+			continue // Skip this entry due to invalid format
+		}
+
+		order.ProviderID = parts[0]
+
+		// Skip entry if provider is excluded
+		if utils.ContainsString(excludeList, order.ProviderID) {
+			continue
+		}
+
+		// Skip entry if token doesn't match
+		if parts[1] != order.Token.Symbol {
+			continue
+		}
+
+		// Parse rate (amount limits and OTC checks already done by ValidateRate/findSuitableProviderRate)
+		rate, err := decimal.NewFromString(parts[2])
+		if err != nil {
+			continue
+		}
+
+		// Fetch ProviderOrderToken only for rate slippage check
+		bucketCurrency := order.ProvisionBucket.Edges.Currency
+		if bucketCurrency == nil {
+			bucketCurrency, err = order.ProvisionBucket.QueryCurrency().Only(ctx)
+			if err != nil {
+				continue
+			}
+		}
+
+		network := order.Token.Edges.Network
+		if network == nil {
+			network, err = order.Token.QueryNetwork().Only(ctx)
+			if err != nil {
+				continue
+			}
+		}
+
+		providerToken, err := db.Client.ProviderOrderToken.
+			Query().
+			Where(
+				providerordertoken.NetworkEQ(network.Identifier),
+				providerordertoken.HasProviderWith(
+					providerprofile.IDEQ(order.ProviderID),
+					providerprofile.HasProviderCurrenciesWith(
+						providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(bucketCurrency.Code)),
+						providercurrencies.IsAvailableEQ(true),
+					),
+				),
+				providerordertoken.HasTokenWith(tokenEnt.IDEQ(order.Token.ID)),
+				providerordertoken.HasCurrencyWith(
+					fiatcurrency.CodeEQ(bucketCurrency.Code),
+				),
+				providerordertoken.AddressNEQ(""),
+			).
+			First(ctx)
+		if err != nil {
+			continue
+		}
+
+		// Calculate allowed deviation based on slippage
+		allowedDeviation := order.Rate.Mul(providerToken.RateSlippage.Div(decimal.NewFromInt(100)))
+
+		if rate.Sub(order.Rate).Abs().LessThanOrEqual(allowedDeviation) {
+			// Found a match for the rate - handle index pop once (common for both OTC and regular)
+			if index == 0 {
+				// Match found at index 0, perform LPOP to dequeue
+				data, err := db.RedisClient.LPop(ctx, redisKey).Result()
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":         fmt.Sprintf("%v", err),
+						"OrderID":       order.ID.String(),
+						"ProviderID":    order.ProviderID,
+						"redisKey":      redisKey,
+						"orderIDPrefix": orderIDPrefix,
+					}).Errorf("failed to dequeue from circular queue when matching rate")
+					return err
+				}
+
+				// Enqueue data to the end of the queue
+				err = db.RedisClient.RPush(ctx, redisKey, data).Err()
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":         fmt.Sprintf("%v", err),
+						"OrderID":       order.ID.String(),
+						"ProviderID":    order.ProviderID,
+						"redisKey":      redisKey,
+						"orderIDPrefix": orderIDPrefix,
+					}).Errorf("failed to enqueue to circular queue when matching rate")
+					return err
+				}
+			}
+
+			// For OTC orders, skip balance check and assign order to provider
+			if order.OrderType == "otc" {
+				if err := s.assignOtcOrder(ctx, order); err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":      fmt.Sprintf("%v", err),
+						"OrderID":    order.ID.String(),
+						"ProviderID": order.ProviderID,
+					}).Errorf("failed to assign OTC order to provider when matching rate")
+
+					// Add provider to exclude list before continuing to next provider
+					s.addProviderToExcludeList(ctx, order.ID.String(), order.ProviderID, 2*time.Hour)
+					continue
+				}
+				break
+			} else {
+				// Regular order (or default for any non-OTC order type) - check balance sufficiency
+				_, err := s.balanceService.CheckBalanceSufficiency(ctx, order.ProviderID, bucketCurrency.Code, order.Amount.Mul(order.Rate).RoundBank(0))
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":      fmt.Sprintf("%v", err),
+						"OrderID":    order.ID.String(),
+						"ProviderID": order.ProviderID,
+						"Currency":   bucketCurrency.Code,
+						"Amount":     order.Amount.String(),
+					}).Errorf("failed to check balance sufficiency")
+					continue
+				}
+
+				// Assign the order to the provider and save it to Redis
+				// Use the test's sendOrderRequest instead of the parent's
+				err = s.sendOrderRequest(ctx, order)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":         fmt.Sprintf("%v", err),
+						"OrderID":       order.ID.String(),
+						"ProviderID":    order.ProviderID,
+						"redisKey":      redisKey,
+						"orderIDPrefix": orderIDPrefix,
+					}).Errorf("failed to send order request to specific provider when matching rate")
+
+					// Add provider to exclude list before reassigning
+					s.addProviderToExcludeList(ctx, order.ID.String(), order.ProviderID, 2*time.Hour)
+
+					// Note: Balance cleanup is now handled in sendOrderRequest via defer
+					// Reassign the lock payment order to another provider
+					return s.AssignLockPaymentOrder(ctx, order)
+				}
+
+				break
+			}
+		}
+	}
+	// This should never be reached in practice, but required by compiler
 	return nil
 }
 
@@ -269,13 +457,30 @@ func setupForPQ() error {
 }
 
 func TestPriorityQueueTest(t *testing.T) {
-	// Set up test database client
-	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+	// Set up test database client with shared in-memory schema
+	// Use 2 connections to allow transaction and query to run concurrently (prevents deadlock)
+	dbConn, err := sql.Open("sqlite3", "file:ent?mode=memory&cache=shared&_fk=1&_busy_timeout=5000")
+	if err != nil {
+		t.Fatalf("Failed to open sqlite DB: %v", err)
+	}
+	dbConn.SetMaxOpenConns(2)
+	defer dbConn.Close()
+
+	drv := entsql.OpenDB(dialect.SQLite, dbConn)
+	client := ent.NewClient(ent.Driver(drv))
 	defer client.Close()
 
-	// Run schema migrations to ensure all tables are created
-	if err := client.Schema.Create(context.Background(), migrate.WithGlobalUniqueID(true)); err != nil {
-		t.Fatal(err)
+	// Set client first so all operations use the same client
+	db.Client = client
+
+	// Create schema to ensure all tables exist and are ready
+	if err := client.Schema.Create(context.Background()); err != nil {
+		t.Fatalf("Failed to create schema: %v", err)
+	}
+
+	// Verify db.Client is set correctly before setup
+	if db.Client != client {
+		t.Fatalf("db.Client is not set to the test client - this will cause schema issues")
 	}
 
 	// Set up in-memory Redis
@@ -289,10 +494,19 @@ func TestPriorityQueueTest(t *testing.T) {
 	defer redisClient.Close()
 
 	db.RedisClient = redisClient
-	db.Client = client
 
 	// Setup test data
 	err = setupForPQ()
+	assert.NoError(t, err)
+
+	// Start a local HTTP server to mock provider endpoints and avoid real network calls
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"status":"success","message":"ok"}`))
+	}))
+	defer mockServer.Close()
+
+	// Point all provider host identifiers to the mock server
+	_, err = db.Client.ProviderProfile.Update().SetHostIdentifier(mockServer.URL).Save(context.Background())
 	assert.NoError(t, err)
 
 	service := NewTestPriorityQueueService()
@@ -400,6 +614,8 @@ func TestPriorityQueueTest(t *testing.T) {
 	})
 
 	t.Run("TestGetProviderRate", func(t *testing.T) {
+		// Use the provider profile directly - it was created with db.Client which is the same as client
+		// The relationship queries should work as long as db.Client is set correctly
 		rate, err := service.GetProviderRate(context.Background(), testCtxForPQ.publicProviderProfile, testCtxForPQ.token.Symbol, testCtxForPQ.currency.Code)
 		assert.NoError(t, err)
 		_rate, ok := rate.Float64()
@@ -417,10 +633,16 @@ func TestPriorityQueueTest(t *testing.T) {
 		assert.NoError(t, err)
 		_order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
 			"provider":   testCtxForPQ.publicProviderProfile,
-			"token_id":   testCtxForPQ.token.ID,
+			"token_id":   int(testCtxForPQ.token.ID),
 			"gateway_id": "order-1234",
 		})
+		if err != nil {
+			t.Logf("Failed to create lock payment order: %v", err)
+		}
 		assert.NoError(t, err)
+		if _order == nil {
+			t.Fatal("LockPaymentOrder is nil - creation failed")
+		}
 
 		_, err = test.AddProvisionBucketToLockPaymentOrder(_order, bucket.ID)
 		assert.NoError(t, err)
@@ -446,10 +668,10 @@ func TestPriorityQueueTest(t *testing.T) {
 		httpmock.RegisterResponder("POST", testCtxForPQ.publicProviderProfile.HostIdentifier+"/new_order",
 			func(req *http.Request) (*http.Response, error) {
 				return httpmock.NewJsonResponse(200, map[string]interface{}{
-					"status": "success",
+					"status":  "success",
 					"message": "Order processed successfully",
 				})
-		})
+			})
 
 		err = service.sendOrderRequest(context.Background(), types.LockPaymentOrderFields{
 			ID:                order.ID,

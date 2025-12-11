@@ -42,12 +42,16 @@ func TestSlackService(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.Deactivate()
 
+	// Use a test webhook URL for unit testing (self-contained, doesn't require external config)
+	testWebhookURL := "https://hooks.slack.com/services/test/webhook/url"
+
+	// If config has a webhook URL, use it; otherwise use the test URL
 	webhookURL := conf.SlackWebhookURL
 	if webhookURL == "" {
-		t.Fatal("SLACK_WEBHOOK_URL is not configured in serverConfig")
+		webhookURL = testWebhookURL
 	}
 
-	// Register mock response using the actual serverConfig URL
+	// Register mock response using the webhook URL
 	httpmock.RegisterResponder("POST", webhookURL,
 		func(r *http.Request) (*http.Response, error) {
 			return httpmock.NewBytesResponse(200, []byte(`{"ok": true}`)), nil

@@ -3,6 +3,8 @@ package test
 import (
 	"bufio"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
@@ -13,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
@@ -24,7 +27,6 @@ import (
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
 	db "github.com/paycrest/aggregator/storage"
-	"github.com/paycrest/aggregator/types"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 )
@@ -62,36 +64,25 @@ func CreateTestUser(overrides map[string]interface{}) (*ent.User, error) {
 }
 
 // CreateERC20Token creates a test token with default or custom values
-func CreateERC20Token(client types.RPCClient, overrides map[string]interface{}) (*ent.Token, error) {
+func CreateERC20Token(overrides map[string]interface{}) (*ent.Token, error) {
 
 	// Default payload
 	payload := map[string]interface{}{
-		"symbol":         "TST",
-		"decimals":       6,
-		"networkRPC":     "ws://localhost:8545",
-		"is_enabled":     true,
-		"identifier":     "localhost",
-		"chainID":        int64(1337),
-		"deployContract": true,
+		"symbol":     "TST",
+		"decimals":   6,
+		"networkRPC": "ws://localhost:8545",
+		"is_enabled": true,
+		"identifier": "localhost",
+		"chainID":    int64(1337),
 	}
-
-	var contractAddress string
 
 	// Apply overrides
 	for key, value := range overrides {
 		payload[key] = value
 	}
 
-	if payload["deployContract"].(bool) {
-		// Deploy ERC20 token contract
-		deployedTokenAddress, err := DeployERC20Contract(client)
-		if err != nil {
-			return nil, err
-		}
-		contractAddress = deployedTokenAddress.Hex()
-	} else {
-		contractAddress = "0xd4E96eF8eee8678dBFf4d535E033Ed1a4F7605b7"
-	}
+	// Use a fixed test contract address
+	contractAddress := "0xd4E96eF8eee8678dBFf4d535E033Ed1a4F7605b7"
 
 	// Create Network
 	networkId, err := db.Client.Network.
@@ -132,7 +123,7 @@ func CreateERC20Token(client types.RPCClient, overrides map[string]interface{}) 
 }
 
 // CreateTRC20Token creates a test token with default or custom values
-func CreateTRC20Token(client types.RPCClient, overrides map[string]interface{}) (*ent.Token, error) {
+func CreateTRC20Token(overrides map[string]interface{}) (*ent.Token, error) {
 
 	// Default payload
 	payload := map[string]interface{}{
@@ -223,10 +214,7 @@ func CreateTestLockPaymentOrder(overrides map[string]interface{}) (*ent.LockPaym
 
 	if payload["token_id"].(int) == 0 {
 		// Create test token
-		backend, _ := SetUpTestBlockchain()
-		token, err := CreateERC20Token(backend, map[string]interface{}{
-			"deployContract": false,
-		})
+		token, err := CreateERC20Token(map[string]interface{}{})
 		if err != nil {
 			return nil, err
 		}
@@ -267,7 +255,7 @@ func CreateTestLockPaymentOrder(overrides map[string]interface{}) (*ent.LockPaym
 }
 
 // CreateTestPaymentOrder creates a test PaymentOrder with default or custom values for sender
-func CreateTestPaymentOrder(client types.RPCClient, token *ent.Token, overrides map[string]interface{}) (*ent.PaymentOrder, error) {
+func CreateTestPaymentOrder(token *ent.Token, overrides map[string]interface{}) (*ent.PaymentOrder, error) {
 	// Default payload
 	payload := map[string]interface{}{
 		"amount":             100.50,
@@ -289,11 +277,18 @@ func CreateTestPaymentOrder(client types.RPCClient, token *ent.Token, overrides 
 		payload[key] = value
 	}
 
-	// Create smart address
-	address, salt, err := CreateSmartAddress(
-		context.Background(), client)
-	if err != nil {
-		return nil, err
+	// Generate a test address and salt (no blockchain deployment)
+	// Generate 20 random bytes for address (40 hex chars)
+	addressBytes := make([]byte, 20)
+	if _, err := rand.Read(addressBytes); err != nil {
+		return nil, fmt.Errorf("failed to generate random address: %w", err)
+	}
+	address := "0x" + hex.EncodeToString(addressBytes)
+
+	// Generate random salt (32 bytes)
+	salt := make([]byte, 32)
+	if _, err := rand.Read(salt); err != nil {
+		return nil, fmt.Errorf("failed to generate random salt: %w", err)
 	}
 
 	// Create receive address
@@ -538,10 +533,7 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 
 	if payload["token_id"].(int) == 0 {
 		// Create test token
-		backend, _ := SetUpTestBlockchain()
-		token, err := CreateERC20Token(backend, map[string]interface{}{
-			"deployContract": false,
-		})
+		token, err := CreateERC20Token(map[string]interface{}{})
 		if err != nil {
 			return nil, err
 		}
@@ -636,39 +628,90 @@ func CreateTestFiatCurrency(overrides map[string]interface{}) (*ent.FiatCurrency
 	var institutions []*ent.Institution
 	var err error
 	if payload["code"] == "KES" {
-		institutions, err = db.Client.Institution.CreateBulk(
-			db.Client.Institution.
-				Create().
-				SetName("M-Pesa").
-				SetCode("MPESAKES").
-				SetType(institution.TypeMobileMoney),
-			db.Client.Institution.
-				Create().
-				SetName("Equity Bank").
-				SetCode("EQTYKES"),
-		).Save(context.Background())
-
+		// Use OnConflict to handle race conditions in parallel tests
+		_, err = db.Client.Institution.
+			Create().
+			SetName("M-Pesa").
+			SetCode("MPESAKES").
+			SetType(institution.TypeMobileMoney).
+			OnConflictColumns("code").
+			UpdateNewValues().
+			ID(context.Background())
 		if err != nil {
 			return nil, err
 		}
+		mpesa, err := db.Client.Institution.Query().Where(institution.CodeEQ("MPESAKES")).Only(context.Background())
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = db.Client.Institution.
+			Create().
+			SetName("Equity Bank").
+			SetCode("EQTYKES").
+			OnConflictColumns("code").
+			UpdateNewValues().
+			ID(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		equity, err := db.Client.Institution.Query().Where(institution.CodeEQ("EQTYKES")).Only(context.Background())
+		if err != nil {
+			return nil, err
+		}
+
+		institutions = []*ent.Institution{mpesa, equity}
 	} else {
-		institutions, err = db.Client.Institution.CreateBulk(
-			db.Client.Institution.
-				Create().
-				SetName("MTN Momo").
-				SetCode("MOMONGPC").
-				SetType(institution.TypeMobileMoney),
-			db.Client.Institution.
-				Create().
-				SetName("Access Bank").
-				SetCode("ABNGNGLA"),
-		).Save(context.Background())
-
+		// Use OnConflict to handle race conditions in parallel tests
+		_, err = db.Client.Institution.
+			Create().
+			SetName("MTN Momo").
+			SetCode("MOMONGPC").
+			SetType(institution.TypeMobileMoney).
+			OnConflictColumns("code").
+			UpdateNewValues().
+			ID(context.Background())
 		if err != nil {
 			return nil, err
 		}
+		mtn, err := db.Client.Institution.Query().Where(institution.CodeEQ("MOMONGPC")).Only(context.Background())
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = db.Client.Institution.
+			Create().
+			SetName("Access Bank").
+			SetCode("ABNGNGLA").
+			OnConflictColumns("code").
+			UpdateNewValues().
+			ID(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		access, err := db.Client.Institution.Query().Where(institution.CodeEQ("ABNGNGLA")).Only(context.Background())
+		if err != nil {
+			return nil, err
+		}
+
+		institutions = []*ent.Institution{mtn, access}
 	}
 
+	// Check if currency already exists
+	existingCurrency, err := db.Client.FiatCurrency.
+		Query().
+		Where(fiatcurrency.CodeEQ(payload["code"].(string))).
+		WithInstitutions().
+		Only(context.Background())
+	if err != nil && !ent.IsNotFound(err) {
+		return nil, err
+	}
+	if err == nil {
+		// Currency already exists, return it
+		return existingCurrency, nil
+	}
+
+	// Currency doesn't exist, create it
 	currency, err := db.Client.FiatCurrency.
 		Create().
 		SetCode(payload["code"].(string)).

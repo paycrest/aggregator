@@ -75,6 +75,10 @@ func TestRateLimit(t *testing.T) {
 				for i := 0; i < tt.numRequests; i++ {
 					w, _ := test.PerformRequest(t, "GET", "/test", nil, headers, router)
 					lastStatus = w.Code
+					// Break early once we detect rate limiting for "Over Limit" tests
+					if tt.expectedStatus == http.StatusTooManyRequests && lastStatus == http.StatusTooManyRequests {
+						break
+					}
 				}
 
 				assert.Equal(t, tt.expectedStatus, lastStatus)

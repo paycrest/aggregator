@@ -3,6 +3,7 @@ package accounts
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -19,8 +20,8 @@ import (
 	"github.com/paycrest/aggregator/ent/enttest"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/migrate"
-	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
@@ -37,25 +38,48 @@ var testCtx = struct {
 	providerProfile *ent.ProviderProfile
 	token           *ent.Token
 	orderToken      *ent.ProviderOrderToken
-	client          types.RPCClient
 }{}
 
 func setup() error {
-	// Set up test blockchain client
-	client, err := test.SetUpTestBlockchain()
+	// Create Network first (skip blockchain connection)
+	networkId, err := db.Client.Network.
+		Create().
+		SetIdentifier("localhost").
+		SetChainID(int64(56)). // Use BNB Smart Chain to skip webhook creation
+		SetRPCEndpoint("ws://localhost:8545").
+		SetBlockTime(decimal.NewFromFloat(3.0)).
+		SetFee(decimal.NewFromFloat(0.1)).
+		SetIsTestnet(true).
+		OnConflict().
+		UpdateNewValues().
+		ID(context.Background())
 	if err != nil {
-		return err
+		return fmt.Errorf("CreateNetwork.profile_test: %w", err)
 	}
 
-	testCtx.client = client
-	// Create a test token
-	token, err := test.CreateERC20Token(
-		client,
-		map[string]interface{}{
-			"deployContract": false,
-		})
+	// Create token directly without blockchain
+	tokenId, err := db.Client.Token.
+		Create().
+		SetSymbol("TST").
+		SetContractAddress("0xd4E96eF8eee8678dBFf4d535E033Ed1a4F7605b7").
+		SetDecimals(6).
+		SetNetworkID(networkId).
+		SetIsEnabled(true).
+		SetBaseCurrency("KES").
+		OnConflict().
+		UpdateNewValues().
+		ID(context.Background())
 	if err != nil {
-		return err
+		return fmt.Errorf("CreateToken.profile_test: %w", err)
+	}
+
+	token, err := db.Client.Token.
+		Query().
+		Where(tokenDB.IDEQ(tokenId)).
+		WithNetwork().
+		Only(context.Background())
+	if err != nil {
+		return fmt.Errorf("GetToken.profile_test: %w", err)
 	}
 	testCtx.token = token
 
@@ -107,8 +131,8 @@ func setup() error {
 }
 
 func TestProfile(t *testing.T) {
-	// Set up test database client
-	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+	// Set up test database client with shared in-memory schema
+	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
 	defer client.Close()
 
 	// Run schema migrations
@@ -276,7 +300,7 @@ func TestProfile(t *testing.T) {
 			tokenPayload[0].Addresses = tokenAddresses
 
 			// setup TRC token
-			tronToken, err := test.CreateTRC20Token(testCtx.client, map[string]interface{}{})
+			tronToken, err := test.CreateTRC20Token(map[string]interface{}{})
 			assert.NoError(t, err)
 			assert.NotEqual(t, "localhost", tronToken.Edges.Network.Identifier)
 
@@ -461,7 +485,6 @@ func TestProfile(t *testing.T) {
 
 	})
 
-
 	t.Run("UpdateProviderProfile", func(t *testing.T) {
 		profileUpdateRequest := func(payload types.ProviderProfilePayload) *httptest.ResponseRecorder {
 			accessToken, _ := token.GenerateAccessJWT(testCtx.user.ID.String(), "provider")
@@ -563,9 +586,9 @@ func TestProfile(t *testing.T) {
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
 					Currency:       "KES",
 					Tokens: []types.ProviderOrderTokenPayload{{
-						Symbol:           testCtx.token.Symbol,
-						Network:          testCtx.orderToken.Network,
-						RateSlippage:     decimal.NewFromFloat(25), // 25% slippage
+						Symbol:            testCtx.token.Symbol,
+						Network:           testCtx.orderToken.Network,
+						RateSlippage:      decimal.NewFromFloat(25), // 25% slippage
 						MaxOrderAmountOTC: decimal.Zero,
 						MinOrderAmountOTC: decimal.Zero,
 					}},
@@ -585,9 +608,9 @@ func TestProfile(t *testing.T) {
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
 					Currency:       "KES",
 					Tokens: []types.ProviderOrderTokenPayload{{
-						Symbol:           testCtx.token.Symbol,
-						Network:          testCtx.orderToken.Network,
-						RateSlippage:     decimal.NewFromFloat(0.09), // 0.09% slippage
+						Symbol:            testCtx.token.Symbol,
+						Network:           testCtx.orderToken.Network,
+						RateSlippage:      decimal.NewFromFloat(0.09), // 0.09% slippage
 						MaxOrderAmountOTC: decimal.Zero,
 						MinOrderAmountOTC: decimal.Zero,
 					}},
