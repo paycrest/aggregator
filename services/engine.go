@@ -1065,6 +1065,68 @@ func (s *EngineService) ParseUserOpErrorJSON(errorJSON map[string]interface{}) s
 	return "Unknown error"
 }
 
+// SendContractCall sends a contract call using ThirdWeb's /v1/write/contract endpoint
+func (s *EngineService) SendContractCall(ctx context.Context, chainID int64, fromAddress string, contractAddress string, method string, params []interface{}) (queueID string, err error) {
+	res, err := fastshot.NewClient(s.config.BaseURL).
+		Config().SetTimeout(30 * time.Second).
+		Header().AddAll(map[string]string{
+		"Accept":               "application/json",
+		"Content-Type":         "application/json",
+		"x-vault-access-token": s.config.AccessToken,
+		"X-Secret-Key":         s.config.ThirdwebSecretKey,
+	}).
+		Build().POST("/v1/write/contract").
+		Body().AsJSON(map[string]interface{}{
+		"executionOptions": map[string]interface{}{
+			"chainId": fmt.Sprintf("%d", chainID),
+			"from":    fromAddress,
+			"type":    "auto",
+		},
+		"params": []map[string]interface{}{
+			{
+				"contractAddress": contractAddress,
+				"method":          method,
+				"params":          params,
+			},
+		},
+	}).Send()
+	if err != nil {
+		return "", fmt.Errorf("failed to send contract call: %w", err)
+	}
+
+	data, err := utils.ParseJSONResponse(res.RawResponse)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse JSON response: %w", err)
+	}
+
+	// Extract result field
+	result, ok := data["result"].(map[string]interface{})
+	if !ok {
+		return "", fmt.Errorf("invalid response structure: missing or invalid 'result' field")
+	}
+
+	transactionsRaw, ok := result["transactions"].([]interface{})
+	if !ok {
+		return "", fmt.Errorf("invalid response structure: missing or invalid 'transactions' field")
+	}
+
+	if len(transactionsRaw) == 0 {
+		return "", fmt.Errorf("invalid response structure: empty 'transactions' array")
+	}
+
+	firstTransaction, ok := transactionsRaw[0].(map[string]interface{})
+	if !ok {
+		return "", fmt.Errorf("invalid response structure: invalid transaction object")
+	}
+
+	queueID, ok = firstTransaction["id"].(string)
+	if !ok {
+		return "", fmt.Errorf("invalid response structure: missing or invalid 'id' field")
+	}
+
+	return queueID, nil
+}
+
 // extractAndDecodeRevertReason extracts the hex-encoded revert reason from the error message and decodes it
 func (s *EngineService) extractAndDecodeRevertReason(errorBody string) string {
 	// Regular expression to find the hex-encoded revert reason

@@ -379,6 +379,7 @@ type ERC20Transfer struct {
 // LockPaymentOrderFields is the fields for a lock payment order
 type LockPaymentOrderFields struct {
 	ID                uuid.UUID
+	OrderType         string
 	Token             *ent.Token
 	Network           *ent.Network
 	GatewayID         string
@@ -584,6 +585,12 @@ type MarketRateResponse struct {
 	MaximumRate decimal.Decimal `json:"maximumRate"`
 }
 
+// RateMetadata contains optional metadata for rate responses
+type RateMetadata struct {
+	OrderType            string `json:"orderType"`            // "regular" or "otc"
+	RefundTimeoutMinutes int    `json:"refundTimeoutMinutes"` // Minutes until automatic refund
+}
+
 type ResendTokenPayload struct {
 	Scope string `json:"scope" binding:"required,oneof=emailVerification resetPassword"`
 	Email string `json:"email" binding:"required,email"`
@@ -607,9 +614,10 @@ type SupportedCurrencies struct {
 
 // Response is the struct for an API response
 type Response struct {
-	Status  string      `json:"status"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data"`
+	Status   string      `json:"status"`
+	Message  string      `json:"message"`
+	Data     interface{} `json:"data"`
+	Metadata interface{} `json:"metadata,omitempty"` // Optional metadata for additional information
 }
 
 // ErrorData is the struct for error data i.e when Status is "error"

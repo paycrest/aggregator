@@ -7,11 +7,14 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"math/big"
 	"strings"
 	"sync"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/go-co-op/gocron"
 	"github.com/google/uuid"
 	fastshot "github.com/opus-domini/fast-shot"
@@ -33,6 +36,7 @@ import (
 	"github.com/paycrest/aggregator/ent/webhookretryattempt"
 	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/common"
+	"github.com/paycrest/aggregator/services/contracts"
 	"github.com/paycrest/aggregator/services/email"
 	"github.com/paycrest/aggregator/services/indexer"
 	orderService "github.com/paycrest/aggregator/services/order"
@@ -48,6 +52,56 @@ import (
 
 var orderConf = config.OrderConfig()
 var serverConf = config.ServerConfig()
+
+// Indexing coordination: track addresses currently being indexed to prevent duplicate work
+var (
+	indexingAddresses sync.Map // address_chainID -> time.Time (when indexing started)
+	recentlyIndexed   sync.Map // address_chainID -> time.Time (when last indexed)
+
+	// Minimum time between indexing same address (3 minutes)
+	indexingCooldown = 3 * time.Minute
+
+	// Maximum time an address can be "in progress" before considering it stale (5 minutes)
+	indexingTimeout = 5 * time.Minute
+
+	// Cleanup interval for stale entries in indexing maps
+	indexingCleanupInterval = 10 * time.Minute
+)
+
+// cleanupIndexingMaps removes stale entries from indexing coordination maps
+func cleanupIndexingMaps() {
+	now := time.Now()
+	var cleanedIndexing, cleanedRecent int
+
+	// Clean up stale "in progress" entries
+	indexingAddresses.Range(func(key, value interface{}) bool {
+		if startTime, ok := value.(time.Time); ok {
+			if now.Sub(startTime) > indexingTimeout {
+				indexingAddresses.Delete(key)
+				cleanedIndexing++
+			}
+		}
+		return true
+	})
+
+	// Clean up old "recently indexed" entries (older than cooldown + 1 hour buffer)
+	recentlyIndexed.Range(func(key, value interface{}) bool {
+		if lastIndexed, ok := value.(time.Time); ok {
+			if now.Sub(lastIndexed) > indexingCooldown+1*time.Hour {
+				recentlyIndexed.Delete(key)
+				cleanedRecent++
+			}
+		}
+		return true
+	})
+
+	if cleanedIndexing > 0 || cleanedRecent > 0 {
+		logger.WithFields(logger.Fields{
+			"CleanedIndexing": cleanedIndexing,
+			"CleanedRecent":   cleanedRecent,
+		}).Debugf("Cleaned up stale indexing map entries")
+	}
+}
 
 // RetryStaleUserOperations retries stale user operations
 // TODO: Fetch failed orders from a separate db table and process them
@@ -177,18 +231,44 @@ func RetryStaleUserOperations() error {
 	}(ctx)
 
 	// Refund order process
+	// OTC orders use separate refund timeout
+	otcRefundTimeout := orderConf.OrderRefundTimeoutOtc
+	regularRefundTimeout := orderConf.OrderRefundTimeout
+
 	lockOrders, err = storage.Client.LockPaymentOrder.
 		Query().
 		Where(
 			lockpaymentorder.GatewayIDNEQ(""),
 			lockpaymentorder.UpdatedAtGTE(time.Now().Add(-5*time.Minute)),
+			lockpaymentorder.StatusNEQ(lockpaymentorder.StatusValidated),
+			lockpaymentorder.StatusNEQ(lockpaymentorder.StatusSettled),
+			lockpaymentorder.StatusNEQ(lockpaymentorder.StatusRefunded),
 			lockpaymentorder.Or(
+				// Regular orders with normal refund timeout
 				lockpaymentorder.And(
+					lockpaymentorder.OrderTypeEQ(lockpaymentorder.OrderTypeRegular),
 					lockpaymentorder.Or(
 						lockpaymentorder.StatusEQ(lockpaymentorder.StatusPending),
 						lockpaymentorder.StatusEQ(lockpaymentorder.StatusCancelled),
 					),
-					lockpaymentorder.CreatedAtLTE(time.Now().Add(-orderConf.OrderRefundTimeout)),
+					lockpaymentorder.CreatedAtLTE(time.Now().Add(-regularRefundTimeout)),
+					lockpaymentorder.Or(
+						lockpaymentorder.Not(lockpaymentorder.HasFulfillments()),
+						lockpaymentorder.HasFulfillmentsWith(
+							lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusFailed),
+							lockorderfulfillment.Not(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusSuccess)),
+							lockorderfulfillment.Not(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusPending)),
+						),
+					),
+				),
+				// OTC orders with 15x refund timeout
+				lockpaymentorder.And(
+					lockpaymentorder.OrderTypeEQ(lockpaymentorder.OrderTypeOtc),
+					lockpaymentorder.Or(
+						lockpaymentorder.StatusEQ(lockpaymentorder.StatusPending),
+						lockpaymentorder.StatusEQ(lockpaymentorder.StatusCancelled),
+					),
+					lockpaymentorder.CreatedAtLTE(time.Now().Add(-otcRefundTimeout)),
 					lockpaymentorder.Or(
 						lockpaymentorder.Not(lockpaymentorder.HasFulfillments()),
 						lockpaymentorder.HasFulfillmentsWith(
@@ -324,6 +404,8 @@ func TaskIndexBlockchainEvents() error {
 				_, _ = indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
 
 				// Find payment orders with missed transfers
+				// Prioritize recent orders (created in last 30 minutes) - most likely to have transfers
+				recentCutoff := time.Now().Add(-30 * time.Minute)
 				paymentOrders, err := storage.Client.PaymentOrder.
 					Query().
 					Where(
@@ -332,6 +414,7 @@ func TaskIndexBlockchainEvents() error {
 						paymentorder.BlockNumberEQ(0),
 						paymentorder.AmountPaidEQ(decimal.Zero),
 						paymentorder.FromAddressIsNil(),
+						paymentorder.CreatedAtGTE(recentCutoff), // Focus on recent orders
 						paymentorder.HasReceiveAddressWith(
 							receiveaddress.StatusEQ(receiveaddress.StatusUnused),
 						),
@@ -346,6 +429,7 @@ func TaskIndexBlockchainEvents() error {
 					}).
 					WithReceiveAddress().
 					Order(ent.Desc(paymentorder.FieldCreatedAt)).
+					Limit(50). // Limit to 50 most recent to avoid processing too many at once
 					All(ctx)
 				if err != nil {
 					logger.WithFields(logger.Fields{
@@ -360,18 +444,55 @@ func TaskIndexBlockchainEvents() error {
 					var wg sync.WaitGroup
 
 					for _, order := range paymentOrders {
-						wg.Add(1)
-						go func(order *ent.PaymentOrder) {
-							defer wg.Done()
+						if order.Edges.ReceiveAddress == nil {
+							continue
+						}
 
-							_, err := indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, order.Edges.ReceiveAddress.Address, 0, 0, "")
+						address := order.Edges.ReceiveAddress.Address
+						chainID := network.ChainID
+						indexKey := fmt.Sprintf("%s_%d", address, chainID)
+
+						// Check if address is currently being indexed by another task
+						if _, indexing := indexingAddresses.Load(indexKey); indexing {
+							// Check if indexing started too long ago (stale)
+							if startTime, ok := indexingAddresses.Load(indexKey); ok {
+								if time.Since(startTime.(time.Time)) > indexingTimeout {
+									indexingAddresses.Delete(indexKey) // Remove stale entry
+								} else {
+									continue // Skip, already being indexed
+								}
+							}
+						}
+
+						// Check if address was recently indexed (within cooldown period)
+						if lastIndexed, indexed := recentlyIndexed.Load(indexKey); indexed {
+							if time.Since(lastIndexed.(time.Time)) < indexingCooldown {
+								continue // Skip, recently indexed
+							}
+						}
+
+						// Mark as being indexed
+						indexingAddresses.Store(indexKey, time.Now())
+
+						wg.Add(1)
+						go func(order *ent.PaymentOrder, addr string, key string) {
+							defer wg.Done()
+							defer indexingAddresses.Delete(key) // Remove from indexing map when done
+
+							// Check circuit breaker before indexing (if Etherscan service is available)
+							// Note: This is a best-effort check, actual circuit breaker is in etherscan service
+
+							_, err := indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, addr, 0, 0, "")
 							if err != nil {
 								logger.WithFields(logger.Fields{
 									"Error":   fmt.Sprintf("%v", err),
 									"OrderID": order.ID.String(),
 								}).Errorf("TaskIndexBlockchainEvents.IndexReceiveAddress")
+							} else {
+								// Mark as recently indexed on success
+								recentlyIndexed.Store(key, time.Now())
 							}
-						}(order)
+						}(order, address, indexKey)
 					}
 
 					// Wait for all transfer indexing to complete
@@ -412,6 +533,14 @@ func reassignCancelledOrder(ctx context.Context, order *ent.LockPaymentOrder, fu
 		_, err := storage.RedisClient.RPush(ctx, orderKey, order.Edges.Provider.ID).Result()
 		if err != nil {
 			return
+		}
+		// Set TTL for the exclude list (2x order request validity since orders can be reassigned)
+		err = storage.RedisClient.ExpireAt(ctx, orderKey, time.Now().Add(orderConf.OrderRequestValidity*2)).Err()
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"OrderID": order.ID.String(),
+			}).Errorf("failed to set TTL for order exclude list")
 		}
 
 		_, err = storage.Client.LockPaymentOrder.
@@ -461,15 +590,18 @@ func reassignCancelledOrder(ctx context.Context, order *ent.LockPaymentOrder, fu
 }
 
 // SyncLockOrderFulfillments syncs lock order fulfillments
+// Only processes regular orders
+// TODO: refactor this to process OTC orders as well when OTC fulfillment validation is automated
 func SyncLockOrderFulfillments() {
 	// ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	// defer cancel()
 	ctx := context.Background()
 
-	// Query unvalidated lock orders.
+	// Query unvalidated lock orders (regular orders only - exclude OTC)
 	lockOrders, err := storage.Client.LockPaymentOrder.
 		Query().
 		Where(
+			lockpaymentorder.OrderTypeEQ(lockpaymentorder.OrderTypeRegular), // Only regular orders
 			lockpaymentorder.Or(
 				lockpaymentorder.And(
 					lockpaymentorder.StatusEQ(lockpaymentorder.StatusFulfilled),
@@ -482,7 +614,6 @@ func SyncLockOrderFulfillments() {
 						lockpaymentorder.HasFulfillmentsWith(
 							lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusPending),
 							lockorderfulfillment.UpdatedAtLTE(time.Now().Add(-orderConf.OrderFulfillmentValidity)),
-							lockorderfulfillment.Not(lockorderfulfillment.UpdatedAtGT(time.Now().Add(-orderConf.OrderFulfillmentValidity))),
 						),
 						lockpaymentorder.HasFulfillmentsWith(
 							lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusSuccess),
@@ -720,6 +851,26 @@ func SyncLockOrderFulfillments() {
 
 					data, err := utils.ParseJSONResponse(res.RawResponse)
 					if err != nil {
+						// Check if it's a 400 error and fulfillment is older than 5 minutes
+						if res.RawResponse.StatusCode == 400 {
+							if time.Since(fulfillment.CreatedAt) > 5*time.Minute {
+								// Mark fulfillment as failed
+								_, updateErr := storage.Client.LockOrderFulfillment.
+									UpdateOneID(fulfillment.ID).
+									SetValidationStatus(lockorderfulfillment.ValidationStatusFailed).
+									SetValidationError("Failed to get transaction status after 5 minutes").
+									Save(ctx)
+								if updateErr != nil {
+									logger.WithFields(logger.Fields{
+										"Error":         fmt.Sprintf("%v", updateErr),
+										"OrderID":       order.ID.String(),
+										"FulfillmentID": fulfillment.ID,
+									}).Errorf("Failed to mark fulfillment as failed after 5 minutes")
+								}
+								continue
+							}
+						}
+
 						logger.WithFields(logger.Fields{
 							"Error":           fmt.Sprintf("%v", err),
 							"OrderID":         order.ID.String(),
@@ -839,18 +990,30 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 				lockpaymentorder.IDEQ(orderUUID),
 			).
 			WithProvisionBucket().
+			WithProvider().
+			WithToken(func(tq *ent.TokenQuery) {
+				tq.WithNetwork()
+			}).
 			Only(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":   fmt.Sprintf("%v", err),
-				"OrderID": order.ID.String(),
+				"OrderID": orderUUID.String(),
 				"UUID":    orderUUID,
 			}).Errorf("ReassignStaleOrderRequest: Failed to get order from database")
 			continue
 		}
 
+		// Extract provider ID from relation if available
+		providerID := ""
+		if order.Edges.Provider != nil {
+			providerID = order.Edges.Provider.ID
+		}
+
+		// Build order fields for reassignment
 		orderFields := types.LockPaymentOrderFields{
 			ID:                order.ID,
+			OrderType:         string(order.OrderType),
 			GatewayID:         order.GatewayID,
 			Amount:            order.Amount,
 			Rate:              order.Rate,
@@ -859,7 +1022,17 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 			AccountIdentifier: order.AccountIdentifier,
 			AccountName:       order.AccountName,
 			Memo:              order.Memo,
+			ProviderID:        providerID,
+			MessageHash:       order.MessageHash,
 			ProvisionBucket:   order.Edges.ProvisionBucket,
+		}
+
+		// Include token and network if available
+		if order.Edges.Token != nil {
+			orderFields.Token = order.Edges.Token
+			if order.Edges.Token.Edges.Network != nil {
+				orderFields.Network = order.Edges.Token.Edges.Network
+			}
 		}
 
 		// Assign the order to a provider
@@ -934,6 +1107,133 @@ func HandleReceiveAddressValidity() error {
 	}
 
 	return nil
+}
+
+// RefundsInterval defines the interval for processing expired orders refunds
+const RefundsInterval = 30
+
+// ProcessExpiredOrdersRefunds processes expired orders and transfers any remaining funds to refund addresses
+func ProcessExpiredOrdersRefunds() error {
+	ctx := context.Background()
+
+	// Get all payment orders that are expired and initiated in the last RefundsInterval
+	expiredOrders, err := storage.Client.PaymentOrder.
+		Query().
+		Where(
+			paymentorder.StatusEQ(paymentorder.StatusExpired),
+			paymentorder.CreatedAtGTE(time.Now().Add(-(RefundsInterval * time.Minute))), // Should match jobs retrying expired orders refunds
+		).
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
+		WithReceiveAddress().
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("ProcessExpiredOrdersRefunds.fetchExpiredOrders: %w", err)
+	}
+
+	if len(expiredOrders) == 0 {
+		return nil
+	}
+
+	engineService := services.NewEngineService()
+
+	var wg sync.WaitGroup
+	semaphore := make(chan struct{}, 5)
+
+	for _, order := range expiredOrders {
+		wg.Add(1)
+		go func(order *ent.PaymentOrder) {
+			defer wg.Done()
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+
+			if order.Edges.ReceiveAddress == nil {
+				return
+			}
+
+			receiveAddress := order.Edges.ReceiveAddress.Address
+			tokenContract := order.Edges.Token.ContractAddress
+			network := order.Edges.Token.Edges.Network
+			rpcEndpoint := network.RPCEndpoint
+			chainID := network.ChainID
+
+			// Skip if no return address (nowhere to refund to)
+			if order.ReturnAddress == "" {
+				return
+			}
+
+			// Check balance of token at receive address
+			balance, err := getTokenBalance(rpcEndpoint, tokenContract, receiveAddress)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":             err.Error(),
+					"OrderID":           order.ID.String(),
+					"ReceiveAddress":    receiveAddress,
+					"TokenContract":     tokenContract,
+					"NetworkIdentifier": network.Identifier,
+				}).Errorf("Failed to check token balance for receive address %s", receiveAddress)
+				return
+			}
+
+			if balance.Cmp(big.NewInt(0)) == 0 {
+				return
+			}
+
+			// Prepare transfer method call
+			method := "function transfer(address recipient, uint256 amount) public returns (bool)"
+			params := []interface{}{
+				order.ReturnAddress, // recipient address
+				balance.String(),    // amount to transfer
+			}
+
+			// Send the transfer transaction
+			_, err = engineService.SendContractCall(
+				ctx,
+				chainID,
+				receiveAddress,
+				tokenContract,
+				method,
+				params,
+			)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":             err.Error(),
+					"OrderID":           order.ID.String(),
+					"ReceiveAddress":    receiveAddress,
+					"ReturnAddress":     order.ReturnAddress,
+					"Balance":           balance.String(),
+					"TokenContract":     tokenContract,
+					"NetworkIdentifier": network.Identifier,
+				}).Errorf("Failed to send refund transfer transaction")
+				return
+			}
+
+		}(order)
+	}
+
+	wg.Wait()
+	return nil
+}
+
+func getTokenBalance(rpcEndpoint string, tokenContractAddress string, walletAddress string) (*big.Int, error) {
+	client, err := ethclient.Dial(rpcEndpoint)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create RPC client: %w", err)
+	}
+	defer client.Close()
+
+	tokenContract, err := contracts.NewERC20Token(ethcommon.HexToAddress(tokenContractAddress), client)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create token contract instance: %w", err)
+	}
+
+	balance, err := tokenContract.BalanceOf(nil, ethcommon.HexToAddress(walletAddress))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get token balance: %w", err)
+	}
+
+	return balance, nil
 }
 
 // SubscribeToRedisKeyspaceEvents subscribes to redis keyspace events according to redis.conf settings
@@ -1276,12 +1576,17 @@ func IndexGatewayEvents() error {
 // resolveMissedEvents resolves cases where transfers to receive addresses were missed
 func resolveMissedEvents(ctx context.Context, network *ent.Network) {
 	// Find payment orders with missed transfers
+	// Focus on orders older than 30 seconds but created in last 2 hours (sweet spot for missed transfers)
+	now := time.Now()
+	recentCutoff := now.Add(-2 * time.Hour)
+	oldEnoughCutoff := now.Add(-30 * time.Second)
+
 	orders, err := storage.Client.PaymentOrder.
 		Query().
 		Where(
 			paymentorder.StatusEQ(paymentorder.StatusInitiated),
-			paymentorder.CreatedAtLTE(time.Now().Add(-30*time.Second)),
-			// paymentorder.CreatedAtGTE(time.Now().Add(-15*time.Minute)),
+			paymentorder.CreatedAtLTE(oldEnoughCutoff), // At least 30 seconds old
+			paymentorder.CreatedAtGTE(recentCutoff),    // But within last 2 hours
 			paymentorder.HasReceiveAddressWith(
 				receiveaddress.StatusNEQ(receiveaddress.StatusExpired),
 			),
@@ -1295,6 +1600,8 @@ func resolveMissedEvents(ctx context.Context, network *ent.Network) {
 			tq.WithNetwork()
 		}).
 		WithReceiveAddress().
+		Order(ent.Desc(paymentorder.FieldCreatedAt)).
+		Limit(100). // Limit to avoid processing too many at once
 		All(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
@@ -1318,32 +1625,79 @@ func resolveMissedEvents(ctx context.Context, network *ent.Network) {
 	errorCount := 0
 
 	for i, order := range orders {
-		if order.Edges.ReceiveAddress != nil {
+		if order.Edges.ReceiveAddress == nil {
+			continue
+		}
+
+		address := order.Edges.ReceiveAddress.Address
+		chainID := network.ChainID
+		indexKey := fmt.Sprintf("%s_%d", address, chainID)
+
+		// Check if address is currently being indexed by another task
+		if _, indexing := indexingAddresses.Load(indexKey); indexing {
+			// Check if indexing started too long ago (stale)
+			if startTime, ok := indexingAddresses.Load(indexKey); ok {
+				if time.Since(startTime.(time.Time)) > indexingTimeout {
+					indexingAddresses.Delete(indexKey) // Remove stale entry
+				} else {
+					continue // Skip, already being indexed
+				}
+			}
+		}
+
+		// Check if address was recently indexed (within cooldown period)
+		if lastIndexed, indexed := recentlyIndexed.Load(indexKey); indexed {
+			if time.Since(lastIndexed.(time.Time)) < indexingCooldown {
+				continue // Skip, recently indexed
+			}
+		}
+
+		// Mark as being indexed
+		indexingAddresses.Store(indexKey, time.Now())
+
+		// Log progress selectively: all for small batches (<=10), first/last/every 50th for larger batches
+		// This provides visibility without excessive logging during bulk operations
+		shouldLog := len(orders) <= 10 || i == 0 || i == len(orders)-1 || (i+1)%50 == 0
+		if shouldLog {
 			logger.WithFields(logger.Fields{
 				"NetworkIdentifier": network.Identifier,
-				"ReceiveAddress":    order.Edges.ReceiveAddress.Address,
+				"ReceiveAddress":    address,
 				"OrderID":           order.ID,
 				"Progress":          fmt.Sprintf("%d/%d", i+1, len(orders)),
 			}).Infof("ResolvePaymentOrderMishaps.resolveMissedEvents")
-
-			_, err = indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, order.Edges.ReceiveAddress.Address, 0, 0, "")
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":             fmt.Sprintf("%v", err),
-					"NetworkIdentifier": network.Identifier,
-					"ReceiveAddress":    order.Edges.ReceiveAddress.Address,
-					"OrderID":           order.ID,
-				}).Errorf("ResolvePaymentOrderMishaps.resolveMissedEvents.indexReceiveAddress")
-				errorCount++
-				continue // Continue with other orders even if one fails
-			}
-			processedCount++
-
-			// Add a small delay between requests to be respectful to the RPC node
-			if i < len(orders)-1 {
-				time.Sleep(250 * time.Millisecond)
-			}
 		}
+
+		_, err = indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, address, 0, 0, "")
+
+		// Remove from indexing map when done
+		indexingAddresses.Delete(indexKey)
+
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":             fmt.Sprintf("%v", err),
+				"NetworkIdentifier": network.Identifier,
+				"ReceiveAddress":    address,
+				"OrderID":           order.ID,
+			}).Errorf("ResolvePaymentOrderMishaps.resolveMissedEvents.indexReceiveAddress")
+			errorCount++
+			continue // Continue with other orders even if one fails
+		}
+
+		// Mark as recently indexed on success
+		recentlyIndexed.Store(indexKey, time.Now())
+		processedCount++
+
+		// Removed 250ms delay - queue handles rate limiting, no need for artificial delay
+	}
+
+	// Log summary at end instead of logging every order
+	if len(orders) > 0 {
+		logger.WithFields(logger.Fields{
+			"NetworkIdentifier": network.Identifier,
+			"TotalOrders":       len(orders),
+			"Processed":         processedCount,
+			"Errors":            errorCount,
+		}).Infof("ResolvePaymentOrderMishaps.resolveMissedEvents completed")
 	}
 }
 
@@ -1764,6 +2118,18 @@ func StartCronJobs() {
 	_, err = scheduler.Every(4).Seconds().Do(TaskIndexBlockchainEvents)
 	if err != nil {
 		logger.Errorf("StartCronJobs for IndexBlockchainEvents: %v", err)
+	}
+
+	// Process expired orders refunds every RefundsInterval
+	_, err = scheduler.Every(RefundsInterval).Minutes().Do(ProcessExpiredOrdersRefunds)
+	if err != nil {
+		logger.Errorf("StartCronJobs for ProcessExpiredOrdersRefunds: %v", err)
+	}
+
+	// Cleanup stale entries in indexing coordination maps
+	_, err = scheduler.Every(indexingCleanupInterval).Do(cleanupIndexingMaps)
+	if err != nil {
+		logger.Errorf("StartCronJobs for cleanupIndexingMaps: %v", err)
 	}
 
 	// Start scheduler

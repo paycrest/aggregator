@@ -18,13 +18,10 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/providerprofile"
-	"github.com/paycrest/aggregator/ent/user"
 	"github.com/paycrest/aggregator/routers/middleware"
 	svc "github.com/paycrest/aggregator/services"
-	"github.com/paycrest/aggregator/services/email"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
-	"github.com/spf13/viper"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/gin-gonic/gin"
@@ -37,29 +34,56 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// mockEmailService is a mock implementation of EmailServiceInterface for testing
+// This avoids the need to mock HTTP calls with httpmock, which has issues with fastshot
+type mockEmailService struct{}
+
+func (m *mockEmailService) SendEmail(ctx context.Context, payload types.SendEmailPayload) (types.SendEmailResponse, error) {
+	return types.SendEmailResponse{Id: "mock-email-id"}, nil
+}
+
+func (m *mockEmailService) SendTemplateEmail(ctx context.Context, payload types.SendEmailPayload, templateID string) (types.SendEmailResponse, error) {
+	return types.SendEmailResponse{Id: "mock-template-id"}, nil
+}
+
+func (m *mockEmailService) SendVerificationEmail(ctx context.Context, token, email, firstName string) (types.SendEmailResponse, error) {
+	return types.SendEmailResponse{Id: "mock-verification-id"}, nil
+}
+
+func (m *mockEmailService) SendPasswordResetEmail(ctx context.Context, token, email, firstName string) (types.SendEmailResponse, error) {
+	return types.SendEmailResponse{Id: "mock-reset-id"}, nil
+}
+
+func (m *mockEmailService) SendWelcomeEmail(ctx context.Context, email, firstName string, scopes []string) (types.SendEmailResponse, error) {
+	return types.SendEmailResponse{Id: "mock-welcome-id"}, nil
+}
+
+func (m *mockEmailService) SendKYBApprovalEmail(ctx context.Context, email, firstName string) (types.SendEmailResponse, error) {
+	return types.SendEmailResponse{Id: "mock-kyb-approval-id"}, nil
+}
+
+func (m *mockEmailService) SendKYBRejectionEmail(ctx context.Context, email, firstName, reasonForDecline string) (types.SendEmailResponse, error) {
+	return types.SendEmailResponse{Id: "mock-kyb-rejection-id"}, nil
+}
+
+func (m *mockEmailService) SendWebhookFailureEmail(ctx context.Context, email, firstName string) (types.SendEmailResponse, error) {
+	return types.SendEmailResponse{Id: "mock-webhook-failure-id"}, nil
+}
+
 func TestAuth(t *testing.T) {
+	// Set environment to "test" so users are auto-verified (email won't be in response)
+	originalEnv := os.Getenv("ENVIRONMENT")
+	os.Setenv("ENVIRONMENT", "test")
+	defer func() {
+		if originalEnv != "" {
+			os.Setenv("ENVIRONMENT", originalEnv)
+		} else {
+			os.Unsetenv("ENVIRONMENT")
+		}
+	}()
 
-	// setup httpmock
-	httpmock.Activate()
-	defer httpmock.Deactivate()
-
-	// register mock response
-	httpmock.RegisterResponder("POST", "https://api.mailgun.net/v3/sandbox9c66b379b78d43d2b1533bf2a09a5325.mailgun.org/messages",
-		func(r *http.Request) (*http.Response, error) {
-			return httpmock.NewBytesResponse(200, []byte(`{"id": "01", "message": "Sent"}`)), nil
-		},
-	)
-
-	httpmock.RegisterResponder("POST", "https://api.sendgrid.com/v3/mail/send",
-		func(r *http.Request) (*http.Response, error) {
-			resp := httpmock.NewBytesResponse(202, nil)
-			resp.Header.Set("X-Message-Id", "thisisatestid")
-			return resp, nil
-		},
-	)
-
-	// Set up test database client
-	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+	// Set up test database client with shared in-memory schema
+	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
 	defer client.Close()
 
 	db.Client = client
@@ -80,7 +104,7 @@ func TestAuth(t *testing.T) {
 	router := gin.New()
 	ctrl := &AuthController{
 		apiKeyService: svc.NewAPIKeyService(),
-		emailService:  email.NewEmailServiceWithProviders(),
+		emailService:  &mockEmailService{}, // Use mock instead of real email service to avoid HTTP mocking issues
 	}
 
 	router.POST("/register", ctrl.Register)
@@ -216,7 +240,7 @@ func TestAuth(t *testing.T) {
 			// Query the database to check if API key and profile were created
 			user, err := db.Client.User.
 				Query().
-				Where(user.IDEQ(userUUID)).
+				Where(userEnt.IDEQ(userUUID)).
 				WithProviderProfile(
 					func(q *ent.ProviderProfileQuery) {
 						q.WithAPIKey()
@@ -290,7 +314,7 @@ func TestAuth(t *testing.T) {
 			// Query the database to check if API key and profile were created
 			user, err := db.Client.User.
 				Query().
-				Where(user.IDEQ(userUUID)).
+				Where(userEnt.IDEQ(userUUID)).
 				WithProviderProfile(
 					func(q *ent.ProviderProfileQuery) {
 						q.WithAPIKey()
@@ -706,28 +730,33 @@ func TestAuth(t *testing.T) {
 		})
 	})
 
-	t.Run("expiriedToken", func(t *testing.T) {
-		// fetch user
-		userUUID, err := uuid.Parse(userID)
-		assert.NoError(t, err)
+	t.Run("expiredToken", func(t *testing.T) {
+		// Create or fetch user for this test
+		var user *ent.User
+		var fetchUserErr error
+		if userID != "" {
+			userUUID, err := uuid.Parse(userID)
+			assert.NoError(t, err)
+			user, fetchUserErr = db.Client.User.
+				Query().
+				Where(userEnt.IDEQ(userUUID)).
+				Only(context.Background())
+		} else {
+			// Create a test user if userID is not set (e.g., when running this test in isolation)
+			user, fetchUserErr = test.CreateTestUser(nil)
+		}
+		assert.NoError(t, fetchUserErr, "failed to fetch or create user")
 
-		user, fetchUserErr := db.Client.User.
-			Query().
-			Where(userEnt.IDEQ(userUUID)).
-			Only(context.Background())
-		assert.NoError(t, fetchUserErr, "failed to fetch user by userID")
-
-		// generate verificationToken
+		// generate verificationToken that is already expired
 		verificationtoken, vtErr := db.Client.VerificationToken.
 			Create().
 			SetOwner(user).
 			SetScope(verificationtoken.ScopeResetPassword).
-			SetExpiryAt(time.Now().Add(-time.Second)).
+			SetExpiryAt(time.Now().Add(-time.Second)). // Token is already expired
 			Save(context.Background())
 		assert.NoError(t, vtErr)
 		t.Run("try to use expired token", func(t *testing.T) {
-			time.Sleep(time.Duration(viper.GetInt("PASSWORD_RESET_LIFESPAN")) * time.Minute)
-			// Test user email confirmation-token
+			// Test user email confirmation with expired token
 			payload := types.ConfirmEmailPayload{
 				Token: verificationtoken.Token,
 				Email: user.Email,
@@ -1193,7 +1222,7 @@ func TestAuth(t *testing.T) {
 			assert.Equal(t, "Account deleted successfully", response.Message)
 			assert.Nil(t, response.Data)
 
-			// Assert profile no longer exist
+			// Verify user and associated profiles are deleted
 
 			_, err = db.Client.User.
 				Query().
