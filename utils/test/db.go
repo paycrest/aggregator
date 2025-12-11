@@ -3,6 +3,8 @@ package test
 import (
 	"bufio"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
@@ -276,8 +278,18 @@ func CreateTestPaymentOrder(token *ent.Token, overrides map[string]interface{}) 
 	}
 
 	// Generate a test address and salt (no blockchain deployment)
-	address := "0x" + strings.Repeat("a", 40) // Fake address
-	salt := []byte("test-salt-encrypted")
+	// Generate 20 random bytes for address (40 hex chars)
+	addressBytes := make([]byte, 20)
+	if _, err := rand.Read(addressBytes); err != nil {
+		return nil, fmt.Errorf("failed to generate random address: %w", err)
+	}
+	address := "0x" + hex.EncodeToString(addressBytes)
+
+	// Generate random salt (32 bytes)
+	salt := make([]byte, 32)
+	if _, err := rand.Read(salt); err != nil {
+		return nil, fmt.Errorf("failed to generate random salt: %w", err)
+	}
 
 	// Create receive address
 	receiveAddress, err := db.Client.ReceiveAddress.

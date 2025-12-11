@@ -441,6 +441,18 @@ func (s *PriorityQueueService) assignOtcOrder(ctx context.Context, order types.L
 			"ProviderID": order.ProviderID,
 			"OrderKey":   orderKey,
 		}).Errorf("Failed to set TTL for OTC order request")
+		// Cleanup: delete the orphaned key before returning
+		cleanupErr := storage.RedisClient.Del(ctx, orderKey).Err()
+		if cleanupErr != nil {
+			logger.WithFields(logger.Fields{
+				"Error":    fmt.Sprintf("%v", cleanupErr),
+				"OrderKey": orderKey,
+			}).Errorf("Failed to cleanup orderKey after ExpireAt failure")
+		} else {
+			logger.WithFields(logger.Fields{
+				"OrderKey": orderKey,
+			}).Infof("Successfully cleaned up orderKey after ExpireAt failure")
+		}
 		return err
 	}
 
@@ -548,6 +560,14 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 			"Error":    fmt.Sprintf("%v", err),
 			"OrderKey": orderKey,
 		}).Errorf("Failed to set TTL for order request")
+		// Cleanup: delete the orphaned key before returning
+		cleanupErr := storage.RedisClient.Del(ctx, orderKey).Err()
+		if cleanupErr != nil {
+			logger.WithFields(logger.Fields{
+				"Error":    fmt.Sprintf("%v", cleanupErr),
+				"OrderKey": orderKey,
+			}).Errorf("Failed to cleanup orderKey after ExpireAt failure")
+		}
 		return err
 	}
 
@@ -560,6 +580,14 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 			"OrderID":    order.ID.String(),
 			"ProviderID": order.ProviderID,
 		}).Errorf("Failed to notify provider")
+		// Cleanup: delete the orphaned key before returning
+		cleanupErr := storage.RedisClient.Del(ctx, orderKey).Err()
+		if cleanupErr != nil {
+			logger.WithFields(logger.Fields{
+				"Error":    fmt.Sprintf("%v", cleanupErr),
+				"OrderKey": orderKey,
+			}).Errorf("Failed to cleanup orderKey after notifyProvider failure")
+		}
 		return err
 	}
 

@@ -86,30 +86,31 @@ func CreateLockPaymentOrder(
 		retryDelay := 500 * time.Millisecond
 
 		err := utils.Retry(maxRetries, retryDelay, func() error {
-			paymentOrder, paymentOrderErr = db.Client.PaymentOrder.
+			// Use local variables to avoid data race with main flow
+			localPaymentOrder, localErr := db.Client.PaymentOrder.
 				Query().
 				Where(
 					paymentorder.MessageHashEQ(event.MessageHash),
 				).
 				Only(ctx)
-			if paymentOrderErr != nil {
-				if ent.IsNotFound(paymentOrderErr) {
-					return paymentOrderErr // Return error to trigger retry
+			if localErr != nil {
+				if ent.IsNotFound(localErr) {
+					return localErr // Return error to trigger retry
 				} else {
 					// Other error occurred, log and return error to trigger retry
 					logger.WithFields(logger.Fields{
 						"MessageHash": event.MessageHash,
 						"TxHash":      event.TxHash,
-						"Error":       paymentOrderErr.Error(),
+						"Error":       localErr.Error(),
 					}).Errorf("Failed to fetch payment order")
-					return paymentOrderErr
+					return localErr
 				}
 			}
 
 			// Payment order found, update it
 			_, updateErr := db.Client.PaymentOrder.
 				Update().
-				Where(paymentorder.IDEQ(paymentOrder.ID)).
+				Where(paymentorder.IDEQ(localPaymentOrder.ID)).
 				SetTxHash(event.TxHash).
 				SetBlockNumber(int64(event.BlockNumber)).
 				SetGatewayID(event.OrderId).
@@ -121,12 +122,12 @@ func CreateLockPaymentOrder(
 				// Refetch the updated payment order for webhook
 				updatedPaymentOrder, fetchErr := db.Client.PaymentOrder.
 					Query().
-					Where(paymentorder.IDEQ(paymentOrder.ID)).
+					Where(paymentorder.IDEQ(localPaymentOrder.ID)).
 					WithSenderProfile().
 					Only(ctx)
 				if fetchErr != nil {
 					logger.WithFields(logger.Fields{
-						"OrderID": paymentOrder.ID,
+						"OrderID": localPaymentOrder.ID,
 						"Error":   fetchErr.Error(),
 					}).Errorf("Failed to refetch payment order for webhook")
 				} else {
