@@ -3,6 +3,7 @@ package indexer
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/NethermindEth/juno/core/felt"
@@ -48,7 +49,7 @@ func (s *IndexerStarknet) IndexReceiveAddress(ctx context.Context, token *ent.To
 
 	if txHash != "" {
 		// Process specific transaction
-		counts, err := s.indexReceiveAddressByTransaction(ctx, token, txHash, nil)
+		counts, err := s.indexReceiveAddressByTransaction(ctx, token, txHash, nil, userAccountAddress)
 		if err != nil {
 			return eventCounts, fmt.Errorf("failed to index receive address by transaction: %w", err)
 		}
@@ -64,6 +65,10 @@ func (s *IndexerStarknet) IndexReceiveAddress(ctx context.Context, token *ent.To
 		}
 		toBlock = int64(currentBlock)
 		fromBlock = int64(toBlock) - 5 // 4s per block and we want to read every 4seconds
+		// Ensure fromBlock is not negative
+		if fromBlock < 0 {
+			fromBlock = 0
+		}
 	} else {
 		ChunkSize = 100
 	}
@@ -91,15 +96,15 @@ func (s *IndexerStarknet) IndexReceiveAddress(ctx context.Context, token *ent.To
 		return eventCounts, nil
 	}
 
-	transferEventCount, err := s.processReceiveAddressByTransactionEvents(ctx, token, transactions)
+	transferEventCount, err := s.processReceiveAddressByTransactionEvents(ctx, token, transactions, userAccountAddress)
 	if err != nil {
 		return eventCounts, fmt.Errorf("failed to index receive address by transaction: %w", err)
 	}
 	eventCounts.Transfer += transferEventCount.Transfer
 
 	for _, tx := range transactions {
-		txHash, ok := tx["hash"].(string)
-		if !ok {
+		txHash, ok := tx["transaction_hash"].(string)
+		if !ok || txHash == "" {
 			continue
 		}
 		gatewayEventCount, err := s.indexGatewayByTransaction(ctx, token.Edges.Network, txHash)
@@ -113,7 +118,7 @@ func (s *IndexerStarknet) IndexReceiveAddress(ctx context.Context, token *ent.To
 }
 
 // indexReceiveAddressByTransaction processes a specific transaction for receive address transfers
-func (s *IndexerStarknet) indexReceiveAddressByTransaction(ctx context.Context, token *ent.Token, txHash string, transactionEvents map[string]interface{}) (*types.EventCounts, error) {
+func (s *IndexerStarknet) indexReceiveAddressByTransaction(ctx context.Context, token *ent.Token, txHash string, transactionEvents map[string]interface{}, userAccountAddress string) (*types.EventCounts, error) {
 	eventCounts := &types.EventCounts{}
 	if txHash == "" {
 		return eventCounts, fmt.Errorf("transaction hash is required")
@@ -136,15 +141,15 @@ func (s *IndexerStarknet) indexReceiveAddressByTransaction(ctx context.Context, 
 		return eventCounts, fmt.Errorf("error getting transfer events for token %s in transaction %s: %w", token.Symbol, txHash[:10]+"...", err)
 	}
 
-	transferEventsCounts, err := s.processReceiveAddressByTransactionEvents(ctx, token, transactions)
+	transferEventsCounts, err := s.processReceiveAddressByTransactionEvents(ctx, token, transactions, userAccountAddress)
 	if err != nil {
 		return eventCounts, fmt.Errorf("failed to index receive address by transaction: %w", err)
 	}
 	eventCounts.Transfer += transferEventsCounts.Transfer
 
 	for _, tx := range transactions {
-		txHash, ok := tx["hash"].(string)
-		if !ok {
+		txHash, ok := tx["transaction_hash"].(string)
+		if !ok || txHash == "" {
 			continue
 		}
 		gatewayEventCount, err := s.indexGatewayByTransaction(ctx, token.Edges.Network, txHash)
@@ -158,7 +163,7 @@ func (s *IndexerStarknet) indexReceiveAddressByTransaction(ctx context.Context, 
 }
 
 // processReceiveAddressByTransactionEvents processes a specific transaction for receive address transfers
-func (s *IndexerStarknet) processReceiveAddressByTransactionEvents(ctx context.Context, token *ent.Token, transferEvents []map[string]interface{}) (*types.EventCounts, error) {
+func (s *IndexerStarknet) processReceiveAddressByTransactionEvents(ctx context.Context, token *ent.Token, transferEvents []map[string]interface{}, userAccountAddress string) (*types.EventCounts, error) {
 	eventCounts := &types.EventCounts{}
 	if len(transferEvents) == 0 {
 		return eventCounts, nil
@@ -174,19 +179,50 @@ func (s *IndexerStarknet) processReceiveAddressByTransactionEvents(ctx context.C
 			continue
 		}
 
-		// Safely extract transfer data
-		fromStr, ok := nonIndexedParams["from"].(string)
-		if !ok || fromStr == "" {
+		// Safely extract transfer data - handle *felt.Felt, *big.Int, and string types
+		var fromStr string
+		if feltVal, ok := nonIndexedParams["from"].(*felt.Felt); ok {
+			fromStr = feltVal.String()
+		} else if strVal, ok := nonIndexedParams["from"].(string); ok {
+			fromStr = strVal
+		} else {
+			logger.Errorf("Unexpected type for 'from' parameter in transfer event")
+			continue
+		}
+		if fromStr == "" {
 			continue
 		}
 
-		toStr, ok := nonIndexedParams["to"].(string)
-		if !ok || toStr == "" {
+		var toStr string
+		if feltVal, ok := nonIndexedParams["to"].(*felt.Felt); ok {
+			toStr = feltVal.String()
+		} else if strVal, ok := nonIndexedParams["to"].(string); ok {
+			toStr = strVal
+		} else {
+			logger.Errorf("Unexpected type for 'to' parameter in transfer event")
+			continue
+		}
+		if toStr == "" {
 			continue
 		}
 
-		valueStr, ok := nonIndexedParams["value"].(string)
-		if !ok || valueStr == "" {
+		var valueStr string
+		if bigIntVal, ok := nonIndexedParams["value"].(*big.Int); ok {
+			valueStr = bigIntVal.String()
+		} else if feltVal, ok := nonIndexedParams["value"].(*felt.Felt); ok {
+			valueStr = feltVal.BigInt(big.NewInt(0)).String()
+		} else if strVal, ok := nonIndexedParams["value"].(string); ok {
+			valueStr = strVal
+		} else {
+			logger.Errorf("Unexpected type for 'value' parameter in transfer event")
+			continue
+		}
+		if valueStr == "" {
+			continue
+		}
+
+		// Filter by userAccountAddress - only process transfers to the specified address
+		if userAccountAddress != "" && !strings.EqualFold(toStr, userAccountAddress) {
 			continue
 		}
 
@@ -241,6 +277,31 @@ func (s *IndexerStarknet) processReceiveAddressByTransactionEvents(ctx context.C
 	return eventCounts, nil
 }
 
+// Helper functions to extract values from event maps
+func extractFeltAsString(val interface{}) (string, bool) {
+	if feltVal, ok := val.(*felt.Felt); ok {
+		return feltVal.String(), true
+	}
+	return "", false
+}
+
+func extractBigIntAsString(val interface{}) (string, bool) {
+	if bigIntVal, ok := val.(*big.Int); ok {
+		return bigIntVal.String(), true
+	}
+	if feltVal, ok := val.(*felt.Felt); ok {
+		return feltVal.BigInt(big.NewInt(0)).String(), true
+	}
+	return "", false
+}
+
+func extractUint64AsString(val interface{}) (string, bool) {
+	if uintVal, ok := val.(uint64); ok {
+		return fmt.Sprintf("%d", uintVal), true
+	}
+	return "", false
+}
+
 func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network *ent.Network, txHash string) (*types.EventCounts, error) {
 	// Find OrderCreated events for this transaction
 	eventCounts := &types.EventCounts{}
@@ -282,7 +343,12 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 			continue
 		}
 
-		eventSignature := eventMap["topics"]
+		// Convert eventSignature from *felt.Felt to hex string for comparison
+		eventSignatureFelt, ok := eventMap["topics"].(*felt.Felt)
+		if !ok {
+			continue
+		}
+		eventSignature := eventSignatureFelt.String()
 
 		// Safely extract block_number and transaction_hash
 		blockNumberRaw, ok := eventMap["block_number"].(float64)
@@ -309,8 +375,8 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 
 		switch eventSignature {
 		case u.OrderCreatedStarknetSelector:
-			// Safely extract required fields for OrderCreated
-			amountStr, ok := indexedParams["amount"].(string)
+			// Extract amount (big.Int from u256FromFelts)
+			amountStr, ok := extractBigIntAsString(indexedParams["amount"])
 			if !ok || amountStr == "" {
 				continue
 			}
@@ -319,7 +385,8 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 				continue
 			}
 
-			protocolFeeStr, ok := nonIndexedParams["protocolFee"].(string)
+			// Extract protocolFee (big.Int)
+			protocolFeeStr, ok := extractBigIntAsString(nonIndexedParams["protocol_fee"])
 			if !ok || protocolFeeStr == "" {
 				continue
 			}
@@ -328,7 +395,8 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 				continue
 			}
 
-			rateStr, ok := nonIndexedParams["rate"].(string)
+			// Extract rate (big.Int)
+			rateStr, ok := extractBigIntAsString(nonIndexedParams["rate"])
 			if !ok || rateStr == "" {
 				continue
 			}
@@ -337,22 +405,26 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 				continue
 			}
 
-			tokenStr, ok := indexedParams["token"].(string)
+			// Extract token (felt.Felt -> hex string)
+			tokenStr, ok := extractFeltAsString(indexedParams["token"])
 			if !ok || tokenStr == "" {
 				continue
 			}
 
-			orderIdStr, ok := nonIndexedParams["orderId"].(string)
+			// Extract orderId (felt.Felt -> hex string)
+			orderIdStr, ok := extractFeltAsString(nonIndexedParams["order_id"])
 			if !ok || orderIdStr == "" {
 				continue
 			}
 
-			messageHashStr, ok := nonIndexedParams["messageHash"].(string)
+			// Extract messageHash (string)
+			messageHashStr, ok := nonIndexedParams["message_hash"].(string)
 			if !ok || messageHashStr == "" {
 				continue
 			}
 
-			senderStr, ok := indexedParams["sender"].(string)
+			// Extract sender (felt.Felt -> hex string)
+			senderStr, ok := extractFeltAsString(indexedParams["sender"])
 			if !ok || senderStr == "" {
 				continue
 			}
@@ -360,19 +432,19 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 			createdEvent := &types.OrderCreatedEvent{
 				BlockNumber: blockNumber,
 				TxHash:      txHashFromEvent,
-				Token:       ethcommon.HexToAddress(tokenStr).Hex(),
+				Token:       tokenStr, // Use Starknet address directly
 				Amount:      orderAmount,
 				ProtocolFee: protocolFee,
 				OrderId:     orderIdStr,
 				Rate:        rate.Div(decimal.NewFromInt(100)),
 				MessageHash: messageHashStr,
-				Sender:      ethcommon.HexToAddress(senderStr).Hex(),
+				Sender:      senderStr, // Use Starknet address directly
 			}
 			orderCreatedEvents = append(orderCreatedEvents, createdEvent)
 
 		case u.OrderSettledStarknetSelector:
-			// Safely extract required fields for OrderSettled
-			settlePercentStr, ok := nonIndexedParams["settlePercent"].(string)
+			// Extract settlePercent (uint64)
+			settlePercentStr, ok := extractUint64AsString(nonIndexedParams["settle_percent"])
 			if !ok || settlePercentStr == "" {
 				continue
 			}
@@ -381,7 +453,8 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 				continue
 			}
 
-			rebatePercentStr, ok := nonIndexedParams["rebatePercent"].(string)
+			// Extract rebatePercent (uint64)
+			rebatePercentStr, ok := extractUint64AsString(nonIndexedParams["rebate_percent"])
 			if !ok || rebatePercentStr == "" {
 				continue
 			}
@@ -390,17 +463,20 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 				continue
 			}
 
-			splitOrderIdStr, ok := nonIndexedParams["splitOrderId"].(string)
+			// Extract splitOrderId (felt.Felt -> hex string)
+			splitOrderIdStr, ok := extractFeltAsString(nonIndexedParams["split_order_id"])
 			if !ok || splitOrderIdStr == "" {
 				continue
 			}
 
-			orderIdStr, ok := indexedParams["orderId"].(string)
+			// Extract orderId (felt.Felt -> hex string)
+			orderIdStr, ok := extractFeltAsString(indexedParams["order_id"])
 			if !ok || orderIdStr == "" {
 				continue
 			}
 
-			liquidityProviderStr, ok := indexedParams["liquidityProvider"].(string)
+			// Extract liquidityProvider (felt.Felt -> hex string)
+			liquidityProviderStr, ok := extractFeltAsString(indexedParams["liquidity_provider"])
 			if !ok || liquidityProviderStr == "" {
 				continue
 			}
@@ -410,15 +486,15 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 				TxHash:            txHashFromEvent,
 				SplitOrderId:      splitOrderIdStr,
 				OrderId:           orderIdStr,
-				LiquidityProvider: ethcommon.HexToAddress(liquidityProviderStr).Hex(),
+				LiquidityProvider: liquidityProviderStr, // Use Starknet address directly
 				SettlePercent:     settlePercent,
 				RebatePercent:     rebatePercent,
 			}
 			orderSettledEvents = append(orderSettledEvents, settledEvent)
 
 		case u.OrderRefundedStarknetSelector:
-			// Safely extract required fields for OrderRefunded
-			feeStr, ok := nonIndexedParams["fee"].(string)
+			// Extract fee (big.Int)
+			feeStr, ok := extractBigIntAsString(nonIndexedParams["fee"])
 			if !ok || feeStr == "" {
 				continue
 			}
@@ -427,7 +503,8 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 				continue
 			}
 
-			orderIdStr, ok := indexedParams["orderId"].(string)
+			// Extract orderId (felt.Felt -> hex string)
+			orderIdStr, ok := extractFeltAsString(indexedParams["order_id"])
 			if !ok || orderIdStr == "" {
 				continue
 			}
@@ -530,7 +607,7 @@ func (s *IndexerStarknet) IndexGateway(ctx context.Context, network *ent.Network
 		}
 		toBlockNum = latest
 		// Index last 100 blocks by default
-		if latest > 20 {
+		if latest > 100 {
 			fromBlockNum = latest - 100
 		} else {
 			fromBlockNum = 0
@@ -559,8 +636,8 @@ func (s *IndexerStarknet) IndexGateway(ctx context.Context, network *ent.Network
 	}
 
 	for _, tx := range transactions {
-		txHash, ok := tx["hash"].(string)
-		if !ok {
+		txHash, ok := tx["transaction_hash"].(string)
+		if !ok || txHash == "" {
 			continue
 		}
 		gatewayEventCount, err := s.indexGatewayByTransaction(ctx, network, txHash)

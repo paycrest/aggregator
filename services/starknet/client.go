@@ -62,6 +62,9 @@ func NewClient() (*Client, error) {
 
 	providerClient, err := rpc.NewProvider(ctx, rpcURL)
 	if err != nil {
+		logger.WithFields(logger.Fields{
+			"error": err,
+		}).Errorf("Failed to create starknet provider")
 		// Check if it's a version incompatibility warning (provider is still usable)
 		if strings.Contains(err.Error(), "incompatible JSON-RPC specification version") {
 			logger.Warnf("Starknet RPC version warning: %v", err)
@@ -87,6 +90,9 @@ func NewClient() (*Client, error) {
 		client.WithHeader("x-paymaster-api-key", paymasterAPIKey),
 	)
 	if err != nil {
+		logger.WithFields(logger.Fields{
+			"error": err,
+		}).Errorf("Failed to create paymaster client for starknet")
 		if strings.Contains(err.Error(), "incompatible JSON-RPC specification version") {
 			logger.Warnf("Starknet paymaster version warning: %v", err)
 		} else {
@@ -252,11 +258,15 @@ func (c *Client) GetTransactionReceipt(ctx context.Context, txHash, accountAddre
 	// Filter logs from the receipt that match the specified event signatures
 	// If token contract is used, the caller should handle the receive address logs
 	for _, log := range receipt.Events {
-		if log.FromAddress == accountAddress {
+		if log.FromAddress != nil && accountAddress != nil && log.FromAddress.Equal(accountAddress) {
+			if len(log.Keys) == 0 || log.Keys[0] == nil {
+				continue
+			}
 			// Check if this log matches any of our event signatures
 			eventSignature := log.Keys[0]
 			for _, signature := range eventSignatures {
-				if *eventSignature == signature {
+				sig := signature
+				if eventSignature.Equal(&sig) {
 					eventsPacked := types.StarknetEventsData{
 						Events: rpc.EmittedEvent{
 							Event:           log,
@@ -641,7 +651,7 @@ func (c *Client) handleOrderCreated(emittedEvent rpc.EmittedEvent) (map[string]i
 	// Keys: [event_selector, sender, token, amount]
 	// Data: [protocol_fee, order_id, rate, message_hash...]
 
-	if len(emittedEvent.Keys) < 4 {
+	if len(emittedEvent.Keys) < 5 {
 		return nil, fmt.Errorf("invalid OrderCreated event: insufficient keys")
 	}
 
@@ -651,7 +661,7 @@ func (c *Client) handleOrderCreated(emittedEvent rpc.EmittedEvent) (map[string]i
 	amountHigh := emittedEvent.Keys[4]
 	amount := u256FromFelts(amountLow, amountHigh)
 
-	if len(emittedEvent.Data) < 3 {
+	if len(emittedEvent.Data) < 4 {
 		return nil, fmt.Errorf("invalid OrderCreated event: insufficient data")
 	}
 
