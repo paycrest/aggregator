@@ -394,25 +394,27 @@ type TransactionLog struct {
 
 // LockPaymentOrderResponse is the response for a lock payment order
 type LockPaymentOrderResponse struct {
-	ID                  uuid.UUID               `json:"id"`
-	Token               string                  `json:"token"`
-	GatewayID           string                  `json:"gatewayId"`
-	Amount              decimal.Decimal         `json:"amount"`
-	AmountInUSD         decimal.Decimal         `json:"amountInUsd"`
-	Rate                decimal.Decimal         `json:"rate"`
-	BlockNumber         int64                   `json:"blockNumber"`
-	TxHash              string                  `json:"txHash"`
-	Institution         string                  `json:"institution"`
-	AccountIdentifier   string                  `json:"accountIdentifier"`
-	AccountName         string                  `json:"accountName"`
-	ProviderID          string                  `json:"providerId"`
-	Memo                string                  `json:"memo"`
-	Network             string                  `json:"network"`
-	Status              lockpaymentorder.Status `json:"status"`
-	UpdatedAt           time.Time               `json:"updatedAt"`
-	CreatedAt           time.Time               `json:"createdAt"`
-	Transactions        []TransactionLog        `json:"transactionLogs"`
-	CancellationReasons []string                `json:"cancellationReasons"`
+	ID                  uuid.UUID                  `json:"id"`
+	Token               string                     `json:"token"`
+	GatewayID           string                     `json:"gatewayId"`
+	Amount              decimal.Decimal            `json:"amount"`
+	AmountInUSD         decimal.Decimal            `json:"amountInUsd"`
+	Rate                decimal.Decimal            `json:"rate"`
+	BlockNumber         int64                      `json:"blockNumber"`
+	TxHash              string                     `json:"txHash"`
+	Institution         string                     `json:"institution"`
+	AccountIdentifier   string                     `json:"accountIdentifier"`
+	AccountName         string                     `json:"accountName"`
+	ProviderID          string                     `json:"providerId"`
+	Memo                string                     `json:"memo"`
+	Network             string                     `json:"network"`
+	Status              lockpaymentorder.Status    `json:"status"`
+	UpdatedAt           time.Time                  `json:"updatedAt"`
+	CreatedAt           time.Time                  `json:"createdAt"`
+	Transactions        []TransactionLog           `json:"transactionLogs"`
+	CancellationReasons []string                   `json:"cancellationReasons"`
+	OrderType           lockpaymentorder.OrderType `json:"orderType"`
+	OTCRequestExpiry    time.Time                  `json:"otcRequestExpiry,omitempty"`
 }
 
 type LockPaymentOrderTxReceipt struct {
@@ -483,28 +485,29 @@ type ReceiveAddressResponse struct {
 
 // PaymentOrderResponse is the response type for a payment order
 type PaymentOrderResponse struct {
-	ID             uuid.UUID             `json:"id"`
-	Amount         decimal.Decimal       `json:"amount"`
-	AmountInUSD    decimal.Decimal       `json:"amountInUsd"`
-	AmountPaid     decimal.Decimal       `json:"amountPaid"`
-	AmountReturned decimal.Decimal       `json:"amountReturned"`
-	Token          string                `json:"token"`
-	SenderFee      decimal.Decimal       `json:"senderFee"`
-	TransactionFee decimal.Decimal       `json:"transactionFee"`
-	Rate           decimal.Decimal       `json:"rate"`
-	Network        string                `json:"network"`
-	GatewayID      string                `json:"gatewayId"`
-	Recipient      PaymentOrderRecipient `json:"recipient"`
-	FromAddress    string                `json:"fromAddress"`
-	ReturnAddress  string                `json:"returnAddress"`
-	ReceiveAddress string                `json:"receiveAddress"`
-	FeeAddress     string                `json:"feeAddress"`
-	Reference      string                `json:"reference"`
-	CreatedAt      time.Time             `json:"createdAt"`
-	UpdatedAt      time.Time             `json:"updatedAt"`
-	TxHash         string                `json:"txHash"`
-	Status         paymentorder.Status   `json:"status"`
-	Transactions   []TransactionLog      `json:"transactionLogs"`
+	ID             uuid.UUID              `json:"id"`
+	Amount         decimal.Decimal        `json:"amount"`
+	AmountInUSD    decimal.Decimal        `json:"amountInUsd"`
+	AmountPaid     decimal.Decimal        `json:"amountPaid"`
+	AmountReturned decimal.Decimal        `json:"amountReturned"`
+	Token          string                 `json:"token"`
+	SenderFee      decimal.Decimal        `json:"senderFee"`
+	TransactionFee decimal.Decimal        `json:"transactionFee"`
+	Rate           decimal.Decimal        `json:"rate"`
+	Network        string                 `json:"network"`
+	GatewayID      string                 `json:"gatewayId"`
+	Recipient      PaymentOrderRecipient  `json:"recipient"`
+	FromAddress    string                 `json:"fromAddress"`
+	ReturnAddress  string                 `json:"returnAddress"`
+	ReceiveAddress string                 `json:"receiveAddress"`
+	FeeAddress     string                 `json:"feeAddress"`
+	Reference      string                 `json:"reference"`
+	CreatedAt      time.Time              `json:"createdAt"`
+	UpdatedAt      time.Time              `json:"updatedAt"`
+	TxHash         string                 `json:"txHash"`
+	Status         paymentorder.Status    `json:"status"`
+	Transactions   []TransactionLog       `json:"transactionLogs"`
+	OrderType      paymentorder.OrderType `json:"orderType"`
 }
 
 // PaymentOrderWebhookData is the data type for a payment order webhook
