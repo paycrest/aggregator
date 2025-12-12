@@ -72,14 +72,11 @@ type Controller struct {
 
 // NewController creates a new instance of AuthController with injected services
 func NewController() *Controller {
-	receiveaddressSvc, err := svc.NewReceiveAddressService()
-	if err != nil {
-		logger.Fatalf("Failed to initialize ReceiveAddressService: %v", err)
-	}
+
 	return &Controller{
 		orderService:          orderSvc.NewOrderEVM(),
 		priorityQueueService:  svc.NewPriorityQueueService(),
-		receiveAddressService: receiveaddressSvc,
+		receiveAddressService: svc.NewReceiveAddressService(),
 		kycService:            smile.NewSmileIDService(),
 		slackService:          svc.NewSlackService(serverConf.SlackWebhookURL),
 		emailService:          email.NewEmailServiceWithProviders(),
@@ -2456,7 +2453,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 	if strings.HasPrefix(network.Identifier, "tron") {
 		indexerInstance = indexer.NewIndexerTron()
 	} else if strings.HasPrefix(network.Identifier, "starknet") {
-		indexerInstance, indexerErr = indexer.NewIndexerStarknet(ctx)
+		indexerInstance, indexerErr = indexer.NewIndexerStarknet()
 		if indexerErr != nil {
 			logger.WithFields(logger.Fields{
 				"Error":        fmt.Sprintf("%v", indexerErr),
@@ -2788,7 +2785,7 @@ func (ctrl *Controller) IndexProviderAddress(ctx *gin.Context) {
 	if strings.HasPrefix(network.Identifier, "tron") {
 		indexerInstance = indexer.NewIndexerTron()
 	} else if strings.HasPrefix(network.Identifier, "starknet") {
-		indexerInstance, err = indexer.NewIndexerStarknet(ctx)
+		indexerInstance, err = indexer.NewIndexerStarknet()
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":   fmt.Sprintf("%v", err),

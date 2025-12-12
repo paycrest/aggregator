@@ -31,18 +31,14 @@ type OrderStarknet struct {
 }
 
 // NewOrderStarknet creates a new instance of OrderStarknet
-func NewOrderStarknet(ctx context.Context) (types.OrderService, error) {
-	client, err := starknet.NewClient(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("NewOrderStarknet: %w", err)
-	}
-	return OrderStarknet{
+func NewOrderStarknet(client *starknet.Client) (types.OrderService) {
+	return &OrderStarknet{
 		client: client,
-	}, nil
+	}
 }
 
 // CreateOrder creates a new payment order on-chain for Starknet
-func (s OrderStarknet) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
+func (s *OrderStarknet) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 	var err error
 	orderIDPrefix := strings.Split(orderID.String(), "-")[0]
 
@@ -143,7 +139,7 @@ func (s OrderStarknet) CreateOrder(ctx context.Context, orderID uuid.UUID) error
 }
 
 // RefundOrder processes order refund on Starknet
-func (s OrderStarknet) RefundOrder(ctx context.Context, network *ent.Network, orderID string) error {
+func (s *OrderStarknet) RefundOrder(ctx context.Context, network *ent.Network, orderID string) error {
 	orderIDPrefix := strings.Split(orderID, "-")[0]
 
 	lockOrder, err := db.Client.LockPaymentOrder.
@@ -212,7 +208,7 @@ func (s OrderStarknet) RefundOrder(ctx context.Context, network *ent.Network, or
 }
 
 // SettleOrder settles a completed order on Starknet
-func (s OrderStarknet) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
+func (s *OrderStarknet) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 	var err error
 
 	orderIDPrefix := strings.Split(orderID.String(), "-")[0]

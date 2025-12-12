@@ -239,8 +239,7 @@ func TestClient_RealTransactionData(t *testing.T) {
 
 // TestGenerateDeterministicAccount tests account generation from seed
 func TestGenerateDeterministicAccount(t *testing.T) {
-	ctx := context.Background()
-	client, err := NewClient(ctx)
+	client, err := NewClient()
 	if err != nil {
 		t.Skip("Skipping test: failed to create client (may need proper config)")
 	}
@@ -415,7 +414,7 @@ func TestGetBlockNumber(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	client, err := NewClient(ctx)
+	client, err := NewClient()
 	if err != nil {
 		t.Skip("Skipping test: failed to create client (may need proper config)")
 	}
@@ -434,7 +433,7 @@ func TestGetTransactionReceipt(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	client, err := NewClient(ctx)
+	client, err := NewClient()
 	if err != nil {
 		t.Skip("Skipping test: failed to create client (may need proper config)")
 	}

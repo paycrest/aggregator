@@ -27,16 +27,13 @@ type IndexerStarknet struct {
 }
 
 // NewIndexerStarknet creates a new instance of IndexerStarknet
-func NewIndexerStarknet(ctx context.Context) (types.Indexer, error) {
-	priorityQueue := services.NewPriorityQueueService()
-	orderService, err := order.NewOrderStarknet(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create order service: %w", err)
-	}
-	client, err := starknetService.NewClient(ctx)
+func NewIndexerStarknet() (types.Indexer, error) {
+	client, err := starknetService.NewClient()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create starknet client: %w", err)
 	}
+	orderService := order.NewOrderStarknet(client)
+	priorityQueue := services.NewPriorityQueueService()
 
 	return &IndexerStarknet{
 		priorityQueue: priorityQueue,
@@ -75,7 +72,7 @@ func (s *IndexerStarknet) IndexReceiveAddress(ctx context.Context, token *ent.To
 	if err != nil {
 		return eventCounts, fmt.Errorf("invalid token address: %w", err)
 	}
-	
+
 	transferSelectorFelt, _ := utils.HexToFelt(u.TransferStarknetSelector)
 	transactions, err := s.client.GetEvents(
 		ctx,
@@ -115,7 +112,6 @@ func (s *IndexerStarknet) IndexReceiveAddress(ctx context.Context, token *ent.To
 	return eventCounts, nil
 }
 
-
 // indexReceiveAddressByTransaction processes a specific transaction for receive address transfers
 func (s *IndexerStarknet) indexReceiveAddressByTransaction(ctx context.Context, token *ent.Token, txHash string, transactionEvents map[string]interface{}) (*types.EventCounts, error) {
 	eventCounts := &types.EventCounts{}
@@ -145,7 +141,7 @@ func (s *IndexerStarknet) indexReceiveAddressByTransaction(ctx context.Context, 
 		return eventCounts, fmt.Errorf("failed to index receive address by transaction: %w", err)
 	}
 	eventCounts.Transfer += transferEventsCounts.Transfer
-	
+
 	for _, tx := range transactions {
 		txHash, ok := tx["hash"].(string)
 		if !ok {
@@ -252,12 +248,12 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 	if txHash == "" {
 		return eventCounts, fmt.Errorf("transaction hash is required")
 	}
-	
+
 	txHashFelt, err := utils.HexToFelt(txHash)
 	if err != nil {
 		return eventCounts, fmt.Errorf("invalid transaction hash: %w", err)
 	}
-	
+
 	gatewayContractFelt, _ := utils.HexToFelt(network.GatewayContractAddress)
 	orderCreatedSelectorFelt, _ := utils.HexToFelt(u.OrderCreatedStarknetSelector)
 
@@ -270,7 +266,7 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 	if err != nil && err.Error() != "no events found" {
 		return eventCounts, fmt.Errorf("error getting gateway events for transaction %s: %w", txHash[:10]+"...", err)
 	}
-	
+
 	// Process all events in a single pass
 	orderCreatedEvents := []*types.OrderCreatedEvent{}
 	orderSettledEvents := []*types.OrderSettledEvent{}
@@ -285,7 +281,7 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 		if eventParams["non_indexed_params"] == nil {
 			continue
 		}
-		
+
 		eventSignature := eventMap["topics"]
 
 		// Safely extract block_number and transaction_hash
@@ -524,7 +520,7 @@ func (s *IndexerStarknet) IndexGateway(ctx context.Context, network *ent.Network
 		}
 
 		return counts, nil
-	} 
+	}
 
 	// Use provided block range or get latest
 	if fromBlock == 0 && toBlock == 0 {
@@ -604,7 +600,7 @@ func (s *IndexerStarknet) indexProviderAddressByTransaction(ctx context.Context,
 	if err != nil {
 		return eventCounts, fmt.Errorf("invalid transaction hash: %w", err)
 	}
-	
+
 	gatewayContractFelt, _ := utils.HexToFelt(network.GatewayContractAddress)
 	orderSettledSelectorFelt, _ := utils.HexToFelt(u.OrderSettledStarknetSelector)
 

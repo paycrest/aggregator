@@ -27,6 +27,7 @@ import (
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	svc "github.com/paycrest/aggregator/services"
 	orderSvc "github.com/paycrest/aggregator/services/order"
+	"github.com/paycrest/aggregator/services/starknet"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	u "github.com/paycrest/aggregator/utils"
@@ -40,13 +41,20 @@ import (
 type SenderController struct {
 	receiveAddressService *svc.ReceiveAddressService
 	orderService          types.OrderService
+	starknetClient        *starknet.Client
 }
 
 // NewSenderController creates a new instance of SenderController
 func NewSenderController() *SenderController {
+	starknetClient, err := starknet.NewClient()
+	if err != nil {
+		starknetClient = nil
+	}
+
 	return &SenderController{
 		receiveAddressService: svc.NewReceiveAddressService(),
 		orderService:          orderSvc.NewOrderEVM(),
+		starknetClient:        starknetClient,
 	}
 }
 
@@ -358,9 +366,54 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	if strings.HasPrefix(payload.Network, "tron") {
 		address, salt, err := ctrl.receiveAddressService.CreateTronAddress(ctx)
 		if err != nil {
-			logger.Errorf("CreateTronAddress error: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", map[string]interface{}{
-				"context": "create_tron_address",
+			logger.WithFields(logger.Fields{
+				"error":   err,
+				"network": payload.Network,
+			}).Errorf("Failed to create receive address")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", types.ErrorData{
+				Field:   "Network",
+				Message: "Tron currently not available",
+			})
+			return
+		}
+
+		receiveAddress, err = storage.Client.ReceiveAddress.
+			Create().
+			SetAddress(address).
+			SetSalt(salt).
+			SetStatus(receiveaddress.StatusUnused).
+			SetValidUntil(time.Now().Add(orderConf.ReceiveAddressValidity)).
+			Save(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"error":   err,
+				"address": address,
+			}).Errorf("Failed to create receive address")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+			return
+		}
+	} else if strings.HasPrefix(payload.Network, "starknet") {
+		if ctrl.starknetClient == nil {
+			logger.WithFields(logger.Fields{
+				"error":   "Starknet client not initialized -- disable Starknet tokens if not in use",
+				"network": payload.Network,
+			}).Errorf("Failed to create receive address")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", types.ErrorData{
+				Field:   "Network",
+				Message: "Starknet currently not available",
+			})
+			return
+		}
+
+		address, salt, err := ctrl.receiveAddressService.CreateStarknetAddress(ctrl.starknetClient)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"error":   err,
+				"network": payload.Network,
+			}).Errorf("Failed to create receive address")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", types.ErrorData{
+				Field:   "Network",
+				Message: "Starknet currently not available",
 			})
 			return
 		}
@@ -387,10 +440,11 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"error":   err,
-				"address": address,
+				"network": payload.Network,
 			}).Errorf("Failed to create receive address")
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", map[string]interface{}{
-				"context": "create_smart_address",
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", types.ErrorData{
+				Field:   "Network",
+				Message: fmt.Sprintf("%s currently not available", payload.Network),
 			})
 			return
 		}

@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"net/url"
 	"strings"
 
 	"github.com/NethermindEth/juno/core/felt"
@@ -18,6 +19,8 @@ import (
 	"github.com/NethermindEth/starknet.go/rpc"
 	"github.com/NethermindEth/starknet.go/utils"
 	"github.com/paycrest/aggregator/config"
+	"github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	u "github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
@@ -30,11 +33,34 @@ type Client struct {
 	AggregatorSeed  string
 }
 
-var starknetConf = config.StarknetConfig()
+var (
+	cryptoConf = config.CryptoConfig()
+	// OpenZeppelin account class hash for Starknet mainnet
+	accountClassHash = "0x5b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564"
+)
 
 // NewClient creates a new Starknet client
-func NewClient(ctx context.Context) (*Client, error) {
-	providerClient, err := rpc.NewProvider(ctx, starknetConf.StarknetClientURL)
+func NewClient() (*Client, error) {
+	ctx := context.Background()
+
+	// Fetch network from database by identifier prefix
+	network, err := storage.Client.Network.
+		Query().
+		Where(
+			network.IdentifierHasPrefix("starknet"),
+		).
+		Only(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch starknet network: %w", err)
+	}
+
+	// Use network's RPC endpoint
+	rpcURL := network.RPCEndpoint
+	if rpcURL == "" {
+		return nil, fmt.Errorf("RPC endpoint not configured for starknet network")
+	}
+
+	providerClient, err := rpc.NewProvider(ctx, rpcURL)
 	if err != nil {
 		// Check if it's a version incompatibility warning (provider is still usable)
 		if strings.Contains(err.Error(), "incompatible JSON-RPC specification version") {
@@ -44,30 +70,65 @@ func NewClient(ctx context.Context) (*Client, error) {
 		}
 	}
 
+	// Parse paymaster URL to extract base URL and API key
+	paymasterURL := network.PaymasterURL
+	if paymasterURL == "" {
+		return nil, fmt.Errorf("paymaster URL not configured for starknet network")
+	}
+
+	paymasterBaseURL, paymasterAPIKey, err := parsePaymasterURL(paymasterURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse paymaster URL: %w", err)
+	}
+
 	paymasterClient, err := paymaster.New(
 		ctx,
-		starknetConf.StarknetPaymasterURL,
-		client.WithHeader("x-paymaster-api-key", starknetConf.StarknetPaymasterAPIKey),
+		paymasterBaseURL,
+		client.WithHeader("x-paymaster-api-key", paymasterAPIKey),
 	)
 	if err != nil {
 		if strings.Contains(err.Error(), "incompatible JSON-RPC specification version") {
-			fmt.Printf("⚠️  Warning: %v\n", err)
+			logger.Warnf("Starknet paymaster version warning: %v", err)
 		} else {
 			return nil, fmt.Errorf("provider error: %w", err)
 		}
 	}
 
 	if !isPaymasterAvailable(ctx, paymasterClient) {
-		return nil, fmt.Errorf("paymaster is not available at %s", starknetConf.StarknetPaymasterURL)
+		return nil, fmt.Errorf("paymaster is not available at %s", paymasterBaseURL)
 	}
 
 	return &Client{
 		providerClient:  providerClient,
 		paymasterClient: paymasterClient,
-		AggregatorSeed:  starknetConf.StarknetAggregatorSeed,
+		AggregatorSeed:  cryptoConf.AggregatorAccountStarknet,
 	}, nil
 }
 
+// parsePaymasterURL extracts the base URL and API key from a paymaster URL
+// Example: https://starknet.paymaster.avnu.fi?apiKey=thisistheapikey
+// Returns: baseURL="https://starknet.paymaster.avnu.fi", apiKey="thisistheapikey"
+func parsePaymasterURL(paymasterURL string) (string, string, error) {
+	parsedURL, err := url.Parse(paymasterURL)
+	if err != nil {
+		return "", "", fmt.Errorf("invalid paymaster URL: %w", err)
+	}
+
+	// Extract API key from query parameters
+	apiKey := parsedURL.Query().Get("apiKey")
+	if apiKey == "" {
+		return "", "", fmt.Errorf("apiKey parameter not found in paymaster URL")
+	}
+
+	// Remove query parameters to get base URL
+	parsedURL.RawQuery = ""
+	parsedURL.Fragment = ""
+	baseURL := parsedURL.String()
+
+	return baseURL, apiKey, nil
+}
+
+// isPaymasterAvailable checks if the paymaster is available
 func isPaymasterAvailable(ctx context.Context, paymasterClient *paymaster.Paymaster) bool {
 	if paymasterClient == nil {
 		return false
@@ -274,7 +335,7 @@ func (c *Client) GetExecutableRequest(
 }
 
 func (c *Client) BuildAccountDeployment(ctx context.Context, accountInfo *types.StarknetDeterministicAccountInfo) (*paymaster.BuildTransactionRequest, paymaster.BuildTransactionResponse, error) {
-	classHash, err := utils.HexToFelt(starknetConf.AccountClassHash)
+	classHash, err := utils.HexToFelt(accountClassHash)
 	if err != nil {
 		return nil, paymaster.BuildTransactionResponse{}, fmt.Errorf("failed to parse class hash: %w", err)
 	}
@@ -479,7 +540,7 @@ func (c *Client) BuildRefundOrderCall(
 
 func (c *Client) GenerateDeterministicAccount(seed string) (*types.StarknetDeterministicAccountInfo, error) {
 	// This assume that all accounts inclusive with aggregator use the same class hash
-	accountClassHash, err := utils.HexToFelt(starknetConf.AccountClassHash)
+	classHash, err := utils.HexToFelt(accountClassHash)
 	if err != nil {
 		return nil, fmt.Errorf("invalid account class hash: %w", err)
 	}
@@ -512,7 +573,7 @@ func (c *Client) GenerateDeterministicAccount(seed string) (*types.StarknetDeter
 	// Precompute the account address
 	address := account.PrecomputeAccountAddress(
 		saltFelt,
-		accountClassHash,
+		classHash,
 		constructorCalldata,
 	)
 

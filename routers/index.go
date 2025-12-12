@@ -1,7 +1,6 @@
 package routers
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -119,10 +118,7 @@ func authRoutes(route *gin.Engine) {
 }
 
 func senderRoutes(route *gin.Engine) {
-	senderCtrl, err := sender.NewSenderController()
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create SenderController: %v", err))
-	}
+	senderCtrl := sender.NewSenderController()
 
 	v1 := route.Group("/v1/sender/")
 	v1.Use(middleware.DynamicAuthMiddleware)
