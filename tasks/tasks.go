@@ -597,6 +597,56 @@ func SyncLockOrderFulfillments() {
 	// defer cancel()
 	ctx := context.Background()
 
+	updatePaymentOrderValidated := func(ctx context.Context, lockOrder *ent.LockPaymentOrder) {
+		if lockOrder == nil || lockOrder.MessageHash == "" {
+			return
+		}
+
+		paymentOrder, err := storage.Client.PaymentOrder.
+			Query().
+			Where(paymentorder.MessageHashEQ(lockOrder.MessageHash)).
+			WithSenderProfile().
+			WithRecipient().
+			WithToken(func(tq *ent.TokenQuery) {
+				tq.WithNetwork()
+			}).
+			Only(ctx)
+		if err != nil {
+			if !ent.IsNotFound(err) {
+				logger.WithFields(logger.Fields{
+					"Error":       fmt.Sprintf("%v", err),
+					"MessageHash": lockOrder.MessageHash,
+					"OrderID":     lockOrder.ID,
+				}).Errorf("SyncLockOrderFulfillments.UpdatePaymentOrderValidated.query")
+			}
+			return
+		}
+
+		_, err = storage.Client.PaymentOrder.
+			Update().
+			Where(paymentorder.IDEQ(paymentOrder.ID)).
+			SetStatus(paymentorder.StatusValidated).
+			Save(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":       fmt.Sprintf("%v", err),
+				"MessageHash": lockOrder.MessageHash,
+				"OrderID":     lockOrder.ID,
+				"PaymentID":   paymentOrder.ID,
+			}).Errorf("SyncLockOrderFulfillments.UpdatePaymentOrderValidated.update")
+			return
+		}
+
+		paymentOrder.Status = paymentorder.StatusValidated
+		if err := utils.SendPaymentOrderWebhook(ctx, paymentOrder); err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":       fmt.Sprintf("%v", err),
+				"MessageHash": lockOrder.MessageHash,
+				"OrderID":     lockOrder.ID,
+				"PaymentID":   paymentOrder.ID,
+			}).Errorf("SyncLockOrderFulfillments.UpdatePaymentOrderValidated.webhook")
+		}
+	}
 	// Query unvalidated lock orders (regular orders only - exclude OTC)
 	lockOrders, err := storage.Client.LockPaymentOrder.
 		Query().
@@ -802,7 +852,9 @@ func SyncLockOrderFulfillments() {
 					SetStatus(lockpaymentorder.StatusValidated).
 					AddTransactions(transactionLog).
 					Save(ctx)
-				if err != nil {
+				if err == nil {
+					updatePaymentOrderValidated(ctx, order)
+				} else {
 					continue
 				}
 			}
@@ -931,7 +983,9 @@ func SyncLockOrderFulfillments() {
 							SetStatus(lockpaymentorder.StatusValidated).
 							AddTransactions(transactionLog).
 							Save(ctx)
-						if err != nil {
+						if err == nil {
+							updatePaymentOrderValidated(ctx, order)
+						} else {
 							continue
 						}
 					}
@@ -959,7 +1013,9 @@ func SyncLockOrderFulfillments() {
 						SetStatus(lockpaymentorder.StatusValidated).
 						AddTransactions(transactionLog).
 						Save(ctx)
-					if err != nil {
+					if err == nil {
+						updatePaymentOrderValidated(ctx, order)
+					} else {
 						continue
 					}
 				}

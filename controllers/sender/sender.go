@@ -271,7 +271,6 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		return
 	}
 
-
 	isLocalTransfer := strings.EqualFold(token.BaseCurrency, institutionObj.Edges.FiatCurrency.Code)
 	if isLocalTransfer && feePercent.IsZero() {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
@@ -666,6 +665,7 @@ func (ctrl *SenderController) GetPaymentOrderByID(ctx *gin.Context) {
 		UpdatedAt:      paymentOrder.UpdatedAt,
 		TxHash:         paymentOrder.TxHash,
 		Status:         paymentOrder.Status,
+		OrderType:      paymentOrder.OrderType,
 	})
 }
 
@@ -1094,6 +1094,7 @@ func (ctrl *SenderController) buildPaymentOrderResponses(ctx *gin.Context, payme
 			UpdatedAt:      paymentOrder.UpdatedAt,
 			TxHash:         paymentOrder.TxHash,
 			Status:         paymentOrder.Status,
+			OrderType:      paymentOrder.OrderType,
 		})
 	}
 

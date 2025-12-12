@@ -202,24 +202,33 @@ func (ctrl *ProviderController) handleListLockPaymentOrders(ctx *gin.Context, pr
 
 	var orders []types.LockPaymentOrderResponse
 	for _, order := range lockPaymentOrders {
-		orders = append(orders, types.LockPaymentOrderResponse{
-			ID:                  order.ID,
-			Token:               order.Edges.Token.Symbol,
-			GatewayID:           order.GatewayID,
-			Amount:              order.Amount,
-			AmountInUSD:         order.AmountInUsd,
-			Rate:                order.Rate,
-			Institution:         order.Institution,
-			AccountIdentifier:   order.AccountIdentifier,
-			AccountName:         order.AccountName,
-			TxHash:              order.TxHash,
-			Status:              order.Status,
-			Memo:                order.Memo,
-			Network:             order.Edges.Token.Edges.Network.Identifier,
-			CancellationReasons: order.CancellationReasons,
-			UpdatedAt:           order.UpdatedAt,
-			CreatedAt:           order.CreatedAt,
-		})
+		orders = append(orders, func(order *ent.LockPaymentOrder) types.LockPaymentOrderResponse {
+			response := types.LockPaymentOrderResponse{
+				ID:                  order.ID,
+				Token:               order.Edges.Token.Symbol,
+				GatewayID:           order.GatewayID,
+				Amount:              order.Amount,
+				AmountInUSD:         order.AmountInUsd,
+				Rate:                order.Rate,
+				Institution:         order.Institution,
+				AccountIdentifier:   order.AccountIdentifier,
+				AccountName:         order.AccountName,
+				TxHash:              order.TxHash,
+				Status:              order.Status,
+				Memo:                order.Memo,
+				Network:             order.Edges.Token.Edges.Network.Identifier,
+				CancellationReasons: order.CancellationReasons,
+				UpdatedAt:           order.UpdatedAt,
+				CreatedAt:           order.CreatedAt,
+				OrderType:           order.OrderType,
+			}
+
+			if order.OrderType == lockpaymentorder.OrderTypeOtc && order.Status == lockpaymentorder.StatusPending && order.Edges.Provider != nil {
+				response.OTCRequestExpiry = time.Now().Add(orderConf.OrderRequestValidityOtc)
+			}
+
+			return response
+		}(order))
 	}
 
 	// return paginated orders (consistent format for both search and regular queries)
@@ -306,6 +315,7 @@ func (ctrl *ProviderController) handleSearchLockPaymentOrders(ctx *gin.Context, 
 			CancellationReasons: order.CancellationReasons,
 			UpdatedAt:           order.UpdatedAt,
 			CreatedAt:           order.CreatedAt,
+			OrderType:           order.OrderType,
 		})
 	}
 
@@ -622,7 +632,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		return
 	}
 
-	u.APIResponse(ctx, http.StatusCreated, "success", "Order request accepted successfully", &types.AcceptOrderResponse{
+	response := types.AcceptOrderResponse{
 		ID:                orderID,
 		Amount:            order.Amount.Mul(order.Rate).RoundBank(0),
 		Institution:       order.Institution,
@@ -630,7 +640,13 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		AccountName:       order.AccountName,
 		Memo:              order.Memo,
 		Metadata:          order.Metadata,
-	})
+	}
+
+	if order.OrderType == lockpaymentorder.OrderTypeOtc && order.Status == lockpaymentorder.StatusProcessing && order.Edges.Provider == provider {
+		response.Metadata["otcFulfillmentExpiry"] = time.Now().Add(orderConf.OrderFulfillmentValidityOtc)
+	}
+
+	u.APIResponse(ctx, http.StatusCreated, "success", "Order request accepted successfully", &response)
 }
 
 // DeclineOrder controller declines an order
@@ -923,7 +939,9 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			}).
 			Only(ctx)
 		if err == nil && paymentOrder != nil {
-			_, err = paymentOrder.Update().
+			_, err = storage.Client.PaymentOrder.
+				Update().
+				Where(paymentorder.MessageHashEQ(fulfillment.Edges.Order.MessageHash)).
 				SetStatus(paymentorder.StatusValidated).
 				Save(ctx)
 			if err != nil {
@@ -932,6 +950,9 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 					"Trx Id":  payload.TxID,
 					"Network": paymentOrder.Edges.Token.Edges.Network.Identifier,
 				}).Errorf("Failed to update payment order status: %v", err)
+			} else {
+				// Ensure in-memory status reflects persisted change before webhook
+				paymentOrder.Status = paymentorder.StatusValidated
 			}
 
 			err = u.SendPaymentOrderWebhook(ctx, paymentOrder)
@@ -1649,6 +1670,7 @@ func (ctrl *ProviderController) GetLockPaymentOrderByID(ctx *gin.Context) {
 		CreatedAt:           lockPaymentOrder.CreatedAt,
 		Transactions:        transactions,
 		CancellationReasons: lockPaymentOrder.CancellationReasons,
+		OrderType:           lockPaymentOrder.OrderType,
 	})
 }
 
