@@ -45,8 +45,8 @@ func setup() error {
 }
 
 func TestIndex(t *testing.T) {
-	// Set up test database client
-	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+	// Set up test database client with shared in-memory schema
+	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
 	defer client.Close()
 
 	db.Client = client
@@ -384,7 +384,7 @@ func TestIndex(t *testing.T) {
 			ProofOfResidentialAddressUrl:  "https://example.com/residential-address.pdf",
 			AmlPolicyUrl:                  nil, // Optional field
 			KycPolicyUrl:                  nil, // Optional field
-			IAcceptTerms:         true,
+			IAcceptTerms:                  true,
 			BeneficialOwners: []types.BeneficialOwnerInput{
 				{
 					FullName:                     "John Doe",
@@ -555,7 +555,7 @@ func TestIndex(t *testing.T) {
 				ProofOfResidentialAddressUrl:  "https://example.com/new-proof-residential-address.pdf",
 				AmlPolicyUrl:                  &amlPolicyUrl,
 				KycPolicyUrl:                  &kycPolicyUrl,
-				IAcceptTerms:         true,
+				IAcceptTerms:                  true,
 				BeneficialOwners: []types.BeneficialOwnerInput{
 					{
 						FullName:                     "Robert Johnson",
@@ -781,7 +781,7 @@ func TestIndex(t *testing.T) {
 			ProofOfResidentialAddressUrl:  "https://example.com/rejected-residential-address.pdf",
 			AmlPolicyUrl:                  nil,
 			KycPolicyUrl:                  nil,
-			IAcceptTerms:         true,
+			IAcceptTerms:                  true,
 			BeneficialOwners: []types.BeneficialOwnerInput{
 				{
 					FullName:                     "Rejected Owner",

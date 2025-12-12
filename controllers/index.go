@@ -219,7 +219,7 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 	}
 
 	// Validate rate using extracted logic
-	rateResponse, err := u.ValidateRate(ctx, token, currency, tokenAmount, ctx.Query("provider_id"), networkFilter)
+	rateResult, err := u.ValidateRate(ctx, token, currency, tokenAmount, ctx.Query("provider_id"), networkFilter)
 	if err != nil {
 		// Return 404 if no provider found, else 500 for other errors
 		if strings.Contains(err.Error(), "no provider available") {
@@ -235,7 +235,25 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 		return
 	}
 
-	u.APIResponse(ctx, http.StatusOK, "success", "Rate fetched successfully", rateResponse)
+	// Build response with rate in data (backward compatible)
+	// Include metadata at top level only for OTC orders
+	var metadata *types.RateMetadata
+	if rateResult.OrderType.String() == "otc" {
+		// OTC refund timeout uses separate refund timeout config
+		otcRefundTimeoutMinutes := int(orderConf.OrderRefundTimeoutOtc.Seconds() / 60)
+		metadata = &types.RateMetadata{
+			OrderType:            "otc",
+			RefundTimeoutMinutes: otcRefundTimeoutMinutes,
+		}
+	}
+
+	// Use APIResponse with metadata at top level (only for OTC orders)
+	ctx.JSON(http.StatusOK, types.Response{
+		Status:   "success",
+		Message:  "Rate fetched successfully",
+		Data:     rateResult.Rate,
+		Metadata: metadata, // nil for regular orders, populated for OTC
+	})
 }
 
 // GetSupportedTokens controller fetches supported cryptocurrency tokens

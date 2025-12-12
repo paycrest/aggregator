@@ -762,24 +762,43 @@ func IsValidHttpsUrl(urlStr string) bool {
 	return parsedUrl.Scheme == "https" && parsedUrl.Host != ""
 }
 
+// RateValidationResult contains the result of rate validation
+type RateValidationResult struct {
+	Rate       decimal.Decimal
+	ProviderID string
+	OrderType  paymentorder.OrderType
+}
+
 // ValidateRate validates if a provided rate is achievable for the given parameters
-func ValidateRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, providerID, networkFilter string) (decimal.Decimal, error) {
-	// Direct currency match
-	if strings.EqualFold(token.BaseCurrency, currency.Code) {
-		return decimal.NewFromInt(1), nil
-	}
+// Returns the rate, provider ID (if found), and order type (regular or OTC)
+func ValidateRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, providerID, networkFilter string) (RateValidationResult, error) {
+	isDirectMatch := strings.EqualFold(token.BaseCurrency, currency.Code)
 
-	// Provider-specific rate
+	// Determine which validation function to use
+	var result RateValidationResult
+	var err error
 	if providerID != "" {
-		return validateProviderRate(ctx, token, currency, amount, providerID, networkFilter)
+		result, err = validateProviderRate(ctx, token, currency, amount, providerID, networkFilter)
+	} else {
+		result, err = validateBucketRate(ctx, token, currency, amount, networkFilter)
 	}
 
-	// Bucket-based rate resolution
-	return validateBucketRate(ctx, token, currency, amount, networkFilter)
+	if err != nil {
+		return RateValidationResult{}, err
+	}
+
+	// For direct currency matches, rate is always 1:1
+	// Both Redis queues and DB store rate 1 for direct matches (e.g., CNGN->NGN in NGN bucket)
+	// We explicitly return 1.0 here for clarity and to ensure consistency
+	if isDirectMatch {
+		result.Rate = decimal.NewFromInt(1)
+	}
+
+	return result, nil
 }
 
 // validateProviderRate handles provider-specific rate validation
-func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, providerID, networkFilter string) (decimal.Decimal, error) {
+func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, providerID, networkFilter string) (RateValidationResult, error) {
 	// Get the provider from the database
 	provider, err := storage.Client.ProviderProfile.
 		Query().
@@ -787,9 +806,9 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return decimal.Zero, fmt.Errorf("provider not found")
+			return RateValidationResult{}, fmt.Errorf("provider not found")
 		}
-		return decimal.Zero, fmt.Errorf("internal server error")
+		return RateValidationResult{}, fmt.Errorf("internal server error")
 	}
 
 	// Get the provider's order token configuration to validate min/max amounts
@@ -811,17 +830,20 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 	providerOrderToken, err := providerOrderTokenQuery.First(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return decimal.Zero, fmt.Errorf("provider does not support this token/currency combination")
+			return RateValidationResult{}, fmt.Errorf("provider does not support this token/currency combination")
 		}
-		return decimal.Zero, fmt.Errorf("internal server error")
+		return RateValidationResult{}, fmt.Errorf("internal server error")
 	}
 
-	// Validate that the token amount is within the provider's min/max limits
-	if amount.LessThan(providerOrderToken.MinOrderAmount) || amount.GreaterThan(providerOrderToken.MaxOrderAmount) {
-		return decimal.Zero, fmt.Errorf("amount must be between %s and %s for this provider", providerOrderToken.MinOrderAmount, providerOrderToken.MaxOrderAmount)
+	// Determine order type before validation
+	orderType := DetermineOrderType(providerOrderToken, amount)
+
+	// Check minimum amount first (applies to both regular and OTC)
+	if amount.LessThan(providerOrderToken.MinOrderAmount) {
+		return RateValidationResult{}, fmt.Errorf("amount must be at least %s for this provider", providerOrderToken.MinOrderAmount)
 	}
 
-	// Try to get the provider's current rate from Redis queue first (most up-to-date)
+	// Get rate first (needed for fiat conversion and OTC validation)
 	var rateResponse decimal.Decimal
 	redisRate, found := getProviderRateFromRedis(ctx, providerID, token.Symbol, currency.Code, amount)
 	if found {
@@ -836,6 +858,25 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 		}
 	}
 
+	// Validate amount limits: if exceeds regular max, check OTC limits
+	// OTC limits are denominated in token amounts (same as regular limits)
+	if amount.GreaterThan(providerOrderToken.MaxOrderAmount) {
+		// Amount exceeds regular max - check if it falls within OTC limits
+		if providerOrderToken.MinOrderAmountOtc.IsZero() || providerOrderToken.MaxOrderAmountOtc.IsZero() {
+			return RateValidationResult{}, fmt.Errorf("amount exceeds maximum order amount (%s) for this provider", providerOrderToken.MaxOrderAmount)
+		}
+		if amount.LessThan(providerOrderToken.MinOrderAmountOtc) || amount.GreaterThan(providerOrderToken.MaxOrderAmountOtc) {
+			if amount.LessThan(providerOrderToken.MinOrderAmountOtc) {
+				return RateValidationResult{}, fmt.Errorf("amount is below minimum order amount (%s) for this provider", providerOrderToken.MinOrderAmountOtc)
+			} else {
+				return RateValidationResult{}, fmt.Errorf("amount exceeds maximum order amount (%s) for this provider", providerOrderToken.MaxOrderAmountOtc)
+			}
+		}
+		// Amount is within OTC limits - allow it (order will be classified as OTC)
+	} else {
+		// Amount is within regular limits - proceed normally
+	}
+
 	// Check if provider has sufficient balance
 	_, err = storage.Client.ProviderCurrencies.
 		Query().
@@ -848,12 +889,16 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return decimal.Zero, fmt.Errorf("provider has insufficient liquidity for %s", currency.Code)
+			return RateValidationResult{}, fmt.Errorf("provider has insufficient liquidity for %s", currency.Code)
 		}
-		return decimal.Zero, fmt.Errorf("internal server error")
+		return RateValidationResult{}, fmt.Errorf("internal server error")
 	}
 
-	return rateResponse, nil
+	return RateValidationResult{
+		Rate:       rateResponse,
+		ProviderID: providerID,
+		OrderType:  orderType,
+	}, nil
 }
 
 // getProviderRateFromRedis retrieves the provider's current rate from Redis queue
@@ -921,7 +966,7 @@ func getProviderRateFromRedis(ctx context.Context, providerID, tokenSymbol, curr
 }
 
 // validateBucketRate handles bucket-based rate validation
-func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, networkIdentifier string) (decimal.Decimal, error) {
+func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, networkIdentifier string) (RateValidationResult, error) {
 	// Get redis keys for provision buckets
 	keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currency.Code+"_*_*", 100).Result()
 	if err != nil {
@@ -930,12 +975,14 @@ func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.Fia
 			"Currency": currency.Code,
 			"Network":  networkIdentifier,
 		}).Errorf("Failed to scan Redis buckets for bucket rate")
-		return decimal.Zero, fmt.Errorf("internal server error")
+		return RateValidationResult{}, fmt.Errorf("internal server error")
 	}
 
 	// Track the best available rate and reason for logging
 	var bestRate decimal.Decimal
 	var foundExactMatch bool
+	var selectedProviderID string
+	var selectedOrderType paymentorder.OrderType
 
 	// Scan through the buckets to find a matching rate
 	for _, key := range keys {
@@ -959,16 +1006,18 @@ func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.Fia
 		}
 
 		// Find the first provider at the top of the queue that matches our criteria
-		rate, found := findSuitableProviderRate(providers, token.Symbol, networkIdentifier, amount, bucketData)
-		if found {
+		result := findSuitableProviderRate(ctx, providers, token.Symbol, networkIdentifier, amount, bucketData)
+		if result.Found {
 			foundExactMatch = true
-			bestRate = rate
+			bestRate = result.Rate
+			selectedProviderID = result.ProviderID
+			selectedOrderType = result.OrderType
 			break // Found exact match, no need to continue
 		}
 
 		// Track the best available rate for logging purposes
-		if rate.GreaterThan(bestRate) {
-			bestRate = rate
+		if result.Rate.GreaterThan(bestRate) {
+			bestRate = result.Rate
 		}
 	}
 
@@ -982,11 +1031,20 @@ func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.Fia
 			"BestRate":      bestRate,
 		}).Warnf("ValidateRate.NoSuitableProvider: no provider found for the given parameters")
 
-		return decimal.Zero, fmt.Errorf("no provider available for %s to %s conversion with amount %s on %s network",
-			token.Symbol, currency.Code, amount, networkIdentifier)
+		// Provide more specific error message
+		networkMsg := networkIdentifier
+		if networkMsg == "" {
+			networkMsg = "any network"
+		}
+		return RateValidationResult{}, fmt.Errorf("no provider available for %s to %s conversion with amount %s on %s",
+			token.Symbol, currency.Code, amount, networkMsg)
 	}
 
-	return bestRate, nil
+	return RateValidationResult{
+		Rate:       bestRate,
+		ProviderID: selectedProviderID,
+		OrderType:  selectedOrderType,
+	}, nil
 }
 
 // parseBucketKey parses and validates bucket key format
@@ -1033,10 +1091,23 @@ func parseBucketKey(key string) (*BucketData, error) {
 	}, nil
 }
 
+// ProviderRateResult contains the result of finding a suitable provider rate
+type ProviderRateResult struct {
+	Rate       decimal.Decimal
+	ProviderID string
+	OrderType  paymentorder.OrderType
+	Found      bool
+}
+
 // findSuitableProviderRate finds the first suitable provider rate from the provider list
-func findSuitableProviderRate(providers []string, tokenSymbol string, networkIdentifier string, tokenAmount decimal.Decimal, bucketData *BucketData) (decimal.Decimal, bool) {
+// Returns the rate, provider ID, order type, and a boolean indicating if an exact match was found
+// An exact match means: amount within limits, within bucket range, and provider has sufficient balance
+func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymbol string, networkIdentifier string, tokenAmount decimal.Decimal, bucketData *BucketData) ProviderRateResult {
 	var bestRate decimal.Decimal
 	var foundExactMatch bool
+
+	// Track reasons for debugging when no match is found
+	var skipReasons []string
 
 	for _, providerData := range providers {
 		parts := strings.Split(providerData, ":")
@@ -1056,10 +1127,12 @@ func findSuitableProviderRate(providers []string, tokenSymbol string, networkIde
 			continue
 		}
 
-		// Skip entry if provider doesn't not have a token configured for the network
+		// Fetch provider order token for network validation and OTC limits check
 		// TODO: Move this to redis cache. Provider's network should be in the key.
+		var providerOrderToken *ent.ProviderOrderToken
 		if networkIdentifier != "" {
-			_, err := storage.Client.ProviderOrderToken.
+			// Network filter provided - fetch with network constraint
+			pot, err := storage.Client.ProviderOrderToken.
 				Query().
 				Where(
 					providerordertoken.HasProviderWith(
@@ -1073,7 +1146,7 @@ func findSuitableProviderRate(providers []string, tokenSymbol string, networkIde
 					providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
 					providerordertoken.NetworkEQ(networkIdentifier),
 					providerordertoken.AddressNEQ(""),
-				).Only(context.Background())
+				).Only(ctx)
 			if err != nil {
 				if ent.IsNotFound(err) {
 					continue
@@ -1084,6 +1157,34 @@ func findSuitableProviderRate(providers []string, tokenSymbol string, networkIde
 				}).Errorf("ValidateRate.InvalidProviderData: failed to fetch provider configuration")
 				continue
 			}
+			providerOrderToken = pot
+		} else {
+			// No network filter - fetch first matching entry
+			pot, err := storage.Client.ProviderOrderToken.
+				Query().
+				Where(
+					providerordertoken.HasProviderWith(
+						providerprofile.IDEQ(parts[0]),
+						providerprofile.HasProviderCurrenciesWith(
+							providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
+							providercurrencies.IsAvailableEQ(true),
+						),
+					),
+					providerordertoken.HasTokenWith(tokenEnt.SymbolEQ(parts[1])),
+					providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
+					providerordertoken.AddressNEQ(""),
+				).First(ctx)
+			if err != nil {
+				if ent.IsNotFound(err) {
+					continue
+				}
+				logger.WithFields(logger.Fields{
+					"ProviderData": providerData,
+					"Error":        err,
+				}).Errorf("ValidateRate.InvalidProviderData: failed to fetch provider configuration")
+				continue
+			}
+			providerOrderToken = pot
 		}
 
 		// Parse provider order amounts
@@ -1105,9 +1206,28 @@ func findSuitableProviderRate(providers []string, tokenSymbol string, networkIde
 			continue
 		}
 
-		// Skip if order amount is not within provider's min and max order amount
-		if tokenAmount.LessThan(minOrderAmount) || tokenAmount.GreaterThan(maxOrderAmount) {
+		// Check if order amount is within provider's regular min/max limits
+		// If not, check OTC limits as fallback
+		if tokenAmount.LessThan(minOrderAmount) {
+			// Amount below regular min - skip
+			skipReasons = append(skipReasons, fmt.Sprintf("amount %s below min %s", tokenAmount, minOrderAmount))
 			continue
+		} else if tokenAmount.GreaterThan(maxOrderAmount) {
+			// Amount exceeds regular max - check OTC limits using already fetched providerOrderToken
+			// Check if token amount is within OTC limits
+			if providerOrderToken.MinOrderAmountOtc.IsZero() || providerOrderToken.MaxOrderAmountOtc.IsZero() {
+				// OTC limits not configured - skip
+				skipReasons = append(skipReasons, fmt.Sprintf("amount %s exceeds max %s, OTC limits not configured", tokenAmount, maxOrderAmount))
+				continue
+			}
+
+			if tokenAmount.LessThan(providerOrderToken.MinOrderAmountOtc) || tokenAmount.GreaterThan(providerOrderToken.MaxOrderAmountOtc) {
+				// Amount outside OTC limits - skip
+				skipReasons = append(skipReasons, fmt.Sprintf("amount %s outside OTC range [%s, %s]", tokenAmount, providerOrderToken.MinOrderAmountOtc, providerOrderToken.MaxOrderAmountOtc))
+				continue
+			}
+
+			// Amount is within OTC limits - proceed to rate parsing
 		}
 
 		// Parse rate
@@ -1120,6 +1240,8 @@ func findSuitableProviderRate(providers []string, tokenSymbol string, networkIde
 			continue
 		}
 
+		providerID := parts[0]
+
 		// Track the best rate we've seen (for logging purposes)
 		if rate.GreaterThan(bestRate) {
 			bestRate = rate
@@ -1130,30 +1252,59 @@ func findSuitableProviderRate(providers []string, tokenSymbol string, networkIde
 
 		// Check if fiat amount is within the bucket range
 		if fiatAmount.GreaterThanOrEqual(bucketData.MinAmount) && fiatAmount.LessThanOrEqual(bucketData.MaxAmount) {
-			return rate, true
+			// Amount is within bucket range - check provider balance before returning
+			_, err := storage.Client.ProviderCurrencies.
+				Query().
+				Where(
+					providercurrencies.HasProviderWith(providerprofile.IDEQ(providerID)),
+					providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
+					providercurrencies.AvailableBalanceGT(fiatAmount),
+					providercurrencies.IsAvailableEQ(true),
+				).
+				Only(ctx)
+			if err != nil {
+				if ent.IsNotFound(err) {
+					skipReasons = append(skipReasons, fmt.Sprintf("provider %s has insufficient balance (need %s %s)", providerID, fiatAmount, bucketData.Currency))
+					continue
+				}
+				return ProviderRateResult{Found: false}
+			}
+
+			// Determine order type for this provider
+			orderType := DetermineOrderType(providerOrderToken, tokenAmount)
+
+			// Provider has balance and amount is within bucket range - exact match
+			return ProviderRateResult{
+				Rate:       rate,
+				ProviderID: providerID,
+				OrderType:  orderType,
+				Found:      true,
+			}
 		}
 
-		// Check if provider has sufficient balance
-		ctx := context.Background()
-		_, err = storage.Client.ProviderCurrencies.
-			Query().
-			Where(
-				providercurrencies.HasProviderWith(providerprofile.IDEQ(parts[0])),
-				providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
-				providercurrencies.AvailableBalanceGT(fiatAmount),
-				providercurrencies.IsAvailableEQ(true),
-			).
-			Only(ctx)
-		if err != nil {
-			if ent.IsNotFound(err) {
-				continue
-			}
-			return decimal.Zero, false
-		}
+		// Amount is outside bucket range - skip this provider
+		skipReasons = append(skipReasons, fmt.Sprintf("fiat amount %s outside bucket range [%s, %s]", fiatAmount, bucketData.MinAmount, bucketData.MaxAmount))
+		continue
 	}
 
 	// Return the best rate we found (even if no exact match) for logging purposes
-	return bestRate, foundExactMatch
+	// Log skip reasons for debugging if no match was found
+	if !foundExactMatch && len(skipReasons) > 0 {
+		maxReasons := 5
+		if len(skipReasons) < maxReasons {
+			maxReasons = len(skipReasons)
+		}
+		logger.WithFields(logger.Fields{
+			"Token":       tokenSymbol,
+			"Amount":      tokenAmount,
+			"SkipReasons": skipReasons[:maxReasons], // Log first 5 reasons
+		}).Debugf("ValidateRate.NoSuitableProvider: providers skipped due to limits/balance")
+	}
+
+	return ProviderRateResult{
+		Rate:  bestRate,
+		Found: foundExactMatch,
+	}
 }
 
 // ValidateAccount validates if an account exists for the given institution and account identifier
@@ -1231,18 +1382,28 @@ func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier str
 	return "", fmt.Errorf("failed to verify account with any provider")
 }
 
-// DetermineOrderType determines the order type based on the order token OTC config and fiat amount.
-func DetermineOrderType(orderToken *ent.ProviderOrderToken, fiatAmount decimal.Decimal) paymentorder.OrderType {
+// DetermineOrderType determines the order type based on the order token OTC config and token amount.
+// OTC limits are denominated in token amounts (same as regular limits).
+// OTC is only used when the amount exceeds regular max AND falls within OTC limits.
+func DetermineOrderType(orderToken *ent.ProviderOrderToken, tokenAmount decimal.Decimal) paymentorder.OrderType {
 	if orderToken == nil {
 		return paymentorder.OrderTypeRegular
 	}
+
+	// Check if amount is within regular limits
+	if tokenAmount.LessThanOrEqual(orderToken.MaxOrderAmount) {
+		return paymentorder.OrderTypeRegular
+	}
+
+	// Amount exceeds regular max - check if OTC is configured
 	minOTC := orderToken.MinOrderAmountOtc
 	maxOTC := orderToken.MaxOrderAmountOtc
 	if minOTC.IsZero() || maxOTC.IsZero() || minOTC.GreaterThan(maxOTC) {
+		// OTC limits not configured - cannot be OTC, return regular (will fail validation)
 		return paymentorder.OrderTypeRegular
 	}
-	if fiatAmount.GreaterThanOrEqual(minOTC) && fiatAmount.LessThanOrEqual(maxOTC) {
-		return paymentorder.OrderTypeOtc
-	}
-	return paymentorder.OrderTypeRegular
+
+	// OTC limits are configured - any amount exceeding regular max should be treated as OTC attempt
+	// Validation will catch if it's outside the valid OTC range (gap between MaxOrderAmount and MinOrderAmountOtc, or > MaxOrderAmountOtc)
+	return paymentorder.OrderTypeOtc
 }
