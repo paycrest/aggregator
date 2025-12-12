@@ -689,3 +689,133 @@ func GetProviderAddressFromLockOrder(ctx context.Context, lockOrder *ent.LockPay
 
 	return providerOrderToken.Address, nil
 }
+
+// ProcessFeeEvents processes LocalTransferFeeSplit  events
+// This event contains orderId and fee amounts, allowing proper fee recording per order
+func ProcessFeeEvents(ctx context.Context, network *ent.Network, localFeeEvents []*types.LocalTransferFeeSplitEvent, fxFeeEvents []*types.FxTransferFeeSplitEvent) error {
+	// Collect all order IDs from both event types (one of both would be nil at a time)
+	allOrderIds := make([]string, 0, len(localFeeEvents) + len(fxFeeEvents))
+
+	localEventMap := make(map[string]*types.LocalTransferFeeSplitEvent)
+	fxEventMap := make(map[string]*types.FxTransferFeeSplitEvent)
+
+	if (len(localFeeEvents) != 0) {
+		for _, event := range localFeeEvents {
+			allOrderIds = append(allOrderIds, event.OrderId)
+			localEventMap[event.OrderId] = event
+		}
+	}
+	
+	if (len(fxFeeEvents) != 0) {
+		for _, event := range fxFeeEvents {
+			allOrderIds = append(allOrderIds, event.OrderId)
+			fxEventMap[event.OrderId] = event
+		}
+	}
+
+	if len(allOrderIds) == 0 {
+		return nil
+	}
+
+	// Find orders by gateway order IDs
+	lockOrders, err := storage.Client.LockPaymentOrder.
+		Query().
+		Where(lockpaymentorder.GatewayIDIn(allOrderIds...)).
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("ProcessFeeEvents.fetchLockOrders: %w", err)
+	}
+
+
+	var wg sync.WaitGroup
+	for _, lockOrder := range lockOrders {
+		wg.Add(1)
+		go func(lo *ent.LockPaymentOrder) {
+			defer wg.Done()
+
+		// Check for LocalTransferFeeSplit event (local transfers)
+		if localEvent, ok := localEventMap[lo.GatewayID]; ok {
+			// Update sender fee from senderAmount
+			if !localEvent.SenderAmount.IsZero() {
+				_, err := db.Client.PaymentOrder.
+					Update().
+					Where(paymentorder.MessageHashEQ(lo.MessageHash)).
+					SetSenderFee(localEvent.SenderAmount).
+					Save(ctx)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":       fmt.Sprintf("%v", err),
+						"MessageHash": lo.MessageHash,
+						"TxHash":      localEvent.TxHash,
+						"Network":     network.Identifier,
+						"SenderFee":   localEvent.SenderAmount.String(),
+					}).Errorf("Failed to update sender fee from LocalTransferFeeSplit event for %s", network.Identifier)
+				}
+			}
+
+			// Update protocol fee from aggregatorAmount (fees collected by the protocol)
+			if !localEvent.AggregatorAmount.IsZero() {
+				_, err := db.Client.LockPaymentOrder.
+					Update().
+					Where(lockpaymentorder.MessageHashEQ(lo.MessageHash)).
+					SetProtocolFee(localEvent.AggregatorAmount).
+					Save(ctx)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":        fmt.Sprintf("%v", err),
+						"MessageHash":  lo.MessageHash,
+						"TxHash":       localEvent.TxHash,
+						"Network":      network.Identifier,
+						"ProtocolFee":  localEvent.AggregatorAmount.String(),
+					}).Errorf("Failed to update protocol fee from LocalTransferFeeSplit event for %s", network.Identifier)
+				}
+			}
+		}
+		
+		// Check for fxTransferFeeSplit event (fx transfers)
+		if fxEvent, ok := fxEventMap[lo.GatewayID]; ok {
+			// Update sender fee from senderAmount
+			if !fxEvent.SenderAmount.IsZero() {
+				_, err := db.Client.PaymentOrder.Update().
+					Where(paymentorder.MessageHashEQ(lo.MessageHash)).
+					SetSenderFee(fxEvent.SenderAmount).
+					Save(ctx)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":       fmt.Sprintf("%v", err),
+						"MessageHash": lo.MessageHash,
+						"TxHash":      fxEvent.TxHash,
+						"Network":     network.Identifier,
+						"SenderFee":   fxEvent.SenderAmount.String(),
+					}).Errorf("Failed to update sender fee from fxTransferFeeSplit event for %s", network.Identifier)
+				}
+			}
+
+			// Update protocol fee from aggregatorAmount (fees collected by the protocol)
+			if !fxEvent.AggregatorAmount.IsZero() {
+				_, err := db.Client.LockPaymentOrder.Update().
+					Where(lockpaymentorder.MessageHashEQ(lo.MessageHash)).
+					SetProtocolFee(fxEvent.AggregatorAmount).
+					Save(ctx)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":        fmt.Sprintf("%v", err),
+						"MessageHash":  lo.MessageHash,
+						"TxHash":       fxEvent.TxHash,
+						"Network":      network.Identifier,
+						"ProtocolFee":  fxEvent.AggregatorAmount.String(),
+					}).Errorf("Failed to update protocol fee from fxTransferFeeSplit event for %s", network.Identifier)
+				}
+			}
+		}
+		}(lockOrder)
+	}
+	wg.Wait()
+
+	return nil
+}
+
+
