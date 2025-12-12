@@ -15,6 +15,7 @@ import (
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/user"
 	"github.com/paycrest/aggregator/storage"
@@ -83,10 +84,98 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 			All(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
-				"Error":      fmt.Sprintf("%v", err),
-				"CurrencyID": bucket.Edges.Currency.ID,
+				"Error":           fmt.Sprintf("%v", err),
+				"BucketMinAmount": bucket.MinAmount,
+				"BucketMaxAmount": bucket.MaxAmount,
+				"Currency":        bucket.Edges.Currency.Code,
 			}).Errorf("Failed to get available providers for bucket")
 			continue
+		}
+
+		if len(availableProviders) == 0 {
+			// if no providers are available, get the order tokens for the bucket
+			orderTokens, err := storage.Client.ProviderOrderToken.Query().
+				Where(
+					providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucket.Edges.Currency.Code)),
+					providerordertoken.HasProviderWith(providerprofile.IsActive(true)),
+					providerordertoken.HasProviderWith(
+						providerprofile.HasUserWith(user.KybVerificationStatusEQ(user.KybVerificationStatusApproved)),
+					),
+					providerordertoken.MinOrderAmountLTE(bucket.MinAmount),
+					providerordertoken.MaxOrderAmountGTE(bucket.MaxAmount),
+				).
+				WithProvider().
+				All(ctx)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":           fmt.Sprintf("%v", err),
+					"BucketMinAmount": bucket.MinAmount,
+					"BucketMaxAmount": bucket.MaxAmount,
+					"Currency":        bucket.Edges.Currency.Code,
+				}).Errorf("Failed to get available providers for bucket")
+				continue
+			}
+			if len(orderTokens) > 0 {
+				for _, orderToken := range orderTokens {
+					// Avoid duplicate M2M inserts for the same provider/bucket pair
+					exists, err := orderToken.Edges.Provider.QueryProvisionBuckets().
+						Where(provisionbucket.IDEQ(bucket.ID)).
+						Exist(ctx)
+					if err != nil {
+						logger.WithFields(logger.Fields{
+							"Error":           fmt.Sprintf("%v", err),
+							"ProviderID":      orderToken.Edges.Provider.ID,
+							"BucketCurrency":  bucket.Edges.Currency.Code,
+							"BucketMinAmount": bucket.MinAmount,
+							"BucketMaxAmount": bucket.MaxAmount,
+						}).Errorf("Failed to check existing bucket for provider")
+						continue
+					}
+					if exists {
+						// Already linked; skip re-adding
+						continue
+					}
+
+					_, err = storage.Client.ProviderProfile.Update().
+						Where(providerprofile.IDEQ(orderToken.Edges.Provider.ID)).
+						AddProvisionBuckets(bucket).
+						Save(ctx)
+					if err != nil {
+						logger.WithFields(logger.Fields{
+							"Error":           fmt.Sprintf("%v", err),
+							"ProviderID":      orderToken.Edges.Provider.ID,
+							"BucketCurrency":  bucket.Edges.Currency.Code,
+							"BucketMinAmount": bucket.MinAmount,
+							"BucketMaxAmount": bucket.MaxAmount,
+						}).Errorf("Failed to add provision bucket to provider")
+					}
+
+					provider, err := storage.Client.ProviderProfile.Query().
+						Where(
+							providerprofile.IDEQ(orderToken.Edges.Provider.ID),
+							providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
+							providerprofile.HasProviderCurrenciesWith(
+								providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)),
+								providercurrencies.AvailableBalanceGT(bucket.MinAmount),
+								providercurrencies.IsAvailableEQ(true),
+								// TODO: add check to enforce critical balance threshold in the future
+							),
+						).
+						Only(ctx)
+					if err != nil {
+						logger.WithFields(logger.Fields{
+							"Error":           fmt.Sprintf("%v", err),
+							"ProviderID":      orderToken.Edges.Provider.ID,
+							"BucketCurrency":  bucket.Edges.Currency.Code,
+							"BucketMinAmount": bucket.MinAmount,
+							"BucketMaxAmount": bucket.MaxAmount,
+						}).Errorf("Failed to get provider")
+					}
+					if provider != nil {
+						availableProviders = append(availableProviders, provider)
+					}
+				}
+			}
 		}
 
 		bucket.Edges.ProviderProfiles = availableProviders
