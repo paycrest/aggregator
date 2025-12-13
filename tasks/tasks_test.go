@@ -102,26 +102,21 @@ func setup() error {
 		SetSenderFee(decimal.NewFromFloat(5.0)).
 		SetToken(token).
 		SetRate(decimal.NewFromFloat(750.0)).
-		SetReceiveAddressText("0x1234567890123456789012345678901234567890").
+		SetReceiveAddress("0x1234567890123456789012345678901234567890").
+		SetReceiveAddressSalt([]byte("test_salt")).
+		SetReceiveAddressExpiry(time.Now().Add(time.Hour)).
 		SetFeePercent(decimal.NewFromFloat(5.0)).
 		SetFeeAddress("0x1234567890123456789012345678901234567890").
 		SetReturnAddress("0x0987654321098765432109876543210987654321").
+		SetInstitution("ABNGNGLA").
+		SetAccountIdentifier("1234567890").
+		SetAccountName("Test Account").
+		SetMemo("Shola Kehinde - rent for May 2021").
 		SetStatus(paymentorder.StatusPending).
 		Save(context.Background())
 	if err != nil {
 		return fmt.Errorf("CreatePaymentOrder.tasks_test: %w", err)
 	}
-
-	// Create payment order recipient
-	_, err = db.Client.PaymentOrderRecipient.
-		Create().
-		SetInstitution("ABNGNGLA").
-		SetAccountIdentifier("1234567890").
-		SetAccountName("Test Account").
-		SetProviderID("").
-		SetMemo("Shola Kehinde - rent for May 2021").
-		SetPaymentOrder(paymentOrder).
-		Save(context.Background())
 	if err != nil {
 		return fmt.Errorf("CreatePaymentOrderRecipient.tasks_test: %w", err)
 	}

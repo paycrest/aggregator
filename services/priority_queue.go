@@ -10,7 +10,6 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
@@ -373,8 +372,8 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 	}
 }
 
-// AssignLockPaymentOrders assigns lock payment orders to providers
-func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order types.LockPaymentOrderFields) error {
+// AssignLockPaymentOrders assigns payment orders to providers
+func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order types.PaymentOrderFields) error {
 	orderIDPrefix := strings.Split(order.ID.String(), "-")[0]
 
 	excludeList, err := storage.RedisClient.LRange(ctx, fmt.Sprintf("order_exclude_list_%s", order.ID), 0, -1).Result()
@@ -472,7 +471,7 @@ func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order
 }
 
 // assignOtcOrder assigns an OTC order to a provider and creates a Redis key for reassignment
-func (s *PriorityQueueService) assignOtcOrder(ctx context.Context, order types.LockPaymentOrderFields) error {
+func (s *PriorityQueueService) assignOtcOrder(ctx context.Context, order types.PaymentOrderFields) error {
 	// Start a transaction for the entire operation
 	tx, err := storage.Client.Tx(ctx)
 	if err != nil {
@@ -490,12 +489,30 @@ func (s *PriorityQueueService) assignOtcOrder(ctx context.Context, order types.L
 	}()
 
 	// Assign OTC order to provider (no balance reservation, no provision node request)
-	_, err = tx.LockPaymentOrder.
-		Update().
-		Where(lockpaymentorder.IDEQ(order.ID)).
-		SetProviderID(order.ProviderID).
-		SetStatus(lockpaymentorder.StatusPending).
-		Save(ctx)
+	// Set provider if ProviderID exists
+	if order.ProviderID != "" {
+		provider, err := tx.ProviderProfile.Query().Where(providerprofile.IDEQ(order.ProviderID)).Only(ctx)
+		if err == nil && provider != nil {
+			_, err = tx.PaymentOrder.
+				Update().
+				Where(paymentorder.IDEQ(order.ID)).
+				SetProvider(provider).
+				SetStatus(paymentorder.StatusPending).
+				Save(ctx)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		_, err = tx.PaymentOrder.
+			Update().
+			Where(paymentorder.IDEQ(order.ID)).
+			SetStatus(paymentorder.StatusPending).
+			Save(ctx)
+		if err != nil {
+			return err
+		}
+	}
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
@@ -586,7 +603,7 @@ func (s *PriorityQueueService) addProviderToExcludeList(ctx context.Context, ord
 }
 
 // sendOrderRequest sends an order request to a provider
-func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types.LockPaymentOrderFields) error {
+func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types.PaymentOrderFields) error {
 	// Reserve balance for this order
 	currency := order.ProvisionBucket.Edges.Currency.Code
 	amount := order.Amount.Mul(order.Rate).RoundBank(0)
@@ -732,7 +749,7 @@ func (s *PriorityQueueService) notifyProvider(ctx context.Context, orderRequestD
 }
 
 // matchRate matches order rate with a provider rate
-func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, orderIDPrefix string, order types.LockPaymentOrderFields, excludeList []string) error {
+func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, orderIDPrefix string, order types.PaymentOrderFields, excludeList []string) error {
 	for index := 0; ; index++ {
 		providerData, err := storage.RedisClient.LIndex(ctx, redisKey, int64(index)).Result()
 		if err != nil {

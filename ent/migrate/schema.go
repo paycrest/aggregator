@@ -154,92 +154,6 @@ var (
 			},
 		},
 	}
-	// LockOrderFulfillmentsColumns holds the columns for the "lock_order_fulfillments" table.
-	LockOrderFulfillmentsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "tx_id", Type: field.TypeString, Nullable: true},
-		{Name: "psp", Type: field.TypeString, Nullable: true},
-		{Name: "validation_status", Type: field.TypeEnum, Enums: []string{"pending", "success", "failed"}, Default: "pending"},
-		{Name: "validation_error", Type: field.TypeString, Nullable: true},
-		{Name: "lock_payment_order_fulfillments", Type: field.TypeUUID},
-	}
-	// LockOrderFulfillmentsTable holds the schema information for the "lock_order_fulfillments" table.
-	LockOrderFulfillmentsTable = &schema.Table{
-		Name:       "lock_order_fulfillments",
-		Columns:    LockOrderFulfillmentsColumns,
-		PrimaryKey: []*schema.Column{LockOrderFulfillmentsColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "lock_order_fulfillments_lock_payment_orders_fulfillments",
-				Columns:    []*schema.Column{LockOrderFulfillmentsColumns[7]},
-				RefColumns: []*schema.Column{LockPaymentOrdersColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-		},
-	}
-	// LockPaymentOrdersColumns holds the columns for the "lock_payment_orders" table.
-	LockPaymentOrdersColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "gateway_id", Type: field.TypeString},
-		{Name: "amount", Type: field.TypeFloat64},
-		{Name: "protocol_fee", Type: field.TypeFloat64},
-		{Name: "rate", Type: field.TypeFloat64},
-		{Name: "order_percent", Type: field.TypeFloat64},
-		{Name: "sender", Type: field.TypeString, Nullable: true},
-		{Name: "tx_hash", Type: field.TypeString, Nullable: true, Size: 70},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "processing", "cancelled", "fulfilled", "validated", "settled", "refunded"}, Default: "pending"},
-		{Name: "block_number", Type: field.TypeInt64},
-		{Name: "institution", Type: field.TypeString},
-		{Name: "account_identifier", Type: field.TypeString},
-		{Name: "account_name", Type: field.TypeString},
-		{Name: "memo", Type: field.TypeString, Nullable: true},
-		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
-		{Name: "cancellation_count", Type: field.TypeInt, Default: 0},
-		{Name: "cancellation_reasons", Type: field.TypeJSON},
-		{Name: "message_hash", Type: field.TypeString, Nullable: true, Size: 400},
-		{Name: "amount_in_usd", Type: field.TypeFloat64},
-		{Name: "order_type", Type: field.TypeEnum, Enums: []string{"otc", "regular"}, Default: "regular"},
-		{Name: "provider_profile_assigned_orders", Type: field.TypeString, Nullable: true},
-		{Name: "provision_bucket_lock_payment_orders", Type: field.TypeInt, Nullable: true},
-		{Name: "token_lock_payment_orders", Type: field.TypeInt},
-	}
-	// LockPaymentOrdersTable holds the schema information for the "lock_payment_orders" table.
-	LockPaymentOrdersTable = &schema.Table{
-		Name:       "lock_payment_orders",
-		Columns:    LockPaymentOrdersColumns,
-		PrimaryKey: []*schema.Column{LockPaymentOrdersColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "lock_payment_orders_provider_profiles_assigned_orders",
-				Columns:    []*schema.Column{LockPaymentOrdersColumns[22]},
-				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-			{
-				Symbol:     "lock_payment_orders_provision_buckets_lock_payment_orders",
-				Columns:    []*schema.Column{LockPaymentOrdersColumns[23]},
-				RefColumns: []*schema.Column{ProvisionBucketsColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-			{
-				Symbol:     "lock_payment_orders_tokens_lock_payment_orders",
-				Columns:    []*schema.Column{LockPaymentOrdersColumns[24]},
-				RefColumns: []*schema.Column{TokensColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "lockpaymentorder_gateway_id_rate_tx_hash_block_number_institution_account_identifier_account_name_memo_token_lock_payment_orders",
-				Unique:  true,
-				Columns: []*schema.Column{LockPaymentOrdersColumns[3], LockPaymentOrdersColumns[6], LockPaymentOrdersColumns[9], LockPaymentOrdersColumns[11], LockPaymentOrdersColumns[12], LockPaymentOrdersColumns[13], LockPaymentOrdersColumns[14], LockPaymentOrdersColumns[15], LockPaymentOrdersColumns[24]},
-			},
-		},
-	}
 	// NetworksColumns holds the columns for the "networks" table.
 	NetworksColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -267,26 +181,40 @@ var (
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "amount", Type: field.TypeFloat64},
+		{Name: "rate", Type: field.TypeFloat64},
+		{Name: "amount_in_usd", Type: field.TypeFloat64},
 		{Name: "amount_paid", Type: field.TypeFloat64},
 		{Name: "amount_returned", Type: field.TypeFloat64},
 		{Name: "percent_settled", Type: field.TypeFloat64},
 		{Name: "sender_fee", Type: field.TypeFloat64},
 		{Name: "network_fee", Type: field.TypeFloat64},
-		{Name: "rate", Type: field.TypeFloat64},
+		{Name: "protocol_fee", Type: field.TypeFloat64},
+		{Name: "order_percent", Type: field.TypeFloat64},
+		{Name: "fee_percent", Type: field.TypeFloat64},
 		{Name: "tx_hash", Type: field.TypeString, Nullable: true, Size: 70},
 		{Name: "block_number", Type: field.TypeInt64, Default: 0},
+		{Name: "message_hash", Type: field.TypeString, Nullable: true},
+		{Name: "gateway_id", Type: field.TypeString, Nullable: true, Size: 255},
 		{Name: "from_address", Type: field.TypeString, Nullable: true, Size: 60},
 		{Name: "return_address", Type: field.TypeString, Nullable: true, Size: 60},
-		{Name: "receive_address_text", Type: field.TypeString, Size: 60},
-		{Name: "fee_percent", Type: field.TypeFloat64},
+		{Name: "receive_address", Type: field.TypeString, Unique: true, Size: 60},
+		{Name: "receive_address_salt", Type: field.TypeBytes, Nullable: true},
+		{Name: "receive_address_expiry", Type: field.TypeTime, Nullable: true},
 		{Name: "fee_address", Type: field.TypeString, Nullable: true, Size: 60},
-		{Name: "gateway_id", Type: field.TypeString, Nullable: true, Size: 70},
-		{Name: "message_hash", Type: field.TypeString, Nullable: true, Size: 400},
+		{Name: "institution", Type: field.TypeString, Size: 255},
+		{Name: "account_identifier", Type: field.TypeString, Size: 255},
+		{Name: "account_name", Type: field.TypeString, Size: 255},
+		{Name: "memo", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
+		{Name: "sender", Type: field.TypeString, Nullable: true, Size: 255},
 		{Name: "reference", Type: field.TypeString, Nullable: true, Size: 70},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"initiated", "processing", "pending", "validated", "expired", "settled", "refunded"}, Default: "initiated"},
-		{Name: "amount_in_usd", Type: field.TypeFloat64},
+		{Name: "cancellation_count", Type: field.TypeInt, Nullable: true, Default: 0},
+		{Name: "cancellation_reasons", Type: field.TypeJSON, Nullable: true},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"initiated", "pending", "processing", "cancelled", "fulfilled", "validated", "expired", "settled", "refunded"}, Default: "initiated"},
 		{Name: "order_type", Type: field.TypeEnum, Enums: []string{"otc", "regular"}, Default: "regular"},
 		{Name: "api_key_payment_orders", Type: field.TypeUUID, Nullable: true},
+		{Name: "provider_profile_assigned_orders", Type: field.TypeString, Nullable: true},
+		{Name: "provision_bucket_payment_orders", Type: field.TypeInt, Nullable: true},
 		{Name: "sender_profile_payment_orders", Type: field.TypeUUID, Nullable: true},
 		{Name: "token_payment_orders", Type: field.TypeInt},
 	}
@@ -298,44 +226,63 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "payment_orders_api_keys_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[23]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[35]},
 				RefColumns: []*schema.Column{APIKeysColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
+				Symbol:     "payment_orders_provider_profiles_assigned_orders",
+				Columns:    []*schema.Column{PaymentOrdersColumns[36]},
+				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "payment_orders_provision_buckets_payment_orders",
+				Columns:    []*schema.Column{PaymentOrdersColumns[37]},
+				RefColumns: []*schema.Column{ProvisionBucketsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
 				Symbol:     "payment_orders_sender_profiles_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[24]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[38]},
 				RefColumns: []*schema.Column{SenderProfilesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "payment_orders_tokens_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[25]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[39]},
 				RefColumns: []*schema.Column{TokensColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "paymentorder_gateway_id_rate_tx_hash_block_number_institution_account_identifier_account_name_memo_token_payment_orders",
+				Unique:  true,
+				Columns: []*schema.Column{PaymentOrdersColumns[17], PaymentOrdersColumns[4], PaymentOrdersColumns[14], PaymentOrdersColumns[15], PaymentOrdersColumns[24], PaymentOrdersColumns[25], PaymentOrdersColumns[26], PaymentOrdersColumns[27], PaymentOrdersColumns[39]},
+			},
+		},
 	}
-	// PaymentOrderRecipientsColumns holds the columns for the "payment_order_recipients" table.
-	PaymentOrderRecipientsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "institution", Type: field.TypeString},
-		{Name: "account_identifier", Type: field.TypeString},
-		{Name: "account_name", Type: field.TypeString},
-		{Name: "memo", Type: field.TypeString, Nullable: true},
-		{Name: "provider_id", Type: field.TypeString, Nullable: true},
-		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
-		{Name: "payment_order_recipient", Type: field.TypeUUID, Unique: true},
+	// PaymentOrderFulfillmentsColumns holds the columns for the "payment_order_fulfillments" table.
+	PaymentOrderFulfillmentsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "tx_id", Type: field.TypeString, Nullable: true},
+		{Name: "psp", Type: field.TypeString, Nullable: true},
+		{Name: "validation_status", Type: field.TypeEnum, Enums: []string{"pending", "success", "failed"}, Default: "pending"},
+		{Name: "validation_error", Type: field.TypeString, Nullable: true},
+		{Name: "payment_order_fulfillments", Type: field.TypeUUID},
 	}
-	// PaymentOrderRecipientsTable holds the schema information for the "payment_order_recipients" table.
-	PaymentOrderRecipientsTable = &schema.Table{
-		Name:       "payment_order_recipients",
-		Columns:    PaymentOrderRecipientsColumns,
-		PrimaryKey: []*schema.Column{PaymentOrderRecipientsColumns[0]},
+	// PaymentOrderFulfillmentsTable holds the schema information for the "payment_order_fulfillments" table.
+	PaymentOrderFulfillmentsTable = &schema.Table{
+		Name:       "payment_order_fulfillments",
+		Columns:    PaymentOrderFulfillmentsColumns,
+		PrimaryKey: []*schema.Column{PaymentOrderFulfillmentsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "payment_order_recipients_payment_orders_recipient",
-				Columns:    []*schema.Column{PaymentOrderRecipientsColumns[7]},
+				Symbol:     "payment_order_fulfillments_payment_orders_fulfillments",
+				Columns:    []*schema.Column{PaymentOrderFulfillmentsColumns[7]},
 				RefColumns: []*schema.Column{PaymentOrdersColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -563,34 +510,6 @@ var (
 			},
 		},
 	}
-	// ReceiveAddressesColumns holds the columns for the "receive_addresses" table.
-	ReceiveAddressesColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "address", Type: field.TypeString, Unique: true},
-		{Name: "salt", Type: field.TypeBytes, Nullable: true},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"unused", "used", "expired"}, Default: "unused"},
-		{Name: "last_indexed_block", Type: field.TypeInt64, Nullable: true},
-		{Name: "last_used", Type: field.TypeTime, Nullable: true},
-		{Name: "tx_hash", Type: field.TypeString, Nullable: true, Size: 70},
-		{Name: "valid_until", Type: field.TypeTime, Nullable: true},
-		{Name: "payment_order_receive_address", Type: field.TypeUUID, Unique: true, Nullable: true},
-	}
-	// ReceiveAddressesTable holds the schema information for the "receive_addresses" table.
-	ReceiveAddressesTable = &schema.Table{
-		Name:       "receive_addresses",
-		Columns:    ReceiveAddressesColumns,
-		PrimaryKey: []*schema.Column{ReceiveAddressesColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "receive_addresses_payment_orders_receive_address",
-				Columns:    []*schema.Column{ReceiveAddressesColumns[10]},
-				RefColumns: []*schema.Column{PaymentOrdersColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-		},
-	}
 	// SenderOrderTokensColumns holds the columns for the "sender_order_tokens" table.
 	SenderOrderTokensColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -690,7 +609,6 @@ var (
 		{Name: "tx_hash", Type: field.TypeString, Nullable: true},
 		{Name: "metadata", Type: field.TypeJSON},
 		{Name: "created_at", Type: field.TypeTime},
-		{Name: "lock_payment_order_transactions", Type: field.TypeUUID, Nullable: true},
 		{Name: "payment_order_transactions", Type: field.TypeUUID, Nullable: true},
 	}
 	// TransactionLogsTable holds the schema information for the "transaction_logs" table.
@@ -700,14 +618,8 @@ var (
 		PrimaryKey: []*schema.Column{TransactionLogsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "transaction_logs_lock_payment_orders_transactions",
-				Columns:    []*schema.Column{TransactionLogsColumns[7]},
-				RefColumns: []*schema.Column{LockPaymentOrdersColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-			{
 				Symbol:     "transaction_logs_payment_orders_transactions",
-				Columns:    []*schema.Column{TransactionLogsColumns[8]},
+				Columns:    []*schema.Column{TransactionLogsColumns[7]},
 				RefColumns: []*schema.Column{PaymentOrdersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -815,11 +727,9 @@ var (
 		IdentityVerificationRequestsTable,
 		InstitutionsTable,
 		KybProfilesTable,
-		LockOrderFulfillmentsTable,
-		LockPaymentOrdersTable,
 		NetworksTable,
 		PaymentOrdersTable,
-		PaymentOrderRecipientsTable,
+		PaymentOrderFulfillmentsTable,
 		PaymentWebhooksTable,
 		ProviderCurrenciesTable,
 		ProviderFiatAccountsTable,
@@ -827,7 +737,6 @@ var (
 		ProviderProfilesTable,
 		ProviderRatingsTable,
 		ProvisionBucketsTable,
-		ReceiveAddressesTable,
 		SenderOrderTokensTable,
 		SenderProfilesTable,
 		TokensTable,
@@ -845,14 +754,12 @@ func init() {
 	BeneficialOwnersTable.ForeignKeys[0].RefTable = KybProfilesTable
 	InstitutionsTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
 	KybProfilesTable.ForeignKeys[0].RefTable = UsersTable
-	LockOrderFulfillmentsTable.ForeignKeys[0].RefTable = LockPaymentOrdersTable
-	LockPaymentOrdersTable.ForeignKeys[0].RefTable = ProviderProfilesTable
-	LockPaymentOrdersTable.ForeignKeys[1].RefTable = ProvisionBucketsTable
-	LockPaymentOrdersTable.ForeignKeys[2].RefTable = TokensTable
 	PaymentOrdersTable.ForeignKeys[0].RefTable = APIKeysTable
-	PaymentOrdersTable.ForeignKeys[1].RefTable = SenderProfilesTable
-	PaymentOrdersTable.ForeignKeys[2].RefTable = TokensTable
-	PaymentOrderRecipientsTable.ForeignKeys[0].RefTable = PaymentOrdersTable
+	PaymentOrdersTable.ForeignKeys[1].RefTable = ProviderProfilesTable
+	PaymentOrdersTable.ForeignKeys[2].RefTable = ProvisionBucketsTable
+	PaymentOrdersTable.ForeignKeys[3].RefTable = SenderProfilesTable
+	PaymentOrdersTable.ForeignKeys[4].RefTable = TokensTable
+	PaymentOrderFulfillmentsTable.ForeignKeys[0].RefTable = PaymentOrdersTable
 	PaymentWebhooksTable.ForeignKeys[0].RefTable = NetworksTable
 	PaymentWebhooksTable.ForeignKeys[1].RefTable = PaymentOrdersTable
 	ProviderCurrenciesTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
@@ -864,13 +771,11 @@ func init() {
 	ProviderProfilesTable.ForeignKeys[0].RefTable = UsersTable
 	ProviderRatingsTable.ForeignKeys[0].RefTable = ProviderProfilesTable
 	ProvisionBucketsTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
-	ReceiveAddressesTable.ForeignKeys[0].RefTable = PaymentOrdersTable
 	SenderOrderTokensTable.ForeignKeys[0].RefTable = SenderProfilesTable
 	SenderOrderTokensTable.ForeignKeys[1].RefTable = TokensTable
 	SenderProfilesTable.ForeignKeys[0].RefTable = UsersTable
 	TokensTable.ForeignKeys[0].RefTable = NetworksTable
-	TransactionLogsTable.ForeignKeys[0].RefTable = LockPaymentOrdersTable
-	TransactionLogsTable.ForeignKeys[1].RefTable = PaymentOrdersTable
+	TransactionLogsTable.ForeignKeys[0].RefTable = PaymentOrdersTable
 	VerificationTokensTable.ForeignKeys[0].RefTable = UsersTable
 	ProvisionBucketProviderProfilesTable.ForeignKeys[0].RefTable = ProvisionBucketsTable
 	ProvisionBucketProviderProfilesTable.ForeignKeys[1].RefTable = ProviderProfilesTable

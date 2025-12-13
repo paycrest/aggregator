@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -11,9 +12,9 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/paymentorder"
-	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
-	"github.com/paycrest/aggregator/ent/receiveaddress"
+	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/shopspring/decimal"
@@ -30,6 +31,10 @@ type PaymentOrder struct {
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// Amount holds the value of the "amount" field.
 	Amount decimal.Decimal `json:"amount,omitempty"`
+	// Rate holds the value of the "rate" field.
+	Rate decimal.Decimal `json:"rate,omitempty"`
+	// AmountInUsd holds the value of the "amount_in_usd" field.
+	AmountInUsd decimal.Decimal `json:"amount_in_usd,omitempty"`
 	// AmountPaid holds the value of the "amount_paid" field.
 	AmountPaid decimal.Decimal `json:"amount_paid,omitempty"`
 	// AmountReturned holds the value of the "amount_returned" field.
@@ -40,71 +45,84 @@ type PaymentOrder struct {
 	SenderFee decimal.Decimal `json:"sender_fee,omitempty"`
 	// NetworkFee holds the value of the "network_fee" field.
 	NetworkFee decimal.Decimal `json:"network_fee,omitempty"`
-	// Rate holds the value of the "rate" field.
-	Rate decimal.Decimal `json:"rate,omitempty"`
+	// ProtocolFee holds the value of the "protocol_fee" field.
+	ProtocolFee decimal.Decimal `json:"protocol_fee,omitempty"`
+	// OrderPercent holds the value of the "order_percent" field.
+	OrderPercent decimal.Decimal `json:"order_percent,omitempty"`
+	// FeePercent holds the value of the "fee_percent" field.
+	FeePercent decimal.Decimal `json:"fee_percent,omitempty"`
 	// TxHash holds the value of the "tx_hash" field.
 	TxHash string `json:"tx_hash,omitempty"`
 	// BlockNumber holds the value of the "block_number" field.
 	BlockNumber int64 `json:"block_number,omitempty"`
+	// MessageHash holds the value of the "message_hash" field.
+	MessageHash string `json:"message_hash,omitempty"`
+	// GatewayID holds the value of the "gateway_id" field.
+	GatewayID string `json:"gateway_id,omitempty"`
 	// FromAddress holds the value of the "from_address" field.
 	FromAddress string `json:"from_address,omitempty"`
 	// ReturnAddress holds the value of the "return_address" field.
 	ReturnAddress string `json:"return_address,omitempty"`
-	// ReceiveAddressText holds the value of the "receive_address_text" field.
-	ReceiveAddressText string `json:"receive_address_text,omitempty"`
-	// FeePercent holds the value of the "fee_percent" field.
-	FeePercent decimal.Decimal `json:"fee_percent,omitempty"`
+	// ReceiveAddress holds the value of the "receive_address" field.
+	ReceiveAddress string `json:"receive_address,omitempty"`
+	// ReceiveAddressSalt holds the value of the "receive_address_salt" field.
+	ReceiveAddressSalt []byte `json:"receive_address_salt,omitempty"`
+	// ReceiveAddressExpiry holds the value of the "receive_address_expiry" field.
+	ReceiveAddressExpiry time.Time `json:"receive_address_expiry,omitempty"`
 	// FeeAddress holds the value of the "fee_address" field.
 	FeeAddress string `json:"fee_address,omitempty"`
-	// GatewayID holds the value of the "gateway_id" field.
-	GatewayID string `json:"gateway_id,omitempty"`
-	// MessageHash holds the value of the "message_hash" field.
-	MessageHash string `json:"message_hash,omitempty"`
+	// Institution holds the value of the "institution" field.
+	Institution string `json:"institution,omitempty"`
+	// AccountIdentifier holds the value of the "account_identifier" field.
+	AccountIdentifier string `json:"account_identifier,omitempty"`
+	// AccountName holds the value of the "account_name" field.
+	AccountName string `json:"account_name,omitempty"`
+	// Memo holds the value of the "memo" field.
+	Memo string `json:"memo,omitempty"`
+	// Metadata holds the value of the "metadata" field.
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
+	// Sender holds the value of the "sender" field.
+	Sender string `json:"sender,omitempty"`
 	// Reference holds the value of the "reference" field.
 	Reference string `json:"reference,omitempty"`
+	// CancellationCount holds the value of the "cancellation_count" field.
+	CancellationCount int `json:"cancellation_count,omitempty"`
+	// CancellationReasons holds the value of the "cancellation_reasons" field.
+	CancellationReasons []string `json:"cancellation_reasons,omitempty"`
 	// Status holds the value of the "status" field.
 	Status paymentorder.Status `json:"status,omitempty"`
-	// AmountInUsd holds the value of the "amount_in_usd" field.
-	AmountInUsd decimal.Decimal `json:"amount_in_usd,omitempty"`
 	// OrderType holds the value of the "order_type" field.
 	OrderType paymentorder.OrderType `json:"order_type,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the PaymentOrderQuery when eager-loading is set.
-	Edges                         PaymentOrderEdges `json:"edges"`
-	api_key_payment_orders        *uuid.UUID
-	sender_profile_payment_orders *uuid.UUID
-	token_payment_orders          *int
-	selectValues                  sql.SelectValues
+	Edges                            PaymentOrderEdges `json:"edges"`
+	api_key_payment_orders           *uuid.UUID
+	provider_profile_assigned_orders *string
+	provision_bucket_payment_orders  *int
+	sender_profile_payment_orders    *uuid.UUID
+	token_payment_orders             *int
+	selectValues                     sql.SelectValues
 }
 
 // PaymentOrderEdges holds the relations/edges for other nodes in the graph.
 type PaymentOrderEdges struct {
-	// SenderProfile holds the value of the sender_profile edge.
-	SenderProfile *SenderProfile `json:"sender_profile,omitempty"`
 	// Token holds the value of the token edge.
 	Token *Token `json:"token,omitempty"`
-	// ReceiveAddress holds the value of the receive_address edge.
-	ReceiveAddress *ReceiveAddress `json:"receive_address,omitempty"`
-	// Recipient holds the value of the recipient edge.
-	Recipient *PaymentOrderRecipient `json:"recipient,omitempty"`
-	// Transactions holds the value of the transactions edge.
-	Transactions []*TransactionLog `json:"transactions,omitempty"`
+	// SenderProfile holds the value of the sender_profile edge.
+	SenderProfile *SenderProfile `json:"sender_profile,omitempty"`
 	// PaymentWebhook holds the value of the payment_webhook edge.
 	PaymentWebhook *PaymentWebhook `json:"payment_webhook,omitempty"`
+	// Provider holds the value of the provider edge.
+	Provider *ProviderProfile `json:"provider,omitempty"`
+	// ProvisionBucket holds the value of the provision_bucket edge.
+	ProvisionBucket *ProvisionBucket `json:"provision_bucket,omitempty"`
+	// Fulfillments holds the value of the fulfillments edge.
+	Fulfillments []*PaymentOrderFulfillment `json:"fulfillments,omitempty"`
+	// Transactions holds the value of the transactions edge.
+	Transactions []*TransactionLog `json:"transactions,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [6]bool
-}
-
-// SenderProfileOrErr returns the SenderProfile value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e PaymentOrderEdges) SenderProfileOrErr() (*SenderProfile, error) {
-	if e.SenderProfile != nil {
-		return e.SenderProfile, nil
-	} else if e.loadedTypes[0] {
-		return nil, &NotFoundError{label: senderprofile.Label}
-	}
-	return nil, &NotLoadedError{edge: "sender_profile"}
+	loadedTypes [7]bool
 }
 
 // TokenOrErr returns the Token value or an error if the edge
@@ -112,41 +130,21 @@ func (e PaymentOrderEdges) SenderProfileOrErr() (*SenderProfile, error) {
 func (e PaymentOrderEdges) TokenOrErr() (*Token, error) {
 	if e.Token != nil {
 		return e.Token, nil
-	} else if e.loadedTypes[1] {
+	} else if e.loadedTypes[0] {
 		return nil, &NotFoundError{label: token.Label}
 	}
 	return nil, &NotLoadedError{edge: "token"}
 }
 
-// ReceiveAddressOrErr returns the ReceiveAddress value or an error if the edge
+// SenderProfileOrErr returns the SenderProfile value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e PaymentOrderEdges) ReceiveAddressOrErr() (*ReceiveAddress, error) {
-	if e.ReceiveAddress != nil {
-		return e.ReceiveAddress, nil
-	} else if e.loadedTypes[2] {
-		return nil, &NotFoundError{label: receiveaddress.Label}
+func (e PaymentOrderEdges) SenderProfileOrErr() (*SenderProfile, error) {
+	if e.SenderProfile != nil {
+		return e.SenderProfile, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: senderprofile.Label}
 	}
-	return nil, &NotLoadedError{edge: "receive_address"}
-}
-
-// RecipientOrErr returns the Recipient value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e PaymentOrderEdges) RecipientOrErr() (*PaymentOrderRecipient, error) {
-	if e.Recipient != nil {
-		return e.Recipient, nil
-	} else if e.loadedTypes[3] {
-		return nil, &NotFoundError{label: paymentorderrecipient.Label}
-	}
-	return nil, &NotLoadedError{edge: "recipient"}
-}
-
-// TransactionsOrErr returns the Transactions value or an error if the edge
-// was not loaded in eager-loading.
-func (e PaymentOrderEdges) TransactionsOrErr() ([]*TransactionLog, error) {
-	if e.loadedTypes[4] {
-		return e.Transactions, nil
-	}
-	return nil, &NotLoadedError{edge: "transactions"}
+	return nil, &NotLoadedError{edge: "sender_profile"}
 }
 
 // PaymentWebhookOrErr returns the PaymentWebhook value or an error if the edge
@@ -154,10 +152,50 @@ func (e PaymentOrderEdges) TransactionsOrErr() ([]*TransactionLog, error) {
 func (e PaymentOrderEdges) PaymentWebhookOrErr() (*PaymentWebhook, error) {
 	if e.PaymentWebhook != nil {
 		return e.PaymentWebhook, nil
-	} else if e.loadedTypes[5] {
+	} else if e.loadedTypes[2] {
 		return nil, &NotFoundError{label: paymentwebhook.Label}
 	}
 	return nil, &NotLoadedError{edge: "payment_webhook"}
+}
+
+// ProviderOrErr returns the Provider value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e PaymentOrderEdges) ProviderOrErr() (*ProviderProfile, error) {
+	if e.Provider != nil {
+		return e.Provider, nil
+	} else if e.loadedTypes[3] {
+		return nil, &NotFoundError{label: providerprofile.Label}
+	}
+	return nil, &NotLoadedError{edge: "provider"}
+}
+
+// ProvisionBucketOrErr returns the ProvisionBucket value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e PaymentOrderEdges) ProvisionBucketOrErr() (*ProvisionBucket, error) {
+	if e.ProvisionBucket != nil {
+		return e.ProvisionBucket, nil
+	} else if e.loadedTypes[4] {
+		return nil, &NotFoundError{label: provisionbucket.Label}
+	}
+	return nil, &NotLoadedError{edge: "provision_bucket"}
+}
+
+// FulfillmentsOrErr returns the Fulfillments value or an error if the edge
+// was not loaded in eager-loading.
+func (e PaymentOrderEdges) FulfillmentsOrErr() ([]*PaymentOrderFulfillment, error) {
+	if e.loadedTypes[5] {
+		return e.Fulfillments, nil
+	}
+	return nil, &NotLoadedError{edge: "fulfillments"}
+}
+
+// TransactionsOrErr returns the Transactions value or an error if the edge
+// was not loaded in eager-loading.
+func (e PaymentOrderEdges) TransactionsOrErr() ([]*TransactionLog, error) {
+	if e.loadedTypes[6] {
+		return e.Transactions, nil
+	}
+	return nil, &NotLoadedError{edge: "transactions"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -165,21 +203,27 @@ func (*PaymentOrder) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case paymentorder.FieldAmount, paymentorder.FieldAmountPaid, paymentorder.FieldAmountReturned, paymentorder.FieldPercentSettled, paymentorder.FieldSenderFee, paymentorder.FieldNetworkFee, paymentorder.FieldRate, paymentorder.FieldFeePercent, paymentorder.FieldAmountInUsd:
+		case paymentorder.FieldReceiveAddressSalt, paymentorder.FieldMetadata, paymentorder.FieldCancellationReasons:
+			values[i] = new([]byte)
+		case paymentorder.FieldAmount, paymentorder.FieldRate, paymentorder.FieldAmountInUsd, paymentorder.FieldAmountPaid, paymentorder.FieldAmountReturned, paymentorder.FieldPercentSettled, paymentorder.FieldSenderFee, paymentorder.FieldNetworkFee, paymentorder.FieldProtocolFee, paymentorder.FieldOrderPercent, paymentorder.FieldFeePercent:
 			values[i] = new(decimal.Decimal)
-		case paymentorder.FieldBlockNumber:
+		case paymentorder.FieldBlockNumber, paymentorder.FieldCancellationCount:
 			values[i] = new(sql.NullInt64)
-		case paymentorder.FieldTxHash, paymentorder.FieldFromAddress, paymentorder.FieldReturnAddress, paymentorder.FieldReceiveAddressText, paymentorder.FieldFeeAddress, paymentorder.FieldGatewayID, paymentorder.FieldMessageHash, paymentorder.FieldReference, paymentorder.FieldStatus, paymentorder.FieldOrderType:
+		case paymentorder.FieldTxHash, paymentorder.FieldMessageHash, paymentorder.FieldGatewayID, paymentorder.FieldFromAddress, paymentorder.FieldReturnAddress, paymentorder.FieldReceiveAddress, paymentorder.FieldFeeAddress, paymentorder.FieldInstitution, paymentorder.FieldAccountIdentifier, paymentorder.FieldAccountName, paymentorder.FieldMemo, paymentorder.FieldSender, paymentorder.FieldReference, paymentorder.FieldStatus, paymentorder.FieldOrderType:
 			values[i] = new(sql.NullString)
-		case paymentorder.FieldCreatedAt, paymentorder.FieldUpdatedAt:
+		case paymentorder.FieldCreatedAt, paymentorder.FieldUpdatedAt, paymentorder.FieldReceiveAddressExpiry:
 			values[i] = new(sql.NullTime)
 		case paymentorder.FieldID:
 			values[i] = new(uuid.UUID)
 		case paymentorder.ForeignKeys[0]: // api_key_payment_orders
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case paymentorder.ForeignKeys[1]: // sender_profile_payment_orders
+		case paymentorder.ForeignKeys[1]: // provider_profile_assigned_orders
+			values[i] = new(sql.NullString)
+		case paymentorder.ForeignKeys[2]: // provision_bucket_payment_orders
+			values[i] = new(sql.NullInt64)
+		case paymentorder.ForeignKeys[3]: // sender_profile_payment_orders
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case paymentorder.ForeignKeys[2]: // token_payment_orders
+		case paymentorder.ForeignKeys[4]: // token_payment_orders
 			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -220,6 +264,18 @@ func (po *PaymentOrder) assignValues(columns []string, values []any) error {
 			} else if value != nil {
 				po.Amount = *value
 			}
+		case paymentorder.FieldRate:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field rate", values[i])
+			} else if value != nil {
+				po.Rate = *value
+			}
+		case paymentorder.FieldAmountInUsd:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field amount_in_usd", values[i])
+			} else if value != nil {
+				po.AmountInUsd = *value
+			}
 		case paymentorder.FieldAmountPaid:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field amount_paid", values[i])
@@ -250,11 +306,23 @@ func (po *PaymentOrder) assignValues(columns []string, values []any) error {
 			} else if value != nil {
 				po.NetworkFee = *value
 			}
-		case paymentorder.FieldRate:
+		case paymentorder.FieldProtocolFee:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
-				return fmt.Errorf("unexpected type %T for field rate", values[i])
+				return fmt.Errorf("unexpected type %T for field protocol_fee", values[i])
 			} else if value != nil {
-				po.Rate = *value
+				po.ProtocolFee = *value
+			}
+		case paymentorder.FieldOrderPercent:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field order_percent", values[i])
+			} else if value != nil {
+				po.OrderPercent = *value
+			}
+		case paymentorder.FieldFeePercent:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field fee_percent", values[i])
+			} else if value != nil {
+				po.FeePercent = *value
 			}
 		case paymentorder.FieldTxHash:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -268,6 +336,18 @@ func (po *PaymentOrder) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				po.BlockNumber = value.Int64
 			}
+		case paymentorder.FieldMessageHash:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field message_hash", values[i])
+			} else if value.Valid {
+				po.MessageHash = value.String
+			}
+		case paymentorder.FieldGatewayID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field gateway_id", values[i])
+			} else if value.Valid {
+				po.GatewayID = value.String
+			}
 		case paymentorder.FieldFromAddress:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field from_address", values[i])
@@ -280,17 +360,23 @@ func (po *PaymentOrder) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				po.ReturnAddress = value.String
 			}
-		case paymentorder.FieldReceiveAddressText:
+		case paymentorder.FieldReceiveAddress:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field receive_address_text", values[i])
+				return fmt.Errorf("unexpected type %T for field receive_address", values[i])
 			} else if value.Valid {
-				po.ReceiveAddressText = value.String
+				po.ReceiveAddress = value.String
 			}
-		case paymentorder.FieldFeePercent:
-			if value, ok := values[i].(*decimal.Decimal); !ok {
-				return fmt.Errorf("unexpected type %T for field fee_percent", values[i])
+		case paymentorder.FieldReceiveAddressSalt:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field receive_address_salt", values[i])
 			} else if value != nil {
-				po.FeePercent = *value
+				po.ReceiveAddressSalt = *value
+			}
+		case paymentorder.FieldReceiveAddressExpiry:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field receive_address_expiry", values[i])
+			} else if value.Valid {
+				po.ReceiveAddressExpiry = value.Time
 			}
 		case paymentorder.FieldFeeAddress:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -298,17 +384,43 @@ func (po *PaymentOrder) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				po.FeeAddress = value.String
 			}
-		case paymentorder.FieldGatewayID:
+		case paymentorder.FieldInstitution:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field gateway_id", values[i])
+				return fmt.Errorf("unexpected type %T for field institution", values[i])
 			} else if value.Valid {
-				po.GatewayID = value.String
+				po.Institution = value.String
 			}
-		case paymentorder.FieldMessageHash:
+		case paymentorder.FieldAccountIdentifier:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field message_hash", values[i])
+				return fmt.Errorf("unexpected type %T for field account_identifier", values[i])
 			} else if value.Valid {
-				po.MessageHash = value.String
+				po.AccountIdentifier = value.String
+			}
+		case paymentorder.FieldAccountName:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field account_name", values[i])
+			} else if value.Valid {
+				po.AccountName = value.String
+			}
+		case paymentorder.FieldMemo:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field memo", values[i])
+			} else if value.Valid {
+				po.Memo = value.String
+			}
+		case paymentorder.FieldMetadata:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field metadata", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &po.Metadata); err != nil {
+					return fmt.Errorf("unmarshal field metadata: %w", err)
+				}
+			}
+		case paymentorder.FieldSender:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field sender", values[i])
+			} else if value.Valid {
+				po.Sender = value.String
 			}
 		case paymentorder.FieldReference:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -316,17 +428,25 @@ func (po *PaymentOrder) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				po.Reference = value.String
 			}
+		case paymentorder.FieldCancellationCount:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field cancellation_count", values[i])
+			} else if value.Valid {
+				po.CancellationCount = int(value.Int64)
+			}
+		case paymentorder.FieldCancellationReasons:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field cancellation_reasons", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &po.CancellationReasons); err != nil {
+					return fmt.Errorf("unmarshal field cancellation_reasons: %w", err)
+				}
+			}
 		case paymentorder.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
 				po.Status = paymentorder.Status(value.String)
-			}
-		case paymentorder.FieldAmountInUsd:
-			if value, ok := values[i].(*decimal.Decimal); !ok {
-				return fmt.Errorf("unexpected type %T for field amount_in_usd", values[i])
-			} else if value != nil {
-				po.AmountInUsd = *value
 			}
 		case paymentorder.FieldOrderType:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -342,13 +462,27 @@ func (po *PaymentOrder) assignValues(columns []string, values []any) error {
 				*po.api_key_payment_orders = *value.S.(*uuid.UUID)
 			}
 		case paymentorder.ForeignKeys[1]:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field provider_profile_assigned_orders", values[i])
+			} else if value.Valid {
+				po.provider_profile_assigned_orders = new(string)
+				*po.provider_profile_assigned_orders = value.String
+			}
+		case paymentorder.ForeignKeys[2]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field provision_bucket_payment_orders", value)
+			} else if value.Valid {
+				po.provision_bucket_payment_orders = new(int)
+				*po.provision_bucket_payment_orders = int(value.Int64)
+			}
+		case paymentorder.ForeignKeys[3]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field sender_profile_payment_orders", values[i])
 			} else if value.Valid {
 				po.sender_profile_payment_orders = new(uuid.UUID)
 				*po.sender_profile_payment_orders = *value.S.(*uuid.UUID)
 			}
-		case paymentorder.ForeignKeys[2]:
+		case paymentorder.ForeignKeys[4]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field token_payment_orders", value)
 			} else if value.Valid {
@@ -368,34 +502,39 @@ func (po *PaymentOrder) Value(name string) (ent.Value, error) {
 	return po.selectValues.Get(name)
 }
 
-// QuerySenderProfile queries the "sender_profile" edge of the PaymentOrder entity.
-func (po *PaymentOrder) QuerySenderProfile() *SenderProfileQuery {
-	return NewPaymentOrderClient(po.config).QuerySenderProfile(po)
-}
-
 // QueryToken queries the "token" edge of the PaymentOrder entity.
 func (po *PaymentOrder) QueryToken() *TokenQuery {
 	return NewPaymentOrderClient(po.config).QueryToken(po)
 }
 
-// QueryReceiveAddress queries the "receive_address" edge of the PaymentOrder entity.
-func (po *PaymentOrder) QueryReceiveAddress() *ReceiveAddressQuery {
-	return NewPaymentOrderClient(po.config).QueryReceiveAddress(po)
-}
-
-// QueryRecipient queries the "recipient" edge of the PaymentOrder entity.
-func (po *PaymentOrder) QueryRecipient() *PaymentOrderRecipientQuery {
-	return NewPaymentOrderClient(po.config).QueryRecipient(po)
-}
-
-// QueryTransactions queries the "transactions" edge of the PaymentOrder entity.
-func (po *PaymentOrder) QueryTransactions() *TransactionLogQuery {
-	return NewPaymentOrderClient(po.config).QueryTransactions(po)
+// QuerySenderProfile queries the "sender_profile" edge of the PaymentOrder entity.
+func (po *PaymentOrder) QuerySenderProfile() *SenderProfileQuery {
+	return NewPaymentOrderClient(po.config).QuerySenderProfile(po)
 }
 
 // QueryPaymentWebhook queries the "payment_webhook" edge of the PaymentOrder entity.
 func (po *PaymentOrder) QueryPaymentWebhook() *PaymentWebhookQuery {
 	return NewPaymentOrderClient(po.config).QueryPaymentWebhook(po)
+}
+
+// QueryProvider queries the "provider" edge of the PaymentOrder entity.
+func (po *PaymentOrder) QueryProvider() *ProviderProfileQuery {
+	return NewPaymentOrderClient(po.config).QueryProvider(po)
+}
+
+// QueryProvisionBucket queries the "provision_bucket" edge of the PaymentOrder entity.
+func (po *PaymentOrder) QueryProvisionBucket() *ProvisionBucketQuery {
+	return NewPaymentOrderClient(po.config).QueryProvisionBucket(po)
+}
+
+// QueryFulfillments queries the "fulfillments" edge of the PaymentOrder entity.
+func (po *PaymentOrder) QueryFulfillments() *PaymentOrderFulfillmentQuery {
+	return NewPaymentOrderClient(po.config).QueryFulfillments(po)
+}
+
+// QueryTransactions queries the "transactions" edge of the PaymentOrder entity.
+func (po *PaymentOrder) QueryTransactions() *TransactionLogQuery {
+	return NewPaymentOrderClient(po.config).QueryTransactions(po)
 }
 
 // Update returns a builder for updating this PaymentOrder.
@@ -430,6 +569,12 @@ func (po *PaymentOrder) String() string {
 	builder.WriteString("amount=")
 	builder.WriteString(fmt.Sprintf("%v", po.Amount))
 	builder.WriteString(", ")
+	builder.WriteString("rate=")
+	builder.WriteString(fmt.Sprintf("%v", po.Rate))
+	builder.WriteString(", ")
+	builder.WriteString("amount_in_usd=")
+	builder.WriteString(fmt.Sprintf("%v", po.AmountInUsd))
+	builder.WriteString(", ")
 	builder.WriteString("amount_paid=")
 	builder.WriteString(fmt.Sprintf("%v", po.AmountPaid))
 	builder.WriteString(", ")
@@ -445,8 +590,14 @@ func (po *PaymentOrder) String() string {
 	builder.WriteString("network_fee=")
 	builder.WriteString(fmt.Sprintf("%v", po.NetworkFee))
 	builder.WriteString(", ")
-	builder.WriteString("rate=")
-	builder.WriteString(fmt.Sprintf("%v", po.Rate))
+	builder.WriteString("protocol_fee=")
+	builder.WriteString(fmt.Sprintf("%v", po.ProtocolFee))
+	builder.WriteString(", ")
+	builder.WriteString("order_percent=")
+	builder.WriteString(fmt.Sprintf("%v", po.OrderPercent))
+	builder.WriteString(", ")
+	builder.WriteString("fee_percent=")
+	builder.WriteString(fmt.Sprintf("%v", po.FeePercent))
 	builder.WriteString(", ")
 	builder.WriteString("tx_hash=")
 	builder.WriteString(po.TxHash)
@@ -454,35 +605,59 @@ func (po *PaymentOrder) String() string {
 	builder.WriteString("block_number=")
 	builder.WriteString(fmt.Sprintf("%v", po.BlockNumber))
 	builder.WriteString(", ")
+	builder.WriteString("message_hash=")
+	builder.WriteString(po.MessageHash)
+	builder.WriteString(", ")
+	builder.WriteString("gateway_id=")
+	builder.WriteString(po.GatewayID)
+	builder.WriteString(", ")
 	builder.WriteString("from_address=")
 	builder.WriteString(po.FromAddress)
 	builder.WriteString(", ")
 	builder.WriteString("return_address=")
 	builder.WriteString(po.ReturnAddress)
 	builder.WriteString(", ")
-	builder.WriteString("receive_address_text=")
-	builder.WriteString(po.ReceiveAddressText)
+	builder.WriteString("receive_address=")
+	builder.WriteString(po.ReceiveAddress)
 	builder.WriteString(", ")
-	builder.WriteString("fee_percent=")
-	builder.WriteString(fmt.Sprintf("%v", po.FeePercent))
+	builder.WriteString("receive_address_salt=")
+	builder.WriteString(fmt.Sprintf("%v", po.ReceiveAddressSalt))
+	builder.WriteString(", ")
+	builder.WriteString("receive_address_expiry=")
+	builder.WriteString(po.ReceiveAddressExpiry.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("fee_address=")
 	builder.WriteString(po.FeeAddress)
 	builder.WriteString(", ")
-	builder.WriteString("gateway_id=")
-	builder.WriteString(po.GatewayID)
+	builder.WriteString("institution=")
+	builder.WriteString(po.Institution)
 	builder.WriteString(", ")
-	builder.WriteString("message_hash=")
-	builder.WriteString(po.MessageHash)
+	builder.WriteString("account_identifier=")
+	builder.WriteString(po.AccountIdentifier)
+	builder.WriteString(", ")
+	builder.WriteString("account_name=")
+	builder.WriteString(po.AccountName)
+	builder.WriteString(", ")
+	builder.WriteString("memo=")
+	builder.WriteString(po.Memo)
+	builder.WriteString(", ")
+	builder.WriteString("metadata=")
+	builder.WriteString(fmt.Sprintf("%v", po.Metadata))
+	builder.WriteString(", ")
+	builder.WriteString("sender=")
+	builder.WriteString(po.Sender)
 	builder.WriteString(", ")
 	builder.WriteString("reference=")
 	builder.WriteString(po.Reference)
 	builder.WriteString(", ")
+	builder.WriteString("cancellation_count=")
+	builder.WriteString(fmt.Sprintf("%v", po.CancellationCount))
+	builder.WriteString(", ")
+	builder.WriteString("cancellation_reasons=")
+	builder.WriteString(fmt.Sprintf("%v", po.CancellationReasons))
+	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(fmt.Sprintf("%v", po.Status))
-	builder.WriteString(", ")
-	builder.WriteString("amount_in_usd=")
-	builder.WriteString(fmt.Sprintf("%v", po.AmountInUsd))
 	builder.WriteString(", ")
 	builder.WriteString("order_type=")
 	builder.WriteString(fmt.Sprintf("%v", po.OrderType))

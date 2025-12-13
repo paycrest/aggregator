@@ -24,16 +24,12 @@ type Tx struct {
 	Institution *InstitutionClient
 	// KYBProfile is the client for interacting with the KYBProfile builders.
 	KYBProfile *KYBProfileClient
-	// LockOrderFulfillment is the client for interacting with the LockOrderFulfillment builders.
-	LockOrderFulfillment *LockOrderFulfillmentClient
-	// LockPaymentOrder is the client for interacting with the LockPaymentOrder builders.
-	LockPaymentOrder *LockPaymentOrderClient
 	// Network is the client for interacting with the Network builders.
 	Network *NetworkClient
 	// PaymentOrder is the client for interacting with the PaymentOrder builders.
 	PaymentOrder *PaymentOrderClient
-	// PaymentOrderRecipient is the client for interacting with the PaymentOrderRecipient builders.
-	PaymentOrderRecipient *PaymentOrderRecipientClient
+	// PaymentOrderFulfillment is the client for interacting with the PaymentOrderFulfillment builders.
+	PaymentOrderFulfillment *PaymentOrderFulfillmentClient
 	// PaymentWebhook is the client for interacting with the PaymentWebhook builders.
 	PaymentWebhook *PaymentWebhookClient
 	// ProviderCurrencies is the client for interacting with the ProviderCurrencies builders.
@@ -48,8 +44,6 @@ type Tx struct {
 	ProviderRating *ProviderRatingClient
 	// ProvisionBucket is the client for interacting with the ProvisionBucket builders.
 	ProvisionBucket *ProvisionBucketClient
-	// ReceiveAddress is the client for interacting with the ReceiveAddress builders.
-	ReceiveAddress *ReceiveAddressClient
 	// SenderOrderToken is the client for interacting with the SenderOrderToken builders.
 	SenderOrderToken *SenderOrderTokenClient
 	// SenderProfile is the client for interacting with the SenderProfile builders.
@@ -201,11 +195,9 @@ func (tx *Tx) init() {
 	tx.IdentityVerificationRequest = NewIdentityVerificationRequestClient(tx.config)
 	tx.Institution = NewInstitutionClient(tx.config)
 	tx.KYBProfile = NewKYBProfileClient(tx.config)
-	tx.LockOrderFulfillment = NewLockOrderFulfillmentClient(tx.config)
-	tx.LockPaymentOrder = NewLockPaymentOrderClient(tx.config)
 	tx.Network = NewNetworkClient(tx.config)
 	tx.PaymentOrder = NewPaymentOrderClient(tx.config)
-	tx.PaymentOrderRecipient = NewPaymentOrderRecipientClient(tx.config)
+	tx.PaymentOrderFulfillment = NewPaymentOrderFulfillmentClient(tx.config)
 	tx.PaymentWebhook = NewPaymentWebhookClient(tx.config)
 	tx.ProviderCurrencies = NewProviderCurrenciesClient(tx.config)
 	tx.ProviderFiatAccount = NewProviderFiatAccountClient(tx.config)
@@ -213,7 +205,6 @@ func (tx *Tx) init() {
 	tx.ProviderProfile = NewProviderProfileClient(tx.config)
 	tx.ProviderRating = NewProviderRatingClient(tx.config)
 	tx.ProvisionBucket = NewProvisionBucketClient(tx.config)
-	tx.ReceiveAddress = NewReceiveAddressClient(tx.config)
 	tx.SenderOrderToken = NewSenderOrderTokenClient(tx.config)
 	tx.SenderProfile = NewSenderProfileClient(tx.config)
 	tx.Token = NewTokenClient(tx.config)

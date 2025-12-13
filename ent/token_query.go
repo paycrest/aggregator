@@ -12,7 +12,6 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/predicate"
@@ -30,7 +29,6 @@ type TokenQuery struct {
 	predicates              []predicate.Token
 	withNetwork             *NetworkQuery
 	withPaymentOrders       *PaymentOrderQuery
-	withLockPaymentOrders   *LockPaymentOrderQuery
 	withSenderOrderTokens   *SenderOrderTokenQuery
 	withProviderOrderTokens *ProviderOrderTokenQuery
 	withFKs                 bool
@@ -107,28 +105,6 @@ func (tq *TokenQuery) QueryPaymentOrders() *PaymentOrderQuery {
 			sqlgraph.From(token.Table, token.FieldID, selector),
 			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, token.PaymentOrdersTable, token.PaymentOrdersColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(tq.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryLockPaymentOrders chains the current query on the "lock_payment_orders" edge.
-func (tq *TokenQuery) QueryLockPaymentOrders() *LockPaymentOrderQuery {
-	query := (&LockPaymentOrderClient{config: tq.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := tq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := tq.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(token.Table, token.FieldID, selector),
-			sqlgraph.To(lockpaymentorder.Table, lockpaymentorder.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, token.LockPaymentOrdersTable, token.LockPaymentOrdersColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(tq.driver.Dialect(), step)
 		return fromU, nil
@@ -374,7 +350,6 @@ func (tq *TokenQuery) Clone() *TokenQuery {
 		predicates:              append([]predicate.Token{}, tq.predicates...),
 		withNetwork:             tq.withNetwork.Clone(),
 		withPaymentOrders:       tq.withPaymentOrders.Clone(),
-		withLockPaymentOrders:   tq.withLockPaymentOrders.Clone(),
 		withSenderOrderTokens:   tq.withSenderOrderTokens.Clone(),
 		withProviderOrderTokens: tq.withProviderOrderTokens.Clone(),
 		// clone intermediate query.
@@ -402,17 +377,6 @@ func (tq *TokenQuery) WithPaymentOrders(opts ...func(*PaymentOrderQuery)) *Token
 		opt(query)
 	}
 	tq.withPaymentOrders = query
-	return tq
-}
-
-// WithLockPaymentOrders tells the query-builder to eager-load the nodes that are connected to
-// the "lock_payment_orders" edge. The optional arguments are used to configure the query builder of the edge.
-func (tq *TokenQuery) WithLockPaymentOrders(opts ...func(*LockPaymentOrderQuery)) *TokenQuery {
-	query := (&LockPaymentOrderClient{config: tq.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	tq.withLockPaymentOrders = query
 	return tq
 }
 
@@ -517,10 +481,9 @@ func (tq *TokenQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Token,
 		nodes       = []*Token{}
 		withFKs     = tq.withFKs
 		_spec       = tq.querySpec()
-		loadedTypes = [5]bool{
+		loadedTypes = [4]bool{
 			tq.withNetwork != nil,
 			tq.withPaymentOrders != nil,
-			tq.withLockPaymentOrders != nil,
 			tq.withSenderOrderTokens != nil,
 			tq.withProviderOrderTokens != nil,
 		}
@@ -559,13 +522,6 @@ func (tq *TokenQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Token,
 		if err := tq.loadPaymentOrders(ctx, query, nodes,
 			func(n *Token) { n.Edges.PaymentOrders = []*PaymentOrder{} },
 			func(n *Token, e *PaymentOrder) { n.Edges.PaymentOrders = append(n.Edges.PaymentOrders, e) }); err != nil {
-			return nil, err
-		}
-	}
-	if query := tq.withLockPaymentOrders; query != nil {
-		if err := tq.loadLockPaymentOrders(ctx, query, nodes,
-			func(n *Token) { n.Edges.LockPaymentOrders = []*LockPaymentOrder{} },
-			func(n *Token, e *LockPaymentOrder) { n.Edges.LockPaymentOrders = append(n.Edges.LockPaymentOrders, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -646,37 +602,6 @@ func (tq *TokenQuery) loadPaymentOrders(ctx context.Context, query *PaymentOrder
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "token_payment_orders" returned %v for node %v`, *fk, n.ID)
-		}
-		assign(node, n)
-	}
-	return nil
-}
-func (tq *TokenQuery) loadLockPaymentOrders(ctx context.Context, query *LockPaymentOrderQuery, nodes []*Token, init func(*Token), assign func(*Token, *LockPaymentOrder)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[int]*Token)
-	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
-		}
-	}
-	query.withFKs = true
-	query.Where(predicate.LockPaymentOrder(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(token.LockPaymentOrdersColumn), fks...))
-	}))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		fk := n.token_lock_payment_orders
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "token_lock_payment_orders" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
-		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "token_lock_payment_orders" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
