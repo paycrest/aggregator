@@ -24,20 +24,14 @@ type Institution func(*sql.Selector)
 // KYBProfile is the predicate function for kybprofile builders.
 type KYBProfile func(*sql.Selector)
 
-// LockOrderFulfillment is the predicate function for lockorderfulfillment builders.
-type LockOrderFulfillment func(*sql.Selector)
-
-// LockPaymentOrder is the predicate function for lockpaymentorder builders.
-type LockPaymentOrder func(*sql.Selector)
-
 // Network is the predicate function for network builders.
 type Network func(*sql.Selector)
 
 // PaymentOrder is the predicate function for paymentorder builders.
 type PaymentOrder func(*sql.Selector)
 
-// PaymentOrderRecipient is the predicate function for paymentorderrecipient builders.
-type PaymentOrderRecipient func(*sql.Selector)
+// PaymentOrderFulfillment is the predicate function for paymentorderfulfillment builders.
+type PaymentOrderFulfillment func(*sql.Selector)
 
 // PaymentWebhook is the predicate function for paymentwebhook builders.
 type PaymentWebhook func(*sql.Selector)
@@ -59,9 +53,6 @@ type ProviderRating func(*sql.Selector)
 
 // ProvisionBucket is the predicate function for provisionbucket builders.
 type ProvisionBucket func(*sql.Selector)
-
-// ReceiveAddress is the predicate function for receiveaddress builders.
-type ReceiveAddress func(*sql.Selector)
 
 // SenderOrderToken is the predicate function for senderordertoken builders.
 type SenderOrderToken func(*sql.Selector)

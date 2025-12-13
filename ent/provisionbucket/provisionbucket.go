@@ -22,8 +22,8 @@ const (
 	FieldCreatedAt = "created_at"
 	// EdgeCurrency holds the string denoting the currency edge name in mutations.
 	EdgeCurrency = "currency"
-	// EdgeLockPaymentOrders holds the string denoting the lock_payment_orders edge name in mutations.
-	EdgeLockPaymentOrders = "lock_payment_orders"
+	// EdgePaymentOrders holds the string denoting the payment_orders edge name in mutations.
+	EdgePaymentOrders = "payment_orders"
 	// EdgeProviderProfiles holds the string denoting the provider_profiles edge name in mutations.
 	EdgeProviderProfiles = "provider_profiles"
 	// Table holds the table name of the provisionbucket in the database.
@@ -35,13 +35,13 @@ const (
 	CurrencyInverseTable = "fiat_currencies"
 	// CurrencyColumn is the table column denoting the currency relation/edge.
 	CurrencyColumn = "fiat_currency_provision_buckets"
-	// LockPaymentOrdersTable is the table that holds the lock_payment_orders relation/edge.
-	LockPaymentOrdersTable = "lock_payment_orders"
-	// LockPaymentOrdersInverseTable is the table name for the LockPaymentOrder entity.
-	// It exists in this package in order to avoid circular dependency with the "lockpaymentorder" package.
-	LockPaymentOrdersInverseTable = "lock_payment_orders"
-	// LockPaymentOrdersColumn is the table column denoting the lock_payment_orders relation/edge.
-	LockPaymentOrdersColumn = "provision_bucket_lock_payment_orders"
+	// PaymentOrdersTable is the table that holds the payment_orders relation/edge.
+	PaymentOrdersTable = "payment_orders"
+	// PaymentOrdersInverseTable is the table name for the PaymentOrder entity.
+	// It exists in this package in order to avoid circular dependency with the "paymentorder" package.
+	PaymentOrdersInverseTable = "payment_orders"
+	// PaymentOrdersColumn is the table column denoting the payment_orders relation/edge.
+	PaymentOrdersColumn = "provision_bucket_payment_orders"
 	// ProviderProfilesTable is the table that holds the provider_profiles relation/edge. The primary key declared below.
 	ProviderProfilesTable = "provision_bucket_provider_profiles"
 	// ProviderProfilesInverseTable is the table name for the ProviderProfile entity.
@@ -119,17 +119,17 @@ func ByCurrencyField(field string, opts ...sql.OrderTermOption) OrderOption {
 	}
 }
 
-// ByLockPaymentOrdersCount orders the results by lock_payment_orders count.
-func ByLockPaymentOrdersCount(opts ...sql.OrderTermOption) OrderOption {
+// ByPaymentOrdersCount orders the results by payment_orders count.
+func ByPaymentOrdersCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newLockPaymentOrdersStep(), opts...)
+		sqlgraph.OrderByNeighborsCount(s, newPaymentOrdersStep(), opts...)
 	}
 }
 
-// ByLockPaymentOrders orders the results by lock_payment_orders terms.
-func ByLockPaymentOrders(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+// ByPaymentOrders orders the results by payment_orders terms.
+func ByPaymentOrders(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newLockPaymentOrdersStep(), append([]sql.OrderTerm{term}, terms...)...)
+		sqlgraph.OrderByNeighborTerms(s, newPaymentOrdersStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 
@@ -153,11 +153,11 @@ func newCurrencyStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.M2O, true, CurrencyTable, CurrencyColumn),
 	)
 }
-func newLockPaymentOrdersStep() *sqlgraph.Step {
+func newPaymentOrdersStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(LockPaymentOrdersInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, LockPaymentOrdersTable, LockPaymentOrdersColumn),
+		sqlgraph.To(PaymentOrdersInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, PaymentOrdersTable, PaymentOrdersColumn),
 	)
 }
 func newProviderProfilesStep() *sqlgraph.Step {

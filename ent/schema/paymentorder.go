@@ -5,6 +5,7 @@ import (
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 )
@@ -25,43 +26,89 @@ func (PaymentOrder) Mixin() []ent.Mixin {
 func (PaymentOrder) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(uuid.New),
+		// Amounts & fees
 		field.Float("amount").GoType(decimal.Decimal{}),
-		field.Float("amount_paid").GoType(decimal.Decimal{}),
-		field.Float("amount_returned").GoType(decimal.Decimal{}),
-		field.Float("percent_settled").GoType(decimal.Decimal{}),
-		field.Float("sender_fee").GoType(decimal.Decimal{}),
-		field.Float("network_fee").GoType(decimal.Decimal{}),
 		field.Float("rate").GoType(decimal.Decimal{}),
+		field.Float("amount_in_usd").GoType(decimal.Decimal{}),
+		field.Float("amount_paid").
+			GoType(decimal.Decimal{}).
+			DefaultFunc(func() decimal.Decimal { return decimal.Zero }),
+		field.Float("amount_returned").
+			GoType(decimal.Decimal{}).
+			DefaultFunc(func() decimal.Decimal { return decimal.Zero }),
+		field.Float("percent_settled").
+			GoType(decimal.Decimal{}).
+			DefaultFunc(func() decimal.Decimal { return decimal.Zero }),
+		field.Float("sender_fee").
+			GoType(decimal.Decimal{}).
+			DefaultFunc(func() decimal.Decimal { return decimal.Zero }),
+		field.Float("network_fee").
+			GoType(decimal.Decimal{}).
+			DefaultFunc(func() decimal.Decimal { return decimal.Zero }),
+		field.Float("protocol_fee").
+			GoType(decimal.Decimal{}).
+			DefaultFunc(func() decimal.Decimal { return decimal.Zero }),
+		field.Float("order_percent").
+			GoType(decimal.Decimal{}).
+			DefaultFunc(func() decimal.Decimal { return decimal.Zero }),
+		field.Float("fee_percent").
+			GoType(decimal.Decimal{}).
+			DefaultFunc(func() decimal.Decimal { return decimal.Zero }),
+		// Transaction details
 		field.String("tx_hash").
 			MaxLen(70).
 			Optional(),
 		field.Int64("block_number").Default(0),
+		field.String("message_hash").
+			Optional(),
+		field.String("gateway_id").
+			MaxLen(255).
+			Optional(),
+		// Addresses
 		field.String("from_address").
 			MaxLen(60).
 			Optional(),
 		field.String("return_address").
 			MaxLen(60).
 			Optional(),
-		field.String("receive_address_text").
-			MaxLen(60),
-		field.Float("fee_percent").GoType(decimal.Decimal{}),
+		field.String("receive_address").
+			MaxLen(60).
+			Unique(),
+		field.Bytes("receive_address_salt").
+			Optional(),
+		field.Time("receive_address_expiry"),
 		field.String("fee_address").
 			MaxLen(60).
 			Optional(),
-		field.String("gateway_id").
-			MaxLen(70).
+		// Recipient info
+		field.String("institution").
+			MaxLen(255),
+		field.String("account_identifier").
+			MaxLen(255),
+		field.String("account_name").
+			MaxLen(255),
+		field.String("memo").
+			MaxLen(255).
 			Optional(),
-		field.String("message_hash").
-			MaxLen(400).
+		field.JSON("metadata", map[string]interface{}{}).
+			Optional(),
+		// Order management
+		field.String("sender").
+			MaxLen(255).
 			Optional(),
 		field.String("reference").
 			MaxLen(70).
 			Optional(),
+		field.Int("cancellation_count").
+			Default(0).
+			Optional(),
+		field.Strings("cancellation_reasons").
+			Default([]string{}).
+			Optional(),
+		// Status & type
 		field.Enum("status").
-			Values("initiated", "processing", "pending", "validated", "expired", "settled", "refunded").
+			Values("initiated", "pending", "processing", "cancelled", "fulfilled", "validated", "expired", "settled", "refunded").
 			Default("initiated"),
-		field.Float("amount_in_usd").
-			GoType(decimal.Decimal{}),
 		field.Enum("order_type").
 			Values("otc", "regular").
 			Default("regular"),
@@ -71,21 +118,32 @@ func (PaymentOrder) Fields() []ent.Field {
 // Edges of the PaymentOrder.
 func (PaymentOrder) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("sender_profile", SenderProfile.Type).
-			Ref("payment_orders").
-			Unique(),
 		edge.From("token", Token.Type).
 			Ref("payment_orders").
 			Unique().
 			Required(),
-		edge.To("receive_address", ReceiveAddress.Type).
-			Unique().
-			Annotations(entsql.OnDelete(entsql.SetNull)),
-		edge.To("recipient", PaymentOrderRecipient.Type).
-			Unique().
+		edge.From("sender_profile", SenderProfile.Type).
+			Ref("payment_orders").
+			Unique(),
+		edge.To("payment_webhook", PaymentWebhook.Type).
+			Unique(),
+		edge.From("provider", ProviderProfile.Type).
+			Ref("assigned_orders").
+			Unique(),
+		edge.From("provision_bucket", ProvisionBucket.Type).
+			Ref("payment_orders").
+			Unique(),
+		edge.To("fulfillments", PaymentOrderFulfillment.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("transactions", TransactionLog.Type),
-		edge.To("payment_webhook", PaymentWebhook.Type).
+	}
+}
+
+// Indexes of the PaymentOrder.
+func (PaymentOrder) Indexes() []ent.Index {
+	return []ent.Index{
+		index.Fields("gateway_id", "rate", "tx_hash", "block_number", "institution", "account_identifier", "account_name", "memo").
+			Edges("token").
 			Unique(),
 	}
 }

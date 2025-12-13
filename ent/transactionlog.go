@@ -30,10 +30,9 @@ type TransactionLog struct {
 	// Metadata holds the value of the "metadata" field.
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
-	CreatedAt                       time.Time `json:"created_at,omitempty"`
-	lock_payment_order_transactions *uuid.UUID
-	payment_order_transactions      *uuid.UUID
-	selectValues                    sql.SelectValues
+	CreatedAt                  time.Time `json:"created_at,omitempty"`
+	payment_order_transactions *uuid.UUID
+	selectValues               sql.SelectValues
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -49,9 +48,7 @@ func (*TransactionLog) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullTime)
 		case transactionlog.FieldID:
 			values[i] = new(uuid.UUID)
-		case transactionlog.ForeignKeys[0]: // lock_payment_order_transactions
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case transactionlog.ForeignKeys[1]: // payment_order_transactions
+		case transactionlog.ForeignKeys[0]: // payment_order_transactions
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
@@ -113,13 +110,6 @@ func (tl *TransactionLog) assignValues(columns []string, values []any) error {
 				tl.CreatedAt = value.Time
 			}
 		case transactionlog.ForeignKeys[0]:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field lock_payment_order_transactions", values[i])
-			} else if value.Valid {
-				tl.lock_payment_order_transactions = new(uuid.UUID)
-				*tl.lock_payment_order_transactions = *value.S.(*uuid.UUID)
-			}
-		case transactionlog.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field payment_order_transactions", values[i])
 			} else if value.Valid {

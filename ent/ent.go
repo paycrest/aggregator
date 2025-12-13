@@ -18,11 +18,9 @@ import (
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/kybprofile"
-	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
-	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
+	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
@@ -30,7 +28,6 @@ import (
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
-	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
@@ -104,11 +101,9 @@ func checkColumn(table, column string) error {
 			identityverificationrequest.Table: identityverificationrequest.ValidColumn,
 			institution.Table:                 institution.ValidColumn,
 			kybprofile.Table:                  kybprofile.ValidColumn,
-			lockorderfulfillment.Table:        lockorderfulfillment.ValidColumn,
-			lockpaymentorder.Table:            lockpaymentorder.ValidColumn,
 			network.Table:                     network.ValidColumn,
 			paymentorder.Table:                paymentorder.ValidColumn,
-			paymentorderrecipient.Table:       paymentorderrecipient.ValidColumn,
+			paymentorderfulfillment.Table:     paymentorderfulfillment.ValidColumn,
 			paymentwebhook.Table:              paymentwebhook.ValidColumn,
 			providercurrencies.Table:          providercurrencies.ValidColumn,
 			providerfiataccount.Table:         providerfiataccount.ValidColumn,
@@ -116,7 +111,6 @@ func checkColumn(table, column string) error {
 			providerprofile.Table:             providerprofile.ValidColumn,
 			providerrating.Table:              providerrating.ValidColumn,
 			provisionbucket.Table:             provisionbucket.ValidColumn,
-			receiveaddress.Table:              receiveaddress.ValidColumn,
 			senderordertoken.Table:            senderordertoken.ValidColumn,
 			senderprofile.Table:               senderprofile.ValidColumn,
 			token.Table:                       token.ValidColumn,

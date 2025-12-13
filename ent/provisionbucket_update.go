@@ -12,7 +12,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
+	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -85,19 +85,19 @@ func (pbu *ProvisionBucketUpdate) SetCurrency(f *FiatCurrency) *ProvisionBucketU
 	return pbu.SetCurrencyID(f.ID)
 }
 
-// AddLockPaymentOrderIDs adds the "lock_payment_orders" edge to the LockPaymentOrder entity by IDs.
-func (pbu *ProvisionBucketUpdate) AddLockPaymentOrderIDs(ids ...uuid.UUID) *ProvisionBucketUpdate {
-	pbu.mutation.AddLockPaymentOrderIDs(ids...)
+// AddPaymentOrderIDs adds the "payment_orders" edge to the PaymentOrder entity by IDs.
+func (pbu *ProvisionBucketUpdate) AddPaymentOrderIDs(ids ...uuid.UUID) *ProvisionBucketUpdate {
+	pbu.mutation.AddPaymentOrderIDs(ids...)
 	return pbu
 }
 
-// AddLockPaymentOrders adds the "lock_payment_orders" edges to the LockPaymentOrder entity.
-func (pbu *ProvisionBucketUpdate) AddLockPaymentOrders(l ...*LockPaymentOrder) *ProvisionBucketUpdate {
-	ids := make([]uuid.UUID, len(l))
-	for i := range l {
-		ids[i] = l[i].ID
+// AddPaymentOrders adds the "payment_orders" edges to the PaymentOrder entity.
+func (pbu *ProvisionBucketUpdate) AddPaymentOrders(p ...*PaymentOrder) *ProvisionBucketUpdate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
 	}
-	return pbu.AddLockPaymentOrderIDs(ids...)
+	return pbu.AddPaymentOrderIDs(ids...)
 }
 
 // AddProviderProfileIDs adds the "provider_profiles" edge to the ProviderProfile entity by IDs.
@@ -126,25 +126,25 @@ func (pbu *ProvisionBucketUpdate) ClearCurrency() *ProvisionBucketUpdate {
 	return pbu
 }
 
-// ClearLockPaymentOrders clears all "lock_payment_orders" edges to the LockPaymentOrder entity.
-func (pbu *ProvisionBucketUpdate) ClearLockPaymentOrders() *ProvisionBucketUpdate {
-	pbu.mutation.ClearLockPaymentOrders()
+// ClearPaymentOrders clears all "payment_orders" edges to the PaymentOrder entity.
+func (pbu *ProvisionBucketUpdate) ClearPaymentOrders() *ProvisionBucketUpdate {
+	pbu.mutation.ClearPaymentOrders()
 	return pbu
 }
 
-// RemoveLockPaymentOrderIDs removes the "lock_payment_orders" edge to LockPaymentOrder entities by IDs.
-func (pbu *ProvisionBucketUpdate) RemoveLockPaymentOrderIDs(ids ...uuid.UUID) *ProvisionBucketUpdate {
-	pbu.mutation.RemoveLockPaymentOrderIDs(ids...)
+// RemovePaymentOrderIDs removes the "payment_orders" edge to PaymentOrder entities by IDs.
+func (pbu *ProvisionBucketUpdate) RemovePaymentOrderIDs(ids ...uuid.UUID) *ProvisionBucketUpdate {
+	pbu.mutation.RemovePaymentOrderIDs(ids...)
 	return pbu
 }
 
-// RemoveLockPaymentOrders removes "lock_payment_orders" edges to LockPaymentOrder entities.
-func (pbu *ProvisionBucketUpdate) RemoveLockPaymentOrders(l ...*LockPaymentOrder) *ProvisionBucketUpdate {
-	ids := make([]uuid.UUID, len(l))
-	for i := range l {
-		ids[i] = l[i].ID
+// RemovePaymentOrders removes "payment_orders" edges to PaymentOrder entities.
+func (pbu *ProvisionBucketUpdate) RemovePaymentOrders(p ...*PaymentOrder) *ProvisionBucketUpdate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
 	}
-	return pbu.RemoveLockPaymentOrderIDs(ids...)
+	return pbu.RemovePaymentOrderIDs(ids...)
 }
 
 // ClearProviderProfiles clears all "provider_profiles" edges to the ProviderProfile entity.
@@ -256,28 +256,28 @@ func (pbu *ProvisionBucketUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pbu.mutation.LockPaymentOrdersCleared() {
+	if pbu.mutation.PaymentOrdersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   provisionbucket.LockPaymentOrdersTable,
-			Columns: []string{provisionbucket.LockPaymentOrdersColumn},
+			Table:   provisionbucket.PaymentOrdersTable,
+			Columns: []string{provisionbucket.PaymentOrdersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pbu.mutation.RemovedLockPaymentOrdersIDs(); len(nodes) > 0 && !pbu.mutation.LockPaymentOrdersCleared() {
+	if nodes := pbu.mutation.RemovedPaymentOrdersIDs(); len(nodes) > 0 && !pbu.mutation.PaymentOrdersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   provisionbucket.LockPaymentOrdersTable,
-			Columns: []string{provisionbucket.LockPaymentOrdersColumn},
+			Table:   provisionbucket.PaymentOrdersTable,
+			Columns: []string{provisionbucket.PaymentOrdersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -285,15 +285,15 @@ func (pbu *ProvisionBucketUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pbu.mutation.LockPaymentOrdersIDs(); len(nodes) > 0 {
+	if nodes := pbu.mutation.PaymentOrdersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   provisionbucket.LockPaymentOrdersTable,
-			Columns: []string{provisionbucket.LockPaymentOrdersColumn},
+			Table:   provisionbucket.PaymentOrdersTable,
+			Columns: []string{provisionbucket.PaymentOrdersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -419,19 +419,19 @@ func (pbuo *ProvisionBucketUpdateOne) SetCurrency(f *FiatCurrency) *ProvisionBuc
 	return pbuo.SetCurrencyID(f.ID)
 }
 
-// AddLockPaymentOrderIDs adds the "lock_payment_orders" edge to the LockPaymentOrder entity by IDs.
-func (pbuo *ProvisionBucketUpdateOne) AddLockPaymentOrderIDs(ids ...uuid.UUID) *ProvisionBucketUpdateOne {
-	pbuo.mutation.AddLockPaymentOrderIDs(ids...)
+// AddPaymentOrderIDs adds the "payment_orders" edge to the PaymentOrder entity by IDs.
+func (pbuo *ProvisionBucketUpdateOne) AddPaymentOrderIDs(ids ...uuid.UUID) *ProvisionBucketUpdateOne {
+	pbuo.mutation.AddPaymentOrderIDs(ids...)
 	return pbuo
 }
 
-// AddLockPaymentOrders adds the "lock_payment_orders" edges to the LockPaymentOrder entity.
-func (pbuo *ProvisionBucketUpdateOne) AddLockPaymentOrders(l ...*LockPaymentOrder) *ProvisionBucketUpdateOne {
-	ids := make([]uuid.UUID, len(l))
-	for i := range l {
-		ids[i] = l[i].ID
+// AddPaymentOrders adds the "payment_orders" edges to the PaymentOrder entity.
+func (pbuo *ProvisionBucketUpdateOne) AddPaymentOrders(p ...*PaymentOrder) *ProvisionBucketUpdateOne {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
 	}
-	return pbuo.AddLockPaymentOrderIDs(ids...)
+	return pbuo.AddPaymentOrderIDs(ids...)
 }
 
 // AddProviderProfileIDs adds the "provider_profiles" edge to the ProviderProfile entity by IDs.
@@ -460,25 +460,25 @@ func (pbuo *ProvisionBucketUpdateOne) ClearCurrency() *ProvisionBucketUpdateOne 
 	return pbuo
 }
 
-// ClearLockPaymentOrders clears all "lock_payment_orders" edges to the LockPaymentOrder entity.
-func (pbuo *ProvisionBucketUpdateOne) ClearLockPaymentOrders() *ProvisionBucketUpdateOne {
-	pbuo.mutation.ClearLockPaymentOrders()
+// ClearPaymentOrders clears all "payment_orders" edges to the PaymentOrder entity.
+func (pbuo *ProvisionBucketUpdateOne) ClearPaymentOrders() *ProvisionBucketUpdateOne {
+	pbuo.mutation.ClearPaymentOrders()
 	return pbuo
 }
 
-// RemoveLockPaymentOrderIDs removes the "lock_payment_orders" edge to LockPaymentOrder entities by IDs.
-func (pbuo *ProvisionBucketUpdateOne) RemoveLockPaymentOrderIDs(ids ...uuid.UUID) *ProvisionBucketUpdateOne {
-	pbuo.mutation.RemoveLockPaymentOrderIDs(ids...)
+// RemovePaymentOrderIDs removes the "payment_orders" edge to PaymentOrder entities by IDs.
+func (pbuo *ProvisionBucketUpdateOne) RemovePaymentOrderIDs(ids ...uuid.UUID) *ProvisionBucketUpdateOne {
+	pbuo.mutation.RemovePaymentOrderIDs(ids...)
 	return pbuo
 }
 
-// RemoveLockPaymentOrders removes "lock_payment_orders" edges to LockPaymentOrder entities.
-func (pbuo *ProvisionBucketUpdateOne) RemoveLockPaymentOrders(l ...*LockPaymentOrder) *ProvisionBucketUpdateOne {
-	ids := make([]uuid.UUID, len(l))
-	for i := range l {
-		ids[i] = l[i].ID
+// RemovePaymentOrders removes "payment_orders" edges to PaymentOrder entities.
+func (pbuo *ProvisionBucketUpdateOne) RemovePaymentOrders(p ...*PaymentOrder) *ProvisionBucketUpdateOne {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
 	}
-	return pbuo.RemoveLockPaymentOrderIDs(ids...)
+	return pbuo.RemovePaymentOrderIDs(ids...)
 }
 
 // ClearProviderProfiles clears all "provider_profiles" edges to the ProviderProfile entity.
@@ -620,28 +620,28 @@ func (pbuo *ProvisionBucketUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pbuo.mutation.LockPaymentOrdersCleared() {
+	if pbuo.mutation.PaymentOrdersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   provisionbucket.LockPaymentOrdersTable,
-			Columns: []string{provisionbucket.LockPaymentOrdersColumn},
+			Table:   provisionbucket.PaymentOrdersTable,
+			Columns: []string{provisionbucket.PaymentOrdersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pbuo.mutation.RemovedLockPaymentOrdersIDs(); len(nodes) > 0 && !pbuo.mutation.LockPaymentOrdersCleared() {
+	if nodes := pbuo.mutation.RemovedPaymentOrdersIDs(); len(nodes) > 0 && !pbuo.mutation.PaymentOrdersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   provisionbucket.LockPaymentOrdersTable,
-			Columns: []string{provisionbucket.LockPaymentOrdersColumn},
+			Table:   provisionbucket.PaymentOrdersTable,
+			Columns: []string{provisionbucket.PaymentOrdersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -649,15 +649,15 @@ func (pbuo *ProvisionBucketUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pbuo.mutation.LockPaymentOrdersIDs(); len(nodes) > 0 {
+	if nodes := pbuo.mutation.PaymentOrdersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   provisionbucket.LockPaymentOrdersTable,
-			Columns: []string{provisionbucket.LockPaymentOrdersColumn},
+			Table:   provisionbucket.PaymentOrdersTable,
+			Columns: []string{provisionbucket.PaymentOrdersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

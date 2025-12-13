@@ -81,30 +81,6 @@ func (f KYBProfileFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.KYBProfileMutation", m)
 }
 
-// The LockOrderFulfillmentFunc type is an adapter to allow the use of ordinary
-// function as LockOrderFulfillment mutator.
-type LockOrderFulfillmentFunc func(context.Context, *ent.LockOrderFulfillmentMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f LockOrderFulfillmentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.LockOrderFulfillmentMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.LockOrderFulfillmentMutation", m)
-}
-
-// The LockPaymentOrderFunc type is an adapter to allow the use of ordinary
-// function as LockPaymentOrder mutator.
-type LockPaymentOrderFunc func(context.Context, *ent.LockPaymentOrderMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f LockPaymentOrderFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.LockPaymentOrderMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.LockPaymentOrderMutation", m)
-}
-
 // The NetworkFunc type is an adapter to allow the use of ordinary
 // function as Network mutator.
 type NetworkFunc func(context.Context, *ent.NetworkMutation) (ent.Value, error)
@@ -129,16 +105,16 @@ func (f PaymentOrderFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PaymentOrderMutation", m)
 }
 
-// The PaymentOrderRecipientFunc type is an adapter to allow the use of ordinary
-// function as PaymentOrderRecipient mutator.
-type PaymentOrderRecipientFunc func(context.Context, *ent.PaymentOrderRecipientMutation) (ent.Value, error)
+// The PaymentOrderFulfillmentFunc type is an adapter to allow the use of ordinary
+// function as PaymentOrderFulfillment mutator.
+type PaymentOrderFulfillmentFunc func(context.Context, *ent.PaymentOrderFulfillmentMutation) (ent.Value, error)
 
 // Mutate calls f(ctx, m).
-func (f PaymentOrderRecipientFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.PaymentOrderRecipientMutation); ok {
+func (f PaymentOrderFulfillmentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.PaymentOrderFulfillmentMutation); ok {
 		return f(ctx, mv)
 	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PaymentOrderRecipientMutation", m)
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PaymentOrderFulfillmentMutation", m)
 }
 
 // The PaymentWebhookFunc type is an adapter to allow the use of ordinary
@@ -223,18 +199,6 @@ func (f ProvisionBucketFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Va
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProvisionBucketMutation", m)
-}
-
-// The ReceiveAddressFunc type is an adapter to allow the use of ordinary
-// function as ReceiveAddress mutator.
-type ReceiveAddressFunc func(context.Context, *ent.ReceiveAddressMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f ReceiveAddressFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.ReceiveAddressMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ReceiveAddressMutation", m)
 }
 
 // The SenderOrderTokenFunc type is an adapter to allow the use of ordinary

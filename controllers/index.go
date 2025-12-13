@@ -23,12 +23,11 @@ import (
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/kybprofile"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	networkent "github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
-	"github.com/paycrest/aggregator/ent/receiveaddress"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/user"
 	svc "github.com/paycrest/aggregator/services"
@@ -338,11 +337,11 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 	}
 
 	// Fetch related payment orders from the database
-	orders, err := storage.Client.LockPaymentOrder.
+	orders, err := storage.Client.PaymentOrder.
 		Query().
 		Where(
-			lockpaymentorder.GatewayIDEQ(orderID),
-			lockpaymentorder.HasTokenWith(
+			paymentorder.GatewayIDEQ(orderID),
+			paymentorder.HasTokenWith(
 				tokenEnt.HasNetworkWith(
 					networkent.ChainIDEQ(chainID),
 				),
@@ -363,8 +362,8 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 		return
 	}
 
-	var settlements []types.LockPaymentOrderSplitOrder
-	var receipts []types.LockPaymentOrderTxReceipt
+	var settlements []types.PaymentOrderSplitOrder
+	var receipts []types.PaymentOrderTxReceipt
 	var settlePercent decimal.Decimal
 	var totalAmount decimal.Decimal
 	var totalAmountInUSD decimal.Decimal
@@ -372,13 +371,13 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 	for _, order := range orders {
 		for _, transaction := range order.Edges.Transactions {
 			if u.ContainsString([]string{"order_settled", "order_created", "order_refunded"}, transaction.Status.String()) {
-				var status lockpaymentorder.Status
+				var status paymentorder.Status
 				if transaction.Status.String() == "order_created" {
-					status = lockpaymentorder.StatusPending
+					status = paymentorder.StatusPending
 				} else {
-					status = lockpaymentorder.Status(strings.TrimPrefix(transaction.Status.String(), "order_"))
+					status = paymentorder.Status(strings.TrimPrefix(transaction.Status.String(), "order_"))
 				}
-				receipts = append(receipts, types.LockPaymentOrderTxReceipt{
+				receipts = append(receipts, types.PaymentOrderTxReceipt{
 					Status:    status,
 					TxHash:    transaction.TxHash,
 					Timestamp: transaction.CreatedAt,
@@ -386,7 +385,7 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 			}
 		}
 
-		settlements = append(settlements, types.LockPaymentOrderSplitOrder{
+		settlements = append(settlements, types.PaymentOrderSplitOrder{
 			SplitOrderID: order.ID,
 			Amount:       order.Amount,
 			Rate:         order.Rate,
@@ -399,7 +398,7 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 	}
 
 	// Sort receipts by latest timestamp
-	slices.SortStableFunc(receipts, func(a, b types.LockPaymentOrderTxReceipt) int {
+	slices.SortStableFunc(receipts, func(a, b types.PaymentOrderTxReceipt) int {
 		return b.Timestamp.Compare(a.Timestamp)
 	})
 
@@ -409,11 +408,11 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 	}
 
 	status := orders[0].Status
-	if status == lockpaymentorder.StatusCancelled {
-		status = lockpaymentorder.StatusProcessing
+	if status == paymentorder.StatusCancelled {
+		status = paymentorder.StatusProcessing
 	}
 
-	response := &types.LockPaymentOrderStatusResponse{
+	response := &types.ProviderOrderStatusResponse{
 		OrderID:       orders[0].GatewayID,
 		Amount:        totalAmount,
 		AmountInUSD:   totalAmountInUSD,
@@ -2044,9 +2043,9 @@ func (ctrl *Controller) handleOrderSettledEvent(ctx *gin.Context, event types.Th
 	}
 
 	// Process settled order using existing logic
-	lockOrder, err := storage.Client.LockPaymentOrder.
+	lockOrder, err := storage.Client.PaymentOrder.
 		Query().
-		Where(lockpaymentorder.GatewayIDEQ(settledEvent.OrderId)).
+		Where(paymentorder.GatewayIDEQ(settledEvent.OrderId)).
 		Only(ctx)
 	if err != nil {
 		return fmt.Errorf("lock payment order not found: %w", err)
@@ -2103,9 +2102,9 @@ func (ctrl *Controller) handleOrderRefundedEvent(ctx *gin.Context, event types.T
 	}
 
 	// Process refunded order using existing logic
-	lockOrder, err := storage.Client.LockPaymentOrder.
+	lockOrder, err := storage.Client.PaymentOrder.
 		Query().
-		Where(lockpaymentorder.GatewayIDEQ(refundedEvent.OrderId)).
+		Where(paymentorder.GatewayIDEQ(refundedEvent.OrderId)).
 		Only(ctx)
 	if err != nil {
 		return fmt.Errorf("lock payment order not found: %w", err)
@@ -2374,16 +2373,16 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 			}()
 		} else {
 			// Check if the address is a receive address in the database
-			receiveAddress, err := storage.Client.ReceiveAddress.
+			paymentOrder, err := storage.Client.PaymentOrder.
 				Query().
-				Where(receiveaddress.AddressEQ(address)).
+				Where(paymentorder.ReceiveAddressEQ(address)).
 				First(ctx)
 
-			if err == nil && receiveAddress != nil {
+			if err == nil && paymentOrder != nil {
 				logger.WithFields(logger.Fields{
-					"NetworkParam":     networkParam,
-					"Address":          address,
-					"ReceiveAddressID": receiveAddress.ID,
+					"NetworkParam":   networkParam,
+					"Address":        address,
+					"PaymentOrderID": paymentOrder.ID,
 				}).Infof("Found receive address in database, starting transfer event indexing")
 
 				// This is a receive address, index transfer events

@@ -45,15 +45,13 @@ type TokenEdges struct {
 	Network *Network `json:"network,omitempty"`
 	// PaymentOrders holds the value of the payment_orders edge.
 	PaymentOrders []*PaymentOrder `json:"payment_orders,omitempty"`
-	// LockPaymentOrders holds the value of the lock_payment_orders edge.
-	LockPaymentOrders []*LockPaymentOrder `json:"lock_payment_orders,omitempty"`
 	// SenderOrderTokens holds the value of the sender_order_tokens edge.
 	SenderOrderTokens []*SenderOrderToken `json:"sender_order_tokens,omitempty"`
 	// ProviderOrderTokens holds the value of the provider_order_tokens edge.
 	ProviderOrderTokens []*ProviderOrderToken `json:"provider_order_tokens,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [5]bool
+	loadedTypes [4]bool
 }
 
 // NetworkOrErr returns the Network value or an error if the edge
@@ -76,19 +74,10 @@ func (e TokenEdges) PaymentOrdersOrErr() ([]*PaymentOrder, error) {
 	return nil, &NotLoadedError{edge: "payment_orders"}
 }
 
-// LockPaymentOrdersOrErr returns the LockPaymentOrders value or an error if the edge
-// was not loaded in eager-loading.
-func (e TokenEdges) LockPaymentOrdersOrErr() ([]*LockPaymentOrder, error) {
-	if e.loadedTypes[2] {
-		return e.LockPaymentOrders, nil
-	}
-	return nil, &NotLoadedError{edge: "lock_payment_orders"}
-}
-
 // SenderOrderTokensOrErr returns the SenderOrderTokens value or an error if the edge
 // was not loaded in eager-loading.
 func (e TokenEdges) SenderOrderTokensOrErr() ([]*SenderOrderToken, error) {
-	if e.loadedTypes[3] {
+	if e.loadedTypes[2] {
 		return e.SenderOrderTokens, nil
 	}
 	return nil, &NotLoadedError{edge: "sender_order_tokens"}
@@ -97,7 +86,7 @@ func (e TokenEdges) SenderOrderTokensOrErr() ([]*SenderOrderToken, error) {
 // ProviderOrderTokensOrErr returns the ProviderOrderTokens value or an error if the edge
 // was not loaded in eager-loading.
 func (e TokenEdges) ProviderOrderTokensOrErr() ([]*ProviderOrderToken, error) {
-	if e.loadedTypes[4] {
+	if e.loadedTypes[3] {
 		return e.ProviderOrderTokens, nil
 	}
 	return nil, &NotLoadedError{edge: "provider_order_tokens"}
@@ -209,11 +198,6 @@ func (t *Token) QueryNetwork() *NetworkQuery {
 // QueryPaymentOrders queries the "payment_orders" edge of the Token entity.
 func (t *Token) QueryPaymentOrders() *PaymentOrderQuery {
 	return NewTokenClient(t.config).QueryPaymentOrders(t)
-}
-
-// QueryLockPaymentOrders queries the "lock_payment_orders" edge of the Token entity.
-func (t *Token) QueryLockPaymentOrders() *LockPaymentOrderQuery {
-	return NewTokenClient(t.config).QueryLockPaymentOrders(t)
 }
 
 // QuerySenderOrderTokens queries the "sender_order_tokens" edge of the Token entity.
