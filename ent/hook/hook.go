@@ -81,18 +81,6 @@ func (f KYBProfileFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.KYBProfileMutation", m)
 }
 
-// The LinkedAddressFunc type is an adapter to allow the use of ordinary
-// function as LinkedAddress mutator.
-type LinkedAddressFunc func(context.Context, *ent.LinkedAddressMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f LinkedAddressFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.LinkedAddressMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.LinkedAddressMutation", m)
-}
-
 // The LockOrderFulfillmentFunc type is an adapter to allow the use of ordinary
 // function as LockOrderFulfillment mutator.
 type LockOrderFulfillmentFunc func(context.Context, *ent.LockOrderFulfillmentMutation) (ent.Value, error)

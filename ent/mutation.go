@@ -18,7 +18,6 @@ import (
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/kybprofile"
-	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/network"
@@ -58,7 +57,6 @@ const (
 	TypeIdentityVerificationRequest = "IdentityVerificationRequest"
 	TypeInstitution                 = "Institution"
 	TypeKYBProfile                  = "KYBProfile"
-	TypeLinkedAddress               = "LinkedAddress"
 	TypeLockOrderFulfillment        = "LockOrderFulfillment"
 	TypeLockPaymentOrder            = "LockPaymentOrder"
 	TypeNetwork                     = "Network"
@@ -5110,1081 +5108,6 @@ func (m *KYBProfileMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown KYBProfile edge %s", name)
 }
 
-// LinkedAddressMutation represents an operation that mutates the LinkedAddress nodes in the graph.
-type LinkedAddressMutation struct {
-	config
-	op                    Op
-	typ                   string
-	id                    *int
-	created_at            *time.Time
-	updated_at            *time.Time
-	address               *string
-	salt                  *[]byte
-	institution           *string
-	account_identifier    *string
-	account_name          *string
-	metadata              *map[string]interface{}
-	owner_address         *string
-	last_indexed_block    *int64
-	addlast_indexed_block *int64
-	tx_hash               *string
-	clearedFields         map[string]struct{}
-	payment_orders        map[uuid.UUID]struct{}
-	removedpayment_orders map[uuid.UUID]struct{}
-	clearedpayment_orders bool
-	done                  bool
-	oldValue              func(context.Context) (*LinkedAddress, error)
-	predicates            []predicate.LinkedAddress
-}
-
-var _ ent.Mutation = (*LinkedAddressMutation)(nil)
-
-// linkedaddressOption allows management of the mutation configuration using functional options.
-type linkedaddressOption func(*LinkedAddressMutation)
-
-// newLinkedAddressMutation creates new mutation for the LinkedAddress entity.
-func newLinkedAddressMutation(c config, op Op, opts ...linkedaddressOption) *LinkedAddressMutation {
-	m := &LinkedAddressMutation{
-		config:        c,
-		op:            op,
-		typ:           TypeLinkedAddress,
-		clearedFields: make(map[string]struct{}),
-	}
-	for _, opt := range opts {
-		opt(m)
-	}
-	return m
-}
-
-// withLinkedAddressID sets the ID field of the mutation.
-func withLinkedAddressID(id int) linkedaddressOption {
-	return func(m *LinkedAddressMutation) {
-		var (
-			err   error
-			once  sync.Once
-			value *LinkedAddress
-		)
-		m.oldValue = func(ctx context.Context) (*LinkedAddress, error) {
-			once.Do(func() {
-				if m.done {
-					err = errors.New("querying old values post mutation is not allowed")
-				} else {
-					value, err = m.Client().LinkedAddress.Get(ctx, id)
-				}
-			})
-			return value, err
-		}
-		m.id = &id
-	}
-}
-
-// withLinkedAddress sets the old LinkedAddress of the mutation.
-func withLinkedAddress(node *LinkedAddress) linkedaddressOption {
-	return func(m *LinkedAddressMutation) {
-		m.oldValue = func(context.Context) (*LinkedAddress, error) {
-			return node, nil
-		}
-		m.id = &node.ID
-	}
-}
-
-// Client returns a new `ent.Client` from the mutation. If the mutation was
-// executed in a transaction (ent.Tx), a transactional client is returned.
-func (m LinkedAddressMutation) Client() *Client {
-	client := &Client{config: m.config}
-	client.init()
-	return client
-}
-
-// Tx returns an `ent.Tx` for mutations that were executed in transactions;
-// it returns an error otherwise.
-func (m LinkedAddressMutation) Tx() (*Tx, error) {
-	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, errors.New("ent: mutation is not running in a transaction")
-	}
-	tx := &Tx{config: m.config}
-	tx.init()
-	return tx, nil
-}
-
-// ID returns the ID value in the mutation. Note that the ID is only available
-// if it was provided to the builder or after it was returned from the database.
-func (m *LinkedAddressMutation) ID() (id int, exists bool) {
-	if m.id == nil {
-		return
-	}
-	return *m.id, true
-}
-
-// IDs queries the database and returns the entity ids that match the mutation's predicate.
-// That means, if the mutation is applied within a transaction with an isolation level such
-// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
-// or updated by the mutation.
-func (m *LinkedAddressMutation) IDs(ctx context.Context) ([]int, error) {
-	switch {
-	case m.op.Is(OpUpdateOne | OpDeleteOne):
-		id, exists := m.ID()
-		if exists {
-			return []int{id}, nil
-		}
-		fallthrough
-	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().LinkedAddress.Query().Where(m.predicates...).IDs(ctx)
-	default:
-		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
-	}
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (m *LinkedAddressMutation) SetCreatedAt(t time.Time) {
-	m.created_at = &t
-}
-
-// CreatedAt returns the value of the "created_at" field in the mutation.
-func (m *LinkedAddressMutation) CreatedAt() (r time.Time, exists bool) {
-	v := m.created_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCreatedAt returns the old "created_at" field's value of the LinkedAddress entity.
-// If the LinkedAddress object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *LinkedAddressMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
-	}
-	return oldValue.CreatedAt, nil
-}
-
-// ResetCreatedAt resets all changes to the "created_at" field.
-func (m *LinkedAddressMutation) ResetCreatedAt() {
-	m.created_at = nil
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (m *LinkedAddressMutation) SetUpdatedAt(t time.Time) {
-	m.updated_at = &t
-}
-
-// UpdatedAt returns the value of the "updated_at" field in the mutation.
-func (m *LinkedAddressMutation) UpdatedAt() (r time.Time, exists bool) {
-	v := m.updated_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldUpdatedAt returns the old "updated_at" field's value of the LinkedAddress entity.
-// If the LinkedAddress object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *LinkedAddressMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
-	}
-	return oldValue.UpdatedAt, nil
-}
-
-// ResetUpdatedAt resets all changes to the "updated_at" field.
-func (m *LinkedAddressMutation) ResetUpdatedAt() {
-	m.updated_at = nil
-}
-
-// SetAddress sets the "address" field.
-func (m *LinkedAddressMutation) SetAddress(s string) {
-	m.address = &s
-}
-
-// Address returns the value of the "address" field in the mutation.
-func (m *LinkedAddressMutation) Address() (r string, exists bool) {
-	v := m.address
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldAddress returns the old "address" field's value of the LinkedAddress entity.
-// If the LinkedAddress object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *LinkedAddressMutation) OldAddress(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldAddress is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldAddress requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldAddress: %w", err)
-	}
-	return oldValue.Address, nil
-}
-
-// ResetAddress resets all changes to the "address" field.
-func (m *LinkedAddressMutation) ResetAddress() {
-	m.address = nil
-}
-
-// SetSalt sets the "salt" field.
-func (m *LinkedAddressMutation) SetSalt(b []byte) {
-	m.salt = &b
-}
-
-// Salt returns the value of the "salt" field in the mutation.
-func (m *LinkedAddressMutation) Salt() (r []byte, exists bool) {
-	v := m.salt
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldSalt returns the old "salt" field's value of the LinkedAddress entity.
-// If the LinkedAddress object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *LinkedAddressMutation) OldSalt(ctx context.Context) (v []byte, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldSalt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldSalt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldSalt: %w", err)
-	}
-	return oldValue.Salt, nil
-}
-
-// ClearSalt clears the value of the "salt" field.
-func (m *LinkedAddressMutation) ClearSalt() {
-	m.salt = nil
-	m.clearedFields[linkedaddress.FieldSalt] = struct{}{}
-}
-
-// SaltCleared returns if the "salt" field was cleared in this mutation.
-func (m *LinkedAddressMutation) SaltCleared() bool {
-	_, ok := m.clearedFields[linkedaddress.FieldSalt]
-	return ok
-}
-
-// ResetSalt resets all changes to the "salt" field.
-func (m *LinkedAddressMutation) ResetSalt() {
-	m.salt = nil
-	delete(m.clearedFields, linkedaddress.FieldSalt)
-}
-
-// SetInstitution sets the "institution" field.
-func (m *LinkedAddressMutation) SetInstitution(s string) {
-	m.institution = &s
-}
-
-// Institution returns the value of the "institution" field in the mutation.
-func (m *LinkedAddressMutation) Institution() (r string, exists bool) {
-	v := m.institution
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldInstitution returns the old "institution" field's value of the LinkedAddress entity.
-// If the LinkedAddress object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *LinkedAddressMutation) OldInstitution(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldInstitution is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldInstitution requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldInstitution: %w", err)
-	}
-	return oldValue.Institution, nil
-}
-
-// ResetInstitution resets all changes to the "institution" field.
-func (m *LinkedAddressMutation) ResetInstitution() {
-	m.institution = nil
-}
-
-// SetAccountIdentifier sets the "account_identifier" field.
-func (m *LinkedAddressMutation) SetAccountIdentifier(s string) {
-	m.account_identifier = &s
-}
-
-// AccountIdentifier returns the value of the "account_identifier" field in the mutation.
-func (m *LinkedAddressMutation) AccountIdentifier() (r string, exists bool) {
-	v := m.account_identifier
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldAccountIdentifier returns the old "account_identifier" field's value of the LinkedAddress entity.
-// If the LinkedAddress object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *LinkedAddressMutation) OldAccountIdentifier(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldAccountIdentifier is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldAccountIdentifier requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldAccountIdentifier: %w", err)
-	}
-	return oldValue.AccountIdentifier, nil
-}
-
-// ResetAccountIdentifier resets all changes to the "account_identifier" field.
-func (m *LinkedAddressMutation) ResetAccountIdentifier() {
-	m.account_identifier = nil
-}
-
-// SetAccountName sets the "account_name" field.
-func (m *LinkedAddressMutation) SetAccountName(s string) {
-	m.account_name = &s
-}
-
-// AccountName returns the value of the "account_name" field in the mutation.
-func (m *LinkedAddressMutation) AccountName() (r string, exists bool) {
-	v := m.account_name
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldAccountName returns the old "account_name" field's value of the LinkedAddress entity.
-// If the LinkedAddress object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *LinkedAddressMutation) OldAccountName(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldAccountName is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldAccountName requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldAccountName: %w", err)
-	}
-	return oldValue.AccountName, nil
-}
-
-// ResetAccountName resets all changes to the "account_name" field.
-func (m *LinkedAddressMutation) ResetAccountName() {
-	m.account_name = nil
-}
-
-// SetMetadata sets the "metadata" field.
-func (m *LinkedAddressMutation) SetMetadata(value map[string]interface{}) {
-	m.metadata = &value
-}
-
-// Metadata returns the value of the "metadata" field in the mutation.
-func (m *LinkedAddressMutation) Metadata() (r map[string]interface{}, exists bool) {
-	v := m.metadata
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldMetadata returns the old "metadata" field's value of the LinkedAddress entity.
-// If the LinkedAddress object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *LinkedAddressMutation) OldMetadata(ctx context.Context) (v map[string]interface{}, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldMetadata is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldMetadata requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldMetadata: %w", err)
-	}
-	return oldValue.Metadata, nil
-}
-
-// ClearMetadata clears the value of the "metadata" field.
-func (m *LinkedAddressMutation) ClearMetadata() {
-	m.metadata = nil
-	m.clearedFields[linkedaddress.FieldMetadata] = struct{}{}
-}
-
-// MetadataCleared returns if the "metadata" field was cleared in this mutation.
-func (m *LinkedAddressMutation) MetadataCleared() bool {
-	_, ok := m.clearedFields[linkedaddress.FieldMetadata]
-	return ok
-}
-
-// ResetMetadata resets all changes to the "metadata" field.
-func (m *LinkedAddressMutation) ResetMetadata() {
-	m.metadata = nil
-	delete(m.clearedFields, linkedaddress.FieldMetadata)
-}
-
-// SetOwnerAddress sets the "owner_address" field.
-func (m *LinkedAddressMutation) SetOwnerAddress(s string) {
-	m.owner_address = &s
-}
-
-// OwnerAddress returns the value of the "owner_address" field in the mutation.
-func (m *LinkedAddressMutation) OwnerAddress() (r string, exists bool) {
-	v := m.owner_address
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldOwnerAddress returns the old "owner_address" field's value of the LinkedAddress entity.
-// If the LinkedAddress object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *LinkedAddressMutation) OldOwnerAddress(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldOwnerAddress is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldOwnerAddress requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldOwnerAddress: %w", err)
-	}
-	return oldValue.OwnerAddress, nil
-}
-
-// ResetOwnerAddress resets all changes to the "owner_address" field.
-func (m *LinkedAddressMutation) ResetOwnerAddress() {
-	m.owner_address = nil
-}
-
-// SetLastIndexedBlock sets the "last_indexed_block" field.
-func (m *LinkedAddressMutation) SetLastIndexedBlock(i int64) {
-	m.last_indexed_block = &i
-	m.addlast_indexed_block = nil
-}
-
-// LastIndexedBlock returns the value of the "last_indexed_block" field in the mutation.
-func (m *LinkedAddressMutation) LastIndexedBlock() (r int64, exists bool) {
-	v := m.last_indexed_block
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldLastIndexedBlock returns the old "last_indexed_block" field's value of the LinkedAddress entity.
-// If the LinkedAddress object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *LinkedAddressMutation) OldLastIndexedBlock(ctx context.Context) (v int64, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldLastIndexedBlock is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldLastIndexedBlock requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldLastIndexedBlock: %w", err)
-	}
-	return oldValue.LastIndexedBlock, nil
-}
-
-// AddLastIndexedBlock adds i to the "last_indexed_block" field.
-func (m *LinkedAddressMutation) AddLastIndexedBlock(i int64) {
-	if m.addlast_indexed_block != nil {
-		*m.addlast_indexed_block += i
-	} else {
-		m.addlast_indexed_block = &i
-	}
-}
-
-// AddedLastIndexedBlock returns the value that was added to the "last_indexed_block" field in this mutation.
-func (m *LinkedAddressMutation) AddedLastIndexedBlock() (r int64, exists bool) {
-	v := m.addlast_indexed_block
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ClearLastIndexedBlock clears the value of the "last_indexed_block" field.
-func (m *LinkedAddressMutation) ClearLastIndexedBlock() {
-	m.last_indexed_block = nil
-	m.addlast_indexed_block = nil
-	m.clearedFields[linkedaddress.FieldLastIndexedBlock] = struct{}{}
-}
-
-// LastIndexedBlockCleared returns if the "last_indexed_block" field was cleared in this mutation.
-func (m *LinkedAddressMutation) LastIndexedBlockCleared() bool {
-	_, ok := m.clearedFields[linkedaddress.FieldLastIndexedBlock]
-	return ok
-}
-
-// ResetLastIndexedBlock resets all changes to the "last_indexed_block" field.
-func (m *LinkedAddressMutation) ResetLastIndexedBlock() {
-	m.last_indexed_block = nil
-	m.addlast_indexed_block = nil
-	delete(m.clearedFields, linkedaddress.FieldLastIndexedBlock)
-}
-
-// SetTxHash sets the "tx_hash" field.
-func (m *LinkedAddressMutation) SetTxHash(s string) {
-	m.tx_hash = &s
-}
-
-// TxHash returns the value of the "tx_hash" field in the mutation.
-func (m *LinkedAddressMutation) TxHash() (r string, exists bool) {
-	v := m.tx_hash
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldTxHash returns the old "tx_hash" field's value of the LinkedAddress entity.
-// If the LinkedAddress object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *LinkedAddressMutation) OldTxHash(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldTxHash is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldTxHash requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldTxHash: %w", err)
-	}
-	return oldValue.TxHash, nil
-}
-
-// ClearTxHash clears the value of the "tx_hash" field.
-func (m *LinkedAddressMutation) ClearTxHash() {
-	m.tx_hash = nil
-	m.clearedFields[linkedaddress.FieldTxHash] = struct{}{}
-}
-
-// TxHashCleared returns if the "tx_hash" field was cleared in this mutation.
-func (m *LinkedAddressMutation) TxHashCleared() bool {
-	_, ok := m.clearedFields[linkedaddress.FieldTxHash]
-	return ok
-}
-
-// ResetTxHash resets all changes to the "tx_hash" field.
-func (m *LinkedAddressMutation) ResetTxHash() {
-	m.tx_hash = nil
-	delete(m.clearedFields, linkedaddress.FieldTxHash)
-}
-
-// AddPaymentOrderIDs adds the "payment_orders" edge to the PaymentOrder entity by ids.
-func (m *LinkedAddressMutation) AddPaymentOrderIDs(ids ...uuid.UUID) {
-	if m.payment_orders == nil {
-		m.payment_orders = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		m.payment_orders[ids[i]] = struct{}{}
-	}
-}
-
-// ClearPaymentOrders clears the "payment_orders" edge to the PaymentOrder entity.
-func (m *LinkedAddressMutation) ClearPaymentOrders() {
-	m.clearedpayment_orders = true
-}
-
-// PaymentOrdersCleared reports if the "payment_orders" edge to the PaymentOrder entity was cleared.
-func (m *LinkedAddressMutation) PaymentOrdersCleared() bool {
-	return m.clearedpayment_orders
-}
-
-// RemovePaymentOrderIDs removes the "payment_orders" edge to the PaymentOrder entity by IDs.
-func (m *LinkedAddressMutation) RemovePaymentOrderIDs(ids ...uuid.UUID) {
-	if m.removedpayment_orders == nil {
-		m.removedpayment_orders = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		delete(m.payment_orders, ids[i])
-		m.removedpayment_orders[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedPaymentOrders returns the removed IDs of the "payment_orders" edge to the PaymentOrder entity.
-func (m *LinkedAddressMutation) RemovedPaymentOrdersIDs() (ids []uuid.UUID) {
-	for id := range m.removedpayment_orders {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// PaymentOrdersIDs returns the "payment_orders" edge IDs in the mutation.
-func (m *LinkedAddressMutation) PaymentOrdersIDs() (ids []uuid.UUID) {
-	for id := range m.payment_orders {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetPaymentOrders resets all changes to the "payment_orders" edge.
-func (m *LinkedAddressMutation) ResetPaymentOrders() {
-	m.payment_orders = nil
-	m.clearedpayment_orders = false
-	m.removedpayment_orders = nil
-}
-
-// Where appends a list predicates to the LinkedAddressMutation builder.
-func (m *LinkedAddressMutation) Where(ps ...predicate.LinkedAddress) {
-	m.predicates = append(m.predicates, ps...)
-}
-
-// WhereP appends storage-level predicates to the LinkedAddressMutation builder. Using this method,
-// users can use type-assertion to append predicates that do not depend on any generated package.
-func (m *LinkedAddressMutation) WhereP(ps ...func(*sql.Selector)) {
-	p := make([]predicate.LinkedAddress, len(ps))
-	for i := range ps {
-		p[i] = ps[i]
-	}
-	m.Where(p...)
-}
-
-// Op returns the operation name.
-func (m *LinkedAddressMutation) Op() Op {
-	return m.op
-}
-
-// SetOp allows setting the mutation operation.
-func (m *LinkedAddressMutation) SetOp(op Op) {
-	m.op = op
-}
-
-// Type returns the node type of this mutation (LinkedAddress).
-func (m *LinkedAddressMutation) Type() string {
-	return m.typ
-}
-
-// Fields returns all fields that were changed during this mutation. Note that in
-// order to get all numeric fields that were incremented/decremented, call
-// AddedFields().
-func (m *LinkedAddressMutation) Fields() []string {
-	fields := make([]string, 0, 11)
-	if m.created_at != nil {
-		fields = append(fields, linkedaddress.FieldCreatedAt)
-	}
-	if m.updated_at != nil {
-		fields = append(fields, linkedaddress.FieldUpdatedAt)
-	}
-	if m.address != nil {
-		fields = append(fields, linkedaddress.FieldAddress)
-	}
-	if m.salt != nil {
-		fields = append(fields, linkedaddress.FieldSalt)
-	}
-	if m.institution != nil {
-		fields = append(fields, linkedaddress.FieldInstitution)
-	}
-	if m.account_identifier != nil {
-		fields = append(fields, linkedaddress.FieldAccountIdentifier)
-	}
-	if m.account_name != nil {
-		fields = append(fields, linkedaddress.FieldAccountName)
-	}
-	if m.metadata != nil {
-		fields = append(fields, linkedaddress.FieldMetadata)
-	}
-	if m.owner_address != nil {
-		fields = append(fields, linkedaddress.FieldOwnerAddress)
-	}
-	if m.last_indexed_block != nil {
-		fields = append(fields, linkedaddress.FieldLastIndexedBlock)
-	}
-	if m.tx_hash != nil {
-		fields = append(fields, linkedaddress.FieldTxHash)
-	}
-	return fields
-}
-
-// Field returns the value of a field with the given name. The second boolean
-// return value indicates that this field was not set, or was not defined in the
-// schema.
-func (m *LinkedAddressMutation) Field(name string) (ent.Value, bool) {
-	switch name {
-	case linkedaddress.FieldCreatedAt:
-		return m.CreatedAt()
-	case linkedaddress.FieldUpdatedAt:
-		return m.UpdatedAt()
-	case linkedaddress.FieldAddress:
-		return m.Address()
-	case linkedaddress.FieldSalt:
-		return m.Salt()
-	case linkedaddress.FieldInstitution:
-		return m.Institution()
-	case linkedaddress.FieldAccountIdentifier:
-		return m.AccountIdentifier()
-	case linkedaddress.FieldAccountName:
-		return m.AccountName()
-	case linkedaddress.FieldMetadata:
-		return m.Metadata()
-	case linkedaddress.FieldOwnerAddress:
-		return m.OwnerAddress()
-	case linkedaddress.FieldLastIndexedBlock:
-		return m.LastIndexedBlock()
-	case linkedaddress.FieldTxHash:
-		return m.TxHash()
-	}
-	return nil, false
-}
-
-// OldField returns the old value of the field from the database. An error is
-// returned if the mutation operation is not UpdateOne, or the query to the
-// database failed.
-func (m *LinkedAddressMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
-	switch name {
-	case linkedaddress.FieldCreatedAt:
-		return m.OldCreatedAt(ctx)
-	case linkedaddress.FieldUpdatedAt:
-		return m.OldUpdatedAt(ctx)
-	case linkedaddress.FieldAddress:
-		return m.OldAddress(ctx)
-	case linkedaddress.FieldSalt:
-		return m.OldSalt(ctx)
-	case linkedaddress.FieldInstitution:
-		return m.OldInstitution(ctx)
-	case linkedaddress.FieldAccountIdentifier:
-		return m.OldAccountIdentifier(ctx)
-	case linkedaddress.FieldAccountName:
-		return m.OldAccountName(ctx)
-	case linkedaddress.FieldMetadata:
-		return m.OldMetadata(ctx)
-	case linkedaddress.FieldOwnerAddress:
-		return m.OldOwnerAddress(ctx)
-	case linkedaddress.FieldLastIndexedBlock:
-		return m.OldLastIndexedBlock(ctx)
-	case linkedaddress.FieldTxHash:
-		return m.OldTxHash(ctx)
-	}
-	return nil, fmt.Errorf("unknown LinkedAddress field %s", name)
-}
-
-// SetField sets the value of a field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *LinkedAddressMutation) SetField(name string, value ent.Value) error {
-	switch name {
-	case linkedaddress.FieldCreatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCreatedAt(v)
-		return nil
-	case linkedaddress.FieldUpdatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetUpdatedAt(v)
-		return nil
-	case linkedaddress.FieldAddress:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetAddress(v)
-		return nil
-	case linkedaddress.FieldSalt:
-		v, ok := value.([]byte)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetSalt(v)
-		return nil
-	case linkedaddress.FieldInstitution:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetInstitution(v)
-		return nil
-	case linkedaddress.FieldAccountIdentifier:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetAccountIdentifier(v)
-		return nil
-	case linkedaddress.FieldAccountName:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetAccountName(v)
-		return nil
-	case linkedaddress.FieldMetadata:
-		v, ok := value.(map[string]interface{})
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetMetadata(v)
-		return nil
-	case linkedaddress.FieldOwnerAddress:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetOwnerAddress(v)
-		return nil
-	case linkedaddress.FieldLastIndexedBlock:
-		v, ok := value.(int64)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetLastIndexedBlock(v)
-		return nil
-	case linkedaddress.FieldTxHash:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetTxHash(v)
-		return nil
-	}
-	return fmt.Errorf("unknown LinkedAddress field %s", name)
-}
-
-// AddedFields returns all numeric fields that were incremented/decremented during
-// this mutation.
-func (m *LinkedAddressMutation) AddedFields() []string {
-	var fields []string
-	if m.addlast_indexed_block != nil {
-		fields = append(fields, linkedaddress.FieldLastIndexedBlock)
-	}
-	return fields
-}
-
-// AddedField returns the numeric value that was incremented/decremented on a field
-// with the given name. The second boolean return value indicates that this field
-// was not set, or was not defined in the schema.
-func (m *LinkedAddressMutation) AddedField(name string) (ent.Value, bool) {
-	switch name {
-	case linkedaddress.FieldLastIndexedBlock:
-		return m.AddedLastIndexedBlock()
-	}
-	return nil, false
-}
-
-// AddField adds the value to the field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *LinkedAddressMutation) AddField(name string, value ent.Value) error {
-	switch name {
-	case linkedaddress.FieldLastIndexedBlock:
-		v, ok := value.(int64)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddLastIndexedBlock(v)
-		return nil
-	}
-	return fmt.Errorf("unknown LinkedAddress numeric field %s", name)
-}
-
-// ClearedFields returns all nullable fields that were cleared during this
-// mutation.
-func (m *LinkedAddressMutation) ClearedFields() []string {
-	var fields []string
-	if m.FieldCleared(linkedaddress.FieldSalt) {
-		fields = append(fields, linkedaddress.FieldSalt)
-	}
-	if m.FieldCleared(linkedaddress.FieldMetadata) {
-		fields = append(fields, linkedaddress.FieldMetadata)
-	}
-	if m.FieldCleared(linkedaddress.FieldLastIndexedBlock) {
-		fields = append(fields, linkedaddress.FieldLastIndexedBlock)
-	}
-	if m.FieldCleared(linkedaddress.FieldTxHash) {
-		fields = append(fields, linkedaddress.FieldTxHash)
-	}
-	return fields
-}
-
-// FieldCleared returns a boolean indicating if a field with the given name was
-// cleared in this mutation.
-func (m *LinkedAddressMutation) FieldCleared(name string) bool {
-	_, ok := m.clearedFields[name]
-	return ok
-}
-
-// ClearField clears the value of the field with the given name. It returns an
-// error if the field is not defined in the schema.
-func (m *LinkedAddressMutation) ClearField(name string) error {
-	switch name {
-	case linkedaddress.FieldSalt:
-		m.ClearSalt()
-		return nil
-	case linkedaddress.FieldMetadata:
-		m.ClearMetadata()
-		return nil
-	case linkedaddress.FieldLastIndexedBlock:
-		m.ClearLastIndexedBlock()
-		return nil
-	case linkedaddress.FieldTxHash:
-		m.ClearTxHash()
-		return nil
-	}
-	return fmt.Errorf("unknown LinkedAddress nullable field %s", name)
-}
-
-// ResetField resets all changes in the mutation for the field with the given name.
-// It returns an error if the field is not defined in the schema.
-func (m *LinkedAddressMutation) ResetField(name string) error {
-	switch name {
-	case linkedaddress.FieldCreatedAt:
-		m.ResetCreatedAt()
-		return nil
-	case linkedaddress.FieldUpdatedAt:
-		m.ResetUpdatedAt()
-		return nil
-	case linkedaddress.FieldAddress:
-		m.ResetAddress()
-		return nil
-	case linkedaddress.FieldSalt:
-		m.ResetSalt()
-		return nil
-	case linkedaddress.FieldInstitution:
-		m.ResetInstitution()
-		return nil
-	case linkedaddress.FieldAccountIdentifier:
-		m.ResetAccountIdentifier()
-		return nil
-	case linkedaddress.FieldAccountName:
-		m.ResetAccountName()
-		return nil
-	case linkedaddress.FieldMetadata:
-		m.ResetMetadata()
-		return nil
-	case linkedaddress.FieldOwnerAddress:
-		m.ResetOwnerAddress()
-		return nil
-	case linkedaddress.FieldLastIndexedBlock:
-		m.ResetLastIndexedBlock()
-		return nil
-	case linkedaddress.FieldTxHash:
-		m.ResetTxHash()
-		return nil
-	}
-	return fmt.Errorf("unknown LinkedAddress field %s", name)
-}
-
-// AddedEdges returns all edge names that were set/added in this mutation.
-func (m *LinkedAddressMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.payment_orders != nil {
-		edges = append(edges, linkedaddress.EdgePaymentOrders)
-	}
-	return edges
-}
-
-// AddedIDs returns all IDs (to other nodes) that were added for the given edge
-// name in this mutation.
-func (m *LinkedAddressMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case linkedaddress.EdgePaymentOrders:
-		ids := make([]ent.Value, 0, len(m.payment_orders))
-		for id := range m.payment_orders {
-			ids = append(ids, id)
-		}
-		return ids
-	}
-	return nil
-}
-
-// RemovedEdges returns all edge names that were removed in this mutation.
-func (m *LinkedAddressMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.removedpayment_orders != nil {
-		edges = append(edges, linkedaddress.EdgePaymentOrders)
-	}
-	return edges
-}
-
-// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
-// the given name in this mutation.
-func (m *LinkedAddressMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	case linkedaddress.EdgePaymentOrders:
-		ids := make([]ent.Value, 0, len(m.removedpayment_orders))
-		for id := range m.removedpayment_orders {
-			ids = append(ids, id)
-		}
-		return ids
-	}
-	return nil
-}
-
-// ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *LinkedAddressMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.clearedpayment_orders {
-		edges = append(edges, linkedaddress.EdgePaymentOrders)
-	}
-	return edges
-}
-
-// EdgeCleared returns a boolean which indicates if the edge with the given name
-// was cleared in this mutation.
-func (m *LinkedAddressMutation) EdgeCleared(name string) bool {
-	switch name {
-	case linkedaddress.EdgePaymentOrders:
-		return m.clearedpayment_orders
-	}
-	return false
-}
-
-// ClearEdge clears the value of the edge with the given name. It returns an error
-// if that edge is not defined in the schema.
-func (m *LinkedAddressMutation) ClearEdge(name string) error {
-	switch name {
-	}
-	return fmt.Errorf("unknown LinkedAddress unique edge %s", name)
-}
-
-// ResetEdge resets all changes to the edge with the given name in this mutation.
-// It returns an error if the edge is not defined in the schema.
-func (m *LinkedAddressMutation) ResetEdge(name string) error {
-	switch name {
-	case linkedaddress.EdgePaymentOrders:
-		m.ResetPaymentOrders()
-		return nil
-	}
-	return fmt.Errorf("unknown LinkedAddress edge %s", name)
-}
-
 // LockOrderFulfillmentMutation represents an operation that mutates the LockOrderFulfillment nodes in the graph.
 type LockOrderFulfillmentMutation struct {
 	config
@@ -10231,8 +9154,6 @@ type PaymentOrderMutation struct {
 	clearedsender_profile  bool
 	token                  *int
 	clearedtoken           bool
-	linked_address         *int
-	clearedlinked_address  bool
 	receive_address        *int
 	clearedreceive_address bool
 	recipient              *int
@@ -11512,45 +10433,6 @@ func (m *PaymentOrderMutation) ResetToken() {
 	m.clearedtoken = false
 }
 
-// SetLinkedAddressID sets the "linked_address" edge to the LinkedAddress entity by id.
-func (m *PaymentOrderMutation) SetLinkedAddressID(id int) {
-	m.linked_address = &id
-}
-
-// ClearLinkedAddress clears the "linked_address" edge to the LinkedAddress entity.
-func (m *PaymentOrderMutation) ClearLinkedAddress() {
-	m.clearedlinked_address = true
-}
-
-// LinkedAddressCleared reports if the "linked_address" edge to the LinkedAddress entity was cleared.
-func (m *PaymentOrderMutation) LinkedAddressCleared() bool {
-	return m.clearedlinked_address
-}
-
-// LinkedAddressID returns the "linked_address" edge ID in the mutation.
-func (m *PaymentOrderMutation) LinkedAddressID() (id int, exists bool) {
-	if m.linked_address != nil {
-		return *m.linked_address, true
-	}
-	return
-}
-
-// LinkedAddressIDs returns the "linked_address" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// LinkedAddressID instead. It exists only for internal usage by the builders.
-func (m *PaymentOrderMutation) LinkedAddressIDs() (ids []int) {
-	if id := m.linked_address; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetLinkedAddress resets all changes to the "linked_address" edge.
-func (m *PaymentOrderMutation) ResetLinkedAddress() {
-	m.linked_address = nil
-	m.clearedlinked_address = false
-}
-
 // SetReceiveAddressID sets the "receive_address" edge to the ReceiveAddress entity by id.
 func (m *PaymentOrderMutation) SetReceiveAddressID(id int) {
 	m.receive_address = &id
@@ -12380,15 +11262,12 @@ func (m *PaymentOrderMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *PaymentOrderMutation) AddedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 6)
 	if m.sender_profile != nil {
 		edges = append(edges, paymentorder.EdgeSenderProfile)
 	}
 	if m.token != nil {
 		edges = append(edges, paymentorder.EdgeToken)
-	}
-	if m.linked_address != nil {
-		edges = append(edges, paymentorder.EdgeLinkedAddress)
 	}
 	if m.receive_address != nil {
 		edges = append(edges, paymentorder.EdgeReceiveAddress)
@@ -12417,10 +11296,6 @@ func (m *PaymentOrderMutation) AddedIDs(name string) []ent.Value {
 		if id := m.token; id != nil {
 			return []ent.Value{*id}
 		}
-	case paymentorder.EdgeLinkedAddress:
-		if id := m.linked_address; id != nil {
-			return []ent.Value{*id}
-		}
 	case paymentorder.EdgeReceiveAddress:
 		if id := m.receive_address; id != nil {
 			return []ent.Value{*id}
@@ -12445,7 +11320,7 @@ func (m *PaymentOrderMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *PaymentOrderMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 6)
 	if m.removedtransactions != nil {
 		edges = append(edges, paymentorder.EdgeTransactions)
 	}
@@ -12468,15 +11343,12 @@ func (m *PaymentOrderMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *PaymentOrderMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 6)
 	if m.clearedsender_profile {
 		edges = append(edges, paymentorder.EdgeSenderProfile)
 	}
 	if m.clearedtoken {
 		edges = append(edges, paymentorder.EdgeToken)
-	}
-	if m.clearedlinked_address {
-		edges = append(edges, paymentorder.EdgeLinkedAddress)
 	}
 	if m.clearedreceive_address {
 		edges = append(edges, paymentorder.EdgeReceiveAddress)
@@ -12501,8 +11373,6 @@ func (m *PaymentOrderMutation) EdgeCleared(name string) bool {
 		return m.clearedsender_profile
 	case paymentorder.EdgeToken:
 		return m.clearedtoken
-	case paymentorder.EdgeLinkedAddress:
-		return m.clearedlinked_address
 	case paymentorder.EdgeReceiveAddress:
 		return m.clearedreceive_address
 	case paymentorder.EdgeRecipient:
@@ -12524,9 +11394,6 @@ func (m *PaymentOrderMutation) ClearEdge(name string) error {
 		return nil
 	case paymentorder.EdgeToken:
 		m.ClearToken()
-		return nil
-	case paymentorder.EdgeLinkedAddress:
-		m.ClearLinkedAddress()
 		return nil
 	case paymentorder.EdgeReceiveAddress:
 		m.ClearReceiveAddress()
@@ -12550,9 +11417,6 @@ func (m *PaymentOrderMutation) ResetEdge(name string) error {
 		return nil
 	case paymentorder.EdgeToken:
 		m.ResetToken()
-		return nil
-	case paymentorder.EdgeLinkedAddress:
-		m.ResetLinkedAddress()
 		return nil
 	case paymentorder.EdgeReceiveAddress:
 		m.ResetReceiveAddress()
@@ -21068,9 +19932,6 @@ type SenderProfileMutation struct {
 	order_tokens           map[int]struct{}
 	removedorder_tokens    map[int]struct{}
 	clearedorder_tokens    bool
-	linked_address         map[int]struct{}
-	removedlinked_address  map[int]struct{}
-	clearedlinked_address  bool
 	done                   bool
 	oldValue               func(context.Context) (*SenderProfile, error)
 	predicates             []predicate.SenderProfile
@@ -21623,60 +20484,6 @@ func (m *SenderProfileMutation) ResetOrderTokens() {
 	m.removedorder_tokens = nil
 }
 
-// AddLinkedAddresIDs adds the "linked_address" edge to the LinkedAddress entity by ids.
-func (m *SenderProfileMutation) AddLinkedAddresIDs(ids ...int) {
-	if m.linked_address == nil {
-		m.linked_address = make(map[int]struct{})
-	}
-	for i := range ids {
-		m.linked_address[ids[i]] = struct{}{}
-	}
-}
-
-// ClearLinkedAddress clears the "linked_address" edge to the LinkedAddress entity.
-func (m *SenderProfileMutation) ClearLinkedAddress() {
-	m.clearedlinked_address = true
-}
-
-// LinkedAddressCleared reports if the "linked_address" edge to the LinkedAddress entity was cleared.
-func (m *SenderProfileMutation) LinkedAddressCleared() bool {
-	return m.clearedlinked_address
-}
-
-// RemoveLinkedAddresIDs removes the "linked_address" edge to the LinkedAddress entity by IDs.
-func (m *SenderProfileMutation) RemoveLinkedAddresIDs(ids ...int) {
-	if m.removedlinked_address == nil {
-		m.removedlinked_address = make(map[int]struct{})
-	}
-	for i := range ids {
-		delete(m.linked_address, ids[i])
-		m.removedlinked_address[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedLinkedAddress returns the removed IDs of the "linked_address" edge to the LinkedAddress entity.
-func (m *SenderProfileMutation) RemovedLinkedAddressIDs() (ids []int) {
-	for id := range m.removedlinked_address {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// LinkedAddressIDs returns the "linked_address" edge IDs in the mutation.
-func (m *SenderProfileMutation) LinkedAddressIDs() (ids []int) {
-	for id := range m.linked_address {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetLinkedAddress resets all changes to the "linked_address" edge.
-func (m *SenderProfileMutation) ResetLinkedAddress() {
-	m.linked_address = nil
-	m.clearedlinked_address = false
-	m.removedlinked_address = nil
-}
-
 // Where appends a list predicates to the SenderProfileMutation builder.
 func (m *SenderProfileMutation) Where(ps ...predicate.SenderProfile) {
 	m.predicates = append(m.predicates, ps...)
@@ -21910,7 +20717,7 @@ func (m *SenderProfileMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *SenderProfileMutation) AddedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 4)
 	if m.user != nil {
 		edges = append(edges, senderprofile.EdgeUser)
 	}
@@ -21922,9 +20729,6 @@ func (m *SenderProfileMutation) AddedEdges() []string {
 	}
 	if m.order_tokens != nil {
 		edges = append(edges, senderprofile.EdgeOrderTokens)
-	}
-	if m.linked_address != nil {
-		edges = append(edges, senderprofile.EdgeLinkedAddress)
 	}
 	return edges
 }
@@ -21953,27 +20757,18 @@ func (m *SenderProfileMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case senderprofile.EdgeLinkedAddress:
-		ids := make([]ent.Value, 0, len(m.linked_address))
-		for id := range m.linked_address {
-			ids = append(ids, id)
-		}
-		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *SenderProfileMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 4)
 	if m.removedpayment_orders != nil {
 		edges = append(edges, senderprofile.EdgePaymentOrders)
 	}
 	if m.removedorder_tokens != nil {
 		edges = append(edges, senderprofile.EdgeOrderTokens)
-	}
-	if m.removedlinked_address != nil {
-		edges = append(edges, senderprofile.EdgeLinkedAddress)
 	}
 	return edges
 }
@@ -21994,19 +20789,13 @@ func (m *SenderProfileMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case senderprofile.EdgeLinkedAddress:
-		ids := make([]ent.Value, 0, len(m.removedlinked_address))
-		for id := range m.removedlinked_address {
-			ids = append(ids, id)
-		}
-		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *SenderProfileMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 4)
 	if m.cleareduser {
 		edges = append(edges, senderprofile.EdgeUser)
 	}
@@ -22018,9 +20807,6 @@ func (m *SenderProfileMutation) ClearedEdges() []string {
 	}
 	if m.clearedorder_tokens {
 		edges = append(edges, senderprofile.EdgeOrderTokens)
-	}
-	if m.clearedlinked_address {
-		edges = append(edges, senderprofile.EdgeLinkedAddress)
 	}
 	return edges
 }
@@ -22037,8 +20823,6 @@ func (m *SenderProfileMutation) EdgeCleared(name string) bool {
 		return m.clearedpayment_orders
 	case senderprofile.EdgeOrderTokens:
 		return m.clearedorder_tokens
-	case senderprofile.EdgeLinkedAddress:
-		return m.clearedlinked_address
 	}
 	return false
 }
@@ -22072,9 +20856,6 @@ func (m *SenderProfileMutation) ResetEdge(name string) error {
 		return nil
 	case senderprofile.EdgeOrderTokens:
 		m.ResetOrderTokens()
-		return nil
-	case senderprofile.EdgeLinkedAddress:
-		m.ResetLinkedAddress()
 		return nil
 	}
 	return fmt.Errorf("unknown SenderProfile edge %s", name)

@@ -22,7 +22,6 @@ import (
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/kybprofile"
-	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/network"
@@ -62,8 +61,6 @@ type Client struct {
 	Institution *InstitutionClient
 	// KYBProfile is the client for interacting with the KYBProfile builders.
 	KYBProfile *KYBProfileClient
-	// LinkedAddress is the client for interacting with the LinkedAddress builders.
-	LinkedAddress *LinkedAddressClient
 	// LockOrderFulfillment is the client for interacting with the LockOrderFulfillment builders.
 	LockOrderFulfillment *LockOrderFulfillmentClient
 	// LockPaymentOrder is the client for interacting with the LockPaymentOrder builders.
@@ -121,7 +118,6 @@ func (c *Client) init() {
 	c.IdentityVerificationRequest = NewIdentityVerificationRequestClient(c.config)
 	c.Institution = NewInstitutionClient(c.config)
 	c.KYBProfile = NewKYBProfileClient(c.config)
-	c.LinkedAddress = NewLinkedAddressClient(c.config)
 	c.LockOrderFulfillment = NewLockOrderFulfillmentClient(c.config)
 	c.LockPaymentOrder = NewLockPaymentOrderClient(c.config)
 	c.Network = NewNetworkClient(c.config)
@@ -240,7 +236,6 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		IdentityVerificationRequest: NewIdentityVerificationRequestClient(cfg),
 		Institution:                 NewInstitutionClient(cfg),
 		KYBProfile:                  NewKYBProfileClient(cfg),
-		LinkedAddress:               NewLinkedAddressClient(cfg),
 		LockOrderFulfillment:        NewLockOrderFulfillmentClient(cfg),
 		LockPaymentOrder:            NewLockPaymentOrderClient(cfg),
 		Network:                     NewNetworkClient(cfg),
@@ -286,7 +281,6 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		IdentityVerificationRequest: NewIdentityVerificationRequestClient(cfg),
 		Institution:                 NewInstitutionClient(cfg),
 		KYBProfile:                  NewKYBProfileClient(cfg),
-		LinkedAddress:               NewLinkedAddressClient(cfg),
 		LockOrderFulfillment:        NewLockOrderFulfillmentClient(cfg),
 		LockPaymentOrder:            NewLockPaymentOrderClient(cfg),
 		Network:                     NewNetworkClient(cfg),
@@ -337,12 +331,12 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.APIKey, c.BeneficialOwner, c.FiatCurrency, c.IdentityVerificationRequest,
-		c.Institution, c.KYBProfile, c.LinkedAddress, c.LockOrderFulfillment,
-		c.LockPaymentOrder, c.Network, c.PaymentOrder, c.PaymentOrderRecipient,
-		c.PaymentWebhook, c.ProviderCurrencies, c.ProviderFiatAccount,
-		c.ProviderOrderToken, c.ProviderProfile, c.ProviderRating, c.ProvisionBucket,
-		c.ReceiveAddress, c.SenderOrderToken, c.SenderProfile, c.Token,
-		c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
+		c.Institution, c.KYBProfile, c.LockOrderFulfillment, c.LockPaymentOrder,
+		c.Network, c.PaymentOrder, c.PaymentOrderRecipient, c.PaymentWebhook,
+		c.ProviderCurrencies, c.ProviderFiatAccount, c.ProviderOrderToken,
+		c.ProviderProfile, c.ProviderRating, c.ProvisionBucket, c.ReceiveAddress,
+		c.SenderOrderToken, c.SenderProfile, c.Token, c.TransactionLog, c.User,
+		c.VerificationToken, c.WebhookRetryAttempt,
 	} {
 		n.Use(hooks...)
 	}
@@ -353,12 +347,12 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.APIKey, c.BeneficialOwner, c.FiatCurrency, c.IdentityVerificationRequest,
-		c.Institution, c.KYBProfile, c.LinkedAddress, c.LockOrderFulfillment,
-		c.LockPaymentOrder, c.Network, c.PaymentOrder, c.PaymentOrderRecipient,
-		c.PaymentWebhook, c.ProviderCurrencies, c.ProviderFiatAccount,
-		c.ProviderOrderToken, c.ProviderProfile, c.ProviderRating, c.ProvisionBucket,
-		c.ReceiveAddress, c.SenderOrderToken, c.SenderProfile, c.Token,
-		c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
+		c.Institution, c.KYBProfile, c.LockOrderFulfillment, c.LockPaymentOrder,
+		c.Network, c.PaymentOrder, c.PaymentOrderRecipient, c.PaymentWebhook,
+		c.ProviderCurrencies, c.ProviderFiatAccount, c.ProviderOrderToken,
+		c.ProviderProfile, c.ProviderRating, c.ProvisionBucket, c.ReceiveAddress,
+		c.SenderOrderToken, c.SenderProfile, c.Token, c.TransactionLog, c.User,
+		c.VerificationToken, c.WebhookRetryAttempt,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -379,8 +373,6 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Institution.mutate(ctx, m)
 	case *KYBProfileMutation:
 		return c.KYBProfile.mutate(ctx, m)
-	case *LinkedAddressMutation:
-		return c.LinkedAddress.mutate(ctx, m)
 	case *LockOrderFulfillmentMutation:
 		return c.LockOrderFulfillment.mutate(ctx, m)
 	case *LockPaymentOrderMutation:
@@ -1400,155 +1392,6 @@ func (c *KYBProfileClient) mutate(ctx context.Context, m *KYBProfileMutation) (V
 	}
 }
 
-// LinkedAddressClient is a client for the LinkedAddress schema.
-type LinkedAddressClient struct {
-	config
-}
-
-// NewLinkedAddressClient returns a client for the LinkedAddress from the given config.
-func NewLinkedAddressClient(c config) *LinkedAddressClient {
-	return &LinkedAddressClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `linkedaddress.Hooks(f(g(h())))`.
-func (c *LinkedAddressClient) Use(hooks ...Hook) {
-	c.hooks.LinkedAddress = append(c.hooks.LinkedAddress, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `linkedaddress.Intercept(f(g(h())))`.
-func (c *LinkedAddressClient) Intercept(interceptors ...Interceptor) {
-	c.inters.LinkedAddress = append(c.inters.LinkedAddress, interceptors...)
-}
-
-// Create returns a builder for creating a LinkedAddress entity.
-func (c *LinkedAddressClient) Create() *LinkedAddressCreate {
-	mutation := newLinkedAddressMutation(c.config, OpCreate)
-	return &LinkedAddressCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of LinkedAddress entities.
-func (c *LinkedAddressClient) CreateBulk(builders ...*LinkedAddressCreate) *LinkedAddressCreateBulk {
-	return &LinkedAddressCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *LinkedAddressClient) MapCreateBulk(slice any, setFunc func(*LinkedAddressCreate, int)) *LinkedAddressCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &LinkedAddressCreateBulk{err: fmt.Errorf("calling to LinkedAddressClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*LinkedAddressCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &LinkedAddressCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for LinkedAddress.
-func (c *LinkedAddressClient) Update() *LinkedAddressUpdate {
-	mutation := newLinkedAddressMutation(c.config, OpUpdate)
-	return &LinkedAddressUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *LinkedAddressClient) UpdateOne(la *LinkedAddress) *LinkedAddressUpdateOne {
-	mutation := newLinkedAddressMutation(c.config, OpUpdateOne, withLinkedAddress(la))
-	return &LinkedAddressUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *LinkedAddressClient) UpdateOneID(id int) *LinkedAddressUpdateOne {
-	mutation := newLinkedAddressMutation(c.config, OpUpdateOne, withLinkedAddressID(id))
-	return &LinkedAddressUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for LinkedAddress.
-func (c *LinkedAddressClient) Delete() *LinkedAddressDelete {
-	mutation := newLinkedAddressMutation(c.config, OpDelete)
-	return &LinkedAddressDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *LinkedAddressClient) DeleteOne(la *LinkedAddress) *LinkedAddressDeleteOne {
-	return c.DeleteOneID(la.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *LinkedAddressClient) DeleteOneID(id int) *LinkedAddressDeleteOne {
-	builder := c.Delete().Where(linkedaddress.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &LinkedAddressDeleteOne{builder}
-}
-
-// Query returns a query builder for LinkedAddress.
-func (c *LinkedAddressClient) Query() *LinkedAddressQuery {
-	return &LinkedAddressQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeLinkedAddress},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a LinkedAddress entity by its id.
-func (c *LinkedAddressClient) Get(ctx context.Context, id int) (*LinkedAddress, error) {
-	return c.Query().Where(linkedaddress.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *LinkedAddressClient) GetX(ctx context.Context, id int) *LinkedAddress {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QueryPaymentOrders queries the payment_orders edge of a LinkedAddress.
-func (c *LinkedAddressClient) QueryPaymentOrders(la *LinkedAddress) *PaymentOrderQuery {
-	query := (&PaymentOrderClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := la.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(linkedaddress.Table, linkedaddress.FieldID, id),
-			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, linkedaddress.PaymentOrdersTable, linkedaddress.PaymentOrdersColumn),
-		)
-		fromV = sqlgraph.Neighbors(la.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *LinkedAddressClient) Hooks() []Hook {
-	return c.hooks.LinkedAddress
-}
-
-// Interceptors returns the client interceptors.
-func (c *LinkedAddressClient) Interceptors() []Interceptor {
-	return c.inters.LinkedAddress
-}
-
-func (c *LinkedAddressClient) mutate(ctx context.Context, m *LinkedAddressMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&LinkedAddressCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&LinkedAddressUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&LinkedAddressUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&LinkedAddressDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("ent: unknown LinkedAddress mutation op: %q", m.Op())
-	}
-}
-
 // LockOrderFulfillmentClient is a client for the LockOrderFulfillment schema.
 type LockOrderFulfillmentClient struct {
 	config
@@ -2209,22 +2052,6 @@ func (c *PaymentOrderClient) QueryToken(po *PaymentOrder) *TokenQuery {
 			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, id),
 			sqlgraph.To(token.Table, token.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, paymentorder.TokenTable, paymentorder.TokenColumn),
-		)
-		fromV = sqlgraph.Neighbors(po.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryLinkedAddress queries the linked_address edge of a PaymentOrder.
-func (c *PaymentOrderClient) QueryLinkedAddress(po *PaymentOrder) *LinkedAddressQuery {
-	query := (&LinkedAddressClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := po.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, id),
-			sqlgraph.To(linkedaddress.Table, linkedaddress.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, paymentorder.LinkedAddressTable, paymentorder.LinkedAddressColumn),
 		)
 		fromV = sqlgraph.Neighbors(po.driver.Dialect(), step)
 		return fromV, nil
@@ -4207,22 +4034,6 @@ func (c *SenderProfileClient) QueryOrderTokens(sp *SenderProfile) *SenderOrderTo
 	return query
 }
 
-// QueryLinkedAddress queries the linked_address edge of a SenderProfile.
-func (c *SenderProfileClient) QueryLinkedAddress(sp *SenderProfile) *LinkedAddressQuery {
-	query := (&LinkedAddressClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := sp.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(senderprofile.Table, senderprofile.FieldID, id),
-			sqlgraph.To(linkedaddress.Table, linkedaddress.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, senderprofile.LinkedAddressTable, senderprofile.LinkedAddressColumn),
-		)
-		fromV = sqlgraph.Neighbors(sp.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // Hooks returns the client hooks.
 func (c *SenderProfileClient) Hooks() []Hook {
 	return c.hooks.SenderProfile
@@ -5079,18 +4890,18 @@ func (c *WebhookRetryAttemptClient) mutate(ctx context.Context, m *WebhookRetryA
 type (
 	hooks struct {
 		APIKey, BeneficialOwner, FiatCurrency, IdentityVerificationRequest, Institution,
-		KYBProfile, LinkedAddress, LockOrderFulfillment, LockPaymentOrder, Network,
-		PaymentOrder, PaymentOrderRecipient, PaymentWebhook, ProviderCurrencies,
-		ProviderFiatAccount, ProviderOrderToken, ProviderProfile, ProviderRating,
-		ProvisionBucket, ReceiveAddress, SenderOrderToken, SenderProfile, Token,
-		TransactionLog, User, VerificationToken, WebhookRetryAttempt []ent.Hook
+		KYBProfile, LockOrderFulfillment, LockPaymentOrder, Network, PaymentOrder,
+		PaymentOrderRecipient, PaymentWebhook, ProviderCurrencies, ProviderFiatAccount,
+		ProviderOrderToken, ProviderProfile, ProviderRating, ProvisionBucket,
+		ReceiveAddress, SenderOrderToken, SenderProfile, Token, TransactionLog, User,
+		VerificationToken, WebhookRetryAttempt []ent.Hook
 	}
 	inters struct {
 		APIKey, BeneficialOwner, FiatCurrency, IdentityVerificationRequest, Institution,
-		KYBProfile, LinkedAddress, LockOrderFulfillment, LockPaymentOrder, Network,
-		PaymentOrder, PaymentOrderRecipient, PaymentWebhook, ProviderCurrencies,
-		ProviderFiatAccount, ProviderOrderToken, ProviderProfile, ProviderRating,
-		ProvisionBucket, ReceiveAddress, SenderOrderToken, SenderProfile, Token,
-		TransactionLog, User, VerificationToken, WebhookRetryAttempt []ent.Interceptor
+		KYBProfile, LockOrderFulfillment, LockPaymentOrder, Network, PaymentOrder,
+		PaymentOrderRecipient, PaymentWebhook, ProviderCurrencies, ProviderFiatAccount,
+		ProviderOrderToken, ProviderProfile, ProviderRating, ProvisionBucket,
+		ReceiveAddress, SenderOrderToken, SenderProfile, Token, TransactionLog, User,
+		VerificationToken, WebhookRetryAttempt []ent.Interceptor
 	}
 )

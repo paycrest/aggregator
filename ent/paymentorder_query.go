@@ -13,7 +13,6 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
@@ -33,7 +32,6 @@ type PaymentOrderQuery struct {
 	predicates         []predicate.PaymentOrder
 	withSenderProfile  *SenderProfileQuery
 	withToken          *TokenQuery
-	withLinkedAddress  *LinkedAddressQuery
 	withReceiveAddress *ReceiveAddressQuery
 	withRecipient      *PaymentOrderRecipientQuery
 	withTransactions   *TransactionLogQuery
@@ -112,28 +110,6 @@ func (poq *PaymentOrderQuery) QueryToken() *TokenQuery {
 			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, selector),
 			sqlgraph.To(token.Table, token.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, paymentorder.TokenTable, paymentorder.TokenColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(poq.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryLinkedAddress chains the current query on the "linked_address" edge.
-func (poq *PaymentOrderQuery) QueryLinkedAddress() *LinkedAddressQuery {
-	query := (&LinkedAddressClient{config: poq.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := poq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := poq.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, selector),
-			sqlgraph.To(linkedaddress.Table, linkedaddress.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, paymentorder.LinkedAddressTable, paymentorder.LinkedAddressColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(poq.driver.Dialect(), step)
 		return fromU, nil
@@ -423,7 +399,6 @@ func (poq *PaymentOrderQuery) Clone() *PaymentOrderQuery {
 		predicates:         append([]predicate.PaymentOrder{}, poq.predicates...),
 		withSenderProfile:  poq.withSenderProfile.Clone(),
 		withToken:          poq.withToken.Clone(),
-		withLinkedAddress:  poq.withLinkedAddress.Clone(),
 		withReceiveAddress: poq.withReceiveAddress.Clone(),
 		withRecipient:      poq.withRecipient.Clone(),
 		withTransactions:   poq.withTransactions.Clone(),
@@ -453,17 +428,6 @@ func (poq *PaymentOrderQuery) WithToken(opts ...func(*TokenQuery)) *PaymentOrder
 		opt(query)
 	}
 	poq.withToken = query
-	return poq
-}
-
-// WithLinkedAddress tells the query-builder to eager-load the nodes that are connected to
-// the "linked_address" edge. The optional arguments are used to configure the query builder of the edge.
-func (poq *PaymentOrderQuery) WithLinkedAddress(opts ...func(*LinkedAddressQuery)) *PaymentOrderQuery {
-	query := (&LinkedAddressClient{config: poq.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	poq.withLinkedAddress = query
 	return poq
 }
 
@@ -590,17 +554,16 @@ func (poq *PaymentOrderQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 		nodes       = []*PaymentOrder{}
 		withFKs     = poq.withFKs
 		_spec       = poq.querySpec()
-		loadedTypes = [7]bool{
+		loadedTypes = [6]bool{
 			poq.withSenderProfile != nil,
 			poq.withToken != nil,
-			poq.withLinkedAddress != nil,
 			poq.withReceiveAddress != nil,
 			poq.withRecipient != nil,
 			poq.withTransactions != nil,
 			poq.withPaymentWebhook != nil,
 		}
 	)
-	if poq.withSenderProfile != nil || poq.withToken != nil || poq.withLinkedAddress != nil {
+	if poq.withSenderProfile != nil || poq.withToken != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -633,12 +596,6 @@ func (poq *PaymentOrderQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 	if query := poq.withToken; query != nil {
 		if err := poq.loadToken(ctx, query, nodes, nil,
 			func(n *PaymentOrder, e *Token) { n.Edges.Token = e }); err != nil {
-			return nil, err
-		}
-	}
-	if query := poq.withLinkedAddress; query != nil {
-		if err := poq.loadLinkedAddress(ctx, query, nodes, nil,
-			func(n *PaymentOrder, e *LinkedAddress) { n.Edges.LinkedAddress = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -727,38 +684,6 @@ func (poq *PaymentOrderQuery) loadToken(ctx context.Context, query *TokenQuery, 
 		nodes, ok := nodeids[n.ID]
 		if !ok {
 			return fmt.Errorf(`unexpected foreign-key "token_payment_orders" returned %v`, n.ID)
-		}
-		for i := range nodes {
-			assign(nodes[i], n)
-		}
-	}
-	return nil
-}
-func (poq *PaymentOrderQuery) loadLinkedAddress(ctx context.Context, query *LinkedAddressQuery, nodes []*PaymentOrder, init func(*PaymentOrder), assign func(*PaymentOrder, *LinkedAddress)) error {
-	ids := make([]int, 0, len(nodes))
-	nodeids := make(map[int][]*PaymentOrder)
-	for i := range nodes {
-		if nodes[i].linked_address_payment_orders == nil {
-			continue
-		}
-		fk := *nodes[i].linked_address_payment_orders
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
-		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
-	}
-	if len(ids) == 0 {
-		return nil
-	}
-	query.Where(linkedaddress.IDIn(ids...))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
-		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "linked_address_payment_orders" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

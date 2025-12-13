@@ -10,7 +10,6 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
-	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
@@ -73,7 +72,6 @@ type PaymentOrder struct {
 	// The values are being populated by the PaymentOrderQuery when eager-loading is set.
 	Edges                         PaymentOrderEdges `json:"edges"`
 	api_key_payment_orders        *uuid.UUID
-	linked_address_payment_orders *int
 	sender_profile_payment_orders *uuid.UUID
 	token_payment_orders          *int
 	selectValues                  sql.SelectValues
@@ -85,8 +83,6 @@ type PaymentOrderEdges struct {
 	SenderProfile *SenderProfile `json:"sender_profile,omitempty"`
 	// Token holds the value of the token edge.
 	Token *Token `json:"token,omitempty"`
-	// LinkedAddress holds the value of the linked_address edge.
-	LinkedAddress *LinkedAddress `json:"linked_address,omitempty"`
 	// ReceiveAddress holds the value of the receive_address edge.
 	ReceiveAddress *ReceiveAddress `json:"receive_address,omitempty"`
 	// Recipient holds the value of the recipient edge.
@@ -97,7 +93,7 @@ type PaymentOrderEdges struct {
 	PaymentWebhook *PaymentWebhook `json:"payment_webhook,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [7]bool
+	loadedTypes [6]bool
 }
 
 // SenderProfileOrErr returns the SenderProfile value or an error if the edge
@@ -122,23 +118,12 @@ func (e PaymentOrderEdges) TokenOrErr() (*Token, error) {
 	return nil, &NotLoadedError{edge: "token"}
 }
 
-// LinkedAddressOrErr returns the LinkedAddress value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e PaymentOrderEdges) LinkedAddressOrErr() (*LinkedAddress, error) {
-	if e.LinkedAddress != nil {
-		return e.LinkedAddress, nil
-	} else if e.loadedTypes[2] {
-		return nil, &NotFoundError{label: linkedaddress.Label}
-	}
-	return nil, &NotLoadedError{edge: "linked_address"}
-}
-
 // ReceiveAddressOrErr returns the ReceiveAddress value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e PaymentOrderEdges) ReceiveAddressOrErr() (*ReceiveAddress, error) {
 	if e.ReceiveAddress != nil {
 		return e.ReceiveAddress, nil
-	} else if e.loadedTypes[3] {
+	} else if e.loadedTypes[2] {
 		return nil, &NotFoundError{label: receiveaddress.Label}
 	}
 	return nil, &NotLoadedError{edge: "receive_address"}
@@ -149,7 +134,7 @@ func (e PaymentOrderEdges) ReceiveAddressOrErr() (*ReceiveAddress, error) {
 func (e PaymentOrderEdges) RecipientOrErr() (*PaymentOrderRecipient, error) {
 	if e.Recipient != nil {
 		return e.Recipient, nil
-	} else if e.loadedTypes[4] {
+	} else if e.loadedTypes[3] {
 		return nil, &NotFoundError{label: paymentorderrecipient.Label}
 	}
 	return nil, &NotLoadedError{edge: "recipient"}
@@ -158,7 +143,7 @@ func (e PaymentOrderEdges) RecipientOrErr() (*PaymentOrderRecipient, error) {
 // TransactionsOrErr returns the Transactions value or an error if the edge
 // was not loaded in eager-loading.
 func (e PaymentOrderEdges) TransactionsOrErr() ([]*TransactionLog, error) {
-	if e.loadedTypes[5] {
+	if e.loadedTypes[4] {
 		return e.Transactions, nil
 	}
 	return nil, &NotLoadedError{edge: "transactions"}
@@ -169,7 +154,7 @@ func (e PaymentOrderEdges) TransactionsOrErr() ([]*TransactionLog, error) {
 func (e PaymentOrderEdges) PaymentWebhookOrErr() (*PaymentWebhook, error) {
 	if e.PaymentWebhook != nil {
 		return e.PaymentWebhook, nil
-	} else if e.loadedTypes[6] {
+	} else if e.loadedTypes[5] {
 		return nil, &NotFoundError{label: paymentwebhook.Label}
 	}
 	return nil, &NotLoadedError{edge: "payment_webhook"}
@@ -192,11 +177,9 @@ func (*PaymentOrder) scanValues(columns []string) ([]any, error) {
 			values[i] = new(uuid.UUID)
 		case paymentorder.ForeignKeys[0]: // api_key_payment_orders
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case paymentorder.ForeignKeys[1]: // linked_address_payment_orders
-			values[i] = new(sql.NullInt64)
-		case paymentorder.ForeignKeys[2]: // sender_profile_payment_orders
+		case paymentorder.ForeignKeys[1]: // sender_profile_payment_orders
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case paymentorder.ForeignKeys[3]: // token_payment_orders
+		case paymentorder.ForeignKeys[2]: // token_payment_orders
 			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -359,20 +342,13 @@ func (po *PaymentOrder) assignValues(columns []string, values []any) error {
 				*po.api_key_payment_orders = *value.S.(*uuid.UUID)
 			}
 		case paymentorder.ForeignKeys[1]:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for edge-field linked_address_payment_orders", value)
-			} else if value.Valid {
-				po.linked_address_payment_orders = new(int)
-				*po.linked_address_payment_orders = int(value.Int64)
-			}
-		case paymentorder.ForeignKeys[2]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field sender_profile_payment_orders", values[i])
 			} else if value.Valid {
 				po.sender_profile_payment_orders = new(uuid.UUID)
 				*po.sender_profile_payment_orders = *value.S.(*uuid.UUID)
 			}
-		case paymentorder.ForeignKeys[3]:
+		case paymentorder.ForeignKeys[2]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field token_payment_orders", value)
 			} else if value.Valid {
@@ -400,11 +376,6 @@ func (po *PaymentOrder) QuerySenderProfile() *SenderProfileQuery {
 // QueryToken queries the "token" edge of the PaymentOrder entity.
 func (po *PaymentOrder) QueryToken() *TokenQuery {
 	return NewPaymentOrderClient(po.config).QueryToken(po)
-}
-
-// QueryLinkedAddress queries the "linked_address" edge of the PaymentOrder entity.
-func (po *PaymentOrder) QueryLinkedAddress() *LinkedAddressQuery {
-	return NewPaymentOrderClient(po.config).QueryLinkedAddress(po)
 }
 
 // QueryReceiveAddress queries the "receive_address" edge of the PaymentOrder entity.
