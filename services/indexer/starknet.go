@@ -272,24 +272,6 @@ func (s *IndexerStarknet) processReceiveAddressByTransactionEvents(ctx context.C
 	return eventCounts, nil
 }
 
-// Helper functions to extract values from event maps
-func extractFeltAsString(val interface{}) (string, bool) {
-	if feltVal, ok := val.(*felt.Felt); ok {
-		return feltVal.String(), true
-	}
-	return "", false
-}
-
-func extractBigIntAsString(val interface{}) (string, bool) {
-	if bigIntVal, ok := val.(*big.Int); ok {
-		return bigIntVal.String(), true
-	}
-	if feltVal, ok := val.(*felt.Felt); ok {
-		return feltVal.BigInt(big.NewInt(0)).String(), true
-	}
-	return "", false
-}
-
 func extractUint64AsString(val interface{}) (string, bool) {
 	if uintVal, ok := val.(uint64); ok {
 		return fmt.Sprintf("%d", uintVal), true
