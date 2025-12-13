@@ -1313,29 +1313,6 @@ func HasTokenWith(preds ...predicate.Token) predicate.PaymentOrder {
 	})
 }
 
-// HasLinkedAddress applies the HasEdge predicate on the "linked_address" edge.
-func HasLinkedAddress() predicate.PaymentOrder {
-	return predicate.PaymentOrder(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, LinkedAddressTable, LinkedAddressColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasLinkedAddressWith applies the HasEdge predicate on the "linked_address" edge with a given conditions (other predicates).
-func HasLinkedAddressWith(preds ...predicate.LinkedAddress) predicate.PaymentOrder {
-	return predicate.PaymentOrder(func(s *sql.Selector) {
-		step := newLinkedAddressStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
 // HasReceiveAddress applies the HasEdge predicate on the "receive_address" edge.
 func HasReceiveAddress() predicate.PaymentOrder {
 	return predicate.PaymentOrder(func(s *sql.Selector) {

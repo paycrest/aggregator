@@ -14,7 +14,6 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/apikey"
-	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
@@ -169,21 +168,6 @@ func (spu *SenderProfileUpdate) AddOrderTokens(s ...*SenderOrderToken) *SenderPr
 	return spu.AddOrderTokenIDs(ids...)
 }
 
-// AddLinkedAddresIDs adds the "linked_address" edge to the LinkedAddress entity by IDs.
-func (spu *SenderProfileUpdate) AddLinkedAddresIDs(ids ...int) *SenderProfileUpdate {
-	spu.mutation.AddLinkedAddresIDs(ids...)
-	return spu
-}
-
-// AddLinkedAddress adds the "linked_address" edges to the LinkedAddress entity.
-func (spu *SenderProfileUpdate) AddLinkedAddress(l ...*LinkedAddress) *SenderProfileUpdate {
-	ids := make([]int, len(l))
-	for i := range l {
-		ids[i] = l[i].ID
-	}
-	return spu.AddLinkedAddresIDs(ids...)
-}
-
 // Mutation returns the SenderProfileMutation object of the builder.
 func (spu *SenderProfileUpdate) Mutation() *SenderProfileMutation {
 	return spu.mutation
@@ -235,27 +219,6 @@ func (spu *SenderProfileUpdate) RemoveOrderTokens(s ...*SenderOrderToken) *Sende
 		ids[i] = s[i].ID
 	}
 	return spu.RemoveOrderTokenIDs(ids...)
-}
-
-// ClearLinkedAddress clears all "linked_address" edges to the LinkedAddress entity.
-func (spu *SenderProfileUpdate) ClearLinkedAddress() *SenderProfileUpdate {
-	spu.mutation.ClearLinkedAddress()
-	return spu
-}
-
-// RemoveLinkedAddresIDs removes the "linked_address" edge to LinkedAddress entities by IDs.
-func (spu *SenderProfileUpdate) RemoveLinkedAddresIDs(ids ...int) *SenderProfileUpdate {
-	spu.mutation.RemoveLinkedAddresIDs(ids...)
-	return spu
-}
-
-// RemoveLinkedAddress removes "linked_address" edges to LinkedAddress entities.
-func (spu *SenderProfileUpdate) RemoveLinkedAddress(l ...*LinkedAddress) *SenderProfileUpdate {
-	ids := make([]int, len(l))
-	for i := range l {
-		ids[i] = l[i].ID
-	}
-	return spu.RemoveLinkedAddresIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -462,51 +425,6 @@ func (spu *SenderProfileUpdate) sqlSave(ctx context.Context) (n int, err error) 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if spu.mutation.LinkedAddressCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   senderprofile.LinkedAddressTable,
-			Columns: []string{senderprofile.LinkedAddressColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(linkedaddress.FieldID, field.TypeInt),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := spu.mutation.RemovedLinkedAddressIDs(); len(nodes) > 0 && !spu.mutation.LinkedAddressCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   senderprofile.LinkedAddressTable,
-			Columns: []string{senderprofile.LinkedAddressColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(linkedaddress.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := spu.mutation.LinkedAddressIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   senderprofile.LinkedAddressTable,
-			Columns: []string{senderprofile.LinkedAddressColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(linkedaddress.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
 	if n, err = sqlgraph.UpdateNodes(ctx, spu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{senderprofile.Label}
@@ -662,21 +580,6 @@ func (spuo *SenderProfileUpdateOne) AddOrderTokens(s ...*SenderOrderToken) *Send
 	return spuo.AddOrderTokenIDs(ids...)
 }
 
-// AddLinkedAddresIDs adds the "linked_address" edge to the LinkedAddress entity by IDs.
-func (spuo *SenderProfileUpdateOne) AddLinkedAddresIDs(ids ...int) *SenderProfileUpdateOne {
-	spuo.mutation.AddLinkedAddresIDs(ids...)
-	return spuo
-}
-
-// AddLinkedAddress adds the "linked_address" edges to the LinkedAddress entity.
-func (spuo *SenderProfileUpdateOne) AddLinkedAddress(l ...*LinkedAddress) *SenderProfileUpdateOne {
-	ids := make([]int, len(l))
-	for i := range l {
-		ids[i] = l[i].ID
-	}
-	return spuo.AddLinkedAddresIDs(ids...)
-}
-
 // Mutation returns the SenderProfileMutation object of the builder.
 func (spuo *SenderProfileUpdateOne) Mutation() *SenderProfileMutation {
 	return spuo.mutation
@@ -728,27 +631,6 @@ func (spuo *SenderProfileUpdateOne) RemoveOrderTokens(s ...*SenderOrderToken) *S
 		ids[i] = s[i].ID
 	}
 	return spuo.RemoveOrderTokenIDs(ids...)
-}
-
-// ClearLinkedAddress clears all "linked_address" edges to the LinkedAddress entity.
-func (spuo *SenderProfileUpdateOne) ClearLinkedAddress() *SenderProfileUpdateOne {
-	spuo.mutation.ClearLinkedAddress()
-	return spuo
-}
-
-// RemoveLinkedAddresIDs removes the "linked_address" edge to LinkedAddress entities by IDs.
-func (spuo *SenderProfileUpdateOne) RemoveLinkedAddresIDs(ids ...int) *SenderProfileUpdateOne {
-	spuo.mutation.RemoveLinkedAddresIDs(ids...)
-	return spuo
-}
-
-// RemoveLinkedAddress removes "linked_address" edges to LinkedAddress entities.
-func (spuo *SenderProfileUpdateOne) RemoveLinkedAddress(l ...*LinkedAddress) *SenderProfileUpdateOne {
-	ids := make([]int, len(l))
-	for i := range l {
-		ids[i] = l[i].ID
-	}
-	return spuo.RemoveLinkedAddresIDs(ids...)
 }
 
 // Where appends a list predicates to the SenderProfileUpdate builder.
@@ -978,51 +860,6 @@ func (spuo *SenderProfileUpdateOne) sqlSave(ctx context.Context) (_node *SenderP
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(senderordertoken.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if spuo.mutation.LinkedAddressCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   senderprofile.LinkedAddressTable,
-			Columns: []string{senderprofile.LinkedAddressColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(linkedaddress.FieldID, field.TypeInt),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := spuo.mutation.RemovedLinkedAddressIDs(); len(nodes) > 0 && !spuo.mutation.LinkedAddressCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   senderprofile.LinkedAddressTable,
-			Columns: []string{senderprofile.LinkedAddressColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(linkedaddress.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := spuo.mutation.LinkedAddressIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   senderprofile.LinkedAddressTable,
-			Columns: []string{senderprofile.LinkedAddressColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(linkedaddress.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

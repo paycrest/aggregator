@@ -18,7 +18,6 @@ import (
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/kybprofile"
-	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/network"
@@ -105,7 +104,6 @@ func checkColumn(table, column string) error {
 			identityverificationrequest.Table: identityverificationrequest.ValidColumn,
 			institution.Table:                 institution.ValidColumn,
 			kybprofile.Table:                  kybprofile.ValidColumn,
-			linkedaddress.Table:               linkedaddress.ValidColumn,
 			lockorderfulfillment.Table:        lockorderfulfillment.ValidColumn,
 			lockpaymentorder.Table:            lockpaymentorder.ValidColumn,
 			network.Table:                     network.ValidColumn,

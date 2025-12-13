@@ -13,7 +13,6 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
@@ -302,25 +301,6 @@ func (poc *PaymentOrderCreate) SetTokenID(id int) *PaymentOrderCreate {
 // SetToken sets the "token" edge to the Token entity.
 func (poc *PaymentOrderCreate) SetToken(t *Token) *PaymentOrderCreate {
 	return poc.SetTokenID(t.ID)
-}
-
-// SetLinkedAddressID sets the "linked_address" edge to the LinkedAddress entity by ID.
-func (poc *PaymentOrderCreate) SetLinkedAddressID(id int) *PaymentOrderCreate {
-	poc.mutation.SetLinkedAddressID(id)
-	return poc
-}
-
-// SetNillableLinkedAddressID sets the "linked_address" edge to the LinkedAddress entity by ID if the given value is not nil.
-func (poc *PaymentOrderCreate) SetNillableLinkedAddressID(id *int) *PaymentOrderCreate {
-	if id != nil {
-		poc = poc.SetLinkedAddressID(*id)
-	}
-	return poc
-}
-
-// SetLinkedAddress sets the "linked_address" edge to the LinkedAddress entity.
-func (poc *PaymentOrderCreate) SetLinkedAddress(l *LinkedAddress) *PaymentOrderCreate {
-	return poc.SetLinkedAddressID(l.ID)
 }
 
 // SetReceiveAddressID sets the "receive_address" edge to the ReceiveAddress entity by ID.
@@ -712,23 +692,6 @@ func (poc *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.token_payment_orders = &nodes[0]
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := poc.mutation.LinkedAddressIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   paymentorder.LinkedAddressTable,
-			Columns: []string{paymentorder.LinkedAddressColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(linkedaddress.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_node.linked_address_payment_orders = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := poc.mutation.ReceiveAddressIDs(); len(nodes) > 0 {

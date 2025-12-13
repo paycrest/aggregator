@@ -24,9 +24,6 @@ type Institution func(*sql.Selector)
 // KYBProfile is the predicate function for kybprofile builders.
 type KYBProfile func(*sql.Selector)
 
-// LinkedAddress is the predicate function for linkedaddress builders.
-type LinkedAddress func(*sql.Selector)
-
 // LockOrderFulfillment is the predicate function for lockorderfulfillment builders.
 type LockOrderFulfillment func(*sql.Selector)
 

@@ -18,7 +18,6 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
-	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	networkent "github.com/paycrest/aggregator/ent/network"
@@ -67,66 +66,15 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 		WithSenderProfile().
 		WithRecipient().
 		WithReceiveAddress().
-		WithLinkedAddress().
 		Only(ctx)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.fetchOrder: %w", orderIDPrefix, err)
 	}
 
-	var address string
-	if order.Edges.ReceiveAddress != nil {
-		address = order.Edges.ReceiveAddress.Address
-	} else if order.Edges.LinkedAddress != nil {
-		address = order.Edges.LinkedAddress.Address
-
-		// Update the rate
-		institution, err := db.Client.Institution.
-			Query().
-			Where(institution.CodeEQ(order.Edges.Recipient.Institution)).
-			WithFiatCurrency().
-			Only(ctx)
-		if err != nil {
-			return fmt.Errorf("%s - CreateOrder.fetchInstitution: %w", orderIDPrefix, err)
-		}
-
-		rate, err := utils.GetTokenRateFromQueue(order.Edges.Token.Symbol, order.Amount, institution.Edges.FiatCurrency.Code, institution.Edges.FiatCurrency.MarketRate)
-		if err != nil {
-			return fmt.Errorf("%s - CreateOrder.getRate: %w", orderIDPrefix, err)
-		}
-
-		if !rate.Equal(order.Rate) {
-			// Update order rate and amount_in_usd
-			amountInUSD := utils.CalculatePaymentOrderAmountInUSD(order.Amount, order.Edges.Token, institution)
-
-			_, err = db.Client.PaymentOrder.
-				Update().
-				Where(paymentorder.IDEQ(orderID)).
-				SetRate(rate).
-				SetAmountInUsd(amountInUSD).
-				Save(ctx)
-			if err != nil {
-				return fmt.Errorf("%s - CreateOrder.updateOrder: %w", orderIDPrefix, err)
-			}
-
-			order.Rate = rate
-
-			// Refresh order from db
-			order, err = db.Client.PaymentOrder.
-				Query().
-				Where(paymentorder.IDEQ(orderID)).
-				WithToken(func(tq *ent.TokenQuery) {
-					tq.WithNetwork()
-				}).
-				WithSenderProfile().
-				WithRecipient().
-				WithReceiveAddress().
-				WithLinkedAddress().
-				Only(ctx)
-			if err != nil {
-				return fmt.Errorf("%s - CreateOrder.refreshOrder: %w", orderIDPrefix, err)
-			}
-		}
+	if order.Edges.ReceiveAddress == nil {
+		return fmt.Errorf("%s - CreateOrder.missingReceiveAddress: payment order has no receive address", orderIDPrefix)
 	}
+	address := order.Edges.ReceiveAddress.Address
 
 	if order.MessageHash != "" {
 		return nil

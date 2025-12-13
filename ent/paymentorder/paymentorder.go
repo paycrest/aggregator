@@ -64,8 +64,6 @@ const (
 	EdgeSenderProfile = "sender_profile"
 	// EdgeToken holds the string denoting the token edge name in mutations.
 	EdgeToken = "token"
-	// EdgeLinkedAddress holds the string denoting the linked_address edge name in mutations.
-	EdgeLinkedAddress = "linked_address"
 	// EdgeReceiveAddress holds the string denoting the receive_address edge name in mutations.
 	EdgeReceiveAddress = "receive_address"
 	// EdgeRecipient holds the string denoting the recipient edge name in mutations.
@@ -90,13 +88,6 @@ const (
 	TokenInverseTable = "tokens"
 	// TokenColumn is the table column denoting the token relation/edge.
 	TokenColumn = "token_payment_orders"
-	// LinkedAddressTable is the table that holds the linked_address relation/edge.
-	LinkedAddressTable = "payment_orders"
-	// LinkedAddressInverseTable is the table name for the LinkedAddress entity.
-	// It exists in this package in order to avoid circular dependency with the "linkedaddress" package.
-	LinkedAddressInverseTable = "linked_addresses"
-	// LinkedAddressColumn is the table column denoting the linked_address relation/edge.
-	LinkedAddressColumn = "linked_address_payment_orders"
 	// ReceiveAddressTable is the table that holds the receive_address relation/edge.
 	ReceiveAddressTable = "receive_addresses"
 	// ReceiveAddressInverseTable is the table name for the ReceiveAddress entity.
@@ -158,7 +149,6 @@ var Columns = []string{
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
 	"api_key_payment_orders",
-	"linked_address_payment_orders",
 	"sender_profile_payment_orders",
 	"token_payment_orders",
 }
@@ -396,13 +386,6 @@ func ByTokenField(field string, opts ...sql.OrderTermOption) OrderOption {
 	}
 }
 
-// ByLinkedAddressField orders the results by linked_address field.
-func ByLinkedAddressField(field string, opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newLinkedAddressStep(), sql.OrderByField(field, opts...))
-	}
-}
-
 // ByReceiveAddressField orders the results by receive_address field.
 func ByReceiveAddressField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -449,13 +432,6 @@ func newTokenStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(TokenInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, TokenTable, TokenColumn),
-	)
-}
-func newLinkedAddressStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(LinkedAddressInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, true, LinkedAddressTable, LinkedAddressColumn),
 	)
 }
 func newReceiveAddressStep() *sqlgraph.Step {

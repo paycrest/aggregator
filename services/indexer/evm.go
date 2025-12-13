@@ -193,7 +193,7 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 			toAddress: transferEvent,
 		}
 
-		err = common.ProcessTransfers(ctx, s.order, s.priorityQueue, []string{toAddress}, addressToEvent, token)
+		err = common.ProcessTransfers(ctx, s.order, s.priorityQueue, []string{toAddress}, addressToEvent)
 		if err != nil {
 			logger.Errorf("Error processing transfer for token %s: %v", token.Symbol, err)
 			continue
@@ -429,7 +429,7 @@ func (s *IndexerEVM) indexReceiveAddressByUserAddressWithBypass(ctx context.Cont
 
 	logger.Infof(logMessage)
 
-	// Process each transaction to find transfer events to linked addresses
+	// Process each transaction to find transfer events to receive addresses
 	for i, tx := range transactions {
 		txHash, ok := tx["hash"].(string)
 		if !ok || txHash == "" {

@@ -12,7 +12,6 @@ import (
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/kybprofile"
-	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
 	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/network"
@@ -140,25 +139,6 @@ func init() {
 	kybprofileDescID := kybprofileFields[0].Descriptor()
 	// kybprofile.DefaultID holds the default value on creation for the id field.
 	kybprofile.DefaultID = kybprofileDescID.Default.(func() uuid.UUID)
-	linkedaddressMixin := schema.LinkedAddress{}.Mixin()
-	linkedaddressMixinFields0 := linkedaddressMixin[0].Fields()
-	_ = linkedaddressMixinFields0
-	linkedaddressFields := schema.LinkedAddress{}.Fields()
-	_ = linkedaddressFields
-	// linkedaddressDescCreatedAt is the schema descriptor for created_at field.
-	linkedaddressDescCreatedAt := linkedaddressMixinFields0[0].Descriptor()
-	// linkedaddress.DefaultCreatedAt holds the default value on creation for the created_at field.
-	linkedaddress.DefaultCreatedAt = linkedaddressDescCreatedAt.Default.(func() time.Time)
-	// linkedaddressDescUpdatedAt is the schema descriptor for updated_at field.
-	linkedaddressDescUpdatedAt := linkedaddressMixinFields0[1].Descriptor()
-	// linkedaddress.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	linkedaddress.DefaultUpdatedAt = linkedaddressDescUpdatedAt.Default.(func() time.Time)
-	// linkedaddress.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	linkedaddress.UpdateDefaultUpdatedAt = linkedaddressDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// linkedaddressDescTxHash is the schema descriptor for tx_hash field.
-	linkedaddressDescTxHash := linkedaddressFields[8].Descriptor()
-	// linkedaddress.TxHashValidator is a validator for the "tx_hash" field. It is called by the builders before save.
-	linkedaddress.TxHashValidator = linkedaddressDescTxHash.Validators[0].(func(string) error)
 	lockorderfulfillmentMixin := schema.LockOrderFulfillment{}.Mixin()
 	lockorderfulfillmentMixinFields0 := lockorderfulfillmentMixin[0].Fields()
 	_ = lockorderfulfillmentMixinFields0
