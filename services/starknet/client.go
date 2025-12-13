@@ -169,9 +169,9 @@ func (c *Client) GetEvents(ctx context.Context, accountAddress *felt.Felt, fromB
 	orderSettledSelectorFelt, _ := utils.HexToFelt(u.OrderSettledStarknetSelector)
 
 	var eventSignatures [][]*felt.Felt
-	if len(topics) > 0 && topics[0] == transferSelectorFelt {
+	if len(topics) > 0 && topics[0].Equal(transferSelectorFelt) {
 		eventSignatures = [][]*felt.Felt{{transferSelectorFelt}}
-	} else if len(topics) > 0 && topics[0] == orderSettledSelectorFelt {
+	} else if len(topics) > 0 && topics[0].Equal(orderSettledSelectorFelt) {
 		eventSignatures = [][]*felt.Felt{{orderSettledSelectorFelt}}
 	} else {
 		orderCreatedSelectorFelt, _ := utils.HexToFelt(u.OrderCreatedStarknetSelector)

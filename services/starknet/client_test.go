@@ -25,6 +25,7 @@ package starknet
 import (
 	"context"
 	"math/big"
+	"os"
 	"testing"
 
 	"github.com/NethermindEth/juno/core/felt"
@@ -36,7 +37,6 @@ import (
 
 // Real transaction hashes from Starknet mainnet for testing
 const (
-	providerURL = "https://1rpc.io/starknet"
 	// OrderCreated transaction
 	txHashOrderCreated = "0x11a848b19eecce8aa1e420b0b7c4064f054027d0f54379c510760a6ff961186"
 
@@ -57,6 +57,12 @@ func TestClient_RealTransactionData(t *testing.T) {
 	}
 
 	ctx := context.Background()
+
+	// Get provider URL from environment variable or use default
+	providerURL := os.Getenv("STARKNET_PROVIDER_URL")
+	if providerURL == "" {
+		providerURL = "https://1rpc.io/starknet"
+	}
 
 	// Create a provider to fetch real transaction data
 	provider, err := rpc.NewProvider(ctx, providerURL)
@@ -522,6 +528,11 @@ func TestGetTransactionReceipt(t *testing.T) {
 func BenchmarkEventParsing(b *testing.B) {
 	if testing.Short() {
 		b.Skip("Skipping benchmark that requires network access")
+	}
+
+	providerURL := os.Getenv("STARKNET_PROVIDER_URL")
+	if providerURL == "" {
+		providerURL = "https://1rpc.io/starknet"
 	}
 
 	ctx := context.Background()
