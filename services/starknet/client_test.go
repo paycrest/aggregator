@@ -36,7 +36,7 @@ import (
 
 // Real transaction hashes from Starknet mainnet for testing
 const (
-	providerURL = "https://1rpc.io/starknet" 
+	providerURL = "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_9/YbiYqFJnjOvrUrbhzl8ur"
 	// OrderCreated transaction
 	txHashOrderCreated = "0x11a848b19eecce8aa1e420b0b7c4064f054027d0f54379c510760a6ff961186"
 
@@ -77,6 +77,7 @@ func TestClient_RealTransactionData(t *testing.T) {
 		// Find OrderCreated events in the receipt
 		require.NotEmpty(t, receipt.Events, "No events found in transaction")
 
+		found := false
 		// Process each event
 		for _, event := range receipt.Events {
 			emittedEvent := rpc.EmittedEvent{
@@ -92,23 +93,37 @@ func TestClient_RealTransactionData(t *testing.T) {
 				continue
 			}
 
-			// Verify the parsed event has expected fields
-			if eventType, ok := result["event"].(string); ok && eventType == "OrderCreated" {
-				assert.NotEmpty(t, result["sender"], "Sender should not be empty")
-				assert.NotEmpty(t, result["token"], "Token should not be empty")
-				assert.NotEmpty(t, result["amount"], "Amount should not be empty")
-				assert.NotEmpty(t, result["order_id"], "Order ID should not be empty")
-				assert.NotEmpty(t, result["rate"], "Rate should not be empty")
-				assert.NotEmpty(t, result["message_hash"], "Message hash should not be empty")
+			// Access nested decoded fields
+			decoded, ok := result["decoded"].(map[string]interface{})
+			if !ok {
+				continue
+			}
 
-				// Verify numeric fields are valid
-				if amount, ok := result["amount"].(*big.Int); ok {
-					assert.True(t, amount.Sign() > 0, "Amount should be positive")
-				}
+			indexedParams, ok := decoded["indexed_params"].(map[string]interface{})
+			if !ok {
+				continue
+			}
 
-				t.Logf("OrderCreated event parsed successfully: order_id=%v", result["order_id"])
+			nonIndexedParams, ok := decoded["non_indexed_params"].(map[string]interface{})
+			if !ok {
+				continue
+			}
+
+			// Check if this is an OrderCreated event by verifying expected fields
+			if sender, ok := indexedParams["sender"].(string); ok && sender != "" {
+				found = true
+				assert.NotEmpty(t, sender, "Sender should not be empty")
+				assert.NotEmpty(t, indexedParams["token"], "Token should not be empty")
+				assert.NotEmpty(t, indexedParams["amount"], "Amount should not be empty")
+				assert.NotEmpty(t, nonIndexedParams["order_id"], "Order ID should not be empty")
+				assert.NotEmpty(t, nonIndexedParams["rate"], "Rate should not be empty")
+				assert.NotEmpty(t, nonIndexedParams["message_hash"], "Message hash should not be empty")
+
+				t.Logf("OrderCreated event parsed successfully: order_id=%v", nonIndexedParams["order_id"])
+				break
 			}
 		}
+		require.True(t, found, "Expected OrderCreated event not found in transaction")
 	})
 
 	t.Run("OrderSettled Event", func(t *testing.T) {
@@ -122,6 +137,7 @@ func TestClient_RealTransactionData(t *testing.T) {
 		// Find OrderSettled events in the receipt
 		require.NotEmpty(t, receipt.Events, "No events found in transaction")
 
+		found := false
 		// Process each event
 		for _, event := range receipt.Events {
 			emittedEvent := rpc.EmittedEvent{
@@ -136,23 +152,44 @@ func TestClient_RealTransactionData(t *testing.T) {
 				continue
 			}
 
-			// Verify the parsed event has expected fields
-			if eventType, ok := result["event"].(string); ok && eventType == "OrderSettled" {
-				assert.NotEmpty(t, result["order_id"], "Order ID should not be empty")
-				assert.NotEmpty(t, result["liquidity_provider"], "Liquidity provider should not be empty")
-				assert.NotEmpty(t, result["split_order_id"], "Split order ID should not be empty")
+			// Access nested decoded fields
+			decoded, ok := result["decoded"].(map[string]interface{})
+			if !ok {
+				continue
+			}
 
-				// Verify percentages are within valid range (0-100 or 0-10000 basis points)
-				if settlePercent, ok := result["settle_percent"].(uint64); ok {
-					assert.True(t, settlePercent <= 10000, "Settle percent should be <= 10000")
-				}
-				if rebatePercent, ok := result["rebate_percent"].(uint64); ok {
-					assert.True(t, rebatePercent <= 10000, "Rebate percent should be <= 10000")
-				}
+			indexedParams, ok := decoded["indexed_params"].(map[string]interface{})
+			if !ok {
+				continue
+			}
 
-				t.Logf("OrderSettled event parsed successfully: order_id=%v", result["order_id"])
+			nonIndexedParams, ok := decoded["non_indexed_params"].(map[string]interface{})
+			if !ok {
+				continue
+			}
+
+			// Check if this is an OrderSettled event
+			if orderID, ok := indexedParams["order_id"].(string); ok && orderID != "" {
+				if liquidityProvider, ok := indexedParams["liquidity_provider"].(string); ok && liquidityProvider != "" {
+					found = true
+					assert.NotEmpty(t, orderID, "Order ID should not be empty")
+					assert.NotEmpty(t, liquidityProvider, "Liquidity provider should not be empty")
+					assert.NotEmpty(t, nonIndexedParams["split_order_id"], "Split order ID should not be empty")
+
+					// Verify percentages are within valid range (0-10000 basis points)
+					if settlePercent, ok := nonIndexedParams["settle_percent"].(uint64); ok {
+						assert.True(t, settlePercent <= 10000, "Settle percent should be <= 10000")
+					}
+					if rebatePercent, ok := nonIndexedParams["rebate_percent"].(uint64); ok {
+						assert.True(t, rebatePercent <= 10000, "Rebate percent should be <= 10000")
+					}
+
+					t.Logf("OrderSettled event parsed successfully: order_id=%v", orderID)
+					break
+				}
 			}
 		}
+		require.True(t, found, "Expected OrderSettled event not found in transaction")
 	})
 
 	t.Run("OrderRefunded Event", func(t *testing.T) {
@@ -166,6 +203,7 @@ func TestClient_RealTransactionData(t *testing.T) {
 		// Find OrderRefunded events in the receipt
 		require.NotEmpty(t, receipt.Events, "No events found in transaction")
 
+		found := false
 		// Process each event
 		for _, event := range receipt.Events {
 			emittedEvent := rpc.EmittedEvent{
@@ -180,19 +218,33 @@ func TestClient_RealTransactionData(t *testing.T) {
 				continue
 			}
 
-			// Verify the parsed event has expected fields
-			if eventType, ok := result["event"].(string); ok && eventType == "OrderRefunded" {
-				assert.NotEmpty(t, result["order_id"], "Order ID should not be empty")
-				assert.NotEmpty(t, result["fee"], "Fee should not be empty")
+			// Access nested decoded fields
+			decoded, ok := result["decoded"].(map[string]interface{})
+			if !ok {
+				continue
+			}
 
-				// Verify fee is valid
-				if fee, ok := result["fee"].(*big.Int); ok {
-					assert.True(t, fee.Sign() >= 0, "Fee should be non-negative")
-				}
+			indexedParams, ok := decoded["indexed_params"].(map[string]interface{})
+			if !ok {
+				continue
+			}
 
-				t.Logf("OrderRefunded event parsed successfully: order_id=%v", result["order_id"])
+			nonIndexedParams, ok := decoded["non_indexed_params"].(map[string]interface{})
+			if !ok {
+				continue
+			}
+
+			// Check if this is an OrderRefunded event
+			if orderID, ok := indexedParams["order_id"].(string); ok && orderID != "" {
+				found = true
+				assert.NotEmpty(t, orderID, "Order ID should not be empty")
+				assert.NotEmpty(t, nonIndexedParams["fee"], "Fee should not be empty")
+
+				t.Logf("OrderRefunded event parsed successfully: order_id=%v", orderID)
+				break
 			}
 		}
+		require.True(t, found, "Expected OrderRefunded event not found in transaction")
 	})
 
 	t.Run("Transfer Event", func(t *testing.T) {
@@ -206,6 +258,7 @@ func TestClient_RealTransactionData(t *testing.T) {
 		// Find Transfer events in the receipt
 		require.NotEmpty(t, receipt.Events, "No events found in transaction")
 
+		found := false
 		// Process each event
 		for _, event := range receipt.Events {
 			emittedEvent := rpc.EmittedEvent{
@@ -220,20 +273,31 @@ func TestClient_RealTransactionData(t *testing.T) {
 				continue
 			}
 
-			// Verify the parsed event has expected fields
-			if eventType, ok := result["event"].(string); ok && eventType == "Transfer" {
-				assert.NotEmpty(t, result["from"], "From address should not be empty")
-				assert.NotEmpty(t, result["to"], "To address should not be empty")
-				assert.NotEmpty(t, result["value"], "Value should not be empty")
+			// Access nested decoded fields
+			decoded, ok := result["decoded"].(map[string]interface{})
+			if !ok {
+				continue
+			}
 
-				// Verify value is valid
-				if value, ok := result["value"].(*big.Int); ok {
-					assert.True(t, value.Sign() > 0, "Transfer value should be positive")
+			nonIndexedParams, ok := decoded["non_indexed_params"].(map[string]interface{})
+			if !ok {
+				continue
+			}
+
+			// Check if this is a Transfer event (Transfer events have from/to/value in non_indexed_params)
+			if from, ok := nonIndexedParams["from"].(string); ok && from != "" {
+				if to, ok := nonIndexedParams["to"].(string); ok && to != "" {
+					found = true
+					assert.NotEmpty(t, from, "From address should not be empty")
+					assert.NotEmpty(t, to, "To address should not be empty")
+					assert.NotEmpty(t, nonIndexedParams["value"], "Value should not be empty")
+
+					t.Logf("Transfer event parsed successfully: from=%v to=%v", from, to)
+					break
 				}
-
-				t.Logf("Transfer event parsed successfully: from=%v to=%v", result["from"], result["to"])
 			}
 		}
+		require.True(t, found, "Expected Transfer event not found in transaction")
 	})
 }
 

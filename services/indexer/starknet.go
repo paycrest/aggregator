@@ -8,7 +8,6 @@ import (
 
 	"github.com/NethermindEth/juno/core/felt"
 	"github.com/NethermindEth/starknet.go/utils"
-	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/common"
@@ -179,11 +178,9 @@ func (s *IndexerStarknet) processReceiveAddressByTransactionEvents(ctx context.C
 			continue
 		}
 
-		// Safely extract transfer data - handle *felt.Felt, *big.Int, and string types
+		// Safely extract transfer data *big.Int, and string types
 		var fromStr string
-		if feltVal, ok := nonIndexedParams["from"].(*felt.Felt); ok {
-			fromStr = feltVal.String()
-		} else if strVal, ok := nonIndexedParams["from"].(string); ok {
+		if strVal, ok := nonIndexedParams["from"].(string); ok {
 			fromStr = strVal
 		} else {
 			logger.Errorf("Unexpected type for 'from' parameter in transfer event")
@@ -194,9 +191,7 @@ func (s *IndexerStarknet) processReceiveAddressByTransactionEvents(ctx context.C
 		}
 
 		var toStr string
-		if feltVal, ok := nonIndexedParams["to"].(*felt.Felt); ok {
-			toStr = feltVal.String()
-		} else if strVal, ok := nonIndexedParams["to"].(string); ok {
+		if strVal, ok := nonIndexedParams["to"].(string); ok {
 			toStr = strVal
 		} else {
 			logger.Errorf("Unexpected type for 'to' parameter in transfer event")
@@ -316,13 +311,12 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 	}
 
 	gatewayContractFelt, _ := utils.HexToFelt(network.GatewayContractAddress)
-	orderCreatedSelectorFelt, _ := utils.HexToFelt(u.OrderCreatedStarknetSelector)
 
 	gatewayContractTransactions, err := s.client.GetTransactionReceipt(
 		ctx,
 		txHashFelt,
 		gatewayContractFelt,
-		[]*felt.Felt{orderCreatedSelectorFelt},
+		nil,
 	)
 	if err != nil && err.Error() != "no events found" {
 		return eventCounts, fmt.Errorf("error getting gateway events for transaction %s: %w", txHash[:10]+"...", err)
@@ -344,11 +338,10 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 		}
 
 		// Convert eventSignature from *felt.Felt to hex string for comparison
-		eventSignatureFelt, ok := eventMap["topics"].(*felt.Felt)
+		eventSignature, ok := eventMap["topics"].(string)
 		if !ok {
 			continue
 		}
-		eventSignature := eventSignatureFelt.String()
 
 		// Safely extract block_number and transaction_hash
 		blockNumberRaw, ok := eventMap["block_number"].(float64)
@@ -375,8 +368,7 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 
 		switch eventSignature {
 		case u.OrderCreatedStarknetSelector:
-			// Extract amount (big.Int from u256FromFelts)
-			amountStr, ok := extractBigIntAsString(indexedParams["amount"])
+			amountStr, ok := indexedParams["amount"].(string)
 			if !ok || amountStr == "" {
 				continue
 			}
@@ -385,8 +377,7 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 				continue
 			}
 
-			// Extract protocolFee (big.Int)
-			protocolFeeStr, ok := extractBigIntAsString(nonIndexedParams["protocol_fee"])
+			protocolFeeStr, ok := nonIndexedParams["protocol_fee"].(string)
 			if !ok || protocolFeeStr == "" {
 				continue
 			}
@@ -395,8 +386,7 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 				continue
 			}
 
-			// Extract rate (big.Int)
-			rateStr, ok := extractBigIntAsString(nonIndexedParams["rate"])
+			rateStr, ok := nonIndexedParams["rate"].(string)
 			if !ok || rateStr == "" {
 				continue
 			}
@@ -405,15 +395,13 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 				continue
 			}
 
-			// Extract token (felt.Felt -> hex string)
-			tokenStr, ok := extractFeltAsString(indexedParams["token"])
+			tokenStr, ok := indexedParams["token"].(string)
 			if !ok || tokenStr == "" {
 				continue
 			}
 
-			// Extract orderId (felt.Felt -> hex string)
-			orderIdStr, ok := extractFeltAsString(nonIndexedParams["order_id"])
-			if !ok || orderIdStr == "" {
+			orderIDStr, ok := nonIndexedParams["order_id"].(string)
+			if !ok || orderIDStr == "" {
 				continue
 			}
 
@@ -423,8 +411,8 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 				continue
 			}
 
-			// Extract sender (felt.Felt -> hex string)
-			senderStr, ok := extractFeltAsString(indexedParams["sender"])
+			// Extract sender (string)
+			senderStr, ok := indexedParams["sender"].(string)
 			if !ok || senderStr == "" {
 				continue
 			}
@@ -435,7 +423,7 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 				Token:       tokenStr, // Use Starknet address directly
 				Amount:      orderAmount,
 				ProtocolFee: protocolFee,
-				OrderId:     orderIdStr,
+				OrderId:     orderIDStr,
 				Rate:        rate.Div(decimal.NewFromInt(100)),
 				MessageHash: messageHashStr,
 				Sender:      senderStr, // Use Starknet address directly
@@ -443,7 +431,6 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 			orderCreatedEvents = append(orderCreatedEvents, createdEvent)
 
 		case u.OrderSettledStarknetSelector:
-			// Extract settlePercent (uint64)
 			settlePercentStr, ok := extractUint64AsString(nonIndexedParams["settle_percent"])
 			if !ok || settlePercentStr == "" {
 				continue
@@ -464,19 +451,19 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 			}
 
 			// Extract splitOrderId (felt.Felt -> hex string)
-			splitOrderIdStr, ok := extractFeltAsString(nonIndexedParams["split_order_id"])
-			if !ok || splitOrderIdStr == "" {
+			splitOrderIDStr, ok := nonIndexedParams["split_order_id"].(string)
+			if !ok || splitOrderIDStr == "" {
 				continue
 			}
 
 			// Extract orderId (felt.Felt -> hex string)
-			orderIdStr, ok := extractFeltAsString(indexedParams["order_id"])
-			if !ok || orderIdStr == "" {
+			orderIDStr, ok := indexedParams["order_id"].(string)
+			if !ok || orderIDStr == "" {
 				continue
 			}
 
 			// Extract liquidityProvider (felt.Felt -> hex string)
-			liquidityProviderStr, ok := extractFeltAsString(indexedParams["liquidity_provider"])
+			liquidityProviderStr, ok := indexedParams["liquidity_provider"].(string)
 			if !ok || liquidityProviderStr == "" {
 				continue
 			}
@@ -484,8 +471,8 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 			settledEvent := &types.OrderSettledEvent{
 				BlockNumber:       blockNumber,
 				TxHash:            txHashFromEvent,
-				SplitOrderId:      splitOrderIdStr,
-				OrderId:           orderIdStr,
+				SplitOrderId:      splitOrderIDStr,
+				OrderId:           orderIDStr,
 				LiquidityProvider: liquidityProviderStr, // Use Starknet address directly
 				SettlePercent:     settlePercent,
 				RebatePercent:     rebatePercent,
@@ -494,7 +481,7 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 
 		case u.OrderRefundedStarknetSelector:
 			// Extract fee (big.Int)
-			feeStr, ok := extractBigIntAsString(nonIndexedParams["fee"])
+			feeStr, ok := nonIndexedParams["fee"].(string)
 			if !ok || feeStr == "" {
 				continue
 			}
@@ -504,15 +491,15 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 			}
 
 			// Extract orderId (felt.Felt -> hex string)
-			orderIdStr, ok := extractFeltAsString(indexedParams["order_id"])
-			if !ok || orderIdStr == "" {
+			orderIDStr, ok := indexedParams["order_id"].(string)
+			if !ok || orderIDStr == "" {
 				continue
 			}
 
 			refundedEvent := &types.OrderRefundedEvent{
 				BlockNumber: blockNumber,
 				TxHash:      txHashFromEvent,
-				OrderId:     orderIdStr,
+				OrderId:     orderIDStr,
 				Fee:         fee,
 			}
 			orderRefundedEvents = append(orderRefundedEvents, refundedEvent)
@@ -521,13 +508,13 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 
 	// Process OrderCreated events
 	if len(orderCreatedEvents) > 0 {
-		orderIds := []string{}
-		orderIdToEvent := make(map[string]*types.OrderCreatedEvent)
+		orderIDs := []string{}
+		orderIDToEvent := make(map[string]*types.OrderCreatedEvent)
 		for _, event := range orderCreatedEvents {
-			orderIds = append(orderIds, event.OrderId)
-			orderIdToEvent[event.OrderId] = event
+			orderIDs = append(orderIDs, event.OrderId)
+			orderIDToEvent[event.OrderId] = event
 		}
-		err := common.ProcessCreatedOrders(ctx, network, orderIds, orderIdToEvent, s.order, s.priorityQueue)
+		err := common.ProcessCreatedOrders(ctx, network, orderIDs, orderIDToEvent, s.order, s.priorityQueue)
 		if err != nil {
 			logger.Errorf("Failed to process OrderCreated events: %v", err)
 		} else {
@@ -540,13 +527,13 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 
 	// Process OrderSettled events
 	if len(orderSettledEvents) > 0 {
-		orderIds := []string{}
-		orderIdToEvent := make(map[string]*types.OrderSettledEvent)
+		orderIDs := []string{}
+		orderIDToEvent := make(map[string]*types.OrderSettledEvent)
 		for _, event := range orderSettledEvents {
-			orderIds = append(orderIds, event.OrderId)
-			orderIdToEvent[event.OrderId] = event
+			orderIDs = append(orderIDs, event.OrderId)
+			orderIDToEvent[event.OrderId] = event
 		}
-		err := common.ProcessSettledOrders(ctx, network, orderIds, orderIdToEvent)
+		err := common.ProcessSettledOrders(ctx, network, orderIDs, orderIDToEvent)
 		if err != nil {
 			logger.Errorf("Failed to process OrderSettled events: %v", err)
 		} else {
@@ -559,13 +546,13 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 
 	// Process OrderRefunded events
 	if len(orderRefundedEvents) > 0 {
-		orderIds := []string{}
-		orderIdToEvent := make(map[string]*types.OrderRefundedEvent)
+		orderIDs := []string{}
+		orderIDToEvent := make(map[string]*types.OrderRefundedEvent)
 		for _, event := range orderRefundedEvents {
-			orderIds = append(orderIds, event.OrderId)
-			orderIdToEvent[event.OrderId] = event
+			orderIDs = append(orderIDs, event.OrderId)
+			orderIDToEvent[event.OrderId] = event
 		}
-		err := common.ProcessRefundedOrders(ctx, network, orderIds, orderIdToEvent)
+		err := common.ProcessRefundedOrders(ctx, network, orderIDs, orderIDToEvent)
 		if err != nil {
 			logger.Errorf("Failed to process OrderRefunded events: %v", err)
 		} else {
@@ -617,14 +604,12 @@ func (s *IndexerStarknet) IndexGateway(ctx context.Context, network *ent.Network
 		toBlockNum = uint64(toBlock)
 	}
 
-	orderCreatedSelectorFelt, _ := utils.HexToFelt(u.OrderCreatedStarknetSelector)
-
 	transactions, err := s.client.GetEvents(
 		ctx,
 		gatewayAddr,
 		int64(fromBlockNum),
 		int64(toBlockNum),
-		[]*felt.Felt{orderCreatedSelectorFelt},
+		nil,
 		100,
 	)
 	if err != nil {
@@ -678,8 +663,14 @@ func (s *IndexerStarknet) indexProviderAddressByTransaction(ctx context.Context,
 		return eventCounts, fmt.Errorf("invalid transaction hash: %w", err)
 	}
 
-	gatewayContractFelt, _ := utils.HexToFelt(network.GatewayContractAddress)
-	orderSettledSelectorFelt, _ := utils.HexToFelt(u.OrderSettledStarknetSelector)
+	gatewayContractFelt, err := utils.HexToFelt(network.GatewayContractAddress)
+	if err != nil {
+		return eventCounts, fmt.Errorf("invalid gateway contract address: %w", err)
+	}
+	orderSettledSelectorFelt, err := utils.HexToFelt(u.OrderSettledStarknetSelector)
+	if err != nil {
+		return eventCounts, fmt.Errorf("invalid order settled selector felt: %w", err)
+	}
 
 	// Get OrderSettled events for this transaction
 	events, err := s.client.GetTransactionReceipt(
@@ -715,11 +706,11 @@ func (s *IndexerStarknet) indexProviderAddressByTransaction(ctx context.Context,
 		}
 
 		// Check if this event is from the provider address we're looking for
-		liquidityProvider, ok := indexedParams["liquidityProvider"].(string)
+		liquidityProvider, ok := indexedParams["liquidity_provider"].(string)
 		if !ok || liquidityProvider == "" {
 			continue
 		}
-		liquidityProvider = ethcommon.HexToAddress(liquidityProvider).Hex()
+
 		if !strings.EqualFold(liquidityProvider, providerAddress) {
 			continue
 		}
@@ -743,7 +734,7 @@ func (s *IndexerStarknet) indexProviderAddressByTransaction(ctx context.Context,
 		}
 
 		// Safely extract required fields
-		settlePercentStr, ok := nonIndexedParams["settlePercent"].(string)
+		settlePercentStr, ok := extractUint64AsString(nonIndexedParams["settle_percent"])
 		if !ok || settlePercentStr == "" {
 			continue
 		}
@@ -753,12 +744,22 @@ func (s *IndexerStarknet) indexProviderAddressByTransaction(ctx context.Context,
 			continue
 		}
 
-		splitOrderId, ok := nonIndexedParams["splitOrderId"].(string)
+		rebatePercentStr, ok := extractUint64AsString(nonIndexedParams["rebate_percent"])
+		if !ok || rebatePercentStr == "" {
+			continue
+		}
+
+		rebatePercent, err := decimal.NewFromString(rebatePercentStr)
+		if err != nil {
+			continue
+		}
+
+		splitOrderId, ok := nonIndexedParams["split_order_id"].(string)
 		if !ok || splitOrderId == "" {
 			continue
 		}
 
-		orderId, ok := indexedParams["orderId"].(string)
+		orderId, ok := indexedParams["order_id"].(string)
 		if !ok || orderId == "" {
 			continue
 		}
@@ -770,6 +771,7 @@ func (s *IndexerStarknet) indexProviderAddressByTransaction(ctx context.Context,
 			OrderId:           orderId,
 			LiquidityProvider: liquidityProvider,
 			SettlePercent:     settlePercent,
+			RebatePercent:     rebatePercent,
 		}
 		orderSettledEvents = append(orderSettledEvents, settledEvent)
 	}

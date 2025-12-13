@@ -171,7 +171,7 @@ func (c *Client) GetEvents(ctx context.Context, accountAddress *felt.Felt, fromB
 	var eventSignatures [][]*felt.Felt
 	if len(topics) > 0 && topics[0] == transferSelectorFelt {
 		eventSignatures = [][]*felt.Felt{{transferSelectorFelt}}
-	} else if topics[0] == orderSettledSelectorFelt {
+	} else if len(topics) > 0 && topics[0] == orderSettledSelectorFelt {
 		eventSignatures = [][]*felt.Felt{{orderSettledSelectorFelt}}
 	} else {
 		orderCreatedSelectorFelt, _ := utils.HexToFelt(u.OrderCreatedStarknetSelector)
@@ -234,7 +234,7 @@ func (c *Client) GetTransactionReceipt(ctx context.Context, txHash, accountAddre
 	if len(topics) > 0 && topics[0] == transferSelectorFelt {
 		// If transfer event signature is provided, filter for transfer events
 		eventSignatures = []felt.Felt{*transferSelectorFelt}
-	} else if topics[0] == orderSettledSelectorFelt {
+	} else if len(topics) > 0 && topics[0] == orderSettledSelectorFelt {
 		eventSignatures = []felt.Felt{*orderSettledSelectorFelt}
 	} else {
 		orderCreatedSelectorFelt, _ := utils.HexToFelt(u.OrderCreatedStarknetSelector)
@@ -409,6 +409,10 @@ func (c *Client) BuildApprovalAndCreateOrderCall(
 	messageHashBytes := []byte(messageHash)
 	messageHashCalldata := encodeCairoByteArray(messageHashBytes)
 
+	// Split u256 values into low/high limbs
+	orderAmountLow, orderAmountHigh := splitU256FromFelt(orderAmount)
+	senderFeeLow, senderFeeHigh := splitU256FromFelt(senderFee)
+
 	buildReq := &paymaster.BuildTransactionRequest{
 		Transaction: paymaster.UserTransaction{
 			Type:       paymaster.UserTxnDeployAndInvoke, // "UserTxnInvoke" UserTxnDeployAndInvoke
@@ -421,8 +425,8 @@ func (c *Client) BuildApprovalAndCreateOrderCall(
 						Selector: approveSelectorFelt,
 						Calldata: []*felt.Felt{
 							gatewayContractAddress,
-							orderAmount,                 // amount low
-							new(felt.Felt).SetUint64(0), // amount high
+							orderAmountLow,  // amount low
+							orderAmountHigh, // amount high
 						},
 					},
 					{
@@ -430,12 +434,12 @@ func (c *Client) BuildApprovalAndCreateOrderCall(
 						Selector: createOrderSelectorFelt,
 						Calldata: append([]*felt.Felt{
 							token,
-							orderAmount,                 // amount low
-							new(felt.Felt).SetUint64(0), // amount high
+							orderAmountLow,  // amount low
+							orderAmountHigh, // amount high
 							rate,
 							senderFeeRecipient,
-							senderFee,                   // sender_fee low
-							new(felt.Felt).SetUint64(0), // sender_fee high
+							senderFeeLow,  // sender_fee low
+							senderFeeHigh, // sender_fee high
 							refundAddress,
 						}, messageHashCalldata...), // message_hash as ByteArray
 					},
@@ -685,20 +689,20 @@ func (c *Client) handleOrderCreated(emittedEvent rpc.EmittedEvent) (map[string]i
 
 	event := map[string]interface{}{
 		"block_number":     float64(emittedEvent.BlockNumber),
-		"transaction_hash": emittedEvent.TransactionHash,
-		"address":          emittedEvent.FromAddress,
-		"topics":           emittedEvent.Keys[0],
+		"transaction_hash": emittedEvent.TransactionHash.String(),
+		"address":          emittedEvent.FromAddress.String(),
+		"topics":           emittedEvent.Keys[0].String(),
 		"data":             emittedEvent.Data,
 		"decoded": map[string]interface{}{
 			"indexed_params": map[string]interface{}{
-				"sender": sender,
-				"token":  token,
-				"amount": amount,
+				"sender": sender.String(),
+				"token":  token.String(),
+				"amount": amount.String(),
 			},
 			"non_indexed_params": map[string]interface{}{
-				"protocol_fee": protocolFee,
-				"order_id":     orderID,
-				"rate":         rate,
+				"protocol_fee": protocolFee.String(),
+				"order_id":     orderID.String(),
+				"rate":         rate.String(),
 				"message_hash": messageHash,
 			},
 		},
@@ -729,16 +733,16 @@ func (c *Client) handleOrderSettled(emittedEvent rpc.EmittedEvent) (map[string]i
 
 	event := map[string]interface{}{
 		"block_number":     float64(emittedEvent.BlockNumber),
-		"transaction_hash": emittedEvent.TransactionHash,
-		"address":          emittedEvent.FromAddress,
-		"topics":           emittedEvent.Keys[0],
+		"transaction_hash": emittedEvent.TransactionHash.String(),
+		"address":          emittedEvent.FromAddress.String(),
+		"topics":           emittedEvent.Keys[0].String(),
 		"decoded": map[string]interface{}{
 			"indexed_params": map[string]interface{}{
-				"order_id":           orderID,
-				"liquidity_provider": liquidityProvider,
+				"order_id":           orderID.String(),
+				"liquidity_provider": liquidityProvider.String(),
 			},
 			"non_indexed_params": map[string]interface{}{
-				"split_order_id": splitOrderID,
+				"split_order_id": splitOrderID.String(),
 				"settle_percent": settlePercent,
 				"rebate_percent": rebatePercent,
 			},
@@ -770,15 +774,15 @@ func (c *Client) handleOrderRefunded(emittedEvent rpc.EmittedEvent) (map[string]
 
 	event := map[string]interface{}{
 		"block_number":     float64(emittedEvent.BlockNumber),
-		"transaction_hash": emittedEvent.TransactionHash,
-		"address":          emittedEvent.FromAddress,
-		"topics":           emittedEvent.Keys[0],
+		"transaction_hash": emittedEvent.TransactionHash.String(),
+		"address":          emittedEvent.FromAddress.String(),
+		"topics":           emittedEvent.Keys[0].String(),
 		"decoded": map[string]interface{}{
 			"indexed_params": map[string]interface{}{
-				"order_id": orderID,
+				"order_id": orderID.String(),
 			},
 			"non_indexed_params": map[string]interface{}{
-				"fee": fee,
+				"fee": fee.String(),
 			},
 		},
 	}
@@ -804,16 +808,16 @@ func (c *Client) handleTransfer(emittedEvent rpc.EmittedEvent) (map[string]inter
 
 	event := map[string]interface{}{
 		"block_number":     float64(emittedEvent.BlockNumber),
-		"transaction_hash": emittedEvent.TransactionHash,
-		"address":          emittedEvent.FromAddress,
-		"topics":           emittedEvent.Keys[0],
+		"transaction_hash": emittedEvent.TransactionHash.String(),
+		"address":          emittedEvent.FromAddress.String(),
+		"topics":           emittedEvent.Keys[0].String(),
 		"decoded": map[string]interface{}{
 			"indexed_params": map[string]interface{}{},
 			"non_indexed_params": map[string]interface{}{
 				// Starknet Transfer event are non-indexed
-				"from":  from,
-				"to":    to,
-				"value": amount,
+				"from":  from.String(),
+				"to":    to.String(),
+				"value": amount.String(),
 			},
 		},
 	}
@@ -877,6 +881,15 @@ func generateSecureSeed() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(b), nil
+}
+
+// splitU256FromFelt splits a felt value into (low, high) 128-bit limbs for u256 calldata
+func splitU256FromFelt(v *felt.Felt) (low, high *felt.Felt) {
+	bi := v.BigInt(big.NewInt(0))
+	mask := new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 128), big.NewInt(1))
+	lowBI := new(big.Int).And(new(big.Int).Set(bi), mask)
+	highBI := new(big.Int).Rsh(new(big.Int).Set(bi), 128)
+	return new(felt.Felt).SetBigInt(lowBI), new(felt.Felt).SetBigInt(highBI)
 }
 
 // u256FromFelts converts two felts (low, high) to a big.Int (u256)
