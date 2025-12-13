@@ -145,7 +145,6 @@ func CreateLockPaymentOrder(
 
 			return nil // Success, no retry needed
 		})
-
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"MessageHash": event.MessageHash,
@@ -957,6 +956,7 @@ func HandleCancellation(ctx context.Context, createdLockPaymentOrder *ent.LockPa
 			SetAccountIdentifier(lockPaymentOrder.AccountIdentifier).
 			SetAccountName(lockPaymentOrder.AccountName).
 			SetSender(lockPaymentOrder.Sender).
+			SetAmountInUsd(lockPaymentOrder.AmountInUSD).
 			SetMemo(lockPaymentOrder.Memo).
 			SetMetadata(lockPaymentOrder.Metadata).
 			SetCancellationCount(3).
