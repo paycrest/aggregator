@@ -36,7 +36,7 @@ import (
 
 // Real transaction hashes from Starknet mainnet for testing
 const (
-	providerURL = "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_9/YbiYqFJnjOvrUrbhzl8ur"
+	providerURL = "https://1rpc.io/starknet"
 	// OrderCreated transaction
 	txHashOrderCreated = "0x11a848b19eecce8aa1e420b0b7c4064f054027d0f54379c510760a6ff961186"
 
