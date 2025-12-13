@@ -10,10 +10,14 @@ import (
 
 // Event signatures for Gateway and token contract events
 const (
-	TransferEventSignature      = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
-	OrderCreatedEventSignature  = "0x40ccd1ceb111a3c186ef9911e1b876dc1f789ed331b86097b3b8851055b6a137"
-	OrderSettledEventSignature  = "0x57c683de2e7c8263c7f57fd108416b9bdaa7a6e7f2e4e7102c3b6f9e37f1cc37"
-	OrderRefundedEventSignature = "0x0736fe428e1747ca8d387c2e6fa1a31a0cde62d3a167c40a46ade59a3cdc828e"
+	TransferEventSignature        = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+	OrderCreatedEventSignature    = "0x40ccd1ceb111a3c186ef9911e1b876dc1f789ed331b86097b3b8851055b6a137"
+	OrderSettledEventSignature    = "0x57c683de2e7c8263c7f57fd108416b9bdaa7a6e7f2e4e7102c3b6f9e37f1cc37"
+	OrderRefundedEventSignature   = "0x0736fe428e1747ca8d387c2e6fa1a31a0cde62d3a167c40a46ade59a3cdc828e"
+	OrderCreatedStarknetSelector  = "0x3427759bfd3b941f14e687e129519da3c9b0046c5b9aaa290bb1dede63753b3"
+	OrderSettledStarknetSelector  = "0x2f4d375c16c9a465e9396e640dcf9032795bee57646a3117d94b9304be0868c"
+	OrderRefundedStarknetSelector = "0x2b1527a936433fc64df27b599aa49d8cbaac3a88b1b3888cf4384b9e8bea9cd"
+	TransferStarknetSelector      = "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9"
 )
 
 // DecodeTransferEvent decodes a Transfer event from RPC log

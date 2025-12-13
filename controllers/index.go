@@ -72,6 +72,7 @@ type Controller struct {
 
 // NewController creates a new instance of AuthController with injected services
 func NewController() *Controller {
+
 	return &Controller{
 		orderService:          orderSvc.NewOrderEVM(),
 		priorityQueueService:  svc.NewPriorityQueueService(),
@@ -2451,6 +2452,16 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 	var indexerErr error
 	if strings.HasPrefix(network.Identifier, "tron") {
 		indexerInstance = indexer.NewIndexerTron()
+	} else if strings.HasPrefix(network.Identifier, "starknet") {
+		indexerInstance, indexerErr = indexer.NewIndexerStarknet()
+		if indexerErr != nil {
+			logger.WithFields(logger.Fields{
+				"Error":        fmt.Sprintf("%v", indexerErr),
+				"NetworkParam": networkParam,
+			}).Errorf("Failed to create Starknet indexer")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initialize indexer", nil)
+			return
+		}
 	} else {
 		indexerInstance, indexerErr = indexer.NewIndexerEVM()
 		if indexerErr != nil {
@@ -2773,11 +2784,24 @@ func (ctrl *Controller) IndexProviderAddress(ctx *gin.Context) {
 	var indexerInstance types.Indexer
 	if strings.HasPrefix(network.Identifier, "tron") {
 		indexerInstance = indexer.NewIndexerTron()
+	} else if strings.HasPrefix(network.Identifier, "starknet") {
+		indexerInstance, err = indexer.NewIndexerStarknet()
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"Network": network.Identifier,
+			}).Errorf("Failed to create Starknet indexer")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initialize indexer", nil)
+			return
+		}
 	} else {
 		indexerInstance, err = indexer.NewIndexerEVM()
 		if err != nil {
-			logger.Errorf("Failed to create indexer: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create indexer", nil)
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"Network": network.Identifier,
+			}).Errorf("Failed to create EVM indexer")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initialize indexer", nil)
 			return
 		}
 	}

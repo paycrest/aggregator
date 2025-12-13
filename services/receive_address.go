@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/paycrest/aggregator/services/starknet"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	tronWallet "github.com/paycrest/tron-wallet"
 	tronEnums "github.com/paycrest/tron-wallet/enums"
@@ -11,7 +12,8 @@ import (
 
 // ReceiveAddressService provides functionality related to managing receive addresses
 type ReceiveAddressService struct {
-	engineService *EngineService
+	engineService  *EngineService
+	starknetClient *starknet.Client
 }
 
 // NewReceiveAddressService creates a new instance of ReceiveAddressService.
@@ -31,7 +33,7 @@ func (s *ReceiveAddressService) CreateTronAddress(ctx context.Context) (string, 
 	var nodeUrl tronEnums.Node
 	if serverConf.Environment == "production" {
 		nodeUrl = tronEnums.MAIN_NODE
-} else {
+	} else {
 		nodeUrl = tronEnums.SHASTA_NODE
 	}
 
@@ -45,4 +47,19 @@ func (s *ReceiveAddressService) CreateTronAddress(ctx context.Context) (string, 
 	}
 
 	return wallet.AddressBase58, privateKeyEncrypted, nil
+}
+
+// CreateStarknetAddress generates and saves a new Starknet address
+func (s *ReceiveAddressService) CreateStarknetAddress(client *starknet.Client) (string, []byte, error) {
+	accountInfo, err := client.GenerateDeterministicAccount("")
+	if err != nil {
+		return "", nil, fmt.Errorf("CreateStarknetAddress: %w", err)
+	}
+
+	saltBytes := accountInfo.Salt.Bytes()
+	saltEncrypted, err := cryptoUtils.EncryptPlain(saltBytes[:])
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to encrypt salt: %w", err)
+	}
+	return accountInfo.NewAccount.Address.String(), saltEncrypted, nil
 }
