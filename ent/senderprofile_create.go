@@ -14,7 +14,6 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/apikey"
-	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
@@ -177,21 +176,6 @@ func (spc *SenderProfileCreate) AddOrderTokens(s ...*SenderOrderToken) *SenderPr
 		ids[i] = s[i].ID
 	}
 	return spc.AddOrderTokenIDs(ids...)
-}
-
-// AddLinkedAddresIDs adds the "linked_address" edge to the LinkedAddress entity by IDs.
-func (spc *SenderProfileCreate) AddLinkedAddresIDs(ids ...int) *SenderProfileCreate {
-	spc.mutation.AddLinkedAddresIDs(ids...)
-	return spc
-}
-
-// AddLinkedAddress adds the "linked_address" edges to the LinkedAddress entity.
-func (spc *SenderProfileCreate) AddLinkedAddress(l ...*LinkedAddress) *SenderProfileCreate {
-	ids := make([]int, len(l))
-	for i := range l {
-		ids[i] = l[i].ID
-	}
-	return spc.AddLinkedAddresIDs(ids...)
 }
 
 // Mutation returns the SenderProfileMutation object of the builder.
@@ -386,22 +370,6 @@ func (spc *SenderProfileCreate) createSpec() (*SenderProfile, *sqlgraph.CreateSp
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(senderordertoken.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := spc.mutation.LinkedAddressIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   senderprofile.LinkedAddressTable,
-			Columns: []string{senderprofile.LinkedAddressColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(linkedaddress.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

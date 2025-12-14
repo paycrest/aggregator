@@ -45,7 +45,6 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "transaction_logs"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"lock_payment_order_transactions",
 	"payment_order_transactions",
 }
 

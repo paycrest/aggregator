@@ -17,12 +17,10 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
-	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
-	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
@@ -179,97 +177,42 @@ func CreateTRC20Token(overrides map[string]interface{}) (*ent.Token, error) {
 	return token, err
 }
 
-// CreateTestLockPaymentOrder creates a test LockPaymentOrder with default or custom values
-func CreateTestLockPaymentOrder(overrides map[string]interface{}) (*ent.LockPaymentOrder, error) {
-
-	// Default payload
-	payload := map[string]interface{}{
-		"gateway_id":           "order-123",
-		"amount":               100.50,
-		"amount_in_usd":        100.50,
-		"protocol_fee":         5.0,
-		"rate":                 750.0,
-		"status":               "pending",
-		"block_number":         12345,
-		"institution":          "ABNGNGLA",
-		"account_identifier":   "1234567890",
-		"account_name":         "Test Account",
-		"updatedAt":            time.Now(),
-		"token_id":             0,
-		"cancellation_reasons": []string{},
-	}
-
-	// Create provider profile
-	var providerProfile *ent.ProviderProfile
-	if overrides["provider"] == nil {
-		providerProfile = nil
-	} else {
-		providerProfile = overrides["provider"].(*ent.ProviderProfile)
-	}
-
-	// Apply overrides
-	for key, value := range overrides {
-		payload[key] = value
-	}
-
-	if payload["token_id"].(int) == 0 {
-		// Create test token
-		token, err := CreateERC20Token(map[string]interface{}{})
-		if err != nil {
-			return nil, err
-		}
-		payload["token_id"] = token.ID
-	}
-
-	// Create LockPaymentOrder
-	order, err := db.Client.LockPaymentOrder.
-		Create().
-		SetGatewayID(payload["gateway_id"].(string)).
-		SetAmount(decimal.NewFromFloat(payload["amount"].(float64))).
-		SetAmountInUsd(decimal.NewFromFloat(payload["amount_in_usd"].(float64))).
-		SetProtocolFee(decimal.NewFromFloat(payload["protocol_fee"].(float64))).
-		SetRate(decimal.NewFromFloat(payload["rate"].(float64))).
-		SetStatus(lockpaymentorder.Status(payload["status"].(string))).
-		SetOrderPercent(decimal.NewFromFloat(100.0)).
-		SetBlockNumber(int64(payload["block_number"].(int))).
-		SetInstitution(payload["institution"].(string)).
-		SetAccountIdentifier(payload["account_identifier"].(string)).
-		SetAccountName(payload["account_name"].(string)).
-		SetTokenID(payload["token_id"].(int)).
-		SetProvider(providerProfile).
-		SetUpdatedAt(payload["updatedAt"].(time.Time)).
-		SetCancellationReasons(payload["cancellation_reasons"].([]string)).
-		Save(context.Background())
-	if err != nil {
-		return nil, err
-	}
-
-	// Push provider ID to order exclude list
-	// orderKey := fmt.Sprintf("order_exclude_list_%s", order.ID)
-	// _, err = db.RedisClient.RPush(context.Background(), orderKey, providerProfile.ID).Result()
-	// if err != nil {
-	// 	return nil, fmt.Errorf("error pushing provider %s to order %s exclude_list on Redis: %v", providerProfile.ID, order.ID, err)
-	// }
-
-	return order, err
-}
-
-// CreateTestPaymentOrder creates a test PaymentOrder with default or custom values for sender
+// CreateTestPaymentOrder creates a test PaymentOrder with default or custom values
+// Can create a sender order (when "sender" is provided), provider order (when "provider" is provided), or both
+// If both are provided, the order will have both sender_profile and provider edges set
+// If token is provided as a parameter, it will be used; otherwise a test token will be created (or fetched from token_id for provider orders)
 func CreateTestPaymentOrder(token *ent.Token, overrides map[string]interface{}) (*ent.PaymentOrder, error) {
+	// Determine if this is a sender or provider order
+	hasSender := overrides["sender"] != nil
+	hasProvider := overrides["provider"] != nil
+
 	// Default payload
 	payload := map[string]interface{}{
 		"amount":             100.50,
 		"amount_in_usd":      100.50,
 		"rate":               750.0,
 		"status":             "pending",
-		"fee_percent":        0.0,
-		"fee_address":        "0x1234567890123456789012345678901234567890",
-		"return_address":     "0x0987654321098765432109876543210987654321",
 		"institution":        "ABNGNGLA",
 		"account_identifier": "1234567890",
 		"account_name":       "Test Account",
 		"memo":               "Shola Kehinde - rent for May 2021",
-		"providerId":         "",
+	}
+
+	// Provider-specific defaults
+	if hasProvider {
+		payload["gateway_id"] = "order-123"
+		payload["protocol_fee"] = 5.0
+		payload["block_number"] = 12345
+		payload["updatedAt"] = time.Now()
+		payload["cancellation_reasons"] = []string{}
+		payload["token_id"] = 0
+	}
+
+	// Sender-specific defaults
+	if hasSender {
+		payload["fee_percent"] = 0.0
+		payload["fee_address"] = "0x1234567890123456789012345678901234567890"
+		payload["return_address"] = "0x0987654321098765432109876543210987654321"
 	}
 
 	// Apply overrides
@@ -277,74 +220,119 @@ func CreateTestPaymentOrder(token *ent.Token, overrides map[string]interface{}) 
 		payload[key] = value
 	}
 
-	// Generate a test address and salt (no blockchain deployment)
-	// Generate 20 random bytes for address (40 hex chars)
-	addressBytes := make([]byte, 20)
-	if _, err := rand.Read(addressBytes); err != nil {
-		return nil, fmt.Errorf("failed to generate random address: %w", err)
+	// Handle token
+	var tokenToUse *ent.Token
+	var err error
+	if token != nil {
+		tokenToUse = token
+	} else if hasProvider {
+		// For provider orders, check if token_id is in overrides
+		if tokenID, ok := payload["token_id"]; ok && tokenID != nil {
+			if tokenIDInt, ok := tokenID.(int); ok && tokenIDInt != 0 {
+				// Fetch existing token
+				tokenToUse, err = db.Client.Token.Get(context.Background(), tokenIDInt)
+				if err != nil {
+					return nil, fmt.Errorf("failed to fetch token: %w", err)
+				}
+			} else {
+				// Create test token for provider orders if token_id is 0 or not set
+				createdToken, err := CreateERC20Token(map[string]interface{}{})
+				if err != nil {
+					return nil, err
+				}
+				tokenToUse = createdToken
+			}
+		} else {
+			// Create test token for provider orders if token_id not in overrides
+			createdToken, err := CreateERC20Token(map[string]interface{}{})
+			if err != nil {
+				return nil, err
+			}
+			tokenToUse = createdToken
+		}
+	} else {
+		return nil, fmt.Errorf("token must be provided for sender orders")
 	}
-	address := "0x" + hex.EncodeToString(addressBytes)
 
-	// Generate random salt (32 bytes)
-	salt := make([]byte, 32)
-	if _, err := rand.Read(salt); err != nil {
-		return nil, fmt.Errorf("failed to generate random salt: %w", err)
+	// Generate receive address and salt for sender orders
+	var address string
+	var salt []byte
+	var expiry time.Time
+	if hasSender {
+		// Generate 20 random bytes for address (40 hex chars)
+		addressBytes := make([]byte, 20)
+		if _, err := rand.Read(addressBytes); err != nil {
+			return nil, fmt.Errorf("failed to generate random address: %w", err)
+		}
+		address = "0x" + hex.EncodeToString(addressBytes)
+
+		// Generate random salt (32 bytes)
+		salt = make([]byte, 32)
+		if _, err := rand.Read(salt); err != nil {
+			return nil, fmt.Errorf("failed to generate random salt: %w", err)
+		}
+
+		expiry = time.Now().Add(time.Millisecond * 5)
+		time.Sleep(time.Second)
 	}
 
-	// Create receive address
-	receiveAddress, err := db.Client.ReceiveAddress.
+	// Build the order
+	orderBuilder := db.Client.PaymentOrder.
 		Create().
-		SetAddress(address).
-		SetSalt(salt).
-		SetStatus(receiveaddress.StatusUnused).
-		SetValidUntil(time.Now().Add(time.Millisecond * 5)).
-		Save(context.Background())
-	if err != nil {
-		return nil, err
-	}
-
-	time.Sleep(time.Second)
-
-	// Create payment order
-	paymentOrder, err := db.Client.PaymentOrder.
-		Create().
-		SetSenderProfile(overrides["sender"].(*ent.SenderProfile)).
 		SetAmount(decimal.NewFromFloat(payload["amount"].(float64))).
 		SetAmountInUsd(decimal.NewFromFloat(payload["amount_in_usd"].(float64))).
-		SetAmountPaid(decimal.NewFromInt(0)).
-		SetAmountReturned(decimal.NewFromInt(0)).
-		SetPercentSettled(decimal.NewFromInt(0)).
-		SetNetworkFee(token.Edges.Network.Fee).
-		SetSenderFee(decimal.NewFromFloat(payload["fee_percent"].(float64)).Mul(decimal.NewFromFloat(payload["amount"].(float64))).Div(decimal.NewFromFloat(payload["rate"].(float64))).Round(int32(token.Decimals))).
-		SetToken(token).
 		SetRate(decimal.NewFromFloat(payload["rate"].(float64))).
-		SetReceiveAddress(receiveAddress).
-		SetReceiveAddressText(receiveAddress.Address).
-		SetFeePercent(decimal.NewFromFloat(payload["fee_percent"].(float64))).
-		SetFeeAddress(payload["fee_address"].(string)).
-		SetReturnAddress(payload["return_address"].(string)).
 		SetStatus(paymentorder.Status(payload["status"].(string))).
-		Save(context.Background())
-	if err != nil {
-		return nil, err
-	}
-
-	// Create payment order recipient
-	_, err = db.Client.PaymentOrderRecipient.
-		Create().
 		SetInstitution(payload["institution"].(string)).
 		SetAccountIdentifier(payload["account_identifier"].(string)).
 		SetAccountName(payload["account_name"].(string)).
-		SetProviderID(payload["providerId"].(string)).
-		SetMemo(payload["memo"].(string)).
-		SetPaymentOrder(paymentOrder).
-		Save(context.Background())
+		SetToken(tokenToUse)
 
-	return paymentOrder, err
+	// Set sender-specific fields
+	if hasSender {
+		senderProfile := overrides["sender"].(*ent.SenderProfile)
+		orderBuilder = orderBuilder.
+			SetSenderProfile(senderProfile).
+			SetAmountPaid(decimal.NewFromInt(0)).
+			SetAmountReturned(decimal.NewFromInt(0)).
+			SetPercentSettled(decimal.NewFromInt(0)).
+			SetNetworkFee(tokenToUse.Edges.Network.Fee).
+			SetSenderFee(decimal.NewFromFloat(payload["fee_percent"].(float64)).Mul(decimal.NewFromFloat(payload["amount"].(float64))).Div(decimal.NewFromFloat(payload["rate"].(float64))).Round(int32(tokenToUse.Decimals))).
+			SetReceiveAddress(address).
+			SetReceiveAddressSalt(salt).
+			SetReceiveAddressExpiry(expiry).
+			SetFeePercent(decimal.NewFromFloat(payload["fee_percent"].(float64))).
+			SetFeeAddress(payload["fee_address"].(string)).
+			SetReturnAddress(payload["return_address"].(string)).
+			SetMemo(payload["memo"].(string))
+	}
+
+	// Set provider-specific fields
+	if hasProvider {
+		providerProfile, _ := overrides["provider"].(*ent.ProviderProfile)
+		orderBuilder = orderBuilder.
+			SetGatewayID(payload["gateway_id"].(string)).
+			SetProtocolFee(decimal.NewFromFloat(payload["protocol_fee"].(float64))).
+			SetOrderPercent(decimal.NewFromFloat(100.0)).
+			SetBlockNumber(int64(payload["block_number"].(int))).
+			SetProvider(providerProfile).
+			SetUpdatedAt(payload["updatedAt"].(time.Time)).
+			SetCancellationReasons(payload["cancellation_reasons"].([]string))
+		if payload["memo"] != nil {
+			orderBuilder = orderBuilder.SetMemo(payload["memo"].(string))
+		}
+	}
+
+	order, err := orderBuilder.Save(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	return order, err
 }
 
-// CreateTestLockOrderFulfillment creates a test LockOrderFulfillment with defaults or custom values
-func CreateTestLockOrderFulfillment(overrides map[string]interface{}) (*ent.LockOrderFulfillment, error) {
+// CreateTestPaymentOrderFulfillment creates a test PaymentOrderFulfillment with defaults or custom values
+func CreateTestPaymentOrderFulfillment(overrides map[string]interface{}) (*ent.PaymentOrderFulfillment, error) {
 
 	// Default payload
 	payload := map[string]interface{}{
@@ -359,18 +347,20 @@ func CreateTestLockOrderFulfillment(overrides map[string]interface{}) (*ent.Lock
 		payload[key] = value
 	}
 
-	// Create lock order
+	// Create payment order if not provided
 	if payload["orderId"] == nil {
-		order, _ := CreateTestLockPaymentOrder(nil)
+		// Create a provider order by default for fulfillments
+		token, _ := CreateERC20Token(map[string]interface{}{})
+		order, _ := CreateTestPaymentOrder(token, map[string]interface{}{"provider": nil})
 		payload["orderId"] = order.ID.String()
 	}
 
-	// Create LockOrderFulfillment
-	fulfillment, err := db.Client.LockOrderFulfillment.
+	// Create PaymentOrderFulfillment
+	fulfillment, err := db.Client.PaymentOrderFulfillment.
 		Create().
 		SetTxID(payload["tx_id"].(string)).
 		SetOrderID(payload["orderId"].(uuid.UUID)).
-		SetValidationStatus(lockorderfulfillment.ValidationStatus(payload["validation_status"].(string))).
+		SetValidationStatus(paymentorderfulfillment.ValidationStatus(payload["validation_status"].(string))).
 		Save(context.Background())
 
 	return fulfillment, err
@@ -501,7 +491,7 @@ func CreateTestProviderProfile(overrides map[string]interface{}) (*ent.ProviderP
 	return profile, err
 }
 
-func AddProvisionBucketToLockPaymentOrder(order *ent.LockPaymentOrder, bucketId int) (*ent.LockPaymentOrder, error) {
+func AddProvisionBucketToPaymentOrder(order *ent.PaymentOrder, bucketId int) (*ent.PaymentOrder, error) {
 	order, err := order.
 		Update().
 		SetProvisionBucketID(bucketId).

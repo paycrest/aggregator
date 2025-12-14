@@ -266,15 +266,6 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 		return nil
 	}
 
-	// Fetch the recipient
-	recipient := paymentOrder.Edges.Recipient
-	if recipient == nil {
-		recipient, err = paymentOrder.QueryRecipient().Only(ctx)
-		if err != nil {
-			return err
-		}
-	}
-
 	// Fetch the token
 	token := paymentOrder.Edges.Token
 	if token == nil {
@@ -289,7 +280,7 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 
 	institution, err := storage.Client.Institution.
 		Query().
-		Where(institutionEnt.CodeEQ(recipient.Institution)).
+		Where(institutionEnt.CodeEQ(paymentOrder.Institution)).
 		WithFiatCurrency().
 		Only(ctx)
 	if err != nil {
@@ -297,6 +288,10 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 	}
 
 	// Create the payload
+	var providerID string
+	if paymentOrder.Edges.Provider != nil {
+		providerID = paymentOrder.Edges.Provider.ID
+	}
 	payloadStruct := types.PaymentOrderWebhookPayload{
 		Event: event,
 		Data: types.PaymentOrderWebhookData{
@@ -313,11 +308,11 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 			SenderID:       profile.ID,
 			Recipient: types.PaymentOrderRecipient{
 				Currency:          institution.Edges.FiatCurrency.Code,
-				Institution:       recipient.Institution,
-				AccountIdentifier: recipient.AccountIdentifier,
-				AccountName:       recipient.AccountName,
-				ProviderID:        recipient.ProviderID,
-				Memo:              recipient.Memo,
+				Institution:       paymentOrder.Institution,
+				AccountIdentifier: paymentOrder.AccountIdentifier,
+				AccountName:       paymentOrder.AccountName,
+				ProviderID:        providerID,
+				Memo:              paymentOrder.Memo,
 			},
 			FromAddress:   paymentOrder.FromAddress,
 			ReturnAddress: paymentOrder.ReturnAddress,

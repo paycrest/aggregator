@@ -37,7 +37,7 @@ var testCtx = struct {
 	currency     *ent.FiatCurrency
 	token        *ent.Token
 	apiKeySecret string
-	lockOrder    *ent.LockPaymentOrder
+	lockOrder    *ent.PaymentOrder
 }{}
 
 func setup() error {
@@ -114,7 +114,7 @@ func setup() error {
 	for i := 0; i < 10; i++ {
 		// Skip sleep in test mode to avoid timeout
 		// time.Sleep(time.Duration(time.Duration(rand.Intn(10)) * time.Second))
-		_, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+		_, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 			"gateway_id": uuid.New().String(),
 			"provider":   providerProfile,
 		})
@@ -263,7 +263,7 @@ func TestProvider(t *testing.T) {
 
 		t.Run("fetch orders with cancellation reasons", func(t *testing.T) {
 			// Create a test order with cancellation reasons
-			order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+			order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 				"gateway_id":           uuid.New().String(),
 				"provider":             testCtx.provider,
 				"cancellation_reasons": []string{"Out of stock", "Payment failed"},
@@ -319,7 +319,7 @@ func TestProvider(t *testing.T) {
 
 		t.Run("fetch single order with cancellation reasons", func(t *testing.T) {
 			// Create a test order with cancellation reasons
-			order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+			order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 				"gateway_id":           uuid.New().String(),
 				"provider":             testCtx.provider,
 				"cancellation_reasons": []string{"Out of stock", "Payment failed"},
@@ -367,7 +367,7 @@ func TestProvider(t *testing.T) {
 
 		t.Run("fetch order without cancellation reasons", func(t *testing.T) {
 			// Create a test order without cancellation reasons
-			order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+			order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 				"gateway_id":           uuid.New().String(),
 				"provider":             testCtx.provider,
 				"cancellation_reasons": []string{},
@@ -730,7 +730,7 @@ func TestProvider(t *testing.T) {
 
 		t.Run("should only calculate volumes of settled orders", func(t *testing.T) {
 			// Create a settled order
-			_, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+			_, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 				"gateway_id": uuid.New().String(),
 				"provider":   testCtx.provider,
 				"status":     "settled",
@@ -1044,7 +1044,7 @@ func TestProvider(t *testing.T) {
 
 			t.Run("Invalid Provider ID", func(t *testing.T) {
 
-				order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+				order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 					"gateway_id": uuid.New().String(),
 					"provider":   testCtx.provider,
 				})
@@ -1099,7 +1099,7 @@ func TestProvider(t *testing.T) {
 			})
 
 			t.Run("Order Id that doesn't Exist", func(t *testing.T) {
-				order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+				order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 					"gateway_id": uuid.New().String(),
 					"provider":   testCtx.provider,
 				})
@@ -1146,7 +1146,7 @@ func TestProvider(t *testing.T) {
 
 		t.Run("when data is accurate", func(t *testing.T) {
 
-			order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+			order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 				"gateway_id": uuid.New().String(),
 				"provider":   testCtx.provider,
 			})
@@ -1272,7 +1272,7 @@ func TestProvider(t *testing.T) {
 
 			t.Run("Invalid Provider ID", func(t *testing.T) {
 
-				order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+				order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 					"gateway_id": uuid.New().String(),
 					"provider":   testCtx.provider,
 				})
@@ -1328,7 +1328,7 @@ func TestProvider(t *testing.T) {
 
 			t.Run("Order Id that doesn't Exist", func(t *testing.T) {
 
-				order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+				order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 					"gateway_id": uuid.New().String(),
 					"provider":   testCtx.provider,
 				})
@@ -1383,7 +1383,7 @@ func TestProvider(t *testing.T) {
 			})
 
 			t.Run("when redis is not initialized", func(t *testing.T) {
-				order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+				order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 					"gateway_id": uuid.New().String(),
 					"provider":   testCtx.provider,
 				})
@@ -1420,7 +1420,7 @@ func TestProvider(t *testing.T) {
 
 		t.Run("when data is accurate", func(t *testing.T) {
 
-			order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+			order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 				"gateway_id": uuid.New().String(),
 				"provider":   testCtx.provider,
 			})
@@ -1555,7 +1555,7 @@ func TestProvider(t *testing.T) {
 			})
 
 			t.Run("Order Id that doesn't Exist", func(t *testing.T) {
-				order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+				order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 					"gateway_id": uuid.New().String(),
 					"provider":   testCtx.provider,
 				})
@@ -1609,7 +1609,7 @@ func TestProvider(t *testing.T) {
 		})
 
 		t.Run("exclude Order For Provider", func(t *testing.T) {
-			order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+			order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 				"gateway_id": uuid.New().String(),
 				"provider":   testCtx.provider,
 			})
@@ -1676,7 +1676,7 @@ func TestProvider(t *testing.T) {
 		})
 
 		t.Run("when data is accurate", func(t *testing.T) {
-			order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+			order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 				"gateway_id": uuid.New().String(),
 				"provider":   testCtx.provider,
 			})
@@ -1838,7 +1838,7 @@ func TestProvider(t *testing.T) {
 
 			t.Run("Order Id that doesn't Exist", func(t *testing.T) {
 
-				order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+				order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 					"gateway_id": uuid.New().String(),
 					"provider":   testCtx.provider,
 				})
@@ -1896,7 +1896,7 @@ func TestProvider(t *testing.T) {
 		})
 
 		t.Run("when data is accurate", func(t *testing.T) {
-			order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+			order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 				"gateway_id": uuid.New().String(),
 				"provider":   testCtx.provider,
 				"status":     "fulfilled",
@@ -1913,11 +1913,11 @@ func TestProvider(t *testing.T) {
 			assert.NoError(t, err)
 
 			// Associate the provision bucket with the order
-			order, err = test.AddProvisionBucketToLockPaymentOrder(order, provisionBucket.ID)
+			order, err = test.AddProvisionBucketToPaymentOrder(order, provisionBucket.ID)
 			assert.NoError(t, err)
 
 			tx_id := "0x123" + fmt.Sprint(rand.Intn(1000000))
-			_, err = test.CreateTestLockOrderFulfillment(map[string]interface{}{
+			_, err = test.CreateTestPaymentOrderFulfillment(map[string]interface{}{
 				"tx_id":             tx_id,
 				"psp":               "psp-name",
 				"validation_status": "success",
@@ -1981,7 +1981,7 @@ func TestProvider(t *testing.T) {
 		t.Run("should search by account identifier", func(t *testing.T) {
 			// Create a test order with a specific account identifier
 			accountIdentifier := "test-account-98765"
-			order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+			order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 				"gateway_id":         uuid.New().String(),
 				"provider":           testCtx.provider,
 				"account_identifier": accountIdentifier,
@@ -2084,7 +2084,7 @@ func TestProvider(t *testing.T) {
 
 			// Create lock payment order for second provider
 			uniqueGatewayID := "unique-gateway-second-provider"
-			lockOrder2, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+			lockOrder2, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 				"gateway_id": uniqueGatewayID,
 				"provider":   providerProfile2,
 			})

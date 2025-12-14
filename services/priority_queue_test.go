@@ -20,7 +20,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
+	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -57,7 +57,7 @@ type TestPriorityQueueService struct {
 }
 
 // Override sendOrderRequest to mock the provider notification
-func (s *TestPriorityQueueService) sendOrderRequest(ctx context.Context, order types.LockPaymentOrderFields) error {
+func (s *TestPriorityQueueService) sendOrderRequest(ctx context.Context, order types.PaymentOrderFields) error {
 	// Mock successful balance reservation and provider notification
 	bucketCurrency := order.ProvisionBucket.Edges.Currency
 	amount := order.Amount.Mul(order.Rate).Round(int32(bucketCurrency.Decimals))
@@ -94,7 +94,7 @@ func (s *TestPriorityQueueService) notifyProvider(ctx context.Context, orderRequ
 // This is needed because matchRate is defined on *PriorityQueueService, so when it calls
 // s.sendOrderRequest, it calls PriorityQueueService.sendOrderRequest, not TestPriorityQueueService.sendOrderRequest.
 // By overriding matchRate, we ensure it uses the test's sendOrderRequest.
-func (s *TestPriorityQueueService) matchRate(ctx context.Context, redisKey string, orderIDPrefix string, order types.LockPaymentOrderFields, excludeList []string) error {
+func (s *TestPriorityQueueService) matchRate(ctx context.Context, redisKey string, orderIDPrefix string, order types.PaymentOrderFields, excludeList []string) error {
 	// Duplicate the matchRate logic but use the test's sendOrderRequest
 	for index := 0; ; index++ {
 		providerData, err := db.RedisClient.LIndex(ctx, redisKey, int64(index)).Result()
@@ -437,7 +437,7 @@ func setupForPQ() error {
 	}
 
 	// Set up payment order
-	_, err = test.CreateTestLockPaymentOrder(map[string]interface{}{
+	_, err = test.CreateTestPaymentOrder(nil, map[string]interface{}{
 		"provider":   privateProviderProfile,
 		"token_id":   testCtxForPQ.token.ID,
 		"gateway_id": "order-12345",
@@ -445,7 +445,7 @@ func setupForPQ() error {
 	if err != nil {
 		return err
 	}
-	_, err = test.CreateTestLockPaymentOrder(map[string]interface{}{
+	_, err = test.CreateTestPaymentOrder(nil, map[string]interface{}{
 		"provider": publicProviderProfile,
 		"token_id": testCtxForPQ.token.ID,
 	})
@@ -574,19 +574,19 @@ func TestPriorityQueueTest(t *testing.T) {
 			Only(ctx)
 		assert.NoError(t, err)
 
-		_order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+		_order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 			"provider":   testCtxForPQ.publicProviderProfile,
 			"rate":       100.0,
 			"token_id":   testCtxForPQ.token.ID,
 			"gateway_id": "order-1",
 		})
 		assert.NoError(t, err)
-		_, err = test.AddProvisionBucketToLockPaymentOrder(_order, bucket.ID)
+		_, err = test.AddProvisionBucketToPaymentOrder(_order, bucket.ID)
 		assert.NoError(t, err)
 
-		order, err := db.Client.LockPaymentOrder.
+		order, err := db.Client.PaymentOrder.
 			Query().
-			Where(lockpaymentorder.IDEQ(_order.ID)).
+			Where(paymentorder.IDEQ(_order.ID)).
 			WithProvisionBucket(func(pb *ent.ProvisionBucketQuery) {
 				pb.WithCurrency()
 			}).
@@ -597,7 +597,7 @@ func TestPriorityQueueTest(t *testing.T) {
 
 		service.CreatePriorityQueueForBucket(ctx, _bucket)
 
-		err = service.AssignLockPaymentOrder(ctx, types.LockPaymentOrderFields{
+		err = service.AssignLockPaymentOrder(ctx, types.PaymentOrderFields{
 			ID:                order.ID,
 			Token:             testCtxForPQ.token,
 			GatewayID:         order.GatewayID,
@@ -631,7 +631,7 @@ func TestPriorityQueueTest(t *testing.T) {
 			"currency_id": testCtxForPQ.currency.ID,
 		})
 		assert.NoError(t, err)
-		_order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+		_order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 			"provider":   testCtxForPQ.publicProviderProfile,
 			"token_id":   int(testCtxForPQ.token.ID),
 			"gateway_id": "order-1234",
@@ -644,15 +644,15 @@ func TestPriorityQueueTest(t *testing.T) {
 			t.Fatal("LockPaymentOrder is nil - creation failed")
 		}
 
-		_, err = test.AddProvisionBucketToLockPaymentOrder(_order, bucket.ID)
+		_, err = test.AddProvisionBucketToPaymentOrder(_order, bucket.ID)
 		assert.NoError(t, err)
 
 		_, err = db.RedisClient.RPush(context.Background(), fmt.Sprintf("order_exclude_list_%s", _order.ID), testCtxForPQ.publicProviderProfile.ID).Result()
 		assert.NoError(t, err)
 
-		order, err := db.Client.LockPaymentOrder.
+		order, err := db.Client.PaymentOrder.
 			Query().
-			Where(lockpaymentorder.IDEQ(_order.ID)).
+			Where(paymentorder.IDEQ(_order.ID)).
 			WithProvisionBucket(func(pb *ent.ProvisionBucketQuery) {
 				pb.WithCurrency()
 			}).
@@ -673,7 +673,7 @@ func TestPriorityQueueTest(t *testing.T) {
 				})
 			})
 
-		err = service.sendOrderRequest(context.Background(), types.LockPaymentOrderFields{
+		err = service.sendOrderRequest(context.Background(), types.PaymentOrderFields{
 			ID:                order.ID,
 			ProviderID:        testCtxForPQ.publicProviderProfile.ID,
 			Token:             testCtxForPQ.token,
@@ -738,14 +738,14 @@ func TestPriorityQueueTest(t *testing.T) {
 	// 			"currency_id": testCtxForPQ.currency.ID,
 	// 		})
 	// 		assert.NoError(t, err)
-	// 		_order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+	// 		_order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 	// 			"provider": testCtxForPQ.publicProviderProfile,
 	// 			"token_id":  testCtxForPQ.token.ID,
 	// 			"status":   lockpaymentorder.StatusProcessing.String(),
 	// 		})
 	// 		assert.NoError(t, err)
 
-	// 		_, err = test.AddProvisionBucketToLockPaymentOrder(_order, bucket.ID)
+	// 		_, err = test.AddProvisionBucketToPaymentOrder(_order, bucket.ID)
 	// 		assert.NoError(t, err)
 
 	// 		service.ReassignUnfulfilledLockOrders()
@@ -767,7 +767,7 @@ func TestPriorityQueueTest(t *testing.T) {
 	// 			"currency_id": testCtxForPQ.currency.ID,
 	// 		})
 	// 		assert.NoError(t, err)
-	// 		_order, err := test.CreateTestLockPaymentOrder(map[string]interface{}{
+	// 		_order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 	// 			"provider":  testCtxForPQ.privateProviderProfile,
 	// 			"token_id":   testCtxForPQ.token.ID,
 	// 			"status":    lockpaymentorder.StatusProcessing.String(),
@@ -779,7 +779,7 @@ func TestPriorityQueueTest(t *testing.T) {
 	// 		_, err = db.RedisClient.RPush(context.Background(), orderKey, testCtxForPQ.privateProviderProfile.ID).Result()
 	// 		assert.NoError(t, err)
 
-	// 		_, err = test.AddProvisionBucketToLockPaymentOrder(_order, bucket.ID)
+	// 		_, err = test.AddProvisionBucketToPaymentOrder(_order, bucket.ID)
 	// 		assert.NoError(t, err)
 
 	// 		service.ReassignUnfulfilledLockOrders()

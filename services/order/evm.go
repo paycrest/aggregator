@@ -18,11 +18,9 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
-	"github.com/paycrest/aggregator/ent/institution"
-	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	tokenent "github.com/paycrest/aggregator/ent/token"
@@ -65,75 +63,22 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 			tq.WithNetwork()
 		}).
 		WithSenderProfile().
-		WithRecipient().
-		WithReceiveAddress().
-		WithLinkedAddress().
 		Only(ctx)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.fetchOrder: %w", orderIDPrefix, err)
 	}
 
-	var address string
-	if order.Edges.ReceiveAddress != nil {
-		address = order.Edges.ReceiveAddress.Address
-	} else if order.Edges.LinkedAddress != nil {
-		address = order.Edges.LinkedAddress.Address
-
-		// Update the rate
-		institution, err := db.Client.Institution.
-			Query().
-			Where(institution.CodeEQ(order.Edges.Recipient.Institution)).
-			WithFiatCurrency().
-			Only(ctx)
-		if err != nil {
-			return fmt.Errorf("%s - CreateOrder.fetchInstitution: %w", orderIDPrefix, err)
-		}
-
-		rate, err := utils.GetTokenRateFromQueue(order.Edges.Token.Symbol, order.Amount, institution.Edges.FiatCurrency.Code, institution.Edges.FiatCurrency.MarketRate)
-		if err != nil {
-			return fmt.Errorf("%s - CreateOrder.getRate: %w", orderIDPrefix, err)
-		}
-
-		if !rate.Equal(order.Rate) {
-			// Update order rate and amount_in_usd
-			amountInUSD := utils.CalculatePaymentOrderAmountInUSD(order.Amount, order.Edges.Token, institution)
-
-			_, err = db.Client.PaymentOrder.
-				Update().
-				Where(paymentorder.IDEQ(orderID)).
-				SetRate(rate).
-				SetAmountInUsd(amountInUSD).
-				Save(ctx)
-			if err != nil {
-				return fmt.Errorf("%s - CreateOrder.updateOrder: %w", orderIDPrefix, err)
-			}
-
-			order.Rate = rate
-
-			// Refresh order from db
-			order, err = db.Client.PaymentOrder.
-				Query().
-				Where(paymentorder.IDEQ(orderID)).
-				WithToken(func(tq *ent.TokenQuery) {
-					tq.WithNetwork()
-				}).
-				WithSenderProfile().
-				WithRecipient().
-				WithReceiveAddress().
-				WithLinkedAddress().
-				Only(ctx)
-			if err != nil {
-				return fmt.Errorf("%s - CreateOrder.refreshOrder: %w", orderIDPrefix, err)
-			}
-		}
+	if order.ReceiveAddress == "" {
+		return fmt.Errorf("%s - CreateOrder.missingReceiveAddress: payment order has no receive address", orderIDPrefix)
 	}
+	address := order.ReceiveAddress
 
 	if order.MessageHash != "" {
 		return nil
 	}
 
 	// Create createOrder data
-	encryptedOrderRecipient, err := cryptoUtils.EncryptOrderRecipient(order.Edges.Recipient)
+	encryptedOrderRecipient, err := cryptoUtils.EncryptOrderRecipient(order)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.encryptOrderRecipient: %w", orderIDPrefix, err)
 	}
@@ -194,12 +139,12 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderID string) error {
 	orderIDPrefix := strings.Split(orderID, "-")[0]
 
-	// Fetch lock order from db
-	lockOrder, err := db.Client.LockPaymentOrder.
+	// Fetch payment order from db
+	lockOrder, err := db.Client.PaymentOrder.
 		Query().
 		Where(
-			lockpaymentorder.GatewayIDEQ(orderID),
-			lockpaymentorder.HasTokenWith(
+			paymentorder.GatewayIDEQ(orderID),
+			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
 				),
@@ -242,13 +187,13 @@ func (s *OrderEVM) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 	orderIDPrefix := strings.Split(orderID.String(), "-")[0]
 
 	// Fetch payment order from db
-	order, err := db.Client.LockPaymentOrder.
+	order, err := db.Client.PaymentOrder.
 		Query().
 		Where(
-			lockpaymentorder.IDEQ(orderID),
-			lockpaymentorder.StatusEQ(lockpaymentorder.StatusValidated),
-			lockpaymentorder.HasFulfillmentsWith(
-				lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusSuccess),
+			paymentorder.IDEQ(orderID),
+			paymentorder.StatusEQ(paymentorder.StatusValidated),
+			paymentorder.HasFulfillmentsWith(
+				paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusSuccess),
 			),
 		).
 		WithToken(func(tq *ent.TokenQuery) {
@@ -336,7 +281,7 @@ func (s *OrderEVM) createOrderCallData(order *ent.PaymentOrder, encryptedOrderRe
 }
 
 // settleCallData creates the data for the settle method in the gateway contract
-func (s *OrderEVM) settleCallData(ctx context.Context, order *ent.LockPaymentOrder) ([]byte, error) {
+func (s *OrderEVM) settleCallData(ctx context.Context, order *ent.PaymentOrder) ([]byte, error) {
 	gatewayABI, err := abi.JSON(strings.NewReader(contracts.GatewayMetaData.ABI))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse GatewayOrder ABI: %w", err)

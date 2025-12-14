@@ -32,8 +32,6 @@ const (
 	EdgeNetwork = "network"
 	// EdgePaymentOrders holds the string denoting the payment_orders edge name in mutations.
 	EdgePaymentOrders = "payment_orders"
-	// EdgeLockPaymentOrders holds the string denoting the lock_payment_orders edge name in mutations.
-	EdgeLockPaymentOrders = "lock_payment_orders"
 	// EdgeSenderOrderTokens holds the string denoting the sender_order_tokens edge name in mutations.
 	EdgeSenderOrderTokens = "sender_order_tokens"
 	// EdgeProviderOrderTokens holds the string denoting the provider_order_tokens edge name in mutations.
@@ -54,13 +52,6 @@ const (
 	PaymentOrdersInverseTable = "payment_orders"
 	// PaymentOrdersColumn is the table column denoting the payment_orders relation/edge.
 	PaymentOrdersColumn = "token_payment_orders"
-	// LockPaymentOrdersTable is the table that holds the lock_payment_orders relation/edge.
-	LockPaymentOrdersTable = "lock_payment_orders"
-	// LockPaymentOrdersInverseTable is the table name for the LockPaymentOrder entity.
-	// It exists in this package in order to avoid circular dependency with the "lockpaymentorder" package.
-	LockPaymentOrdersInverseTable = "lock_payment_orders"
-	// LockPaymentOrdersColumn is the table column denoting the lock_payment_orders relation/edge.
-	LockPaymentOrdersColumn = "token_lock_payment_orders"
 	// SenderOrderTokensTable is the table that holds the sender_order_tokens relation/edge.
 	SenderOrderTokensTable = "sender_order_tokens"
 	// SenderOrderTokensInverseTable is the table name for the SenderOrderToken entity.
@@ -191,20 +182,6 @@ func ByPaymentOrders(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
-// ByLockPaymentOrdersCount orders the results by lock_payment_orders count.
-func ByLockPaymentOrdersCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newLockPaymentOrdersStep(), opts...)
-	}
-}
-
-// ByLockPaymentOrders orders the results by lock_payment_orders terms.
-func ByLockPaymentOrders(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newLockPaymentOrdersStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-
 // BySenderOrderTokensCount orders the results by sender_order_tokens count.
 func BySenderOrderTokensCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -244,13 +221,6 @@ func newPaymentOrdersStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(PaymentOrdersInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, PaymentOrdersTable, PaymentOrdersColumn),
-	)
-}
-func newLockPaymentOrdersStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(LockPaymentOrdersInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, LockPaymentOrdersTable, LockPaymentOrdersColumn),
 	)
 }
 func newSenderOrderTokensStep() *sqlgraph.Step {

@@ -490,7 +490,7 @@ func HasAssignedOrders() predicate.ProviderProfile {
 }
 
 // HasAssignedOrdersWith applies the HasEdge predicate on the "assigned_orders" edge with a given conditions (other predicates).
-func HasAssignedOrdersWith(preds ...predicate.LockPaymentOrder) predicate.ProviderProfile {
+func HasAssignedOrdersWith(preds ...predicate.PaymentOrder) predicate.ProviderProfile {
 	return predicate.ProviderProfile(func(s *sql.Selector) {
 		step := newAssignedOrdersStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {

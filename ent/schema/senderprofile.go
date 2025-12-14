@@ -48,7 +48,5 @@ func (SenderProfile) Edges() []ent.Edge {
 			Annotations(entsql.OnDelete(entsql.SetNull)),
 		edge.To("order_tokens", SenderOrderToken.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
-		edge.To("linked_address", LinkedAddress.Type).
-			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }

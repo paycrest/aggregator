@@ -60,7 +60,7 @@ func (ProviderProfile) Edges() []ent.Edge {
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("provider_rating", ProviderRating.Type).
 			Unique(),
-		edge.To("assigned_orders", LockPaymentOrder.Type).
+		edge.To("assigned_orders", PaymentOrder.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("fiat_accounts", ProviderFiatAccount.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),

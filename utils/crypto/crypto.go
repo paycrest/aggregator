@@ -251,11 +251,15 @@ func GenerateTronAccountFromIndex(accountIndex int) (wallet *tronWallet.TronWall
 }
 
 // EncryptOrderRecipient encrypts the recipient details using the aggregator's public key
-func EncryptOrderRecipient(recipient *ent.PaymentOrderRecipient) (string, error) {
+func EncryptOrderRecipient(order *ent.PaymentOrder) (string, error) {
 	// Generate a cryptographically secure random nonce
 	nonce := make([]byte, 12)
 	if _, err := rand.Read(nonce); err != nil {
 		return "", fmt.Errorf("failed to generate nonce: %w", err)
+	}
+	var providerID string
+	if order.Edges.Provider != nil {
+		providerID = order.Edges.Provider.ID
 	}
 	message := struct {
 		Nonce             string
@@ -266,7 +270,7 @@ func EncryptOrderRecipient(recipient *ent.PaymentOrderRecipient) (string, error)
 		Memo              string
 		Metadata          map[string]interface{}
 	}{
-		base64.StdEncoding.EncodeToString(nonce), recipient.AccountIdentifier, recipient.AccountName, recipient.Institution, recipient.ProviderID, recipient.Memo, recipient.Metadata,
+		base64.StdEncoding.EncodeToString(nonce), order.AccountIdentifier, order.AccountName, order.Institution, providerID, order.Memo, order.Metadata,
 	}
 
 	// Encrypt with the public key of the aggregator

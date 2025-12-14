@@ -9,6 +9,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 const (
@@ -22,6 +23,10 @@ const (
 	FieldUpdatedAt = "updated_at"
 	// FieldAmount holds the string denoting the amount field in the database.
 	FieldAmount = "amount"
+	// FieldRate holds the string denoting the rate field in the database.
+	FieldRate = "rate"
+	// FieldAmountInUsd holds the string denoting the amount_in_usd field in the database.
+	FieldAmountInUsd = "amount_in_usd"
 	// FieldAmountPaid holds the string denoting the amount_paid field in the database.
 	FieldAmountPaid = "amount_paid"
 	// FieldAmountReturned holds the string denoting the amount_returned field in the database.
@@ -32,57 +37,70 @@ const (
 	FieldSenderFee = "sender_fee"
 	// FieldNetworkFee holds the string denoting the network_fee field in the database.
 	FieldNetworkFee = "network_fee"
-	// FieldRate holds the string denoting the rate field in the database.
-	FieldRate = "rate"
+	// FieldProtocolFee holds the string denoting the protocol_fee field in the database.
+	FieldProtocolFee = "protocol_fee"
+	// FieldOrderPercent holds the string denoting the order_percent field in the database.
+	FieldOrderPercent = "order_percent"
+	// FieldFeePercent holds the string denoting the fee_percent field in the database.
+	FieldFeePercent = "fee_percent"
 	// FieldTxHash holds the string denoting the tx_hash field in the database.
 	FieldTxHash = "tx_hash"
 	// FieldBlockNumber holds the string denoting the block_number field in the database.
 	FieldBlockNumber = "block_number"
+	// FieldMessageHash holds the string denoting the message_hash field in the database.
+	FieldMessageHash = "message_hash"
+	// FieldGatewayID holds the string denoting the gateway_id field in the database.
+	FieldGatewayID = "gateway_id"
 	// FieldFromAddress holds the string denoting the from_address field in the database.
 	FieldFromAddress = "from_address"
 	// FieldReturnAddress holds the string denoting the return_address field in the database.
 	FieldReturnAddress = "return_address"
-	// FieldReceiveAddressText holds the string denoting the receive_address_text field in the database.
-	FieldReceiveAddressText = "receive_address_text"
-	// FieldFeePercent holds the string denoting the fee_percent field in the database.
-	FieldFeePercent = "fee_percent"
+	// FieldReceiveAddress holds the string denoting the receive_address field in the database.
+	FieldReceiveAddress = "receive_address"
+	// FieldReceiveAddressSalt holds the string denoting the receive_address_salt field in the database.
+	FieldReceiveAddressSalt = "receive_address_salt"
+	// FieldReceiveAddressExpiry holds the string denoting the receive_address_expiry field in the database.
+	FieldReceiveAddressExpiry = "receive_address_expiry"
 	// FieldFeeAddress holds the string denoting the fee_address field in the database.
 	FieldFeeAddress = "fee_address"
-	// FieldGatewayID holds the string denoting the gateway_id field in the database.
-	FieldGatewayID = "gateway_id"
-	// FieldMessageHash holds the string denoting the message_hash field in the database.
-	FieldMessageHash = "message_hash"
+	// FieldInstitution holds the string denoting the institution field in the database.
+	FieldInstitution = "institution"
+	// FieldAccountIdentifier holds the string denoting the account_identifier field in the database.
+	FieldAccountIdentifier = "account_identifier"
+	// FieldAccountName holds the string denoting the account_name field in the database.
+	FieldAccountName = "account_name"
+	// FieldMemo holds the string denoting the memo field in the database.
+	FieldMemo = "memo"
+	// FieldMetadata holds the string denoting the metadata field in the database.
+	FieldMetadata = "metadata"
+	// FieldSender holds the string denoting the sender field in the database.
+	FieldSender = "sender"
 	// FieldReference holds the string denoting the reference field in the database.
 	FieldReference = "reference"
+	// FieldCancellationCount holds the string denoting the cancellation_count field in the database.
+	FieldCancellationCount = "cancellation_count"
+	// FieldCancellationReasons holds the string denoting the cancellation_reasons field in the database.
+	FieldCancellationReasons = "cancellation_reasons"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
-	// FieldAmountInUsd holds the string denoting the amount_in_usd field in the database.
-	FieldAmountInUsd = "amount_in_usd"
 	// FieldOrderType holds the string denoting the order_type field in the database.
 	FieldOrderType = "order_type"
-	// EdgeSenderProfile holds the string denoting the sender_profile edge name in mutations.
-	EdgeSenderProfile = "sender_profile"
 	// EdgeToken holds the string denoting the token edge name in mutations.
 	EdgeToken = "token"
-	// EdgeLinkedAddress holds the string denoting the linked_address edge name in mutations.
-	EdgeLinkedAddress = "linked_address"
-	// EdgeReceiveAddress holds the string denoting the receive_address edge name in mutations.
-	EdgeReceiveAddress = "receive_address"
-	// EdgeRecipient holds the string denoting the recipient edge name in mutations.
-	EdgeRecipient = "recipient"
-	// EdgeTransactions holds the string denoting the transactions edge name in mutations.
-	EdgeTransactions = "transactions"
+	// EdgeSenderProfile holds the string denoting the sender_profile edge name in mutations.
+	EdgeSenderProfile = "sender_profile"
 	// EdgePaymentWebhook holds the string denoting the payment_webhook edge name in mutations.
 	EdgePaymentWebhook = "payment_webhook"
+	// EdgeProvider holds the string denoting the provider edge name in mutations.
+	EdgeProvider = "provider"
+	// EdgeProvisionBucket holds the string denoting the provision_bucket edge name in mutations.
+	EdgeProvisionBucket = "provision_bucket"
+	// EdgeFulfillments holds the string denoting the fulfillments edge name in mutations.
+	EdgeFulfillments = "fulfillments"
+	// EdgeTransactions holds the string denoting the transactions edge name in mutations.
+	EdgeTransactions = "transactions"
 	// Table holds the table name of the paymentorder in the database.
 	Table = "payment_orders"
-	// SenderProfileTable is the table that holds the sender_profile relation/edge.
-	SenderProfileTable = "payment_orders"
-	// SenderProfileInverseTable is the table name for the SenderProfile entity.
-	// It exists in this package in order to avoid circular dependency with the "senderprofile" package.
-	SenderProfileInverseTable = "sender_profiles"
-	// SenderProfileColumn is the table column denoting the sender_profile relation/edge.
-	SenderProfileColumn = "sender_profile_payment_orders"
 	// TokenTable is the table that holds the token relation/edge.
 	TokenTable = "payment_orders"
 	// TokenInverseTable is the table name for the Token entity.
@@ -90,34 +108,13 @@ const (
 	TokenInverseTable = "tokens"
 	// TokenColumn is the table column denoting the token relation/edge.
 	TokenColumn = "token_payment_orders"
-	// LinkedAddressTable is the table that holds the linked_address relation/edge.
-	LinkedAddressTable = "payment_orders"
-	// LinkedAddressInverseTable is the table name for the LinkedAddress entity.
-	// It exists in this package in order to avoid circular dependency with the "linkedaddress" package.
-	LinkedAddressInverseTable = "linked_addresses"
-	// LinkedAddressColumn is the table column denoting the linked_address relation/edge.
-	LinkedAddressColumn = "linked_address_payment_orders"
-	// ReceiveAddressTable is the table that holds the receive_address relation/edge.
-	ReceiveAddressTable = "receive_addresses"
-	// ReceiveAddressInverseTable is the table name for the ReceiveAddress entity.
-	// It exists in this package in order to avoid circular dependency with the "receiveaddress" package.
-	ReceiveAddressInverseTable = "receive_addresses"
-	// ReceiveAddressColumn is the table column denoting the receive_address relation/edge.
-	ReceiveAddressColumn = "payment_order_receive_address"
-	// RecipientTable is the table that holds the recipient relation/edge.
-	RecipientTable = "payment_order_recipients"
-	// RecipientInverseTable is the table name for the PaymentOrderRecipient entity.
-	// It exists in this package in order to avoid circular dependency with the "paymentorderrecipient" package.
-	RecipientInverseTable = "payment_order_recipients"
-	// RecipientColumn is the table column denoting the recipient relation/edge.
-	RecipientColumn = "payment_order_recipient"
-	// TransactionsTable is the table that holds the transactions relation/edge.
-	TransactionsTable = "transaction_logs"
-	// TransactionsInverseTable is the table name for the TransactionLog entity.
-	// It exists in this package in order to avoid circular dependency with the "transactionlog" package.
-	TransactionsInverseTable = "transaction_logs"
-	// TransactionsColumn is the table column denoting the transactions relation/edge.
-	TransactionsColumn = "payment_order_transactions"
+	// SenderProfileTable is the table that holds the sender_profile relation/edge.
+	SenderProfileTable = "payment_orders"
+	// SenderProfileInverseTable is the table name for the SenderProfile entity.
+	// It exists in this package in order to avoid circular dependency with the "senderprofile" package.
+	SenderProfileInverseTable = "sender_profiles"
+	// SenderProfileColumn is the table column denoting the sender_profile relation/edge.
+	SenderProfileColumn = "sender_profile_payment_orders"
 	// PaymentWebhookTable is the table that holds the payment_webhook relation/edge.
 	PaymentWebhookTable = "payment_webhooks"
 	// PaymentWebhookInverseTable is the table name for the PaymentWebhook entity.
@@ -125,6 +122,34 @@ const (
 	PaymentWebhookInverseTable = "payment_webhooks"
 	// PaymentWebhookColumn is the table column denoting the payment_webhook relation/edge.
 	PaymentWebhookColumn = "payment_order_payment_webhook"
+	// ProviderTable is the table that holds the provider relation/edge.
+	ProviderTable = "payment_orders"
+	// ProviderInverseTable is the table name for the ProviderProfile entity.
+	// It exists in this package in order to avoid circular dependency with the "providerprofile" package.
+	ProviderInverseTable = "provider_profiles"
+	// ProviderColumn is the table column denoting the provider relation/edge.
+	ProviderColumn = "provider_profile_assigned_orders"
+	// ProvisionBucketTable is the table that holds the provision_bucket relation/edge.
+	ProvisionBucketTable = "payment_orders"
+	// ProvisionBucketInverseTable is the table name for the ProvisionBucket entity.
+	// It exists in this package in order to avoid circular dependency with the "provisionbucket" package.
+	ProvisionBucketInverseTable = "provision_buckets"
+	// ProvisionBucketColumn is the table column denoting the provision_bucket relation/edge.
+	ProvisionBucketColumn = "provision_bucket_payment_orders"
+	// FulfillmentsTable is the table that holds the fulfillments relation/edge.
+	FulfillmentsTable = "payment_order_fulfillments"
+	// FulfillmentsInverseTable is the table name for the PaymentOrderFulfillment entity.
+	// It exists in this package in order to avoid circular dependency with the "paymentorderfulfillment" package.
+	FulfillmentsInverseTable = "payment_order_fulfillments"
+	// FulfillmentsColumn is the table column denoting the fulfillments relation/edge.
+	FulfillmentsColumn = "payment_order_fulfillments"
+	// TransactionsTable is the table that holds the transactions relation/edge.
+	TransactionsTable = "transaction_logs"
+	// TransactionsInverseTable is the table name for the TransactionLog entity.
+	// It exists in this package in order to avoid circular dependency with the "transactionlog" package.
+	TransactionsInverseTable = "transaction_logs"
+	// TransactionsColumn is the table column denoting the transactions relation/edge.
+	TransactionsColumn = "payment_order_transactions"
 )
 
 // Columns holds all SQL columns for paymentorder fields.
@@ -133,24 +158,36 @@ var Columns = []string{
 	FieldCreatedAt,
 	FieldUpdatedAt,
 	FieldAmount,
+	FieldRate,
+	FieldAmountInUsd,
 	FieldAmountPaid,
 	FieldAmountReturned,
 	FieldPercentSettled,
 	FieldSenderFee,
 	FieldNetworkFee,
-	FieldRate,
+	FieldProtocolFee,
+	FieldOrderPercent,
+	FieldFeePercent,
 	FieldTxHash,
 	FieldBlockNumber,
+	FieldMessageHash,
+	FieldGatewayID,
 	FieldFromAddress,
 	FieldReturnAddress,
-	FieldReceiveAddressText,
-	FieldFeePercent,
+	FieldReceiveAddress,
+	FieldReceiveAddressSalt,
+	FieldReceiveAddressExpiry,
 	FieldFeeAddress,
-	FieldGatewayID,
-	FieldMessageHash,
+	FieldInstitution,
+	FieldAccountIdentifier,
+	FieldAccountName,
+	FieldMemo,
+	FieldMetadata,
+	FieldSender,
 	FieldReference,
+	FieldCancellationCount,
+	FieldCancellationReasons,
 	FieldStatus,
-	FieldAmountInUsd,
 	FieldOrderType,
 }
 
@@ -158,7 +195,8 @@ var Columns = []string{
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
 	"api_key_payment_orders",
-	"linked_address_payment_orders",
+	"provider_profile_assigned_orders",
+	"provision_bucket_payment_orders",
 	"sender_profile_payment_orders",
 	"token_payment_orders",
 }
@@ -185,24 +223,52 @@ var (
 	DefaultUpdatedAt func() time.Time
 	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
 	UpdateDefaultUpdatedAt func() time.Time
+	// DefaultAmountPaid holds the default value on creation for the "amount_paid" field.
+	DefaultAmountPaid func() decimal.Decimal
+	// DefaultAmountReturned holds the default value on creation for the "amount_returned" field.
+	DefaultAmountReturned func() decimal.Decimal
+	// DefaultPercentSettled holds the default value on creation for the "percent_settled" field.
+	DefaultPercentSettled func() decimal.Decimal
+	// DefaultSenderFee holds the default value on creation for the "sender_fee" field.
+	DefaultSenderFee func() decimal.Decimal
+	// DefaultNetworkFee holds the default value on creation for the "network_fee" field.
+	DefaultNetworkFee func() decimal.Decimal
+	// DefaultProtocolFee holds the default value on creation for the "protocol_fee" field.
+	DefaultProtocolFee func() decimal.Decimal
+	// DefaultOrderPercent holds the default value on creation for the "order_percent" field.
+	DefaultOrderPercent func() decimal.Decimal
+	// DefaultFeePercent holds the default value on creation for the "fee_percent" field.
+	DefaultFeePercent func() decimal.Decimal
 	// TxHashValidator is a validator for the "tx_hash" field. It is called by the builders before save.
 	TxHashValidator func(string) error
 	// DefaultBlockNumber holds the default value on creation for the "block_number" field.
 	DefaultBlockNumber int64
+	// GatewayIDValidator is a validator for the "gateway_id" field. It is called by the builders before save.
+	GatewayIDValidator func(string) error
 	// FromAddressValidator is a validator for the "from_address" field. It is called by the builders before save.
 	FromAddressValidator func(string) error
 	// ReturnAddressValidator is a validator for the "return_address" field. It is called by the builders before save.
 	ReturnAddressValidator func(string) error
-	// ReceiveAddressTextValidator is a validator for the "receive_address_text" field. It is called by the builders before save.
-	ReceiveAddressTextValidator func(string) error
+	// ReceiveAddressValidator is a validator for the "receive_address" field. It is called by the builders before save.
+	ReceiveAddressValidator func(string) error
 	// FeeAddressValidator is a validator for the "fee_address" field. It is called by the builders before save.
 	FeeAddressValidator func(string) error
-	// GatewayIDValidator is a validator for the "gateway_id" field. It is called by the builders before save.
-	GatewayIDValidator func(string) error
-	// MessageHashValidator is a validator for the "message_hash" field. It is called by the builders before save.
-	MessageHashValidator func(string) error
+	// InstitutionValidator is a validator for the "institution" field. It is called by the builders before save.
+	InstitutionValidator func(string) error
+	// AccountIdentifierValidator is a validator for the "account_identifier" field. It is called by the builders before save.
+	AccountIdentifierValidator func(string) error
+	// AccountNameValidator is a validator for the "account_name" field. It is called by the builders before save.
+	AccountNameValidator func(string) error
+	// MemoValidator is a validator for the "memo" field. It is called by the builders before save.
+	MemoValidator func(string) error
+	// SenderValidator is a validator for the "sender" field. It is called by the builders before save.
+	SenderValidator func(string) error
 	// ReferenceValidator is a validator for the "reference" field. It is called by the builders before save.
 	ReferenceValidator func(string) error
+	// DefaultCancellationCount holds the default value on creation for the "cancellation_count" field.
+	DefaultCancellationCount int
+	// DefaultCancellationReasons holds the default value on creation for the "cancellation_reasons" field.
+	DefaultCancellationReasons []string
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -216,8 +282,10 @@ const DefaultStatus = StatusInitiated
 // Status values.
 const (
 	StatusInitiated  Status = "initiated"
-	StatusProcessing Status = "processing"
 	StatusPending    Status = "pending"
+	StatusProcessing Status = "processing"
+	StatusCancelled  Status = "cancelled"
+	StatusFulfilled  Status = "fulfilled"
 	StatusValidated  Status = "validated"
 	StatusExpired    Status = "expired"
 	StatusSettled    Status = "settled"
@@ -231,7 +299,7 @@ func (s Status) String() string {
 // StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
 func StatusValidator(s Status) error {
 	switch s {
-	case StatusInitiated, StatusProcessing, StatusPending, StatusValidated, StatusExpired, StatusSettled, StatusRefunded:
+	case StatusInitiated, StatusPending, StatusProcessing, StatusCancelled, StatusFulfilled, StatusValidated, StatusExpired, StatusSettled, StatusRefunded:
 		return nil
 	default:
 		return fmt.Errorf("paymentorder: invalid enum value for status field: %q", s)
@@ -287,6 +355,16 @@ func ByAmount(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAmount, opts...).ToFunc()
 }
 
+// ByRate orders the results by the rate field.
+func ByRate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRate, opts...).ToFunc()
+}
+
+// ByAmountInUsd orders the results by the amount_in_usd field.
+func ByAmountInUsd(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAmountInUsd, opts...).ToFunc()
+}
+
 // ByAmountPaid orders the results by the amount_paid field.
 func ByAmountPaid(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAmountPaid, opts...).ToFunc()
@@ -312,9 +390,19 @@ func ByNetworkFee(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldNetworkFee, opts...).ToFunc()
 }
 
-// ByRate orders the results by the rate field.
-func ByRate(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldRate, opts...).ToFunc()
+// ByProtocolFee orders the results by the protocol_fee field.
+func ByProtocolFee(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldProtocolFee, opts...).ToFunc()
+}
+
+// ByOrderPercent orders the results by the order_percent field.
+func ByOrderPercent(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOrderPercent, opts...).ToFunc()
+}
+
+// ByFeePercent orders the results by the fee_percent field.
+func ByFeePercent(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFeePercent, opts...).ToFunc()
 }
 
 // ByTxHash orders the results by the tx_hash field.
@@ -327,6 +415,16 @@ func ByBlockNumber(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldBlockNumber, opts...).ToFunc()
 }
 
+// ByMessageHash orders the results by the message_hash field.
+func ByMessageHash(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMessageHash, opts...).ToFunc()
+}
+
+// ByGatewayID orders the results by the gateway_id field.
+func ByGatewayID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldGatewayID, opts...).ToFunc()
+}
+
 // ByFromAddress orders the results by the from_address field.
 func ByFromAddress(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldFromAddress, opts...).ToFunc()
@@ -337,14 +435,14 @@ func ByReturnAddress(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldReturnAddress, opts...).ToFunc()
 }
 
-// ByReceiveAddressText orders the results by the receive_address_text field.
-func ByReceiveAddressText(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldReceiveAddressText, opts...).ToFunc()
+// ByReceiveAddress orders the results by the receive_address field.
+func ByReceiveAddress(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldReceiveAddress, opts...).ToFunc()
 }
 
-// ByFeePercent orders the results by the fee_percent field.
-func ByFeePercent(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldFeePercent, opts...).ToFunc()
+// ByReceiveAddressExpiry orders the results by the receive_address_expiry field.
+func ByReceiveAddressExpiry(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldReceiveAddressExpiry, opts...).ToFunc()
 }
 
 // ByFeeAddress orders the results by the fee_address field.
@@ -352,14 +450,29 @@ func ByFeeAddress(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldFeeAddress, opts...).ToFunc()
 }
 
-// ByGatewayID orders the results by the gateway_id field.
-func ByGatewayID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldGatewayID, opts...).ToFunc()
+// ByInstitution orders the results by the institution field.
+func ByInstitution(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldInstitution, opts...).ToFunc()
 }
 
-// ByMessageHash orders the results by the message_hash field.
-func ByMessageHash(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldMessageHash, opts...).ToFunc()
+// ByAccountIdentifier orders the results by the account_identifier field.
+func ByAccountIdentifier(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAccountIdentifier, opts...).ToFunc()
+}
+
+// ByAccountName orders the results by the account_name field.
+func ByAccountName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAccountName, opts...).ToFunc()
+}
+
+// ByMemo orders the results by the memo field.
+func ByMemo(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMemo, opts...).ToFunc()
+}
+
+// BySender orders the results by the sender field.
+func BySender(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSender, opts...).ToFunc()
 }
 
 // ByReference orders the results by the reference field.
@@ -367,26 +480,19 @@ func ByReference(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldReference, opts...).ToFunc()
 }
 
+// ByCancellationCount orders the results by the cancellation_count field.
+func ByCancellationCount(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCancellationCount, opts...).ToFunc()
+}
+
 // ByStatus orders the results by the status field.
 func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStatus, opts...).ToFunc()
 }
 
-// ByAmountInUsd orders the results by the amount_in_usd field.
-func ByAmountInUsd(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldAmountInUsd, opts...).ToFunc()
-}
-
 // ByOrderType orders the results by the order_type field.
 func ByOrderType(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldOrderType, opts...).ToFunc()
-}
-
-// BySenderProfileField orders the results by sender_profile field.
-func BySenderProfileField(field string, opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newSenderProfileStep(), sql.OrderByField(field, opts...))
-	}
 }
 
 // ByTokenField orders the results by token field.
@@ -396,24 +502,45 @@ func ByTokenField(field string, opts ...sql.OrderTermOption) OrderOption {
 	}
 }
 
-// ByLinkedAddressField orders the results by linked_address field.
-func ByLinkedAddressField(field string, opts ...sql.OrderTermOption) OrderOption {
+// BySenderProfileField orders the results by sender_profile field.
+func BySenderProfileField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newLinkedAddressStep(), sql.OrderByField(field, opts...))
+		sqlgraph.OrderByNeighborTerms(s, newSenderProfileStep(), sql.OrderByField(field, opts...))
 	}
 }
 
-// ByReceiveAddressField orders the results by receive_address field.
-func ByReceiveAddressField(field string, opts ...sql.OrderTermOption) OrderOption {
+// ByPaymentWebhookField orders the results by payment_webhook field.
+func ByPaymentWebhookField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newReceiveAddressStep(), sql.OrderByField(field, opts...))
+		sqlgraph.OrderByNeighborTerms(s, newPaymentWebhookStep(), sql.OrderByField(field, opts...))
 	}
 }
 
-// ByRecipientField orders the results by recipient field.
-func ByRecipientField(field string, opts ...sql.OrderTermOption) OrderOption {
+// ByProviderField orders the results by provider field.
+func ByProviderField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newRecipientStep(), sql.OrderByField(field, opts...))
+		sqlgraph.OrderByNeighborTerms(s, newProviderStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByProvisionBucketField orders the results by provision_bucket field.
+func ByProvisionBucketField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProvisionBucketStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByFulfillmentsCount orders the results by fulfillments count.
+func ByFulfillmentsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newFulfillmentsStep(), opts...)
+	}
+}
+
+// ByFulfillments orders the results by fulfillments terms.
+func ByFulfillments(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newFulfillmentsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 
@@ -430,12 +557,12 @@ func ByTransactions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newTransactionsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
-
-// ByPaymentWebhookField orders the results by payment_webhook field.
-func ByPaymentWebhookField(field string, opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newPaymentWebhookStep(), sql.OrderByField(field, opts...))
-	}
+func newTokenStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TokenInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, TokenTable, TokenColumn),
+	)
 }
 func newSenderProfileStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
@@ -444,32 +571,32 @@ func newSenderProfileStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.M2O, true, SenderProfileTable, SenderProfileColumn),
 	)
 }
-func newTokenStep() *sqlgraph.Step {
+func newPaymentWebhookStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(TokenInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, true, TokenTable, TokenColumn),
+		sqlgraph.To(PaymentWebhookInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, false, PaymentWebhookTable, PaymentWebhookColumn),
 	)
 }
-func newLinkedAddressStep() *sqlgraph.Step {
+func newProviderStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(LinkedAddressInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, true, LinkedAddressTable, LinkedAddressColumn),
+		sqlgraph.To(ProviderInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, ProviderTable, ProviderColumn),
 	)
 }
-func newReceiveAddressStep() *sqlgraph.Step {
+func newProvisionBucketStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(ReceiveAddressInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2O, false, ReceiveAddressTable, ReceiveAddressColumn),
+		sqlgraph.To(ProvisionBucketInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, ProvisionBucketTable, ProvisionBucketColumn),
 	)
 }
-func newRecipientStep() *sqlgraph.Step {
+func newFulfillmentsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(RecipientInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2O, false, RecipientTable, RecipientColumn),
+		sqlgraph.To(FulfillmentsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, FulfillmentsTable, FulfillmentsColumn),
 	)
 }
 func newTransactionsStep() *sqlgraph.Step {
@@ -477,12 +604,5 @@ func newTransactionsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(TransactionsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, TransactionsTable, TransactionsColumn),
-	)
-}
-func newPaymentWebhookStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(PaymentWebhookInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2O, false, PaymentWebhookTable, PaymentWebhookColumn),
 	)
 }

@@ -1,4 +1,4 @@
-h1:6UqNqlYS5D/G8dELazmVh+pFlYtlKSGf+pa6oeZ8SGM=
+h1:GgyFyIRGQYhxFfsoEpcHCeHwqOekcHlzlG66ITE+g4A=
 20240118234246_initial.sql h1:dYuYBqns33WT+3p8VQvbKUP62k3k6w6h8S+FqNqgSvU=
 20240130122324_order_from_address.sql h1:mMVI2iBUd1roIYLUqu0d2jZ7+B6exppRN8qqn+aIHx4=
 20240202010744_fees_on_order.sql h1:P7ngxZKqDKefBM5vk6M3kbWeMPVwbZ4MZVcLBjEfS34=
@@ -67,3 +67,4 @@ h1:6UqNqlYS5D/G8dELazmVh+pFlYtlKSGf+pa6oeZ8SGM=
 20251127160716_provider_fiat_accounts.sql h1:sMYAz1alpFpIi6QSfUJTjhJ5UejbsQycFS7XkZcH03s=
 20251127162259_add_min_max_otc.sql h1:fWw2k6GSDGF0IWbw81AbVymRnHxvoGRtW+EnpSEEv9E=
 20251205013057_add_max_fee_cap.sql h1:CzuZauPVotDkcc9veRugGigy8StSGh5gvI9ipn/XrWA=
+20251213235606_unify_payment_order_tables.sql h1:HgOSuXLL+QidyfAGQHN7ktI7lBj192bOk9nZPy1tnTs=
