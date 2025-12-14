@@ -620,8 +620,8 @@ type ResetPasswordTokenPayload struct {
 	Email string `json:"email" binding:"required,email"`
 }
 
-// ProviderLockOrderList is the struct for a list of provider lock orders
-type ProviderLockOrderList struct {
+// ProviderOrderList is the struct for a list of provider orders
+type ProviderOrderList struct {
 	TotalRecords int                     `json:"total"`
 	Page         int                     `json:"page"`
 	PageSize     int                     `json:"pageSize"`

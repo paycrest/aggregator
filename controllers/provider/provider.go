@@ -236,7 +236,7 @@ func (ctrl *ProviderController) handleListLockPaymentOrders(ctx *gin.Context, pr
 	}
 
 	// return paginated orders (consistent format for both search and regular queries)
-	u.APIResponse(ctx, http.StatusOK, "success", "Orders successfully retrieved", types.ProviderLockOrderList{
+	u.APIResponse(ctx, http.StatusOK, "success", "Orders successfully retrieved", types.ProviderOrderList{
 		Page:         page,
 		PageSize:     pageSize,
 		TotalRecords: count,
@@ -324,7 +324,7 @@ func (ctrl *ProviderController) handleSearchLockPaymentOrders(ctx *gin.Context, 
 	}
 
 	// Return search results using standard response format
-	u.APIResponse(ctx, http.StatusOK, "success", "Orders successfully retrieved", types.ProviderLockOrderList{
+	u.APIResponse(ctx, http.StatusOK, "success", "Orders successfully retrieved", types.ProviderOrderList{
 		Page:         1,
 		PageSize:     len(orders),
 		TotalRecords: count,
