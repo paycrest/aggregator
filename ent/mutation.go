@@ -7463,9 +7463,22 @@ func (m *PaymentOrderMutation) OldReceiveAddress(ctx context.Context) (v string,
 	return oldValue.ReceiveAddress, nil
 }
 
+// ClearReceiveAddress clears the value of the "receive_address" field.
+func (m *PaymentOrderMutation) ClearReceiveAddress() {
+	m.receive_address = nil
+	m.clearedFields[paymentorder.FieldReceiveAddress] = struct{}{}
+}
+
+// ReceiveAddressCleared returns if the "receive_address" field was cleared in this mutation.
+func (m *PaymentOrderMutation) ReceiveAddressCleared() bool {
+	_, ok := m.clearedFields[paymentorder.FieldReceiveAddress]
+	return ok
+}
+
 // ResetReceiveAddress resets all changes to the "receive_address" field.
 func (m *PaymentOrderMutation) ResetReceiveAddress() {
 	m.receive_address = nil
+	delete(m.clearedFields, paymentorder.FieldReceiveAddress)
 }
 
 // SetReceiveAddressSalt sets the "receive_address_salt" field.
@@ -9170,6 +9183,9 @@ func (m *PaymentOrderMutation) ClearedFields() []string {
 	if m.FieldCleared(paymentorder.FieldReturnAddress) {
 		fields = append(fields, paymentorder.FieldReturnAddress)
 	}
+	if m.FieldCleared(paymentorder.FieldReceiveAddress) {
+		fields = append(fields, paymentorder.FieldReceiveAddress)
+	}
 	if m.FieldCleared(paymentorder.FieldReceiveAddressSalt) {
 		fields = append(fields, paymentorder.FieldReceiveAddressSalt)
 	}
@@ -9225,6 +9241,9 @@ func (m *PaymentOrderMutation) ClearField(name string) error {
 		return nil
 	case paymentorder.FieldReturnAddress:
 		m.ClearReturnAddress()
+		return nil
+	case paymentorder.FieldReceiveAddress:
+		m.ClearReceiveAddress()
 		return nil
 	case paymentorder.FieldReceiveAddressSalt:
 		m.ClearReceiveAddressSalt()

@@ -73,10 +73,12 @@ func (PaymentOrder) Fields() []ent.Field {
 			Optional(),
 		field.String("receive_address").
 			MaxLen(60).
+			Optional().
 			Unique(),
 		field.Bytes("receive_address_salt").
 			Optional(),
-		field.Time("receive_address_expiry"),
+		field.Time("receive_address_expiry").
+			Optional(),
 		field.String("fee_address").
 			MaxLen(60).
 			Optional(),

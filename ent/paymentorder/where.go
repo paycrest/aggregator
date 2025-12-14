@@ -1197,6 +1197,16 @@ func ReceiveAddressHasSuffix(v string) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldHasSuffix(FieldReceiveAddress, v))
 }
 
+// ReceiveAddressIsNil applies the IsNil predicate on the "receive_address" field.
+func ReceiveAddressIsNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIsNull(FieldReceiveAddress))
+}
+
+// ReceiveAddressNotNil applies the NotNil predicate on the "receive_address" field.
+func ReceiveAddressNotNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotNull(FieldReceiveAddress))
+}
+
 // ReceiveAddressEqualFold applies the EqualFold predicate on the "receive_address" field.
 func ReceiveAddressEqualFold(v string) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldEqualFold(FieldReceiveAddress, v))

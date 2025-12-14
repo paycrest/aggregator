@@ -82,6 +82,8 @@ BEGIN
 
     -- Add institution if it doesn't exist
     -- Note: Schema shows it as required, but we'll add as nullable initially for data migration
+    -- Add institution if it doesn't exist
+    -- Note: Added as nullable initially for data migration, will be set to NOT NULL in Step 9.6
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
                    WHERE table_name = 'payment_orders' AND column_name = 'institution') THEN
         ALTER TABLE "payment_orders" ADD COLUMN "institution" character varying(255) NULL;
@@ -566,6 +568,50 @@ BEGIN
     RAISE NOTICE '  duplicate matches: %', duplicate_matches;
     RAISE NOTICE '  mismatched tokens: %', mismatched_tokens;
 END $$;
+
+-- Step 9.6: Set recipient fields to NOT NULL after data migration
+-- First verify all records have these fields populated
+DO $$
+DECLARE
+    missing_institution bigint;
+    missing_account_identifier bigint;
+    missing_account_name bigint;
+BEGIN
+    -- Check for records missing institution
+    SELECT COUNT(*) INTO missing_institution
+    FROM "payment_orders"
+    WHERE "institution" IS NULL;
+    
+    -- Check for records missing account_identifier
+    SELECT COUNT(*) INTO missing_account_identifier
+    FROM "payment_orders"
+    WHERE "account_identifier" IS NULL;
+    
+    -- Check for records missing account_name
+    SELECT COUNT(*) INTO missing_account_name
+    FROM "payment_orders"
+    WHERE "account_name" IS NULL;
+    
+    -- Raise exception if any records are missing required fields
+    IF missing_institution > 0 THEN
+        RAISE EXCEPTION 'Cannot set institution to NOT NULL: % payment orders have NULL institution', missing_institution;
+    END IF;
+    
+    IF missing_account_identifier > 0 THEN
+        RAISE EXCEPTION 'Cannot set account_identifier to NOT NULL: % payment orders have NULL account_identifier', missing_account_identifier;
+    END IF;
+    
+    IF missing_account_name > 0 THEN
+        RAISE EXCEPTION 'Cannot set account_name to NOT NULL: % payment orders have NULL account_name', missing_account_name;
+    END IF;
+    
+    RAISE NOTICE 'All recipient fields are populated. Setting to NOT NULL.';
+END $$;
+
+-- Now set the columns to NOT NULL
+ALTER TABLE "payment_orders" ALTER COLUMN "institution" SET NOT NULL;
+ALTER TABLE "payment_orders" ALTER COLUMN "account_identifier" SET NOT NULL;
+ALTER TABLE "payment_orders" ALTER COLUMN "account_name" SET NOT NULL;
 
 -- Step 10: Drop old tables (in reverse dependency order)
 -- Drop fulfillments first
