@@ -764,7 +764,6 @@ func (ctrl *SenderController) handleSearchPaymentOrders(ctx *gin.Context, sender
 		paymentorder.ReceiveAddressContains(searchText),
 		paymentorder.FromAddressContains(searchText),
 		paymentorder.ReturnAddressContains(searchText),
-		paymentorder.InstitutionNEQ(""), // Must have recipient fields
 		paymentorder.Or(
 			paymentorder.AccountIdentifierContains(searchText),
 			paymentorder.AccountNameContains(searchText),

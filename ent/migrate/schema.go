@@ -197,7 +197,7 @@ var (
 		{Name: "gateway_id", Type: field.TypeString, Nullable: true, Size: 255},
 		{Name: "from_address", Type: field.TypeString, Nullable: true, Size: 60},
 		{Name: "return_address", Type: field.TypeString, Nullable: true, Size: 60},
-		{Name: "receive_address", Type: field.TypeString, Unique: true, Size: 60},
+		{Name: "receive_address", Type: field.TypeString, Unique: true, Nullable: true, Size: 60},
 		{Name: "receive_address_salt", Type: field.TypeBytes, Nullable: true},
 		{Name: "receive_address_expiry", Type: field.TypeTime, Nullable: true},
 		{Name: "fee_address", Type: field.TypeString, Nullable: true, Size: 60},

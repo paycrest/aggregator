@@ -280,6 +280,14 @@ func (poc *PaymentOrderCreate) SetReceiveAddress(s string) *PaymentOrderCreate {
 	return poc
 }
 
+// SetNillableReceiveAddress sets the "receive_address" field if the given value is not nil.
+func (poc *PaymentOrderCreate) SetNillableReceiveAddress(s *string) *PaymentOrderCreate {
+	if s != nil {
+		poc.SetReceiveAddress(*s)
+	}
+	return poc
+}
+
 // SetReceiveAddressSalt sets the "receive_address_salt" field.
 func (poc *PaymentOrderCreate) SetReceiveAddressSalt(b []byte) *PaymentOrderCreate {
 	poc.mutation.SetReceiveAddressSalt(b)
@@ -723,9 +731,6 @@ func (poc *PaymentOrderCreate) check() error {
 		if err := paymentorder.ReturnAddressValidator(v); err != nil {
 			return &ValidationError{Name: "return_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.return_address": %w`, err)}
 		}
-	}
-	if _, ok := poc.mutation.ReceiveAddress(); !ok {
-		return &ValidationError{Name: "receive_address", err: errors.New(`ent: missing required field "PaymentOrder.receive_address"`)}
 	}
 	if v, ok := poc.mutation.ReceiveAddress(); ok {
 		if err := paymentorder.ReceiveAddressValidator(v); err != nil {
@@ -1465,6 +1470,12 @@ func (u *PaymentOrderUpsert) UpdateReceiveAddress() *PaymentOrderUpsert {
 	return u
 }
 
+// ClearReceiveAddress clears the value of the "receive_address" field.
+func (u *PaymentOrderUpsert) ClearReceiveAddress() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldReceiveAddress)
+	return u
+}
+
 // SetReceiveAddressSalt sets the "receive_address_salt" field.
 func (u *PaymentOrderUpsert) SetReceiveAddressSalt(v []byte) *PaymentOrderUpsert {
 	u.Set(paymentorder.FieldReceiveAddressSalt, v)
@@ -2126,6 +2137,13 @@ func (u *PaymentOrderUpsertOne) SetReceiveAddress(v string) *PaymentOrderUpsertO
 func (u *PaymentOrderUpsertOne) UpdateReceiveAddress() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.UpdateReceiveAddress()
+	})
+}
+
+// ClearReceiveAddress clears the value of the "receive_address" field.
+func (u *PaymentOrderUpsertOne) ClearReceiveAddress() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearReceiveAddress()
 	})
 }
 
@@ -2995,6 +3013,13 @@ func (u *PaymentOrderUpsertBulk) SetReceiveAddress(v string) *PaymentOrderUpsert
 func (u *PaymentOrderUpsertBulk) UpdateReceiveAddress() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.UpdateReceiveAddress()
+	})
+}
+
+// ClearReceiveAddress clears the value of the "receive_address" field.
+func (u *PaymentOrderUpsertBulk) ClearReceiveAddress() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearReceiveAddress()
 	})
 }
 

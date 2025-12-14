@@ -410,6 +410,12 @@ func (pou *PaymentOrderUpdate) SetNillableReceiveAddress(s *string) *PaymentOrde
 	return pou
 }
 
+// ClearReceiveAddress clears the value of the "receive_address" field.
+func (pou *PaymentOrderUpdate) ClearReceiveAddress() *PaymentOrderUpdate {
+	pou.mutation.ClearReceiveAddress()
+	return pou
+}
+
 // SetReceiveAddressSalt sets the "receive_address_salt" field.
 func (pou *PaymentOrderUpdate) SetReceiveAddressSalt(b []byte) *PaymentOrderUpdate {
 	pou.mutation.SetReceiveAddressSalt(b)
@@ -1076,6 +1082,9 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := pou.mutation.ReceiveAddress(); ok {
 		_spec.SetField(paymentorder.FieldReceiveAddress, field.TypeString, value)
+	}
+	if pou.mutation.ReceiveAddressCleared() {
+		_spec.ClearField(paymentorder.FieldReceiveAddress, field.TypeString)
 	}
 	if value, ok := pou.mutation.ReceiveAddressSalt(); ok {
 		_spec.SetField(paymentorder.FieldReceiveAddressSalt, field.TypeBytes, value)
@@ -1781,6 +1790,12 @@ func (pouo *PaymentOrderUpdateOne) SetNillableReceiveAddress(s *string) *Payment
 	return pouo
 }
 
+// ClearReceiveAddress clears the value of the "receive_address" field.
+func (pouo *PaymentOrderUpdateOne) ClearReceiveAddress() *PaymentOrderUpdateOne {
+	pouo.mutation.ClearReceiveAddress()
+	return pouo
+}
+
 // SetReceiveAddressSalt sets the "receive_address_salt" field.
 func (pouo *PaymentOrderUpdateOne) SetReceiveAddressSalt(b []byte) *PaymentOrderUpdateOne {
 	pouo.mutation.SetReceiveAddressSalt(b)
@@ -2477,6 +2492,9 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 	}
 	if value, ok := pouo.mutation.ReceiveAddress(); ok {
 		_spec.SetField(paymentorder.FieldReceiveAddress, field.TypeString, value)
+	}
+	if pouo.mutation.ReceiveAddressCleared() {
+		_spec.ClearField(paymentorder.FieldReceiveAddress, field.TypeString)
 	}
 	if value, ok := pouo.mutation.ReceiveAddressSalt(); ok {
 		_spec.SetField(paymentorder.FieldReceiveAddressSalt, field.TypeBytes, value)
