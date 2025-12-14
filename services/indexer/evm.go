@@ -564,6 +564,8 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 	orderCreatedEvents := []*types.OrderCreatedEvent{}
 	orderSettledEvents := []*types.OrderSettledEvent{}
 	orderRefundedEvents := []*types.OrderRefundedEvent{}
+	localTransferFeeSplitEvents := []*types.LocalTransferFeeSplitEvent{}
+	fxTransferFeeSplitEvents := []*types.FxTransferFeeSplitEvent{}
 
 	// Use GetContractEventsWithFallback to try Thirdweb first and fall back to RPC
 	eventPayload := map[string]string{
@@ -790,6 +792,84 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 				Fee:         fee,
 			}
 			orderRefundedEvents = append(orderRefundedEvents, refundedEvent)
+
+		case utils.LocalTransferFeeSplitEventSignature:
+			// Safely extract required fields for LocalTransferFeeSplit
+			orderIdStr, ok := indexedParams["orderId"].(string)
+			if !ok || orderIdStr == "" {
+				continue
+			}
+
+			senderAmountStr, ok := nonIndexedParams["senderAmount"].(string)
+			if !ok || senderAmountStr == "" {
+				continue
+			}
+			senderAmount, err := decimal.NewFromString(senderAmountStr)
+			if err != nil {
+				continue
+			}
+
+			providerAmountStr, ok := nonIndexedParams["providerAmount"].(string)
+			if !ok || providerAmountStr == "" {
+				continue
+			}
+			providerAmount, err := decimal.NewFromString(providerAmountStr)
+			if err != nil {
+				continue
+			}
+
+			aggregatorAmountStr, ok := nonIndexedParams["aggregatorAmount"].(string)
+			if !ok || aggregatorAmountStr == "" {
+				continue
+			}
+			aggregatorAmount, err := decimal.NewFromString(aggregatorAmountStr)
+			if err != nil {
+				continue
+			}
+
+			localFeeSplitEvent := &types.LocalTransferFeeSplitEvent{
+				BlockNumber:      blockNumber,
+				TxHash:           txHashFromEvent,
+				OrderId:          orderIdStr,
+				SenderAmount:     senderAmount,
+				ProviderAmount:   providerAmount,
+				AggregatorAmount: aggregatorAmount,
+			}
+			localTransferFeeSplitEvents = append(localTransferFeeSplitEvents, localFeeSplitEvent)
+
+		case utils.FxTransferFeeSplitEventSignature:
+			// Safely extract required fields for FxTransferFeeSplit
+			orderIdStr, ok := indexedParams["orderId"].(string)
+			if !ok || orderIdStr == "" {
+				continue
+			}
+
+			senderAmountStr, ok := nonIndexedParams["senderAmount"].(string)
+			if !ok || senderAmountStr == "" {
+				continue
+			}
+			senderAmount, err := decimal.NewFromString(senderAmountStr)
+			if err != nil {
+				continue
+			}
+
+			aggregatorAmountStr, ok := nonIndexedParams["aggregatorAmount"].(string)
+			if !ok || aggregatorAmountStr == "" {
+				continue
+			}
+			aggregatorAmount, err := decimal.NewFromString(aggregatorAmountStr)
+			if err != nil {
+				continue
+			}
+
+			fxFeeSplitEvent := &types.FxTransferFeeSplitEvent{
+				BlockNumber:      blockNumber,
+				TxHash:           txHashFromEvent,
+				OrderId:          orderIdStr,
+				SenderAmount:     senderAmount,
+				AggregatorAmount: aggregatorAmount,
+			}
+			fxTransferFeeSplitEvents = append(fxTransferFeeSplitEvents, fxFeeSplitEvent)
 		}
 	}
 
@@ -849,6 +929,22 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 		}
 	}
 	eventCounts.OrderRefunded = len(orderRefundedEvents)
+
+	// Process fee events (LocalTransferFeeSplit and fxTransferFeeSplit)
+	if len(localTransferFeeSplitEvents) > 0 {
+		err := common.ProcessFeeEvents(ctx, network, localTransferFeeSplitEvents, nil)
+		if err != nil {
+			logger.Errorf("Failed to process fee events: %v", err)
+		}
+	} 
+	
+	
+	if len(fxTransferFeeSplitEvents) > 0 {
+		err := common.ProcessFeeEvents(ctx, network, nil, fxTransferFeeSplitEvents)
+		if err != nil {
+			logger.Errorf("Failed to process FX fee events: %v", err)
+		}
+	}
 
 	return eventCounts, nil
 }

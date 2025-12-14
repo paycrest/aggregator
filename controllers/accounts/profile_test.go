@@ -20,6 +20,7 @@ import (
 	"github.com/paycrest/aggregator/ent/enttest"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/migrate"
+	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
@@ -484,6 +485,7 @@ func TestProfile(t *testing.T) {
 		})
 
 	})
+
 
 	t.Run("UpdateProviderProfile", func(t *testing.T) {
 		profileUpdateRequest := func(payload types.ProviderProfilePayload) *httptest.ResponseRecorder {

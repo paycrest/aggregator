@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -10,10 +11,12 @@ import (
 
 // Event signatures for Gateway and token contract events
 const (
-	TransferEventSignature      = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
-	OrderCreatedEventSignature  = "0x40ccd1ceb111a3c186ef9911e1b876dc1f789ed331b86097b3b8851055b6a137"
-	OrderSettledEventSignature  = "0x57c683de2e7c8263c7f57fd108416b9bdaa7a6e7f2e4e7102c3b6f9e37f1cc37"
-	OrderRefundedEventSignature = "0x0736fe428e1747ca8d387c2e6fa1a31a0cde62d3a167c40a46ade59a3cdc828e"
+	TransferEventSignature             = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+	OrderCreatedEventSignature         = "0x40ccd1ceb111a3c186ef9911e1b876dc1f789ed331b86097b3b8851055b6a137"
+	OrderSettledEventSignature         = "0x57c683de2e7c8263c7f57fd108416b9bdaa7a6e7f2e4e7102c3b6f9e37f1cc37"
+	OrderRefundedEventSignature        = "0x0736fe428e1747ca8d387c2e6fa1a31a0cde62d3a167c40a46ade59a3cdc828e"
+	LocalTransferFeeSplitEventSignature = "0x831c7cc0006d91462607c476603366c48469d125de6228c0791a7090efd7f7a4"
+	FxTransferFeeSplitEventSignature = "0x88592047496a7850992dc5e8cd92a9b633cef0d191a4f5e87fd745c7d382630a"
 )
 
 // DecodeTransferEvent decodes a Transfer event from RPC log
@@ -209,6 +212,10 @@ func ProcessRPCEvents(events []interface{}, eventSignature string) error {
 				decoded, err = DecodeOrderSettledEvent(mockLog)
 			case OrderRefundedEventSignature:
 				decoded, err = DecodeOrderRefundedEvent(mockLog)
+			case LocalTransferFeeSplitEventSignature:
+				decoded, err = DecodeLocalTransferFeeSplitEvent(mockLog)
+			case FxTransferFeeSplitEventSignature:
+				decoded, err = DecodeFxTransferFeeSplitEvent(mockLog)
 			default:
 				continue
 			}
@@ -267,6 +274,10 @@ func ProcessRPCEventsBySignature(events []interface{}) error {
 				decoded, err = DecodeOrderSettledEvent(mockLog)
 			case OrderRefundedEventSignature:
 				decoded, err = DecodeOrderRefundedEvent(mockLog)
+			case LocalTransferFeeSplitEventSignature:
+				decoded, err = DecodeLocalTransferFeeSplitEvent(mockLog)
+			case FxTransferFeeSplitEventSignature:
+				decoded, err = DecodeFxTransferFeeSplitEvent(mockLog)
 			default:
 				continue
 			}
@@ -280,4 +291,62 @@ func ProcessRPCEventsBySignature(events []interface{}) error {
 	}
 
 	return nil
+}
+
+// DecodeLocalTransferFeeSplitEvent decodes a LocalTransferFeeSplit event from RPC log
+func DecodeLocalTransferFeeSplitEvent(log types.Log) (map[string]interface{}, error) {
+	if len(log.Topics) != 2 {
+		return nil, fmt.Errorf("invalid LocalTransferFeeSplit event: expected 2 topics, got %d", len(log.Topics))
+	}
+
+	// Decode messageHash from indexed parameter (topic[1])
+	messageHashBytes := log.Topics[1].Bytes()
+	messageHash := strings.Trim(string(messageHashBytes), "\x00")
+
+	// Decode amounts from data
+	if len(log.Data) < 64 {
+		return nil, fmt.Errorf("invalid LocalTransferFeeSplit event data: too short")
+	}
+
+	senderAmount := new(big.Int).SetBytes(log.Data[:32])
+	aggregatorAmount := new(big.Int).SetBytes(log.Data[32:64])
+
+	return map[string]interface{}{
+		"indexed_params": map[string]interface{}{
+			"messageHash": messageHash,
+		},
+		"non_indexed_params": map[string]interface{}{
+			"senderAmount":     senderAmount.String(),
+			"aggregatorAmount": aggregatorAmount.String(),
+		},
+	}, nil
+}
+
+// DecodeFxTransferFeeSplitEvent decodes a FxTransferFeeSplit event from RPC log
+func DecodeFxTransferFeeSplitEvent(log types.Log) (map[string]interface{}, error) {
+	if len(log.Topics) != 2 {
+		return nil, fmt.Errorf("invalid FxTransferFeeSplit event: expected 2 topics, got %d", len(log.Topics))
+	}
+
+	// Decode messageHash from indexed parameter (topic[1])
+	messageHashBytes := log.Topics[1].Bytes()
+	messageHash := strings.Trim(string(messageHashBytes), "\x00")
+
+	// Decode amounts from data
+	if len(log.Data) < 64 {
+		return nil, fmt.Errorf("invalid FxTransferFeeSplit event data: too short")
+	}
+
+	senderAmount := new(big.Int).SetBytes(log.Data[:32])
+	aggregatorAmount := new(big.Int).SetBytes(log.Data[32:64])
+
+	return map[string]interface{}{
+		"indexed_params": map[string]interface{}{
+			"messageHash": messageHash,
+		},
+		"non_indexed_params": map[string]interface{}{
+			"senderAmount":     senderAmount.String(),
+			"aggregatorAmount": aggregatorAmount.String(),
+		},
+	}, nil
 }

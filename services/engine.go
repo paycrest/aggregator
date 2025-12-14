@@ -513,6 +513,14 @@ func (s *EngineService) CreateGatewayWebhook() error {
 			"sig_hash": "0x0736fe428e1747ca8d387c2e6fa1a31a0cde62d3a167c40a46ade59a3cdc828e", // OrderRefunded event signature
 			"abi":      "{\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"fee\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"orderId\",\"type\":\"bytes32\"}],\"name\":\"OrderRefunded\",\"type\":\"event\"}",
 		},
+		{
+			"sig_hash": "0x831c7cc0006d91462607c476603366c48469d125de6228c0791a7090efd7f7a4", // LocalTransferFeeSplit event signature
+			"abi":      "{\"inputs\":[{\"indexed\":true,\"internalType\":\"string\",\"name\":\"messageHash\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"senderAmount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"aggregatorAmount\",\"type\":\"uint256\"}],\"name\":\"LocalTransferFeeSplit\",\"type\":\"event\"}",
+		},
+		{
+			"sig_hash": "0x88592047496a7850992dc5e8cd92a9b633cef0d191a4f5e87fd745c7d382630a", // FxTransferFeeSplit event signature
+			"abi":      "{\"inputs\":[{\"indexed\":true,\"internalType\":\"string\",\"name\":\"messageHash\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"senderAmount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"aggregatorAmount\",\"type\":\"uint256\"}],\"name\":\"FxTransferFeeSplit\",\"type\":\"event\"}",
+		},
 	}
 
 	// Collect all chain IDs and gateway addresses
