@@ -640,11 +640,6 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 			Update().
 			Where(
 				paymentorder.IDEQ(paymentOrder.ID),
-				paymentorder.HasTokenWith(
-					tokenent.HasNetworkWith(
-						networkent.IdentifierEQ(network.Identifier),
-					),
-				),
 			).
 			SetTxHash(event.TxHash).
 			SetBlockNumber(event.BlockNumber).
