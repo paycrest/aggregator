@@ -223,8 +223,13 @@ func (ctrl *ProviderController) handleListLockPaymentOrders(ctx *gin.Context, pr
 				OrderType:           order.OrderType,
 			}
 
-			if order.OrderType == lockpaymentorder.OrderTypeOtc && order.Status == lockpaymentorder.StatusPending && order.Edges.Provider != nil {
-				response.OTCRequestExpiry = time.Now().Add(orderConf.OrderRequestValidityOtc)
+			if order.OrderType == lockpaymentorder.OrderTypeOtc && order.Edges.Provider != nil {
+				switch order.Status {
+				case lockpaymentorder.StatusPending:
+					response.OTCExpiry = order.UpdatedAt.Add(orderConf.OrderRequestValidityOtc)
+				case lockpaymentorder.StatusProcessing:
+					response.OTCExpiry = order.UpdatedAt.Add(orderConf.OrderFulfillmentValidityOtc)
+				}
 			}
 
 			return response

@@ -414,7 +414,7 @@ type LockPaymentOrderResponse struct {
 	Transactions        []TransactionLog           `json:"transactionLogs"`
 	CancellationReasons []string                   `json:"cancellationReasons"`
 	OrderType           lockpaymentorder.OrderType `json:"orderType"`
-	OTCRequestExpiry    time.Time                  `json:"otcRequestExpiry,omitempty"`
+	OTCExpiry           time.Time                  `json:"otcExpiry,omitempty"`
 }
 
 type LockPaymentOrderTxReceipt struct {
