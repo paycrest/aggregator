@@ -498,7 +498,6 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 			),
 		).
 		WithSenderProfile().
-		WithLinkedAddress().
 		Only(ctx)
 	if err != nil {
 		// Try to find by gateway_id as fallback (for orders created via InitiatePaymentOrder)
@@ -513,7 +512,6 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 				),
 			).
 			WithSenderProfile().
-			WithLinkedAddress().
 			Only(ctx)
 		if err != nil {
 			if ent.IsNotFound(err) {
