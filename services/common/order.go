@@ -498,6 +498,7 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 			),
 		).
 		WithSenderProfile().
+		WithLinkedAddress().
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -513,6 +514,7 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 					),
 				).
 				WithSenderProfile().
+				WithLinkedAddress().
 				Only(ctx)
 			if err != nil {
 				if ent.IsNotFound(err) {
