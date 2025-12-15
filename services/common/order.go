@@ -500,26 +500,30 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		WithSenderProfile().
 		Only(ctx)
 	if err != nil {
-		// Try to find by gateway_id as fallback (for orders created via InitiatePaymentOrder)
-		paymentOrder, err = db.Client.PaymentOrder.
-			Query().
-			Where(
-				paymentorder.GatewayIDEQ(event.OrderId),
-				paymentorder.HasTokenWith(
-					tokenent.HasNetworkWith(
-						networkent.IdentifierEQ(network.Identifier),
+		if ent.IsNotFound(err) {
+			// Try to find by gateway_id as fallback (for orders created via InitiatePaymentOrder)
+			paymentOrder, err = db.Client.PaymentOrder.
+				Query().
+				Where(
+					paymentorder.GatewayIDEQ(event.OrderId),
+					paymentorder.HasTokenWith(
+						tokenent.HasNetworkWith(
+							networkent.IdentifierEQ(network.Identifier),
+						),
 					),
-				),
-			).
-			WithSenderProfile().
-			Only(ctx)
-		if err != nil {
-			if ent.IsNotFound(err) {
-				// Payment order does not exist, no need to update
-				paymentOrderExists = false
-			} else {
-				return fmt.Errorf("UpdateOrderStatusRefunded.fetchOrderByGatewayId: %v", err)
+				).
+				WithSenderProfile().
+				Only(ctx)
+			if err != nil {
+				if ent.IsNotFound(err) {
+					// Payment order does not exist, no need to update
+					paymentOrderExists = false
+				} else {
+					return fmt.Errorf("UpdateOrderStatusRefunded.fetchOrderByGatewayId: %v", err)
+				}
 			}
+		} else {
+			return fmt.Errorf("UpdateOrderStatusRefunded.fetchOrderByMessageHash: %v", err)
 		}
 	}
 
@@ -706,26 +710,30 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 		WithSenderProfile().
 		Only(ctx)
 	if err != nil {
-		// Try to find by gateway_id as fallback (for orders created via InitiatePaymentOrder)
-		paymentOrder, err = db.Client.PaymentOrder.
-			Query().
-			Where(
-				paymentorder.GatewayIDEQ(event.OrderId),
-				paymentorder.HasTokenWith(
-					tokenent.HasNetworkWith(
-						networkent.IdentifierEQ(network.Identifier),
+		if ent.IsNotFound(err) {
+			// Try to find by gateway_id as fallback (for orders created via InitiatePaymentOrder)
+			paymentOrder, err = db.Client.PaymentOrder.
+				Query().
+				Where(
+					paymentorder.GatewayIDEQ(event.OrderId),
+					paymentorder.HasTokenWith(
+						tokenent.HasNetworkWith(
+							networkent.IdentifierEQ(network.Identifier),
+						),
 					),
-				),
-			).
-			WithSenderProfile().
-			Only(ctx)
-		if err != nil {
-			if ent.IsNotFound(err) {
-				// Payment order does not exist, no need to update
-				paymentOrderExists = false
-			} else {
-				return fmt.Errorf("UpdateOrderStatusSettled.fetchOrderByGatewayId: %v", err)
+				).
+				WithSenderProfile().
+				Only(ctx)
+			if err != nil {
+				if ent.IsNotFound(err) {
+					// Payment order does not exist, no need to update
+					paymentOrderExists = false
+				} else {
+					return fmt.Errorf("UpdateOrderStatusSettled.fetchOrderByGatewayId: %v", err)
+				}
 			}
+		} else {
+			return fmt.Errorf("UpdateOrderStatusSettled.fetchOrderByMessageHash: %v", err)
 		}
 	}
 
