@@ -188,9 +188,12 @@ BEGIN
           PRIMARY KEY ("id"),
           CONSTRAINT "payment_order_fulfillments_payment_orders_fulfillments" FOREIGN KEY ("payment_order_fulfillments") REFERENCES "payment_orders" ("id") ON UPDATE NO ACTION ON DELETE CASCADE
         );
-        INSERT INTO "ent_types" ("type") VALUES ('payment_order_fulfillments');
     END IF;
 END $$;
+
+-- Ensure payment_order_fulfillments entry exists in ent_types (idempotent)
+INSERT INTO "ent_types" ("type") VALUES ('payment_order_fulfillments')
+ON CONFLICT ("type") DO NOTHING;
 
 -- Step 2: Migrate receive_address data to payment_orders
 -- Handle both receive_addresses table and receive_address column (already renamed from receive_address_text)
@@ -200,19 +203,17 @@ SET
     "receive_address_salt" = COALESCE(po."receive_address_salt", ra."salt"),
     "receive_address_expiry" = COALESCE(po."receive_address_expiry", ra."valid_until")
 FROM "receive_addresses" ra
-WHERE po."receive_address_payment_orders" = ra."id"
-  AND po."receive_address" IS NULL;
+WHERE po."receive_address_payment_orders" = ra."id";
 
 -- Step 3: Migrate payment_order_recipients data to payment_orders
 UPDATE "payment_orders" po
 SET 
-    "institution" = por."institution",
-    "account_identifier" = por."account_identifier",
-    "account_name" = por."account_name",
+    "institution" = COALESCE(po."institution", por."institution"),
+    "account_identifier" = COALESCE(po."account_identifier", por."account_identifier"),
+    "account_name" = COALESCE(po."account_name", por."account_name"),
     "memo" = COALESCE(po."memo", por."memo")
 FROM "payment_order_recipients" por
-WHERE por."payment_order_recipient" = po."id"
-  AND po."institution" IS NULL;
+WHERE por."payment_order_recipient" = po."id";
 
 -- Step 3.5: Pre-migration verification - Check for duplicate matches
 -- Verify no lock_payment_order matches multiple payment_orders (would cause UPDATE to fail)
@@ -247,8 +248,8 @@ SET
     "protocol_fee" = lpo."protocol_fee",
     "order_percent" = lpo."order_percent",
     "gateway_id" = COALESCE(po."gateway_id", lpo."gateway_id"),
-    "tx_hash" = COALESCE(po."tx_hash", lpo."tx_hash"),
-    "block_number" = COALESCE(po."block_number", lpo."block_number"),
+    "tx_hash" = COALESCE(lpo."tx_hash", po."tx_hash"),
+    "block_number" = COALESCE(lpo."block_number", po."block_number"),
     "institution" = COALESCE(po."institution", lpo."institution"),
     "account_identifier" = COALESCE(po."account_identifier", lpo."account_identifier"),
     "account_name" = COALESCE(po."account_name", lpo."account_name"),
