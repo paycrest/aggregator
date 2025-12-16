@@ -315,6 +315,8 @@ func RetryStaleUserOperations() error {
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
+		WithFulfillments().
+		WithProvider().
 		All(ctx)
 	if err != nil {
 		return fmt.Errorf("RetryStaleUserOperations: %w", err)
@@ -340,6 +342,21 @@ func RetryStaleUserOperations() error {
 			} else {
 				service = orderService.NewOrderEVM()
 			}
+
+			if order.OrderType == lockpaymentorder.OrderTypeRegular && order.Status == lockpaymentorder.StatusPending && order.Edges.Provider != nil && len(order.Edges.Fulfillments) == 0 {
+				// Check if there's an active order request in Redis
+				exists, err := hasActiveOrderRequest(ctx, order.ID, "RetryStaleUserOperations")
+				if err != nil {
+					// If we can't check Redis, skip refund
+					continue
+				}
+				if exists {
+					// Active order request exists, don't refund (skip)
+					continue
+				}
+				// If order_request doesn't exist, proceed with refund check
+			}
+
 			err := service.RefundOrder(ctx, order.Edges.Token.Edges.Network, order.GatewayID)
 			if err != nil {
 				logger.WithFields(logger.Fields{
@@ -567,9 +584,25 @@ func GetTronLatestBlock(endpoint string) (int64, error) {
 	return int64(data["block"].([]interface{})[0].(map[string]interface{})["block_header"].(map[string]interface{})["raw_data"].(map[string]interface{})["timestamp"].(float64)), nil
 }
 
+// hasActiveOrderRequest checks if there's an active order_request entry in Redis for the given order ID.
+// Returns (exists bool, err error). If err != nil, exists will be false.
+func hasActiveOrderRequest(ctx context.Context, orderID uuid.UUID, logPrefix string) (bool, error) {
+	orderKey := fmt.Sprintf("order_request_%s", orderID)
+	exists, err := storage.RedisClient.Exists(ctx, orderKey).Result()
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":    fmt.Sprintf("%v", err),
+			"OrderID":  orderID.String(),
+			"OrderKey": orderKey,
+		}).Errorf("%s: Failed to check order_request Redis entry", logPrefix)
+		return false, err
+	}
+	return exists > 0, nil
+}
+
 // reassignCancelledOrder reassigns cancelled orders to providers
 func reassignCancelledOrder(ctx context.Context, order *ent.LockPaymentOrder, fulfillment *ent.LockOrderFulfillment) {
-	if order.Edges.Provider.VisibilityMode != providerprofile.VisibilityModePrivate && order.CancellationCount < orderConf.RefundCancellationCount {
+	if order.Edges.Provider.VisibilityMode != providerprofile.VisibilityModePrivate && order.CancellationCount < orderConf.RefundCancellationCount && order.CreatedAt.After(time.Now().Add(-orderConf.OrderRefundTimeout-10*time.Second)) {
 		// Push provider ID to order exclude list
 		orderKey := fmt.Sprintf("order_exclude_list_%s", order.ID)
 		_, err := storage.RedisClient.RPush(ctx, orderKey, order.Edges.Provider.ID).Result()
@@ -693,6 +726,7 @@ func SyncLockOrderFulfillments() {
 	lockOrders, err := storage.Client.LockPaymentOrder.
 		Query().
 		Where(
+			// case 1: regular, pending, created older than 2 minutes, no fulfillments
 			lockpaymentorder.OrderTypeEQ(lockpaymentorder.OrderTypeRegular), // Only regular orders
 			lockpaymentorder.Or(
 				lockpaymentorder.And(
@@ -713,7 +747,10 @@ func SyncLockOrderFulfillments() {
 					),
 				),
 				lockpaymentorder.And(
-					lockpaymentorder.StatusEQ(lockpaymentorder.StatusCancelled),
+					lockpaymentorder.Or(
+						lockpaymentorder.StatusEQ(lockpaymentorder.StatusCancelled),
+						lockpaymentorder.StatusEQ(lockpaymentorder.StatusPending),
+					),
 					lockpaymentorder.Or(
 						lockpaymentorder.HasFulfillmentsWith(
 							lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusPending),
@@ -751,6 +788,18 @@ func SyncLockOrderFulfillments() {
 			if order.Status == lockpaymentorder.StatusCancelled {
 				reassignCancelledOrder(ctx, order, nil)
 				continue
+			}
+
+			// Check if there's an active order request before querying tx_status
+			if order.Status == lockpaymentorder.StatusPending {
+				exists, err := hasActiveOrderRequest(ctx, order.ID, "SyncLockOrderFulfillments")
+				if err != nil {
+					continue
+				}
+				if !exists {
+					// No active order request, skip tx_status check
+					continue
+				}
 			}
 
 			// Compute HMAC
@@ -857,7 +906,8 @@ func SyncLockOrderFulfillments() {
 					continue
 				}
 
-				_, err = order.Update().
+				_, err = storage.Client.LockPaymentOrder.
+					UpdateOneID(order.ID).
 					SetStatus(lockpaymentorder.StatusFulfilled).
 					Save(ctx)
 				if err != nil {
