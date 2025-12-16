@@ -248,16 +248,6 @@ func UpdateReceiveAddressStatus(
 		orderAmountWithFees := paymentOrder.Amount.Add(fees).Round(int32(paymentOrder.Edges.Token.Decimals))
 		transferMatchesOrderAmount := event.Value.Equal(orderAmountWithFees)
 
-		logger.WithFields(logger.Fields{
-			"paymentOrderID":             paymentOrder.ID,
-			"event":                      event,
-			"fees":                       fees,
-			"amount":                     paymentOrder.Amount,
-			"orderAmountWithFees":        orderAmountWithFees,
-			"transferMatchesOrderAmount": transferMatchesOrderAmount,
-			"receiveAddress":             paymentOrder.ReceiveAddress,
-		}).Info("Processing receive address status")
-
 		tx, err := db.Client.Tx(ctx)
 		if err != nil {
 			return true, fmt.Errorf("UpdateReceiveAddressStatus.db: %v", err)
@@ -292,15 +282,6 @@ func UpdateReceiveAddressStatus(
 			}
 			transferMatchesOrderAmount = true
 		}
-		logger.WithFields(logger.Fields{
-			"paymentOrderID":             paymentOrder.ID,
-			"event":                      event,
-			"fees":                       fees,
-			"amount":                     paymentOrder.Amount,
-			"orderAmountWithFees":        orderAmountWithFees,
-			"transferMatchesOrderAmount": transferMatchesOrderAmount,
-			"receiveAddress":             paymentOrder.ReceiveAddress,
-		}).Info("Processing receive address status after update")
 
 		if paymentOrder.AmountPaid.GreaterThanOrEqual(decimal.Zero) && paymentOrder.AmountPaid.LessThan(orderAmountWithFees) {
 			transactionLog, err := tx.TransactionLog.
@@ -339,16 +320,6 @@ func UpdateReceiveAddressStatus(
 				return true, fmt.Errorf("UpdateReceiveAddressStatus.db: %v", err)
 			}
 		}
-
-		logger.WithFields(logger.Fields{
-			"paymentOrderID":             paymentOrder.ID,
-			"event":                      event,
-			"fees":                       fees,
-			"amount":                     paymentOrder.Amount,
-			"orderAmountWithFees":        orderAmountWithFees,
-			"transferMatchesOrderAmount": transferMatchesOrderAmount,
-			"receiveAddress":             paymentOrder.ReceiveAddress,
-		}).Info("Processing receive address status after payment order update")
 
 		if transferMatchesOrderAmount {
 			// Transfer value equals order amount with fees - update payment order status to pending

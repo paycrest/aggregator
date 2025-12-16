@@ -1571,7 +1571,7 @@ func IndexGatewayEvents() error {
 	}
 
 	// Process each network in parallel (EVM and Starknet)
-	for i, network := range networks {
+	for _, network := range networks {
 		// Skip Tron networks
 		if strings.HasPrefix(network.Identifier, "tron") {
 			continue

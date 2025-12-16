@@ -376,21 +376,9 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			return
 		}
 
-		receiveAddress, err = storage.Client.ReceiveAddress.
-			Create().
-			SetAddress(address).
-			SetSalt(salt).
-			SetStatus(receiveaddress.StatusUnused).
-			SetValidUntil(time.Now().Add(orderConf.ReceiveAddressValidity)).
-			Save(ctx)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"error":   err,
-				"address": address,
-			}).Errorf("Failed to create receive address")
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
-			return
-		}
+		receiveAddress = address
+		receiveAddressSalt = salt
+		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
 	} else if strings.HasPrefix(payload.Network, "starknet") {
 		if ctrl.starknetClient == nil {
 			logger.WithFields(logger.Fields{
