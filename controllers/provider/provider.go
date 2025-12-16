@@ -829,9 +829,9 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 	// This prevents attempting to fulfill already-settled orders and avoids balance release errors
 	if fulfillment.Edges.Order != nil {
 		orderStatus := fulfillment.Edges.Order.Status
-		if orderStatus == lockpaymentorder.StatusSettled ||
-			orderStatus == lockpaymentorder.StatusValidated ||
-			orderStatus == lockpaymentorder.StatusRefunded {
+		if orderStatus == paymentorder.StatusSettled ||
+			orderStatus == paymentorder.StatusValidated ||
+			orderStatus == paymentorder.StatusRefunded {
 			logger.WithFields(logger.Fields{
 				"OrderID": orderID.String(),
 				"Status":  orderStatus,
@@ -903,13 +903,13 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 
 		// Check order status again before updating (race condition protection)
 		// This prevents updating orders that were settled by another process
-		currentOrder, err := tx.LockPaymentOrder.
+		currentOrder, err := tx.PaymentOrder.
 			Query().
-			Where(lockpaymentorder.IDEQ(orderID)).
+			Where(paymentorder.IDEQ(orderID)).
 			Only(ctx)
 		if err == nil && currentOrder != nil {
-			if currentOrder.Status == lockpaymentorder.StatusSettled ||
-				currentOrder.Status == lockpaymentorder.StatusRefunded {
+			if currentOrder.Status == paymentorder.StatusSettled ||
+				currentOrder.Status == paymentorder.StatusRefunded {
 				logger.WithFields(logger.Fields{
 					"OrderID": orderID.String(),
 					"Status":  currentOrder.Status,
@@ -948,13 +948,13 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		if err != nil {
 			// Check if error is due to order already being settled (balance already released)
 			// If so, check order status and return success instead of error
-			checkOrder, checkErr := tx.LockPaymentOrder.
+			checkOrder, checkErr := tx.PaymentOrder.
 				Query().
-				Where(lockpaymentorder.IDEQ(orderID)).
+				Where(paymentorder.IDEQ(orderID)).
 				Only(ctx)
 			if checkErr == nil && checkOrder != nil {
-				if checkOrder.Status == lockpaymentorder.StatusSettled ||
-					checkOrder.Status == lockpaymentorder.StatusRefunded {
+				if checkOrder.Status == paymentorder.StatusSettled ||
+					checkOrder.Status == paymentorder.StatusRefunded {
 					logger.WithFields(logger.Fields{
 						"OrderID": orderID.String(),
 						"Status":  checkOrder.Status,
