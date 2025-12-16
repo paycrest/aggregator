@@ -563,6 +563,11 @@ func TestPriorityQueueTest(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, 1, len(data))
 		assert.Contains(t, data[0], testCtxForPQ.publicProviderProfile.ID)
+
+		// Clean up: Delete the bucket created in this test to avoid conflicts with TestProcessBucketQueues
+		// (both buckets would use the same Redis key)
+		_, err = db.Client.ProvisionBucket.Delete().Where(provisionbucket.IDEQ(bucket.ID)).Exec(ctx)
+		assert.NoError(t, err)
 	})
 
 	t.Run("TestProcessBucketQueues", func(t *testing.T) {

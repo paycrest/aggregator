@@ -232,13 +232,7 @@ func (s *PriorityQueueService) deleteQueue(ctx context.Context, key string) erro
 
 // CreatePriorityQueueForBucket creates a priority queue for a bucket and saves it to redis
 func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context, bucket *ent.ProvisionBucket) {
-	// Create a slice to store the provider profiles sorted by trust score
 	providers := bucket.Edges.ProviderProfiles
-	// sort.SliceStable(providers, func(i, j int) bool {
-	// 	trustScoreI, _ := providers[i].Edges.ProviderRating.TrustScore.Float64()
-	// 	trustScoreJ, _ := providers[j].Edges.ProviderRating.TrustScore.Float64()
-	// 	return trustScoreI > trustScoreJ // Sort in descending order
-	// })
 
 	// Randomize the order of providers
 	rand.Shuffle(len(providers), func(i, j int) {
