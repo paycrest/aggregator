@@ -503,10 +503,30 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			// Payment order does not exist, no need to update
-			paymentOrderExists = false
+			// Try to find by gateway_id as fallback (for orders created via InitiatePaymentOrder)
+			paymentOrder, err = db.Client.PaymentOrder.
+				Query().
+				Where(
+					paymentorder.GatewayIDEQ(event.OrderId),
+					paymentorder.HasTokenWith(
+						tokenent.HasNetworkWith(
+							networkent.IdentifierEQ(network.Identifier),
+						),
+					),
+				).
+				WithSenderProfile().
+				WithLinkedAddress().
+				Only(ctx)
+			if err != nil {
+				if ent.IsNotFound(err) {
+					// Payment order does not exist, no need to update
+					paymentOrderExists = false
+				} else {
+					return fmt.Errorf("UpdateOrderStatusRefunded.fetchOrderByGatewayId: %v", err)
+				}
+			}
 		} else {
-			return fmt.Errorf("UpdateOrderStatusRefunded.fetchOrder: %v", err)
+			return fmt.Errorf("UpdateOrderStatusRefunded.fetchOrderByMessageHash: %v", err)
 		}
 	}
 
@@ -622,12 +642,7 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		paymentOrderUpdate := tx.PaymentOrder.
 			Update().
 			Where(
-				paymentorder.MessageHashEQ(messageHash),
-				paymentorder.HasTokenWith(
-					tokenent.HasNetworkWith(
-						networkent.IdentifierEQ(network.Identifier),
-					),
-				),
+				paymentorder.IDEQ(paymentOrder.ID),
 			).
 			SetTxHash(event.TxHash).
 			SetBlockNumber(event.BlockNumber).
@@ -690,10 +705,29 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			// Payment order does not exist, no need to update
-			paymentOrderExists = false
+			// Try to find by gateway_id as fallback (for orders created via InitiatePaymentOrder)
+			paymentOrder, err = db.Client.PaymentOrder.
+				Query().
+				Where(
+					paymentorder.GatewayIDEQ(event.OrderId),
+					paymentorder.HasTokenWith(
+						tokenent.HasNetworkWith(
+							networkent.IdentifierEQ(network.Identifier),
+						),
+					),
+				).
+				WithSenderProfile().
+				Only(ctx)
+			if err != nil {
+				if ent.IsNotFound(err) {
+					// Payment order does not exist, no need to update
+					paymentOrderExists = false
+				} else {
+					return fmt.Errorf("UpdateOrderStatusSettled.fetchOrderByGatewayId: %v", err)
+				}
+			}
 		} else {
-			return fmt.Errorf("UpdateOrderStatusSettled.fetchOrder: %v", err)
+			return fmt.Errorf("UpdateOrderStatusSettled.fetchOrderByMessageHash: %v", err)
 		}
 	}
 
@@ -834,7 +868,7 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 		paymentOrderUpdate := tx.PaymentOrder.
 			Update().
 			Where(
-				paymentorder.MessageHashEQ(messageHash),
+				paymentorder.IDEQ(paymentOrder.ID),
 			).
 			SetBlockNumber(event.BlockNumber).
 			SetTxHash(event.TxHash).

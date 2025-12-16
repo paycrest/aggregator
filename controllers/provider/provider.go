@@ -825,10 +825,31 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		return
 	}
 
+	// Check if order is already in a final state before processing
+	// This prevents attempting to fulfill already-settled orders and avoids balance release errors
+	if fulfillment.Edges.Order != nil {
+		orderStatus := fulfillment.Edges.Order.Status
+		if orderStatus == lockpaymentorder.StatusSettled ||
+			orderStatus == lockpaymentorder.StatusValidated ||
+			orderStatus == lockpaymentorder.StatusRefunded {
+			logger.WithFields(logger.Fields{
+				"OrderID": orderID.String(),
+				"Status":  orderStatus,
+				"TxID":    payload.TxID,
+			}).Warnf("Rejecting fulfill request for order already in final state")
+			u.APIResponse(ctx, http.StatusOK, "success", fmt.Sprintf("Order already %s", orderStatus), nil)
+			return
+		}
+	}
+
 	switch payload.ValidationStatus {
 	case paymentorderfulfillment.ValidationStatusSuccess:
-		if fulfillment.Edges.Order.Status == paymentorder.StatusValidated {
-			u.APIResponse(ctx, http.StatusOK, "success", "Order already validated", nil)
+		// Double-check order status (race condition protection)
+		orderStatus := fulfillment.Edges.Order.Status
+		if orderStatus == paymentorder.StatusValidated ||
+			orderStatus == paymentorder.StatusSettled ||
+			orderStatus == paymentorder.StatusRefunded {
+			u.APIResponse(ctx, http.StatusOK, "success", fmt.Sprintf("Order already %s", orderStatus), nil)
 			return
 		}
 
@@ -880,6 +901,26 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			return
 		}
 
+		// Check order status again before updating (race condition protection)
+		// This prevents updating orders that were settled by another process
+		currentOrder, err := tx.LockPaymentOrder.
+			Query().
+			Where(lockpaymentorder.IDEQ(orderID)).
+			Only(ctx)
+		if err == nil && currentOrder != nil {
+			if currentOrder.Status == lockpaymentorder.StatusSettled ||
+				currentOrder.Status == lockpaymentorder.StatusRefunded {
+				logger.WithFields(logger.Fields{
+					"OrderID": orderID.String(),
+					"Status":  currentOrder.Status,
+					"TxID":    payload.TxID,
+				}).Warnf("Order already settled/refunded, skipping fulfillment")
+				_ = tx.Rollback()
+				u.APIResponse(ctx, http.StatusOK, "success", fmt.Sprintf("Order already %s", currentOrder.Status), nil)
+				return
+			}
+		}
+
 		// Update lock order status within transaction
 		_, err = tx.PaymentOrder.
 			Update().
@@ -905,6 +946,27 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 
 		err = ctrl.balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount, tx)
 		if err != nil {
+			// Check if error is due to order already being settled (balance already released)
+			// If so, check order status and return success instead of error
+			checkOrder, checkErr := tx.LockPaymentOrder.
+				Query().
+				Where(lockpaymentorder.IDEQ(orderID)).
+				Only(ctx)
+			if checkErr == nil && checkOrder != nil {
+				if checkOrder.Status == lockpaymentorder.StatusSettled ||
+					checkOrder.Status == lockpaymentorder.StatusRefunded {
+					logger.WithFields(logger.Fields{
+						"OrderID": orderID.String(),
+						"Status":  checkOrder.Status,
+						"TxID":    payload.TxID,
+						"Error":   fmt.Sprintf("%v", err),
+					}).Warnf("Balance release failed but order already settled/refunded, treating as success")
+					_ = tx.Rollback()
+					u.APIResponse(ctx, http.StatusOK, "success", fmt.Sprintf("Order already %s", checkOrder.Status), nil)
+					return
+				}
+			}
+
 			logger.WithFields(logger.Fields{
 				"Error":      fmt.Sprintf("%v", err),
 				"OrderID":    orderID.String(),

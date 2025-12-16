@@ -66,13 +66,13 @@ func (PaymentOrder) Fields() []ent.Field {
 			Optional(),
 		// Addresses
 		field.String("from_address").
-			MaxLen(60).
+			MaxLen(70).
 			Optional(),
 		field.String("return_address").
-			MaxLen(60).
+			MaxLen(70).
 			Optional(),
 		field.String("receive_address").
-			MaxLen(60).
+			MaxLen(70).
 			Optional().
 			Unique(),
 		field.Bytes("receive_address_salt").
@@ -80,7 +80,7 @@ func (PaymentOrder) Fields() []ent.Field {
 		field.Time("receive_address_expiry").
 			Optional(),
 		field.String("fee_address").
-			MaxLen(60).
+			MaxLen(70).
 			Optional(),
 		// Recipient info
 		field.String("institution").
