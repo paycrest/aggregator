@@ -28,40 +28,40 @@ type WebhookRetryAttemptQuery struct {
 }
 
 // Where adds a new predicate for the WebhookRetryAttemptQuery builder.
-func (wraq *WebhookRetryAttemptQuery) Where(ps ...predicate.WebhookRetryAttempt) *WebhookRetryAttemptQuery {
-	wraq.predicates = append(wraq.predicates, ps...)
-	return wraq
+func (_q *WebhookRetryAttemptQuery) Where(ps ...predicate.WebhookRetryAttempt) *WebhookRetryAttemptQuery {
+	_q.predicates = append(_q.predicates, ps...)
+	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (wraq *WebhookRetryAttemptQuery) Limit(limit int) *WebhookRetryAttemptQuery {
-	wraq.ctx.Limit = &limit
-	return wraq
+func (_q *WebhookRetryAttemptQuery) Limit(limit int) *WebhookRetryAttemptQuery {
+	_q.ctx.Limit = &limit
+	return _q
 }
 
 // Offset to start from.
-func (wraq *WebhookRetryAttemptQuery) Offset(offset int) *WebhookRetryAttemptQuery {
-	wraq.ctx.Offset = &offset
-	return wraq
+func (_q *WebhookRetryAttemptQuery) Offset(offset int) *WebhookRetryAttemptQuery {
+	_q.ctx.Offset = &offset
+	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (wraq *WebhookRetryAttemptQuery) Unique(unique bool) *WebhookRetryAttemptQuery {
-	wraq.ctx.Unique = &unique
-	return wraq
+func (_q *WebhookRetryAttemptQuery) Unique(unique bool) *WebhookRetryAttemptQuery {
+	_q.ctx.Unique = &unique
+	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (wraq *WebhookRetryAttemptQuery) Order(o ...webhookretryattempt.OrderOption) *WebhookRetryAttemptQuery {
-	wraq.order = append(wraq.order, o...)
-	return wraq
+func (_q *WebhookRetryAttemptQuery) Order(o ...webhookretryattempt.OrderOption) *WebhookRetryAttemptQuery {
+	_q.order = append(_q.order, o...)
+	return _q
 }
 
 // First returns the first WebhookRetryAttempt entity from the query.
 // Returns a *NotFoundError when no WebhookRetryAttempt was found.
-func (wraq *WebhookRetryAttemptQuery) First(ctx context.Context) (*WebhookRetryAttempt, error) {
-	nodes, err := wraq.Limit(1).All(setContextOp(ctx, wraq.ctx, ent.OpQueryFirst))
+func (_q *WebhookRetryAttemptQuery) First(ctx context.Context) (*WebhookRetryAttempt, error) {
+	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
@@ -72,8 +72,8 @@ func (wraq *WebhookRetryAttemptQuery) First(ctx context.Context) (*WebhookRetryA
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (wraq *WebhookRetryAttemptQuery) FirstX(ctx context.Context) *WebhookRetryAttempt {
-	node, err := wraq.First(ctx)
+func (_q *WebhookRetryAttemptQuery) FirstX(ctx context.Context) *WebhookRetryAttempt {
+	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -82,9 +82,9 @@ func (wraq *WebhookRetryAttemptQuery) FirstX(ctx context.Context) *WebhookRetryA
 
 // FirstID returns the first WebhookRetryAttempt ID from the query.
 // Returns a *NotFoundError when no WebhookRetryAttempt ID was found.
-func (wraq *WebhookRetryAttemptQuery) FirstID(ctx context.Context) (id int, err error) {
+func (_q *WebhookRetryAttemptQuery) FirstID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = wraq.Limit(1).IDs(setContextOp(ctx, wraq.ctx, ent.OpQueryFirstID)); err != nil {
+	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -95,8 +95,8 @@ func (wraq *WebhookRetryAttemptQuery) FirstID(ctx context.Context) (id int, err 
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (wraq *WebhookRetryAttemptQuery) FirstIDX(ctx context.Context) int {
-	id, err := wraq.FirstID(ctx)
+func (_q *WebhookRetryAttemptQuery) FirstIDX(ctx context.Context) int {
+	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -106,8 +106,8 @@ func (wraq *WebhookRetryAttemptQuery) FirstIDX(ctx context.Context) int {
 // Only returns a single WebhookRetryAttempt entity found by the query, ensuring it only returns one.
 // Returns a *NotSingularError when more than one WebhookRetryAttempt entity is found.
 // Returns a *NotFoundError when no WebhookRetryAttempt entities are found.
-func (wraq *WebhookRetryAttemptQuery) Only(ctx context.Context) (*WebhookRetryAttempt, error) {
-	nodes, err := wraq.Limit(2).All(setContextOp(ctx, wraq.ctx, ent.OpQueryOnly))
+func (_q *WebhookRetryAttemptQuery) Only(ctx context.Context) (*WebhookRetryAttempt, error) {
+	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -122,8 +122,8 @@ func (wraq *WebhookRetryAttemptQuery) Only(ctx context.Context) (*WebhookRetryAt
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (wraq *WebhookRetryAttemptQuery) OnlyX(ctx context.Context) *WebhookRetryAttempt {
-	node, err := wraq.Only(ctx)
+func (_q *WebhookRetryAttemptQuery) OnlyX(ctx context.Context) *WebhookRetryAttempt {
+	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -133,9 +133,9 @@ func (wraq *WebhookRetryAttemptQuery) OnlyX(ctx context.Context) *WebhookRetryAt
 // OnlyID is like Only, but returns the only WebhookRetryAttempt ID in the query.
 // Returns a *NotSingularError when more than one WebhookRetryAttempt ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (wraq *WebhookRetryAttemptQuery) OnlyID(ctx context.Context) (id int, err error) {
+func (_q *WebhookRetryAttemptQuery) OnlyID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = wraq.Limit(2).IDs(setContextOp(ctx, wraq.ctx, ent.OpQueryOnlyID)); err != nil {
+	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -150,8 +150,8 @@ func (wraq *WebhookRetryAttemptQuery) OnlyID(ctx context.Context) (id int, err e
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (wraq *WebhookRetryAttemptQuery) OnlyIDX(ctx context.Context) int {
-	id, err := wraq.OnlyID(ctx)
+func (_q *WebhookRetryAttemptQuery) OnlyIDX(ctx context.Context) int {
+	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -159,18 +159,18 @@ func (wraq *WebhookRetryAttemptQuery) OnlyIDX(ctx context.Context) int {
 }
 
 // All executes the query and returns a list of WebhookRetryAttempts.
-func (wraq *WebhookRetryAttemptQuery) All(ctx context.Context) ([]*WebhookRetryAttempt, error) {
-	ctx = setContextOp(ctx, wraq.ctx, ent.OpQueryAll)
-	if err := wraq.prepareQuery(ctx); err != nil {
+func (_q *WebhookRetryAttemptQuery) All(ctx context.Context) ([]*WebhookRetryAttempt, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
 	qr := querierAll[[]*WebhookRetryAttempt, *WebhookRetryAttemptQuery]()
-	return withInterceptors[[]*WebhookRetryAttempt](ctx, wraq, qr, wraq.inters)
+	return withInterceptors[[]*WebhookRetryAttempt](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (wraq *WebhookRetryAttemptQuery) AllX(ctx context.Context) []*WebhookRetryAttempt {
-	nodes, err := wraq.All(ctx)
+func (_q *WebhookRetryAttemptQuery) AllX(ctx context.Context) []*WebhookRetryAttempt {
+	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -178,20 +178,20 @@ func (wraq *WebhookRetryAttemptQuery) AllX(ctx context.Context) []*WebhookRetryA
 }
 
 // IDs executes the query and returns a list of WebhookRetryAttempt IDs.
-func (wraq *WebhookRetryAttemptQuery) IDs(ctx context.Context) (ids []int, err error) {
-	if wraq.ctx.Unique == nil && wraq.path != nil {
-		wraq.Unique(true)
+func (_q *WebhookRetryAttemptQuery) IDs(ctx context.Context) (ids []int, err error) {
+	if _q.ctx.Unique == nil && _q.path != nil {
+		_q.Unique(true)
 	}
-	ctx = setContextOp(ctx, wraq.ctx, ent.OpQueryIDs)
-	if err = wraq.Select(webhookretryattempt.FieldID).Scan(ctx, &ids); err != nil {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
+	if err = _q.Select(webhookretryattempt.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (wraq *WebhookRetryAttemptQuery) IDsX(ctx context.Context) []int {
-	ids, err := wraq.IDs(ctx)
+func (_q *WebhookRetryAttemptQuery) IDsX(ctx context.Context) []int {
+	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -199,17 +199,17 @@ func (wraq *WebhookRetryAttemptQuery) IDsX(ctx context.Context) []int {
 }
 
 // Count returns the count of the given query.
-func (wraq *WebhookRetryAttemptQuery) Count(ctx context.Context) (int, error) {
-	ctx = setContextOp(ctx, wraq.ctx, ent.OpQueryCount)
-	if err := wraq.prepareQuery(ctx); err != nil {
+func (_q *WebhookRetryAttemptQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, wraq, querierCount[*WebhookRetryAttemptQuery](), wraq.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*WebhookRetryAttemptQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (wraq *WebhookRetryAttemptQuery) CountX(ctx context.Context) int {
-	count, err := wraq.Count(ctx)
+func (_q *WebhookRetryAttemptQuery) CountX(ctx context.Context) int {
+	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -217,9 +217,9 @@ func (wraq *WebhookRetryAttemptQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (wraq *WebhookRetryAttemptQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = setContextOp(ctx, wraq.ctx, ent.OpQueryExist)
-	switch _, err := wraq.FirstID(ctx); {
+func (_q *WebhookRetryAttemptQuery) Exist(ctx context.Context) (bool, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
+	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
 	case err != nil:
@@ -230,8 +230,8 @@ func (wraq *WebhookRetryAttemptQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (wraq *WebhookRetryAttemptQuery) ExistX(ctx context.Context) bool {
-	exist, err := wraq.Exist(ctx)
+func (_q *WebhookRetryAttemptQuery) ExistX(ctx context.Context) bool {
+	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -240,19 +240,19 @@ func (wraq *WebhookRetryAttemptQuery) ExistX(ctx context.Context) bool {
 
 // Clone returns a duplicate of the WebhookRetryAttemptQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (wraq *WebhookRetryAttemptQuery) Clone() *WebhookRetryAttemptQuery {
-	if wraq == nil {
+func (_q *WebhookRetryAttemptQuery) Clone() *WebhookRetryAttemptQuery {
+	if _q == nil {
 		return nil
 	}
 	return &WebhookRetryAttemptQuery{
-		config:     wraq.config,
-		ctx:        wraq.ctx.Clone(),
-		order:      append([]webhookretryattempt.OrderOption{}, wraq.order...),
-		inters:     append([]Interceptor{}, wraq.inters...),
-		predicates: append([]predicate.WebhookRetryAttempt{}, wraq.predicates...),
+		config:     _q.config,
+		ctx:        _q.ctx.Clone(),
+		order:      append([]webhookretryattempt.OrderOption{}, _q.order...),
+		inters:     append([]Interceptor{}, _q.inters...),
+		predicates: append([]predicate.WebhookRetryAttempt{}, _q.predicates...),
 		// clone intermediate query.
-		sql:  wraq.sql.Clone(),
-		path: wraq.path,
+		sql:  _q.sql.Clone(),
+		path: _q.path,
 	}
 }
 
@@ -270,10 +270,10 @@ func (wraq *WebhookRetryAttemptQuery) Clone() *WebhookRetryAttemptQuery {
 //		GroupBy(webhookretryattempt.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (wraq *WebhookRetryAttemptQuery) GroupBy(field string, fields ...string) *WebhookRetryAttemptGroupBy {
-	wraq.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &WebhookRetryAttemptGroupBy{build: wraq}
-	grbuild.flds = &wraq.ctx.Fields
+func (_q *WebhookRetryAttemptQuery) GroupBy(field string, fields ...string) *WebhookRetryAttemptGroupBy {
+	_q.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &WebhookRetryAttemptGroupBy{build: _q}
+	grbuild.flds = &_q.ctx.Fields
 	grbuild.label = webhookretryattempt.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -291,62 +291,62 @@ func (wraq *WebhookRetryAttemptQuery) GroupBy(field string, fields ...string) *W
 //	client.WebhookRetryAttempt.Query().
 //		Select(webhookretryattempt.FieldCreatedAt).
 //		Scan(ctx, &v)
-func (wraq *WebhookRetryAttemptQuery) Select(fields ...string) *WebhookRetryAttemptSelect {
-	wraq.ctx.Fields = append(wraq.ctx.Fields, fields...)
-	sbuild := &WebhookRetryAttemptSelect{WebhookRetryAttemptQuery: wraq}
+func (_q *WebhookRetryAttemptQuery) Select(fields ...string) *WebhookRetryAttemptSelect {
+	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
+	sbuild := &WebhookRetryAttemptSelect{WebhookRetryAttemptQuery: _q}
 	sbuild.label = webhookretryattempt.Label
-	sbuild.flds, sbuild.scan = &wraq.ctx.Fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
 // Aggregate returns a WebhookRetryAttemptSelect configured with the given aggregations.
-func (wraq *WebhookRetryAttemptQuery) Aggregate(fns ...AggregateFunc) *WebhookRetryAttemptSelect {
-	return wraq.Select().Aggregate(fns...)
+func (_q *WebhookRetryAttemptQuery) Aggregate(fns ...AggregateFunc) *WebhookRetryAttemptSelect {
+	return _q.Select().Aggregate(fns...)
 }
 
-func (wraq *WebhookRetryAttemptQuery) prepareQuery(ctx context.Context) error {
-	for _, inter := range wraq.inters {
+func (_q *WebhookRetryAttemptQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
 		}
 		if trv, ok := inter.(Traverser); ok {
-			if err := trv.Traverse(ctx, wraq); err != nil {
+			if err := trv.Traverse(ctx, _q); err != nil {
 				return err
 			}
 		}
 	}
-	for _, f := range wraq.ctx.Fields {
+	for _, f := range _q.ctx.Fields {
 		if !webhookretryattempt.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
-	if wraq.path != nil {
-		prev, err := wraq.path(ctx)
+	if _q.path != nil {
+		prev, err := _q.path(ctx)
 		if err != nil {
 			return err
 		}
-		wraq.sql = prev
+		_q.sql = prev
 	}
 	return nil
 }
 
-func (wraq *WebhookRetryAttemptQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*WebhookRetryAttempt, error) {
+func (_q *WebhookRetryAttemptQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*WebhookRetryAttempt, error) {
 	var (
 		nodes = []*WebhookRetryAttempt{}
-		_spec = wraq.querySpec()
+		_spec = _q.querySpec()
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*WebhookRetryAttempt).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &WebhookRetryAttempt{config: wraq.config}
+		node := &WebhookRetryAttempt{config: _q.config}
 		nodes = append(nodes, node)
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
 	}
-	if err := sqlgraph.QueryNodes(ctx, wraq.driver, _spec); err != nil {
+	if err := sqlgraph.QueryNodes(ctx, _q.driver, _spec); err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
@@ -355,24 +355,24 @@ func (wraq *WebhookRetryAttemptQuery) sqlAll(ctx context.Context, hooks ...query
 	return nodes, nil
 }
 
-func (wraq *WebhookRetryAttemptQuery) sqlCount(ctx context.Context) (int, error) {
-	_spec := wraq.querySpec()
-	_spec.Node.Columns = wraq.ctx.Fields
-	if len(wraq.ctx.Fields) > 0 {
-		_spec.Unique = wraq.ctx.Unique != nil && *wraq.ctx.Unique
+func (_q *WebhookRetryAttemptQuery) sqlCount(ctx context.Context) (int, error) {
+	_spec := _q.querySpec()
+	_spec.Node.Columns = _q.ctx.Fields
+	if len(_q.ctx.Fields) > 0 {
+		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
 	}
-	return sqlgraph.CountNodes(ctx, wraq.driver, _spec)
+	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (wraq *WebhookRetryAttemptQuery) querySpec() *sqlgraph.QuerySpec {
+func (_q *WebhookRetryAttemptQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := sqlgraph.NewQuerySpec(webhookretryattempt.Table, webhookretryattempt.Columns, sqlgraph.NewFieldSpec(webhookretryattempt.FieldID, field.TypeInt))
-	_spec.From = wraq.sql
-	if unique := wraq.ctx.Unique; unique != nil {
+	_spec.From = _q.sql
+	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
-	} else if wraq.path != nil {
+	} else if _q.path != nil {
 		_spec.Unique = true
 	}
-	if fields := wraq.ctx.Fields; len(fields) > 0 {
+	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, webhookretryattempt.FieldID)
 		for i := range fields {
@@ -381,20 +381,20 @@ func (wraq *WebhookRetryAttemptQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if ps := wraq.predicates; len(ps) > 0 {
+	if ps := _q.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if limit := wraq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := wraq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
-	if ps := wraq.order; len(ps) > 0 {
+	if ps := _q.order; len(ps) > 0 {
 		_spec.Order = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
@@ -404,33 +404,33 @@ func (wraq *WebhookRetryAttemptQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (wraq *WebhookRetryAttemptQuery) sqlQuery(ctx context.Context) *sql.Selector {
-	builder := sql.Dialect(wraq.driver.Dialect())
+func (_q *WebhookRetryAttemptQuery) sqlQuery(ctx context.Context) *sql.Selector {
+	builder := sql.Dialect(_q.driver.Dialect())
 	t1 := builder.Table(webhookretryattempt.Table)
-	columns := wraq.ctx.Fields
+	columns := _q.ctx.Fields
 	if len(columns) == 0 {
 		columns = webhookretryattempt.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
-	if wraq.sql != nil {
-		selector = wraq.sql
+	if _q.sql != nil {
+		selector = _q.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if wraq.ctx.Unique != nil && *wraq.ctx.Unique {
+	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
-	for _, p := range wraq.predicates {
+	for _, p := range _q.predicates {
 		p(selector)
 	}
-	for _, p := range wraq.order {
+	for _, p := range _q.order {
 		p(selector)
 	}
-	if offset := wraq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := wraq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -443,41 +443,41 @@ type WebhookRetryAttemptGroupBy struct {
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (wragb *WebhookRetryAttemptGroupBy) Aggregate(fns ...AggregateFunc) *WebhookRetryAttemptGroupBy {
-	wragb.fns = append(wragb.fns, fns...)
-	return wragb
+func (_g *WebhookRetryAttemptGroupBy) Aggregate(fns ...AggregateFunc) *WebhookRetryAttemptGroupBy {
+	_g.fns = append(_g.fns, fns...)
+	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (wragb *WebhookRetryAttemptGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, wragb.build.ctx, ent.OpQueryGroupBy)
-	if err := wragb.build.prepareQuery(ctx); err != nil {
+func (_g *WebhookRetryAttemptGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
+	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*WebhookRetryAttemptQuery, *WebhookRetryAttemptGroupBy](ctx, wragb.build, wragb, wragb.build.inters, v)
+	return scanWithInterceptors[*WebhookRetryAttemptQuery, *WebhookRetryAttemptGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (wragb *WebhookRetryAttemptGroupBy) sqlScan(ctx context.Context, root *WebhookRetryAttemptQuery, v any) error {
+func (_g *WebhookRetryAttemptGroupBy) sqlScan(ctx context.Context, root *WebhookRetryAttemptQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
-	aggregation := make([]string, 0, len(wragb.fns))
-	for _, fn := range wragb.fns {
+	aggregation := make([]string, 0, len(_g.fns))
+	for _, fn := range _g.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
 	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(*wragb.flds)+len(wragb.fns))
-		for _, f := range *wragb.flds {
+		columns := make([]string, 0, len(*_g.flds)+len(_g.fns))
+		for _, f := range *_g.flds {
 			columns = append(columns, selector.C(f))
 		}
 		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
-	selector.GroupBy(selector.Columns(*wragb.flds...)...)
+	selector.GroupBy(selector.Columns(*_g.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := wragb.build.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _g.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
@@ -491,27 +491,27 @@ type WebhookRetryAttemptSelect struct {
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (wras *WebhookRetryAttemptSelect) Aggregate(fns ...AggregateFunc) *WebhookRetryAttemptSelect {
-	wras.fns = append(wras.fns, fns...)
-	return wras
+func (_s *WebhookRetryAttemptSelect) Aggregate(fns ...AggregateFunc) *WebhookRetryAttemptSelect {
+	_s.fns = append(_s.fns, fns...)
+	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (wras *WebhookRetryAttemptSelect) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, wras.ctx, ent.OpQuerySelect)
-	if err := wras.prepareQuery(ctx); err != nil {
+func (_s *WebhookRetryAttemptSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
+	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*WebhookRetryAttemptQuery, *WebhookRetryAttemptSelect](ctx, wras.WebhookRetryAttemptQuery, wras, wras.inters, v)
+	return scanWithInterceptors[*WebhookRetryAttemptQuery, *WebhookRetryAttemptSelect](ctx, _s.WebhookRetryAttemptQuery, _s, _s.inters, v)
 }
 
-func (wras *WebhookRetryAttemptSelect) sqlScan(ctx context.Context, root *WebhookRetryAttemptQuery, v any) error {
+func (_s *WebhookRetryAttemptSelect) sqlScan(ctx context.Context, root *WebhookRetryAttemptQuery, v any) error {
 	selector := root.sqlQuery(ctx)
-	aggregation := make([]string, 0, len(wras.fns))
-	for _, fn := range wras.fns {
+	aggregation := make([]string, 0, len(_s.fns))
+	for _, fn := range _s.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
-	switch n := len(*wras.selector.flds); {
+	switch n := len(*_s.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
 		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
@@ -519,7 +519,7 @@ func (wras *WebhookRetryAttemptSelect) sqlScan(ctx context.Context, root *Webhoo
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := wras.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _s.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()

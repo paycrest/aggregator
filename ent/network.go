@@ -102,7 +102,7 @@ func (*Network) scanValues(columns []string) ([]any, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the Network fields.
-func (n *Network) assignValues(columns []string, values []any) error {
+func (_m *Network) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -113,75 +113,75 @@ func (n *Network) assignValues(columns []string, values []any) error {
 			if !ok {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
-			n.ID = int(value.Int64)
+			_m.ID = int(value.Int64)
 		case network.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
-				n.CreatedAt = value.Time
+				_m.CreatedAt = value.Time
 			}
 		case network.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
-				n.UpdatedAt = value.Time
+				_m.UpdatedAt = value.Time
 			}
 		case network.FieldChainID:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field chain_id", values[i])
 			} else if value.Valid {
-				n.ChainID = value.Int64
+				_m.ChainID = value.Int64
 			}
 		case network.FieldIdentifier:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field identifier", values[i])
 			} else if value.Valid {
-				n.Identifier = value.String
+				_m.Identifier = value.String
 			}
 		case network.FieldRPCEndpoint:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field rpc_endpoint", values[i])
 			} else if value.Valid {
-				n.RPCEndpoint = value.String
+				_m.RPCEndpoint = value.String
 			}
 		case network.FieldGatewayContractAddress:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field gateway_contract_address", values[i])
 			} else if value.Valid {
-				n.GatewayContractAddress = value.String
+				_m.GatewayContractAddress = value.String
 			}
 		case network.FieldBlockTime:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field block_time", values[i])
 			} else if value != nil {
-				n.BlockTime = *value
+				_m.BlockTime = *value
 			}
 		case network.FieldIsTestnet:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field is_testnet", values[i])
 			} else if value.Valid {
-				n.IsTestnet = value.Bool
+				_m.IsTestnet = value.Bool
 			}
 		case network.FieldBundlerURL:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field bundler_url", values[i])
 			} else if value.Valid {
-				n.BundlerURL = value.String
+				_m.BundlerURL = value.String
 			}
 		case network.FieldPaymasterURL:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field paymaster_url", values[i])
 			} else if value.Valid {
-				n.PaymasterURL = value.String
+				_m.PaymasterURL = value.String
 			}
 		case network.FieldFee:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field fee", values[i])
 			} else if value != nil {
-				n.Fee = *value
+				_m.Fee = *value
 			}
 		default:
-			n.selectValues.Set(columns[i], values[i])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -189,75 +189,75 @@ func (n *Network) assignValues(columns []string, values []any) error {
 
 // Value returns the ent.Value that was dynamically selected and assigned to the Network.
 // This includes values selected through modifiers, order, etc.
-func (n *Network) Value(name string) (ent.Value, error) {
-	return n.selectValues.Get(name)
+func (_m *Network) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
 }
 
 // QueryTokens queries the "tokens" edge of the Network entity.
-func (n *Network) QueryTokens() *TokenQuery {
-	return NewNetworkClient(n.config).QueryTokens(n)
+func (_m *Network) QueryTokens() *TokenQuery {
+	return NewNetworkClient(_m.config).QueryTokens(_m)
 }
 
 // QueryPaymentWebhook queries the "payment_webhook" edge of the Network entity.
-func (n *Network) QueryPaymentWebhook() *PaymentWebhookQuery {
-	return NewNetworkClient(n.config).QueryPaymentWebhook(n)
+func (_m *Network) QueryPaymentWebhook() *PaymentWebhookQuery {
+	return NewNetworkClient(_m.config).QueryPaymentWebhook(_m)
 }
 
 // Update returns a builder for updating this Network.
 // Note that you need to call Network.Unwrap() before calling this method if this Network
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (n *Network) Update() *NetworkUpdateOne {
-	return NewNetworkClient(n.config).UpdateOne(n)
+func (_m *Network) Update() *NetworkUpdateOne {
+	return NewNetworkClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the Network entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (n *Network) Unwrap() *Network {
-	_tx, ok := n.config.driver.(*txDriver)
+func (_m *Network) Unwrap() *Network {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: Network is not a transactional entity")
 	}
-	n.config.driver = _tx.drv
-	return n
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (n *Network) String() string {
+func (_m *Network) String() string {
 	var builder strings.Builder
 	builder.WriteString("Network(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", n.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("created_at=")
-	builder.WriteString(n.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
-	builder.WriteString(n.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("chain_id=")
-	builder.WriteString(fmt.Sprintf("%v", n.ChainID))
+	builder.WriteString(fmt.Sprintf("%v", _m.ChainID))
 	builder.WriteString(", ")
 	builder.WriteString("identifier=")
-	builder.WriteString(n.Identifier)
+	builder.WriteString(_m.Identifier)
 	builder.WriteString(", ")
 	builder.WriteString("rpc_endpoint=")
-	builder.WriteString(n.RPCEndpoint)
+	builder.WriteString(_m.RPCEndpoint)
 	builder.WriteString(", ")
 	builder.WriteString("gateway_contract_address=")
-	builder.WriteString(n.GatewayContractAddress)
+	builder.WriteString(_m.GatewayContractAddress)
 	builder.WriteString(", ")
 	builder.WriteString("block_time=")
-	builder.WriteString(fmt.Sprintf("%v", n.BlockTime))
+	builder.WriteString(fmt.Sprintf("%v", _m.BlockTime))
 	builder.WriteString(", ")
 	builder.WriteString("is_testnet=")
-	builder.WriteString(fmt.Sprintf("%v", n.IsTestnet))
+	builder.WriteString(fmt.Sprintf("%v", _m.IsTestnet))
 	builder.WriteString(", ")
 	builder.WriteString("bundler_url=")
-	builder.WriteString(n.BundlerURL)
+	builder.WriteString(_m.BundlerURL)
 	builder.WriteString(", ")
 	builder.WriteString("paymaster_url=")
-	builder.WriteString(n.PaymasterURL)
+	builder.WriteString(_m.PaymasterURL)
 	builder.WriteString(", ")
 	builder.WriteString("fee=")
-	builder.WriteString(fmt.Sprintf("%v", n.Fee))
+	builder.WriteString(fmt.Sprintf("%v", _m.Fee))
 	builder.WriteByte(')')
 	return builder.String()
 }

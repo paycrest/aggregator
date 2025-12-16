@@ -32,44 +32,44 @@ type BeneficialOwnerQuery struct {
 }
 
 // Where adds a new predicate for the BeneficialOwnerQuery builder.
-func (boq *BeneficialOwnerQuery) Where(ps ...predicate.BeneficialOwner) *BeneficialOwnerQuery {
-	boq.predicates = append(boq.predicates, ps...)
-	return boq
+func (_q *BeneficialOwnerQuery) Where(ps ...predicate.BeneficialOwner) *BeneficialOwnerQuery {
+	_q.predicates = append(_q.predicates, ps...)
+	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (boq *BeneficialOwnerQuery) Limit(limit int) *BeneficialOwnerQuery {
-	boq.ctx.Limit = &limit
-	return boq
+func (_q *BeneficialOwnerQuery) Limit(limit int) *BeneficialOwnerQuery {
+	_q.ctx.Limit = &limit
+	return _q
 }
 
 // Offset to start from.
-func (boq *BeneficialOwnerQuery) Offset(offset int) *BeneficialOwnerQuery {
-	boq.ctx.Offset = &offset
-	return boq
+func (_q *BeneficialOwnerQuery) Offset(offset int) *BeneficialOwnerQuery {
+	_q.ctx.Offset = &offset
+	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (boq *BeneficialOwnerQuery) Unique(unique bool) *BeneficialOwnerQuery {
-	boq.ctx.Unique = &unique
-	return boq
+func (_q *BeneficialOwnerQuery) Unique(unique bool) *BeneficialOwnerQuery {
+	_q.ctx.Unique = &unique
+	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (boq *BeneficialOwnerQuery) Order(o ...beneficialowner.OrderOption) *BeneficialOwnerQuery {
-	boq.order = append(boq.order, o...)
-	return boq
+func (_q *BeneficialOwnerQuery) Order(o ...beneficialowner.OrderOption) *BeneficialOwnerQuery {
+	_q.order = append(_q.order, o...)
+	return _q
 }
 
 // QueryKybProfile chains the current query on the "kyb_profile" edge.
-func (boq *BeneficialOwnerQuery) QueryKybProfile() *KYBProfileQuery {
-	query := (&KYBProfileClient{config: boq.config}).Query()
+func (_q *BeneficialOwnerQuery) QueryKybProfile() *KYBProfileQuery {
+	query := (&KYBProfileClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := boq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := boq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -78,7 +78,7 @@ func (boq *BeneficialOwnerQuery) QueryKybProfile() *KYBProfileQuery {
 			sqlgraph.To(kybprofile.Table, kybprofile.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, beneficialowner.KybProfileTable, beneficialowner.KybProfileColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(boq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
@@ -86,8 +86,8 @@ func (boq *BeneficialOwnerQuery) QueryKybProfile() *KYBProfileQuery {
 
 // First returns the first BeneficialOwner entity from the query.
 // Returns a *NotFoundError when no BeneficialOwner was found.
-func (boq *BeneficialOwnerQuery) First(ctx context.Context) (*BeneficialOwner, error) {
-	nodes, err := boq.Limit(1).All(setContextOp(ctx, boq.ctx, ent.OpQueryFirst))
+func (_q *BeneficialOwnerQuery) First(ctx context.Context) (*BeneficialOwner, error) {
+	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
@@ -98,8 +98,8 @@ func (boq *BeneficialOwnerQuery) First(ctx context.Context) (*BeneficialOwner, e
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (boq *BeneficialOwnerQuery) FirstX(ctx context.Context) *BeneficialOwner {
-	node, err := boq.First(ctx)
+func (_q *BeneficialOwnerQuery) FirstX(ctx context.Context) *BeneficialOwner {
+	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -108,9 +108,9 @@ func (boq *BeneficialOwnerQuery) FirstX(ctx context.Context) *BeneficialOwner {
 
 // FirstID returns the first BeneficialOwner ID from the query.
 // Returns a *NotFoundError when no BeneficialOwner ID was found.
-func (boq *BeneficialOwnerQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *BeneficialOwnerQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = boq.Limit(1).IDs(setContextOp(ctx, boq.ctx, ent.OpQueryFirstID)); err != nil {
+	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -121,8 +121,8 @@ func (boq *BeneficialOwnerQuery) FirstID(ctx context.Context) (id uuid.UUID, err
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (boq *BeneficialOwnerQuery) FirstIDX(ctx context.Context) uuid.UUID {
-	id, err := boq.FirstID(ctx)
+func (_q *BeneficialOwnerQuery) FirstIDX(ctx context.Context) uuid.UUID {
+	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -132,8 +132,8 @@ func (boq *BeneficialOwnerQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Only returns a single BeneficialOwner entity found by the query, ensuring it only returns one.
 // Returns a *NotSingularError when more than one BeneficialOwner entity is found.
 // Returns a *NotFoundError when no BeneficialOwner entities are found.
-func (boq *BeneficialOwnerQuery) Only(ctx context.Context) (*BeneficialOwner, error) {
-	nodes, err := boq.Limit(2).All(setContextOp(ctx, boq.ctx, ent.OpQueryOnly))
+func (_q *BeneficialOwnerQuery) Only(ctx context.Context) (*BeneficialOwner, error) {
+	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -148,8 +148,8 @@ func (boq *BeneficialOwnerQuery) Only(ctx context.Context) (*BeneficialOwner, er
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (boq *BeneficialOwnerQuery) OnlyX(ctx context.Context) *BeneficialOwner {
-	node, err := boq.Only(ctx)
+func (_q *BeneficialOwnerQuery) OnlyX(ctx context.Context) *BeneficialOwner {
+	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -159,9 +159,9 @@ func (boq *BeneficialOwnerQuery) OnlyX(ctx context.Context) *BeneficialOwner {
 // OnlyID is like Only, but returns the only BeneficialOwner ID in the query.
 // Returns a *NotSingularError when more than one BeneficialOwner ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (boq *BeneficialOwnerQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *BeneficialOwnerQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = boq.Limit(2).IDs(setContextOp(ctx, boq.ctx, ent.OpQueryOnlyID)); err != nil {
+	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -176,8 +176,8 @@ func (boq *BeneficialOwnerQuery) OnlyID(ctx context.Context) (id uuid.UUID, err 
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (boq *BeneficialOwnerQuery) OnlyIDX(ctx context.Context) uuid.UUID {
-	id, err := boq.OnlyID(ctx)
+func (_q *BeneficialOwnerQuery) OnlyIDX(ctx context.Context) uuid.UUID {
+	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -185,18 +185,18 @@ func (boq *BeneficialOwnerQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 }
 
 // All executes the query and returns a list of BeneficialOwners.
-func (boq *BeneficialOwnerQuery) All(ctx context.Context) ([]*BeneficialOwner, error) {
-	ctx = setContextOp(ctx, boq.ctx, ent.OpQueryAll)
-	if err := boq.prepareQuery(ctx); err != nil {
+func (_q *BeneficialOwnerQuery) All(ctx context.Context) ([]*BeneficialOwner, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
 	qr := querierAll[[]*BeneficialOwner, *BeneficialOwnerQuery]()
-	return withInterceptors[[]*BeneficialOwner](ctx, boq, qr, boq.inters)
+	return withInterceptors[[]*BeneficialOwner](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (boq *BeneficialOwnerQuery) AllX(ctx context.Context) []*BeneficialOwner {
-	nodes, err := boq.All(ctx)
+func (_q *BeneficialOwnerQuery) AllX(ctx context.Context) []*BeneficialOwner {
+	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -204,20 +204,20 @@ func (boq *BeneficialOwnerQuery) AllX(ctx context.Context) []*BeneficialOwner {
 }
 
 // IDs executes the query and returns a list of BeneficialOwner IDs.
-func (boq *BeneficialOwnerQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
-	if boq.ctx.Unique == nil && boq.path != nil {
-		boq.Unique(true)
+func (_q *BeneficialOwnerQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if _q.ctx.Unique == nil && _q.path != nil {
+		_q.Unique(true)
 	}
-	ctx = setContextOp(ctx, boq.ctx, ent.OpQueryIDs)
-	if err = boq.Select(beneficialowner.FieldID).Scan(ctx, &ids); err != nil {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
+	if err = _q.Select(beneficialowner.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (boq *BeneficialOwnerQuery) IDsX(ctx context.Context) []uuid.UUID {
-	ids, err := boq.IDs(ctx)
+func (_q *BeneficialOwnerQuery) IDsX(ctx context.Context) []uuid.UUID {
+	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -225,17 +225,17 @@ func (boq *BeneficialOwnerQuery) IDsX(ctx context.Context) []uuid.UUID {
 }
 
 // Count returns the count of the given query.
-func (boq *BeneficialOwnerQuery) Count(ctx context.Context) (int, error) {
-	ctx = setContextOp(ctx, boq.ctx, ent.OpQueryCount)
-	if err := boq.prepareQuery(ctx); err != nil {
+func (_q *BeneficialOwnerQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, boq, querierCount[*BeneficialOwnerQuery](), boq.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*BeneficialOwnerQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (boq *BeneficialOwnerQuery) CountX(ctx context.Context) int {
-	count, err := boq.Count(ctx)
+func (_q *BeneficialOwnerQuery) CountX(ctx context.Context) int {
+	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -243,9 +243,9 @@ func (boq *BeneficialOwnerQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (boq *BeneficialOwnerQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = setContextOp(ctx, boq.ctx, ent.OpQueryExist)
-	switch _, err := boq.FirstID(ctx); {
+func (_q *BeneficialOwnerQuery) Exist(ctx context.Context) (bool, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
+	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
 	case err != nil:
@@ -256,8 +256,8 @@ func (boq *BeneficialOwnerQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (boq *BeneficialOwnerQuery) ExistX(ctx context.Context) bool {
-	exist, err := boq.Exist(ctx)
+func (_q *BeneficialOwnerQuery) ExistX(ctx context.Context) bool {
+	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -266,32 +266,32 @@ func (boq *BeneficialOwnerQuery) ExistX(ctx context.Context) bool {
 
 // Clone returns a duplicate of the BeneficialOwnerQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (boq *BeneficialOwnerQuery) Clone() *BeneficialOwnerQuery {
-	if boq == nil {
+func (_q *BeneficialOwnerQuery) Clone() *BeneficialOwnerQuery {
+	if _q == nil {
 		return nil
 	}
 	return &BeneficialOwnerQuery{
-		config:         boq.config,
-		ctx:            boq.ctx.Clone(),
-		order:          append([]beneficialowner.OrderOption{}, boq.order...),
-		inters:         append([]Interceptor{}, boq.inters...),
-		predicates:     append([]predicate.BeneficialOwner{}, boq.predicates...),
-		withKybProfile: boq.withKybProfile.Clone(),
+		config:         _q.config,
+		ctx:            _q.ctx.Clone(),
+		order:          append([]beneficialowner.OrderOption{}, _q.order...),
+		inters:         append([]Interceptor{}, _q.inters...),
+		predicates:     append([]predicate.BeneficialOwner{}, _q.predicates...),
+		withKybProfile: _q.withKybProfile.Clone(),
 		// clone intermediate query.
-		sql:  boq.sql.Clone(),
-		path: boq.path,
+		sql:  _q.sql.Clone(),
+		path: _q.path,
 	}
 }
 
 // WithKybProfile tells the query-builder to eager-load the nodes that are connected to
 // the "kyb_profile" edge. The optional arguments are used to configure the query builder of the edge.
-func (boq *BeneficialOwnerQuery) WithKybProfile(opts ...func(*KYBProfileQuery)) *BeneficialOwnerQuery {
-	query := (&KYBProfileClient{config: boq.config}).Query()
+func (_q *BeneficialOwnerQuery) WithKybProfile(opts ...func(*KYBProfileQuery)) *BeneficialOwnerQuery {
+	query := (&KYBProfileClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	boq.withKybProfile = query
-	return boq
+	_q.withKybProfile = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -308,10 +308,10 @@ func (boq *BeneficialOwnerQuery) WithKybProfile(opts ...func(*KYBProfileQuery)) 
 //		GroupBy(beneficialowner.FieldFullName).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (boq *BeneficialOwnerQuery) GroupBy(field string, fields ...string) *BeneficialOwnerGroupBy {
-	boq.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &BeneficialOwnerGroupBy{build: boq}
-	grbuild.flds = &boq.ctx.Fields
+func (_q *BeneficialOwnerQuery) GroupBy(field string, fields ...string) *BeneficialOwnerGroupBy {
+	_q.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &BeneficialOwnerGroupBy{build: _q}
+	grbuild.flds = &_q.ctx.Fields
 	grbuild.label = beneficialowner.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -329,55 +329,55 @@ func (boq *BeneficialOwnerQuery) GroupBy(field string, fields ...string) *Benefi
 //	client.BeneficialOwner.Query().
 //		Select(beneficialowner.FieldFullName).
 //		Scan(ctx, &v)
-func (boq *BeneficialOwnerQuery) Select(fields ...string) *BeneficialOwnerSelect {
-	boq.ctx.Fields = append(boq.ctx.Fields, fields...)
-	sbuild := &BeneficialOwnerSelect{BeneficialOwnerQuery: boq}
+func (_q *BeneficialOwnerQuery) Select(fields ...string) *BeneficialOwnerSelect {
+	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
+	sbuild := &BeneficialOwnerSelect{BeneficialOwnerQuery: _q}
 	sbuild.label = beneficialowner.Label
-	sbuild.flds, sbuild.scan = &boq.ctx.Fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
 // Aggregate returns a BeneficialOwnerSelect configured with the given aggregations.
-func (boq *BeneficialOwnerQuery) Aggregate(fns ...AggregateFunc) *BeneficialOwnerSelect {
-	return boq.Select().Aggregate(fns...)
+func (_q *BeneficialOwnerQuery) Aggregate(fns ...AggregateFunc) *BeneficialOwnerSelect {
+	return _q.Select().Aggregate(fns...)
 }
 
-func (boq *BeneficialOwnerQuery) prepareQuery(ctx context.Context) error {
-	for _, inter := range boq.inters {
+func (_q *BeneficialOwnerQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
 		}
 		if trv, ok := inter.(Traverser); ok {
-			if err := trv.Traverse(ctx, boq); err != nil {
+			if err := trv.Traverse(ctx, _q); err != nil {
 				return err
 			}
 		}
 	}
-	for _, f := range boq.ctx.Fields {
+	for _, f := range _q.ctx.Fields {
 		if !beneficialowner.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
-	if boq.path != nil {
-		prev, err := boq.path(ctx)
+	if _q.path != nil {
+		prev, err := _q.path(ctx)
 		if err != nil {
 			return err
 		}
-		boq.sql = prev
+		_q.sql = prev
 	}
 	return nil
 }
 
-func (boq *BeneficialOwnerQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*BeneficialOwner, error) {
+func (_q *BeneficialOwnerQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*BeneficialOwner, error) {
 	var (
 		nodes       = []*BeneficialOwner{}
-		withFKs     = boq.withFKs
-		_spec       = boq.querySpec()
+		withFKs     = _q.withFKs
+		_spec       = _q.querySpec()
 		loadedTypes = [1]bool{
-			boq.withKybProfile != nil,
+			_q.withKybProfile != nil,
 		}
 	)
-	if boq.withKybProfile != nil {
+	if _q.withKybProfile != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -387,7 +387,7 @@ func (boq *BeneficialOwnerQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 		return (*BeneficialOwner).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &BeneficialOwner{config: boq.config}
+		node := &BeneficialOwner{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -395,14 +395,14 @@ func (boq *BeneficialOwnerQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 	for i := range hooks {
 		hooks[i](ctx, _spec)
 	}
-	if err := sqlgraph.QueryNodes(ctx, boq.driver, _spec); err != nil {
+	if err := sqlgraph.QueryNodes(ctx, _q.driver, _spec); err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := boq.withKybProfile; query != nil {
-		if err := boq.loadKybProfile(ctx, query, nodes, nil,
+	if query := _q.withKybProfile; query != nil {
+		if err := _q.loadKybProfile(ctx, query, nodes, nil,
 			func(n *BeneficialOwner, e *KYBProfile) { n.Edges.KybProfile = e }); err != nil {
 			return nil, err
 		}
@@ -410,7 +410,7 @@ func (boq *BeneficialOwnerQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 	return nodes, nil
 }
 
-func (boq *BeneficialOwnerQuery) loadKybProfile(ctx context.Context, query *KYBProfileQuery, nodes []*BeneficialOwner, init func(*BeneficialOwner), assign func(*BeneficialOwner, *KYBProfile)) error {
+func (_q *BeneficialOwnerQuery) loadKybProfile(ctx context.Context, query *KYBProfileQuery, nodes []*BeneficialOwner, init func(*BeneficialOwner), assign func(*BeneficialOwner, *KYBProfile)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*BeneficialOwner)
 	for i := range nodes {
@@ -443,24 +443,24 @@ func (boq *BeneficialOwnerQuery) loadKybProfile(ctx context.Context, query *KYBP
 	return nil
 }
 
-func (boq *BeneficialOwnerQuery) sqlCount(ctx context.Context) (int, error) {
-	_spec := boq.querySpec()
-	_spec.Node.Columns = boq.ctx.Fields
-	if len(boq.ctx.Fields) > 0 {
-		_spec.Unique = boq.ctx.Unique != nil && *boq.ctx.Unique
+func (_q *BeneficialOwnerQuery) sqlCount(ctx context.Context) (int, error) {
+	_spec := _q.querySpec()
+	_spec.Node.Columns = _q.ctx.Fields
+	if len(_q.ctx.Fields) > 0 {
+		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
 	}
-	return sqlgraph.CountNodes(ctx, boq.driver, _spec)
+	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (boq *BeneficialOwnerQuery) querySpec() *sqlgraph.QuerySpec {
+func (_q *BeneficialOwnerQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := sqlgraph.NewQuerySpec(beneficialowner.Table, beneficialowner.Columns, sqlgraph.NewFieldSpec(beneficialowner.FieldID, field.TypeUUID))
-	_spec.From = boq.sql
-	if unique := boq.ctx.Unique; unique != nil {
+	_spec.From = _q.sql
+	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
-	} else if boq.path != nil {
+	} else if _q.path != nil {
 		_spec.Unique = true
 	}
-	if fields := boq.ctx.Fields; len(fields) > 0 {
+	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, beneficialowner.FieldID)
 		for i := range fields {
@@ -469,20 +469,20 @@ func (boq *BeneficialOwnerQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if ps := boq.predicates; len(ps) > 0 {
+	if ps := _q.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if limit := boq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := boq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
-	if ps := boq.order; len(ps) > 0 {
+	if ps := _q.order; len(ps) > 0 {
 		_spec.Order = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
@@ -492,33 +492,33 @@ func (boq *BeneficialOwnerQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (boq *BeneficialOwnerQuery) sqlQuery(ctx context.Context) *sql.Selector {
-	builder := sql.Dialect(boq.driver.Dialect())
+func (_q *BeneficialOwnerQuery) sqlQuery(ctx context.Context) *sql.Selector {
+	builder := sql.Dialect(_q.driver.Dialect())
 	t1 := builder.Table(beneficialowner.Table)
-	columns := boq.ctx.Fields
+	columns := _q.ctx.Fields
 	if len(columns) == 0 {
 		columns = beneficialowner.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
-	if boq.sql != nil {
-		selector = boq.sql
+	if _q.sql != nil {
+		selector = _q.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if boq.ctx.Unique != nil && *boq.ctx.Unique {
+	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
-	for _, p := range boq.predicates {
+	for _, p := range _q.predicates {
 		p(selector)
 	}
-	for _, p := range boq.order {
+	for _, p := range _q.order {
 		p(selector)
 	}
-	if offset := boq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := boq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -531,41 +531,41 @@ type BeneficialOwnerGroupBy struct {
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (bogb *BeneficialOwnerGroupBy) Aggregate(fns ...AggregateFunc) *BeneficialOwnerGroupBy {
-	bogb.fns = append(bogb.fns, fns...)
-	return bogb
+func (_g *BeneficialOwnerGroupBy) Aggregate(fns ...AggregateFunc) *BeneficialOwnerGroupBy {
+	_g.fns = append(_g.fns, fns...)
+	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (bogb *BeneficialOwnerGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, bogb.build.ctx, ent.OpQueryGroupBy)
-	if err := bogb.build.prepareQuery(ctx); err != nil {
+func (_g *BeneficialOwnerGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
+	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*BeneficialOwnerQuery, *BeneficialOwnerGroupBy](ctx, bogb.build, bogb, bogb.build.inters, v)
+	return scanWithInterceptors[*BeneficialOwnerQuery, *BeneficialOwnerGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (bogb *BeneficialOwnerGroupBy) sqlScan(ctx context.Context, root *BeneficialOwnerQuery, v any) error {
+func (_g *BeneficialOwnerGroupBy) sqlScan(ctx context.Context, root *BeneficialOwnerQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
-	aggregation := make([]string, 0, len(bogb.fns))
-	for _, fn := range bogb.fns {
+	aggregation := make([]string, 0, len(_g.fns))
+	for _, fn := range _g.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
 	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(*bogb.flds)+len(bogb.fns))
-		for _, f := range *bogb.flds {
+		columns := make([]string, 0, len(*_g.flds)+len(_g.fns))
+		for _, f := range *_g.flds {
 			columns = append(columns, selector.C(f))
 		}
 		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
-	selector.GroupBy(selector.Columns(*bogb.flds...)...)
+	selector.GroupBy(selector.Columns(*_g.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := bogb.build.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _g.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
@@ -579,27 +579,27 @@ type BeneficialOwnerSelect struct {
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (bos *BeneficialOwnerSelect) Aggregate(fns ...AggregateFunc) *BeneficialOwnerSelect {
-	bos.fns = append(bos.fns, fns...)
-	return bos
+func (_s *BeneficialOwnerSelect) Aggregate(fns ...AggregateFunc) *BeneficialOwnerSelect {
+	_s.fns = append(_s.fns, fns...)
+	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (bos *BeneficialOwnerSelect) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, bos.ctx, ent.OpQuerySelect)
-	if err := bos.prepareQuery(ctx); err != nil {
+func (_s *BeneficialOwnerSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
+	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*BeneficialOwnerQuery, *BeneficialOwnerSelect](ctx, bos.BeneficialOwnerQuery, bos, bos.inters, v)
+	return scanWithInterceptors[*BeneficialOwnerQuery, *BeneficialOwnerSelect](ctx, _s.BeneficialOwnerQuery, _s, _s.inters, v)
 }
 
-func (bos *BeneficialOwnerSelect) sqlScan(ctx context.Context, root *BeneficialOwnerQuery, v any) error {
+func (_s *BeneficialOwnerSelect) sqlScan(ctx context.Context, root *BeneficialOwnerQuery, v any) error {
 	selector := root.sqlQuery(ctx)
-	aggregation := make([]string, 0, len(bos.fns))
-	for _, fn := range bos.fns {
+	aggregation := make([]string, 0, len(_s.fns))
+	for _, fn := range _s.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
-	switch n := len(*bos.selector.flds); {
+	switch n := len(*_s.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
 		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
@@ -607,7 +607,7 @@ func (bos *BeneficialOwnerSelect) sqlScan(ctx context.Context, root *BeneficialO
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := bos.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _s.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()

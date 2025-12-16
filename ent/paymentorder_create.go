@@ -33,382 +33,382 @@ type PaymentOrderCreate struct {
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (poc *PaymentOrderCreate) SetCreatedAt(t time.Time) *PaymentOrderCreate {
-	poc.mutation.SetCreatedAt(t)
-	return poc
+func (_c *PaymentOrderCreate) SetCreatedAt(v time.Time) *PaymentOrderCreate {
+	_c.mutation.SetCreatedAt(v)
+	return _c
 }
 
 // SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (poc *PaymentOrderCreate) SetNillableCreatedAt(t *time.Time) *PaymentOrderCreate {
-	if t != nil {
-		poc.SetCreatedAt(*t)
+func (_c *PaymentOrderCreate) SetNillableCreatedAt(v *time.Time) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetCreatedAt(*v)
 	}
-	return poc
+	return _c
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (poc *PaymentOrderCreate) SetUpdatedAt(t time.Time) *PaymentOrderCreate {
-	poc.mutation.SetUpdatedAt(t)
-	return poc
+func (_c *PaymentOrderCreate) SetUpdatedAt(v time.Time) *PaymentOrderCreate {
+	_c.mutation.SetUpdatedAt(v)
+	return _c
 }
 
 // SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (poc *PaymentOrderCreate) SetNillableUpdatedAt(t *time.Time) *PaymentOrderCreate {
-	if t != nil {
-		poc.SetUpdatedAt(*t)
+func (_c *PaymentOrderCreate) SetNillableUpdatedAt(v *time.Time) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetUpdatedAt(*v)
 	}
-	return poc
+	return _c
 }
 
 // SetAmount sets the "amount" field.
-func (poc *PaymentOrderCreate) SetAmount(d decimal.Decimal) *PaymentOrderCreate {
-	poc.mutation.SetAmount(d)
-	return poc
+func (_c *PaymentOrderCreate) SetAmount(v decimal.Decimal) *PaymentOrderCreate {
+	_c.mutation.SetAmount(v)
+	return _c
 }
 
 // SetAmountPaid sets the "amount_paid" field.
-func (poc *PaymentOrderCreate) SetAmountPaid(d decimal.Decimal) *PaymentOrderCreate {
-	poc.mutation.SetAmountPaid(d)
-	return poc
+func (_c *PaymentOrderCreate) SetAmountPaid(v decimal.Decimal) *PaymentOrderCreate {
+	_c.mutation.SetAmountPaid(v)
+	return _c
 }
 
 // SetAmountReturned sets the "amount_returned" field.
-func (poc *PaymentOrderCreate) SetAmountReturned(d decimal.Decimal) *PaymentOrderCreate {
-	poc.mutation.SetAmountReturned(d)
-	return poc
+func (_c *PaymentOrderCreate) SetAmountReturned(v decimal.Decimal) *PaymentOrderCreate {
+	_c.mutation.SetAmountReturned(v)
+	return _c
 }
 
 // SetPercentSettled sets the "percent_settled" field.
-func (poc *PaymentOrderCreate) SetPercentSettled(d decimal.Decimal) *PaymentOrderCreate {
-	poc.mutation.SetPercentSettled(d)
-	return poc
+func (_c *PaymentOrderCreate) SetPercentSettled(v decimal.Decimal) *PaymentOrderCreate {
+	_c.mutation.SetPercentSettled(v)
+	return _c
 }
 
 // SetSenderFee sets the "sender_fee" field.
-func (poc *PaymentOrderCreate) SetSenderFee(d decimal.Decimal) *PaymentOrderCreate {
-	poc.mutation.SetSenderFee(d)
-	return poc
+func (_c *PaymentOrderCreate) SetSenderFee(v decimal.Decimal) *PaymentOrderCreate {
+	_c.mutation.SetSenderFee(v)
+	return _c
 }
 
 // SetNetworkFee sets the "network_fee" field.
-func (poc *PaymentOrderCreate) SetNetworkFee(d decimal.Decimal) *PaymentOrderCreate {
-	poc.mutation.SetNetworkFee(d)
-	return poc
+func (_c *PaymentOrderCreate) SetNetworkFee(v decimal.Decimal) *PaymentOrderCreate {
+	_c.mutation.SetNetworkFee(v)
+	return _c
 }
 
 // SetRate sets the "rate" field.
-func (poc *PaymentOrderCreate) SetRate(d decimal.Decimal) *PaymentOrderCreate {
-	poc.mutation.SetRate(d)
-	return poc
+func (_c *PaymentOrderCreate) SetRate(v decimal.Decimal) *PaymentOrderCreate {
+	_c.mutation.SetRate(v)
+	return _c
 }
 
 // SetTxHash sets the "tx_hash" field.
-func (poc *PaymentOrderCreate) SetTxHash(s string) *PaymentOrderCreate {
-	poc.mutation.SetTxHash(s)
-	return poc
+func (_c *PaymentOrderCreate) SetTxHash(v string) *PaymentOrderCreate {
+	_c.mutation.SetTxHash(v)
+	return _c
 }
 
 // SetNillableTxHash sets the "tx_hash" field if the given value is not nil.
-func (poc *PaymentOrderCreate) SetNillableTxHash(s *string) *PaymentOrderCreate {
-	if s != nil {
-		poc.SetTxHash(*s)
+func (_c *PaymentOrderCreate) SetNillableTxHash(v *string) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetTxHash(*v)
 	}
-	return poc
+	return _c
 }
 
 // SetBlockNumber sets the "block_number" field.
-func (poc *PaymentOrderCreate) SetBlockNumber(i int64) *PaymentOrderCreate {
-	poc.mutation.SetBlockNumber(i)
-	return poc
+func (_c *PaymentOrderCreate) SetBlockNumber(v int64) *PaymentOrderCreate {
+	_c.mutation.SetBlockNumber(v)
+	return _c
 }
 
 // SetNillableBlockNumber sets the "block_number" field if the given value is not nil.
-func (poc *PaymentOrderCreate) SetNillableBlockNumber(i *int64) *PaymentOrderCreate {
-	if i != nil {
-		poc.SetBlockNumber(*i)
+func (_c *PaymentOrderCreate) SetNillableBlockNumber(v *int64) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetBlockNumber(*v)
 	}
-	return poc
+	return _c
 }
 
 // SetFromAddress sets the "from_address" field.
-func (poc *PaymentOrderCreate) SetFromAddress(s string) *PaymentOrderCreate {
-	poc.mutation.SetFromAddress(s)
-	return poc
+func (_c *PaymentOrderCreate) SetFromAddress(v string) *PaymentOrderCreate {
+	_c.mutation.SetFromAddress(v)
+	return _c
 }
 
 // SetNillableFromAddress sets the "from_address" field if the given value is not nil.
-func (poc *PaymentOrderCreate) SetNillableFromAddress(s *string) *PaymentOrderCreate {
-	if s != nil {
-		poc.SetFromAddress(*s)
+func (_c *PaymentOrderCreate) SetNillableFromAddress(v *string) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetFromAddress(*v)
 	}
-	return poc
+	return _c
 }
 
 // SetReturnAddress sets the "return_address" field.
-func (poc *PaymentOrderCreate) SetReturnAddress(s string) *PaymentOrderCreate {
-	poc.mutation.SetReturnAddress(s)
-	return poc
+func (_c *PaymentOrderCreate) SetReturnAddress(v string) *PaymentOrderCreate {
+	_c.mutation.SetReturnAddress(v)
+	return _c
 }
 
 // SetNillableReturnAddress sets the "return_address" field if the given value is not nil.
-func (poc *PaymentOrderCreate) SetNillableReturnAddress(s *string) *PaymentOrderCreate {
-	if s != nil {
-		poc.SetReturnAddress(*s)
+func (_c *PaymentOrderCreate) SetNillableReturnAddress(v *string) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetReturnAddress(*v)
 	}
-	return poc
+	return _c
 }
 
 // SetReceiveAddressText sets the "receive_address_text" field.
-func (poc *PaymentOrderCreate) SetReceiveAddressText(s string) *PaymentOrderCreate {
-	poc.mutation.SetReceiveAddressText(s)
-	return poc
+func (_c *PaymentOrderCreate) SetReceiveAddressText(v string) *PaymentOrderCreate {
+	_c.mutation.SetReceiveAddressText(v)
+	return _c
 }
 
 // SetFeePercent sets the "fee_percent" field.
-func (poc *PaymentOrderCreate) SetFeePercent(d decimal.Decimal) *PaymentOrderCreate {
-	poc.mutation.SetFeePercent(d)
-	return poc
+func (_c *PaymentOrderCreate) SetFeePercent(v decimal.Decimal) *PaymentOrderCreate {
+	_c.mutation.SetFeePercent(v)
+	return _c
 }
 
 // SetFeeAddress sets the "fee_address" field.
-func (poc *PaymentOrderCreate) SetFeeAddress(s string) *PaymentOrderCreate {
-	poc.mutation.SetFeeAddress(s)
-	return poc
+func (_c *PaymentOrderCreate) SetFeeAddress(v string) *PaymentOrderCreate {
+	_c.mutation.SetFeeAddress(v)
+	return _c
 }
 
 // SetNillableFeeAddress sets the "fee_address" field if the given value is not nil.
-func (poc *PaymentOrderCreate) SetNillableFeeAddress(s *string) *PaymentOrderCreate {
-	if s != nil {
-		poc.SetFeeAddress(*s)
+func (_c *PaymentOrderCreate) SetNillableFeeAddress(v *string) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetFeeAddress(*v)
 	}
-	return poc
+	return _c
 }
 
 // SetGatewayID sets the "gateway_id" field.
-func (poc *PaymentOrderCreate) SetGatewayID(s string) *PaymentOrderCreate {
-	poc.mutation.SetGatewayID(s)
-	return poc
+func (_c *PaymentOrderCreate) SetGatewayID(v string) *PaymentOrderCreate {
+	_c.mutation.SetGatewayID(v)
+	return _c
 }
 
 // SetNillableGatewayID sets the "gateway_id" field if the given value is not nil.
-func (poc *PaymentOrderCreate) SetNillableGatewayID(s *string) *PaymentOrderCreate {
-	if s != nil {
-		poc.SetGatewayID(*s)
+func (_c *PaymentOrderCreate) SetNillableGatewayID(v *string) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetGatewayID(*v)
 	}
-	return poc
+	return _c
 }
 
 // SetMessageHash sets the "message_hash" field.
-func (poc *PaymentOrderCreate) SetMessageHash(s string) *PaymentOrderCreate {
-	poc.mutation.SetMessageHash(s)
-	return poc
+func (_c *PaymentOrderCreate) SetMessageHash(v string) *PaymentOrderCreate {
+	_c.mutation.SetMessageHash(v)
+	return _c
 }
 
 // SetNillableMessageHash sets the "message_hash" field if the given value is not nil.
-func (poc *PaymentOrderCreate) SetNillableMessageHash(s *string) *PaymentOrderCreate {
-	if s != nil {
-		poc.SetMessageHash(*s)
+func (_c *PaymentOrderCreate) SetNillableMessageHash(v *string) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetMessageHash(*v)
 	}
-	return poc
+	return _c
 }
 
 // SetReference sets the "reference" field.
-func (poc *PaymentOrderCreate) SetReference(s string) *PaymentOrderCreate {
-	poc.mutation.SetReference(s)
-	return poc
+func (_c *PaymentOrderCreate) SetReference(v string) *PaymentOrderCreate {
+	_c.mutation.SetReference(v)
+	return _c
 }
 
 // SetNillableReference sets the "reference" field if the given value is not nil.
-func (poc *PaymentOrderCreate) SetNillableReference(s *string) *PaymentOrderCreate {
-	if s != nil {
-		poc.SetReference(*s)
+func (_c *PaymentOrderCreate) SetNillableReference(v *string) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetReference(*v)
 	}
-	return poc
+	return _c
 }
 
 // SetStatus sets the "status" field.
-func (poc *PaymentOrderCreate) SetStatus(pa paymentorder.Status) *PaymentOrderCreate {
-	poc.mutation.SetStatus(pa)
-	return poc
+func (_c *PaymentOrderCreate) SetStatus(v paymentorder.Status) *PaymentOrderCreate {
+	_c.mutation.SetStatus(v)
+	return _c
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (poc *PaymentOrderCreate) SetNillableStatus(pa *paymentorder.Status) *PaymentOrderCreate {
-	if pa != nil {
-		poc.SetStatus(*pa)
+func (_c *PaymentOrderCreate) SetNillableStatus(v *paymentorder.Status) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetStatus(*v)
 	}
-	return poc
+	return _c
 }
 
 // SetAmountInUsd sets the "amount_in_usd" field.
-func (poc *PaymentOrderCreate) SetAmountInUsd(d decimal.Decimal) *PaymentOrderCreate {
-	poc.mutation.SetAmountInUsd(d)
-	return poc
+func (_c *PaymentOrderCreate) SetAmountInUsd(v decimal.Decimal) *PaymentOrderCreate {
+	_c.mutation.SetAmountInUsd(v)
+	return _c
 }
 
 // SetOrderType sets the "order_type" field.
-func (poc *PaymentOrderCreate) SetOrderType(pt paymentorder.OrderType) *PaymentOrderCreate {
-	poc.mutation.SetOrderType(pt)
-	return poc
+func (_c *PaymentOrderCreate) SetOrderType(v paymentorder.OrderType) *PaymentOrderCreate {
+	_c.mutation.SetOrderType(v)
+	return _c
 }
 
 // SetNillableOrderType sets the "order_type" field if the given value is not nil.
-func (poc *PaymentOrderCreate) SetNillableOrderType(pt *paymentorder.OrderType) *PaymentOrderCreate {
-	if pt != nil {
-		poc.SetOrderType(*pt)
+func (_c *PaymentOrderCreate) SetNillableOrderType(v *paymentorder.OrderType) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetOrderType(*v)
 	}
-	return poc
+	return _c
 }
 
 // SetID sets the "id" field.
-func (poc *PaymentOrderCreate) SetID(u uuid.UUID) *PaymentOrderCreate {
-	poc.mutation.SetID(u)
-	return poc
+func (_c *PaymentOrderCreate) SetID(v uuid.UUID) *PaymentOrderCreate {
+	_c.mutation.SetID(v)
+	return _c
 }
 
 // SetNillableID sets the "id" field if the given value is not nil.
-func (poc *PaymentOrderCreate) SetNillableID(u *uuid.UUID) *PaymentOrderCreate {
-	if u != nil {
-		poc.SetID(*u)
+func (_c *PaymentOrderCreate) SetNillableID(v *uuid.UUID) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetID(*v)
 	}
-	return poc
+	return _c
 }
 
 // SetSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by ID.
-func (poc *PaymentOrderCreate) SetSenderProfileID(id uuid.UUID) *PaymentOrderCreate {
-	poc.mutation.SetSenderProfileID(id)
-	return poc
+func (_c *PaymentOrderCreate) SetSenderProfileID(id uuid.UUID) *PaymentOrderCreate {
+	_c.mutation.SetSenderProfileID(id)
+	return _c
 }
 
 // SetNillableSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by ID if the given value is not nil.
-func (poc *PaymentOrderCreate) SetNillableSenderProfileID(id *uuid.UUID) *PaymentOrderCreate {
+func (_c *PaymentOrderCreate) SetNillableSenderProfileID(id *uuid.UUID) *PaymentOrderCreate {
 	if id != nil {
-		poc = poc.SetSenderProfileID(*id)
+		_c = _c.SetSenderProfileID(*id)
 	}
-	return poc
+	return _c
 }
 
 // SetSenderProfile sets the "sender_profile" edge to the SenderProfile entity.
-func (poc *PaymentOrderCreate) SetSenderProfile(s *SenderProfile) *PaymentOrderCreate {
-	return poc.SetSenderProfileID(s.ID)
+func (_c *PaymentOrderCreate) SetSenderProfile(v *SenderProfile) *PaymentOrderCreate {
+	return _c.SetSenderProfileID(v.ID)
 }
 
 // SetTokenID sets the "token" edge to the Token entity by ID.
-func (poc *PaymentOrderCreate) SetTokenID(id int) *PaymentOrderCreate {
-	poc.mutation.SetTokenID(id)
-	return poc
+func (_c *PaymentOrderCreate) SetTokenID(id int) *PaymentOrderCreate {
+	_c.mutation.SetTokenID(id)
+	return _c
 }
 
 // SetToken sets the "token" edge to the Token entity.
-func (poc *PaymentOrderCreate) SetToken(t *Token) *PaymentOrderCreate {
-	return poc.SetTokenID(t.ID)
+func (_c *PaymentOrderCreate) SetToken(v *Token) *PaymentOrderCreate {
+	return _c.SetTokenID(v.ID)
 }
 
 // SetLinkedAddressID sets the "linked_address" edge to the LinkedAddress entity by ID.
-func (poc *PaymentOrderCreate) SetLinkedAddressID(id int) *PaymentOrderCreate {
-	poc.mutation.SetLinkedAddressID(id)
-	return poc
+func (_c *PaymentOrderCreate) SetLinkedAddressID(id int) *PaymentOrderCreate {
+	_c.mutation.SetLinkedAddressID(id)
+	return _c
 }
 
 // SetNillableLinkedAddressID sets the "linked_address" edge to the LinkedAddress entity by ID if the given value is not nil.
-func (poc *PaymentOrderCreate) SetNillableLinkedAddressID(id *int) *PaymentOrderCreate {
+func (_c *PaymentOrderCreate) SetNillableLinkedAddressID(id *int) *PaymentOrderCreate {
 	if id != nil {
-		poc = poc.SetLinkedAddressID(*id)
+		_c = _c.SetLinkedAddressID(*id)
 	}
-	return poc
+	return _c
 }
 
 // SetLinkedAddress sets the "linked_address" edge to the LinkedAddress entity.
-func (poc *PaymentOrderCreate) SetLinkedAddress(l *LinkedAddress) *PaymentOrderCreate {
-	return poc.SetLinkedAddressID(l.ID)
+func (_c *PaymentOrderCreate) SetLinkedAddress(v *LinkedAddress) *PaymentOrderCreate {
+	return _c.SetLinkedAddressID(v.ID)
 }
 
 // SetReceiveAddressID sets the "receive_address" edge to the ReceiveAddress entity by ID.
-func (poc *PaymentOrderCreate) SetReceiveAddressID(id int) *PaymentOrderCreate {
-	poc.mutation.SetReceiveAddressID(id)
-	return poc
+func (_c *PaymentOrderCreate) SetReceiveAddressID(id int) *PaymentOrderCreate {
+	_c.mutation.SetReceiveAddressID(id)
+	return _c
 }
 
 // SetNillableReceiveAddressID sets the "receive_address" edge to the ReceiveAddress entity by ID if the given value is not nil.
-func (poc *PaymentOrderCreate) SetNillableReceiveAddressID(id *int) *PaymentOrderCreate {
+func (_c *PaymentOrderCreate) SetNillableReceiveAddressID(id *int) *PaymentOrderCreate {
 	if id != nil {
-		poc = poc.SetReceiveAddressID(*id)
+		_c = _c.SetReceiveAddressID(*id)
 	}
-	return poc
+	return _c
 }
 
 // SetReceiveAddress sets the "receive_address" edge to the ReceiveAddress entity.
-func (poc *PaymentOrderCreate) SetReceiveAddress(r *ReceiveAddress) *PaymentOrderCreate {
-	return poc.SetReceiveAddressID(r.ID)
+func (_c *PaymentOrderCreate) SetReceiveAddress(v *ReceiveAddress) *PaymentOrderCreate {
+	return _c.SetReceiveAddressID(v.ID)
 }
 
 // SetRecipientID sets the "recipient" edge to the PaymentOrderRecipient entity by ID.
-func (poc *PaymentOrderCreate) SetRecipientID(id int) *PaymentOrderCreate {
-	poc.mutation.SetRecipientID(id)
-	return poc
+func (_c *PaymentOrderCreate) SetRecipientID(id int) *PaymentOrderCreate {
+	_c.mutation.SetRecipientID(id)
+	return _c
 }
 
 // SetNillableRecipientID sets the "recipient" edge to the PaymentOrderRecipient entity by ID if the given value is not nil.
-func (poc *PaymentOrderCreate) SetNillableRecipientID(id *int) *PaymentOrderCreate {
+func (_c *PaymentOrderCreate) SetNillableRecipientID(id *int) *PaymentOrderCreate {
 	if id != nil {
-		poc = poc.SetRecipientID(*id)
+		_c = _c.SetRecipientID(*id)
 	}
-	return poc
+	return _c
 }
 
 // SetRecipient sets the "recipient" edge to the PaymentOrderRecipient entity.
-func (poc *PaymentOrderCreate) SetRecipient(p *PaymentOrderRecipient) *PaymentOrderCreate {
-	return poc.SetRecipientID(p.ID)
+func (_c *PaymentOrderCreate) SetRecipient(v *PaymentOrderRecipient) *PaymentOrderCreate {
+	return _c.SetRecipientID(v.ID)
 }
 
 // AddTransactionIDs adds the "transactions" edge to the TransactionLog entity by IDs.
-func (poc *PaymentOrderCreate) AddTransactionIDs(ids ...uuid.UUID) *PaymentOrderCreate {
-	poc.mutation.AddTransactionIDs(ids...)
-	return poc
+func (_c *PaymentOrderCreate) AddTransactionIDs(ids ...uuid.UUID) *PaymentOrderCreate {
+	_c.mutation.AddTransactionIDs(ids...)
+	return _c
 }
 
 // AddTransactions adds the "transactions" edges to the TransactionLog entity.
-func (poc *PaymentOrderCreate) AddTransactions(t ...*TransactionLog) *PaymentOrderCreate {
-	ids := make([]uuid.UUID, len(t))
-	for i := range t {
-		ids[i] = t[i].ID
+func (_c *PaymentOrderCreate) AddTransactions(v ...*TransactionLog) *PaymentOrderCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return poc.AddTransactionIDs(ids...)
+	return _c.AddTransactionIDs(ids...)
 }
 
 // SetPaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID.
-func (poc *PaymentOrderCreate) SetPaymentWebhookID(id uuid.UUID) *PaymentOrderCreate {
-	poc.mutation.SetPaymentWebhookID(id)
-	return poc
+func (_c *PaymentOrderCreate) SetPaymentWebhookID(id uuid.UUID) *PaymentOrderCreate {
+	_c.mutation.SetPaymentWebhookID(id)
+	return _c
 }
 
 // SetNillablePaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID if the given value is not nil.
-func (poc *PaymentOrderCreate) SetNillablePaymentWebhookID(id *uuid.UUID) *PaymentOrderCreate {
+func (_c *PaymentOrderCreate) SetNillablePaymentWebhookID(id *uuid.UUID) *PaymentOrderCreate {
 	if id != nil {
-		poc = poc.SetPaymentWebhookID(*id)
+		_c = _c.SetPaymentWebhookID(*id)
 	}
-	return poc
+	return _c
 }
 
 // SetPaymentWebhook sets the "payment_webhook" edge to the PaymentWebhook entity.
-func (poc *PaymentOrderCreate) SetPaymentWebhook(p *PaymentWebhook) *PaymentOrderCreate {
-	return poc.SetPaymentWebhookID(p.ID)
+func (_c *PaymentOrderCreate) SetPaymentWebhook(v *PaymentWebhook) *PaymentOrderCreate {
+	return _c.SetPaymentWebhookID(v.ID)
 }
 
 // Mutation returns the PaymentOrderMutation object of the builder.
-func (poc *PaymentOrderCreate) Mutation() *PaymentOrderMutation {
-	return poc.mutation
+func (_c *PaymentOrderCreate) Mutation() *PaymentOrderMutation {
+	return _c.mutation
 }
 
 // Save creates the PaymentOrder in the database.
-func (poc *PaymentOrderCreate) Save(ctx context.Context) (*PaymentOrder, error) {
-	poc.defaults()
-	return withHooks(ctx, poc.sqlSave, poc.mutation, poc.hooks)
+func (_c *PaymentOrderCreate) Save(ctx context.Context) (*PaymentOrder, error) {
+	_c.defaults()
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (poc *PaymentOrderCreate) SaveX(ctx context.Context) *PaymentOrder {
-	v, err := poc.Save(ctx)
+func (_c *PaymentOrderCreate) SaveX(ctx context.Context) *PaymentOrder {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -416,155 +416,155 @@ func (poc *PaymentOrderCreate) SaveX(ctx context.Context) *PaymentOrder {
 }
 
 // Exec executes the query.
-func (poc *PaymentOrderCreate) Exec(ctx context.Context) error {
-	_, err := poc.Save(ctx)
+func (_c *PaymentOrderCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (poc *PaymentOrderCreate) ExecX(ctx context.Context) {
-	if err := poc.Exec(ctx); err != nil {
+func (_c *PaymentOrderCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (poc *PaymentOrderCreate) defaults() {
-	if _, ok := poc.mutation.CreatedAt(); !ok {
+func (_c *PaymentOrderCreate) defaults() {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := paymentorder.DefaultCreatedAt()
-		poc.mutation.SetCreatedAt(v)
+		_c.mutation.SetCreatedAt(v)
 	}
-	if _, ok := poc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		v := paymentorder.DefaultUpdatedAt()
-		poc.mutation.SetUpdatedAt(v)
+		_c.mutation.SetUpdatedAt(v)
 	}
-	if _, ok := poc.mutation.BlockNumber(); !ok {
+	if _, ok := _c.mutation.BlockNumber(); !ok {
 		v := paymentorder.DefaultBlockNumber
-		poc.mutation.SetBlockNumber(v)
+		_c.mutation.SetBlockNumber(v)
 	}
-	if _, ok := poc.mutation.Status(); !ok {
+	if _, ok := _c.mutation.Status(); !ok {
 		v := paymentorder.DefaultStatus
-		poc.mutation.SetStatus(v)
+		_c.mutation.SetStatus(v)
 	}
-	if _, ok := poc.mutation.OrderType(); !ok {
+	if _, ok := _c.mutation.OrderType(); !ok {
 		v := paymentorder.DefaultOrderType
-		poc.mutation.SetOrderType(v)
+		_c.mutation.SetOrderType(v)
 	}
-	if _, ok := poc.mutation.ID(); !ok {
+	if _, ok := _c.mutation.ID(); !ok {
 		v := paymentorder.DefaultID()
-		poc.mutation.SetID(v)
+		_c.mutation.SetID(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (poc *PaymentOrderCreate) check() error {
-	if _, ok := poc.mutation.CreatedAt(); !ok {
+func (_c *PaymentOrderCreate) check() error {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "PaymentOrder.created_at"`)}
 	}
-	if _, ok := poc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "PaymentOrder.updated_at"`)}
 	}
-	if _, ok := poc.mutation.Amount(); !ok {
+	if _, ok := _c.mutation.Amount(); !ok {
 		return &ValidationError{Name: "amount", err: errors.New(`ent: missing required field "PaymentOrder.amount"`)}
 	}
-	if _, ok := poc.mutation.AmountPaid(); !ok {
+	if _, ok := _c.mutation.AmountPaid(); !ok {
 		return &ValidationError{Name: "amount_paid", err: errors.New(`ent: missing required field "PaymentOrder.amount_paid"`)}
 	}
-	if _, ok := poc.mutation.AmountReturned(); !ok {
+	if _, ok := _c.mutation.AmountReturned(); !ok {
 		return &ValidationError{Name: "amount_returned", err: errors.New(`ent: missing required field "PaymentOrder.amount_returned"`)}
 	}
-	if _, ok := poc.mutation.PercentSettled(); !ok {
+	if _, ok := _c.mutation.PercentSettled(); !ok {
 		return &ValidationError{Name: "percent_settled", err: errors.New(`ent: missing required field "PaymentOrder.percent_settled"`)}
 	}
-	if _, ok := poc.mutation.SenderFee(); !ok {
+	if _, ok := _c.mutation.SenderFee(); !ok {
 		return &ValidationError{Name: "sender_fee", err: errors.New(`ent: missing required field "PaymentOrder.sender_fee"`)}
 	}
-	if _, ok := poc.mutation.NetworkFee(); !ok {
+	if _, ok := _c.mutation.NetworkFee(); !ok {
 		return &ValidationError{Name: "network_fee", err: errors.New(`ent: missing required field "PaymentOrder.network_fee"`)}
 	}
-	if _, ok := poc.mutation.Rate(); !ok {
+	if _, ok := _c.mutation.Rate(); !ok {
 		return &ValidationError{Name: "rate", err: errors.New(`ent: missing required field "PaymentOrder.rate"`)}
 	}
-	if v, ok := poc.mutation.TxHash(); ok {
+	if v, ok := _c.mutation.TxHash(); ok {
 		if err := paymentorder.TxHashValidator(v); err != nil {
 			return &ValidationError{Name: "tx_hash", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.tx_hash": %w`, err)}
 		}
 	}
-	if _, ok := poc.mutation.BlockNumber(); !ok {
+	if _, ok := _c.mutation.BlockNumber(); !ok {
 		return &ValidationError{Name: "block_number", err: errors.New(`ent: missing required field "PaymentOrder.block_number"`)}
 	}
-	if v, ok := poc.mutation.FromAddress(); ok {
+	if v, ok := _c.mutation.FromAddress(); ok {
 		if err := paymentorder.FromAddressValidator(v); err != nil {
 			return &ValidationError{Name: "from_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.from_address": %w`, err)}
 		}
 	}
-	if v, ok := poc.mutation.ReturnAddress(); ok {
+	if v, ok := _c.mutation.ReturnAddress(); ok {
 		if err := paymentorder.ReturnAddressValidator(v); err != nil {
 			return &ValidationError{Name: "return_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.return_address": %w`, err)}
 		}
 	}
-	if _, ok := poc.mutation.ReceiveAddressText(); !ok {
+	if _, ok := _c.mutation.ReceiveAddressText(); !ok {
 		return &ValidationError{Name: "receive_address_text", err: errors.New(`ent: missing required field "PaymentOrder.receive_address_text"`)}
 	}
-	if v, ok := poc.mutation.ReceiveAddressText(); ok {
+	if v, ok := _c.mutation.ReceiveAddressText(); ok {
 		if err := paymentorder.ReceiveAddressTextValidator(v); err != nil {
 			return &ValidationError{Name: "receive_address_text", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.receive_address_text": %w`, err)}
 		}
 	}
-	if _, ok := poc.mutation.FeePercent(); !ok {
+	if _, ok := _c.mutation.FeePercent(); !ok {
 		return &ValidationError{Name: "fee_percent", err: errors.New(`ent: missing required field "PaymentOrder.fee_percent"`)}
 	}
-	if v, ok := poc.mutation.FeeAddress(); ok {
+	if v, ok := _c.mutation.FeeAddress(); ok {
 		if err := paymentorder.FeeAddressValidator(v); err != nil {
 			return &ValidationError{Name: "fee_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.fee_address": %w`, err)}
 		}
 	}
-	if v, ok := poc.mutation.GatewayID(); ok {
+	if v, ok := _c.mutation.GatewayID(); ok {
 		if err := paymentorder.GatewayIDValidator(v); err != nil {
 			return &ValidationError{Name: "gateway_id", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.gateway_id": %w`, err)}
 		}
 	}
-	if v, ok := poc.mutation.MessageHash(); ok {
+	if v, ok := _c.mutation.MessageHash(); ok {
 		if err := paymentorder.MessageHashValidator(v); err != nil {
 			return &ValidationError{Name: "message_hash", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.message_hash": %w`, err)}
 		}
 	}
-	if v, ok := poc.mutation.Reference(); ok {
+	if v, ok := _c.mutation.Reference(); ok {
 		if err := paymentorder.ReferenceValidator(v); err != nil {
 			return &ValidationError{Name: "reference", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.reference": %w`, err)}
 		}
 	}
-	if _, ok := poc.mutation.Status(); !ok {
+	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "PaymentOrder.status"`)}
 	}
-	if v, ok := poc.mutation.Status(); ok {
+	if v, ok := _c.mutation.Status(); ok {
 		if err := paymentorder.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.status": %w`, err)}
 		}
 	}
-	if _, ok := poc.mutation.AmountInUsd(); !ok {
+	if _, ok := _c.mutation.AmountInUsd(); !ok {
 		return &ValidationError{Name: "amount_in_usd", err: errors.New(`ent: missing required field "PaymentOrder.amount_in_usd"`)}
 	}
-	if _, ok := poc.mutation.OrderType(); !ok {
+	if _, ok := _c.mutation.OrderType(); !ok {
 		return &ValidationError{Name: "order_type", err: errors.New(`ent: missing required field "PaymentOrder.order_type"`)}
 	}
-	if v, ok := poc.mutation.OrderType(); ok {
+	if v, ok := _c.mutation.OrderType(); ok {
 		if err := paymentorder.OrderTypeValidator(v); err != nil {
 			return &ValidationError{Name: "order_type", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.order_type": %w`, err)}
 		}
 	}
-	if len(poc.mutation.TokenIDs()) == 0 {
+	if len(_c.mutation.TokenIDs()) == 0 {
 		return &ValidationError{Name: "token", err: errors.New(`ent: missing required edge "PaymentOrder.token"`)}
 	}
 	return nil
 }
 
-func (poc *PaymentOrderCreate) sqlSave(ctx context.Context) (*PaymentOrder, error) {
-	if err := poc.check(); err != nil {
+func (_c *PaymentOrderCreate) sqlSave(ctx context.Context) (*PaymentOrder, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := poc.createSpec()
-	if err := sqlgraph.CreateNode(ctx, poc.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -577,110 +577,110 @@ func (poc *PaymentOrderCreate) sqlSave(ctx context.Context) (*PaymentOrder, erro
 			return nil, err
 		}
 	}
-	poc.mutation.id = &_node.ID
-	poc.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (poc *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec) {
+func (_c *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec) {
 	var (
-		_node = &PaymentOrder{config: poc.config}
+		_node = &PaymentOrder{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(paymentorder.Table, sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID))
 	)
-	_spec.OnConflict = poc.conflict
-	if id, ok := poc.mutation.ID(); ok {
+	_spec.OnConflict = _c.conflict
+	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := poc.mutation.CreatedAt(); ok {
+	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(paymentorder.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
 	}
-	if value, ok := poc.mutation.UpdatedAt(); ok {
+	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(paymentorder.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if value, ok := poc.mutation.Amount(); ok {
+	if value, ok := _c.mutation.Amount(); ok {
 		_spec.SetField(paymentorder.FieldAmount, field.TypeFloat64, value)
 		_node.Amount = value
 	}
-	if value, ok := poc.mutation.AmountPaid(); ok {
+	if value, ok := _c.mutation.AmountPaid(); ok {
 		_spec.SetField(paymentorder.FieldAmountPaid, field.TypeFloat64, value)
 		_node.AmountPaid = value
 	}
-	if value, ok := poc.mutation.AmountReturned(); ok {
+	if value, ok := _c.mutation.AmountReturned(); ok {
 		_spec.SetField(paymentorder.FieldAmountReturned, field.TypeFloat64, value)
 		_node.AmountReturned = value
 	}
-	if value, ok := poc.mutation.PercentSettled(); ok {
+	if value, ok := _c.mutation.PercentSettled(); ok {
 		_spec.SetField(paymentorder.FieldPercentSettled, field.TypeFloat64, value)
 		_node.PercentSettled = value
 	}
-	if value, ok := poc.mutation.SenderFee(); ok {
+	if value, ok := _c.mutation.SenderFee(); ok {
 		_spec.SetField(paymentorder.FieldSenderFee, field.TypeFloat64, value)
 		_node.SenderFee = value
 	}
-	if value, ok := poc.mutation.NetworkFee(); ok {
+	if value, ok := _c.mutation.NetworkFee(); ok {
 		_spec.SetField(paymentorder.FieldNetworkFee, field.TypeFloat64, value)
 		_node.NetworkFee = value
 	}
-	if value, ok := poc.mutation.Rate(); ok {
+	if value, ok := _c.mutation.Rate(); ok {
 		_spec.SetField(paymentorder.FieldRate, field.TypeFloat64, value)
 		_node.Rate = value
 	}
-	if value, ok := poc.mutation.TxHash(); ok {
+	if value, ok := _c.mutation.TxHash(); ok {
 		_spec.SetField(paymentorder.FieldTxHash, field.TypeString, value)
 		_node.TxHash = value
 	}
-	if value, ok := poc.mutation.BlockNumber(); ok {
+	if value, ok := _c.mutation.BlockNumber(); ok {
 		_spec.SetField(paymentorder.FieldBlockNumber, field.TypeInt64, value)
 		_node.BlockNumber = value
 	}
-	if value, ok := poc.mutation.FromAddress(); ok {
+	if value, ok := _c.mutation.FromAddress(); ok {
 		_spec.SetField(paymentorder.FieldFromAddress, field.TypeString, value)
 		_node.FromAddress = value
 	}
-	if value, ok := poc.mutation.ReturnAddress(); ok {
+	if value, ok := _c.mutation.ReturnAddress(); ok {
 		_spec.SetField(paymentorder.FieldReturnAddress, field.TypeString, value)
 		_node.ReturnAddress = value
 	}
-	if value, ok := poc.mutation.ReceiveAddressText(); ok {
+	if value, ok := _c.mutation.ReceiveAddressText(); ok {
 		_spec.SetField(paymentorder.FieldReceiveAddressText, field.TypeString, value)
 		_node.ReceiveAddressText = value
 	}
-	if value, ok := poc.mutation.FeePercent(); ok {
+	if value, ok := _c.mutation.FeePercent(); ok {
 		_spec.SetField(paymentorder.FieldFeePercent, field.TypeFloat64, value)
 		_node.FeePercent = value
 	}
-	if value, ok := poc.mutation.FeeAddress(); ok {
+	if value, ok := _c.mutation.FeeAddress(); ok {
 		_spec.SetField(paymentorder.FieldFeeAddress, field.TypeString, value)
 		_node.FeeAddress = value
 	}
-	if value, ok := poc.mutation.GatewayID(); ok {
+	if value, ok := _c.mutation.GatewayID(); ok {
 		_spec.SetField(paymentorder.FieldGatewayID, field.TypeString, value)
 		_node.GatewayID = value
 	}
-	if value, ok := poc.mutation.MessageHash(); ok {
+	if value, ok := _c.mutation.MessageHash(); ok {
 		_spec.SetField(paymentorder.FieldMessageHash, field.TypeString, value)
 		_node.MessageHash = value
 	}
-	if value, ok := poc.mutation.Reference(); ok {
+	if value, ok := _c.mutation.Reference(); ok {
 		_spec.SetField(paymentorder.FieldReference, field.TypeString, value)
 		_node.Reference = value
 	}
-	if value, ok := poc.mutation.Status(); ok {
+	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(paymentorder.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
-	if value, ok := poc.mutation.AmountInUsd(); ok {
+	if value, ok := _c.mutation.AmountInUsd(); ok {
 		_spec.SetField(paymentorder.FieldAmountInUsd, field.TypeFloat64, value)
 		_node.AmountInUsd = value
 	}
-	if value, ok := poc.mutation.OrderType(); ok {
+	if value, ok := _c.mutation.OrderType(); ok {
 		_spec.SetField(paymentorder.FieldOrderType, field.TypeEnum, value)
 		_node.OrderType = value
 	}
-	if nodes := poc.mutation.SenderProfileIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.SenderProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -697,7 +697,7 @@ func (poc *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec
 		_node.sender_profile_payment_orders = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := poc.mutation.TokenIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.TokenIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -714,7 +714,7 @@ func (poc *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec
 		_node.token_payment_orders = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := poc.mutation.LinkedAddressIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.LinkedAddressIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -731,7 +731,7 @@ func (poc *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec
 		_node.linked_address_payment_orders = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := poc.mutation.ReceiveAddressIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.ReceiveAddressIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -747,7 +747,7 @@ func (poc *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := poc.mutation.RecipientIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.RecipientIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -763,7 +763,7 @@ func (poc *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := poc.mutation.TransactionsIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.TransactionsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -779,7 +779,7 @@ func (poc *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := poc.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -814,10 +814,10 @@ func (poc *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (poc *PaymentOrderCreate) OnConflict(opts ...sql.ConflictOption) *PaymentOrderUpsertOne {
-	poc.conflict = opts
+func (_c *PaymentOrderCreate) OnConflict(opts ...sql.ConflictOption) *PaymentOrderUpsertOne {
+	_c.conflict = opts
 	return &PaymentOrderUpsertOne{
-		create: poc,
+		create: _c,
 	}
 }
 
@@ -827,10 +827,10 @@ func (poc *PaymentOrderCreate) OnConflict(opts ...sql.ConflictOption) *PaymentOr
 //	client.PaymentOrder.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (poc *PaymentOrderCreate) OnConflictColumns(columns ...string) *PaymentOrderUpsertOne {
-	poc.conflict = append(poc.conflict, sql.ConflictColumns(columns...))
+func (_c *PaymentOrderCreate) OnConflictColumns(columns ...string) *PaymentOrderUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &PaymentOrderUpsertOne{
-		create: poc,
+		create: _c,
 	}
 }
 
@@ -1712,16 +1712,16 @@ type PaymentOrderCreateBulk struct {
 }
 
 // Save creates the PaymentOrder entities in the database.
-func (pocb *PaymentOrderCreateBulk) Save(ctx context.Context) ([]*PaymentOrder, error) {
-	if pocb.err != nil {
-		return nil, pocb.err
+func (_c *PaymentOrderCreateBulk) Save(ctx context.Context) ([]*PaymentOrder, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(pocb.builders))
-	nodes := make([]*PaymentOrder, len(pocb.builders))
-	mutators := make([]Mutator, len(pocb.builders))
-	for i := range pocb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*PaymentOrder, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := pocb.builders[i]
+			builder := _c.builders[i]
 			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*PaymentOrderMutation)
@@ -1735,12 +1735,12 @@ func (pocb *PaymentOrderCreateBulk) Save(ctx context.Context) ([]*PaymentOrder, 
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, pocb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = pocb.conflict
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, pocb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -1760,7 +1760,7 @@ func (pocb *PaymentOrderCreateBulk) Save(ctx context.Context) ([]*PaymentOrder, 
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, pocb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -1768,8 +1768,8 @@ func (pocb *PaymentOrderCreateBulk) Save(ctx context.Context) ([]*PaymentOrder, 
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (pocb *PaymentOrderCreateBulk) SaveX(ctx context.Context) []*PaymentOrder {
-	v, err := pocb.Save(ctx)
+func (_c *PaymentOrderCreateBulk) SaveX(ctx context.Context) []*PaymentOrder {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -1777,14 +1777,14 @@ func (pocb *PaymentOrderCreateBulk) SaveX(ctx context.Context) []*PaymentOrder {
 }
 
 // Exec executes the query.
-func (pocb *PaymentOrderCreateBulk) Exec(ctx context.Context) error {
-	_, err := pocb.Save(ctx)
+func (_c *PaymentOrderCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pocb *PaymentOrderCreateBulk) ExecX(ctx context.Context) {
-	if err := pocb.Exec(ctx); err != nil {
+func (_c *PaymentOrderCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
@@ -1804,10 +1804,10 @@ func (pocb *PaymentOrderCreateBulk) ExecX(ctx context.Context) {
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (pocb *PaymentOrderCreateBulk) OnConflict(opts ...sql.ConflictOption) *PaymentOrderUpsertBulk {
-	pocb.conflict = opts
+func (_c *PaymentOrderCreateBulk) OnConflict(opts ...sql.ConflictOption) *PaymentOrderUpsertBulk {
+	_c.conflict = opts
 	return &PaymentOrderUpsertBulk{
-		create: pocb,
+		create: _c,
 	}
 }
 
@@ -1817,10 +1817,10 @@ func (pocb *PaymentOrderCreateBulk) OnConflict(opts ...sql.ConflictOption) *Paym
 //	client.PaymentOrder.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (pocb *PaymentOrderCreateBulk) OnConflictColumns(columns ...string) *PaymentOrderUpsertBulk {
-	pocb.conflict = append(pocb.conflict, sql.ConflictColumns(columns...))
+func (_c *PaymentOrderCreateBulk) OnConflictColumns(columns ...string) *PaymentOrderUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &PaymentOrderUpsertBulk{
-		create: pocb,
+		create: _c,
 	}
 }
 

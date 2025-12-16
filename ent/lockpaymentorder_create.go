@@ -31,310 +31,310 @@ type LockPaymentOrderCreate struct {
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (lpoc *LockPaymentOrderCreate) SetCreatedAt(t time.Time) *LockPaymentOrderCreate {
-	lpoc.mutation.SetCreatedAt(t)
-	return lpoc
+func (_c *LockPaymentOrderCreate) SetCreatedAt(v time.Time) *LockPaymentOrderCreate {
+	_c.mutation.SetCreatedAt(v)
+	return _c
 }
 
 // SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (lpoc *LockPaymentOrderCreate) SetNillableCreatedAt(t *time.Time) *LockPaymentOrderCreate {
-	if t != nil {
-		lpoc.SetCreatedAt(*t)
+func (_c *LockPaymentOrderCreate) SetNillableCreatedAt(v *time.Time) *LockPaymentOrderCreate {
+	if v != nil {
+		_c.SetCreatedAt(*v)
 	}
-	return lpoc
+	return _c
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (lpoc *LockPaymentOrderCreate) SetUpdatedAt(t time.Time) *LockPaymentOrderCreate {
-	lpoc.mutation.SetUpdatedAt(t)
-	return lpoc
+func (_c *LockPaymentOrderCreate) SetUpdatedAt(v time.Time) *LockPaymentOrderCreate {
+	_c.mutation.SetUpdatedAt(v)
+	return _c
 }
 
 // SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (lpoc *LockPaymentOrderCreate) SetNillableUpdatedAt(t *time.Time) *LockPaymentOrderCreate {
-	if t != nil {
-		lpoc.SetUpdatedAt(*t)
+func (_c *LockPaymentOrderCreate) SetNillableUpdatedAt(v *time.Time) *LockPaymentOrderCreate {
+	if v != nil {
+		_c.SetUpdatedAt(*v)
 	}
-	return lpoc
+	return _c
 }
 
 // SetGatewayID sets the "gateway_id" field.
-func (lpoc *LockPaymentOrderCreate) SetGatewayID(s string) *LockPaymentOrderCreate {
-	lpoc.mutation.SetGatewayID(s)
-	return lpoc
+func (_c *LockPaymentOrderCreate) SetGatewayID(v string) *LockPaymentOrderCreate {
+	_c.mutation.SetGatewayID(v)
+	return _c
 }
 
 // SetAmount sets the "amount" field.
-func (lpoc *LockPaymentOrderCreate) SetAmount(d decimal.Decimal) *LockPaymentOrderCreate {
-	lpoc.mutation.SetAmount(d)
-	return lpoc
+func (_c *LockPaymentOrderCreate) SetAmount(v decimal.Decimal) *LockPaymentOrderCreate {
+	_c.mutation.SetAmount(v)
+	return _c
 }
 
 // SetProtocolFee sets the "protocol_fee" field.
-func (lpoc *LockPaymentOrderCreate) SetProtocolFee(d decimal.Decimal) *LockPaymentOrderCreate {
-	lpoc.mutation.SetProtocolFee(d)
-	return lpoc
+func (_c *LockPaymentOrderCreate) SetProtocolFee(v decimal.Decimal) *LockPaymentOrderCreate {
+	_c.mutation.SetProtocolFee(v)
+	return _c
 }
 
 // SetRate sets the "rate" field.
-func (lpoc *LockPaymentOrderCreate) SetRate(d decimal.Decimal) *LockPaymentOrderCreate {
-	lpoc.mutation.SetRate(d)
-	return lpoc
+func (_c *LockPaymentOrderCreate) SetRate(v decimal.Decimal) *LockPaymentOrderCreate {
+	_c.mutation.SetRate(v)
+	return _c
 }
 
 // SetOrderPercent sets the "order_percent" field.
-func (lpoc *LockPaymentOrderCreate) SetOrderPercent(d decimal.Decimal) *LockPaymentOrderCreate {
-	lpoc.mutation.SetOrderPercent(d)
-	return lpoc
+func (_c *LockPaymentOrderCreate) SetOrderPercent(v decimal.Decimal) *LockPaymentOrderCreate {
+	_c.mutation.SetOrderPercent(v)
+	return _c
 }
 
 // SetSender sets the "sender" field.
-func (lpoc *LockPaymentOrderCreate) SetSender(s string) *LockPaymentOrderCreate {
-	lpoc.mutation.SetSender(s)
-	return lpoc
+func (_c *LockPaymentOrderCreate) SetSender(v string) *LockPaymentOrderCreate {
+	_c.mutation.SetSender(v)
+	return _c
 }
 
 // SetNillableSender sets the "sender" field if the given value is not nil.
-func (lpoc *LockPaymentOrderCreate) SetNillableSender(s *string) *LockPaymentOrderCreate {
-	if s != nil {
-		lpoc.SetSender(*s)
+func (_c *LockPaymentOrderCreate) SetNillableSender(v *string) *LockPaymentOrderCreate {
+	if v != nil {
+		_c.SetSender(*v)
 	}
-	return lpoc
+	return _c
 }
 
 // SetTxHash sets the "tx_hash" field.
-func (lpoc *LockPaymentOrderCreate) SetTxHash(s string) *LockPaymentOrderCreate {
-	lpoc.mutation.SetTxHash(s)
-	return lpoc
+func (_c *LockPaymentOrderCreate) SetTxHash(v string) *LockPaymentOrderCreate {
+	_c.mutation.SetTxHash(v)
+	return _c
 }
 
 // SetNillableTxHash sets the "tx_hash" field if the given value is not nil.
-func (lpoc *LockPaymentOrderCreate) SetNillableTxHash(s *string) *LockPaymentOrderCreate {
-	if s != nil {
-		lpoc.SetTxHash(*s)
+func (_c *LockPaymentOrderCreate) SetNillableTxHash(v *string) *LockPaymentOrderCreate {
+	if v != nil {
+		_c.SetTxHash(*v)
 	}
-	return lpoc
+	return _c
 }
 
 // SetStatus sets the "status" field.
-func (lpoc *LockPaymentOrderCreate) SetStatus(l lockpaymentorder.Status) *LockPaymentOrderCreate {
-	lpoc.mutation.SetStatus(l)
-	return lpoc
+func (_c *LockPaymentOrderCreate) SetStatus(v lockpaymentorder.Status) *LockPaymentOrderCreate {
+	_c.mutation.SetStatus(v)
+	return _c
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (lpoc *LockPaymentOrderCreate) SetNillableStatus(l *lockpaymentorder.Status) *LockPaymentOrderCreate {
-	if l != nil {
-		lpoc.SetStatus(*l)
+func (_c *LockPaymentOrderCreate) SetNillableStatus(v *lockpaymentorder.Status) *LockPaymentOrderCreate {
+	if v != nil {
+		_c.SetStatus(*v)
 	}
-	return lpoc
+	return _c
 }
 
 // SetBlockNumber sets the "block_number" field.
-func (lpoc *LockPaymentOrderCreate) SetBlockNumber(i int64) *LockPaymentOrderCreate {
-	lpoc.mutation.SetBlockNumber(i)
-	return lpoc
+func (_c *LockPaymentOrderCreate) SetBlockNumber(v int64) *LockPaymentOrderCreate {
+	_c.mutation.SetBlockNumber(v)
+	return _c
 }
 
 // SetInstitution sets the "institution" field.
-func (lpoc *LockPaymentOrderCreate) SetInstitution(s string) *LockPaymentOrderCreate {
-	lpoc.mutation.SetInstitution(s)
-	return lpoc
+func (_c *LockPaymentOrderCreate) SetInstitution(v string) *LockPaymentOrderCreate {
+	_c.mutation.SetInstitution(v)
+	return _c
 }
 
 // SetAccountIdentifier sets the "account_identifier" field.
-func (lpoc *LockPaymentOrderCreate) SetAccountIdentifier(s string) *LockPaymentOrderCreate {
-	lpoc.mutation.SetAccountIdentifier(s)
-	return lpoc
+func (_c *LockPaymentOrderCreate) SetAccountIdentifier(v string) *LockPaymentOrderCreate {
+	_c.mutation.SetAccountIdentifier(v)
+	return _c
 }
 
 // SetAccountName sets the "account_name" field.
-func (lpoc *LockPaymentOrderCreate) SetAccountName(s string) *LockPaymentOrderCreate {
-	lpoc.mutation.SetAccountName(s)
-	return lpoc
+func (_c *LockPaymentOrderCreate) SetAccountName(v string) *LockPaymentOrderCreate {
+	_c.mutation.SetAccountName(v)
+	return _c
 }
 
 // SetMemo sets the "memo" field.
-func (lpoc *LockPaymentOrderCreate) SetMemo(s string) *LockPaymentOrderCreate {
-	lpoc.mutation.SetMemo(s)
-	return lpoc
+func (_c *LockPaymentOrderCreate) SetMemo(v string) *LockPaymentOrderCreate {
+	_c.mutation.SetMemo(v)
+	return _c
 }
 
 // SetNillableMemo sets the "memo" field if the given value is not nil.
-func (lpoc *LockPaymentOrderCreate) SetNillableMemo(s *string) *LockPaymentOrderCreate {
-	if s != nil {
-		lpoc.SetMemo(*s)
+func (_c *LockPaymentOrderCreate) SetNillableMemo(v *string) *LockPaymentOrderCreate {
+	if v != nil {
+		_c.SetMemo(*v)
 	}
-	return lpoc
+	return _c
 }
 
 // SetMetadata sets the "metadata" field.
-func (lpoc *LockPaymentOrderCreate) SetMetadata(m map[string]interface{}) *LockPaymentOrderCreate {
-	lpoc.mutation.SetMetadata(m)
-	return lpoc
+func (_c *LockPaymentOrderCreate) SetMetadata(v map[string]interface{}) *LockPaymentOrderCreate {
+	_c.mutation.SetMetadata(v)
+	return _c
 }
 
 // SetCancellationCount sets the "cancellation_count" field.
-func (lpoc *LockPaymentOrderCreate) SetCancellationCount(i int) *LockPaymentOrderCreate {
-	lpoc.mutation.SetCancellationCount(i)
-	return lpoc
+func (_c *LockPaymentOrderCreate) SetCancellationCount(v int) *LockPaymentOrderCreate {
+	_c.mutation.SetCancellationCount(v)
+	return _c
 }
 
 // SetNillableCancellationCount sets the "cancellation_count" field if the given value is not nil.
-func (lpoc *LockPaymentOrderCreate) SetNillableCancellationCount(i *int) *LockPaymentOrderCreate {
-	if i != nil {
-		lpoc.SetCancellationCount(*i)
+func (_c *LockPaymentOrderCreate) SetNillableCancellationCount(v *int) *LockPaymentOrderCreate {
+	if v != nil {
+		_c.SetCancellationCount(*v)
 	}
-	return lpoc
+	return _c
 }
 
 // SetCancellationReasons sets the "cancellation_reasons" field.
-func (lpoc *LockPaymentOrderCreate) SetCancellationReasons(s []string) *LockPaymentOrderCreate {
-	lpoc.mutation.SetCancellationReasons(s)
-	return lpoc
+func (_c *LockPaymentOrderCreate) SetCancellationReasons(v []string) *LockPaymentOrderCreate {
+	_c.mutation.SetCancellationReasons(v)
+	return _c
 }
 
 // SetMessageHash sets the "message_hash" field.
-func (lpoc *LockPaymentOrderCreate) SetMessageHash(s string) *LockPaymentOrderCreate {
-	lpoc.mutation.SetMessageHash(s)
-	return lpoc
+func (_c *LockPaymentOrderCreate) SetMessageHash(v string) *LockPaymentOrderCreate {
+	_c.mutation.SetMessageHash(v)
+	return _c
 }
 
 // SetNillableMessageHash sets the "message_hash" field if the given value is not nil.
-func (lpoc *LockPaymentOrderCreate) SetNillableMessageHash(s *string) *LockPaymentOrderCreate {
-	if s != nil {
-		lpoc.SetMessageHash(*s)
+func (_c *LockPaymentOrderCreate) SetNillableMessageHash(v *string) *LockPaymentOrderCreate {
+	if v != nil {
+		_c.SetMessageHash(*v)
 	}
-	return lpoc
+	return _c
 }
 
 // SetAmountInUsd sets the "amount_in_usd" field.
-func (lpoc *LockPaymentOrderCreate) SetAmountInUsd(d decimal.Decimal) *LockPaymentOrderCreate {
-	lpoc.mutation.SetAmountInUsd(d)
-	return lpoc
+func (_c *LockPaymentOrderCreate) SetAmountInUsd(v decimal.Decimal) *LockPaymentOrderCreate {
+	_c.mutation.SetAmountInUsd(v)
+	return _c
 }
 
 // SetOrderType sets the "order_type" field.
-func (lpoc *LockPaymentOrderCreate) SetOrderType(lt lockpaymentorder.OrderType) *LockPaymentOrderCreate {
-	lpoc.mutation.SetOrderType(lt)
-	return lpoc
+func (_c *LockPaymentOrderCreate) SetOrderType(v lockpaymentorder.OrderType) *LockPaymentOrderCreate {
+	_c.mutation.SetOrderType(v)
+	return _c
 }
 
 // SetNillableOrderType sets the "order_type" field if the given value is not nil.
-func (lpoc *LockPaymentOrderCreate) SetNillableOrderType(lt *lockpaymentorder.OrderType) *LockPaymentOrderCreate {
-	if lt != nil {
-		lpoc.SetOrderType(*lt)
+func (_c *LockPaymentOrderCreate) SetNillableOrderType(v *lockpaymentorder.OrderType) *LockPaymentOrderCreate {
+	if v != nil {
+		_c.SetOrderType(*v)
 	}
-	return lpoc
+	return _c
 }
 
 // SetID sets the "id" field.
-func (lpoc *LockPaymentOrderCreate) SetID(u uuid.UUID) *LockPaymentOrderCreate {
-	lpoc.mutation.SetID(u)
-	return lpoc
+func (_c *LockPaymentOrderCreate) SetID(v uuid.UUID) *LockPaymentOrderCreate {
+	_c.mutation.SetID(v)
+	return _c
 }
 
 // SetNillableID sets the "id" field if the given value is not nil.
-func (lpoc *LockPaymentOrderCreate) SetNillableID(u *uuid.UUID) *LockPaymentOrderCreate {
-	if u != nil {
-		lpoc.SetID(*u)
+func (_c *LockPaymentOrderCreate) SetNillableID(v *uuid.UUID) *LockPaymentOrderCreate {
+	if v != nil {
+		_c.SetID(*v)
 	}
-	return lpoc
+	return _c
 }
 
 // SetTokenID sets the "token" edge to the Token entity by ID.
-func (lpoc *LockPaymentOrderCreate) SetTokenID(id int) *LockPaymentOrderCreate {
-	lpoc.mutation.SetTokenID(id)
-	return lpoc
+func (_c *LockPaymentOrderCreate) SetTokenID(id int) *LockPaymentOrderCreate {
+	_c.mutation.SetTokenID(id)
+	return _c
 }
 
 // SetToken sets the "token" edge to the Token entity.
-func (lpoc *LockPaymentOrderCreate) SetToken(t *Token) *LockPaymentOrderCreate {
-	return lpoc.SetTokenID(t.ID)
+func (_c *LockPaymentOrderCreate) SetToken(v *Token) *LockPaymentOrderCreate {
+	return _c.SetTokenID(v.ID)
 }
 
 // SetProvisionBucketID sets the "provision_bucket" edge to the ProvisionBucket entity by ID.
-func (lpoc *LockPaymentOrderCreate) SetProvisionBucketID(id int) *LockPaymentOrderCreate {
-	lpoc.mutation.SetProvisionBucketID(id)
-	return lpoc
+func (_c *LockPaymentOrderCreate) SetProvisionBucketID(id int) *LockPaymentOrderCreate {
+	_c.mutation.SetProvisionBucketID(id)
+	return _c
 }
 
 // SetNillableProvisionBucketID sets the "provision_bucket" edge to the ProvisionBucket entity by ID if the given value is not nil.
-func (lpoc *LockPaymentOrderCreate) SetNillableProvisionBucketID(id *int) *LockPaymentOrderCreate {
+func (_c *LockPaymentOrderCreate) SetNillableProvisionBucketID(id *int) *LockPaymentOrderCreate {
 	if id != nil {
-		lpoc = lpoc.SetProvisionBucketID(*id)
+		_c = _c.SetProvisionBucketID(*id)
 	}
-	return lpoc
+	return _c
 }
 
 // SetProvisionBucket sets the "provision_bucket" edge to the ProvisionBucket entity.
-func (lpoc *LockPaymentOrderCreate) SetProvisionBucket(p *ProvisionBucket) *LockPaymentOrderCreate {
-	return lpoc.SetProvisionBucketID(p.ID)
+func (_c *LockPaymentOrderCreate) SetProvisionBucket(v *ProvisionBucket) *LockPaymentOrderCreate {
+	return _c.SetProvisionBucketID(v.ID)
 }
 
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
-func (lpoc *LockPaymentOrderCreate) SetProviderID(id string) *LockPaymentOrderCreate {
-	lpoc.mutation.SetProviderID(id)
-	return lpoc
+func (_c *LockPaymentOrderCreate) SetProviderID(id string) *LockPaymentOrderCreate {
+	_c.mutation.SetProviderID(id)
+	return _c
 }
 
 // SetNillableProviderID sets the "provider" edge to the ProviderProfile entity by ID if the given value is not nil.
-func (lpoc *LockPaymentOrderCreate) SetNillableProviderID(id *string) *LockPaymentOrderCreate {
+func (_c *LockPaymentOrderCreate) SetNillableProviderID(id *string) *LockPaymentOrderCreate {
 	if id != nil {
-		lpoc = lpoc.SetProviderID(*id)
+		_c = _c.SetProviderID(*id)
 	}
-	return lpoc
+	return _c
 }
 
 // SetProvider sets the "provider" edge to the ProviderProfile entity.
-func (lpoc *LockPaymentOrderCreate) SetProvider(p *ProviderProfile) *LockPaymentOrderCreate {
-	return lpoc.SetProviderID(p.ID)
+func (_c *LockPaymentOrderCreate) SetProvider(v *ProviderProfile) *LockPaymentOrderCreate {
+	return _c.SetProviderID(v.ID)
 }
 
 // AddFulfillmentIDs adds the "fulfillments" edge to the LockOrderFulfillment entity by IDs.
-func (lpoc *LockPaymentOrderCreate) AddFulfillmentIDs(ids ...uuid.UUID) *LockPaymentOrderCreate {
-	lpoc.mutation.AddFulfillmentIDs(ids...)
-	return lpoc
+func (_c *LockPaymentOrderCreate) AddFulfillmentIDs(ids ...uuid.UUID) *LockPaymentOrderCreate {
+	_c.mutation.AddFulfillmentIDs(ids...)
+	return _c
 }
 
 // AddFulfillments adds the "fulfillments" edges to the LockOrderFulfillment entity.
-func (lpoc *LockPaymentOrderCreate) AddFulfillments(l ...*LockOrderFulfillment) *LockPaymentOrderCreate {
-	ids := make([]uuid.UUID, len(l))
-	for i := range l {
-		ids[i] = l[i].ID
+func (_c *LockPaymentOrderCreate) AddFulfillments(v ...*LockOrderFulfillment) *LockPaymentOrderCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return lpoc.AddFulfillmentIDs(ids...)
+	return _c.AddFulfillmentIDs(ids...)
 }
 
 // AddTransactionIDs adds the "transactions" edge to the TransactionLog entity by IDs.
-func (lpoc *LockPaymentOrderCreate) AddTransactionIDs(ids ...uuid.UUID) *LockPaymentOrderCreate {
-	lpoc.mutation.AddTransactionIDs(ids...)
-	return lpoc
+func (_c *LockPaymentOrderCreate) AddTransactionIDs(ids ...uuid.UUID) *LockPaymentOrderCreate {
+	_c.mutation.AddTransactionIDs(ids...)
+	return _c
 }
 
 // AddTransactions adds the "transactions" edges to the TransactionLog entity.
-func (lpoc *LockPaymentOrderCreate) AddTransactions(t ...*TransactionLog) *LockPaymentOrderCreate {
-	ids := make([]uuid.UUID, len(t))
-	for i := range t {
-		ids[i] = t[i].ID
+func (_c *LockPaymentOrderCreate) AddTransactions(v ...*TransactionLog) *LockPaymentOrderCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return lpoc.AddTransactionIDs(ids...)
+	return _c.AddTransactionIDs(ids...)
 }
 
 // Mutation returns the LockPaymentOrderMutation object of the builder.
-func (lpoc *LockPaymentOrderCreate) Mutation() *LockPaymentOrderMutation {
-	return lpoc.mutation
+func (_c *LockPaymentOrderCreate) Mutation() *LockPaymentOrderMutation {
+	return _c.mutation
 }
 
 // Save creates the LockPaymentOrder in the database.
-func (lpoc *LockPaymentOrderCreate) Save(ctx context.Context) (*LockPaymentOrder, error) {
-	lpoc.defaults()
-	return withHooks(ctx, lpoc.sqlSave, lpoc.mutation, lpoc.hooks)
+func (_c *LockPaymentOrderCreate) Save(ctx context.Context) (*LockPaymentOrder, error) {
+	_c.defaults()
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (lpoc *LockPaymentOrderCreate) SaveX(ctx context.Context) *LockPaymentOrder {
-	v, err := lpoc.Save(ctx)
+func (_c *LockPaymentOrderCreate) SaveX(ctx context.Context) *LockPaymentOrder {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -342,132 +342,132 @@ func (lpoc *LockPaymentOrderCreate) SaveX(ctx context.Context) *LockPaymentOrder
 }
 
 // Exec executes the query.
-func (lpoc *LockPaymentOrderCreate) Exec(ctx context.Context) error {
-	_, err := lpoc.Save(ctx)
+func (_c *LockPaymentOrderCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (lpoc *LockPaymentOrderCreate) ExecX(ctx context.Context) {
-	if err := lpoc.Exec(ctx); err != nil {
+func (_c *LockPaymentOrderCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (lpoc *LockPaymentOrderCreate) defaults() {
-	if _, ok := lpoc.mutation.CreatedAt(); !ok {
+func (_c *LockPaymentOrderCreate) defaults() {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := lockpaymentorder.DefaultCreatedAt()
-		lpoc.mutation.SetCreatedAt(v)
+		_c.mutation.SetCreatedAt(v)
 	}
-	if _, ok := lpoc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		v := lockpaymentorder.DefaultUpdatedAt()
-		lpoc.mutation.SetUpdatedAt(v)
+		_c.mutation.SetUpdatedAt(v)
 	}
-	if _, ok := lpoc.mutation.Status(); !ok {
+	if _, ok := _c.mutation.Status(); !ok {
 		v := lockpaymentorder.DefaultStatus
-		lpoc.mutation.SetStatus(v)
+		_c.mutation.SetStatus(v)
 	}
-	if _, ok := lpoc.mutation.CancellationCount(); !ok {
+	if _, ok := _c.mutation.CancellationCount(); !ok {
 		v := lockpaymentorder.DefaultCancellationCount
-		lpoc.mutation.SetCancellationCount(v)
+		_c.mutation.SetCancellationCount(v)
 	}
-	if _, ok := lpoc.mutation.CancellationReasons(); !ok {
+	if _, ok := _c.mutation.CancellationReasons(); !ok {
 		v := lockpaymentorder.DefaultCancellationReasons
-		lpoc.mutation.SetCancellationReasons(v)
+		_c.mutation.SetCancellationReasons(v)
 	}
-	if _, ok := lpoc.mutation.OrderType(); !ok {
+	if _, ok := _c.mutation.OrderType(); !ok {
 		v := lockpaymentorder.DefaultOrderType
-		lpoc.mutation.SetOrderType(v)
+		_c.mutation.SetOrderType(v)
 	}
-	if _, ok := lpoc.mutation.ID(); !ok {
+	if _, ok := _c.mutation.ID(); !ok {
 		v := lockpaymentorder.DefaultID()
-		lpoc.mutation.SetID(v)
+		_c.mutation.SetID(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (lpoc *LockPaymentOrderCreate) check() error {
-	if _, ok := lpoc.mutation.CreatedAt(); !ok {
+func (_c *LockPaymentOrderCreate) check() error {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "LockPaymentOrder.created_at"`)}
 	}
-	if _, ok := lpoc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "LockPaymentOrder.updated_at"`)}
 	}
-	if _, ok := lpoc.mutation.GatewayID(); !ok {
+	if _, ok := _c.mutation.GatewayID(); !ok {
 		return &ValidationError{Name: "gateway_id", err: errors.New(`ent: missing required field "LockPaymentOrder.gateway_id"`)}
 	}
-	if _, ok := lpoc.mutation.Amount(); !ok {
+	if _, ok := _c.mutation.Amount(); !ok {
 		return &ValidationError{Name: "amount", err: errors.New(`ent: missing required field "LockPaymentOrder.amount"`)}
 	}
-	if _, ok := lpoc.mutation.ProtocolFee(); !ok {
+	if _, ok := _c.mutation.ProtocolFee(); !ok {
 		return &ValidationError{Name: "protocol_fee", err: errors.New(`ent: missing required field "LockPaymentOrder.protocol_fee"`)}
 	}
-	if _, ok := lpoc.mutation.Rate(); !ok {
+	if _, ok := _c.mutation.Rate(); !ok {
 		return &ValidationError{Name: "rate", err: errors.New(`ent: missing required field "LockPaymentOrder.rate"`)}
 	}
-	if _, ok := lpoc.mutation.OrderPercent(); !ok {
+	if _, ok := _c.mutation.OrderPercent(); !ok {
 		return &ValidationError{Name: "order_percent", err: errors.New(`ent: missing required field "LockPaymentOrder.order_percent"`)}
 	}
-	if v, ok := lpoc.mutation.TxHash(); ok {
+	if v, ok := _c.mutation.TxHash(); ok {
 		if err := lockpaymentorder.TxHashValidator(v); err != nil {
 			return &ValidationError{Name: "tx_hash", err: fmt.Errorf(`ent: validator failed for field "LockPaymentOrder.tx_hash": %w`, err)}
 		}
 	}
-	if _, ok := lpoc.mutation.Status(); !ok {
+	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "LockPaymentOrder.status"`)}
 	}
-	if v, ok := lpoc.mutation.Status(); ok {
+	if v, ok := _c.mutation.Status(); ok {
 		if err := lockpaymentorder.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "LockPaymentOrder.status": %w`, err)}
 		}
 	}
-	if _, ok := lpoc.mutation.BlockNumber(); !ok {
+	if _, ok := _c.mutation.BlockNumber(); !ok {
 		return &ValidationError{Name: "block_number", err: errors.New(`ent: missing required field "LockPaymentOrder.block_number"`)}
 	}
-	if _, ok := lpoc.mutation.Institution(); !ok {
+	if _, ok := _c.mutation.Institution(); !ok {
 		return &ValidationError{Name: "institution", err: errors.New(`ent: missing required field "LockPaymentOrder.institution"`)}
 	}
-	if _, ok := lpoc.mutation.AccountIdentifier(); !ok {
+	if _, ok := _c.mutation.AccountIdentifier(); !ok {
 		return &ValidationError{Name: "account_identifier", err: errors.New(`ent: missing required field "LockPaymentOrder.account_identifier"`)}
 	}
-	if _, ok := lpoc.mutation.AccountName(); !ok {
+	if _, ok := _c.mutation.AccountName(); !ok {
 		return &ValidationError{Name: "account_name", err: errors.New(`ent: missing required field "LockPaymentOrder.account_name"`)}
 	}
-	if _, ok := lpoc.mutation.CancellationCount(); !ok {
+	if _, ok := _c.mutation.CancellationCount(); !ok {
 		return &ValidationError{Name: "cancellation_count", err: errors.New(`ent: missing required field "LockPaymentOrder.cancellation_count"`)}
 	}
-	if _, ok := lpoc.mutation.CancellationReasons(); !ok {
+	if _, ok := _c.mutation.CancellationReasons(); !ok {
 		return &ValidationError{Name: "cancellation_reasons", err: errors.New(`ent: missing required field "LockPaymentOrder.cancellation_reasons"`)}
 	}
-	if v, ok := lpoc.mutation.MessageHash(); ok {
+	if v, ok := _c.mutation.MessageHash(); ok {
 		if err := lockpaymentorder.MessageHashValidator(v); err != nil {
 			return &ValidationError{Name: "message_hash", err: fmt.Errorf(`ent: validator failed for field "LockPaymentOrder.message_hash": %w`, err)}
 		}
 	}
-	if _, ok := lpoc.mutation.AmountInUsd(); !ok {
+	if _, ok := _c.mutation.AmountInUsd(); !ok {
 		return &ValidationError{Name: "amount_in_usd", err: errors.New(`ent: missing required field "LockPaymentOrder.amount_in_usd"`)}
 	}
-	if _, ok := lpoc.mutation.OrderType(); !ok {
+	if _, ok := _c.mutation.OrderType(); !ok {
 		return &ValidationError{Name: "order_type", err: errors.New(`ent: missing required field "LockPaymentOrder.order_type"`)}
 	}
-	if v, ok := lpoc.mutation.OrderType(); ok {
+	if v, ok := _c.mutation.OrderType(); ok {
 		if err := lockpaymentorder.OrderTypeValidator(v); err != nil {
 			return &ValidationError{Name: "order_type", err: fmt.Errorf(`ent: validator failed for field "LockPaymentOrder.order_type": %w`, err)}
 		}
 	}
-	if len(lpoc.mutation.TokenIDs()) == 0 {
+	if len(_c.mutation.TokenIDs()) == 0 {
 		return &ValidationError{Name: "token", err: errors.New(`ent: missing required edge "LockPaymentOrder.token"`)}
 	}
 	return nil
 }
 
-func (lpoc *LockPaymentOrderCreate) sqlSave(ctx context.Context) (*LockPaymentOrder, error) {
-	if err := lpoc.check(); err != nil {
+func (_c *LockPaymentOrderCreate) sqlSave(ctx context.Context) (*LockPaymentOrder, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := lpoc.createSpec()
-	if err := sqlgraph.CreateNode(ctx, lpoc.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -480,106 +480,106 @@ func (lpoc *LockPaymentOrderCreate) sqlSave(ctx context.Context) (*LockPaymentOr
 			return nil, err
 		}
 	}
-	lpoc.mutation.id = &_node.ID
-	lpoc.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (lpoc *LockPaymentOrderCreate) createSpec() (*LockPaymentOrder, *sqlgraph.CreateSpec) {
+func (_c *LockPaymentOrderCreate) createSpec() (*LockPaymentOrder, *sqlgraph.CreateSpec) {
 	var (
-		_node = &LockPaymentOrder{config: lpoc.config}
+		_node = &LockPaymentOrder{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(lockpaymentorder.Table, sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID))
 	)
-	_spec.OnConflict = lpoc.conflict
-	if id, ok := lpoc.mutation.ID(); ok {
+	_spec.OnConflict = _c.conflict
+	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := lpoc.mutation.CreatedAt(); ok {
+	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(lockpaymentorder.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
 	}
-	if value, ok := lpoc.mutation.UpdatedAt(); ok {
+	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(lockpaymentorder.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if value, ok := lpoc.mutation.GatewayID(); ok {
+	if value, ok := _c.mutation.GatewayID(); ok {
 		_spec.SetField(lockpaymentorder.FieldGatewayID, field.TypeString, value)
 		_node.GatewayID = value
 	}
-	if value, ok := lpoc.mutation.Amount(); ok {
+	if value, ok := _c.mutation.Amount(); ok {
 		_spec.SetField(lockpaymentorder.FieldAmount, field.TypeFloat64, value)
 		_node.Amount = value
 	}
-	if value, ok := lpoc.mutation.ProtocolFee(); ok {
+	if value, ok := _c.mutation.ProtocolFee(); ok {
 		_spec.SetField(lockpaymentorder.FieldProtocolFee, field.TypeFloat64, value)
 		_node.ProtocolFee = value
 	}
-	if value, ok := lpoc.mutation.Rate(); ok {
+	if value, ok := _c.mutation.Rate(); ok {
 		_spec.SetField(lockpaymentorder.FieldRate, field.TypeFloat64, value)
 		_node.Rate = value
 	}
-	if value, ok := lpoc.mutation.OrderPercent(); ok {
+	if value, ok := _c.mutation.OrderPercent(); ok {
 		_spec.SetField(lockpaymentorder.FieldOrderPercent, field.TypeFloat64, value)
 		_node.OrderPercent = value
 	}
-	if value, ok := lpoc.mutation.Sender(); ok {
+	if value, ok := _c.mutation.Sender(); ok {
 		_spec.SetField(lockpaymentorder.FieldSender, field.TypeString, value)
 		_node.Sender = value
 	}
-	if value, ok := lpoc.mutation.TxHash(); ok {
+	if value, ok := _c.mutation.TxHash(); ok {
 		_spec.SetField(lockpaymentorder.FieldTxHash, field.TypeString, value)
 		_node.TxHash = value
 	}
-	if value, ok := lpoc.mutation.Status(); ok {
+	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(lockpaymentorder.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
-	if value, ok := lpoc.mutation.BlockNumber(); ok {
+	if value, ok := _c.mutation.BlockNumber(); ok {
 		_spec.SetField(lockpaymentorder.FieldBlockNumber, field.TypeInt64, value)
 		_node.BlockNumber = value
 	}
-	if value, ok := lpoc.mutation.Institution(); ok {
+	if value, ok := _c.mutation.Institution(); ok {
 		_spec.SetField(lockpaymentorder.FieldInstitution, field.TypeString, value)
 		_node.Institution = value
 	}
-	if value, ok := lpoc.mutation.AccountIdentifier(); ok {
+	if value, ok := _c.mutation.AccountIdentifier(); ok {
 		_spec.SetField(lockpaymentorder.FieldAccountIdentifier, field.TypeString, value)
 		_node.AccountIdentifier = value
 	}
-	if value, ok := lpoc.mutation.AccountName(); ok {
+	if value, ok := _c.mutation.AccountName(); ok {
 		_spec.SetField(lockpaymentorder.FieldAccountName, field.TypeString, value)
 		_node.AccountName = value
 	}
-	if value, ok := lpoc.mutation.Memo(); ok {
+	if value, ok := _c.mutation.Memo(); ok {
 		_spec.SetField(lockpaymentorder.FieldMemo, field.TypeString, value)
 		_node.Memo = value
 	}
-	if value, ok := lpoc.mutation.Metadata(); ok {
+	if value, ok := _c.mutation.Metadata(); ok {
 		_spec.SetField(lockpaymentorder.FieldMetadata, field.TypeJSON, value)
 		_node.Metadata = value
 	}
-	if value, ok := lpoc.mutation.CancellationCount(); ok {
+	if value, ok := _c.mutation.CancellationCount(); ok {
 		_spec.SetField(lockpaymentorder.FieldCancellationCount, field.TypeInt, value)
 		_node.CancellationCount = value
 	}
-	if value, ok := lpoc.mutation.CancellationReasons(); ok {
+	if value, ok := _c.mutation.CancellationReasons(); ok {
 		_spec.SetField(lockpaymentorder.FieldCancellationReasons, field.TypeJSON, value)
 		_node.CancellationReasons = value
 	}
-	if value, ok := lpoc.mutation.MessageHash(); ok {
+	if value, ok := _c.mutation.MessageHash(); ok {
 		_spec.SetField(lockpaymentorder.FieldMessageHash, field.TypeString, value)
 		_node.MessageHash = value
 	}
-	if value, ok := lpoc.mutation.AmountInUsd(); ok {
+	if value, ok := _c.mutation.AmountInUsd(); ok {
 		_spec.SetField(lockpaymentorder.FieldAmountInUsd, field.TypeFloat64, value)
 		_node.AmountInUsd = value
 	}
-	if value, ok := lpoc.mutation.OrderType(); ok {
+	if value, ok := _c.mutation.OrderType(); ok {
 		_spec.SetField(lockpaymentorder.FieldOrderType, field.TypeEnum, value)
 		_node.OrderType = value
 	}
-	if nodes := lpoc.mutation.TokenIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.TokenIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -596,7 +596,7 @@ func (lpoc *LockPaymentOrderCreate) createSpec() (*LockPaymentOrder, *sqlgraph.C
 		_node.token_lock_payment_orders = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := lpoc.mutation.ProvisionBucketIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.ProvisionBucketIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -613,7 +613,7 @@ func (lpoc *LockPaymentOrderCreate) createSpec() (*LockPaymentOrder, *sqlgraph.C
 		_node.provision_bucket_lock_payment_orders = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := lpoc.mutation.ProviderIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.ProviderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -630,7 +630,7 @@ func (lpoc *LockPaymentOrderCreate) createSpec() (*LockPaymentOrder, *sqlgraph.C
 		_node.provider_profile_assigned_orders = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := lpoc.mutation.FulfillmentsIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.FulfillmentsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -646,7 +646,7 @@ func (lpoc *LockPaymentOrderCreate) createSpec() (*LockPaymentOrder, *sqlgraph.C
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := lpoc.mutation.TransactionsIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.TransactionsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -681,10 +681,10 @@ func (lpoc *LockPaymentOrderCreate) createSpec() (*LockPaymentOrder, *sqlgraph.C
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (lpoc *LockPaymentOrderCreate) OnConflict(opts ...sql.ConflictOption) *LockPaymentOrderUpsertOne {
-	lpoc.conflict = opts
+func (_c *LockPaymentOrderCreate) OnConflict(opts ...sql.ConflictOption) *LockPaymentOrderUpsertOne {
+	_c.conflict = opts
 	return &LockPaymentOrderUpsertOne{
-		create: lpoc,
+		create: _c,
 	}
 }
 
@@ -694,10 +694,10 @@ func (lpoc *LockPaymentOrderCreate) OnConflict(opts ...sql.ConflictOption) *Lock
 //	client.LockPaymentOrder.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (lpoc *LockPaymentOrderCreate) OnConflictColumns(columns ...string) *LockPaymentOrderUpsertOne {
-	lpoc.conflict = append(lpoc.conflict, sql.ConflictColumns(columns...))
+func (_c *LockPaymentOrderCreate) OnConflictColumns(columns ...string) *LockPaymentOrderUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &LockPaymentOrderUpsertOne{
-		create: lpoc,
+		create: _c,
 	}
 }
 
@@ -1488,16 +1488,16 @@ type LockPaymentOrderCreateBulk struct {
 }
 
 // Save creates the LockPaymentOrder entities in the database.
-func (lpocb *LockPaymentOrderCreateBulk) Save(ctx context.Context) ([]*LockPaymentOrder, error) {
-	if lpocb.err != nil {
-		return nil, lpocb.err
+func (_c *LockPaymentOrderCreateBulk) Save(ctx context.Context) ([]*LockPaymentOrder, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(lpocb.builders))
-	nodes := make([]*LockPaymentOrder, len(lpocb.builders))
-	mutators := make([]Mutator, len(lpocb.builders))
-	for i := range lpocb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*LockPaymentOrder, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := lpocb.builders[i]
+			builder := _c.builders[i]
 			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*LockPaymentOrderMutation)
@@ -1511,12 +1511,12 @@ func (lpocb *LockPaymentOrderCreateBulk) Save(ctx context.Context) ([]*LockPayme
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, lpocb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = lpocb.conflict
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, lpocb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -1536,7 +1536,7 @@ func (lpocb *LockPaymentOrderCreateBulk) Save(ctx context.Context) ([]*LockPayme
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, lpocb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -1544,8 +1544,8 @@ func (lpocb *LockPaymentOrderCreateBulk) Save(ctx context.Context) ([]*LockPayme
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (lpocb *LockPaymentOrderCreateBulk) SaveX(ctx context.Context) []*LockPaymentOrder {
-	v, err := lpocb.Save(ctx)
+func (_c *LockPaymentOrderCreateBulk) SaveX(ctx context.Context) []*LockPaymentOrder {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -1553,14 +1553,14 @@ func (lpocb *LockPaymentOrderCreateBulk) SaveX(ctx context.Context) []*LockPayme
 }
 
 // Exec executes the query.
-func (lpocb *LockPaymentOrderCreateBulk) Exec(ctx context.Context) error {
-	_, err := lpocb.Save(ctx)
+func (_c *LockPaymentOrderCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (lpocb *LockPaymentOrderCreateBulk) ExecX(ctx context.Context) {
-	if err := lpocb.Exec(ctx); err != nil {
+func (_c *LockPaymentOrderCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
@@ -1580,10 +1580,10 @@ func (lpocb *LockPaymentOrderCreateBulk) ExecX(ctx context.Context) {
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (lpocb *LockPaymentOrderCreateBulk) OnConflict(opts ...sql.ConflictOption) *LockPaymentOrderUpsertBulk {
-	lpocb.conflict = opts
+func (_c *LockPaymentOrderCreateBulk) OnConflict(opts ...sql.ConflictOption) *LockPaymentOrderUpsertBulk {
+	_c.conflict = opts
 	return &LockPaymentOrderUpsertBulk{
-		create: lpocb,
+		create: _c,
 	}
 }
 
@@ -1593,10 +1593,10 @@ func (lpocb *LockPaymentOrderCreateBulk) OnConflict(opts ...sql.ConflictOption) 
 //	client.LockPaymentOrder.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (lpocb *LockPaymentOrderCreateBulk) OnConflictColumns(columns ...string) *LockPaymentOrderUpsertBulk {
-	lpocb.conflict = append(lpocb.conflict, sql.ConflictColumns(columns...))
+func (_c *LockPaymentOrderCreateBulk) OnConflictColumns(columns ...string) *LockPaymentOrderUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &LockPaymentOrderUpsertBulk{
-		create: lpocb,
+		create: _c,
 	}
 }
 

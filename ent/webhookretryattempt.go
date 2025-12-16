@@ -59,7 +59,7 @@ func (*WebhookRetryAttempt) scanValues(columns []string) ([]any, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the WebhookRetryAttempt fields.
-func (wra *WebhookRetryAttempt) assignValues(columns []string, values []any) error {
+func (_m *WebhookRetryAttempt) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -70,36 +70,36 @@ func (wra *WebhookRetryAttempt) assignValues(columns []string, values []any) err
 			if !ok {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
-			wra.ID = int(value.Int64)
+			_m.ID = int(value.Int64)
 		case webhookretryattempt.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
-				wra.CreatedAt = value.Time
+				_m.CreatedAt = value.Time
 			}
 		case webhookretryattempt.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
-				wra.UpdatedAt = value.Time
+				_m.UpdatedAt = value.Time
 			}
 		case webhookretryattempt.FieldAttemptNumber:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field attempt_number", values[i])
 			} else if value.Valid {
-				wra.AttemptNumber = int(value.Int64)
+				_m.AttemptNumber = int(value.Int64)
 			}
 		case webhookretryattempt.FieldNextRetryTime:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field next_retry_time", values[i])
 			} else if value.Valid {
-				wra.NextRetryTime = value.Time
+				_m.NextRetryTime = value.Time
 			}
 		case webhookretryattempt.FieldPayload:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field payload", values[i])
 			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &wra.Payload); err != nil {
+				if err := json.Unmarshal(*value, &_m.Payload); err != nil {
 					return fmt.Errorf("unmarshal field payload: %w", err)
 				}
 			}
@@ -107,22 +107,22 @@ func (wra *WebhookRetryAttempt) assignValues(columns []string, values []any) err
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field signature", values[i])
 			} else if value.Valid {
-				wra.Signature = value.String
+				_m.Signature = value.String
 			}
 		case webhookretryattempt.FieldWebhookURL:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field webhook_url", values[i])
 			} else if value.Valid {
-				wra.WebhookURL = value.String
+				_m.WebhookURL = value.String
 			}
 		case webhookretryattempt.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				wra.Status = webhookretryattempt.Status(value.String)
+				_m.Status = webhookretryattempt.Status(value.String)
 			}
 		default:
-			wra.selectValues.Set(columns[i], values[i])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -130,56 +130,56 @@ func (wra *WebhookRetryAttempt) assignValues(columns []string, values []any) err
 
 // Value returns the ent.Value that was dynamically selected and assigned to the WebhookRetryAttempt.
 // This includes values selected through modifiers, order, etc.
-func (wra *WebhookRetryAttempt) Value(name string) (ent.Value, error) {
-	return wra.selectValues.Get(name)
+func (_m *WebhookRetryAttempt) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
 }
 
 // Update returns a builder for updating this WebhookRetryAttempt.
 // Note that you need to call WebhookRetryAttempt.Unwrap() before calling this method if this WebhookRetryAttempt
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (wra *WebhookRetryAttempt) Update() *WebhookRetryAttemptUpdateOne {
-	return NewWebhookRetryAttemptClient(wra.config).UpdateOne(wra)
+func (_m *WebhookRetryAttempt) Update() *WebhookRetryAttemptUpdateOne {
+	return NewWebhookRetryAttemptClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the WebhookRetryAttempt entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (wra *WebhookRetryAttempt) Unwrap() *WebhookRetryAttempt {
-	_tx, ok := wra.config.driver.(*txDriver)
+func (_m *WebhookRetryAttempt) Unwrap() *WebhookRetryAttempt {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: WebhookRetryAttempt is not a transactional entity")
 	}
-	wra.config.driver = _tx.drv
-	return wra
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (wra *WebhookRetryAttempt) String() string {
+func (_m *WebhookRetryAttempt) String() string {
 	var builder strings.Builder
 	builder.WriteString("WebhookRetryAttempt(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", wra.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("created_at=")
-	builder.WriteString(wra.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
-	builder.WriteString(wra.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("attempt_number=")
-	builder.WriteString(fmt.Sprintf("%v", wra.AttemptNumber))
+	builder.WriteString(fmt.Sprintf("%v", _m.AttemptNumber))
 	builder.WriteString(", ")
 	builder.WriteString("next_retry_time=")
-	builder.WriteString(wra.NextRetryTime.Format(time.ANSIC))
+	builder.WriteString(_m.NextRetryTime.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("payload=")
-	builder.WriteString(fmt.Sprintf("%v", wra.Payload))
+	builder.WriteString(fmt.Sprintf("%v", _m.Payload))
 	builder.WriteString(", ")
 	builder.WriteString("signature=")
-	builder.WriteString(wra.Signature)
+	builder.WriteString(_m.Signature)
 	builder.WriteString(", ")
 	builder.WriteString("webhook_url=")
-	builder.WriteString(wra.WebhookURL)
+	builder.WriteString(_m.WebhookURL)
 	builder.WriteString(", ")
 	builder.WriteString("status=")
-	builder.WriteString(fmt.Sprintf("%v", wra.Status))
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
 	builder.WriteByte(')')
 	return builder.String()
 }

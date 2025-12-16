@@ -120,7 +120,7 @@ func (*FiatCurrency) scanValues(columns []string) ([]any, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the FiatCurrency fields.
-func (fc *FiatCurrency) assignValues(columns []string, values []any) error {
+func (_m *FiatCurrency) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -130,64 +130,64 @@ func (fc *FiatCurrency) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*uuid.UUID); !ok {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
-				fc.ID = *value
+				_m.ID = *value
 			}
 		case fiatcurrency.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
-				fc.CreatedAt = value.Time
+				_m.CreatedAt = value.Time
 			}
 		case fiatcurrency.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
-				fc.UpdatedAt = value.Time
+				_m.UpdatedAt = value.Time
 			}
 		case fiatcurrency.FieldCode:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field code", values[i])
 			} else if value.Valid {
-				fc.Code = value.String
+				_m.Code = value.String
 			}
 		case fiatcurrency.FieldShortName:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field short_name", values[i])
 			} else if value.Valid {
-				fc.ShortName = value.String
+				_m.ShortName = value.String
 			}
 		case fiatcurrency.FieldDecimals:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field decimals", values[i])
 			} else if value.Valid {
-				fc.Decimals = int(value.Int64)
+				_m.Decimals = int(value.Int64)
 			}
 		case fiatcurrency.FieldSymbol:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field symbol", values[i])
 			} else if value.Valid {
-				fc.Symbol = value.String
+				_m.Symbol = value.String
 			}
 		case fiatcurrency.FieldName:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field name", values[i])
 			} else if value.Valid {
-				fc.Name = value.String
+				_m.Name = value.String
 			}
 		case fiatcurrency.FieldMarketRate:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field market_rate", values[i])
 			} else if value != nil {
-				fc.MarketRate = *value
+				_m.MarketRate = *value
 			}
 		case fiatcurrency.FieldIsEnabled:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field is_enabled", values[i])
 			} else if value.Valid {
-				fc.IsEnabled = value.Bool
+				_m.IsEnabled = value.Bool
 			}
 		default:
-			fc.selectValues.Set(columns[i], values[i])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -195,79 +195,79 @@ func (fc *FiatCurrency) assignValues(columns []string, values []any) error {
 
 // Value returns the ent.Value that was dynamically selected and assigned to the FiatCurrency.
 // This includes values selected through modifiers, order, etc.
-func (fc *FiatCurrency) Value(name string) (ent.Value, error) {
-	return fc.selectValues.Get(name)
+func (_m *FiatCurrency) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
 }
 
 // QueryProviderCurrencies queries the "provider_currencies" edge of the FiatCurrency entity.
-func (fc *FiatCurrency) QueryProviderCurrencies() *ProviderCurrenciesQuery {
-	return NewFiatCurrencyClient(fc.config).QueryProviderCurrencies(fc)
+func (_m *FiatCurrency) QueryProviderCurrencies() *ProviderCurrenciesQuery {
+	return NewFiatCurrencyClient(_m.config).QueryProviderCurrencies(_m)
 }
 
 // QueryProvisionBuckets queries the "provision_buckets" edge of the FiatCurrency entity.
-func (fc *FiatCurrency) QueryProvisionBuckets() *ProvisionBucketQuery {
-	return NewFiatCurrencyClient(fc.config).QueryProvisionBuckets(fc)
+func (_m *FiatCurrency) QueryProvisionBuckets() *ProvisionBucketQuery {
+	return NewFiatCurrencyClient(_m.config).QueryProvisionBuckets(_m)
 }
 
 // QueryInstitutions queries the "institutions" edge of the FiatCurrency entity.
-func (fc *FiatCurrency) QueryInstitutions() *InstitutionQuery {
-	return NewFiatCurrencyClient(fc.config).QueryInstitutions(fc)
+func (_m *FiatCurrency) QueryInstitutions() *InstitutionQuery {
+	return NewFiatCurrencyClient(_m.config).QueryInstitutions(_m)
 }
 
 // QueryProviderOrderTokens queries the "provider_order_tokens" edge of the FiatCurrency entity.
-func (fc *FiatCurrency) QueryProviderOrderTokens() *ProviderOrderTokenQuery {
-	return NewFiatCurrencyClient(fc.config).QueryProviderOrderTokens(fc)
+func (_m *FiatCurrency) QueryProviderOrderTokens() *ProviderOrderTokenQuery {
+	return NewFiatCurrencyClient(_m.config).QueryProviderOrderTokens(_m)
 }
 
 // Update returns a builder for updating this FiatCurrency.
 // Note that you need to call FiatCurrency.Unwrap() before calling this method if this FiatCurrency
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (fc *FiatCurrency) Update() *FiatCurrencyUpdateOne {
-	return NewFiatCurrencyClient(fc.config).UpdateOne(fc)
+func (_m *FiatCurrency) Update() *FiatCurrencyUpdateOne {
+	return NewFiatCurrencyClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the FiatCurrency entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (fc *FiatCurrency) Unwrap() *FiatCurrency {
-	_tx, ok := fc.config.driver.(*txDriver)
+func (_m *FiatCurrency) Unwrap() *FiatCurrency {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: FiatCurrency is not a transactional entity")
 	}
-	fc.config.driver = _tx.drv
-	return fc
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (fc *FiatCurrency) String() string {
+func (_m *FiatCurrency) String() string {
 	var builder strings.Builder
 	builder.WriteString("FiatCurrency(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", fc.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("created_at=")
-	builder.WriteString(fc.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
-	builder.WriteString(fc.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("code=")
-	builder.WriteString(fc.Code)
+	builder.WriteString(_m.Code)
 	builder.WriteString(", ")
 	builder.WriteString("short_name=")
-	builder.WriteString(fc.ShortName)
+	builder.WriteString(_m.ShortName)
 	builder.WriteString(", ")
 	builder.WriteString("decimals=")
-	builder.WriteString(fmt.Sprintf("%v", fc.Decimals))
+	builder.WriteString(fmt.Sprintf("%v", _m.Decimals))
 	builder.WriteString(", ")
 	builder.WriteString("symbol=")
-	builder.WriteString(fc.Symbol)
+	builder.WriteString(_m.Symbol)
 	builder.WriteString(", ")
 	builder.WriteString("name=")
-	builder.WriteString(fc.Name)
+	builder.WriteString(_m.Name)
 	builder.WriteString(", ")
 	builder.WriteString("market_rate=")
-	builder.WriteString(fmt.Sprintf("%v", fc.MarketRate))
+	builder.WriteString(fmt.Sprintf("%v", _m.MarketRate))
 	builder.WriteString(", ")
 	builder.WriteString("is_enabled=")
-	builder.WriteString(fmt.Sprintf("%v", fc.IsEnabled))
+	builder.WriteString(fmt.Sprintf("%v", _m.IsEnabled))
 	builder.WriteByte(')')
 	return builder.String()
 }

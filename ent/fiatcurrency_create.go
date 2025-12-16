@@ -30,179 +30,179 @@ type FiatCurrencyCreate struct {
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (fcc *FiatCurrencyCreate) SetCreatedAt(t time.Time) *FiatCurrencyCreate {
-	fcc.mutation.SetCreatedAt(t)
-	return fcc
+func (_c *FiatCurrencyCreate) SetCreatedAt(v time.Time) *FiatCurrencyCreate {
+	_c.mutation.SetCreatedAt(v)
+	return _c
 }
 
 // SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (fcc *FiatCurrencyCreate) SetNillableCreatedAt(t *time.Time) *FiatCurrencyCreate {
-	if t != nil {
-		fcc.SetCreatedAt(*t)
+func (_c *FiatCurrencyCreate) SetNillableCreatedAt(v *time.Time) *FiatCurrencyCreate {
+	if v != nil {
+		_c.SetCreatedAt(*v)
 	}
-	return fcc
+	return _c
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (fcc *FiatCurrencyCreate) SetUpdatedAt(t time.Time) *FiatCurrencyCreate {
-	fcc.mutation.SetUpdatedAt(t)
-	return fcc
+func (_c *FiatCurrencyCreate) SetUpdatedAt(v time.Time) *FiatCurrencyCreate {
+	_c.mutation.SetUpdatedAt(v)
+	return _c
 }
 
 // SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (fcc *FiatCurrencyCreate) SetNillableUpdatedAt(t *time.Time) *FiatCurrencyCreate {
-	if t != nil {
-		fcc.SetUpdatedAt(*t)
+func (_c *FiatCurrencyCreate) SetNillableUpdatedAt(v *time.Time) *FiatCurrencyCreate {
+	if v != nil {
+		_c.SetUpdatedAt(*v)
 	}
-	return fcc
+	return _c
 }
 
 // SetCode sets the "code" field.
-func (fcc *FiatCurrencyCreate) SetCode(s string) *FiatCurrencyCreate {
-	fcc.mutation.SetCode(s)
-	return fcc
+func (_c *FiatCurrencyCreate) SetCode(v string) *FiatCurrencyCreate {
+	_c.mutation.SetCode(v)
+	return _c
 }
 
 // SetShortName sets the "short_name" field.
-func (fcc *FiatCurrencyCreate) SetShortName(s string) *FiatCurrencyCreate {
-	fcc.mutation.SetShortName(s)
-	return fcc
+func (_c *FiatCurrencyCreate) SetShortName(v string) *FiatCurrencyCreate {
+	_c.mutation.SetShortName(v)
+	return _c
 }
 
 // SetDecimals sets the "decimals" field.
-func (fcc *FiatCurrencyCreate) SetDecimals(i int) *FiatCurrencyCreate {
-	fcc.mutation.SetDecimals(i)
-	return fcc
+func (_c *FiatCurrencyCreate) SetDecimals(v int) *FiatCurrencyCreate {
+	_c.mutation.SetDecimals(v)
+	return _c
 }
 
 // SetNillableDecimals sets the "decimals" field if the given value is not nil.
-func (fcc *FiatCurrencyCreate) SetNillableDecimals(i *int) *FiatCurrencyCreate {
-	if i != nil {
-		fcc.SetDecimals(*i)
+func (_c *FiatCurrencyCreate) SetNillableDecimals(v *int) *FiatCurrencyCreate {
+	if v != nil {
+		_c.SetDecimals(*v)
 	}
-	return fcc
+	return _c
 }
 
 // SetSymbol sets the "symbol" field.
-func (fcc *FiatCurrencyCreate) SetSymbol(s string) *FiatCurrencyCreate {
-	fcc.mutation.SetSymbol(s)
-	return fcc
+func (_c *FiatCurrencyCreate) SetSymbol(v string) *FiatCurrencyCreate {
+	_c.mutation.SetSymbol(v)
+	return _c
 }
 
 // SetName sets the "name" field.
-func (fcc *FiatCurrencyCreate) SetName(s string) *FiatCurrencyCreate {
-	fcc.mutation.SetName(s)
-	return fcc
+func (_c *FiatCurrencyCreate) SetName(v string) *FiatCurrencyCreate {
+	_c.mutation.SetName(v)
+	return _c
 }
 
 // SetMarketRate sets the "market_rate" field.
-func (fcc *FiatCurrencyCreate) SetMarketRate(d decimal.Decimal) *FiatCurrencyCreate {
-	fcc.mutation.SetMarketRate(d)
-	return fcc
+func (_c *FiatCurrencyCreate) SetMarketRate(v decimal.Decimal) *FiatCurrencyCreate {
+	_c.mutation.SetMarketRate(v)
+	return _c
 }
 
 // SetIsEnabled sets the "is_enabled" field.
-func (fcc *FiatCurrencyCreate) SetIsEnabled(b bool) *FiatCurrencyCreate {
-	fcc.mutation.SetIsEnabled(b)
-	return fcc
+func (_c *FiatCurrencyCreate) SetIsEnabled(v bool) *FiatCurrencyCreate {
+	_c.mutation.SetIsEnabled(v)
+	return _c
 }
 
 // SetNillableIsEnabled sets the "is_enabled" field if the given value is not nil.
-func (fcc *FiatCurrencyCreate) SetNillableIsEnabled(b *bool) *FiatCurrencyCreate {
-	if b != nil {
-		fcc.SetIsEnabled(*b)
+func (_c *FiatCurrencyCreate) SetNillableIsEnabled(v *bool) *FiatCurrencyCreate {
+	if v != nil {
+		_c.SetIsEnabled(*v)
 	}
-	return fcc
+	return _c
 }
 
 // SetID sets the "id" field.
-func (fcc *FiatCurrencyCreate) SetID(u uuid.UUID) *FiatCurrencyCreate {
-	fcc.mutation.SetID(u)
-	return fcc
+func (_c *FiatCurrencyCreate) SetID(v uuid.UUID) *FiatCurrencyCreate {
+	_c.mutation.SetID(v)
+	return _c
 }
 
 // SetNillableID sets the "id" field if the given value is not nil.
-func (fcc *FiatCurrencyCreate) SetNillableID(u *uuid.UUID) *FiatCurrencyCreate {
-	if u != nil {
-		fcc.SetID(*u)
+func (_c *FiatCurrencyCreate) SetNillableID(v *uuid.UUID) *FiatCurrencyCreate {
+	if v != nil {
+		_c.SetID(*v)
 	}
-	return fcc
+	return _c
 }
 
 // AddProviderCurrencyIDs adds the "provider_currencies" edge to the ProviderCurrencies entity by IDs.
-func (fcc *FiatCurrencyCreate) AddProviderCurrencyIDs(ids ...uuid.UUID) *FiatCurrencyCreate {
-	fcc.mutation.AddProviderCurrencyIDs(ids...)
-	return fcc
+func (_c *FiatCurrencyCreate) AddProviderCurrencyIDs(ids ...uuid.UUID) *FiatCurrencyCreate {
+	_c.mutation.AddProviderCurrencyIDs(ids...)
+	return _c
 }
 
 // AddProviderCurrencies adds the "provider_currencies" edges to the ProviderCurrencies entity.
-func (fcc *FiatCurrencyCreate) AddProviderCurrencies(p ...*ProviderCurrencies) *FiatCurrencyCreate {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_c *FiatCurrencyCreate) AddProviderCurrencies(v ...*ProviderCurrencies) *FiatCurrencyCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return fcc.AddProviderCurrencyIDs(ids...)
+	return _c.AddProviderCurrencyIDs(ids...)
 }
 
 // AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by IDs.
-func (fcc *FiatCurrencyCreate) AddProvisionBucketIDs(ids ...int) *FiatCurrencyCreate {
-	fcc.mutation.AddProvisionBucketIDs(ids...)
-	return fcc
+func (_c *FiatCurrencyCreate) AddProvisionBucketIDs(ids ...int) *FiatCurrencyCreate {
+	_c.mutation.AddProvisionBucketIDs(ids...)
+	return _c
 }
 
 // AddProvisionBuckets adds the "provision_buckets" edges to the ProvisionBucket entity.
-func (fcc *FiatCurrencyCreate) AddProvisionBuckets(p ...*ProvisionBucket) *FiatCurrencyCreate {
-	ids := make([]int, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_c *FiatCurrencyCreate) AddProvisionBuckets(v ...*ProvisionBucket) *FiatCurrencyCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return fcc.AddProvisionBucketIDs(ids...)
+	return _c.AddProvisionBucketIDs(ids...)
 }
 
 // AddInstitutionIDs adds the "institutions" edge to the Institution entity by IDs.
-func (fcc *FiatCurrencyCreate) AddInstitutionIDs(ids ...int) *FiatCurrencyCreate {
-	fcc.mutation.AddInstitutionIDs(ids...)
-	return fcc
+func (_c *FiatCurrencyCreate) AddInstitutionIDs(ids ...int) *FiatCurrencyCreate {
+	_c.mutation.AddInstitutionIDs(ids...)
+	return _c
 }
 
 // AddInstitutions adds the "institutions" edges to the Institution entity.
-func (fcc *FiatCurrencyCreate) AddInstitutions(i ...*Institution) *FiatCurrencyCreate {
-	ids := make([]int, len(i))
-	for j := range i {
-		ids[j] = i[j].ID
+func (_c *FiatCurrencyCreate) AddInstitutions(v ...*Institution) *FiatCurrencyCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return fcc.AddInstitutionIDs(ids...)
+	return _c.AddInstitutionIDs(ids...)
 }
 
 // AddProviderOrderTokenIDs adds the "provider_order_tokens" edge to the ProviderOrderToken entity by IDs.
-func (fcc *FiatCurrencyCreate) AddProviderOrderTokenIDs(ids ...int) *FiatCurrencyCreate {
-	fcc.mutation.AddProviderOrderTokenIDs(ids...)
-	return fcc
+func (_c *FiatCurrencyCreate) AddProviderOrderTokenIDs(ids ...int) *FiatCurrencyCreate {
+	_c.mutation.AddProviderOrderTokenIDs(ids...)
+	return _c
 }
 
 // AddProviderOrderTokens adds the "provider_order_tokens" edges to the ProviderOrderToken entity.
-func (fcc *FiatCurrencyCreate) AddProviderOrderTokens(p ...*ProviderOrderToken) *FiatCurrencyCreate {
-	ids := make([]int, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_c *FiatCurrencyCreate) AddProviderOrderTokens(v ...*ProviderOrderToken) *FiatCurrencyCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return fcc.AddProviderOrderTokenIDs(ids...)
+	return _c.AddProviderOrderTokenIDs(ids...)
 }
 
 // Mutation returns the FiatCurrencyMutation object of the builder.
-func (fcc *FiatCurrencyCreate) Mutation() *FiatCurrencyMutation {
-	return fcc.mutation
+func (_c *FiatCurrencyCreate) Mutation() *FiatCurrencyMutation {
+	return _c.mutation
 }
 
 // Save creates the FiatCurrency in the database.
-func (fcc *FiatCurrencyCreate) Save(ctx context.Context) (*FiatCurrency, error) {
-	fcc.defaults()
-	return withHooks(ctx, fcc.sqlSave, fcc.mutation, fcc.hooks)
+func (_c *FiatCurrencyCreate) Save(ctx context.Context) (*FiatCurrency, error) {
+	_c.defaults()
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (fcc *FiatCurrencyCreate) SaveX(ctx context.Context) *FiatCurrency {
-	v, err := fcc.Save(ctx)
+func (_c *FiatCurrencyCreate) SaveX(ctx context.Context) *FiatCurrency {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -210,80 +210,80 @@ func (fcc *FiatCurrencyCreate) SaveX(ctx context.Context) *FiatCurrency {
 }
 
 // Exec executes the query.
-func (fcc *FiatCurrencyCreate) Exec(ctx context.Context) error {
-	_, err := fcc.Save(ctx)
+func (_c *FiatCurrencyCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (fcc *FiatCurrencyCreate) ExecX(ctx context.Context) {
-	if err := fcc.Exec(ctx); err != nil {
+func (_c *FiatCurrencyCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (fcc *FiatCurrencyCreate) defaults() {
-	if _, ok := fcc.mutation.CreatedAt(); !ok {
+func (_c *FiatCurrencyCreate) defaults() {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := fiatcurrency.DefaultCreatedAt()
-		fcc.mutation.SetCreatedAt(v)
+		_c.mutation.SetCreatedAt(v)
 	}
-	if _, ok := fcc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		v := fiatcurrency.DefaultUpdatedAt()
-		fcc.mutation.SetUpdatedAt(v)
+		_c.mutation.SetUpdatedAt(v)
 	}
-	if _, ok := fcc.mutation.Decimals(); !ok {
+	if _, ok := _c.mutation.Decimals(); !ok {
 		v := fiatcurrency.DefaultDecimals
-		fcc.mutation.SetDecimals(v)
+		_c.mutation.SetDecimals(v)
 	}
-	if _, ok := fcc.mutation.IsEnabled(); !ok {
+	if _, ok := _c.mutation.IsEnabled(); !ok {
 		v := fiatcurrency.DefaultIsEnabled
-		fcc.mutation.SetIsEnabled(v)
+		_c.mutation.SetIsEnabled(v)
 	}
-	if _, ok := fcc.mutation.ID(); !ok {
+	if _, ok := _c.mutation.ID(); !ok {
 		v := fiatcurrency.DefaultID()
-		fcc.mutation.SetID(v)
+		_c.mutation.SetID(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (fcc *FiatCurrencyCreate) check() error {
-	if _, ok := fcc.mutation.CreatedAt(); !ok {
+func (_c *FiatCurrencyCreate) check() error {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "FiatCurrency.created_at"`)}
 	}
-	if _, ok := fcc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "FiatCurrency.updated_at"`)}
 	}
-	if _, ok := fcc.mutation.Code(); !ok {
+	if _, ok := _c.mutation.Code(); !ok {
 		return &ValidationError{Name: "code", err: errors.New(`ent: missing required field "FiatCurrency.code"`)}
 	}
-	if _, ok := fcc.mutation.ShortName(); !ok {
+	if _, ok := _c.mutation.ShortName(); !ok {
 		return &ValidationError{Name: "short_name", err: errors.New(`ent: missing required field "FiatCurrency.short_name"`)}
 	}
-	if _, ok := fcc.mutation.Decimals(); !ok {
+	if _, ok := _c.mutation.Decimals(); !ok {
 		return &ValidationError{Name: "decimals", err: errors.New(`ent: missing required field "FiatCurrency.decimals"`)}
 	}
-	if _, ok := fcc.mutation.Symbol(); !ok {
+	if _, ok := _c.mutation.Symbol(); !ok {
 		return &ValidationError{Name: "symbol", err: errors.New(`ent: missing required field "FiatCurrency.symbol"`)}
 	}
-	if _, ok := fcc.mutation.Name(); !ok {
+	if _, ok := _c.mutation.Name(); !ok {
 		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "FiatCurrency.name"`)}
 	}
-	if _, ok := fcc.mutation.MarketRate(); !ok {
+	if _, ok := _c.mutation.MarketRate(); !ok {
 		return &ValidationError{Name: "market_rate", err: errors.New(`ent: missing required field "FiatCurrency.market_rate"`)}
 	}
-	if _, ok := fcc.mutation.IsEnabled(); !ok {
+	if _, ok := _c.mutation.IsEnabled(); !ok {
 		return &ValidationError{Name: "is_enabled", err: errors.New(`ent: missing required field "FiatCurrency.is_enabled"`)}
 	}
 	return nil
 }
 
-func (fcc *FiatCurrencyCreate) sqlSave(ctx context.Context) (*FiatCurrency, error) {
-	if err := fcc.check(); err != nil {
+func (_c *FiatCurrencyCreate) sqlSave(ctx context.Context) (*FiatCurrency, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := fcc.createSpec()
-	if err := sqlgraph.CreateNode(ctx, fcc.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -296,58 +296,58 @@ func (fcc *FiatCurrencyCreate) sqlSave(ctx context.Context) (*FiatCurrency, erro
 			return nil, err
 		}
 	}
-	fcc.mutation.id = &_node.ID
-	fcc.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (fcc *FiatCurrencyCreate) createSpec() (*FiatCurrency, *sqlgraph.CreateSpec) {
+func (_c *FiatCurrencyCreate) createSpec() (*FiatCurrency, *sqlgraph.CreateSpec) {
 	var (
-		_node = &FiatCurrency{config: fcc.config}
+		_node = &FiatCurrency{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(fiatcurrency.Table, sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID))
 	)
-	_spec.OnConflict = fcc.conflict
-	if id, ok := fcc.mutation.ID(); ok {
+	_spec.OnConflict = _c.conflict
+	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := fcc.mutation.CreatedAt(); ok {
+	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(fiatcurrency.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
 	}
-	if value, ok := fcc.mutation.UpdatedAt(); ok {
+	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(fiatcurrency.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if value, ok := fcc.mutation.Code(); ok {
+	if value, ok := _c.mutation.Code(); ok {
 		_spec.SetField(fiatcurrency.FieldCode, field.TypeString, value)
 		_node.Code = value
 	}
-	if value, ok := fcc.mutation.ShortName(); ok {
+	if value, ok := _c.mutation.ShortName(); ok {
 		_spec.SetField(fiatcurrency.FieldShortName, field.TypeString, value)
 		_node.ShortName = value
 	}
-	if value, ok := fcc.mutation.Decimals(); ok {
+	if value, ok := _c.mutation.Decimals(); ok {
 		_spec.SetField(fiatcurrency.FieldDecimals, field.TypeInt, value)
 		_node.Decimals = value
 	}
-	if value, ok := fcc.mutation.Symbol(); ok {
+	if value, ok := _c.mutation.Symbol(); ok {
 		_spec.SetField(fiatcurrency.FieldSymbol, field.TypeString, value)
 		_node.Symbol = value
 	}
-	if value, ok := fcc.mutation.Name(); ok {
+	if value, ok := _c.mutation.Name(); ok {
 		_spec.SetField(fiatcurrency.FieldName, field.TypeString, value)
 		_node.Name = value
 	}
-	if value, ok := fcc.mutation.MarketRate(); ok {
+	if value, ok := _c.mutation.MarketRate(); ok {
 		_spec.SetField(fiatcurrency.FieldMarketRate, field.TypeFloat64, value)
 		_node.MarketRate = value
 	}
-	if value, ok := fcc.mutation.IsEnabled(); ok {
+	if value, ok := _c.mutation.IsEnabled(); ok {
 		_spec.SetField(fiatcurrency.FieldIsEnabled, field.TypeBool, value)
 		_node.IsEnabled = value
 	}
-	if nodes := fcc.mutation.ProviderCurrenciesIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.ProviderCurrenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -363,7 +363,7 @@ func (fcc *FiatCurrencyCreate) createSpec() (*FiatCurrency, *sqlgraph.CreateSpec
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := fcc.mutation.ProvisionBucketsIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.ProvisionBucketsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -379,7 +379,7 @@ func (fcc *FiatCurrencyCreate) createSpec() (*FiatCurrency, *sqlgraph.CreateSpec
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := fcc.mutation.InstitutionsIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.InstitutionsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -395,7 +395,7 @@ func (fcc *FiatCurrencyCreate) createSpec() (*FiatCurrency, *sqlgraph.CreateSpec
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := fcc.mutation.ProviderOrderTokensIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.ProviderOrderTokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -430,10 +430,10 @@ func (fcc *FiatCurrencyCreate) createSpec() (*FiatCurrency, *sqlgraph.CreateSpec
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (fcc *FiatCurrencyCreate) OnConflict(opts ...sql.ConflictOption) *FiatCurrencyUpsertOne {
-	fcc.conflict = opts
+func (_c *FiatCurrencyCreate) OnConflict(opts ...sql.ConflictOption) *FiatCurrencyUpsertOne {
+	_c.conflict = opts
 	return &FiatCurrencyUpsertOne{
-		create: fcc,
+		create: _c,
 	}
 }
 
@@ -443,10 +443,10 @@ func (fcc *FiatCurrencyCreate) OnConflict(opts ...sql.ConflictOption) *FiatCurre
 //	client.FiatCurrency.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (fcc *FiatCurrencyCreate) OnConflictColumns(columns ...string) *FiatCurrencyUpsertOne {
-	fcc.conflict = append(fcc.conflict, sql.ConflictColumns(columns...))
+func (_c *FiatCurrencyCreate) OnConflictColumns(columns ...string) *FiatCurrencyUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &FiatCurrencyUpsertOne{
-		create: fcc,
+		create: _c,
 	}
 }
 
@@ -795,16 +795,16 @@ type FiatCurrencyCreateBulk struct {
 }
 
 // Save creates the FiatCurrency entities in the database.
-func (fccb *FiatCurrencyCreateBulk) Save(ctx context.Context) ([]*FiatCurrency, error) {
-	if fccb.err != nil {
-		return nil, fccb.err
+func (_c *FiatCurrencyCreateBulk) Save(ctx context.Context) ([]*FiatCurrency, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(fccb.builders))
-	nodes := make([]*FiatCurrency, len(fccb.builders))
-	mutators := make([]Mutator, len(fccb.builders))
-	for i := range fccb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*FiatCurrency, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := fccb.builders[i]
+			builder := _c.builders[i]
 			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*FiatCurrencyMutation)
@@ -818,12 +818,12 @@ func (fccb *FiatCurrencyCreateBulk) Save(ctx context.Context) ([]*FiatCurrency, 
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, fccb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = fccb.conflict
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, fccb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -843,7 +843,7 @@ func (fccb *FiatCurrencyCreateBulk) Save(ctx context.Context) ([]*FiatCurrency, 
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, fccb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -851,8 +851,8 @@ func (fccb *FiatCurrencyCreateBulk) Save(ctx context.Context) ([]*FiatCurrency, 
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (fccb *FiatCurrencyCreateBulk) SaveX(ctx context.Context) []*FiatCurrency {
-	v, err := fccb.Save(ctx)
+func (_c *FiatCurrencyCreateBulk) SaveX(ctx context.Context) []*FiatCurrency {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -860,14 +860,14 @@ func (fccb *FiatCurrencyCreateBulk) SaveX(ctx context.Context) []*FiatCurrency {
 }
 
 // Exec executes the query.
-func (fccb *FiatCurrencyCreateBulk) Exec(ctx context.Context) error {
-	_, err := fccb.Save(ctx)
+func (_c *FiatCurrencyCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (fccb *FiatCurrencyCreateBulk) ExecX(ctx context.Context) {
-	if err := fccb.Exec(ctx); err != nil {
+func (_c *FiatCurrencyCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
@@ -887,10 +887,10 @@ func (fccb *FiatCurrencyCreateBulk) ExecX(ctx context.Context) {
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (fccb *FiatCurrencyCreateBulk) OnConflict(opts ...sql.ConflictOption) *FiatCurrencyUpsertBulk {
-	fccb.conflict = opts
+func (_c *FiatCurrencyCreateBulk) OnConflict(opts ...sql.ConflictOption) *FiatCurrencyUpsertBulk {
+	_c.conflict = opts
 	return &FiatCurrencyUpsertBulk{
-		create: fccb,
+		create: _c,
 	}
 }
 
@@ -900,10 +900,10 @@ func (fccb *FiatCurrencyCreateBulk) OnConflict(opts ...sql.ConflictOption) *Fiat
 //	client.FiatCurrency.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (fccb *FiatCurrencyCreateBulk) OnConflictColumns(columns ...string) *FiatCurrencyUpsertBulk {
-	fccb.conflict = append(fccb.conflict, sql.ConflictColumns(columns...))
+func (_c *FiatCurrencyCreateBulk) OnConflictColumns(columns ...string) *FiatCurrencyUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &FiatCurrencyUpsertBulk{
-		create: fccb,
+		create: _c,
 	}
 }
 

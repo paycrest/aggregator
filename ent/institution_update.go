@@ -25,98 +25,98 @@ type InstitutionUpdate struct {
 }
 
 // Where appends a list predicates to the InstitutionUpdate builder.
-func (iu *InstitutionUpdate) Where(ps ...predicate.Institution) *InstitutionUpdate {
-	iu.mutation.Where(ps...)
-	return iu
+func (_u *InstitutionUpdate) Where(ps ...predicate.Institution) *InstitutionUpdate {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (iu *InstitutionUpdate) SetUpdatedAt(t time.Time) *InstitutionUpdate {
-	iu.mutation.SetUpdatedAt(t)
-	return iu
+func (_u *InstitutionUpdate) SetUpdatedAt(v time.Time) *InstitutionUpdate {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetCode sets the "code" field.
-func (iu *InstitutionUpdate) SetCode(s string) *InstitutionUpdate {
-	iu.mutation.SetCode(s)
-	return iu
+func (_u *InstitutionUpdate) SetCode(v string) *InstitutionUpdate {
+	_u.mutation.SetCode(v)
+	return _u
 }
 
 // SetNillableCode sets the "code" field if the given value is not nil.
-func (iu *InstitutionUpdate) SetNillableCode(s *string) *InstitutionUpdate {
-	if s != nil {
-		iu.SetCode(*s)
+func (_u *InstitutionUpdate) SetNillableCode(v *string) *InstitutionUpdate {
+	if v != nil {
+		_u.SetCode(*v)
 	}
-	return iu
+	return _u
 }
 
 // SetName sets the "name" field.
-func (iu *InstitutionUpdate) SetName(s string) *InstitutionUpdate {
-	iu.mutation.SetName(s)
-	return iu
+func (_u *InstitutionUpdate) SetName(v string) *InstitutionUpdate {
+	_u.mutation.SetName(v)
+	return _u
 }
 
 // SetNillableName sets the "name" field if the given value is not nil.
-func (iu *InstitutionUpdate) SetNillableName(s *string) *InstitutionUpdate {
-	if s != nil {
-		iu.SetName(*s)
+func (_u *InstitutionUpdate) SetNillableName(v *string) *InstitutionUpdate {
+	if v != nil {
+		_u.SetName(*v)
 	}
-	return iu
+	return _u
 }
 
 // SetType sets the "type" field.
-func (iu *InstitutionUpdate) SetType(i institution.Type) *InstitutionUpdate {
-	iu.mutation.SetType(i)
-	return iu
+func (_u *InstitutionUpdate) SetType(v institution.Type) *InstitutionUpdate {
+	_u.mutation.SetType(v)
+	return _u
 }
 
 // SetNillableType sets the "type" field if the given value is not nil.
-func (iu *InstitutionUpdate) SetNillableType(i *institution.Type) *InstitutionUpdate {
-	if i != nil {
-		iu.SetType(*i)
+func (_u *InstitutionUpdate) SetNillableType(v *institution.Type) *InstitutionUpdate {
+	if v != nil {
+		_u.SetType(*v)
 	}
-	return iu
+	return _u
 }
 
 // SetFiatCurrencyID sets the "fiat_currency" edge to the FiatCurrency entity by ID.
-func (iu *InstitutionUpdate) SetFiatCurrencyID(id uuid.UUID) *InstitutionUpdate {
-	iu.mutation.SetFiatCurrencyID(id)
-	return iu
+func (_u *InstitutionUpdate) SetFiatCurrencyID(id uuid.UUID) *InstitutionUpdate {
+	_u.mutation.SetFiatCurrencyID(id)
+	return _u
 }
 
 // SetNillableFiatCurrencyID sets the "fiat_currency" edge to the FiatCurrency entity by ID if the given value is not nil.
-func (iu *InstitutionUpdate) SetNillableFiatCurrencyID(id *uuid.UUID) *InstitutionUpdate {
+func (_u *InstitutionUpdate) SetNillableFiatCurrencyID(id *uuid.UUID) *InstitutionUpdate {
 	if id != nil {
-		iu = iu.SetFiatCurrencyID(*id)
+		_u = _u.SetFiatCurrencyID(*id)
 	}
-	return iu
+	return _u
 }
 
 // SetFiatCurrency sets the "fiat_currency" edge to the FiatCurrency entity.
-func (iu *InstitutionUpdate) SetFiatCurrency(f *FiatCurrency) *InstitutionUpdate {
-	return iu.SetFiatCurrencyID(f.ID)
+func (_u *InstitutionUpdate) SetFiatCurrency(v *FiatCurrency) *InstitutionUpdate {
+	return _u.SetFiatCurrencyID(v.ID)
 }
 
 // Mutation returns the InstitutionMutation object of the builder.
-func (iu *InstitutionUpdate) Mutation() *InstitutionMutation {
-	return iu.mutation
+func (_u *InstitutionUpdate) Mutation() *InstitutionMutation {
+	return _u.mutation
 }
 
 // ClearFiatCurrency clears the "fiat_currency" edge to the FiatCurrency entity.
-func (iu *InstitutionUpdate) ClearFiatCurrency() *InstitutionUpdate {
-	iu.mutation.ClearFiatCurrency()
-	return iu
+func (_u *InstitutionUpdate) ClearFiatCurrency() *InstitutionUpdate {
+	_u.mutation.ClearFiatCurrency()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
-func (iu *InstitutionUpdate) Save(ctx context.Context) (int, error) {
-	iu.defaults()
-	return withHooks(ctx, iu.sqlSave, iu.mutation, iu.hooks)
+func (_u *InstitutionUpdate) Save(ctx context.Context) (int, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (iu *InstitutionUpdate) SaveX(ctx context.Context) int {
-	affected, err := iu.Save(ctx)
+func (_u *InstitutionUpdate) SaveX(ctx context.Context) int {
+	affected, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -124,29 +124,29 @@ func (iu *InstitutionUpdate) SaveX(ctx context.Context) int {
 }
 
 // Exec executes the query.
-func (iu *InstitutionUpdate) Exec(ctx context.Context) error {
-	_, err := iu.Save(ctx)
+func (_u *InstitutionUpdate) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (iu *InstitutionUpdate) ExecX(ctx context.Context) {
-	if err := iu.Exec(ctx); err != nil {
+func (_u *InstitutionUpdate) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (iu *InstitutionUpdate) defaults() {
-	if _, ok := iu.mutation.UpdatedAt(); !ok {
+func (_u *InstitutionUpdate) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := institution.UpdateDefaultUpdatedAt()
-		iu.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (iu *InstitutionUpdate) check() error {
-	if v, ok := iu.mutation.GetType(); ok {
+func (_u *InstitutionUpdate) check() error {
+	if v, ok := _u.mutation.GetType(); ok {
 		if err := institution.TypeValidator(v); err != nil {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "Institution.type": %w`, err)}
 		}
@@ -154,31 +154,31 @@ func (iu *InstitutionUpdate) check() error {
 	return nil
 }
 
-func (iu *InstitutionUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	if err := iu.check(); err != nil {
-		return n, err
+func (_u *InstitutionUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(institution.Table, institution.Columns, sqlgraph.NewFieldSpec(institution.FieldID, field.TypeInt))
-	if ps := iu.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := iu.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(institution.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := iu.mutation.Code(); ok {
+	if value, ok := _u.mutation.Code(); ok {
 		_spec.SetField(institution.FieldCode, field.TypeString, value)
 	}
-	if value, ok := iu.mutation.Name(); ok {
+	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(institution.FieldName, field.TypeString, value)
 	}
-	if value, ok := iu.mutation.GetType(); ok {
+	if value, ok := _u.mutation.GetType(); ok {
 		_spec.SetField(institution.FieldType, field.TypeEnum, value)
 	}
-	if iu.mutation.FiatCurrencyCleared() {
+	if _u.mutation.FiatCurrencyCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -191,7 +191,7 @@ func (iu *InstitutionUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := iu.mutation.FiatCurrencyIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.FiatCurrencyIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -207,7 +207,7 @@ func (iu *InstitutionUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if n, err = sqlgraph.UpdateNodes(ctx, iu.driver, _spec); err != nil {
+	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{institution.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -215,8 +215,8 @@ func (iu *InstitutionUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
-	iu.mutation.done = true
-	return n, nil
+	_u.mutation.done = true
+	return _node, nil
 }
 
 // InstitutionUpdateOne is the builder for updating a single Institution entity.
@@ -228,105 +228,105 @@ type InstitutionUpdateOne struct {
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (iuo *InstitutionUpdateOne) SetUpdatedAt(t time.Time) *InstitutionUpdateOne {
-	iuo.mutation.SetUpdatedAt(t)
-	return iuo
+func (_u *InstitutionUpdateOne) SetUpdatedAt(v time.Time) *InstitutionUpdateOne {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetCode sets the "code" field.
-func (iuo *InstitutionUpdateOne) SetCode(s string) *InstitutionUpdateOne {
-	iuo.mutation.SetCode(s)
-	return iuo
+func (_u *InstitutionUpdateOne) SetCode(v string) *InstitutionUpdateOne {
+	_u.mutation.SetCode(v)
+	return _u
 }
 
 // SetNillableCode sets the "code" field if the given value is not nil.
-func (iuo *InstitutionUpdateOne) SetNillableCode(s *string) *InstitutionUpdateOne {
-	if s != nil {
-		iuo.SetCode(*s)
+func (_u *InstitutionUpdateOne) SetNillableCode(v *string) *InstitutionUpdateOne {
+	if v != nil {
+		_u.SetCode(*v)
 	}
-	return iuo
+	return _u
 }
 
 // SetName sets the "name" field.
-func (iuo *InstitutionUpdateOne) SetName(s string) *InstitutionUpdateOne {
-	iuo.mutation.SetName(s)
-	return iuo
+func (_u *InstitutionUpdateOne) SetName(v string) *InstitutionUpdateOne {
+	_u.mutation.SetName(v)
+	return _u
 }
 
 // SetNillableName sets the "name" field if the given value is not nil.
-func (iuo *InstitutionUpdateOne) SetNillableName(s *string) *InstitutionUpdateOne {
-	if s != nil {
-		iuo.SetName(*s)
+func (_u *InstitutionUpdateOne) SetNillableName(v *string) *InstitutionUpdateOne {
+	if v != nil {
+		_u.SetName(*v)
 	}
-	return iuo
+	return _u
 }
 
 // SetType sets the "type" field.
-func (iuo *InstitutionUpdateOne) SetType(i institution.Type) *InstitutionUpdateOne {
-	iuo.mutation.SetType(i)
-	return iuo
+func (_u *InstitutionUpdateOne) SetType(v institution.Type) *InstitutionUpdateOne {
+	_u.mutation.SetType(v)
+	return _u
 }
 
 // SetNillableType sets the "type" field if the given value is not nil.
-func (iuo *InstitutionUpdateOne) SetNillableType(i *institution.Type) *InstitutionUpdateOne {
-	if i != nil {
-		iuo.SetType(*i)
+func (_u *InstitutionUpdateOne) SetNillableType(v *institution.Type) *InstitutionUpdateOne {
+	if v != nil {
+		_u.SetType(*v)
 	}
-	return iuo
+	return _u
 }
 
 // SetFiatCurrencyID sets the "fiat_currency" edge to the FiatCurrency entity by ID.
-func (iuo *InstitutionUpdateOne) SetFiatCurrencyID(id uuid.UUID) *InstitutionUpdateOne {
-	iuo.mutation.SetFiatCurrencyID(id)
-	return iuo
+func (_u *InstitutionUpdateOne) SetFiatCurrencyID(id uuid.UUID) *InstitutionUpdateOne {
+	_u.mutation.SetFiatCurrencyID(id)
+	return _u
 }
 
 // SetNillableFiatCurrencyID sets the "fiat_currency" edge to the FiatCurrency entity by ID if the given value is not nil.
-func (iuo *InstitutionUpdateOne) SetNillableFiatCurrencyID(id *uuid.UUID) *InstitutionUpdateOne {
+func (_u *InstitutionUpdateOne) SetNillableFiatCurrencyID(id *uuid.UUID) *InstitutionUpdateOne {
 	if id != nil {
-		iuo = iuo.SetFiatCurrencyID(*id)
+		_u = _u.SetFiatCurrencyID(*id)
 	}
-	return iuo
+	return _u
 }
 
 // SetFiatCurrency sets the "fiat_currency" edge to the FiatCurrency entity.
-func (iuo *InstitutionUpdateOne) SetFiatCurrency(f *FiatCurrency) *InstitutionUpdateOne {
-	return iuo.SetFiatCurrencyID(f.ID)
+func (_u *InstitutionUpdateOne) SetFiatCurrency(v *FiatCurrency) *InstitutionUpdateOne {
+	return _u.SetFiatCurrencyID(v.ID)
 }
 
 // Mutation returns the InstitutionMutation object of the builder.
-func (iuo *InstitutionUpdateOne) Mutation() *InstitutionMutation {
-	return iuo.mutation
+func (_u *InstitutionUpdateOne) Mutation() *InstitutionMutation {
+	return _u.mutation
 }
 
 // ClearFiatCurrency clears the "fiat_currency" edge to the FiatCurrency entity.
-func (iuo *InstitutionUpdateOne) ClearFiatCurrency() *InstitutionUpdateOne {
-	iuo.mutation.ClearFiatCurrency()
-	return iuo
+func (_u *InstitutionUpdateOne) ClearFiatCurrency() *InstitutionUpdateOne {
+	_u.mutation.ClearFiatCurrency()
+	return _u
 }
 
 // Where appends a list predicates to the InstitutionUpdate builder.
-func (iuo *InstitutionUpdateOne) Where(ps ...predicate.Institution) *InstitutionUpdateOne {
-	iuo.mutation.Where(ps...)
-	return iuo
+func (_u *InstitutionUpdateOne) Where(ps ...predicate.Institution) *InstitutionUpdateOne {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
-func (iuo *InstitutionUpdateOne) Select(field string, fields ...string) *InstitutionUpdateOne {
-	iuo.fields = append([]string{field}, fields...)
-	return iuo
+func (_u *InstitutionUpdateOne) Select(field string, fields ...string) *InstitutionUpdateOne {
+	_u.fields = append([]string{field}, fields...)
+	return _u
 }
 
 // Save executes the query and returns the updated Institution entity.
-func (iuo *InstitutionUpdateOne) Save(ctx context.Context) (*Institution, error) {
-	iuo.defaults()
-	return withHooks(ctx, iuo.sqlSave, iuo.mutation, iuo.hooks)
+func (_u *InstitutionUpdateOne) Save(ctx context.Context) (*Institution, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (iuo *InstitutionUpdateOne) SaveX(ctx context.Context) *Institution {
-	node, err := iuo.Save(ctx)
+func (_u *InstitutionUpdateOne) SaveX(ctx context.Context) *Institution {
+	node, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -334,29 +334,29 @@ func (iuo *InstitutionUpdateOne) SaveX(ctx context.Context) *Institution {
 }
 
 // Exec executes the query on the entity.
-func (iuo *InstitutionUpdateOne) Exec(ctx context.Context) error {
-	_, err := iuo.Save(ctx)
+func (_u *InstitutionUpdateOne) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (iuo *InstitutionUpdateOne) ExecX(ctx context.Context) {
-	if err := iuo.Exec(ctx); err != nil {
+func (_u *InstitutionUpdateOne) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (iuo *InstitutionUpdateOne) defaults() {
-	if _, ok := iuo.mutation.UpdatedAt(); !ok {
+func (_u *InstitutionUpdateOne) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := institution.UpdateDefaultUpdatedAt()
-		iuo.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (iuo *InstitutionUpdateOne) check() error {
-	if v, ok := iuo.mutation.GetType(); ok {
+func (_u *InstitutionUpdateOne) check() error {
+	if v, ok := _u.mutation.GetType(); ok {
 		if err := institution.TypeValidator(v); err != nil {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "Institution.type": %w`, err)}
 		}
@@ -364,17 +364,17 @@ func (iuo *InstitutionUpdateOne) check() error {
 	return nil
 }
 
-func (iuo *InstitutionUpdateOne) sqlSave(ctx context.Context) (_node *Institution, err error) {
-	if err := iuo.check(); err != nil {
+func (_u *InstitutionUpdateOne) sqlSave(ctx context.Context) (_node *Institution, err error) {
+	if err := _u.check(); err != nil {
 		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(institution.Table, institution.Columns, sqlgraph.NewFieldSpec(institution.FieldID, field.TypeInt))
-	id, ok := iuo.mutation.ID()
+	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Institution.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
-	if fields := iuo.fields; len(fields) > 0 {
+	if fields := _u.fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, institution.FieldID)
 		for _, f := range fields {
@@ -386,26 +386,26 @@ func (iuo *InstitutionUpdateOne) sqlSave(ctx context.Context) (_node *Institutio
 			}
 		}
 	}
-	if ps := iuo.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := iuo.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(institution.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := iuo.mutation.Code(); ok {
+	if value, ok := _u.mutation.Code(); ok {
 		_spec.SetField(institution.FieldCode, field.TypeString, value)
 	}
-	if value, ok := iuo.mutation.Name(); ok {
+	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(institution.FieldName, field.TypeString, value)
 	}
-	if value, ok := iuo.mutation.GetType(); ok {
+	if value, ok := _u.mutation.GetType(); ok {
 		_spec.SetField(institution.FieldType, field.TypeEnum, value)
 	}
-	if iuo.mutation.FiatCurrencyCleared() {
+	if _u.mutation.FiatCurrencyCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -418,7 +418,7 @@ func (iuo *InstitutionUpdateOne) sqlSave(ctx context.Context) (_node *Institutio
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := iuo.mutation.FiatCurrencyIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.FiatCurrencyIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -434,10 +434,10 @@ func (iuo *InstitutionUpdateOne) sqlSave(ctx context.Context) (_node *Institutio
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	_node = &Institution{config: iuo.config}
+	_node = &Institution{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues
-	if err = sqlgraph.UpdateNode(ctx, iuo.driver, _spec); err != nil {
+	if err = sqlgraph.UpdateNode(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{institution.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -445,6 +445,6 @@ func (iuo *InstitutionUpdateOne) sqlSave(ctx context.Context) (_node *Institutio
 		}
 		return nil, err
 	}
-	iuo.mutation.done = true
+	_u.mutation.done = true
 	return _node, nil
 }

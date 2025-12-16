@@ -35,44 +35,44 @@ type KYBProfileQuery struct {
 }
 
 // Where adds a new predicate for the KYBProfileQuery builder.
-func (kpq *KYBProfileQuery) Where(ps ...predicate.KYBProfile) *KYBProfileQuery {
-	kpq.predicates = append(kpq.predicates, ps...)
-	return kpq
+func (_q *KYBProfileQuery) Where(ps ...predicate.KYBProfile) *KYBProfileQuery {
+	_q.predicates = append(_q.predicates, ps...)
+	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (kpq *KYBProfileQuery) Limit(limit int) *KYBProfileQuery {
-	kpq.ctx.Limit = &limit
-	return kpq
+func (_q *KYBProfileQuery) Limit(limit int) *KYBProfileQuery {
+	_q.ctx.Limit = &limit
+	return _q
 }
 
 // Offset to start from.
-func (kpq *KYBProfileQuery) Offset(offset int) *KYBProfileQuery {
-	kpq.ctx.Offset = &offset
-	return kpq
+func (_q *KYBProfileQuery) Offset(offset int) *KYBProfileQuery {
+	_q.ctx.Offset = &offset
+	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (kpq *KYBProfileQuery) Unique(unique bool) *KYBProfileQuery {
-	kpq.ctx.Unique = &unique
-	return kpq
+func (_q *KYBProfileQuery) Unique(unique bool) *KYBProfileQuery {
+	_q.ctx.Unique = &unique
+	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (kpq *KYBProfileQuery) Order(o ...kybprofile.OrderOption) *KYBProfileQuery {
-	kpq.order = append(kpq.order, o...)
-	return kpq
+func (_q *KYBProfileQuery) Order(o ...kybprofile.OrderOption) *KYBProfileQuery {
+	_q.order = append(_q.order, o...)
+	return _q
 }
 
 // QueryBeneficialOwners chains the current query on the "beneficial_owners" edge.
-func (kpq *KYBProfileQuery) QueryBeneficialOwners() *BeneficialOwnerQuery {
-	query := (&BeneficialOwnerClient{config: kpq.config}).Query()
+func (_q *KYBProfileQuery) QueryBeneficialOwners() *BeneficialOwnerQuery {
+	query := (&BeneficialOwnerClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := kpq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := kpq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -81,20 +81,20 @@ func (kpq *KYBProfileQuery) QueryBeneficialOwners() *BeneficialOwnerQuery {
 			sqlgraph.To(beneficialowner.Table, beneficialowner.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, kybprofile.BeneficialOwnersTable, kybprofile.BeneficialOwnersColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(kpq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryUser chains the current query on the "user" edge.
-func (kpq *KYBProfileQuery) QueryUser() *UserQuery {
-	query := (&UserClient{config: kpq.config}).Query()
+func (_q *KYBProfileQuery) QueryUser() *UserQuery {
+	query := (&UserClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := kpq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := kpq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -103,7 +103,7 @@ func (kpq *KYBProfileQuery) QueryUser() *UserQuery {
 			sqlgraph.To(user.Table, user.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, kybprofile.UserTable, kybprofile.UserColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(kpq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
@@ -111,8 +111,8 @@ func (kpq *KYBProfileQuery) QueryUser() *UserQuery {
 
 // First returns the first KYBProfile entity from the query.
 // Returns a *NotFoundError when no KYBProfile was found.
-func (kpq *KYBProfileQuery) First(ctx context.Context) (*KYBProfile, error) {
-	nodes, err := kpq.Limit(1).All(setContextOp(ctx, kpq.ctx, ent.OpQueryFirst))
+func (_q *KYBProfileQuery) First(ctx context.Context) (*KYBProfile, error) {
+	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
@@ -123,8 +123,8 @@ func (kpq *KYBProfileQuery) First(ctx context.Context) (*KYBProfile, error) {
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (kpq *KYBProfileQuery) FirstX(ctx context.Context) *KYBProfile {
-	node, err := kpq.First(ctx)
+func (_q *KYBProfileQuery) FirstX(ctx context.Context) *KYBProfile {
+	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -133,9 +133,9 @@ func (kpq *KYBProfileQuery) FirstX(ctx context.Context) *KYBProfile {
 
 // FirstID returns the first KYBProfile ID from the query.
 // Returns a *NotFoundError when no KYBProfile ID was found.
-func (kpq *KYBProfileQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *KYBProfileQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = kpq.Limit(1).IDs(setContextOp(ctx, kpq.ctx, ent.OpQueryFirstID)); err != nil {
+	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -146,8 +146,8 @@ func (kpq *KYBProfileQuery) FirstID(ctx context.Context) (id uuid.UUID, err erro
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (kpq *KYBProfileQuery) FirstIDX(ctx context.Context) uuid.UUID {
-	id, err := kpq.FirstID(ctx)
+func (_q *KYBProfileQuery) FirstIDX(ctx context.Context) uuid.UUID {
+	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -157,8 +157,8 @@ func (kpq *KYBProfileQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Only returns a single KYBProfile entity found by the query, ensuring it only returns one.
 // Returns a *NotSingularError when more than one KYBProfile entity is found.
 // Returns a *NotFoundError when no KYBProfile entities are found.
-func (kpq *KYBProfileQuery) Only(ctx context.Context) (*KYBProfile, error) {
-	nodes, err := kpq.Limit(2).All(setContextOp(ctx, kpq.ctx, ent.OpQueryOnly))
+func (_q *KYBProfileQuery) Only(ctx context.Context) (*KYBProfile, error) {
+	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -173,8 +173,8 @@ func (kpq *KYBProfileQuery) Only(ctx context.Context) (*KYBProfile, error) {
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (kpq *KYBProfileQuery) OnlyX(ctx context.Context) *KYBProfile {
-	node, err := kpq.Only(ctx)
+func (_q *KYBProfileQuery) OnlyX(ctx context.Context) *KYBProfile {
+	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -184,9 +184,9 @@ func (kpq *KYBProfileQuery) OnlyX(ctx context.Context) *KYBProfile {
 // OnlyID is like Only, but returns the only KYBProfile ID in the query.
 // Returns a *NotSingularError when more than one KYBProfile ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (kpq *KYBProfileQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *KYBProfileQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = kpq.Limit(2).IDs(setContextOp(ctx, kpq.ctx, ent.OpQueryOnlyID)); err != nil {
+	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -201,8 +201,8 @@ func (kpq *KYBProfileQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (kpq *KYBProfileQuery) OnlyIDX(ctx context.Context) uuid.UUID {
-	id, err := kpq.OnlyID(ctx)
+func (_q *KYBProfileQuery) OnlyIDX(ctx context.Context) uuid.UUID {
+	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -210,18 +210,18 @@ func (kpq *KYBProfileQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 }
 
 // All executes the query and returns a list of KYBProfiles.
-func (kpq *KYBProfileQuery) All(ctx context.Context) ([]*KYBProfile, error) {
-	ctx = setContextOp(ctx, kpq.ctx, ent.OpQueryAll)
-	if err := kpq.prepareQuery(ctx); err != nil {
+func (_q *KYBProfileQuery) All(ctx context.Context) ([]*KYBProfile, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
 	qr := querierAll[[]*KYBProfile, *KYBProfileQuery]()
-	return withInterceptors[[]*KYBProfile](ctx, kpq, qr, kpq.inters)
+	return withInterceptors[[]*KYBProfile](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (kpq *KYBProfileQuery) AllX(ctx context.Context) []*KYBProfile {
-	nodes, err := kpq.All(ctx)
+func (_q *KYBProfileQuery) AllX(ctx context.Context) []*KYBProfile {
+	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -229,20 +229,20 @@ func (kpq *KYBProfileQuery) AllX(ctx context.Context) []*KYBProfile {
 }
 
 // IDs executes the query and returns a list of KYBProfile IDs.
-func (kpq *KYBProfileQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
-	if kpq.ctx.Unique == nil && kpq.path != nil {
-		kpq.Unique(true)
+func (_q *KYBProfileQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if _q.ctx.Unique == nil && _q.path != nil {
+		_q.Unique(true)
 	}
-	ctx = setContextOp(ctx, kpq.ctx, ent.OpQueryIDs)
-	if err = kpq.Select(kybprofile.FieldID).Scan(ctx, &ids); err != nil {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
+	if err = _q.Select(kybprofile.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (kpq *KYBProfileQuery) IDsX(ctx context.Context) []uuid.UUID {
-	ids, err := kpq.IDs(ctx)
+func (_q *KYBProfileQuery) IDsX(ctx context.Context) []uuid.UUID {
+	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -250,17 +250,17 @@ func (kpq *KYBProfileQuery) IDsX(ctx context.Context) []uuid.UUID {
 }
 
 // Count returns the count of the given query.
-func (kpq *KYBProfileQuery) Count(ctx context.Context) (int, error) {
-	ctx = setContextOp(ctx, kpq.ctx, ent.OpQueryCount)
-	if err := kpq.prepareQuery(ctx); err != nil {
+func (_q *KYBProfileQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, kpq, querierCount[*KYBProfileQuery](), kpq.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*KYBProfileQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (kpq *KYBProfileQuery) CountX(ctx context.Context) int {
-	count, err := kpq.Count(ctx)
+func (_q *KYBProfileQuery) CountX(ctx context.Context) int {
+	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -268,9 +268,9 @@ func (kpq *KYBProfileQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (kpq *KYBProfileQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = setContextOp(ctx, kpq.ctx, ent.OpQueryExist)
-	switch _, err := kpq.FirstID(ctx); {
+func (_q *KYBProfileQuery) Exist(ctx context.Context) (bool, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
+	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
 	case err != nil:
@@ -281,8 +281,8 @@ func (kpq *KYBProfileQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (kpq *KYBProfileQuery) ExistX(ctx context.Context) bool {
-	exist, err := kpq.Exist(ctx)
+func (_q *KYBProfileQuery) ExistX(ctx context.Context) bool {
+	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -291,44 +291,44 @@ func (kpq *KYBProfileQuery) ExistX(ctx context.Context) bool {
 
 // Clone returns a duplicate of the KYBProfileQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (kpq *KYBProfileQuery) Clone() *KYBProfileQuery {
-	if kpq == nil {
+func (_q *KYBProfileQuery) Clone() *KYBProfileQuery {
+	if _q == nil {
 		return nil
 	}
 	return &KYBProfileQuery{
-		config:               kpq.config,
-		ctx:                  kpq.ctx.Clone(),
-		order:                append([]kybprofile.OrderOption{}, kpq.order...),
-		inters:               append([]Interceptor{}, kpq.inters...),
-		predicates:           append([]predicate.KYBProfile{}, kpq.predicates...),
-		withBeneficialOwners: kpq.withBeneficialOwners.Clone(),
-		withUser:             kpq.withUser.Clone(),
+		config:               _q.config,
+		ctx:                  _q.ctx.Clone(),
+		order:                append([]kybprofile.OrderOption{}, _q.order...),
+		inters:               append([]Interceptor{}, _q.inters...),
+		predicates:           append([]predicate.KYBProfile{}, _q.predicates...),
+		withBeneficialOwners: _q.withBeneficialOwners.Clone(),
+		withUser:             _q.withUser.Clone(),
 		// clone intermediate query.
-		sql:  kpq.sql.Clone(),
-		path: kpq.path,
+		sql:  _q.sql.Clone(),
+		path: _q.path,
 	}
 }
 
 // WithBeneficialOwners tells the query-builder to eager-load the nodes that are connected to
 // the "beneficial_owners" edge. The optional arguments are used to configure the query builder of the edge.
-func (kpq *KYBProfileQuery) WithBeneficialOwners(opts ...func(*BeneficialOwnerQuery)) *KYBProfileQuery {
-	query := (&BeneficialOwnerClient{config: kpq.config}).Query()
+func (_q *KYBProfileQuery) WithBeneficialOwners(opts ...func(*BeneficialOwnerQuery)) *KYBProfileQuery {
+	query := (&BeneficialOwnerClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	kpq.withBeneficialOwners = query
-	return kpq
+	_q.withBeneficialOwners = query
+	return _q
 }
 
 // WithUser tells the query-builder to eager-load the nodes that are connected to
 // the "user" edge. The optional arguments are used to configure the query builder of the edge.
-func (kpq *KYBProfileQuery) WithUser(opts ...func(*UserQuery)) *KYBProfileQuery {
-	query := (&UserClient{config: kpq.config}).Query()
+func (_q *KYBProfileQuery) WithUser(opts ...func(*UserQuery)) *KYBProfileQuery {
+	query := (&UserClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	kpq.withUser = query
-	return kpq
+	_q.withUser = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -345,10 +345,10 @@ func (kpq *KYBProfileQuery) WithUser(opts ...func(*UserQuery)) *KYBProfileQuery 
 //		GroupBy(kybprofile.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (kpq *KYBProfileQuery) GroupBy(field string, fields ...string) *KYBProfileGroupBy {
-	kpq.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &KYBProfileGroupBy{build: kpq}
-	grbuild.flds = &kpq.ctx.Fields
+func (_q *KYBProfileQuery) GroupBy(field string, fields ...string) *KYBProfileGroupBy {
+	_q.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &KYBProfileGroupBy{build: _q}
+	grbuild.flds = &_q.ctx.Fields
 	grbuild.label = kybprofile.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -366,56 +366,56 @@ func (kpq *KYBProfileQuery) GroupBy(field string, fields ...string) *KYBProfileG
 //	client.KYBProfile.Query().
 //		Select(kybprofile.FieldCreatedAt).
 //		Scan(ctx, &v)
-func (kpq *KYBProfileQuery) Select(fields ...string) *KYBProfileSelect {
-	kpq.ctx.Fields = append(kpq.ctx.Fields, fields...)
-	sbuild := &KYBProfileSelect{KYBProfileQuery: kpq}
+func (_q *KYBProfileQuery) Select(fields ...string) *KYBProfileSelect {
+	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
+	sbuild := &KYBProfileSelect{KYBProfileQuery: _q}
 	sbuild.label = kybprofile.Label
-	sbuild.flds, sbuild.scan = &kpq.ctx.Fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
 // Aggregate returns a KYBProfileSelect configured with the given aggregations.
-func (kpq *KYBProfileQuery) Aggregate(fns ...AggregateFunc) *KYBProfileSelect {
-	return kpq.Select().Aggregate(fns...)
+func (_q *KYBProfileQuery) Aggregate(fns ...AggregateFunc) *KYBProfileSelect {
+	return _q.Select().Aggregate(fns...)
 }
 
-func (kpq *KYBProfileQuery) prepareQuery(ctx context.Context) error {
-	for _, inter := range kpq.inters {
+func (_q *KYBProfileQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
 		}
 		if trv, ok := inter.(Traverser); ok {
-			if err := trv.Traverse(ctx, kpq); err != nil {
+			if err := trv.Traverse(ctx, _q); err != nil {
 				return err
 			}
 		}
 	}
-	for _, f := range kpq.ctx.Fields {
+	for _, f := range _q.ctx.Fields {
 		if !kybprofile.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
-	if kpq.path != nil {
-		prev, err := kpq.path(ctx)
+	if _q.path != nil {
+		prev, err := _q.path(ctx)
 		if err != nil {
 			return err
 		}
-		kpq.sql = prev
+		_q.sql = prev
 	}
 	return nil
 }
 
-func (kpq *KYBProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*KYBProfile, error) {
+func (_q *KYBProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*KYBProfile, error) {
 	var (
 		nodes       = []*KYBProfile{}
-		withFKs     = kpq.withFKs
-		_spec       = kpq.querySpec()
+		withFKs     = _q.withFKs
+		_spec       = _q.querySpec()
 		loadedTypes = [2]bool{
-			kpq.withBeneficialOwners != nil,
-			kpq.withUser != nil,
+			_q.withBeneficialOwners != nil,
+			_q.withUser != nil,
 		}
 	)
-	if kpq.withUser != nil {
+	if _q.withUser != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -425,7 +425,7 @@ func (kpq *KYBProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 		return (*KYBProfile).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &KYBProfile{config: kpq.config}
+		node := &KYBProfile{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -433,14 +433,14 @@ func (kpq *KYBProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	for i := range hooks {
 		hooks[i](ctx, _spec)
 	}
-	if err := sqlgraph.QueryNodes(ctx, kpq.driver, _spec); err != nil {
+	if err := sqlgraph.QueryNodes(ctx, _q.driver, _spec); err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := kpq.withBeneficialOwners; query != nil {
-		if err := kpq.loadBeneficialOwners(ctx, query, nodes,
+	if query := _q.withBeneficialOwners; query != nil {
+		if err := _q.loadBeneficialOwners(ctx, query, nodes,
 			func(n *KYBProfile) { n.Edges.BeneficialOwners = []*BeneficialOwner{} },
 			func(n *KYBProfile, e *BeneficialOwner) {
 				n.Edges.BeneficialOwners = append(n.Edges.BeneficialOwners, e)
@@ -448,8 +448,8 @@ func (kpq *KYBProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 			return nil, err
 		}
 	}
-	if query := kpq.withUser; query != nil {
-		if err := kpq.loadUser(ctx, query, nodes, nil,
+	if query := _q.withUser; query != nil {
+		if err := _q.loadUser(ctx, query, nodes, nil,
 			func(n *KYBProfile, e *User) { n.Edges.User = e }); err != nil {
 			return nil, err
 		}
@@ -457,7 +457,7 @@ func (kpq *KYBProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	return nodes, nil
 }
 
-func (kpq *KYBProfileQuery) loadBeneficialOwners(ctx context.Context, query *BeneficialOwnerQuery, nodes []*KYBProfile, init func(*KYBProfile), assign func(*KYBProfile, *BeneficialOwner)) error {
+func (_q *KYBProfileQuery) loadBeneficialOwners(ctx context.Context, query *BeneficialOwnerQuery, nodes []*KYBProfile, init func(*KYBProfile), assign func(*KYBProfile, *BeneficialOwner)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*KYBProfile)
 	for i := range nodes {
@@ -488,7 +488,7 @@ func (kpq *KYBProfileQuery) loadBeneficialOwners(ctx context.Context, query *Ben
 	}
 	return nil
 }
-func (kpq *KYBProfileQuery) loadUser(ctx context.Context, query *UserQuery, nodes []*KYBProfile, init func(*KYBProfile), assign func(*KYBProfile, *User)) error {
+func (_q *KYBProfileQuery) loadUser(ctx context.Context, query *UserQuery, nodes []*KYBProfile, init func(*KYBProfile), assign func(*KYBProfile, *User)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*KYBProfile)
 	for i := range nodes {
@@ -521,24 +521,24 @@ func (kpq *KYBProfileQuery) loadUser(ctx context.Context, query *UserQuery, node
 	return nil
 }
 
-func (kpq *KYBProfileQuery) sqlCount(ctx context.Context) (int, error) {
-	_spec := kpq.querySpec()
-	_spec.Node.Columns = kpq.ctx.Fields
-	if len(kpq.ctx.Fields) > 0 {
-		_spec.Unique = kpq.ctx.Unique != nil && *kpq.ctx.Unique
+func (_q *KYBProfileQuery) sqlCount(ctx context.Context) (int, error) {
+	_spec := _q.querySpec()
+	_spec.Node.Columns = _q.ctx.Fields
+	if len(_q.ctx.Fields) > 0 {
+		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
 	}
-	return sqlgraph.CountNodes(ctx, kpq.driver, _spec)
+	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (kpq *KYBProfileQuery) querySpec() *sqlgraph.QuerySpec {
+func (_q *KYBProfileQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := sqlgraph.NewQuerySpec(kybprofile.Table, kybprofile.Columns, sqlgraph.NewFieldSpec(kybprofile.FieldID, field.TypeUUID))
-	_spec.From = kpq.sql
-	if unique := kpq.ctx.Unique; unique != nil {
+	_spec.From = _q.sql
+	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
-	} else if kpq.path != nil {
+	} else if _q.path != nil {
 		_spec.Unique = true
 	}
-	if fields := kpq.ctx.Fields; len(fields) > 0 {
+	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, kybprofile.FieldID)
 		for i := range fields {
@@ -547,20 +547,20 @@ func (kpq *KYBProfileQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if ps := kpq.predicates; len(ps) > 0 {
+	if ps := _q.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if limit := kpq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := kpq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
-	if ps := kpq.order; len(ps) > 0 {
+	if ps := _q.order; len(ps) > 0 {
 		_spec.Order = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
@@ -570,33 +570,33 @@ func (kpq *KYBProfileQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (kpq *KYBProfileQuery) sqlQuery(ctx context.Context) *sql.Selector {
-	builder := sql.Dialect(kpq.driver.Dialect())
+func (_q *KYBProfileQuery) sqlQuery(ctx context.Context) *sql.Selector {
+	builder := sql.Dialect(_q.driver.Dialect())
 	t1 := builder.Table(kybprofile.Table)
-	columns := kpq.ctx.Fields
+	columns := _q.ctx.Fields
 	if len(columns) == 0 {
 		columns = kybprofile.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
-	if kpq.sql != nil {
-		selector = kpq.sql
+	if _q.sql != nil {
+		selector = _q.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if kpq.ctx.Unique != nil && *kpq.ctx.Unique {
+	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
-	for _, p := range kpq.predicates {
+	for _, p := range _q.predicates {
 		p(selector)
 	}
-	for _, p := range kpq.order {
+	for _, p := range _q.order {
 		p(selector)
 	}
-	if offset := kpq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := kpq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -609,41 +609,41 @@ type KYBProfileGroupBy struct {
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (kpgb *KYBProfileGroupBy) Aggregate(fns ...AggregateFunc) *KYBProfileGroupBy {
-	kpgb.fns = append(kpgb.fns, fns...)
-	return kpgb
+func (_g *KYBProfileGroupBy) Aggregate(fns ...AggregateFunc) *KYBProfileGroupBy {
+	_g.fns = append(_g.fns, fns...)
+	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (kpgb *KYBProfileGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, kpgb.build.ctx, ent.OpQueryGroupBy)
-	if err := kpgb.build.prepareQuery(ctx); err != nil {
+func (_g *KYBProfileGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
+	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*KYBProfileQuery, *KYBProfileGroupBy](ctx, kpgb.build, kpgb, kpgb.build.inters, v)
+	return scanWithInterceptors[*KYBProfileQuery, *KYBProfileGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (kpgb *KYBProfileGroupBy) sqlScan(ctx context.Context, root *KYBProfileQuery, v any) error {
+func (_g *KYBProfileGroupBy) sqlScan(ctx context.Context, root *KYBProfileQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
-	aggregation := make([]string, 0, len(kpgb.fns))
-	for _, fn := range kpgb.fns {
+	aggregation := make([]string, 0, len(_g.fns))
+	for _, fn := range _g.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
 	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(*kpgb.flds)+len(kpgb.fns))
-		for _, f := range *kpgb.flds {
+		columns := make([]string, 0, len(*_g.flds)+len(_g.fns))
+		for _, f := range *_g.flds {
 			columns = append(columns, selector.C(f))
 		}
 		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
-	selector.GroupBy(selector.Columns(*kpgb.flds...)...)
+	selector.GroupBy(selector.Columns(*_g.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := kpgb.build.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _g.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
@@ -657,27 +657,27 @@ type KYBProfileSelect struct {
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (kps *KYBProfileSelect) Aggregate(fns ...AggregateFunc) *KYBProfileSelect {
-	kps.fns = append(kps.fns, fns...)
-	return kps
+func (_s *KYBProfileSelect) Aggregate(fns ...AggregateFunc) *KYBProfileSelect {
+	_s.fns = append(_s.fns, fns...)
+	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (kps *KYBProfileSelect) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, kps.ctx, ent.OpQuerySelect)
-	if err := kps.prepareQuery(ctx); err != nil {
+func (_s *KYBProfileSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
+	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*KYBProfileQuery, *KYBProfileSelect](ctx, kps.KYBProfileQuery, kps, kps.inters, v)
+	return scanWithInterceptors[*KYBProfileQuery, *KYBProfileSelect](ctx, _s.KYBProfileQuery, _s, _s.inters, v)
 }
 
-func (kps *KYBProfileSelect) sqlScan(ctx context.Context, root *KYBProfileQuery, v any) error {
+func (_s *KYBProfileSelect) sqlScan(ctx context.Context, root *KYBProfileQuery, v any) error {
 	selector := root.sqlQuery(ctx)
-	aggregation := make([]string, 0, len(kps.fns))
-	for _, fn := range kps.fns {
+	aggregation := make([]string, 0, len(_s.fns))
+	for _, fn := range _s.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
-	switch n := len(*kps.selector.flds); {
+	switch n := len(*_s.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
 		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
@@ -685,7 +685,7 @@ func (kps *KYBProfileSelect) sqlScan(ctx context.Context, root *KYBProfileQuery,
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := kps.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _s.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()

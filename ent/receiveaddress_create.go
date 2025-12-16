@@ -25,148 +25,148 @@ type ReceiveAddressCreate struct {
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (rac *ReceiveAddressCreate) SetCreatedAt(t time.Time) *ReceiveAddressCreate {
-	rac.mutation.SetCreatedAt(t)
-	return rac
+func (_c *ReceiveAddressCreate) SetCreatedAt(v time.Time) *ReceiveAddressCreate {
+	_c.mutation.SetCreatedAt(v)
+	return _c
 }
 
 // SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (rac *ReceiveAddressCreate) SetNillableCreatedAt(t *time.Time) *ReceiveAddressCreate {
-	if t != nil {
-		rac.SetCreatedAt(*t)
+func (_c *ReceiveAddressCreate) SetNillableCreatedAt(v *time.Time) *ReceiveAddressCreate {
+	if v != nil {
+		_c.SetCreatedAt(*v)
 	}
-	return rac
+	return _c
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (rac *ReceiveAddressCreate) SetUpdatedAt(t time.Time) *ReceiveAddressCreate {
-	rac.mutation.SetUpdatedAt(t)
-	return rac
+func (_c *ReceiveAddressCreate) SetUpdatedAt(v time.Time) *ReceiveAddressCreate {
+	_c.mutation.SetUpdatedAt(v)
+	return _c
 }
 
 // SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (rac *ReceiveAddressCreate) SetNillableUpdatedAt(t *time.Time) *ReceiveAddressCreate {
-	if t != nil {
-		rac.SetUpdatedAt(*t)
+func (_c *ReceiveAddressCreate) SetNillableUpdatedAt(v *time.Time) *ReceiveAddressCreate {
+	if v != nil {
+		_c.SetUpdatedAt(*v)
 	}
-	return rac
+	return _c
 }
 
 // SetAddress sets the "address" field.
-func (rac *ReceiveAddressCreate) SetAddress(s string) *ReceiveAddressCreate {
-	rac.mutation.SetAddress(s)
-	return rac
+func (_c *ReceiveAddressCreate) SetAddress(v string) *ReceiveAddressCreate {
+	_c.mutation.SetAddress(v)
+	return _c
 }
 
 // SetSalt sets the "salt" field.
-func (rac *ReceiveAddressCreate) SetSalt(b []byte) *ReceiveAddressCreate {
-	rac.mutation.SetSalt(b)
-	return rac
+func (_c *ReceiveAddressCreate) SetSalt(v []byte) *ReceiveAddressCreate {
+	_c.mutation.SetSalt(v)
+	return _c
 }
 
 // SetStatus sets the "status" field.
-func (rac *ReceiveAddressCreate) SetStatus(r receiveaddress.Status) *ReceiveAddressCreate {
-	rac.mutation.SetStatus(r)
-	return rac
+func (_c *ReceiveAddressCreate) SetStatus(v receiveaddress.Status) *ReceiveAddressCreate {
+	_c.mutation.SetStatus(v)
+	return _c
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (rac *ReceiveAddressCreate) SetNillableStatus(r *receiveaddress.Status) *ReceiveAddressCreate {
-	if r != nil {
-		rac.SetStatus(*r)
+func (_c *ReceiveAddressCreate) SetNillableStatus(v *receiveaddress.Status) *ReceiveAddressCreate {
+	if v != nil {
+		_c.SetStatus(*v)
 	}
-	return rac
+	return _c
 }
 
 // SetLastIndexedBlock sets the "last_indexed_block" field.
-func (rac *ReceiveAddressCreate) SetLastIndexedBlock(i int64) *ReceiveAddressCreate {
-	rac.mutation.SetLastIndexedBlock(i)
-	return rac
+func (_c *ReceiveAddressCreate) SetLastIndexedBlock(v int64) *ReceiveAddressCreate {
+	_c.mutation.SetLastIndexedBlock(v)
+	return _c
 }
 
 // SetNillableLastIndexedBlock sets the "last_indexed_block" field if the given value is not nil.
-func (rac *ReceiveAddressCreate) SetNillableLastIndexedBlock(i *int64) *ReceiveAddressCreate {
-	if i != nil {
-		rac.SetLastIndexedBlock(*i)
+func (_c *ReceiveAddressCreate) SetNillableLastIndexedBlock(v *int64) *ReceiveAddressCreate {
+	if v != nil {
+		_c.SetLastIndexedBlock(*v)
 	}
-	return rac
+	return _c
 }
 
 // SetLastUsed sets the "last_used" field.
-func (rac *ReceiveAddressCreate) SetLastUsed(t time.Time) *ReceiveAddressCreate {
-	rac.mutation.SetLastUsed(t)
-	return rac
+func (_c *ReceiveAddressCreate) SetLastUsed(v time.Time) *ReceiveAddressCreate {
+	_c.mutation.SetLastUsed(v)
+	return _c
 }
 
 // SetNillableLastUsed sets the "last_used" field if the given value is not nil.
-func (rac *ReceiveAddressCreate) SetNillableLastUsed(t *time.Time) *ReceiveAddressCreate {
-	if t != nil {
-		rac.SetLastUsed(*t)
+func (_c *ReceiveAddressCreate) SetNillableLastUsed(v *time.Time) *ReceiveAddressCreate {
+	if v != nil {
+		_c.SetLastUsed(*v)
 	}
-	return rac
+	return _c
 }
 
 // SetTxHash sets the "tx_hash" field.
-func (rac *ReceiveAddressCreate) SetTxHash(s string) *ReceiveAddressCreate {
-	rac.mutation.SetTxHash(s)
-	return rac
+func (_c *ReceiveAddressCreate) SetTxHash(v string) *ReceiveAddressCreate {
+	_c.mutation.SetTxHash(v)
+	return _c
 }
 
 // SetNillableTxHash sets the "tx_hash" field if the given value is not nil.
-func (rac *ReceiveAddressCreate) SetNillableTxHash(s *string) *ReceiveAddressCreate {
-	if s != nil {
-		rac.SetTxHash(*s)
+func (_c *ReceiveAddressCreate) SetNillableTxHash(v *string) *ReceiveAddressCreate {
+	if v != nil {
+		_c.SetTxHash(*v)
 	}
-	return rac
+	return _c
 }
 
 // SetValidUntil sets the "valid_until" field.
-func (rac *ReceiveAddressCreate) SetValidUntil(t time.Time) *ReceiveAddressCreate {
-	rac.mutation.SetValidUntil(t)
-	return rac
+func (_c *ReceiveAddressCreate) SetValidUntil(v time.Time) *ReceiveAddressCreate {
+	_c.mutation.SetValidUntil(v)
+	return _c
 }
 
 // SetNillableValidUntil sets the "valid_until" field if the given value is not nil.
-func (rac *ReceiveAddressCreate) SetNillableValidUntil(t *time.Time) *ReceiveAddressCreate {
-	if t != nil {
-		rac.SetValidUntil(*t)
+func (_c *ReceiveAddressCreate) SetNillableValidUntil(v *time.Time) *ReceiveAddressCreate {
+	if v != nil {
+		_c.SetValidUntil(*v)
 	}
-	return rac
+	return _c
 }
 
 // SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID.
-func (rac *ReceiveAddressCreate) SetPaymentOrderID(id uuid.UUID) *ReceiveAddressCreate {
-	rac.mutation.SetPaymentOrderID(id)
-	return rac
+func (_c *ReceiveAddressCreate) SetPaymentOrderID(id uuid.UUID) *ReceiveAddressCreate {
+	_c.mutation.SetPaymentOrderID(id)
+	return _c
 }
 
 // SetNillablePaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID if the given value is not nil.
-func (rac *ReceiveAddressCreate) SetNillablePaymentOrderID(id *uuid.UUID) *ReceiveAddressCreate {
+func (_c *ReceiveAddressCreate) SetNillablePaymentOrderID(id *uuid.UUID) *ReceiveAddressCreate {
 	if id != nil {
-		rac = rac.SetPaymentOrderID(*id)
+		_c = _c.SetPaymentOrderID(*id)
 	}
-	return rac
+	return _c
 }
 
 // SetPaymentOrder sets the "payment_order" edge to the PaymentOrder entity.
-func (rac *ReceiveAddressCreate) SetPaymentOrder(p *PaymentOrder) *ReceiveAddressCreate {
-	return rac.SetPaymentOrderID(p.ID)
+func (_c *ReceiveAddressCreate) SetPaymentOrder(v *PaymentOrder) *ReceiveAddressCreate {
+	return _c.SetPaymentOrderID(v.ID)
 }
 
 // Mutation returns the ReceiveAddressMutation object of the builder.
-func (rac *ReceiveAddressCreate) Mutation() *ReceiveAddressMutation {
-	return rac.mutation
+func (_c *ReceiveAddressCreate) Mutation() *ReceiveAddressMutation {
+	return _c.mutation
 }
 
 // Save creates the ReceiveAddress in the database.
-func (rac *ReceiveAddressCreate) Save(ctx context.Context) (*ReceiveAddress, error) {
-	rac.defaults()
-	return withHooks(ctx, rac.sqlSave, rac.mutation, rac.hooks)
+func (_c *ReceiveAddressCreate) Save(ctx context.Context) (*ReceiveAddress, error) {
+	_c.defaults()
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (rac *ReceiveAddressCreate) SaveX(ctx context.Context) *ReceiveAddress {
-	v, err := rac.Save(ctx)
+func (_c *ReceiveAddressCreate) SaveX(ctx context.Context) *ReceiveAddress {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -174,54 +174,54 @@ func (rac *ReceiveAddressCreate) SaveX(ctx context.Context) *ReceiveAddress {
 }
 
 // Exec executes the query.
-func (rac *ReceiveAddressCreate) Exec(ctx context.Context) error {
-	_, err := rac.Save(ctx)
+func (_c *ReceiveAddressCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (rac *ReceiveAddressCreate) ExecX(ctx context.Context) {
-	if err := rac.Exec(ctx); err != nil {
+func (_c *ReceiveAddressCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (rac *ReceiveAddressCreate) defaults() {
-	if _, ok := rac.mutation.CreatedAt(); !ok {
+func (_c *ReceiveAddressCreate) defaults() {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := receiveaddress.DefaultCreatedAt()
-		rac.mutation.SetCreatedAt(v)
+		_c.mutation.SetCreatedAt(v)
 	}
-	if _, ok := rac.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		v := receiveaddress.DefaultUpdatedAt()
-		rac.mutation.SetUpdatedAt(v)
+		_c.mutation.SetUpdatedAt(v)
 	}
-	if _, ok := rac.mutation.Status(); !ok {
+	if _, ok := _c.mutation.Status(); !ok {
 		v := receiveaddress.DefaultStatus
-		rac.mutation.SetStatus(v)
+		_c.mutation.SetStatus(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (rac *ReceiveAddressCreate) check() error {
-	if _, ok := rac.mutation.CreatedAt(); !ok {
+func (_c *ReceiveAddressCreate) check() error {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "ReceiveAddress.created_at"`)}
 	}
-	if _, ok := rac.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ReceiveAddress.updated_at"`)}
 	}
-	if _, ok := rac.mutation.Address(); !ok {
+	if _, ok := _c.mutation.Address(); !ok {
 		return &ValidationError{Name: "address", err: errors.New(`ent: missing required field "ReceiveAddress.address"`)}
 	}
-	if _, ok := rac.mutation.Status(); !ok {
+	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "ReceiveAddress.status"`)}
 	}
-	if v, ok := rac.mutation.Status(); ok {
+	if v, ok := _c.mutation.Status(); ok {
 		if err := receiveaddress.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "ReceiveAddress.status": %w`, err)}
 		}
 	}
-	if v, ok := rac.mutation.TxHash(); ok {
+	if v, ok := _c.mutation.TxHash(); ok {
 		if err := receiveaddress.TxHashValidator(v); err != nil {
 			return &ValidationError{Name: "tx_hash", err: fmt.Errorf(`ent: validator failed for field "ReceiveAddress.tx_hash": %w`, err)}
 		}
@@ -229,12 +229,12 @@ func (rac *ReceiveAddressCreate) check() error {
 	return nil
 }
 
-func (rac *ReceiveAddressCreate) sqlSave(ctx context.Context) (*ReceiveAddress, error) {
-	if err := rac.check(); err != nil {
+func (_c *ReceiveAddressCreate) sqlSave(ctx context.Context) (*ReceiveAddress, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := rac.createSpec()
-	if err := sqlgraph.CreateNode(ctx, rac.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -242,54 +242,54 @@ func (rac *ReceiveAddressCreate) sqlSave(ctx context.Context) (*ReceiveAddress, 
 	}
 	id := _spec.ID.Value.(int64)
 	_node.ID = int(id)
-	rac.mutation.id = &_node.ID
-	rac.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (rac *ReceiveAddressCreate) createSpec() (*ReceiveAddress, *sqlgraph.CreateSpec) {
+func (_c *ReceiveAddressCreate) createSpec() (*ReceiveAddress, *sqlgraph.CreateSpec) {
 	var (
-		_node = &ReceiveAddress{config: rac.config}
+		_node = &ReceiveAddress{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(receiveaddress.Table, sqlgraph.NewFieldSpec(receiveaddress.FieldID, field.TypeInt))
 	)
-	_spec.OnConflict = rac.conflict
-	if value, ok := rac.mutation.CreatedAt(); ok {
+	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(receiveaddress.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
 	}
-	if value, ok := rac.mutation.UpdatedAt(); ok {
+	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(receiveaddress.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if value, ok := rac.mutation.Address(); ok {
+	if value, ok := _c.mutation.Address(); ok {
 		_spec.SetField(receiveaddress.FieldAddress, field.TypeString, value)
 		_node.Address = value
 	}
-	if value, ok := rac.mutation.Salt(); ok {
+	if value, ok := _c.mutation.Salt(); ok {
 		_spec.SetField(receiveaddress.FieldSalt, field.TypeBytes, value)
 		_node.Salt = value
 	}
-	if value, ok := rac.mutation.Status(); ok {
+	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(receiveaddress.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
-	if value, ok := rac.mutation.LastIndexedBlock(); ok {
+	if value, ok := _c.mutation.LastIndexedBlock(); ok {
 		_spec.SetField(receiveaddress.FieldLastIndexedBlock, field.TypeInt64, value)
 		_node.LastIndexedBlock = value
 	}
-	if value, ok := rac.mutation.LastUsed(); ok {
+	if value, ok := _c.mutation.LastUsed(); ok {
 		_spec.SetField(receiveaddress.FieldLastUsed, field.TypeTime, value)
 		_node.LastUsed = value
 	}
-	if value, ok := rac.mutation.TxHash(); ok {
+	if value, ok := _c.mutation.TxHash(); ok {
 		_spec.SetField(receiveaddress.FieldTxHash, field.TypeString, value)
 		_node.TxHash = value
 	}
-	if value, ok := rac.mutation.ValidUntil(); ok {
+	if value, ok := _c.mutation.ValidUntil(); ok {
 		_spec.SetField(receiveaddress.FieldValidUntil, field.TypeTime, value)
 		_node.ValidUntil = value
 	}
-	if nodes := rac.mutation.PaymentOrderIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.PaymentOrderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -325,10 +325,10 @@ func (rac *ReceiveAddressCreate) createSpec() (*ReceiveAddress, *sqlgraph.Create
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (rac *ReceiveAddressCreate) OnConflict(opts ...sql.ConflictOption) *ReceiveAddressUpsertOne {
-	rac.conflict = opts
+func (_c *ReceiveAddressCreate) OnConflict(opts ...sql.ConflictOption) *ReceiveAddressUpsertOne {
+	_c.conflict = opts
 	return &ReceiveAddressUpsertOne{
-		create: rac,
+		create: _c,
 	}
 }
 
@@ -338,10 +338,10 @@ func (rac *ReceiveAddressCreate) OnConflict(opts ...sql.ConflictOption) *Receive
 //	client.ReceiveAddress.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (rac *ReceiveAddressCreate) OnConflictColumns(columns ...string) *ReceiveAddressUpsertOne {
-	rac.conflict = append(rac.conflict, sql.ConflictColumns(columns...))
+func (_c *ReceiveAddressCreate) OnConflictColumns(columns ...string) *ReceiveAddressUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &ReceiveAddressUpsertOne{
-		create: rac,
+		create: _c,
 	}
 }
 
@@ -731,16 +731,16 @@ type ReceiveAddressCreateBulk struct {
 }
 
 // Save creates the ReceiveAddress entities in the database.
-func (racb *ReceiveAddressCreateBulk) Save(ctx context.Context) ([]*ReceiveAddress, error) {
-	if racb.err != nil {
-		return nil, racb.err
+func (_c *ReceiveAddressCreateBulk) Save(ctx context.Context) ([]*ReceiveAddress, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(racb.builders))
-	nodes := make([]*ReceiveAddress, len(racb.builders))
-	mutators := make([]Mutator, len(racb.builders))
-	for i := range racb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*ReceiveAddress, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := racb.builders[i]
+			builder := _c.builders[i]
 			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*ReceiveAddressMutation)
@@ -754,12 +754,12 @@ func (racb *ReceiveAddressCreateBulk) Save(ctx context.Context) ([]*ReceiveAddre
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, racb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = racb.conflict
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, racb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -783,7 +783,7 @@ func (racb *ReceiveAddressCreateBulk) Save(ctx context.Context) ([]*ReceiveAddre
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, racb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -791,8 +791,8 @@ func (racb *ReceiveAddressCreateBulk) Save(ctx context.Context) ([]*ReceiveAddre
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (racb *ReceiveAddressCreateBulk) SaveX(ctx context.Context) []*ReceiveAddress {
-	v, err := racb.Save(ctx)
+func (_c *ReceiveAddressCreateBulk) SaveX(ctx context.Context) []*ReceiveAddress {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -800,14 +800,14 @@ func (racb *ReceiveAddressCreateBulk) SaveX(ctx context.Context) []*ReceiveAddre
 }
 
 // Exec executes the query.
-func (racb *ReceiveAddressCreateBulk) Exec(ctx context.Context) error {
-	_, err := racb.Save(ctx)
+func (_c *ReceiveAddressCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (racb *ReceiveAddressCreateBulk) ExecX(ctx context.Context) {
-	if err := racb.Exec(ctx); err != nil {
+func (_c *ReceiveAddressCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
@@ -827,10 +827,10 @@ func (racb *ReceiveAddressCreateBulk) ExecX(ctx context.Context) {
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (racb *ReceiveAddressCreateBulk) OnConflict(opts ...sql.ConflictOption) *ReceiveAddressUpsertBulk {
-	racb.conflict = opts
+func (_c *ReceiveAddressCreateBulk) OnConflict(opts ...sql.ConflictOption) *ReceiveAddressUpsertBulk {
+	_c.conflict = opts
 	return &ReceiveAddressUpsertBulk{
-		create: racb,
+		create: _c,
 	}
 }
 
@@ -840,10 +840,10 @@ func (racb *ReceiveAddressCreateBulk) OnConflict(opts ...sql.ConflictOption) *Re
 //	client.ReceiveAddress.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (racb *ReceiveAddressCreateBulk) OnConflictColumns(columns ...string) *ReceiveAddressUpsertBulk {
-	racb.conflict = append(racb.conflict, sql.ConflictColumns(columns...))
+func (_c *ReceiveAddressCreateBulk) OnConflictColumns(columns ...string) *ReceiveAddressUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &ReceiveAddressUpsertBulk{
-		create: racb,
+		create: _c,
 	}
 }
 

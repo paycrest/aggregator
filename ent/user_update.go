@@ -28,256 +28,256 @@ type UserUpdate struct {
 }
 
 // Where appends a list predicates to the UserUpdate builder.
-func (uu *UserUpdate) Where(ps ...predicate.User) *UserUpdate {
-	uu.mutation.Where(ps...)
-	return uu
+func (_u *UserUpdate) Where(ps ...predicate.User) *UserUpdate {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (uu *UserUpdate) SetUpdatedAt(t time.Time) *UserUpdate {
-	uu.mutation.SetUpdatedAt(t)
-	return uu
+func (_u *UserUpdate) SetUpdatedAt(v time.Time) *UserUpdate {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetFirstName sets the "first_name" field.
-func (uu *UserUpdate) SetFirstName(s string) *UserUpdate {
-	uu.mutation.SetFirstName(s)
-	return uu
+func (_u *UserUpdate) SetFirstName(v string) *UserUpdate {
+	_u.mutation.SetFirstName(v)
+	return _u
 }
 
 // SetNillableFirstName sets the "first_name" field if the given value is not nil.
-func (uu *UserUpdate) SetNillableFirstName(s *string) *UserUpdate {
-	if s != nil {
-		uu.SetFirstName(*s)
+func (_u *UserUpdate) SetNillableFirstName(v *string) *UserUpdate {
+	if v != nil {
+		_u.SetFirstName(*v)
 	}
-	return uu
+	return _u
 }
 
 // SetLastName sets the "last_name" field.
-func (uu *UserUpdate) SetLastName(s string) *UserUpdate {
-	uu.mutation.SetLastName(s)
-	return uu
+func (_u *UserUpdate) SetLastName(v string) *UserUpdate {
+	_u.mutation.SetLastName(v)
+	return _u
 }
 
 // SetNillableLastName sets the "last_name" field if the given value is not nil.
-func (uu *UserUpdate) SetNillableLastName(s *string) *UserUpdate {
-	if s != nil {
-		uu.SetLastName(*s)
+func (_u *UserUpdate) SetNillableLastName(v *string) *UserUpdate {
+	if v != nil {
+		_u.SetLastName(*v)
 	}
-	return uu
+	return _u
 }
 
 // SetEmail sets the "email" field.
-func (uu *UserUpdate) SetEmail(s string) *UserUpdate {
-	uu.mutation.SetEmail(s)
-	return uu
+func (_u *UserUpdate) SetEmail(v string) *UserUpdate {
+	_u.mutation.SetEmail(v)
+	return _u
 }
 
 // SetNillableEmail sets the "email" field if the given value is not nil.
-func (uu *UserUpdate) SetNillableEmail(s *string) *UserUpdate {
-	if s != nil {
-		uu.SetEmail(*s)
+func (_u *UserUpdate) SetNillableEmail(v *string) *UserUpdate {
+	if v != nil {
+		_u.SetEmail(*v)
 	}
-	return uu
+	return _u
 }
 
 // SetPassword sets the "password" field.
-func (uu *UserUpdate) SetPassword(s string) *UserUpdate {
-	uu.mutation.SetPassword(s)
-	return uu
+func (_u *UserUpdate) SetPassword(v string) *UserUpdate {
+	_u.mutation.SetPassword(v)
+	return _u
 }
 
 // SetNillablePassword sets the "password" field if the given value is not nil.
-func (uu *UserUpdate) SetNillablePassword(s *string) *UserUpdate {
-	if s != nil {
-		uu.SetPassword(*s)
+func (_u *UserUpdate) SetNillablePassword(v *string) *UserUpdate {
+	if v != nil {
+		_u.SetPassword(*v)
 	}
-	return uu
+	return _u
 }
 
 // SetScope sets the "scope" field.
-func (uu *UserUpdate) SetScope(s string) *UserUpdate {
-	uu.mutation.SetScope(s)
-	return uu
+func (_u *UserUpdate) SetScope(v string) *UserUpdate {
+	_u.mutation.SetScope(v)
+	return _u
 }
 
 // SetNillableScope sets the "scope" field if the given value is not nil.
-func (uu *UserUpdate) SetNillableScope(s *string) *UserUpdate {
-	if s != nil {
-		uu.SetScope(*s)
+func (_u *UserUpdate) SetNillableScope(v *string) *UserUpdate {
+	if v != nil {
+		_u.SetScope(*v)
 	}
-	return uu
+	return _u
 }
 
 // SetIsEmailVerified sets the "is_email_verified" field.
-func (uu *UserUpdate) SetIsEmailVerified(b bool) *UserUpdate {
-	uu.mutation.SetIsEmailVerified(b)
-	return uu
+func (_u *UserUpdate) SetIsEmailVerified(v bool) *UserUpdate {
+	_u.mutation.SetIsEmailVerified(v)
+	return _u
 }
 
 // SetNillableIsEmailVerified sets the "is_email_verified" field if the given value is not nil.
-func (uu *UserUpdate) SetNillableIsEmailVerified(b *bool) *UserUpdate {
-	if b != nil {
-		uu.SetIsEmailVerified(*b)
+func (_u *UserUpdate) SetNillableIsEmailVerified(v *bool) *UserUpdate {
+	if v != nil {
+		_u.SetIsEmailVerified(*v)
 	}
-	return uu
+	return _u
 }
 
 // SetHasEarlyAccess sets the "has_early_access" field.
-func (uu *UserUpdate) SetHasEarlyAccess(b bool) *UserUpdate {
-	uu.mutation.SetHasEarlyAccess(b)
-	return uu
+func (_u *UserUpdate) SetHasEarlyAccess(v bool) *UserUpdate {
+	_u.mutation.SetHasEarlyAccess(v)
+	return _u
 }
 
 // SetNillableHasEarlyAccess sets the "has_early_access" field if the given value is not nil.
-func (uu *UserUpdate) SetNillableHasEarlyAccess(b *bool) *UserUpdate {
-	if b != nil {
-		uu.SetHasEarlyAccess(*b)
+func (_u *UserUpdate) SetNillableHasEarlyAccess(v *bool) *UserUpdate {
+	if v != nil {
+		_u.SetHasEarlyAccess(*v)
 	}
-	return uu
+	return _u
 }
 
 // SetKybVerificationStatus sets the "kyb_verification_status" field.
-func (uu *UserUpdate) SetKybVerificationStatus(uvs user.KybVerificationStatus) *UserUpdate {
-	uu.mutation.SetKybVerificationStatus(uvs)
-	return uu
+func (_u *UserUpdate) SetKybVerificationStatus(v user.KybVerificationStatus) *UserUpdate {
+	_u.mutation.SetKybVerificationStatus(v)
+	return _u
 }
 
 // SetNillableKybVerificationStatus sets the "kyb_verification_status" field if the given value is not nil.
-func (uu *UserUpdate) SetNillableKybVerificationStatus(uvs *user.KybVerificationStatus) *UserUpdate {
-	if uvs != nil {
-		uu.SetKybVerificationStatus(*uvs)
+func (_u *UserUpdate) SetNillableKybVerificationStatus(v *user.KybVerificationStatus) *UserUpdate {
+	if v != nil {
+		_u.SetKybVerificationStatus(*v)
 	}
-	return uu
+	return _u
 }
 
 // SetSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by ID.
-func (uu *UserUpdate) SetSenderProfileID(id uuid.UUID) *UserUpdate {
-	uu.mutation.SetSenderProfileID(id)
-	return uu
+func (_u *UserUpdate) SetSenderProfileID(id uuid.UUID) *UserUpdate {
+	_u.mutation.SetSenderProfileID(id)
+	return _u
 }
 
 // SetNillableSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by ID if the given value is not nil.
-func (uu *UserUpdate) SetNillableSenderProfileID(id *uuid.UUID) *UserUpdate {
+func (_u *UserUpdate) SetNillableSenderProfileID(id *uuid.UUID) *UserUpdate {
 	if id != nil {
-		uu = uu.SetSenderProfileID(*id)
+		_u = _u.SetSenderProfileID(*id)
 	}
-	return uu
+	return _u
 }
 
 // SetSenderProfile sets the "sender_profile" edge to the SenderProfile entity.
-func (uu *UserUpdate) SetSenderProfile(s *SenderProfile) *UserUpdate {
-	return uu.SetSenderProfileID(s.ID)
+func (_u *UserUpdate) SetSenderProfile(v *SenderProfile) *UserUpdate {
+	return _u.SetSenderProfileID(v.ID)
 }
 
 // SetProviderProfileID sets the "provider_profile" edge to the ProviderProfile entity by ID.
-func (uu *UserUpdate) SetProviderProfileID(id string) *UserUpdate {
-	uu.mutation.SetProviderProfileID(id)
-	return uu
+func (_u *UserUpdate) SetProviderProfileID(id string) *UserUpdate {
+	_u.mutation.SetProviderProfileID(id)
+	return _u
 }
 
 // SetNillableProviderProfileID sets the "provider_profile" edge to the ProviderProfile entity by ID if the given value is not nil.
-func (uu *UserUpdate) SetNillableProviderProfileID(id *string) *UserUpdate {
+func (_u *UserUpdate) SetNillableProviderProfileID(id *string) *UserUpdate {
 	if id != nil {
-		uu = uu.SetProviderProfileID(*id)
+		_u = _u.SetProviderProfileID(*id)
 	}
-	return uu
+	return _u
 }
 
 // SetProviderProfile sets the "provider_profile" edge to the ProviderProfile entity.
-func (uu *UserUpdate) SetProviderProfile(p *ProviderProfile) *UserUpdate {
-	return uu.SetProviderProfileID(p.ID)
+func (_u *UserUpdate) SetProviderProfile(v *ProviderProfile) *UserUpdate {
+	return _u.SetProviderProfileID(v.ID)
 }
 
 // AddVerificationTokenIDs adds the "verification_token" edge to the VerificationToken entity by IDs.
-func (uu *UserUpdate) AddVerificationTokenIDs(ids ...uuid.UUID) *UserUpdate {
-	uu.mutation.AddVerificationTokenIDs(ids...)
-	return uu
+func (_u *UserUpdate) AddVerificationTokenIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.AddVerificationTokenIDs(ids...)
+	return _u
 }
 
 // AddVerificationToken adds the "verification_token" edges to the VerificationToken entity.
-func (uu *UserUpdate) AddVerificationToken(v ...*VerificationToken) *UserUpdate {
+func (_u *UserUpdate) AddVerificationToken(v ...*VerificationToken) *UserUpdate {
 	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return uu.AddVerificationTokenIDs(ids...)
+	return _u.AddVerificationTokenIDs(ids...)
 }
 
 // SetKybProfileID sets the "kyb_profile" edge to the KYBProfile entity by ID.
-func (uu *UserUpdate) SetKybProfileID(id uuid.UUID) *UserUpdate {
-	uu.mutation.SetKybProfileID(id)
-	return uu
+func (_u *UserUpdate) SetKybProfileID(id uuid.UUID) *UserUpdate {
+	_u.mutation.SetKybProfileID(id)
+	return _u
 }
 
 // SetNillableKybProfileID sets the "kyb_profile" edge to the KYBProfile entity by ID if the given value is not nil.
-func (uu *UserUpdate) SetNillableKybProfileID(id *uuid.UUID) *UserUpdate {
+func (_u *UserUpdate) SetNillableKybProfileID(id *uuid.UUID) *UserUpdate {
 	if id != nil {
-		uu = uu.SetKybProfileID(*id)
+		_u = _u.SetKybProfileID(*id)
 	}
-	return uu
+	return _u
 }
 
 // SetKybProfile sets the "kyb_profile" edge to the KYBProfile entity.
-func (uu *UserUpdate) SetKybProfile(k *KYBProfile) *UserUpdate {
-	return uu.SetKybProfileID(k.ID)
+func (_u *UserUpdate) SetKybProfile(v *KYBProfile) *UserUpdate {
+	return _u.SetKybProfileID(v.ID)
 }
 
 // Mutation returns the UserMutation object of the builder.
-func (uu *UserUpdate) Mutation() *UserMutation {
-	return uu.mutation
+func (_u *UserUpdate) Mutation() *UserMutation {
+	return _u.mutation
 }
 
 // ClearSenderProfile clears the "sender_profile" edge to the SenderProfile entity.
-func (uu *UserUpdate) ClearSenderProfile() *UserUpdate {
-	uu.mutation.ClearSenderProfile()
-	return uu
+func (_u *UserUpdate) ClearSenderProfile() *UserUpdate {
+	_u.mutation.ClearSenderProfile()
+	return _u
 }
 
 // ClearProviderProfile clears the "provider_profile" edge to the ProviderProfile entity.
-func (uu *UserUpdate) ClearProviderProfile() *UserUpdate {
-	uu.mutation.ClearProviderProfile()
-	return uu
+func (_u *UserUpdate) ClearProviderProfile() *UserUpdate {
+	_u.mutation.ClearProviderProfile()
+	return _u
 }
 
 // ClearVerificationToken clears all "verification_token" edges to the VerificationToken entity.
-func (uu *UserUpdate) ClearVerificationToken() *UserUpdate {
-	uu.mutation.ClearVerificationToken()
-	return uu
+func (_u *UserUpdate) ClearVerificationToken() *UserUpdate {
+	_u.mutation.ClearVerificationToken()
+	return _u
 }
 
 // RemoveVerificationTokenIDs removes the "verification_token" edge to VerificationToken entities by IDs.
-func (uu *UserUpdate) RemoveVerificationTokenIDs(ids ...uuid.UUID) *UserUpdate {
-	uu.mutation.RemoveVerificationTokenIDs(ids...)
-	return uu
+func (_u *UserUpdate) RemoveVerificationTokenIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.RemoveVerificationTokenIDs(ids...)
+	return _u
 }
 
 // RemoveVerificationToken removes "verification_token" edges to VerificationToken entities.
-func (uu *UserUpdate) RemoveVerificationToken(v ...*VerificationToken) *UserUpdate {
+func (_u *UserUpdate) RemoveVerificationToken(v ...*VerificationToken) *UserUpdate {
 	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return uu.RemoveVerificationTokenIDs(ids...)
+	return _u.RemoveVerificationTokenIDs(ids...)
 }
 
 // ClearKybProfile clears the "kyb_profile" edge to the KYBProfile entity.
-func (uu *UserUpdate) ClearKybProfile() *UserUpdate {
-	uu.mutation.ClearKybProfile()
-	return uu
+func (_u *UserUpdate) ClearKybProfile() *UserUpdate {
+	_u.mutation.ClearKybProfile()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
-func (uu *UserUpdate) Save(ctx context.Context) (int, error) {
-	if err := uu.defaults(); err != nil {
+func (_u *UserUpdate) Save(ctx context.Context) (int, error) {
+	if err := _u.defaults(); err != nil {
 		return 0, err
 	}
-	return withHooks(ctx, uu.sqlSave, uu.mutation, uu.hooks)
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (uu *UserUpdate) SaveX(ctx context.Context) int {
-	affected, err := uu.Save(ctx)
+func (_u *UserUpdate) SaveX(ctx context.Context) int {
+	affected, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -285,43 +285,43 @@ func (uu *UserUpdate) SaveX(ctx context.Context) int {
 }
 
 // Exec executes the query.
-func (uu *UserUpdate) Exec(ctx context.Context) error {
-	_, err := uu.Save(ctx)
+func (_u *UserUpdate) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (uu *UserUpdate) ExecX(ctx context.Context) {
-	if err := uu.Exec(ctx); err != nil {
+func (_u *UserUpdate) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (uu *UserUpdate) defaults() error {
-	if _, ok := uu.mutation.UpdatedAt(); !ok {
+func (_u *UserUpdate) defaults() error {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		if user.UpdateDefaultUpdatedAt == nil {
 			return fmt.Errorf("ent: uninitialized user.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
 		}
 		v := user.UpdateDefaultUpdatedAt()
-		uu.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (uu *UserUpdate) check() error {
-	if v, ok := uu.mutation.FirstName(); ok {
+func (_u *UserUpdate) check() error {
+	if v, ok := _u.mutation.FirstName(); ok {
 		if err := user.FirstNameValidator(v); err != nil {
 			return &ValidationError{Name: "first_name", err: fmt.Errorf(`ent: validator failed for field "User.first_name": %w`, err)}
 		}
 	}
-	if v, ok := uu.mutation.LastName(); ok {
+	if v, ok := _u.mutation.LastName(); ok {
 		if err := user.LastNameValidator(v); err != nil {
 			return &ValidationError{Name: "last_name", err: fmt.Errorf(`ent: validator failed for field "User.last_name": %w`, err)}
 		}
 	}
-	if v, ok := uu.mutation.KybVerificationStatus(); ok {
+	if v, ok := _u.mutation.KybVerificationStatus(); ok {
 		if err := user.KybVerificationStatusValidator(v); err != nil {
 			return &ValidationError{Name: "kyb_verification_status", err: fmt.Errorf(`ent: validator failed for field "User.kyb_verification_status": %w`, err)}
 		}
@@ -329,46 +329,46 @@ func (uu *UserUpdate) check() error {
 	return nil
 }
 
-func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	if err := uu.check(); err != nil {
-		return n, err
+func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(user.Table, user.Columns, sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID))
-	if ps := uu.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := uu.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(user.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := uu.mutation.FirstName(); ok {
+	if value, ok := _u.mutation.FirstName(); ok {
 		_spec.SetField(user.FieldFirstName, field.TypeString, value)
 	}
-	if value, ok := uu.mutation.LastName(); ok {
+	if value, ok := _u.mutation.LastName(); ok {
 		_spec.SetField(user.FieldLastName, field.TypeString, value)
 	}
-	if value, ok := uu.mutation.Email(); ok {
+	if value, ok := _u.mutation.Email(); ok {
 		_spec.SetField(user.FieldEmail, field.TypeString, value)
 	}
-	if value, ok := uu.mutation.Password(); ok {
+	if value, ok := _u.mutation.Password(); ok {
 		_spec.SetField(user.FieldPassword, field.TypeString, value)
 	}
-	if value, ok := uu.mutation.Scope(); ok {
+	if value, ok := _u.mutation.Scope(); ok {
 		_spec.SetField(user.FieldScope, field.TypeString, value)
 	}
-	if value, ok := uu.mutation.IsEmailVerified(); ok {
+	if value, ok := _u.mutation.IsEmailVerified(); ok {
 		_spec.SetField(user.FieldIsEmailVerified, field.TypeBool, value)
 	}
-	if value, ok := uu.mutation.HasEarlyAccess(); ok {
+	if value, ok := _u.mutation.HasEarlyAccess(); ok {
 		_spec.SetField(user.FieldHasEarlyAccess, field.TypeBool, value)
 	}
-	if value, ok := uu.mutation.KybVerificationStatus(); ok {
+	if value, ok := _u.mutation.KybVerificationStatus(); ok {
 		_spec.SetField(user.FieldKybVerificationStatus, field.TypeEnum, value)
 	}
-	if uu.mutation.SenderProfileCleared() {
+	if _u.mutation.SenderProfileCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -381,7 +381,7 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uu.mutation.SenderProfileIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.SenderProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -397,7 +397,7 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if uu.mutation.ProviderProfileCleared() {
+	if _u.mutation.ProviderProfileCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -410,7 +410,7 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uu.mutation.ProviderProfileIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProviderProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -426,7 +426,7 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if uu.mutation.VerificationTokenCleared() {
+	if _u.mutation.VerificationTokenCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -439,7 +439,7 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uu.mutation.RemovedVerificationTokenIDs(); len(nodes) > 0 && !uu.mutation.VerificationTokenCleared() {
+	if nodes := _u.mutation.RemovedVerificationTokenIDs(); len(nodes) > 0 && !_u.mutation.VerificationTokenCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -455,7 +455,7 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uu.mutation.VerificationTokenIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.VerificationTokenIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -471,7 +471,7 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if uu.mutation.KybProfileCleared() {
+	if _u.mutation.KybProfileCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -484,7 +484,7 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uu.mutation.KybProfileIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.KybProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -500,7 +500,7 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if n, err = sqlgraph.UpdateNodes(ctx, uu.driver, _spec); err != nil {
+	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{user.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -508,8 +508,8 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
-	uu.mutation.done = true
-	return n, nil
+	_u.mutation.done = true
+	return _node, nil
 }
 
 // UserUpdateOne is the builder for updating a single User entity.
@@ -521,263 +521,263 @@ type UserUpdateOne struct {
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (uuo *UserUpdateOne) SetUpdatedAt(t time.Time) *UserUpdateOne {
-	uuo.mutation.SetUpdatedAt(t)
-	return uuo
+func (_u *UserUpdateOne) SetUpdatedAt(v time.Time) *UserUpdateOne {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetFirstName sets the "first_name" field.
-func (uuo *UserUpdateOne) SetFirstName(s string) *UserUpdateOne {
-	uuo.mutation.SetFirstName(s)
-	return uuo
+func (_u *UserUpdateOne) SetFirstName(v string) *UserUpdateOne {
+	_u.mutation.SetFirstName(v)
+	return _u
 }
 
 // SetNillableFirstName sets the "first_name" field if the given value is not nil.
-func (uuo *UserUpdateOne) SetNillableFirstName(s *string) *UserUpdateOne {
-	if s != nil {
-		uuo.SetFirstName(*s)
+func (_u *UserUpdateOne) SetNillableFirstName(v *string) *UserUpdateOne {
+	if v != nil {
+		_u.SetFirstName(*v)
 	}
-	return uuo
+	return _u
 }
 
 // SetLastName sets the "last_name" field.
-func (uuo *UserUpdateOne) SetLastName(s string) *UserUpdateOne {
-	uuo.mutation.SetLastName(s)
-	return uuo
+func (_u *UserUpdateOne) SetLastName(v string) *UserUpdateOne {
+	_u.mutation.SetLastName(v)
+	return _u
 }
 
 // SetNillableLastName sets the "last_name" field if the given value is not nil.
-func (uuo *UserUpdateOne) SetNillableLastName(s *string) *UserUpdateOne {
-	if s != nil {
-		uuo.SetLastName(*s)
+func (_u *UserUpdateOne) SetNillableLastName(v *string) *UserUpdateOne {
+	if v != nil {
+		_u.SetLastName(*v)
 	}
-	return uuo
+	return _u
 }
 
 // SetEmail sets the "email" field.
-func (uuo *UserUpdateOne) SetEmail(s string) *UserUpdateOne {
-	uuo.mutation.SetEmail(s)
-	return uuo
+func (_u *UserUpdateOne) SetEmail(v string) *UserUpdateOne {
+	_u.mutation.SetEmail(v)
+	return _u
 }
 
 // SetNillableEmail sets the "email" field if the given value is not nil.
-func (uuo *UserUpdateOne) SetNillableEmail(s *string) *UserUpdateOne {
-	if s != nil {
-		uuo.SetEmail(*s)
+func (_u *UserUpdateOne) SetNillableEmail(v *string) *UserUpdateOne {
+	if v != nil {
+		_u.SetEmail(*v)
 	}
-	return uuo
+	return _u
 }
 
 // SetPassword sets the "password" field.
-func (uuo *UserUpdateOne) SetPassword(s string) *UserUpdateOne {
-	uuo.mutation.SetPassword(s)
-	return uuo
+func (_u *UserUpdateOne) SetPassword(v string) *UserUpdateOne {
+	_u.mutation.SetPassword(v)
+	return _u
 }
 
 // SetNillablePassword sets the "password" field if the given value is not nil.
-func (uuo *UserUpdateOne) SetNillablePassword(s *string) *UserUpdateOne {
-	if s != nil {
-		uuo.SetPassword(*s)
+func (_u *UserUpdateOne) SetNillablePassword(v *string) *UserUpdateOne {
+	if v != nil {
+		_u.SetPassword(*v)
 	}
-	return uuo
+	return _u
 }
 
 // SetScope sets the "scope" field.
-func (uuo *UserUpdateOne) SetScope(s string) *UserUpdateOne {
-	uuo.mutation.SetScope(s)
-	return uuo
+func (_u *UserUpdateOne) SetScope(v string) *UserUpdateOne {
+	_u.mutation.SetScope(v)
+	return _u
 }
 
 // SetNillableScope sets the "scope" field if the given value is not nil.
-func (uuo *UserUpdateOne) SetNillableScope(s *string) *UserUpdateOne {
-	if s != nil {
-		uuo.SetScope(*s)
+func (_u *UserUpdateOne) SetNillableScope(v *string) *UserUpdateOne {
+	if v != nil {
+		_u.SetScope(*v)
 	}
-	return uuo
+	return _u
 }
 
 // SetIsEmailVerified sets the "is_email_verified" field.
-func (uuo *UserUpdateOne) SetIsEmailVerified(b bool) *UserUpdateOne {
-	uuo.mutation.SetIsEmailVerified(b)
-	return uuo
+func (_u *UserUpdateOne) SetIsEmailVerified(v bool) *UserUpdateOne {
+	_u.mutation.SetIsEmailVerified(v)
+	return _u
 }
 
 // SetNillableIsEmailVerified sets the "is_email_verified" field if the given value is not nil.
-func (uuo *UserUpdateOne) SetNillableIsEmailVerified(b *bool) *UserUpdateOne {
-	if b != nil {
-		uuo.SetIsEmailVerified(*b)
+func (_u *UserUpdateOne) SetNillableIsEmailVerified(v *bool) *UserUpdateOne {
+	if v != nil {
+		_u.SetIsEmailVerified(*v)
 	}
-	return uuo
+	return _u
 }
 
 // SetHasEarlyAccess sets the "has_early_access" field.
-func (uuo *UserUpdateOne) SetHasEarlyAccess(b bool) *UserUpdateOne {
-	uuo.mutation.SetHasEarlyAccess(b)
-	return uuo
+func (_u *UserUpdateOne) SetHasEarlyAccess(v bool) *UserUpdateOne {
+	_u.mutation.SetHasEarlyAccess(v)
+	return _u
 }
 
 // SetNillableHasEarlyAccess sets the "has_early_access" field if the given value is not nil.
-func (uuo *UserUpdateOne) SetNillableHasEarlyAccess(b *bool) *UserUpdateOne {
-	if b != nil {
-		uuo.SetHasEarlyAccess(*b)
+func (_u *UserUpdateOne) SetNillableHasEarlyAccess(v *bool) *UserUpdateOne {
+	if v != nil {
+		_u.SetHasEarlyAccess(*v)
 	}
-	return uuo
+	return _u
 }
 
 // SetKybVerificationStatus sets the "kyb_verification_status" field.
-func (uuo *UserUpdateOne) SetKybVerificationStatus(uvs user.KybVerificationStatus) *UserUpdateOne {
-	uuo.mutation.SetKybVerificationStatus(uvs)
-	return uuo
+func (_u *UserUpdateOne) SetKybVerificationStatus(v user.KybVerificationStatus) *UserUpdateOne {
+	_u.mutation.SetKybVerificationStatus(v)
+	return _u
 }
 
 // SetNillableKybVerificationStatus sets the "kyb_verification_status" field if the given value is not nil.
-func (uuo *UserUpdateOne) SetNillableKybVerificationStatus(uvs *user.KybVerificationStatus) *UserUpdateOne {
-	if uvs != nil {
-		uuo.SetKybVerificationStatus(*uvs)
+func (_u *UserUpdateOne) SetNillableKybVerificationStatus(v *user.KybVerificationStatus) *UserUpdateOne {
+	if v != nil {
+		_u.SetKybVerificationStatus(*v)
 	}
-	return uuo
+	return _u
 }
 
 // SetSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by ID.
-func (uuo *UserUpdateOne) SetSenderProfileID(id uuid.UUID) *UserUpdateOne {
-	uuo.mutation.SetSenderProfileID(id)
-	return uuo
+func (_u *UserUpdateOne) SetSenderProfileID(id uuid.UUID) *UserUpdateOne {
+	_u.mutation.SetSenderProfileID(id)
+	return _u
 }
 
 // SetNillableSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by ID if the given value is not nil.
-func (uuo *UserUpdateOne) SetNillableSenderProfileID(id *uuid.UUID) *UserUpdateOne {
+func (_u *UserUpdateOne) SetNillableSenderProfileID(id *uuid.UUID) *UserUpdateOne {
 	if id != nil {
-		uuo = uuo.SetSenderProfileID(*id)
+		_u = _u.SetSenderProfileID(*id)
 	}
-	return uuo
+	return _u
 }
 
 // SetSenderProfile sets the "sender_profile" edge to the SenderProfile entity.
-func (uuo *UserUpdateOne) SetSenderProfile(s *SenderProfile) *UserUpdateOne {
-	return uuo.SetSenderProfileID(s.ID)
+func (_u *UserUpdateOne) SetSenderProfile(v *SenderProfile) *UserUpdateOne {
+	return _u.SetSenderProfileID(v.ID)
 }
 
 // SetProviderProfileID sets the "provider_profile" edge to the ProviderProfile entity by ID.
-func (uuo *UserUpdateOne) SetProviderProfileID(id string) *UserUpdateOne {
-	uuo.mutation.SetProviderProfileID(id)
-	return uuo
+func (_u *UserUpdateOne) SetProviderProfileID(id string) *UserUpdateOne {
+	_u.mutation.SetProviderProfileID(id)
+	return _u
 }
 
 // SetNillableProviderProfileID sets the "provider_profile" edge to the ProviderProfile entity by ID if the given value is not nil.
-func (uuo *UserUpdateOne) SetNillableProviderProfileID(id *string) *UserUpdateOne {
+func (_u *UserUpdateOne) SetNillableProviderProfileID(id *string) *UserUpdateOne {
 	if id != nil {
-		uuo = uuo.SetProviderProfileID(*id)
+		_u = _u.SetProviderProfileID(*id)
 	}
-	return uuo
+	return _u
 }
 
 // SetProviderProfile sets the "provider_profile" edge to the ProviderProfile entity.
-func (uuo *UserUpdateOne) SetProviderProfile(p *ProviderProfile) *UserUpdateOne {
-	return uuo.SetProviderProfileID(p.ID)
+func (_u *UserUpdateOne) SetProviderProfile(v *ProviderProfile) *UserUpdateOne {
+	return _u.SetProviderProfileID(v.ID)
 }
 
 // AddVerificationTokenIDs adds the "verification_token" edge to the VerificationToken entity by IDs.
-func (uuo *UserUpdateOne) AddVerificationTokenIDs(ids ...uuid.UUID) *UserUpdateOne {
-	uuo.mutation.AddVerificationTokenIDs(ids...)
-	return uuo
+func (_u *UserUpdateOne) AddVerificationTokenIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.AddVerificationTokenIDs(ids...)
+	return _u
 }
 
 // AddVerificationToken adds the "verification_token" edges to the VerificationToken entity.
-func (uuo *UserUpdateOne) AddVerificationToken(v ...*VerificationToken) *UserUpdateOne {
+func (_u *UserUpdateOne) AddVerificationToken(v ...*VerificationToken) *UserUpdateOne {
 	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return uuo.AddVerificationTokenIDs(ids...)
+	return _u.AddVerificationTokenIDs(ids...)
 }
 
 // SetKybProfileID sets the "kyb_profile" edge to the KYBProfile entity by ID.
-func (uuo *UserUpdateOne) SetKybProfileID(id uuid.UUID) *UserUpdateOne {
-	uuo.mutation.SetKybProfileID(id)
-	return uuo
+func (_u *UserUpdateOne) SetKybProfileID(id uuid.UUID) *UserUpdateOne {
+	_u.mutation.SetKybProfileID(id)
+	return _u
 }
 
 // SetNillableKybProfileID sets the "kyb_profile" edge to the KYBProfile entity by ID if the given value is not nil.
-func (uuo *UserUpdateOne) SetNillableKybProfileID(id *uuid.UUID) *UserUpdateOne {
+func (_u *UserUpdateOne) SetNillableKybProfileID(id *uuid.UUID) *UserUpdateOne {
 	if id != nil {
-		uuo = uuo.SetKybProfileID(*id)
+		_u = _u.SetKybProfileID(*id)
 	}
-	return uuo
+	return _u
 }
 
 // SetKybProfile sets the "kyb_profile" edge to the KYBProfile entity.
-func (uuo *UserUpdateOne) SetKybProfile(k *KYBProfile) *UserUpdateOne {
-	return uuo.SetKybProfileID(k.ID)
+func (_u *UserUpdateOne) SetKybProfile(v *KYBProfile) *UserUpdateOne {
+	return _u.SetKybProfileID(v.ID)
 }
 
 // Mutation returns the UserMutation object of the builder.
-func (uuo *UserUpdateOne) Mutation() *UserMutation {
-	return uuo.mutation
+func (_u *UserUpdateOne) Mutation() *UserMutation {
+	return _u.mutation
 }
 
 // ClearSenderProfile clears the "sender_profile" edge to the SenderProfile entity.
-func (uuo *UserUpdateOne) ClearSenderProfile() *UserUpdateOne {
-	uuo.mutation.ClearSenderProfile()
-	return uuo
+func (_u *UserUpdateOne) ClearSenderProfile() *UserUpdateOne {
+	_u.mutation.ClearSenderProfile()
+	return _u
 }
 
 // ClearProviderProfile clears the "provider_profile" edge to the ProviderProfile entity.
-func (uuo *UserUpdateOne) ClearProviderProfile() *UserUpdateOne {
-	uuo.mutation.ClearProviderProfile()
-	return uuo
+func (_u *UserUpdateOne) ClearProviderProfile() *UserUpdateOne {
+	_u.mutation.ClearProviderProfile()
+	return _u
 }
 
 // ClearVerificationToken clears all "verification_token" edges to the VerificationToken entity.
-func (uuo *UserUpdateOne) ClearVerificationToken() *UserUpdateOne {
-	uuo.mutation.ClearVerificationToken()
-	return uuo
+func (_u *UserUpdateOne) ClearVerificationToken() *UserUpdateOne {
+	_u.mutation.ClearVerificationToken()
+	return _u
 }
 
 // RemoveVerificationTokenIDs removes the "verification_token" edge to VerificationToken entities by IDs.
-func (uuo *UserUpdateOne) RemoveVerificationTokenIDs(ids ...uuid.UUID) *UserUpdateOne {
-	uuo.mutation.RemoveVerificationTokenIDs(ids...)
-	return uuo
+func (_u *UserUpdateOne) RemoveVerificationTokenIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.RemoveVerificationTokenIDs(ids...)
+	return _u
 }
 
 // RemoveVerificationToken removes "verification_token" edges to VerificationToken entities.
-func (uuo *UserUpdateOne) RemoveVerificationToken(v ...*VerificationToken) *UserUpdateOne {
+func (_u *UserUpdateOne) RemoveVerificationToken(v ...*VerificationToken) *UserUpdateOne {
 	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return uuo.RemoveVerificationTokenIDs(ids...)
+	return _u.RemoveVerificationTokenIDs(ids...)
 }
 
 // ClearKybProfile clears the "kyb_profile" edge to the KYBProfile entity.
-func (uuo *UserUpdateOne) ClearKybProfile() *UserUpdateOne {
-	uuo.mutation.ClearKybProfile()
-	return uuo
+func (_u *UserUpdateOne) ClearKybProfile() *UserUpdateOne {
+	_u.mutation.ClearKybProfile()
+	return _u
 }
 
 // Where appends a list predicates to the UserUpdate builder.
-func (uuo *UserUpdateOne) Where(ps ...predicate.User) *UserUpdateOne {
-	uuo.mutation.Where(ps...)
-	return uuo
+func (_u *UserUpdateOne) Where(ps ...predicate.User) *UserUpdateOne {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
-func (uuo *UserUpdateOne) Select(field string, fields ...string) *UserUpdateOne {
-	uuo.fields = append([]string{field}, fields...)
-	return uuo
+func (_u *UserUpdateOne) Select(field string, fields ...string) *UserUpdateOne {
+	_u.fields = append([]string{field}, fields...)
+	return _u
 }
 
 // Save executes the query and returns the updated User entity.
-func (uuo *UserUpdateOne) Save(ctx context.Context) (*User, error) {
-	if err := uuo.defaults(); err != nil {
+func (_u *UserUpdateOne) Save(ctx context.Context) (*User, error) {
+	if err := _u.defaults(); err != nil {
 		return nil, err
 	}
-	return withHooks(ctx, uuo.sqlSave, uuo.mutation, uuo.hooks)
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (uuo *UserUpdateOne) SaveX(ctx context.Context) *User {
-	node, err := uuo.Save(ctx)
+func (_u *UserUpdateOne) SaveX(ctx context.Context) *User {
+	node, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -785,43 +785,43 @@ func (uuo *UserUpdateOne) SaveX(ctx context.Context) *User {
 }
 
 // Exec executes the query on the entity.
-func (uuo *UserUpdateOne) Exec(ctx context.Context) error {
-	_, err := uuo.Save(ctx)
+func (_u *UserUpdateOne) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (uuo *UserUpdateOne) ExecX(ctx context.Context) {
-	if err := uuo.Exec(ctx); err != nil {
+func (_u *UserUpdateOne) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (uuo *UserUpdateOne) defaults() error {
-	if _, ok := uuo.mutation.UpdatedAt(); !ok {
+func (_u *UserUpdateOne) defaults() error {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		if user.UpdateDefaultUpdatedAt == nil {
 			return fmt.Errorf("ent: uninitialized user.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
 		}
 		v := user.UpdateDefaultUpdatedAt()
-		uuo.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (uuo *UserUpdateOne) check() error {
-	if v, ok := uuo.mutation.FirstName(); ok {
+func (_u *UserUpdateOne) check() error {
+	if v, ok := _u.mutation.FirstName(); ok {
 		if err := user.FirstNameValidator(v); err != nil {
 			return &ValidationError{Name: "first_name", err: fmt.Errorf(`ent: validator failed for field "User.first_name": %w`, err)}
 		}
 	}
-	if v, ok := uuo.mutation.LastName(); ok {
+	if v, ok := _u.mutation.LastName(); ok {
 		if err := user.LastNameValidator(v); err != nil {
 			return &ValidationError{Name: "last_name", err: fmt.Errorf(`ent: validator failed for field "User.last_name": %w`, err)}
 		}
 	}
-	if v, ok := uuo.mutation.KybVerificationStatus(); ok {
+	if v, ok := _u.mutation.KybVerificationStatus(); ok {
 		if err := user.KybVerificationStatusValidator(v); err != nil {
 			return &ValidationError{Name: "kyb_verification_status", err: fmt.Errorf(`ent: validator failed for field "User.kyb_verification_status": %w`, err)}
 		}
@@ -829,17 +829,17 @@ func (uuo *UserUpdateOne) check() error {
 	return nil
 }
 
-func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
-	if err := uuo.check(); err != nil {
+func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
+	if err := _u.check(); err != nil {
 		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(user.Table, user.Columns, sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID))
-	id, ok := uuo.mutation.ID()
+	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "User.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
-	if fields := uuo.fields; len(fields) > 0 {
+	if fields := _u.fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, user.FieldID)
 		for _, f := range fields {
@@ -851,41 +851,41 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 			}
 		}
 	}
-	if ps := uuo.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := uuo.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(user.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := uuo.mutation.FirstName(); ok {
+	if value, ok := _u.mutation.FirstName(); ok {
 		_spec.SetField(user.FieldFirstName, field.TypeString, value)
 	}
-	if value, ok := uuo.mutation.LastName(); ok {
+	if value, ok := _u.mutation.LastName(); ok {
 		_spec.SetField(user.FieldLastName, field.TypeString, value)
 	}
-	if value, ok := uuo.mutation.Email(); ok {
+	if value, ok := _u.mutation.Email(); ok {
 		_spec.SetField(user.FieldEmail, field.TypeString, value)
 	}
-	if value, ok := uuo.mutation.Password(); ok {
+	if value, ok := _u.mutation.Password(); ok {
 		_spec.SetField(user.FieldPassword, field.TypeString, value)
 	}
-	if value, ok := uuo.mutation.Scope(); ok {
+	if value, ok := _u.mutation.Scope(); ok {
 		_spec.SetField(user.FieldScope, field.TypeString, value)
 	}
-	if value, ok := uuo.mutation.IsEmailVerified(); ok {
+	if value, ok := _u.mutation.IsEmailVerified(); ok {
 		_spec.SetField(user.FieldIsEmailVerified, field.TypeBool, value)
 	}
-	if value, ok := uuo.mutation.HasEarlyAccess(); ok {
+	if value, ok := _u.mutation.HasEarlyAccess(); ok {
 		_spec.SetField(user.FieldHasEarlyAccess, field.TypeBool, value)
 	}
-	if value, ok := uuo.mutation.KybVerificationStatus(); ok {
+	if value, ok := _u.mutation.KybVerificationStatus(); ok {
 		_spec.SetField(user.FieldKybVerificationStatus, field.TypeEnum, value)
 	}
-	if uuo.mutation.SenderProfileCleared() {
+	if _u.mutation.SenderProfileCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -898,7 +898,7 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uuo.mutation.SenderProfileIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.SenderProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -914,7 +914,7 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if uuo.mutation.ProviderProfileCleared() {
+	if _u.mutation.ProviderProfileCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -927,7 +927,7 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uuo.mutation.ProviderProfileIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProviderProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -943,7 +943,7 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if uuo.mutation.VerificationTokenCleared() {
+	if _u.mutation.VerificationTokenCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -956,7 +956,7 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uuo.mutation.RemovedVerificationTokenIDs(); len(nodes) > 0 && !uuo.mutation.VerificationTokenCleared() {
+	if nodes := _u.mutation.RemovedVerificationTokenIDs(); len(nodes) > 0 && !_u.mutation.VerificationTokenCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -972,7 +972,7 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uuo.mutation.VerificationTokenIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.VerificationTokenIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -988,7 +988,7 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if uuo.mutation.KybProfileCleared() {
+	if _u.mutation.KybProfileCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -1001,7 +1001,7 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uuo.mutation.KybProfileIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.KybProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -1017,10 +1017,10 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	_node = &User{config: uuo.config}
+	_node = &User{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues
-	if err = sqlgraph.UpdateNode(ctx, uuo.driver, _spec); err != nil {
+	if err = sqlgraph.UpdateNode(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{user.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -1028,6 +1028,6 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 		}
 		return nil, err
 	}
-	uuo.mutation.done = true
+	_u.mutation.done = true
 	return _node, nil
 }

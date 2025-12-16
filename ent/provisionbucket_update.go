@@ -27,155 +27,155 @@ type ProvisionBucketUpdate struct {
 }
 
 // Where appends a list predicates to the ProvisionBucketUpdate builder.
-func (pbu *ProvisionBucketUpdate) Where(ps ...predicate.ProvisionBucket) *ProvisionBucketUpdate {
-	pbu.mutation.Where(ps...)
-	return pbu
+func (_u *ProvisionBucketUpdate) Where(ps ...predicate.ProvisionBucket) *ProvisionBucketUpdate {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // SetMinAmount sets the "min_amount" field.
-func (pbu *ProvisionBucketUpdate) SetMinAmount(d decimal.Decimal) *ProvisionBucketUpdate {
-	pbu.mutation.ResetMinAmount()
-	pbu.mutation.SetMinAmount(d)
-	return pbu
+func (_u *ProvisionBucketUpdate) SetMinAmount(v decimal.Decimal) *ProvisionBucketUpdate {
+	_u.mutation.ResetMinAmount()
+	_u.mutation.SetMinAmount(v)
+	return _u
 }
 
 // SetNillableMinAmount sets the "min_amount" field if the given value is not nil.
-func (pbu *ProvisionBucketUpdate) SetNillableMinAmount(d *decimal.Decimal) *ProvisionBucketUpdate {
-	if d != nil {
-		pbu.SetMinAmount(*d)
+func (_u *ProvisionBucketUpdate) SetNillableMinAmount(v *decimal.Decimal) *ProvisionBucketUpdate {
+	if v != nil {
+		_u.SetMinAmount(*v)
 	}
-	return pbu
+	return _u
 }
 
-// AddMinAmount adds d to the "min_amount" field.
-func (pbu *ProvisionBucketUpdate) AddMinAmount(d decimal.Decimal) *ProvisionBucketUpdate {
-	pbu.mutation.AddMinAmount(d)
-	return pbu
+// AddMinAmount adds value to the "min_amount" field.
+func (_u *ProvisionBucketUpdate) AddMinAmount(v decimal.Decimal) *ProvisionBucketUpdate {
+	_u.mutation.AddMinAmount(v)
+	return _u
 }
 
 // SetMaxAmount sets the "max_amount" field.
-func (pbu *ProvisionBucketUpdate) SetMaxAmount(d decimal.Decimal) *ProvisionBucketUpdate {
-	pbu.mutation.ResetMaxAmount()
-	pbu.mutation.SetMaxAmount(d)
-	return pbu
+func (_u *ProvisionBucketUpdate) SetMaxAmount(v decimal.Decimal) *ProvisionBucketUpdate {
+	_u.mutation.ResetMaxAmount()
+	_u.mutation.SetMaxAmount(v)
+	return _u
 }
 
 // SetNillableMaxAmount sets the "max_amount" field if the given value is not nil.
-func (pbu *ProvisionBucketUpdate) SetNillableMaxAmount(d *decimal.Decimal) *ProvisionBucketUpdate {
-	if d != nil {
-		pbu.SetMaxAmount(*d)
+func (_u *ProvisionBucketUpdate) SetNillableMaxAmount(v *decimal.Decimal) *ProvisionBucketUpdate {
+	if v != nil {
+		_u.SetMaxAmount(*v)
 	}
-	return pbu
+	return _u
 }
 
-// AddMaxAmount adds d to the "max_amount" field.
-func (pbu *ProvisionBucketUpdate) AddMaxAmount(d decimal.Decimal) *ProvisionBucketUpdate {
-	pbu.mutation.AddMaxAmount(d)
-	return pbu
+// AddMaxAmount adds value to the "max_amount" field.
+func (_u *ProvisionBucketUpdate) AddMaxAmount(v decimal.Decimal) *ProvisionBucketUpdate {
+	_u.mutation.AddMaxAmount(v)
+	return _u
 }
 
 // SetCurrencyID sets the "currency" edge to the FiatCurrency entity by ID.
-func (pbu *ProvisionBucketUpdate) SetCurrencyID(id uuid.UUID) *ProvisionBucketUpdate {
-	pbu.mutation.SetCurrencyID(id)
-	return pbu
+func (_u *ProvisionBucketUpdate) SetCurrencyID(id uuid.UUID) *ProvisionBucketUpdate {
+	_u.mutation.SetCurrencyID(id)
+	return _u
 }
 
 // SetCurrency sets the "currency" edge to the FiatCurrency entity.
-func (pbu *ProvisionBucketUpdate) SetCurrency(f *FiatCurrency) *ProvisionBucketUpdate {
-	return pbu.SetCurrencyID(f.ID)
+func (_u *ProvisionBucketUpdate) SetCurrency(v *FiatCurrency) *ProvisionBucketUpdate {
+	return _u.SetCurrencyID(v.ID)
 }
 
 // AddLockPaymentOrderIDs adds the "lock_payment_orders" edge to the LockPaymentOrder entity by IDs.
-func (pbu *ProvisionBucketUpdate) AddLockPaymentOrderIDs(ids ...uuid.UUID) *ProvisionBucketUpdate {
-	pbu.mutation.AddLockPaymentOrderIDs(ids...)
-	return pbu
+func (_u *ProvisionBucketUpdate) AddLockPaymentOrderIDs(ids ...uuid.UUID) *ProvisionBucketUpdate {
+	_u.mutation.AddLockPaymentOrderIDs(ids...)
+	return _u
 }
 
 // AddLockPaymentOrders adds the "lock_payment_orders" edges to the LockPaymentOrder entity.
-func (pbu *ProvisionBucketUpdate) AddLockPaymentOrders(l ...*LockPaymentOrder) *ProvisionBucketUpdate {
-	ids := make([]uuid.UUID, len(l))
-	for i := range l {
-		ids[i] = l[i].ID
+func (_u *ProvisionBucketUpdate) AddLockPaymentOrders(v ...*LockPaymentOrder) *ProvisionBucketUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return pbu.AddLockPaymentOrderIDs(ids...)
+	return _u.AddLockPaymentOrderIDs(ids...)
 }
 
 // AddProviderProfileIDs adds the "provider_profiles" edge to the ProviderProfile entity by IDs.
-func (pbu *ProvisionBucketUpdate) AddProviderProfileIDs(ids ...string) *ProvisionBucketUpdate {
-	pbu.mutation.AddProviderProfileIDs(ids...)
-	return pbu
+func (_u *ProvisionBucketUpdate) AddProviderProfileIDs(ids ...string) *ProvisionBucketUpdate {
+	_u.mutation.AddProviderProfileIDs(ids...)
+	return _u
 }
 
 // AddProviderProfiles adds the "provider_profiles" edges to the ProviderProfile entity.
-func (pbu *ProvisionBucketUpdate) AddProviderProfiles(p ...*ProviderProfile) *ProvisionBucketUpdate {
-	ids := make([]string, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *ProvisionBucketUpdate) AddProviderProfiles(v ...*ProviderProfile) *ProvisionBucketUpdate {
+	ids := make([]string, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return pbu.AddProviderProfileIDs(ids...)
+	return _u.AddProviderProfileIDs(ids...)
 }
 
 // Mutation returns the ProvisionBucketMutation object of the builder.
-func (pbu *ProvisionBucketUpdate) Mutation() *ProvisionBucketMutation {
-	return pbu.mutation
+func (_u *ProvisionBucketUpdate) Mutation() *ProvisionBucketMutation {
+	return _u.mutation
 }
 
 // ClearCurrency clears the "currency" edge to the FiatCurrency entity.
-func (pbu *ProvisionBucketUpdate) ClearCurrency() *ProvisionBucketUpdate {
-	pbu.mutation.ClearCurrency()
-	return pbu
+func (_u *ProvisionBucketUpdate) ClearCurrency() *ProvisionBucketUpdate {
+	_u.mutation.ClearCurrency()
+	return _u
 }
 
 // ClearLockPaymentOrders clears all "lock_payment_orders" edges to the LockPaymentOrder entity.
-func (pbu *ProvisionBucketUpdate) ClearLockPaymentOrders() *ProvisionBucketUpdate {
-	pbu.mutation.ClearLockPaymentOrders()
-	return pbu
+func (_u *ProvisionBucketUpdate) ClearLockPaymentOrders() *ProvisionBucketUpdate {
+	_u.mutation.ClearLockPaymentOrders()
+	return _u
 }
 
 // RemoveLockPaymentOrderIDs removes the "lock_payment_orders" edge to LockPaymentOrder entities by IDs.
-func (pbu *ProvisionBucketUpdate) RemoveLockPaymentOrderIDs(ids ...uuid.UUID) *ProvisionBucketUpdate {
-	pbu.mutation.RemoveLockPaymentOrderIDs(ids...)
-	return pbu
+func (_u *ProvisionBucketUpdate) RemoveLockPaymentOrderIDs(ids ...uuid.UUID) *ProvisionBucketUpdate {
+	_u.mutation.RemoveLockPaymentOrderIDs(ids...)
+	return _u
 }
 
 // RemoveLockPaymentOrders removes "lock_payment_orders" edges to LockPaymentOrder entities.
-func (pbu *ProvisionBucketUpdate) RemoveLockPaymentOrders(l ...*LockPaymentOrder) *ProvisionBucketUpdate {
-	ids := make([]uuid.UUID, len(l))
-	for i := range l {
-		ids[i] = l[i].ID
+func (_u *ProvisionBucketUpdate) RemoveLockPaymentOrders(v ...*LockPaymentOrder) *ProvisionBucketUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return pbu.RemoveLockPaymentOrderIDs(ids...)
+	return _u.RemoveLockPaymentOrderIDs(ids...)
 }
 
 // ClearProviderProfiles clears all "provider_profiles" edges to the ProviderProfile entity.
-func (pbu *ProvisionBucketUpdate) ClearProviderProfiles() *ProvisionBucketUpdate {
-	pbu.mutation.ClearProviderProfiles()
-	return pbu
+func (_u *ProvisionBucketUpdate) ClearProviderProfiles() *ProvisionBucketUpdate {
+	_u.mutation.ClearProviderProfiles()
+	return _u
 }
 
 // RemoveProviderProfileIDs removes the "provider_profiles" edge to ProviderProfile entities by IDs.
-func (pbu *ProvisionBucketUpdate) RemoveProviderProfileIDs(ids ...string) *ProvisionBucketUpdate {
-	pbu.mutation.RemoveProviderProfileIDs(ids...)
-	return pbu
+func (_u *ProvisionBucketUpdate) RemoveProviderProfileIDs(ids ...string) *ProvisionBucketUpdate {
+	_u.mutation.RemoveProviderProfileIDs(ids...)
+	return _u
 }
 
 // RemoveProviderProfiles removes "provider_profiles" edges to ProviderProfile entities.
-func (pbu *ProvisionBucketUpdate) RemoveProviderProfiles(p ...*ProviderProfile) *ProvisionBucketUpdate {
-	ids := make([]string, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *ProvisionBucketUpdate) RemoveProviderProfiles(v ...*ProviderProfile) *ProvisionBucketUpdate {
+	ids := make([]string, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return pbu.RemoveProviderProfileIDs(ids...)
+	return _u.RemoveProviderProfileIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
-func (pbu *ProvisionBucketUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks(ctx, pbu.sqlSave, pbu.mutation, pbu.hooks)
+func (_u *ProvisionBucketUpdate) Save(ctx context.Context) (int, error) {
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (pbu *ProvisionBucketUpdate) SaveX(ctx context.Context) int {
-	affected, err := pbu.Save(ctx)
+func (_u *ProvisionBucketUpdate) SaveX(ctx context.Context) int {
+	affected, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -183,51 +183,51 @@ func (pbu *ProvisionBucketUpdate) SaveX(ctx context.Context) int {
 }
 
 // Exec executes the query.
-func (pbu *ProvisionBucketUpdate) Exec(ctx context.Context) error {
-	_, err := pbu.Save(ctx)
+func (_u *ProvisionBucketUpdate) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pbu *ProvisionBucketUpdate) ExecX(ctx context.Context) {
-	if err := pbu.Exec(ctx); err != nil {
+func (_u *ProvisionBucketUpdate) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (pbu *ProvisionBucketUpdate) check() error {
-	if pbu.mutation.CurrencyCleared() && len(pbu.mutation.CurrencyIDs()) > 0 {
+func (_u *ProvisionBucketUpdate) check() error {
+	if _u.mutation.CurrencyCleared() && len(_u.mutation.CurrencyIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ProvisionBucket.currency"`)
 	}
 	return nil
 }
 
-func (pbu *ProvisionBucketUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	if err := pbu.check(); err != nil {
-		return n, err
+func (_u *ProvisionBucketUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(provisionbucket.Table, provisionbucket.Columns, sqlgraph.NewFieldSpec(provisionbucket.FieldID, field.TypeInt))
-	if ps := pbu.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := pbu.mutation.MinAmount(); ok {
+	if value, ok := _u.mutation.MinAmount(); ok {
 		_spec.SetField(provisionbucket.FieldMinAmount, field.TypeFloat64, value)
 	}
-	if value, ok := pbu.mutation.AddedMinAmount(); ok {
+	if value, ok := _u.mutation.AddedMinAmount(); ok {
 		_spec.AddField(provisionbucket.FieldMinAmount, field.TypeFloat64, value)
 	}
-	if value, ok := pbu.mutation.MaxAmount(); ok {
+	if value, ok := _u.mutation.MaxAmount(); ok {
 		_spec.SetField(provisionbucket.FieldMaxAmount, field.TypeFloat64, value)
 	}
-	if value, ok := pbu.mutation.AddedMaxAmount(); ok {
+	if value, ok := _u.mutation.AddedMaxAmount(); ok {
 		_spec.AddField(provisionbucket.FieldMaxAmount, field.TypeFloat64, value)
 	}
-	if pbu.mutation.CurrencyCleared() {
+	if _u.mutation.CurrencyCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -240,7 +240,7 @@ func (pbu *ProvisionBucketUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pbu.mutation.CurrencyIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.CurrencyIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -256,7 +256,7 @@ func (pbu *ProvisionBucketUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pbu.mutation.LockPaymentOrdersCleared() {
+	if _u.mutation.LockPaymentOrdersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -269,7 +269,7 @@ func (pbu *ProvisionBucketUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pbu.mutation.RemovedLockPaymentOrdersIDs(); len(nodes) > 0 && !pbu.mutation.LockPaymentOrdersCleared() {
+	if nodes := _u.mutation.RemovedLockPaymentOrdersIDs(); len(nodes) > 0 && !_u.mutation.LockPaymentOrdersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -285,7 +285,7 @@ func (pbu *ProvisionBucketUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pbu.mutation.LockPaymentOrdersIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.LockPaymentOrdersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -301,7 +301,7 @@ func (pbu *ProvisionBucketUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pbu.mutation.ProviderProfilesCleared() {
+	if _u.mutation.ProviderProfilesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
@@ -314,7 +314,7 @@ func (pbu *ProvisionBucketUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pbu.mutation.RemovedProviderProfilesIDs(); len(nodes) > 0 && !pbu.mutation.ProviderProfilesCleared() {
+	if nodes := _u.mutation.RemovedProviderProfilesIDs(); len(nodes) > 0 && !_u.mutation.ProviderProfilesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
@@ -330,7 +330,7 @@ func (pbu *ProvisionBucketUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pbu.mutation.ProviderProfilesIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProviderProfilesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
@@ -346,7 +346,7 @@ func (pbu *ProvisionBucketUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if n, err = sqlgraph.UpdateNodes(ctx, pbu.driver, _spec); err != nil {
+	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{provisionbucket.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -354,8 +354,8 @@ func (pbu *ProvisionBucketUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		return 0, err
 	}
-	pbu.mutation.done = true
-	return n, nil
+	_u.mutation.done = true
+	return _node, nil
 }
 
 // ProvisionBucketUpdateOne is the builder for updating a single ProvisionBucket entity.
@@ -367,162 +367,162 @@ type ProvisionBucketUpdateOne struct {
 }
 
 // SetMinAmount sets the "min_amount" field.
-func (pbuo *ProvisionBucketUpdateOne) SetMinAmount(d decimal.Decimal) *ProvisionBucketUpdateOne {
-	pbuo.mutation.ResetMinAmount()
-	pbuo.mutation.SetMinAmount(d)
-	return pbuo
+func (_u *ProvisionBucketUpdateOne) SetMinAmount(v decimal.Decimal) *ProvisionBucketUpdateOne {
+	_u.mutation.ResetMinAmount()
+	_u.mutation.SetMinAmount(v)
+	return _u
 }
 
 // SetNillableMinAmount sets the "min_amount" field if the given value is not nil.
-func (pbuo *ProvisionBucketUpdateOne) SetNillableMinAmount(d *decimal.Decimal) *ProvisionBucketUpdateOne {
-	if d != nil {
-		pbuo.SetMinAmount(*d)
+func (_u *ProvisionBucketUpdateOne) SetNillableMinAmount(v *decimal.Decimal) *ProvisionBucketUpdateOne {
+	if v != nil {
+		_u.SetMinAmount(*v)
 	}
-	return pbuo
+	return _u
 }
 
-// AddMinAmount adds d to the "min_amount" field.
-func (pbuo *ProvisionBucketUpdateOne) AddMinAmount(d decimal.Decimal) *ProvisionBucketUpdateOne {
-	pbuo.mutation.AddMinAmount(d)
-	return pbuo
+// AddMinAmount adds value to the "min_amount" field.
+func (_u *ProvisionBucketUpdateOne) AddMinAmount(v decimal.Decimal) *ProvisionBucketUpdateOne {
+	_u.mutation.AddMinAmount(v)
+	return _u
 }
 
 // SetMaxAmount sets the "max_amount" field.
-func (pbuo *ProvisionBucketUpdateOne) SetMaxAmount(d decimal.Decimal) *ProvisionBucketUpdateOne {
-	pbuo.mutation.ResetMaxAmount()
-	pbuo.mutation.SetMaxAmount(d)
-	return pbuo
+func (_u *ProvisionBucketUpdateOne) SetMaxAmount(v decimal.Decimal) *ProvisionBucketUpdateOne {
+	_u.mutation.ResetMaxAmount()
+	_u.mutation.SetMaxAmount(v)
+	return _u
 }
 
 // SetNillableMaxAmount sets the "max_amount" field if the given value is not nil.
-func (pbuo *ProvisionBucketUpdateOne) SetNillableMaxAmount(d *decimal.Decimal) *ProvisionBucketUpdateOne {
-	if d != nil {
-		pbuo.SetMaxAmount(*d)
+func (_u *ProvisionBucketUpdateOne) SetNillableMaxAmount(v *decimal.Decimal) *ProvisionBucketUpdateOne {
+	if v != nil {
+		_u.SetMaxAmount(*v)
 	}
-	return pbuo
+	return _u
 }
 
-// AddMaxAmount adds d to the "max_amount" field.
-func (pbuo *ProvisionBucketUpdateOne) AddMaxAmount(d decimal.Decimal) *ProvisionBucketUpdateOne {
-	pbuo.mutation.AddMaxAmount(d)
-	return pbuo
+// AddMaxAmount adds value to the "max_amount" field.
+func (_u *ProvisionBucketUpdateOne) AddMaxAmount(v decimal.Decimal) *ProvisionBucketUpdateOne {
+	_u.mutation.AddMaxAmount(v)
+	return _u
 }
 
 // SetCurrencyID sets the "currency" edge to the FiatCurrency entity by ID.
-func (pbuo *ProvisionBucketUpdateOne) SetCurrencyID(id uuid.UUID) *ProvisionBucketUpdateOne {
-	pbuo.mutation.SetCurrencyID(id)
-	return pbuo
+func (_u *ProvisionBucketUpdateOne) SetCurrencyID(id uuid.UUID) *ProvisionBucketUpdateOne {
+	_u.mutation.SetCurrencyID(id)
+	return _u
 }
 
 // SetCurrency sets the "currency" edge to the FiatCurrency entity.
-func (pbuo *ProvisionBucketUpdateOne) SetCurrency(f *FiatCurrency) *ProvisionBucketUpdateOne {
-	return pbuo.SetCurrencyID(f.ID)
+func (_u *ProvisionBucketUpdateOne) SetCurrency(v *FiatCurrency) *ProvisionBucketUpdateOne {
+	return _u.SetCurrencyID(v.ID)
 }
 
 // AddLockPaymentOrderIDs adds the "lock_payment_orders" edge to the LockPaymentOrder entity by IDs.
-func (pbuo *ProvisionBucketUpdateOne) AddLockPaymentOrderIDs(ids ...uuid.UUID) *ProvisionBucketUpdateOne {
-	pbuo.mutation.AddLockPaymentOrderIDs(ids...)
-	return pbuo
+func (_u *ProvisionBucketUpdateOne) AddLockPaymentOrderIDs(ids ...uuid.UUID) *ProvisionBucketUpdateOne {
+	_u.mutation.AddLockPaymentOrderIDs(ids...)
+	return _u
 }
 
 // AddLockPaymentOrders adds the "lock_payment_orders" edges to the LockPaymentOrder entity.
-func (pbuo *ProvisionBucketUpdateOne) AddLockPaymentOrders(l ...*LockPaymentOrder) *ProvisionBucketUpdateOne {
-	ids := make([]uuid.UUID, len(l))
-	for i := range l {
-		ids[i] = l[i].ID
+func (_u *ProvisionBucketUpdateOne) AddLockPaymentOrders(v ...*LockPaymentOrder) *ProvisionBucketUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return pbuo.AddLockPaymentOrderIDs(ids...)
+	return _u.AddLockPaymentOrderIDs(ids...)
 }
 
 // AddProviderProfileIDs adds the "provider_profiles" edge to the ProviderProfile entity by IDs.
-func (pbuo *ProvisionBucketUpdateOne) AddProviderProfileIDs(ids ...string) *ProvisionBucketUpdateOne {
-	pbuo.mutation.AddProviderProfileIDs(ids...)
-	return pbuo
+func (_u *ProvisionBucketUpdateOne) AddProviderProfileIDs(ids ...string) *ProvisionBucketUpdateOne {
+	_u.mutation.AddProviderProfileIDs(ids...)
+	return _u
 }
 
 // AddProviderProfiles adds the "provider_profiles" edges to the ProviderProfile entity.
-func (pbuo *ProvisionBucketUpdateOne) AddProviderProfiles(p ...*ProviderProfile) *ProvisionBucketUpdateOne {
-	ids := make([]string, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *ProvisionBucketUpdateOne) AddProviderProfiles(v ...*ProviderProfile) *ProvisionBucketUpdateOne {
+	ids := make([]string, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return pbuo.AddProviderProfileIDs(ids...)
+	return _u.AddProviderProfileIDs(ids...)
 }
 
 // Mutation returns the ProvisionBucketMutation object of the builder.
-func (pbuo *ProvisionBucketUpdateOne) Mutation() *ProvisionBucketMutation {
-	return pbuo.mutation
+func (_u *ProvisionBucketUpdateOne) Mutation() *ProvisionBucketMutation {
+	return _u.mutation
 }
 
 // ClearCurrency clears the "currency" edge to the FiatCurrency entity.
-func (pbuo *ProvisionBucketUpdateOne) ClearCurrency() *ProvisionBucketUpdateOne {
-	pbuo.mutation.ClearCurrency()
-	return pbuo
+func (_u *ProvisionBucketUpdateOne) ClearCurrency() *ProvisionBucketUpdateOne {
+	_u.mutation.ClearCurrency()
+	return _u
 }
 
 // ClearLockPaymentOrders clears all "lock_payment_orders" edges to the LockPaymentOrder entity.
-func (pbuo *ProvisionBucketUpdateOne) ClearLockPaymentOrders() *ProvisionBucketUpdateOne {
-	pbuo.mutation.ClearLockPaymentOrders()
-	return pbuo
+func (_u *ProvisionBucketUpdateOne) ClearLockPaymentOrders() *ProvisionBucketUpdateOne {
+	_u.mutation.ClearLockPaymentOrders()
+	return _u
 }
 
 // RemoveLockPaymentOrderIDs removes the "lock_payment_orders" edge to LockPaymentOrder entities by IDs.
-func (pbuo *ProvisionBucketUpdateOne) RemoveLockPaymentOrderIDs(ids ...uuid.UUID) *ProvisionBucketUpdateOne {
-	pbuo.mutation.RemoveLockPaymentOrderIDs(ids...)
-	return pbuo
+func (_u *ProvisionBucketUpdateOne) RemoveLockPaymentOrderIDs(ids ...uuid.UUID) *ProvisionBucketUpdateOne {
+	_u.mutation.RemoveLockPaymentOrderIDs(ids...)
+	return _u
 }
 
 // RemoveLockPaymentOrders removes "lock_payment_orders" edges to LockPaymentOrder entities.
-func (pbuo *ProvisionBucketUpdateOne) RemoveLockPaymentOrders(l ...*LockPaymentOrder) *ProvisionBucketUpdateOne {
-	ids := make([]uuid.UUID, len(l))
-	for i := range l {
-		ids[i] = l[i].ID
+func (_u *ProvisionBucketUpdateOne) RemoveLockPaymentOrders(v ...*LockPaymentOrder) *ProvisionBucketUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return pbuo.RemoveLockPaymentOrderIDs(ids...)
+	return _u.RemoveLockPaymentOrderIDs(ids...)
 }
 
 // ClearProviderProfiles clears all "provider_profiles" edges to the ProviderProfile entity.
-func (pbuo *ProvisionBucketUpdateOne) ClearProviderProfiles() *ProvisionBucketUpdateOne {
-	pbuo.mutation.ClearProviderProfiles()
-	return pbuo
+func (_u *ProvisionBucketUpdateOne) ClearProviderProfiles() *ProvisionBucketUpdateOne {
+	_u.mutation.ClearProviderProfiles()
+	return _u
 }
 
 // RemoveProviderProfileIDs removes the "provider_profiles" edge to ProviderProfile entities by IDs.
-func (pbuo *ProvisionBucketUpdateOne) RemoveProviderProfileIDs(ids ...string) *ProvisionBucketUpdateOne {
-	pbuo.mutation.RemoveProviderProfileIDs(ids...)
-	return pbuo
+func (_u *ProvisionBucketUpdateOne) RemoveProviderProfileIDs(ids ...string) *ProvisionBucketUpdateOne {
+	_u.mutation.RemoveProviderProfileIDs(ids...)
+	return _u
 }
 
 // RemoveProviderProfiles removes "provider_profiles" edges to ProviderProfile entities.
-func (pbuo *ProvisionBucketUpdateOne) RemoveProviderProfiles(p ...*ProviderProfile) *ProvisionBucketUpdateOne {
-	ids := make([]string, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *ProvisionBucketUpdateOne) RemoveProviderProfiles(v ...*ProviderProfile) *ProvisionBucketUpdateOne {
+	ids := make([]string, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return pbuo.RemoveProviderProfileIDs(ids...)
+	return _u.RemoveProviderProfileIDs(ids...)
 }
 
 // Where appends a list predicates to the ProvisionBucketUpdate builder.
-func (pbuo *ProvisionBucketUpdateOne) Where(ps ...predicate.ProvisionBucket) *ProvisionBucketUpdateOne {
-	pbuo.mutation.Where(ps...)
-	return pbuo
+func (_u *ProvisionBucketUpdateOne) Where(ps ...predicate.ProvisionBucket) *ProvisionBucketUpdateOne {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
-func (pbuo *ProvisionBucketUpdateOne) Select(field string, fields ...string) *ProvisionBucketUpdateOne {
-	pbuo.fields = append([]string{field}, fields...)
-	return pbuo
+func (_u *ProvisionBucketUpdateOne) Select(field string, fields ...string) *ProvisionBucketUpdateOne {
+	_u.fields = append([]string{field}, fields...)
+	return _u
 }
 
 // Save executes the query and returns the updated ProvisionBucket entity.
-func (pbuo *ProvisionBucketUpdateOne) Save(ctx context.Context) (*ProvisionBucket, error) {
-	return withHooks(ctx, pbuo.sqlSave, pbuo.mutation, pbuo.hooks)
+func (_u *ProvisionBucketUpdateOne) Save(ctx context.Context) (*ProvisionBucket, error) {
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (pbuo *ProvisionBucketUpdateOne) SaveX(ctx context.Context) *ProvisionBucket {
-	node, err := pbuo.Save(ctx)
+func (_u *ProvisionBucketUpdateOne) SaveX(ctx context.Context) *ProvisionBucket {
+	node, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -530,37 +530,37 @@ func (pbuo *ProvisionBucketUpdateOne) SaveX(ctx context.Context) *ProvisionBucke
 }
 
 // Exec executes the query on the entity.
-func (pbuo *ProvisionBucketUpdateOne) Exec(ctx context.Context) error {
-	_, err := pbuo.Save(ctx)
+func (_u *ProvisionBucketUpdateOne) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pbuo *ProvisionBucketUpdateOne) ExecX(ctx context.Context) {
-	if err := pbuo.Exec(ctx); err != nil {
+func (_u *ProvisionBucketUpdateOne) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (pbuo *ProvisionBucketUpdateOne) check() error {
-	if pbuo.mutation.CurrencyCleared() && len(pbuo.mutation.CurrencyIDs()) > 0 {
+func (_u *ProvisionBucketUpdateOne) check() error {
+	if _u.mutation.CurrencyCleared() && len(_u.mutation.CurrencyIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ProvisionBucket.currency"`)
 	}
 	return nil
 }
 
-func (pbuo *ProvisionBucketUpdateOne) sqlSave(ctx context.Context) (_node *ProvisionBucket, err error) {
-	if err := pbuo.check(); err != nil {
+func (_u *ProvisionBucketUpdateOne) sqlSave(ctx context.Context) (_node *ProvisionBucket, err error) {
+	if err := _u.check(); err != nil {
 		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(provisionbucket.Table, provisionbucket.Columns, sqlgraph.NewFieldSpec(provisionbucket.FieldID, field.TypeInt))
-	id, ok := pbuo.mutation.ID()
+	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "ProvisionBucket.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
-	if fields := pbuo.fields; len(fields) > 0 {
+	if fields := _u.fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, provisionbucket.FieldID)
 		for _, f := range fields {
@@ -572,26 +572,26 @@ func (pbuo *ProvisionBucketUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			}
 		}
 	}
-	if ps := pbuo.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := pbuo.mutation.MinAmount(); ok {
+	if value, ok := _u.mutation.MinAmount(); ok {
 		_spec.SetField(provisionbucket.FieldMinAmount, field.TypeFloat64, value)
 	}
-	if value, ok := pbuo.mutation.AddedMinAmount(); ok {
+	if value, ok := _u.mutation.AddedMinAmount(); ok {
 		_spec.AddField(provisionbucket.FieldMinAmount, field.TypeFloat64, value)
 	}
-	if value, ok := pbuo.mutation.MaxAmount(); ok {
+	if value, ok := _u.mutation.MaxAmount(); ok {
 		_spec.SetField(provisionbucket.FieldMaxAmount, field.TypeFloat64, value)
 	}
-	if value, ok := pbuo.mutation.AddedMaxAmount(); ok {
+	if value, ok := _u.mutation.AddedMaxAmount(); ok {
 		_spec.AddField(provisionbucket.FieldMaxAmount, field.TypeFloat64, value)
 	}
-	if pbuo.mutation.CurrencyCleared() {
+	if _u.mutation.CurrencyCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -604,7 +604,7 @@ func (pbuo *ProvisionBucketUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pbuo.mutation.CurrencyIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.CurrencyIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -620,7 +620,7 @@ func (pbuo *ProvisionBucketUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pbuo.mutation.LockPaymentOrdersCleared() {
+	if _u.mutation.LockPaymentOrdersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -633,7 +633,7 @@ func (pbuo *ProvisionBucketUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pbuo.mutation.RemovedLockPaymentOrdersIDs(); len(nodes) > 0 && !pbuo.mutation.LockPaymentOrdersCleared() {
+	if nodes := _u.mutation.RemovedLockPaymentOrdersIDs(); len(nodes) > 0 && !_u.mutation.LockPaymentOrdersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -649,7 +649,7 @@ func (pbuo *ProvisionBucketUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pbuo.mutation.LockPaymentOrdersIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.LockPaymentOrdersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -665,7 +665,7 @@ func (pbuo *ProvisionBucketUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pbuo.mutation.ProviderProfilesCleared() {
+	if _u.mutation.ProviderProfilesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
@@ -678,7 +678,7 @@ func (pbuo *ProvisionBucketUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pbuo.mutation.RemovedProviderProfilesIDs(); len(nodes) > 0 && !pbuo.mutation.ProviderProfilesCleared() {
+	if nodes := _u.mutation.RemovedProviderProfilesIDs(); len(nodes) > 0 && !_u.mutation.ProviderProfilesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
@@ -694,7 +694,7 @@ func (pbuo *ProvisionBucketUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pbuo.mutation.ProviderProfilesIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProviderProfilesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
@@ -710,10 +710,10 @@ func (pbuo *ProvisionBucketUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	_node = &ProvisionBucket{config: pbuo.config}
+	_node = &ProvisionBucket{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues
-	if err = sqlgraph.UpdateNode(ctx, pbuo.driver, _spec); err != nil {
+	if err = sqlgraph.UpdateNode(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{provisionbucket.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -721,6 +721,6 @@ func (pbuo *ProvisionBucketUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		return nil, err
 	}
-	pbuo.mutation.done = true
+	_u.mutation.done = true
 	return _node, nil
 }

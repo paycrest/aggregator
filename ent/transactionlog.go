@@ -62,7 +62,7 @@ func (*TransactionLog) scanValues(columns []string) ([]any, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the TransactionLog fields.
-func (tl *TransactionLog) assignValues(columns []string, values []any) error {
+func (_m *TransactionLog) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -72,37 +72,37 @@ func (tl *TransactionLog) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*uuid.UUID); !ok {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
-				tl.ID = *value
+				_m.ID = *value
 			}
 		case transactionlog.FieldGatewayID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field gateway_id", values[i])
 			} else if value.Valid {
-				tl.GatewayID = value.String
+				_m.GatewayID = value.String
 			}
 		case transactionlog.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				tl.Status = transactionlog.Status(value.String)
+				_m.Status = transactionlog.Status(value.String)
 			}
 		case transactionlog.FieldNetwork:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field network", values[i])
 			} else if value.Valid {
-				tl.Network = value.String
+				_m.Network = value.String
 			}
 		case transactionlog.FieldTxHash:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field tx_hash", values[i])
 			} else if value.Valid {
-				tl.TxHash = value.String
+				_m.TxHash = value.String
 			}
 		case transactionlog.FieldMetadata:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field metadata", values[i])
 			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &tl.Metadata); err != nil {
+				if err := json.Unmarshal(*value, &_m.Metadata); err != nil {
 					return fmt.Errorf("unmarshal field metadata: %w", err)
 				}
 			}
@@ -110,24 +110,24 @@ func (tl *TransactionLog) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
-				tl.CreatedAt = value.Time
+				_m.CreatedAt = value.Time
 			}
 		case transactionlog.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field lock_payment_order_transactions", values[i])
 			} else if value.Valid {
-				tl.lock_payment_order_transactions = new(uuid.UUID)
-				*tl.lock_payment_order_transactions = *value.S.(*uuid.UUID)
+				_m.lock_payment_order_transactions = new(uuid.UUID)
+				*_m.lock_payment_order_transactions = *value.S.(*uuid.UUID)
 			}
 		case transactionlog.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field payment_order_transactions", values[i])
 			} else if value.Valid {
-				tl.payment_order_transactions = new(uuid.UUID)
-				*tl.payment_order_transactions = *value.S.(*uuid.UUID)
+				_m.payment_order_transactions = new(uuid.UUID)
+				*_m.payment_order_transactions = *value.S.(*uuid.UUID)
 			}
 		default:
-			tl.selectValues.Set(columns[i], values[i])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -135,50 +135,50 @@ func (tl *TransactionLog) assignValues(columns []string, values []any) error {
 
 // Value returns the ent.Value that was dynamically selected and assigned to the TransactionLog.
 // This includes values selected through modifiers, order, etc.
-func (tl *TransactionLog) Value(name string) (ent.Value, error) {
-	return tl.selectValues.Get(name)
+func (_m *TransactionLog) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
 }
 
 // Update returns a builder for updating this TransactionLog.
 // Note that you need to call TransactionLog.Unwrap() before calling this method if this TransactionLog
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (tl *TransactionLog) Update() *TransactionLogUpdateOne {
-	return NewTransactionLogClient(tl.config).UpdateOne(tl)
+func (_m *TransactionLog) Update() *TransactionLogUpdateOne {
+	return NewTransactionLogClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the TransactionLog entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (tl *TransactionLog) Unwrap() *TransactionLog {
-	_tx, ok := tl.config.driver.(*txDriver)
+func (_m *TransactionLog) Unwrap() *TransactionLog {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: TransactionLog is not a transactional entity")
 	}
-	tl.config.driver = _tx.drv
-	return tl
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (tl *TransactionLog) String() string {
+func (_m *TransactionLog) String() string {
 	var builder strings.Builder
 	builder.WriteString("TransactionLog(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", tl.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("gateway_id=")
-	builder.WriteString(tl.GatewayID)
+	builder.WriteString(_m.GatewayID)
 	builder.WriteString(", ")
 	builder.WriteString("status=")
-	builder.WriteString(fmt.Sprintf("%v", tl.Status))
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
 	builder.WriteString(", ")
 	builder.WriteString("network=")
-	builder.WriteString(tl.Network)
+	builder.WriteString(_m.Network)
 	builder.WriteString(", ")
 	builder.WriteString("tx_hash=")
-	builder.WriteString(tl.TxHash)
+	builder.WriteString(_m.TxHash)
 	builder.WriteString(", ")
 	builder.WriteString("metadata=")
-	builder.WriteString(fmt.Sprintf("%v", tl.Metadata))
+	builder.WriteString(fmt.Sprintf("%v", _m.Metadata))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
-	builder.WriteString(tl.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
 	builder.WriteByte(')')
 	return builder.String()
 }

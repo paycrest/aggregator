@@ -20,56 +20,56 @@ type TransactionLogDelete struct {
 }
 
 // Where appends a list predicates to the TransactionLogDelete builder.
-func (tld *TransactionLogDelete) Where(ps ...predicate.TransactionLog) *TransactionLogDelete {
-	tld.mutation.Where(ps...)
-	return tld
+func (_d *TransactionLogDelete) Where(ps ...predicate.TransactionLog) *TransactionLogDelete {
+	_d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query and returns how many vertices were deleted.
-func (tld *TransactionLogDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks(ctx, tld.sqlExec, tld.mutation, tld.hooks)
+func (_d *TransactionLogDelete) Exec(ctx context.Context) (int, error) {
+	return withHooks(ctx, _d.sqlExec, _d.mutation, _d.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (tld *TransactionLogDelete) ExecX(ctx context.Context) int {
-	n, err := tld.Exec(ctx)
+func (_d *TransactionLogDelete) ExecX(ctx context.Context) int {
+	n, err := _d.Exec(ctx)
 	if err != nil {
 		panic(err)
 	}
 	return n
 }
 
-func (tld *TransactionLogDelete) sqlExec(ctx context.Context) (int, error) {
+func (_d *TransactionLogDelete) sqlExec(ctx context.Context) (int, error) {
 	_spec := sqlgraph.NewDeleteSpec(transactionlog.Table, sqlgraph.NewFieldSpec(transactionlog.FieldID, field.TypeUUID))
-	if ps := tld.mutation.predicates; len(ps) > 0 {
+	if ps := _d.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	affected, err := sqlgraph.DeleteNodes(ctx, tld.driver, _spec)
+	affected, err := sqlgraph.DeleteNodes(ctx, _d.driver, _spec)
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
-	tld.mutation.done = true
+	_d.mutation.done = true
 	return affected, err
 }
 
 // TransactionLogDeleteOne is the builder for deleting a single TransactionLog entity.
 type TransactionLogDeleteOne struct {
-	tld *TransactionLogDelete
+	_d *TransactionLogDelete
 }
 
 // Where appends a list predicates to the TransactionLogDelete builder.
-func (tldo *TransactionLogDeleteOne) Where(ps ...predicate.TransactionLog) *TransactionLogDeleteOne {
-	tldo.tld.mutation.Where(ps...)
-	return tldo
+func (_d *TransactionLogDeleteOne) Where(ps ...predicate.TransactionLog) *TransactionLogDeleteOne {
+	_d._d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query.
-func (tldo *TransactionLogDeleteOne) Exec(ctx context.Context) error {
-	n, err := tldo.tld.Exec(ctx)
+func (_d *TransactionLogDeleteOne) Exec(ctx context.Context) error {
+	n, err := _d._d.Exec(ctx)
 	switch {
 	case err != nil:
 		return err
@@ -81,8 +81,8 @@ func (tldo *TransactionLogDeleteOne) Exec(ctx context.Context) error {
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (tldo *TransactionLogDeleteOne) ExecX(ctx context.Context) {
-	if err := tldo.Exec(ctx); err != nil {
+func (_d *TransactionLogDeleteOne) ExecX(ctx context.Context) {
+	if err := _d.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

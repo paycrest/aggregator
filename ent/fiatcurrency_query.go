@@ -38,44 +38,44 @@ type FiatCurrencyQuery struct {
 }
 
 // Where adds a new predicate for the FiatCurrencyQuery builder.
-func (fcq *FiatCurrencyQuery) Where(ps ...predicate.FiatCurrency) *FiatCurrencyQuery {
-	fcq.predicates = append(fcq.predicates, ps...)
-	return fcq
+func (_q *FiatCurrencyQuery) Where(ps ...predicate.FiatCurrency) *FiatCurrencyQuery {
+	_q.predicates = append(_q.predicates, ps...)
+	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (fcq *FiatCurrencyQuery) Limit(limit int) *FiatCurrencyQuery {
-	fcq.ctx.Limit = &limit
-	return fcq
+func (_q *FiatCurrencyQuery) Limit(limit int) *FiatCurrencyQuery {
+	_q.ctx.Limit = &limit
+	return _q
 }
 
 // Offset to start from.
-func (fcq *FiatCurrencyQuery) Offset(offset int) *FiatCurrencyQuery {
-	fcq.ctx.Offset = &offset
-	return fcq
+func (_q *FiatCurrencyQuery) Offset(offset int) *FiatCurrencyQuery {
+	_q.ctx.Offset = &offset
+	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (fcq *FiatCurrencyQuery) Unique(unique bool) *FiatCurrencyQuery {
-	fcq.ctx.Unique = &unique
-	return fcq
+func (_q *FiatCurrencyQuery) Unique(unique bool) *FiatCurrencyQuery {
+	_q.ctx.Unique = &unique
+	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (fcq *FiatCurrencyQuery) Order(o ...fiatcurrency.OrderOption) *FiatCurrencyQuery {
-	fcq.order = append(fcq.order, o...)
-	return fcq
+func (_q *FiatCurrencyQuery) Order(o ...fiatcurrency.OrderOption) *FiatCurrencyQuery {
+	_q.order = append(_q.order, o...)
+	return _q
 }
 
 // QueryProviderCurrencies chains the current query on the "provider_currencies" edge.
-func (fcq *FiatCurrencyQuery) QueryProviderCurrencies() *ProviderCurrenciesQuery {
-	query := (&ProviderCurrenciesClient{config: fcq.config}).Query()
+func (_q *FiatCurrencyQuery) QueryProviderCurrencies() *ProviderCurrenciesQuery {
+	query := (&ProviderCurrenciesClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := fcq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := fcq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -84,20 +84,20 @@ func (fcq *FiatCurrencyQuery) QueryProviderCurrencies() *ProviderCurrenciesQuery
 			sqlgraph.To(providercurrencies.Table, providercurrencies.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, fiatcurrency.ProviderCurrenciesTable, fiatcurrency.ProviderCurrenciesColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(fcq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryProvisionBuckets chains the current query on the "provision_buckets" edge.
-func (fcq *FiatCurrencyQuery) QueryProvisionBuckets() *ProvisionBucketQuery {
-	query := (&ProvisionBucketClient{config: fcq.config}).Query()
+func (_q *FiatCurrencyQuery) QueryProvisionBuckets() *ProvisionBucketQuery {
+	query := (&ProvisionBucketClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := fcq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := fcq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -106,20 +106,20 @@ func (fcq *FiatCurrencyQuery) QueryProvisionBuckets() *ProvisionBucketQuery {
 			sqlgraph.To(provisionbucket.Table, provisionbucket.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, fiatcurrency.ProvisionBucketsTable, fiatcurrency.ProvisionBucketsColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(fcq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryInstitutions chains the current query on the "institutions" edge.
-func (fcq *FiatCurrencyQuery) QueryInstitutions() *InstitutionQuery {
-	query := (&InstitutionClient{config: fcq.config}).Query()
+func (_q *FiatCurrencyQuery) QueryInstitutions() *InstitutionQuery {
+	query := (&InstitutionClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := fcq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := fcq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -128,20 +128,20 @@ func (fcq *FiatCurrencyQuery) QueryInstitutions() *InstitutionQuery {
 			sqlgraph.To(institution.Table, institution.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, fiatcurrency.InstitutionsTable, fiatcurrency.InstitutionsColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(fcq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryProviderOrderTokens chains the current query on the "provider_order_tokens" edge.
-func (fcq *FiatCurrencyQuery) QueryProviderOrderTokens() *ProviderOrderTokenQuery {
-	query := (&ProviderOrderTokenClient{config: fcq.config}).Query()
+func (_q *FiatCurrencyQuery) QueryProviderOrderTokens() *ProviderOrderTokenQuery {
+	query := (&ProviderOrderTokenClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := fcq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := fcq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -150,7 +150,7 @@ func (fcq *FiatCurrencyQuery) QueryProviderOrderTokens() *ProviderOrderTokenQuer
 			sqlgraph.To(providerordertoken.Table, providerordertoken.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, fiatcurrency.ProviderOrderTokensTable, fiatcurrency.ProviderOrderTokensColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(fcq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
@@ -158,8 +158,8 @@ func (fcq *FiatCurrencyQuery) QueryProviderOrderTokens() *ProviderOrderTokenQuer
 
 // First returns the first FiatCurrency entity from the query.
 // Returns a *NotFoundError when no FiatCurrency was found.
-func (fcq *FiatCurrencyQuery) First(ctx context.Context) (*FiatCurrency, error) {
-	nodes, err := fcq.Limit(1).All(setContextOp(ctx, fcq.ctx, ent.OpQueryFirst))
+func (_q *FiatCurrencyQuery) First(ctx context.Context) (*FiatCurrency, error) {
+	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
@@ -170,8 +170,8 @@ func (fcq *FiatCurrencyQuery) First(ctx context.Context) (*FiatCurrency, error) 
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (fcq *FiatCurrencyQuery) FirstX(ctx context.Context) *FiatCurrency {
-	node, err := fcq.First(ctx)
+func (_q *FiatCurrencyQuery) FirstX(ctx context.Context) *FiatCurrency {
+	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -180,9 +180,9 @@ func (fcq *FiatCurrencyQuery) FirstX(ctx context.Context) *FiatCurrency {
 
 // FirstID returns the first FiatCurrency ID from the query.
 // Returns a *NotFoundError when no FiatCurrency ID was found.
-func (fcq *FiatCurrencyQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *FiatCurrencyQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = fcq.Limit(1).IDs(setContextOp(ctx, fcq.ctx, ent.OpQueryFirstID)); err != nil {
+	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -193,8 +193,8 @@ func (fcq *FiatCurrencyQuery) FirstID(ctx context.Context) (id uuid.UUID, err er
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (fcq *FiatCurrencyQuery) FirstIDX(ctx context.Context) uuid.UUID {
-	id, err := fcq.FirstID(ctx)
+func (_q *FiatCurrencyQuery) FirstIDX(ctx context.Context) uuid.UUID {
+	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -204,8 +204,8 @@ func (fcq *FiatCurrencyQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Only returns a single FiatCurrency entity found by the query, ensuring it only returns one.
 // Returns a *NotSingularError when more than one FiatCurrency entity is found.
 // Returns a *NotFoundError when no FiatCurrency entities are found.
-func (fcq *FiatCurrencyQuery) Only(ctx context.Context) (*FiatCurrency, error) {
-	nodes, err := fcq.Limit(2).All(setContextOp(ctx, fcq.ctx, ent.OpQueryOnly))
+func (_q *FiatCurrencyQuery) Only(ctx context.Context) (*FiatCurrency, error) {
+	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -220,8 +220,8 @@ func (fcq *FiatCurrencyQuery) Only(ctx context.Context) (*FiatCurrency, error) {
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (fcq *FiatCurrencyQuery) OnlyX(ctx context.Context) *FiatCurrency {
-	node, err := fcq.Only(ctx)
+func (_q *FiatCurrencyQuery) OnlyX(ctx context.Context) *FiatCurrency {
+	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -231,9 +231,9 @@ func (fcq *FiatCurrencyQuery) OnlyX(ctx context.Context) *FiatCurrency {
 // OnlyID is like Only, but returns the only FiatCurrency ID in the query.
 // Returns a *NotSingularError when more than one FiatCurrency ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (fcq *FiatCurrencyQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *FiatCurrencyQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = fcq.Limit(2).IDs(setContextOp(ctx, fcq.ctx, ent.OpQueryOnlyID)); err != nil {
+	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -248,8 +248,8 @@ func (fcq *FiatCurrencyQuery) OnlyID(ctx context.Context) (id uuid.UUID, err err
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (fcq *FiatCurrencyQuery) OnlyIDX(ctx context.Context) uuid.UUID {
-	id, err := fcq.OnlyID(ctx)
+func (_q *FiatCurrencyQuery) OnlyIDX(ctx context.Context) uuid.UUID {
+	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -257,18 +257,18 @@ func (fcq *FiatCurrencyQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 }
 
 // All executes the query and returns a list of FiatCurrencies.
-func (fcq *FiatCurrencyQuery) All(ctx context.Context) ([]*FiatCurrency, error) {
-	ctx = setContextOp(ctx, fcq.ctx, ent.OpQueryAll)
-	if err := fcq.prepareQuery(ctx); err != nil {
+func (_q *FiatCurrencyQuery) All(ctx context.Context) ([]*FiatCurrency, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
 	qr := querierAll[[]*FiatCurrency, *FiatCurrencyQuery]()
-	return withInterceptors[[]*FiatCurrency](ctx, fcq, qr, fcq.inters)
+	return withInterceptors[[]*FiatCurrency](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (fcq *FiatCurrencyQuery) AllX(ctx context.Context) []*FiatCurrency {
-	nodes, err := fcq.All(ctx)
+func (_q *FiatCurrencyQuery) AllX(ctx context.Context) []*FiatCurrency {
+	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -276,20 +276,20 @@ func (fcq *FiatCurrencyQuery) AllX(ctx context.Context) []*FiatCurrency {
 }
 
 // IDs executes the query and returns a list of FiatCurrency IDs.
-func (fcq *FiatCurrencyQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
-	if fcq.ctx.Unique == nil && fcq.path != nil {
-		fcq.Unique(true)
+func (_q *FiatCurrencyQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if _q.ctx.Unique == nil && _q.path != nil {
+		_q.Unique(true)
 	}
-	ctx = setContextOp(ctx, fcq.ctx, ent.OpQueryIDs)
-	if err = fcq.Select(fiatcurrency.FieldID).Scan(ctx, &ids); err != nil {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
+	if err = _q.Select(fiatcurrency.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (fcq *FiatCurrencyQuery) IDsX(ctx context.Context) []uuid.UUID {
-	ids, err := fcq.IDs(ctx)
+func (_q *FiatCurrencyQuery) IDsX(ctx context.Context) []uuid.UUID {
+	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -297,17 +297,17 @@ func (fcq *FiatCurrencyQuery) IDsX(ctx context.Context) []uuid.UUID {
 }
 
 // Count returns the count of the given query.
-func (fcq *FiatCurrencyQuery) Count(ctx context.Context) (int, error) {
-	ctx = setContextOp(ctx, fcq.ctx, ent.OpQueryCount)
-	if err := fcq.prepareQuery(ctx); err != nil {
+func (_q *FiatCurrencyQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, fcq, querierCount[*FiatCurrencyQuery](), fcq.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*FiatCurrencyQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (fcq *FiatCurrencyQuery) CountX(ctx context.Context) int {
-	count, err := fcq.Count(ctx)
+func (_q *FiatCurrencyQuery) CountX(ctx context.Context) int {
+	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -315,9 +315,9 @@ func (fcq *FiatCurrencyQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (fcq *FiatCurrencyQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = setContextOp(ctx, fcq.ctx, ent.OpQueryExist)
-	switch _, err := fcq.FirstID(ctx); {
+func (_q *FiatCurrencyQuery) Exist(ctx context.Context) (bool, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
+	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
 	case err != nil:
@@ -328,8 +328,8 @@ func (fcq *FiatCurrencyQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (fcq *FiatCurrencyQuery) ExistX(ctx context.Context) bool {
-	exist, err := fcq.Exist(ctx)
+func (_q *FiatCurrencyQuery) ExistX(ctx context.Context) bool {
+	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -338,68 +338,68 @@ func (fcq *FiatCurrencyQuery) ExistX(ctx context.Context) bool {
 
 // Clone returns a duplicate of the FiatCurrencyQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (fcq *FiatCurrencyQuery) Clone() *FiatCurrencyQuery {
-	if fcq == nil {
+func (_q *FiatCurrencyQuery) Clone() *FiatCurrencyQuery {
+	if _q == nil {
 		return nil
 	}
 	return &FiatCurrencyQuery{
-		config:                  fcq.config,
-		ctx:                     fcq.ctx.Clone(),
-		order:                   append([]fiatcurrency.OrderOption{}, fcq.order...),
-		inters:                  append([]Interceptor{}, fcq.inters...),
-		predicates:              append([]predicate.FiatCurrency{}, fcq.predicates...),
-		withProviderCurrencies:  fcq.withProviderCurrencies.Clone(),
-		withProvisionBuckets:    fcq.withProvisionBuckets.Clone(),
-		withInstitutions:        fcq.withInstitutions.Clone(),
-		withProviderOrderTokens: fcq.withProviderOrderTokens.Clone(),
+		config:                  _q.config,
+		ctx:                     _q.ctx.Clone(),
+		order:                   append([]fiatcurrency.OrderOption{}, _q.order...),
+		inters:                  append([]Interceptor{}, _q.inters...),
+		predicates:              append([]predicate.FiatCurrency{}, _q.predicates...),
+		withProviderCurrencies:  _q.withProviderCurrencies.Clone(),
+		withProvisionBuckets:    _q.withProvisionBuckets.Clone(),
+		withInstitutions:        _q.withInstitutions.Clone(),
+		withProviderOrderTokens: _q.withProviderOrderTokens.Clone(),
 		// clone intermediate query.
-		sql:  fcq.sql.Clone(),
-		path: fcq.path,
+		sql:  _q.sql.Clone(),
+		path: _q.path,
 	}
 }
 
 // WithProviderCurrencies tells the query-builder to eager-load the nodes that are connected to
 // the "provider_currencies" edge. The optional arguments are used to configure the query builder of the edge.
-func (fcq *FiatCurrencyQuery) WithProviderCurrencies(opts ...func(*ProviderCurrenciesQuery)) *FiatCurrencyQuery {
-	query := (&ProviderCurrenciesClient{config: fcq.config}).Query()
+func (_q *FiatCurrencyQuery) WithProviderCurrencies(opts ...func(*ProviderCurrenciesQuery)) *FiatCurrencyQuery {
+	query := (&ProviderCurrenciesClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	fcq.withProviderCurrencies = query
-	return fcq
+	_q.withProviderCurrencies = query
+	return _q
 }
 
 // WithProvisionBuckets tells the query-builder to eager-load the nodes that are connected to
 // the "provision_buckets" edge. The optional arguments are used to configure the query builder of the edge.
-func (fcq *FiatCurrencyQuery) WithProvisionBuckets(opts ...func(*ProvisionBucketQuery)) *FiatCurrencyQuery {
-	query := (&ProvisionBucketClient{config: fcq.config}).Query()
+func (_q *FiatCurrencyQuery) WithProvisionBuckets(opts ...func(*ProvisionBucketQuery)) *FiatCurrencyQuery {
+	query := (&ProvisionBucketClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	fcq.withProvisionBuckets = query
-	return fcq
+	_q.withProvisionBuckets = query
+	return _q
 }
 
 // WithInstitutions tells the query-builder to eager-load the nodes that are connected to
 // the "institutions" edge. The optional arguments are used to configure the query builder of the edge.
-func (fcq *FiatCurrencyQuery) WithInstitutions(opts ...func(*InstitutionQuery)) *FiatCurrencyQuery {
-	query := (&InstitutionClient{config: fcq.config}).Query()
+func (_q *FiatCurrencyQuery) WithInstitutions(opts ...func(*InstitutionQuery)) *FiatCurrencyQuery {
+	query := (&InstitutionClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	fcq.withInstitutions = query
-	return fcq
+	_q.withInstitutions = query
+	return _q
 }
 
 // WithProviderOrderTokens tells the query-builder to eager-load the nodes that are connected to
 // the "provider_order_tokens" edge. The optional arguments are used to configure the query builder of the edge.
-func (fcq *FiatCurrencyQuery) WithProviderOrderTokens(opts ...func(*ProviderOrderTokenQuery)) *FiatCurrencyQuery {
-	query := (&ProviderOrderTokenClient{config: fcq.config}).Query()
+func (_q *FiatCurrencyQuery) WithProviderOrderTokens(opts ...func(*ProviderOrderTokenQuery)) *FiatCurrencyQuery {
+	query := (&ProviderOrderTokenClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	fcq.withProviderOrderTokens = query
-	return fcq
+	_q.withProviderOrderTokens = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -416,10 +416,10 @@ func (fcq *FiatCurrencyQuery) WithProviderOrderTokens(opts ...func(*ProviderOrde
 //		GroupBy(fiatcurrency.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (fcq *FiatCurrencyQuery) GroupBy(field string, fields ...string) *FiatCurrencyGroupBy {
-	fcq.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &FiatCurrencyGroupBy{build: fcq}
-	grbuild.flds = &fcq.ctx.Fields
+func (_q *FiatCurrencyQuery) GroupBy(field string, fields ...string) *FiatCurrencyGroupBy {
+	_q.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &FiatCurrencyGroupBy{build: _q}
+	grbuild.flds = &_q.ctx.Fields
 	grbuild.label = fiatcurrency.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -437,61 +437,61 @@ func (fcq *FiatCurrencyQuery) GroupBy(field string, fields ...string) *FiatCurre
 //	client.FiatCurrency.Query().
 //		Select(fiatcurrency.FieldCreatedAt).
 //		Scan(ctx, &v)
-func (fcq *FiatCurrencyQuery) Select(fields ...string) *FiatCurrencySelect {
-	fcq.ctx.Fields = append(fcq.ctx.Fields, fields...)
-	sbuild := &FiatCurrencySelect{FiatCurrencyQuery: fcq}
+func (_q *FiatCurrencyQuery) Select(fields ...string) *FiatCurrencySelect {
+	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
+	sbuild := &FiatCurrencySelect{FiatCurrencyQuery: _q}
 	sbuild.label = fiatcurrency.Label
-	sbuild.flds, sbuild.scan = &fcq.ctx.Fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
 // Aggregate returns a FiatCurrencySelect configured with the given aggregations.
-func (fcq *FiatCurrencyQuery) Aggregate(fns ...AggregateFunc) *FiatCurrencySelect {
-	return fcq.Select().Aggregate(fns...)
+func (_q *FiatCurrencyQuery) Aggregate(fns ...AggregateFunc) *FiatCurrencySelect {
+	return _q.Select().Aggregate(fns...)
 }
 
-func (fcq *FiatCurrencyQuery) prepareQuery(ctx context.Context) error {
-	for _, inter := range fcq.inters {
+func (_q *FiatCurrencyQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
 		}
 		if trv, ok := inter.(Traverser); ok {
-			if err := trv.Traverse(ctx, fcq); err != nil {
+			if err := trv.Traverse(ctx, _q); err != nil {
 				return err
 			}
 		}
 	}
-	for _, f := range fcq.ctx.Fields {
+	for _, f := range _q.ctx.Fields {
 		if !fiatcurrency.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
-	if fcq.path != nil {
-		prev, err := fcq.path(ctx)
+	if _q.path != nil {
+		prev, err := _q.path(ctx)
 		if err != nil {
 			return err
 		}
-		fcq.sql = prev
+		_q.sql = prev
 	}
 	return nil
 }
 
-func (fcq *FiatCurrencyQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*FiatCurrency, error) {
+func (_q *FiatCurrencyQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*FiatCurrency, error) {
 	var (
 		nodes       = []*FiatCurrency{}
-		_spec       = fcq.querySpec()
+		_spec       = _q.querySpec()
 		loadedTypes = [4]bool{
-			fcq.withProviderCurrencies != nil,
-			fcq.withProvisionBuckets != nil,
-			fcq.withInstitutions != nil,
-			fcq.withProviderOrderTokens != nil,
+			_q.withProviderCurrencies != nil,
+			_q.withProvisionBuckets != nil,
+			_q.withInstitutions != nil,
+			_q.withProviderOrderTokens != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*FiatCurrency).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &FiatCurrency{config: fcq.config}
+		node := &FiatCurrency{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -499,14 +499,14 @@ func (fcq *FiatCurrencyQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 	for i := range hooks {
 		hooks[i](ctx, _spec)
 	}
-	if err := sqlgraph.QueryNodes(ctx, fcq.driver, _spec); err != nil {
+	if err := sqlgraph.QueryNodes(ctx, _q.driver, _spec); err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := fcq.withProviderCurrencies; query != nil {
-		if err := fcq.loadProviderCurrencies(ctx, query, nodes,
+	if query := _q.withProviderCurrencies; query != nil {
+		if err := _q.loadProviderCurrencies(ctx, query, nodes,
 			func(n *FiatCurrency) { n.Edges.ProviderCurrencies = []*ProviderCurrencies{} },
 			func(n *FiatCurrency, e *ProviderCurrencies) {
 				n.Edges.ProviderCurrencies = append(n.Edges.ProviderCurrencies, e)
@@ -514,8 +514,8 @@ func (fcq *FiatCurrencyQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 			return nil, err
 		}
 	}
-	if query := fcq.withProvisionBuckets; query != nil {
-		if err := fcq.loadProvisionBuckets(ctx, query, nodes,
+	if query := _q.withProvisionBuckets; query != nil {
+		if err := _q.loadProvisionBuckets(ctx, query, nodes,
 			func(n *FiatCurrency) { n.Edges.ProvisionBuckets = []*ProvisionBucket{} },
 			func(n *FiatCurrency, e *ProvisionBucket) {
 				n.Edges.ProvisionBuckets = append(n.Edges.ProvisionBuckets, e)
@@ -523,15 +523,15 @@ func (fcq *FiatCurrencyQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 			return nil, err
 		}
 	}
-	if query := fcq.withInstitutions; query != nil {
-		if err := fcq.loadInstitutions(ctx, query, nodes,
+	if query := _q.withInstitutions; query != nil {
+		if err := _q.loadInstitutions(ctx, query, nodes,
 			func(n *FiatCurrency) { n.Edges.Institutions = []*Institution{} },
 			func(n *FiatCurrency, e *Institution) { n.Edges.Institutions = append(n.Edges.Institutions, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := fcq.withProviderOrderTokens; query != nil {
-		if err := fcq.loadProviderOrderTokens(ctx, query, nodes,
+	if query := _q.withProviderOrderTokens; query != nil {
+		if err := _q.loadProviderOrderTokens(ctx, query, nodes,
 			func(n *FiatCurrency) { n.Edges.ProviderOrderTokens = []*ProviderOrderToken{} },
 			func(n *FiatCurrency, e *ProviderOrderToken) {
 				n.Edges.ProviderOrderTokens = append(n.Edges.ProviderOrderTokens, e)
@@ -542,7 +542,7 @@ func (fcq *FiatCurrencyQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 	return nodes, nil
 }
 
-func (fcq *FiatCurrencyQuery) loadProviderCurrencies(ctx context.Context, query *ProviderCurrenciesQuery, nodes []*FiatCurrency, init func(*FiatCurrency), assign func(*FiatCurrency, *ProviderCurrencies)) error {
+func (_q *FiatCurrencyQuery) loadProviderCurrencies(ctx context.Context, query *ProviderCurrenciesQuery, nodes []*FiatCurrency, init func(*FiatCurrency), assign func(*FiatCurrency, *ProviderCurrencies)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*FiatCurrency)
 	for i := range nodes {
@@ -573,7 +573,7 @@ func (fcq *FiatCurrencyQuery) loadProviderCurrencies(ctx context.Context, query 
 	}
 	return nil
 }
-func (fcq *FiatCurrencyQuery) loadProvisionBuckets(ctx context.Context, query *ProvisionBucketQuery, nodes []*FiatCurrency, init func(*FiatCurrency), assign func(*FiatCurrency, *ProvisionBucket)) error {
+func (_q *FiatCurrencyQuery) loadProvisionBuckets(ctx context.Context, query *ProvisionBucketQuery, nodes []*FiatCurrency, init func(*FiatCurrency), assign func(*FiatCurrency, *ProvisionBucket)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*FiatCurrency)
 	for i := range nodes {
@@ -604,7 +604,7 @@ func (fcq *FiatCurrencyQuery) loadProvisionBuckets(ctx context.Context, query *P
 	}
 	return nil
 }
-func (fcq *FiatCurrencyQuery) loadInstitutions(ctx context.Context, query *InstitutionQuery, nodes []*FiatCurrency, init func(*FiatCurrency), assign func(*FiatCurrency, *Institution)) error {
+func (_q *FiatCurrencyQuery) loadInstitutions(ctx context.Context, query *InstitutionQuery, nodes []*FiatCurrency, init func(*FiatCurrency), assign func(*FiatCurrency, *Institution)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*FiatCurrency)
 	for i := range nodes {
@@ -635,7 +635,7 @@ func (fcq *FiatCurrencyQuery) loadInstitutions(ctx context.Context, query *Insti
 	}
 	return nil
 }
-func (fcq *FiatCurrencyQuery) loadProviderOrderTokens(ctx context.Context, query *ProviderOrderTokenQuery, nodes []*FiatCurrency, init func(*FiatCurrency), assign func(*FiatCurrency, *ProviderOrderToken)) error {
+func (_q *FiatCurrencyQuery) loadProviderOrderTokens(ctx context.Context, query *ProviderOrderTokenQuery, nodes []*FiatCurrency, init func(*FiatCurrency), assign func(*FiatCurrency, *ProviderOrderToken)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*FiatCurrency)
 	for i := range nodes {
@@ -667,24 +667,24 @@ func (fcq *FiatCurrencyQuery) loadProviderOrderTokens(ctx context.Context, query
 	return nil
 }
 
-func (fcq *FiatCurrencyQuery) sqlCount(ctx context.Context) (int, error) {
-	_spec := fcq.querySpec()
-	_spec.Node.Columns = fcq.ctx.Fields
-	if len(fcq.ctx.Fields) > 0 {
-		_spec.Unique = fcq.ctx.Unique != nil && *fcq.ctx.Unique
+func (_q *FiatCurrencyQuery) sqlCount(ctx context.Context) (int, error) {
+	_spec := _q.querySpec()
+	_spec.Node.Columns = _q.ctx.Fields
+	if len(_q.ctx.Fields) > 0 {
+		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
 	}
-	return sqlgraph.CountNodes(ctx, fcq.driver, _spec)
+	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (fcq *FiatCurrencyQuery) querySpec() *sqlgraph.QuerySpec {
+func (_q *FiatCurrencyQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := sqlgraph.NewQuerySpec(fiatcurrency.Table, fiatcurrency.Columns, sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID))
-	_spec.From = fcq.sql
-	if unique := fcq.ctx.Unique; unique != nil {
+	_spec.From = _q.sql
+	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
-	} else if fcq.path != nil {
+	} else if _q.path != nil {
 		_spec.Unique = true
 	}
-	if fields := fcq.ctx.Fields; len(fields) > 0 {
+	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, fiatcurrency.FieldID)
 		for i := range fields {
@@ -693,20 +693,20 @@ func (fcq *FiatCurrencyQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if ps := fcq.predicates; len(ps) > 0 {
+	if ps := _q.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if limit := fcq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := fcq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
-	if ps := fcq.order; len(ps) > 0 {
+	if ps := _q.order; len(ps) > 0 {
 		_spec.Order = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
@@ -716,33 +716,33 @@ func (fcq *FiatCurrencyQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (fcq *FiatCurrencyQuery) sqlQuery(ctx context.Context) *sql.Selector {
-	builder := sql.Dialect(fcq.driver.Dialect())
+func (_q *FiatCurrencyQuery) sqlQuery(ctx context.Context) *sql.Selector {
+	builder := sql.Dialect(_q.driver.Dialect())
 	t1 := builder.Table(fiatcurrency.Table)
-	columns := fcq.ctx.Fields
+	columns := _q.ctx.Fields
 	if len(columns) == 0 {
 		columns = fiatcurrency.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
-	if fcq.sql != nil {
-		selector = fcq.sql
+	if _q.sql != nil {
+		selector = _q.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if fcq.ctx.Unique != nil && *fcq.ctx.Unique {
+	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
-	for _, p := range fcq.predicates {
+	for _, p := range _q.predicates {
 		p(selector)
 	}
-	for _, p := range fcq.order {
+	for _, p := range _q.order {
 		p(selector)
 	}
-	if offset := fcq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := fcq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -755,41 +755,41 @@ type FiatCurrencyGroupBy struct {
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (fcgb *FiatCurrencyGroupBy) Aggregate(fns ...AggregateFunc) *FiatCurrencyGroupBy {
-	fcgb.fns = append(fcgb.fns, fns...)
-	return fcgb
+func (_g *FiatCurrencyGroupBy) Aggregate(fns ...AggregateFunc) *FiatCurrencyGroupBy {
+	_g.fns = append(_g.fns, fns...)
+	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (fcgb *FiatCurrencyGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, fcgb.build.ctx, ent.OpQueryGroupBy)
-	if err := fcgb.build.prepareQuery(ctx); err != nil {
+func (_g *FiatCurrencyGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
+	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*FiatCurrencyQuery, *FiatCurrencyGroupBy](ctx, fcgb.build, fcgb, fcgb.build.inters, v)
+	return scanWithInterceptors[*FiatCurrencyQuery, *FiatCurrencyGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (fcgb *FiatCurrencyGroupBy) sqlScan(ctx context.Context, root *FiatCurrencyQuery, v any) error {
+func (_g *FiatCurrencyGroupBy) sqlScan(ctx context.Context, root *FiatCurrencyQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
-	aggregation := make([]string, 0, len(fcgb.fns))
-	for _, fn := range fcgb.fns {
+	aggregation := make([]string, 0, len(_g.fns))
+	for _, fn := range _g.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
 	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(*fcgb.flds)+len(fcgb.fns))
-		for _, f := range *fcgb.flds {
+		columns := make([]string, 0, len(*_g.flds)+len(_g.fns))
+		for _, f := range *_g.flds {
 			columns = append(columns, selector.C(f))
 		}
 		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
-	selector.GroupBy(selector.Columns(*fcgb.flds...)...)
+	selector.GroupBy(selector.Columns(*_g.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := fcgb.build.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _g.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
@@ -803,27 +803,27 @@ type FiatCurrencySelect struct {
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (fcs *FiatCurrencySelect) Aggregate(fns ...AggregateFunc) *FiatCurrencySelect {
-	fcs.fns = append(fcs.fns, fns...)
-	return fcs
+func (_s *FiatCurrencySelect) Aggregate(fns ...AggregateFunc) *FiatCurrencySelect {
+	_s.fns = append(_s.fns, fns...)
+	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (fcs *FiatCurrencySelect) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, fcs.ctx, ent.OpQuerySelect)
-	if err := fcs.prepareQuery(ctx); err != nil {
+func (_s *FiatCurrencySelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
+	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*FiatCurrencyQuery, *FiatCurrencySelect](ctx, fcs.FiatCurrencyQuery, fcs, fcs.inters, v)
+	return scanWithInterceptors[*FiatCurrencyQuery, *FiatCurrencySelect](ctx, _s.FiatCurrencyQuery, _s, _s.inters, v)
 }
 
-func (fcs *FiatCurrencySelect) sqlScan(ctx context.Context, root *FiatCurrencyQuery, v any) error {
+func (_s *FiatCurrencySelect) sqlScan(ctx context.Context, root *FiatCurrencyQuery, v any) error {
 	selector := root.sqlQuery(ctx)
-	aggregation := make([]string, 0, len(fcs.fns))
-	for _, fn := range fcs.fns {
+	aggregation := make([]string, 0, len(_s.fns))
+	for _, fn := range _s.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
-	switch n := len(*fcs.selector.flds); {
+	switch n := len(*_s.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
 		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
@@ -831,7 +831,7 @@ func (fcs *FiatCurrencySelect) sqlScan(ctx context.Context, root *FiatCurrencyQu
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := fcs.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _s.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()

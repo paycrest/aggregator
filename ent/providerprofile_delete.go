@@ -20,56 +20,56 @@ type ProviderProfileDelete struct {
 }
 
 // Where appends a list predicates to the ProviderProfileDelete builder.
-func (ppd *ProviderProfileDelete) Where(ps ...predicate.ProviderProfile) *ProviderProfileDelete {
-	ppd.mutation.Where(ps...)
-	return ppd
+func (_d *ProviderProfileDelete) Where(ps ...predicate.ProviderProfile) *ProviderProfileDelete {
+	_d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query and returns how many vertices were deleted.
-func (ppd *ProviderProfileDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks(ctx, ppd.sqlExec, ppd.mutation, ppd.hooks)
+func (_d *ProviderProfileDelete) Exec(ctx context.Context) (int, error) {
+	return withHooks(ctx, _d.sqlExec, _d.mutation, _d.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (ppd *ProviderProfileDelete) ExecX(ctx context.Context) int {
-	n, err := ppd.Exec(ctx)
+func (_d *ProviderProfileDelete) ExecX(ctx context.Context) int {
+	n, err := _d.Exec(ctx)
 	if err != nil {
 		panic(err)
 	}
 	return n
 }
 
-func (ppd *ProviderProfileDelete) sqlExec(ctx context.Context) (int, error) {
+func (_d *ProviderProfileDelete) sqlExec(ctx context.Context) (int, error) {
 	_spec := sqlgraph.NewDeleteSpec(providerprofile.Table, sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString))
-	if ps := ppd.mutation.predicates; len(ps) > 0 {
+	if ps := _d.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	affected, err := sqlgraph.DeleteNodes(ctx, ppd.driver, _spec)
+	affected, err := sqlgraph.DeleteNodes(ctx, _d.driver, _spec)
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
-	ppd.mutation.done = true
+	_d.mutation.done = true
 	return affected, err
 }
 
 // ProviderProfileDeleteOne is the builder for deleting a single ProviderProfile entity.
 type ProviderProfileDeleteOne struct {
-	ppd *ProviderProfileDelete
+	_d *ProviderProfileDelete
 }
 
 // Where appends a list predicates to the ProviderProfileDelete builder.
-func (ppdo *ProviderProfileDeleteOne) Where(ps ...predicate.ProviderProfile) *ProviderProfileDeleteOne {
-	ppdo.ppd.mutation.Where(ps...)
-	return ppdo
+func (_d *ProviderProfileDeleteOne) Where(ps ...predicate.ProviderProfile) *ProviderProfileDeleteOne {
+	_d._d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query.
-func (ppdo *ProviderProfileDeleteOne) Exec(ctx context.Context) error {
-	n, err := ppdo.ppd.Exec(ctx)
+func (_d *ProviderProfileDeleteOne) Exec(ctx context.Context) error {
+	n, err := _d._d.Exec(ctx)
 	switch {
 	case err != nil:
 		return err
@@ -81,8 +81,8 @@ func (ppdo *ProviderProfileDeleteOne) Exec(ctx context.Context) error {
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (ppdo *ProviderProfileDeleteOne) ExecX(ctx context.Context) {
-	if err := ppdo.Exec(ctx); err != nil {
+func (_d *ProviderProfileDeleteOne) ExecX(ctx context.Context) {
+	if err := _d.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

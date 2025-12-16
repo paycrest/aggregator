@@ -174,7 +174,7 @@ func (*LockPaymentOrder) scanValues(columns []string) ([]any, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the LockPaymentOrder fields.
-func (lpo *LockPaymentOrder) assignValues(columns []string, values []any) error {
+func (_m *LockPaymentOrder) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -184,103 +184,103 @@ func (lpo *LockPaymentOrder) assignValues(columns []string, values []any) error 
 			if value, ok := values[i].(*uuid.UUID); !ok {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
-				lpo.ID = *value
+				_m.ID = *value
 			}
 		case lockpaymentorder.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
-				lpo.CreatedAt = value.Time
+				_m.CreatedAt = value.Time
 			}
 		case lockpaymentorder.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
-				lpo.UpdatedAt = value.Time
+				_m.UpdatedAt = value.Time
 			}
 		case lockpaymentorder.FieldGatewayID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field gateway_id", values[i])
 			} else if value.Valid {
-				lpo.GatewayID = value.String
+				_m.GatewayID = value.String
 			}
 		case lockpaymentorder.FieldAmount:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field amount", values[i])
 			} else if value != nil {
-				lpo.Amount = *value
+				_m.Amount = *value
 			}
 		case lockpaymentorder.FieldProtocolFee:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field protocol_fee", values[i])
 			} else if value != nil {
-				lpo.ProtocolFee = *value
+				_m.ProtocolFee = *value
 			}
 		case lockpaymentorder.FieldRate:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field rate", values[i])
 			} else if value != nil {
-				lpo.Rate = *value
+				_m.Rate = *value
 			}
 		case lockpaymentorder.FieldOrderPercent:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field order_percent", values[i])
 			} else if value != nil {
-				lpo.OrderPercent = *value
+				_m.OrderPercent = *value
 			}
 		case lockpaymentorder.FieldSender:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field sender", values[i])
 			} else if value.Valid {
-				lpo.Sender = value.String
+				_m.Sender = value.String
 			}
 		case lockpaymentorder.FieldTxHash:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field tx_hash", values[i])
 			} else if value.Valid {
-				lpo.TxHash = value.String
+				_m.TxHash = value.String
 			}
 		case lockpaymentorder.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				lpo.Status = lockpaymentorder.Status(value.String)
+				_m.Status = lockpaymentorder.Status(value.String)
 			}
 		case lockpaymentorder.FieldBlockNumber:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field block_number", values[i])
 			} else if value.Valid {
-				lpo.BlockNumber = value.Int64
+				_m.BlockNumber = value.Int64
 			}
 		case lockpaymentorder.FieldInstitution:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field institution", values[i])
 			} else if value.Valid {
-				lpo.Institution = value.String
+				_m.Institution = value.String
 			}
 		case lockpaymentorder.FieldAccountIdentifier:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field account_identifier", values[i])
 			} else if value.Valid {
-				lpo.AccountIdentifier = value.String
+				_m.AccountIdentifier = value.String
 			}
 		case lockpaymentorder.FieldAccountName:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field account_name", values[i])
 			} else if value.Valid {
-				lpo.AccountName = value.String
+				_m.AccountName = value.String
 			}
 		case lockpaymentorder.FieldMemo:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field memo", values[i])
 			} else if value.Valid {
-				lpo.Memo = value.String
+				_m.Memo = value.String
 			}
 		case lockpaymentorder.FieldMetadata:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field metadata", values[i])
 			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &lpo.Metadata); err != nil {
+				if err := json.Unmarshal(*value, &_m.Metadata); err != nil {
 					return fmt.Errorf("unmarshal field metadata: %w", err)
 				}
 			}
@@ -288,13 +288,13 @@ func (lpo *LockPaymentOrder) assignValues(columns []string, values []any) error 
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field cancellation_count", values[i])
 			} else if value.Valid {
-				lpo.CancellationCount = int(value.Int64)
+				_m.CancellationCount = int(value.Int64)
 			}
 		case lockpaymentorder.FieldCancellationReasons:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field cancellation_reasons", values[i])
 			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &lpo.CancellationReasons); err != nil {
+				if err := json.Unmarshal(*value, &_m.CancellationReasons); err != nil {
 					return fmt.Errorf("unmarshal field cancellation_reasons: %w", err)
 				}
 			}
@@ -302,43 +302,43 @@ func (lpo *LockPaymentOrder) assignValues(columns []string, values []any) error 
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field message_hash", values[i])
 			} else if value.Valid {
-				lpo.MessageHash = value.String
+				_m.MessageHash = value.String
 			}
 		case lockpaymentorder.FieldAmountInUsd:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field amount_in_usd", values[i])
 			} else if value != nil {
-				lpo.AmountInUsd = *value
+				_m.AmountInUsd = *value
 			}
 		case lockpaymentorder.FieldOrderType:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field order_type", values[i])
 			} else if value.Valid {
-				lpo.OrderType = lockpaymentorder.OrderType(value.String)
+				_m.OrderType = lockpaymentorder.OrderType(value.String)
 			}
 		case lockpaymentorder.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field provider_profile_assigned_orders", values[i])
 			} else if value.Valid {
-				lpo.provider_profile_assigned_orders = new(string)
-				*lpo.provider_profile_assigned_orders = value.String
+				_m.provider_profile_assigned_orders = new(string)
+				*_m.provider_profile_assigned_orders = value.String
 			}
 		case lockpaymentorder.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field provision_bucket_lock_payment_orders", value)
 			} else if value.Valid {
-				lpo.provision_bucket_lock_payment_orders = new(int)
-				*lpo.provision_bucket_lock_payment_orders = int(value.Int64)
+				_m.provision_bucket_lock_payment_orders = new(int)
+				*_m.provision_bucket_lock_payment_orders = int(value.Int64)
 			}
 		case lockpaymentorder.ForeignKeys[2]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field token_lock_payment_orders", value)
 			} else if value.Valid {
-				lpo.token_lock_payment_orders = new(int)
-				*lpo.token_lock_payment_orders = int(value.Int64)
+				_m.token_lock_payment_orders = new(int)
+				*_m.token_lock_payment_orders = int(value.Int64)
 			}
 		default:
-			lpo.selectValues.Set(columns[i], values[i])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -346,120 +346,120 @@ func (lpo *LockPaymentOrder) assignValues(columns []string, values []any) error 
 
 // Value returns the ent.Value that was dynamically selected and assigned to the LockPaymentOrder.
 // This includes values selected through modifiers, order, etc.
-func (lpo *LockPaymentOrder) Value(name string) (ent.Value, error) {
-	return lpo.selectValues.Get(name)
+func (_m *LockPaymentOrder) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
 }
 
 // QueryToken queries the "token" edge of the LockPaymentOrder entity.
-func (lpo *LockPaymentOrder) QueryToken() *TokenQuery {
-	return NewLockPaymentOrderClient(lpo.config).QueryToken(lpo)
+func (_m *LockPaymentOrder) QueryToken() *TokenQuery {
+	return NewLockPaymentOrderClient(_m.config).QueryToken(_m)
 }
 
 // QueryProvisionBucket queries the "provision_bucket" edge of the LockPaymentOrder entity.
-func (lpo *LockPaymentOrder) QueryProvisionBucket() *ProvisionBucketQuery {
-	return NewLockPaymentOrderClient(lpo.config).QueryProvisionBucket(lpo)
+func (_m *LockPaymentOrder) QueryProvisionBucket() *ProvisionBucketQuery {
+	return NewLockPaymentOrderClient(_m.config).QueryProvisionBucket(_m)
 }
 
 // QueryProvider queries the "provider" edge of the LockPaymentOrder entity.
-func (lpo *LockPaymentOrder) QueryProvider() *ProviderProfileQuery {
-	return NewLockPaymentOrderClient(lpo.config).QueryProvider(lpo)
+func (_m *LockPaymentOrder) QueryProvider() *ProviderProfileQuery {
+	return NewLockPaymentOrderClient(_m.config).QueryProvider(_m)
 }
 
 // QueryFulfillments queries the "fulfillments" edge of the LockPaymentOrder entity.
-func (lpo *LockPaymentOrder) QueryFulfillments() *LockOrderFulfillmentQuery {
-	return NewLockPaymentOrderClient(lpo.config).QueryFulfillments(lpo)
+func (_m *LockPaymentOrder) QueryFulfillments() *LockOrderFulfillmentQuery {
+	return NewLockPaymentOrderClient(_m.config).QueryFulfillments(_m)
 }
 
 // QueryTransactions queries the "transactions" edge of the LockPaymentOrder entity.
-func (lpo *LockPaymentOrder) QueryTransactions() *TransactionLogQuery {
-	return NewLockPaymentOrderClient(lpo.config).QueryTransactions(lpo)
+func (_m *LockPaymentOrder) QueryTransactions() *TransactionLogQuery {
+	return NewLockPaymentOrderClient(_m.config).QueryTransactions(_m)
 }
 
 // Update returns a builder for updating this LockPaymentOrder.
 // Note that you need to call LockPaymentOrder.Unwrap() before calling this method if this LockPaymentOrder
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (lpo *LockPaymentOrder) Update() *LockPaymentOrderUpdateOne {
-	return NewLockPaymentOrderClient(lpo.config).UpdateOne(lpo)
+func (_m *LockPaymentOrder) Update() *LockPaymentOrderUpdateOne {
+	return NewLockPaymentOrderClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the LockPaymentOrder entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (lpo *LockPaymentOrder) Unwrap() *LockPaymentOrder {
-	_tx, ok := lpo.config.driver.(*txDriver)
+func (_m *LockPaymentOrder) Unwrap() *LockPaymentOrder {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: LockPaymentOrder is not a transactional entity")
 	}
-	lpo.config.driver = _tx.drv
-	return lpo
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (lpo *LockPaymentOrder) String() string {
+func (_m *LockPaymentOrder) String() string {
 	var builder strings.Builder
 	builder.WriteString("LockPaymentOrder(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", lpo.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("created_at=")
-	builder.WriteString(lpo.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
-	builder.WriteString(lpo.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("gateway_id=")
-	builder.WriteString(lpo.GatewayID)
+	builder.WriteString(_m.GatewayID)
 	builder.WriteString(", ")
 	builder.WriteString("amount=")
-	builder.WriteString(fmt.Sprintf("%v", lpo.Amount))
+	builder.WriteString(fmt.Sprintf("%v", _m.Amount))
 	builder.WriteString(", ")
 	builder.WriteString("protocol_fee=")
-	builder.WriteString(fmt.Sprintf("%v", lpo.ProtocolFee))
+	builder.WriteString(fmt.Sprintf("%v", _m.ProtocolFee))
 	builder.WriteString(", ")
 	builder.WriteString("rate=")
-	builder.WriteString(fmt.Sprintf("%v", lpo.Rate))
+	builder.WriteString(fmt.Sprintf("%v", _m.Rate))
 	builder.WriteString(", ")
 	builder.WriteString("order_percent=")
-	builder.WriteString(fmt.Sprintf("%v", lpo.OrderPercent))
+	builder.WriteString(fmt.Sprintf("%v", _m.OrderPercent))
 	builder.WriteString(", ")
 	builder.WriteString("sender=")
-	builder.WriteString(lpo.Sender)
+	builder.WriteString(_m.Sender)
 	builder.WriteString(", ")
 	builder.WriteString("tx_hash=")
-	builder.WriteString(lpo.TxHash)
+	builder.WriteString(_m.TxHash)
 	builder.WriteString(", ")
 	builder.WriteString("status=")
-	builder.WriteString(fmt.Sprintf("%v", lpo.Status))
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
 	builder.WriteString(", ")
 	builder.WriteString("block_number=")
-	builder.WriteString(fmt.Sprintf("%v", lpo.BlockNumber))
+	builder.WriteString(fmt.Sprintf("%v", _m.BlockNumber))
 	builder.WriteString(", ")
 	builder.WriteString("institution=")
-	builder.WriteString(lpo.Institution)
+	builder.WriteString(_m.Institution)
 	builder.WriteString(", ")
 	builder.WriteString("account_identifier=")
-	builder.WriteString(lpo.AccountIdentifier)
+	builder.WriteString(_m.AccountIdentifier)
 	builder.WriteString(", ")
 	builder.WriteString("account_name=")
-	builder.WriteString(lpo.AccountName)
+	builder.WriteString(_m.AccountName)
 	builder.WriteString(", ")
 	builder.WriteString("memo=")
-	builder.WriteString(lpo.Memo)
+	builder.WriteString(_m.Memo)
 	builder.WriteString(", ")
 	builder.WriteString("metadata=")
-	builder.WriteString(fmt.Sprintf("%v", lpo.Metadata))
+	builder.WriteString(fmt.Sprintf("%v", _m.Metadata))
 	builder.WriteString(", ")
 	builder.WriteString("cancellation_count=")
-	builder.WriteString(fmt.Sprintf("%v", lpo.CancellationCount))
+	builder.WriteString(fmt.Sprintf("%v", _m.CancellationCount))
 	builder.WriteString(", ")
 	builder.WriteString("cancellation_reasons=")
-	builder.WriteString(fmt.Sprintf("%v", lpo.CancellationReasons))
+	builder.WriteString(fmt.Sprintf("%v", _m.CancellationReasons))
 	builder.WriteString(", ")
 	builder.WriteString("message_hash=")
-	builder.WriteString(lpo.MessageHash)
+	builder.WriteString(_m.MessageHash)
 	builder.WriteString(", ")
 	builder.WriteString("amount_in_usd=")
-	builder.WriteString(fmt.Sprintf("%v", lpo.AmountInUsd))
+	builder.WriteString(fmt.Sprintf("%v", _m.AmountInUsd))
 	builder.WriteString(", ")
 	builder.WriteString("order_type=")
-	builder.WriteString(fmt.Sprintf("%v", lpo.OrderType))
+	builder.WriteString(fmt.Sprintf("%v", _m.OrderType))
 	builder.WriteByte(')')
 	return builder.String()
 }

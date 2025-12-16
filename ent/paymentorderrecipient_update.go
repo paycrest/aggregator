@@ -24,135 +24,135 @@ type PaymentOrderRecipientUpdate struct {
 }
 
 // Where appends a list predicates to the PaymentOrderRecipientUpdate builder.
-func (poru *PaymentOrderRecipientUpdate) Where(ps ...predicate.PaymentOrderRecipient) *PaymentOrderRecipientUpdate {
-	poru.mutation.Where(ps...)
-	return poru
+func (_u *PaymentOrderRecipientUpdate) Where(ps ...predicate.PaymentOrderRecipient) *PaymentOrderRecipientUpdate {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // SetInstitution sets the "institution" field.
-func (poru *PaymentOrderRecipientUpdate) SetInstitution(s string) *PaymentOrderRecipientUpdate {
-	poru.mutation.SetInstitution(s)
-	return poru
+func (_u *PaymentOrderRecipientUpdate) SetInstitution(v string) *PaymentOrderRecipientUpdate {
+	_u.mutation.SetInstitution(v)
+	return _u
 }
 
 // SetNillableInstitution sets the "institution" field if the given value is not nil.
-func (poru *PaymentOrderRecipientUpdate) SetNillableInstitution(s *string) *PaymentOrderRecipientUpdate {
-	if s != nil {
-		poru.SetInstitution(*s)
+func (_u *PaymentOrderRecipientUpdate) SetNillableInstitution(v *string) *PaymentOrderRecipientUpdate {
+	if v != nil {
+		_u.SetInstitution(*v)
 	}
-	return poru
+	return _u
 }
 
 // SetAccountIdentifier sets the "account_identifier" field.
-func (poru *PaymentOrderRecipientUpdate) SetAccountIdentifier(s string) *PaymentOrderRecipientUpdate {
-	poru.mutation.SetAccountIdentifier(s)
-	return poru
+func (_u *PaymentOrderRecipientUpdate) SetAccountIdentifier(v string) *PaymentOrderRecipientUpdate {
+	_u.mutation.SetAccountIdentifier(v)
+	return _u
 }
 
 // SetNillableAccountIdentifier sets the "account_identifier" field if the given value is not nil.
-func (poru *PaymentOrderRecipientUpdate) SetNillableAccountIdentifier(s *string) *PaymentOrderRecipientUpdate {
-	if s != nil {
-		poru.SetAccountIdentifier(*s)
+func (_u *PaymentOrderRecipientUpdate) SetNillableAccountIdentifier(v *string) *PaymentOrderRecipientUpdate {
+	if v != nil {
+		_u.SetAccountIdentifier(*v)
 	}
-	return poru
+	return _u
 }
 
 // SetAccountName sets the "account_name" field.
-func (poru *PaymentOrderRecipientUpdate) SetAccountName(s string) *PaymentOrderRecipientUpdate {
-	poru.mutation.SetAccountName(s)
-	return poru
+func (_u *PaymentOrderRecipientUpdate) SetAccountName(v string) *PaymentOrderRecipientUpdate {
+	_u.mutation.SetAccountName(v)
+	return _u
 }
 
 // SetNillableAccountName sets the "account_name" field if the given value is not nil.
-func (poru *PaymentOrderRecipientUpdate) SetNillableAccountName(s *string) *PaymentOrderRecipientUpdate {
-	if s != nil {
-		poru.SetAccountName(*s)
+func (_u *PaymentOrderRecipientUpdate) SetNillableAccountName(v *string) *PaymentOrderRecipientUpdate {
+	if v != nil {
+		_u.SetAccountName(*v)
 	}
-	return poru
+	return _u
 }
 
 // SetMemo sets the "memo" field.
-func (poru *PaymentOrderRecipientUpdate) SetMemo(s string) *PaymentOrderRecipientUpdate {
-	poru.mutation.SetMemo(s)
-	return poru
+func (_u *PaymentOrderRecipientUpdate) SetMemo(v string) *PaymentOrderRecipientUpdate {
+	_u.mutation.SetMemo(v)
+	return _u
 }
 
 // SetNillableMemo sets the "memo" field if the given value is not nil.
-func (poru *PaymentOrderRecipientUpdate) SetNillableMemo(s *string) *PaymentOrderRecipientUpdate {
-	if s != nil {
-		poru.SetMemo(*s)
+func (_u *PaymentOrderRecipientUpdate) SetNillableMemo(v *string) *PaymentOrderRecipientUpdate {
+	if v != nil {
+		_u.SetMemo(*v)
 	}
-	return poru
+	return _u
 }
 
 // ClearMemo clears the value of the "memo" field.
-func (poru *PaymentOrderRecipientUpdate) ClearMemo() *PaymentOrderRecipientUpdate {
-	poru.mutation.ClearMemo()
-	return poru
+func (_u *PaymentOrderRecipientUpdate) ClearMemo() *PaymentOrderRecipientUpdate {
+	_u.mutation.ClearMemo()
+	return _u
 }
 
 // SetProviderID sets the "provider_id" field.
-func (poru *PaymentOrderRecipientUpdate) SetProviderID(s string) *PaymentOrderRecipientUpdate {
-	poru.mutation.SetProviderID(s)
-	return poru
+func (_u *PaymentOrderRecipientUpdate) SetProviderID(v string) *PaymentOrderRecipientUpdate {
+	_u.mutation.SetProviderID(v)
+	return _u
 }
 
 // SetNillableProviderID sets the "provider_id" field if the given value is not nil.
-func (poru *PaymentOrderRecipientUpdate) SetNillableProviderID(s *string) *PaymentOrderRecipientUpdate {
-	if s != nil {
-		poru.SetProviderID(*s)
+func (_u *PaymentOrderRecipientUpdate) SetNillableProviderID(v *string) *PaymentOrderRecipientUpdate {
+	if v != nil {
+		_u.SetProviderID(*v)
 	}
-	return poru
+	return _u
 }
 
 // ClearProviderID clears the value of the "provider_id" field.
-func (poru *PaymentOrderRecipientUpdate) ClearProviderID() *PaymentOrderRecipientUpdate {
-	poru.mutation.ClearProviderID()
-	return poru
+func (_u *PaymentOrderRecipientUpdate) ClearProviderID() *PaymentOrderRecipientUpdate {
+	_u.mutation.ClearProviderID()
+	return _u
 }
 
 // SetMetadata sets the "metadata" field.
-func (poru *PaymentOrderRecipientUpdate) SetMetadata(m map[string]interface{}) *PaymentOrderRecipientUpdate {
-	poru.mutation.SetMetadata(m)
-	return poru
+func (_u *PaymentOrderRecipientUpdate) SetMetadata(v map[string]interface{}) *PaymentOrderRecipientUpdate {
+	_u.mutation.SetMetadata(v)
+	return _u
 }
 
 // ClearMetadata clears the value of the "metadata" field.
-func (poru *PaymentOrderRecipientUpdate) ClearMetadata() *PaymentOrderRecipientUpdate {
-	poru.mutation.ClearMetadata()
-	return poru
+func (_u *PaymentOrderRecipientUpdate) ClearMetadata() *PaymentOrderRecipientUpdate {
+	_u.mutation.ClearMetadata()
+	return _u
 }
 
 // SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID.
-func (poru *PaymentOrderRecipientUpdate) SetPaymentOrderID(id uuid.UUID) *PaymentOrderRecipientUpdate {
-	poru.mutation.SetPaymentOrderID(id)
-	return poru
+func (_u *PaymentOrderRecipientUpdate) SetPaymentOrderID(id uuid.UUID) *PaymentOrderRecipientUpdate {
+	_u.mutation.SetPaymentOrderID(id)
+	return _u
 }
 
 // SetPaymentOrder sets the "payment_order" edge to the PaymentOrder entity.
-func (poru *PaymentOrderRecipientUpdate) SetPaymentOrder(p *PaymentOrder) *PaymentOrderRecipientUpdate {
-	return poru.SetPaymentOrderID(p.ID)
+func (_u *PaymentOrderRecipientUpdate) SetPaymentOrder(v *PaymentOrder) *PaymentOrderRecipientUpdate {
+	return _u.SetPaymentOrderID(v.ID)
 }
 
 // Mutation returns the PaymentOrderRecipientMutation object of the builder.
-func (poru *PaymentOrderRecipientUpdate) Mutation() *PaymentOrderRecipientMutation {
-	return poru.mutation
+func (_u *PaymentOrderRecipientUpdate) Mutation() *PaymentOrderRecipientMutation {
+	return _u.mutation
 }
 
 // ClearPaymentOrder clears the "payment_order" edge to the PaymentOrder entity.
-func (poru *PaymentOrderRecipientUpdate) ClearPaymentOrder() *PaymentOrderRecipientUpdate {
-	poru.mutation.ClearPaymentOrder()
-	return poru
+func (_u *PaymentOrderRecipientUpdate) ClearPaymentOrder() *PaymentOrderRecipientUpdate {
+	_u.mutation.ClearPaymentOrder()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
-func (poru *PaymentOrderRecipientUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks(ctx, poru.sqlSave, poru.mutation, poru.hooks)
+func (_u *PaymentOrderRecipientUpdate) Save(ctx context.Context) (int, error) {
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (poru *PaymentOrderRecipientUpdate) SaveX(ctx context.Context) int {
-	affected, err := poru.Save(ctx)
+func (_u *PaymentOrderRecipientUpdate) SaveX(ctx context.Context) int {
+	affected, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -160,66 +160,66 @@ func (poru *PaymentOrderRecipientUpdate) SaveX(ctx context.Context) int {
 }
 
 // Exec executes the query.
-func (poru *PaymentOrderRecipientUpdate) Exec(ctx context.Context) error {
-	_, err := poru.Save(ctx)
+func (_u *PaymentOrderRecipientUpdate) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (poru *PaymentOrderRecipientUpdate) ExecX(ctx context.Context) {
-	if err := poru.Exec(ctx); err != nil {
+func (_u *PaymentOrderRecipientUpdate) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (poru *PaymentOrderRecipientUpdate) check() error {
-	if poru.mutation.PaymentOrderCleared() && len(poru.mutation.PaymentOrderIDs()) > 0 {
+func (_u *PaymentOrderRecipientUpdate) check() error {
+	if _u.mutation.PaymentOrderCleared() && len(_u.mutation.PaymentOrderIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "PaymentOrderRecipient.payment_order"`)
 	}
 	return nil
 }
 
-func (poru *PaymentOrderRecipientUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	if err := poru.check(); err != nil {
-		return n, err
+func (_u *PaymentOrderRecipientUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(paymentorderrecipient.Table, paymentorderrecipient.Columns, sqlgraph.NewFieldSpec(paymentorderrecipient.FieldID, field.TypeInt))
-	if ps := poru.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := poru.mutation.Institution(); ok {
+	if value, ok := _u.mutation.Institution(); ok {
 		_spec.SetField(paymentorderrecipient.FieldInstitution, field.TypeString, value)
 	}
-	if value, ok := poru.mutation.AccountIdentifier(); ok {
+	if value, ok := _u.mutation.AccountIdentifier(); ok {
 		_spec.SetField(paymentorderrecipient.FieldAccountIdentifier, field.TypeString, value)
 	}
-	if value, ok := poru.mutation.AccountName(); ok {
+	if value, ok := _u.mutation.AccountName(); ok {
 		_spec.SetField(paymentorderrecipient.FieldAccountName, field.TypeString, value)
 	}
-	if value, ok := poru.mutation.Memo(); ok {
+	if value, ok := _u.mutation.Memo(); ok {
 		_spec.SetField(paymentorderrecipient.FieldMemo, field.TypeString, value)
 	}
-	if poru.mutation.MemoCleared() {
+	if _u.mutation.MemoCleared() {
 		_spec.ClearField(paymentorderrecipient.FieldMemo, field.TypeString)
 	}
-	if value, ok := poru.mutation.ProviderID(); ok {
+	if value, ok := _u.mutation.ProviderID(); ok {
 		_spec.SetField(paymentorderrecipient.FieldProviderID, field.TypeString, value)
 	}
-	if poru.mutation.ProviderIDCleared() {
+	if _u.mutation.ProviderIDCleared() {
 		_spec.ClearField(paymentorderrecipient.FieldProviderID, field.TypeString)
 	}
-	if value, ok := poru.mutation.Metadata(); ok {
+	if value, ok := _u.mutation.Metadata(); ok {
 		_spec.SetField(paymentorderrecipient.FieldMetadata, field.TypeJSON, value)
 	}
-	if poru.mutation.MetadataCleared() {
+	if _u.mutation.MetadataCleared() {
 		_spec.ClearField(paymentorderrecipient.FieldMetadata, field.TypeJSON)
 	}
-	if poru.mutation.PaymentOrderCleared() {
+	if _u.mutation.PaymentOrderCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -232,7 +232,7 @@ func (poru *PaymentOrderRecipientUpdate) sqlSave(ctx context.Context) (n int, er
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := poru.mutation.PaymentOrderIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.PaymentOrderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -248,7 +248,7 @@ func (poru *PaymentOrderRecipientUpdate) sqlSave(ctx context.Context) (n int, er
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if n, err = sqlgraph.UpdateNodes(ctx, poru.driver, _spec); err != nil {
+	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{paymentorderrecipient.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -256,8 +256,8 @@ func (poru *PaymentOrderRecipientUpdate) sqlSave(ctx context.Context) (n int, er
 		}
 		return 0, err
 	}
-	poru.mutation.done = true
-	return n, nil
+	_u.mutation.done = true
+	return _node, nil
 }
 
 // PaymentOrderRecipientUpdateOne is the builder for updating a single PaymentOrderRecipient entity.
@@ -269,142 +269,142 @@ type PaymentOrderRecipientUpdateOne struct {
 }
 
 // SetInstitution sets the "institution" field.
-func (poruo *PaymentOrderRecipientUpdateOne) SetInstitution(s string) *PaymentOrderRecipientUpdateOne {
-	poruo.mutation.SetInstitution(s)
-	return poruo
+func (_u *PaymentOrderRecipientUpdateOne) SetInstitution(v string) *PaymentOrderRecipientUpdateOne {
+	_u.mutation.SetInstitution(v)
+	return _u
 }
 
 // SetNillableInstitution sets the "institution" field if the given value is not nil.
-func (poruo *PaymentOrderRecipientUpdateOne) SetNillableInstitution(s *string) *PaymentOrderRecipientUpdateOne {
-	if s != nil {
-		poruo.SetInstitution(*s)
+func (_u *PaymentOrderRecipientUpdateOne) SetNillableInstitution(v *string) *PaymentOrderRecipientUpdateOne {
+	if v != nil {
+		_u.SetInstitution(*v)
 	}
-	return poruo
+	return _u
 }
 
 // SetAccountIdentifier sets the "account_identifier" field.
-func (poruo *PaymentOrderRecipientUpdateOne) SetAccountIdentifier(s string) *PaymentOrderRecipientUpdateOne {
-	poruo.mutation.SetAccountIdentifier(s)
-	return poruo
+func (_u *PaymentOrderRecipientUpdateOne) SetAccountIdentifier(v string) *PaymentOrderRecipientUpdateOne {
+	_u.mutation.SetAccountIdentifier(v)
+	return _u
 }
 
 // SetNillableAccountIdentifier sets the "account_identifier" field if the given value is not nil.
-func (poruo *PaymentOrderRecipientUpdateOne) SetNillableAccountIdentifier(s *string) *PaymentOrderRecipientUpdateOne {
-	if s != nil {
-		poruo.SetAccountIdentifier(*s)
+func (_u *PaymentOrderRecipientUpdateOne) SetNillableAccountIdentifier(v *string) *PaymentOrderRecipientUpdateOne {
+	if v != nil {
+		_u.SetAccountIdentifier(*v)
 	}
-	return poruo
+	return _u
 }
 
 // SetAccountName sets the "account_name" field.
-func (poruo *PaymentOrderRecipientUpdateOne) SetAccountName(s string) *PaymentOrderRecipientUpdateOne {
-	poruo.mutation.SetAccountName(s)
-	return poruo
+func (_u *PaymentOrderRecipientUpdateOne) SetAccountName(v string) *PaymentOrderRecipientUpdateOne {
+	_u.mutation.SetAccountName(v)
+	return _u
 }
 
 // SetNillableAccountName sets the "account_name" field if the given value is not nil.
-func (poruo *PaymentOrderRecipientUpdateOne) SetNillableAccountName(s *string) *PaymentOrderRecipientUpdateOne {
-	if s != nil {
-		poruo.SetAccountName(*s)
+func (_u *PaymentOrderRecipientUpdateOne) SetNillableAccountName(v *string) *PaymentOrderRecipientUpdateOne {
+	if v != nil {
+		_u.SetAccountName(*v)
 	}
-	return poruo
+	return _u
 }
 
 // SetMemo sets the "memo" field.
-func (poruo *PaymentOrderRecipientUpdateOne) SetMemo(s string) *PaymentOrderRecipientUpdateOne {
-	poruo.mutation.SetMemo(s)
-	return poruo
+func (_u *PaymentOrderRecipientUpdateOne) SetMemo(v string) *PaymentOrderRecipientUpdateOne {
+	_u.mutation.SetMemo(v)
+	return _u
 }
 
 // SetNillableMemo sets the "memo" field if the given value is not nil.
-func (poruo *PaymentOrderRecipientUpdateOne) SetNillableMemo(s *string) *PaymentOrderRecipientUpdateOne {
-	if s != nil {
-		poruo.SetMemo(*s)
+func (_u *PaymentOrderRecipientUpdateOne) SetNillableMemo(v *string) *PaymentOrderRecipientUpdateOne {
+	if v != nil {
+		_u.SetMemo(*v)
 	}
-	return poruo
+	return _u
 }
 
 // ClearMemo clears the value of the "memo" field.
-func (poruo *PaymentOrderRecipientUpdateOne) ClearMemo() *PaymentOrderRecipientUpdateOne {
-	poruo.mutation.ClearMemo()
-	return poruo
+func (_u *PaymentOrderRecipientUpdateOne) ClearMemo() *PaymentOrderRecipientUpdateOne {
+	_u.mutation.ClearMemo()
+	return _u
 }
 
 // SetProviderID sets the "provider_id" field.
-func (poruo *PaymentOrderRecipientUpdateOne) SetProviderID(s string) *PaymentOrderRecipientUpdateOne {
-	poruo.mutation.SetProviderID(s)
-	return poruo
+func (_u *PaymentOrderRecipientUpdateOne) SetProviderID(v string) *PaymentOrderRecipientUpdateOne {
+	_u.mutation.SetProviderID(v)
+	return _u
 }
 
 // SetNillableProviderID sets the "provider_id" field if the given value is not nil.
-func (poruo *PaymentOrderRecipientUpdateOne) SetNillableProviderID(s *string) *PaymentOrderRecipientUpdateOne {
-	if s != nil {
-		poruo.SetProviderID(*s)
+func (_u *PaymentOrderRecipientUpdateOne) SetNillableProviderID(v *string) *PaymentOrderRecipientUpdateOne {
+	if v != nil {
+		_u.SetProviderID(*v)
 	}
-	return poruo
+	return _u
 }
 
 // ClearProviderID clears the value of the "provider_id" field.
-func (poruo *PaymentOrderRecipientUpdateOne) ClearProviderID() *PaymentOrderRecipientUpdateOne {
-	poruo.mutation.ClearProviderID()
-	return poruo
+func (_u *PaymentOrderRecipientUpdateOne) ClearProviderID() *PaymentOrderRecipientUpdateOne {
+	_u.mutation.ClearProviderID()
+	return _u
 }
 
 // SetMetadata sets the "metadata" field.
-func (poruo *PaymentOrderRecipientUpdateOne) SetMetadata(m map[string]interface{}) *PaymentOrderRecipientUpdateOne {
-	poruo.mutation.SetMetadata(m)
-	return poruo
+func (_u *PaymentOrderRecipientUpdateOne) SetMetadata(v map[string]interface{}) *PaymentOrderRecipientUpdateOne {
+	_u.mutation.SetMetadata(v)
+	return _u
 }
 
 // ClearMetadata clears the value of the "metadata" field.
-func (poruo *PaymentOrderRecipientUpdateOne) ClearMetadata() *PaymentOrderRecipientUpdateOne {
-	poruo.mutation.ClearMetadata()
-	return poruo
+func (_u *PaymentOrderRecipientUpdateOne) ClearMetadata() *PaymentOrderRecipientUpdateOne {
+	_u.mutation.ClearMetadata()
+	return _u
 }
 
 // SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID.
-func (poruo *PaymentOrderRecipientUpdateOne) SetPaymentOrderID(id uuid.UUID) *PaymentOrderRecipientUpdateOne {
-	poruo.mutation.SetPaymentOrderID(id)
-	return poruo
+func (_u *PaymentOrderRecipientUpdateOne) SetPaymentOrderID(id uuid.UUID) *PaymentOrderRecipientUpdateOne {
+	_u.mutation.SetPaymentOrderID(id)
+	return _u
 }
 
 // SetPaymentOrder sets the "payment_order" edge to the PaymentOrder entity.
-func (poruo *PaymentOrderRecipientUpdateOne) SetPaymentOrder(p *PaymentOrder) *PaymentOrderRecipientUpdateOne {
-	return poruo.SetPaymentOrderID(p.ID)
+func (_u *PaymentOrderRecipientUpdateOne) SetPaymentOrder(v *PaymentOrder) *PaymentOrderRecipientUpdateOne {
+	return _u.SetPaymentOrderID(v.ID)
 }
 
 // Mutation returns the PaymentOrderRecipientMutation object of the builder.
-func (poruo *PaymentOrderRecipientUpdateOne) Mutation() *PaymentOrderRecipientMutation {
-	return poruo.mutation
+func (_u *PaymentOrderRecipientUpdateOne) Mutation() *PaymentOrderRecipientMutation {
+	return _u.mutation
 }
 
 // ClearPaymentOrder clears the "payment_order" edge to the PaymentOrder entity.
-func (poruo *PaymentOrderRecipientUpdateOne) ClearPaymentOrder() *PaymentOrderRecipientUpdateOne {
-	poruo.mutation.ClearPaymentOrder()
-	return poruo
+func (_u *PaymentOrderRecipientUpdateOne) ClearPaymentOrder() *PaymentOrderRecipientUpdateOne {
+	_u.mutation.ClearPaymentOrder()
+	return _u
 }
 
 // Where appends a list predicates to the PaymentOrderRecipientUpdate builder.
-func (poruo *PaymentOrderRecipientUpdateOne) Where(ps ...predicate.PaymentOrderRecipient) *PaymentOrderRecipientUpdateOne {
-	poruo.mutation.Where(ps...)
-	return poruo
+func (_u *PaymentOrderRecipientUpdateOne) Where(ps ...predicate.PaymentOrderRecipient) *PaymentOrderRecipientUpdateOne {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
-func (poruo *PaymentOrderRecipientUpdateOne) Select(field string, fields ...string) *PaymentOrderRecipientUpdateOne {
-	poruo.fields = append([]string{field}, fields...)
-	return poruo
+func (_u *PaymentOrderRecipientUpdateOne) Select(field string, fields ...string) *PaymentOrderRecipientUpdateOne {
+	_u.fields = append([]string{field}, fields...)
+	return _u
 }
 
 // Save executes the query and returns the updated PaymentOrderRecipient entity.
-func (poruo *PaymentOrderRecipientUpdateOne) Save(ctx context.Context) (*PaymentOrderRecipient, error) {
-	return withHooks(ctx, poruo.sqlSave, poruo.mutation, poruo.hooks)
+func (_u *PaymentOrderRecipientUpdateOne) Save(ctx context.Context) (*PaymentOrderRecipient, error) {
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (poruo *PaymentOrderRecipientUpdateOne) SaveX(ctx context.Context) *PaymentOrderRecipient {
-	node, err := poruo.Save(ctx)
+func (_u *PaymentOrderRecipientUpdateOne) SaveX(ctx context.Context) *PaymentOrderRecipient {
+	node, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -412,37 +412,37 @@ func (poruo *PaymentOrderRecipientUpdateOne) SaveX(ctx context.Context) *Payment
 }
 
 // Exec executes the query on the entity.
-func (poruo *PaymentOrderRecipientUpdateOne) Exec(ctx context.Context) error {
-	_, err := poruo.Save(ctx)
+func (_u *PaymentOrderRecipientUpdateOne) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (poruo *PaymentOrderRecipientUpdateOne) ExecX(ctx context.Context) {
-	if err := poruo.Exec(ctx); err != nil {
+func (_u *PaymentOrderRecipientUpdateOne) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (poruo *PaymentOrderRecipientUpdateOne) check() error {
-	if poruo.mutation.PaymentOrderCleared() && len(poruo.mutation.PaymentOrderIDs()) > 0 {
+func (_u *PaymentOrderRecipientUpdateOne) check() error {
+	if _u.mutation.PaymentOrderCleared() && len(_u.mutation.PaymentOrderIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "PaymentOrderRecipient.payment_order"`)
 	}
 	return nil
 }
 
-func (poruo *PaymentOrderRecipientUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrderRecipient, err error) {
-	if err := poruo.check(); err != nil {
+func (_u *PaymentOrderRecipientUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrderRecipient, err error) {
+	if err := _u.check(); err != nil {
 		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(paymentorderrecipient.Table, paymentorderrecipient.Columns, sqlgraph.NewFieldSpec(paymentorderrecipient.FieldID, field.TypeInt))
-	id, ok := poruo.mutation.ID()
+	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "PaymentOrderRecipient.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
-	if fields := poruo.fields; len(fields) > 0 {
+	if fields := _u.fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, paymentorderrecipient.FieldID)
 		for _, f := range fields {
@@ -454,41 +454,41 @@ func (poruo *PaymentOrderRecipientUpdateOne) sqlSave(ctx context.Context) (_node
 			}
 		}
 	}
-	if ps := poruo.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := poruo.mutation.Institution(); ok {
+	if value, ok := _u.mutation.Institution(); ok {
 		_spec.SetField(paymentorderrecipient.FieldInstitution, field.TypeString, value)
 	}
-	if value, ok := poruo.mutation.AccountIdentifier(); ok {
+	if value, ok := _u.mutation.AccountIdentifier(); ok {
 		_spec.SetField(paymentorderrecipient.FieldAccountIdentifier, field.TypeString, value)
 	}
-	if value, ok := poruo.mutation.AccountName(); ok {
+	if value, ok := _u.mutation.AccountName(); ok {
 		_spec.SetField(paymentorderrecipient.FieldAccountName, field.TypeString, value)
 	}
-	if value, ok := poruo.mutation.Memo(); ok {
+	if value, ok := _u.mutation.Memo(); ok {
 		_spec.SetField(paymentorderrecipient.FieldMemo, field.TypeString, value)
 	}
-	if poruo.mutation.MemoCleared() {
+	if _u.mutation.MemoCleared() {
 		_spec.ClearField(paymentorderrecipient.FieldMemo, field.TypeString)
 	}
-	if value, ok := poruo.mutation.ProviderID(); ok {
+	if value, ok := _u.mutation.ProviderID(); ok {
 		_spec.SetField(paymentorderrecipient.FieldProviderID, field.TypeString, value)
 	}
-	if poruo.mutation.ProviderIDCleared() {
+	if _u.mutation.ProviderIDCleared() {
 		_spec.ClearField(paymentorderrecipient.FieldProviderID, field.TypeString)
 	}
-	if value, ok := poruo.mutation.Metadata(); ok {
+	if value, ok := _u.mutation.Metadata(); ok {
 		_spec.SetField(paymentorderrecipient.FieldMetadata, field.TypeJSON, value)
 	}
-	if poruo.mutation.MetadataCleared() {
+	if _u.mutation.MetadataCleared() {
 		_spec.ClearField(paymentorderrecipient.FieldMetadata, field.TypeJSON)
 	}
-	if poruo.mutation.PaymentOrderCleared() {
+	if _u.mutation.PaymentOrderCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -501,7 +501,7 @@ func (poruo *PaymentOrderRecipientUpdateOne) sqlSave(ctx context.Context) (_node
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := poruo.mutation.PaymentOrderIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.PaymentOrderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -517,10 +517,10 @@ func (poruo *PaymentOrderRecipientUpdateOne) sqlSave(ctx context.Context) (_node
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	_node = &PaymentOrderRecipient{config: poruo.config}
+	_node = &PaymentOrderRecipient{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues
-	if err = sqlgraph.UpdateNode(ctx, poruo.driver, _spec); err != nil {
+	if err = sqlgraph.UpdateNode(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{paymentorderrecipient.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -528,6 +528,6 @@ func (poruo *PaymentOrderRecipientUpdateOne) sqlSave(ctx context.Context) (_node
 		}
 		return nil, err
 	}
-	poruo.mutation.done = true
+	_u.mutation.done = true
 	return _node, nil
 }

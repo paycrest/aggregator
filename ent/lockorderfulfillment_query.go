@@ -32,44 +32,44 @@ type LockOrderFulfillmentQuery struct {
 }
 
 // Where adds a new predicate for the LockOrderFulfillmentQuery builder.
-func (lofq *LockOrderFulfillmentQuery) Where(ps ...predicate.LockOrderFulfillment) *LockOrderFulfillmentQuery {
-	lofq.predicates = append(lofq.predicates, ps...)
-	return lofq
+func (_q *LockOrderFulfillmentQuery) Where(ps ...predicate.LockOrderFulfillment) *LockOrderFulfillmentQuery {
+	_q.predicates = append(_q.predicates, ps...)
+	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (lofq *LockOrderFulfillmentQuery) Limit(limit int) *LockOrderFulfillmentQuery {
-	lofq.ctx.Limit = &limit
-	return lofq
+func (_q *LockOrderFulfillmentQuery) Limit(limit int) *LockOrderFulfillmentQuery {
+	_q.ctx.Limit = &limit
+	return _q
 }
 
 // Offset to start from.
-func (lofq *LockOrderFulfillmentQuery) Offset(offset int) *LockOrderFulfillmentQuery {
-	lofq.ctx.Offset = &offset
-	return lofq
+func (_q *LockOrderFulfillmentQuery) Offset(offset int) *LockOrderFulfillmentQuery {
+	_q.ctx.Offset = &offset
+	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (lofq *LockOrderFulfillmentQuery) Unique(unique bool) *LockOrderFulfillmentQuery {
-	lofq.ctx.Unique = &unique
-	return lofq
+func (_q *LockOrderFulfillmentQuery) Unique(unique bool) *LockOrderFulfillmentQuery {
+	_q.ctx.Unique = &unique
+	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (lofq *LockOrderFulfillmentQuery) Order(o ...lockorderfulfillment.OrderOption) *LockOrderFulfillmentQuery {
-	lofq.order = append(lofq.order, o...)
-	return lofq
+func (_q *LockOrderFulfillmentQuery) Order(o ...lockorderfulfillment.OrderOption) *LockOrderFulfillmentQuery {
+	_q.order = append(_q.order, o...)
+	return _q
 }
 
 // QueryOrder chains the current query on the "order" edge.
-func (lofq *LockOrderFulfillmentQuery) QueryOrder() *LockPaymentOrderQuery {
-	query := (&LockPaymentOrderClient{config: lofq.config}).Query()
+func (_q *LockOrderFulfillmentQuery) QueryOrder() *LockPaymentOrderQuery {
+	query := (&LockPaymentOrderClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := lofq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := lofq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -78,7 +78,7 @@ func (lofq *LockOrderFulfillmentQuery) QueryOrder() *LockPaymentOrderQuery {
 			sqlgraph.To(lockpaymentorder.Table, lockpaymentorder.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, lockorderfulfillment.OrderTable, lockorderfulfillment.OrderColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(lofq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
@@ -86,8 +86,8 @@ func (lofq *LockOrderFulfillmentQuery) QueryOrder() *LockPaymentOrderQuery {
 
 // First returns the first LockOrderFulfillment entity from the query.
 // Returns a *NotFoundError when no LockOrderFulfillment was found.
-func (lofq *LockOrderFulfillmentQuery) First(ctx context.Context) (*LockOrderFulfillment, error) {
-	nodes, err := lofq.Limit(1).All(setContextOp(ctx, lofq.ctx, ent.OpQueryFirst))
+func (_q *LockOrderFulfillmentQuery) First(ctx context.Context) (*LockOrderFulfillment, error) {
+	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
@@ -98,8 +98,8 @@ func (lofq *LockOrderFulfillmentQuery) First(ctx context.Context) (*LockOrderFul
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (lofq *LockOrderFulfillmentQuery) FirstX(ctx context.Context) *LockOrderFulfillment {
-	node, err := lofq.First(ctx)
+func (_q *LockOrderFulfillmentQuery) FirstX(ctx context.Context) *LockOrderFulfillment {
+	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -108,9 +108,9 @@ func (lofq *LockOrderFulfillmentQuery) FirstX(ctx context.Context) *LockOrderFul
 
 // FirstID returns the first LockOrderFulfillment ID from the query.
 // Returns a *NotFoundError when no LockOrderFulfillment ID was found.
-func (lofq *LockOrderFulfillmentQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *LockOrderFulfillmentQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = lofq.Limit(1).IDs(setContextOp(ctx, lofq.ctx, ent.OpQueryFirstID)); err != nil {
+	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -121,8 +121,8 @@ func (lofq *LockOrderFulfillmentQuery) FirstID(ctx context.Context) (id uuid.UUI
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (lofq *LockOrderFulfillmentQuery) FirstIDX(ctx context.Context) uuid.UUID {
-	id, err := lofq.FirstID(ctx)
+func (_q *LockOrderFulfillmentQuery) FirstIDX(ctx context.Context) uuid.UUID {
+	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -132,8 +132,8 @@ func (lofq *LockOrderFulfillmentQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Only returns a single LockOrderFulfillment entity found by the query, ensuring it only returns one.
 // Returns a *NotSingularError when more than one LockOrderFulfillment entity is found.
 // Returns a *NotFoundError when no LockOrderFulfillment entities are found.
-func (lofq *LockOrderFulfillmentQuery) Only(ctx context.Context) (*LockOrderFulfillment, error) {
-	nodes, err := lofq.Limit(2).All(setContextOp(ctx, lofq.ctx, ent.OpQueryOnly))
+func (_q *LockOrderFulfillmentQuery) Only(ctx context.Context) (*LockOrderFulfillment, error) {
+	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -148,8 +148,8 @@ func (lofq *LockOrderFulfillmentQuery) Only(ctx context.Context) (*LockOrderFulf
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (lofq *LockOrderFulfillmentQuery) OnlyX(ctx context.Context) *LockOrderFulfillment {
-	node, err := lofq.Only(ctx)
+func (_q *LockOrderFulfillmentQuery) OnlyX(ctx context.Context) *LockOrderFulfillment {
+	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -159,9 +159,9 @@ func (lofq *LockOrderFulfillmentQuery) OnlyX(ctx context.Context) *LockOrderFulf
 // OnlyID is like Only, but returns the only LockOrderFulfillment ID in the query.
 // Returns a *NotSingularError when more than one LockOrderFulfillment ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (lofq *LockOrderFulfillmentQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *LockOrderFulfillmentQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = lofq.Limit(2).IDs(setContextOp(ctx, lofq.ctx, ent.OpQueryOnlyID)); err != nil {
+	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -176,8 +176,8 @@ func (lofq *LockOrderFulfillmentQuery) OnlyID(ctx context.Context) (id uuid.UUID
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (lofq *LockOrderFulfillmentQuery) OnlyIDX(ctx context.Context) uuid.UUID {
-	id, err := lofq.OnlyID(ctx)
+func (_q *LockOrderFulfillmentQuery) OnlyIDX(ctx context.Context) uuid.UUID {
+	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -185,18 +185,18 @@ func (lofq *LockOrderFulfillmentQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 }
 
 // All executes the query and returns a list of LockOrderFulfillments.
-func (lofq *LockOrderFulfillmentQuery) All(ctx context.Context) ([]*LockOrderFulfillment, error) {
-	ctx = setContextOp(ctx, lofq.ctx, ent.OpQueryAll)
-	if err := lofq.prepareQuery(ctx); err != nil {
+func (_q *LockOrderFulfillmentQuery) All(ctx context.Context) ([]*LockOrderFulfillment, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
 	qr := querierAll[[]*LockOrderFulfillment, *LockOrderFulfillmentQuery]()
-	return withInterceptors[[]*LockOrderFulfillment](ctx, lofq, qr, lofq.inters)
+	return withInterceptors[[]*LockOrderFulfillment](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (lofq *LockOrderFulfillmentQuery) AllX(ctx context.Context) []*LockOrderFulfillment {
-	nodes, err := lofq.All(ctx)
+func (_q *LockOrderFulfillmentQuery) AllX(ctx context.Context) []*LockOrderFulfillment {
+	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -204,20 +204,20 @@ func (lofq *LockOrderFulfillmentQuery) AllX(ctx context.Context) []*LockOrderFul
 }
 
 // IDs executes the query and returns a list of LockOrderFulfillment IDs.
-func (lofq *LockOrderFulfillmentQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
-	if lofq.ctx.Unique == nil && lofq.path != nil {
-		lofq.Unique(true)
+func (_q *LockOrderFulfillmentQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if _q.ctx.Unique == nil && _q.path != nil {
+		_q.Unique(true)
 	}
-	ctx = setContextOp(ctx, lofq.ctx, ent.OpQueryIDs)
-	if err = lofq.Select(lockorderfulfillment.FieldID).Scan(ctx, &ids); err != nil {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
+	if err = _q.Select(lockorderfulfillment.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (lofq *LockOrderFulfillmentQuery) IDsX(ctx context.Context) []uuid.UUID {
-	ids, err := lofq.IDs(ctx)
+func (_q *LockOrderFulfillmentQuery) IDsX(ctx context.Context) []uuid.UUID {
+	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -225,17 +225,17 @@ func (lofq *LockOrderFulfillmentQuery) IDsX(ctx context.Context) []uuid.UUID {
 }
 
 // Count returns the count of the given query.
-func (lofq *LockOrderFulfillmentQuery) Count(ctx context.Context) (int, error) {
-	ctx = setContextOp(ctx, lofq.ctx, ent.OpQueryCount)
-	if err := lofq.prepareQuery(ctx); err != nil {
+func (_q *LockOrderFulfillmentQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, lofq, querierCount[*LockOrderFulfillmentQuery](), lofq.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*LockOrderFulfillmentQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (lofq *LockOrderFulfillmentQuery) CountX(ctx context.Context) int {
-	count, err := lofq.Count(ctx)
+func (_q *LockOrderFulfillmentQuery) CountX(ctx context.Context) int {
+	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -243,9 +243,9 @@ func (lofq *LockOrderFulfillmentQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (lofq *LockOrderFulfillmentQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = setContextOp(ctx, lofq.ctx, ent.OpQueryExist)
-	switch _, err := lofq.FirstID(ctx); {
+func (_q *LockOrderFulfillmentQuery) Exist(ctx context.Context) (bool, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
+	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
 	case err != nil:
@@ -256,8 +256,8 @@ func (lofq *LockOrderFulfillmentQuery) Exist(ctx context.Context) (bool, error) 
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (lofq *LockOrderFulfillmentQuery) ExistX(ctx context.Context) bool {
-	exist, err := lofq.Exist(ctx)
+func (_q *LockOrderFulfillmentQuery) ExistX(ctx context.Context) bool {
+	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -266,32 +266,32 @@ func (lofq *LockOrderFulfillmentQuery) ExistX(ctx context.Context) bool {
 
 // Clone returns a duplicate of the LockOrderFulfillmentQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (lofq *LockOrderFulfillmentQuery) Clone() *LockOrderFulfillmentQuery {
-	if lofq == nil {
+func (_q *LockOrderFulfillmentQuery) Clone() *LockOrderFulfillmentQuery {
+	if _q == nil {
 		return nil
 	}
 	return &LockOrderFulfillmentQuery{
-		config:     lofq.config,
-		ctx:        lofq.ctx.Clone(),
-		order:      append([]lockorderfulfillment.OrderOption{}, lofq.order...),
-		inters:     append([]Interceptor{}, lofq.inters...),
-		predicates: append([]predicate.LockOrderFulfillment{}, lofq.predicates...),
-		withOrder:  lofq.withOrder.Clone(),
+		config:     _q.config,
+		ctx:        _q.ctx.Clone(),
+		order:      append([]lockorderfulfillment.OrderOption{}, _q.order...),
+		inters:     append([]Interceptor{}, _q.inters...),
+		predicates: append([]predicate.LockOrderFulfillment{}, _q.predicates...),
+		withOrder:  _q.withOrder.Clone(),
 		// clone intermediate query.
-		sql:  lofq.sql.Clone(),
-		path: lofq.path,
+		sql:  _q.sql.Clone(),
+		path: _q.path,
 	}
 }
 
 // WithOrder tells the query-builder to eager-load the nodes that are connected to
 // the "order" edge. The optional arguments are used to configure the query builder of the edge.
-func (lofq *LockOrderFulfillmentQuery) WithOrder(opts ...func(*LockPaymentOrderQuery)) *LockOrderFulfillmentQuery {
-	query := (&LockPaymentOrderClient{config: lofq.config}).Query()
+func (_q *LockOrderFulfillmentQuery) WithOrder(opts ...func(*LockPaymentOrderQuery)) *LockOrderFulfillmentQuery {
+	query := (&LockPaymentOrderClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	lofq.withOrder = query
-	return lofq
+	_q.withOrder = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -308,10 +308,10 @@ func (lofq *LockOrderFulfillmentQuery) WithOrder(opts ...func(*LockPaymentOrderQ
 //		GroupBy(lockorderfulfillment.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (lofq *LockOrderFulfillmentQuery) GroupBy(field string, fields ...string) *LockOrderFulfillmentGroupBy {
-	lofq.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &LockOrderFulfillmentGroupBy{build: lofq}
-	grbuild.flds = &lofq.ctx.Fields
+func (_q *LockOrderFulfillmentQuery) GroupBy(field string, fields ...string) *LockOrderFulfillmentGroupBy {
+	_q.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &LockOrderFulfillmentGroupBy{build: _q}
+	grbuild.flds = &_q.ctx.Fields
 	grbuild.label = lockorderfulfillment.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -329,55 +329,55 @@ func (lofq *LockOrderFulfillmentQuery) GroupBy(field string, fields ...string) *
 //	client.LockOrderFulfillment.Query().
 //		Select(lockorderfulfillment.FieldCreatedAt).
 //		Scan(ctx, &v)
-func (lofq *LockOrderFulfillmentQuery) Select(fields ...string) *LockOrderFulfillmentSelect {
-	lofq.ctx.Fields = append(lofq.ctx.Fields, fields...)
-	sbuild := &LockOrderFulfillmentSelect{LockOrderFulfillmentQuery: lofq}
+func (_q *LockOrderFulfillmentQuery) Select(fields ...string) *LockOrderFulfillmentSelect {
+	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
+	sbuild := &LockOrderFulfillmentSelect{LockOrderFulfillmentQuery: _q}
 	sbuild.label = lockorderfulfillment.Label
-	sbuild.flds, sbuild.scan = &lofq.ctx.Fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
 // Aggregate returns a LockOrderFulfillmentSelect configured with the given aggregations.
-func (lofq *LockOrderFulfillmentQuery) Aggregate(fns ...AggregateFunc) *LockOrderFulfillmentSelect {
-	return lofq.Select().Aggregate(fns...)
+func (_q *LockOrderFulfillmentQuery) Aggregate(fns ...AggregateFunc) *LockOrderFulfillmentSelect {
+	return _q.Select().Aggregate(fns...)
 }
 
-func (lofq *LockOrderFulfillmentQuery) prepareQuery(ctx context.Context) error {
-	for _, inter := range lofq.inters {
+func (_q *LockOrderFulfillmentQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
 		}
 		if trv, ok := inter.(Traverser); ok {
-			if err := trv.Traverse(ctx, lofq); err != nil {
+			if err := trv.Traverse(ctx, _q); err != nil {
 				return err
 			}
 		}
 	}
-	for _, f := range lofq.ctx.Fields {
+	for _, f := range _q.ctx.Fields {
 		if !lockorderfulfillment.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
-	if lofq.path != nil {
-		prev, err := lofq.path(ctx)
+	if _q.path != nil {
+		prev, err := _q.path(ctx)
 		if err != nil {
 			return err
 		}
-		lofq.sql = prev
+		_q.sql = prev
 	}
 	return nil
 }
 
-func (lofq *LockOrderFulfillmentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*LockOrderFulfillment, error) {
+func (_q *LockOrderFulfillmentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*LockOrderFulfillment, error) {
 	var (
 		nodes       = []*LockOrderFulfillment{}
-		withFKs     = lofq.withFKs
-		_spec       = lofq.querySpec()
+		withFKs     = _q.withFKs
+		_spec       = _q.querySpec()
 		loadedTypes = [1]bool{
-			lofq.withOrder != nil,
+			_q.withOrder != nil,
 		}
 	)
-	if lofq.withOrder != nil {
+	if _q.withOrder != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -387,7 +387,7 @@ func (lofq *LockOrderFulfillmentQuery) sqlAll(ctx context.Context, hooks ...quer
 		return (*LockOrderFulfillment).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &LockOrderFulfillment{config: lofq.config}
+		node := &LockOrderFulfillment{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -395,14 +395,14 @@ func (lofq *LockOrderFulfillmentQuery) sqlAll(ctx context.Context, hooks ...quer
 	for i := range hooks {
 		hooks[i](ctx, _spec)
 	}
-	if err := sqlgraph.QueryNodes(ctx, lofq.driver, _spec); err != nil {
+	if err := sqlgraph.QueryNodes(ctx, _q.driver, _spec); err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := lofq.withOrder; query != nil {
-		if err := lofq.loadOrder(ctx, query, nodes, nil,
+	if query := _q.withOrder; query != nil {
+		if err := _q.loadOrder(ctx, query, nodes, nil,
 			func(n *LockOrderFulfillment, e *LockPaymentOrder) { n.Edges.Order = e }); err != nil {
 			return nil, err
 		}
@@ -410,7 +410,7 @@ func (lofq *LockOrderFulfillmentQuery) sqlAll(ctx context.Context, hooks ...quer
 	return nodes, nil
 }
 
-func (lofq *LockOrderFulfillmentQuery) loadOrder(ctx context.Context, query *LockPaymentOrderQuery, nodes []*LockOrderFulfillment, init func(*LockOrderFulfillment), assign func(*LockOrderFulfillment, *LockPaymentOrder)) error {
+func (_q *LockOrderFulfillmentQuery) loadOrder(ctx context.Context, query *LockPaymentOrderQuery, nodes []*LockOrderFulfillment, init func(*LockOrderFulfillment), assign func(*LockOrderFulfillment, *LockPaymentOrder)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*LockOrderFulfillment)
 	for i := range nodes {
@@ -443,24 +443,24 @@ func (lofq *LockOrderFulfillmentQuery) loadOrder(ctx context.Context, query *Loc
 	return nil
 }
 
-func (lofq *LockOrderFulfillmentQuery) sqlCount(ctx context.Context) (int, error) {
-	_spec := lofq.querySpec()
-	_spec.Node.Columns = lofq.ctx.Fields
-	if len(lofq.ctx.Fields) > 0 {
-		_spec.Unique = lofq.ctx.Unique != nil && *lofq.ctx.Unique
+func (_q *LockOrderFulfillmentQuery) sqlCount(ctx context.Context) (int, error) {
+	_spec := _q.querySpec()
+	_spec.Node.Columns = _q.ctx.Fields
+	if len(_q.ctx.Fields) > 0 {
+		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
 	}
-	return sqlgraph.CountNodes(ctx, lofq.driver, _spec)
+	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (lofq *LockOrderFulfillmentQuery) querySpec() *sqlgraph.QuerySpec {
+func (_q *LockOrderFulfillmentQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := sqlgraph.NewQuerySpec(lockorderfulfillment.Table, lockorderfulfillment.Columns, sqlgraph.NewFieldSpec(lockorderfulfillment.FieldID, field.TypeUUID))
-	_spec.From = lofq.sql
-	if unique := lofq.ctx.Unique; unique != nil {
+	_spec.From = _q.sql
+	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
-	} else if lofq.path != nil {
+	} else if _q.path != nil {
 		_spec.Unique = true
 	}
-	if fields := lofq.ctx.Fields; len(fields) > 0 {
+	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, lockorderfulfillment.FieldID)
 		for i := range fields {
@@ -469,20 +469,20 @@ func (lofq *LockOrderFulfillmentQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if ps := lofq.predicates; len(ps) > 0 {
+	if ps := _q.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if limit := lofq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := lofq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
-	if ps := lofq.order; len(ps) > 0 {
+	if ps := _q.order; len(ps) > 0 {
 		_spec.Order = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
@@ -492,33 +492,33 @@ func (lofq *LockOrderFulfillmentQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (lofq *LockOrderFulfillmentQuery) sqlQuery(ctx context.Context) *sql.Selector {
-	builder := sql.Dialect(lofq.driver.Dialect())
+func (_q *LockOrderFulfillmentQuery) sqlQuery(ctx context.Context) *sql.Selector {
+	builder := sql.Dialect(_q.driver.Dialect())
 	t1 := builder.Table(lockorderfulfillment.Table)
-	columns := lofq.ctx.Fields
+	columns := _q.ctx.Fields
 	if len(columns) == 0 {
 		columns = lockorderfulfillment.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
-	if lofq.sql != nil {
-		selector = lofq.sql
+	if _q.sql != nil {
+		selector = _q.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if lofq.ctx.Unique != nil && *lofq.ctx.Unique {
+	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
-	for _, p := range lofq.predicates {
+	for _, p := range _q.predicates {
 		p(selector)
 	}
-	for _, p := range lofq.order {
+	for _, p := range _q.order {
 		p(selector)
 	}
-	if offset := lofq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := lofq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -531,41 +531,41 @@ type LockOrderFulfillmentGroupBy struct {
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (lofgb *LockOrderFulfillmentGroupBy) Aggregate(fns ...AggregateFunc) *LockOrderFulfillmentGroupBy {
-	lofgb.fns = append(lofgb.fns, fns...)
-	return lofgb
+func (_g *LockOrderFulfillmentGroupBy) Aggregate(fns ...AggregateFunc) *LockOrderFulfillmentGroupBy {
+	_g.fns = append(_g.fns, fns...)
+	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (lofgb *LockOrderFulfillmentGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, lofgb.build.ctx, ent.OpQueryGroupBy)
-	if err := lofgb.build.prepareQuery(ctx); err != nil {
+func (_g *LockOrderFulfillmentGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
+	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*LockOrderFulfillmentQuery, *LockOrderFulfillmentGroupBy](ctx, lofgb.build, lofgb, lofgb.build.inters, v)
+	return scanWithInterceptors[*LockOrderFulfillmentQuery, *LockOrderFulfillmentGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (lofgb *LockOrderFulfillmentGroupBy) sqlScan(ctx context.Context, root *LockOrderFulfillmentQuery, v any) error {
+func (_g *LockOrderFulfillmentGroupBy) sqlScan(ctx context.Context, root *LockOrderFulfillmentQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
-	aggregation := make([]string, 0, len(lofgb.fns))
-	for _, fn := range lofgb.fns {
+	aggregation := make([]string, 0, len(_g.fns))
+	for _, fn := range _g.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
 	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(*lofgb.flds)+len(lofgb.fns))
-		for _, f := range *lofgb.flds {
+		columns := make([]string, 0, len(*_g.flds)+len(_g.fns))
+		for _, f := range *_g.flds {
 			columns = append(columns, selector.C(f))
 		}
 		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
-	selector.GroupBy(selector.Columns(*lofgb.flds...)...)
+	selector.GroupBy(selector.Columns(*_g.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := lofgb.build.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _g.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
@@ -579,27 +579,27 @@ type LockOrderFulfillmentSelect struct {
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (lofs *LockOrderFulfillmentSelect) Aggregate(fns ...AggregateFunc) *LockOrderFulfillmentSelect {
-	lofs.fns = append(lofs.fns, fns...)
-	return lofs
+func (_s *LockOrderFulfillmentSelect) Aggregate(fns ...AggregateFunc) *LockOrderFulfillmentSelect {
+	_s.fns = append(_s.fns, fns...)
+	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (lofs *LockOrderFulfillmentSelect) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, lofs.ctx, ent.OpQuerySelect)
-	if err := lofs.prepareQuery(ctx); err != nil {
+func (_s *LockOrderFulfillmentSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
+	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*LockOrderFulfillmentQuery, *LockOrderFulfillmentSelect](ctx, lofs.LockOrderFulfillmentQuery, lofs, lofs.inters, v)
+	return scanWithInterceptors[*LockOrderFulfillmentQuery, *LockOrderFulfillmentSelect](ctx, _s.LockOrderFulfillmentQuery, _s, _s.inters, v)
 }
 
-func (lofs *LockOrderFulfillmentSelect) sqlScan(ctx context.Context, root *LockOrderFulfillmentQuery, v any) error {
+func (_s *LockOrderFulfillmentSelect) sqlScan(ctx context.Context, root *LockOrderFulfillmentQuery, v any) error {
 	selector := root.sqlQuery(ctx)
-	aggregation := make([]string, 0, len(lofs.fns))
-	for _, fn := range lofs.fns {
+	aggregation := make([]string, 0, len(_s.fns))
+	for _, fn := range _s.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
-	switch n := len(*lofs.selector.flds); {
+	switch n := len(*_s.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
 		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
@@ -607,7 +607,7 @@ func (lofs *LockOrderFulfillmentSelect) sqlScan(ctx context.Context, root *LockO
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := lofs.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _s.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()

@@ -33,44 +33,44 @@ type NetworkQuery struct {
 }
 
 // Where adds a new predicate for the NetworkQuery builder.
-func (nq *NetworkQuery) Where(ps ...predicate.Network) *NetworkQuery {
-	nq.predicates = append(nq.predicates, ps...)
-	return nq
+func (_q *NetworkQuery) Where(ps ...predicate.Network) *NetworkQuery {
+	_q.predicates = append(_q.predicates, ps...)
+	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (nq *NetworkQuery) Limit(limit int) *NetworkQuery {
-	nq.ctx.Limit = &limit
-	return nq
+func (_q *NetworkQuery) Limit(limit int) *NetworkQuery {
+	_q.ctx.Limit = &limit
+	return _q
 }
 
 // Offset to start from.
-func (nq *NetworkQuery) Offset(offset int) *NetworkQuery {
-	nq.ctx.Offset = &offset
-	return nq
+func (_q *NetworkQuery) Offset(offset int) *NetworkQuery {
+	_q.ctx.Offset = &offset
+	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (nq *NetworkQuery) Unique(unique bool) *NetworkQuery {
-	nq.ctx.Unique = &unique
-	return nq
+func (_q *NetworkQuery) Unique(unique bool) *NetworkQuery {
+	_q.ctx.Unique = &unique
+	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (nq *NetworkQuery) Order(o ...network.OrderOption) *NetworkQuery {
-	nq.order = append(nq.order, o...)
-	return nq
+func (_q *NetworkQuery) Order(o ...network.OrderOption) *NetworkQuery {
+	_q.order = append(_q.order, o...)
+	return _q
 }
 
 // QueryTokens chains the current query on the "tokens" edge.
-func (nq *NetworkQuery) QueryTokens() *TokenQuery {
-	query := (&TokenClient{config: nq.config}).Query()
+func (_q *NetworkQuery) QueryTokens() *TokenQuery {
+	query := (&TokenClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := nq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := nq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -79,20 +79,20 @@ func (nq *NetworkQuery) QueryTokens() *TokenQuery {
 			sqlgraph.To(token.Table, token.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, network.TokensTable, network.TokensColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(nq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryPaymentWebhook chains the current query on the "payment_webhook" edge.
-func (nq *NetworkQuery) QueryPaymentWebhook() *PaymentWebhookQuery {
-	query := (&PaymentWebhookClient{config: nq.config}).Query()
+func (_q *NetworkQuery) QueryPaymentWebhook() *PaymentWebhookQuery {
+	query := (&PaymentWebhookClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := nq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := nq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -101,7 +101,7 @@ func (nq *NetworkQuery) QueryPaymentWebhook() *PaymentWebhookQuery {
 			sqlgraph.To(paymentwebhook.Table, paymentwebhook.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, network.PaymentWebhookTable, network.PaymentWebhookColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(nq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
@@ -109,8 +109,8 @@ func (nq *NetworkQuery) QueryPaymentWebhook() *PaymentWebhookQuery {
 
 // First returns the first Network entity from the query.
 // Returns a *NotFoundError when no Network was found.
-func (nq *NetworkQuery) First(ctx context.Context) (*Network, error) {
-	nodes, err := nq.Limit(1).All(setContextOp(ctx, nq.ctx, ent.OpQueryFirst))
+func (_q *NetworkQuery) First(ctx context.Context) (*Network, error) {
+	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
@@ -121,8 +121,8 @@ func (nq *NetworkQuery) First(ctx context.Context) (*Network, error) {
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (nq *NetworkQuery) FirstX(ctx context.Context) *Network {
-	node, err := nq.First(ctx)
+func (_q *NetworkQuery) FirstX(ctx context.Context) *Network {
+	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -131,9 +131,9 @@ func (nq *NetworkQuery) FirstX(ctx context.Context) *Network {
 
 // FirstID returns the first Network ID from the query.
 // Returns a *NotFoundError when no Network ID was found.
-func (nq *NetworkQuery) FirstID(ctx context.Context) (id int, err error) {
+func (_q *NetworkQuery) FirstID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = nq.Limit(1).IDs(setContextOp(ctx, nq.ctx, ent.OpQueryFirstID)); err != nil {
+	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -144,8 +144,8 @@ func (nq *NetworkQuery) FirstID(ctx context.Context) (id int, err error) {
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (nq *NetworkQuery) FirstIDX(ctx context.Context) int {
-	id, err := nq.FirstID(ctx)
+func (_q *NetworkQuery) FirstIDX(ctx context.Context) int {
+	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -155,8 +155,8 @@ func (nq *NetworkQuery) FirstIDX(ctx context.Context) int {
 // Only returns a single Network entity found by the query, ensuring it only returns one.
 // Returns a *NotSingularError when more than one Network entity is found.
 // Returns a *NotFoundError when no Network entities are found.
-func (nq *NetworkQuery) Only(ctx context.Context) (*Network, error) {
-	nodes, err := nq.Limit(2).All(setContextOp(ctx, nq.ctx, ent.OpQueryOnly))
+func (_q *NetworkQuery) Only(ctx context.Context) (*Network, error) {
+	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -171,8 +171,8 @@ func (nq *NetworkQuery) Only(ctx context.Context) (*Network, error) {
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (nq *NetworkQuery) OnlyX(ctx context.Context) *Network {
-	node, err := nq.Only(ctx)
+func (_q *NetworkQuery) OnlyX(ctx context.Context) *Network {
+	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -182,9 +182,9 @@ func (nq *NetworkQuery) OnlyX(ctx context.Context) *Network {
 // OnlyID is like Only, but returns the only Network ID in the query.
 // Returns a *NotSingularError when more than one Network ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (nq *NetworkQuery) OnlyID(ctx context.Context) (id int, err error) {
+func (_q *NetworkQuery) OnlyID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = nq.Limit(2).IDs(setContextOp(ctx, nq.ctx, ent.OpQueryOnlyID)); err != nil {
+	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -199,8 +199,8 @@ func (nq *NetworkQuery) OnlyID(ctx context.Context) (id int, err error) {
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (nq *NetworkQuery) OnlyIDX(ctx context.Context) int {
-	id, err := nq.OnlyID(ctx)
+func (_q *NetworkQuery) OnlyIDX(ctx context.Context) int {
+	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -208,18 +208,18 @@ func (nq *NetworkQuery) OnlyIDX(ctx context.Context) int {
 }
 
 // All executes the query and returns a list of Networks.
-func (nq *NetworkQuery) All(ctx context.Context) ([]*Network, error) {
-	ctx = setContextOp(ctx, nq.ctx, ent.OpQueryAll)
-	if err := nq.prepareQuery(ctx); err != nil {
+func (_q *NetworkQuery) All(ctx context.Context) ([]*Network, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
 	qr := querierAll[[]*Network, *NetworkQuery]()
-	return withInterceptors[[]*Network](ctx, nq, qr, nq.inters)
+	return withInterceptors[[]*Network](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (nq *NetworkQuery) AllX(ctx context.Context) []*Network {
-	nodes, err := nq.All(ctx)
+func (_q *NetworkQuery) AllX(ctx context.Context) []*Network {
+	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -227,20 +227,20 @@ func (nq *NetworkQuery) AllX(ctx context.Context) []*Network {
 }
 
 // IDs executes the query and returns a list of Network IDs.
-func (nq *NetworkQuery) IDs(ctx context.Context) (ids []int, err error) {
-	if nq.ctx.Unique == nil && nq.path != nil {
-		nq.Unique(true)
+func (_q *NetworkQuery) IDs(ctx context.Context) (ids []int, err error) {
+	if _q.ctx.Unique == nil && _q.path != nil {
+		_q.Unique(true)
 	}
-	ctx = setContextOp(ctx, nq.ctx, ent.OpQueryIDs)
-	if err = nq.Select(network.FieldID).Scan(ctx, &ids); err != nil {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
+	if err = _q.Select(network.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (nq *NetworkQuery) IDsX(ctx context.Context) []int {
-	ids, err := nq.IDs(ctx)
+func (_q *NetworkQuery) IDsX(ctx context.Context) []int {
+	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -248,17 +248,17 @@ func (nq *NetworkQuery) IDsX(ctx context.Context) []int {
 }
 
 // Count returns the count of the given query.
-func (nq *NetworkQuery) Count(ctx context.Context) (int, error) {
-	ctx = setContextOp(ctx, nq.ctx, ent.OpQueryCount)
-	if err := nq.prepareQuery(ctx); err != nil {
+func (_q *NetworkQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, nq, querierCount[*NetworkQuery](), nq.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*NetworkQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (nq *NetworkQuery) CountX(ctx context.Context) int {
-	count, err := nq.Count(ctx)
+func (_q *NetworkQuery) CountX(ctx context.Context) int {
+	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -266,9 +266,9 @@ func (nq *NetworkQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (nq *NetworkQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = setContextOp(ctx, nq.ctx, ent.OpQueryExist)
-	switch _, err := nq.FirstID(ctx); {
+func (_q *NetworkQuery) Exist(ctx context.Context) (bool, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
+	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
 	case err != nil:
@@ -279,8 +279,8 @@ func (nq *NetworkQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (nq *NetworkQuery) ExistX(ctx context.Context) bool {
-	exist, err := nq.Exist(ctx)
+func (_q *NetworkQuery) ExistX(ctx context.Context) bool {
+	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -289,44 +289,44 @@ func (nq *NetworkQuery) ExistX(ctx context.Context) bool {
 
 // Clone returns a duplicate of the NetworkQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (nq *NetworkQuery) Clone() *NetworkQuery {
-	if nq == nil {
+func (_q *NetworkQuery) Clone() *NetworkQuery {
+	if _q == nil {
 		return nil
 	}
 	return &NetworkQuery{
-		config:             nq.config,
-		ctx:                nq.ctx.Clone(),
-		order:              append([]network.OrderOption{}, nq.order...),
-		inters:             append([]Interceptor{}, nq.inters...),
-		predicates:         append([]predicate.Network{}, nq.predicates...),
-		withTokens:         nq.withTokens.Clone(),
-		withPaymentWebhook: nq.withPaymentWebhook.Clone(),
+		config:             _q.config,
+		ctx:                _q.ctx.Clone(),
+		order:              append([]network.OrderOption{}, _q.order...),
+		inters:             append([]Interceptor{}, _q.inters...),
+		predicates:         append([]predicate.Network{}, _q.predicates...),
+		withTokens:         _q.withTokens.Clone(),
+		withPaymentWebhook: _q.withPaymentWebhook.Clone(),
 		// clone intermediate query.
-		sql:  nq.sql.Clone(),
-		path: nq.path,
+		sql:  _q.sql.Clone(),
+		path: _q.path,
 	}
 }
 
 // WithTokens tells the query-builder to eager-load the nodes that are connected to
 // the "tokens" edge. The optional arguments are used to configure the query builder of the edge.
-func (nq *NetworkQuery) WithTokens(opts ...func(*TokenQuery)) *NetworkQuery {
-	query := (&TokenClient{config: nq.config}).Query()
+func (_q *NetworkQuery) WithTokens(opts ...func(*TokenQuery)) *NetworkQuery {
+	query := (&TokenClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	nq.withTokens = query
-	return nq
+	_q.withTokens = query
+	return _q
 }
 
 // WithPaymentWebhook tells the query-builder to eager-load the nodes that are connected to
 // the "payment_webhook" edge. The optional arguments are used to configure the query builder of the edge.
-func (nq *NetworkQuery) WithPaymentWebhook(opts ...func(*PaymentWebhookQuery)) *NetworkQuery {
-	query := (&PaymentWebhookClient{config: nq.config}).Query()
+func (_q *NetworkQuery) WithPaymentWebhook(opts ...func(*PaymentWebhookQuery)) *NetworkQuery {
+	query := (&PaymentWebhookClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	nq.withPaymentWebhook = query
-	return nq
+	_q.withPaymentWebhook = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -343,10 +343,10 @@ func (nq *NetworkQuery) WithPaymentWebhook(opts ...func(*PaymentWebhookQuery)) *
 //		GroupBy(network.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (nq *NetworkQuery) GroupBy(field string, fields ...string) *NetworkGroupBy {
-	nq.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &NetworkGroupBy{build: nq}
-	grbuild.flds = &nq.ctx.Fields
+func (_q *NetworkQuery) GroupBy(field string, fields ...string) *NetworkGroupBy {
+	_q.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &NetworkGroupBy{build: _q}
+	grbuild.flds = &_q.ctx.Fields
 	grbuild.label = network.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -364,59 +364,59 @@ func (nq *NetworkQuery) GroupBy(field string, fields ...string) *NetworkGroupBy 
 //	client.Network.Query().
 //		Select(network.FieldCreatedAt).
 //		Scan(ctx, &v)
-func (nq *NetworkQuery) Select(fields ...string) *NetworkSelect {
-	nq.ctx.Fields = append(nq.ctx.Fields, fields...)
-	sbuild := &NetworkSelect{NetworkQuery: nq}
+func (_q *NetworkQuery) Select(fields ...string) *NetworkSelect {
+	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
+	sbuild := &NetworkSelect{NetworkQuery: _q}
 	sbuild.label = network.Label
-	sbuild.flds, sbuild.scan = &nq.ctx.Fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
 // Aggregate returns a NetworkSelect configured with the given aggregations.
-func (nq *NetworkQuery) Aggregate(fns ...AggregateFunc) *NetworkSelect {
-	return nq.Select().Aggregate(fns...)
+func (_q *NetworkQuery) Aggregate(fns ...AggregateFunc) *NetworkSelect {
+	return _q.Select().Aggregate(fns...)
 }
 
-func (nq *NetworkQuery) prepareQuery(ctx context.Context) error {
-	for _, inter := range nq.inters {
+func (_q *NetworkQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
 		}
 		if trv, ok := inter.(Traverser); ok {
-			if err := trv.Traverse(ctx, nq); err != nil {
+			if err := trv.Traverse(ctx, _q); err != nil {
 				return err
 			}
 		}
 	}
-	for _, f := range nq.ctx.Fields {
+	for _, f := range _q.ctx.Fields {
 		if !network.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
-	if nq.path != nil {
-		prev, err := nq.path(ctx)
+	if _q.path != nil {
+		prev, err := _q.path(ctx)
 		if err != nil {
 			return err
 		}
-		nq.sql = prev
+		_q.sql = prev
 	}
 	return nil
 }
 
-func (nq *NetworkQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Network, error) {
+func (_q *NetworkQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Network, error) {
 	var (
 		nodes       = []*Network{}
-		_spec       = nq.querySpec()
+		_spec       = _q.querySpec()
 		loadedTypes = [2]bool{
-			nq.withTokens != nil,
-			nq.withPaymentWebhook != nil,
+			_q.withTokens != nil,
+			_q.withPaymentWebhook != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Network).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &Network{config: nq.config}
+		node := &Network{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -424,21 +424,21 @@ func (nq *NetworkQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Netw
 	for i := range hooks {
 		hooks[i](ctx, _spec)
 	}
-	if err := sqlgraph.QueryNodes(ctx, nq.driver, _spec); err != nil {
+	if err := sqlgraph.QueryNodes(ctx, _q.driver, _spec); err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := nq.withTokens; query != nil {
-		if err := nq.loadTokens(ctx, query, nodes,
+	if query := _q.withTokens; query != nil {
+		if err := _q.loadTokens(ctx, query, nodes,
 			func(n *Network) { n.Edges.Tokens = []*Token{} },
 			func(n *Network, e *Token) { n.Edges.Tokens = append(n.Edges.Tokens, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := nq.withPaymentWebhook; query != nil {
-		if err := nq.loadPaymentWebhook(ctx, query, nodes, nil,
+	if query := _q.withPaymentWebhook; query != nil {
+		if err := _q.loadPaymentWebhook(ctx, query, nodes, nil,
 			func(n *Network, e *PaymentWebhook) { n.Edges.PaymentWebhook = e }); err != nil {
 			return nil, err
 		}
@@ -446,7 +446,7 @@ func (nq *NetworkQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Netw
 	return nodes, nil
 }
 
-func (nq *NetworkQuery) loadTokens(ctx context.Context, query *TokenQuery, nodes []*Network, init func(*Network), assign func(*Network, *Token)) error {
+func (_q *NetworkQuery) loadTokens(ctx context.Context, query *TokenQuery, nodes []*Network, init func(*Network), assign func(*Network, *Token)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[int]*Network)
 	for i := range nodes {
@@ -477,7 +477,7 @@ func (nq *NetworkQuery) loadTokens(ctx context.Context, query *TokenQuery, nodes
 	}
 	return nil
 }
-func (nq *NetworkQuery) loadPaymentWebhook(ctx context.Context, query *PaymentWebhookQuery, nodes []*Network, init func(*Network), assign func(*Network, *PaymentWebhook)) error {
+func (_q *NetworkQuery) loadPaymentWebhook(ctx context.Context, query *PaymentWebhookQuery, nodes []*Network, init func(*Network), assign func(*Network, *PaymentWebhook)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[int]*Network)
 	for i := range nodes {
@@ -506,24 +506,24 @@ func (nq *NetworkQuery) loadPaymentWebhook(ctx context.Context, query *PaymentWe
 	return nil
 }
 
-func (nq *NetworkQuery) sqlCount(ctx context.Context) (int, error) {
-	_spec := nq.querySpec()
-	_spec.Node.Columns = nq.ctx.Fields
-	if len(nq.ctx.Fields) > 0 {
-		_spec.Unique = nq.ctx.Unique != nil && *nq.ctx.Unique
+func (_q *NetworkQuery) sqlCount(ctx context.Context) (int, error) {
+	_spec := _q.querySpec()
+	_spec.Node.Columns = _q.ctx.Fields
+	if len(_q.ctx.Fields) > 0 {
+		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
 	}
-	return sqlgraph.CountNodes(ctx, nq.driver, _spec)
+	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (nq *NetworkQuery) querySpec() *sqlgraph.QuerySpec {
+func (_q *NetworkQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := sqlgraph.NewQuerySpec(network.Table, network.Columns, sqlgraph.NewFieldSpec(network.FieldID, field.TypeInt))
-	_spec.From = nq.sql
-	if unique := nq.ctx.Unique; unique != nil {
+	_spec.From = _q.sql
+	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
-	} else if nq.path != nil {
+	} else if _q.path != nil {
 		_spec.Unique = true
 	}
-	if fields := nq.ctx.Fields; len(fields) > 0 {
+	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, network.FieldID)
 		for i := range fields {
@@ -532,20 +532,20 @@ func (nq *NetworkQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if ps := nq.predicates; len(ps) > 0 {
+	if ps := _q.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if limit := nq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := nq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
-	if ps := nq.order; len(ps) > 0 {
+	if ps := _q.order; len(ps) > 0 {
 		_spec.Order = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
@@ -555,33 +555,33 @@ func (nq *NetworkQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (nq *NetworkQuery) sqlQuery(ctx context.Context) *sql.Selector {
-	builder := sql.Dialect(nq.driver.Dialect())
+func (_q *NetworkQuery) sqlQuery(ctx context.Context) *sql.Selector {
+	builder := sql.Dialect(_q.driver.Dialect())
 	t1 := builder.Table(network.Table)
-	columns := nq.ctx.Fields
+	columns := _q.ctx.Fields
 	if len(columns) == 0 {
 		columns = network.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
-	if nq.sql != nil {
-		selector = nq.sql
+	if _q.sql != nil {
+		selector = _q.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if nq.ctx.Unique != nil && *nq.ctx.Unique {
+	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
-	for _, p := range nq.predicates {
+	for _, p := range _q.predicates {
 		p(selector)
 	}
-	for _, p := range nq.order {
+	for _, p := range _q.order {
 		p(selector)
 	}
-	if offset := nq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := nq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -594,41 +594,41 @@ type NetworkGroupBy struct {
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (ngb *NetworkGroupBy) Aggregate(fns ...AggregateFunc) *NetworkGroupBy {
-	ngb.fns = append(ngb.fns, fns...)
-	return ngb
+func (_g *NetworkGroupBy) Aggregate(fns ...AggregateFunc) *NetworkGroupBy {
+	_g.fns = append(_g.fns, fns...)
+	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (ngb *NetworkGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, ngb.build.ctx, ent.OpQueryGroupBy)
-	if err := ngb.build.prepareQuery(ctx); err != nil {
+func (_g *NetworkGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
+	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*NetworkQuery, *NetworkGroupBy](ctx, ngb.build, ngb, ngb.build.inters, v)
+	return scanWithInterceptors[*NetworkQuery, *NetworkGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (ngb *NetworkGroupBy) sqlScan(ctx context.Context, root *NetworkQuery, v any) error {
+func (_g *NetworkGroupBy) sqlScan(ctx context.Context, root *NetworkQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
-	aggregation := make([]string, 0, len(ngb.fns))
-	for _, fn := range ngb.fns {
+	aggregation := make([]string, 0, len(_g.fns))
+	for _, fn := range _g.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
 	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(*ngb.flds)+len(ngb.fns))
-		for _, f := range *ngb.flds {
+		columns := make([]string, 0, len(*_g.flds)+len(_g.fns))
+		for _, f := range *_g.flds {
 			columns = append(columns, selector.C(f))
 		}
 		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
-	selector.GroupBy(selector.Columns(*ngb.flds...)...)
+	selector.GroupBy(selector.Columns(*_g.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := ngb.build.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _g.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
@@ -642,27 +642,27 @@ type NetworkSelect struct {
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (ns *NetworkSelect) Aggregate(fns ...AggregateFunc) *NetworkSelect {
-	ns.fns = append(ns.fns, fns...)
-	return ns
+func (_s *NetworkSelect) Aggregate(fns ...AggregateFunc) *NetworkSelect {
+	_s.fns = append(_s.fns, fns...)
+	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (ns *NetworkSelect) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, ns.ctx, ent.OpQuerySelect)
-	if err := ns.prepareQuery(ctx); err != nil {
+func (_s *NetworkSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
+	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*NetworkQuery, *NetworkSelect](ctx, ns.NetworkQuery, ns, ns.inters, v)
+	return scanWithInterceptors[*NetworkQuery, *NetworkSelect](ctx, _s.NetworkQuery, _s, _s.inters, v)
 }
 
-func (ns *NetworkSelect) sqlScan(ctx context.Context, root *NetworkQuery, v any) error {
+func (_s *NetworkSelect) sqlScan(ctx context.Context, root *NetworkQuery, v any) error {
 	selector := root.sqlQuery(ctx)
-	aggregation := make([]string, 0, len(ns.fns))
-	for _, fn := range ns.fns {
+	aggregation := make([]string, 0, len(_s.fns))
+	for _, fn := range _s.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
-	switch n := len(*ns.selector.flds); {
+	switch n := len(*_s.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
 		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
@@ -670,7 +670,7 @@ func (ns *NetworkSelect) sqlScan(ctx context.Context, root *NetworkQuery, v any)
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := ns.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _s.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()

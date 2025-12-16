@@ -88,7 +88,7 @@ func (*ReceiveAddress) scanValues(columns []string) ([]any, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the ReceiveAddress fields.
-func (ra *ReceiveAddress) assignValues(columns []string, values []any) error {
+func (_m *ReceiveAddress) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -99,70 +99,70 @@ func (ra *ReceiveAddress) assignValues(columns []string, values []any) error {
 			if !ok {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
-			ra.ID = int(value.Int64)
+			_m.ID = int(value.Int64)
 		case receiveaddress.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
-				ra.CreatedAt = value.Time
+				_m.CreatedAt = value.Time
 			}
 		case receiveaddress.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
-				ra.UpdatedAt = value.Time
+				_m.UpdatedAt = value.Time
 			}
 		case receiveaddress.FieldAddress:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field address", values[i])
 			} else if value.Valid {
-				ra.Address = value.String
+				_m.Address = value.String
 			}
 		case receiveaddress.FieldSalt:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field salt", values[i])
 			} else if value != nil {
-				ra.Salt = *value
+				_m.Salt = *value
 			}
 		case receiveaddress.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				ra.Status = receiveaddress.Status(value.String)
+				_m.Status = receiveaddress.Status(value.String)
 			}
 		case receiveaddress.FieldLastIndexedBlock:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field last_indexed_block", values[i])
 			} else if value.Valid {
-				ra.LastIndexedBlock = value.Int64
+				_m.LastIndexedBlock = value.Int64
 			}
 		case receiveaddress.FieldLastUsed:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field last_used", values[i])
 			} else if value.Valid {
-				ra.LastUsed = value.Time
+				_m.LastUsed = value.Time
 			}
 		case receiveaddress.FieldTxHash:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field tx_hash", values[i])
 			} else if value.Valid {
-				ra.TxHash = value.String
+				_m.TxHash = value.String
 			}
 		case receiveaddress.FieldValidUntil:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field valid_until", values[i])
 			} else if value.Valid {
-				ra.ValidUntil = value.Time
+				_m.ValidUntil = value.Time
 			}
 		case receiveaddress.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field payment_order_receive_address", values[i])
 			} else if value.Valid {
-				ra.payment_order_receive_address = new(uuid.UUID)
-				*ra.payment_order_receive_address = *value.S.(*uuid.UUID)
+				_m.payment_order_receive_address = new(uuid.UUID)
+				*_m.payment_order_receive_address = *value.S.(*uuid.UUID)
 			}
 		default:
-			ra.selectValues.Set(columns[i], values[i])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -170,64 +170,64 @@ func (ra *ReceiveAddress) assignValues(columns []string, values []any) error {
 
 // Value returns the ent.Value that was dynamically selected and assigned to the ReceiveAddress.
 // This includes values selected through modifiers, order, etc.
-func (ra *ReceiveAddress) Value(name string) (ent.Value, error) {
-	return ra.selectValues.Get(name)
+func (_m *ReceiveAddress) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
 }
 
 // QueryPaymentOrder queries the "payment_order" edge of the ReceiveAddress entity.
-func (ra *ReceiveAddress) QueryPaymentOrder() *PaymentOrderQuery {
-	return NewReceiveAddressClient(ra.config).QueryPaymentOrder(ra)
+func (_m *ReceiveAddress) QueryPaymentOrder() *PaymentOrderQuery {
+	return NewReceiveAddressClient(_m.config).QueryPaymentOrder(_m)
 }
 
 // Update returns a builder for updating this ReceiveAddress.
 // Note that you need to call ReceiveAddress.Unwrap() before calling this method if this ReceiveAddress
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (ra *ReceiveAddress) Update() *ReceiveAddressUpdateOne {
-	return NewReceiveAddressClient(ra.config).UpdateOne(ra)
+func (_m *ReceiveAddress) Update() *ReceiveAddressUpdateOne {
+	return NewReceiveAddressClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the ReceiveAddress entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (ra *ReceiveAddress) Unwrap() *ReceiveAddress {
-	_tx, ok := ra.config.driver.(*txDriver)
+func (_m *ReceiveAddress) Unwrap() *ReceiveAddress {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: ReceiveAddress is not a transactional entity")
 	}
-	ra.config.driver = _tx.drv
-	return ra
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (ra *ReceiveAddress) String() string {
+func (_m *ReceiveAddress) String() string {
 	var builder strings.Builder
 	builder.WriteString("ReceiveAddress(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", ra.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("created_at=")
-	builder.WriteString(ra.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
-	builder.WriteString(ra.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("address=")
-	builder.WriteString(ra.Address)
+	builder.WriteString(_m.Address)
 	builder.WriteString(", ")
 	builder.WriteString("salt=")
-	builder.WriteString(fmt.Sprintf("%v", ra.Salt))
+	builder.WriteString(fmt.Sprintf("%v", _m.Salt))
 	builder.WriteString(", ")
 	builder.WriteString("status=")
-	builder.WriteString(fmt.Sprintf("%v", ra.Status))
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
 	builder.WriteString(", ")
 	builder.WriteString("last_indexed_block=")
-	builder.WriteString(fmt.Sprintf("%v", ra.LastIndexedBlock))
+	builder.WriteString(fmt.Sprintf("%v", _m.LastIndexedBlock))
 	builder.WriteString(", ")
 	builder.WriteString("last_used=")
-	builder.WriteString(ra.LastUsed.Format(time.ANSIC))
+	builder.WriteString(_m.LastUsed.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("tx_hash=")
-	builder.WriteString(ra.TxHash)
+	builder.WriteString(_m.TxHash)
 	builder.WriteString(", ")
 	builder.WriteString("valid_until=")
-	builder.WriteString(ra.ValidUntil.Format(time.ANSIC))
+	builder.WriteString(_m.ValidUntil.Format(time.ANSIC))
 	builder.WriteByte(')')
 	return builder.String()
 }

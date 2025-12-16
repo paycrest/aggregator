@@ -34,44 +34,44 @@ type SenderOrderTokenQuery struct {
 }
 
 // Where adds a new predicate for the SenderOrderTokenQuery builder.
-func (sotq *SenderOrderTokenQuery) Where(ps ...predicate.SenderOrderToken) *SenderOrderTokenQuery {
-	sotq.predicates = append(sotq.predicates, ps...)
-	return sotq
+func (_q *SenderOrderTokenQuery) Where(ps ...predicate.SenderOrderToken) *SenderOrderTokenQuery {
+	_q.predicates = append(_q.predicates, ps...)
+	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (sotq *SenderOrderTokenQuery) Limit(limit int) *SenderOrderTokenQuery {
-	sotq.ctx.Limit = &limit
-	return sotq
+func (_q *SenderOrderTokenQuery) Limit(limit int) *SenderOrderTokenQuery {
+	_q.ctx.Limit = &limit
+	return _q
 }
 
 // Offset to start from.
-func (sotq *SenderOrderTokenQuery) Offset(offset int) *SenderOrderTokenQuery {
-	sotq.ctx.Offset = &offset
-	return sotq
+func (_q *SenderOrderTokenQuery) Offset(offset int) *SenderOrderTokenQuery {
+	_q.ctx.Offset = &offset
+	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (sotq *SenderOrderTokenQuery) Unique(unique bool) *SenderOrderTokenQuery {
-	sotq.ctx.Unique = &unique
-	return sotq
+func (_q *SenderOrderTokenQuery) Unique(unique bool) *SenderOrderTokenQuery {
+	_q.ctx.Unique = &unique
+	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (sotq *SenderOrderTokenQuery) Order(o ...senderordertoken.OrderOption) *SenderOrderTokenQuery {
-	sotq.order = append(sotq.order, o...)
-	return sotq
+func (_q *SenderOrderTokenQuery) Order(o ...senderordertoken.OrderOption) *SenderOrderTokenQuery {
+	_q.order = append(_q.order, o...)
+	return _q
 }
 
 // QuerySender chains the current query on the "sender" edge.
-func (sotq *SenderOrderTokenQuery) QuerySender() *SenderProfileQuery {
-	query := (&SenderProfileClient{config: sotq.config}).Query()
+func (_q *SenderOrderTokenQuery) QuerySender() *SenderProfileQuery {
+	query := (&SenderProfileClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := sotq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := sotq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -80,20 +80,20 @@ func (sotq *SenderOrderTokenQuery) QuerySender() *SenderProfileQuery {
 			sqlgraph.To(senderprofile.Table, senderprofile.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, senderordertoken.SenderTable, senderordertoken.SenderColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(sotq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryToken chains the current query on the "token" edge.
-func (sotq *SenderOrderTokenQuery) QueryToken() *TokenQuery {
-	query := (&TokenClient{config: sotq.config}).Query()
+func (_q *SenderOrderTokenQuery) QueryToken() *TokenQuery {
+	query := (&TokenClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := sotq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := sotq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -102,7 +102,7 @@ func (sotq *SenderOrderTokenQuery) QueryToken() *TokenQuery {
 			sqlgraph.To(token.Table, token.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, senderordertoken.TokenTable, senderordertoken.TokenColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(sotq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
@@ -110,8 +110,8 @@ func (sotq *SenderOrderTokenQuery) QueryToken() *TokenQuery {
 
 // First returns the first SenderOrderToken entity from the query.
 // Returns a *NotFoundError when no SenderOrderToken was found.
-func (sotq *SenderOrderTokenQuery) First(ctx context.Context) (*SenderOrderToken, error) {
-	nodes, err := sotq.Limit(1).All(setContextOp(ctx, sotq.ctx, ent.OpQueryFirst))
+func (_q *SenderOrderTokenQuery) First(ctx context.Context) (*SenderOrderToken, error) {
+	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
@@ -122,8 +122,8 @@ func (sotq *SenderOrderTokenQuery) First(ctx context.Context) (*SenderOrderToken
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (sotq *SenderOrderTokenQuery) FirstX(ctx context.Context) *SenderOrderToken {
-	node, err := sotq.First(ctx)
+func (_q *SenderOrderTokenQuery) FirstX(ctx context.Context) *SenderOrderToken {
+	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -132,9 +132,9 @@ func (sotq *SenderOrderTokenQuery) FirstX(ctx context.Context) *SenderOrderToken
 
 // FirstID returns the first SenderOrderToken ID from the query.
 // Returns a *NotFoundError when no SenderOrderToken ID was found.
-func (sotq *SenderOrderTokenQuery) FirstID(ctx context.Context) (id int, err error) {
+func (_q *SenderOrderTokenQuery) FirstID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = sotq.Limit(1).IDs(setContextOp(ctx, sotq.ctx, ent.OpQueryFirstID)); err != nil {
+	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -145,8 +145,8 @@ func (sotq *SenderOrderTokenQuery) FirstID(ctx context.Context) (id int, err err
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (sotq *SenderOrderTokenQuery) FirstIDX(ctx context.Context) int {
-	id, err := sotq.FirstID(ctx)
+func (_q *SenderOrderTokenQuery) FirstIDX(ctx context.Context) int {
+	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -156,8 +156,8 @@ func (sotq *SenderOrderTokenQuery) FirstIDX(ctx context.Context) int {
 // Only returns a single SenderOrderToken entity found by the query, ensuring it only returns one.
 // Returns a *NotSingularError when more than one SenderOrderToken entity is found.
 // Returns a *NotFoundError when no SenderOrderToken entities are found.
-func (sotq *SenderOrderTokenQuery) Only(ctx context.Context) (*SenderOrderToken, error) {
-	nodes, err := sotq.Limit(2).All(setContextOp(ctx, sotq.ctx, ent.OpQueryOnly))
+func (_q *SenderOrderTokenQuery) Only(ctx context.Context) (*SenderOrderToken, error) {
+	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -172,8 +172,8 @@ func (sotq *SenderOrderTokenQuery) Only(ctx context.Context) (*SenderOrderToken,
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (sotq *SenderOrderTokenQuery) OnlyX(ctx context.Context) *SenderOrderToken {
-	node, err := sotq.Only(ctx)
+func (_q *SenderOrderTokenQuery) OnlyX(ctx context.Context) *SenderOrderToken {
+	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -183,9 +183,9 @@ func (sotq *SenderOrderTokenQuery) OnlyX(ctx context.Context) *SenderOrderToken 
 // OnlyID is like Only, but returns the only SenderOrderToken ID in the query.
 // Returns a *NotSingularError when more than one SenderOrderToken ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (sotq *SenderOrderTokenQuery) OnlyID(ctx context.Context) (id int, err error) {
+func (_q *SenderOrderTokenQuery) OnlyID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = sotq.Limit(2).IDs(setContextOp(ctx, sotq.ctx, ent.OpQueryOnlyID)); err != nil {
+	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -200,8 +200,8 @@ func (sotq *SenderOrderTokenQuery) OnlyID(ctx context.Context) (id int, err erro
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (sotq *SenderOrderTokenQuery) OnlyIDX(ctx context.Context) int {
-	id, err := sotq.OnlyID(ctx)
+func (_q *SenderOrderTokenQuery) OnlyIDX(ctx context.Context) int {
+	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -209,18 +209,18 @@ func (sotq *SenderOrderTokenQuery) OnlyIDX(ctx context.Context) int {
 }
 
 // All executes the query and returns a list of SenderOrderTokens.
-func (sotq *SenderOrderTokenQuery) All(ctx context.Context) ([]*SenderOrderToken, error) {
-	ctx = setContextOp(ctx, sotq.ctx, ent.OpQueryAll)
-	if err := sotq.prepareQuery(ctx); err != nil {
+func (_q *SenderOrderTokenQuery) All(ctx context.Context) ([]*SenderOrderToken, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
 	qr := querierAll[[]*SenderOrderToken, *SenderOrderTokenQuery]()
-	return withInterceptors[[]*SenderOrderToken](ctx, sotq, qr, sotq.inters)
+	return withInterceptors[[]*SenderOrderToken](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (sotq *SenderOrderTokenQuery) AllX(ctx context.Context) []*SenderOrderToken {
-	nodes, err := sotq.All(ctx)
+func (_q *SenderOrderTokenQuery) AllX(ctx context.Context) []*SenderOrderToken {
+	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -228,20 +228,20 @@ func (sotq *SenderOrderTokenQuery) AllX(ctx context.Context) []*SenderOrderToken
 }
 
 // IDs executes the query and returns a list of SenderOrderToken IDs.
-func (sotq *SenderOrderTokenQuery) IDs(ctx context.Context) (ids []int, err error) {
-	if sotq.ctx.Unique == nil && sotq.path != nil {
-		sotq.Unique(true)
+func (_q *SenderOrderTokenQuery) IDs(ctx context.Context) (ids []int, err error) {
+	if _q.ctx.Unique == nil && _q.path != nil {
+		_q.Unique(true)
 	}
-	ctx = setContextOp(ctx, sotq.ctx, ent.OpQueryIDs)
-	if err = sotq.Select(senderordertoken.FieldID).Scan(ctx, &ids); err != nil {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
+	if err = _q.Select(senderordertoken.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (sotq *SenderOrderTokenQuery) IDsX(ctx context.Context) []int {
-	ids, err := sotq.IDs(ctx)
+func (_q *SenderOrderTokenQuery) IDsX(ctx context.Context) []int {
+	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -249,17 +249,17 @@ func (sotq *SenderOrderTokenQuery) IDsX(ctx context.Context) []int {
 }
 
 // Count returns the count of the given query.
-func (sotq *SenderOrderTokenQuery) Count(ctx context.Context) (int, error) {
-	ctx = setContextOp(ctx, sotq.ctx, ent.OpQueryCount)
-	if err := sotq.prepareQuery(ctx); err != nil {
+func (_q *SenderOrderTokenQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, sotq, querierCount[*SenderOrderTokenQuery](), sotq.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*SenderOrderTokenQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (sotq *SenderOrderTokenQuery) CountX(ctx context.Context) int {
-	count, err := sotq.Count(ctx)
+func (_q *SenderOrderTokenQuery) CountX(ctx context.Context) int {
+	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -267,9 +267,9 @@ func (sotq *SenderOrderTokenQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (sotq *SenderOrderTokenQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = setContextOp(ctx, sotq.ctx, ent.OpQueryExist)
-	switch _, err := sotq.FirstID(ctx); {
+func (_q *SenderOrderTokenQuery) Exist(ctx context.Context) (bool, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
+	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
 	case err != nil:
@@ -280,8 +280,8 @@ func (sotq *SenderOrderTokenQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (sotq *SenderOrderTokenQuery) ExistX(ctx context.Context) bool {
-	exist, err := sotq.Exist(ctx)
+func (_q *SenderOrderTokenQuery) ExistX(ctx context.Context) bool {
+	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -290,44 +290,44 @@ func (sotq *SenderOrderTokenQuery) ExistX(ctx context.Context) bool {
 
 // Clone returns a duplicate of the SenderOrderTokenQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (sotq *SenderOrderTokenQuery) Clone() *SenderOrderTokenQuery {
-	if sotq == nil {
+func (_q *SenderOrderTokenQuery) Clone() *SenderOrderTokenQuery {
+	if _q == nil {
 		return nil
 	}
 	return &SenderOrderTokenQuery{
-		config:     sotq.config,
-		ctx:        sotq.ctx.Clone(),
-		order:      append([]senderordertoken.OrderOption{}, sotq.order...),
-		inters:     append([]Interceptor{}, sotq.inters...),
-		predicates: append([]predicate.SenderOrderToken{}, sotq.predicates...),
-		withSender: sotq.withSender.Clone(),
-		withToken:  sotq.withToken.Clone(),
+		config:     _q.config,
+		ctx:        _q.ctx.Clone(),
+		order:      append([]senderordertoken.OrderOption{}, _q.order...),
+		inters:     append([]Interceptor{}, _q.inters...),
+		predicates: append([]predicate.SenderOrderToken{}, _q.predicates...),
+		withSender: _q.withSender.Clone(),
+		withToken:  _q.withToken.Clone(),
 		// clone intermediate query.
-		sql:  sotq.sql.Clone(),
-		path: sotq.path,
+		sql:  _q.sql.Clone(),
+		path: _q.path,
 	}
 }
 
 // WithSender tells the query-builder to eager-load the nodes that are connected to
 // the "sender" edge. The optional arguments are used to configure the query builder of the edge.
-func (sotq *SenderOrderTokenQuery) WithSender(opts ...func(*SenderProfileQuery)) *SenderOrderTokenQuery {
-	query := (&SenderProfileClient{config: sotq.config}).Query()
+func (_q *SenderOrderTokenQuery) WithSender(opts ...func(*SenderProfileQuery)) *SenderOrderTokenQuery {
+	query := (&SenderProfileClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	sotq.withSender = query
-	return sotq
+	_q.withSender = query
+	return _q
 }
 
 // WithToken tells the query-builder to eager-load the nodes that are connected to
 // the "token" edge. The optional arguments are used to configure the query builder of the edge.
-func (sotq *SenderOrderTokenQuery) WithToken(opts ...func(*TokenQuery)) *SenderOrderTokenQuery {
-	query := (&TokenClient{config: sotq.config}).Query()
+func (_q *SenderOrderTokenQuery) WithToken(opts ...func(*TokenQuery)) *SenderOrderTokenQuery {
+	query := (&TokenClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	sotq.withToken = query
-	return sotq
+	_q.withToken = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -344,10 +344,10 @@ func (sotq *SenderOrderTokenQuery) WithToken(opts ...func(*TokenQuery)) *SenderO
 //		GroupBy(senderordertoken.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (sotq *SenderOrderTokenQuery) GroupBy(field string, fields ...string) *SenderOrderTokenGroupBy {
-	sotq.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &SenderOrderTokenGroupBy{build: sotq}
-	grbuild.flds = &sotq.ctx.Fields
+func (_q *SenderOrderTokenQuery) GroupBy(field string, fields ...string) *SenderOrderTokenGroupBy {
+	_q.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &SenderOrderTokenGroupBy{build: _q}
+	grbuild.flds = &_q.ctx.Fields
 	grbuild.label = senderordertoken.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -365,56 +365,56 @@ func (sotq *SenderOrderTokenQuery) GroupBy(field string, fields ...string) *Send
 //	client.SenderOrderToken.Query().
 //		Select(senderordertoken.FieldCreatedAt).
 //		Scan(ctx, &v)
-func (sotq *SenderOrderTokenQuery) Select(fields ...string) *SenderOrderTokenSelect {
-	sotq.ctx.Fields = append(sotq.ctx.Fields, fields...)
-	sbuild := &SenderOrderTokenSelect{SenderOrderTokenQuery: sotq}
+func (_q *SenderOrderTokenQuery) Select(fields ...string) *SenderOrderTokenSelect {
+	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
+	sbuild := &SenderOrderTokenSelect{SenderOrderTokenQuery: _q}
 	sbuild.label = senderordertoken.Label
-	sbuild.flds, sbuild.scan = &sotq.ctx.Fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
 // Aggregate returns a SenderOrderTokenSelect configured with the given aggregations.
-func (sotq *SenderOrderTokenQuery) Aggregate(fns ...AggregateFunc) *SenderOrderTokenSelect {
-	return sotq.Select().Aggregate(fns...)
+func (_q *SenderOrderTokenQuery) Aggregate(fns ...AggregateFunc) *SenderOrderTokenSelect {
+	return _q.Select().Aggregate(fns...)
 }
 
-func (sotq *SenderOrderTokenQuery) prepareQuery(ctx context.Context) error {
-	for _, inter := range sotq.inters {
+func (_q *SenderOrderTokenQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
 		}
 		if trv, ok := inter.(Traverser); ok {
-			if err := trv.Traverse(ctx, sotq); err != nil {
+			if err := trv.Traverse(ctx, _q); err != nil {
 				return err
 			}
 		}
 	}
-	for _, f := range sotq.ctx.Fields {
+	for _, f := range _q.ctx.Fields {
 		if !senderordertoken.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
-	if sotq.path != nil {
-		prev, err := sotq.path(ctx)
+	if _q.path != nil {
+		prev, err := _q.path(ctx)
 		if err != nil {
 			return err
 		}
-		sotq.sql = prev
+		_q.sql = prev
 	}
 	return nil
 }
 
-func (sotq *SenderOrderTokenQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*SenderOrderToken, error) {
+func (_q *SenderOrderTokenQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*SenderOrderToken, error) {
 	var (
 		nodes       = []*SenderOrderToken{}
-		withFKs     = sotq.withFKs
-		_spec       = sotq.querySpec()
+		withFKs     = _q.withFKs
+		_spec       = _q.querySpec()
 		loadedTypes = [2]bool{
-			sotq.withSender != nil,
-			sotq.withToken != nil,
+			_q.withSender != nil,
+			_q.withToken != nil,
 		}
 	)
-	if sotq.withSender != nil || sotq.withToken != nil {
+	if _q.withSender != nil || _q.withToken != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -424,7 +424,7 @@ func (sotq *SenderOrderTokenQuery) sqlAll(ctx context.Context, hooks ...queryHoo
 		return (*SenderOrderToken).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &SenderOrderToken{config: sotq.config}
+		node := &SenderOrderToken{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -432,20 +432,20 @@ func (sotq *SenderOrderTokenQuery) sqlAll(ctx context.Context, hooks ...queryHoo
 	for i := range hooks {
 		hooks[i](ctx, _spec)
 	}
-	if err := sqlgraph.QueryNodes(ctx, sotq.driver, _spec); err != nil {
+	if err := sqlgraph.QueryNodes(ctx, _q.driver, _spec); err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := sotq.withSender; query != nil {
-		if err := sotq.loadSender(ctx, query, nodes, nil,
+	if query := _q.withSender; query != nil {
+		if err := _q.loadSender(ctx, query, nodes, nil,
 			func(n *SenderOrderToken, e *SenderProfile) { n.Edges.Sender = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := sotq.withToken; query != nil {
-		if err := sotq.loadToken(ctx, query, nodes, nil,
+	if query := _q.withToken; query != nil {
+		if err := _q.loadToken(ctx, query, nodes, nil,
 			func(n *SenderOrderToken, e *Token) { n.Edges.Token = e }); err != nil {
 			return nil, err
 		}
@@ -453,7 +453,7 @@ func (sotq *SenderOrderTokenQuery) sqlAll(ctx context.Context, hooks ...queryHoo
 	return nodes, nil
 }
 
-func (sotq *SenderOrderTokenQuery) loadSender(ctx context.Context, query *SenderProfileQuery, nodes []*SenderOrderToken, init func(*SenderOrderToken), assign func(*SenderOrderToken, *SenderProfile)) error {
+func (_q *SenderOrderTokenQuery) loadSender(ctx context.Context, query *SenderProfileQuery, nodes []*SenderOrderToken, init func(*SenderOrderToken), assign func(*SenderOrderToken, *SenderProfile)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*SenderOrderToken)
 	for i := range nodes {
@@ -485,7 +485,7 @@ func (sotq *SenderOrderTokenQuery) loadSender(ctx context.Context, query *Sender
 	}
 	return nil
 }
-func (sotq *SenderOrderTokenQuery) loadToken(ctx context.Context, query *TokenQuery, nodes []*SenderOrderToken, init func(*SenderOrderToken), assign func(*SenderOrderToken, *Token)) error {
+func (_q *SenderOrderTokenQuery) loadToken(ctx context.Context, query *TokenQuery, nodes []*SenderOrderToken, init func(*SenderOrderToken), assign func(*SenderOrderToken, *Token)) error {
 	ids := make([]int, 0, len(nodes))
 	nodeids := make(map[int][]*SenderOrderToken)
 	for i := range nodes {
@@ -518,24 +518,24 @@ func (sotq *SenderOrderTokenQuery) loadToken(ctx context.Context, query *TokenQu
 	return nil
 }
 
-func (sotq *SenderOrderTokenQuery) sqlCount(ctx context.Context) (int, error) {
-	_spec := sotq.querySpec()
-	_spec.Node.Columns = sotq.ctx.Fields
-	if len(sotq.ctx.Fields) > 0 {
-		_spec.Unique = sotq.ctx.Unique != nil && *sotq.ctx.Unique
+func (_q *SenderOrderTokenQuery) sqlCount(ctx context.Context) (int, error) {
+	_spec := _q.querySpec()
+	_spec.Node.Columns = _q.ctx.Fields
+	if len(_q.ctx.Fields) > 0 {
+		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
 	}
-	return sqlgraph.CountNodes(ctx, sotq.driver, _spec)
+	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (sotq *SenderOrderTokenQuery) querySpec() *sqlgraph.QuerySpec {
+func (_q *SenderOrderTokenQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := sqlgraph.NewQuerySpec(senderordertoken.Table, senderordertoken.Columns, sqlgraph.NewFieldSpec(senderordertoken.FieldID, field.TypeInt))
-	_spec.From = sotq.sql
-	if unique := sotq.ctx.Unique; unique != nil {
+	_spec.From = _q.sql
+	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
-	} else if sotq.path != nil {
+	} else if _q.path != nil {
 		_spec.Unique = true
 	}
-	if fields := sotq.ctx.Fields; len(fields) > 0 {
+	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, senderordertoken.FieldID)
 		for i := range fields {
@@ -544,20 +544,20 @@ func (sotq *SenderOrderTokenQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if ps := sotq.predicates; len(ps) > 0 {
+	if ps := _q.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if limit := sotq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := sotq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
-	if ps := sotq.order; len(ps) > 0 {
+	if ps := _q.order; len(ps) > 0 {
 		_spec.Order = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
@@ -567,33 +567,33 @@ func (sotq *SenderOrderTokenQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (sotq *SenderOrderTokenQuery) sqlQuery(ctx context.Context) *sql.Selector {
-	builder := sql.Dialect(sotq.driver.Dialect())
+func (_q *SenderOrderTokenQuery) sqlQuery(ctx context.Context) *sql.Selector {
+	builder := sql.Dialect(_q.driver.Dialect())
 	t1 := builder.Table(senderordertoken.Table)
-	columns := sotq.ctx.Fields
+	columns := _q.ctx.Fields
 	if len(columns) == 0 {
 		columns = senderordertoken.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
-	if sotq.sql != nil {
-		selector = sotq.sql
+	if _q.sql != nil {
+		selector = _q.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if sotq.ctx.Unique != nil && *sotq.ctx.Unique {
+	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
-	for _, p := range sotq.predicates {
+	for _, p := range _q.predicates {
 		p(selector)
 	}
-	for _, p := range sotq.order {
+	for _, p := range _q.order {
 		p(selector)
 	}
-	if offset := sotq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := sotq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -606,41 +606,41 @@ type SenderOrderTokenGroupBy struct {
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (sotgb *SenderOrderTokenGroupBy) Aggregate(fns ...AggregateFunc) *SenderOrderTokenGroupBy {
-	sotgb.fns = append(sotgb.fns, fns...)
-	return sotgb
+func (_g *SenderOrderTokenGroupBy) Aggregate(fns ...AggregateFunc) *SenderOrderTokenGroupBy {
+	_g.fns = append(_g.fns, fns...)
+	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (sotgb *SenderOrderTokenGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, sotgb.build.ctx, ent.OpQueryGroupBy)
-	if err := sotgb.build.prepareQuery(ctx); err != nil {
+func (_g *SenderOrderTokenGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
+	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*SenderOrderTokenQuery, *SenderOrderTokenGroupBy](ctx, sotgb.build, sotgb, sotgb.build.inters, v)
+	return scanWithInterceptors[*SenderOrderTokenQuery, *SenderOrderTokenGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (sotgb *SenderOrderTokenGroupBy) sqlScan(ctx context.Context, root *SenderOrderTokenQuery, v any) error {
+func (_g *SenderOrderTokenGroupBy) sqlScan(ctx context.Context, root *SenderOrderTokenQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
-	aggregation := make([]string, 0, len(sotgb.fns))
-	for _, fn := range sotgb.fns {
+	aggregation := make([]string, 0, len(_g.fns))
+	for _, fn := range _g.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
 	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(*sotgb.flds)+len(sotgb.fns))
-		for _, f := range *sotgb.flds {
+		columns := make([]string, 0, len(*_g.flds)+len(_g.fns))
+		for _, f := range *_g.flds {
 			columns = append(columns, selector.C(f))
 		}
 		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
-	selector.GroupBy(selector.Columns(*sotgb.flds...)...)
+	selector.GroupBy(selector.Columns(*_g.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := sotgb.build.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _g.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
@@ -654,27 +654,27 @@ type SenderOrderTokenSelect struct {
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (sots *SenderOrderTokenSelect) Aggregate(fns ...AggregateFunc) *SenderOrderTokenSelect {
-	sots.fns = append(sots.fns, fns...)
-	return sots
+func (_s *SenderOrderTokenSelect) Aggregate(fns ...AggregateFunc) *SenderOrderTokenSelect {
+	_s.fns = append(_s.fns, fns...)
+	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (sots *SenderOrderTokenSelect) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, sots.ctx, ent.OpQuerySelect)
-	if err := sots.prepareQuery(ctx); err != nil {
+func (_s *SenderOrderTokenSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
+	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*SenderOrderTokenQuery, *SenderOrderTokenSelect](ctx, sots.SenderOrderTokenQuery, sots, sots.inters, v)
+	return scanWithInterceptors[*SenderOrderTokenQuery, *SenderOrderTokenSelect](ctx, _s.SenderOrderTokenQuery, _s, _s.inters, v)
 }
 
-func (sots *SenderOrderTokenSelect) sqlScan(ctx context.Context, root *SenderOrderTokenQuery, v any) error {
+func (_s *SenderOrderTokenSelect) sqlScan(ctx context.Context, root *SenderOrderTokenQuery, v any) error {
 	selector := root.sqlQuery(ctx)
-	aggregation := make([]string, 0, len(sots.fns))
-	for _, fn := range sots.fns {
+	aggregation := make([]string, 0, len(_s.fns))
+	for _, fn := range _s.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
-	switch n := len(*sots.selector.flds); {
+	switch n := len(*_s.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
 		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
@@ -682,7 +682,7 @@ func (sots *SenderOrderTokenSelect) sqlScan(ctx context.Context, root *SenderOrd
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := sots.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _s.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()

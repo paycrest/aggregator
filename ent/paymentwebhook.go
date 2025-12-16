@@ -95,7 +95,7 @@ func (*PaymentWebhook) scanValues(columns []string) ([]any, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the PaymentWebhook fields.
-func (pw *PaymentWebhook) assignValues(columns []string, values []any) error {
+func (_m *PaymentWebhook) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -105,54 +105,54 @@ func (pw *PaymentWebhook) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*uuid.UUID); !ok {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
-				pw.ID = *value
+				_m.ID = *value
 			}
 		case paymentwebhook.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
-				pw.CreatedAt = value.Time
+				_m.CreatedAt = value.Time
 			}
 		case paymentwebhook.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
-				pw.UpdatedAt = value.Time
+				_m.UpdatedAt = value.Time
 			}
 		case paymentwebhook.FieldWebhookID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field webhook_id", values[i])
 			} else if value.Valid {
-				pw.WebhookID = value.String
+				_m.WebhookID = value.String
 			}
 		case paymentwebhook.FieldWebhookSecret:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field webhook_secret", values[i])
 			} else if value.Valid {
-				pw.WebhookSecret = value.String
+				_m.WebhookSecret = value.String
 			}
 		case paymentwebhook.FieldCallbackURL:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field callback_url", values[i])
 			} else if value.Valid {
-				pw.CallbackURL = value.String
+				_m.CallbackURL = value.String
 			}
 		case paymentwebhook.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field network_payment_webhook", value)
 			} else if value.Valid {
-				pw.network_payment_webhook = new(int)
-				*pw.network_payment_webhook = int(value.Int64)
+				_m.network_payment_webhook = new(int)
+				*_m.network_payment_webhook = int(value.Int64)
 			}
 		case paymentwebhook.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field payment_order_payment_webhook", values[i])
 			} else if value.Valid {
-				pw.payment_order_payment_webhook = new(uuid.UUID)
-				*pw.payment_order_payment_webhook = *value.S.(*uuid.UUID)
+				_m.payment_order_payment_webhook = new(uuid.UUID)
+				*_m.payment_order_payment_webhook = *value.S.(*uuid.UUID)
 			}
 		default:
-			pw.selectValues.Set(columns[i], values[i])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -160,57 +160,57 @@ func (pw *PaymentWebhook) assignValues(columns []string, values []any) error {
 
 // Value returns the ent.Value that was dynamically selected and assigned to the PaymentWebhook.
 // This includes values selected through modifiers, order, etc.
-func (pw *PaymentWebhook) Value(name string) (ent.Value, error) {
-	return pw.selectValues.Get(name)
+func (_m *PaymentWebhook) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
 }
 
 // QueryPaymentOrder queries the "payment_order" edge of the PaymentWebhook entity.
-func (pw *PaymentWebhook) QueryPaymentOrder() *PaymentOrderQuery {
-	return NewPaymentWebhookClient(pw.config).QueryPaymentOrder(pw)
+func (_m *PaymentWebhook) QueryPaymentOrder() *PaymentOrderQuery {
+	return NewPaymentWebhookClient(_m.config).QueryPaymentOrder(_m)
 }
 
 // QueryNetwork queries the "network" edge of the PaymentWebhook entity.
-func (pw *PaymentWebhook) QueryNetwork() *NetworkQuery {
-	return NewPaymentWebhookClient(pw.config).QueryNetwork(pw)
+func (_m *PaymentWebhook) QueryNetwork() *NetworkQuery {
+	return NewPaymentWebhookClient(_m.config).QueryNetwork(_m)
 }
 
 // Update returns a builder for updating this PaymentWebhook.
 // Note that you need to call PaymentWebhook.Unwrap() before calling this method if this PaymentWebhook
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (pw *PaymentWebhook) Update() *PaymentWebhookUpdateOne {
-	return NewPaymentWebhookClient(pw.config).UpdateOne(pw)
+func (_m *PaymentWebhook) Update() *PaymentWebhookUpdateOne {
+	return NewPaymentWebhookClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the PaymentWebhook entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (pw *PaymentWebhook) Unwrap() *PaymentWebhook {
-	_tx, ok := pw.config.driver.(*txDriver)
+func (_m *PaymentWebhook) Unwrap() *PaymentWebhook {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: PaymentWebhook is not a transactional entity")
 	}
-	pw.config.driver = _tx.drv
-	return pw
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (pw *PaymentWebhook) String() string {
+func (_m *PaymentWebhook) String() string {
 	var builder strings.Builder
 	builder.WriteString("PaymentWebhook(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", pw.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("created_at=")
-	builder.WriteString(pw.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
-	builder.WriteString(pw.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("webhook_id=")
-	builder.WriteString(pw.WebhookID)
+	builder.WriteString(_m.WebhookID)
 	builder.WriteString(", ")
 	builder.WriteString("webhook_secret=")
-	builder.WriteString(pw.WebhookSecret)
+	builder.WriteString(_m.WebhookSecret)
 	builder.WriteString(", ")
 	builder.WriteString("callback_url=")
-	builder.WriteString(pw.CallbackURL)
+	builder.WriteString(_m.CallbackURL)
 	builder.WriteByte(')')
 	return builder.String()
 }

@@ -80,7 +80,7 @@ func (*LockOrderFulfillment) scanValues(columns []string) ([]any, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the LockOrderFulfillment fields.
-func (lof *LockOrderFulfillment) assignValues(columns []string, values []any) error {
+func (_m *LockOrderFulfillment) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -90,53 +90,53 @@ func (lof *LockOrderFulfillment) assignValues(columns []string, values []any) er
 			if value, ok := values[i].(*uuid.UUID); !ok {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
-				lof.ID = *value
+				_m.ID = *value
 			}
 		case lockorderfulfillment.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
-				lof.CreatedAt = value.Time
+				_m.CreatedAt = value.Time
 			}
 		case lockorderfulfillment.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
-				lof.UpdatedAt = value.Time
+				_m.UpdatedAt = value.Time
 			}
 		case lockorderfulfillment.FieldTxID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field tx_id", values[i])
 			} else if value.Valid {
-				lof.TxID = value.String
+				_m.TxID = value.String
 			}
 		case lockorderfulfillment.FieldPsp:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field psp", values[i])
 			} else if value.Valid {
-				lof.Psp = value.String
+				_m.Psp = value.String
 			}
 		case lockorderfulfillment.FieldValidationStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field validation_status", values[i])
 			} else if value.Valid {
-				lof.ValidationStatus = lockorderfulfillment.ValidationStatus(value.String)
+				_m.ValidationStatus = lockorderfulfillment.ValidationStatus(value.String)
 			}
 		case lockorderfulfillment.FieldValidationError:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field validation_error", values[i])
 			} else if value.Valid {
-				lof.ValidationError = value.String
+				_m.ValidationError = value.String
 			}
 		case lockorderfulfillment.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field lock_payment_order_fulfillments", values[i])
 			} else if value.Valid {
-				lof.lock_payment_order_fulfillments = new(uuid.UUID)
-				*lof.lock_payment_order_fulfillments = *value.S.(*uuid.UUID)
+				_m.lock_payment_order_fulfillments = new(uuid.UUID)
+				*_m.lock_payment_order_fulfillments = *value.S.(*uuid.UUID)
 			}
 		default:
-			lof.selectValues.Set(columns[i], values[i])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -144,55 +144,55 @@ func (lof *LockOrderFulfillment) assignValues(columns []string, values []any) er
 
 // Value returns the ent.Value that was dynamically selected and assigned to the LockOrderFulfillment.
 // This includes values selected through modifiers, order, etc.
-func (lof *LockOrderFulfillment) Value(name string) (ent.Value, error) {
-	return lof.selectValues.Get(name)
+func (_m *LockOrderFulfillment) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
 }
 
 // QueryOrder queries the "order" edge of the LockOrderFulfillment entity.
-func (lof *LockOrderFulfillment) QueryOrder() *LockPaymentOrderQuery {
-	return NewLockOrderFulfillmentClient(lof.config).QueryOrder(lof)
+func (_m *LockOrderFulfillment) QueryOrder() *LockPaymentOrderQuery {
+	return NewLockOrderFulfillmentClient(_m.config).QueryOrder(_m)
 }
 
 // Update returns a builder for updating this LockOrderFulfillment.
 // Note that you need to call LockOrderFulfillment.Unwrap() before calling this method if this LockOrderFulfillment
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (lof *LockOrderFulfillment) Update() *LockOrderFulfillmentUpdateOne {
-	return NewLockOrderFulfillmentClient(lof.config).UpdateOne(lof)
+func (_m *LockOrderFulfillment) Update() *LockOrderFulfillmentUpdateOne {
+	return NewLockOrderFulfillmentClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the LockOrderFulfillment entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (lof *LockOrderFulfillment) Unwrap() *LockOrderFulfillment {
-	_tx, ok := lof.config.driver.(*txDriver)
+func (_m *LockOrderFulfillment) Unwrap() *LockOrderFulfillment {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: LockOrderFulfillment is not a transactional entity")
 	}
-	lof.config.driver = _tx.drv
-	return lof
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (lof *LockOrderFulfillment) String() string {
+func (_m *LockOrderFulfillment) String() string {
 	var builder strings.Builder
 	builder.WriteString("LockOrderFulfillment(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", lof.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("created_at=")
-	builder.WriteString(lof.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
-	builder.WriteString(lof.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("tx_id=")
-	builder.WriteString(lof.TxID)
+	builder.WriteString(_m.TxID)
 	builder.WriteString(", ")
 	builder.WriteString("psp=")
-	builder.WriteString(lof.Psp)
+	builder.WriteString(_m.Psp)
 	builder.WriteString(", ")
 	builder.WriteString("validation_status=")
-	builder.WriteString(fmt.Sprintf("%v", lof.ValidationStatus))
+	builder.WriteString(fmt.Sprintf("%v", _m.ValidationStatus))
 	builder.WriteString(", ")
 	builder.WriteString("validation_error=")
-	builder.WriteString(lof.ValidationError)
+	builder.WriteString(_m.ValidationError)
 	builder.WriteByte(')')
 	return builder.String()
 }

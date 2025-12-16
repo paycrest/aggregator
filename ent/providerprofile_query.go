@@ -47,44 +47,44 @@ type ProviderProfileQuery struct {
 }
 
 // Where adds a new predicate for the ProviderProfileQuery builder.
-func (ppq *ProviderProfileQuery) Where(ps ...predicate.ProviderProfile) *ProviderProfileQuery {
-	ppq.predicates = append(ppq.predicates, ps...)
-	return ppq
+func (_q *ProviderProfileQuery) Where(ps ...predicate.ProviderProfile) *ProviderProfileQuery {
+	_q.predicates = append(_q.predicates, ps...)
+	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (ppq *ProviderProfileQuery) Limit(limit int) *ProviderProfileQuery {
-	ppq.ctx.Limit = &limit
-	return ppq
+func (_q *ProviderProfileQuery) Limit(limit int) *ProviderProfileQuery {
+	_q.ctx.Limit = &limit
+	return _q
 }
 
 // Offset to start from.
-func (ppq *ProviderProfileQuery) Offset(offset int) *ProviderProfileQuery {
-	ppq.ctx.Offset = &offset
-	return ppq
+func (_q *ProviderProfileQuery) Offset(offset int) *ProviderProfileQuery {
+	_q.ctx.Offset = &offset
+	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (ppq *ProviderProfileQuery) Unique(unique bool) *ProviderProfileQuery {
-	ppq.ctx.Unique = &unique
-	return ppq
+func (_q *ProviderProfileQuery) Unique(unique bool) *ProviderProfileQuery {
+	_q.ctx.Unique = &unique
+	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (ppq *ProviderProfileQuery) Order(o ...providerprofile.OrderOption) *ProviderProfileQuery {
-	ppq.order = append(ppq.order, o...)
-	return ppq
+func (_q *ProviderProfileQuery) Order(o ...providerprofile.OrderOption) *ProviderProfileQuery {
+	_q.order = append(_q.order, o...)
+	return _q
 }
 
 // QueryUser chains the current query on the "user" edge.
-func (ppq *ProviderProfileQuery) QueryUser() *UserQuery {
-	query := (&UserClient{config: ppq.config}).Query()
+func (_q *ProviderProfileQuery) QueryUser() *UserQuery {
+	query := (&UserClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := ppq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := ppq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -93,20 +93,20 @@ func (ppq *ProviderProfileQuery) QueryUser() *UserQuery {
 			sqlgraph.To(user.Table, user.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, providerprofile.UserTable, providerprofile.UserColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(ppq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryAPIKey chains the current query on the "api_key" edge.
-func (ppq *ProviderProfileQuery) QueryAPIKey() *APIKeyQuery {
-	query := (&APIKeyClient{config: ppq.config}).Query()
+func (_q *ProviderProfileQuery) QueryAPIKey() *APIKeyQuery {
+	query := (&APIKeyClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := ppq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := ppq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -115,20 +115,20 @@ func (ppq *ProviderProfileQuery) QueryAPIKey() *APIKeyQuery {
 			sqlgraph.To(apikey.Table, apikey.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, providerprofile.APIKeyTable, providerprofile.APIKeyColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(ppq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryProviderCurrencies chains the current query on the "provider_currencies" edge.
-func (ppq *ProviderProfileQuery) QueryProviderCurrencies() *ProviderCurrenciesQuery {
-	query := (&ProviderCurrenciesClient{config: ppq.config}).Query()
+func (_q *ProviderProfileQuery) QueryProviderCurrencies() *ProviderCurrenciesQuery {
+	query := (&ProviderCurrenciesClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := ppq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := ppq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -137,20 +137,20 @@ func (ppq *ProviderProfileQuery) QueryProviderCurrencies() *ProviderCurrenciesQu
 			sqlgraph.To(providercurrencies.Table, providercurrencies.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.ProviderCurrenciesTable, providerprofile.ProviderCurrenciesColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(ppq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryProvisionBuckets chains the current query on the "provision_buckets" edge.
-func (ppq *ProviderProfileQuery) QueryProvisionBuckets() *ProvisionBucketQuery {
-	query := (&ProvisionBucketClient{config: ppq.config}).Query()
+func (_q *ProviderProfileQuery) QueryProvisionBuckets() *ProvisionBucketQuery {
+	query := (&ProvisionBucketClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := ppq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := ppq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -159,20 +159,20 @@ func (ppq *ProviderProfileQuery) QueryProvisionBuckets() *ProvisionBucketQuery {
 			sqlgraph.To(provisionbucket.Table, provisionbucket.FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, true, providerprofile.ProvisionBucketsTable, providerprofile.ProvisionBucketsPrimaryKey...),
 		)
-		fromU = sqlgraph.SetNeighbors(ppq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryOrderTokens chains the current query on the "order_tokens" edge.
-func (ppq *ProviderProfileQuery) QueryOrderTokens() *ProviderOrderTokenQuery {
-	query := (&ProviderOrderTokenClient{config: ppq.config}).Query()
+func (_q *ProviderProfileQuery) QueryOrderTokens() *ProviderOrderTokenQuery {
+	query := (&ProviderOrderTokenClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := ppq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := ppq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -181,20 +181,20 @@ func (ppq *ProviderProfileQuery) QueryOrderTokens() *ProviderOrderTokenQuery {
 			sqlgraph.To(providerordertoken.Table, providerordertoken.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.OrderTokensTable, providerprofile.OrderTokensColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(ppq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryProviderRating chains the current query on the "provider_rating" edge.
-func (ppq *ProviderProfileQuery) QueryProviderRating() *ProviderRatingQuery {
-	query := (&ProviderRatingClient{config: ppq.config}).Query()
+func (_q *ProviderProfileQuery) QueryProviderRating() *ProviderRatingQuery {
+	query := (&ProviderRatingClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := ppq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := ppq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -203,20 +203,20 @@ func (ppq *ProviderProfileQuery) QueryProviderRating() *ProviderRatingQuery {
 			sqlgraph.To(providerrating.Table, providerrating.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, providerprofile.ProviderRatingTable, providerprofile.ProviderRatingColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(ppq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryAssignedOrders chains the current query on the "assigned_orders" edge.
-func (ppq *ProviderProfileQuery) QueryAssignedOrders() *LockPaymentOrderQuery {
-	query := (&LockPaymentOrderClient{config: ppq.config}).Query()
+func (_q *ProviderProfileQuery) QueryAssignedOrders() *LockPaymentOrderQuery {
+	query := (&LockPaymentOrderClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := ppq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := ppq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -225,20 +225,20 @@ func (ppq *ProviderProfileQuery) QueryAssignedOrders() *LockPaymentOrderQuery {
 			sqlgraph.To(lockpaymentorder.Table, lockpaymentorder.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.AssignedOrdersTable, providerprofile.AssignedOrdersColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(ppq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryFiatAccounts chains the current query on the "fiat_accounts" edge.
-func (ppq *ProviderProfileQuery) QueryFiatAccounts() *ProviderFiatAccountQuery {
-	query := (&ProviderFiatAccountClient{config: ppq.config}).Query()
+func (_q *ProviderProfileQuery) QueryFiatAccounts() *ProviderFiatAccountQuery {
+	query := (&ProviderFiatAccountClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := ppq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := ppq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -247,7 +247,7 @@ func (ppq *ProviderProfileQuery) QueryFiatAccounts() *ProviderFiatAccountQuery {
 			sqlgraph.To(providerfiataccount.Table, providerfiataccount.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.FiatAccountsTable, providerprofile.FiatAccountsColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(ppq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
@@ -255,8 +255,8 @@ func (ppq *ProviderProfileQuery) QueryFiatAccounts() *ProviderFiatAccountQuery {
 
 // First returns the first ProviderProfile entity from the query.
 // Returns a *NotFoundError when no ProviderProfile was found.
-func (ppq *ProviderProfileQuery) First(ctx context.Context) (*ProviderProfile, error) {
-	nodes, err := ppq.Limit(1).All(setContextOp(ctx, ppq.ctx, ent.OpQueryFirst))
+func (_q *ProviderProfileQuery) First(ctx context.Context) (*ProviderProfile, error) {
+	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
@@ -267,8 +267,8 @@ func (ppq *ProviderProfileQuery) First(ctx context.Context) (*ProviderProfile, e
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (ppq *ProviderProfileQuery) FirstX(ctx context.Context) *ProviderProfile {
-	node, err := ppq.First(ctx)
+func (_q *ProviderProfileQuery) FirstX(ctx context.Context) *ProviderProfile {
+	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -277,9 +277,9 @@ func (ppq *ProviderProfileQuery) FirstX(ctx context.Context) *ProviderProfile {
 
 // FirstID returns the first ProviderProfile ID from the query.
 // Returns a *NotFoundError when no ProviderProfile ID was found.
-func (ppq *ProviderProfileQuery) FirstID(ctx context.Context) (id string, err error) {
+func (_q *ProviderProfileQuery) FirstID(ctx context.Context) (id string, err error) {
 	var ids []string
-	if ids, err = ppq.Limit(1).IDs(setContextOp(ctx, ppq.ctx, ent.OpQueryFirstID)); err != nil {
+	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -290,8 +290,8 @@ func (ppq *ProviderProfileQuery) FirstID(ctx context.Context) (id string, err er
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (ppq *ProviderProfileQuery) FirstIDX(ctx context.Context) string {
-	id, err := ppq.FirstID(ctx)
+func (_q *ProviderProfileQuery) FirstIDX(ctx context.Context) string {
+	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -301,8 +301,8 @@ func (ppq *ProviderProfileQuery) FirstIDX(ctx context.Context) string {
 // Only returns a single ProviderProfile entity found by the query, ensuring it only returns one.
 // Returns a *NotSingularError when more than one ProviderProfile entity is found.
 // Returns a *NotFoundError when no ProviderProfile entities are found.
-func (ppq *ProviderProfileQuery) Only(ctx context.Context) (*ProviderProfile, error) {
-	nodes, err := ppq.Limit(2).All(setContextOp(ctx, ppq.ctx, ent.OpQueryOnly))
+func (_q *ProviderProfileQuery) Only(ctx context.Context) (*ProviderProfile, error) {
+	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -317,8 +317,8 @@ func (ppq *ProviderProfileQuery) Only(ctx context.Context) (*ProviderProfile, er
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (ppq *ProviderProfileQuery) OnlyX(ctx context.Context) *ProviderProfile {
-	node, err := ppq.Only(ctx)
+func (_q *ProviderProfileQuery) OnlyX(ctx context.Context) *ProviderProfile {
+	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -328,9 +328,9 @@ func (ppq *ProviderProfileQuery) OnlyX(ctx context.Context) *ProviderProfile {
 // OnlyID is like Only, but returns the only ProviderProfile ID in the query.
 // Returns a *NotSingularError when more than one ProviderProfile ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (ppq *ProviderProfileQuery) OnlyID(ctx context.Context) (id string, err error) {
+func (_q *ProviderProfileQuery) OnlyID(ctx context.Context) (id string, err error) {
 	var ids []string
-	if ids, err = ppq.Limit(2).IDs(setContextOp(ctx, ppq.ctx, ent.OpQueryOnlyID)); err != nil {
+	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -345,8 +345,8 @@ func (ppq *ProviderProfileQuery) OnlyID(ctx context.Context) (id string, err err
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (ppq *ProviderProfileQuery) OnlyIDX(ctx context.Context) string {
-	id, err := ppq.OnlyID(ctx)
+func (_q *ProviderProfileQuery) OnlyIDX(ctx context.Context) string {
+	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -354,18 +354,18 @@ func (ppq *ProviderProfileQuery) OnlyIDX(ctx context.Context) string {
 }
 
 // All executes the query and returns a list of ProviderProfiles.
-func (ppq *ProviderProfileQuery) All(ctx context.Context) ([]*ProviderProfile, error) {
-	ctx = setContextOp(ctx, ppq.ctx, ent.OpQueryAll)
-	if err := ppq.prepareQuery(ctx); err != nil {
+func (_q *ProviderProfileQuery) All(ctx context.Context) ([]*ProviderProfile, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
 	qr := querierAll[[]*ProviderProfile, *ProviderProfileQuery]()
-	return withInterceptors[[]*ProviderProfile](ctx, ppq, qr, ppq.inters)
+	return withInterceptors[[]*ProviderProfile](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (ppq *ProviderProfileQuery) AllX(ctx context.Context) []*ProviderProfile {
-	nodes, err := ppq.All(ctx)
+func (_q *ProviderProfileQuery) AllX(ctx context.Context) []*ProviderProfile {
+	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -373,20 +373,20 @@ func (ppq *ProviderProfileQuery) AllX(ctx context.Context) []*ProviderProfile {
 }
 
 // IDs executes the query and returns a list of ProviderProfile IDs.
-func (ppq *ProviderProfileQuery) IDs(ctx context.Context) (ids []string, err error) {
-	if ppq.ctx.Unique == nil && ppq.path != nil {
-		ppq.Unique(true)
+func (_q *ProviderProfileQuery) IDs(ctx context.Context) (ids []string, err error) {
+	if _q.ctx.Unique == nil && _q.path != nil {
+		_q.Unique(true)
 	}
-	ctx = setContextOp(ctx, ppq.ctx, ent.OpQueryIDs)
-	if err = ppq.Select(providerprofile.FieldID).Scan(ctx, &ids); err != nil {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
+	if err = _q.Select(providerprofile.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (ppq *ProviderProfileQuery) IDsX(ctx context.Context) []string {
-	ids, err := ppq.IDs(ctx)
+func (_q *ProviderProfileQuery) IDsX(ctx context.Context) []string {
+	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -394,17 +394,17 @@ func (ppq *ProviderProfileQuery) IDsX(ctx context.Context) []string {
 }
 
 // Count returns the count of the given query.
-func (ppq *ProviderProfileQuery) Count(ctx context.Context) (int, error) {
-	ctx = setContextOp(ctx, ppq.ctx, ent.OpQueryCount)
-	if err := ppq.prepareQuery(ctx); err != nil {
+func (_q *ProviderProfileQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, ppq, querierCount[*ProviderProfileQuery](), ppq.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*ProviderProfileQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (ppq *ProviderProfileQuery) CountX(ctx context.Context) int {
-	count, err := ppq.Count(ctx)
+func (_q *ProviderProfileQuery) CountX(ctx context.Context) int {
+	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -412,9 +412,9 @@ func (ppq *ProviderProfileQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (ppq *ProviderProfileQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = setContextOp(ctx, ppq.ctx, ent.OpQueryExist)
-	switch _, err := ppq.FirstID(ctx); {
+func (_q *ProviderProfileQuery) Exist(ctx context.Context) (bool, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
+	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
 	case err != nil:
@@ -425,8 +425,8 @@ func (ppq *ProviderProfileQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (ppq *ProviderProfileQuery) ExistX(ctx context.Context) bool {
-	exist, err := ppq.Exist(ctx)
+func (_q *ProviderProfileQuery) ExistX(ctx context.Context) bool {
+	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -435,116 +435,116 @@ func (ppq *ProviderProfileQuery) ExistX(ctx context.Context) bool {
 
 // Clone returns a duplicate of the ProviderProfileQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (ppq *ProviderProfileQuery) Clone() *ProviderProfileQuery {
-	if ppq == nil {
+func (_q *ProviderProfileQuery) Clone() *ProviderProfileQuery {
+	if _q == nil {
 		return nil
 	}
 	return &ProviderProfileQuery{
-		config:                 ppq.config,
-		ctx:                    ppq.ctx.Clone(),
-		order:                  append([]providerprofile.OrderOption{}, ppq.order...),
-		inters:                 append([]Interceptor{}, ppq.inters...),
-		predicates:             append([]predicate.ProviderProfile{}, ppq.predicates...),
-		withUser:               ppq.withUser.Clone(),
-		withAPIKey:             ppq.withAPIKey.Clone(),
-		withProviderCurrencies: ppq.withProviderCurrencies.Clone(),
-		withProvisionBuckets:   ppq.withProvisionBuckets.Clone(),
-		withOrderTokens:        ppq.withOrderTokens.Clone(),
-		withProviderRating:     ppq.withProviderRating.Clone(),
-		withAssignedOrders:     ppq.withAssignedOrders.Clone(),
-		withFiatAccounts:       ppq.withFiatAccounts.Clone(),
+		config:                 _q.config,
+		ctx:                    _q.ctx.Clone(),
+		order:                  append([]providerprofile.OrderOption{}, _q.order...),
+		inters:                 append([]Interceptor{}, _q.inters...),
+		predicates:             append([]predicate.ProviderProfile{}, _q.predicates...),
+		withUser:               _q.withUser.Clone(),
+		withAPIKey:             _q.withAPIKey.Clone(),
+		withProviderCurrencies: _q.withProviderCurrencies.Clone(),
+		withProvisionBuckets:   _q.withProvisionBuckets.Clone(),
+		withOrderTokens:        _q.withOrderTokens.Clone(),
+		withProviderRating:     _q.withProviderRating.Clone(),
+		withAssignedOrders:     _q.withAssignedOrders.Clone(),
+		withFiatAccounts:       _q.withFiatAccounts.Clone(),
 		// clone intermediate query.
-		sql:  ppq.sql.Clone(),
-		path: ppq.path,
+		sql:  _q.sql.Clone(),
+		path: _q.path,
 	}
 }
 
 // WithUser tells the query-builder to eager-load the nodes that are connected to
 // the "user" edge. The optional arguments are used to configure the query builder of the edge.
-func (ppq *ProviderProfileQuery) WithUser(opts ...func(*UserQuery)) *ProviderProfileQuery {
-	query := (&UserClient{config: ppq.config}).Query()
+func (_q *ProviderProfileQuery) WithUser(opts ...func(*UserQuery)) *ProviderProfileQuery {
+	query := (&UserClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	ppq.withUser = query
-	return ppq
+	_q.withUser = query
+	return _q
 }
 
 // WithAPIKey tells the query-builder to eager-load the nodes that are connected to
 // the "api_key" edge. The optional arguments are used to configure the query builder of the edge.
-func (ppq *ProviderProfileQuery) WithAPIKey(opts ...func(*APIKeyQuery)) *ProviderProfileQuery {
-	query := (&APIKeyClient{config: ppq.config}).Query()
+func (_q *ProviderProfileQuery) WithAPIKey(opts ...func(*APIKeyQuery)) *ProviderProfileQuery {
+	query := (&APIKeyClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	ppq.withAPIKey = query
-	return ppq
+	_q.withAPIKey = query
+	return _q
 }
 
 // WithProviderCurrencies tells the query-builder to eager-load the nodes that are connected to
 // the "provider_currencies" edge. The optional arguments are used to configure the query builder of the edge.
-func (ppq *ProviderProfileQuery) WithProviderCurrencies(opts ...func(*ProviderCurrenciesQuery)) *ProviderProfileQuery {
-	query := (&ProviderCurrenciesClient{config: ppq.config}).Query()
+func (_q *ProviderProfileQuery) WithProviderCurrencies(opts ...func(*ProviderCurrenciesQuery)) *ProviderProfileQuery {
+	query := (&ProviderCurrenciesClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	ppq.withProviderCurrencies = query
-	return ppq
+	_q.withProviderCurrencies = query
+	return _q
 }
 
 // WithProvisionBuckets tells the query-builder to eager-load the nodes that are connected to
 // the "provision_buckets" edge. The optional arguments are used to configure the query builder of the edge.
-func (ppq *ProviderProfileQuery) WithProvisionBuckets(opts ...func(*ProvisionBucketQuery)) *ProviderProfileQuery {
-	query := (&ProvisionBucketClient{config: ppq.config}).Query()
+func (_q *ProviderProfileQuery) WithProvisionBuckets(opts ...func(*ProvisionBucketQuery)) *ProviderProfileQuery {
+	query := (&ProvisionBucketClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	ppq.withProvisionBuckets = query
-	return ppq
+	_q.withProvisionBuckets = query
+	return _q
 }
 
 // WithOrderTokens tells the query-builder to eager-load the nodes that are connected to
 // the "order_tokens" edge. The optional arguments are used to configure the query builder of the edge.
-func (ppq *ProviderProfileQuery) WithOrderTokens(opts ...func(*ProviderOrderTokenQuery)) *ProviderProfileQuery {
-	query := (&ProviderOrderTokenClient{config: ppq.config}).Query()
+func (_q *ProviderProfileQuery) WithOrderTokens(opts ...func(*ProviderOrderTokenQuery)) *ProviderProfileQuery {
+	query := (&ProviderOrderTokenClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	ppq.withOrderTokens = query
-	return ppq
+	_q.withOrderTokens = query
+	return _q
 }
 
 // WithProviderRating tells the query-builder to eager-load the nodes that are connected to
 // the "provider_rating" edge. The optional arguments are used to configure the query builder of the edge.
-func (ppq *ProviderProfileQuery) WithProviderRating(opts ...func(*ProviderRatingQuery)) *ProviderProfileQuery {
-	query := (&ProviderRatingClient{config: ppq.config}).Query()
+func (_q *ProviderProfileQuery) WithProviderRating(opts ...func(*ProviderRatingQuery)) *ProviderProfileQuery {
+	query := (&ProviderRatingClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	ppq.withProviderRating = query
-	return ppq
+	_q.withProviderRating = query
+	return _q
 }
 
 // WithAssignedOrders tells the query-builder to eager-load the nodes that are connected to
 // the "assigned_orders" edge. The optional arguments are used to configure the query builder of the edge.
-func (ppq *ProviderProfileQuery) WithAssignedOrders(opts ...func(*LockPaymentOrderQuery)) *ProviderProfileQuery {
-	query := (&LockPaymentOrderClient{config: ppq.config}).Query()
+func (_q *ProviderProfileQuery) WithAssignedOrders(opts ...func(*LockPaymentOrderQuery)) *ProviderProfileQuery {
+	query := (&LockPaymentOrderClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	ppq.withAssignedOrders = query
-	return ppq
+	_q.withAssignedOrders = query
+	return _q
 }
 
 // WithFiatAccounts tells the query-builder to eager-load the nodes that are connected to
 // the "fiat_accounts" edge. The optional arguments are used to configure the query builder of the edge.
-func (ppq *ProviderProfileQuery) WithFiatAccounts(opts ...func(*ProviderFiatAccountQuery)) *ProviderProfileQuery {
-	query := (&ProviderFiatAccountClient{config: ppq.config}).Query()
+func (_q *ProviderProfileQuery) WithFiatAccounts(opts ...func(*ProviderFiatAccountQuery)) *ProviderProfileQuery {
+	query := (&ProviderFiatAccountClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	ppq.withFiatAccounts = query
-	return ppq
+	_q.withFiatAccounts = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -561,10 +561,10 @@ func (ppq *ProviderProfileQuery) WithFiatAccounts(opts ...func(*ProviderFiatAcco
 //		GroupBy(providerprofile.FieldTradingName).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (ppq *ProviderProfileQuery) GroupBy(field string, fields ...string) *ProviderProfileGroupBy {
-	ppq.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &ProviderProfileGroupBy{build: ppq}
-	grbuild.flds = &ppq.ctx.Fields
+func (_q *ProviderProfileQuery) GroupBy(field string, fields ...string) *ProviderProfileGroupBy {
+	_q.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &ProviderProfileGroupBy{build: _q}
+	grbuild.flds = &_q.ctx.Fields
 	grbuild.label = providerprofile.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -582,62 +582,62 @@ func (ppq *ProviderProfileQuery) GroupBy(field string, fields ...string) *Provid
 //	client.ProviderProfile.Query().
 //		Select(providerprofile.FieldTradingName).
 //		Scan(ctx, &v)
-func (ppq *ProviderProfileQuery) Select(fields ...string) *ProviderProfileSelect {
-	ppq.ctx.Fields = append(ppq.ctx.Fields, fields...)
-	sbuild := &ProviderProfileSelect{ProviderProfileQuery: ppq}
+func (_q *ProviderProfileQuery) Select(fields ...string) *ProviderProfileSelect {
+	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
+	sbuild := &ProviderProfileSelect{ProviderProfileQuery: _q}
 	sbuild.label = providerprofile.Label
-	sbuild.flds, sbuild.scan = &ppq.ctx.Fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
 // Aggregate returns a ProviderProfileSelect configured with the given aggregations.
-func (ppq *ProviderProfileQuery) Aggregate(fns ...AggregateFunc) *ProviderProfileSelect {
-	return ppq.Select().Aggregate(fns...)
+func (_q *ProviderProfileQuery) Aggregate(fns ...AggregateFunc) *ProviderProfileSelect {
+	return _q.Select().Aggregate(fns...)
 }
 
-func (ppq *ProviderProfileQuery) prepareQuery(ctx context.Context) error {
-	for _, inter := range ppq.inters {
+func (_q *ProviderProfileQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
 		}
 		if trv, ok := inter.(Traverser); ok {
-			if err := trv.Traverse(ctx, ppq); err != nil {
+			if err := trv.Traverse(ctx, _q); err != nil {
 				return err
 			}
 		}
 	}
-	for _, f := range ppq.ctx.Fields {
+	for _, f := range _q.ctx.Fields {
 		if !providerprofile.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
-	if ppq.path != nil {
-		prev, err := ppq.path(ctx)
+	if _q.path != nil {
+		prev, err := _q.path(ctx)
 		if err != nil {
 			return err
 		}
-		ppq.sql = prev
+		_q.sql = prev
 	}
 	return nil
 }
 
-func (ppq *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*ProviderProfile, error) {
+func (_q *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*ProviderProfile, error) {
 	var (
 		nodes       = []*ProviderProfile{}
-		withFKs     = ppq.withFKs
-		_spec       = ppq.querySpec()
+		withFKs     = _q.withFKs
+		_spec       = _q.querySpec()
 		loadedTypes = [8]bool{
-			ppq.withUser != nil,
-			ppq.withAPIKey != nil,
-			ppq.withProviderCurrencies != nil,
-			ppq.withProvisionBuckets != nil,
-			ppq.withOrderTokens != nil,
-			ppq.withProviderRating != nil,
-			ppq.withAssignedOrders != nil,
-			ppq.withFiatAccounts != nil,
+			_q.withUser != nil,
+			_q.withAPIKey != nil,
+			_q.withProviderCurrencies != nil,
+			_q.withProvisionBuckets != nil,
+			_q.withOrderTokens != nil,
+			_q.withProviderRating != nil,
+			_q.withAssignedOrders != nil,
+			_q.withFiatAccounts != nil,
 		}
 	)
-	if ppq.withUser != nil {
+	if _q.withUser != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -647,7 +647,7 @@ func (ppq *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 		return (*ProviderProfile).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &ProviderProfile{config: ppq.config}
+		node := &ProviderProfile{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -655,26 +655,26 @@ func (ppq *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 	for i := range hooks {
 		hooks[i](ctx, _spec)
 	}
-	if err := sqlgraph.QueryNodes(ctx, ppq.driver, _spec); err != nil {
+	if err := sqlgraph.QueryNodes(ctx, _q.driver, _spec); err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := ppq.withUser; query != nil {
-		if err := ppq.loadUser(ctx, query, nodes, nil,
+	if query := _q.withUser; query != nil {
+		if err := _q.loadUser(ctx, query, nodes, nil,
 			func(n *ProviderProfile, e *User) { n.Edges.User = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := ppq.withAPIKey; query != nil {
-		if err := ppq.loadAPIKey(ctx, query, nodes, nil,
+	if query := _q.withAPIKey; query != nil {
+		if err := _q.loadAPIKey(ctx, query, nodes, nil,
 			func(n *ProviderProfile, e *APIKey) { n.Edges.APIKey = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := ppq.withProviderCurrencies; query != nil {
-		if err := ppq.loadProviderCurrencies(ctx, query, nodes,
+	if query := _q.withProviderCurrencies; query != nil {
+		if err := _q.loadProviderCurrencies(ctx, query, nodes,
 			func(n *ProviderProfile) { n.Edges.ProviderCurrencies = []*ProviderCurrencies{} },
 			func(n *ProviderProfile, e *ProviderCurrencies) {
 				n.Edges.ProviderCurrencies = append(n.Edges.ProviderCurrencies, e)
@@ -682,8 +682,8 @@ func (ppq *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 			return nil, err
 		}
 	}
-	if query := ppq.withProvisionBuckets; query != nil {
-		if err := ppq.loadProvisionBuckets(ctx, query, nodes,
+	if query := _q.withProvisionBuckets; query != nil {
+		if err := _q.loadProvisionBuckets(ctx, query, nodes,
 			func(n *ProviderProfile) { n.Edges.ProvisionBuckets = []*ProvisionBucket{} },
 			func(n *ProviderProfile, e *ProvisionBucket) {
 				n.Edges.ProvisionBuckets = append(n.Edges.ProvisionBuckets, e)
@@ -691,21 +691,21 @@ func (ppq *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 			return nil, err
 		}
 	}
-	if query := ppq.withOrderTokens; query != nil {
-		if err := ppq.loadOrderTokens(ctx, query, nodes,
+	if query := _q.withOrderTokens; query != nil {
+		if err := _q.loadOrderTokens(ctx, query, nodes,
 			func(n *ProviderProfile) { n.Edges.OrderTokens = []*ProviderOrderToken{} },
 			func(n *ProviderProfile, e *ProviderOrderToken) { n.Edges.OrderTokens = append(n.Edges.OrderTokens, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := ppq.withProviderRating; query != nil {
-		if err := ppq.loadProviderRating(ctx, query, nodes, nil,
+	if query := _q.withProviderRating; query != nil {
+		if err := _q.loadProviderRating(ctx, query, nodes, nil,
 			func(n *ProviderProfile, e *ProviderRating) { n.Edges.ProviderRating = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := ppq.withAssignedOrders; query != nil {
-		if err := ppq.loadAssignedOrders(ctx, query, nodes,
+	if query := _q.withAssignedOrders; query != nil {
+		if err := _q.loadAssignedOrders(ctx, query, nodes,
 			func(n *ProviderProfile) { n.Edges.AssignedOrders = []*LockPaymentOrder{} },
 			func(n *ProviderProfile, e *LockPaymentOrder) {
 				n.Edges.AssignedOrders = append(n.Edges.AssignedOrders, e)
@@ -713,8 +713,8 @@ func (ppq *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 			return nil, err
 		}
 	}
-	if query := ppq.withFiatAccounts; query != nil {
-		if err := ppq.loadFiatAccounts(ctx, query, nodes,
+	if query := _q.withFiatAccounts; query != nil {
+		if err := _q.loadFiatAccounts(ctx, query, nodes,
 			func(n *ProviderProfile) { n.Edges.FiatAccounts = []*ProviderFiatAccount{} },
 			func(n *ProviderProfile, e *ProviderFiatAccount) {
 				n.Edges.FiatAccounts = append(n.Edges.FiatAccounts, e)
@@ -725,7 +725,7 @@ func (ppq *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 	return nodes, nil
 }
 
-func (ppq *ProviderProfileQuery) loadUser(ctx context.Context, query *UserQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *User)) error {
+func (_q *ProviderProfileQuery) loadUser(ctx context.Context, query *UserQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *User)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProviderProfile)
 	for i := range nodes {
@@ -757,7 +757,7 @@ func (ppq *ProviderProfileQuery) loadUser(ctx context.Context, query *UserQuery,
 	}
 	return nil
 }
-func (ppq *ProviderProfileQuery) loadAPIKey(ctx context.Context, query *APIKeyQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *APIKey)) error {
+func (_q *ProviderProfileQuery) loadAPIKey(ctx context.Context, query *APIKeyQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *APIKey)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[string]*ProviderProfile)
 	for i := range nodes {
@@ -785,7 +785,7 @@ func (ppq *ProviderProfileQuery) loadAPIKey(ctx context.Context, query *APIKeyQu
 	}
 	return nil
 }
-func (ppq *ProviderProfileQuery) loadProviderCurrencies(ctx context.Context, query *ProviderCurrenciesQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *ProviderCurrencies)) error {
+func (_q *ProviderProfileQuery) loadProviderCurrencies(ctx context.Context, query *ProviderCurrenciesQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *ProviderCurrencies)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[string]*ProviderProfile)
 	for i := range nodes {
@@ -816,7 +816,7 @@ func (ppq *ProviderProfileQuery) loadProviderCurrencies(ctx context.Context, que
 	}
 	return nil
 }
-func (ppq *ProviderProfileQuery) loadProvisionBuckets(ctx context.Context, query *ProvisionBucketQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *ProvisionBucket)) error {
+func (_q *ProviderProfileQuery) loadProvisionBuckets(ctx context.Context, query *ProvisionBucketQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *ProvisionBucket)) error {
 	edgeIDs := make([]driver.Value, len(nodes))
 	byID := make(map[string]*ProviderProfile)
 	nids := make(map[int]map[*ProviderProfile]struct{})
@@ -877,7 +877,7 @@ func (ppq *ProviderProfileQuery) loadProvisionBuckets(ctx context.Context, query
 	}
 	return nil
 }
-func (ppq *ProviderProfileQuery) loadOrderTokens(ctx context.Context, query *ProviderOrderTokenQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *ProviderOrderToken)) error {
+func (_q *ProviderProfileQuery) loadOrderTokens(ctx context.Context, query *ProviderOrderTokenQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *ProviderOrderToken)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[string]*ProviderProfile)
 	for i := range nodes {
@@ -908,7 +908,7 @@ func (ppq *ProviderProfileQuery) loadOrderTokens(ctx context.Context, query *Pro
 	}
 	return nil
 }
-func (ppq *ProviderProfileQuery) loadProviderRating(ctx context.Context, query *ProviderRatingQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *ProviderRating)) error {
+func (_q *ProviderProfileQuery) loadProviderRating(ctx context.Context, query *ProviderRatingQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *ProviderRating)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[string]*ProviderProfile)
 	for i := range nodes {
@@ -936,7 +936,7 @@ func (ppq *ProviderProfileQuery) loadProviderRating(ctx context.Context, query *
 	}
 	return nil
 }
-func (ppq *ProviderProfileQuery) loadAssignedOrders(ctx context.Context, query *LockPaymentOrderQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *LockPaymentOrder)) error {
+func (_q *ProviderProfileQuery) loadAssignedOrders(ctx context.Context, query *LockPaymentOrderQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *LockPaymentOrder)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[string]*ProviderProfile)
 	for i := range nodes {
@@ -967,7 +967,7 @@ func (ppq *ProviderProfileQuery) loadAssignedOrders(ctx context.Context, query *
 	}
 	return nil
 }
-func (ppq *ProviderProfileQuery) loadFiatAccounts(ctx context.Context, query *ProviderFiatAccountQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *ProviderFiatAccount)) error {
+func (_q *ProviderProfileQuery) loadFiatAccounts(ctx context.Context, query *ProviderFiatAccountQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *ProviderFiatAccount)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[string]*ProviderProfile)
 	for i := range nodes {
@@ -999,24 +999,24 @@ func (ppq *ProviderProfileQuery) loadFiatAccounts(ctx context.Context, query *Pr
 	return nil
 }
 
-func (ppq *ProviderProfileQuery) sqlCount(ctx context.Context) (int, error) {
-	_spec := ppq.querySpec()
-	_spec.Node.Columns = ppq.ctx.Fields
-	if len(ppq.ctx.Fields) > 0 {
-		_spec.Unique = ppq.ctx.Unique != nil && *ppq.ctx.Unique
+func (_q *ProviderProfileQuery) sqlCount(ctx context.Context) (int, error) {
+	_spec := _q.querySpec()
+	_spec.Node.Columns = _q.ctx.Fields
+	if len(_q.ctx.Fields) > 0 {
+		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
 	}
-	return sqlgraph.CountNodes(ctx, ppq.driver, _spec)
+	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (ppq *ProviderProfileQuery) querySpec() *sqlgraph.QuerySpec {
+func (_q *ProviderProfileQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := sqlgraph.NewQuerySpec(providerprofile.Table, providerprofile.Columns, sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString))
-	_spec.From = ppq.sql
-	if unique := ppq.ctx.Unique; unique != nil {
+	_spec.From = _q.sql
+	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
-	} else if ppq.path != nil {
+	} else if _q.path != nil {
 		_spec.Unique = true
 	}
-	if fields := ppq.ctx.Fields; len(fields) > 0 {
+	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, providerprofile.FieldID)
 		for i := range fields {
@@ -1025,20 +1025,20 @@ func (ppq *ProviderProfileQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if ps := ppq.predicates; len(ps) > 0 {
+	if ps := _q.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if limit := ppq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := ppq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
-	if ps := ppq.order; len(ps) > 0 {
+	if ps := _q.order; len(ps) > 0 {
 		_spec.Order = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
@@ -1048,33 +1048,33 @@ func (ppq *ProviderProfileQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (ppq *ProviderProfileQuery) sqlQuery(ctx context.Context) *sql.Selector {
-	builder := sql.Dialect(ppq.driver.Dialect())
+func (_q *ProviderProfileQuery) sqlQuery(ctx context.Context) *sql.Selector {
+	builder := sql.Dialect(_q.driver.Dialect())
 	t1 := builder.Table(providerprofile.Table)
-	columns := ppq.ctx.Fields
+	columns := _q.ctx.Fields
 	if len(columns) == 0 {
 		columns = providerprofile.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
-	if ppq.sql != nil {
-		selector = ppq.sql
+	if _q.sql != nil {
+		selector = _q.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if ppq.ctx.Unique != nil && *ppq.ctx.Unique {
+	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
-	for _, p := range ppq.predicates {
+	for _, p := range _q.predicates {
 		p(selector)
 	}
-	for _, p := range ppq.order {
+	for _, p := range _q.order {
 		p(selector)
 	}
-	if offset := ppq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := ppq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -1087,41 +1087,41 @@ type ProviderProfileGroupBy struct {
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (ppgb *ProviderProfileGroupBy) Aggregate(fns ...AggregateFunc) *ProviderProfileGroupBy {
-	ppgb.fns = append(ppgb.fns, fns...)
-	return ppgb
+func (_g *ProviderProfileGroupBy) Aggregate(fns ...AggregateFunc) *ProviderProfileGroupBy {
+	_g.fns = append(_g.fns, fns...)
+	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (ppgb *ProviderProfileGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, ppgb.build.ctx, ent.OpQueryGroupBy)
-	if err := ppgb.build.prepareQuery(ctx); err != nil {
+func (_g *ProviderProfileGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
+	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*ProviderProfileQuery, *ProviderProfileGroupBy](ctx, ppgb.build, ppgb, ppgb.build.inters, v)
+	return scanWithInterceptors[*ProviderProfileQuery, *ProviderProfileGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (ppgb *ProviderProfileGroupBy) sqlScan(ctx context.Context, root *ProviderProfileQuery, v any) error {
+func (_g *ProviderProfileGroupBy) sqlScan(ctx context.Context, root *ProviderProfileQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
-	aggregation := make([]string, 0, len(ppgb.fns))
-	for _, fn := range ppgb.fns {
+	aggregation := make([]string, 0, len(_g.fns))
+	for _, fn := range _g.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
 	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(*ppgb.flds)+len(ppgb.fns))
-		for _, f := range *ppgb.flds {
+		columns := make([]string, 0, len(*_g.flds)+len(_g.fns))
+		for _, f := range *_g.flds {
 			columns = append(columns, selector.C(f))
 		}
 		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
-	selector.GroupBy(selector.Columns(*ppgb.flds...)...)
+	selector.GroupBy(selector.Columns(*_g.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := ppgb.build.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _g.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
@@ -1135,27 +1135,27 @@ type ProviderProfileSelect struct {
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (pps *ProviderProfileSelect) Aggregate(fns ...AggregateFunc) *ProviderProfileSelect {
-	pps.fns = append(pps.fns, fns...)
-	return pps
+func (_s *ProviderProfileSelect) Aggregate(fns ...AggregateFunc) *ProviderProfileSelect {
+	_s.fns = append(_s.fns, fns...)
+	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (pps *ProviderProfileSelect) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, pps.ctx, ent.OpQuerySelect)
-	if err := pps.prepareQuery(ctx); err != nil {
+func (_s *ProviderProfileSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
+	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*ProviderProfileQuery, *ProviderProfileSelect](ctx, pps.ProviderProfileQuery, pps, pps.inters, v)
+	return scanWithInterceptors[*ProviderProfileQuery, *ProviderProfileSelect](ctx, _s.ProviderProfileQuery, _s, _s.inters, v)
 }
 
-func (pps *ProviderProfileSelect) sqlScan(ctx context.Context, root *ProviderProfileQuery, v any) error {
+func (_s *ProviderProfileSelect) sqlScan(ctx context.Context, root *ProviderProfileQuery, v any) error {
 	selector := root.sqlQuery(ctx)
-	aggregation := make([]string, 0, len(pps.fns))
-	for _, fn := range pps.fns {
+	aggregation := make([]string, 0, len(_s.fns))
+	for _, fn := range _s.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
-	switch n := len(*pps.selector.flds); {
+	switch n := len(*_s.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
 		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
@@ -1163,7 +1163,7 @@ func (pps *ProviderProfileSelect) sqlScan(ctx context.Context, root *ProviderPro
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := pps.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _s.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()

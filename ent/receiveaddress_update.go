@@ -25,183 +25,183 @@ type ReceiveAddressUpdate struct {
 }
 
 // Where appends a list predicates to the ReceiveAddressUpdate builder.
-func (rau *ReceiveAddressUpdate) Where(ps ...predicate.ReceiveAddress) *ReceiveAddressUpdate {
-	rau.mutation.Where(ps...)
-	return rau
+func (_u *ReceiveAddressUpdate) Where(ps ...predicate.ReceiveAddress) *ReceiveAddressUpdate {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (rau *ReceiveAddressUpdate) SetUpdatedAt(t time.Time) *ReceiveAddressUpdate {
-	rau.mutation.SetUpdatedAt(t)
-	return rau
+func (_u *ReceiveAddressUpdate) SetUpdatedAt(v time.Time) *ReceiveAddressUpdate {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetAddress sets the "address" field.
-func (rau *ReceiveAddressUpdate) SetAddress(s string) *ReceiveAddressUpdate {
-	rau.mutation.SetAddress(s)
-	return rau
+func (_u *ReceiveAddressUpdate) SetAddress(v string) *ReceiveAddressUpdate {
+	_u.mutation.SetAddress(v)
+	return _u
 }
 
 // SetNillableAddress sets the "address" field if the given value is not nil.
-func (rau *ReceiveAddressUpdate) SetNillableAddress(s *string) *ReceiveAddressUpdate {
-	if s != nil {
-		rau.SetAddress(*s)
+func (_u *ReceiveAddressUpdate) SetNillableAddress(v *string) *ReceiveAddressUpdate {
+	if v != nil {
+		_u.SetAddress(*v)
 	}
-	return rau
+	return _u
 }
 
 // SetSalt sets the "salt" field.
-func (rau *ReceiveAddressUpdate) SetSalt(b []byte) *ReceiveAddressUpdate {
-	rau.mutation.SetSalt(b)
-	return rau
+func (_u *ReceiveAddressUpdate) SetSalt(v []byte) *ReceiveAddressUpdate {
+	_u.mutation.SetSalt(v)
+	return _u
 }
 
 // ClearSalt clears the value of the "salt" field.
-func (rau *ReceiveAddressUpdate) ClearSalt() *ReceiveAddressUpdate {
-	rau.mutation.ClearSalt()
-	return rau
+func (_u *ReceiveAddressUpdate) ClearSalt() *ReceiveAddressUpdate {
+	_u.mutation.ClearSalt()
+	return _u
 }
 
 // SetStatus sets the "status" field.
-func (rau *ReceiveAddressUpdate) SetStatus(r receiveaddress.Status) *ReceiveAddressUpdate {
-	rau.mutation.SetStatus(r)
-	return rau
+func (_u *ReceiveAddressUpdate) SetStatus(v receiveaddress.Status) *ReceiveAddressUpdate {
+	_u.mutation.SetStatus(v)
+	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (rau *ReceiveAddressUpdate) SetNillableStatus(r *receiveaddress.Status) *ReceiveAddressUpdate {
-	if r != nil {
-		rau.SetStatus(*r)
+func (_u *ReceiveAddressUpdate) SetNillableStatus(v *receiveaddress.Status) *ReceiveAddressUpdate {
+	if v != nil {
+		_u.SetStatus(*v)
 	}
-	return rau
+	return _u
 }
 
 // SetLastIndexedBlock sets the "last_indexed_block" field.
-func (rau *ReceiveAddressUpdate) SetLastIndexedBlock(i int64) *ReceiveAddressUpdate {
-	rau.mutation.ResetLastIndexedBlock()
-	rau.mutation.SetLastIndexedBlock(i)
-	return rau
+func (_u *ReceiveAddressUpdate) SetLastIndexedBlock(v int64) *ReceiveAddressUpdate {
+	_u.mutation.ResetLastIndexedBlock()
+	_u.mutation.SetLastIndexedBlock(v)
+	return _u
 }
 
 // SetNillableLastIndexedBlock sets the "last_indexed_block" field if the given value is not nil.
-func (rau *ReceiveAddressUpdate) SetNillableLastIndexedBlock(i *int64) *ReceiveAddressUpdate {
-	if i != nil {
-		rau.SetLastIndexedBlock(*i)
+func (_u *ReceiveAddressUpdate) SetNillableLastIndexedBlock(v *int64) *ReceiveAddressUpdate {
+	if v != nil {
+		_u.SetLastIndexedBlock(*v)
 	}
-	return rau
+	return _u
 }
 
-// AddLastIndexedBlock adds i to the "last_indexed_block" field.
-func (rau *ReceiveAddressUpdate) AddLastIndexedBlock(i int64) *ReceiveAddressUpdate {
-	rau.mutation.AddLastIndexedBlock(i)
-	return rau
+// AddLastIndexedBlock adds value to the "last_indexed_block" field.
+func (_u *ReceiveAddressUpdate) AddLastIndexedBlock(v int64) *ReceiveAddressUpdate {
+	_u.mutation.AddLastIndexedBlock(v)
+	return _u
 }
 
 // ClearLastIndexedBlock clears the value of the "last_indexed_block" field.
-func (rau *ReceiveAddressUpdate) ClearLastIndexedBlock() *ReceiveAddressUpdate {
-	rau.mutation.ClearLastIndexedBlock()
-	return rau
+func (_u *ReceiveAddressUpdate) ClearLastIndexedBlock() *ReceiveAddressUpdate {
+	_u.mutation.ClearLastIndexedBlock()
+	return _u
 }
 
 // SetLastUsed sets the "last_used" field.
-func (rau *ReceiveAddressUpdate) SetLastUsed(t time.Time) *ReceiveAddressUpdate {
-	rau.mutation.SetLastUsed(t)
-	return rau
+func (_u *ReceiveAddressUpdate) SetLastUsed(v time.Time) *ReceiveAddressUpdate {
+	_u.mutation.SetLastUsed(v)
+	return _u
 }
 
 // SetNillableLastUsed sets the "last_used" field if the given value is not nil.
-func (rau *ReceiveAddressUpdate) SetNillableLastUsed(t *time.Time) *ReceiveAddressUpdate {
-	if t != nil {
-		rau.SetLastUsed(*t)
+func (_u *ReceiveAddressUpdate) SetNillableLastUsed(v *time.Time) *ReceiveAddressUpdate {
+	if v != nil {
+		_u.SetLastUsed(*v)
 	}
-	return rau
+	return _u
 }
 
 // ClearLastUsed clears the value of the "last_used" field.
-func (rau *ReceiveAddressUpdate) ClearLastUsed() *ReceiveAddressUpdate {
-	rau.mutation.ClearLastUsed()
-	return rau
+func (_u *ReceiveAddressUpdate) ClearLastUsed() *ReceiveAddressUpdate {
+	_u.mutation.ClearLastUsed()
+	return _u
 }
 
 // SetTxHash sets the "tx_hash" field.
-func (rau *ReceiveAddressUpdate) SetTxHash(s string) *ReceiveAddressUpdate {
-	rau.mutation.SetTxHash(s)
-	return rau
+func (_u *ReceiveAddressUpdate) SetTxHash(v string) *ReceiveAddressUpdate {
+	_u.mutation.SetTxHash(v)
+	return _u
 }
 
 // SetNillableTxHash sets the "tx_hash" field if the given value is not nil.
-func (rau *ReceiveAddressUpdate) SetNillableTxHash(s *string) *ReceiveAddressUpdate {
-	if s != nil {
-		rau.SetTxHash(*s)
+func (_u *ReceiveAddressUpdate) SetNillableTxHash(v *string) *ReceiveAddressUpdate {
+	if v != nil {
+		_u.SetTxHash(*v)
 	}
-	return rau
+	return _u
 }
 
 // ClearTxHash clears the value of the "tx_hash" field.
-func (rau *ReceiveAddressUpdate) ClearTxHash() *ReceiveAddressUpdate {
-	rau.mutation.ClearTxHash()
-	return rau
+func (_u *ReceiveAddressUpdate) ClearTxHash() *ReceiveAddressUpdate {
+	_u.mutation.ClearTxHash()
+	return _u
 }
 
 // SetValidUntil sets the "valid_until" field.
-func (rau *ReceiveAddressUpdate) SetValidUntil(t time.Time) *ReceiveAddressUpdate {
-	rau.mutation.SetValidUntil(t)
-	return rau
+func (_u *ReceiveAddressUpdate) SetValidUntil(v time.Time) *ReceiveAddressUpdate {
+	_u.mutation.SetValidUntil(v)
+	return _u
 }
 
 // SetNillableValidUntil sets the "valid_until" field if the given value is not nil.
-func (rau *ReceiveAddressUpdate) SetNillableValidUntil(t *time.Time) *ReceiveAddressUpdate {
-	if t != nil {
-		rau.SetValidUntil(*t)
+func (_u *ReceiveAddressUpdate) SetNillableValidUntil(v *time.Time) *ReceiveAddressUpdate {
+	if v != nil {
+		_u.SetValidUntil(*v)
 	}
-	return rau
+	return _u
 }
 
 // ClearValidUntil clears the value of the "valid_until" field.
-func (rau *ReceiveAddressUpdate) ClearValidUntil() *ReceiveAddressUpdate {
-	rau.mutation.ClearValidUntil()
-	return rau
+func (_u *ReceiveAddressUpdate) ClearValidUntil() *ReceiveAddressUpdate {
+	_u.mutation.ClearValidUntil()
+	return _u
 }
 
 // SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID.
-func (rau *ReceiveAddressUpdate) SetPaymentOrderID(id uuid.UUID) *ReceiveAddressUpdate {
-	rau.mutation.SetPaymentOrderID(id)
-	return rau
+func (_u *ReceiveAddressUpdate) SetPaymentOrderID(id uuid.UUID) *ReceiveAddressUpdate {
+	_u.mutation.SetPaymentOrderID(id)
+	return _u
 }
 
 // SetNillablePaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID if the given value is not nil.
-func (rau *ReceiveAddressUpdate) SetNillablePaymentOrderID(id *uuid.UUID) *ReceiveAddressUpdate {
+func (_u *ReceiveAddressUpdate) SetNillablePaymentOrderID(id *uuid.UUID) *ReceiveAddressUpdate {
 	if id != nil {
-		rau = rau.SetPaymentOrderID(*id)
+		_u = _u.SetPaymentOrderID(*id)
 	}
-	return rau
+	return _u
 }
 
 // SetPaymentOrder sets the "payment_order" edge to the PaymentOrder entity.
-func (rau *ReceiveAddressUpdate) SetPaymentOrder(p *PaymentOrder) *ReceiveAddressUpdate {
-	return rau.SetPaymentOrderID(p.ID)
+func (_u *ReceiveAddressUpdate) SetPaymentOrder(v *PaymentOrder) *ReceiveAddressUpdate {
+	return _u.SetPaymentOrderID(v.ID)
 }
 
 // Mutation returns the ReceiveAddressMutation object of the builder.
-func (rau *ReceiveAddressUpdate) Mutation() *ReceiveAddressMutation {
-	return rau.mutation
+func (_u *ReceiveAddressUpdate) Mutation() *ReceiveAddressMutation {
+	return _u.mutation
 }
 
 // ClearPaymentOrder clears the "payment_order" edge to the PaymentOrder entity.
-func (rau *ReceiveAddressUpdate) ClearPaymentOrder() *ReceiveAddressUpdate {
-	rau.mutation.ClearPaymentOrder()
-	return rau
+func (_u *ReceiveAddressUpdate) ClearPaymentOrder() *ReceiveAddressUpdate {
+	_u.mutation.ClearPaymentOrder()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
-func (rau *ReceiveAddressUpdate) Save(ctx context.Context) (int, error) {
-	rau.defaults()
-	return withHooks(ctx, rau.sqlSave, rau.mutation, rau.hooks)
+func (_u *ReceiveAddressUpdate) Save(ctx context.Context) (int, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (rau *ReceiveAddressUpdate) SaveX(ctx context.Context) int {
-	affected, err := rau.Save(ctx)
+func (_u *ReceiveAddressUpdate) SaveX(ctx context.Context) int {
+	affected, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -209,34 +209,34 @@ func (rau *ReceiveAddressUpdate) SaveX(ctx context.Context) int {
 }
 
 // Exec executes the query.
-func (rau *ReceiveAddressUpdate) Exec(ctx context.Context) error {
-	_, err := rau.Save(ctx)
+func (_u *ReceiveAddressUpdate) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (rau *ReceiveAddressUpdate) ExecX(ctx context.Context) {
-	if err := rau.Exec(ctx); err != nil {
+func (_u *ReceiveAddressUpdate) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (rau *ReceiveAddressUpdate) defaults() {
-	if _, ok := rau.mutation.UpdatedAt(); !ok {
+func (_u *ReceiveAddressUpdate) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := receiveaddress.UpdateDefaultUpdatedAt()
-		rau.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (rau *ReceiveAddressUpdate) check() error {
-	if v, ok := rau.mutation.Status(); ok {
+func (_u *ReceiveAddressUpdate) check() error {
+	if v, ok := _u.mutation.Status(); ok {
 		if err := receiveaddress.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "ReceiveAddress.status": %w`, err)}
 		}
 	}
-	if v, ok := rau.mutation.TxHash(); ok {
+	if v, ok := _u.mutation.TxHash(); ok {
 		if err := receiveaddress.TxHashValidator(v); err != nil {
 			return &ValidationError{Name: "tx_hash", err: fmt.Errorf(`ent: validator failed for field "ReceiveAddress.tx_hash": %w`, err)}
 		}
@@ -244,61 +244,61 @@ func (rau *ReceiveAddressUpdate) check() error {
 	return nil
 }
 
-func (rau *ReceiveAddressUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	if err := rau.check(); err != nil {
-		return n, err
+func (_u *ReceiveAddressUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(receiveaddress.Table, receiveaddress.Columns, sqlgraph.NewFieldSpec(receiveaddress.FieldID, field.TypeInt))
-	if ps := rau.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := rau.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(receiveaddress.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := rau.mutation.Address(); ok {
+	if value, ok := _u.mutation.Address(); ok {
 		_spec.SetField(receiveaddress.FieldAddress, field.TypeString, value)
 	}
-	if value, ok := rau.mutation.Salt(); ok {
+	if value, ok := _u.mutation.Salt(); ok {
 		_spec.SetField(receiveaddress.FieldSalt, field.TypeBytes, value)
 	}
-	if rau.mutation.SaltCleared() {
+	if _u.mutation.SaltCleared() {
 		_spec.ClearField(receiveaddress.FieldSalt, field.TypeBytes)
 	}
-	if value, ok := rau.mutation.Status(); ok {
+	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(receiveaddress.FieldStatus, field.TypeEnum, value)
 	}
-	if value, ok := rau.mutation.LastIndexedBlock(); ok {
+	if value, ok := _u.mutation.LastIndexedBlock(); ok {
 		_spec.SetField(receiveaddress.FieldLastIndexedBlock, field.TypeInt64, value)
 	}
-	if value, ok := rau.mutation.AddedLastIndexedBlock(); ok {
+	if value, ok := _u.mutation.AddedLastIndexedBlock(); ok {
 		_spec.AddField(receiveaddress.FieldLastIndexedBlock, field.TypeInt64, value)
 	}
-	if rau.mutation.LastIndexedBlockCleared() {
+	if _u.mutation.LastIndexedBlockCleared() {
 		_spec.ClearField(receiveaddress.FieldLastIndexedBlock, field.TypeInt64)
 	}
-	if value, ok := rau.mutation.LastUsed(); ok {
+	if value, ok := _u.mutation.LastUsed(); ok {
 		_spec.SetField(receiveaddress.FieldLastUsed, field.TypeTime, value)
 	}
-	if rau.mutation.LastUsedCleared() {
+	if _u.mutation.LastUsedCleared() {
 		_spec.ClearField(receiveaddress.FieldLastUsed, field.TypeTime)
 	}
-	if value, ok := rau.mutation.TxHash(); ok {
+	if value, ok := _u.mutation.TxHash(); ok {
 		_spec.SetField(receiveaddress.FieldTxHash, field.TypeString, value)
 	}
-	if rau.mutation.TxHashCleared() {
+	if _u.mutation.TxHashCleared() {
 		_spec.ClearField(receiveaddress.FieldTxHash, field.TypeString)
 	}
-	if value, ok := rau.mutation.ValidUntil(); ok {
+	if value, ok := _u.mutation.ValidUntil(); ok {
 		_spec.SetField(receiveaddress.FieldValidUntil, field.TypeTime, value)
 	}
-	if rau.mutation.ValidUntilCleared() {
+	if _u.mutation.ValidUntilCleared() {
 		_spec.ClearField(receiveaddress.FieldValidUntil, field.TypeTime)
 	}
-	if rau.mutation.PaymentOrderCleared() {
+	if _u.mutation.PaymentOrderCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -311,7 +311,7 @@ func (rau *ReceiveAddressUpdate) sqlSave(ctx context.Context) (n int, err error)
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := rau.mutation.PaymentOrderIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.PaymentOrderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -327,7 +327,7 @@ func (rau *ReceiveAddressUpdate) sqlSave(ctx context.Context) (n int, err error)
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if n, err = sqlgraph.UpdateNodes(ctx, rau.driver, _spec); err != nil {
+	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{receiveaddress.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -335,8 +335,8 @@ func (rau *ReceiveAddressUpdate) sqlSave(ctx context.Context) (n int, err error)
 		}
 		return 0, err
 	}
-	rau.mutation.done = true
-	return n, nil
+	_u.mutation.done = true
+	return _node, nil
 }
 
 // ReceiveAddressUpdateOne is the builder for updating a single ReceiveAddress entity.
@@ -348,190 +348,190 @@ type ReceiveAddressUpdateOne struct {
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (rauo *ReceiveAddressUpdateOne) SetUpdatedAt(t time.Time) *ReceiveAddressUpdateOne {
-	rauo.mutation.SetUpdatedAt(t)
-	return rauo
+func (_u *ReceiveAddressUpdateOne) SetUpdatedAt(v time.Time) *ReceiveAddressUpdateOne {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetAddress sets the "address" field.
-func (rauo *ReceiveAddressUpdateOne) SetAddress(s string) *ReceiveAddressUpdateOne {
-	rauo.mutation.SetAddress(s)
-	return rauo
+func (_u *ReceiveAddressUpdateOne) SetAddress(v string) *ReceiveAddressUpdateOne {
+	_u.mutation.SetAddress(v)
+	return _u
 }
 
 // SetNillableAddress sets the "address" field if the given value is not nil.
-func (rauo *ReceiveAddressUpdateOne) SetNillableAddress(s *string) *ReceiveAddressUpdateOne {
-	if s != nil {
-		rauo.SetAddress(*s)
+func (_u *ReceiveAddressUpdateOne) SetNillableAddress(v *string) *ReceiveAddressUpdateOne {
+	if v != nil {
+		_u.SetAddress(*v)
 	}
-	return rauo
+	return _u
 }
 
 // SetSalt sets the "salt" field.
-func (rauo *ReceiveAddressUpdateOne) SetSalt(b []byte) *ReceiveAddressUpdateOne {
-	rauo.mutation.SetSalt(b)
-	return rauo
+func (_u *ReceiveAddressUpdateOne) SetSalt(v []byte) *ReceiveAddressUpdateOne {
+	_u.mutation.SetSalt(v)
+	return _u
 }
 
 // ClearSalt clears the value of the "salt" field.
-func (rauo *ReceiveAddressUpdateOne) ClearSalt() *ReceiveAddressUpdateOne {
-	rauo.mutation.ClearSalt()
-	return rauo
+func (_u *ReceiveAddressUpdateOne) ClearSalt() *ReceiveAddressUpdateOne {
+	_u.mutation.ClearSalt()
+	return _u
 }
 
 // SetStatus sets the "status" field.
-func (rauo *ReceiveAddressUpdateOne) SetStatus(r receiveaddress.Status) *ReceiveAddressUpdateOne {
-	rauo.mutation.SetStatus(r)
-	return rauo
+func (_u *ReceiveAddressUpdateOne) SetStatus(v receiveaddress.Status) *ReceiveAddressUpdateOne {
+	_u.mutation.SetStatus(v)
+	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (rauo *ReceiveAddressUpdateOne) SetNillableStatus(r *receiveaddress.Status) *ReceiveAddressUpdateOne {
-	if r != nil {
-		rauo.SetStatus(*r)
+func (_u *ReceiveAddressUpdateOne) SetNillableStatus(v *receiveaddress.Status) *ReceiveAddressUpdateOne {
+	if v != nil {
+		_u.SetStatus(*v)
 	}
-	return rauo
+	return _u
 }
 
 // SetLastIndexedBlock sets the "last_indexed_block" field.
-func (rauo *ReceiveAddressUpdateOne) SetLastIndexedBlock(i int64) *ReceiveAddressUpdateOne {
-	rauo.mutation.ResetLastIndexedBlock()
-	rauo.mutation.SetLastIndexedBlock(i)
-	return rauo
+func (_u *ReceiveAddressUpdateOne) SetLastIndexedBlock(v int64) *ReceiveAddressUpdateOne {
+	_u.mutation.ResetLastIndexedBlock()
+	_u.mutation.SetLastIndexedBlock(v)
+	return _u
 }
 
 // SetNillableLastIndexedBlock sets the "last_indexed_block" field if the given value is not nil.
-func (rauo *ReceiveAddressUpdateOne) SetNillableLastIndexedBlock(i *int64) *ReceiveAddressUpdateOne {
-	if i != nil {
-		rauo.SetLastIndexedBlock(*i)
+func (_u *ReceiveAddressUpdateOne) SetNillableLastIndexedBlock(v *int64) *ReceiveAddressUpdateOne {
+	if v != nil {
+		_u.SetLastIndexedBlock(*v)
 	}
-	return rauo
+	return _u
 }
 
-// AddLastIndexedBlock adds i to the "last_indexed_block" field.
-func (rauo *ReceiveAddressUpdateOne) AddLastIndexedBlock(i int64) *ReceiveAddressUpdateOne {
-	rauo.mutation.AddLastIndexedBlock(i)
-	return rauo
+// AddLastIndexedBlock adds value to the "last_indexed_block" field.
+func (_u *ReceiveAddressUpdateOne) AddLastIndexedBlock(v int64) *ReceiveAddressUpdateOne {
+	_u.mutation.AddLastIndexedBlock(v)
+	return _u
 }
 
 // ClearLastIndexedBlock clears the value of the "last_indexed_block" field.
-func (rauo *ReceiveAddressUpdateOne) ClearLastIndexedBlock() *ReceiveAddressUpdateOne {
-	rauo.mutation.ClearLastIndexedBlock()
-	return rauo
+func (_u *ReceiveAddressUpdateOne) ClearLastIndexedBlock() *ReceiveAddressUpdateOne {
+	_u.mutation.ClearLastIndexedBlock()
+	return _u
 }
 
 // SetLastUsed sets the "last_used" field.
-func (rauo *ReceiveAddressUpdateOne) SetLastUsed(t time.Time) *ReceiveAddressUpdateOne {
-	rauo.mutation.SetLastUsed(t)
-	return rauo
+func (_u *ReceiveAddressUpdateOne) SetLastUsed(v time.Time) *ReceiveAddressUpdateOne {
+	_u.mutation.SetLastUsed(v)
+	return _u
 }
 
 // SetNillableLastUsed sets the "last_used" field if the given value is not nil.
-func (rauo *ReceiveAddressUpdateOne) SetNillableLastUsed(t *time.Time) *ReceiveAddressUpdateOne {
-	if t != nil {
-		rauo.SetLastUsed(*t)
+func (_u *ReceiveAddressUpdateOne) SetNillableLastUsed(v *time.Time) *ReceiveAddressUpdateOne {
+	if v != nil {
+		_u.SetLastUsed(*v)
 	}
-	return rauo
+	return _u
 }
 
 // ClearLastUsed clears the value of the "last_used" field.
-func (rauo *ReceiveAddressUpdateOne) ClearLastUsed() *ReceiveAddressUpdateOne {
-	rauo.mutation.ClearLastUsed()
-	return rauo
+func (_u *ReceiveAddressUpdateOne) ClearLastUsed() *ReceiveAddressUpdateOne {
+	_u.mutation.ClearLastUsed()
+	return _u
 }
 
 // SetTxHash sets the "tx_hash" field.
-func (rauo *ReceiveAddressUpdateOne) SetTxHash(s string) *ReceiveAddressUpdateOne {
-	rauo.mutation.SetTxHash(s)
-	return rauo
+func (_u *ReceiveAddressUpdateOne) SetTxHash(v string) *ReceiveAddressUpdateOne {
+	_u.mutation.SetTxHash(v)
+	return _u
 }
 
 // SetNillableTxHash sets the "tx_hash" field if the given value is not nil.
-func (rauo *ReceiveAddressUpdateOne) SetNillableTxHash(s *string) *ReceiveAddressUpdateOne {
-	if s != nil {
-		rauo.SetTxHash(*s)
+func (_u *ReceiveAddressUpdateOne) SetNillableTxHash(v *string) *ReceiveAddressUpdateOne {
+	if v != nil {
+		_u.SetTxHash(*v)
 	}
-	return rauo
+	return _u
 }
 
 // ClearTxHash clears the value of the "tx_hash" field.
-func (rauo *ReceiveAddressUpdateOne) ClearTxHash() *ReceiveAddressUpdateOne {
-	rauo.mutation.ClearTxHash()
-	return rauo
+func (_u *ReceiveAddressUpdateOne) ClearTxHash() *ReceiveAddressUpdateOne {
+	_u.mutation.ClearTxHash()
+	return _u
 }
 
 // SetValidUntil sets the "valid_until" field.
-func (rauo *ReceiveAddressUpdateOne) SetValidUntil(t time.Time) *ReceiveAddressUpdateOne {
-	rauo.mutation.SetValidUntil(t)
-	return rauo
+func (_u *ReceiveAddressUpdateOne) SetValidUntil(v time.Time) *ReceiveAddressUpdateOne {
+	_u.mutation.SetValidUntil(v)
+	return _u
 }
 
 // SetNillableValidUntil sets the "valid_until" field if the given value is not nil.
-func (rauo *ReceiveAddressUpdateOne) SetNillableValidUntil(t *time.Time) *ReceiveAddressUpdateOne {
-	if t != nil {
-		rauo.SetValidUntil(*t)
+func (_u *ReceiveAddressUpdateOne) SetNillableValidUntil(v *time.Time) *ReceiveAddressUpdateOne {
+	if v != nil {
+		_u.SetValidUntil(*v)
 	}
-	return rauo
+	return _u
 }
 
 // ClearValidUntil clears the value of the "valid_until" field.
-func (rauo *ReceiveAddressUpdateOne) ClearValidUntil() *ReceiveAddressUpdateOne {
-	rauo.mutation.ClearValidUntil()
-	return rauo
+func (_u *ReceiveAddressUpdateOne) ClearValidUntil() *ReceiveAddressUpdateOne {
+	_u.mutation.ClearValidUntil()
+	return _u
 }
 
 // SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID.
-func (rauo *ReceiveAddressUpdateOne) SetPaymentOrderID(id uuid.UUID) *ReceiveAddressUpdateOne {
-	rauo.mutation.SetPaymentOrderID(id)
-	return rauo
+func (_u *ReceiveAddressUpdateOne) SetPaymentOrderID(id uuid.UUID) *ReceiveAddressUpdateOne {
+	_u.mutation.SetPaymentOrderID(id)
+	return _u
 }
 
 // SetNillablePaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID if the given value is not nil.
-func (rauo *ReceiveAddressUpdateOne) SetNillablePaymentOrderID(id *uuid.UUID) *ReceiveAddressUpdateOne {
+func (_u *ReceiveAddressUpdateOne) SetNillablePaymentOrderID(id *uuid.UUID) *ReceiveAddressUpdateOne {
 	if id != nil {
-		rauo = rauo.SetPaymentOrderID(*id)
+		_u = _u.SetPaymentOrderID(*id)
 	}
-	return rauo
+	return _u
 }
 
 // SetPaymentOrder sets the "payment_order" edge to the PaymentOrder entity.
-func (rauo *ReceiveAddressUpdateOne) SetPaymentOrder(p *PaymentOrder) *ReceiveAddressUpdateOne {
-	return rauo.SetPaymentOrderID(p.ID)
+func (_u *ReceiveAddressUpdateOne) SetPaymentOrder(v *PaymentOrder) *ReceiveAddressUpdateOne {
+	return _u.SetPaymentOrderID(v.ID)
 }
 
 // Mutation returns the ReceiveAddressMutation object of the builder.
-func (rauo *ReceiveAddressUpdateOne) Mutation() *ReceiveAddressMutation {
-	return rauo.mutation
+func (_u *ReceiveAddressUpdateOne) Mutation() *ReceiveAddressMutation {
+	return _u.mutation
 }
 
 // ClearPaymentOrder clears the "payment_order" edge to the PaymentOrder entity.
-func (rauo *ReceiveAddressUpdateOne) ClearPaymentOrder() *ReceiveAddressUpdateOne {
-	rauo.mutation.ClearPaymentOrder()
-	return rauo
+func (_u *ReceiveAddressUpdateOne) ClearPaymentOrder() *ReceiveAddressUpdateOne {
+	_u.mutation.ClearPaymentOrder()
+	return _u
 }
 
 // Where appends a list predicates to the ReceiveAddressUpdate builder.
-func (rauo *ReceiveAddressUpdateOne) Where(ps ...predicate.ReceiveAddress) *ReceiveAddressUpdateOne {
-	rauo.mutation.Where(ps...)
-	return rauo
+func (_u *ReceiveAddressUpdateOne) Where(ps ...predicate.ReceiveAddress) *ReceiveAddressUpdateOne {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
-func (rauo *ReceiveAddressUpdateOne) Select(field string, fields ...string) *ReceiveAddressUpdateOne {
-	rauo.fields = append([]string{field}, fields...)
-	return rauo
+func (_u *ReceiveAddressUpdateOne) Select(field string, fields ...string) *ReceiveAddressUpdateOne {
+	_u.fields = append([]string{field}, fields...)
+	return _u
 }
 
 // Save executes the query and returns the updated ReceiveAddress entity.
-func (rauo *ReceiveAddressUpdateOne) Save(ctx context.Context) (*ReceiveAddress, error) {
-	rauo.defaults()
-	return withHooks(ctx, rauo.sqlSave, rauo.mutation, rauo.hooks)
+func (_u *ReceiveAddressUpdateOne) Save(ctx context.Context) (*ReceiveAddress, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (rauo *ReceiveAddressUpdateOne) SaveX(ctx context.Context) *ReceiveAddress {
-	node, err := rauo.Save(ctx)
+func (_u *ReceiveAddressUpdateOne) SaveX(ctx context.Context) *ReceiveAddress {
+	node, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -539,34 +539,34 @@ func (rauo *ReceiveAddressUpdateOne) SaveX(ctx context.Context) *ReceiveAddress 
 }
 
 // Exec executes the query on the entity.
-func (rauo *ReceiveAddressUpdateOne) Exec(ctx context.Context) error {
-	_, err := rauo.Save(ctx)
+func (_u *ReceiveAddressUpdateOne) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (rauo *ReceiveAddressUpdateOne) ExecX(ctx context.Context) {
-	if err := rauo.Exec(ctx); err != nil {
+func (_u *ReceiveAddressUpdateOne) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (rauo *ReceiveAddressUpdateOne) defaults() {
-	if _, ok := rauo.mutation.UpdatedAt(); !ok {
+func (_u *ReceiveAddressUpdateOne) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := receiveaddress.UpdateDefaultUpdatedAt()
-		rauo.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (rauo *ReceiveAddressUpdateOne) check() error {
-	if v, ok := rauo.mutation.Status(); ok {
+func (_u *ReceiveAddressUpdateOne) check() error {
+	if v, ok := _u.mutation.Status(); ok {
 		if err := receiveaddress.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "ReceiveAddress.status": %w`, err)}
 		}
 	}
-	if v, ok := rauo.mutation.TxHash(); ok {
+	if v, ok := _u.mutation.TxHash(); ok {
 		if err := receiveaddress.TxHashValidator(v); err != nil {
 			return &ValidationError{Name: "tx_hash", err: fmt.Errorf(`ent: validator failed for field "ReceiveAddress.tx_hash": %w`, err)}
 		}
@@ -574,17 +574,17 @@ func (rauo *ReceiveAddressUpdateOne) check() error {
 	return nil
 }
 
-func (rauo *ReceiveAddressUpdateOne) sqlSave(ctx context.Context) (_node *ReceiveAddress, err error) {
-	if err := rauo.check(); err != nil {
+func (_u *ReceiveAddressUpdateOne) sqlSave(ctx context.Context) (_node *ReceiveAddress, err error) {
+	if err := _u.check(); err != nil {
 		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(receiveaddress.Table, receiveaddress.Columns, sqlgraph.NewFieldSpec(receiveaddress.FieldID, field.TypeInt))
-	id, ok := rauo.mutation.ID()
+	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "ReceiveAddress.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
-	if fields := rauo.fields; len(fields) > 0 {
+	if fields := _u.fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, receiveaddress.FieldID)
 		for _, f := range fields {
@@ -596,56 +596,56 @@ func (rauo *ReceiveAddressUpdateOne) sqlSave(ctx context.Context) (_node *Receiv
 			}
 		}
 	}
-	if ps := rauo.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := rauo.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(receiveaddress.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := rauo.mutation.Address(); ok {
+	if value, ok := _u.mutation.Address(); ok {
 		_spec.SetField(receiveaddress.FieldAddress, field.TypeString, value)
 	}
-	if value, ok := rauo.mutation.Salt(); ok {
+	if value, ok := _u.mutation.Salt(); ok {
 		_spec.SetField(receiveaddress.FieldSalt, field.TypeBytes, value)
 	}
-	if rauo.mutation.SaltCleared() {
+	if _u.mutation.SaltCleared() {
 		_spec.ClearField(receiveaddress.FieldSalt, field.TypeBytes)
 	}
-	if value, ok := rauo.mutation.Status(); ok {
+	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(receiveaddress.FieldStatus, field.TypeEnum, value)
 	}
-	if value, ok := rauo.mutation.LastIndexedBlock(); ok {
+	if value, ok := _u.mutation.LastIndexedBlock(); ok {
 		_spec.SetField(receiveaddress.FieldLastIndexedBlock, field.TypeInt64, value)
 	}
-	if value, ok := rauo.mutation.AddedLastIndexedBlock(); ok {
+	if value, ok := _u.mutation.AddedLastIndexedBlock(); ok {
 		_spec.AddField(receiveaddress.FieldLastIndexedBlock, field.TypeInt64, value)
 	}
-	if rauo.mutation.LastIndexedBlockCleared() {
+	if _u.mutation.LastIndexedBlockCleared() {
 		_spec.ClearField(receiveaddress.FieldLastIndexedBlock, field.TypeInt64)
 	}
-	if value, ok := rauo.mutation.LastUsed(); ok {
+	if value, ok := _u.mutation.LastUsed(); ok {
 		_spec.SetField(receiveaddress.FieldLastUsed, field.TypeTime, value)
 	}
-	if rauo.mutation.LastUsedCleared() {
+	if _u.mutation.LastUsedCleared() {
 		_spec.ClearField(receiveaddress.FieldLastUsed, field.TypeTime)
 	}
-	if value, ok := rauo.mutation.TxHash(); ok {
+	if value, ok := _u.mutation.TxHash(); ok {
 		_spec.SetField(receiveaddress.FieldTxHash, field.TypeString, value)
 	}
-	if rauo.mutation.TxHashCleared() {
+	if _u.mutation.TxHashCleared() {
 		_spec.ClearField(receiveaddress.FieldTxHash, field.TypeString)
 	}
-	if value, ok := rauo.mutation.ValidUntil(); ok {
+	if value, ok := _u.mutation.ValidUntil(); ok {
 		_spec.SetField(receiveaddress.FieldValidUntil, field.TypeTime, value)
 	}
-	if rauo.mutation.ValidUntilCleared() {
+	if _u.mutation.ValidUntilCleared() {
 		_spec.ClearField(receiveaddress.FieldValidUntil, field.TypeTime)
 	}
-	if rauo.mutation.PaymentOrderCleared() {
+	if _u.mutation.PaymentOrderCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -658,7 +658,7 @@ func (rauo *ReceiveAddressUpdateOne) sqlSave(ctx context.Context) (_node *Receiv
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := rauo.mutation.PaymentOrderIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.PaymentOrderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -674,10 +674,10 @@ func (rauo *ReceiveAddressUpdateOne) sqlSave(ctx context.Context) (_node *Receiv
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	_node = &ReceiveAddress{config: rauo.config}
+	_node = &ReceiveAddress{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues
-	if err = sqlgraph.UpdateNode(ctx, rauo.driver, _spec); err != nil {
+	if err = sqlgraph.UpdateNode(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{receiveaddress.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -685,6 +685,6 @@ func (rauo *ReceiveAddressUpdateOne) sqlSave(ctx context.Context) (_node *Receiv
 		}
 		return nil, err
 	}
-	rauo.mutation.done = true
+	_u.mutation.done = true
 	return _node, nil
 }

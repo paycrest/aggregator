@@ -27,93 +27,93 @@ type SenderOrderTokenCreate struct {
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (sotc *SenderOrderTokenCreate) SetCreatedAt(t time.Time) *SenderOrderTokenCreate {
-	sotc.mutation.SetCreatedAt(t)
-	return sotc
+func (_c *SenderOrderTokenCreate) SetCreatedAt(v time.Time) *SenderOrderTokenCreate {
+	_c.mutation.SetCreatedAt(v)
+	return _c
 }
 
 // SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (sotc *SenderOrderTokenCreate) SetNillableCreatedAt(t *time.Time) *SenderOrderTokenCreate {
-	if t != nil {
-		sotc.SetCreatedAt(*t)
+func (_c *SenderOrderTokenCreate) SetNillableCreatedAt(v *time.Time) *SenderOrderTokenCreate {
+	if v != nil {
+		_c.SetCreatedAt(*v)
 	}
-	return sotc
+	return _c
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (sotc *SenderOrderTokenCreate) SetUpdatedAt(t time.Time) *SenderOrderTokenCreate {
-	sotc.mutation.SetUpdatedAt(t)
-	return sotc
+func (_c *SenderOrderTokenCreate) SetUpdatedAt(v time.Time) *SenderOrderTokenCreate {
+	_c.mutation.SetUpdatedAt(v)
+	return _c
 }
 
 // SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (sotc *SenderOrderTokenCreate) SetNillableUpdatedAt(t *time.Time) *SenderOrderTokenCreate {
-	if t != nil {
-		sotc.SetUpdatedAt(*t)
+func (_c *SenderOrderTokenCreate) SetNillableUpdatedAt(v *time.Time) *SenderOrderTokenCreate {
+	if v != nil {
+		_c.SetUpdatedAt(*v)
 	}
-	return sotc
+	return _c
 }
 
 // SetFeePercent sets the "fee_percent" field.
-func (sotc *SenderOrderTokenCreate) SetFeePercent(d decimal.Decimal) *SenderOrderTokenCreate {
-	sotc.mutation.SetFeePercent(d)
-	return sotc
+func (_c *SenderOrderTokenCreate) SetFeePercent(v decimal.Decimal) *SenderOrderTokenCreate {
+	_c.mutation.SetFeePercent(v)
+	return _c
 }
 
 // SetMaxFeeCap sets the "max_fee_cap" field.
-func (sotc *SenderOrderTokenCreate) SetMaxFeeCap(d decimal.Decimal) *SenderOrderTokenCreate {
-	sotc.mutation.SetMaxFeeCap(d)
-	return sotc
+func (_c *SenderOrderTokenCreate) SetMaxFeeCap(v decimal.Decimal) *SenderOrderTokenCreate {
+	_c.mutation.SetMaxFeeCap(v)
+	return _c
 }
 
 // SetFeeAddress sets the "fee_address" field.
-func (sotc *SenderOrderTokenCreate) SetFeeAddress(s string) *SenderOrderTokenCreate {
-	sotc.mutation.SetFeeAddress(s)
-	return sotc
+func (_c *SenderOrderTokenCreate) SetFeeAddress(v string) *SenderOrderTokenCreate {
+	_c.mutation.SetFeeAddress(v)
+	return _c
 }
 
 // SetRefundAddress sets the "refund_address" field.
-func (sotc *SenderOrderTokenCreate) SetRefundAddress(s string) *SenderOrderTokenCreate {
-	sotc.mutation.SetRefundAddress(s)
-	return sotc
+func (_c *SenderOrderTokenCreate) SetRefundAddress(v string) *SenderOrderTokenCreate {
+	_c.mutation.SetRefundAddress(v)
+	return _c
 }
 
 // SetSenderID sets the "sender" edge to the SenderProfile entity by ID.
-func (sotc *SenderOrderTokenCreate) SetSenderID(id uuid.UUID) *SenderOrderTokenCreate {
-	sotc.mutation.SetSenderID(id)
-	return sotc
+func (_c *SenderOrderTokenCreate) SetSenderID(id uuid.UUID) *SenderOrderTokenCreate {
+	_c.mutation.SetSenderID(id)
+	return _c
 }
 
 // SetSender sets the "sender" edge to the SenderProfile entity.
-func (sotc *SenderOrderTokenCreate) SetSender(s *SenderProfile) *SenderOrderTokenCreate {
-	return sotc.SetSenderID(s.ID)
+func (_c *SenderOrderTokenCreate) SetSender(v *SenderProfile) *SenderOrderTokenCreate {
+	return _c.SetSenderID(v.ID)
 }
 
 // SetTokenID sets the "token" edge to the Token entity by ID.
-func (sotc *SenderOrderTokenCreate) SetTokenID(id int) *SenderOrderTokenCreate {
-	sotc.mutation.SetTokenID(id)
-	return sotc
+func (_c *SenderOrderTokenCreate) SetTokenID(id int) *SenderOrderTokenCreate {
+	_c.mutation.SetTokenID(id)
+	return _c
 }
 
 // SetToken sets the "token" edge to the Token entity.
-func (sotc *SenderOrderTokenCreate) SetToken(t *Token) *SenderOrderTokenCreate {
-	return sotc.SetTokenID(t.ID)
+func (_c *SenderOrderTokenCreate) SetToken(v *Token) *SenderOrderTokenCreate {
+	return _c.SetTokenID(v.ID)
 }
 
 // Mutation returns the SenderOrderTokenMutation object of the builder.
-func (sotc *SenderOrderTokenCreate) Mutation() *SenderOrderTokenMutation {
-	return sotc.mutation
+func (_c *SenderOrderTokenCreate) Mutation() *SenderOrderTokenMutation {
+	return _c.mutation
 }
 
 // Save creates the SenderOrderToken in the database.
-func (sotc *SenderOrderTokenCreate) Save(ctx context.Context) (*SenderOrderToken, error) {
-	sotc.defaults()
-	return withHooks(ctx, sotc.sqlSave, sotc.mutation, sotc.hooks)
+func (_c *SenderOrderTokenCreate) Save(ctx context.Context) (*SenderOrderToken, error) {
+	_c.defaults()
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (sotc *SenderOrderTokenCreate) SaveX(ctx context.Context) *SenderOrderToken {
-	v, err := sotc.Save(ctx)
+func (_c *SenderOrderTokenCreate) SaveX(ctx context.Context) *SenderOrderToken {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -121,75 +121,75 @@ func (sotc *SenderOrderTokenCreate) SaveX(ctx context.Context) *SenderOrderToken
 }
 
 // Exec executes the query.
-func (sotc *SenderOrderTokenCreate) Exec(ctx context.Context) error {
-	_, err := sotc.Save(ctx)
+func (_c *SenderOrderTokenCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (sotc *SenderOrderTokenCreate) ExecX(ctx context.Context) {
-	if err := sotc.Exec(ctx); err != nil {
+func (_c *SenderOrderTokenCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (sotc *SenderOrderTokenCreate) defaults() {
-	if _, ok := sotc.mutation.CreatedAt(); !ok {
+func (_c *SenderOrderTokenCreate) defaults() {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := senderordertoken.DefaultCreatedAt()
-		sotc.mutation.SetCreatedAt(v)
+		_c.mutation.SetCreatedAt(v)
 	}
-	if _, ok := sotc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		v := senderordertoken.DefaultUpdatedAt()
-		sotc.mutation.SetUpdatedAt(v)
+		_c.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (sotc *SenderOrderTokenCreate) check() error {
-	if _, ok := sotc.mutation.CreatedAt(); !ok {
+func (_c *SenderOrderTokenCreate) check() error {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "SenderOrderToken.created_at"`)}
 	}
-	if _, ok := sotc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "SenderOrderToken.updated_at"`)}
 	}
-	if _, ok := sotc.mutation.FeePercent(); !ok {
+	if _, ok := _c.mutation.FeePercent(); !ok {
 		return &ValidationError{Name: "fee_percent", err: errors.New(`ent: missing required field "SenderOrderToken.fee_percent"`)}
 	}
-	if _, ok := sotc.mutation.MaxFeeCap(); !ok {
+	if _, ok := _c.mutation.MaxFeeCap(); !ok {
 		return &ValidationError{Name: "max_fee_cap", err: errors.New(`ent: missing required field "SenderOrderToken.max_fee_cap"`)}
 	}
-	if _, ok := sotc.mutation.FeeAddress(); !ok {
+	if _, ok := _c.mutation.FeeAddress(); !ok {
 		return &ValidationError{Name: "fee_address", err: errors.New(`ent: missing required field "SenderOrderToken.fee_address"`)}
 	}
-	if v, ok := sotc.mutation.FeeAddress(); ok {
+	if v, ok := _c.mutation.FeeAddress(); ok {
 		if err := senderordertoken.FeeAddressValidator(v); err != nil {
 			return &ValidationError{Name: "fee_address", err: fmt.Errorf(`ent: validator failed for field "SenderOrderToken.fee_address": %w`, err)}
 		}
 	}
-	if _, ok := sotc.mutation.RefundAddress(); !ok {
+	if _, ok := _c.mutation.RefundAddress(); !ok {
 		return &ValidationError{Name: "refund_address", err: errors.New(`ent: missing required field "SenderOrderToken.refund_address"`)}
 	}
-	if v, ok := sotc.mutation.RefundAddress(); ok {
+	if v, ok := _c.mutation.RefundAddress(); ok {
 		if err := senderordertoken.RefundAddressValidator(v); err != nil {
 			return &ValidationError{Name: "refund_address", err: fmt.Errorf(`ent: validator failed for field "SenderOrderToken.refund_address": %w`, err)}
 		}
 	}
-	if len(sotc.mutation.SenderIDs()) == 0 {
+	if len(_c.mutation.SenderIDs()) == 0 {
 		return &ValidationError{Name: "sender", err: errors.New(`ent: missing required edge "SenderOrderToken.sender"`)}
 	}
-	if len(sotc.mutation.TokenIDs()) == 0 {
+	if len(_c.mutation.TokenIDs()) == 0 {
 		return &ValidationError{Name: "token", err: errors.New(`ent: missing required edge "SenderOrderToken.token"`)}
 	}
 	return nil
 }
 
-func (sotc *SenderOrderTokenCreate) sqlSave(ctx context.Context) (*SenderOrderToken, error) {
-	if err := sotc.check(); err != nil {
+func (_c *SenderOrderTokenCreate) sqlSave(ctx context.Context) (*SenderOrderToken, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := sotc.createSpec()
-	if err := sqlgraph.CreateNode(ctx, sotc.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -197,42 +197,42 @@ func (sotc *SenderOrderTokenCreate) sqlSave(ctx context.Context) (*SenderOrderTo
 	}
 	id := _spec.ID.Value.(int64)
 	_node.ID = int(id)
-	sotc.mutation.id = &_node.ID
-	sotc.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (sotc *SenderOrderTokenCreate) createSpec() (*SenderOrderToken, *sqlgraph.CreateSpec) {
+func (_c *SenderOrderTokenCreate) createSpec() (*SenderOrderToken, *sqlgraph.CreateSpec) {
 	var (
-		_node = &SenderOrderToken{config: sotc.config}
+		_node = &SenderOrderToken{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(senderordertoken.Table, sqlgraph.NewFieldSpec(senderordertoken.FieldID, field.TypeInt))
 	)
-	_spec.OnConflict = sotc.conflict
-	if value, ok := sotc.mutation.CreatedAt(); ok {
+	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(senderordertoken.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
 	}
-	if value, ok := sotc.mutation.UpdatedAt(); ok {
+	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(senderordertoken.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if value, ok := sotc.mutation.FeePercent(); ok {
+	if value, ok := _c.mutation.FeePercent(); ok {
 		_spec.SetField(senderordertoken.FieldFeePercent, field.TypeFloat64, value)
 		_node.FeePercent = value
 	}
-	if value, ok := sotc.mutation.MaxFeeCap(); ok {
+	if value, ok := _c.mutation.MaxFeeCap(); ok {
 		_spec.SetField(senderordertoken.FieldMaxFeeCap, field.TypeFloat64, value)
 		_node.MaxFeeCap = value
 	}
-	if value, ok := sotc.mutation.FeeAddress(); ok {
+	if value, ok := _c.mutation.FeeAddress(); ok {
 		_spec.SetField(senderordertoken.FieldFeeAddress, field.TypeString, value)
 		_node.FeeAddress = value
 	}
-	if value, ok := sotc.mutation.RefundAddress(); ok {
+	if value, ok := _c.mutation.RefundAddress(); ok {
 		_spec.SetField(senderordertoken.FieldRefundAddress, field.TypeString, value)
 		_node.RefundAddress = value
 	}
-	if nodes := sotc.mutation.SenderIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.SenderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -249,7 +249,7 @@ func (sotc *SenderOrderTokenCreate) createSpec() (*SenderOrderToken, *sqlgraph.C
 		_node.sender_profile_order_tokens = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := sotc.mutation.TokenIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.TokenIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -285,10 +285,10 @@ func (sotc *SenderOrderTokenCreate) createSpec() (*SenderOrderToken, *sqlgraph.C
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (sotc *SenderOrderTokenCreate) OnConflict(opts ...sql.ConflictOption) *SenderOrderTokenUpsertOne {
-	sotc.conflict = opts
+func (_c *SenderOrderTokenCreate) OnConflict(opts ...sql.ConflictOption) *SenderOrderTokenUpsertOne {
+	_c.conflict = opts
 	return &SenderOrderTokenUpsertOne{
-		create: sotc,
+		create: _c,
 	}
 }
 
@@ -298,10 +298,10 @@ func (sotc *SenderOrderTokenCreate) OnConflict(opts ...sql.ConflictOption) *Send
 //	client.SenderOrderToken.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (sotc *SenderOrderTokenCreate) OnConflictColumns(columns ...string) *SenderOrderTokenUpsertOne {
-	sotc.conflict = append(sotc.conflict, sql.ConflictColumns(columns...))
+func (_c *SenderOrderTokenCreate) OnConflictColumns(columns ...string) *SenderOrderTokenUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &SenderOrderTokenUpsertOne{
-		create: sotc,
+		create: _c,
 	}
 }
 
@@ -561,16 +561,16 @@ type SenderOrderTokenCreateBulk struct {
 }
 
 // Save creates the SenderOrderToken entities in the database.
-func (sotcb *SenderOrderTokenCreateBulk) Save(ctx context.Context) ([]*SenderOrderToken, error) {
-	if sotcb.err != nil {
-		return nil, sotcb.err
+func (_c *SenderOrderTokenCreateBulk) Save(ctx context.Context) ([]*SenderOrderToken, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(sotcb.builders))
-	nodes := make([]*SenderOrderToken, len(sotcb.builders))
-	mutators := make([]Mutator, len(sotcb.builders))
-	for i := range sotcb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*SenderOrderToken, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := sotcb.builders[i]
+			builder := _c.builders[i]
 			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*SenderOrderTokenMutation)
@@ -584,12 +584,12 @@ func (sotcb *SenderOrderTokenCreateBulk) Save(ctx context.Context) ([]*SenderOrd
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, sotcb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = sotcb.conflict
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, sotcb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -613,7 +613,7 @@ func (sotcb *SenderOrderTokenCreateBulk) Save(ctx context.Context) ([]*SenderOrd
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, sotcb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -621,8 +621,8 @@ func (sotcb *SenderOrderTokenCreateBulk) Save(ctx context.Context) ([]*SenderOrd
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (sotcb *SenderOrderTokenCreateBulk) SaveX(ctx context.Context) []*SenderOrderToken {
-	v, err := sotcb.Save(ctx)
+func (_c *SenderOrderTokenCreateBulk) SaveX(ctx context.Context) []*SenderOrderToken {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -630,14 +630,14 @@ func (sotcb *SenderOrderTokenCreateBulk) SaveX(ctx context.Context) []*SenderOrd
 }
 
 // Exec executes the query.
-func (sotcb *SenderOrderTokenCreateBulk) Exec(ctx context.Context) error {
-	_, err := sotcb.Save(ctx)
+func (_c *SenderOrderTokenCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (sotcb *SenderOrderTokenCreateBulk) ExecX(ctx context.Context) {
-	if err := sotcb.Exec(ctx); err != nil {
+func (_c *SenderOrderTokenCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
@@ -657,10 +657,10 @@ func (sotcb *SenderOrderTokenCreateBulk) ExecX(ctx context.Context) {
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (sotcb *SenderOrderTokenCreateBulk) OnConflict(opts ...sql.ConflictOption) *SenderOrderTokenUpsertBulk {
-	sotcb.conflict = opts
+func (_c *SenderOrderTokenCreateBulk) OnConflict(opts ...sql.ConflictOption) *SenderOrderTokenUpsertBulk {
+	_c.conflict = opts
 	return &SenderOrderTokenUpsertBulk{
-		create: sotcb,
+		create: _c,
 	}
 }
 
@@ -670,10 +670,10 @@ func (sotcb *SenderOrderTokenCreateBulk) OnConflict(opts ...sql.ConflictOption) 
 //	client.SenderOrderToken.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (sotcb *SenderOrderTokenCreateBulk) OnConflictColumns(columns ...string) *SenderOrderTokenUpsertBulk {
-	sotcb.conflict = append(sotcb.conflict, sql.ConflictColumns(columns...))
+func (_c *SenderOrderTokenCreateBulk) OnConflictColumns(columns ...string) *SenderOrderTokenUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &SenderOrderTokenUpsertBulk{
-		create: sotcb,
+		create: _c,
 	}
 }
 

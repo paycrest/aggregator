@@ -23,143 +23,143 @@ type IdentityVerificationRequestUpdate struct {
 }
 
 // Where appends a list predicates to the IdentityVerificationRequestUpdate builder.
-func (ivru *IdentityVerificationRequestUpdate) Where(ps ...predicate.IdentityVerificationRequest) *IdentityVerificationRequestUpdate {
-	ivru.mutation.Where(ps...)
-	return ivru
+func (_u *IdentityVerificationRequestUpdate) Where(ps ...predicate.IdentityVerificationRequest) *IdentityVerificationRequestUpdate {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // SetWalletAddress sets the "wallet_address" field.
-func (ivru *IdentityVerificationRequestUpdate) SetWalletAddress(s string) *IdentityVerificationRequestUpdate {
-	ivru.mutation.SetWalletAddress(s)
-	return ivru
+func (_u *IdentityVerificationRequestUpdate) SetWalletAddress(v string) *IdentityVerificationRequestUpdate {
+	_u.mutation.SetWalletAddress(v)
+	return _u
 }
 
 // SetNillableWalletAddress sets the "wallet_address" field if the given value is not nil.
-func (ivru *IdentityVerificationRequestUpdate) SetNillableWalletAddress(s *string) *IdentityVerificationRequestUpdate {
-	if s != nil {
-		ivru.SetWalletAddress(*s)
+func (_u *IdentityVerificationRequestUpdate) SetNillableWalletAddress(v *string) *IdentityVerificationRequestUpdate {
+	if v != nil {
+		_u.SetWalletAddress(*v)
 	}
-	return ivru
+	return _u
 }
 
 // SetWalletSignature sets the "wallet_signature" field.
-func (ivru *IdentityVerificationRequestUpdate) SetWalletSignature(s string) *IdentityVerificationRequestUpdate {
-	ivru.mutation.SetWalletSignature(s)
-	return ivru
+func (_u *IdentityVerificationRequestUpdate) SetWalletSignature(v string) *IdentityVerificationRequestUpdate {
+	_u.mutation.SetWalletSignature(v)
+	return _u
 }
 
 // SetNillableWalletSignature sets the "wallet_signature" field if the given value is not nil.
-func (ivru *IdentityVerificationRequestUpdate) SetNillableWalletSignature(s *string) *IdentityVerificationRequestUpdate {
-	if s != nil {
-		ivru.SetWalletSignature(*s)
+func (_u *IdentityVerificationRequestUpdate) SetNillableWalletSignature(v *string) *IdentityVerificationRequestUpdate {
+	if v != nil {
+		_u.SetWalletSignature(*v)
 	}
-	return ivru
+	return _u
 }
 
 // SetPlatform sets the "platform" field.
-func (ivru *IdentityVerificationRequestUpdate) SetPlatform(i identityverificationrequest.Platform) *IdentityVerificationRequestUpdate {
-	ivru.mutation.SetPlatform(i)
-	return ivru
+func (_u *IdentityVerificationRequestUpdate) SetPlatform(v identityverificationrequest.Platform) *IdentityVerificationRequestUpdate {
+	_u.mutation.SetPlatform(v)
+	return _u
 }
 
 // SetNillablePlatform sets the "platform" field if the given value is not nil.
-func (ivru *IdentityVerificationRequestUpdate) SetNillablePlatform(i *identityverificationrequest.Platform) *IdentityVerificationRequestUpdate {
-	if i != nil {
-		ivru.SetPlatform(*i)
+func (_u *IdentityVerificationRequestUpdate) SetNillablePlatform(v *identityverificationrequest.Platform) *IdentityVerificationRequestUpdate {
+	if v != nil {
+		_u.SetPlatform(*v)
 	}
-	return ivru
+	return _u
 }
 
 // SetPlatformRef sets the "platform_ref" field.
-func (ivru *IdentityVerificationRequestUpdate) SetPlatformRef(s string) *IdentityVerificationRequestUpdate {
-	ivru.mutation.SetPlatformRef(s)
-	return ivru
+func (_u *IdentityVerificationRequestUpdate) SetPlatformRef(v string) *IdentityVerificationRequestUpdate {
+	_u.mutation.SetPlatformRef(v)
+	return _u
 }
 
 // SetNillablePlatformRef sets the "platform_ref" field if the given value is not nil.
-func (ivru *IdentityVerificationRequestUpdate) SetNillablePlatformRef(s *string) *IdentityVerificationRequestUpdate {
-	if s != nil {
-		ivru.SetPlatformRef(*s)
+func (_u *IdentityVerificationRequestUpdate) SetNillablePlatformRef(v *string) *IdentityVerificationRequestUpdate {
+	if v != nil {
+		_u.SetPlatformRef(*v)
 	}
-	return ivru
+	return _u
 }
 
 // SetVerificationURL sets the "verification_url" field.
-func (ivru *IdentityVerificationRequestUpdate) SetVerificationURL(s string) *IdentityVerificationRequestUpdate {
-	ivru.mutation.SetVerificationURL(s)
-	return ivru
+func (_u *IdentityVerificationRequestUpdate) SetVerificationURL(v string) *IdentityVerificationRequestUpdate {
+	_u.mutation.SetVerificationURL(v)
+	return _u
 }
 
 // SetNillableVerificationURL sets the "verification_url" field if the given value is not nil.
-func (ivru *IdentityVerificationRequestUpdate) SetNillableVerificationURL(s *string) *IdentityVerificationRequestUpdate {
-	if s != nil {
-		ivru.SetVerificationURL(*s)
+func (_u *IdentityVerificationRequestUpdate) SetNillableVerificationURL(v *string) *IdentityVerificationRequestUpdate {
+	if v != nil {
+		_u.SetVerificationURL(*v)
 	}
-	return ivru
+	return _u
 }
 
 // SetStatus sets the "status" field.
-func (ivru *IdentityVerificationRequestUpdate) SetStatus(i identityverificationrequest.Status) *IdentityVerificationRequestUpdate {
-	ivru.mutation.SetStatus(i)
-	return ivru
+func (_u *IdentityVerificationRequestUpdate) SetStatus(v identityverificationrequest.Status) *IdentityVerificationRequestUpdate {
+	_u.mutation.SetStatus(v)
+	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (ivru *IdentityVerificationRequestUpdate) SetNillableStatus(i *identityverificationrequest.Status) *IdentityVerificationRequestUpdate {
-	if i != nil {
-		ivru.SetStatus(*i)
+func (_u *IdentityVerificationRequestUpdate) SetNillableStatus(v *identityverificationrequest.Status) *IdentityVerificationRequestUpdate {
+	if v != nil {
+		_u.SetStatus(*v)
 	}
-	return ivru
+	return _u
 }
 
 // SetFeeReclaimed sets the "fee_reclaimed" field.
-func (ivru *IdentityVerificationRequestUpdate) SetFeeReclaimed(b bool) *IdentityVerificationRequestUpdate {
-	ivru.mutation.SetFeeReclaimed(b)
-	return ivru
+func (_u *IdentityVerificationRequestUpdate) SetFeeReclaimed(v bool) *IdentityVerificationRequestUpdate {
+	_u.mutation.SetFeeReclaimed(v)
+	return _u
 }
 
 // SetNillableFeeReclaimed sets the "fee_reclaimed" field if the given value is not nil.
-func (ivru *IdentityVerificationRequestUpdate) SetNillableFeeReclaimed(b *bool) *IdentityVerificationRequestUpdate {
-	if b != nil {
-		ivru.SetFeeReclaimed(*b)
+func (_u *IdentityVerificationRequestUpdate) SetNillableFeeReclaimed(v *bool) *IdentityVerificationRequestUpdate {
+	if v != nil {
+		_u.SetFeeReclaimed(*v)
 	}
-	return ivru
+	return _u
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (ivru *IdentityVerificationRequestUpdate) SetUpdatedAt(t time.Time) *IdentityVerificationRequestUpdate {
-	ivru.mutation.SetUpdatedAt(t)
-	return ivru
+func (_u *IdentityVerificationRequestUpdate) SetUpdatedAt(v time.Time) *IdentityVerificationRequestUpdate {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetLastURLCreatedAt sets the "last_url_created_at" field.
-func (ivru *IdentityVerificationRequestUpdate) SetLastURLCreatedAt(t time.Time) *IdentityVerificationRequestUpdate {
-	ivru.mutation.SetLastURLCreatedAt(t)
-	return ivru
+func (_u *IdentityVerificationRequestUpdate) SetLastURLCreatedAt(v time.Time) *IdentityVerificationRequestUpdate {
+	_u.mutation.SetLastURLCreatedAt(v)
+	return _u
 }
 
 // SetNillableLastURLCreatedAt sets the "last_url_created_at" field if the given value is not nil.
-func (ivru *IdentityVerificationRequestUpdate) SetNillableLastURLCreatedAt(t *time.Time) *IdentityVerificationRequestUpdate {
-	if t != nil {
-		ivru.SetLastURLCreatedAt(*t)
+func (_u *IdentityVerificationRequestUpdate) SetNillableLastURLCreatedAt(v *time.Time) *IdentityVerificationRequestUpdate {
+	if v != nil {
+		_u.SetLastURLCreatedAt(*v)
 	}
-	return ivru
+	return _u
 }
 
 // Mutation returns the IdentityVerificationRequestMutation object of the builder.
-func (ivru *IdentityVerificationRequestUpdate) Mutation() *IdentityVerificationRequestMutation {
-	return ivru.mutation
+func (_u *IdentityVerificationRequestUpdate) Mutation() *IdentityVerificationRequestMutation {
+	return _u.mutation
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
-func (ivru *IdentityVerificationRequestUpdate) Save(ctx context.Context) (int, error) {
-	ivru.defaults()
-	return withHooks(ctx, ivru.sqlSave, ivru.mutation, ivru.hooks)
+func (_u *IdentityVerificationRequestUpdate) Save(ctx context.Context) (int, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (ivru *IdentityVerificationRequestUpdate) SaveX(ctx context.Context) int {
-	affected, err := ivru.Save(ctx)
+func (_u *IdentityVerificationRequestUpdate) SaveX(ctx context.Context) int {
+	affected, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -167,34 +167,34 @@ func (ivru *IdentityVerificationRequestUpdate) SaveX(ctx context.Context) int {
 }
 
 // Exec executes the query.
-func (ivru *IdentityVerificationRequestUpdate) Exec(ctx context.Context) error {
-	_, err := ivru.Save(ctx)
+func (_u *IdentityVerificationRequestUpdate) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (ivru *IdentityVerificationRequestUpdate) ExecX(ctx context.Context) {
-	if err := ivru.Exec(ctx); err != nil {
+func (_u *IdentityVerificationRequestUpdate) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (ivru *IdentityVerificationRequestUpdate) defaults() {
-	if _, ok := ivru.mutation.UpdatedAt(); !ok {
+func (_u *IdentityVerificationRequestUpdate) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := identityverificationrequest.UpdateDefaultUpdatedAt()
-		ivru.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (ivru *IdentityVerificationRequestUpdate) check() error {
-	if v, ok := ivru.mutation.Platform(); ok {
+func (_u *IdentityVerificationRequestUpdate) check() error {
+	if v, ok := _u.mutation.Platform(); ok {
 		if err := identityverificationrequest.PlatformValidator(v); err != nil {
 			return &ValidationError{Name: "platform", err: fmt.Errorf(`ent: validator failed for field "IdentityVerificationRequest.platform": %w`, err)}
 		}
 	}
-	if v, ok := ivru.mutation.Status(); ok {
+	if v, ok := _u.mutation.Status(); ok {
 		if err := identityverificationrequest.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "IdentityVerificationRequest.status": %w`, err)}
 		}
@@ -202,46 +202,46 @@ func (ivru *IdentityVerificationRequestUpdate) check() error {
 	return nil
 }
 
-func (ivru *IdentityVerificationRequestUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	if err := ivru.check(); err != nil {
-		return n, err
+func (_u *IdentityVerificationRequestUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(identityverificationrequest.Table, identityverificationrequest.Columns, sqlgraph.NewFieldSpec(identityverificationrequest.FieldID, field.TypeUUID))
-	if ps := ivru.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := ivru.mutation.WalletAddress(); ok {
+	if value, ok := _u.mutation.WalletAddress(); ok {
 		_spec.SetField(identityverificationrequest.FieldWalletAddress, field.TypeString, value)
 	}
-	if value, ok := ivru.mutation.WalletSignature(); ok {
+	if value, ok := _u.mutation.WalletSignature(); ok {
 		_spec.SetField(identityverificationrequest.FieldWalletSignature, field.TypeString, value)
 	}
-	if value, ok := ivru.mutation.Platform(); ok {
+	if value, ok := _u.mutation.Platform(); ok {
 		_spec.SetField(identityverificationrequest.FieldPlatform, field.TypeEnum, value)
 	}
-	if value, ok := ivru.mutation.PlatformRef(); ok {
+	if value, ok := _u.mutation.PlatformRef(); ok {
 		_spec.SetField(identityverificationrequest.FieldPlatformRef, field.TypeString, value)
 	}
-	if value, ok := ivru.mutation.VerificationURL(); ok {
+	if value, ok := _u.mutation.VerificationURL(); ok {
 		_spec.SetField(identityverificationrequest.FieldVerificationURL, field.TypeString, value)
 	}
-	if value, ok := ivru.mutation.Status(); ok {
+	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(identityverificationrequest.FieldStatus, field.TypeEnum, value)
 	}
-	if value, ok := ivru.mutation.FeeReclaimed(); ok {
+	if value, ok := _u.mutation.FeeReclaimed(); ok {
 		_spec.SetField(identityverificationrequest.FieldFeeReclaimed, field.TypeBool, value)
 	}
-	if value, ok := ivru.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(identityverificationrequest.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := ivru.mutation.LastURLCreatedAt(); ok {
+	if value, ok := _u.mutation.LastURLCreatedAt(); ok {
 		_spec.SetField(identityverificationrequest.FieldLastURLCreatedAt, field.TypeTime, value)
 	}
-	if n, err = sqlgraph.UpdateNodes(ctx, ivru.driver, _spec); err != nil {
+	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{identityverificationrequest.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -249,8 +249,8 @@ func (ivru *IdentityVerificationRequestUpdate) sqlSave(ctx context.Context) (n i
 		}
 		return 0, err
 	}
-	ivru.mutation.done = true
-	return n, nil
+	_u.mutation.done = true
+	return _node, nil
 }
 
 // IdentityVerificationRequestUpdateOne is the builder for updating a single IdentityVerificationRequest entity.
@@ -262,150 +262,150 @@ type IdentityVerificationRequestUpdateOne struct {
 }
 
 // SetWalletAddress sets the "wallet_address" field.
-func (ivruo *IdentityVerificationRequestUpdateOne) SetWalletAddress(s string) *IdentityVerificationRequestUpdateOne {
-	ivruo.mutation.SetWalletAddress(s)
-	return ivruo
+func (_u *IdentityVerificationRequestUpdateOne) SetWalletAddress(v string) *IdentityVerificationRequestUpdateOne {
+	_u.mutation.SetWalletAddress(v)
+	return _u
 }
 
 // SetNillableWalletAddress sets the "wallet_address" field if the given value is not nil.
-func (ivruo *IdentityVerificationRequestUpdateOne) SetNillableWalletAddress(s *string) *IdentityVerificationRequestUpdateOne {
-	if s != nil {
-		ivruo.SetWalletAddress(*s)
+func (_u *IdentityVerificationRequestUpdateOne) SetNillableWalletAddress(v *string) *IdentityVerificationRequestUpdateOne {
+	if v != nil {
+		_u.SetWalletAddress(*v)
 	}
-	return ivruo
+	return _u
 }
 
 // SetWalletSignature sets the "wallet_signature" field.
-func (ivruo *IdentityVerificationRequestUpdateOne) SetWalletSignature(s string) *IdentityVerificationRequestUpdateOne {
-	ivruo.mutation.SetWalletSignature(s)
-	return ivruo
+func (_u *IdentityVerificationRequestUpdateOne) SetWalletSignature(v string) *IdentityVerificationRequestUpdateOne {
+	_u.mutation.SetWalletSignature(v)
+	return _u
 }
 
 // SetNillableWalletSignature sets the "wallet_signature" field if the given value is not nil.
-func (ivruo *IdentityVerificationRequestUpdateOne) SetNillableWalletSignature(s *string) *IdentityVerificationRequestUpdateOne {
-	if s != nil {
-		ivruo.SetWalletSignature(*s)
+func (_u *IdentityVerificationRequestUpdateOne) SetNillableWalletSignature(v *string) *IdentityVerificationRequestUpdateOne {
+	if v != nil {
+		_u.SetWalletSignature(*v)
 	}
-	return ivruo
+	return _u
 }
 
 // SetPlatform sets the "platform" field.
-func (ivruo *IdentityVerificationRequestUpdateOne) SetPlatform(i identityverificationrequest.Platform) *IdentityVerificationRequestUpdateOne {
-	ivruo.mutation.SetPlatform(i)
-	return ivruo
+func (_u *IdentityVerificationRequestUpdateOne) SetPlatform(v identityverificationrequest.Platform) *IdentityVerificationRequestUpdateOne {
+	_u.mutation.SetPlatform(v)
+	return _u
 }
 
 // SetNillablePlatform sets the "platform" field if the given value is not nil.
-func (ivruo *IdentityVerificationRequestUpdateOne) SetNillablePlatform(i *identityverificationrequest.Platform) *IdentityVerificationRequestUpdateOne {
-	if i != nil {
-		ivruo.SetPlatform(*i)
+func (_u *IdentityVerificationRequestUpdateOne) SetNillablePlatform(v *identityverificationrequest.Platform) *IdentityVerificationRequestUpdateOne {
+	if v != nil {
+		_u.SetPlatform(*v)
 	}
-	return ivruo
+	return _u
 }
 
 // SetPlatformRef sets the "platform_ref" field.
-func (ivruo *IdentityVerificationRequestUpdateOne) SetPlatformRef(s string) *IdentityVerificationRequestUpdateOne {
-	ivruo.mutation.SetPlatformRef(s)
-	return ivruo
+func (_u *IdentityVerificationRequestUpdateOne) SetPlatformRef(v string) *IdentityVerificationRequestUpdateOne {
+	_u.mutation.SetPlatformRef(v)
+	return _u
 }
 
 // SetNillablePlatformRef sets the "platform_ref" field if the given value is not nil.
-func (ivruo *IdentityVerificationRequestUpdateOne) SetNillablePlatformRef(s *string) *IdentityVerificationRequestUpdateOne {
-	if s != nil {
-		ivruo.SetPlatformRef(*s)
+func (_u *IdentityVerificationRequestUpdateOne) SetNillablePlatformRef(v *string) *IdentityVerificationRequestUpdateOne {
+	if v != nil {
+		_u.SetPlatformRef(*v)
 	}
-	return ivruo
+	return _u
 }
 
 // SetVerificationURL sets the "verification_url" field.
-func (ivruo *IdentityVerificationRequestUpdateOne) SetVerificationURL(s string) *IdentityVerificationRequestUpdateOne {
-	ivruo.mutation.SetVerificationURL(s)
-	return ivruo
+func (_u *IdentityVerificationRequestUpdateOne) SetVerificationURL(v string) *IdentityVerificationRequestUpdateOne {
+	_u.mutation.SetVerificationURL(v)
+	return _u
 }
 
 // SetNillableVerificationURL sets the "verification_url" field if the given value is not nil.
-func (ivruo *IdentityVerificationRequestUpdateOne) SetNillableVerificationURL(s *string) *IdentityVerificationRequestUpdateOne {
-	if s != nil {
-		ivruo.SetVerificationURL(*s)
+func (_u *IdentityVerificationRequestUpdateOne) SetNillableVerificationURL(v *string) *IdentityVerificationRequestUpdateOne {
+	if v != nil {
+		_u.SetVerificationURL(*v)
 	}
-	return ivruo
+	return _u
 }
 
 // SetStatus sets the "status" field.
-func (ivruo *IdentityVerificationRequestUpdateOne) SetStatus(i identityverificationrequest.Status) *IdentityVerificationRequestUpdateOne {
-	ivruo.mutation.SetStatus(i)
-	return ivruo
+func (_u *IdentityVerificationRequestUpdateOne) SetStatus(v identityverificationrequest.Status) *IdentityVerificationRequestUpdateOne {
+	_u.mutation.SetStatus(v)
+	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (ivruo *IdentityVerificationRequestUpdateOne) SetNillableStatus(i *identityverificationrequest.Status) *IdentityVerificationRequestUpdateOne {
-	if i != nil {
-		ivruo.SetStatus(*i)
+func (_u *IdentityVerificationRequestUpdateOne) SetNillableStatus(v *identityverificationrequest.Status) *IdentityVerificationRequestUpdateOne {
+	if v != nil {
+		_u.SetStatus(*v)
 	}
-	return ivruo
+	return _u
 }
 
 // SetFeeReclaimed sets the "fee_reclaimed" field.
-func (ivruo *IdentityVerificationRequestUpdateOne) SetFeeReclaimed(b bool) *IdentityVerificationRequestUpdateOne {
-	ivruo.mutation.SetFeeReclaimed(b)
-	return ivruo
+func (_u *IdentityVerificationRequestUpdateOne) SetFeeReclaimed(v bool) *IdentityVerificationRequestUpdateOne {
+	_u.mutation.SetFeeReclaimed(v)
+	return _u
 }
 
 // SetNillableFeeReclaimed sets the "fee_reclaimed" field if the given value is not nil.
-func (ivruo *IdentityVerificationRequestUpdateOne) SetNillableFeeReclaimed(b *bool) *IdentityVerificationRequestUpdateOne {
-	if b != nil {
-		ivruo.SetFeeReclaimed(*b)
+func (_u *IdentityVerificationRequestUpdateOne) SetNillableFeeReclaimed(v *bool) *IdentityVerificationRequestUpdateOne {
+	if v != nil {
+		_u.SetFeeReclaimed(*v)
 	}
-	return ivruo
+	return _u
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (ivruo *IdentityVerificationRequestUpdateOne) SetUpdatedAt(t time.Time) *IdentityVerificationRequestUpdateOne {
-	ivruo.mutation.SetUpdatedAt(t)
-	return ivruo
+func (_u *IdentityVerificationRequestUpdateOne) SetUpdatedAt(v time.Time) *IdentityVerificationRequestUpdateOne {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetLastURLCreatedAt sets the "last_url_created_at" field.
-func (ivruo *IdentityVerificationRequestUpdateOne) SetLastURLCreatedAt(t time.Time) *IdentityVerificationRequestUpdateOne {
-	ivruo.mutation.SetLastURLCreatedAt(t)
-	return ivruo
+func (_u *IdentityVerificationRequestUpdateOne) SetLastURLCreatedAt(v time.Time) *IdentityVerificationRequestUpdateOne {
+	_u.mutation.SetLastURLCreatedAt(v)
+	return _u
 }
 
 // SetNillableLastURLCreatedAt sets the "last_url_created_at" field if the given value is not nil.
-func (ivruo *IdentityVerificationRequestUpdateOne) SetNillableLastURLCreatedAt(t *time.Time) *IdentityVerificationRequestUpdateOne {
-	if t != nil {
-		ivruo.SetLastURLCreatedAt(*t)
+func (_u *IdentityVerificationRequestUpdateOne) SetNillableLastURLCreatedAt(v *time.Time) *IdentityVerificationRequestUpdateOne {
+	if v != nil {
+		_u.SetLastURLCreatedAt(*v)
 	}
-	return ivruo
+	return _u
 }
 
 // Mutation returns the IdentityVerificationRequestMutation object of the builder.
-func (ivruo *IdentityVerificationRequestUpdateOne) Mutation() *IdentityVerificationRequestMutation {
-	return ivruo.mutation
+func (_u *IdentityVerificationRequestUpdateOne) Mutation() *IdentityVerificationRequestMutation {
+	return _u.mutation
 }
 
 // Where appends a list predicates to the IdentityVerificationRequestUpdate builder.
-func (ivruo *IdentityVerificationRequestUpdateOne) Where(ps ...predicate.IdentityVerificationRequest) *IdentityVerificationRequestUpdateOne {
-	ivruo.mutation.Where(ps...)
-	return ivruo
+func (_u *IdentityVerificationRequestUpdateOne) Where(ps ...predicate.IdentityVerificationRequest) *IdentityVerificationRequestUpdateOne {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
-func (ivruo *IdentityVerificationRequestUpdateOne) Select(field string, fields ...string) *IdentityVerificationRequestUpdateOne {
-	ivruo.fields = append([]string{field}, fields...)
-	return ivruo
+func (_u *IdentityVerificationRequestUpdateOne) Select(field string, fields ...string) *IdentityVerificationRequestUpdateOne {
+	_u.fields = append([]string{field}, fields...)
+	return _u
 }
 
 // Save executes the query and returns the updated IdentityVerificationRequest entity.
-func (ivruo *IdentityVerificationRequestUpdateOne) Save(ctx context.Context) (*IdentityVerificationRequest, error) {
-	ivruo.defaults()
-	return withHooks(ctx, ivruo.sqlSave, ivruo.mutation, ivruo.hooks)
+func (_u *IdentityVerificationRequestUpdateOne) Save(ctx context.Context) (*IdentityVerificationRequest, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (ivruo *IdentityVerificationRequestUpdateOne) SaveX(ctx context.Context) *IdentityVerificationRequest {
-	node, err := ivruo.Save(ctx)
+func (_u *IdentityVerificationRequestUpdateOne) SaveX(ctx context.Context) *IdentityVerificationRequest {
+	node, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -413,34 +413,34 @@ func (ivruo *IdentityVerificationRequestUpdateOne) SaveX(ctx context.Context) *I
 }
 
 // Exec executes the query on the entity.
-func (ivruo *IdentityVerificationRequestUpdateOne) Exec(ctx context.Context) error {
-	_, err := ivruo.Save(ctx)
+func (_u *IdentityVerificationRequestUpdateOne) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (ivruo *IdentityVerificationRequestUpdateOne) ExecX(ctx context.Context) {
-	if err := ivruo.Exec(ctx); err != nil {
+func (_u *IdentityVerificationRequestUpdateOne) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (ivruo *IdentityVerificationRequestUpdateOne) defaults() {
-	if _, ok := ivruo.mutation.UpdatedAt(); !ok {
+func (_u *IdentityVerificationRequestUpdateOne) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := identityverificationrequest.UpdateDefaultUpdatedAt()
-		ivruo.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (ivruo *IdentityVerificationRequestUpdateOne) check() error {
-	if v, ok := ivruo.mutation.Platform(); ok {
+func (_u *IdentityVerificationRequestUpdateOne) check() error {
+	if v, ok := _u.mutation.Platform(); ok {
 		if err := identityverificationrequest.PlatformValidator(v); err != nil {
 			return &ValidationError{Name: "platform", err: fmt.Errorf(`ent: validator failed for field "IdentityVerificationRequest.platform": %w`, err)}
 		}
 	}
-	if v, ok := ivruo.mutation.Status(); ok {
+	if v, ok := _u.mutation.Status(); ok {
 		if err := identityverificationrequest.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "IdentityVerificationRequest.status": %w`, err)}
 		}
@@ -448,17 +448,17 @@ func (ivruo *IdentityVerificationRequestUpdateOne) check() error {
 	return nil
 }
 
-func (ivruo *IdentityVerificationRequestUpdateOne) sqlSave(ctx context.Context) (_node *IdentityVerificationRequest, err error) {
-	if err := ivruo.check(); err != nil {
+func (_u *IdentityVerificationRequestUpdateOne) sqlSave(ctx context.Context) (_node *IdentityVerificationRequest, err error) {
+	if err := _u.check(); err != nil {
 		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(identityverificationrequest.Table, identityverificationrequest.Columns, sqlgraph.NewFieldSpec(identityverificationrequest.FieldID, field.TypeUUID))
-	id, ok := ivruo.mutation.ID()
+	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "IdentityVerificationRequest.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
-	if fields := ivruo.fields; len(fields) > 0 {
+	if fields := _u.fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, identityverificationrequest.FieldID)
 		for _, f := range fields {
@@ -470,44 +470,44 @@ func (ivruo *IdentityVerificationRequestUpdateOne) sqlSave(ctx context.Context) 
 			}
 		}
 	}
-	if ps := ivruo.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := ivruo.mutation.WalletAddress(); ok {
+	if value, ok := _u.mutation.WalletAddress(); ok {
 		_spec.SetField(identityverificationrequest.FieldWalletAddress, field.TypeString, value)
 	}
-	if value, ok := ivruo.mutation.WalletSignature(); ok {
+	if value, ok := _u.mutation.WalletSignature(); ok {
 		_spec.SetField(identityverificationrequest.FieldWalletSignature, field.TypeString, value)
 	}
-	if value, ok := ivruo.mutation.Platform(); ok {
+	if value, ok := _u.mutation.Platform(); ok {
 		_spec.SetField(identityverificationrequest.FieldPlatform, field.TypeEnum, value)
 	}
-	if value, ok := ivruo.mutation.PlatformRef(); ok {
+	if value, ok := _u.mutation.PlatformRef(); ok {
 		_spec.SetField(identityverificationrequest.FieldPlatformRef, field.TypeString, value)
 	}
-	if value, ok := ivruo.mutation.VerificationURL(); ok {
+	if value, ok := _u.mutation.VerificationURL(); ok {
 		_spec.SetField(identityverificationrequest.FieldVerificationURL, field.TypeString, value)
 	}
-	if value, ok := ivruo.mutation.Status(); ok {
+	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(identityverificationrequest.FieldStatus, field.TypeEnum, value)
 	}
-	if value, ok := ivruo.mutation.FeeReclaimed(); ok {
+	if value, ok := _u.mutation.FeeReclaimed(); ok {
 		_spec.SetField(identityverificationrequest.FieldFeeReclaimed, field.TypeBool, value)
 	}
-	if value, ok := ivruo.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(identityverificationrequest.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := ivruo.mutation.LastURLCreatedAt(); ok {
+	if value, ok := _u.mutation.LastURLCreatedAt(); ok {
 		_spec.SetField(identityverificationrequest.FieldLastURLCreatedAt, field.TypeTime, value)
 	}
-	_node = &IdentityVerificationRequest{config: ivruo.config}
+	_node = &IdentityVerificationRequest{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues
-	if err = sqlgraph.UpdateNode(ctx, ivruo.driver, _spec); err != nil {
+	if err = sqlgraph.UpdateNode(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{identityverificationrequest.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -515,6 +515,6 @@ func (ivruo *IdentityVerificationRequestUpdateOne) sqlSave(ctx context.Context) 
 		}
 		return nil, err
 	}
-	ivruo.mutation.done = true
+	_u.mutation.done = true
 	return _node, nil
 }

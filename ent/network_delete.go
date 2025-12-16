@@ -20,56 +20,56 @@ type NetworkDelete struct {
 }
 
 // Where appends a list predicates to the NetworkDelete builder.
-func (nd *NetworkDelete) Where(ps ...predicate.Network) *NetworkDelete {
-	nd.mutation.Where(ps...)
-	return nd
+func (_d *NetworkDelete) Where(ps ...predicate.Network) *NetworkDelete {
+	_d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query and returns how many vertices were deleted.
-func (nd *NetworkDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks(ctx, nd.sqlExec, nd.mutation, nd.hooks)
+func (_d *NetworkDelete) Exec(ctx context.Context) (int, error) {
+	return withHooks(ctx, _d.sqlExec, _d.mutation, _d.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (nd *NetworkDelete) ExecX(ctx context.Context) int {
-	n, err := nd.Exec(ctx)
+func (_d *NetworkDelete) ExecX(ctx context.Context) int {
+	n, err := _d.Exec(ctx)
 	if err != nil {
 		panic(err)
 	}
 	return n
 }
 
-func (nd *NetworkDelete) sqlExec(ctx context.Context) (int, error) {
+func (_d *NetworkDelete) sqlExec(ctx context.Context) (int, error) {
 	_spec := sqlgraph.NewDeleteSpec(network.Table, sqlgraph.NewFieldSpec(network.FieldID, field.TypeInt))
-	if ps := nd.mutation.predicates; len(ps) > 0 {
+	if ps := _d.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	affected, err := sqlgraph.DeleteNodes(ctx, nd.driver, _spec)
+	affected, err := sqlgraph.DeleteNodes(ctx, _d.driver, _spec)
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
-	nd.mutation.done = true
+	_d.mutation.done = true
 	return affected, err
 }
 
 // NetworkDeleteOne is the builder for deleting a single Network entity.
 type NetworkDeleteOne struct {
-	nd *NetworkDelete
+	_d *NetworkDelete
 }
 
 // Where appends a list predicates to the NetworkDelete builder.
-func (ndo *NetworkDeleteOne) Where(ps ...predicate.Network) *NetworkDeleteOne {
-	ndo.nd.mutation.Where(ps...)
-	return ndo
+func (_d *NetworkDeleteOne) Where(ps ...predicate.Network) *NetworkDeleteOne {
+	_d._d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query.
-func (ndo *NetworkDeleteOne) Exec(ctx context.Context) error {
-	n, err := ndo.nd.Exec(ctx)
+func (_d *NetworkDeleteOne) Exec(ctx context.Context) error {
+	n, err := _d._d.Exec(ctx)
 	switch {
 	case err != nil:
 		return err
@@ -81,8 +81,8 @@ func (ndo *NetworkDeleteOne) Exec(ctx context.Context) error {
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (ndo *NetworkDeleteOne) ExecX(ctx context.Context) {
-	if err := ndo.Exec(ctx); err != nil {
+func (_d *NetworkDeleteOne) ExecX(ctx context.Context) {
+	if err := _d.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

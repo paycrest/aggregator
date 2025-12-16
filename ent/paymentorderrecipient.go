@@ -80,7 +80,7 @@ func (*PaymentOrderRecipient) scanValues(columns []string) ([]any, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the PaymentOrderRecipient fields.
-func (por *PaymentOrderRecipient) assignValues(columns []string, values []any) error {
+func (_m *PaymentOrderRecipient) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -91,42 +91,42 @@ func (por *PaymentOrderRecipient) assignValues(columns []string, values []any) e
 			if !ok {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
-			por.ID = int(value.Int64)
+			_m.ID = int(value.Int64)
 		case paymentorderrecipient.FieldInstitution:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field institution", values[i])
 			} else if value.Valid {
-				por.Institution = value.String
+				_m.Institution = value.String
 			}
 		case paymentorderrecipient.FieldAccountIdentifier:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field account_identifier", values[i])
 			} else if value.Valid {
-				por.AccountIdentifier = value.String
+				_m.AccountIdentifier = value.String
 			}
 		case paymentorderrecipient.FieldAccountName:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field account_name", values[i])
 			} else if value.Valid {
-				por.AccountName = value.String
+				_m.AccountName = value.String
 			}
 		case paymentorderrecipient.FieldMemo:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field memo", values[i])
 			} else if value.Valid {
-				por.Memo = value.String
+				_m.Memo = value.String
 			}
 		case paymentorderrecipient.FieldProviderID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field provider_id", values[i])
 			} else if value.Valid {
-				por.ProviderID = value.String
+				_m.ProviderID = value.String
 			}
 		case paymentorderrecipient.FieldMetadata:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field metadata", values[i])
 			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &por.Metadata); err != nil {
+				if err := json.Unmarshal(*value, &_m.Metadata); err != nil {
 					return fmt.Errorf("unmarshal field metadata: %w", err)
 				}
 			}
@@ -134,11 +134,11 @@ func (por *PaymentOrderRecipient) assignValues(columns []string, values []any) e
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field payment_order_recipient", values[i])
 			} else if value.Valid {
-				por.payment_order_recipient = new(uuid.UUID)
-				*por.payment_order_recipient = *value.S.(*uuid.UUID)
+				_m.payment_order_recipient = new(uuid.UUID)
+				*_m.payment_order_recipient = *value.S.(*uuid.UUID)
 			}
 		default:
-			por.selectValues.Set(columns[i], values[i])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -146,55 +146,55 @@ func (por *PaymentOrderRecipient) assignValues(columns []string, values []any) e
 
 // Value returns the ent.Value that was dynamically selected and assigned to the PaymentOrderRecipient.
 // This includes values selected through modifiers, order, etc.
-func (por *PaymentOrderRecipient) Value(name string) (ent.Value, error) {
-	return por.selectValues.Get(name)
+func (_m *PaymentOrderRecipient) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
 }
 
 // QueryPaymentOrder queries the "payment_order" edge of the PaymentOrderRecipient entity.
-func (por *PaymentOrderRecipient) QueryPaymentOrder() *PaymentOrderQuery {
-	return NewPaymentOrderRecipientClient(por.config).QueryPaymentOrder(por)
+func (_m *PaymentOrderRecipient) QueryPaymentOrder() *PaymentOrderQuery {
+	return NewPaymentOrderRecipientClient(_m.config).QueryPaymentOrder(_m)
 }
 
 // Update returns a builder for updating this PaymentOrderRecipient.
 // Note that you need to call PaymentOrderRecipient.Unwrap() before calling this method if this PaymentOrderRecipient
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (por *PaymentOrderRecipient) Update() *PaymentOrderRecipientUpdateOne {
-	return NewPaymentOrderRecipientClient(por.config).UpdateOne(por)
+func (_m *PaymentOrderRecipient) Update() *PaymentOrderRecipientUpdateOne {
+	return NewPaymentOrderRecipientClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the PaymentOrderRecipient entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (por *PaymentOrderRecipient) Unwrap() *PaymentOrderRecipient {
-	_tx, ok := por.config.driver.(*txDriver)
+func (_m *PaymentOrderRecipient) Unwrap() *PaymentOrderRecipient {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: PaymentOrderRecipient is not a transactional entity")
 	}
-	por.config.driver = _tx.drv
-	return por
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (por *PaymentOrderRecipient) String() string {
+func (_m *PaymentOrderRecipient) String() string {
 	var builder strings.Builder
 	builder.WriteString("PaymentOrderRecipient(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", por.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("institution=")
-	builder.WriteString(por.Institution)
+	builder.WriteString(_m.Institution)
 	builder.WriteString(", ")
 	builder.WriteString("account_identifier=")
-	builder.WriteString(por.AccountIdentifier)
+	builder.WriteString(_m.AccountIdentifier)
 	builder.WriteString(", ")
 	builder.WriteString("account_name=")
-	builder.WriteString(por.AccountName)
+	builder.WriteString(_m.AccountName)
 	builder.WriteString(", ")
 	builder.WriteString("memo=")
-	builder.WriteString(por.Memo)
+	builder.WriteString(_m.Memo)
 	builder.WriteString(", ")
 	builder.WriteString("provider_id=")
-	builder.WriteString(por.ProviderID)
+	builder.WriteString(_m.ProviderID)
 	builder.WriteString(", ")
 	builder.WriteString("metadata=")
-	builder.WriteString(fmt.Sprintf("%v", por.Metadata))
+	builder.WriteString(fmt.Sprintf("%v", _m.Metadata))
 	builder.WriteByte(')')
 	return builder.String()
 }

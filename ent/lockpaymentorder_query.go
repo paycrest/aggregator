@@ -41,44 +41,44 @@ type LockPaymentOrderQuery struct {
 }
 
 // Where adds a new predicate for the LockPaymentOrderQuery builder.
-func (lpoq *LockPaymentOrderQuery) Where(ps ...predicate.LockPaymentOrder) *LockPaymentOrderQuery {
-	lpoq.predicates = append(lpoq.predicates, ps...)
-	return lpoq
+func (_q *LockPaymentOrderQuery) Where(ps ...predicate.LockPaymentOrder) *LockPaymentOrderQuery {
+	_q.predicates = append(_q.predicates, ps...)
+	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (lpoq *LockPaymentOrderQuery) Limit(limit int) *LockPaymentOrderQuery {
-	lpoq.ctx.Limit = &limit
-	return lpoq
+func (_q *LockPaymentOrderQuery) Limit(limit int) *LockPaymentOrderQuery {
+	_q.ctx.Limit = &limit
+	return _q
 }
 
 // Offset to start from.
-func (lpoq *LockPaymentOrderQuery) Offset(offset int) *LockPaymentOrderQuery {
-	lpoq.ctx.Offset = &offset
-	return lpoq
+func (_q *LockPaymentOrderQuery) Offset(offset int) *LockPaymentOrderQuery {
+	_q.ctx.Offset = &offset
+	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (lpoq *LockPaymentOrderQuery) Unique(unique bool) *LockPaymentOrderQuery {
-	lpoq.ctx.Unique = &unique
-	return lpoq
+func (_q *LockPaymentOrderQuery) Unique(unique bool) *LockPaymentOrderQuery {
+	_q.ctx.Unique = &unique
+	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (lpoq *LockPaymentOrderQuery) Order(o ...lockpaymentorder.OrderOption) *LockPaymentOrderQuery {
-	lpoq.order = append(lpoq.order, o...)
-	return lpoq
+func (_q *LockPaymentOrderQuery) Order(o ...lockpaymentorder.OrderOption) *LockPaymentOrderQuery {
+	_q.order = append(_q.order, o...)
+	return _q
 }
 
 // QueryToken chains the current query on the "token" edge.
-func (lpoq *LockPaymentOrderQuery) QueryToken() *TokenQuery {
-	query := (&TokenClient{config: lpoq.config}).Query()
+func (_q *LockPaymentOrderQuery) QueryToken() *TokenQuery {
+	query := (&TokenClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := lpoq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := lpoq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -87,20 +87,20 @@ func (lpoq *LockPaymentOrderQuery) QueryToken() *TokenQuery {
 			sqlgraph.To(token.Table, token.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, lockpaymentorder.TokenTable, lockpaymentorder.TokenColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(lpoq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryProvisionBucket chains the current query on the "provision_bucket" edge.
-func (lpoq *LockPaymentOrderQuery) QueryProvisionBucket() *ProvisionBucketQuery {
-	query := (&ProvisionBucketClient{config: lpoq.config}).Query()
+func (_q *LockPaymentOrderQuery) QueryProvisionBucket() *ProvisionBucketQuery {
+	query := (&ProvisionBucketClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := lpoq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := lpoq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -109,20 +109,20 @@ func (lpoq *LockPaymentOrderQuery) QueryProvisionBucket() *ProvisionBucketQuery 
 			sqlgraph.To(provisionbucket.Table, provisionbucket.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, lockpaymentorder.ProvisionBucketTable, lockpaymentorder.ProvisionBucketColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(lpoq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryProvider chains the current query on the "provider" edge.
-func (lpoq *LockPaymentOrderQuery) QueryProvider() *ProviderProfileQuery {
-	query := (&ProviderProfileClient{config: lpoq.config}).Query()
+func (_q *LockPaymentOrderQuery) QueryProvider() *ProviderProfileQuery {
+	query := (&ProviderProfileClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := lpoq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := lpoq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -131,20 +131,20 @@ func (lpoq *LockPaymentOrderQuery) QueryProvider() *ProviderProfileQuery {
 			sqlgraph.To(providerprofile.Table, providerprofile.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, lockpaymentorder.ProviderTable, lockpaymentorder.ProviderColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(lpoq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryFulfillments chains the current query on the "fulfillments" edge.
-func (lpoq *LockPaymentOrderQuery) QueryFulfillments() *LockOrderFulfillmentQuery {
-	query := (&LockOrderFulfillmentClient{config: lpoq.config}).Query()
+func (_q *LockPaymentOrderQuery) QueryFulfillments() *LockOrderFulfillmentQuery {
+	query := (&LockOrderFulfillmentClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := lpoq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := lpoq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -153,20 +153,20 @@ func (lpoq *LockPaymentOrderQuery) QueryFulfillments() *LockOrderFulfillmentQuer
 			sqlgraph.To(lockorderfulfillment.Table, lockorderfulfillment.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, lockpaymentorder.FulfillmentsTable, lockpaymentorder.FulfillmentsColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(lpoq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryTransactions chains the current query on the "transactions" edge.
-func (lpoq *LockPaymentOrderQuery) QueryTransactions() *TransactionLogQuery {
-	query := (&TransactionLogClient{config: lpoq.config}).Query()
+func (_q *LockPaymentOrderQuery) QueryTransactions() *TransactionLogQuery {
+	query := (&TransactionLogClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := lpoq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := lpoq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -175,7 +175,7 @@ func (lpoq *LockPaymentOrderQuery) QueryTransactions() *TransactionLogQuery {
 			sqlgraph.To(transactionlog.Table, transactionlog.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, lockpaymentorder.TransactionsTable, lockpaymentorder.TransactionsColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(lpoq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
@@ -183,8 +183,8 @@ func (lpoq *LockPaymentOrderQuery) QueryTransactions() *TransactionLogQuery {
 
 // First returns the first LockPaymentOrder entity from the query.
 // Returns a *NotFoundError when no LockPaymentOrder was found.
-func (lpoq *LockPaymentOrderQuery) First(ctx context.Context) (*LockPaymentOrder, error) {
-	nodes, err := lpoq.Limit(1).All(setContextOp(ctx, lpoq.ctx, ent.OpQueryFirst))
+func (_q *LockPaymentOrderQuery) First(ctx context.Context) (*LockPaymentOrder, error) {
+	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
@@ -195,8 +195,8 @@ func (lpoq *LockPaymentOrderQuery) First(ctx context.Context) (*LockPaymentOrder
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (lpoq *LockPaymentOrderQuery) FirstX(ctx context.Context) *LockPaymentOrder {
-	node, err := lpoq.First(ctx)
+func (_q *LockPaymentOrderQuery) FirstX(ctx context.Context) *LockPaymentOrder {
+	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -205,9 +205,9 @@ func (lpoq *LockPaymentOrderQuery) FirstX(ctx context.Context) *LockPaymentOrder
 
 // FirstID returns the first LockPaymentOrder ID from the query.
 // Returns a *NotFoundError when no LockPaymentOrder ID was found.
-func (lpoq *LockPaymentOrderQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *LockPaymentOrderQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = lpoq.Limit(1).IDs(setContextOp(ctx, lpoq.ctx, ent.OpQueryFirstID)); err != nil {
+	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -218,8 +218,8 @@ func (lpoq *LockPaymentOrderQuery) FirstID(ctx context.Context) (id uuid.UUID, e
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (lpoq *LockPaymentOrderQuery) FirstIDX(ctx context.Context) uuid.UUID {
-	id, err := lpoq.FirstID(ctx)
+func (_q *LockPaymentOrderQuery) FirstIDX(ctx context.Context) uuid.UUID {
+	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -229,8 +229,8 @@ func (lpoq *LockPaymentOrderQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Only returns a single LockPaymentOrder entity found by the query, ensuring it only returns one.
 // Returns a *NotSingularError when more than one LockPaymentOrder entity is found.
 // Returns a *NotFoundError when no LockPaymentOrder entities are found.
-func (lpoq *LockPaymentOrderQuery) Only(ctx context.Context) (*LockPaymentOrder, error) {
-	nodes, err := lpoq.Limit(2).All(setContextOp(ctx, lpoq.ctx, ent.OpQueryOnly))
+func (_q *LockPaymentOrderQuery) Only(ctx context.Context) (*LockPaymentOrder, error) {
+	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -245,8 +245,8 @@ func (lpoq *LockPaymentOrderQuery) Only(ctx context.Context) (*LockPaymentOrder,
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (lpoq *LockPaymentOrderQuery) OnlyX(ctx context.Context) *LockPaymentOrder {
-	node, err := lpoq.Only(ctx)
+func (_q *LockPaymentOrderQuery) OnlyX(ctx context.Context) *LockPaymentOrder {
+	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -256,9 +256,9 @@ func (lpoq *LockPaymentOrderQuery) OnlyX(ctx context.Context) *LockPaymentOrder 
 // OnlyID is like Only, but returns the only LockPaymentOrder ID in the query.
 // Returns a *NotSingularError when more than one LockPaymentOrder ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (lpoq *LockPaymentOrderQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *LockPaymentOrderQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = lpoq.Limit(2).IDs(setContextOp(ctx, lpoq.ctx, ent.OpQueryOnlyID)); err != nil {
+	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -273,8 +273,8 @@ func (lpoq *LockPaymentOrderQuery) OnlyID(ctx context.Context) (id uuid.UUID, er
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (lpoq *LockPaymentOrderQuery) OnlyIDX(ctx context.Context) uuid.UUID {
-	id, err := lpoq.OnlyID(ctx)
+func (_q *LockPaymentOrderQuery) OnlyIDX(ctx context.Context) uuid.UUID {
+	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -282,18 +282,18 @@ func (lpoq *LockPaymentOrderQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 }
 
 // All executes the query and returns a list of LockPaymentOrders.
-func (lpoq *LockPaymentOrderQuery) All(ctx context.Context) ([]*LockPaymentOrder, error) {
-	ctx = setContextOp(ctx, lpoq.ctx, ent.OpQueryAll)
-	if err := lpoq.prepareQuery(ctx); err != nil {
+func (_q *LockPaymentOrderQuery) All(ctx context.Context) ([]*LockPaymentOrder, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
 	qr := querierAll[[]*LockPaymentOrder, *LockPaymentOrderQuery]()
-	return withInterceptors[[]*LockPaymentOrder](ctx, lpoq, qr, lpoq.inters)
+	return withInterceptors[[]*LockPaymentOrder](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (lpoq *LockPaymentOrderQuery) AllX(ctx context.Context) []*LockPaymentOrder {
-	nodes, err := lpoq.All(ctx)
+func (_q *LockPaymentOrderQuery) AllX(ctx context.Context) []*LockPaymentOrder {
+	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -301,20 +301,20 @@ func (lpoq *LockPaymentOrderQuery) AllX(ctx context.Context) []*LockPaymentOrder
 }
 
 // IDs executes the query and returns a list of LockPaymentOrder IDs.
-func (lpoq *LockPaymentOrderQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
-	if lpoq.ctx.Unique == nil && lpoq.path != nil {
-		lpoq.Unique(true)
+func (_q *LockPaymentOrderQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if _q.ctx.Unique == nil && _q.path != nil {
+		_q.Unique(true)
 	}
-	ctx = setContextOp(ctx, lpoq.ctx, ent.OpQueryIDs)
-	if err = lpoq.Select(lockpaymentorder.FieldID).Scan(ctx, &ids); err != nil {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
+	if err = _q.Select(lockpaymentorder.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (lpoq *LockPaymentOrderQuery) IDsX(ctx context.Context) []uuid.UUID {
-	ids, err := lpoq.IDs(ctx)
+func (_q *LockPaymentOrderQuery) IDsX(ctx context.Context) []uuid.UUID {
+	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -322,17 +322,17 @@ func (lpoq *LockPaymentOrderQuery) IDsX(ctx context.Context) []uuid.UUID {
 }
 
 // Count returns the count of the given query.
-func (lpoq *LockPaymentOrderQuery) Count(ctx context.Context) (int, error) {
-	ctx = setContextOp(ctx, lpoq.ctx, ent.OpQueryCount)
-	if err := lpoq.prepareQuery(ctx); err != nil {
+func (_q *LockPaymentOrderQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, lpoq, querierCount[*LockPaymentOrderQuery](), lpoq.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*LockPaymentOrderQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (lpoq *LockPaymentOrderQuery) CountX(ctx context.Context) int {
-	count, err := lpoq.Count(ctx)
+func (_q *LockPaymentOrderQuery) CountX(ctx context.Context) int {
+	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -340,9 +340,9 @@ func (lpoq *LockPaymentOrderQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (lpoq *LockPaymentOrderQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = setContextOp(ctx, lpoq.ctx, ent.OpQueryExist)
-	switch _, err := lpoq.FirstID(ctx); {
+func (_q *LockPaymentOrderQuery) Exist(ctx context.Context) (bool, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
+	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
 	case err != nil:
@@ -353,8 +353,8 @@ func (lpoq *LockPaymentOrderQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (lpoq *LockPaymentOrderQuery) ExistX(ctx context.Context) bool {
-	exist, err := lpoq.Exist(ctx)
+func (_q *LockPaymentOrderQuery) ExistX(ctx context.Context) bool {
+	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -363,80 +363,80 @@ func (lpoq *LockPaymentOrderQuery) ExistX(ctx context.Context) bool {
 
 // Clone returns a duplicate of the LockPaymentOrderQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (lpoq *LockPaymentOrderQuery) Clone() *LockPaymentOrderQuery {
-	if lpoq == nil {
+func (_q *LockPaymentOrderQuery) Clone() *LockPaymentOrderQuery {
+	if _q == nil {
 		return nil
 	}
 	return &LockPaymentOrderQuery{
-		config:              lpoq.config,
-		ctx:                 lpoq.ctx.Clone(),
-		order:               append([]lockpaymentorder.OrderOption{}, lpoq.order...),
-		inters:              append([]Interceptor{}, lpoq.inters...),
-		predicates:          append([]predicate.LockPaymentOrder{}, lpoq.predicates...),
-		withToken:           lpoq.withToken.Clone(),
-		withProvisionBucket: lpoq.withProvisionBucket.Clone(),
-		withProvider:        lpoq.withProvider.Clone(),
-		withFulfillments:    lpoq.withFulfillments.Clone(),
-		withTransactions:    lpoq.withTransactions.Clone(),
+		config:              _q.config,
+		ctx:                 _q.ctx.Clone(),
+		order:               append([]lockpaymentorder.OrderOption{}, _q.order...),
+		inters:              append([]Interceptor{}, _q.inters...),
+		predicates:          append([]predicate.LockPaymentOrder{}, _q.predicates...),
+		withToken:           _q.withToken.Clone(),
+		withProvisionBucket: _q.withProvisionBucket.Clone(),
+		withProvider:        _q.withProvider.Clone(),
+		withFulfillments:    _q.withFulfillments.Clone(),
+		withTransactions:    _q.withTransactions.Clone(),
 		// clone intermediate query.
-		sql:  lpoq.sql.Clone(),
-		path: lpoq.path,
+		sql:  _q.sql.Clone(),
+		path: _q.path,
 	}
 }
 
 // WithToken tells the query-builder to eager-load the nodes that are connected to
 // the "token" edge. The optional arguments are used to configure the query builder of the edge.
-func (lpoq *LockPaymentOrderQuery) WithToken(opts ...func(*TokenQuery)) *LockPaymentOrderQuery {
-	query := (&TokenClient{config: lpoq.config}).Query()
+func (_q *LockPaymentOrderQuery) WithToken(opts ...func(*TokenQuery)) *LockPaymentOrderQuery {
+	query := (&TokenClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	lpoq.withToken = query
-	return lpoq
+	_q.withToken = query
+	return _q
 }
 
 // WithProvisionBucket tells the query-builder to eager-load the nodes that are connected to
 // the "provision_bucket" edge. The optional arguments are used to configure the query builder of the edge.
-func (lpoq *LockPaymentOrderQuery) WithProvisionBucket(opts ...func(*ProvisionBucketQuery)) *LockPaymentOrderQuery {
-	query := (&ProvisionBucketClient{config: lpoq.config}).Query()
+func (_q *LockPaymentOrderQuery) WithProvisionBucket(opts ...func(*ProvisionBucketQuery)) *LockPaymentOrderQuery {
+	query := (&ProvisionBucketClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	lpoq.withProvisionBucket = query
-	return lpoq
+	_q.withProvisionBucket = query
+	return _q
 }
 
 // WithProvider tells the query-builder to eager-load the nodes that are connected to
 // the "provider" edge. The optional arguments are used to configure the query builder of the edge.
-func (lpoq *LockPaymentOrderQuery) WithProvider(opts ...func(*ProviderProfileQuery)) *LockPaymentOrderQuery {
-	query := (&ProviderProfileClient{config: lpoq.config}).Query()
+func (_q *LockPaymentOrderQuery) WithProvider(opts ...func(*ProviderProfileQuery)) *LockPaymentOrderQuery {
+	query := (&ProviderProfileClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	lpoq.withProvider = query
-	return lpoq
+	_q.withProvider = query
+	return _q
 }
 
 // WithFulfillments tells the query-builder to eager-load the nodes that are connected to
 // the "fulfillments" edge. The optional arguments are used to configure the query builder of the edge.
-func (lpoq *LockPaymentOrderQuery) WithFulfillments(opts ...func(*LockOrderFulfillmentQuery)) *LockPaymentOrderQuery {
-	query := (&LockOrderFulfillmentClient{config: lpoq.config}).Query()
+func (_q *LockPaymentOrderQuery) WithFulfillments(opts ...func(*LockOrderFulfillmentQuery)) *LockPaymentOrderQuery {
+	query := (&LockOrderFulfillmentClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	lpoq.withFulfillments = query
-	return lpoq
+	_q.withFulfillments = query
+	return _q
 }
 
 // WithTransactions tells the query-builder to eager-load the nodes that are connected to
 // the "transactions" edge. The optional arguments are used to configure the query builder of the edge.
-func (lpoq *LockPaymentOrderQuery) WithTransactions(opts ...func(*TransactionLogQuery)) *LockPaymentOrderQuery {
-	query := (&TransactionLogClient{config: lpoq.config}).Query()
+func (_q *LockPaymentOrderQuery) WithTransactions(opts ...func(*TransactionLogQuery)) *LockPaymentOrderQuery {
+	query := (&TransactionLogClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	lpoq.withTransactions = query
-	return lpoq
+	_q.withTransactions = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -453,10 +453,10 @@ func (lpoq *LockPaymentOrderQuery) WithTransactions(opts ...func(*TransactionLog
 //		GroupBy(lockpaymentorder.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (lpoq *LockPaymentOrderQuery) GroupBy(field string, fields ...string) *LockPaymentOrderGroupBy {
-	lpoq.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &LockPaymentOrderGroupBy{build: lpoq}
-	grbuild.flds = &lpoq.ctx.Fields
+func (_q *LockPaymentOrderQuery) GroupBy(field string, fields ...string) *LockPaymentOrderGroupBy {
+	_q.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &LockPaymentOrderGroupBy{build: _q}
+	grbuild.flds = &_q.ctx.Fields
 	grbuild.label = lockpaymentorder.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -474,59 +474,59 @@ func (lpoq *LockPaymentOrderQuery) GroupBy(field string, fields ...string) *Lock
 //	client.LockPaymentOrder.Query().
 //		Select(lockpaymentorder.FieldCreatedAt).
 //		Scan(ctx, &v)
-func (lpoq *LockPaymentOrderQuery) Select(fields ...string) *LockPaymentOrderSelect {
-	lpoq.ctx.Fields = append(lpoq.ctx.Fields, fields...)
-	sbuild := &LockPaymentOrderSelect{LockPaymentOrderQuery: lpoq}
+func (_q *LockPaymentOrderQuery) Select(fields ...string) *LockPaymentOrderSelect {
+	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
+	sbuild := &LockPaymentOrderSelect{LockPaymentOrderQuery: _q}
 	sbuild.label = lockpaymentorder.Label
-	sbuild.flds, sbuild.scan = &lpoq.ctx.Fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
 // Aggregate returns a LockPaymentOrderSelect configured with the given aggregations.
-func (lpoq *LockPaymentOrderQuery) Aggregate(fns ...AggregateFunc) *LockPaymentOrderSelect {
-	return lpoq.Select().Aggregate(fns...)
+func (_q *LockPaymentOrderQuery) Aggregate(fns ...AggregateFunc) *LockPaymentOrderSelect {
+	return _q.Select().Aggregate(fns...)
 }
 
-func (lpoq *LockPaymentOrderQuery) prepareQuery(ctx context.Context) error {
-	for _, inter := range lpoq.inters {
+func (_q *LockPaymentOrderQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
 		}
 		if trv, ok := inter.(Traverser); ok {
-			if err := trv.Traverse(ctx, lpoq); err != nil {
+			if err := trv.Traverse(ctx, _q); err != nil {
 				return err
 			}
 		}
 	}
-	for _, f := range lpoq.ctx.Fields {
+	for _, f := range _q.ctx.Fields {
 		if !lockpaymentorder.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
-	if lpoq.path != nil {
-		prev, err := lpoq.path(ctx)
+	if _q.path != nil {
+		prev, err := _q.path(ctx)
 		if err != nil {
 			return err
 		}
-		lpoq.sql = prev
+		_q.sql = prev
 	}
 	return nil
 }
 
-func (lpoq *LockPaymentOrderQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*LockPaymentOrder, error) {
+func (_q *LockPaymentOrderQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*LockPaymentOrder, error) {
 	var (
 		nodes       = []*LockPaymentOrder{}
-		withFKs     = lpoq.withFKs
-		_spec       = lpoq.querySpec()
+		withFKs     = _q.withFKs
+		_spec       = _q.querySpec()
 		loadedTypes = [5]bool{
-			lpoq.withToken != nil,
-			lpoq.withProvisionBucket != nil,
-			lpoq.withProvider != nil,
-			lpoq.withFulfillments != nil,
-			lpoq.withTransactions != nil,
+			_q.withToken != nil,
+			_q.withProvisionBucket != nil,
+			_q.withProvider != nil,
+			_q.withFulfillments != nil,
+			_q.withTransactions != nil,
 		}
 	)
-	if lpoq.withToken != nil || lpoq.withProvisionBucket != nil || lpoq.withProvider != nil {
+	if _q.withToken != nil || _q.withProvisionBucket != nil || _q.withProvider != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -536,7 +536,7 @@ func (lpoq *LockPaymentOrderQuery) sqlAll(ctx context.Context, hooks ...queryHoo
 		return (*LockPaymentOrder).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &LockPaymentOrder{config: lpoq.config}
+		node := &LockPaymentOrder{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -544,32 +544,32 @@ func (lpoq *LockPaymentOrderQuery) sqlAll(ctx context.Context, hooks ...queryHoo
 	for i := range hooks {
 		hooks[i](ctx, _spec)
 	}
-	if err := sqlgraph.QueryNodes(ctx, lpoq.driver, _spec); err != nil {
+	if err := sqlgraph.QueryNodes(ctx, _q.driver, _spec); err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := lpoq.withToken; query != nil {
-		if err := lpoq.loadToken(ctx, query, nodes, nil,
+	if query := _q.withToken; query != nil {
+		if err := _q.loadToken(ctx, query, nodes, nil,
 			func(n *LockPaymentOrder, e *Token) { n.Edges.Token = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := lpoq.withProvisionBucket; query != nil {
-		if err := lpoq.loadProvisionBucket(ctx, query, nodes, nil,
+	if query := _q.withProvisionBucket; query != nil {
+		if err := _q.loadProvisionBucket(ctx, query, nodes, nil,
 			func(n *LockPaymentOrder, e *ProvisionBucket) { n.Edges.ProvisionBucket = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := lpoq.withProvider; query != nil {
-		if err := lpoq.loadProvider(ctx, query, nodes, nil,
+	if query := _q.withProvider; query != nil {
+		if err := _q.loadProvider(ctx, query, nodes, nil,
 			func(n *LockPaymentOrder, e *ProviderProfile) { n.Edges.Provider = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := lpoq.withFulfillments; query != nil {
-		if err := lpoq.loadFulfillments(ctx, query, nodes,
+	if query := _q.withFulfillments; query != nil {
+		if err := _q.loadFulfillments(ctx, query, nodes,
 			func(n *LockPaymentOrder) { n.Edges.Fulfillments = []*LockOrderFulfillment{} },
 			func(n *LockPaymentOrder, e *LockOrderFulfillment) {
 				n.Edges.Fulfillments = append(n.Edges.Fulfillments, e)
@@ -577,8 +577,8 @@ func (lpoq *LockPaymentOrderQuery) sqlAll(ctx context.Context, hooks ...queryHoo
 			return nil, err
 		}
 	}
-	if query := lpoq.withTransactions; query != nil {
-		if err := lpoq.loadTransactions(ctx, query, nodes,
+	if query := _q.withTransactions; query != nil {
+		if err := _q.loadTransactions(ctx, query, nodes,
 			func(n *LockPaymentOrder) { n.Edges.Transactions = []*TransactionLog{} },
 			func(n *LockPaymentOrder, e *TransactionLog) { n.Edges.Transactions = append(n.Edges.Transactions, e) }); err != nil {
 			return nil, err
@@ -587,7 +587,7 @@ func (lpoq *LockPaymentOrderQuery) sqlAll(ctx context.Context, hooks ...queryHoo
 	return nodes, nil
 }
 
-func (lpoq *LockPaymentOrderQuery) loadToken(ctx context.Context, query *TokenQuery, nodes []*LockPaymentOrder, init func(*LockPaymentOrder), assign func(*LockPaymentOrder, *Token)) error {
+func (_q *LockPaymentOrderQuery) loadToken(ctx context.Context, query *TokenQuery, nodes []*LockPaymentOrder, init func(*LockPaymentOrder), assign func(*LockPaymentOrder, *Token)) error {
 	ids := make([]int, 0, len(nodes))
 	nodeids := make(map[int][]*LockPaymentOrder)
 	for i := range nodes {
@@ -619,7 +619,7 @@ func (lpoq *LockPaymentOrderQuery) loadToken(ctx context.Context, query *TokenQu
 	}
 	return nil
 }
-func (lpoq *LockPaymentOrderQuery) loadProvisionBucket(ctx context.Context, query *ProvisionBucketQuery, nodes []*LockPaymentOrder, init func(*LockPaymentOrder), assign func(*LockPaymentOrder, *ProvisionBucket)) error {
+func (_q *LockPaymentOrderQuery) loadProvisionBucket(ctx context.Context, query *ProvisionBucketQuery, nodes []*LockPaymentOrder, init func(*LockPaymentOrder), assign func(*LockPaymentOrder, *ProvisionBucket)) error {
 	ids := make([]int, 0, len(nodes))
 	nodeids := make(map[int][]*LockPaymentOrder)
 	for i := range nodes {
@@ -651,7 +651,7 @@ func (lpoq *LockPaymentOrderQuery) loadProvisionBucket(ctx context.Context, quer
 	}
 	return nil
 }
-func (lpoq *LockPaymentOrderQuery) loadProvider(ctx context.Context, query *ProviderProfileQuery, nodes []*LockPaymentOrder, init func(*LockPaymentOrder), assign func(*LockPaymentOrder, *ProviderProfile)) error {
+func (_q *LockPaymentOrderQuery) loadProvider(ctx context.Context, query *ProviderProfileQuery, nodes []*LockPaymentOrder, init func(*LockPaymentOrder), assign func(*LockPaymentOrder, *ProviderProfile)) error {
 	ids := make([]string, 0, len(nodes))
 	nodeids := make(map[string][]*LockPaymentOrder)
 	for i := range nodes {
@@ -683,7 +683,7 @@ func (lpoq *LockPaymentOrderQuery) loadProvider(ctx context.Context, query *Prov
 	}
 	return nil
 }
-func (lpoq *LockPaymentOrderQuery) loadFulfillments(ctx context.Context, query *LockOrderFulfillmentQuery, nodes []*LockPaymentOrder, init func(*LockPaymentOrder), assign func(*LockPaymentOrder, *LockOrderFulfillment)) error {
+func (_q *LockPaymentOrderQuery) loadFulfillments(ctx context.Context, query *LockOrderFulfillmentQuery, nodes []*LockPaymentOrder, init func(*LockPaymentOrder), assign func(*LockPaymentOrder, *LockOrderFulfillment)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*LockPaymentOrder)
 	for i := range nodes {
@@ -714,7 +714,7 @@ func (lpoq *LockPaymentOrderQuery) loadFulfillments(ctx context.Context, query *
 	}
 	return nil
 }
-func (lpoq *LockPaymentOrderQuery) loadTransactions(ctx context.Context, query *TransactionLogQuery, nodes []*LockPaymentOrder, init func(*LockPaymentOrder), assign func(*LockPaymentOrder, *TransactionLog)) error {
+func (_q *LockPaymentOrderQuery) loadTransactions(ctx context.Context, query *TransactionLogQuery, nodes []*LockPaymentOrder, init func(*LockPaymentOrder), assign func(*LockPaymentOrder, *TransactionLog)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*LockPaymentOrder)
 	for i := range nodes {
@@ -746,24 +746,24 @@ func (lpoq *LockPaymentOrderQuery) loadTransactions(ctx context.Context, query *
 	return nil
 }
 
-func (lpoq *LockPaymentOrderQuery) sqlCount(ctx context.Context) (int, error) {
-	_spec := lpoq.querySpec()
-	_spec.Node.Columns = lpoq.ctx.Fields
-	if len(lpoq.ctx.Fields) > 0 {
-		_spec.Unique = lpoq.ctx.Unique != nil && *lpoq.ctx.Unique
+func (_q *LockPaymentOrderQuery) sqlCount(ctx context.Context) (int, error) {
+	_spec := _q.querySpec()
+	_spec.Node.Columns = _q.ctx.Fields
+	if len(_q.ctx.Fields) > 0 {
+		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
 	}
-	return sqlgraph.CountNodes(ctx, lpoq.driver, _spec)
+	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (lpoq *LockPaymentOrderQuery) querySpec() *sqlgraph.QuerySpec {
+func (_q *LockPaymentOrderQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := sqlgraph.NewQuerySpec(lockpaymentorder.Table, lockpaymentorder.Columns, sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID))
-	_spec.From = lpoq.sql
-	if unique := lpoq.ctx.Unique; unique != nil {
+	_spec.From = _q.sql
+	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
-	} else if lpoq.path != nil {
+	} else if _q.path != nil {
 		_spec.Unique = true
 	}
-	if fields := lpoq.ctx.Fields; len(fields) > 0 {
+	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, lockpaymentorder.FieldID)
 		for i := range fields {
@@ -772,20 +772,20 @@ func (lpoq *LockPaymentOrderQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if ps := lpoq.predicates; len(ps) > 0 {
+	if ps := _q.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if limit := lpoq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := lpoq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
-	if ps := lpoq.order; len(ps) > 0 {
+	if ps := _q.order; len(ps) > 0 {
 		_spec.Order = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
@@ -795,33 +795,33 @@ func (lpoq *LockPaymentOrderQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (lpoq *LockPaymentOrderQuery) sqlQuery(ctx context.Context) *sql.Selector {
-	builder := sql.Dialect(lpoq.driver.Dialect())
+func (_q *LockPaymentOrderQuery) sqlQuery(ctx context.Context) *sql.Selector {
+	builder := sql.Dialect(_q.driver.Dialect())
 	t1 := builder.Table(lockpaymentorder.Table)
-	columns := lpoq.ctx.Fields
+	columns := _q.ctx.Fields
 	if len(columns) == 0 {
 		columns = lockpaymentorder.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
-	if lpoq.sql != nil {
-		selector = lpoq.sql
+	if _q.sql != nil {
+		selector = _q.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if lpoq.ctx.Unique != nil && *lpoq.ctx.Unique {
+	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
-	for _, p := range lpoq.predicates {
+	for _, p := range _q.predicates {
 		p(selector)
 	}
-	for _, p := range lpoq.order {
+	for _, p := range _q.order {
 		p(selector)
 	}
-	if offset := lpoq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := lpoq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -834,41 +834,41 @@ type LockPaymentOrderGroupBy struct {
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (lpogb *LockPaymentOrderGroupBy) Aggregate(fns ...AggregateFunc) *LockPaymentOrderGroupBy {
-	lpogb.fns = append(lpogb.fns, fns...)
-	return lpogb
+func (_g *LockPaymentOrderGroupBy) Aggregate(fns ...AggregateFunc) *LockPaymentOrderGroupBy {
+	_g.fns = append(_g.fns, fns...)
+	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (lpogb *LockPaymentOrderGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, lpogb.build.ctx, ent.OpQueryGroupBy)
-	if err := lpogb.build.prepareQuery(ctx); err != nil {
+func (_g *LockPaymentOrderGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
+	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*LockPaymentOrderQuery, *LockPaymentOrderGroupBy](ctx, lpogb.build, lpogb, lpogb.build.inters, v)
+	return scanWithInterceptors[*LockPaymentOrderQuery, *LockPaymentOrderGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (lpogb *LockPaymentOrderGroupBy) sqlScan(ctx context.Context, root *LockPaymentOrderQuery, v any) error {
+func (_g *LockPaymentOrderGroupBy) sqlScan(ctx context.Context, root *LockPaymentOrderQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
-	aggregation := make([]string, 0, len(lpogb.fns))
-	for _, fn := range lpogb.fns {
+	aggregation := make([]string, 0, len(_g.fns))
+	for _, fn := range _g.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
 	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(*lpogb.flds)+len(lpogb.fns))
-		for _, f := range *lpogb.flds {
+		columns := make([]string, 0, len(*_g.flds)+len(_g.fns))
+		for _, f := range *_g.flds {
 			columns = append(columns, selector.C(f))
 		}
 		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
-	selector.GroupBy(selector.Columns(*lpogb.flds...)...)
+	selector.GroupBy(selector.Columns(*_g.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := lpogb.build.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _g.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
@@ -882,27 +882,27 @@ type LockPaymentOrderSelect struct {
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (lpos *LockPaymentOrderSelect) Aggregate(fns ...AggregateFunc) *LockPaymentOrderSelect {
-	lpos.fns = append(lpos.fns, fns...)
-	return lpos
+func (_s *LockPaymentOrderSelect) Aggregate(fns ...AggregateFunc) *LockPaymentOrderSelect {
+	_s.fns = append(_s.fns, fns...)
+	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (lpos *LockPaymentOrderSelect) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, lpos.ctx, ent.OpQuerySelect)
-	if err := lpos.prepareQuery(ctx); err != nil {
+func (_s *LockPaymentOrderSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
+	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*LockPaymentOrderQuery, *LockPaymentOrderSelect](ctx, lpos.LockPaymentOrderQuery, lpos, lpos.inters, v)
+	return scanWithInterceptors[*LockPaymentOrderQuery, *LockPaymentOrderSelect](ctx, _s.LockPaymentOrderQuery, _s, _s.inters, v)
 }
 
-func (lpos *LockPaymentOrderSelect) sqlScan(ctx context.Context, root *LockPaymentOrderQuery, v any) error {
+func (_s *LockPaymentOrderSelect) sqlScan(ctx context.Context, root *LockPaymentOrderQuery, v any) error {
 	selector := root.sqlQuery(ctx)
-	aggregation := make([]string, 0, len(lpos.fns))
-	for _, fn := range lpos.fns {
+	aggregation := make([]string, 0, len(_s.fns))
+	for _, fn := range _s.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
-	switch n := len(*lpos.selector.flds); {
+	switch n := len(*_s.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
 		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
@@ -910,7 +910,7 @@ func (lpos *LockPaymentOrderSelect) sqlScan(ctx context.Context, root *LockPayme
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := lpos.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _s.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
