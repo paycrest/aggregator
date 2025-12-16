@@ -32,44 +32,44 @@ type InstitutionQuery struct {
 }
 
 // Where adds a new predicate for the InstitutionQuery builder.
-func (iq *InstitutionQuery) Where(ps ...predicate.Institution) *InstitutionQuery {
-	iq.predicates = append(iq.predicates, ps...)
-	return iq
+func (_q *InstitutionQuery) Where(ps ...predicate.Institution) *InstitutionQuery {
+	_q.predicates = append(_q.predicates, ps...)
+	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (iq *InstitutionQuery) Limit(limit int) *InstitutionQuery {
-	iq.ctx.Limit = &limit
-	return iq
+func (_q *InstitutionQuery) Limit(limit int) *InstitutionQuery {
+	_q.ctx.Limit = &limit
+	return _q
 }
 
 // Offset to start from.
-func (iq *InstitutionQuery) Offset(offset int) *InstitutionQuery {
-	iq.ctx.Offset = &offset
-	return iq
+func (_q *InstitutionQuery) Offset(offset int) *InstitutionQuery {
+	_q.ctx.Offset = &offset
+	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (iq *InstitutionQuery) Unique(unique bool) *InstitutionQuery {
-	iq.ctx.Unique = &unique
-	return iq
+func (_q *InstitutionQuery) Unique(unique bool) *InstitutionQuery {
+	_q.ctx.Unique = &unique
+	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (iq *InstitutionQuery) Order(o ...institution.OrderOption) *InstitutionQuery {
-	iq.order = append(iq.order, o...)
-	return iq
+func (_q *InstitutionQuery) Order(o ...institution.OrderOption) *InstitutionQuery {
+	_q.order = append(_q.order, o...)
+	return _q
 }
 
 // QueryFiatCurrency chains the current query on the "fiat_currency" edge.
-func (iq *InstitutionQuery) QueryFiatCurrency() *FiatCurrencyQuery {
-	query := (&FiatCurrencyClient{config: iq.config}).Query()
+func (_q *InstitutionQuery) QueryFiatCurrency() *FiatCurrencyQuery {
+	query := (&FiatCurrencyClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := iq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := iq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -78,7 +78,7 @@ func (iq *InstitutionQuery) QueryFiatCurrency() *FiatCurrencyQuery {
 			sqlgraph.To(fiatcurrency.Table, fiatcurrency.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, institution.FiatCurrencyTable, institution.FiatCurrencyColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(iq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
@@ -86,8 +86,8 @@ func (iq *InstitutionQuery) QueryFiatCurrency() *FiatCurrencyQuery {
 
 // First returns the first Institution entity from the query.
 // Returns a *NotFoundError when no Institution was found.
-func (iq *InstitutionQuery) First(ctx context.Context) (*Institution, error) {
-	nodes, err := iq.Limit(1).All(setContextOp(ctx, iq.ctx, ent.OpQueryFirst))
+func (_q *InstitutionQuery) First(ctx context.Context) (*Institution, error) {
+	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
@@ -98,8 +98,8 @@ func (iq *InstitutionQuery) First(ctx context.Context) (*Institution, error) {
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (iq *InstitutionQuery) FirstX(ctx context.Context) *Institution {
-	node, err := iq.First(ctx)
+func (_q *InstitutionQuery) FirstX(ctx context.Context) *Institution {
+	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -108,9 +108,9 @@ func (iq *InstitutionQuery) FirstX(ctx context.Context) *Institution {
 
 // FirstID returns the first Institution ID from the query.
 // Returns a *NotFoundError when no Institution ID was found.
-func (iq *InstitutionQuery) FirstID(ctx context.Context) (id int, err error) {
+func (_q *InstitutionQuery) FirstID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = iq.Limit(1).IDs(setContextOp(ctx, iq.ctx, ent.OpQueryFirstID)); err != nil {
+	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -121,8 +121,8 @@ func (iq *InstitutionQuery) FirstID(ctx context.Context) (id int, err error) {
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (iq *InstitutionQuery) FirstIDX(ctx context.Context) int {
-	id, err := iq.FirstID(ctx)
+func (_q *InstitutionQuery) FirstIDX(ctx context.Context) int {
+	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -132,8 +132,8 @@ func (iq *InstitutionQuery) FirstIDX(ctx context.Context) int {
 // Only returns a single Institution entity found by the query, ensuring it only returns one.
 // Returns a *NotSingularError when more than one Institution entity is found.
 // Returns a *NotFoundError when no Institution entities are found.
-func (iq *InstitutionQuery) Only(ctx context.Context) (*Institution, error) {
-	nodes, err := iq.Limit(2).All(setContextOp(ctx, iq.ctx, ent.OpQueryOnly))
+func (_q *InstitutionQuery) Only(ctx context.Context) (*Institution, error) {
+	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -148,8 +148,8 @@ func (iq *InstitutionQuery) Only(ctx context.Context) (*Institution, error) {
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (iq *InstitutionQuery) OnlyX(ctx context.Context) *Institution {
-	node, err := iq.Only(ctx)
+func (_q *InstitutionQuery) OnlyX(ctx context.Context) *Institution {
+	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -159,9 +159,9 @@ func (iq *InstitutionQuery) OnlyX(ctx context.Context) *Institution {
 // OnlyID is like Only, but returns the only Institution ID in the query.
 // Returns a *NotSingularError when more than one Institution ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (iq *InstitutionQuery) OnlyID(ctx context.Context) (id int, err error) {
+func (_q *InstitutionQuery) OnlyID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = iq.Limit(2).IDs(setContextOp(ctx, iq.ctx, ent.OpQueryOnlyID)); err != nil {
+	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -176,8 +176,8 @@ func (iq *InstitutionQuery) OnlyID(ctx context.Context) (id int, err error) {
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (iq *InstitutionQuery) OnlyIDX(ctx context.Context) int {
-	id, err := iq.OnlyID(ctx)
+func (_q *InstitutionQuery) OnlyIDX(ctx context.Context) int {
+	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -185,18 +185,18 @@ func (iq *InstitutionQuery) OnlyIDX(ctx context.Context) int {
 }
 
 // All executes the query and returns a list of Institutions.
-func (iq *InstitutionQuery) All(ctx context.Context) ([]*Institution, error) {
-	ctx = setContextOp(ctx, iq.ctx, ent.OpQueryAll)
-	if err := iq.prepareQuery(ctx); err != nil {
+func (_q *InstitutionQuery) All(ctx context.Context) ([]*Institution, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
 	qr := querierAll[[]*Institution, *InstitutionQuery]()
-	return withInterceptors[[]*Institution](ctx, iq, qr, iq.inters)
+	return withInterceptors[[]*Institution](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (iq *InstitutionQuery) AllX(ctx context.Context) []*Institution {
-	nodes, err := iq.All(ctx)
+func (_q *InstitutionQuery) AllX(ctx context.Context) []*Institution {
+	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -204,20 +204,20 @@ func (iq *InstitutionQuery) AllX(ctx context.Context) []*Institution {
 }
 
 // IDs executes the query and returns a list of Institution IDs.
-func (iq *InstitutionQuery) IDs(ctx context.Context) (ids []int, err error) {
-	if iq.ctx.Unique == nil && iq.path != nil {
-		iq.Unique(true)
+func (_q *InstitutionQuery) IDs(ctx context.Context) (ids []int, err error) {
+	if _q.ctx.Unique == nil && _q.path != nil {
+		_q.Unique(true)
 	}
-	ctx = setContextOp(ctx, iq.ctx, ent.OpQueryIDs)
-	if err = iq.Select(institution.FieldID).Scan(ctx, &ids); err != nil {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
+	if err = _q.Select(institution.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (iq *InstitutionQuery) IDsX(ctx context.Context) []int {
-	ids, err := iq.IDs(ctx)
+func (_q *InstitutionQuery) IDsX(ctx context.Context) []int {
+	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -225,17 +225,17 @@ func (iq *InstitutionQuery) IDsX(ctx context.Context) []int {
 }
 
 // Count returns the count of the given query.
-func (iq *InstitutionQuery) Count(ctx context.Context) (int, error) {
-	ctx = setContextOp(ctx, iq.ctx, ent.OpQueryCount)
-	if err := iq.prepareQuery(ctx); err != nil {
+func (_q *InstitutionQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, iq, querierCount[*InstitutionQuery](), iq.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*InstitutionQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (iq *InstitutionQuery) CountX(ctx context.Context) int {
-	count, err := iq.Count(ctx)
+func (_q *InstitutionQuery) CountX(ctx context.Context) int {
+	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -243,9 +243,9 @@ func (iq *InstitutionQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (iq *InstitutionQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = setContextOp(ctx, iq.ctx, ent.OpQueryExist)
-	switch _, err := iq.FirstID(ctx); {
+func (_q *InstitutionQuery) Exist(ctx context.Context) (bool, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
+	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
 	case err != nil:
@@ -256,8 +256,8 @@ func (iq *InstitutionQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (iq *InstitutionQuery) ExistX(ctx context.Context) bool {
-	exist, err := iq.Exist(ctx)
+func (_q *InstitutionQuery) ExistX(ctx context.Context) bool {
+	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -266,32 +266,32 @@ func (iq *InstitutionQuery) ExistX(ctx context.Context) bool {
 
 // Clone returns a duplicate of the InstitutionQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (iq *InstitutionQuery) Clone() *InstitutionQuery {
-	if iq == nil {
+func (_q *InstitutionQuery) Clone() *InstitutionQuery {
+	if _q == nil {
 		return nil
 	}
 	return &InstitutionQuery{
-		config:           iq.config,
-		ctx:              iq.ctx.Clone(),
-		order:            append([]institution.OrderOption{}, iq.order...),
-		inters:           append([]Interceptor{}, iq.inters...),
-		predicates:       append([]predicate.Institution{}, iq.predicates...),
-		withFiatCurrency: iq.withFiatCurrency.Clone(),
+		config:           _q.config,
+		ctx:              _q.ctx.Clone(),
+		order:            append([]institution.OrderOption{}, _q.order...),
+		inters:           append([]Interceptor{}, _q.inters...),
+		predicates:       append([]predicate.Institution{}, _q.predicates...),
+		withFiatCurrency: _q.withFiatCurrency.Clone(),
 		// clone intermediate query.
-		sql:  iq.sql.Clone(),
-		path: iq.path,
+		sql:  _q.sql.Clone(),
+		path: _q.path,
 	}
 }
 
 // WithFiatCurrency tells the query-builder to eager-load the nodes that are connected to
 // the "fiat_currency" edge. The optional arguments are used to configure the query builder of the edge.
-func (iq *InstitutionQuery) WithFiatCurrency(opts ...func(*FiatCurrencyQuery)) *InstitutionQuery {
-	query := (&FiatCurrencyClient{config: iq.config}).Query()
+func (_q *InstitutionQuery) WithFiatCurrency(opts ...func(*FiatCurrencyQuery)) *InstitutionQuery {
+	query := (&FiatCurrencyClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	iq.withFiatCurrency = query
-	return iq
+	_q.withFiatCurrency = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -308,10 +308,10 @@ func (iq *InstitutionQuery) WithFiatCurrency(opts ...func(*FiatCurrencyQuery)) *
 //		GroupBy(institution.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (iq *InstitutionQuery) GroupBy(field string, fields ...string) *InstitutionGroupBy {
-	iq.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &InstitutionGroupBy{build: iq}
-	grbuild.flds = &iq.ctx.Fields
+func (_q *InstitutionQuery) GroupBy(field string, fields ...string) *InstitutionGroupBy {
+	_q.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &InstitutionGroupBy{build: _q}
+	grbuild.flds = &_q.ctx.Fields
 	grbuild.label = institution.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -329,55 +329,55 @@ func (iq *InstitutionQuery) GroupBy(field string, fields ...string) *Institution
 //	client.Institution.Query().
 //		Select(institution.FieldCreatedAt).
 //		Scan(ctx, &v)
-func (iq *InstitutionQuery) Select(fields ...string) *InstitutionSelect {
-	iq.ctx.Fields = append(iq.ctx.Fields, fields...)
-	sbuild := &InstitutionSelect{InstitutionQuery: iq}
+func (_q *InstitutionQuery) Select(fields ...string) *InstitutionSelect {
+	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
+	sbuild := &InstitutionSelect{InstitutionQuery: _q}
 	sbuild.label = institution.Label
-	sbuild.flds, sbuild.scan = &iq.ctx.Fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
 // Aggregate returns a InstitutionSelect configured with the given aggregations.
-func (iq *InstitutionQuery) Aggregate(fns ...AggregateFunc) *InstitutionSelect {
-	return iq.Select().Aggregate(fns...)
+func (_q *InstitutionQuery) Aggregate(fns ...AggregateFunc) *InstitutionSelect {
+	return _q.Select().Aggregate(fns...)
 }
 
-func (iq *InstitutionQuery) prepareQuery(ctx context.Context) error {
-	for _, inter := range iq.inters {
+func (_q *InstitutionQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
 		}
 		if trv, ok := inter.(Traverser); ok {
-			if err := trv.Traverse(ctx, iq); err != nil {
+			if err := trv.Traverse(ctx, _q); err != nil {
 				return err
 			}
 		}
 	}
-	for _, f := range iq.ctx.Fields {
+	for _, f := range _q.ctx.Fields {
 		if !institution.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
-	if iq.path != nil {
-		prev, err := iq.path(ctx)
+	if _q.path != nil {
+		prev, err := _q.path(ctx)
 		if err != nil {
 			return err
 		}
-		iq.sql = prev
+		_q.sql = prev
 	}
 	return nil
 }
 
-func (iq *InstitutionQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Institution, error) {
+func (_q *InstitutionQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Institution, error) {
 	var (
 		nodes       = []*Institution{}
-		withFKs     = iq.withFKs
-		_spec       = iq.querySpec()
+		withFKs     = _q.withFKs
+		_spec       = _q.querySpec()
 		loadedTypes = [1]bool{
-			iq.withFiatCurrency != nil,
+			_q.withFiatCurrency != nil,
 		}
 	)
-	if iq.withFiatCurrency != nil {
+	if _q.withFiatCurrency != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -387,7 +387,7 @@ func (iq *InstitutionQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 		return (*Institution).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &Institution{config: iq.config}
+		node := &Institution{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -395,14 +395,14 @@ func (iq *InstitutionQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	for i := range hooks {
 		hooks[i](ctx, _spec)
 	}
-	if err := sqlgraph.QueryNodes(ctx, iq.driver, _spec); err != nil {
+	if err := sqlgraph.QueryNodes(ctx, _q.driver, _spec); err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := iq.withFiatCurrency; query != nil {
-		if err := iq.loadFiatCurrency(ctx, query, nodes, nil,
+	if query := _q.withFiatCurrency; query != nil {
+		if err := _q.loadFiatCurrency(ctx, query, nodes, nil,
 			func(n *Institution, e *FiatCurrency) { n.Edges.FiatCurrency = e }); err != nil {
 			return nil, err
 		}
@@ -410,7 +410,7 @@ func (iq *InstitutionQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	return nodes, nil
 }
 
-func (iq *InstitutionQuery) loadFiatCurrency(ctx context.Context, query *FiatCurrencyQuery, nodes []*Institution, init func(*Institution), assign func(*Institution, *FiatCurrency)) error {
+func (_q *InstitutionQuery) loadFiatCurrency(ctx context.Context, query *FiatCurrencyQuery, nodes []*Institution, init func(*Institution), assign func(*Institution, *FiatCurrency)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Institution)
 	for i := range nodes {
@@ -443,24 +443,24 @@ func (iq *InstitutionQuery) loadFiatCurrency(ctx context.Context, query *FiatCur
 	return nil
 }
 
-func (iq *InstitutionQuery) sqlCount(ctx context.Context) (int, error) {
-	_spec := iq.querySpec()
-	_spec.Node.Columns = iq.ctx.Fields
-	if len(iq.ctx.Fields) > 0 {
-		_spec.Unique = iq.ctx.Unique != nil && *iq.ctx.Unique
+func (_q *InstitutionQuery) sqlCount(ctx context.Context) (int, error) {
+	_spec := _q.querySpec()
+	_spec.Node.Columns = _q.ctx.Fields
+	if len(_q.ctx.Fields) > 0 {
+		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
 	}
-	return sqlgraph.CountNodes(ctx, iq.driver, _spec)
+	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (iq *InstitutionQuery) querySpec() *sqlgraph.QuerySpec {
+func (_q *InstitutionQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := sqlgraph.NewQuerySpec(institution.Table, institution.Columns, sqlgraph.NewFieldSpec(institution.FieldID, field.TypeInt))
-	_spec.From = iq.sql
-	if unique := iq.ctx.Unique; unique != nil {
+	_spec.From = _q.sql
+	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
-	} else if iq.path != nil {
+	} else if _q.path != nil {
 		_spec.Unique = true
 	}
-	if fields := iq.ctx.Fields; len(fields) > 0 {
+	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, institution.FieldID)
 		for i := range fields {
@@ -469,20 +469,20 @@ func (iq *InstitutionQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if ps := iq.predicates; len(ps) > 0 {
+	if ps := _q.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if limit := iq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := iq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
-	if ps := iq.order; len(ps) > 0 {
+	if ps := _q.order; len(ps) > 0 {
 		_spec.Order = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
@@ -492,33 +492,33 @@ func (iq *InstitutionQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (iq *InstitutionQuery) sqlQuery(ctx context.Context) *sql.Selector {
-	builder := sql.Dialect(iq.driver.Dialect())
+func (_q *InstitutionQuery) sqlQuery(ctx context.Context) *sql.Selector {
+	builder := sql.Dialect(_q.driver.Dialect())
 	t1 := builder.Table(institution.Table)
-	columns := iq.ctx.Fields
+	columns := _q.ctx.Fields
 	if len(columns) == 0 {
 		columns = institution.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
-	if iq.sql != nil {
-		selector = iq.sql
+	if _q.sql != nil {
+		selector = _q.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if iq.ctx.Unique != nil && *iq.ctx.Unique {
+	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
-	for _, p := range iq.predicates {
+	for _, p := range _q.predicates {
 		p(selector)
 	}
-	for _, p := range iq.order {
+	for _, p := range _q.order {
 		p(selector)
 	}
-	if offset := iq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := iq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -531,41 +531,41 @@ type InstitutionGroupBy struct {
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (igb *InstitutionGroupBy) Aggregate(fns ...AggregateFunc) *InstitutionGroupBy {
-	igb.fns = append(igb.fns, fns...)
-	return igb
+func (_g *InstitutionGroupBy) Aggregate(fns ...AggregateFunc) *InstitutionGroupBy {
+	_g.fns = append(_g.fns, fns...)
+	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (igb *InstitutionGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, igb.build.ctx, ent.OpQueryGroupBy)
-	if err := igb.build.prepareQuery(ctx); err != nil {
+func (_g *InstitutionGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
+	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*InstitutionQuery, *InstitutionGroupBy](ctx, igb.build, igb, igb.build.inters, v)
+	return scanWithInterceptors[*InstitutionQuery, *InstitutionGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (igb *InstitutionGroupBy) sqlScan(ctx context.Context, root *InstitutionQuery, v any) error {
+func (_g *InstitutionGroupBy) sqlScan(ctx context.Context, root *InstitutionQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
-	aggregation := make([]string, 0, len(igb.fns))
-	for _, fn := range igb.fns {
+	aggregation := make([]string, 0, len(_g.fns))
+	for _, fn := range _g.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
 	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(*igb.flds)+len(igb.fns))
-		for _, f := range *igb.flds {
+		columns := make([]string, 0, len(*_g.flds)+len(_g.fns))
+		for _, f := range *_g.flds {
 			columns = append(columns, selector.C(f))
 		}
 		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
-	selector.GroupBy(selector.Columns(*igb.flds...)...)
+	selector.GroupBy(selector.Columns(*_g.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := igb.build.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _g.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
@@ -579,27 +579,27 @@ type InstitutionSelect struct {
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (is *InstitutionSelect) Aggregate(fns ...AggregateFunc) *InstitutionSelect {
-	is.fns = append(is.fns, fns...)
-	return is
+func (_s *InstitutionSelect) Aggregate(fns ...AggregateFunc) *InstitutionSelect {
+	_s.fns = append(_s.fns, fns...)
+	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (is *InstitutionSelect) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, is.ctx, ent.OpQuerySelect)
-	if err := is.prepareQuery(ctx); err != nil {
+func (_s *InstitutionSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
+	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*InstitutionQuery, *InstitutionSelect](ctx, is.InstitutionQuery, is, is.inters, v)
+	return scanWithInterceptors[*InstitutionQuery, *InstitutionSelect](ctx, _s.InstitutionQuery, _s, _s.inters, v)
 }
 
-func (is *InstitutionSelect) sqlScan(ctx context.Context, root *InstitutionQuery, v any) error {
+func (_s *InstitutionSelect) sqlScan(ctx context.Context, root *InstitutionQuery, v any) error {
 	selector := root.sqlQuery(ctx)
-	aggregation := make([]string, 0, len(is.fns))
-	for _, fn := range is.fns {
+	aggregation := make([]string, 0, len(_s.fns))
+	for _, fn := range _s.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
-	switch n := len(*is.selector.flds); {
+	switch n := len(*_s.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
 		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
@@ -607,7 +607,7 @@ func (is *InstitutionSelect) sqlScan(ctx context.Context, root *InstitutionQuery
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := is.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _s.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()

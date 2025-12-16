@@ -32,44 +32,44 @@ type PaymentOrderRecipientQuery struct {
 }
 
 // Where adds a new predicate for the PaymentOrderRecipientQuery builder.
-func (porq *PaymentOrderRecipientQuery) Where(ps ...predicate.PaymentOrderRecipient) *PaymentOrderRecipientQuery {
-	porq.predicates = append(porq.predicates, ps...)
-	return porq
+func (_q *PaymentOrderRecipientQuery) Where(ps ...predicate.PaymentOrderRecipient) *PaymentOrderRecipientQuery {
+	_q.predicates = append(_q.predicates, ps...)
+	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (porq *PaymentOrderRecipientQuery) Limit(limit int) *PaymentOrderRecipientQuery {
-	porq.ctx.Limit = &limit
-	return porq
+func (_q *PaymentOrderRecipientQuery) Limit(limit int) *PaymentOrderRecipientQuery {
+	_q.ctx.Limit = &limit
+	return _q
 }
 
 // Offset to start from.
-func (porq *PaymentOrderRecipientQuery) Offset(offset int) *PaymentOrderRecipientQuery {
-	porq.ctx.Offset = &offset
-	return porq
+func (_q *PaymentOrderRecipientQuery) Offset(offset int) *PaymentOrderRecipientQuery {
+	_q.ctx.Offset = &offset
+	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (porq *PaymentOrderRecipientQuery) Unique(unique bool) *PaymentOrderRecipientQuery {
-	porq.ctx.Unique = &unique
-	return porq
+func (_q *PaymentOrderRecipientQuery) Unique(unique bool) *PaymentOrderRecipientQuery {
+	_q.ctx.Unique = &unique
+	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (porq *PaymentOrderRecipientQuery) Order(o ...paymentorderrecipient.OrderOption) *PaymentOrderRecipientQuery {
-	porq.order = append(porq.order, o...)
-	return porq
+func (_q *PaymentOrderRecipientQuery) Order(o ...paymentorderrecipient.OrderOption) *PaymentOrderRecipientQuery {
+	_q.order = append(_q.order, o...)
+	return _q
 }
 
 // QueryPaymentOrder chains the current query on the "payment_order" edge.
-func (porq *PaymentOrderRecipientQuery) QueryPaymentOrder() *PaymentOrderQuery {
-	query := (&PaymentOrderClient{config: porq.config}).Query()
+func (_q *PaymentOrderRecipientQuery) QueryPaymentOrder() *PaymentOrderQuery {
+	query := (&PaymentOrderClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := porq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := porq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -78,7 +78,7 @@ func (porq *PaymentOrderRecipientQuery) QueryPaymentOrder() *PaymentOrderQuery {
 			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, paymentorderrecipient.PaymentOrderTable, paymentorderrecipient.PaymentOrderColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(porq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
@@ -86,8 +86,8 @@ func (porq *PaymentOrderRecipientQuery) QueryPaymentOrder() *PaymentOrderQuery {
 
 // First returns the first PaymentOrderRecipient entity from the query.
 // Returns a *NotFoundError when no PaymentOrderRecipient was found.
-func (porq *PaymentOrderRecipientQuery) First(ctx context.Context) (*PaymentOrderRecipient, error) {
-	nodes, err := porq.Limit(1).All(setContextOp(ctx, porq.ctx, ent.OpQueryFirst))
+func (_q *PaymentOrderRecipientQuery) First(ctx context.Context) (*PaymentOrderRecipient, error) {
+	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
@@ -98,8 +98,8 @@ func (porq *PaymentOrderRecipientQuery) First(ctx context.Context) (*PaymentOrde
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (porq *PaymentOrderRecipientQuery) FirstX(ctx context.Context) *PaymentOrderRecipient {
-	node, err := porq.First(ctx)
+func (_q *PaymentOrderRecipientQuery) FirstX(ctx context.Context) *PaymentOrderRecipient {
+	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -108,9 +108,9 @@ func (porq *PaymentOrderRecipientQuery) FirstX(ctx context.Context) *PaymentOrde
 
 // FirstID returns the first PaymentOrderRecipient ID from the query.
 // Returns a *NotFoundError when no PaymentOrderRecipient ID was found.
-func (porq *PaymentOrderRecipientQuery) FirstID(ctx context.Context) (id int, err error) {
+func (_q *PaymentOrderRecipientQuery) FirstID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = porq.Limit(1).IDs(setContextOp(ctx, porq.ctx, ent.OpQueryFirstID)); err != nil {
+	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -121,8 +121,8 @@ func (porq *PaymentOrderRecipientQuery) FirstID(ctx context.Context) (id int, er
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (porq *PaymentOrderRecipientQuery) FirstIDX(ctx context.Context) int {
-	id, err := porq.FirstID(ctx)
+func (_q *PaymentOrderRecipientQuery) FirstIDX(ctx context.Context) int {
+	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -132,8 +132,8 @@ func (porq *PaymentOrderRecipientQuery) FirstIDX(ctx context.Context) int {
 // Only returns a single PaymentOrderRecipient entity found by the query, ensuring it only returns one.
 // Returns a *NotSingularError when more than one PaymentOrderRecipient entity is found.
 // Returns a *NotFoundError when no PaymentOrderRecipient entities are found.
-func (porq *PaymentOrderRecipientQuery) Only(ctx context.Context) (*PaymentOrderRecipient, error) {
-	nodes, err := porq.Limit(2).All(setContextOp(ctx, porq.ctx, ent.OpQueryOnly))
+func (_q *PaymentOrderRecipientQuery) Only(ctx context.Context) (*PaymentOrderRecipient, error) {
+	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -148,8 +148,8 @@ func (porq *PaymentOrderRecipientQuery) Only(ctx context.Context) (*PaymentOrder
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (porq *PaymentOrderRecipientQuery) OnlyX(ctx context.Context) *PaymentOrderRecipient {
-	node, err := porq.Only(ctx)
+func (_q *PaymentOrderRecipientQuery) OnlyX(ctx context.Context) *PaymentOrderRecipient {
+	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -159,9 +159,9 @@ func (porq *PaymentOrderRecipientQuery) OnlyX(ctx context.Context) *PaymentOrder
 // OnlyID is like Only, but returns the only PaymentOrderRecipient ID in the query.
 // Returns a *NotSingularError when more than one PaymentOrderRecipient ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (porq *PaymentOrderRecipientQuery) OnlyID(ctx context.Context) (id int, err error) {
+func (_q *PaymentOrderRecipientQuery) OnlyID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = porq.Limit(2).IDs(setContextOp(ctx, porq.ctx, ent.OpQueryOnlyID)); err != nil {
+	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -176,8 +176,8 @@ func (porq *PaymentOrderRecipientQuery) OnlyID(ctx context.Context) (id int, err
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (porq *PaymentOrderRecipientQuery) OnlyIDX(ctx context.Context) int {
-	id, err := porq.OnlyID(ctx)
+func (_q *PaymentOrderRecipientQuery) OnlyIDX(ctx context.Context) int {
+	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -185,18 +185,18 @@ func (porq *PaymentOrderRecipientQuery) OnlyIDX(ctx context.Context) int {
 }
 
 // All executes the query and returns a list of PaymentOrderRecipients.
-func (porq *PaymentOrderRecipientQuery) All(ctx context.Context) ([]*PaymentOrderRecipient, error) {
-	ctx = setContextOp(ctx, porq.ctx, ent.OpQueryAll)
-	if err := porq.prepareQuery(ctx); err != nil {
+func (_q *PaymentOrderRecipientQuery) All(ctx context.Context) ([]*PaymentOrderRecipient, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
 	qr := querierAll[[]*PaymentOrderRecipient, *PaymentOrderRecipientQuery]()
-	return withInterceptors[[]*PaymentOrderRecipient](ctx, porq, qr, porq.inters)
+	return withInterceptors[[]*PaymentOrderRecipient](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (porq *PaymentOrderRecipientQuery) AllX(ctx context.Context) []*PaymentOrderRecipient {
-	nodes, err := porq.All(ctx)
+func (_q *PaymentOrderRecipientQuery) AllX(ctx context.Context) []*PaymentOrderRecipient {
+	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -204,20 +204,20 @@ func (porq *PaymentOrderRecipientQuery) AllX(ctx context.Context) []*PaymentOrde
 }
 
 // IDs executes the query and returns a list of PaymentOrderRecipient IDs.
-func (porq *PaymentOrderRecipientQuery) IDs(ctx context.Context) (ids []int, err error) {
-	if porq.ctx.Unique == nil && porq.path != nil {
-		porq.Unique(true)
+func (_q *PaymentOrderRecipientQuery) IDs(ctx context.Context) (ids []int, err error) {
+	if _q.ctx.Unique == nil && _q.path != nil {
+		_q.Unique(true)
 	}
-	ctx = setContextOp(ctx, porq.ctx, ent.OpQueryIDs)
-	if err = porq.Select(paymentorderrecipient.FieldID).Scan(ctx, &ids); err != nil {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
+	if err = _q.Select(paymentorderrecipient.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (porq *PaymentOrderRecipientQuery) IDsX(ctx context.Context) []int {
-	ids, err := porq.IDs(ctx)
+func (_q *PaymentOrderRecipientQuery) IDsX(ctx context.Context) []int {
+	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -225,17 +225,17 @@ func (porq *PaymentOrderRecipientQuery) IDsX(ctx context.Context) []int {
 }
 
 // Count returns the count of the given query.
-func (porq *PaymentOrderRecipientQuery) Count(ctx context.Context) (int, error) {
-	ctx = setContextOp(ctx, porq.ctx, ent.OpQueryCount)
-	if err := porq.prepareQuery(ctx); err != nil {
+func (_q *PaymentOrderRecipientQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, porq, querierCount[*PaymentOrderRecipientQuery](), porq.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*PaymentOrderRecipientQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (porq *PaymentOrderRecipientQuery) CountX(ctx context.Context) int {
-	count, err := porq.Count(ctx)
+func (_q *PaymentOrderRecipientQuery) CountX(ctx context.Context) int {
+	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -243,9 +243,9 @@ func (porq *PaymentOrderRecipientQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (porq *PaymentOrderRecipientQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = setContextOp(ctx, porq.ctx, ent.OpQueryExist)
-	switch _, err := porq.FirstID(ctx); {
+func (_q *PaymentOrderRecipientQuery) Exist(ctx context.Context) (bool, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
+	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
 	case err != nil:
@@ -256,8 +256,8 @@ func (porq *PaymentOrderRecipientQuery) Exist(ctx context.Context) (bool, error)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (porq *PaymentOrderRecipientQuery) ExistX(ctx context.Context) bool {
-	exist, err := porq.Exist(ctx)
+func (_q *PaymentOrderRecipientQuery) ExistX(ctx context.Context) bool {
+	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -266,32 +266,32 @@ func (porq *PaymentOrderRecipientQuery) ExistX(ctx context.Context) bool {
 
 // Clone returns a duplicate of the PaymentOrderRecipientQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (porq *PaymentOrderRecipientQuery) Clone() *PaymentOrderRecipientQuery {
-	if porq == nil {
+func (_q *PaymentOrderRecipientQuery) Clone() *PaymentOrderRecipientQuery {
+	if _q == nil {
 		return nil
 	}
 	return &PaymentOrderRecipientQuery{
-		config:           porq.config,
-		ctx:              porq.ctx.Clone(),
-		order:            append([]paymentorderrecipient.OrderOption{}, porq.order...),
-		inters:           append([]Interceptor{}, porq.inters...),
-		predicates:       append([]predicate.PaymentOrderRecipient{}, porq.predicates...),
-		withPaymentOrder: porq.withPaymentOrder.Clone(),
+		config:           _q.config,
+		ctx:              _q.ctx.Clone(),
+		order:            append([]paymentorderrecipient.OrderOption{}, _q.order...),
+		inters:           append([]Interceptor{}, _q.inters...),
+		predicates:       append([]predicate.PaymentOrderRecipient{}, _q.predicates...),
+		withPaymentOrder: _q.withPaymentOrder.Clone(),
 		// clone intermediate query.
-		sql:  porq.sql.Clone(),
-		path: porq.path,
+		sql:  _q.sql.Clone(),
+		path: _q.path,
 	}
 }
 
 // WithPaymentOrder tells the query-builder to eager-load the nodes that are connected to
 // the "payment_order" edge. The optional arguments are used to configure the query builder of the edge.
-func (porq *PaymentOrderRecipientQuery) WithPaymentOrder(opts ...func(*PaymentOrderQuery)) *PaymentOrderRecipientQuery {
-	query := (&PaymentOrderClient{config: porq.config}).Query()
+func (_q *PaymentOrderRecipientQuery) WithPaymentOrder(opts ...func(*PaymentOrderQuery)) *PaymentOrderRecipientQuery {
+	query := (&PaymentOrderClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	porq.withPaymentOrder = query
-	return porq
+	_q.withPaymentOrder = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -308,10 +308,10 @@ func (porq *PaymentOrderRecipientQuery) WithPaymentOrder(opts ...func(*PaymentOr
 //		GroupBy(paymentorderrecipient.FieldInstitution).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (porq *PaymentOrderRecipientQuery) GroupBy(field string, fields ...string) *PaymentOrderRecipientGroupBy {
-	porq.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &PaymentOrderRecipientGroupBy{build: porq}
-	grbuild.flds = &porq.ctx.Fields
+func (_q *PaymentOrderRecipientQuery) GroupBy(field string, fields ...string) *PaymentOrderRecipientGroupBy {
+	_q.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &PaymentOrderRecipientGroupBy{build: _q}
+	grbuild.flds = &_q.ctx.Fields
 	grbuild.label = paymentorderrecipient.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -329,55 +329,55 @@ func (porq *PaymentOrderRecipientQuery) GroupBy(field string, fields ...string) 
 //	client.PaymentOrderRecipient.Query().
 //		Select(paymentorderrecipient.FieldInstitution).
 //		Scan(ctx, &v)
-func (porq *PaymentOrderRecipientQuery) Select(fields ...string) *PaymentOrderRecipientSelect {
-	porq.ctx.Fields = append(porq.ctx.Fields, fields...)
-	sbuild := &PaymentOrderRecipientSelect{PaymentOrderRecipientQuery: porq}
+func (_q *PaymentOrderRecipientQuery) Select(fields ...string) *PaymentOrderRecipientSelect {
+	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
+	sbuild := &PaymentOrderRecipientSelect{PaymentOrderRecipientQuery: _q}
 	sbuild.label = paymentorderrecipient.Label
-	sbuild.flds, sbuild.scan = &porq.ctx.Fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
 // Aggregate returns a PaymentOrderRecipientSelect configured with the given aggregations.
-func (porq *PaymentOrderRecipientQuery) Aggregate(fns ...AggregateFunc) *PaymentOrderRecipientSelect {
-	return porq.Select().Aggregate(fns...)
+func (_q *PaymentOrderRecipientQuery) Aggregate(fns ...AggregateFunc) *PaymentOrderRecipientSelect {
+	return _q.Select().Aggregate(fns...)
 }
 
-func (porq *PaymentOrderRecipientQuery) prepareQuery(ctx context.Context) error {
-	for _, inter := range porq.inters {
+func (_q *PaymentOrderRecipientQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
 		}
 		if trv, ok := inter.(Traverser); ok {
-			if err := trv.Traverse(ctx, porq); err != nil {
+			if err := trv.Traverse(ctx, _q); err != nil {
 				return err
 			}
 		}
 	}
-	for _, f := range porq.ctx.Fields {
+	for _, f := range _q.ctx.Fields {
 		if !paymentorderrecipient.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
-	if porq.path != nil {
-		prev, err := porq.path(ctx)
+	if _q.path != nil {
+		prev, err := _q.path(ctx)
 		if err != nil {
 			return err
 		}
-		porq.sql = prev
+		_q.sql = prev
 	}
 	return nil
 }
 
-func (porq *PaymentOrderRecipientQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*PaymentOrderRecipient, error) {
+func (_q *PaymentOrderRecipientQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*PaymentOrderRecipient, error) {
 	var (
 		nodes       = []*PaymentOrderRecipient{}
-		withFKs     = porq.withFKs
-		_spec       = porq.querySpec()
+		withFKs     = _q.withFKs
+		_spec       = _q.querySpec()
 		loadedTypes = [1]bool{
-			porq.withPaymentOrder != nil,
+			_q.withPaymentOrder != nil,
 		}
 	)
-	if porq.withPaymentOrder != nil {
+	if _q.withPaymentOrder != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -387,7 +387,7 @@ func (porq *PaymentOrderRecipientQuery) sqlAll(ctx context.Context, hooks ...que
 		return (*PaymentOrderRecipient).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &PaymentOrderRecipient{config: porq.config}
+		node := &PaymentOrderRecipient{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -395,14 +395,14 @@ func (porq *PaymentOrderRecipientQuery) sqlAll(ctx context.Context, hooks ...que
 	for i := range hooks {
 		hooks[i](ctx, _spec)
 	}
-	if err := sqlgraph.QueryNodes(ctx, porq.driver, _spec); err != nil {
+	if err := sqlgraph.QueryNodes(ctx, _q.driver, _spec); err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := porq.withPaymentOrder; query != nil {
-		if err := porq.loadPaymentOrder(ctx, query, nodes, nil,
+	if query := _q.withPaymentOrder; query != nil {
+		if err := _q.loadPaymentOrder(ctx, query, nodes, nil,
 			func(n *PaymentOrderRecipient, e *PaymentOrder) { n.Edges.PaymentOrder = e }); err != nil {
 			return nil, err
 		}
@@ -410,7 +410,7 @@ func (porq *PaymentOrderRecipientQuery) sqlAll(ctx context.Context, hooks ...que
 	return nodes, nil
 }
 
-func (porq *PaymentOrderRecipientQuery) loadPaymentOrder(ctx context.Context, query *PaymentOrderQuery, nodes []*PaymentOrderRecipient, init func(*PaymentOrderRecipient), assign func(*PaymentOrderRecipient, *PaymentOrder)) error {
+func (_q *PaymentOrderRecipientQuery) loadPaymentOrder(ctx context.Context, query *PaymentOrderQuery, nodes []*PaymentOrderRecipient, init func(*PaymentOrderRecipient), assign func(*PaymentOrderRecipient, *PaymentOrder)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*PaymentOrderRecipient)
 	for i := range nodes {
@@ -443,24 +443,24 @@ func (porq *PaymentOrderRecipientQuery) loadPaymentOrder(ctx context.Context, qu
 	return nil
 }
 
-func (porq *PaymentOrderRecipientQuery) sqlCount(ctx context.Context) (int, error) {
-	_spec := porq.querySpec()
-	_spec.Node.Columns = porq.ctx.Fields
-	if len(porq.ctx.Fields) > 0 {
-		_spec.Unique = porq.ctx.Unique != nil && *porq.ctx.Unique
+func (_q *PaymentOrderRecipientQuery) sqlCount(ctx context.Context) (int, error) {
+	_spec := _q.querySpec()
+	_spec.Node.Columns = _q.ctx.Fields
+	if len(_q.ctx.Fields) > 0 {
+		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
 	}
-	return sqlgraph.CountNodes(ctx, porq.driver, _spec)
+	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (porq *PaymentOrderRecipientQuery) querySpec() *sqlgraph.QuerySpec {
+func (_q *PaymentOrderRecipientQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := sqlgraph.NewQuerySpec(paymentorderrecipient.Table, paymentorderrecipient.Columns, sqlgraph.NewFieldSpec(paymentorderrecipient.FieldID, field.TypeInt))
-	_spec.From = porq.sql
-	if unique := porq.ctx.Unique; unique != nil {
+	_spec.From = _q.sql
+	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
-	} else if porq.path != nil {
+	} else if _q.path != nil {
 		_spec.Unique = true
 	}
-	if fields := porq.ctx.Fields; len(fields) > 0 {
+	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, paymentorderrecipient.FieldID)
 		for i := range fields {
@@ -469,20 +469,20 @@ func (porq *PaymentOrderRecipientQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if ps := porq.predicates; len(ps) > 0 {
+	if ps := _q.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if limit := porq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := porq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
-	if ps := porq.order; len(ps) > 0 {
+	if ps := _q.order; len(ps) > 0 {
 		_spec.Order = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
@@ -492,33 +492,33 @@ func (porq *PaymentOrderRecipientQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (porq *PaymentOrderRecipientQuery) sqlQuery(ctx context.Context) *sql.Selector {
-	builder := sql.Dialect(porq.driver.Dialect())
+func (_q *PaymentOrderRecipientQuery) sqlQuery(ctx context.Context) *sql.Selector {
+	builder := sql.Dialect(_q.driver.Dialect())
 	t1 := builder.Table(paymentorderrecipient.Table)
-	columns := porq.ctx.Fields
+	columns := _q.ctx.Fields
 	if len(columns) == 0 {
 		columns = paymentorderrecipient.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
-	if porq.sql != nil {
-		selector = porq.sql
+	if _q.sql != nil {
+		selector = _q.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if porq.ctx.Unique != nil && *porq.ctx.Unique {
+	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
-	for _, p := range porq.predicates {
+	for _, p := range _q.predicates {
 		p(selector)
 	}
-	for _, p := range porq.order {
+	for _, p := range _q.order {
 		p(selector)
 	}
-	if offset := porq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := porq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -531,41 +531,41 @@ type PaymentOrderRecipientGroupBy struct {
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (porgb *PaymentOrderRecipientGroupBy) Aggregate(fns ...AggregateFunc) *PaymentOrderRecipientGroupBy {
-	porgb.fns = append(porgb.fns, fns...)
-	return porgb
+func (_g *PaymentOrderRecipientGroupBy) Aggregate(fns ...AggregateFunc) *PaymentOrderRecipientGroupBy {
+	_g.fns = append(_g.fns, fns...)
+	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (porgb *PaymentOrderRecipientGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, porgb.build.ctx, ent.OpQueryGroupBy)
-	if err := porgb.build.prepareQuery(ctx); err != nil {
+func (_g *PaymentOrderRecipientGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
+	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*PaymentOrderRecipientQuery, *PaymentOrderRecipientGroupBy](ctx, porgb.build, porgb, porgb.build.inters, v)
+	return scanWithInterceptors[*PaymentOrderRecipientQuery, *PaymentOrderRecipientGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (porgb *PaymentOrderRecipientGroupBy) sqlScan(ctx context.Context, root *PaymentOrderRecipientQuery, v any) error {
+func (_g *PaymentOrderRecipientGroupBy) sqlScan(ctx context.Context, root *PaymentOrderRecipientQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
-	aggregation := make([]string, 0, len(porgb.fns))
-	for _, fn := range porgb.fns {
+	aggregation := make([]string, 0, len(_g.fns))
+	for _, fn := range _g.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
 	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(*porgb.flds)+len(porgb.fns))
-		for _, f := range *porgb.flds {
+		columns := make([]string, 0, len(*_g.flds)+len(_g.fns))
+		for _, f := range *_g.flds {
 			columns = append(columns, selector.C(f))
 		}
 		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
-	selector.GroupBy(selector.Columns(*porgb.flds...)...)
+	selector.GroupBy(selector.Columns(*_g.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := porgb.build.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _g.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
@@ -579,27 +579,27 @@ type PaymentOrderRecipientSelect struct {
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (pors *PaymentOrderRecipientSelect) Aggregate(fns ...AggregateFunc) *PaymentOrderRecipientSelect {
-	pors.fns = append(pors.fns, fns...)
-	return pors
+func (_s *PaymentOrderRecipientSelect) Aggregate(fns ...AggregateFunc) *PaymentOrderRecipientSelect {
+	_s.fns = append(_s.fns, fns...)
+	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (pors *PaymentOrderRecipientSelect) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, pors.ctx, ent.OpQuerySelect)
-	if err := pors.prepareQuery(ctx); err != nil {
+func (_s *PaymentOrderRecipientSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
+	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*PaymentOrderRecipientQuery, *PaymentOrderRecipientSelect](ctx, pors.PaymentOrderRecipientQuery, pors, pors.inters, v)
+	return scanWithInterceptors[*PaymentOrderRecipientQuery, *PaymentOrderRecipientSelect](ctx, _s.PaymentOrderRecipientQuery, _s, _s.inters, v)
 }
 
-func (pors *PaymentOrderRecipientSelect) sqlScan(ctx context.Context, root *PaymentOrderRecipientQuery, v any) error {
+func (_s *PaymentOrderRecipientSelect) sqlScan(ctx context.Context, root *PaymentOrderRecipientQuery, v any) error {
 	selector := root.sqlQuery(ctx)
-	aggregation := make([]string, 0, len(pors.fns))
-	for _, fn := range pors.fns {
+	aggregation := make([]string, 0, len(_s.fns))
+	for _, fn := range _s.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
-	switch n := len(*pors.selector.flds); {
+	switch n := len(*_s.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
 		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
@@ -607,7 +607,7 @@ func (pors *PaymentOrderRecipientSelect) sqlScan(ctx context.Context, root *Paym
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := pors.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _s.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()

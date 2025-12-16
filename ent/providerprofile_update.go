@@ -31,357 +31,357 @@ type ProviderProfileUpdate struct {
 }
 
 // Where appends a list predicates to the ProviderProfileUpdate builder.
-func (ppu *ProviderProfileUpdate) Where(ps ...predicate.ProviderProfile) *ProviderProfileUpdate {
-	ppu.mutation.Where(ps...)
-	return ppu
+func (_u *ProviderProfileUpdate) Where(ps ...predicate.ProviderProfile) *ProviderProfileUpdate {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // SetTradingName sets the "trading_name" field.
-func (ppu *ProviderProfileUpdate) SetTradingName(s string) *ProviderProfileUpdate {
-	ppu.mutation.SetTradingName(s)
-	return ppu
+func (_u *ProviderProfileUpdate) SetTradingName(v string) *ProviderProfileUpdate {
+	_u.mutation.SetTradingName(v)
+	return _u
 }
 
 // SetNillableTradingName sets the "trading_name" field if the given value is not nil.
-func (ppu *ProviderProfileUpdate) SetNillableTradingName(s *string) *ProviderProfileUpdate {
-	if s != nil {
-		ppu.SetTradingName(*s)
+func (_u *ProviderProfileUpdate) SetNillableTradingName(v *string) *ProviderProfileUpdate {
+	if v != nil {
+		_u.SetTradingName(*v)
 	}
-	return ppu
+	return _u
 }
 
 // ClearTradingName clears the value of the "trading_name" field.
-func (ppu *ProviderProfileUpdate) ClearTradingName() *ProviderProfileUpdate {
-	ppu.mutation.ClearTradingName()
-	return ppu
+func (_u *ProviderProfileUpdate) ClearTradingName() *ProviderProfileUpdate {
+	_u.mutation.ClearTradingName()
+	return _u
 }
 
 // SetHostIdentifier sets the "host_identifier" field.
-func (ppu *ProviderProfileUpdate) SetHostIdentifier(s string) *ProviderProfileUpdate {
-	ppu.mutation.SetHostIdentifier(s)
-	return ppu
+func (_u *ProviderProfileUpdate) SetHostIdentifier(v string) *ProviderProfileUpdate {
+	_u.mutation.SetHostIdentifier(v)
+	return _u
 }
 
 // SetNillableHostIdentifier sets the "host_identifier" field if the given value is not nil.
-func (ppu *ProviderProfileUpdate) SetNillableHostIdentifier(s *string) *ProviderProfileUpdate {
-	if s != nil {
-		ppu.SetHostIdentifier(*s)
+func (_u *ProviderProfileUpdate) SetNillableHostIdentifier(v *string) *ProviderProfileUpdate {
+	if v != nil {
+		_u.SetHostIdentifier(*v)
 	}
-	return ppu
+	return _u
 }
 
 // ClearHostIdentifier clears the value of the "host_identifier" field.
-func (ppu *ProviderProfileUpdate) ClearHostIdentifier() *ProviderProfileUpdate {
-	ppu.mutation.ClearHostIdentifier()
-	return ppu
+func (_u *ProviderProfileUpdate) ClearHostIdentifier() *ProviderProfileUpdate {
+	_u.mutation.ClearHostIdentifier()
+	return _u
 }
 
 // SetProvisionMode sets the "provision_mode" field.
-func (ppu *ProviderProfileUpdate) SetProvisionMode(pm providerprofile.ProvisionMode) *ProviderProfileUpdate {
-	ppu.mutation.SetProvisionMode(pm)
-	return ppu
+func (_u *ProviderProfileUpdate) SetProvisionMode(v providerprofile.ProvisionMode) *ProviderProfileUpdate {
+	_u.mutation.SetProvisionMode(v)
+	return _u
 }
 
 // SetNillableProvisionMode sets the "provision_mode" field if the given value is not nil.
-func (ppu *ProviderProfileUpdate) SetNillableProvisionMode(pm *providerprofile.ProvisionMode) *ProviderProfileUpdate {
-	if pm != nil {
-		ppu.SetProvisionMode(*pm)
+func (_u *ProviderProfileUpdate) SetNillableProvisionMode(v *providerprofile.ProvisionMode) *ProviderProfileUpdate {
+	if v != nil {
+		_u.SetProvisionMode(*v)
 	}
-	return ppu
+	return _u
 }
 
 // SetIsActive sets the "is_active" field.
-func (ppu *ProviderProfileUpdate) SetIsActive(b bool) *ProviderProfileUpdate {
-	ppu.mutation.SetIsActive(b)
-	return ppu
+func (_u *ProviderProfileUpdate) SetIsActive(v bool) *ProviderProfileUpdate {
+	_u.mutation.SetIsActive(v)
+	return _u
 }
 
 // SetNillableIsActive sets the "is_active" field if the given value is not nil.
-func (ppu *ProviderProfileUpdate) SetNillableIsActive(b *bool) *ProviderProfileUpdate {
-	if b != nil {
-		ppu.SetIsActive(*b)
+func (_u *ProviderProfileUpdate) SetNillableIsActive(v *bool) *ProviderProfileUpdate {
+	if v != nil {
+		_u.SetIsActive(*v)
 	}
-	return ppu
+	return _u
 }
 
 // SetIsKybVerified sets the "is_kyb_verified" field.
-func (ppu *ProviderProfileUpdate) SetIsKybVerified(b bool) *ProviderProfileUpdate {
-	ppu.mutation.SetIsKybVerified(b)
-	return ppu
+func (_u *ProviderProfileUpdate) SetIsKybVerified(v bool) *ProviderProfileUpdate {
+	_u.mutation.SetIsKybVerified(v)
+	return _u
 }
 
 // SetNillableIsKybVerified sets the "is_kyb_verified" field if the given value is not nil.
-func (ppu *ProviderProfileUpdate) SetNillableIsKybVerified(b *bool) *ProviderProfileUpdate {
-	if b != nil {
-		ppu.SetIsKybVerified(*b)
+func (_u *ProviderProfileUpdate) SetNillableIsKybVerified(v *bool) *ProviderProfileUpdate {
+	if v != nil {
+		_u.SetIsKybVerified(*v)
 	}
-	return ppu
+	return _u
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (ppu *ProviderProfileUpdate) SetUpdatedAt(t time.Time) *ProviderProfileUpdate {
-	ppu.mutation.SetUpdatedAt(t)
-	return ppu
+func (_u *ProviderProfileUpdate) SetUpdatedAt(v time.Time) *ProviderProfileUpdate {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetVisibilityMode sets the "visibility_mode" field.
-func (ppu *ProviderProfileUpdate) SetVisibilityMode(pm providerprofile.VisibilityMode) *ProviderProfileUpdate {
-	ppu.mutation.SetVisibilityMode(pm)
-	return ppu
+func (_u *ProviderProfileUpdate) SetVisibilityMode(v providerprofile.VisibilityMode) *ProviderProfileUpdate {
+	_u.mutation.SetVisibilityMode(v)
+	return _u
 }
 
 // SetNillableVisibilityMode sets the "visibility_mode" field if the given value is not nil.
-func (ppu *ProviderProfileUpdate) SetNillableVisibilityMode(pm *providerprofile.VisibilityMode) *ProviderProfileUpdate {
-	if pm != nil {
-		ppu.SetVisibilityMode(*pm)
+func (_u *ProviderProfileUpdate) SetNillableVisibilityMode(v *providerprofile.VisibilityMode) *ProviderProfileUpdate {
+	if v != nil {
+		_u.SetVisibilityMode(*v)
 	}
-	return ppu
+	return _u
 }
 
 // SetAPIKeyID sets the "api_key" edge to the APIKey entity by ID.
-func (ppu *ProviderProfileUpdate) SetAPIKeyID(id uuid.UUID) *ProviderProfileUpdate {
-	ppu.mutation.SetAPIKeyID(id)
-	return ppu
+func (_u *ProviderProfileUpdate) SetAPIKeyID(id uuid.UUID) *ProviderProfileUpdate {
+	_u.mutation.SetAPIKeyID(id)
+	return _u
 }
 
 // SetNillableAPIKeyID sets the "api_key" edge to the APIKey entity by ID if the given value is not nil.
-func (ppu *ProviderProfileUpdate) SetNillableAPIKeyID(id *uuid.UUID) *ProviderProfileUpdate {
+func (_u *ProviderProfileUpdate) SetNillableAPIKeyID(id *uuid.UUID) *ProviderProfileUpdate {
 	if id != nil {
-		ppu = ppu.SetAPIKeyID(*id)
+		_u = _u.SetAPIKeyID(*id)
 	}
-	return ppu
+	return _u
 }
 
 // SetAPIKey sets the "api_key" edge to the APIKey entity.
-func (ppu *ProviderProfileUpdate) SetAPIKey(a *APIKey) *ProviderProfileUpdate {
-	return ppu.SetAPIKeyID(a.ID)
+func (_u *ProviderProfileUpdate) SetAPIKey(v *APIKey) *ProviderProfileUpdate {
+	return _u.SetAPIKeyID(v.ID)
 }
 
 // AddProviderCurrencyIDs adds the "provider_currencies" edge to the ProviderCurrencies entity by IDs.
-func (ppu *ProviderProfileUpdate) AddProviderCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
-	ppu.mutation.AddProviderCurrencyIDs(ids...)
-	return ppu
+func (_u *ProviderProfileUpdate) AddProviderCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
+	_u.mutation.AddProviderCurrencyIDs(ids...)
+	return _u
 }
 
 // AddProviderCurrencies adds the "provider_currencies" edges to the ProviderCurrencies entity.
-func (ppu *ProviderProfileUpdate) AddProviderCurrencies(p ...*ProviderCurrencies) *ProviderProfileUpdate {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *ProviderProfileUpdate) AddProviderCurrencies(v ...*ProviderCurrencies) *ProviderProfileUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return ppu.AddProviderCurrencyIDs(ids...)
+	return _u.AddProviderCurrencyIDs(ids...)
 }
 
 // AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by IDs.
-func (ppu *ProviderProfileUpdate) AddProvisionBucketIDs(ids ...int) *ProviderProfileUpdate {
-	ppu.mutation.AddProvisionBucketIDs(ids...)
-	return ppu
+func (_u *ProviderProfileUpdate) AddProvisionBucketIDs(ids ...int) *ProviderProfileUpdate {
+	_u.mutation.AddProvisionBucketIDs(ids...)
+	return _u
 }
 
 // AddProvisionBuckets adds the "provision_buckets" edges to the ProvisionBucket entity.
-func (ppu *ProviderProfileUpdate) AddProvisionBuckets(p ...*ProvisionBucket) *ProviderProfileUpdate {
-	ids := make([]int, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *ProviderProfileUpdate) AddProvisionBuckets(v ...*ProvisionBucket) *ProviderProfileUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return ppu.AddProvisionBucketIDs(ids...)
+	return _u.AddProvisionBucketIDs(ids...)
 }
 
 // AddOrderTokenIDs adds the "order_tokens" edge to the ProviderOrderToken entity by IDs.
-func (ppu *ProviderProfileUpdate) AddOrderTokenIDs(ids ...int) *ProviderProfileUpdate {
-	ppu.mutation.AddOrderTokenIDs(ids...)
-	return ppu
+func (_u *ProviderProfileUpdate) AddOrderTokenIDs(ids ...int) *ProviderProfileUpdate {
+	_u.mutation.AddOrderTokenIDs(ids...)
+	return _u
 }
 
 // AddOrderTokens adds the "order_tokens" edges to the ProviderOrderToken entity.
-func (ppu *ProviderProfileUpdate) AddOrderTokens(p ...*ProviderOrderToken) *ProviderProfileUpdate {
-	ids := make([]int, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *ProviderProfileUpdate) AddOrderTokens(v ...*ProviderOrderToken) *ProviderProfileUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return ppu.AddOrderTokenIDs(ids...)
+	return _u.AddOrderTokenIDs(ids...)
 }
 
 // SetProviderRatingID sets the "provider_rating" edge to the ProviderRating entity by ID.
-func (ppu *ProviderProfileUpdate) SetProviderRatingID(id int) *ProviderProfileUpdate {
-	ppu.mutation.SetProviderRatingID(id)
-	return ppu
+func (_u *ProviderProfileUpdate) SetProviderRatingID(id int) *ProviderProfileUpdate {
+	_u.mutation.SetProviderRatingID(id)
+	return _u
 }
 
 // SetNillableProviderRatingID sets the "provider_rating" edge to the ProviderRating entity by ID if the given value is not nil.
-func (ppu *ProviderProfileUpdate) SetNillableProviderRatingID(id *int) *ProviderProfileUpdate {
+func (_u *ProviderProfileUpdate) SetNillableProviderRatingID(id *int) *ProviderProfileUpdate {
 	if id != nil {
-		ppu = ppu.SetProviderRatingID(*id)
+		_u = _u.SetProviderRatingID(*id)
 	}
-	return ppu
+	return _u
 }
 
 // SetProviderRating sets the "provider_rating" edge to the ProviderRating entity.
-func (ppu *ProviderProfileUpdate) SetProviderRating(p *ProviderRating) *ProviderProfileUpdate {
-	return ppu.SetProviderRatingID(p.ID)
+func (_u *ProviderProfileUpdate) SetProviderRating(v *ProviderRating) *ProviderProfileUpdate {
+	return _u.SetProviderRatingID(v.ID)
 }
 
 // AddAssignedOrderIDs adds the "assigned_orders" edge to the LockPaymentOrder entity by IDs.
-func (ppu *ProviderProfileUpdate) AddAssignedOrderIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
-	ppu.mutation.AddAssignedOrderIDs(ids...)
-	return ppu
+func (_u *ProviderProfileUpdate) AddAssignedOrderIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
+	_u.mutation.AddAssignedOrderIDs(ids...)
+	return _u
 }
 
 // AddAssignedOrders adds the "assigned_orders" edges to the LockPaymentOrder entity.
-func (ppu *ProviderProfileUpdate) AddAssignedOrders(l ...*LockPaymentOrder) *ProviderProfileUpdate {
-	ids := make([]uuid.UUID, len(l))
-	for i := range l {
-		ids[i] = l[i].ID
+func (_u *ProviderProfileUpdate) AddAssignedOrders(v ...*LockPaymentOrder) *ProviderProfileUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return ppu.AddAssignedOrderIDs(ids...)
+	return _u.AddAssignedOrderIDs(ids...)
 }
 
 // AddFiatAccountIDs adds the "fiat_accounts" edge to the ProviderFiatAccount entity by IDs.
-func (ppu *ProviderProfileUpdate) AddFiatAccountIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
-	ppu.mutation.AddFiatAccountIDs(ids...)
-	return ppu
+func (_u *ProviderProfileUpdate) AddFiatAccountIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
+	_u.mutation.AddFiatAccountIDs(ids...)
+	return _u
 }
 
 // AddFiatAccounts adds the "fiat_accounts" edges to the ProviderFiatAccount entity.
-func (ppu *ProviderProfileUpdate) AddFiatAccounts(p ...*ProviderFiatAccount) *ProviderProfileUpdate {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *ProviderProfileUpdate) AddFiatAccounts(v ...*ProviderFiatAccount) *ProviderProfileUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return ppu.AddFiatAccountIDs(ids...)
+	return _u.AddFiatAccountIDs(ids...)
 }
 
 // Mutation returns the ProviderProfileMutation object of the builder.
-func (ppu *ProviderProfileUpdate) Mutation() *ProviderProfileMutation {
-	return ppu.mutation
+func (_u *ProviderProfileUpdate) Mutation() *ProviderProfileMutation {
+	return _u.mutation
 }
 
 // ClearAPIKey clears the "api_key" edge to the APIKey entity.
-func (ppu *ProviderProfileUpdate) ClearAPIKey() *ProviderProfileUpdate {
-	ppu.mutation.ClearAPIKey()
-	return ppu
+func (_u *ProviderProfileUpdate) ClearAPIKey() *ProviderProfileUpdate {
+	_u.mutation.ClearAPIKey()
+	return _u
 }
 
 // ClearProviderCurrencies clears all "provider_currencies" edges to the ProviderCurrencies entity.
-func (ppu *ProviderProfileUpdate) ClearProviderCurrencies() *ProviderProfileUpdate {
-	ppu.mutation.ClearProviderCurrencies()
-	return ppu
+func (_u *ProviderProfileUpdate) ClearProviderCurrencies() *ProviderProfileUpdate {
+	_u.mutation.ClearProviderCurrencies()
+	return _u
 }
 
 // RemoveProviderCurrencyIDs removes the "provider_currencies" edge to ProviderCurrencies entities by IDs.
-func (ppu *ProviderProfileUpdate) RemoveProviderCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
-	ppu.mutation.RemoveProviderCurrencyIDs(ids...)
-	return ppu
+func (_u *ProviderProfileUpdate) RemoveProviderCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
+	_u.mutation.RemoveProviderCurrencyIDs(ids...)
+	return _u
 }
 
 // RemoveProviderCurrencies removes "provider_currencies" edges to ProviderCurrencies entities.
-func (ppu *ProviderProfileUpdate) RemoveProviderCurrencies(p ...*ProviderCurrencies) *ProviderProfileUpdate {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *ProviderProfileUpdate) RemoveProviderCurrencies(v ...*ProviderCurrencies) *ProviderProfileUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return ppu.RemoveProviderCurrencyIDs(ids...)
+	return _u.RemoveProviderCurrencyIDs(ids...)
 }
 
 // ClearProvisionBuckets clears all "provision_buckets" edges to the ProvisionBucket entity.
-func (ppu *ProviderProfileUpdate) ClearProvisionBuckets() *ProviderProfileUpdate {
-	ppu.mutation.ClearProvisionBuckets()
-	return ppu
+func (_u *ProviderProfileUpdate) ClearProvisionBuckets() *ProviderProfileUpdate {
+	_u.mutation.ClearProvisionBuckets()
+	return _u
 }
 
 // RemoveProvisionBucketIDs removes the "provision_buckets" edge to ProvisionBucket entities by IDs.
-func (ppu *ProviderProfileUpdate) RemoveProvisionBucketIDs(ids ...int) *ProviderProfileUpdate {
-	ppu.mutation.RemoveProvisionBucketIDs(ids...)
-	return ppu
+func (_u *ProviderProfileUpdate) RemoveProvisionBucketIDs(ids ...int) *ProviderProfileUpdate {
+	_u.mutation.RemoveProvisionBucketIDs(ids...)
+	return _u
 }
 
 // RemoveProvisionBuckets removes "provision_buckets" edges to ProvisionBucket entities.
-func (ppu *ProviderProfileUpdate) RemoveProvisionBuckets(p ...*ProvisionBucket) *ProviderProfileUpdate {
-	ids := make([]int, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *ProviderProfileUpdate) RemoveProvisionBuckets(v ...*ProvisionBucket) *ProviderProfileUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return ppu.RemoveProvisionBucketIDs(ids...)
+	return _u.RemoveProvisionBucketIDs(ids...)
 }
 
 // ClearOrderTokens clears all "order_tokens" edges to the ProviderOrderToken entity.
-func (ppu *ProviderProfileUpdate) ClearOrderTokens() *ProviderProfileUpdate {
-	ppu.mutation.ClearOrderTokens()
-	return ppu
+func (_u *ProviderProfileUpdate) ClearOrderTokens() *ProviderProfileUpdate {
+	_u.mutation.ClearOrderTokens()
+	return _u
 }
 
 // RemoveOrderTokenIDs removes the "order_tokens" edge to ProviderOrderToken entities by IDs.
-func (ppu *ProviderProfileUpdate) RemoveOrderTokenIDs(ids ...int) *ProviderProfileUpdate {
-	ppu.mutation.RemoveOrderTokenIDs(ids...)
-	return ppu
+func (_u *ProviderProfileUpdate) RemoveOrderTokenIDs(ids ...int) *ProviderProfileUpdate {
+	_u.mutation.RemoveOrderTokenIDs(ids...)
+	return _u
 }
 
 // RemoveOrderTokens removes "order_tokens" edges to ProviderOrderToken entities.
-func (ppu *ProviderProfileUpdate) RemoveOrderTokens(p ...*ProviderOrderToken) *ProviderProfileUpdate {
-	ids := make([]int, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *ProviderProfileUpdate) RemoveOrderTokens(v ...*ProviderOrderToken) *ProviderProfileUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return ppu.RemoveOrderTokenIDs(ids...)
+	return _u.RemoveOrderTokenIDs(ids...)
 }
 
 // ClearProviderRating clears the "provider_rating" edge to the ProviderRating entity.
-func (ppu *ProviderProfileUpdate) ClearProviderRating() *ProviderProfileUpdate {
-	ppu.mutation.ClearProviderRating()
-	return ppu
+func (_u *ProviderProfileUpdate) ClearProviderRating() *ProviderProfileUpdate {
+	_u.mutation.ClearProviderRating()
+	return _u
 }
 
 // ClearAssignedOrders clears all "assigned_orders" edges to the LockPaymentOrder entity.
-func (ppu *ProviderProfileUpdate) ClearAssignedOrders() *ProviderProfileUpdate {
-	ppu.mutation.ClearAssignedOrders()
-	return ppu
+func (_u *ProviderProfileUpdate) ClearAssignedOrders() *ProviderProfileUpdate {
+	_u.mutation.ClearAssignedOrders()
+	return _u
 }
 
 // RemoveAssignedOrderIDs removes the "assigned_orders" edge to LockPaymentOrder entities by IDs.
-func (ppu *ProviderProfileUpdate) RemoveAssignedOrderIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
-	ppu.mutation.RemoveAssignedOrderIDs(ids...)
-	return ppu
+func (_u *ProviderProfileUpdate) RemoveAssignedOrderIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
+	_u.mutation.RemoveAssignedOrderIDs(ids...)
+	return _u
 }
 
 // RemoveAssignedOrders removes "assigned_orders" edges to LockPaymentOrder entities.
-func (ppu *ProviderProfileUpdate) RemoveAssignedOrders(l ...*LockPaymentOrder) *ProviderProfileUpdate {
-	ids := make([]uuid.UUID, len(l))
-	for i := range l {
-		ids[i] = l[i].ID
+func (_u *ProviderProfileUpdate) RemoveAssignedOrders(v ...*LockPaymentOrder) *ProviderProfileUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return ppu.RemoveAssignedOrderIDs(ids...)
+	return _u.RemoveAssignedOrderIDs(ids...)
 }
 
 // ClearFiatAccounts clears all "fiat_accounts" edges to the ProviderFiatAccount entity.
-func (ppu *ProviderProfileUpdate) ClearFiatAccounts() *ProviderProfileUpdate {
-	ppu.mutation.ClearFiatAccounts()
-	return ppu
+func (_u *ProviderProfileUpdate) ClearFiatAccounts() *ProviderProfileUpdate {
+	_u.mutation.ClearFiatAccounts()
+	return _u
 }
 
 // RemoveFiatAccountIDs removes the "fiat_accounts" edge to ProviderFiatAccount entities by IDs.
-func (ppu *ProviderProfileUpdate) RemoveFiatAccountIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
-	ppu.mutation.RemoveFiatAccountIDs(ids...)
-	return ppu
+func (_u *ProviderProfileUpdate) RemoveFiatAccountIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
+	_u.mutation.RemoveFiatAccountIDs(ids...)
+	return _u
 }
 
 // RemoveFiatAccounts removes "fiat_accounts" edges to ProviderFiatAccount entities.
-func (ppu *ProviderProfileUpdate) RemoveFiatAccounts(p ...*ProviderFiatAccount) *ProviderProfileUpdate {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *ProviderProfileUpdate) RemoveFiatAccounts(v ...*ProviderFiatAccount) *ProviderProfileUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return ppu.RemoveFiatAccountIDs(ids...)
+	return _u.RemoveFiatAccountIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
-func (ppu *ProviderProfileUpdate) Save(ctx context.Context) (int, error) {
-	ppu.defaults()
-	return withHooks(ctx, ppu.sqlSave, ppu.mutation, ppu.hooks)
+func (_u *ProviderProfileUpdate) Save(ctx context.Context) (int, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (ppu *ProviderProfileUpdate) SaveX(ctx context.Context) int {
-	affected, err := ppu.Save(ctx)
+func (_u *ProviderProfileUpdate) SaveX(ctx context.Context) int {
+	affected, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -389,89 +389,89 @@ func (ppu *ProviderProfileUpdate) SaveX(ctx context.Context) int {
 }
 
 // Exec executes the query.
-func (ppu *ProviderProfileUpdate) Exec(ctx context.Context) error {
-	_, err := ppu.Save(ctx)
+func (_u *ProviderProfileUpdate) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (ppu *ProviderProfileUpdate) ExecX(ctx context.Context) {
-	if err := ppu.Exec(ctx); err != nil {
+func (_u *ProviderProfileUpdate) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (ppu *ProviderProfileUpdate) defaults() {
-	if _, ok := ppu.mutation.UpdatedAt(); !ok {
+func (_u *ProviderProfileUpdate) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := providerprofile.UpdateDefaultUpdatedAt()
-		ppu.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (ppu *ProviderProfileUpdate) check() error {
-	if v, ok := ppu.mutation.TradingName(); ok {
+func (_u *ProviderProfileUpdate) check() error {
+	if v, ok := _u.mutation.TradingName(); ok {
 		if err := providerprofile.TradingNameValidator(v); err != nil {
 			return &ValidationError{Name: "trading_name", err: fmt.Errorf(`ent: validator failed for field "ProviderProfile.trading_name": %w`, err)}
 		}
 	}
-	if v, ok := ppu.mutation.ProvisionMode(); ok {
+	if v, ok := _u.mutation.ProvisionMode(); ok {
 		if err := providerprofile.ProvisionModeValidator(v); err != nil {
 			return &ValidationError{Name: "provision_mode", err: fmt.Errorf(`ent: validator failed for field "ProviderProfile.provision_mode": %w`, err)}
 		}
 	}
-	if v, ok := ppu.mutation.VisibilityMode(); ok {
+	if v, ok := _u.mutation.VisibilityMode(); ok {
 		if err := providerprofile.VisibilityModeValidator(v); err != nil {
 			return &ValidationError{Name: "visibility_mode", err: fmt.Errorf(`ent: validator failed for field "ProviderProfile.visibility_mode": %w`, err)}
 		}
 	}
-	if ppu.mutation.UserCleared() && len(ppu.mutation.UserIDs()) > 0 {
+	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ProviderProfile.user"`)
 	}
 	return nil
 }
 
-func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	if err := ppu.check(); err != nil {
-		return n, err
+func (_u *ProviderProfileUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(providerprofile.Table, providerprofile.Columns, sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString))
-	if ps := ppu.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := ppu.mutation.TradingName(); ok {
+	if value, ok := _u.mutation.TradingName(); ok {
 		_spec.SetField(providerprofile.FieldTradingName, field.TypeString, value)
 	}
-	if ppu.mutation.TradingNameCleared() {
+	if _u.mutation.TradingNameCleared() {
 		_spec.ClearField(providerprofile.FieldTradingName, field.TypeString)
 	}
-	if value, ok := ppu.mutation.HostIdentifier(); ok {
+	if value, ok := _u.mutation.HostIdentifier(); ok {
 		_spec.SetField(providerprofile.FieldHostIdentifier, field.TypeString, value)
 	}
-	if ppu.mutation.HostIdentifierCleared() {
+	if _u.mutation.HostIdentifierCleared() {
 		_spec.ClearField(providerprofile.FieldHostIdentifier, field.TypeString)
 	}
-	if value, ok := ppu.mutation.ProvisionMode(); ok {
+	if value, ok := _u.mutation.ProvisionMode(); ok {
 		_spec.SetField(providerprofile.FieldProvisionMode, field.TypeEnum, value)
 	}
-	if value, ok := ppu.mutation.IsActive(); ok {
+	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(providerprofile.FieldIsActive, field.TypeBool, value)
 	}
-	if value, ok := ppu.mutation.IsKybVerified(); ok {
+	if value, ok := _u.mutation.IsKybVerified(); ok {
 		_spec.SetField(providerprofile.FieldIsKybVerified, field.TypeBool, value)
 	}
-	if value, ok := ppu.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerprofile.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := ppu.mutation.VisibilityMode(); ok {
+	if value, ok := _u.mutation.VisibilityMode(); ok {
 		_spec.SetField(providerprofile.FieldVisibilityMode, field.TypeEnum, value)
 	}
-	if ppu.mutation.APIKeyCleared() {
+	if _u.mutation.APIKeyCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -484,7 +484,7 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppu.mutation.APIKeyIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.APIKeyIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -500,7 +500,7 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if ppu.mutation.ProviderCurrenciesCleared() {
+	if _u.mutation.ProviderCurrenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -513,7 +513,7 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppu.mutation.RemovedProviderCurrenciesIDs(); len(nodes) > 0 && !ppu.mutation.ProviderCurrenciesCleared() {
+	if nodes := _u.mutation.RemovedProviderCurrenciesIDs(); len(nodes) > 0 && !_u.mutation.ProviderCurrenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -529,7 +529,7 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppu.mutation.ProviderCurrenciesIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProviderCurrenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -545,7 +545,7 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if ppu.mutation.ProvisionBucketsCleared() {
+	if _u.mutation.ProvisionBucketsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
@@ -558,7 +558,7 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppu.mutation.RemovedProvisionBucketsIDs(); len(nodes) > 0 && !ppu.mutation.ProvisionBucketsCleared() {
+	if nodes := _u.mutation.RemovedProvisionBucketsIDs(); len(nodes) > 0 && !_u.mutation.ProvisionBucketsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
@@ -574,7 +574,7 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppu.mutation.ProvisionBucketsIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProvisionBucketsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
@@ -590,7 +590,7 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if ppu.mutation.OrderTokensCleared() {
+	if _u.mutation.OrderTokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -603,7 +603,7 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppu.mutation.RemovedOrderTokensIDs(); len(nodes) > 0 && !ppu.mutation.OrderTokensCleared() {
+	if nodes := _u.mutation.RemovedOrderTokensIDs(); len(nodes) > 0 && !_u.mutation.OrderTokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -619,7 +619,7 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppu.mutation.OrderTokensIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.OrderTokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -635,7 +635,7 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if ppu.mutation.ProviderRatingCleared() {
+	if _u.mutation.ProviderRatingCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -648,7 +648,7 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppu.mutation.ProviderRatingIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProviderRatingIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -664,7 +664,7 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if ppu.mutation.AssignedOrdersCleared() {
+	if _u.mutation.AssignedOrdersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -677,7 +677,7 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppu.mutation.RemovedAssignedOrdersIDs(); len(nodes) > 0 && !ppu.mutation.AssignedOrdersCleared() {
+	if nodes := _u.mutation.RemovedAssignedOrdersIDs(); len(nodes) > 0 && !_u.mutation.AssignedOrdersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -693,7 +693,7 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppu.mutation.AssignedOrdersIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.AssignedOrdersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -709,7 +709,7 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if ppu.mutation.FiatAccountsCleared() {
+	if _u.mutation.FiatAccountsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -722,7 +722,7 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppu.mutation.RemovedFiatAccountsIDs(); len(nodes) > 0 && !ppu.mutation.FiatAccountsCleared() {
+	if nodes := _u.mutation.RemovedFiatAccountsIDs(); len(nodes) > 0 && !_u.mutation.FiatAccountsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -738,7 +738,7 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppu.mutation.FiatAccountsIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.FiatAccountsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -754,7 +754,7 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if n, err = sqlgraph.UpdateNodes(ctx, ppu.driver, _spec); err != nil {
+	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{providerprofile.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -762,8 +762,8 @@ func (ppu *ProviderProfileUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		return 0, err
 	}
-	ppu.mutation.done = true
-	return n, nil
+	_u.mutation.done = true
+	return _node, nil
 }
 
 // ProviderProfileUpdateOne is the builder for updating a single ProviderProfile entity.
@@ -775,364 +775,364 @@ type ProviderProfileUpdateOne struct {
 }
 
 // SetTradingName sets the "trading_name" field.
-func (ppuo *ProviderProfileUpdateOne) SetTradingName(s string) *ProviderProfileUpdateOne {
-	ppuo.mutation.SetTradingName(s)
-	return ppuo
+func (_u *ProviderProfileUpdateOne) SetTradingName(v string) *ProviderProfileUpdateOne {
+	_u.mutation.SetTradingName(v)
+	return _u
 }
 
 // SetNillableTradingName sets the "trading_name" field if the given value is not nil.
-func (ppuo *ProviderProfileUpdateOne) SetNillableTradingName(s *string) *ProviderProfileUpdateOne {
-	if s != nil {
-		ppuo.SetTradingName(*s)
+func (_u *ProviderProfileUpdateOne) SetNillableTradingName(v *string) *ProviderProfileUpdateOne {
+	if v != nil {
+		_u.SetTradingName(*v)
 	}
-	return ppuo
+	return _u
 }
 
 // ClearTradingName clears the value of the "trading_name" field.
-func (ppuo *ProviderProfileUpdateOne) ClearTradingName() *ProviderProfileUpdateOne {
-	ppuo.mutation.ClearTradingName()
-	return ppuo
+func (_u *ProviderProfileUpdateOne) ClearTradingName() *ProviderProfileUpdateOne {
+	_u.mutation.ClearTradingName()
+	return _u
 }
 
 // SetHostIdentifier sets the "host_identifier" field.
-func (ppuo *ProviderProfileUpdateOne) SetHostIdentifier(s string) *ProviderProfileUpdateOne {
-	ppuo.mutation.SetHostIdentifier(s)
-	return ppuo
+func (_u *ProviderProfileUpdateOne) SetHostIdentifier(v string) *ProviderProfileUpdateOne {
+	_u.mutation.SetHostIdentifier(v)
+	return _u
 }
 
 // SetNillableHostIdentifier sets the "host_identifier" field if the given value is not nil.
-func (ppuo *ProviderProfileUpdateOne) SetNillableHostIdentifier(s *string) *ProviderProfileUpdateOne {
-	if s != nil {
-		ppuo.SetHostIdentifier(*s)
+func (_u *ProviderProfileUpdateOne) SetNillableHostIdentifier(v *string) *ProviderProfileUpdateOne {
+	if v != nil {
+		_u.SetHostIdentifier(*v)
 	}
-	return ppuo
+	return _u
 }
 
 // ClearHostIdentifier clears the value of the "host_identifier" field.
-func (ppuo *ProviderProfileUpdateOne) ClearHostIdentifier() *ProviderProfileUpdateOne {
-	ppuo.mutation.ClearHostIdentifier()
-	return ppuo
+func (_u *ProviderProfileUpdateOne) ClearHostIdentifier() *ProviderProfileUpdateOne {
+	_u.mutation.ClearHostIdentifier()
+	return _u
 }
 
 // SetProvisionMode sets the "provision_mode" field.
-func (ppuo *ProviderProfileUpdateOne) SetProvisionMode(pm providerprofile.ProvisionMode) *ProviderProfileUpdateOne {
-	ppuo.mutation.SetProvisionMode(pm)
-	return ppuo
+func (_u *ProviderProfileUpdateOne) SetProvisionMode(v providerprofile.ProvisionMode) *ProviderProfileUpdateOne {
+	_u.mutation.SetProvisionMode(v)
+	return _u
 }
 
 // SetNillableProvisionMode sets the "provision_mode" field if the given value is not nil.
-func (ppuo *ProviderProfileUpdateOne) SetNillableProvisionMode(pm *providerprofile.ProvisionMode) *ProviderProfileUpdateOne {
-	if pm != nil {
-		ppuo.SetProvisionMode(*pm)
+func (_u *ProviderProfileUpdateOne) SetNillableProvisionMode(v *providerprofile.ProvisionMode) *ProviderProfileUpdateOne {
+	if v != nil {
+		_u.SetProvisionMode(*v)
 	}
-	return ppuo
+	return _u
 }
 
 // SetIsActive sets the "is_active" field.
-func (ppuo *ProviderProfileUpdateOne) SetIsActive(b bool) *ProviderProfileUpdateOne {
-	ppuo.mutation.SetIsActive(b)
-	return ppuo
+func (_u *ProviderProfileUpdateOne) SetIsActive(v bool) *ProviderProfileUpdateOne {
+	_u.mutation.SetIsActive(v)
+	return _u
 }
 
 // SetNillableIsActive sets the "is_active" field if the given value is not nil.
-func (ppuo *ProviderProfileUpdateOne) SetNillableIsActive(b *bool) *ProviderProfileUpdateOne {
-	if b != nil {
-		ppuo.SetIsActive(*b)
+func (_u *ProviderProfileUpdateOne) SetNillableIsActive(v *bool) *ProviderProfileUpdateOne {
+	if v != nil {
+		_u.SetIsActive(*v)
 	}
-	return ppuo
+	return _u
 }
 
 // SetIsKybVerified sets the "is_kyb_verified" field.
-func (ppuo *ProviderProfileUpdateOne) SetIsKybVerified(b bool) *ProviderProfileUpdateOne {
-	ppuo.mutation.SetIsKybVerified(b)
-	return ppuo
+func (_u *ProviderProfileUpdateOne) SetIsKybVerified(v bool) *ProviderProfileUpdateOne {
+	_u.mutation.SetIsKybVerified(v)
+	return _u
 }
 
 // SetNillableIsKybVerified sets the "is_kyb_verified" field if the given value is not nil.
-func (ppuo *ProviderProfileUpdateOne) SetNillableIsKybVerified(b *bool) *ProviderProfileUpdateOne {
-	if b != nil {
-		ppuo.SetIsKybVerified(*b)
+func (_u *ProviderProfileUpdateOne) SetNillableIsKybVerified(v *bool) *ProviderProfileUpdateOne {
+	if v != nil {
+		_u.SetIsKybVerified(*v)
 	}
-	return ppuo
+	return _u
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (ppuo *ProviderProfileUpdateOne) SetUpdatedAt(t time.Time) *ProviderProfileUpdateOne {
-	ppuo.mutation.SetUpdatedAt(t)
-	return ppuo
+func (_u *ProviderProfileUpdateOne) SetUpdatedAt(v time.Time) *ProviderProfileUpdateOne {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetVisibilityMode sets the "visibility_mode" field.
-func (ppuo *ProviderProfileUpdateOne) SetVisibilityMode(pm providerprofile.VisibilityMode) *ProviderProfileUpdateOne {
-	ppuo.mutation.SetVisibilityMode(pm)
-	return ppuo
+func (_u *ProviderProfileUpdateOne) SetVisibilityMode(v providerprofile.VisibilityMode) *ProviderProfileUpdateOne {
+	_u.mutation.SetVisibilityMode(v)
+	return _u
 }
 
 // SetNillableVisibilityMode sets the "visibility_mode" field if the given value is not nil.
-func (ppuo *ProviderProfileUpdateOne) SetNillableVisibilityMode(pm *providerprofile.VisibilityMode) *ProviderProfileUpdateOne {
-	if pm != nil {
-		ppuo.SetVisibilityMode(*pm)
+func (_u *ProviderProfileUpdateOne) SetNillableVisibilityMode(v *providerprofile.VisibilityMode) *ProviderProfileUpdateOne {
+	if v != nil {
+		_u.SetVisibilityMode(*v)
 	}
-	return ppuo
+	return _u
 }
 
 // SetAPIKeyID sets the "api_key" edge to the APIKey entity by ID.
-func (ppuo *ProviderProfileUpdateOne) SetAPIKeyID(id uuid.UUID) *ProviderProfileUpdateOne {
-	ppuo.mutation.SetAPIKeyID(id)
-	return ppuo
+func (_u *ProviderProfileUpdateOne) SetAPIKeyID(id uuid.UUID) *ProviderProfileUpdateOne {
+	_u.mutation.SetAPIKeyID(id)
+	return _u
 }
 
 // SetNillableAPIKeyID sets the "api_key" edge to the APIKey entity by ID if the given value is not nil.
-func (ppuo *ProviderProfileUpdateOne) SetNillableAPIKeyID(id *uuid.UUID) *ProviderProfileUpdateOne {
+func (_u *ProviderProfileUpdateOne) SetNillableAPIKeyID(id *uuid.UUID) *ProviderProfileUpdateOne {
 	if id != nil {
-		ppuo = ppuo.SetAPIKeyID(*id)
+		_u = _u.SetAPIKeyID(*id)
 	}
-	return ppuo
+	return _u
 }
 
 // SetAPIKey sets the "api_key" edge to the APIKey entity.
-func (ppuo *ProviderProfileUpdateOne) SetAPIKey(a *APIKey) *ProviderProfileUpdateOne {
-	return ppuo.SetAPIKeyID(a.ID)
+func (_u *ProviderProfileUpdateOne) SetAPIKey(v *APIKey) *ProviderProfileUpdateOne {
+	return _u.SetAPIKeyID(v.ID)
 }
 
 // AddProviderCurrencyIDs adds the "provider_currencies" edge to the ProviderCurrencies entity by IDs.
-func (ppuo *ProviderProfileUpdateOne) AddProviderCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
-	ppuo.mutation.AddProviderCurrencyIDs(ids...)
-	return ppuo
+func (_u *ProviderProfileUpdateOne) AddProviderCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
+	_u.mutation.AddProviderCurrencyIDs(ids...)
+	return _u
 }
 
 // AddProviderCurrencies adds the "provider_currencies" edges to the ProviderCurrencies entity.
-func (ppuo *ProviderProfileUpdateOne) AddProviderCurrencies(p ...*ProviderCurrencies) *ProviderProfileUpdateOne {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *ProviderProfileUpdateOne) AddProviderCurrencies(v ...*ProviderCurrencies) *ProviderProfileUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return ppuo.AddProviderCurrencyIDs(ids...)
+	return _u.AddProviderCurrencyIDs(ids...)
 }
 
 // AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by IDs.
-func (ppuo *ProviderProfileUpdateOne) AddProvisionBucketIDs(ids ...int) *ProviderProfileUpdateOne {
-	ppuo.mutation.AddProvisionBucketIDs(ids...)
-	return ppuo
+func (_u *ProviderProfileUpdateOne) AddProvisionBucketIDs(ids ...int) *ProviderProfileUpdateOne {
+	_u.mutation.AddProvisionBucketIDs(ids...)
+	return _u
 }
 
 // AddProvisionBuckets adds the "provision_buckets" edges to the ProvisionBucket entity.
-func (ppuo *ProviderProfileUpdateOne) AddProvisionBuckets(p ...*ProvisionBucket) *ProviderProfileUpdateOne {
-	ids := make([]int, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *ProviderProfileUpdateOne) AddProvisionBuckets(v ...*ProvisionBucket) *ProviderProfileUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return ppuo.AddProvisionBucketIDs(ids...)
+	return _u.AddProvisionBucketIDs(ids...)
 }
 
 // AddOrderTokenIDs adds the "order_tokens" edge to the ProviderOrderToken entity by IDs.
-func (ppuo *ProviderProfileUpdateOne) AddOrderTokenIDs(ids ...int) *ProviderProfileUpdateOne {
-	ppuo.mutation.AddOrderTokenIDs(ids...)
-	return ppuo
+func (_u *ProviderProfileUpdateOne) AddOrderTokenIDs(ids ...int) *ProviderProfileUpdateOne {
+	_u.mutation.AddOrderTokenIDs(ids...)
+	return _u
 }
 
 // AddOrderTokens adds the "order_tokens" edges to the ProviderOrderToken entity.
-func (ppuo *ProviderProfileUpdateOne) AddOrderTokens(p ...*ProviderOrderToken) *ProviderProfileUpdateOne {
-	ids := make([]int, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *ProviderProfileUpdateOne) AddOrderTokens(v ...*ProviderOrderToken) *ProviderProfileUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return ppuo.AddOrderTokenIDs(ids...)
+	return _u.AddOrderTokenIDs(ids...)
 }
 
 // SetProviderRatingID sets the "provider_rating" edge to the ProviderRating entity by ID.
-func (ppuo *ProviderProfileUpdateOne) SetProviderRatingID(id int) *ProviderProfileUpdateOne {
-	ppuo.mutation.SetProviderRatingID(id)
-	return ppuo
+func (_u *ProviderProfileUpdateOne) SetProviderRatingID(id int) *ProviderProfileUpdateOne {
+	_u.mutation.SetProviderRatingID(id)
+	return _u
 }
 
 // SetNillableProviderRatingID sets the "provider_rating" edge to the ProviderRating entity by ID if the given value is not nil.
-func (ppuo *ProviderProfileUpdateOne) SetNillableProviderRatingID(id *int) *ProviderProfileUpdateOne {
+func (_u *ProviderProfileUpdateOne) SetNillableProviderRatingID(id *int) *ProviderProfileUpdateOne {
 	if id != nil {
-		ppuo = ppuo.SetProviderRatingID(*id)
+		_u = _u.SetProviderRatingID(*id)
 	}
-	return ppuo
+	return _u
 }
 
 // SetProviderRating sets the "provider_rating" edge to the ProviderRating entity.
-func (ppuo *ProviderProfileUpdateOne) SetProviderRating(p *ProviderRating) *ProviderProfileUpdateOne {
-	return ppuo.SetProviderRatingID(p.ID)
+func (_u *ProviderProfileUpdateOne) SetProviderRating(v *ProviderRating) *ProviderProfileUpdateOne {
+	return _u.SetProviderRatingID(v.ID)
 }
 
 // AddAssignedOrderIDs adds the "assigned_orders" edge to the LockPaymentOrder entity by IDs.
-func (ppuo *ProviderProfileUpdateOne) AddAssignedOrderIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
-	ppuo.mutation.AddAssignedOrderIDs(ids...)
-	return ppuo
+func (_u *ProviderProfileUpdateOne) AddAssignedOrderIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
+	_u.mutation.AddAssignedOrderIDs(ids...)
+	return _u
 }
 
 // AddAssignedOrders adds the "assigned_orders" edges to the LockPaymentOrder entity.
-func (ppuo *ProviderProfileUpdateOne) AddAssignedOrders(l ...*LockPaymentOrder) *ProviderProfileUpdateOne {
-	ids := make([]uuid.UUID, len(l))
-	for i := range l {
-		ids[i] = l[i].ID
+func (_u *ProviderProfileUpdateOne) AddAssignedOrders(v ...*LockPaymentOrder) *ProviderProfileUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return ppuo.AddAssignedOrderIDs(ids...)
+	return _u.AddAssignedOrderIDs(ids...)
 }
 
 // AddFiatAccountIDs adds the "fiat_accounts" edge to the ProviderFiatAccount entity by IDs.
-func (ppuo *ProviderProfileUpdateOne) AddFiatAccountIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
-	ppuo.mutation.AddFiatAccountIDs(ids...)
-	return ppuo
+func (_u *ProviderProfileUpdateOne) AddFiatAccountIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
+	_u.mutation.AddFiatAccountIDs(ids...)
+	return _u
 }
 
 // AddFiatAccounts adds the "fiat_accounts" edges to the ProviderFiatAccount entity.
-func (ppuo *ProviderProfileUpdateOne) AddFiatAccounts(p ...*ProviderFiatAccount) *ProviderProfileUpdateOne {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *ProviderProfileUpdateOne) AddFiatAccounts(v ...*ProviderFiatAccount) *ProviderProfileUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return ppuo.AddFiatAccountIDs(ids...)
+	return _u.AddFiatAccountIDs(ids...)
 }
 
 // Mutation returns the ProviderProfileMutation object of the builder.
-func (ppuo *ProviderProfileUpdateOne) Mutation() *ProviderProfileMutation {
-	return ppuo.mutation
+func (_u *ProviderProfileUpdateOne) Mutation() *ProviderProfileMutation {
+	return _u.mutation
 }
 
 // ClearAPIKey clears the "api_key" edge to the APIKey entity.
-func (ppuo *ProviderProfileUpdateOne) ClearAPIKey() *ProviderProfileUpdateOne {
-	ppuo.mutation.ClearAPIKey()
-	return ppuo
+func (_u *ProviderProfileUpdateOne) ClearAPIKey() *ProviderProfileUpdateOne {
+	_u.mutation.ClearAPIKey()
+	return _u
 }
 
 // ClearProviderCurrencies clears all "provider_currencies" edges to the ProviderCurrencies entity.
-func (ppuo *ProviderProfileUpdateOne) ClearProviderCurrencies() *ProviderProfileUpdateOne {
-	ppuo.mutation.ClearProviderCurrencies()
-	return ppuo
+func (_u *ProviderProfileUpdateOne) ClearProviderCurrencies() *ProviderProfileUpdateOne {
+	_u.mutation.ClearProviderCurrencies()
+	return _u
 }
 
 // RemoveProviderCurrencyIDs removes the "provider_currencies" edge to ProviderCurrencies entities by IDs.
-func (ppuo *ProviderProfileUpdateOne) RemoveProviderCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
-	ppuo.mutation.RemoveProviderCurrencyIDs(ids...)
-	return ppuo
+func (_u *ProviderProfileUpdateOne) RemoveProviderCurrencyIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
+	_u.mutation.RemoveProviderCurrencyIDs(ids...)
+	return _u
 }
 
 // RemoveProviderCurrencies removes "provider_currencies" edges to ProviderCurrencies entities.
-func (ppuo *ProviderProfileUpdateOne) RemoveProviderCurrencies(p ...*ProviderCurrencies) *ProviderProfileUpdateOne {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *ProviderProfileUpdateOne) RemoveProviderCurrencies(v ...*ProviderCurrencies) *ProviderProfileUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return ppuo.RemoveProviderCurrencyIDs(ids...)
+	return _u.RemoveProviderCurrencyIDs(ids...)
 }
 
 // ClearProvisionBuckets clears all "provision_buckets" edges to the ProvisionBucket entity.
-func (ppuo *ProviderProfileUpdateOne) ClearProvisionBuckets() *ProviderProfileUpdateOne {
-	ppuo.mutation.ClearProvisionBuckets()
-	return ppuo
+func (_u *ProviderProfileUpdateOne) ClearProvisionBuckets() *ProviderProfileUpdateOne {
+	_u.mutation.ClearProvisionBuckets()
+	return _u
 }
 
 // RemoveProvisionBucketIDs removes the "provision_buckets" edge to ProvisionBucket entities by IDs.
-func (ppuo *ProviderProfileUpdateOne) RemoveProvisionBucketIDs(ids ...int) *ProviderProfileUpdateOne {
-	ppuo.mutation.RemoveProvisionBucketIDs(ids...)
-	return ppuo
+func (_u *ProviderProfileUpdateOne) RemoveProvisionBucketIDs(ids ...int) *ProviderProfileUpdateOne {
+	_u.mutation.RemoveProvisionBucketIDs(ids...)
+	return _u
 }
 
 // RemoveProvisionBuckets removes "provision_buckets" edges to ProvisionBucket entities.
-func (ppuo *ProviderProfileUpdateOne) RemoveProvisionBuckets(p ...*ProvisionBucket) *ProviderProfileUpdateOne {
-	ids := make([]int, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *ProviderProfileUpdateOne) RemoveProvisionBuckets(v ...*ProvisionBucket) *ProviderProfileUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return ppuo.RemoveProvisionBucketIDs(ids...)
+	return _u.RemoveProvisionBucketIDs(ids...)
 }
 
 // ClearOrderTokens clears all "order_tokens" edges to the ProviderOrderToken entity.
-func (ppuo *ProviderProfileUpdateOne) ClearOrderTokens() *ProviderProfileUpdateOne {
-	ppuo.mutation.ClearOrderTokens()
-	return ppuo
+func (_u *ProviderProfileUpdateOne) ClearOrderTokens() *ProviderProfileUpdateOne {
+	_u.mutation.ClearOrderTokens()
+	return _u
 }
 
 // RemoveOrderTokenIDs removes the "order_tokens" edge to ProviderOrderToken entities by IDs.
-func (ppuo *ProviderProfileUpdateOne) RemoveOrderTokenIDs(ids ...int) *ProviderProfileUpdateOne {
-	ppuo.mutation.RemoveOrderTokenIDs(ids...)
-	return ppuo
+func (_u *ProviderProfileUpdateOne) RemoveOrderTokenIDs(ids ...int) *ProviderProfileUpdateOne {
+	_u.mutation.RemoveOrderTokenIDs(ids...)
+	return _u
 }
 
 // RemoveOrderTokens removes "order_tokens" edges to ProviderOrderToken entities.
-func (ppuo *ProviderProfileUpdateOne) RemoveOrderTokens(p ...*ProviderOrderToken) *ProviderProfileUpdateOne {
-	ids := make([]int, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *ProviderProfileUpdateOne) RemoveOrderTokens(v ...*ProviderOrderToken) *ProviderProfileUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return ppuo.RemoveOrderTokenIDs(ids...)
+	return _u.RemoveOrderTokenIDs(ids...)
 }
 
 // ClearProviderRating clears the "provider_rating" edge to the ProviderRating entity.
-func (ppuo *ProviderProfileUpdateOne) ClearProviderRating() *ProviderProfileUpdateOne {
-	ppuo.mutation.ClearProviderRating()
-	return ppuo
+func (_u *ProviderProfileUpdateOne) ClearProviderRating() *ProviderProfileUpdateOne {
+	_u.mutation.ClearProviderRating()
+	return _u
 }
 
 // ClearAssignedOrders clears all "assigned_orders" edges to the LockPaymentOrder entity.
-func (ppuo *ProviderProfileUpdateOne) ClearAssignedOrders() *ProviderProfileUpdateOne {
-	ppuo.mutation.ClearAssignedOrders()
-	return ppuo
+func (_u *ProviderProfileUpdateOne) ClearAssignedOrders() *ProviderProfileUpdateOne {
+	_u.mutation.ClearAssignedOrders()
+	return _u
 }
 
 // RemoveAssignedOrderIDs removes the "assigned_orders" edge to LockPaymentOrder entities by IDs.
-func (ppuo *ProviderProfileUpdateOne) RemoveAssignedOrderIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
-	ppuo.mutation.RemoveAssignedOrderIDs(ids...)
-	return ppuo
+func (_u *ProviderProfileUpdateOne) RemoveAssignedOrderIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
+	_u.mutation.RemoveAssignedOrderIDs(ids...)
+	return _u
 }
 
 // RemoveAssignedOrders removes "assigned_orders" edges to LockPaymentOrder entities.
-func (ppuo *ProviderProfileUpdateOne) RemoveAssignedOrders(l ...*LockPaymentOrder) *ProviderProfileUpdateOne {
-	ids := make([]uuid.UUID, len(l))
-	for i := range l {
-		ids[i] = l[i].ID
+func (_u *ProviderProfileUpdateOne) RemoveAssignedOrders(v ...*LockPaymentOrder) *ProviderProfileUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return ppuo.RemoveAssignedOrderIDs(ids...)
+	return _u.RemoveAssignedOrderIDs(ids...)
 }
 
 // ClearFiatAccounts clears all "fiat_accounts" edges to the ProviderFiatAccount entity.
-func (ppuo *ProviderProfileUpdateOne) ClearFiatAccounts() *ProviderProfileUpdateOne {
-	ppuo.mutation.ClearFiatAccounts()
-	return ppuo
+func (_u *ProviderProfileUpdateOne) ClearFiatAccounts() *ProviderProfileUpdateOne {
+	_u.mutation.ClearFiatAccounts()
+	return _u
 }
 
 // RemoveFiatAccountIDs removes the "fiat_accounts" edge to ProviderFiatAccount entities by IDs.
-func (ppuo *ProviderProfileUpdateOne) RemoveFiatAccountIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
-	ppuo.mutation.RemoveFiatAccountIDs(ids...)
-	return ppuo
+func (_u *ProviderProfileUpdateOne) RemoveFiatAccountIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
+	_u.mutation.RemoveFiatAccountIDs(ids...)
+	return _u
 }
 
 // RemoveFiatAccounts removes "fiat_accounts" edges to ProviderFiatAccount entities.
-func (ppuo *ProviderProfileUpdateOne) RemoveFiatAccounts(p ...*ProviderFiatAccount) *ProviderProfileUpdateOne {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *ProviderProfileUpdateOne) RemoveFiatAccounts(v ...*ProviderFiatAccount) *ProviderProfileUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return ppuo.RemoveFiatAccountIDs(ids...)
+	return _u.RemoveFiatAccountIDs(ids...)
 }
 
 // Where appends a list predicates to the ProviderProfileUpdate builder.
-func (ppuo *ProviderProfileUpdateOne) Where(ps ...predicate.ProviderProfile) *ProviderProfileUpdateOne {
-	ppuo.mutation.Where(ps...)
-	return ppuo
+func (_u *ProviderProfileUpdateOne) Where(ps ...predicate.ProviderProfile) *ProviderProfileUpdateOne {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
-func (ppuo *ProviderProfileUpdateOne) Select(field string, fields ...string) *ProviderProfileUpdateOne {
-	ppuo.fields = append([]string{field}, fields...)
-	return ppuo
+func (_u *ProviderProfileUpdateOne) Select(field string, fields ...string) *ProviderProfileUpdateOne {
+	_u.fields = append([]string{field}, fields...)
+	return _u
 }
 
 // Save executes the query and returns the updated ProviderProfile entity.
-func (ppuo *ProviderProfileUpdateOne) Save(ctx context.Context) (*ProviderProfile, error) {
-	ppuo.defaults()
-	return withHooks(ctx, ppuo.sqlSave, ppuo.mutation, ppuo.hooks)
+func (_u *ProviderProfileUpdateOne) Save(ctx context.Context) (*ProviderProfile, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (ppuo *ProviderProfileUpdateOne) SaveX(ctx context.Context) *ProviderProfile {
-	node, err := ppuo.Save(ctx)
+func (_u *ProviderProfileUpdateOne) SaveX(ctx context.Context) *ProviderProfile {
+	node, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -1140,60 +1140,60 @@ func (ppuo *ProviderProfileUpdateOne) SaveX(ctx context.Context) *ProviderProfil
 }
 
 // Exec executes the query on the entity.
-func (ppuo *ProviderProfileUpdateOne) Exec(ctx context.Context) error {
-	_, err := ppuo.Save(ctx)
+func (_u *ProviderProfileUpdateOne) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (ppuo *ProviderProfileUpdateOne) ExecX(ctx context.Context) {
-	if err := ppuo.Exec(ctx); err != nil {
+func (_u *ProviderProfileUpdateOne) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (ppuo *ProviderProfileUpdateOne) defaults() {
-	if _, ok := ppuo.mutation.UpdatedAt(); !ok {
+func (_u *ProviderProfileUpdateOne) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := providerprofile.UpdateDefaultUpdatedAt()
-		ppuo.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (ppuo *ProviderProfileUpdateOne) check() error {
-	if v, ok := ppuo.mutation.TradingName(); ok {
+func (_u *ProviderProfileUpdateOne) check() error {
+	if v, ok := _u.mutation.TradingName(); ok {
 		if err := providerprofile.TradingNameValidator(v); err != nil {
 			return &ValidationError{Name: "trading_name", err: fmt.Errorf(`ent: validator failed for field "ProviderProfile.trading_name": %w`, err)}
 		}
 	}
-	if v, ok := ppuo.mutation.ProvisionMode(); ok {
+	if v, ok := _u.mutation.ProvisionMode(); ok {
 		if err := providerprofile.ProvisionModeValidator(v); err != nil {
 			return &ValidationError{Name: "provision_mode", err: fmt.Errorf(`ent: validator failed for field "ProviderProfile.provision_mode": %w`, err)}
 		}
 	}
-	if v, ok := ppuo.mutation.VisibilityMode(); ok {
+	if v, ok := _u.mutation.VisibilityMode(); ok {
 		if err := providerprofile.VisibilityModeValidator(v); err != nil {
 			return &ValidationError{Name: "visibility_mode", err: fmt.Errorf(`ent: validator failed for field "ProviderProfile.visibility_mode": %w`, err)}
 		}
 	}
-	if ppuo.mutation.UserCleared() && len(ppuo.mutation.UserIDs()) > 0 {
+	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ProviderProfile.user"`)
 	}
 	return nil
 }
 
-func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *ProviderProfile, err error) {
-	if err := ppuo.check(); err != nil {
+func (_u *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *ProviderProfile, err error) {
+	if err := _u.check(); err != nil {
 		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(providerprofile.Table, providerprofile.Columns, sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString))
-	id, ok := ppuo.mutation.ID()
+	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "ProviderProfile.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
-	if fields := ppuo.fields; len(fields) > 0 {
+	if fields := _u.fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, providerprofile.FieldID)
 		for _, f := range fields {
@@ -1205,41 +1205,41 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 			}
 		}
 	}
-	if ps := ppuo.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := ppuo.mutation.TradingName(); ok {
+	if value, ok := _u.mutation.TradingName(); ok {
 		_spec.SetField(providerprofile.FieldTradingName, field.TypeString, value)
 	}
-	if ppuo.mutation.TradingNameCleared() {
+	if _u.mutation.TradingNameCleared() {
 		_spec.ClearField(providerprofile.FieldTradingName, field.TypeString)
 	}
-	if value, ok := ppuo.mutation.HostIdentifier(); ok {
+	if value, ok := _u.mutation.HostIdentifier(); ok {
 		_spec.SetField(providerprofile.FieldHostIdentifier, field.TypeString, value)
 	}
-	if ppuo.mutation.HostIdentifierCleared() {
+	if _u.mutation.HostIdentifierCleared() {
 		_spec.ClearField(providerprofile.FieldHostIdentifier, field.TypeString)
 	}
-	if value, ok := ppuo.mutation.ProvisionMode(); ok {
+	if value, ok := _u.mutation.ProvisionMode(); ok {
 		_spec.SetField(providerprofile.FieldProvisionMode, field.TypeEnum, value)
 	}
-	if value, ok := ppuo.mutation.IsActive(); ok {
+	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(providerprofile.FieldIsActive, field.TypeBool, value)
 	}
-	if value, ok := ppuo.mutation.IsKybVerified(); ok {
+	if value, ok := _u.mutation.IsKybVerified(); ok {
 		_spec.SetField(providerprofile.FieldIsKybVerified, field.TypeBool, value)
 	}
-	if value, ok := ppuo.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerprofile.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := ppuo.mutation.VisibilityMode(); ok {
+	if value, ok := _u.mutation.VisibilityMode(); ok {
 		_spec.SetField(providerprofile.FieldVisibilityMode, field.TypeEnum, value)
 	}
-	if ppuo.mutation.APIKeyCleared() {
+	if _u.mutation.APIKeyCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -1252,7 +1252,7 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppuo.mutation.APIKeyIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.APIKeyIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -1268,7 +1268,7 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if ppuo.mutation.ProviderCurrenciesCleared() {
+	if _u.mutation.ProviderCurrenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -1281,7 +1281,7 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppuo.mutation.RemovedProviderCurrenciesIDs(); len(nodes) > 0 && !ppuo.mutation.ProviderCurrenciesCleared() {
+	if nodes := _u.mutation.RemovedProviderCurrenciesIDs(); len(nodes) > 0 && !_u.mutation.ProviderCurrenciesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -1297,7 +1297,7 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppuo.mutation.ProviderCurrenciesIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProviderCurrenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -1313,7 +1313,7 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if ppuo.mutation.ProvisionBucketsCleared() {
+	if _u.mutation.ProvisionBucketsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
@@ -1326,7 +1326,7 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppuo.mutation.RemovedProvisionBucketsIDs(); len(nodes) > 0 && !ppuo.mutation.ProvisionBucketsCleared() {
+	if nodes := _u.mutation.RemovedProvisionBucketsIDs(); len(nodes) > 0 && !_u.mutation.ProvisionBucketsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
@@ -1342,7 +1342,7 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppuo.mutation.ProvisionBucketsIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProvisionBucketsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
@@ -1358,7 +1358,7 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if ppuo.mutation.OrderTokensCleared() {
+	if _u.mutation.OrderTokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -1371,7 +1371,7 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppuo.mutation.RemovedOrderTokensIDs(); len(nodes) > 0 && !ppuo.mutation.OrderTokensCleared() {
+	if nodes := _u.mutation.RemovedOrderTokensIDs(); len(nodes) > 0 && !_u.mutation.OrderTokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -1387,7 +1387,7 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppuo.mutation.OrderTokensIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.OrderTokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -1403,7 +1403,7 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if ppuo.mutation.ProviderRatingCleared() {
+	if _u.mutation.ProviderRatingCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -1416,7 +1416,7 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppuo.mutation.ProviderRatingIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProviderRatingIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -1432,7 +1432,7 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if ppuo.mutation.AssignedOrdersCleared() {
+	if _u.mutation.AssignedOrdersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -1445,7 +1445,7 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppuo.mutation.RemovedAssignedOrdersIDs(); len(nodes) > 0 && !ppuo.mutation.AssignedOrdersCleared() {
+	if nodes := _u.mutation.RemovedAssignedOrdersIDs(); len(nodes) > 0 && !_u.mutation.AssignedOrdersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -1461,7 +1461,7 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppuo.mutation.AssignedOrdersIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.AssignedOrdersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -1477,7 +1477,7 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if ppuo.mutation.FiatAccountsCleared() {
+	if _u.mutation.FiatAccountsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -1490,7 +1490,7 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppuo.mutation.RemovedFiatAccountsIDs(); len(nodes) > 0 && !ppuo.mutation.FiatAccountsCleared() {
+	if nodes := _u.mutation.RemovedFiatAccountsIDs(); len(nodes) > 0 && !_u.mutation.FiatAccountsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -1506,7 +1506,7 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ppuo.mutation.FiatAccountsIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.FiatAccountsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -1522,10 +1522,10 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	_node = &ProviderProfile{config: ppuo.config}
+	_node = &ProviderProfile{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues
-	if err = sqlgraph.UpdateNode(ctx, ppuo.driver, _spec); err != nil {
+	if err = sqlgraph.UpdateNode(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{providerprofile.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -1533,6 +1533,6 @@ func (ppuo *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provi
 		}
 		return nil, err
 	}
-	ppuo.mutation.done = true
+	_u.mutation.done = true
 	return _node, nil
 }

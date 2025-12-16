@@ -29,40 +29,40 @@ type IdentityVerificationRequestQuery struct {
 }
 
 // Where adds a new predicate for the IdentityVerificationRequestQuery builder.
-func (ivrq *IdentityVerificationRequestQuery) Where(ps ...predicate.IdentityVerificationRequest) *IdentityVerificationRequestQuery {
-	ivrq.predicates = append(ivrq.predicates, ps...)
-	return ivrq
+func (_q *IdentityVerificationRequestQuery) Where(ps ...predicate.IdentityVerificationRequest) *IdentityVerificationRequestQuery {
+	_q.predicates = append(_q.predicates, ps...)
+	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (ivrq *IdentityVerificationRequestQuery) Limit(limit int) *IdentityVerificationRequestQuery {
-	ivrq.ctx.Limit = &limit
-	return ivrq
+func (_q *IdentityVerificationRequestQuery) Limit(limit int) *IdentityVerificationRequestQuery {
+	_q.ctx.Limit = &limit
+	return _q
 }
 
 // Offset to start from.
-func (ivrq *IdentityVerificationRequestQuery) Offset(offset int) *IdentityVerificationRequestQuery {
-	ivrq.ctx.Offset = &offset
-	return ivrq
+func (_q *IdentityVerificationRequestQuery) Offset(offset int) *IdentityVerificationRequestQuery {
+	_q.ctx.Offset = &offset
+	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (ivrq *IdentityVerificationRequestQuery) Unique(unique bool) *IdentityVerificationRequestQuery {
-	ivrq.ctx.Unique = &unique
-	return ivrq
+func (_q *IdentityVerificationRequestQuery) Unique(unique bool) *IdentityVerificationRequestQuery {
+	_q.ctx.Unique = &unique
+	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (ivrq *IdentityVerificationRequestQuery) Order(o ...identityverificationrequest.OrderOption) *IdentityVerificationRequestQuery {
-	ivrq.order = append(ivrq.order, o...)
-	return ivrq
+func (_q *IdentityVerificationRequestQuery) Order(o ...identityverificationrequest.OrderOption) *IdentityVerificationRequestQuery {
+	_q.order = append(_q.order, o...)
+	return _q
 }
 
 // First returns the first IdentityVerificationRequest entity from the query.
 // Returns a *NotFoundError when no IdentityVerificationRequest was found.
-func (ivrq *IdentityVerificationRequestQuery) First(ctx context.Context) (*IdentityVerificationRequest, error) {
-	nodes, err := ivrq.Limit(1).All(setContextOp(ctx, ivrq.ctx, ent.OpQueryFirst))
+func (_q *IdentityVerificationRequestQuery) First(ctx context.Context) (*IdentityVerificationRequest, error) {
+	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
@@ -73,8 +73,8 @@ func (ivrq *IdentityVerificationRequestQuery) First(ctx context.Context) (*Ident
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (ivrq *IdentityVerificationRequestQuery) FirstX(ctx context.Context) *IdentityVerificationRequest {
-	node, err := ivrq.First(ctx)
+func (_q *IdentityVerificationRequestQuery) FirstX(ctx context.Context) *IdentityVerificationRequest {
+	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -83,9 +83,9 @@ func (ivrq *IdentityVerificationRequestQuery) FirstX(ctx context.Context) *Ident
 
 // FirstID returns the first IdentityVerificationRequest ID from the query.
 // Returns a *NotFoundError when no IdentityVerificationRequest ID was found.
-func (ivrq *IdentityVerificationRequestQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *IdentityVerificationRequestQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = ivrq.Limit(1).IDs(setContextOp(ctx, ivrq.ctx, ent.OpQueryFirstID)); err != nil {
+	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -96,8 +96,8 @@ func (ivrq *IdentityVerificationRequestQuery) FirstID(ctx context.Context) (id u
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (ivrq *IdentityVerificationRequestQuery) FirstIDX(ctx context.Context) uuid.UUID {
-	id, err := ivrq.FirstID(ctx)
+func (_q *IdentityVerificationRequestQuery) FirstIDX(ctx context.Context) uuid.UUID {
+	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -107,8 +107,8 @@ func (ivrq *IdentityVerificationRequestQuery) FirstIDX(ctx context.Context) uuid
 // Only returns a single IdentityVerificationRequest entity found by the query, ensuring it only returns one.
 // Returns a *NotSingularError when more than one IdentityVerificationRequest entity is found.
 // Returns a *NotFoundError when no IdentityVerificationRequest entities are found.
-func (ivrq *IdentityVerificationRequestQuery) Only(ctx context.Context) (*IdentityVerificationRequest, error) {
-	nodes, err := ivrq.Limit(2).All(setContextOp(ctx, ivrq.ctx, ent.OpQueryOnly))
+func (_q *IdentityVerificationRequestQuery) Only(ctx context.Context) (*IdentityVerificationRequest, error) {
+	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -123,8 +123,8 @@ func (ivrq *IdentityVerificationRequestQuery) Only(ctx context.Context) (*Identi
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (ivrq *IdentityVerificationRequestQuery) OnlyX(ctx context.Context) *IdentityVerificationRequest {
-	node, err := ivrq.Only(ctx)
+func (_q *IdentityVerificationRequestQuery) OnlyX(ctx context.Context) *IdentityVerificationRequest {
+	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -134,9 +134,9 @@ func (ivrq *IdentityVerificationRequestQuery) OnlyX(ctx context.Context) *Identi
 // OnlyID is like Only, but returns the only IdentityVerificationRequest ID in the query.
 // Returns a *NotSingularError when more than one IdentityVerificationRequest ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (ivrq *IdentityVerificationRequestQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *IdentityVerificationRequestQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = ivrq.Limit(2).IDs(setContextOp(ctx, ivrq.ctx, ent.OpQueryOnlyID)); err != nil {
+	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -151,8 +151,8 @@ func (ivrq *IdentityVerificationRequestQuery) OnlyID(ctx context.Context) (id uu
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (ivrq *IdentityVerificationRequestQuery) OnlyIDX(ctx context.Context) uuid.UUID {
-	id, err := ivrq.OnlyID(ctx)
+func (_q *IdentityVerificationRequestQuery) OnlyIDX(ctx context.Context) uuid.UUID {
+	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -160,18 +160,18 @@ func (ivrq *IdentityVerificationRequestQuery) OnlyIDX(ctx context.Context) uuid.
 }
 
 // All executes the query and returns a list of IdentityVerificationRequests.
-func (ivrq *IdentityVerificationRequestQuery) All(ctx context.Context) ([]*IdentityVerificationRequest, error) {
-	ctx = setContextOp(ctx, ivrq.ctx, ent.OpQueryAll)
-	if err := ivrq.prepareQuery(ctx); err != nil {
+func (_q *IdentityVerificationRequestQuery) All(ctx context.Context) ([]*IdentityVerificationRequest, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
 	qr := querierAll[[]*IdentityVerificationRequest, *IdentityVerificationRequestQuery]()
-	return withInterceptors[[]*IdentityVerificationRequest](ctx, ivrq, qr, ivrq.inters)
+	return withInterceptors[[]*IdentityVerificationRequest](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (ivrq *IdentityVerificationRequestQuery) AllX(ctx context.Context) []*IdentityVerificationRequest {
-	nodes, err := ivrq.All(ctx)
+func (_q *IdentityVerificationRequestQuery) AllX(ctx context.Context) []*IdentityVerificationRequest {
+	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -179,20 +179,20 @@ func (ivrq *IdentityVerificationRequestQuery) AllX(ctx context.Context) []*Ident
 }
 
 // IDs executes the query and returns a list of IdentityVerificationRequest IDs.
-func (ivrq *IdentityVerificationRequestQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
-	if ivrq.ctx.Unique == nil && ivrq.path != nil {
-		ivrq.Unique(true)
+func (_q *IdentityVerificationRequestQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if _q.ctx.Unique == nil && _q.path != nil {
+		_q.Unique(true)
 	}
-	ctx = setContextOp(ctx, ivrq.ctx, ent.OpQueryIDs)
-	if err = ivrq.Select(identityverificationrequest.FieldID).Scan(ctx, &ids); err != nil {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
+	if err = _q.Select(identityverificationrequest.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (ivrq *IdentityVerificationRequestQuery) IDsX(ctx context.Context) []uuid.UUID {
-	ids, err := ivrq.IDs(ctx)
+func (_q *IdentityVerificationRequestQuery) IDsX(ctx context.Context) []uuid.UUID {
+	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -200,17 +200,17 @@ func (ivrq *IdentityVerificationRequestQuery) IDsX(ctx context.Context) []uuid.U
 }
 
 // Count returns the count of the given query.
-func (ivrq *IdentityVerificationRequestQuery) Count(ctx context.Context) (int, error) {
-	ctx = setContextOp(ctx, ivrq.ctx, ent.OpQueryCount)
-	if err := ivrq.prepareQuery(ctx); err != nil {
+func (_q *IdentityVerificationRequestQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, ivrq, querierCount[*IdentityVerificationRequestQuery](), ivrq.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*IdentityVerificationRequestQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (ivrq *IdentityVerificationRequestQuery) CountX(ctx context.Context) int {
-	count, err := ivrq.Count(ctx)
+func (_q *IdentityVerificationRequestQuery) CountX(ctx context.Context) int {
+	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -218,9 +218,9 @@ func (ivrq *IdentityVerificationRequestQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (ivrq *IdentityVerificationRequestQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = setContextOp(ctx, ivrq.ctx, ent.OpQueryExist)
-	switch _, err := ivrq.FirstID(ctx); {
+func (_q *IdentityVerificationRequestQuery) Exist(ctx context.Context) (bool, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
+	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
 	case err != nil:
@@ -231,8 +231,8 @@ func (ivrq *IdentityVerificationRequestQuery) Exist(ctx context.Context) (bool, 
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (ivrq *IdentityVerificationRequestQuery) ExistX(ctx context.Context) bool {
-	exist, err := ivrq.Exist(ctx)
+func (_q *IdentityVerificationRequestQuery) ExistX(ctx context.Context) bool {
+	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -241,19 +241,19 @@ func (ivrq *IdentityVerificationRequestQuery) ExistX(ctx context.Context) bool {
 
 // Clone returns a duplicate of the IdentityVerificationRequestQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (ivrq *IdentityVerificationRequestQuery) Clone() *IdentityVerificationRequestQuery {
-	if ivrq == nil {
+func (_q *IdentityVerificationRequestQuery) Clone() *IdentityVerificationRequestQuery {
+	if _q == nil {
 		return nil
 	}
 	return &IdentityVerificationRequestQuery{
-		config:     ivrq.config,
-		ctx:        ivrq.ctx.Clone(),
-		order:      append([]identityverificationrequest.OrderOption{}, ivrq.order...),
-		inters:     append([]Interceptor{}, ivrq.inters...),
-		predicates: append([]predicate.IdentityVerificationRequest{}, ivrq.predicates...),
+		config:     _q.config,
+		ctx:        _q.ctx.Clone(),
+		order:      append([]identityverificationrequest.OrderOption{}, _q.order...),
+		inters:     append([]Interceptor{}, _q.inters...),
+		predicates: append([]predicate.IdentityVerificationRequest{}, _q.predicates...),
 		// clone intermediate query.
-		sql:  ivrq.sql.Clone(),
-		path: ivrq.path,
+		sql:  _q.sql.Clone(),
+		path: _q.path,
 	}
 }
 
@@ -271,10 +271,10 @@ func (ivrq *IdentityVerificationRequestQuery) Clone() *IdentityVerificationReque
 //		GroupBy(identityverificationrequest.FieldWalletAddress).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (ivrq *IdentityVerificationRequestQuery) GroupBy(field string, fields ...string) *IdentityVerificationRequestGroupBy {
-	ivrq.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &IdentityVerificationRequestGroupBy{build: ivrq}
-	grbuild.flds = &ivrq.ctx.Fields
+func (_q *IdentityVerificationRequestQuery) GroupBy(field string, fields ...string) *IdentityVerificationRequestGroupBy {
+	_q.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &IdentityVerificationRequestGroupBy{build: _q}
+	grbuild.flds = &_q.ctx.Fields
 	grbuild.label = identityverificationrequest.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -292,62 +292,62 @@ func (ivrq *IdentityVerificationRequestQuery) GroupBy(field string, fields ...st
 //	client.IdentityVerificationRequest.Query().
 //		Select(identityverificationrequest.FieldWalletAddress).
 //		Scan(ctx, &v)
-func (ivrq *IdentityVerificationRequestQuery) Select(fields ...string) *IdentityVerificationRequestSelect {
-	ivrq.ctx.Fields = append(ivrq.ctx.Fields, fields...)
-	sbuild := &IdentityVerificationRequestSelect{IdentityVerificationRequestQuery: ivrq}
+func (_q *IdentityVerificationRequestQuery) Select(fields ...string) *IdentityVerificationRequestSelect {
+	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
+	sbuild := &IdentityVerificationRequestSelect{IdentityVerificationRequestQuery: _q}
 	sbuild.label = identityverificationrequest.Label
-	sbuild.flds, sbuild.scan = &ivrq.ctx.Fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
 // Aggregate returns a IdentityVerificationRequestSelect configured with the given aggregations.
-func (ivrq *IdentityVerificationRequestQuery) Aggregate(fns ...AggregateFunc) *IdentityVerificationRequestSelect {
-	return ivrq.Select().Aggregate(fns...)
+func (_q *IdentityVerificationRequestQuery) Aggregate(fns ...AggregateFunc) *IdentityVerificationRequestSelect {
+	return _q.Select().Aggregate(fns...)
 }
 
-func (ivrq *IdentityVerificationRequestQuery) prepareQuery(ctx context.Context) error {
-	for _, inter := range ivrq.inters {
+func (_q *IdentityVerificationRequestQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
 		}
 		if trv, ok := inter.(Traverser); ok {
-			if err := trv.Traverse(ctx, ivrq); err != nil {
+			if err := trv.Traverse(ctx, _q); err != nil {
 				return err
 			}
 		}
 	}
-	for _, f := range ivrq.ctx.Fields {
+	for _, f := range _q.ctx.Fields {
 		if !identityverificationrequest.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
-	if ivrq.path != nil {
-		prev, err := ivrq.path(ctx)
+	if _q.path != nil {
+		prev, err := _q.path(ctx)
 		if err != nil {
 			return err
 		}
-		ivrq.sql = prev
+		_q.sql = prev
 	}
 	return nil
 }
 
-func (ivrq *IdentityVerificationRequestQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*IdentityVerificationRequest, error) {
+func (_q *IdentityVerificationRequestQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*IdentityVerificationRequest, error) {
 	var (
 		nodes = []*IdentityVerificationRequest{}
-		_spec = ivrq.querySpec()
+		_spec = _q.querySpec()
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*IdentityVerificationRequest).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &IdentityVerificationRequest{config: ivrq.config}
+		node := &IdentityVerificationRequest{config: _q.config}
 		nodes = append(nodes, node)
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
 	}
-	if err := sqlgraph.QueryNodes(ctx, ivrq.driver, _spec); err != nil {
+	if err := sqlgraph.QueryNodes(ctx, _q.driver, _spec); err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
@@ -356,24 +356,24 @@ func (ivrq *IdentityVerificationRequestQuery) sqlAll(ctx context.Context, hooks 
 	return nodes, nil
 }
 
-func (ivrq *IdentityVerificationRequestQuery) sqlCount(ctx context.Context) (int, error) {
-	_spec := ivrq.querySpec()
-	_spec.Node.Columns = ivrq.ctx.Fields
-	if len(ivrq.ctx.Fields) > 0 {
-		_spec.Unique = ivrq.ctx.Unique != nil && *ivrq.ctx.Unique
+func (_q *IdentityVerificationRequestQuery) sqlCount(ctx context.Context) (int, error) {
+	_spec := _q.querySpec()
+	_spec.Node.Columns = _q.ctx.Fields
+	if len(_q.ctx.Fields) > 0 {
+		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
 	}
-	return sqlgraph.CountNodes(ctx, ivrq.driver, _spec)
+	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (ivrq *IdentityVerificationRequestQuery) querySpec() *sqlgraph.QuerySpec {
+func (_q *IdentityVerificationRequestQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := sqlgraph.NewQuerySpec(identityverificationrequest.Table, identityverificationrequest.Columns, sqlgraph.NewFieldSpec(identityverificationrequest.FieldID, field.TypeUUID))
-	_spec.From = ivrq.sql
-	if unique := ivrq.ctx.Unique; unique != nil {
+	_spec.From = _q.sql
+	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
-	} else if ivrq.path != nil {
+	} else if _q.path != nil {
 		_spec.Unique = true
 	}
-	if fields := ivrq.ctx.Fields; len(fields) > 0 {
+	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, identityverificationrequest.FieldID)
 		for i := range fields {
@@ -382,20 +382,20 @@ func (ivrq *IdentityVerificationRequestQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if ps := ivrq.predicates; len(ps) > 0 {
+	if ps := _q.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if limit := ivrq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := ivrq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
-	if ps := ivrq.order; len(ps) > 0 {
+	if ps := _q.order; len(ps) > 0 {
 		_spec.Order = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
@@ -405,33 +405,33 @@ func (ivrq *IdentityVerificationRequestQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (ivrq *IdentityVerificationRequestQuery) sqlQuery(ctx context.Context) *sql.Selector {
-	builder := sql.Dialect(ivrq.driver.Dialect())
+func (_q *IdentityVerificationRequestQuery) sqlQuery(ctx context.Context) *sql.Selector {
+	builder := sql.Dialect(_q.driver.Dialect())
 	t1 := builder.Table(identityverificationrequest.Table)
-	columns := ivrq.ctx.Fields
+	columns := _q.ctx.Fields
 	if len(columns) == 0 {
 		columns = identityverificationrequest.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
-	if ivrq.sql != nil {
-		selector = ivrq.sql
+	if _q.sql != nil {
+		selector = _q.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if ivrq.ctx.Unique != nil && *ivrq.ctx.Unique {
+	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
-	for _, p := range ivrq.predicates {
+	for _, p := range _q.predicates {
 		p(selector)
 	}
-	for _, p := range ivrq.order {
+	for _, p := range _q.order {
 		p(selector)
 	}
-	if offset := ivrq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := ivrq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -444,41 +444,41 @@ type IdentityVerificationRequestGroupBy struct {
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (ivrgb *IdentityVerificationRequestGroupBy) Aggregate(fns ...AggregateFunc) *IdentityVerificationRequestGroupBy {
-	ivrgb.fns = append(ivrgb.fns, fns...)
-	return ivrgb
+func (_g *IdentityVerificationRequestGroupBy) Aggregate(fns ...AggregateFunc) *IdentityVerificationRequestGroupBy {
+	_g.fns = append(_g.fns, fns...)
+	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (ivrgb *IdentityVerificationRequestGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, ivrgb.build.ctx, ent.OpQueryGroupBy)
-	if err := ivrgb.build.prepareQuery(ctx); err != nil {
+func (_g *IdentityVerificationRequestGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
+	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*IdentityVerificationRequestQuery, *IdentityVerificationRequestGroupBy](ctx, ivrgb.build, ivrgb, ivrgb.build.inters, v)
+	return scanWithInterceptors[*IdentityVerificationRequestQuery, *IdentityVerificationRequestGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (ivrgb *IdentityVerificationRequestGroupBy) sqlScan(ctx context.Context, root *IdentityVerificationRequestQuery, v any) error {
+func (_g *IdentityVerificationRequestGroupBy) sqlScan(ctx context.Context, root *IdentityVerificationRequestQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
-	aggregation := make([]string, 0, len(ivrgb.fns))
-	for _, fn := range ivrgb.fns {
+	aggregation := make([]string, 0, len(_g.fns))
+	for _, fn := range _g.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
 	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(*ivrgb.flds)+len(ivrgb.fns))
-		for _, f := range *ivrgb.flds {
+		columns := make([]string, 0, len(*_g.flds)+len(_g.fns))
+		for _, f := range *_g.flds {
 			columns = append(columns, selector.C(f))
 		}
 		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
-	selector.GroupBy(selector.Columns(*ivrgb.flds...)...)
+	selector.GroupBy(selector.Columns(*_g.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := ivrgb.build.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _g.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
@@ -492,27 +492,27 @@ type IdentityVerificationRequestSelect struct {
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (ivrs *IdentityVerificationRequestSelect) Aggregate(fns ...AggregateFunc) *IdentityVerificationRequestSelect {
-	ivrs.fns = append(ivrs.fns, fns...)
-	return ivrs
+func (_s *IdentityVerificationRequestSelect) Aggregate(fns ...AggregateFunc) *IdentityVerificationRequestSelect {
+	_s.fns = append(_s.fns, fns...)
+	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (ivrs *IdentityVerificationRequestSelect) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, ivrs.ctx, ent.OpQuerySelect)
-	if err := ivrs.prepareQuery(ctx); err != nil {
+func (_s *IdentityVerificationRequestSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
+	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*IdentityVerificationRequestQuery, *IdentityVerificationRequestSelect](ctx, ivrs.IdentityVerificationRequestQuery, ivrs, ivrs.inters, v)
+	return scanWithInterceptors[*IdentityVerificationRequestQuery, *IdentityVerificationRequestSelect](ctx, _s.IdentityVerificationRequestQuery, _s, _s.inters, v)
 }
 
-func (ivrs *IdentityVerificationRequestSelect) sqlScan(ctx context.Context, root *IdentityVerificationRequestQuery, v any) error {
+func (_s *IdentityVerificationRequestSelect) sqlScan(ctx context.Context, root *IdentityVerificationRequestQuery, v any) error {
 	selector := root.sqlQuery(ctx)
-	aggregation := make([]string, 0, len(ivrs.fns))
-	for _, fn := range ivrs.fns {
+	aggregation := make([]string, 0, len(_s.fns))
+	for _, fn := range _s.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
-	switch n := len(*ivrs.selector.flds); {
+	switch n := len(*_s.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
 		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
@@ -520,7 +520,7 @@ func (ivrs *IdentityVerificationRequestSelect) sqlScan(ctx context.Context, root
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := ivrs.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _s.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()

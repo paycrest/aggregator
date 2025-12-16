@@ -26,128 +26,128 @@ type LockOrderFulfillmentCreate struct {
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (lofc *LockOrderFulfillmentCreate) SetCreatedAt(t time.Time) *LockOrderFulfillmentCreate {
-	lofc.mutation.SetCreatedAt(t)
-	return lofc
+func (_c *LockOrderFulfillmentCreate) SetCreatedAt(v time.Time) *LockOrderFulfillmentCreate {
+	_c.mutation.SetCreatedAt(v)
+	return _c
 }
 
 // SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (lofc *LockOrderFulfillmentCreate) SetNillableCreatedAt(t *time.Time) *LockOrderFulfillmentCreate {
-	if t != nil {
-		lofc.SetCreatedAt(*t)
+func (_c *LockOrderFulfillmentCreate) SetNillableCreatedAt(v *time.Time) *LockOrderFulfillmentCreate {
+	if v != nil {
+		_c.SetCreatedAt(*v)
 	}
-	return lofc
+	return _c
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (lofc *LockOrderFulfillmentCreate) SetUpdatedAt(t time.Time) *LockOrderFulfillmentCreate {
-	lofc.mutation.SetUpdatedAt(t)
-	return lofc
+func (_c *LockOrderFulfillmentCreate) SetUpdatedAt(v time.Time) *LockOrderFulfillmentCreate {
+	_c.mutation.SetUpdatedAt(v)
+	return _c
 }
 
 // SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (lofc *LockOrderFulfillmentCreate) SetNillableUpdatedAt(t *time.Time) *LockOrderFulfillmentCreate {
-	if t != nil {
-		lofc.SetUpdatedAt(*t)
+func (_c *LockOrderFulfillmentCreate) SetNillableUpdatedAt(v *time.Time) *LockOrderFulfillmentCreate {
+	if v != nil {
+		_c.SetUpdatedAt(*v)
 	}
-	return lofc
+	return _c
 }
 
 // SetTxID sets the "tx_id" field.
-func (lofc *LockOrderFulfillmentCreate) SetTxID(s string) *LockOrderFulfillmentCreate {
-	lofc.mutation.SetTxID(s)
-	return lofc
+func (_c *LockOrderFulfillmentCreate) SetTxID(v string) *LockOrderFulfillmentCreate {
+	_c.mutation.SetTxID(v)
+	return _c
 }
 
 // SetNillableTxID sets the "tx_id" field if the given value is not nil.
-func (lofc *LockOrderFulfillmentCreate) SetNillableTxID(s *string) *LockOrderFulfillmentCreate {
-	if s != nil {
-		lofc.SetTxID(*s)
+func (_c *LockOrderFulfillmentCreate) SetNillableTxID(v *string) *LockOrderFulfillmentCreate {
+	if v != nil {
+		_c.SetTxID(*v)
 	}
-	return lofc
+	return _c
 }
 
 // SetPsp sets the "psp" field.
-func (lofc *LockOrderFulfillmentCreate) SetPsp(s string) *LockOrderFulfillmentCreate {
-	lofc.mutation.SetPsp(s)
-	return lofc
+func (_c *LockOrderFulfillmentCreate) SetPsp(v string) *LockOrderFulfillmentCreate {
+	_c.mutation.SetPsp(v)
+	return _c
 }
 
 // SetNillablePsp sets the "psp" field if the given value is not nil.
-func (lofc *LockOrderFulfillmentCreate) SetNillablePsp(s *string) *LockOrderFulfillmentCreate {
-	if s != nil {
-		lofc.SetPsp(*s)
+func (_c *LockOrderFulfillmentCreate) SetNillablePsp(v *string) *LockOrderFulfillmentCreate {
+	if v != nil {
+		_c.SetPsp(*v)
 	}
-	return lofc
+	return _c
 }
 
 // SetValidationStatus sets the "validation_status" field.
-func (lofc *LockOrderFulfillmentCreate) SetValidationStatus(ls lockorderfulfillment.ValidationStatus) *LockOrderFulfillmentCreate {
-	lofc.mutation.SetValidationStatus(ls)
-	return lofc
+func (_c *LockOrderFulfillmentCreate) SetValidationStatus(v lockorderfulfillment.ValidationStatus) *LockOrderFulfillmentCreate {
+	_c.mutation.SetValidationStatus(v)
+	return _c
 }
 
 // SetNillableValidationStatus sets the "validation_status" field if the given value is not nil.
-func (lofc *LockOrderFulfillmentCreate) SetNillableValidationStatus(ls *lockorderfulfillment.ValidationStatus) *LockOrderFulfillmentCreate {
-	if ls != nil {
-		lofc.SetValidationStatus(*ls)
+func (_c *LockOrderFulfillmentCreate) SetNillableValidationStatus(v *lockorderfulfillment.ValidationStatus) *LockOrderFulfillmentCreate {
+	if v != nil {
+		_c.SetValidationStatus(*v)
 	}
-	return lofc
+	return _c
 }
 
 // SetValidationError sets the "validation_error" field.
-func (lofc *LockOrderFulfillmentCreate) SetValidationError(s string) *LockOrderFulfillmentCreate {
-	lofc.mutation.SetValidationError(s)
-	return lofc
+func (_c *LockOrderFulfillmentCreate) SetValidationError(v string) *LockOrderFulfillmentCreate {
+	_c.mutation.SetValidationError(v)
+	return _c
 }
 
 // SetNillableValidationError sets the "validation_error" field if the given value is not nil.
-func (lofc *LockOrderFulfillmentCreate) SetNillableValidationError(s *string) *LockOrderFulfillmentCreate {
-	if s != nil {
-		lofc.SetValidationError(*s)
+func (_c *LockOrderFulfillmentCreate) SetNillableValidationError(v *string) *LockOrderFulfillmentCreate {
+	if v != nil {
+		_c.SetValidationError(*v)
 	}
-	return lofc
+	return _c
 }
 
 // SetID sets the "id" field.
-func (lofc *LockOrderFulfillmentCreate) SetID(u uuid.UUID) *LockOrderFulfillmentCreate {
-	lofc.mutation.SetID(u)
-	return lofc
+func (_c *LockOrderFulfillmentCreate) SetID(v uuid.UUID) *LockOrderFulfillmentCreate {
+	_c.mutation.SetID(v)
+	return _c
 }
 
 // SetNillableID sets the "id" field if the given value is not nil.
-func (lofc *LockOrderFulfillmentCreate) SetNillableID(u *uuid.UUID) *LockOrderFulfillmentCreate {
-	if u != nil {
-		lofc.SetID(*u)
+func (_c *LockOrderFulfillmentCreate) SetNillableID(v *uuid.UUID) *LockOrderFulfillmentCreate {
+	if v != nil {
+		_c.SetID(*v)
 	}
-	return lofc
+	return _c
 }
 
 // SetOrderID sets the "order" edge to the LockPaymentOrder entity by ID.
-func (lofc *LockOrderFulfillmentCreate) SetOrderID(id uuid.UUID) *LockOrderFulfillmentCreate {
-	lofc.mutation.SetOrderID(id)
-	return lofc
+func (_c *LockOrderFulfillmentCreate) SetOrderID(id uuid.UUID) *LockOrderFulfillmentCreate {
+	_c.mutation.SetOrderID(id)
+	return _c
 }
 
 // SetOrder sets the "order" edge to the LockPaymentOrder entity.
-func (lofc *LockOrderFulfillmentCreate) SetOrder(l *LockPaymentOrder) *LockOrderFulfillmentCreate {
-	return lofc.SetOrderID(l.ID)
+func (_c *LockOrderFulfillmentCreate) SetOrder(v *LockPaymentOrder) *LockOrderFulfillmentCreate {
+	return _c.SetOrderID(v.ID)
 }
 
 // Mutation returns the LockOrderFulfillmentMutation object of the builder.
-func (lofc *LockOrderFulfillmentCreate) Mutation() *LockOrderFulfillmentMutation {
-	return lofc.mutation
+func (_c *LockOrderFulfillmentCreate) Mutation() *LockOrderFulfillmentMutation {
+	return _c.mutation
 }
 
 // Save creates the LockOrderFulfillment in the database.
-func (lofc *LockOrderFulfillmentCreate) Save(ctx context.Context) (*LockOrderFulfillment, error) {
-	lofc.defaults()
-	return withHooks(ctx, lofc.sqlSave, lofc.mutation, lofc.hooks)
+func (_c *LockOrderFulfillmentCreate) Save(ctx context.Context) (*LockOrderFulfillment, error) {
+	_c.defaults()
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (lofc *LockOrderFulfillmentCreate) SaveX(ctx context.Context) *LockOrderFulfillment {
-	v, err := lofc.Save(ctx)
+func (_c *LockOrderFulfillmentCreate) SaveX(ctx context.Context) *LockOrderFulfillment {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -155,66 +155,66 @@ func (lofc *LockOrderFulfillmentCreate) SaveX(ctx context.Context) *LockOrderFul
 }
 
 // Exec executes the query.
-func (lofc *LockOrderFulfillmentCreate) Exec(ctx context.Context) error {
-	_, err := lofc.Save(ctx)
+func (_c *LockOrderFulfillmentCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (lofc *LockOrderFulfillmentCreate) ExecX(ctx context.Context) {
-	if err := lofc.Exec(ctx); err != nil {
+func (_c *LockOrderFulfillmentCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (lofc *LockOrderFulfillmentCreate) defaults() {
-	if _, ok := lofc.mutation.CreatedAt(); !ok {
+func (_c *LockOrderFulfillmentCreate) defaults() {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := lockorderfulfillment.DefaultCreatedAt()
-		lofc.mutation.SetCreatedAt(v)
+		_c.mutation.SetCreatedAt(v)
 	}
-	if _, ok := lofc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		v := lockorderfulfillment.DefaultUpdatedAt()
-		lofc.mutation.SetUpdatedAt(v)
+		_c.mutation.SetUpdatedAt(v)
 	}
-	if _, ok := lofc.mutation.ValidationStatus(); !ok {
+	if _, ok := _c.mutation.ValidationStatus(); !ok {
 		v := lockorderfulfillment.DefaultValidationStatus
-		lofc.mutation.SetValidationStatus(v)
+		_c.mutation.SetValidationStatus(v)
 	}
-	if _, ok := lofc.mutation.ID(); !ok {
+	if _, ok := _c.mutation.ID(); !ok {
 		v := lockorderfulfillment.DefaultID()
-		lofc.mutation.SetID(v)
+		_c.mutation.SetID(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (lofc *LockOrderFulfillmentCreate) check() error {
-	if _, ok := lofc.mutation.CreatedAt(); !ok {
+func (_c *LockOrderFulfillmentCreate) check() error {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "LockOrderFulfillment.created_at"`)}
 	}
-	if _, ok := lofc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "LockOrderFulfillment.updated_at"`)}
 	}
-	if _, ok := lofc.mutation.ValidationStatus(); !ok {
+	if _, ok := _c.mutation.ValidationStatus(); !ok {
 		return &ValidationError{Name: "validation_status", err: errors.New(`ent: missing required field "LockOrderFulfillment.validation_status"`)}
 	}
-	if v, ok := lofc.mutation.ValidationStatus(); ok {
+	if v, ok := _c.mutation.ValidationStatus(); ok {
 		if err := lockorderfulfillment.ValidationStatusValidator(v); err != nil {
 			return &ValidationError{Name: "validation_status", err: fmt.Errorf(`ent: validator failed for field "LockOrderFulfillment.validation_status": %w`, err)}
 		}
 	}
-	if len(lofc.mutation.OrderIDs()) == 0 {
+	if len(_c.mutation.OrderIDs()) == 0 {
 		return &ValidationError{Name: "order", err: errors.New(`ent: missing required edge "LockOrderFulfillment.order"`)}
 	}
 	return nil
 }
 
-func (lofc *LockOrderFulfillmentCreate) sqlSave(ctx context.Context) (*LockOrderFulfillment, error) {
-	if err := lofc.check(); err != nil {
+func (_c *LockOrderFulfillmentCreate) sqlSave(ctx context.Context) (*LockOrderFulfillment, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := lofc.createSpec()
-	if err := sqlgraph.CreateNode(ctx, lofc.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -227,46 +227,46 @@ func (lofc *LockOrderFulfillmentCreate) sqlSave(ctx context.Context) (*LockOrder
 			return nil, err
 		}
 	}
-	lofc.mutation.id = &_node.ID
-	lofc.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (lofc *LockOrderFulfillmentCreate) createSpec() (*LockOrderFulfillment, *sqlgraph.CreateSpec) {
+func (_c *LockOrderFulfillmentCreate) createSpec() (*LockOrderFulfillment, *sqlgraph.CreateSpec) {
 	var (
-		_node = &LockOrderFulfillment{config: lofc.config}
+		_node = &LockOrderFulfillment{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(lockorderfulfillment.Table, sqlgraph.NewFieldSpec(lockorderfulfillment.FieldID, field.TypeUUID))
 	)
-	_spec.OnConflict = lofc.conflict
-	if id, ok := lofc.mutation.ID(); ok {
+	_spec.OnConflict = _c.conflict
+	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := lofc.mutation.CreatedAt(); ok {
+	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(lockorderfulfillment.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
 	}
-	if value, ok := lofc.mutation.UpdatedAt(); ok {
+	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(lockorderfulfillment.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if value, ok := lofc.mutation.TxID(); ok {
+	if value, ok := _c.mutation.TxID(); ok {
 		_spec.SetField(lockorderfulfillment.FieldTxID, field.TypeString, value)
 		_node.TxID = value
 	}
-	if value, ok := lofc.mutation.Psp(); ok {
+	if value, ok := _c.mutation.Psp(); ok {
 		_spec.SetField(lockorderfulfillment.FieldPsp, field.TypeString, value)
 		_node.Psp = value
 	}
-	if value, ok := lofc.mutation.ValidationStatus(); ok {
+	if value, ok := _c.mutation.ValidationStatus(); ok {
 		_spec.SetField(lockorderfulfillment.FieldValidationStatus, field.TypeEnum, value)
 		_node.ValidationStatus = value
 	}
-	if value, ok := lofc.mutation.ValidationError(); ok {
+	if value, ok := _c.mutation.ValidationError(); ok {
 		_spec.SetField(lockorderfulfillment.FieldValidationError, field.TypeString, value)
 		_node.ValidationError = value
 	}
-	if nodes := lofc.mutation.OrderIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.OrderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -302,10 +302,10 @@ func (lofc *LockOrderFulfillmentCreate) createSpec() (*LockOrderFulfillment, *sq
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (lofc *LockOrderFulfillmentCreate) OnConflict(opts ...sql.ConflictOption) *LockOrderFulfillmentUpsertOne {
-	lofc.conflict = opts
+func (_c *LockOrderFulfillmentCreate) OnConflict(opts ...sql.ConflictOption) *LockOrderFulfillmentUpsertOne {
+	_c.conflict = opts
 	return &LockOrderFulfillmentUpsertOne{
-		create: lofc,
+		create: _c,
 	}
 }
 
@@ -315,10 +315,10 @@ func (lofc *LockOrderFulfillmentCreate) OnConflict(opts ...sql.ConflictOption) *
 //	client.LockOrderFulfillment.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (lofc *LockOrderFulfillmentCreate) OnConflictColumns(columns ...string) *LockOrderFulfillmentUpsertOne {
-	lofc.conflict = append(lofc.conflict, sql.ConflictColumns(columns...))
+func (_c *LockOrderFulfillmentCreate) OnConflictColumns(columns ...string) *LockOrderFulfillmentUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &LockOrderFulfillmentUpsertOne{
-		create: lofc,
+		create: _c,
 	}
 }
 
@@ -602,16 +602,16 @@ type LockOrderFulfillmentCreateBulk struct {
 }
 
 // Save creates the LockOrderFulfillment entities in the database.
-func (lofcb *LockOrderFulfillmentCreateBulk) Save(ctx context.Context) ([]*LockOrderFulfillment, error) {
-	if lofcb.err != nil {
-		return nil, lofcb.err
+func (_c *LockOrderFulfillmentCreateBulk) Save(ctx context.Context) ([]*LockOrderFulfillment, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(lofcb.builders))
-	nodes := make([]*LockOrderFulfillment, len(lofcb.builders))
-	mutators := make([]Mutator, len(lofcb.builders))
-	for i := range lofcb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*LockOrderFulfillment, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := lofcb.builders[i]
+			builder := _c.builders[i]
 			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*LockOrderFulfillmentMutation)
@@ -625,12 +625,12 @@ func (lofcb *LockOrderFulfillmentCreateBulk) Save(ctx context.Context) ([]*LockO
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, lofcb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = lofcb.conflict
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, lofcb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -650,7 +650,7 @@ func (lofcb *LockOrderFulfillmentCreateBulk) Save(ctx context.Context) ([]*LockO
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, lofcb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -658,8 +658,8 @@ func (lofcb *LockOrderFulfillmentCreateBulk) Save(ctx context.Context) ([]*LockO
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (lofcb *LockOrderFulfillmentCreateBulk) SaveX(ctx context.Context) []*LockOrderFulfillment {
-	v, err := lofcb.Save(ctx)
+func (_c *LockOrderFulfillmentCreateBulk) SaveX(ctx context.Context) []*LockOrderFulfillment {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -667,14 +667,14 @@ func (lofcb *LockOrderFulfillmentCreateBulk) SaveX(ctx context.Context) []*LockO
 }
 
 // Exec executes the query.
-func (lofcb *LockOrderFulfillmentCreateBulk) Exec(ctx context.Context) error {
-	_, err := lofcb.Save(ctx)
+func (_c *LockOrderFulfillmentCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (lofcb *LockOrderFulfillmentCreateBulk) ExecX(ctx context.Context) {
-	if err := lofcb.Exec(ctx); err != nil {
+func (_c *LockOrderFulfillmentCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
@@ -694,10 +694,10 @@ func (lofcb *LockOrderFulfillmentCreateBulk) ExecX(ctx context.Context) {
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (lofcb *LockOrderFulfillmentCreateBulk) OnConflict(opts ...sql.ConflictOption) *LockOrderFulfillmentUpsertBulk {
-	lofcb.conflict = opts
+func (_c *LockOrderFulfillmentCreateBulk) OnConflict(opts ...sql.ConflictOption) *LockOrderFulfillmentUpsertBulk {
+	_c.conflict = opts
 	return &LockOrderFulfillmentUpsertBulk{
-		create: lofcb,
+		create: _c,
 	}
 }
 
@@ -707,10 +707,10 @@ func (lofcb *LockOrderFulfillmentCreateBulk) OnConflict(opts ...sql.ConflictOpti
 //	client.LockOrderFulfillment.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (lofcb *LockOrderFulfillmentCreateBulk) OnConflictColumns(columns ...string) *LockOrderFulfillmentUpsertBulk {
-	lofcb.conflict = append(lofcb.conflict, sql.ConflictColumns(columns...))
+func (_c *LockOrderFulfillmentCreateBulk) OnConflictColumns(columns ...string) *LockOrderFulfillmentUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &LockOrderFulfillmentUpsertBulk{
-		create: lofcb,
+		create: _c,
 	}
 }
 

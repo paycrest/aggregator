@@ -27,251 +27,251 @@ type NetworkUpdate struct {
 }
 
 // Where appends a list predicates to the NetworkUpdate builder.
-func (nu *NetworkUpdate) Where(ps ...predicate.Network) *NetworkUpdate {
-	nu.mutation.Where(ps...)
-	return nu
+func (_u *NetworkUpdate) Where(ps ...predicate.Network) *NetworkUpdate {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (nu *NetworkUpdate) SetUpdatedAt(t time.Time) *NetworkUpdate {
-	nu.mutation.SetUpdatedAt(t)
-	return nu
+func (_u *NetworkUpdate) SetUpdatedAt(v time.Time) *NetworkUpdate {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetChainID sets the "chain_id" field.
-func (nu *NetworkUpdate) SetChainID(i int64) *NetworkUpdate {
-	nu.mutation.ResetChainID()
-	nu.mutation.SetChainID(i)
-	return nu
+func (_u *NetworkUpdate) SetChainID(v int64) *NetworkUpdate {
+	_u.mutation.ResetChainID()
+	_u.mutation.SetChainID(v)
+	return _u
 }
 
 // SetNillableChainID sets the "chain_id" field if the given value is not nil.
-func (nu *NetworkUpdate) SetNillableChainID(i *int64) *NetworkUpdate {
-	if i != nil {
-		nu.SetChainID(*i)
+func (_u *NetworkUpdate) SetNillableChainID(v *int64) *NetworkUpdate {
+	if v != nil {
+		_u.SetChainID(*v)
 	}
-	return nu
+	return _u
 }
 
-// AddChainID adds i to the "chain_id" field.
-func (nu *NetworkUpdate) AddChainID(i int64) *NetworkUpdate {
-	nu.mutation.AddChainID(i)
-	return nu
+// AddChainID adds value to the "chain_id" field.
+func (_u *NetworkUpdate) AddChainID(v int64) *NetworkUpdate {
+	_u.mutation.AddChainID(v)
+	return _u
 }
 
 // SetIdentifier sets the "identifier" field.
-func (nu *NetworkUpdate) SetIdentifier(s string) *NetworkUpdate {
-	nu.mutation.SetIdentifier(s)
-	return nu
+func (_u *NetworkUpdate) SetIdentifier(v string) *NetworkUpdate {
+	_u.mutation.SetIdentifier(v)
+	return _u
 }
 
 // SetNillableIdentifier sets the "identifier" field if the given value is not nil.
-func (nu *NetworkUpdate) SetNillableIdentifier(s *string) *NetworkUpdate {
-	if s != nil {
-		nu.SetIdentifier(*s)
+func (_u *NetworkUpdate) SetNillableIdentifier(v *string) *NetworkUpdate {
+	if v != nil {
+		_u.SetIdentifier(*v)
 	}
-	return nu
+	return _u
 }
 
 // SetRPCEndpoint sets the "rpc_endpoint" field.
-func (nu *NetworkUpdate) SetRPCEndpoint(s string) *NetworkUpdate {
-	nu.mutation.SetRPCEndpoint(s)
-	return nu
+func (_u *NetworkUpdate) SetRPCEndpoint(v string) *NetworkUpdate {
+	_u.mutation.SetRPCEndpoint(v)
+	return _u
 }
 
 // SetNillableRPCEndpoint sets the "rpc_endpoint" field if the given value is not nil.
-func (nu *NetworkUpdate) SetNillableRPCEndpoint(s *string) *NetworkUpdate {
-	if s != nil {
-		nu.SetRPCEndpoint(*s)
+func (_u *NetworkUpdate) SetNillableRPCEndpoint(v *string) *NetworkUpdate {
+	if v != nil {
+		_u.SetRPCEndpoint(*v)
 	}
-	return nu
+	return _u
 }
 
 // SetGatewayContractAddress sets the "gateway_contract_address" field.
-func (nu *NetworkUpdate) SetGatewayContractAddress(s string) *NetworkUpdate {
-	nu.mutation.SetGatewayContractAddress(s)
-	return nu
+func (_u *NetworkUpdate) SetGatewayContractAddress(v string) *NetworkUpdate {
+	_u.mutation.SetGatewayContractAddress(v)
+	return _u
 }
 
 // SetNillableGatewayContractAddress sets the "gateway_contract_address" field if the given value is not nil.
-func (nu *NetworkUpdate) SetNillableGatewayContractAddress(s *string) *NetworkUpdate {
-	if s != nil {
-		nu.SetGatewayContractAddress(*s)
+func (_u *NetworkUpdate) SetNillableGatewayContractAddress(v *string) *NetworkUpdate {
+	if v != nil {
+		_u.SetGatewayContractAddress(*v)
 	}
-	return nu
+	return _u
 }
 
 // SetBlockTime sets the "block_time" field.
-func (nu *NetworkUpdate) SetBlockTime(d decimal.Decimal) *NetworkUpdate {
-	nu.mutation.ResetBlockTime()
-	nu.mutation.SetBlockTime(d)
-	return nu
+func (_u *NetworkUpdate) SetBlockTime(v decimal.Decimal) *NetworkUpdate {
+	_u.mutation.ResetBlockTime()
+	_u.mutation.SetBlockTime(v)
+	return _u
 }
 
 // SetNillableBlockTime sets the "block_time" field if the given value is not nil.
-func (nu *NetworkUpdate) SetNillableBlockTime(d *decimal.Decimal) *NetworkUpdate {
-	if d != nil {
-		nu.SetBlockTime(*d)
+func (_u *NetworkUpdate) SetNillableBlockTime(v *decimal.Decimal) *NetworkUpdate {
+	if v != nil {
+		_u.SetBlockTime(*v)
 	}
-	return nu
+	return _u
 }
 
-// AddBlockTime adds d to the "block_time" field.
-func (nu *NetworkUpdate) AddBlockTime(d decimal.Decimal) *NetworkUpdate {
-	nu.mutation.AddBlockTime(d)
-	return nu
+// AddBlockTime adds value to the "block_time" field.
+func (_u *NetworkUpdate) AddBlockTime(v decimal.Decimal) *NetworkUpdate {
+	_u.mutation.AddBlockTime(v)
+	return _u
 }
 
 // SetIsTestnet sets the "is_testnet" field.
-func (nu *NetworkUpdate) SetIsTestnet(b bool) *NetworkUpdate {
-	nu.mutation.SetIsTestnet(b)
-	return nu
+func (_u *NetworkUpdate) SetIsTestnet(v bool) *NetworkUpdate {
+	_u.mutation.SetIsTestnet(v)
+	return _u
 }
 
 // SetNillableIsTestnet sets the "is_testnet" field if the given value is not nil.
-func (nu *NetworkUpdate) SetNillableIsTestnet(b *bool) *NetworkUpdate {
-	if b != nil {
-		nu.SetIsTestnet(*b)
+func (_u *NetworkUpdate) SetNillableIsTestnet(v *bool) *NetworkUpdate {
+	if v != nil {
+		_u.SetIsTestnet(*v)
 	}
-	return nu
+	return _u
 }
 
 // SetBundlerURL sets the "bundler_url" field.
-func (nu *NetworkUpdate) SetBundlerURL(s string) *NetworkUpdate {
-	nu.mutation.SetBundlerURL(s)
-	return nu
+func (_u *NetworkUpdate) SetBundlerURL(v string) *NetworkUpdate {
+	_u.mutation.SetBundlerURL(v)
+	return _u
 }
 
 // SetNillableBundlerURL sets the "bundler_url" field if the given value is not nil.
-func (nu *NetworkUpdate) SetNillableBundlerURL(s *string) *NetworkUpdate {
-	if s != nil {
-		nu.SetBundlerURL(*s)
+func (_u *NetworkUpdate) SetNillableBundlerURL(v *string) *NetworkUpdate {
+	if v != nil {
+		_u.SetBundlerURL(*v)
 	}
-	return nu
+	return _u
 }
 
 // ClearBundlerURL clears the value of the "bundler_url" field.
-func (nu *NetworkUpdate) ClearBundlerURL() *NetworkUpdate {
-	nu.mutation.ClearBundlerURL()
-	return nu
+func (_u *NetworkUpdate) ClearBundlerURL() *NetworkUpdate {
+	_u.mutation.ClearBundlerURL()
+	return _u
 }
 
 // SetPaymasterURL sets the "paymaster_url" field.
-func (nu *NetworkUpdate) SetPaymasterURL(s string) *NetworkUpdate {
-	nu.mutation.SetPaymasterURL(s)
-	return nu
+func (_u *NetworkUpdate) SetPaymasterURL(v string) *NetworkUpdate {
+	_u.mutation.SetPaymasterURL(v)
+	return _u
 }
 
 // SetNillablePaymasterURL sets the "paymaster_url" field if the given value is not nil.
-func (nu *NetworkUpdate) SetNillablePaymasterURL(s *string) *NetworkUpdate {
-	if s != nil {
-		nu.SetPaymasterURL(*s)
+func (_u *NetworkUpdate) SetNillablePaymasterURL(v *string) *NetworkUpdate {
+	if v != nil {
+		_u.SetPaymasterURL(*v)
 	}
-	return nu
+	return _u
 }
 
 // ClearPaymasterURL clears the value of the "paymaster_url" field.
-func (nu *NetworkUpdate) ClearPaymasterURL() *NetworkUpdate {
-	nu.mutation.ClearPaymasterURL()
-	return nu
+func (_u *NetworkUpdate) ClearPaymasterURL() *NetworkUpdate {
+	_u.mutation.ClearPaymasterURL()
+	return _u
 }
 
 // SetFee sets the "fee" field.
-func (nu *NetworkUpdate) SetFee(d decimal.Decimal) *NetworkUpdate {
-	nu.mutation.ResetFee()
-	nu.mutation.SetFee(d)
-	return nu
+func (_u *NetworkUpdate) SetFee(v decimal.Decimal) *NetworkUpdate {
+	_u.mutation.ResetFee()
+	_u.mutation.SetFee(v)
+	return _u
 }
 
 // SetNillableFee sets the "fee" field if the given value is not nil.
-func (nu *NetworkUpdate) SetNillableFee(d *decimal.Decimal) *NetworkUpdate {
-	if d != nil {
-		nu.SetFee(*d)
+func (_u *NetworkUpdate) SetNillableFee(v *decimal.Decimal) *NetworkUpdate {
+	if v != nil {
+		_u.SetFee(*v)
 	}
-	return nu
+	return _u
 }
 
-// AddFee adds d to the "fee" field.
-func (nu *NetworkUpdate) AddFee(d decimal.Decimal) *NetworkUpdate {
-	nu.mutation.AddFee(d)
-	return nu
+// AddFee adds value to the "fee" field.
+func (_u *NetworkUpdate) AddFee(v decimal.Decimal) *NetworkUpdate {
+	_u.mutation.AddFee(v)
+	return _u
 }
 
 // AddTokenIDs adds the "tokens" edge to the Token entity by IDs.
-func (nu *NetworkUpdate) AddTokenIDs(ids ...int) *NetworkUpdate {
-	nu.mutation.AddTokenIDs(ids...)
-	return nu
+func (_u *NetworkUpdate) AddTokenIDs(ids ...int) *NetworkUpdate {
+	_u.mutation.AddTokenIDs(ids...)
+	return _u
 }
 
 // AddTokens adds the "tokens" edges to the Token entity.
-func (nu *NetworkUpdate) AddTokens(t ...*Token) *NetworkUpdate {
-	ids := make([]int, len(t))
-	for i := range t {
-		ids[i] = t[i].ID
+func (_u *NetworkUpdate) AddTokens(v ...*Token) *NetworkUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return nu.AddTokenIDs(ids...)
+	return _u.AddTokenIDs(ids...)
 }
 
 // SetPaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID.
-func (nu *NetworkUpdate) SetPaymentWebhookID(id uuid.UUID) *NetworkUpdate {
-	nu.mutation.SetPaymentWebhookID(id)
-	return nu
+func (_u *NetworkUpdate) SetPaymentWebhookID(id uuid.UUID) *NetworkUpdate {
+	_u.mutation.SetPaymentWebhookID(id)
+	return _u
 }
 
 // SetNillablePaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID if the given value is not nil.
-func (nu *NetworkUpdate) SetNillablePaymentWebhookID(id *uuid.UUID) *NetworkUpdate {
+func (_u *NetworkUpdate) SetNillablePaymentWebhookID(id *uuid.UUID) *NetworkUpdate {
 	if id != nil {
-		nu = nu.SetPaymentWebhookID(*id)
+		_u = _u.SetPaymentWebhookID(*id)
 	}
-	return nu
+	return _u
 }
 
 // SetPaymentWebhook sets the "payment_webhook" edge to the PaymentWebhook entity.
-func (nu *NetworkUpdate) SetPaymentWebhook(p *PaymentWebhook) *NetworkUpdate {
-	return nu.SetPaymentWebhookID(p.ID)
+func (_u *NetworkUpdate) SetPaymentWebhook(v *PaymentWebhook) *NetworkUpdate {
+	return _u.SetPaymentWebhookID(v.ID)
 }
 
 // Mutation returns the NetworkMutation object of the builder.
-func (nu *NetworkUpdate) Mutation() *NetworkMutation {
-	return nu.mutation
+func (_u *NetworkUpdate) Mutation() *NetworkMutation {
+	return _u.mutation
 }
 
 // ClearTokens clears all "tokens" edges to the Token entity.
-func (nu *NetworkUpdate) ClearTokens() *NetworkUpdate {
-	nu.mutation.ClearTokens()
-	return nu
+func (_u *NetworkUpdate) ClearTokens() *NetworkUpdate {
+	_u.mutation.ClearTokens()
+	return _u
 }
 
 // RemoveTokenIDs removes the "tokens" edge to Token entities by IDs.
-func (nu *NetworkUpdate) RemoveTokenIDs(ids ...int) *NetworkUpdate {
-	nu.mutation.RemoveTokenIDs(ids...)
-	return nu
+func (_u *NetworkUpdate) RemoveTokenIDs(ids ...int) *NetworkUpdate {
+	_u.mutation.RemoveTokenIDs(ids...)
+	return _u
 }
 
 // RemoveTokens removes "tokens" edges to Token entities.
-func (nu *NetworkUpdate) RemoveTokens(t ...*Token) *NetworkUpdate {
-	ids := make([]int, len(t))
-	for i := range t {
-		ids[i] = t[i].ID
+func (_u *NetworkUpdate) RemoveTokens(v ...*Token) *NetworkUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return nu.RemoveTokenIDs(ids...)
+	return _u.RemoveTokenIDs(ids...)
 }
 
 // ClearPaymentWebhook clears the "payment_webhook" edge to the PaymentWebhook entity.
-func (nu *NetworkUpdate) ClearPaymentWebhook() *NetworkUpdate {
-	nu.mutation.ClearPaymentWebhook()
-	return nu
+func (_u *NetworkUpdate) ClearPaymentWebhook() *NetworkUpdate {
+	_u.mutation.ClearPaymentWebhook()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
-func (nu *NetworkUpdate) Save(ctx context.Context) (int, error) {
-	nu.defaults()
-	return withHooks(ctx, nu.sqlSave, nu.mutation, nu.hooks)
+func (_u *NetworkUpdate) Save(ctx context.Context) (int, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (nu *NetworkUpdate) SaveX(ctx context.Context) int {
-	affected, err := nu.Save(ctx)
+func (_u *NetworkUpdate) SaveX(ctx context.Context) int {
+	affected, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -279,81 +279,81 @@ func (nu *NetworkUpdate) SaveX(ctx context.Context) int {
 }
 
 // Exec executes the query.
-func (nu *NetworkUpdate) Exec(ctx context.Context) error {
-	_, err := nu.Save(ctx)
+func (_u *NetworkUpdate) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (nu *NetworkUpdate) ExecX(ctx context.Context) {
-	if err := nu.Exec(ctx); err != nil {
+func (_u *NetworkUpdate) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (nu *NetworkUpdate) defaults() {
-	if _, ok := nu.mutation.UpdatedAt(); !ok {
+func (_u *NetworkUpdate) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := network.UpdateDefaultUpdatedAt()
-		nu.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
-func (nu *NetworkUpdate) sqlSave(ctx context.Context) (n int, err error) {
+func (_u *NetworkUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	_spec := sqlgraph.NewUpdateSpec(network.Table, network.Columns, sqlgraph.NewFieldSpec(network.FieldID, field.TypeInt))
-	if ps := nu.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := nu.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(network.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := nu.mutation.ChainID(); ok {
+	if value, ok := _u.mutation.ChainID(); ok {
 		_spec.SetField(network.FieldChainID, field.TypeInt64, value)
 	}
-	if value, ok := nu.mutation.AddedChainID(); ok {
+	if value, ok := _u.mutation.AddedChainID(); ok {
 		_spec.AddField(network.FieldChainID, field.TypeInt64, value)
 	}
-	if value, ok := nu.mutation.Identifier(); ok {
+	if value, ok := _u.mutation.Identifier(); ok {
 		_spec.SetField(network.FieldIdentifier, field.TypeString, value)
 	}
-	if value, ok := nu.mutation.RPCEndpoint(); ok {
+	if value, ok := _u.mutation.RPCEndpoint(); ok {
 		_spec.SetField(network.FieldRPCEndpoint, field.TypeString, value)
 	}
-	if value, ok := nu.mutation.GatewayContractAddress(); ok {
+	if value, ok := _u.mutation.GatewayContractAddress(); ok {
 		_spec.SetField(network.FieldGatewayContractAddress, field.TypeString, value)
 	}
-	if value, ok := nu.mutation.BlockTime(); ok {
+	if value, ok := _u.mutation.BlockTime(); ok {
 		_spec.SetField(network.FieldBlockTime, field.TypeFloat64, value)
 	}
-	if value, ok := nu.mutation.AddedBlockTime(); ok {
+	if value, ok := _u.mutation.AddedBlockTime(); ok {
 		_spec.AddField(network.FieldBlockTime, field.TypeFloat64, value)
 	}
-	if value, ok := nu.mutation.IsTestnet(); ok {
+	if value, ok := _u.mutation.IsTestnet(); ok {
 		_spec.SetField(network.FieldIsTestnet, field.TypeBool, value)
 	}
-	if value, ok := nu.mutation.BundlerURL(); ok {
+	if value, ok := _u.mutation.BundlerURL(); ok {
 		_spec.SetField(network.FieldBundlerURL, field.TypeString, value)
 	}
-	if nu.mutation.BundlerURLCleared() {
+	if _u.mutation.BundlerURLCleared() {
 		_spec.ClearField(network.FieldBundlerURL, field.TypeString)
 	}
-	if value, ok := nu.mutation.PaymasterURL(); ok {
+	if value, ok := _u.mutation.PaymasterURL(); ok {
 		_spec.SetField(network.FieldPaymasterURL, field.TypeString, value)
 	}
-	if nu.mutation.PaymasterURLCleared() {
+	if _u.mutation.PaymasterURLCleared() {
 		_spec.ClearField(network.FieldPaymasterURL, field.TypeString)
 	}
-	if value, ok := nu.mutation.Fee(); ok {
+	if value, ok := _u.mutation.Fee(); ok {
 		_spec.SetField(network.FieldFee, field.TypeFloat64, value)
 	}
-	if value, ok := nu.mutation.AddedFee(); ok {
+	if value, ok := _u.mutation.AddedFee(); ok {
 		_spec.AddField(network.FieldFee, field.TypeFloat64, value)
 	}
-	if nu.mutation.TokensCleared() {
+	if _u.mutation.TokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -366,7 +366,7 @@ func (nu *NetworkUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := nu.mutation.RemovedTokensIDs(); len(nodes) > 0 && !nu.mutation.TokensCleared() {
+	if nodes := _u.mutation.RemovedTokensIDs(); len(nodes) > 0 && !_u.mutation.TokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -382,7 +382,7 @@ func (nu *NetworkUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := nu.mutation.TokensIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.TokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -398,7 +398,7 @@ func (nu *NetworkUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if nu.mutation.PaymentWebhookCleared() {
+	if _u.mutation.PaymentWebhookCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -411,7 +411,7 @@ func (nu *NetworkUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := nu.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -427,7 +427,7 @@ func (nu *NetworkUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if n, err = sqlgraph.UpdateNodes(ctx, nu.driver, _spec); err != nil {
+	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{network.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -435,8 +435,8 @@ func (nu *NetworkUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
-	nu.mutation.done = true
-	return n, nil
+	_u.mutation.done = true
+	return _node, nil
 }
 
 // NetworkUpdateOne is the builder for updating a single Network entity.
@@ -448,258 +448,258 @@ type NetworkUpdateOne struct {
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (nuo *NetworkUpdateOne) SetUpdatedAt(t time.Time) *NetworkUpdateOne {
-	nuo.mutation.SetUpdatedAt(t)
-	return nuo
+func (_u *NetworkUpdateOne) SetUpdatedAt(v time.Time) *NetworkUpdateOne {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetChainID sets the "chain_id" field.
-func (nuo *NetworkUpdateOne) SetChainID(i int64) *NetworkUpdateOne {
-	nuo.mutation.ResetChainID()
-	nuo.mutation.SetChainID(i)
-	return nuo
+func (_u *NetworkUpdateOne) SetChainID(v int64) *NetworkUpdateOne {
+	_u.mutation.ResetChainID()
+	_u.mutation.SetChainID(v)
+	return _u
 }
 
 // SetNillableChainID sets the "chain_id" field if the given value is not nil.
-func (nuo *NetworkUpdateOne) SetNillableChainID(i *int64) *NetworkUpdateOne {
-	if i != nil {
-		nuo.SetChainID(*i)
+func (_u *NetworkUpdateOne) SetNillableChainID(v *int64) *NetworkUpdateOne {
+	if v != nil {
+		_u.SetChainID(*v)
 	}
-	return nuo
+	return _u
 }
 
-// AddChainID adds i to the "chain_id" field.
-func (nuo *NetworkUpdateOne) AddChainID(i int64) *NetworkUpdateOne {
-	nuo.mutation.AddChainID(i)
-	return nuo
+// AddChainID adds value to the "chain_id" field.
+func (_u *NetworkUpdateOne) AddChainID(v int64) *NetworkUpdateOne {
+	_u.mutation.AddChainID(v)
+	return _u
 }
 
 // SetIdentifier sets the "identifier" field.
-func (nuo *NetworkUpdateOne) SetIdentifier(s string) *NetworkUpdateOne {
-	nuo.mutation.SetIdentifier(s)
-	return nuo
+func (_u *NetworkUpdateOne) SetIdentifier(v string) *NetworkUpdateOne {
+	_u.mutation.SetIdentifier(v)
+	return _u
 }
 
 // SetNillableIdentifier sets the "identifier" field if the given value is not nil.
-func (nuo *NetworkUpdateOne) SetNillableIdentifier(s *string) *NetworkUpdateOne {
-	if s != nil {
-		nuo.SetIdentifier(*s)
+func (_u *NetworkUpdateOne) SetNillableIdentifier(v *string) *NetworkUpdateOne {
+	if v != nil {
+		_u.SetIdentifier(*v)
 	}
-	return nuo
+	return _u
 }
 
 // SetRPCEndpoint sets the "rpc_endpoint" field.
-func (nuo *NetworkUpdateOne) SetRPCEndpoint(s string) *NetworkUpdateOne {
-	nuo.mutation.SetRPCEndpoint(s)
-	return nuo
+func (_u *NetworkUpdateOne) SetRPCEndpoint(v string) *NetworkUpdateOne {
+	_u.mutation.SetRPCEndpoint(v)
+	return _u
 }
 
 // SetNillableRPCEndpoint sets the "rpc_endpoint" field if the given value is not nil.
-func (nuo *NetworkUpdateOne) SetNillableRPCEndpoint(s *string) *NetworkUpdateOne {
-	if s != nil {
-		nuo.SetRPCEndpoint(*s)
+func (_u *NetworkUpdateOne) SetNillableRPCEndpoint(v *string) *NetworkUpdateOne {
+	if v != nil {
+		_u.SetRPCEndpoint(*v)
 	}
-	return nuo
+	return _u
 }
 
 // SetGatewayContractAddress sets the "gateway_contract_address" field.
-func (nuo *NetworkUpdateOne) SetGatewayContractAddress(s string) *NetworkUpdateOne {
-	nuo.mutation.SetGatewayContractAddress(s)
-	return nuo
+func (_u *NetworkUpdateOne) SetGatewayContractAddress(v string) *NetworkUpdateOne {
+	_u.mutation.SetGatewayContractAddress(v)
+	return _u
 }
 
 // SetNillableGatewayContractAddress sets the "gateway_contract_address" field if the given value is not nil.
-func (nuo *NetworkUpdateOne) SetNillableGatewayContractAddress(s *string) *NetworkUpdateOne {
-	if s != nil {
-		nuo.SetGatewayContractAddress(*s)
+func (_u *NetworkUpdateOne) SetNillableGatewayContractAddress(v *string) *NetworkUpdateOne {
+	if v != nil {
+		_u.SetGatewayContractAddress(*v)
 	}
-	return nuo
+	return _u
 }
 
 // SetBlockTime sets the "block_time" field.
-func (nuo *NetworkUpdateOne) SetBlockTime(d decimal.Decimal) *NetworkUpdateOne {
-	nuo.mutation.ResetBlockTime()
-	nuo.mutation.SetBlockTime(d)
-	return nuo
+func (_u *NetworkUpdateOne) SetBlockTime(v decimal.Decimal) *NetworkUpdateOne {
+	_u.mutation.ResetBlockTime()
+	_u.mutation.SetBlockTime(v)
+	return _u
 }
 
 // SetNillableBlockTime sets the "block_time" field if the given value is not nil.
-func (nuo *NetworkUpdateOne) SetNillableBlockTime(d *decimal.Decimal) *NetworkUpdateOne {
-	if d != nil {
-		nuo.SetBlockTime(*d)
+func (_u *NetworkUpdateOne) SetNillableBlockTime(v *decimal.Decimal) *NetworkUpdateOne {
+	if v != nil {
+		_u.SetBlockTime(*v)
 	}
-	return nuo
+	return _u
 }
 
-// AddBlockTime adds d to the "block_time" field.
-func (nuo *NetworkUpdateOne) AddBlockTime(d decimal.Decimal) *NetworkUpdateOne {
-	nuo.mutation.AddBlockTime(d)
-	return nuo
+// AddBlockTime adds value to the "block_time" field.
+func (_u *NetworkUpdateOne) AddBlockTime(v decimal.Decimal) *NetworkUpdateOne {
+	_u.mutation.AddBlockTime(v)
+	return _u
 }
 
 // SetIsTestnet sets the "is_testnet" field.
-func (nuo *NetworkUpdateOne) SetIsTestnet(b bool) *NetworkUpdateOne {
-	nuo.mutation.SetIsTestnet(b)
-	return nuo
+func (_u *NetworkUpdateOne) SetIsTestnet(v bool) *NetworkUpdateOne {
+	_u.mutation.SetIsTestnet(v)
+	return _u
 }
 
 // SetNillableIsTestnet sets the "is_testnet" field if the given value is not nil.
-func (nuo *NetworkUpdateOne) SetNillableIsTestnet(b *bool) *NetworkUpdateOne {
-	if b != nil {
-		nuo.SetIsTestnet(*b)
+func (_u *NetworkUpdateOne) SetNillableIsTestnet(v *bool) *NetworkUpdateOne {
+	if v != nil {
+		_u.SetIsTestnet(*v)
 	}
-	return nuo
+	return _u
 }
 
 // SetBundlerURL sets the "bundler_url" field.
-func (nuo *NetworkUpdateOne) SetBundlerURL(s string) *NetworkUpdateOne {
-	nuo.mutation.SetBundlerURL(s)
-	return nuo
+func (_u *NetworkUpdateOne) SetBundlerURL(v string) *NetworkUpdateOne {
+	_u.mutation.SetBundlerURL(v)
+	return _u
 }
 
 // SetNillableBundlerURL sets the "bundler_url" field if the given value is not nil.
-func (nuo *NetworkUpdateOne) SetNillableBundlerURL(s *string) *NetworkUpdateOne {
-	if s != nil {
-		nuo.SetBundlerURL(*s)
+func (_u *NetworkUpdateOne) SetNillableBundlerURL(v *string) *NetworkUpdateOne {
+	if v != nil {
+		_u.SetBundlerURL(*v)
 	}
-	return nuo
+	return _u
 }
 
 // ClearBundlerURL clears the value of the "bundler_url" field.
-func (nuo *NetworkUpdateOne) ClearBundlerURL() *NetworkUpdateOne {
-	nuo.mutation.ClearBundlerURL()
-	return nuo
+func (_u *NetworkUpdateOne) ClearBundlerURL() *NetworkUpdateOne {
+	_u.mutation.ClearBundlerURL()
+	return _u
 }
 
 // SetPaymasterURL sets the "paymaster_url" field.
-func (nuo *NetworkUpdateOne) SetPaymasterURL(s string) *NetworkUpdateOne {
-	nuo.mutation.SetPaymasterURL(s)
-	return nuo
+func (_u *NetworkUpdateOne) SetPaymasterURL(v string) *NetworkUpdateOne {
+	_u.mutation.SetPaymasterURL(v)
+	return _u
 }
 
 // SetNillablePaymasterURL sets the "paymaster_url" field if the given value is not nil.
-func (nuo *NetworkUpdateOne) SetNillablePaymasterURL(s *string) *NetworkUpdateOne {
-	if s != nil {
-		nuo.SetPaymasterURL(*s)
+func (_u *NetworkUpdateOne) SetNillablePaymasterURL(v *string) *NetworkUpdateOne {
+	if v != nil {
+		_u.SetPaymasterURL(*v)
 	}
-	return nuo
+	return _u
 }
 
 // ClearPaymasterURL clears the value of the "paymaster_url" field.
-func (nuo *NetworkUpdateOne) ClearPaymasterURL() *NetworkUpdateOne {
-	nuo.mutation.ClearPaymasterURL()
-	return nuo
+func (_u *NetworkUpdateOne) ClearPaymasterURL() *NetworkUpdateOne {
+	_u.mutation.ClearPaymasterURL()
+	return _u
 }
 
 // SetFee sets the "fee" field.
-func (nuo *NetworkUpdateOne) SetFee(d decimal.Decimal) *NetworkUpdateOne {
-	nuo.mutation.ResetFee()
-	nuo.mutation.SetFee(d)
-	return nuo
+func (_u *NetworkUpdateOne) SetFee(v decimal.Decimal) *NetworkUpdateOne {
+	_u.mutation.ResetFee()
+	_u.mutation.SetFee(v)
+	return _u
 }
 
 // SetNillableFee sets the "fee" field if the given value is not nil.
-func (nuo *NetworkUpdateOne) SetNillableFee(d *decimal.Decimal) *NetworkUpdateOne {
-	if d != nil {
-		nuo.SetFee(*d)
+func (_u *NetworkUpdateOne) SetNillableFee(v *decimal.Decimal) *NetworkUpdateOne {
+	if v != nil {
+		_u.SetFee(*v)
 	}
-	return nuo
+	return _u
 }
 
-// AddFee adds d to the "fee" field.
-func (nuo *NetworkUpdateOne) AddFee(d decimal.Decimal) *NetworkUpdateOne {
-	nuo.mutation.AddFee(d)
-	return nuo
+// AddFee adds value to the "fee" field.
+func (_u *NetworkUpdateOne) AddFee(v decimal.Decimal) *NetworkUpdateOne {
+	_u.mutation.AddFee(v)
+	return _u
 }
 
 // AddTokenIDs adds the "tokens" edge to the Token entity by IDs.
-func (nuo *NetworkUpdateOne) AddTokenIDs(ids ...int) *NetworkUpdateOne {
-	nuo.mutation.AddTokenIDs(ids...)
-	return nuo
+func (_u *NetworkUpdateOne) AddTokenIDs(ids ...int) *NetworkUpdateOne {
+	_u.mutation.AddTokenIDs(ids...)
+	return _u
 }
 
 // AddTokens adds the "tokens" edges to the Token entity.
-func (nuo *NetworkUpdateOne) AddTokens(t ...*Token) *NetworkUpdateOne {
-	ids := make([]int, len(t))
-	for i := range t {
-		ids[i] = t[i].ID
+func (_u *NetworkUpdateOne) AddTokens(v ...*Token) *NetworkUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return nuo.AddTokenIDs(ids...)
+	return _u.AddTokenIDs(ids...)
 }
 
 // SetPaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID.
-func (nuo *NetworkUpdateOne) SetPaymentWebhookID(id uuid.UUID) *NetworkUpdateOne {
-	nuo.mutation.SetPaymentWebhookID(id)
-	return nuo
+func (_u *NetworkUpdateOne) SetPaymentWebhookID(id uuid.UUID) *NetworkUpdateOne {
+	_u.mutation.SetPaymentWebhookID(id)
+	return _u
 }
 
 // SetNillablePaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID if the given value is not nil.
-func (nuo *NetworkUpdateOne) SetNillablePaymentWebhookID(id *uuid.UUID) *NetworkUpdateOne {
+func (_u *NetworkUpdateOne) SetNillablePaymentWebhookID(id *uuid.UUID) *NetworkUpdateOne {
 	if id != nil {
-		nuo = nuo.SetPaymentWebhookID(*id)
+		_u = _u.SetPaymentWebhookID(*id)
 	}
-	return nuo
+	return _u
 }
 
 // SetPaymentWebhook sets the "payment_webhook" edge to the PaymentWebhook entity.
-func (nuo *NetworkUpdateOne) SetPaymentWebhook(p *PaymentWebhook) *NetworkUpdateOne {
-	return nuo.SetPaymentWebhookID(p.ID)
+func (_u *NetworkUpdateOne) SetPaymentWebhook(v *PaymentWebhook) *NetworkUpdateOne {
+	return _u.SetPaymentWebhookID(v.ID)
 }
 
 // Mutation returns the NetworkMutation object of the builder.
-func (nuo *NetworkUpdateOne) Mutation() *NetworkMutation {
-	return nuo.mutation
+func (_u *NetworkUpdateOne) Mutation() *NetworkMutation {
+	return _u.mutation
 }
 
 // ClearTokens clears all "tokens" edges to the Token entity.
-func (nuo *NetworkUpdateOne) ClearTokens() *NetworkUpdateOne {
-	nuo.mutation.ClearTokens()
-	return nuo
+func (_u *NetworkUpdateOne) ClearTokens() *NetworkUpdateOne {
+	_u.mutation.ClearTokens()
+	return _u
 }
 
 // RemoveTokenIDs removes the "tokens" edge to Token entities by IDs.
-func (nuo *NetworkUpdateOne) RemoveTokenIDs(ids ...int) *NetworkUpdateOne {
-	nuo.mutation.RemoveTokenIDs(ids...)
-	return nuo
+func (_u *NetworkUpdateOne) RemoveTokenIDs(ids ...int) *NetworkUpdateOne {
+	_u.mutation.RemoveTokenIDs(ids...)
+	return _u
 }
 
 // RemoveTokens removes "tokens" edges to Token entities.
-func (nuo *NetworkUpdateOne) RemoveTokens(t ...*Token) *NetworkUpdateOne {
-	ids := make([]int, len(t))
-	for i := range t {
-		ids[i] = t[i].ID
+func (_u *NetworkUpdateOne) RemoveTokens(v ...*Token) *NetworkUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return nuo.RemoveTokenIDs(ids...)
+	return _u.RemoveTokenIDs(ids...)
 }
 
 // ClearPaymentWebhook clears the "payment_webhook" edge to the PaymentWebhook entity.
-func (nuo *NetworkUpdateOne) ClearPaymentWebhook() *NetworkUpdateOne {
-	nuo.mutation.ClearPaymentWebhook()
-	return nuo
+func (_u *NetworkUpdateOne) ClearPaymentWebhook() *NetworkUpdateOne {
+	_u.mutation.ClearPaymentWebhook()
+	return _u
 }
 
 // Where appends a list predicates to the NetworkUpdate builder.
-func (nuo *NetworkUpdateOne) Where(ps ...predicate.Network) *NetworkUpdateOne {
-	nuo.mutation.Where(ps...)
-	return nuo
+func (_u *NetworkUpdateOne) Where(ps ...predicate.Network) *NetworkUpdateOne {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
-func (nuo *NetworkUpdateOne) Select(field string, fields ...string) *NetworkUpdateOne {
-	nuo.fields = append([]string{field}, fields...)
-	return nuo
+func (_u *NetworkUpdateOne) Select(field string, fields ...string) *NetworkUpdateOne {
+	_u.fields = append([]string{field}, fields...)
+	return _u
 }
 
 // Save executes the query and returns the updated Network entity.
-func (nuo *NetworkUpdateOne) Save(ctx context.Context) (*Network, error) {
-	nuo.defaults()
-	return withHooks(ctx, nuo.sqlSave, nuo.mutation, nuo.hooks)
+func (_u *NetworkUpdateOne) Save(ctx context.Context) (*Network, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (nuo *NetworkUpdateOne) SaveX(ctx context.Context) *Network {
-	node, err := nuo.Save(ctx)
+func (_u *NetworkUpdateOne) SaveX(ctx context.Context) *Network {
+	node, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -707,34 +707,34 @@ func (nuo *NetworkUpdateOne) SaveX(ctx context.Context) *Network {
 }
 
 // Exec executes the query on the entity.
-func (nuo *NetworkUpdateOne) Exec(ctx context.Context) error {
-	_, err := nuo.Save(ctx)
+func (_u *NetworkUpdateOne) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (nuo *NetworkUpdateOne) ExecX(ctx context.Context) {
-	if err := nuo.Exec(ctx); err != nil {
+func (_u *NetworkUpdateOne) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (nuo *NetworkUpdateOne) defaults() {
-	if _, ok := nuo.mutation.UpdatedAt(); !ok {
+func (_u *NetworkUpdateOne) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := network.UpdateDefaultUpdatedAt()
-		nuo.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
-func (nuo *NetworkUpdateOne) sqlSave(ctx context.Context) (_node *Network, err error) {
+func (_u *NetworkUpdateOne) sqlSave(ctx context.Context) (_node *Network, err error) {
 	_spec := sqlgraph.NewUpdateSpec(network.Table, network.Columns, sqlgraph.NewFieldSpec(network.FieldID, field.TypeInt))
-	id, ok := nuo.mutation.ID()
+	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Network.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
-	if fields := nuo.fields; len(fields) > 0 {
+	if fields := _u.fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, network.FieldID)
 		for _, f := range fields {
@@ -746,59 +746,59 @@ func (nuo *NetworkUpdateOne) sqlSave(ctx context.Context) (_node *Network, err e
 			}
 		}
 	}
-	if ps := nuo.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := nuo.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(network.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := nuo.mutation.ChainID(); ok {
+	if value, ok := _u.mutation.ChainID(); ok {
 		_spec.SetField(network.FieldChainID, field.TypeInt64, value)
 	}
-	if value, ok := nuo.mutation.AddedChainID(); ok {
+	if value, ok := _u.mutation.AddedChainID(); ok {
 		_spec.AddField(network.FieldChainID, field.TypeInt64, value)
 	}
-	if value, ok := nuo.mutation.Identifier(); ok {
+	if value, ok := _u.mutation.Identifier(); ok {
 		_spec.SetField(network.FieldIdentifier, field.TypeString, value)
 	}
-	if value, ok := nuo.mutation.RPCEndpoint(); ok {
+	if value, ok := _u.mutation.RPCEndpoint(); ok {
 		_spec.SetField(network.FieldRPCEndpoint, field.TypeString, value)
 	}
-	if value, ok := nuo.mutation.GatewayContractAddress(); ok {
+	if value, ok := _u.mutation.GatewayContractAddress(); ok {
 		_spec.SetField(network.FieldGatewayContractAddress, field.TypeString, value)
 	}
-	if value, ok := nuo.mutation.BlockTime(); ok {
+	if value, ok := _u.mutation.BlockTime(); ok {
 		_spec.SetField(network.FieldBlockTime, field.TypeFloat64, value)
 	}
-	if value, ok := nuo.mutation.AddedBlockTime(); ok {
+	if value, ok := _u.mutation.AddedBlockTime(); ok {
 		_spec.AddField(network.FieldBlockTime, field.TypeFloat64, value)
 	}
-	if value, ok := nuo.mutation.IsTestnet(); ok {
+	if value, ok := _u.mutation.IsTestnet(); ok {
 		_spec.SetField(network.FieldIsTestnet, field.TypeBool, value)
 	}
-	if value, ok := nuo.mutation.BundlerURL(); ok {
+	if value, ok := _u.mutation.BundlerURL(); ok {
 		_spec.SetField(network.FieldBundlerURL, field.TypeString, value)
 	}
-	if nuo.mutation.BundlerURLCleared() {
+	if _u.mutation.BundlerURLCleared() {
 		_spec.ClearField(network.FieldBundlerURL, field.TypeString)
 	}
-	if value, ok := nuo.mutation.PaymasterURL(); ok {
+	if value, ok := _u.mutation.PaymasterURL(); ok {
 		_spec.SetField(network.FieldPaymasterURL, field.TypeString, value)
 	}
-	if nuo.mutation.PaymasterURLCleared() {
+	if _u.mutation.PaymasterURLCleared() {
 		_spec.ClearField(network.FieldPaymasterURL, field.TypeString)
 	}
-	if value, ok := nuo.mutation.Fee(); ok {
+	if value, ok := _u.mutation.Fee(); ok {
 		_spec.SetField(network.FieldFee, field.TypeFloat64, value)
 	}
-	if value, ok := nuo.mutation.AddedFee(); ok {
+	if value, ok := _u.mutation.AddedFee(); ok {
 		_spec.AddField(network.FieldFee, field.TypeFloat64, value)
 	}
-	if nuo.mutation.TokensCleared() {
+	if _u.mutation.TokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -811,7 +811,7 @@ func (nuo *NetworkUpdateOne) sqlSave(ctx context.Context) (_node *Network, err e
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := nuo.mutation.RemovedTokensIDs(); len(nodes) > 0 && !nuo.mutation.TokensCleared() {
+	if nodes := _u.mutation.RemovedTokensIDs(); len(nodes) > 0 && !_u.mutation.TokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -827,7 +827,7 @@ func (nuo *NetworkUpdateOne) sqlSave(ctx context.Context) (_node *Network, err e
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := nuo.mutation.TokensIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.TokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -843,7 +843,7 @@ func (nuo *NetworkUpdateOne) sqlSave(ctx context.Context) (_node *Network, err e
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if nuo.mutation.PaymentWebhookCleared() {
+	if _u.mutation.PaymentWebhookCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -856,7 +856,7 @@ func (nuo *NetworkUpdateOne) sqlSave(ctx context.Context) (_node *Network, err e
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := nuo.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -872,10 +872,10 @@ func (nuo *NetworkUpdateOne) sqlSave(ctx context.Context) (_node *Network, err e
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	_node = &Network{config: nuo.config}
+	_node = &Network{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues
-	if err = sqlgraph.UpdateNode(ctx, nuo.driver, _spec); err != nil {
+	if err = sqlgraph.UpdateNode(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{network.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -883,6 +883,6 @@ func (nuo *NetworkUpdateOne) sqlSave(ctx context.Context) (_node *Network, err e
 		}
 		return nil, err
 	}
-	nuo.mutation.done = true
+	_u.mutation.done = true
 	return _node, nil
 }

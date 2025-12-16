@@ -20,56 +20,56 @@ type PaymentWebhookDelete struct {
 }
 
 // Where appends a list predicates to the PaymentWebhookDelete builder.
-func (pwd *PaymentWebhookDelete) Where(ps ...predicate.PaymentWebhook) *PaymentWebhookDelete {
-	pwd.mutation.Where(ps...)
-	return pwd
+func (_d *PaymentWebhookDelete) Where(ps ...predicate.PaymentWebhook) *PaymentWebhookDelete {
+	_d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query and returns how many vertices were deleted.
-func (pwd *PaymentWebhookDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks(ctx, pwd.sqlExec, pwd.mutation, pwd.hooks)
+func (_d *PaymentWebhookDelete) Exec(ctx context.Context) (int, error) {
+	return withHooks(ctx, _d.sqlExec, _d.mutation, _d.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pwd *PaymentWebhookDelete) ExecX(ctx context.Context) int {
-	n, err := pwd.Exec(ctx)
+func (_d *PaymentWebhookDelete) ExecX(ctx context.Context) int {
+	n, err := _d.Exec(ctx)
 	if err != nil {
 		panic(err)
 	}
 	return n
 }
 
-func (pwd *PaymentWebhookDelete) sqlExec(ctx context.Context) (int, error) {
+func (_d *PaymentWebhookDelete) sqlExec(ctx context.Context) (int, error) {
 	_spec := sqlgraph.NewDeleteSpec(paymentwebhook.Table, sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID))
-	if ps := pwd.mutation.predicates; len(ps) > 0 {
+	if ps := _d.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	affected, err := sqlgraph.DeleteNodes(ctx, pwd.driver, _spec)
+	affected, err := sqlgraph.DeleteNodes(ctx, _d.driver, _spec)
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
-	pwd.mutation.done = true
+	_d.mutation.done = true
 	return affected, err
 }
 
 // PaymentWebhookDeleteOne is the builder for deleting a single PaymentWebhook entity.
 type PaymentWebhookDeleteOne struct {
-	pwd *PaymentWebhookDelete
+	_d *PaymentWebhookDelete
 }
 
 // Where appends a list predicates to the PaymentWebhookDelete builder.
-func (pwdo *PaymentWebhookDeleteOne) Where(ps ...predicate.PaymentWebhook) *PaymentWebhookDeleteOne {
-	pwdo.pwd.mutation.Where(ps...)
-	return pwdo
+func (_d *PaymentWebhookDeleteOne) Where(ps ...predicate.PaymentWebhook) *PaymentWebhookDeleteOne {
+	_d._d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query.
-func (pwdo *PaymentWebhookDeleteOne) Exec(ctx context.Context) error {
-	n, err := pwdo.pwd.Exec(ctx)
+func (_d *PaymentWebhookDeleteOne) Exec(ctx context.Context) error {
+	n, err := _d._d.Exec(ctx)
 	switch {
 	case err != nil:
 		return err
@@ -81,8 +81,8 @@ func (pwdo *PaymentWebhookDeleteOne) Exec(ctx context.Context) error {
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pwdo *PaymentWebhookDeleteOne) ExecX(ctx context.Context) {
-	if err := pwdo.Exec(ctx); err != nil {
+func (_d *PaymentWebhookDeleteOne) ExecX(ctx context.Context) {
+	if err := _d.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

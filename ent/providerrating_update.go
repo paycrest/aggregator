@@ -24,52 +24,52 @@ type ProviderRatingUpdate struct {
 }
 
 // Where appends a list predicates to the ProviderRatingUpdate builder.
-func (pru *ProviderRatingUpdate) Where(ps ...predicate.ProviderRating) *ProviderRatingUpdate {
-	pru.mutation.Where(ps...)
-	return pru
+func (_u *ProviderRatingUpdate) Where(ps ...predicate.ProviderRating) *ProviderRatingUpdate {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (pru *ProviderRatingUpdate) SetUpdatedAt(t time.Time) *ProviderRatingUpdate {
-	pru.mutation.SetUpdatedAt(t)
-	return pru
+func (_u *ProviderRatingUpdate) SetUpdatedAt(v time.Time) *ProviderRatingUpdate {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetTrustScore sets the "trust_score" field.
-func (pru *ProviderRatingUpdate) SetTrustScore(d decimal.Decimal) *ProviderRatingUpdate {
-	pru.mutation.ResetTrustScore()
-	pru.mutation.SetTrustScore(d)
-	return pru
+func (_u *ProviderRatingUpdate) SetTrustScore(v decimal.Decimal) *ProviderRatingUpdate {
+	_u.mutation.ResetTrustScore()
+	_u.mutation.SetTrustScore(v)
+	return _u
 }
 
 // SetNillableTrustScore sets the "trust_score" field if the given value is not nil.
-func (pru *ProviderRatingUpdate) SetNillableTrustScore(d *decimal.Decimal) *ProviderRatingUpdate {
-	if d != nil {
-		pru.SetTrustScore(*d)
+func (_u *ProviderRatingUpdate) SetNillableTrustScore(v *decimal.Decimal) *ProviderRatingUpdate {
+	if v != nil {
+		_u.SetTrustScore(*v)
 	}
-	return pru
+	return _u
 }
 
-// AddTrustScore adds d to the "trust_score" field.
-func (pru *ProviderRatingUpdate) AddTrustScore(d decimal.Decimal) *ProviderRatingUpdate {
-	pru.mutation.AddTrustScore(d)
-	return pru
+// AddTrustScore adds value to the "trust_score" field.
+func (_u *ProviderRatingUpdate) AddTrustScore(v decimal.Decimal) *ProviderRatingUpdate {
+	_u.mutation.AddTrustScore(v)
+	return _u
 }
 
 // Mutation returns the ProviderRatingMutation object of the builder.
-func (pru *ProviderRatingUpdate) Mutation() *ProviderRatingMutation {
-	return pru.mutation
+func (_u *ProviderRatingUpdate) Mutation() *ProviderRatingMutation {
+	return _u.mutation
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
-func (pru *ProviderRatingUpdate) Save(ctx context.Context) (int, error) {
-	pru.defaults()
-	return withHooks(ctx, pru.sqlSave, pru.mutation, pru.hooks)
+func (_u *ProviderRatingUpdate) Save(ctx context.Context) (int, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (pru *ProviderRatingUpdate) SaveX(ctx context.Context) int {
-	affected, err := pru.Save(ctx)
+func (_u *ProviderRatingUpdate) SaveX(ctx context.Context) int {
+	affected, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -77,56 +77,56 @@ func (pru *ProviderRatingUpdate) SaveX(ctx context.Context) int {
 }
 
 // Exec executes the query.
-func (pru *ProviderRatingUpdate) Exec(ctx context.Context) error {
-	_, err := pru.Save(ctx)
+func (_u *ProviderRatingUpdate) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pru *ProviderRatingUpdate) ExecX(ctx context.Context) {
-	if err := pru.Exec(ctx); err != nil {
+func (_u *ProviderRatingUpdate) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (pru *ProviderRatingUpdate) defaults() {
-	if _, ok := pru.mutation.UpdatedAt(); !ok {
+func (_u *ProviderRatingUpdate) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := providerrating.UpdateDefaultUpdatedAt()
-		pru.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (pru *ProviderRatingUpdate) check() error {
-	if pru.mutation.ProviderProfileCleared() && len(pru.mutation.ProviderProfileIDs()) > 0 {
+func (_u *ProviderRatingUpdate) check() error {
+	if _u.mutation.ProviderProfileCleared() && len(_u.mutation.ProviderProfileIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ProviderRating.provider_profile"`)
 	}
 	return nil
 }
 
-func (pru *ProviderRatingUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	if err := pru.check(); err != nil {
-		return n, err
+func (_u *ProviderRatingUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(providerrating.Table, providerrating.Columns, sqlgraph.NewFieldSpec(providerrating.FieldID, field.TypeInt))
-	if ps := pru.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := pru.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerrating.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := pru.mutation.TrustScore(); ok {
+	if value, ok := _u.mutation.TrustScore(); ok {
 		_spec.SetField(providerrating.FieldTrustScore, field.TypeFloat64, value)
 	}
-	if value, ok := pru.mutation.AddedTrustScore(); ok {
+	if value, ok := _u.mutation.AddedTrustScore(); ok {
 		_spec.AddField(providerrating.FieldTrustScore, field.TypeFloat64, value)
 	}
-	if n, err = sqlgraph.UpdateNodes(ctx, pru.driver, _spec); err != nil {
+	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{providerrating.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -134,8 +134,8 @@ func (pru *ProviderRatingUpdate) sqlSave(ctx context.Context) (n int, err error)
 		}
 		return 0, err
 	}
-	pru.mutation.done = true
-	return n, nil
+	_u.mutation.done = true
+	return _node, nil
 }
 
 // ProviderRatingUpdateOne is the builder for updating a single ProviderRating entity.
@@ -147,59 +147,59 @@ type ProviderRatingUpdateOne struct {
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (pruo *ProviderRatingUpdateOne) SetUpdatedAt(t time.Time) *ProviderRatingUpdateOne {
-	pruo.mutation.SetUpdatedAt(t)
-	return pruo
+func (_u *ProviderRatingUpdateOne) SetUpdatedAt(v time.Time) *ProviderRatingUpdateOne {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetTrustScore sets the "trust_score" field.
-func (pruo *ProviderRatingUpdateOne) SetTrustScore(d decimal.Decimal) *ProviderRatingUpdateOne {
-	pruo.mutation.ResetTrustScore()
-	pruo.mutation.SetTrustScore(d)
-	return pruo
+func (_u *ProviderRatingUpdateOne) SetTrustScore(v decimal.Decimal) *ProviderRatingUpdateOne {
+	_u.mutation.ResetTrustScore()
+	_u.mutation.SetTrustScore(v)
+	return _u
 }
 
 // SetNillableTrustScore sets the "trust_score" field if the given value is not nil.
-func (pruo *ProviderRatingUpdateOne) SetNillableTrustScore(d *decimal.Decimal) *ProviderRatingUpdateOne {
-	if d != nil {
-		pruo.SetTrustScore(*d)
+func (_u *ProviderRatingUpdateOne) SetNillableTrustScore(v *decimal.Decimal) *ProviderRatingUpdateOne {
+	if v != nil {
+		_u.SetTrustScore(*v)
 	}
-	return pruo
+	return _u
 }
 
-// AddTrustScore adds d to the "trust_score" field.
-func (pruo *ProviderRatingUpdateOne) AddTrustScore(d decimal.Decimal) *ProviderRatingUpdateOne {
-	pruo.mutation.AddTrustScore(d)
-	return pruo
+// AddTrustScore adds value to the "trust_score" field.
+func (_u *ProviderRatingUpdateOne) AddTrustScore(v decimal.Decimal) *ProviderRatingUpdateOne {
+	_u.mutation.AddTrustScore(v)
+	return _u
 }
 
 // Mutation returns the ProviderRatingMutation object of the builder.
-func (pruo *ProviderRatingUpdateOne) Mutation() *ProviderRatingMutation {
-	return pruo.mutation
+func (_u *ProviderRatingUpdateOne) Mutation() *ProviderRatingMutation {
+	return _u.mutation
 }
 
 // Where appends a list predicates to the ProviderRatingUpdate builder.
-func (pruo *ProviderRatingUpdateOne) Where(ps ...predicate.ProviderRating) *ProviderRatingUpdateOne {
-	pruo.mutation.Where(ps...)
-	return pruo
+func (_u *ProviderRatingUpdateOne) Where(ps ...predicate.ProviderRating) *ProviderRatingUpdateOne {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
-func (pruo *ProviderRatingUpdateOne) Select(field string, fields ...string) *ProviderRatingUpdateOne {
-	pruo.fields = append([]string{field}, fields...)
-	return pruo
+func (_u *ProviderRatingUpdateOne) Select(field string, fields ...string) *ProviderRatingUpdateOne {
+	_u.fields = append([]string{field}, fields...)
+	return _u
 }
 
 // Save executes the query and returns the updated ProviderRating entity.
-func (pruo *ProviderRatingUpdateOne) Save(ctx context.Context) (*ProviderRating, error) {
-	pruo.defaults()
-	return withHooks(ctx, pruo.sqlSave, pruo.mutation, pruo.hooks)
+func (_u *ProviderRatingUpdateOne) Save(ctx context.Context) (*ProviderRating, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (pruo *ProviderRatingUpdateOne) SaveX(ctx context.Context) *ProviderRating {
-	node, err := pruo.Save(ctx)
+func (_u *ProviderRatingUpdateOne) SaveX(ctx context.Context) *ProviderRating {
+	node, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -207,45 +207,45 @@ func (pruo *ProviderRatingUpdateOne) SaveX(ctx context.Context) *ProviderRating 
 }
 
 // Exec executes the query on the entity.
-func (pruo *ProviderRatingUpdateOne) Exec(ctx context.Context) error {
-	_, err := pruo.Save(ctx)
+func (_u *ProviderRatingUpdateOne) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pruo *ProviderRatingUpdateOne) ExecX(ctx context.Context) {
-	if err := pruo.Exec(ctx); err != nil {
+func (_u *ProviderRatingUpdateOne) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (pruo *ProviderRatingUpdateOne) defaults() {
-	if _, ok := pruo.mutation.UpdatedAt(); !ok {
+func (_u *ProviderRatingUpdateOne) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := providerrating.UpdateDefaultUpdatedAt()
-		pruo.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (pruo *ProviderRatingUpdateOne) check() error {
-	if pruo.mutation.ProviderProfileCleared() && len(pruo.mutation.ProviderProfileIDs()) > 0 {
+func (_u *ProviderRatingUpdateOne) check() error {
+	if _u.mutation.ProviderProfileCleared() && len(_u.mutation.ProviderProfileIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ProviderRating.provider_profile"`)
 	}
 	return nil
 }
 
-func (pruo *ProviderRatingUpdateOne) sqlSave(ctx context.Context) (_node *ProviderRating, err error) {
-	if err := pruo.check(); err != nil {
+func (_u *ProviderRatingUpdateOne) sqlSave(ctx context.Context) (_node *ProviderRating, err error) {
+	if err := _u.check(); err != nil {
 		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(providerrating.Table, providerrating.Columns, sqlgraph.NewFieldSpec(providerrating.FieldID, field.TypeInt))
-	id, ok := pruo.mutation.ID()
+	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "ProviderRating.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
-	if fields := pruo.fields; len(fields) > 0 {
+	if fields := _u.fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, providerrating.FieldID)
 		for _, f := range fields {
@@ -257,26 +257,26 @@ func (pruo *ProviderRatingUpdateOne) sqlSave(ctx context.Context) (_node *Provid
 			}
 		}
 	}
-	if ps := pruo.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := pruo.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerrating.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := pruo.mutation.TrustScore(); ok {
+	if value, ok := _u.mutation.TrustScore(); ok {
 		_spec.SetField(providerrating.FieldTrustScore, field.TypeFloat64, value)
 	}
-	if value, ok := pruo.mutation.AddedTrustScore(); ok {
+	if value, ok := _u.mutation.AddedTrustScore(); ok {
 		_spec.AddField(providerrating.FieldTrustScore, field.TypeFloat64, value)
 	}
-	_node = &ProviderRating{config: pruo.config}
+	_node = &ProviderRating{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues
-	if err = sqlgraph.UpdateNode(ctx, pruo.driver, _spec); err != nil {
+	if err = sqlgraph.UpdateNode(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{providerrating.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -284,6 +284,6 @@ func (pruo *ProviderRatingUpdateOne) sqlSave(ctx context.Context) (_node *Provid
 		}
 		return nil, err
 	}
-	pruo.mutation.done = true
+	_u.mutation.done = true
 	return _node, nil
 }

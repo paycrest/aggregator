@@ -20,56 +20,56 @@ type ReceiveAddressDelete struct {
 }
 
 // Where appends a list predicates to the ReceiveAddressDelete builder.
-func (rad *ReceiveAddressDelete) Where(ps ...predicate.ReceiveAddress) *ReceiveAddressDelete {
-	rad.mutation.Where(ps...)
-	return rad
+func (_d *ReceiveAddressDelete) Where(ps ...predicate.ReceiveAddress) *ReceiveAddressDelete {
+	_d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query and returns how many vertices were deleted.
-func (rad *ReceiveAddressDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks(ctx, rad.sqlExec, rad.mutation, rad.hooks)
+func (_d *ReceiveAddressDelete) Exec(ctx context.Context) (int, error) {
+	return withHooks(ctx, _d.sqlExec, _d.mutation, _d.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (rad *ReceiveAddressDelete) ExecX(ctx context.Context) int {
-	n, err := rad.Exec(ctx)
+func (_d *ReceiveAddressDelete) ExecX(ctx context.Context) int {
+	n, err := _d.Exec(ctx)
 	if err != nil {
 		panic(err)
 	}
 	return n
 }
 
-func (rad *ReceiveAddressDelete) sqlExec(ctx context.Context) (int, error) {
+func (_d *ReceiveAddressDelete) sqlExec(ctx context.Context) (int, error) {
 	_spec := sqlgraph.NewDeleteSpec(receiveaddress.Table, sqlgraph.NewFieldSpec(receiveaddress.FieldID, field.TypeInt))
-	if ps := rad.mutation.predicates; len(ps) > 0 {
+	if ps := _d.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	affected, err := sqlgraph.DeleteNodes(ctx, rad.driver, _spec)
+	affected, err := sqlgraph.DeleteNodes(ctx, _d.driver, _spec)
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
-	rad.mutation.done = true
+	_d.mutation.done = true
 	return affected, err
 }
 
 // ReceiveAddressDeleteOne is the builder for deleting a single ReceiveAddress entity.
 type ReceiveAddressDeleteOne struct {
-	rad *ReceiveAddressDelete
+	_d *ReceiveAddressDelete
 }
 
 // Where appends a list predicates to the ReceiveAddressDelete builder.
-func (rado *ReceiveAddressDeleteOne) Where(ps ...predicate.ReceiveAddress) *ReceiveAddressDeleteOne {
-	rado.rad.mutation.Where(ps...)
-	return rado
+func (_d *ReceiveAddressDeleteOne) Where(ps ...predicate.ReceiveAddress) *ReceiveAddressDeleteOne {
+	_d._d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query.
-func (rado *ReceiveAddressDeleteOne) Exec(ctx context.Context) error {
-	n, err := rado.rad.Exec(ctx)
+func (_d *ReceiveAddressDeleteOne) Exec(ctx context.Context) error {
+	n, err := _d._d.Exec(ctx)
 	switch {
 	case err != nil:
 		return err
@@ -81,8 +81,8 @@ func (rado *ReceiveAddressDeleteOne) Exec(ctx context.Context) error {
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (rado *ReceiveAddressDeleteOne) ExecX(ctx context.Context) {
-	if err := rado.Exec(ctx); err != nil {
+func (_d *ReceiveAddressDeleteOne) ExecX(ctx context.Context) {
+	if err := _d.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

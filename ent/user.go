@@ -126,7 +126,7 @@ func (*User) scanValues(columns []string) ([]any, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the User fields.
-func (u *User) assignValues(columns []string, values []any) error {
+func (_m *User) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -136,70 +136,70 @@ func (u *User) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*uuid.UUID); !ok {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
-				u.ID = *value
+				_m.ID = *value
 			}
 		case user.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
-				u.CreatedAt = value.Time
+				_m.CreatedAt = value.Time
 			}
 		case user.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
-				u.UpdatedAt = value.Time
+				_m.UpdatedAt = value.Time
 			}
 		case user.FieldFirstName:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field first_name", values[i])
 			} else if value.Valid {
-				u.FirstName = value.String
+				_m.FirstName = value.String
 			}
 		case user.FieldLastName:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field last_name", values[i])
 			} else if value.Valid {
-				u.LastName = value.String
+				_m.LastName = value.String
 			}
 		case user.FieldEmail:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field email", values[i])
 			} else if value.Valid {
-				u.Email = value.String
+				_m.Email = value.String
 			}
 		case user.FieldPassword:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field password", values[i])
 			} else if value.Valid {
-				u.Password = value.String
+				_m.Password = value.String
 			}
 		case user.FieldScope:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field scope", values[i])
 			} else if value.Valid {
-				u.Scope = value.String
+				_m.Scope = value.String
 			}
 		case user.FieldIsEmailVerified:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field is_email_verified", values[i])
 			} else if value.Valid {
-				u.IsEmailVerified = value.Bool
+				_m.IsEmailVerified = value.Bool
 			}
 		case user.FieldHasEarlyAccess:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field has_early_access", values[i])
 			} else if value.Valid {
-				u.HasEarlyAccess = value.Bool
+				_m.HasEarlyAccess = value.Bool
 			}
 		case user.FieldKybVerificationStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field kyb_verification_status", values[i])
 			} else if value.Valid {
-				u.KybVerificationStatus = user.KybVerificationStatus(value.String)
+				_m.KybVerificationStatus = user.KybVerificationStatus(value.String)
 			}
 		default:
-			u.selectValues.Set(columns[i], values[i])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -207,81 +207,81 @@ func (u *User) assignValues(columns []string, values []any) error {
 
 // Value returns the ent.Value that was dynamically selected and assigned to the User.
 // This includes values selected through modifiers, order, etc.
-func (u *User) Value(name string) (ent.Value, error) {
-	return u.selectValues.Get(name)
+func (_m *User) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
 }
 
 // QuerySenderProfile queries the "sender_profile" edge of the User entity.
-func (u *User) QuerySenderProfile() *SenderProfileQuery {
-	return NewUserClient(u.config).QuerySenderProfile(u)
+func (_m *User) QuerySenderProfile() *SenderProfileQuery {
+	return NewUserClient(_m.config).QuerySenderProfile(_m)
 }
 
 // QueryProviderProfile queries the "provider_profile" edge of the User entity.
-func (u *User) QueryProviderProfile() *ProviderProfileQuery {
-	return NewUserClient(u.config).QueryProviderProfile(u)
+func (_m *User) QueryProviderProfile() *ProviderProfileQuery {
+	return NewUserClient(_m.config).QueryProviderProfile(_m)
 }
 
 // QueryVerificationToken queries the "verification_token" edge of the User entity.
-func (u *User) QueryVerificationToken() *VerificationTokenQuery {
-	return NewUserClient(u.config).QueryVerificationToken(u)
+func (_m *User) QueryVerificationToken() *VerificationTokenQuery {
+	return NewUserClient(_m.config).QueryVerificationToken(_m)
 }
 
 // QueryKybProfile queries the "kyb_profile" edge of the User entity.
-func (u *User) QueryKybProfile() *KYBProfileQuery {
-	return NewUserClient(u.config).QueryKybProfile(u)
+func (_m *User) QueryKybProfile() *KYBProfileQuery {
+	return NewUserClient(_m.config).QueryKybProfile(_m)
 }
 
 // Update returns a builder for updating this User.
 // Note that you need to call User.Unwrap() before calling this method if this User
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (u *User) Update() *UserUpdateOne {
-	return NewUserClient(u.config).UpdateOne(u)
+func (_m *User) Update() *UserUpdateOne {
+	return NewUserClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the User entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (u *User) Unwrap() *User {
-	_tx, ok := u.config.driver.(*txDriver)
+func (_m *User) Unwrap() *User {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: User is not a transactional entity")
 	}
-	u.config.driver = _tx.drv
-	return u
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (u *User) String() string {
+func (_m *User) String() string {
 	var builder strings.Builder
 	builder.WriteString("User(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", u.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("created_at=")
-	builder.WriteString(u.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
-	builder.WriteString(u.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("first_name=")
-	builder.WriteString(u.FirstName)
+	builder.WriteString(_m.FirstName)
 	builder.WriteString(", ")
 	builder.WriteString("last_name=")
-	builder.WriteString(u.LastName)
+	builder.WriteString(_m.LastName)
 	builder.WriteString(", ")
 	builder.WriteString("email=")
-	builder.WriteString(u.Email)
+	builder.WriteString(_m.Email)
 	builder.WriteString(", ")
 	builder.WriteString("password=<sensitive>")
 	builder.WriteString(", ")
 	builder.WriteString("scope=")
-	builder.WriteString(u.Scope)
+	builder.WriteString(_m.Scope)
 	builder.WriteString(", ")
 	builder.WriteString("is_email_verified=")
-	builder.WriteString(fmt.Sprintf("%v", u.IsEmailVerified))
+	builder.WriteString(fmt.Sprintf("%v", _m.IsEmailVerified))
 	builder.WriteString(", ")
 	builder.WriteString("has_early_access=")
-	builder.WriteString(fmt.Sprintf("%v", u.HasEarlyAccess))
+	builder.WriteString(fmt.Sprintf("%v", _m.HasEarlyAccess))
 	builder.WriteString(", ")
 	builder.WriteString("kyb_verification_status=")
-	builder.WriteString(fmt.Sprintf("%v", u.KybVerificationStatus))
+	builder.WriteString(fmt.Sprintf("%v", _m.KybVerificationStatus))
 	builder.WriteByte(')')
 	return builder.String()
 }

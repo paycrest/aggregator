@@ -24,74 +24,74 @@ type APIKeyUpdate struct {
 }
 
 // Where appends a list predicates to the APIKeyUpdate builder.
-func (aku *APIKeyUpdate) Where(ps ...predicate.APIKey) *APIKeyUpdate {
-	aku.mutation.Where(ps...)
-	return aku
+func (_u *APIKeyUpdate) Where(ps ...predicate.APIKey) *APIKeyUpdate {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // SetSecret sets the "secret" field.
-func (aku *APIKeyUpdate) SetSecret(s string) *APIKeyUpdate {
-	aku.mutation.SetSecret(s)
-	return aku
+func (_u *APIKeyUpdate) SetSecret(v string) *APIKeyUpdate {
+	_u.mutation.SetSecret(v)
+	return _u
 }
 
 // SetNillableSecret sets the "secret" field if the given value is not nil.
-func (aku *APIKeyUpdate) SetNillableSecret(s *string) *APIKeyUpdate {
-	if s != nil {
-		aku.SetSecret(*s)
+func (_u *APIKeyUpdate) SetNillableSecret(v *string) *APIKeyUpdate {
+	if v != nil {
+		_u.SetSecret(*v)
 	}
-	return aku
+	return _u
 }
 
 // AddPaymentOrderIDs adds the "payment_orders" edge to the PaymentOrder entity by IDs.
-func (aku *APIKeyUpdate) AddPaymentOrderIDs(ids ...uuid.UUID) *APIKeyUpdate {
-	aku.mutation.AddPaymentOrderIDs(ids...)
-	return aku
+func (_u *APIKeyUpdate) AddPaymentOrderIDs(ids ...uuid.UUID) *APIKeyUpdate {
+	_u.mutation.AddPaymentOrderIDs(ids...)
+	return _u
 }
 
 // AddPaymentOrders adds the "payment_orders" edges to the PaymentOrder entity.
-func (aku *APIKeyUpdate) AddPaymentOrders(p ...*PaymentOrder) *APIKeyUpdate {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *APIKeyUpdate) AddPaymentOrders(v ...*PaymentOrder) *APIKeyUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return aku.AddPaymentOrderIDs(ids...)
+	return _u.AddPaymentOrderIDs(ids...)
 }
 
 // Mutation returns the APIKeyMutation object of the builder.
-func (aku *APIKeyUpdate) Mutation() *APIKeyMutation {
-	return aku.mutation
+func (_u *APIKeyUpdate) Mutation() *APIKeyMutation {
+	return _u.mutation
 }
 
 // ClearPaymentOrders clears all "payment_orders" edges to the PaymentOrder entity.
-func (aku *APIKeyUpdate) ClearPaymentOrders() *APIKeyUpdate {
-	aku.mutation.ClearPaymentOrders()
-	return aku
+func (_u *APIKeyUpdate) ClearPaymentOrders() *APIKeyUpdate {
+	_u.mutation.ClearPaymentOrders()
+	return _u
 }
 
 // RemovePaymentOrderIDs removes the "payment_orders" edge to PaymentOrder entities by IDs.
-func (aku *APIKeyUpdate) RemovePaymentOrderIDs(ids ...uuid.UUID) *APIKeyUpdate {
-	aku.mutation.RemovePaymentOrderIDs(ids...)
-	return aku
+func (_u *APIKeyUpdate) RemovePaymentOrderIDs(ids ...uuid.UUID) *APIKeyUpdate {
+	_u.mutation.RemovePaymentOrderIDs(ids...)
+	return _u
 }
 
 // RemovePaymentOrders removes "payment_orders" edges to PaymentOrder entities.
-func (aku *APIKeyUpdate) RemovePaymentOrders(p ...*PaymentOrder) *APIKeyUpdate {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *APIKeyUpdate) RemovePaymentOrders(v ...*PaymentOrder) *APIKeyUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return aku.RemovePaymentOrderIDs(ids...)
+	return _u.RemovePaymentOrderIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
-func (aku *APIKeyUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks(ctx, aku.sqlSave, aku.mutation, aku.hooks)
+func (_u *APIKeyUpdate) Save(ctx context.Context) (int, error) {
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (aku *APIKeyUpdate) SaveX(ctx context.Context) int {
-	affected, err := aku.Save(ctx)
+func (_u *APIKeyUpdate) SaveX(ctx context.Context) int {
+	affected, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -99,21 +99,21 @@ func (aku *APIKeyUpdate) SaveX(ctx context.Context) int {
 }
 
 // Exec executes the query.
-func (aku *APIKeyUpdate) Exec(ctx context.Context) error {
-	_, err := aku.Save(ctx)
+func (_u *APIKeyUpdate) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (aku *APIKeyUpdate) ExecX(ctx context.Context) {
-	if err := aku.Exec(ctx); err != nil {
+func (_u *APIKeyUpdate) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (aku *APIKeyUpdate) check() error {
-	if v, ok := aku.mutation.Secret(); ok {
+func (_u *APIKeyUpdate) check() error {
+	if v, ok := _u.mutation.Secret(); ok {
 		if err := apikey.SecretValidator(v); err != nil {
 			return &ValidationError{Name: "secret", err: fmt.Errorf(`ent: validator failed for field "APIKey.secret": %w`, err)}
 		}
@@ -121,22 +121,22 @@ func (aku *APIKeyUpdate) check() error {
 	return nil
 }
 
-func (aku *APIKeyUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	if err := aku.check(); err != nil {
-		return n, err
+func (_u *APIKeyUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(apikey.Table, apikey.Columns, sqlgraph.NewFieldSpec(apikey.FieldID, field.TypeUUID))
-	if ps := aku.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := aku.mutation.Secret(); ok {
+	if value, ok := _u.mutation.Secret(); ok {
 		_spec.SetField(apikey.FieldSecret, field.TypeString, value)
 	}
-	if aku.mutation.PaymentOrdersCleared() {
+	if _u.mutation.PaymentOrdersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -149,7 +149,7 @@ func (aku *APIKeyUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := aku.mutation.RemovedPaymentOrdersIDs(); len(nodes) > 0 && !aku.mutation.PaymentOrdersCleared() {
+	if nodes := _u.mutation.RemovedPaymentOrdersIDs(); len(nodes) > 0 && !_u.mutation.PaymentOrdersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -165,7 +165,7 @@ func (aku *APIKeyUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := aku.mutation.PaymentOrdersIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.PaymentOrdersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -181,7 +181,7 @@ func (aku *APIKeyUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if n, err = sqlgraph.UpdateNodes(ctx, aku.driver, _spec); err != nil {
+	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{apikey.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -189,8 +189,8 @@ func (aku *APIKeyUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
-	aku.mutation.done = true
-	return n, nil
+	_u.mutation.done = true
+	return _node, nil
 }
 
 // APIKeyUpdateOne is the builder for updating a single APIKey entity.
@@ -202,81 +202,81 @@ type APIKeyUpdateOne struct {
 }
 
 // SetSecret sets the "secret" field.
-func (akuo *APIKeyUpdateOne) SetSecret(s string) *APIKeyUpdateOne {
-	akuo.mutation.SetSecret(s)
-	return akuo
+func (_u *APIKeyUpdateOne) SetSecret(v string) *APIKeyUpdateOne {
+	_u.mutation.SetSecret(v)
+	return _u
 }
 
 // SetNillableSecret sets the "secret" field if the given value is not nil.
-func (akuo *APIKeyUpdateOne) SetNillableSecret(s *string) *APIKeyUpdateOne {
-	if s != nil {
-		akuo.SetSecret(*s)
+func (_u *APIKeyUpdateOne) SetNillableSecret(v *string) *APIKeyUpdateOne {
+	if v != nil {
+		_u.SetSecret(*v)
 	}
-	return akuo
+	return _u
 }
 
 // AddPaymentOrderIDs adds the "payment_orders" edge to the PaymentOrder entity by IDs.
-func (akuo *APIKeyUpdateOne) AddPaymentOrderIDs(ids ...uuid.UUID) *APIKeyUpdateOne {
-	akuo.mutation.AddPaymentOrderIDs(ids...)
-	return akuo
+func (_u *APIKeyUpdateOne) AddPaymentOrderIDs(ids ...uuid.UUID) *APIKeyUpdateOne {
+	_u.mutation.AddPaymentOrderIDs(ids...)
+	return _u
 }
 
 // AddPaymentOrders adds the "payment_orders" edges to the PaymentOrder entity.
-func (akuo *APIKeyUpdateOne) AddPaymentOrders(p ...*PaymentOrder) *APIKeyUpdateOne {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *APIKeyUpdateOne) AddPaymentOrders(v ...*PaymentOrder) *APIKeyUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return akuo.AddPaymentOrderIDs(ids...)
+	return _u.AddPaymentOrderIDs(ids...)
 }
 
 // Mutation returns the APIKeyMutation object of the builder.
-func (akuo *APIKeyUpdateOne) Mutation() *APIKeyMutation {
-	return akuo.mutation
+func (_u *APIKeyUpdateOne) Mutation() *APIKeyMutation {
+	return _u.mutation
 }
 
 // ClearPaymentOrders clears all "payment_orders" edges to the PaymentOrder entity.
-func (akuo *APIKeyUpdateOne) ClearPaymentOrders() *APIKeyUpdateOne {
-	akuo.mutation.ClearPaymentOrders()
-	return akuo
+func (_u *APIKeyUpdateOne) ClearPaymentOrders() *APIKeyUpdateOne {
+	_u.mutation.ClearPaymentOrders()
+	return _u
 }
 
 // RemovePaymentOrderIDs removes the "payment_orders" edge to PaymentOrder entities by IDs.
-func (akuo *APIKeyUpdateOne) RemovePaymentOrderIDs(ids ...uuid.UUID) *APIKeyUpdateOne {
-	akuo.mutation.RemovePaymentOrderIDs(ids...)
-	return akuo
+func (_u *APIKeyUpdateOne) RemovePaymentOrderIDs(ids ...uuid.UUID) *APIKeyUpdateOne {
+	_u.mutation.RemovePaymentOrderIDs(ids...)
+	return _u
 }
 
 // RemovePaymentOrders removes "payment_orders" edges to PaymentOrder entities.
-func (akuo *APIKeyUpdateOne) RemovePaymentOrders(p ...*PaymentOrder) *APIKeyUpdateOne {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *APIKeyUpdateOne) RemovePaymentOrders(v ...*PaymentOrder) *APIKeyUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return akuo.RemovePaymentOrderIDs(ids...)
+	return _u.RemovePaymentOrderIDs(ids...)
 }
 
 // Where appends a list predicates to the APIKeyUpdate builder.
-func (akuo *APIKeyUpdateOne) Where(ps ...predicate.APIKey) *APIKeyUpdateOne {
-	akuo.mutation.Where(ps...)
-	return akuo
+func (_u *APIKeyUpdateOne) Where(ps ...predicate.APIKey) *APIKeyUpdateOne {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
-func (akuo *APIKeyUpdateOne) Select(field string, fields ...string) *APIKeyUpdateOne {
-	akuo.fields = append([]string{field}, fields...)
-	return akuo
+func (_u *APIKeyUpdateOne) Select(field string, fields ...string) *APIKeyUpdateOne {
+	_u.fields = append([]string{field}, fields...)
+	return _u
 }
 
 // Save executes the query and returns the updated APIKey entity.
-func (akuo *APIKeyUpdateOne) Save(ctx context.Context) (*APIKey, error) {
-	return withHooks(ctx, akuo.sqlSave, akuo.mutation, akuo.hooks)
+func (_u *APIKeyUpdateOne) Save(ctx context.Context) (*APIKey, error) {
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (akuo *APIKeyUpdateOne) SaveX(ctx context.Context) *APIKey {
-	node, err := akuo.Save(ctx)
+func (_u *APIKeyUpdateOne) SaveX(ctx context.Context) *APIKey {
+	node, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -284,21 +284,21 @@ func (akuo *APIKeyUpdateOne) SaveX(ctx context.Context) *APIKey {
 }
 
 // Exec executes the query on the entity.
-func (akuo *APIKeyUpdateOne) Exec(ctx context.Context) error {
-	_, err := akuo.Save(ctx)
+func (_u *APIKeyUpdateOne) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (akuo *APIKeyUpdateOne) ExecX(ctx context.Context) {
-	if err := akuo.Exec(ctx); err != nil {
+func (_u *APIKeyUpdateOne) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (akuo *APIKeyUpdateOne) check() error {
-	if v, ok := akuo.mutation.Secret(); ok {
+func (_u *APIKeyUpdateOne) check() error {
+	if v, ok := _u.mutation.Secret(); ok {
 		if err := apikey.SecretValidator(v); err != nil {
 			return &ValidationError{Name: "secret", err: fmt.Errorf(`ent: validator failed for field "APIKey.secret": %w`, err)}
 		}
@@ -306,17 +306,17 @@ func (akuo *APIKeyUpdateOne) check() error {
 	return nil
 }
 
-func (akuo *APIKeyUpdateOne) sqlSave(ctx context.Context) (_node *APIKey, err error) {
-	if err := akuo.check(); err != nil {
+func (_u *APIKeyUpdateOne) sqlSave(ctx context.Context) (_node *APIKey, err error) {
+	if err := _u.check(); err != nil {
 		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(apikey.Table, apikey.Columns, sqlgraph.NewFieldSpec(apikey.FieldID, field.TypeUUID))
-	id, ok := akuo.mutation.ID()
+	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "APIKey.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
-	if fields := akuo.fields; len(fields) > 0 {
+	if fields := _u.fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, apikey.FieldID)
 		for _, f := range fields {
@@ -328,17 +328,17 @@ func (akuo *APIKeyUpdateOne) sqlSave(ctx context.Context) (_node *APIKey, err er
 			}
 		}
 	}
-	if ps := akuo.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := akuo.mutation.Secret(); ok {
+	if value, ok := _u.mutation.Secret(); ok {
 		_spec.SetField(apikey.FieldSecret, field.TypeString, value)
 	}
-	if akuo.mutation.PaymentOrdersCleared() {
+	if _u.mutation.PaymentOrdersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -351,7 +351,7 @@ func (akuo *APIKeyUpdateOne) sqlSave(ctx context.Context) (_node *APIKey, err er
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := akuo.mutation.RemovedPaymentOrdersIDs(); len(nodes) > 0 && !akuo.mutation.PaymentOrdersCleared() {
+	if nodes := _u.mutation.RemovedPaymentOrdersIDs(); len(nodes) > 0 && !_u.mutation.PaymentOrdersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -367,7 +367,7 @@ func (akuo *APIKeyUpdateOne) sqlSave(ctx context.Context) (_node *APIKey, err er
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := akuo.mutation.PaymentOrdersIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.PaymentOrdersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -383,10 +383,10 @@ func (akuo *APIKeyUpdateOne) sqlSave(ctx context.Context) (_node *APIKey, err er
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	_node = &APIKey{config: akuo.config}
+	_node = &APIKey{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues
-	if err = sqlgraph.UpdateNode(ctx, akuo.driver, _spec); err != nil {
+	if err = sqlgraph.UpdateNode(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{apikey.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -394,6 +394,6 @@ func (akuo *APIKeyUpdateOne) sqlSave(ctx context.Context) (_node *APIKey, err er
 		}
 		return nil, err
 	}
-	akuo.mutation.done = true
+	_u.mutation.done = true
 	return _node, nil
 }

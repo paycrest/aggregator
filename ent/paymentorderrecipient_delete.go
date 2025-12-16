@@ -20,56 +20,56 @@ type PaymentOrderRecipientDelete struct {
 }
 
 // Where appends a list predicates to the PaymentOrderRecipientDelete builder.
-func (pord *PaymentOrderRecipientDelete) Where(ps ...predicate.PaymentOrderRecipient) *PaymentOrderRecipientDelete {
-	pord.mutation.Where(ps...)
-	return pord
+func (_d *PaymentOrderRecipientDelete) Where(ps ...predicate.PaymentOrderRecipient) *PaymentOrderRecipientDelete {
+	_d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query and returns how many vertices were deleted.
-func (pord *PaymentOrderRecipientDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks(ctx, pord.sqlExec, pord.mutation, pord.hooks)
+func (_d *PaymentOrderRecipientDelete) Exec(ctx context.Context) (int, error) {
+	return withHooks(ctx, _d.sqlExec, _d.mutation, _d.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pord *PaymentOrderRecipientDelete) ExecX(ctx context.Context) int {
-	n, err := pord.Exec(ctx)
+func (_d *PaymentOrderRecipientDelete) ExecX(ctx context.Context) int {
+	n, err := _d.Exec(ctx)
 	if err != nil {
 		panic(err)
 	}
 	return n
 }
 
-func (pord *PaymentOrderRecipientDelete) sqlExec(ctx context.Context) (int, error) {
+func (_d *PaymentOrderRecipientDelete) sqlExec(ctx context.Context) (int, error) {
 	_spec := sqlgraph.NewDeleteSpec(paymentorderrecipient.Table, sqlgraph.NewFieldSpec(paymentorderrecipient.FieldID, field.TypeInt))
-	if ps := pord.mutation.predicates; len(ps) > 0 {
+	if ps := _d.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	affected, err := sqlgraph.DeleteNodes(ctx, pord.driver, _spec)
+	affected, err := sqlgraph.DeleteNodes(ctx, _d.driver, _spec)
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
-	pord.mutation.done = true
+	_d.mutation.done = true
 	return affected, err
 }
 
 // PaymentOrderRecipientDeleteOne is the builder for deleting a single PaymentOrderRecipient entity.
 type PaymentOrderRecipientDeleteOne struct {
-	pord *PaymentOrderRecipientDelete
+	_d *PaymentOrderRecipientDelete
 }
 
 // Where appends a list predicates to the PaymentOrderRecipientDelete builder.
-func (pordo *PaymentOrderRecipientDeleteOne) Where(ps ...predicate.PaymentOrderRecipient) *PaymentOrderRecipientDeleteOne {
-	pordo.pord.mutation.Where(ps...)
-	return pordo
+func (_d *PaymentOrderRecipientDeleteOne) Where(ps ...predicate.PaymentOrderRecipient) *PaymentOrderRecipientDeleteOne {
+	_d._d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query.
-func (pordo *PaymentOrderRecipientDeleteOne) Exec(ctx context.Context) error {
-	n, err := pordo.pord.Exec(ctx)
+func (_d *PaymentOrderRecipientDeleteOne) Exec(ctx context.Context) error {
+	n, err := _d._d.Exec(ctx)
 	switch {
 	case err != nil:
 		return err
@@ -81,8 +81,8 @@ func (pordo *PaymentOrderRecipientDeleteOne) Exec(ctx context.Context) error {
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pordo *PaymentOrderRecipientDeleteOne) ExecX(ctx context.Context) {
-	if err := pordo.Exec(ctx); err != nil {
+func (_d *PaymentOrderRecipientDeleteOne) ExecX(ctx context.Context) {
+	if err := _d.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

@@ -25,94 +25,94 @@ type BeneficialOwnerCreate struct {
 }
 
 // SetFullName sets the "full_name" field.
-func (boc *BeneficialOwnerCreate) SetFullName(s string) *BeneficialOwnerCreate {
-	boc.mutation.SetFullName(s)
-	return boc
+func (_c *BeneficialOwnerCreate) SetFullName(v string) *BeneficialOwnerCreate {
+	_c.mutation.SetFullName(v)
+	return _c
 }
 
 // SetResidentialAddress sets the "residential_address" field.
-func (boc *BeneficialOwnerCreate) SetResidentialAddress(s string) *BeneficialOwnerCreate {
-	boc.mutation.SetResidentialAddress(s)
-	return boc
+func (_c *BeneficialOwnerCreate) SetResidentialAddress(v string) *BeneficialOwnerCreate {
+	_c.mutation.SetResidentialAddress(v)
+	return _c
 }
 
 // SetProofOfResidentialAddressURL sets the "proof_of_residential_address_url" field.
-func (boc *BeneficialOwnerCreate) SetProofOfResidentialAddressURL(s string) *BeneficialOwnerCreate {
-	boc.mutation.SetProofOfResidentialAddressURL(s)
-	return boc
+func (_c *BeneficialOwnerCreate) SetProofOfResidentialAddressURL(v string) *BeneficialOwnerCreate {
+	_c.mutation.SetProofOfResidentialAddressURL(v)
+	return _c
 }
 
 // SetGovernmentIssuedIDURL sets the "government_issued_id_url" field.
-func (boc *BeneficialOwnerCreate) SetGovernmentIssuedIDURL(s string) *BeneficialOwnerCreate {
-	boc.mutation.SetGovernmentIssuedIDURL(s)
-	return boc
+func (_c *BeneficialOwnerCreate) SetGovernmentIssuedIDURL(v string) *BeneficialOwnerCreate {
+	_c.mutation.SetGovernmentIssuedIDURL(v)
+	return _c
 }
 
 // SetDateOfBirth sets the "date_of_birth" field.
-func (boc *BeneficialOwnerCreate) SetDateOfBirth(s string) *BeneficialOwnerCreate {
-	boc.mutation.SetDateOfBirth(s)
-	return boc
+func (_c *BeneficialOwnerCreate) SetDateOfBirth(v string) *BeneficialOwnerCreate {
+	_c.mutation.SetDateOfBirth(v)
+	return _c
 }
 
 // SetOwnershipPercentage sets the "ownership_percentage" field.
-func (boc *BeneficialOwnerCreate) SetOwnershipPercentage(f float64) *BeneficialOwnerCreate {
-	boc.mutation.SetOwnershipPercentage(f)
-	return boc
+func (_c *BeneficialOwnerCreate) SetOwnershipPercentage(v float64) *BeneficialOwnerCreate {
+	_c.mutation.SetOwnershipPercentage(v)
+	return _c
 }
 
 // SetGovernmentIssuedIDType sets the "government_issued_id_type" field.
-func (boc *BeneficialOwnerCreate) SetGovernmentIssuedIDType(biit beneficialowner.GovernmentIssuedIDType) *BeneficialOwnerCreate {
-	boc.mutation.SetGovernmentIssuedIDType(biit)
-	return boc
+func (_c *BeneficialOwnerCreate) SetGovernmentIssuedIDType(v beneficialowner.GovernmentIssuedIDType) *BeneficialOwnerCreate {
+	_c.mutation.SetGovernmentIssuedIDType(v)
+	return _c
 }
 
 // SetNillableGovernmentIssuedIDType sets the "government_issued_id_type" field if the given value is not nil.
-func (boc *BeneficialOwnerCreate) SetNillableGovernmentIssuedIDType(biit *beneficialowner.GovernmentIssuedIDType) *BeneficialOwnerCreate {
-	if biit != nil {
-		boc.SetGovernmentIssuedIDType(*biit)
+func (_c *BeneficialOwnerCreate) SetNillableGovernmentIssuedIDType(v *beneficialowner.GovernmentIssuedIDType) *BeneficialOwnerCreate {
+	if v != nil {
+		_c.SetGovernmentIssuedIDType(*v)
 	}
-	return boc
+	return _c
 }
 
 // SetID sets the "id" field.
-func (boc *BeneficialOwnerCreate) SetID(u uuid.UUID) *BeneficialOwnerCreate {
-	boc.mutation.SetID(u)
-	return boc
+func (_c *BeneficialOwnerCreate) SetID(v uuid.UUID) *BeneficialOwnerCreate {
+	_c.mutation.SetID(v)
+	return _c
 }
 
 // SetNillableID sets the "id" field if the given value is not nil.
-func (boc *BeneficialOwnerCreate) SetNillableID(u *uuid.UUID) *BeneficialOwnerCreate {
-	if u != nil {
-		boc.SetID(*u)
+func (_c *BeneficialOwnerCreate) SetNillableID(v *uuid.UUID) *BeneficialOwnerCreate {
+	if v != nil {
+		_c.SetID(*v)
 	}
-	return boc
+	return _c
 }
 
 // SetKybProfileID sets the "kyb_profile" edge to the KYBProfile entity by ID.
-func (boc *BeneficialOwnerCreate) SetKybProfileID(id uuid.UUID) *BeneficialOwnerCreate {
-	boc.mutation.SetKybProfileID(id)
-	return boc
+func (_c *BeneficialOwnerCreate) SetKybProfileID(id uuid.UUID) *BeneficialOwnerCreate {
+	_c.mutation.SetKybProfileID(id)
+	return _c
 }
 
 // SetKybProfile sets the "kyb_profile" edge to the KYBProfile entity.
-func (boc *BeneficialOwnerCreate) SetKybProfile(k *KYBProfile) *BeneficialOwnerCreate {
-	return boc.SetKybProfileID(k.ID)
+func (_c *BeneficialOwnerCreate) SetKybProfile(v *KYBProfile) *BeneficialOwnerCreate {
+	return _c.SetKybProfileID(v.ID)
 }
 
 // Mutation returns the BeneficialOwnerMutation object of the builder.
-func (boc *BeneficialOwnerCreate) Mutation() *BeneficialOwnerMutation {
-	return boc.mutation
+func (_c *BeneficialOwnerCreate) Mutation() *BeneficialOwnerMutation {
+	return _c.mutation
 }
 
 // Save creates the BeneficialOwner in the database.
-func (boc *BeneficialOwnerCreate) Save(ctx context.Context) (*BeneficialOwner, error) {
-	boc.defaults()
-	return withHooks(ctx, boc.sqlSave, boc.mutation, boc.hooks)
+func (_c *BeneficialOwnerCreate) Save(ctx context.Context) (*BeneficialOwner, error) {
+	_c.defaults()
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (boc *BeneficialOwnerCreate) SaveX(ctx context.Context) *BeneficialOwner {
-	v, err := boc.Save(ctx)
+func (_c *BeneficialOwnerCreate) SaveX(ctx context.Context) *BeneficialOwner {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -120,68 +120,68 @@ func (boc *BeneficialOwnerCreate) SaveX(ctx context.Context) *BeneficialOwner {
 }
 
 // Exec executes the query.
-func (boc *BeneficialOwnerCreate) Exec(ctx context.Context) error {
-	_, err := boc.Save(ctx)
+func (_c *BeneficialOwnerCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (boc *BeneficialOwnerCreate) ExecX(ctx context.Context) {
-	if err := boc.Exec(ctx); err != nil {
+func (_c *BeneficialOwnerCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (boc *BeneficialOwnerCreate) defaults() {
-	if _, ok := boc.mutation.ID(); !ok {
+func (_c *BeneficialOwnerCreate) defaults() {
+	if _, ok := _c.mutation.ID(); !ok {
 		v := beneficialowner.DefaultID()
-		boc.mutation.SetID(v)
+		_c.mutation.SetID(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (boc *BeneficialOwnerCreate) check() error {
-	if _, ok := boc.mutation.FullName(); !ok {
+func (_c *BeneficialOwnerCreate) check() error {
+	if _, ok := _c.mutation.FullName(); !ok {
 		return &ValidationError{Name: "full_name", err: errors.New(`ent: missing required field "BeneficialOwner.full_name"`)}
 	}
-	if v, ok := boc.mutation.FullName(); ok {
+	if v, ok := _c.mutation.FullName(); ok {
 		if err := beneficialowner.FullNameValidator(v); err != nil {
 			return &ValidationError{Name: "full_name", err: fmt.Errorf(`ent: validator failed for field "BeneficialOwner.full_name": %w`, err)}
 		}
 	}
-	if _, ok := boc.mutation.ResidentialAddress(); !ok {
+	if _, ok := _c.mutation.ResidentialAddress(); !ok {
 		return &ValidationError{Name: "residential_address", err: errors.New(`ent: missing required field "BeneficialOwner.residential_address"`)}
 	}
-	if _, ok := boc.mutation.ProofOfResidentialAddressURL(); !ok {
+	if _, ok := _c.mutation.ProofOfResidentialAddressURL(); !ok {
 		return &ValidationError{Name: "proof_of_residential_address_url", err: errors.New(`ent: missing required field "BeneficialOwner.proof_of_residential_address_url"`)}
 	}
-	if _, ok := boc.mutation.GovernmentIssuedIDURL(); !ok {
+	if _, ok := _c.mutation.GovernmentIssuedIDURL(); !ok {
 		return &ValidationError{Name: "government_issued_id_url", err: errors.New(`ent: missing required field "BeneficialOwner.government_issued_id_url"`)}
 	}
-	if _, ok := boc.mutation.DateOfBirth(); !ok {
+	if _, ok := _c.mutation.DateOfBirth(); !ok {
 		return &ValidationError{Name: "date_of_birth", err: errors.New(`ent: missing required field "BeneficialOwner.date_of_birth"`)}
 	}
-	if _, ok := boc.mutation.OwnershipPercentage(); !ok {
+	if _, ok := _c.mutation.OwnershipPercentage(); !ok {
 		return &ValidationError{Name: "ownership_percentage", err: errors.New(`ent: missing required field "BeneficialOwner.ownership_percentage"`)}
 	}
-	if v, ok := boc.mutation.GovernmentIssuedIDType(); ok {
+	if v, ok := _c.mutation.GovernmentIssuedIDType(); ok {
 		if err := beneficialowner.GovernmentIssuedIDTypeValidator(v); err != nil {
 			return &ValidationError{Name: "government_issued_id_type", err: fmt.Errorf(`ent: validator failed for field "BeneficialOwner.government_issued_id_type": %w`, err)}
 		}
 	}
-	if len(boc.mutation.KybProfileIDs()) == 0 {
+	if len(_c.mutation.KybProfileIDs()) == 0 {
 		return &ValidationError{Name: "kyb_profile", err: errors.New(`ent: missing required edge "BeneficialOwner.kyb_profile"`)}
 	}
 	return nil
 }
 
-func (boc *BeneficialOwnerCreate) sqlSave(ctx context.Context) (*BeneficialOwner, error) {
-	if err := boc.check(); err != nil {
+func (_c *BeneficialOwnerCreate) sqlSave(ctx context.Context) (*BeneficialOwner, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := boc.createSpec()
-	if err := sqlgraph.CreateNode(ctx, boc.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -194,50 +194,50 @@ func (boc *BeneficialOwnerCreate) sqlSave(ctx context.Context) (*BeneficialOwner
 			return nil, err
 		}
 	}
-	boc.mutation.id = &_node.ID
-	boc.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (boc *BeneficialOwnerCreate) createSpec() (*BeneficialOwner, *sqlgraph.CreateSpec) {
+func (_c *BeneficialOwnerCreate) createSpec() (*BeneficialOwner, *sqlgraph.CreateSpec) {
 	var (
-		_node = &BeneficialOwner{config: boc.config}
+		_node = &BeneficialOwner{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(beneficialowner.Table, sqlgraph.NewFieldSpec(beneficialowner.FieldID, field.TypeUUID))
 	)
-	_spec.OnConflict = boc.conflict
-	if id, ok := boc.mutation.ID(); ok {
+	_spec.OnConflict = _c.conflict
+	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := boc.mutation.FullName(); ok {
+	if value, ok := _c.mutation.FullName(); ok {
 		_spec.SetField(beneficialowner.FieldFullName, field.TypeString, value)
 		_node.FullName = value
 	}
-	if value, ok := boc.mutation.ResidentialAddress(); ok {
+	if value, ok := _c.mutation.ResidentialAddress(); ok {
 		_spec.SetField(beneficialowner.FieldResidentialAddress, field.TypeString, value)
 		_node.ResidentialAddress = value
 	}
-	if value, ok := boc.mutation.ProofOfResidentialAddressURL(); ok {
+	if value, ok := _c.mutation.ProofOfResidentialAddressURL(); ok {
 		_spec.SetField(beneficialowner.FieldProofOfResidentialAddressURL, field.TypeString, value)
 		_node.ProofOfResidentialAddressURL = value
 	}
-	if value, ok := boc.mutation.GovernmentIssuedIDURL(); ok {
+	if value, ok := _c.mutation.GovernmentIssuedIDURL(); ok {
 		_spec.SetField(beneficialowner.FieldGovernmentIssuedIDURL, field.TypeString, value)
 		_node.GovernmentIssuedIDURL = value
 	}
-	if value, ok := boc.mutation.DateOfBirth(); ok {
+	if value, ok := _c.mutation.DateOfBirth(); ok {
 		_spec.SetField(beneficialowner.FieldDateOfBirth, field.TypeString, value)
 		_node.DateOfBirth = value
 	}
-	if value, ok := boc.mutation.OwnershipPercentage(); ok {
+	if value, ok := _c.mutation.OwnershipPercentage(); ok {
 		_spec.SetField(beneficialowner.FieldOwnershipPercentage, field.TypeFloat64, value)
 		_node.OwnershipPercentage = value
 	}
-	if value, ok := boc.mutation.GovernmentIssuedIDType(); ok {
+	if value, ok := _c.mutation.GovernmentIssuedIDType(); ok {
 		_spec.SetField(beneficialowner.FieldGovernmentIssuedIDType, field.TypeEnum, value)
 		_node.GovernmentIssuedIDType = value
 	}
-	if nodes := boc.mutation.KybProfileIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.KybProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -273,10 +273,10 @@ func (boc *BeneficialOwnerCreate) createSpec() (*BeneficialOwner, *sqlgraph.Crea
 //			SetFullName(v+v).
 //		}).
 //		Exec(ctx)
-func (boc *BeneficialOwnerCreate) OnConflict(opts ...sql.ConflictOption) *BeneficialOwnerUpsertOne {
-	boc.conflict = opts
+func (_c *BeneficialOwnerCreate) OnConflict(opts ...sql.ConflictOption) *BeneficialOwnerUpsertOne {
+	_c.conflict = opts
 	return &BeneficialOwnerUpsertOne{
-		create: boc,
+		create: _c,
 	}
 }
 
@@ -286,10 +286,10 @@ func (boc *BeneficialOwnerCreate) OnConflict(opts ...sql.ConflictOption) *Benefi
 //	client.BeneficialOwner.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (boc *BeneficialOwnerCreate) OnConflictColumns(columns ...string) *BeneficialOwnerUpsertOne {
-	boc.conflict = append(boc.conflict, sql.ConflictColumns(columns...))
+func (_c *BeneficialOwnerCreate) OnConflictColumns(columns ...string) *BeneficialOwnerUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &BeneficialOwnerUpsertOne{
-		create: boc,
+		create: _c,
 	}
 }
 
@@ -609,16 +609,16 @@ type BeneficialOwnerCreateBulk struct {
 }
 
 // Save creates the BeneficialOwner entities in the database.
-func (bocb *BeneficialOwnerCreateBulk) Save(ctx context.Context) ([]*BeneficialOwner, error) {
-	if bocb.err != nil {
-		return nil, bocb.err
+func (_c *BeneficialOwnerCreateBulk) Save(ctx context.Context) ([]*BeneficialOwner, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(bocb.builders))
-	nodes := make([]*BeneficialOwner, len(bocb.builders))
-	mutators := make([]Mutator, len(bocb.builders))
-	for i := range bocb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*BeneficialOwner, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := bocb.builders[i]
+			builder := _c.builders[i]
 			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*BeneficialOwnerMutation)
@@ -632,12 +632,12 @@ func (bocb *BeneficialOwnerCreateBulk) Save(ctx context.Context) ([]*BeneficialO
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, bocb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = bocb.conflict
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, bocb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -657,7 +657,7 @@ func (bocb *BeneficialOwnerCreateBulk) Save(ctx context.Context) ([]*BeneficialO
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, bocb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -665,8 +665,8 @@ func (bocb *BeneficialOwnerCreateBulk) Save(ctx context.Context) ([]*BeneficialO
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (bocb *BeneficialOwnerCreateBulk) SaveX(ctx context.Context) []*BeneficialOwner {
-	v, err := bocb.Save(ctx)
+func (_c *BeneficialOwnerCreateBulk) SaveX(ctx context.Context) []*BeneficialOwner {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -674,14 +674,14 @@ func (bocb *BeneficialOwnerCreateBulk) SaveX(ctx context.Context) []*BeneficialO
 }
 
 // Exec executes the query.
-func (bocb *BeneficialOwnerCreateBulk) Exec(ctx context.Context) error {
-	_, err := bocb.Save(ctx)
+func (_c *BeneficialOwnerCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (bocb *BeneficialOwnerCreateBulk) ExecX(ctx context.Context) {
-	if err := bocb.Exec(ctx); err != nil {
+func (_c *BeneficialOwnerCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
@@ -701,10 +701,10 @@ func (bocb *BeneficialOwnerCreateBulk) ExecX(ctx context.Context) {
 //			SetFullName(v+v).
 //		}).
 //		Exec(ctx)
-func (bocb *BeneficialOwnerCreateBulk) OnConflict(opts ...sql.ConflictOption) *BeneficialOwnerUpsertBulk {
-	bocb.conflict = opts
+func (_c *BeneficialOwnerCreateBulk) OnConflict(opts ...sql.ConflictOption) *BeneficialOwnerUpsertBulk {
+	_c.conflict = opts
 	return &BeneficialOwnerUpsertBulk{
-		create: bocb,
+		create: _c,
 	}
 }
 
@@ -714,10 +714,10 @@ func (bocb *BeneficialOwnerCreateBulk) OnConflict(opts ...sql.ConflictOption) *B
 //	client.BeneficialOwner.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (bocb *BeneficialOwnerCreateBulk) OnConflictColumns(columns ...string) *BeneficialOwnerUpsertBulk {
-	bocb.conflict = append(bocb.conflict, sql.ConflictColumns(columns...))
+func (_c *BeneficialOwnerCreateBulk) OnConflictColumns(columns ...string) *BeneficialOwnerUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &BeneficialOwnerUpsertBulk{
-		create: bocb,
+		create: _c,
 	}
 }
 

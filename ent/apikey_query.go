@@ -37,44 +37,44 @@ type APIKeyQuery struct {
 }
 
 // Where adds a new predicate for the APIKeyQuery builder.
-func (akq *APIKeyQuery) Where(ps ...predicate.APIKey) *APIKeyQuery {
-	akq.predicates = append(akq.predicates, ps...)
-	return akq
+func (_q *APIKeyQuery) Where(ps ...predicate.APIKey) *APIKeyQuery {
+	_q.predicates = append(_q.predicates, ps...)
+	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (akq *APIKeyQuery) Limit(limit int) *APIKeyQuery {
-	akq.ctx.Limit = &limit
-	return akq
+func (_q *APIKeyQuery) Limit(limit int) *APIKeyQuery {
+	_q.ctx.Limit = &limit
+	return _q
 }
 
 // Offset to start from.
-func (akq *APIKeyQuery) Offset(offset int) *APIKeyQuery {
-	akq.ctx.Offset = &offset
-	return akq
+func (_q *APIKeyQuery) Offset(offset int) *APIKeyQuery {
+	_q.ctx.Offset = &offset
+	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (akq *APIKeyQuery) Unique(unique bool) *APIKeyQuery {
-	akq.ctx.Unique = &unique
-	return akq
+func (_q *APIKeyQuery) Unique(unique bool) *APIKeyQuery {
+	_q.ctx.Unique = &unique
+	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (akq *APIKeyQuery) Order(o ...apikey.OrderOption) *APIKeyQuery {
-	akq.order = append(akq.order, o...)
-	return akq
+func (_q *APIKeyQuery) Order(o ...apikey.OrderOption) *APIKeyQuery {
+	_q.order = append(_q.order, o...)
+	return _q
 }
 
 // QuerySenderProfile chains the current query on the "sender_profile" edge.
-func (akq *APIKeyQuery) QuerySenderProfile() *SenderProfileQuery {
-	query := (&SenderProfileClient{config: akq.config}).Query()
+func (_q *APIKeyQuery) QuerySenderProfile() *SenderProfileQuery {
+	query := (&SenderProfileClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := akq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := akq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -83,20 +83,20 @@ func (akq *APIKeyQuery) QuerySenderProfile() *SenderProfileQuery {
 			sqlgraph.To(senderprofile.Table, senderprofile.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, apikey.SenderProfileTable, apikey.SenderProfileColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(akq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryProviderProfile chains the current query on the "provider_profile" edge.
-func (akq *APIKeyQuery) QueryProviderProfile() *ProviderProfileQuery {
-	query := (&ProviderProfileClient{config: akq.config}).Query()
+func (_q *APIKeyQuery) QueryProviderProfile() *ProviderProfileQuery {
+	query := (&ProviderProfileClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := akq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := akq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -105,20 +105,20 @@ func (akq *APIKeyQuery) QueryProviderProfile() *ProviderProfileQuery {
 			sqlgraph.To(providerprofile.Table, providerprofile.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, apikey.ProviderProfileTable, apikey.ProviderProfileColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(akq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryPaymentOrders chains the current query on the "payment_orders" edge.
-func (akq *APIKeyQuery) QueryPaymentOrders() *PaymentOrderQuery {
-	query := (&PaymentOrderClient{config: akq.config}).Query()
+func (_q *APIKeyQuery) QueryPaymentOrders() *PaymentOrderQuery {
+	query := (&PaymentOrderClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := akq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := akq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -127,7 +127,7 @@ func (akq *APIKeyQuery) QueryPaymentOrders() *PaymentOrderQuery {
 			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, apikey.PaymentOrdersTable, apikey.PaymentOrdersColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(akq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
@@ -135,8 +135,8 @@ func (akq *APIKeyQuery) QueryPaymentOrders() *PaymentOrderQuery {
 
 // First returns the first APIKey entity from the query.
 // Returns a *NotFoundError when no APIKey was found.
-func (akq *APIKeyQuery) First(ctx context.Context) (*APIKey, error) {
-	nodes, err := akq.Limit(1).All(setContextOp(ctx, akq.ctx, ent.OpQueryFirst))
+func (_q *APIKeyQuery) First(ctx context.Context) (*APIKey, error) {
+	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
@@ -147,8 +147,8 @@ func (akq *APIKeyQuery) First(ctx context.Context) (*APIKey, error) {
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (akq *APIKeyQuery) FirstX(ctx context.Context) *APIKey {
-	node, err := akq.First(ctx)
+func (_q *APIKeyQuery) FirstX(ctx context.Context) *APIKey {
+	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -157,9 +157,9 @@ func (akq *APIKeyQuery) FirstX(ctx context.Context) *APIKey {
 
 // FirstID returns the first APIKey ID from the query.
 // Returns a *NotFoundError when no APIKey ID was found.
-func (akq *APIKeyQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *APIKeyQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = akq.Limit(1).IDs(setContextOp(ctx, akq.ctx, ent.OpQueryFirstID)); err != nil {
+	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -170,8 +170,8 @@ func (akq *APIKeyQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (akq *APIKeyQuery) FirstIDX(ctx context.Context) uuid.UUID {
-	id, err := akq.FirstID(ctx)
+func (_q *APIKeyQuery) FirstIDX(ctx context.Context) uuid.UUID {
+	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -181,8 +181,8 @@ func (akq *APIKeyQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Only returns a single APIKey entity found by the query, ensuring it only returns one.
 // Returns a *NotSingularError when more than one APIKey entity is found.
 // Returns a *NotFoundError when no APIKey entities are found.
-func (akq *APIKeyQuery) Only(ctx context.Context) (*APIKey, error) {
-	nodes, err := akq.Limit(2).All(setContextOp(ctx, akq.ctx, ent.OpQueryOnly))
+func (_q *APIKeyQuery) Only(ctx context.Context) (*APIKey, error) {
+	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -197,8 +197,8 @@ func (akq *APIKeyQuery) Only(ctx context.Context) (*APIKey, error) {
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (akq *APIKeyQuery) OnlyX(ctx context.Context) *APIKey {
-	node, err := akq.Only(ctx)
+func (_q *APIKeyQuery) OnlyX(ctx context.Context) *APIKey {
+	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -208,9 +208,9 @@ func (akq *APIKeyQuery) OnlyX(ctx context.Context) *APIKey {
 // OnlyID is like Only, but returns the only APIKey ID in the query.
 // Returns a *NotSingularError when more than one APIKey ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (akq *APIKeyQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *APIKeyQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = akq.Limit(2).IDs(setContextOp(ctx, akq.ctx, ent.OpQueryOnlyID)); err != nil {
+	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -225,8 +225,8 @@ func (akq *APIKeyQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (akq *APIKeyQuery) OnlyIDX(ctx context.Context) uuid.UUID {
-	id, err := akq.OnlyID(ctx)
+func (_q *APIKeyQuery) OnlyIDX(ctx context.Context) uuid.UUID {
+	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -234,18 +234,18 @@ func (akq *APIKeyQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 }
 
 // All executes the query and returns a list of APIKeys.
-func (akq *APIKeyQuery) All(ctx context.Context) ([]*APIKey, error) {
-	ctx = setContextOp(ctx, akq.ctx, ent.OpQueryAll)
-	if err := akq.prepareQuery(ctx); err != nil {
+func (_q *APIKeyQuery) All(ctx context.Context) ([]*APIKey, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
 	qr := querierAll[[]*APIKey, *APIKeyQuery]()
-	return withInterceptors[[]*APIKey](ctx, akq, qr, akq.inters)
+	return withInterceptors[[]*APIKey](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (akq *APIKeyQuery) AllX(ctx context.Context) []*APIKey {
-	nodes, err := akq.All(ctx)
+func (_q *APIKeyQuery) AllX(ctx context.Context) []*APIKey {
+	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -253,20 +253,20 @@ func (akq *APIKeyQuery) AllX(ctx context.Context) []*APIKey {
 }
 
 // IDs executes the query and returns a list of APIKey IDs.
-func (akq *APIKeyQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
-	if akq.ctx.Unique == nil && akq.path != nil {
-		akq.Unique(true)
+func (_q *APIKeyQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if _q.ctx.Unique == nil && _q.path != nil {
+		_q.Unique(true)
 	}
-	ctx = setContextOp(ctx, akq.ctx, ent.OpQueryIDs)
-	if err = akq.Select(apikey.FieldID).Scan(ctx, &ids); err != nil {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
+	if err = _q.Select(apikey.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (akq *APIKeyQuery) IDsX(ctx context.Context) []uuid.UUID {
-	ids, err := akq.IDs(ctx)
+func (_q *APIKeyQuery) IDsX(ctx context.Context) []uuid.UUID {
+	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -274,17 +274,17 @@ func (akq *APIKeyQuery) IDsX(ctx context.Context) []uuid.UUID {
 }
 
 // Count returns the count of the given query.
-func (akq *APIKeyQuery) Count(ctx context.Context) (int, error) {
-	ctx = setContextOp(ctx, akq.ctx, ent.OpQueryCount)
-	if err := akq.prepareQuery(ctx); err != nil {
+func (_q *APIKeyQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, akq, querierCount[*APIKeyQuery](), akq.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*APIKeyQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (akq *APIKeyQuery) CountX(ctx context.Context) int {
-	count, err := akq.Count(ctx)
+func (_q *APIKeyQuery) CountX(ctx context.Context) int {
+	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -292,9 +292,9 @@ func (akq *APIKeyQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (akq *APIKeyQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = setContextOp(ctx, akq.ctx, ent.OpQueryExist)
-	switch _, err := akq.FirstID(ctx); {
+func (_q *APIKeyQuery) Exist(ctx context.Context) (bool, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
+	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
 	case err != nil:
@@ -305,8 +305,8 @@ func (akq *APIKeyQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (akq *APIKeyQuery) ExistX(ctx context.Context) bool {
-	exist, err := akq.Exist(ctx)
+func (_q *APIKeyQuery) ExistX(ctx context.Context) bool {
+	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -315,56 +315,56 @@ func (akq *APIKeyQuery) ExistX(ctx context.Context) bool {
 
 // Clone returns a duplicate of the APIKeyQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (akq *APIKeyQuery) Clone() *APIKeyQuery {
-	if akq == nil {
+func (_q *APIKeyQuery) Clone() *APIKeyQuery {
+	if _q == nil {
 		return nil
 	}
 	return &APIKeyQuery{
-		config:              akq.config,
-		ctx:                 akq.ctx.Clone(),
-		order:               append([]apikey.OrderOption{}, akq.order...),
-		inters:              append([]Interceptor{}, akq.inters...),
-		predicates:          append([]predicate.APIKey{}, akq.predicates...),
-		withSenderProfile:   akq.withSenderProfile.Clone(),
-		withProviderProfile: akq.withProviderProfile.Clone(),
-		withPaymentOrders:   akq.withPaymentOrders.Clone(),
+		config:              _q.config,
+		ctx:                 _q.ctx.Clone(),
+		order:               append([]apikey.OrderOption{}, _q.order...),
+		inters:              append([]Interceptor{}, _q.inters...),
+		predicates:          append([]predicate.APIKey{}, _q.predicates...),
+		withSenderProfile:   _q.withSenderProfile.Clone(),
+		withProviderProfile: _q.withProviderProfile.Clone(),
+		withPaymentOrders:   _q.withPaymentOrders.Clone(),
 		// clone intermediate query.
-		sql:  akq.sql.Clone(),
-		path: akq.path,
+		sql:  _q.sql.Clone(),
+		path: _q.path,
 	}
 }
 
 // WithSenderProfile tells the query-builder to eager-load the nodes that are connected to
 // the "sender_profile" edge. The optional arguments are used to configure the query builder of the edge.
-func (akq *APIKeyQuery) WithSenderProfile(opts ...func(*SenderProfileQuery)) *APIKeyQuery {
-	query := (&SenderProfileClient{config: akq.config}).Query()
+func (_q *APIKeyQuery) WithSenderProfile(opts ...func(*SenderProfileQuery)) *APIKeyQuery {
+	query := (&SenderProfileClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	akq.withSenderProfile = query
-	return akq
+	_q.withSenderProfile = query
+	return _q
 }
 
 // WithProviderProfile tells the query-builder to eager-load the nodes that are connected to
 // the "provider_profile" edge. The optional arguments are used to configure the query builder of the edge.
-func (akq *APIKeyQuery) WithProviderProfile(opts ...func(*ProviderProfileQuery)) *APIKeyQuery {
-	query := (&ProviderProfileClient{config: akq.config}).Query()
+func (_q *APIKeyQuery) WithProviderProfile(opts ...func(*ProviderProfileQuery)) *APIKeyQuery {
+	query := (&ProviderProfileClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	akq.withProviderProfile = query
-	return akq
+	_q.withProviderProfile = query
+	return _q
 }
 
 // WithPaymentOrders tells the query-builder to eager-load the nodes that are connected to
 // the "payment_orders" edge. The optional arguments are used to configure the query builder of the edge.
-func (akq *APIKeyQuery) WithPaymentOrders(opts ...func(*PaymentOrderQuery)) *APIKeyQuery {
-	query := (&PaymentOrderClient{config: akq.config}).Query()
+func (_q *APIKeyQuery) WithPaymentOrders(opts ...func(*PaymentOrderQuery)) *APIKeyQuery {
+	query := (&PaymentOrderClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	akq.withPaymentOrders = query
-	return akq
+	_q.withPaymentOrders = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -381,10 +381,10 @@ func (akq *APIKeyQuery) WithPaymentOrders(opts ...func(*PaymentOrderQuery)) *API
 //		GroupBy(apikey.FieldSecret).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (akq *APIKeyQuery) GroupBy(field string, fields ...string) *APIKeyGroupBy {
-	akq.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &APIKeyGroupBy{build: akq}
-	grbuild.flds = &akq.ctx.Fields
+func (_q *APIKeyQuery) GroupBy(field string, fields ...string) *APIKeyGroupBy {
+	_q.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &APIKeyGroupBy{build: _q}
+	grbuild.flds = &_q.ctx.Fields
 	grbuild.label = apikey.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -402,57 +402,57 @@ func (akq *APIKeyQuery) GroupBy(field string, fields ...string) *APIKeyGroupBy {
 //	client.APIKey.Query().
 //		Select(apikey.FieldSecret).
 //		Scan(ctx, &v)
-func (akq *APIKeyQuery) Select(fields ...string) *APIKeySelect {
-	akq.ctx.Fields = append(akq.ctx.Fields, fields...)
-	sbuild := &APIKeySelect{APIKeyQuery: akq}
+func (_q *APIKeyQuery) Select(fields ...string) *APIKeySelect {
+	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
+	sbuild := &APIKeySelect{APIKeyQuery: _q}
 	sbuild.label = apikey.Label
-	sbuild.flds, sbuild.scan = &akq.ctx.Fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
 // Aggregate returns a APIKeySelect configured with the given aggregations.
-func (akq *APIKeyQuery) Aggregate(fns ...AggregateFunc) *APIKeySelect {
-	return akq.Select().Aggregate(fns...)
+func (_q *APIKeyQuery) Aggregate(fns ...AggregateFunc) *APIKeySelect {
+	return _q.Select().Aggregate(fns...)
 }
 
-func (akq *APIKeyQuery) prepareQuery(ctx context.Context) error {
-	for _, inter := range akq.inters {
+func (_q *APIKeyQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
 		}
 		if trv, ok := inter.(Traverser); ok {
-			if err := trv.Traverse(ctx, akq); err != nil {
+			if err := trv.Traverse(ctx, _q); err != nil {
 				return err
 			}
 		}
 	}
-	for _, f := range akq.ctx.Fields {
+	for _, f := range _q.ctx.Fields {
 		if !apikey.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
-	if akq.path != nil {
-		prev, err := akq.path(ctx)
+	if _q.path != nil {
+		prev, err := _q.path(ctx)
 		if err != nil {
 			return err
 		}
-		akq.sql = prev
+		_q.sql = prev
 	}
 	return nil
 }
 
-func (akq *APIKeyQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*APIKey, error) {
+func (_q *APIKeyQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*APIKey, error) {
 	var (
 		nodes       = []*APIKey{}
-		withFKs     = akq.withFKs
-		_spec       = akq.querySpec()
+		withFKs     = _q.withFKs
+		_spec       = _q.querySpec()
 		loadedTypes = [3]bool{
-			akq.withSenderProfile != nil,
-			akq.withProviderProfile != nil,
-			akq.withPaymentOrders != nil,
+			_q.withSenderProfile != nil,
+			_q.withProviderProfile != nil,
+			_q.withPaymentOrders != nil,
 		}
 	)
-	if akq.withSenderProfile != nil || akq.withProviderProfile != nil {
+	if _q.withSenderProfile != nil || _q.withProviderProfile != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -462,7 +462,7 @@ func (akq *APIKeyQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*APIK
 		return (*APIKey).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &APIKey{config: akq.config}
+		node := &APIKey{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -470,26 +470,26 @@ func (akq *APIKeyQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*APIK
 	for i := range hooks {
 		hooks[i](ctx, _spec)
 	}
-	if err := sqlgraph.QueryNodes(ctx, akq.driver, _spec); err != nil {
+	if err := sqlgraph.QueryNodes(ctx, _q.driver, _spec); err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := akq.withSenderProfile; query != nil {
-		if err := akq.loadSenderProfile(ctx, query, nodes, nil,
+	if query := _q.withSenderProfile; query != nil {
+		if err := _q.loadSenderProfile(ctx, query, nodes, nil,
 			func(n *APIKey, e *SenderProfile) { n.Edges.SenderProfile = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := akq.withProviderProfile; query != nil {
-		if err := akq.loadProviderProfile(ctx, query, nodes, nil,
+	if query := _q.withProviderProfile; query != nil {
+		if err := _q.loadProviderProfile(ctx, query, nodes, nil,
 			func(n *APIKey, e *ProviderProfile) { n.Edges.ProviderProfile = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := akq.withPaymentOrders; query != nil {
-		if err := akq.loadPaymentOrders(ctx, query, nodes,
+	if query := _q.withPaymentOrders; query != nil {
+		if err := _q.loadPaymentOrders(ctx, query, nodes,
 			func(n *APIKey) { n.Edges.PaymentOrders = []*PaymentOrder{} },
 			func(n *APIKey, e *PaymentOrder) { n.Edges.PaymentOrders = append(n.Edges.PaymentOrders, e) }); err != nil {
 			return nil, err
@@ -498,7 +498,7 @@ func (akq *APIKeyQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*APIK
 	return nodes, nil
 }
 
-func (akq *APIKeyQuery) loadSenderProfile(ctx context.Context, query *SenderProfileQuery, nodes []*APIKey, init func(*APIKey), assign func(*APIKey, *SenderProfile)) error {
+func (_q *APIKeyQuery) loadSenderProfile(ctx context.Context, query *SenderProfileQuery, nodes []*APIKey, init func(*APIKey), assign func(*APIKey, *SenderProfile)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*APIKey)
 	for i := range nodes {
@@ -530,7 +530,7 @@ func (akq *APIKeyQuery) loadSenderProfile(ctx context.Context, query *SenderProf
 	}
 	return nil
 }
-func (akq *APIKeyQuery) loadProviderProfile(ctx context.Context, query *ProviderProfileQuery, nodes []*APIKey, init func(*APIKey), assign func(*APIKey, *ProviderProfile)) error {
+func (_q *APIKeyQuery) loadProviderProfile(ctx context.Context, query *ProviderProfileQuery, nodes []*APIKey, init func(*APIKey), assign func(*APIKey, *ProviderProfile)) error {
 	ids := make([]string, 0, len(nodes))
 	nodeids := make(map[string][]*APIKey)
 	for i := range nodes {
@@ -562,7 +562,7 @@ func (akq *APIKeyQuery) loadProviderProfile(ctx context.Context, query *Provider
 	}
 	return nil
 }
-func (akq *APIKeyQuery) loadPaymentOrders(ctx context.Context, query *PaymentOrderQuery, nodes []*APIKey, init func(*APIKey), assign func(*APIKey, *PaymentOrder)) error {
+func (_q *APIKeyQuery) loadPaymentOrders(ctx context.Context, query *PaymentOrderQuery, nodes []*APIKey, init func(*APIKey), assign func(*APIKey, *PaymentOrder)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*APIKey)
 	for i := range nodes {
@@ -594,24 +594,24 @@ func (akq *APIKeyQuery) loadPaymentOrders(ctx context.Context, query *PaymentOrd
 	return nil
 }
 
-func (akq *APIKeyQuery) sqlCount(ctx context.Context) (int, error) {
-	_spec := akq.querySpec()
-	_spec.Node.Columns = akq.ctx.Fields
-	if len(akq.ctx.Fields) > 0 {
-		_spec.Unique = akq.ctx.Unique != nil && *akq.ctx.Unique
+func (_q *APIKeyQuery) sqlCount(ctx context.Context) (int, error) {
+	_spec := _q.querySpec()
+	_spec.Node.Columns = _q.ctx.Fields
+	if len(_q.ctx.Fields) > 0 {
+		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
 	}
-	return sqlgraph.CountNodes(ctx, akq.driver, _spec)
+	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (akq *APIKeyQuery) querySpec() *sqlgraph.QuerySpec {
+func (_q *APIKeyQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := sqlgraph.NewQuerySpec(apikey.Table, apikey.Columns, sqlgraph.NewFieldSpec(apikey.FieldID, field.TypeUUID))
-	_spec.From = akq.sql
-	if unique := akq.ctx.Unique; unique != nil {
+	_spec.From = _q.sql
+	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
-	} else if akq.path != nil {
+	} else if _q.path != nil {
 		_spec.Unique = true
 	}
-	if fields := akq.ctx.Fields; len(fields) > 0 {
+	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, apikey.FieldID)
 		for i := range fields {
@@ -620,20 +620,20 @@ func (akq *APIKeyQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if ps := akq.predicates; len(ps) > 0 {
+	if ps := _q.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if limit := akq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := akq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
-	if ps := akq.order; len(ps) > 0 {
+	if ps := _q.order; len(ps) > 0 {
 		_spec.Order = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
@@ -643,33 +643,33 @@ func (akq *APIKeyQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (akq *APIKeyQuery) sqlQuery(ctx context.Context) *sql.Selector {
-	builder := sql.Dialect(akq.driver.Dialect())
+func (_q *APIKeyQuery) sqlQuery(ctx context.Context) *sql.Selector {
+	builder := sql.Dialect(_q.driver.Dialect())
 	t1 := builder.Table(apikey.Table)
-	columns := akq.ctx.Fields
+	columns := _q.ctx.Fields
 	if len(columns) == 0 {
 		columns = apikey.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
-	if akq.sql != nil {
-		selector = akq.sql
+	if _q.sql != nil {
+		selector = _q.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if akq.ctx.Unique != nil && *akq.ctx.Unique {
+	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
-	for _, p := range akq.predicates {
+	for _, p := range _q.predicates {
 		p(selector)
 	}
-	for _, p := range akq.order {
+	for _, p := range _q.order {
 		p(selector)
 	}
-	if offset := akq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := akq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -682,41 +682,41 @@ type APIKeyGroupBy struct {
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (akgb *APIKeyGroupBy) Aggregate(fns ...AggregateFunc) *APIKeyGroupBy {
-	akgb.fns = append(akgb.fns, fns...)
-	return akgb
+func (_g *APIKeyGroupBy) Aggregate(fns ...AggregateFunc) *APIKeyGroupBy {
+	_g.fns = append(_g.fns, fns...)
+	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (akgb *APIKeyGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, akgb.build.ctx, ent.OpQueryGroupBy)
-	if err := akgb.build.prepareQuery(ctx); err != nil {
+func (_g *APIKeyGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
+	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*APIKeyQuery, *APIKeyGroupBy](ctx, akgb.build, akgb, akgb.build.inters, v)
+	return scanWithInterceptors[*APIKeyQuery, *APIKeyGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (akgb *APIKeyGroupBy) sqlScan(ctx context.Context, root *APIKeyQuery, v any) error {
+func (_g *APIKeyGroupBy) sqlScan(ctx context.Context, root *APIKeyQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
-	aggregation := make([]string, 0, len(akgb.fns))
-	for _, fn := range akgb.fns {
+	aggregation := make([]string, 0, len(_g.fns))
+	for _, fn := range _g.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
 	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(*akgb.flds)+len(akgb.fns))
-		for _, f := range *akgb.flds {
+		columns := make([]string, 0, len(*_g.flds)+len(_g.fns))
+		for _, f := range *_g.flds {
 			columns = append(columns, selector.C(f))
 		}
 		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
-	selector.GroupBy(selector.Columns(*akgb.flds...)...)
+	selector.GroupBy(selector.Columns(*_g.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := akgb.build.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _g.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
@@ -730,27 +730,27 @@ type APIKeySelect struct {
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (aks *APIKeySelect) Aggregate(fns ...AggregateFunc) *APIKeySelect {
-	aks.fns = append(aks.fns, fns...)
-	return aks
+func (_s *APIKeySelect) Aggregate(fns ...AggregateFunc) *APIKeySelect {
+	_s.fns = append(_s.fns, fns...)
+	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (aks *APIKeySelect) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, aks.ctx, ent.OpQuerySelect)
-	if err := aks.prepareQuery(ctx); err != nil {
+func (_s *APIKeySelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
+	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*APIKeyQuery, *APIKeySelect](ctx, aks.APIKeyQuery, aks, aks.inters, v)
+	return scanWithInterceptors[*APIKeyQuery, *APIKeySelect](ctx, _s.APIKeyQuery, _s, _s.inters, v)
 }
 
-func (aks *APIKeySelect) sqlScan(ctx context.Context, root *APIKeyQuery, v any) error {
+func (_s *APIKeySelect) sqlScan(ctx context.Context, root *APIKeyQuery, v any) error {
 	selector := root.sqlQuery(ctx)
-	aggregation := make([]string, 0, len(aks.fns))
-	for _, fn := range aks.fns {
+	aggregation := make([]string, 0, len(_s.fns))
+	for _, fn := range _s.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
-	switch n := len(*aks.selector.flds); {
+	switch n := len(*_s.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
 		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
@@ -758,7 +758,7 @@ func (aks *APIKeySelect) sqlScan(ctx context.Context, root *APIKeyQuery, v any) 
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := aks.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _s.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()

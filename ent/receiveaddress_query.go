@@ -32,44 +32,44 @@ type ReceiveAddressQuery struct {
 }
 
 // Where adds a new predicate for the ReceiveAddressQuery builder.
-func (raq *ReceiveAddressQuery) Where(ps ...predicate.ReceiveAddress) *ReceiveAddressQuery {
-	raq.predicates = append(raq.predicates, ps...)
-	return raq
+func (_q *ReceiveAddressQuery) Where(ps ...predicate.ReceiveAddress) *ReceiveAddressQuery {
+	_q.predicates = append(_q.predicates, ps...)
+	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (raq *ReceiveAddressQuery) Limit(limit int) *ReceiveAddressQuery {
-	raq.ctx.Limit = &limit
-	return raq
+func (_q *ReceiveAddressQuery) Limit(limit int) *ReceiveAddressQuery {
+	_q.ctx.Limit = &limit
+	return _q
 }
 
 // Offset to start from.
-func (raq *ReceiveAddressQuery) Offset(offset int) *ReceiveAddressQuery {
-	raq.ctx.Offset = &offset
-	return raq
+func (_q *ReceiveAddressQuery) Offset(offset int) *ReceiveAddressQuery {
+	_q.ctx.Offset = &offset
+	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (raq *ReceiveAddressQuery) Unique(unique bool) *ReceiveAddressQuery {
-	raq.ctx.Unique = &unique
-	return raq
+func (_q *ReceiveAddressQuery) Unique(unique bool) *ReceiveAddressQuery {
+	_q.ctx.Unique = &unique
+	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (raq *ReceiveAddressQuery) Order(o ...receiveaddress.OrderOption) *ReceiveAddressQuery {
-	raq.order = append(raq.order, o...)
-	return raq
+func (_q *ReceiveAddressQuery) Order(o ...receiveaddress.OrderOption) *ReceiveAddressQuery {
+	_q.order = append(_q.order, o...)
+	return _q
 }
 
 // QueryPaymentOrder chains the current query on the "payment_order" edge.
-func (raq *ReceiveAddressQuery) QueryPaymentOrder() *PaymentOrderQuery {
-	query := (&PaymentOrderClient{config: raq.config}).Query()
+func (_q *ReceiveAddressQuery) QueryPaymentOrder() *PaymentOrderQuery {
+	query := (&PaymentOrderClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := raq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := raq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -78,7 +78,7 @@ func (raq *ReceiveAddressQuery) QueryPaymentOrder() *PaymentOrderQuery {
 			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, receiveaddress.PaymentOrderTable, receiveaddress.PaymentOrderColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(raq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
@@ -86,8 +86,8 @@ func (raq *ReceiveAddressQuery) QueryPaymentOrder() *PaymentOrderQuery {
 
 // First returns the first ReceiveAddress entity from the query.
 // Returns a *NotFoundError when no ReceiveAddress was found.
-func (raq *ReceiveAddressQuery) First(ctx context.Context) (*ReceiveAddress, error) {
-	nodes, err := raq.Limit(1).All(setContextOp(ctx, raq.ctx, ent.OpQueryFirst))
+func (_q *ReceiveAddressQuery) First(ctx context.Context) (*ReceiveAddress, error) {
+	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
@@ -98,8 +98,8 @@ func (raq *ReceiveAddressQuery) First(ctx context.Context) (*ReceiveAddress, err
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (raq *ReceiveAddressQuery) FirstX(ctx context.Context) *ReceiveAddress {
-	node, err := raq.First(ctx)
+func (_q *ReceiveAddressQuery) FirstX(ctx context.Context) *ReceiveAddress {
+	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -108,9 +108,9 @@ func (raq *ReceiveAddressQuery) FirstX(ctx context.Context) *ReceiveAddress {
 
 // FirstID returns the first ReceiveAddress ID from the query.
 // Returns a *NotFoundError when no ReceiveAddress ID was found.
-func (raq *ReceiveAddressQuery) FirstID(ctx context.Context) (id int, err error) {
+func (_q *ReceiveAddressQuery) FirstID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = raq.Limit(1).IDs(setContextOp(ctx, raq.ctx, ent.OpQueryFirstID)); err != nil {
+	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -121,8 +121,8 @@ func (raq *ReceiveAddressQuery) FirstID(ctx context.Context) (id int, err error)
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (raq *ReceiveAddressQuery) FirstIDX(ctx context.Context) int {
-	id, err := raq.FirstID(ctx)
+func (_q *ReceiveAddressQuery) FirstIDX(ctx context.Context) int {
+	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -132,8 +132,8 @@ func (raq *ReceiveAddressQuery) FirstIDX(ctx context.Context) int {
 // Only returns a single ReceiveAddress entity found by the query, ensuring it only returns one.
 // Returns a *NotSingularError when more than one ReceiveAddress entity is found.
 // Returns a *NotFoundError when no ReceiveAddress entities are found.
-func (raq *ReceiveAddressQuery) Only(ctx context.Context) (*ReceiveAddress, error) {
-	nodes, err := raq.Limit(2).All(setContextOp(ctx, raq.ctx, ent.OpQueryOnly))
+func (_q *ReceiveAddressQuery) Only(ctx context.Context) (*ReceiveAddress, error) {
+	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -148,8 +148,8 @@ func (raq *ReceiveAddressQuery) Only(ctx context.Context) (*ReceiveAddress, erro
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (raq *ReceiveAddressQuery) OnlyX(ctx context.Context) *ReceiveAddress {
-	node, err := raq.Only(ctx)
+func (_q *ReceiveAddressQuery) OnlyX(ctx context.Context) *ReceiveAddress {
+	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -159,9 +159,9 @@ func (raq *ReceiveAddressQuery) OnlyX(ctx context.Context) *ReceiveAddress {
 // OnlyID is like Only, but returns the only ReceiveAddress ID in the query.
 // Returns a *NotSingularError when more than one ReceiveAddress ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (raq *ReceiveAddressQuery) OnlyID(ctx context.Context) (id int, err error) {
+func (_q *ReceiveAddressQuery) OnlyID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = raq.Limit(2).IDs(setContextOp(ctx, raq.ctx, ent.OpQueryOnlyID)); err != nil {
+	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -176,8 +176,8 @@ func (raq *ReceiveAddressQuery) OnlyID(ctx context.Context) (id int, err error) 
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (raq *ReceiveAddressQuery) OnlyIDX(ctx context.Context) int {
-	id, err := raq.OnlyID(ctx)
+func (_q *ReceiveAddressQuery) OnlyIDX(ctx context.Context) int {
+	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -185,18 +185,18 @@ func (raq *ReceiveAddressQuery) OnlyIDX(ctx context.Context) int {
 }
 
 // All executes the query and returns a list of ReceiveAddresses.
-func (raq *ReceiveAddressQuery) All(ctx context.Context) ([]*ReceiveAddress, error) {
-	ctx = setContextOp(ctx, raq.ctx, ent.OpQueryAll)
-	if err := raq.prepareQuery(ctx); err != nil {
+func (_q *ReceiveAddressQuery) All(ctx context.Context) ([]*ReceiveAddress, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
 	qr := querierAll[[]*ReceiveAddress, *ReceiveAddressQuery]()
-	return withInterceptors[[]*ReceiveAddress](ctx, raq, qr, raq.inters)
+	return withInterceptors[[]*ReceiveAddress](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (raq *ReceiveAddressQuery) AllX(ctx context.Context) []*ReceiveAddress {
-	nodes, err := raq.All(ctx)
+func (_q *ReceiveAddressQuery) AllX(ctx context.Context) []*ReceiveAddress {
+	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -204,20 +204,20 @@ func (raq *ReceiveAddressQuery) AllX(ctx context.Context) []*ReceiveAddress {
 }
 
 // IDs executes the query and returns a list of ReceiveAddress IDs.
-func (raq *ReceiveAddressQuery) IDs(ctx context.Context) (ids []int, err error) {
-	if raq.ctx.Unique == nil && raq.path != nil {
-		raq.Unique(true)
+func (_q *ReceiveAddressQuery) IDs(ctx context.Context) (ids []int, err error) {
+	if _q.ctx.Unique == nil && _q.path != nil {
+		_q.Unique(true)
 	}
-	ctx = setContextOp(ctx, raq.ctx, ent.OpQueryIDs)
-	if err = raq.Select(receiveaddress.FieldID).Scan(ctx, &ids); err != nil {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
+	if err = _q.Select(receiveaddress.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (raq *ReceiveAddressQuery) IDsX(ctx context.Context) []int {
-	ids, err := raq.IDs(ctx)
+func (_q *ReceiveAddressQuery) IDsX(ctx context.Context) []int {
+	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -225,17 +225,17 @@ func (raq *ReceiveAddressQuery) IDsX(ctx context.Context) []int {
 }
 
 // Count returns the count of the given query.
-func (raq *ReceiveAddressQuery) Count(ctx context.Context) (int, error) {
-	ctx = setContextOp(ctx, raq.ctx, ent.OpQueryCount)
-	if err := raq.prepareQuery(ctx); err != nil {
+func (_q *ReceiveAddressQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, raq, querierCount[*ReceiveAddressQuery](), raq.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*ReceiveAddressQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (raq *ReceiveAddressQuery) CountX(ctx context.Context) int {
-	count, err := raq.Count(ctx)
+func (_q *ReceiveAddressQuery) CountX(ctx context.Context) int {
+	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -243,9 +243,9 @@ func (raq *ReceiveAddressQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (raq *ReceiveAddressQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = setContextOp(ctx, raq.ctx, ent.OpQueryExist)
-	switch _, err := raq.FirstID(ctx); {
+func (_q *ReceiveAddressQuery) Exist(ctx context.Context) (bool, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
+	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
 	case err != nil:
@@ -256,8 +256,8 @@ func (raq *ReceiveAddressQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (raq *ReceiveAddressQuery) ExistX(ctx context.Context) bool {
-	exist, err := raq.Exist(ctx)
+func (_q *ReceiveAddressQuery) ExistX(ctx context.Context) bool {
+	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -266,32 +266,32 @@ func (raq *ReceiveAddressQuery) ExistX(ctx context.Context) bool {
 
 // Clone returns a duplicate of the ReceiveAddressQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (raq *ReceiveAddressQuery) Clone() *ReceiveAddressQuery {
-	if raq == nil {
+func (_q *ReceiveAddressQuery) Clone() *ReceiveAddressQuery {
+	if _q == nil {
 		return nil
 	}
 	return &ReceiveAddressQuery{
-		config:           raq.config,
-		ctx:              raq.ctx.Clone(),
-		order:            append([]receiveaddress.OrderOption{}, raq.order...),
-		inters:           append([]Interceptor{}, raq.inters...),
-		predicates:       append([]predicate.ReceiveAddress{}, raq.predicates...),
-		withPaymentOrder: raq.withPaymentOrder.Clone(),
+		config:           _q.config,
+		ctx:              _q.ctx.Clone(),
+		order:            append([]receiveaddress.OrderOption{}, _q.order...),
+		inters:           append([]Interceptor{}, _q.inters...),
+		predicates:       append([]predicate.ReceiveAddress{}, _q.predicates...),
+		withPaymentOrder: _q.withPaymentOrder.Clone(),
 		// clone intermediate query.
-		sql:  raq.sql.Clone(),
-		path: raq.path,
+		sql:  _q.sql.Clone(),
+		path: _q.path,
 	}
 }
 
 // WithPaymentOrder tells the query-builder to eager-load the nodes that are connected to
 // the "payment_order" edge. The optional arguments are used to configure the query builder of the edge.
-func (raq *ReceiveAddressQuery) WithPaymentOrder(opts ...func(*PaymentOrderQuery)) *ReceiveAddressQuery {
-	query := (&PaymentOrderClient{config: raq.config}).Query()
+func (_q *ReceiveAddressQuery) WithPaymentOrder(opts ...func(*PaymentOrderQuery)) *ReceiveAddressQuery {
+	query := (&PaymentOrderClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	raq.withPaymentOrder = query
-	return raq
+	_q.withPaymentOrder = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -308,10 +308,10 @@ func (raq *ReceiveAddressQuery) WithPaymentOrder(opts ...func(*PaymentOrderQuery
 //		GroupBy(receiveaddress.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (raq *ReceiveAddressQuery) GroupBy(field string, fields ...string) *ReceiveAddressGroupBy {
-	raq.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &ReceiveAddressGroupBy{build: raq}
-	grbuild.flds = &raq.ctx.Fields
+func (_q *ReceiveAddressQuery) GroupBy(field string, fields ...string) *ReceiveAddressGroupBy {
+	_q.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &ReceiveAddressGroupBy{build: _q}
+	grbuild.flds = &_q.ctx.Fields
 	grbuild.label = receiveaddress.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -329,55 +329,55 @@ func (raq *ReceiveAddressQuery) GroupBy(field string, fields ...string) *Receive
 //	client.ReceiveAddress.Query().
 //		Select(receiveaddress.FieldCreatedAt).
 //		Scan(ctx, &v)
-func (raq *ReceiveAddressQuery) Select(fields ...string) *ReceiveAddressSelect {
-	raq.ctx.Fields = append(raq.ctx.Fields, fields...)
-	sbuild := &ReceiveAddressSelect{ReceiveAddressQuery: raq}
+func (_q *ReceiveAddressQuery) Select(fields ...string) *ReceiveAddressSelect {
+	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
+	sbuild := &ReceiveAddressSelect{ReceiveAddressQuery: _q}
 	sbuild.label = receiveaddress.Label
-	sbuild.flds, sbuild.scan = &raq.ctx.Fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
 // Aggregate returns a ReceiveAddressSelect configured with the given aggregations.
-func (raq *ReceiveAddressQuery) Aggregate(fns ...AggregateFunc) *ReceiveAddressSelect {
-	return raq.Select().Aggregate(fns...)
+func (_q *ReceiveAddressQuery) Aggregate(fns ...AggregateFunc) *ReceiveAddressSelect {
+	return _q.Select().Aggregate(fns...)
 }
 
-func (raq *ReceiveAddressQuery) prepareQuery(ctx context.Context) error {
-	for _, inter := range raq.inters {
+func (_q *ReceiveAddressQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
 		}
 		if trv, ok := inter.(Traverser); ok {
-			if err := trv.Traverse(ctx, raq); err != nil {
+			if err := trv.Traverse(ctx, _q); err != nil {
 				return err
 			}
 		}
 	}
-	for _, f := range raq.ctx.Fields {
+	for _, f := range _q.ctx.Fields {
 		if !receiveaddress.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
-	if raq.path != nil {
-		prev, err := raq.path(ctx)
+	if _q.path != nil {
+		prev, err := _q.path(ctx)
 		if err != nil {
 			return err
 		}
-		raq.sql = prev
+		_q.sql = prev
 	}
 	return nil
 }
 
-func (raq *ReceiveAddressQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*ReceiveAddress, error) {
+func (_q *ReceiveAddressQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*ReceiveAddress, error) {
 	var (
 		nodes       = []*ReceiveAddress{}
-		withFKs     = raq.withFKs
-		_spec       = raq.querySpec()
+		withFKs     = _q.withFKs
+		_spec       = _q.querySpec()
 		loadedTypes = [1]bool{
-			raq.withPaymentOrder != nil,
+			_q.withPaymentOrder != nil,
 		}
 	)
-	if raq.withPaymentOrder != nil {
+	if _q.withPaymentOrder != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -387,7 +387,7 @@ func (raq *ReceiveAddressQuery) sqlAll(ctx context.Context, hooks ...queryHook) 
 		return (*ReceiveAddress).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &ReceiveAddress{config: raq.config}
+		node := &ReceiveAddress{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -395,14 +395,14 @@ func (raq *ReceiveAddressQuery) sqlAll(ctx context.Context, hooks ...queryHook) 
 	for i := range hooks {
 		hooks[i](ctx, _spec)
 	}
-	if err := sqlgraph.QueryNodes(ctx, raq.driver, _spec); err != nil {
+	if err := sqlgraph.QueryNodes(ctx, _q.driver, _spec); err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := raq.withPaymentOrder; query != nil {
-		if err := raq.loadPaymentOrder(ctx, query, nodes, nil,
+	if query := _q.withPaymentOrder; query != nil {
+		if err := _q.loadPaymentOrder(ctx, query, nodes, nil,
 			func(n *ReceiveAddress, e *PaymentOrder) { n.Edges.PaymentOrder = e }); err != nil {
 			return nil, err
 		}
@@ -410,7 +410,7 @@ func (raq *ReceiveAddressQuery) sqlAll(ctx context.Context, hooks ...queryHook) 
 	return nodes, nil
 }
 
-func (raq *ReceiveAddressQuery) loadPaymentOrder(ctx context.Context, query *PaymentOrderQuery, nodes []*ReceiveAddress, init func(*ReceiveAddress), assign func(*ReceiveAddress, *PaymentOrder)) error {
+func (_q *ReceiveAddressQuery) loadPaymentOrder(ctx context.Context, query *PaymentOrderQuery, nodes []*ReceiveAddress, init func(*ReceiveAddress), assign func(*ReceiveAddress, *PaymentOrder)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ReceiveAddress)
 	for i := range nodes {
@@ -443,24 +443,24 @@ func (raq *ReceiveAddressQuery) loadPaymentOrder(ctx context.Context, query *Pay
 	return nil
 }
 
-func (raq *ReceiveAddressQuery) sqlCount(ctx context.Context) (int, error) {
-	_spec := raq.querySpec()
-	_spec.Node.Columns = raq.ctx.Fields
-	if len(raq.ctx.Fields) > 0 {
-		_spec.Unique = raq.ctx.Unique != nil && *raq.ctx.Unique
+func (_q *ReceiveAddressQuery) sqlCount(ctx context.Context) (int, error) {
+	_spec := _q.querySpec()
+	_spec.Node.Columns = _q.ctx.Fields
+	if len(_q.ctx.Fields) > 0 {
+		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
 	}
-	return sqlgraph.CountNodes(ctx, raq.driver, _spec)
+	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (raq *ReceiveAddressQuery) querySpec() *sqlgraph.QuerySpec {
+func (_q *ReceiveAddressQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := sqlgraph.NewQuerySpec(receiveaddress.Table, receiveaddress.Columns, sqlgraph.NewFieldSpec(receiveaddress.FieldID, field.TypeInt))
-	_spec.From = raq.sql
-	if unique := raq.ctx.Unique; unique != nil {
+	_spec.From = _q.sql
+	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
-	} else if raq.path != nil {
+	} else if _q.path != nil {
 		_spec.Unique = true
 	}
-	if fields := raq.ctx.Fields; len(fields) > 0 {
+	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, receiveaddress.FieldID)
 		for i := range fields {
@@ -469,20 +469,20 @@ func (raq *ReceiveAddressQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if ps := raq.predicates; len(ps) > 0 {
+	if ps := _q.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if limit := raq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := raq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
-	if ps := raq.order; len(ps) > 0 {
+	if ps := _q.order; len(ps) > 0 {
 		_spec.Order = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
@@ -492,33 +492,33 @@ func (raq *ReceiveAddressQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (raq *ReceiveAddressQuery) sqlQuery(ctx context.Context) *sql.Selector {
-	builder := sql.Dialect(raq.driver.Dialect())
+func (_q *ReceiveAddressQuery) sqlQuery(ctx context.Context) *sql.Selector {
+	builder := sql.Dialect(_q.driver.Dialect())
 	t1 := builder.Table(receiveaddress.Table)
-	columns := raq.ctx.Fields
+	columns := _q.ctx.Fields
 	if len(columns) == 0 {
 		columns = receiveaddress.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
-	if raq.sql != nil {
-		selector = raq.sql
+	if _q.sql != nil {
+		selector = _q.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if raq.ctx.Unique != nil && *raq.ctx.Unique {
+	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
-	for _, p := range raq.predicates {
+	for _, p := range _q.predicates {
 		p(selector)
 	}
-	for _, p := range raq.order {
+	for _, p := range _q.order {
 		p(selector)
 	}
-	if offset := raq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := raq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -531,41 +531,41 @@ type ReceiveAddressGroupBy struct {
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (ragb *ReceiveAddressGroupBy) Aggregate(fns ...AggregateFunc) *ReceiveAddressGroupBy {
-	ragb.fns = append(ragb.fns, fns...)
-	return ragb
+func (_g *ReceiveAddressGroupBy) Aggregate(fns ...AggregateFunc) *ReceiveAddressGroupBy {
+	_g.fns = append(_g.fns, fns...)
+	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (ragb *ReceiveAddressGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, ragb.build.ctx, ent.OpQueryGroupBy)
-	if err := ragb.build.prepareQuery(ctx); err != nil {
+func (_g *ReceiveAddressGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
+	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*ReceiveAddressQuery, *ReceiveAddressGroupBy](ctx, ragb.build, ragb, ragb.build.inters, v)
+	return scanWithInterceptors[*ReceiveAddressQuery, *ReceiveAddressGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (ragb *ReceiveAddressGroupBy) sqlScan(ctx context.Context, root *ReceiveAddressQuery, v any) error {
+func (_g *ReceiveAddressGroupBy) sqlScan(ctx context.Context, root *ReceiveAddressQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
-	aggregation := make([]string, 0, len(ragb.fns))
-	for _, fn := range ragb.fns {
+	aggregation := make([]string, 0, len(_g.fns))
+	for _, fn := range _g.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
 	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(*ragb.flds)+len(ragb.fns))
-		for _, f := range *ragb.flds {
+		columns := make([]string, 0, len(*_g.flds)+len(_g.fns))
+		for _, f := range *_g.flds {
 			columns = append(columns, selector.C(f))
 		}
 		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
-	selector.GroupBy(selector.Columns(*ragb.flds...)...)
+	selector.GroupBy(selector.Columns(*_g.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := ragb.build.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _g.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
@@ -579,27 +579,27 @@ type ReceiveAddressSelect struct {
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (ras *ReceiveAddressSelect) Aggregate(fns ...AggregateFunc) *ReceiveAddressSelect {
-	ras.fns = append(ras.fns, fns...)
-	return ras
+func (_s *ReceiveAddressSelect) Aggregate(fns ...AggregateFunc) *ReceiveAddressSelect {
+	_s.fns = append(_s.fns, fns...)
+	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (ras *ReceiveAddressSelect) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, ras.ctx, ent.OpQuerySelect)
-	if err := ras.prepareQuery(ctx); err != nil {
+func (_s *ReceiveAddressSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
+	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*ReceiveAddressQuery, *ReceiveAddressSelect](ctx, ras.ReceiveAddressQuery, ras, ras.inters, v)
+	return scanWithInterceptors[*ReceiveAddressQuery, *ReceiveAddressSelect](ctx, _s.ReceiveAddressQuery, _s, _s.inters, v)
 }
 
-func (ras *ReceiveAddressSelect) sqlScan(ctx context.Context, root *ReceiveAddressQuery, v any) error {
+func (_s *ReceiveAddressSelect) sqlScan(ctx context.Context, root *ReceiveAddressQuery, v any) error {
 	selector := root.sqlQuery(ctx)
-	aggregation := make([]string, 0, len(ras.fns))
-	for _, fn := range ras.fns {
+	aggregation := make([]string, 0, len(_s.fns))
+	for _, fn := range _s.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
-	switch n := len(*ras.selector.flds); {
+	switch n := len(*_s.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
 		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
@@ -607,7 +607,7 @@ func (ras *ReceiveAddressSelect) sqlScan(ctx context.Context, root *ReceiveAddre
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := ras.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _s.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()

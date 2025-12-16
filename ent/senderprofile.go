@@ -132,7 +132,7 @@ func (*SenderProfile) scanValues(columns []string) ([]any, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the SenderProfile fields.
-func (sp *SenderProfile) assignValues(columns []string, values []any) error {
+func (_m *SenderProfile) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -142,19 +142,19 @@ func (sp *SenderProfile) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*uuid.UUID); !ok {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
-				sp.ID = *value
+				_m.ID = *value
 			}
 		case senderprofile.FieldWebhookURL:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field webhook_url", values[i])
 			} else if value.Valid {
-				sp.WebhookURL = value.String
+				_m.WebhookURL = value.String
 			}
 		case senderprofile.FieldDomainWhitelist:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field domain_whitelist", values[i])
 			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &sp.DomainWhitelist); err != nil {
+				if err := json.Unmarshal(*value, &_m.DomainWhitelist); err != nil {
 					return fmt.Errorf("unmarshal field domain_whitelist: %w", err)
 				}
 			}
@@ -162,35 +162,35 @@ func (sp *SenderProfile) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field provider_id", values[i])
 			} else if value.Valid {
-				sp.ProviderID = value.String
+				_m.ProviderID = value.String
 			}
 		case senderprofile.FieldIsPartner:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field is_partner", values[i])
 			} else if value.Valid {
-				sp.IsPartner = value.Bool
+				_m.IsPartner = value.Bool
 			}
 		case senderprofile.FieldIsActive:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field is_active", values[i])
 			} else if value.Valid {
-				sp.IsActive = value.Bool
+				_m.IsActive = value.Bool
 			}
 		case senderprofile.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
-				sp.UpdatedAt = value.Time
+				_m.UpdatedAt = value.Time
 			}
 		case senderprofile.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field user_sender_profile", values[i])
 			} else if value.Valid {
-				sp.user_sender_profile = new(uuid.UUID)
-				*sp.user_sender_profile = *value.S.(*uuid.UUID)
+				_m.user_sender_profile = new(uuid.UUID)
+				*_m.user_sender_profile = *value.S.(*uuid.UUID)
 			}
 		default:
-			sp.selectValues.Set(columns[i], values[i])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -198,75 +198,75 @@ func (sp *SenderProfile) assignValues(columns []string, values []any) error {
 
 // Value returns the ent.Value that was dynamically selected and assigned to the SenderProfile.
 // This includes values selected through modifiers, order, etc.
-func (sp *SenderProfile) Value(name string) (ent.Value, error) {
-	return sp.selectValues.Get(name)
+func (_m *SenderProfile) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
 }
 
 // QueryUser queries the "user" edge of the SenderProfile entity.
-func (sp *SenderProfile) QueryUser() *UserQuery {
-	return NewSenderProfileClient(sp.config).QueryUser(sp)
+func (_m *SenderProfile) QueryUser() *UserQuery {
+	return NewSenderProfileClient(_m.config).QueryUser(_m)
 }
 
 // QueryAPIKey queries the "api_key" edge of the SenderProfile entity.
-func (sp *SenderProfile) QueryAPIKey() *APIKeyQuery {
-	return NewSenderProfileClient(sp.config).QueryAPIKey(sp)
+func (_m *SenderProfile) QueryAPIKey() *APIKeyQuery {
+	return NewSenderProfileClient(_m.config).QueryAPIKey(_m)
 }
 
 // QueryPaymentOrders queries the "payment_orders" edge of the SenderProfile entity.
-func (sp *SenderProfile) QueryPaymentOrders() *PaymentOrderQuery {
-	return NewSenderProfileClient(sp.config).QueryPaymentOrders(sp)
+func (_m *SenderProfile) QueryPaymentOrders() *PaymentOrderQuery {
+	return NewSenderProfileClient(_m.config).QueryPaymentOrders(_m)
 }
 
 // QueryOrderTokens queries the "order_tokens" edge of the SenderProfile entity.
-func (sp *SenderProfile) QueryOrderTokens() *SenderOrderTokenQuery {
-	return NewSenderProfileClient(sp.config).QueryOrderTokens(sp)
+func (_m *SenderProfile) QueryOrderTokens() *SenderOrderTokenQuery {
+	return NewSenderProfileClient(_m.config).QueryOrderTokens(_m)
 }
 
 // QueryLinkedAddress queries the "linked_address" edge of the SenderProfile entity.
-func (sp *SenderProfile) QueryLinkedAddress() *LinkedAddressQuery {
-	return NewSenderProfileClient(sp.config).QueryLinkedAddress(sp)
+func (_m *SenderProfile) QueryLinkedAddress() *LinkedAddressQuery {
+	return NewSenderProfileClient(_m.config).QueryLinkedAddress(_m)
 }
 
 // Update returns a builder for updating this SenderProfile.
 // Note that you need to call SenderProfile.Unwrap() before calling this method if this SenderProfile
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (sp *SenderProfile) Update() *SenderProfileUpdateOne {
-	return NewSenderProfileClient(sp.config).UpdateOne(sp)
+func (_m *SenderProfile) Update() *SenderProfileUpdateOne {
+	return NewSenderProfileClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the SenderProfile entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (sp *SenderProfile) Unwrap() *SenderProfile {
-	_tx, ok := sp.config.driver.(*txDriver)
+func (_m *SenderProfile) Unwrap() *SenderProfile {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: SenderProfile is not a transactional entity")
 	}
-	sp.config.driver = _tx.drv
-	return sp
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (sp *SenderProfile) String() string {
+func (_m *SenderProfile) String() string {
 	var builder strings.Builder
 	builder.WriteString("SenderProfile(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", sp.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("webhook_url=")
-	builder.WriteString(sp.WebhookURL)
+	builder.WriteString(_m.WebhookURL)
 	builder.WriteString(", ")
 	builder.WriteString("domain_whitelist=")
-	builder.WriteString(fmt.Sprintf("%v", sp.DomainWhitelist))
+	builder.WriteString(fmt.Sprintf("%v", _m.DomainWhitelist))
 	builder.WriteString(", ")
 	builder.WriteString("provider_id=")
-	builder.WriteString(sp.ProviderID)
+	builder.WriteString(_m.ProviderID)
 	builder.WriteString(", ")
 	builder.WriteString("is_partner=")
-	builder.WriteString(fmt.Sprintf("%v", sp.IsPartner))
+	builder.WriteString(fmt.Sprintf("%v", _m.IsPartner))
 	builder.WriteString(", ")
 	builder.WriteString("is_active=")
-	builder.WriteString(fmt.Sprintf("%v", sp.IsActive))
+	builder.WriteString(fmt.Sprintf("%v", _m.IsActive))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
-	builder.WriteString(sp.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteByte(')')
 	return builder.String()
 }

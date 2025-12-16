@@ -20,56 +20,56 @@ type LockPaymentOrderDelete struct {
 }
 
 // Where appends a list predicates to the LockPaymentOrderDelete builder.
-func (lpod *LockPaymentOrderDelete) Where(ps ...predicate.LockPaymentOrder) *LockPaymentOrderDelete {
-	lpod.mutation.Where(ps...)
-	return lpod
+func (_d *LockPaymentOrderDelete) Where(ps ...predicate.LockPaymentOrder) *LockPaymentOrderDelete {
+	_d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query and returns how many vertices were deleted.
-func (lpod *LockPaymentOrderDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks(ctx, lpod.sqlExec, lpod.mutation, lpod.hooks)
+func (_d *LockPaymentOrderDelete) Exec(ctx context.Context) (int, error) {
+	return withHooks(ctx, _d.sqlExec, _d.mutation, _d.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (lpod *LockPaymentOrderDelete) ExecX(ctx context.Context) int {
-	n, err := lpod.Exec(ctx)
+func (_d *LockPaymentOrderDelete) ExecX(ctx context.Context) int {
+	n, err := _d.Exec(ctx)
 	if err != nil {
 		panic(err)
 	}
 	return n
 }
 
-func (lpod *LockPaymentOrderDelete) sqlExec(ctx context.Context) (int, error) {
+func (_d *LockPaymentOrderDelete) sqlExec(ctx context.Context) (int, error) {
 	_spec := sqlgraph.NewDeleteSpec(lockpaymentorder.Table, sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID))
-	if ps := lpod.mutation.predicates; len(ps) > 0 {
+	if ps := _d.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	affected, err := sqlgraph.DeleteNodes(ctx, lpod.driver, _spec)
+	affected, err := sqlgraph.DeleteNodes(ctx, _d.driver, _spec)
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
-	lpod.mutation.done = true
+	_d.mutation.done = true
 	return affected, err
 }
 
 // LockPaymentOrderDeleteOne is the builder for deleting a single LockPaymentOrder entity.
 type LockPaymentOrderDeleteOne struct {
-	lpod *LockPaymentOrderDelete
+	_d *LockPaymentOrderDelete
 }
 
 // Where appends a list predicates to the LockPaymentOrderDelete builder.
-func (lpodo *LockPaymentOrderDeleteOne) Where(ps ...predicate.LockPaymentOrder) *LockPaymentOrderDeleteOne {
-	lpodo.lpod.mutation.Where(ps...)
-	return lpodo
+func (_d *LockPaymentOrderDeleteOne) Where(ps ...predicate.LockPaymentOrder) *LockPaymentOrderDeleteOne {
+	_d._d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query.
-func (lpodo *LockPaymentOrderDeleteOne) Exec(ctx context.Context) error {
-	n, err := lpodo.lpod.Exec(ctx)
+func (_d *LockPaymentOrderDeleteOne) Exec(ctx context.Context) error {
+	n, err := _d._d.Exec(ctx)
 	switch {
 	case err != nil:
 		return err
@@ -81,8 +81,8 @@ func (lpodo *LockPaymentOrderDeleteOne) Exec(ctx context.Context) error {
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (lpodo *LockPaymentOrderDeleteOne) ExecX(ctx context.Context) {
-	if err := lpodo.Exec(ctx); err != nil {
+func (_d *LockPaymentOrderDeleteOne) ExecX(ctx context.Context) {
+	if err := _d.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

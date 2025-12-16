@@ -31,44 +31,44 @@ type ProviderRatingQuery struct {
 }
 
 // Where adds a new predicate for the ProviderRatingQuery builder.
-func (prq *ProviderRatingQuery) Where(ps ...predicate.ProviderRating) *ProviderRatingQuery {
-	prq.predicates = append(prq.predicates, ps...)
-	return prq
+func (_q *ProviderRatingQuery) Where(ps ...predicate.ProviderRating) *ProviderRatingQuery {
+	_q.predicates = append(_q.predicates, ps...)
+	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (prq *ProviderRatingQuery) Limit(limit int) *ProviderRatingQuery {
-	prq.ctx.Limit = &limit
-	return prq
+func (_q *ProviderRatingQuery) Limit(limit int) *ProviderRatingQuery {
+	_q.ctx.Limit = &limit
+	return _q
 }
 
 // Offset to start from.
-func (prq *ProviderRatingQuery) Offset(offset int) *ProviderRatingQuery {
-	prq.ctx.Offset = &offset
-	return prq
+func (_q *ProviderRatingQuery) Offset(offset int) *ProviderRatingQuery {
+	_q.ctx.Offset = &offset
+	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (prq *ProviderRatingQuery) Unique(unique bool) *ProviderRatingQuery {
-	prq.ctx.Unique = &unique
-	return prq
+func (_q *ProviderRatingQuery) Unique(unique bool) *ProviderRatingQuery {
+	_q.ctx.Unique = &unique
+	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (prq *ProviderRatingQuery) Order(o ...providerrating.OrderOption) *ProviderRatingQuery {
-	prq.order = append(prq.order, o...)
-	return prq
+func (_q *ProviderRatingQuery) Order(o ...providerrating.OrderOption) *ProviderRatingQuery {
+	_q.order = append(_q.order, o...)
+	return _q
 }
 
 // QueryProviderProfile chains the current query on the "provider_profile" edge.
-func (prq *ProviderRatingQuery) QueryProviderProfile() *ProviderProfileQuery {
-	query := (&ProviderProfileClient{config: prq.config}).Query()
+func (_q *ProviderRatingQuery) QueryProviderProfile() *ProviderProfileQuery {
+	query := (&ProviderProfileClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := prq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := prq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -77,7 +77,7 @@ func (prq *ProviderRatingQuery) QueryProviderProfile() *ProviderProfileQuery {
 			sqlgraph.To(providerprofile.Table, providerprofile.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, providerrating.ProviderProfileTable, providerrating.ProviderProfileColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(prq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
@@ -85,8 +85,8 @@ func (prq *ProviderRatingQuery) QueryProviderProfile() *ProviderProfileQuery {
 
 // First returns the first ProviderRating entity from the query.
 // Returns a *NotFoundError when no ProviderRating was found.
-func (prq *ProviderRatingQuery) First(ctx context.Context) (*ProviderRating, error) {
-	nodes, err := prq.Limit(1).All(setContextOp(ctx, prq.ctx, ent.OpQueryFirst))
+func (_q *ProviderRatingQuery) First(ctx context.Context) (*ProviderRating, error) {
+	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
@@ -97,8 +97,8 @@ func (prq *ProviderRatingQuery) First(ctx context.Context) (*ProviderRating, err
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (prq *ProviderRatingQuery) FirstX(ctx context.Context) *ProviderRating {
-	node, err := prq.First(ctx)
+func (_q *ProviderRatingQuery) FirstX(ctx context.Context) *ProviderRating {
+	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -107,9 +107,9 @@ func (prq *ProviderRatingQuery) FirstX(ctx context.Context) *ProviderRating {
 
 // FirstID returns the first ProviderRating ID from the query.
 // Returns a *NotFoundError when no ProviderRating ID was found.
-func (prq *ProviderRatingQuery) FirstID(ctx context.Context) (id int, err error) {
+func (_q *ProviderRatingQuery) FirstID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = prq.Limit(1).IDs(setContextOp(ctx, prq.ctx, ent.OpQueryFirstID)); err != nil {
+	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -120,8 +120,8 @@ func (prq *ProviderRatingQuery) FirstID(ctx context.Context) (id int, err error)
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (prq *ProviderRatingQuery) FirstIDX(ctx context.Context) int {
-	id, err := prq.FirstID(ctx)
+func (_q *ProviderRatingQuery) FirstIDX(ctx context.Context) int {
+	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -131,8 +131,8 @@ func (prq *ProviderRatingQuery) FirstIDX(ctx context.Context) int {
 // Only returns a single ProviderRating entity found by the query, ensuring it only returns one.
 // Returns a *NotSingularError when more than one ProviderRating entity is found.
 // Returns a *NotFoundError when no ProviderRating entities are found.
-func (prq *ProviderRatingQuery) Only(ctx context.Context) (*ProviderRating, error) {
-	nodes, err := prq.Limit(2).All(setContextOp(ctx, prq.ctx, ent.OpQueryOnly))
+func (_q *ProviderRatingQuery) Only(ctx context.Context) (*ProviderRating, error) {
+	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -147,8 +147,8 @@ func (prq *ProviderRatingQuery) Only(ctx context.Context) (*ProviderRating, erro
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (prq *ProviderRatingQuery) OnlyX(ctx context.Context) *ProviderRating {
-	node, err := prq.Only(ctx)
+func (_q *ProviderRatingQuery) OnlyX(ctx context.Context) *ProviderRating {
+	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -158,9 +158,9 @@ func (prq *ProviderRatingQuery) OnlyX(ctx context.Context) *ProviderRating {
 // OnlyID is like Only, but returns the only ProviderRating ID in the query.
 // Returns a *NotSingularError when more than one ProviderRating ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (prq *ProviderRatingQuery) OnlyID(ctx context.Context) (id int, err error) {
+func (_q *ProviderRatingQuery) OnlyID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = prq.Limit(2).IDs(setContextOp(ctx, prq.ctx, ent.OpQueryOnlyID)); err != nil {
+	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -175,8 +175,8 @@ func (prq *ProviderRatingQuery) OnlyID(ctx context.Context) (id int, err error) 
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (prq *ProviderRatingQuery) OnlyIDX(ctx context.Context) int {
-	id, err := prq.OnlyID(ctx)
+func (_q *ProviderRatingQuery) OnlyIDX(ctx context.Context) int {
+	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -184,18 +184,18 @@ func (prq *ProviderRatingQuery) OnlyIDX(ctx context.Context) int {
 }
 
 // All executes the query and returns a list of ProviderRatings.
-func (prq *ProviderRatingQuery) All(ctx context.Context) ([]*ProviderRating, error) {
-	ctx = setContextOp(ctx, prq.ctx, ent.OpQueryAll)
-	if err := prq.prepareQuery(ctx); err != nil {
+func (_q *ProviderRatingQuery) All(ctx context.Context) ([]*ProviderRating, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
 	qr := querierAll[[]*ProviderRating, *ProviderRatingQuery]()
-	return withInterceptors[[]*ProviderRating](ctx, prq, qr, prq.inters)
+	return withInterceptors[[]*ProviderRating](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (prq *ProviderRatingQuery) AllX(ctx context.Context) []*ProviderRating {
-	nodes, err := prq.All(ctx)
+func (_q *ProviderRatingQuery) AllX(ctx context.Context) []*ProviderRating {
+	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -203,20 +203,20 @@ func (prq *ProviderRatingQuery) AllX(ctx context.Context) []*ProviderRating {
 }
 
 // IDs executes the query and returns a list of ProviderRating IDs.
-func (prq *ProviderRatingQuery) IDs(ctx context.Context) (ids []int, err error) {
-	if prq.ctx.Unique == nil && prq.path != nil {
-		prq.Unique(true)
+func (_q *ProviderRatingQuery) IDs(ctx context.Context) (ids []int, err error) {
+	if _q.ctx.Unique == nil && _q.path != nil {
+		_q.Unique(true)
 	}
-	ctx = setContextOp(ctx, prq.ctx, ent.OpQueryIDs)
-	if err = prq.Select(providerrating.FieldID).Scan(ctx, &ids); err != nil {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
+	if err = _q.Select(providerrating.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (prq *ProviderRatingQuery) IDsX(ctx context.Context) []int {
-	ids, err := prq.IDs(ctx)
+func (_q *ProviderRatingQuery) IDsX(ctx context.Context) []int {
+	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -224,17 +224,17 @@ func (prq *ProviderRatingQuery) IDsX(ctx context.Context) []int {
 }
 
 // Count returns the count of the given query.
-func (prq *ProviderRatingQuery) Count(ctx context.Context) (int, error) {
-	ctx = setContextOp(ctx, prq.ctx, ent.OpQueryCount)
-	if err := prq.prepareQuery(ctx); err != nil {
+func (_q *ProviderRatingQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, prq, querierCount[*ProviderRatingQuery](), prq.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*ProviderRatingQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (prq *ProviderRatingQuery) CountX(ctx context.Context) int {
-	count, err := prq.Count(ctx)
+func (_q *ProviderRatingQuery) CountX(ctx context.Context) int {
+	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -242,9 +242,9 @@ func (prq *ProviderRatingQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (prq *ProviderRatingQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = setContextOp(ctx, prq.ctx, ent.OpQueryExist)
-	switch _, err := prq.FirstID(ctx); {
+func (_q *ProviderRatingQuery) Exist(ctx context.Context) (bool, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
+	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
 	case err != nil:
@@ -255,8 +255,8 @@ func (prq *ProviderRatingQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (prq *ProviderRatingQuery) ExistX(ctx context.Context) bool {
-	exist, err := prq.Exist(ctx)
+func (_q *ProviderRatingQuery) ExistX(ctx context.Context) bool {
+	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -265,32 +265,32 @@ func (prq *ProviderRatingQuery) ExistX(ctx context.Context) bool {
 
 // Clone returns a duplicate of the ProviderRatingQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (prq *ProviderRatingQuery) Clone() *ProviderRatingQuery {
-	if prq == nil {
+func (_q *ProviderRatingQuery) Clone() *ProviderRatingQuery {
+	if _q == nil {
 		return nil
 	}
 	return &ProviderRatingQuery{
-		config:              prq.config,
-		ctx:                 prq.ctx.Clone(),
-		order:               append([]providerrating.OrderOption{}, prq.order...),
-		inters:              append([]Interceptor{}, prq.inters...),
-		predicates:          append([]predicate.ProviderRating{}, prq.predicates...),
-		withProviderProfile: prq.withProviderProfile.Clone(),
+		config:              _q.config,
+		ctx:                 _q.ctx.Clone(),
+		order:               append([]providerrating.OrderOption{}, _q.order...),
+		inters:              append([]Interceptor{}, _q.inters...),
+		predicates:          append([]predicate.ProviderRating{}, _q.predicates...),
+		withProviderProfile: _q.withProviderProfile.Clone(),
 		// clone intermediate query.
-		sql:  prq.sql.Clone(),
-		path: prq.path,
+		sql:  _q.sql.Clone(),
+		path: _q.path,
 	}
 }
 
 // WithProviderProfile tells the query-builder to eager-load the nodes that are connected to
 // the "provider_profile" edge. The optional arguments are used to configure the query builder of the edge.
-func (prq *ProviderRatingQuery) WithProviderProfile(opts ...func(*ProviderProfileQuery)) *ProviderRatingQuery {
-	query := (&ProviderProfileClient{config: prq.config}).Query()
+func (_q *ProviderRatingQuery) WithProviderProfile(opts ...func(*ProviderProfileQuery)) *ProviderRatingQuery {
+	query := (&ProviderProfileClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	prq.withProviderProfile = query
-	return prq
+	_q.withProviderProfile = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -307,10 +307,10 @@ func (prq *ProviderRatingQuery) WithProviderProfile(opts ...func(*ProviderProfil
 //		GroupBy(providerrating.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (prq *ProviderRatingQuery) GroupBy(field string, fields ...string) *ProviderRatingGroupBy {
-	prq.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &ProviderRatingGroupBy{build: prq}
-	grbuild.flds = &prq.ctx.Fields
+func (_q *ProviderRatingQuery) GroupBy(field string, fields ...string) *ProviderRatingGroupBy {
+	_q.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &ProviderRatingGroupBy{build: _q}
+	grbuild.flds = &_q.ctx.Fields
 	grbuild.label = providerrating.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -328,55 +328,55 @@ func (prq *ProviderRatingQuery) GroupBy(field string, fields ...string) *Provide
 //	client.ProviderRating.Query().
 //		Select(providerrating.FieldCreatedAt).
 //		Scan(ctx, &v)
-func (prq *ProviderRatingQuery) Select(fields ...string) *ProviderRatingSelect {
-	prq.ctx.Fields = append(prq.ctx.Fields, fields...)
-	sbuild := &ProviderRatingSelect{ProviderRatingQuery: prq}
+func (_q *ProviderRatingQuery) Select(fields ...string) *ProviderRatingSelect {
+	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
+	sbuild := &ProviderRatingSelect{ProviderRatingQuery: _q}
 	sbuild.label = providerrating.Label
-	sbuild.flds, sbuild.scan = &prq.ctx.Fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
 // Aggregate returns a ProviderRatingSelect configured with the given aggregations.
-func (prq *ProviderRatingQuery) Aggregate(fns ...AggregateFunc) *ProviderRatingSelect {
-	return prq.Select().Aggregate(fns...)
+func (_q *ProviderRatingQuery) Aggregate(fns ...AggregateFunc) *ProviderRatingSelect {
+	return _q.Select().Aggregate(fns...)
 }
 
-func (prq *ProviderRatingQuery) prepareQuery(ctx context.Context) error {
-	for _, inter := range prq.inters {
+func (_q *ProviderRatingQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
 		}
 		if trv, ok := inter.(Traverser); ok {
-			if err := trv.Traverse(ctx, prq); err != nil {
+			if err := trv.Traverse(ctx, _q); err != nil {
 				return err
 			}
 		}
 	}
-	for _, f := range prq.ctx.Fields {
+	for _, f := range _q.ctx.Fields {
 		if !providerrating.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
-	if prq.path != nil {
-		prev, err := prq.path(ctx)
+	if _q.path != nil {
+		prev, err := _q.path(ctx)
 		if err != nil {
 			return err
 		}
-		prq.sql = prev
+		_q.sql = prev
 	}
 	return nil
 }
 
-func (prq *ProviderRatingQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*ProviderRating, error) {
+func (_q *ProviderRatingQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*ProviderRating, error) {
 	var (
 		nodes       = []*ProviderRating{}
-		withFKs     = prq.withFKs
-		_spec       = prq.querySpec()
+		withFKs     = _q.withFKs
+		_spec       = _q.querySpec()
 		loadedTypes = [1]bool{
-			prq.withProviderProfile != nil,
+			_q.withProviderProfile != nil,
 		}
 	)
-	if prq.withProviderProfile != nil {
+	if _q.withProviderProfile != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -386,7 +386,7 @@ func (prq *ProviderRatingQuery) sqlAll(ctx context.Context, hooks ...queryHook) 
 		return (*ProviderRating).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &ProviderRating{config: prq.config}
+		node := &ProviderRating{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -394,14 +394,14 @@ func (prq *ProviderRatingQuery) sqlAll(ctx context.Context, hooks ...queryHook) 
 	for i := range hooks {
 		hooks[i](ctx, _spec)
 	}
-	if err := sqlgraph.QueryNodes(ctx, prq.driver, _spec); err != nil {
+	if err := sqlgraph.QueryNodes(ctx, _q.driver, _spec); err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := prq.withProviderProfile; query != nil {
-		if err := prq.loadProviderProfile(ctx, query, nodes, nil,
+	if query := _q.withProviderProfile; query != nil {
+		if err := _q.loadProviderProfile(ctx, query, nodes, nil,
 			func(n *ProviderRating, e *ProviderProfile) { n.Edges.ProviderProfile = e }); err != nil {
 			return nil, err
 		}
@@ -409,7 +409,7 @@ func (prq *ProviderRatingQuery) sqlAll(ctx context.Context, hooks ...queryHook) 
 	return nodes, nil
 }
 
-func (prq *ProviderRatingQuery) loadProviderProfile(ctx context.Context, query *ProviderProfileQuery, nodes []*ProviderRating, init func(*ProviderRating), assign func(*ProviderRating, *ProviderProfile)) error {
+func (_q *ProviderRatingQuery) loadProviderProfile(ctx context.Context, query *ProviderProfileQuery, nodes []*ProviderRating, init func(*ProviderRating), assign func(*ProviderRating, *ProviderProfile)) error {
 	ids := make([]string, 0, len(nodes))
 	nodeids := make(map[string][]*ProviderRating)
 	for i := range nodes {
@@ -442,24 +442,24 @@ func (prq *ProviderRatingQuery) loadProviderProfile(ctx context.Context, query *
 	return nil
 }
 
-func (prq *ProviderRatingQuery) sqlCount(ctx context.Context) (int, error) {
-	_spec := prq.querySpec()
-	_spec.Node.Columns = prq.ctx.Fields
-	if len(prq.ctx.Fields) > 0 {
-		_spec.Unique = prq.ctx.Unique != nil && *prq.ctx.Unique
+func (_q *ProviderRatingQuery) sqlCount(ctx context.Context) (int, error) {
+	_spec := _q.querySpec()
+	_spec.Node.Columns = _q.ctx.Fields
+	if len(_q.ctx.Fields) > 0 {
+		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
 	}
-	return sqlgraph.CountNodes(ctx, prq.driver, _spec)
+	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (prq *ProviderRatingQuery) querySpec() *sqlgraph.QuerySpec {
+func (_q *ProviderRatingQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := sqlgraph.NewQuerySpec(providerrating.Table, providerrating.Columns, sqlgraph.NewFieldSpec(providerrating.FieldID, field.TypeInt))
-	_spec.From = prq.sql
-	if unique := prq.ctx.Unique; unique != nil {
+	_spec.From = _q.sql
+	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
-	} else if prq.path != nil {
+	} else if _q.path != nil {
 		_spec.Unique = true
 	}
-	if fields := prq.ctx.Fields; len(fields) > 0 {
+	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, providerrating.FieldID)
 		for i := range fields {
@@ -468,20 +468,20 @@ func (prq *ProviderRatingQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if ps := prq.predicates; len(ps) > 0 {
+	if ps := _q.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if limit := prq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := prq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
-	if ps := prq.order; len(ps) > 0 {
+	if ps := _q.order; len(ps) > 0 {
 		_spec.Order = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
@@ -491,33 +491,33 @@ func (prq *ProviderRatingQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (prq *ProviderRatingQuery) sqlQuery(ctx context.Context) *sql.Selector {
-	builder := sql.Dialect(prq.driver.Dialect())
+func (_q *ProviderRatingQuery) sqlQuery(ctx context.Context) *sql.Selector {
+	builder := sql.Dialect(_q.driver.Dialect())
 	t1 := builder.Table(providerrating.Table)
-	columns := prq.ctx.Fields
+	columns := _q.ctx.Fields
 	if len(columns) == 0 {
 		columns = providerrating.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
-	if prq.sql != nil {
-		selector = prq.sql
+	if _q.sql != nil {
+		selector = _q.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if prq.ctx.Unique != nil && *prq.ctx.Unique {
+	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
-	for _, p := range prq.predicates {
+	for _, p := range _q.predicates {
 		p(selector)
 	}
-	for _, p := range prq.order {
+	for _, p := range _q.order {
 		p(selector)
 	}
-	if offset := prq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := prq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -530,41 +530,41 @@ type ProviderRatingGroupBy struct {
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (prgb *ProviderRatingGroupBy) Aggregate(fns ...AggregateFunc) *ProviderRatingGroupBy {
-	prgb.fns = append(prgb.fns, fns...)
-	return prgb
+func (_g *ProviderRatingGroupBy) Aggregate(fns ...AggregateFunc) *ProviderRatingGroupBy {
+	_g.fns = append(_g.fns, fns...)
+	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (prgb *ProviderRatingGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, prgb.build.ctx, ent.OpQueryGroupBy)
-	if err := prgb.build.prepareQuery(ctx); err != nil {
+func (_g *ProviderRatingGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
+	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*ProviderRatingQuery, *ProviderRatingGroupBy](ctx, prgb.build, prgb, prgb.build.inters, v)
+	return scanWithInterceptors[*ProviderRatingQuery, *ProviderRatingGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (prgb *ProviderRatingGroupBy) sqlScan(ctx context.Context, root *ProviderRatingQuery, v any) error {
+func (_g *ProviderRatingGroupBy) sqlScan(ctx context.Context, root *ProviderRatingQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
-	aggregation := make([]string, 0, len(prgb.fns))
-	for _, fn := range prgb.fns {
+	aggregation := make([]string, 0, len(_g.fns))
+	for _, fn := range _g.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
 	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(*prgb.flds)+len(prgb.fns))
-		for _, f := range *prgb.flds {
+		columns := make([]string, 0, len(*_g.flds)+len(_g.fns))
+		for _, f := range *_g.flds {
 			columns = append(columns, selector.C(f))
 		}
 		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
-	selector.GroupBy(selector.Columns(*prgb.flds...)...)
+	selector.GroupBy(selector.Columns(*_g.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := prgb.build.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _g.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
@@ -578,27 +578,27 @@ type ProviderRatingSelect struct {
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (prs *ProviderRatingSelect) Aggregate(fns ...AggregateFunc) *ProviderRatingSelect {
-	prs.fns = append(prs.fns, fns...)
-	return prs
+func (_s *ProviderRatingSelect) Aggregate(fns ...AggregateFunc) *ProviderRatingSelect {
+	_s.fns = append(_s.fns, fns...)
+	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (prs *ProviderRatingSelect) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, prs.ctx, ent.OpQuerySelect)
-	if err := prs.prepareQuery(ctx); err != nil {
+func (_s *ProviderRatingSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
+	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*ProviderRatingQuery, *ProviderRatingSelect](ctx, prs.ProviderRatingQuery, prs, prs.inters, v)
+	return scanWithInterceptors[*ProviderRatingQuery, *ProviderRatingSelect](ctx, _s.ProviderRatingQuery, _s, _s.inters, v)
 }
 
-func (prs *ProviderRatingSelect) sqlScan(ctx context.Context, root *ProviderRatingQuery, v any) error {
+func (_s *ProviderRatingSelect) sqlScan(ctx context.Context, root *ProviderRatingQuery, v any) error {
 	selector := root.sqlQuery(ctx)
-	aggregation := make([]string, 0, len(prs.fns))
-	for _, fn := range prs.fns {
+	aggregation := make([]string, 0, len(_s.fns))
+	for _, fn := range _s.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
-	switch n := len(*prs.selector.flds); {
+	switch n := len(*_s.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
 		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
@@ -606,7 +606,7 @@ func (prs *ProviderRatingSelect) sqlScan(ctx context.Context, root *ProviderRati
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := prs.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _s.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()

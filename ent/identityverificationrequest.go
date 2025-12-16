@@ -61,7 +61,7 @@ func (*IdentityVerificationRequest) scanValues(columns []string) ([]any, error) 
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the IdentityVerificationRequest fields.
-func (ivr *IdentityVerificationRequest) assignValues(columns []string, values []any) error {
+func (_m *IdentityVerificationRequest) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -71,64 +71,64 @@ func (ivr *IdentityVerificationRequest) assignValues(columns []string, values []
 			if value, ok := values[i].(*uuid.UUID); !ok {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
-				ivr.ID = *value
+				_m.ID = *value
 			}
 		case identityverificationrequest.FieldWalletAddress:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field wallet_address", values[i])
 			} else if value.Valid {
-				ivr.WalletAddress = value.String
+				_m.WalletAddress = value.String
 			}
 		case identityverificationrequest.FieldWalletSignature:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field wallet_signature", values[i])
 			} else if value.Valid {
-				ivr.WalletSignature = value.String
+				_m.WalletSignature = value.String
 			}
 		case identityverificationrequest.FieldPlatform:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field platform", values[i])
 			} else if value.Valid {
-				ivr.Platform = identityverificationrequest.Platform(value.String)
+				_m.Platform = identityverificationrequest.Platform(value.String)
 			}
 		case identityverificationrequest.FieldPlatformRef:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field platform_ref", values[i])
 			} else if value.Valid {
-				ivr.PlatformRef = value.String
+				_m.PlatformRef = value.String
 			}
 		case identityverificationrequest.FieldVerificationURL:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field verification_url", values[i])
 			} else if value.Valid {
-				ivr.VerificationURL = value.String
+				_m.VerificationURL = value.String
 			}
 		case identityverificationrequest.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				ivr.Status = identityverificationrequest.Status(value.String)
+				_m.Status = identityverificationrequest.Status(value.String)
 			}
 		case identityverificationrequest.FieldFeeReclaimed:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field fee_reclaimed", values[i])
 			} else if value.Valid {
-				ivr.FeeReclaimed = value.Bool
+				_m.FeeReclaimed = value.Bool
 			}
 		case identityverificationrequest.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
-				ivr.UpdatedAt = value.Time
+				_m.UpdatedAt = value.Time
 			}
 		case identityverificationrequest.FieldLastURLCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field last_url_created_at", values[i])
 			} else if value.Valid {
-				ivr.LastURLCreatedAt = value.Time
+				_m.LastURLCreatedAt = value.Time
 			}
 		default:
-			ivr.selectValues.Set(columns[i], values[i])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -136,59 +136,59 @@ func (ivr *IdentityVerificationRequest) assignValues(columns []string, values []
 
 // Value returns the ent.Value that was dynamically selected and assigned to the IdentityVerificationRequest.
 // This includes values selected through modifiers, order, etc.
-func (ivr *IdentityVerificationRequest) Value(name string) (ent.Value, error) {
-	return ivr.selectValues.Get(name)
+func (_m *IdentityVerificationRequest) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
 }
 
 // Update returns a builder for updating this IdentityVerificationRequest.
 // Note that you need to call IdentityVerificationRequest.Unwrap() before calling this method if this IdentityVerificationRequest
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (ivr *IdentityVerificationRequest) Update() *IdentityVerificationRequestUpdateOne {
-	return NewIdentityVerificationRequestClient(ivr.config).UpdateOne(ivr)
+func (_m *IdentityVerificationRequest) Update() *IdentityVerificationRequestUpdateOne {
+	return NewIdentityVerificationRequestClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the IdentityVerificationRequest entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (ivr *IdentityVerificationRequest) Unwrap() *IdentityVerificationRequest {
-	_tx, ok := ivr.config.driver.(*txDriver)
+func (_m *IdentityVerificationRequest) Unwrap() *IdentityVerificationRequest {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: IdentityVerificationRequest is not a transactional entity")
 	}
-	ivr.config.driver = _tx.drv
-	return ivr
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (ivr *IdentityVerificationRequest) String() string {
+func (_m *IdentityVerificationRequest) String() string {
 	var builder strings.Builder
 	builder.WriteString("IdentityVerificationRequest(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", ivr.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("wallet_address=")
-	builder.WriteString(ivr.WalletAddress)
+	builder.WriteString(_m.WalletAddress)
 	builder.WriteString(", ")
 	builder.WriteString("wallet_signature=")
-	builder.WriteString(ivr.WalletSignature)
+	builder.WriteString(_m.WalletSignature)
 	builder.WriteString(", ")
 	builder.WriteString("platform=")
-	builder.WriteString(fmt.Sprintf("%v", ivr.Platform))
+	builder.WriteString(fmt.Sprintf("%v", _m.Platform))
 	builder.WriteString(", ")
 	builder.WriteString("platform_ref=")
-	builder.WriteString(ivr.PlatformRef)
+	builder.WriteString(_m.PlatformRef)
 	builder.WriteString(", ")
 	builder.WriteString("verification_url=")
-	builder.WriteString(ivr.VerificationURL)
+	builder.WriteString(_m.VerificationURL)
 	builder.WriteString(", ")
 	builder.WriteString("status=")
-	builder.WriteString(fmt.Sprintf("%v", ivr.Status))
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
 	builder.WriteString(", ")
 	builder.WriteString("fee_reclaimed=")
-	builder.WriteString(fmt.Sprintf("%v", ivr.FeeReclaimed))
+	builder.WriteString(fmt.Sprintf("%v", _m.FeeReclaimed))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
-	builder.WriteString(ivr.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("last_url_created_at=")
-	builder.WriteString(ivr.LastURLCreatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.LastURLCreatedAt.Format(time.ANSIC))
 	builder.WriteByte(')')
 	return builder.String()
 }

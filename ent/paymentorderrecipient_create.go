@@ -24,81 +24,81 @@ type PaymentOrderRecipientCreate struct {
 }
 
 // SetInstitution sets the "institution" field.
-func (porc *PaymentOrderRecipientCreate) SetInstitution(s string) *PaymentOrderRecipientCreate {
-	porc.mutation.SetInstitution(s)
-	return porc
+func (_c *PaymentOrderRecipientCreate) SetInstitution(v string) *PaymentOrderRecipientCreate {
+	_c.mutation.SetInstitution(v)
+	return _c
 }
 
 // SetAccountIdentifier sets the "account_identifier" field.
-func (porc *PaymentOrderRecipientCreate) SetAccountIdentifier(s string) *PaymentOrderRecipientCreate {
-	porc.mutation.SetAccountIdentifier(s)
-	return porc
+func (_c *PaymentOrderRecipientCreate) SetAccountIdentifier(v string) *PaymentOrderRecipientCreate {
+	_c.mutation.SetAccountIdentifier(v)
+	return _c
 }
 
 // SetAccountName sets the "account_name" field.
-func (porc *PaymentOrderRecipientCreate) SetAccountName(s string) *PaymentOrderRecipientCreate {
-	porc.mutation.SetAccountName(s)
-	return porc
+func (_c *PaymentOrderRecipientCreate) SetAccountName(v string) *PaymentOrderRecipientCreate {
+	_c.mutation.SetAccountName(v)
+	return _c
 }
 
 // SetMemo sets the "memo" field.
-func (porc *PaymentOrderRecipientCreate) SetMemo(s string) *PaymentOrderRecipientCreate {
-	porc.mutation.SetMemo(s)
-	return porc
+func (_c *PaymentOrderRecipientCreate) SetMemo(v string) *PaymentOrderRecipientCreate {
+	_c.mutation.SetMemo(v)
+	return _c
 }
 
 // SetNillableMemo sets the "memo" field if the given value is not nil.
-func (porc *PaymentOrderRecipientCreate) SetNillableMemo(s *string) *PaymentOrderRecipientCreate {
-	if s != nil {
-		porc.SetMemo(*s)
+func (_c *PaymentOrderRecipientCreate) SetNillableMemo(v *string) *PaymentOrderRecipientCreate {
+	if v != nil {
+		_c.SetMemo(*v)
 	}
-	return porc
+	return _c
 }
 
 // SetProviderID sets the "provider_id" field.
-func (porc *PaymentOrderRecipientCreate) SetProviderID(s string) *PaymentOrderRecipientCreate {
-	porc.mutation.SetProviderID(s)
-	return porc
+func (_c *PaymentOrderRecipientCreate) SetProviderID(v string) *PaymentOrderRecipientCreate {
+	_c.mutation.SetProviderID(v)
+	return _c
 }
 
 // SetNillableProviderID sets the "provider_id" field if the given value is not nil.
-func (porc *PaymentOrderRecipientCreate) SetNillableProviderID(s *string) *PaymentOrderRecipientCreate {
-	if s != nil {
-		porc.SetProviderID(*s)
+func (_c *PaymentOrderRecipientCreate) SetNillableProviderID(v *string) *PaymentOrderRecipientCreate {
+	if v != nil {
+		_c.SetProviderID(*v)
 	}
-	return porc
+	return _c
 }
 
 // SetMetadata sets the "metadata" field.
-func (porc *PaymentOrderRecipientCreate) SetMetadata(m map[string]interface{}) *PaymentOrderRecipientCreate {
-	porc.mutation.SetMetadata(m)
-	return porc
+func (_c *PaymentOrderRecipientCreate) SetMetadata(v map[string]interface{}) *PaymentOrderRecipientCreate {
+	_c.mutation.SetMetadata(v)
+	return _c
 }
 
 // SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID.
-func (porc *PaymentOrderRecipientCreate) SetPaymentOrderID(id uuid.UUID) *PaymentOrderRecipientCreate {
-	porc.mutation.SetPaymentOrderID(id)
-	return porc
+func (_c *PaymentOrderRecipientCreate) SetPaymentOrderID(id uuid.UUID) *PaymentOrderRecipientCreate {
+	_c.mutation.SetPaymentOrderID(id)
+	return _c
 }
 
 // SetPaymentOrder sets the "payment_order" edge to the PaymentOrder entity.
-func (porc *PaymentOrderRecipientCreate) SetPaymentOrder(p *PaymentOrder) *PaymentOrderRecipientCreate {
-	return porc.SetPaymentOrderID(p.ID)
+func (_c *PaymentOrderRecipientCreate) SetPaymentOrder(v *PaymentOrder) *PaymentOrderRecipientCreate {
+	return _c.SetPaymentOrderID(v.ID)
 }
 
 // Mutation returns the PaymentOrderRecipientMutation object of the builder.
-func (porc *PaymentOrderRecipientCreate) Mutation() *PaymentOrderRecipientMutation {
-	return porc.mutation
+func (_c *PaymentOrderRecipientCreate) Mutation() *PaymentOrderRecipientMutation {
+	return _c.mutation
 }
 
 // Save creates the PaymentOrderRecipient in the database.
-func (porc *PaymentOrderRecipientCreate) Save(ctx context.Context) (*PaymentOrderRecipient, error) {
-	return withHooks(ctx, porc.sqlSave, porc.mutation, porc.hooks)
+func (_c *PaymentOrderRecipientCreate) Save(ctx context.Context) (*PaymentOrderRecipient, error) {
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (porc *PaymentOrderRecipientCreate) SaveX(ctx context.Context) *PaymentOrderRecipient {
-	v, err := porc.Save(ctx)
+func (_c *PaymentOrderRecipientCreate) SaveX(ctx context.Context) *PaymentOrderRecipient {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -106,41 +106,41 @@ func (porc *PaymentOrderRecipientCreate) SaveX(ctx context.Context) *PaymentOrde
 }
 
 // Exec executes the query.
-func (porc *PaymentOrderRecipientCreate) Exec(ctx context.Context) error {
-	_, err := porc.Save(ctx)
+func (_c *PaymentOrderRecipientCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (porc *PaymentOrderRecipientCreate) ExecX(ctx context.Context) {
-	if err := porc.Exec(ctx); err != nil {
+func (_c *PaymentOrderRecipientCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (porc *PaymentOrderRecipientCreate) check() error {
-	if _, ok := porc.mutation.Institution(); !ok {
+func (_c *PaymentOrderRecipientCreate) check() error {
+	if _, ok := _c.mutation.Institution(); !ok {
 		return &ValidationError{Name: "institution", err: errors.New(`ent: missing required field "PaymentOrderRecipient.institution"`)}
 	}
-	if _, ok := porc.mutation.AccountIdentifier(); !ok {
+	if _, ok := _c.mutation.AccountIdentifier(); !ok {
 		return &ValidationError{Name: "account_identifier", err: errors.New(`ent: missing required field "PaymentOrderRecipient.account_identifier"`)}
 	}
-	if _, ok := porc.mutation.AccountName(); !ok {
+	if _, ok := _c.mutation.AccountName(); !ok {
 		return &ValidationError{Name: "account_name", err: errors.New(`ent: missing required field "PaymentOrderRecipient.account_name"`)}
 	}
-	if len(porc.mutation.PaymentOrderIDs()) == 0 {
+	if len(_c.mutation.PaymentOrderIDs()) == 0 {
 		return &ValidationError{Name: "payment_order", err: errors.New(`ent: missing required edge "PaymentOrderRecipient.payment_order"`)}
 	}
 	return nil
 }
 
-func (porc *PaymentOrderRecipientCreate) sqlSave(ctx context.Context) (*PaymentOrderRecipient, error) {
-	if err := porc.check(); err != nil {
+func (_c *PaymentOrderRecipientCreate) sqlSave(ctx context.Context) (*PaymentOrderRecipient, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := porc.createSpec()
-	if err := sqlgraph.CreateNode(ctx, porc.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -148,42 +148,42 @@ func (porc *PaymentOrderRecipientCreate) sqlSave(ctx context.Context) (*PaymentO
 	}
 	id := _spec.ID.Value.(int64)
 	_node.ID = int(id)
-	porc.mutation.id = &_node.ID
-	porc.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (porc *PaymentOrderRecipientCreate) createSpec() (*PaymentOrderRecipient, *sqlgraph.CreateSpec) {
+func (_c *PaymentOrderRecipientCreate) createSpec() (*PaymentOrderRecipient, *sqlgraph.CreateSpec) {
 	var (
-		_node = &PaymentOrderRecipient{config: porc.config}
+		_node = &PaymentOrderRecipient{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(paymentorderrecipient.Table, sqlgraph.NewFieldSpec(paymentorderrecipient.FieldID, field.TypeInt))
 	)
-	_spec.OnConflict = porc.conflict
-	if value, ok := porc.mutation.Institution(); ok {
+	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.Institution(); ok {
 		_spec.SetField(paymentorderrecipient.FieldInstitution, field.TypeString, value)
 		_node.Institution = value
 	}
-	if value, ok := porc.mutation.AccountIdentifier(); ok {
+	if value, ok := _c.mutation.AccountIdentifier(); ok {
 		_spec.SetField(paymentorderrecipient.FieldAccountIdentifier, field.TypeString, value)
 		_node.AccountIdentifier = value
 	}
-	if value, ok := porc.mutation.AccountName(); ok {
+	if value, ok := _c.mutation.AccountName(); ok {
 		_spec.SetField(paymentorderrecipient.FieldAccountName, field.TypeString, value)
 		_node.AccountName = value
 	}
-	if value, ok := porc.mutation.Memo(); ok {
+	if value, ok := _c.mutation.Memo(); ok {
 		_spec.SetField(paymentorderrecipient.FieldMemo, field.TypeString, value)
 		_node.Memo = value
 	}
-	if value, ok := porc.mutation.ProviderID(); ok {
+	if value, ok := _c.mutation.ProviderID(); ok {
 		_spec.SetField(paymentorderrecipient.FieldProviderID, field.TypeString, value)
 		_node.ProviderID = value
 	}
-	if value, ok := porc.mutation.Metadata(); ok {
+	if value, ok := _c.mutation.Metadata(); ok {
 		_spec.SetField(paymentorderrecipient.FieldMetadata, field.TypeJSON, value)
 		_node.Metadata = value
 	}
-	if nodes := porc.mutation.PaymentOrderIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.PaymentOrderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -219,10 +219,10 @@ func (porc *PaymentOrderRecipientCreate) createSpec() (*PaymentOrderRecipient, *
 //			SetInstitution(v+v).
 //		}).
 //		Exec(ctx)
-func (porc *PaymentOrderRecipientCreate) OnConflict(opts ...sql.ConflictOption) *PaymentOrderRecipientUpsertOne {
-	porc.conflict = opts
+func (_c *PaymentOrderRecipientCreate) OnConflict(opts ...sql.ConflictOption) *PaymentOrderRecipientUpsertOne {
+	_c.conflict = opts
 	return &PaymentOrderRecipientUpsertOne{
-		create: porc,
+		create: _c,
 	}
 }
 
@@ -232,10 +232,10 @@ func (porc *PaymentOrderRecipientCreate) OnConflict(opts ...sql.ConflictOption) 
 //	client.PaymentOrderRecipient.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (porc *PaymentOrderRecipientCreate) OnConflictColumns(columns ...string) *PaymentOrderRecipientUpsertOne {
-	porc.conflict = append(porc.conflict, sql.ConflictColumns(columns...))
+func (_c *PaymentOrderRecipientCreate) OnConflictColumns(columns ...string) *PaymentOrderRecipientUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &PaymentOrderRecipientUpsertOne{
-		create: porc,
+		create: _c,
 	}
 }
 
@@ -529,16 +529,16 @@ type PaymentOrderRecipientCreateBulk struct {
 }
 
 // Save creates the PaymentOrderRecipient entities in the database.
-func (porcb *PaymentOrderRecipientCreateBulk) Save(ctx context.Context) ([]*PaymentOrderRecipient, error) {
-	if porcb.err != nil {
-		return nil, porcb.err
+func (_c *PaymentOrderRecipientCreateBulk) Save(ctx context.Context) ([]*PaymentOrderRecipient, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(porcb.builders))
-	nodes := make([]*PaymentOrderRecipient, len(porcb.builders))
-	mutators := make([]Mutator, len(porcb.builders))
-	for i := range porcb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*PaymentOrderRecipient, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := porcb.builders[i]
+			builder := _c.builders[i]
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*PaymentOrderRecipientMutation)
 				if !ok {
@@ -551,12 +551,12 @@ func (porcb *PaymentOrderRecipientCreateBulk) Save(ctx context.Context) ([]*Paym
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, porcb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = porcb.conflict
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, porcb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -580,7 +580,7 @@ func (porcb *PaymentOrderRecipientCreateBulk) Save(ctx context.Context) ([]*Paym
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, porcb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -588,8 +588,8 @@ func (porcb *PaymentOrderRecipientCreateBulk) Save(ctx context.Context) ([]*Paym
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (porcb *PaymentOrderRecipientCreateBulk) SaveX(ctx context.Context) []*PaymentOrderRecipient {
-	v, err := porcb.Save(ctx)
+func (_c *PaymentOrderRecipientCreateBulk) SaveX(ctx context.Context) []*PaymentOrderRecipient {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -597,14 +597,14 @@ func (porcb *PaymentOrderRecipientCreateBulk) SaveX(ctx context.Context) []*Paym
 }
 
 // Exec executes the query.
-func (porcb *PaymentOrderRecipientCreateBulk) Exec(ctx context.Context) error {
-	_, err := porcb.Save(ctx)
+func (_c *PaymentOrderRecipientCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (porcb *PaymentOrderRecipientCreateBulk) ExecX(ctx context.Context) {
-	if err := porcb.Exec(ctx); err != nil {
+func (_c *PaymentOrderRecipientCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
@@ -624,10 +624,10 @@ func (porcb *PaymentOrderRecipientCreateBulk) ExecX(ctx context.Context) {
 //			SetInstitution(v+v).
 //		}).
 //		Exec(ctx)
-func (porcb *PaymentOrderRecipientCreateBulk) OnConflict(opts ...sql.ConflictOption) *PaymentOrderRecipientUpsertBulk {
-	porcb.conflict = opts
+func (_c *PaymentOrderRecipientCreateBulk) OnConflict(opts ...sql.ConflictOption) *PaymentOrderRecipientUpsertBulk {
+	_c.conflict = opts
 	return &PaymentOrderRecipientUpsertBulk{
-		create: porcb,
+		create: _c,
 	}
 }
 
@@ -637,10 +637,10 @@ func (porcb *PaymentOrderRecipientCreateBulk) OnConflict(opts ...sql.ConflictOpt
 //	client.PaymentOrderRecipient.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (porcb *PaymentOrderRecipientCreateBulk) OnConflictColumns(columns ...string) *PaymentOrderRecipientUpsertBulk {
-	porcb.conflict = append(porcb.conflict, sql.ConflictColumns(columns...))
+func (_c *PaymentOrderRecipientCreateBulk) OnConflictColumns(columns ...string) *PaymentOrderRecipientUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &PaymentOrderRecipientUpsertBulk{
-		create: porcb,
+		create: _c,
 	}
 }
 

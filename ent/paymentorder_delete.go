@@ -20,56 +20,56 @@ type PaymentOrderDelete struct {
 }
 
 // Where appends a list predicates to the PaymentOrderDelete builder.
-func (pod *PaymentOrderDelete) Where(ps ...predicate.PaymentOrder) *PaymentOrderDelete {
-	pod.mutation.Where(ps...)
-	return pod
+func (_d *PaymentOrderDelete) Where(ps ...predicate.PaymentOrder) *PaymentOrderDelete {
+	_d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query and returns how many vertices were deleted.
-func (pod *PaymentOrderDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks(ctx, pod.sqlExec, pod.mutation, pod.hooks)
+func (_d *PaymentOrderDelete) Exec(ctx context.Context) (int, error) {
+	return withHooks(ctx, _d.sqlExec, _d.mutation, _d.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pod *PaymentOrderDelete) ExecX(ctx context.Context) int {
-	n, err := pod.Exec(ctx)
+func (_d *PaymentOrderDelete) ExecX(ctx context.Context) int {
+	n, err := _d.Exec(ctx)
 	if err != nil {
 		panic(err)
 	}
 	return n
 }
 
-func (pod *PaymentOrderDelete) sqlExec(ctx context.Context) (int, error) {
+func (_d *PaymentOrderDelete) sqlExec(ctx context.Context) (int, error) {
 	_spec := sqlgraph.NewDeleteSpec(paymentorder.Table, sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID))
-	if ps := pod.mutation.predicates; len(ps) > 0 {
+	if ps := _d.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	affected, err := sqlgraph.DeleteNodes(ctx, pod.driver, _spec)
+	affected, err := sqlgraph.DeleteNodes(ctx, _d.driver, _spec)
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
-	pod.mutation.done = true
+	_d.mutation.done = true
 	return affected, err
 }
 
 // PaymentOrderDeleteOne is the builder for deleting a single PaymentOrder entity.
 type PaymentOrderDeleteOne struct {
-	pod *PaymentOrderDelete
+	_d *PaymentOrderDelete
 }
 
 // Where appends a list predicates to the PaymentOrderDelete builder.
-func (podo *PaymentOrderDeleteOne) Where(ps ...predicate.PaymentOrder) *PaymentOrderDeleteOne {
-	podo.pod.mutation.Where(ps...)
-	return podo
+func (_d *PaymentOrderDeleteOne) Where(ps ...predicate.PaymentOrder) *PaymentOrderDeleteOne {
+	_d._d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query.
-func (podo *PaymentOrderDeleteOne) Exec(ctx context.Context) error {
-	n, err := podo.pod.Exec(ctx)
+func (_d *PaymentOrderDeleteOne) Exec(ctx context.Context) error {
+	n, err := _d._d.Exec(ctx)
 	switch {
 	case err != nil:
 		return err
@@ -81,8 +81,8 @@ func (podo *PaymentOrderDeleteOne) Exec(ctx context.Context) error {
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (podo *PaymentOrderDeleteOne) ExecX(ctx context.Context) {
-	if err := podo.Exec(ctx); err != nil {
+func (_d *PaymentOrderDeleteOne) ExecX(ctx context.Context) {
+	if err := _d.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

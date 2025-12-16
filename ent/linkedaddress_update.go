@@ -25,208 +25,208 @@ type LinkedAddressUpdate struct {
 }
 
 // Where appends a list predicates to the LinkedAddressUpdate builder.
-func (lau *LinkedAddressUpdate) Where(ps ...predicate.LinkedAddress) *LinkedAddressUpdate {
-	lau.mutation.Where(ps...)
-	return lau
+func (_u *LinkedAddressUpdate) Where(ps ...predicate.LinkedAddress) *LinkedAddressUpdate {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (lau *LinkedAddressUpdate) SetUpdatedAt(t time.Time) *LinkedAddressUpdate {
-	lau.mutation.SetUpdatedAt(t)
-	return lau
+func (_u *LinkedAddressUpdate) SetUpdatedAt(v time.Time) *LinkedAddressUpdate {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetAddress sets the "address" field.
-func (lau *LinkedAddressUpdate) SetAddress(s string) *LinkedAddressUpdate {
-	lau.mutation.SetAddress(s)
-	return lau
+func (_u *LinkedAddressUpdate) SetAddress(v string) *LinkedAddressUpdate {
+	_u.mutation.SetAddress(v)
+	return _u
 }
 
 // SetNillableAddress sets the "address" field if the given value is not nil.
-func (lau *LinkedAddressUpdate) SetNillableAddress(s *string) *LinkedAddressUpdate {
-	if s != nil {
-		lau.SetAddress(*s)
+func (_u *LinkedAddressUpdate) SetNillableAddress(v *string) *LinkedAddressUpdate {
+	if v != nil {
+		_u.SetAddress(*v)
 	}
-	return lau
+	return _u
 }
 
 // SetSalt sets the "salt" field.
-func (lau *LinkedAddressUpdate) SetSalt(b []byte) *LinkedAddressUpdate {
-	lau.mutation.SetSalt(b)
-	return lau
+func (_u *LinkedAddressUpdate) SetSalt(v []byte) *LinkedAddressUpdate {
+	_u.mutation.SetSalt(v)
+	return _u
 }
 
 // ClearSalt clears the value of the "salt" field.
-func (lau *LinkedAddressUpdate) ClearSalt() *LinkedAddressUpdate {
-	lau.mutation.ClearSalt()
-	return lau
+func (_u *LinkedAddressUpdate) ClearSalt() *LinkedAddressUpdate {
+	_u.mutation.ClearSalt()
+	return _u
 }
 
 // SetInstitution sets the "institution" field.
-func (lau *LinkedAddressUpdate) SetInstitution(s string) *LinkedAddressUpdate {
-	lau.mutation.SetInstitution(s)
-	return lau
+func (_u *LinkedAddressUpdate) SetInstitution(v string) *LinkedAddressUpdate {
+	_u.mutation.SetInstitution(v)
+	return _u
 }
 
 // SetNillableInstitution sets the "institution" field if the given value is not nil.
-func (lau *LinkedAddressUpdate) SetNillableInstitution(s *string) *LinkedAddressUpdate {
-	if s != nil {
-		lau.SetInstitution(*s)
+func (_u *LinkedAddressUpdate) SetNillableInstitution(v *string) *LinkedAddressUpdate {
+	if v != nil {
+		_u.SetInstitution(*v)
 	}
-	return lau
+	return _u
 }
 
 // SetAccountIdentifier sets the "account_identifier" field.
-func (lau *LinkedAddressUpdate) SetAccountIdentifier(s string) *LinkedAddressUpdate {
-	lau.mutation.SetAccountIdentifier(s)
-	return lau
+func (_u *LinkedAddressUpdate) SetAccountIdentifier(v string) *LinkedAddressUpdate {
+	_u.mutation.SetAccountIdentifier(v)
+	return _u
 }
 
 // SetNillableAccountIdentifier sets the "account_identifier" field if the given value is not nil.
-func (lau *LinkedAddressUpdate) SetNillableAccountIdentifier(s *string) *LinkedAddressUpdate {
-	if s != nil {
-		lau.SetAccountIdentifier(*s)
+func (_u *LinkedAddressUpdate) SetNillableAccountIdentifier(v *string) *LinkedAddressUpdate {
+	if v != nil {
+		_u.SetAccountIdentifier(*v)
 	}
-	return lau
+	return _u
 }
 
 // SetAccountName sets the "account_name" field.
-func (lau *LinkedAddressUpdate) SetAccountName(s string) *LinkedAddressUpdate {
-	lau.mutation.SetAccountName(s)
-	return lau
+func (_u *LinkedAddressUpdate) SetAccountName(v string) *LinkedAddressUpdate {
+	_u.mutation.SetAccountName(v)
+	return _u
 }
 
 // SetNillableAccountName sets the "account_name" field if the given value is not nil.
-func (lau *LinkedAddressUpdate) SetNillableAccountName(s *string) *LinkedAddressUpdate {
-	if s != nil {
-		lau.SetAccountName(*s)
+func (_u *LinkedAddressUpdate) SetNillableAccountName(v *string) *LinkedAddressUpdate {
+	if v != nil {
+		_u.SetAccountName(*v)
 	}
-	return lau
+	return _u
 }
 
 // SetMetadata sets the "metadata" field.
-func (lau *LinkedAddressUpdate) SetMetadata(m map[string]interface{}) *LinkedAddressUpdate {
-	lau.mutation.SetMetadata(m)
-	return lau
+func (_u *LinkedAddressUpdate) SetMetadata(v map[string]interface{}) *LinkedAddressUpdate {
+	_u.mutation.SetMetadata(v)
+	return _u
 }
 
 // ClearMetadata clears the value of the "metadata" field.
-func (lau *LinkedAddressUpdate) ClearMetadata() *LinkedAddressUpdate {
-	lau.mutation.ClearMetadata()
-	return lau
+func (_u *LinkedAddressUpdate) ClearMetadata() *LinkedAddressUpdate {
+	_u.mutation.ClearMetadata()
+	return _u
 }
 
 // SetOwnerAddress sets the "owner_address" field.
-func (lau *LinkedAddressUpdate) SetOwnerAddress(s string) *LinkedAddressUpdate {
-	lau.mutation.SetOwnerAddress(s)
-	return lau
+func (_u *LinkedAddressUpdate) SetOwnerAddress(v string) *LinkedAddressUpdate {
+	_u.mutation.SetOwnerAddress(v)
+	return _u
 }
 
 // SetNillableOwnerAddress sets the "owner_address" field if the given value is not nil.
-func (lau *LinkedAddressUpdate) SetNillableOwnerAddress(s *string) *LinkedAddressUpdate {
-	if s != nil {
-		lau.SetOwnerAddress(*s)
+func (_u *LinkedAddressUpdate) SetNillableOwnerAddress(v *string) *LinkedAddressUpdate {
+	if v != nil {
+		_u.SetOwnerAddress(*v)
 	}
-	return lau
+	return _u
 }
 
 // SetLastIndexedBlock sets the "last_indexed_block" field.
-func (lau *LinkedAddressUpdate) SetLastIndexedBlock(i int64) *LinkedAddressUpdate {
-	lau.mutation.ResetLastIndexedBlock()
-	lau.mutation.SetLastIndexedBlock(i)
-	return lau
+func (_u *LinkedAddressUpdate) SetLastIndexedBlock(v int64) *LinkedAddressUpdate {
+	_u.mutation.ResetLastIndexedBlock()
+	_u.mutation.SetLastIndexedBlock(v)
+	return _u
 }
 
 // SetNillableLastIndexedBlock sets the "last_indexed_block" field if the given value is not nil.
-func (lau *LinkedAddressUpdate) SetNillableLastIndexedBlock(i *int64) *LinkedAddressUpdate {
-	if i != nil {
-		lau.SetLastIndexedBlock(*i)
+func (_u *LinkedAddressUpdate) SetNillableLastIndexedBlock(v *int64) *LinkedAddressUpdate {
+	if v != nil {
+		_u.SetLastIndexedBlock(*v)
 	}
-	return lau
+	return _u
 }
 
-// AddLastIndexedBlock adds i to the "last_indexed_block" field.
-func (lau *LinkedAddressUpdate) AddLastIndexedBlock(i int64) *LinkedAddressUpdate {
-	lau.mutation.AddLastIndexedBlock(i)
-	return lau
+// AddLastIndexedBlock adds value to the "last_indexed_block" field.
+func (_u *LinkedAddressUpdate) AddLastIndexedBlock(v int64) *LinkedAddressUpdate {
+	_u.mutation.AddLastIndexedBlock(v)
+	return _u
 }
 
 // ClearLastIndexedBlock clears the value of the "last_indexed_block" field.
-func (lau *LinkedAddressUpdate) ClearLastIndexedBlock() *LinkedAddressUpdate {
-	lau.mutation.ClearLastIndexedBlock()
-	return lau
+func (_u *LinkedAddressUpdate) ClearLastIndexedBlock() *LinkedAddressUpdate {
+	_u.mutation.ClearLastIndexedBlock()
+	return _u
 }
 
 // SetTxHash sets the "tx_hash" field.
-func (lau *LinkedAddressUpdate) SetTxHash(s string) *LinkedAddressUpdate {
-	lau.mutation.SetTxHash(s)
-	return lau
+func (_u *LinkedAddressUpdate) SetTxHash(v string) *LinkedAddressUpdate {
+	_u.mutation.SetTxHash(v)
+	return _u
 }
 
 // SetNillableTxHash sets the "tx_hash" field if the given value is not nil.
-func (lau *LinkedAddressUpdate) SetNillableTxHash(s *string) *LinkedAddressUpdate {
-	if s != nil {
-		lau.SetTxHash(*s)
+func (_u *LinkedAddressUpdate) SetNillableTxHash(v *string) *LinkedAddressUpdate {
+	if v != nil {
+		_u.SetTxHash(*v)
 	}
-	return lau
+	return _u
 }
 
 // ClearTxHash clears the value of the "tx_hash" field.
-func (lau *LinkedAddressUpdate) ClearTxHash() *LinkedAddressUpdate {
-	lau.mutation.ClearTxHash()
-	return lau
+func (_u *LinkedAddressUpdate) ClearTxHash() *LinkedAddressUpdate {
+	_u.mutation.ClearTxHash()
+	return _u
 }
 
 // AddPaymentOrderIDs adds the "payment_orders" edge to the PaymentOrder entity by IDs.
-func (lau *LinkedAddressUpdate) AddPaymentOrderIDs(ids ...uuid.UUID) *LinkedAddressUpdate {
-	lau.mutation.AddPaymentOrderIDs(ids...)
-	return lau
+func (_u *LinkedAddressUpdate) AddPaymentOrderIDs(ids ...uuid.UUID) *LinkedAddressUpdate {
+	_u.mutation.AddPaymentOrderIDs(ids...)
+	return _u
 }
 
 // AddPaymentOrders adds the "payment_orders" edges to the PaymentOrder entity.
-func (lau *LinkedAddressUpdate) AddPaymentOrders(p ...*PaymentOrder) *LinkedAddressUpdate {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *LinkedAddressUpdate) AddPaymentOrders(v ...*PaymentOrder) *LinkedAddressUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return lau.AddPaymentOrderIDs(ids...)
+	return _u.AddPaymentOrderIDs(ids...)
 }
 
 // Mutation returns the LinkedAddressMutation object of the builder.
-func (lau *LinkedAddressUpdate) Mutation() *LinkedAddressMutation {
-	return lau.mutation
+func (_u *LinkedAddressUpdate) Mutation() *LinkedAddressMutation {
+	return _u.mutation
 }
 
 // ClearPaymentOrders clears all "payment_orders" edges to the PaymentOrder entity.
-func (lau *LinkedAddressUpdate) ClearPaymentOrders() *LinkedAddressUpdate {
-	lau.mutation.ClearPaymentOrders()
-	return lau
+func (_u *LinkedAddressUpdate) ClearPaymentOrders() *LinkedAddressUpdate {
+	_u.mutation.ClearPaymentOrders()
+	return _u
 }
 
 // RemovePaymentOrderIDs removes the "payment_orders" edge to PaymentOrder entities by IDs.
-func (lau *LinkedAddressUpdate) RemovePaymentOrderIDs(ids ...uuid.UUID) *LinkedAddressUpdate {
-	lau.mutation.RemovePaymentOrderIDs(ids...)
-	return lau
+func (_u *LinkedAddressUpdate) RemovePaymentOrderIDs(ids ...uuid.UUID) *LinkedAddressUpdate {
+	_u.mutation.RemovePaymentOrderIDs(ids...)
+	return _u
 }
 
 // RemovePaymentOrders removes "payment_orders" edges to PaymentOrder entities.
-func (lau *LinkedAddressUpdate) RemovePaymentOrders(p ...*PaymentOrder) *LinkedAddressUpdate {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *LinkedAddressUpdate) RemovePaymentOrders(v ...*PaymentOrder) *LinkedAddressUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return lau.RemovePaymentOrderIDs(ids...)
+	return _u.RemovePaymentOrderIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
-func (lau *LinkedAddressUpdate) Save(ctx context.Context) (int, error) {
-	lau.defaults()
-	return withHooks(ctx, lau.sqlSave, lau.mutation, lau.hooks)
+func (_u *LinkedAddressUpdate) Save(ctx context.Context) (int, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (lau *LinkedAddressUpdate) SaveX(ctx context.Context) int {
-	affected, err := lau.Save(ctx)
+func (_u *LinkedAddressUpdate) SaveX(ctx context.Context) int {
+	affected, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -234,29 +234,29 @@ func (lau *LinkedAddressUpdate) SaveX(ctx context.Context) int {
 }
 
 // Exec executes the query.
-func (lau *LinkedAddressUpdate) Exec(ctx context.Context) error {
-	_, err := lau.Save(ctx)
+func (_u *LinkedAddressUpdate) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (lau *LinkedAddressUpdate) ExecX(ctx context.Context) {
-	if err := lau.Exec(ctx); err != nil {
+func (_u *LinkedAddressUpdate) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (lau *LinkedAddressUpdate) defaults() {
-	if _, ok := lau.mutation.UpdatedAt(); !ok {
+func (_u *LinkedAddressUpdate) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := linkedaddress.UpdateDefaultUpdatedAt()
-		lau.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (lau *LinkedAddressUpdate) check() error {
-	if v, ok := lau.mutation.TxHash(); ok {
+func (_u *LinkedAddressUpdate) check() error {
+	if v, ok := _u.mutation.TxHash(); ok {
 		if err := linkedaddress.TxHashValidator(v); err != nil {
 			return &ValidationError{Name: "tx_hash", err: fmt.Errorf(`ent: validator failed for field "LinkedAddress.tx_hash": %w`, err)}
 		}
@@ -264,64 +264,64 @@ func (lau *LinkedAddressUpdate) check() error {
 	return nil
 }
 
-func (lau *LinkedAddressUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	if err := lau.check(); err != nil {
-		return n, err
+func (_u *LinkedAddressUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(linkedaddress.Table, linkedaddress.Columns, sqlgraph.NewFieldSpec(linkedaddress.FieldID, field.TypeInt))
-	if ps := lau.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := lau.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(linkedaddress.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := lau.mutation.Address(); ok {
+	if value, ok := _u.mutation.Address(); ok {
 		_spec.SetField(linkedaddress.FieldAddress, field.TypeString, value)
 	}
-	if value, ok := lau.mutation.Salt(); ok {
+	if value, ok := _u.mutation.Salt(); ok {
 		_spec.SetField(linkedaddress.FieldSalt, field.TypeBytes, value)
 	}
-	if lau.mutation.SaltCleared() {
+	if _u.mutation.SaltCleared() {
 		_spec.ClearField(linkedaddress.FieldSalt, field.TypeBytes)
 	}
-	if value, ok := lau.mutation.Institution(); ok {
+	if value, ok := _u.mutation.Institution(); ok {
 		_spec.SetField(linkedaddress.FieldInstitution, field.TypeString, value)
 	}
-	if value, ok := lau.mutation.AccountIdentifier(); ok {
+	if value, ok := _u.mutation.AccountIdentifier(); ok {
 		_spec.SetField(linkedaddress.FieldAccountIdentifier, field.TypeString, value)
 	}
-	if value, ok := lau.mutation.AccountName(); ok {
+	if value, ok := _u.mutation.AccountName(); ok {
 		_spec.SetField(linkedaddress.FieldAccountName, field.TypeString, value)
 	}
-	if value, ok := lau.mutation.Metadata(); ok {
+	if value, ok := _u.mutation.Metadata(); ok {
 		_spec.SetField(linkedaddress.FieldMetadata, field.TypeJSON, value)
 	}
-	if lau.mutation.MetadataCleared() {
+	if _u.mutation.MetadataCleared() {
 		_spec.ClearField(linkedaddress.FieldMetadata, field.TypeJSON)
 	}
-	if value, ok := lau.mutation.OwnerAddress(); ok {
+	if value, ok := _u.mutation.OwnerAddress(); ok {
 		_spec.SetField(linkedaddress.FieldOwnerAddress, field.TypeString, value)
 	}
-	if value, ok := lau.mutation.LastIndexedBlock(); ok {
+	if value, ok := _u.mutation.LastIndexedBlock(); ok {
 		_spec.SetField(linkedaddress.FieldLastIndexedBlock, field.TypeInt64, value)
 	}
-	if value, ok := lau.mutation.AddedLastIndexedBlock(); ok {
+	if value, ok := _u.mutation.AddedLastIndexedBlock(); ok {
 		_spec.AddField(linkedaddress.FieldLastIndexedBlock, field.TypeInt64, value)
 	}
-	if lau.mutation.LastIndexedBlockCleared() {
+	if _u.mutation.LastIndexedBlockCleared() {
 		_spec.ClearField(linkedaddress.FieldLastIndexedBlock, field.TypeInt64)
 	}
-	if value, ok := lau.mutation.TxHash(); ok {
+	if value, ok := _u.mutation.TxHash(); ok {
 		_spec.SetField(linkedaddress.FieldTxHash, field.TypeString, value)
 	}
-	if lau.mutation.TxHashCleared() {
+	if _u.mutation.TxHashCleared() {
 		_spec.ClearField(linkedaddress.FieldTxHash, field.TypeString)
 	}
-	if lau.mutation.PaymentOrdersCleared() {
+	if _u.mutation.PaymentOrdersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -334,7 +334,7 @@ func (lau *LinkedAddressUpdate) sqlSave(ctx context.Context) (n int, err error) 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := lau.mutation.RemovedPaymentOrdersIDs(); len(nodes) > 0 && !lau.mutation.PaymentOrdersCleared() {
+	if nodes := _u.mutation.RemovedPaymentOrdersIDs(); len(nodes) > 0 && !_u.mutation.PaymentOrdersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -350,7 +350,7 @@ func (lau *LinkedAddressUpdate) sqlSave(ctx context.Context) (n int, err error) 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := lau.mutation.PaymentOrdersIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.PaymentOrdersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -366,7 +366,7 @@ func (lau *LinkedAddressUpdate) sqlSave(ctx context.Context) (n int, err error) 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if n, err = sqlgraph.UpdateNodes(ctx, lau.driver, _spec); err != nil {
+	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{linkedaddress.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -374,8 +374,8 @@ func (lau *LinkedAddressUpdate) sqlSave(ctx context.Context) (n int, err error) 
 		}
 		return 0, err
 	}
-	lau.mutation.done = true
-	return n, nil
+	_u.mutation.done = true
+	return _node, nil
 }
 
 // LinkedAddressUpdateOne is the builder for updating a single LinkedAddress entity.
@@ -387,215 +387,215 @@ type LinkedAddressUpdateOne struct {
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (lauo *LinkedAddressUpdateOne) SetUpdatedAt(t time.Time) *LinkedAddressUpdateOne {
-	lauo.mutation.SetUpdatedAt(t)
-	return lauo
+func (_u *LinkedAddressUpdateOne) SetUpdatedAt(v time.Time) *LinkedAddressUpdateOne {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetAddress sets the "address" field.
-func (lauo *LinkedAddressUpdateOne) SetAddress(s string) *LinkedAddressUpdateOne {
-	lauo.mutation.SetAddress(s)
-	return lauo
+func (_u *LinkedAddressUpdateOne) SetAddress(v string) *LinkedAddressUpdateOne {
+	_u.mutation.SetAddress(v)
+	return _u
 }
 
 // SetNillableAddress sets the "address" field if the given value is not nil.
-func (lauo *LinkedAddressUpdateOne) SetNillableAddress(s *string) *LinkedAddressUpdateOne {
-	if s != nil {
-		lauo.SetAddress(*s)
+func (_u *LinkedAddressUpdateOne) SetNillableAddress(v *string) *LinkedAddressUpdateOne {
+	if v != nil {
+		_u.SetAddress(*v)
 	}
-	return lauo
+	return _u
 }
 
 // SetSalt sets the "salt" field.
-func (lauo *LinkedAddressUpdateOne) SetSalt(b []byte) *LinkedAddressUpdateOne {
-	lauo.mutation.SetSalt(b)
-	return lauo
+func (_u *LinkedAddressUpdateOne) SetSalt(v []byte) *LinkedAddressUpdateOne {
+	_u.mutation.SetSalt(v)
+	return _u
 }
 
 // ClearSalt clears the value of the "salt" field.
-func (lauo *LinkedAddressUpdateOne) ClearSalt() *LinkedAddressUpdateOne {
-	lauo.mutation.ClearSalt()
-	return lauo
+func (_u *LinkedAddressUpdateOne) ClearSalt() *LinkedAddressUpdateOne {
+	_u.mutation.ClearSalt()
+	return _u
 }
 
 // SetInstitution sets the "institution" field.
-func (lauo *LinkedAddressUpdateOne) SetInstitution(s string) *LinkedAddressUpdateOne {
-	lauo.mutation.SetInstitution(s)
-	return lauo
+func (_u *LinkedAddressUpdateOne) SetInstitution(v string) *LinkedAddressUpdateOne {
+	_u.mutation.SetInstitution(v)
+	return _u
 }
 
 // SetNillableInstitution sets the "institution" field if the given value is not nil.
-func (lauo *LinkedAddressUpdateOne) SetNillableInstitution(s *string) *LinkedAddressUpdateOne {
-	if s != nil {
-		lauo.SetInstitution(*s)
+func (_u *LinkedAddressUpdateOne) SetNillableInstitution(v *string) *LinkedAddressUpdateOne {
+	if v != nil {
+		_u.SetInstitution(*v)
 	}
-	return lauo
+	return _u
 }
 
 // SetAccountIdentifier sets the "account_identifier" field.
-func (lauo *LinkedAddressUpdateOne) SetAccountIdentifier(s string) *LinkedAddressUpdateOne {
-	lauo.mutation.SetAccountIdentifier(s)
-	return lauo
+func (_u *LinkedAddressUpdateOne) SetAccountIdentifier(v string) *LinkedAddressUpdateOne {
+	_u.mutation.SetAccountIdentifier(v)
+	return _u
 }
 
 // SetNillableAccountIdentifier sets the "account_identifier" field if the given value is not nil.
-func (lauo *LinkedAddressUpdateOne) SetNillableAccountIdentifier(s *string) *LinkedAddressUpdateOne {
-	if s != nil {
-		lauo.SetAccountIdentifier(*s)
+func (_u *LinkedAddressUpdateOne) SetNillableAccountIdentifier(v *string) *LinkedAddressUpdateOne {
+	if v != nil {
+		_u.SetAccountIdentifier(*v)
 	}
-	return lauo
+	return _u
 }
 
 // SetAccountName sets the "account_name" field.
-func (lauo *LinkedAddressUpdateOne) SetAccountName(s string) *LinkedAddressUpdateOne {
-	lauo.mutation.SetAccountName(s)
-	return lauo
+func (_u *LinkedAddressUpdateOne) SetAccountName(v string) *LinkedAddressUpdateOne {
+	_u.mutation.SetAccountName(v)
+	return _u
 }
 
 // SetNillableAccountName sets the "account_name" field if the given value is not nil.
-func (lauo *LinkedAddressUpdateOne) SetNillableAccountName(s *string) *LinkedAddressUpdateOne {
-	if s != nil {
-		lauo.SetAccountName(*s)
+func (_u *LinkedAddressUpdateOne) SetNillableAccountName(v *string) *LinkedAddressUpdateOne {
+	if v != nil {
+		_u.SetAccountName(*v)
 	}
-	return lauo
+	return _u
 }
 
 // SetMetadata sets the "metadata" field.
-func (lauo *LinkedAddressUpdateOne) SetMetadata(m map[string]interface{}) *LinkedAddressUpdateOne {
-	lauo.mutation.SetMetadata(m)
-	return lauo
+func (_u *LinkedAddressUpdateOne) SetMetadata(v map[string]interface{}) *LinkedAddressUpdateOne {
+	_u.mutation.SetMetadata(v)
+	return _u
 }
 
 // ClearMetadata clears the value of the "metadata" field.
-func (lauo *LinkedAddressUpdateOne) ClearMetadata() *LinkedAddressUpdateOne {
-	lauo.mutation.ClearMetadata()
-	return lauo
+func (_u *LinkedAddressUpdateOne) ClearMetadata() *LinkedAddressUpdateOne {
+	_u.mutation.ClearMetadata()
+	return _u
 }
 
 // SetOwnerAddress sets the "owner_address" field.
-func (lauo *LinkedAddressUpdateOne) SetOwnerAddress(s string) *LinkedAddressUpdateOne {
-	lauo.mutation.SetOwnerAddress(s)
-	return lauo
+func (_u *LinkedAddressUpdateOne) SetOwnerAddress(v string) *LinkedAddressUpdateOne {
+	_u.mutation.SetOwnerAddress(v)
+	return _u
 }
 
 // SetNillableOwnerAddress sets the "owner_address" field if the given value is not nil.
-func (lauo *LinkedAddressUpdateOne) SetNillableOwnerAddress(s *string) *LinkedAddressUpdateOne {
-	if s != nil {
-		lauo.SetOwnerAddress(*s)
+func (_u *LinkedAddressUpdateOne) SetNillableOwnerAddress(v *string) *LinkedAddressUpdateOne {
+	if v != nil {
+		_u.SetOwnerAddress(*v)
 	}
-	return lauo
+	return _u
 }
 
 // SetLastIndexedBlock sets the "last_indexed_block" field.
-func (lauo *LinkedAddressUpdateOne) SetLastIndexedBlock(i int64) *LinkedAddressUpdateOne {
-	lauo.mutation.ResetLastIndexedBlock()
-	lauo.mutation.SetLastIndexedBlock(i)
-	return lauo
+func (_u *LinkedAddressUpdateOne) SetLastIndexedBlock(v int64) *LinkedAddressUpdateOne {
+	_u.mutation.ResetLastIndexedBlock()
+	_u.mutation.SetLastIndexedBlock(v)
+	return _u
 }
 
 // SetNillableLastIndexedBlock sets the "last_indexed_block" field if the given value is not nil.
-func (lauo *LinkedAddressUpdateOne) SetNillableLastIndexedBlock(i *int64) *LinkedAddressUpdateOne {
-	if i != nil {
-		lauo.SetLastIndexedBlock(*i)
+func (_u *LinkedAddressUpdateOne) SetNillableLastIndexedBlock(v *int64) *LinkedAddressUpdateOne {
+	if v != nil {
+		_u.SetLastIndexedBlock(*v)
 	}
-	return lauo
+	return _u
 }
 
-// AddLastIndexedBlock adds i to the "last_indexed_block" field.
-func (lauo *LinkedAddressUpdateOne) AddLastIndexedBlock(i int64) *LinkedAddressUpdateOne {
-	lauo.mutation.AddLastIndexedBlock(i)
-	return lauo
+// AddLastIndexedBlock adds value to the "last_indexed_block" field.
+func (_u *LinkedAddressUpdateOne) AddLastIndexedBlock(v int64) *LinkedAddressUpdateOne {
+	_u.mutation.AddLastIndexedBlock(v)
+	return _u
 }
 
 // ClearLastIndexedBlock clears the value of the "last_indexed_block" field.
-func (lauo *LinkedAddressUpdateOne) ClearLastIndexedBlock() *LinkedAddressUpdateOne {
-	lauo.mutation.ClearLastIndexedBlock()
-	return lauo
+func (_u *LinkedAddressUpdateOne) ClearLastIndexedBlock() *LinkedAddressUpdateOne {
+	_u.mutation.ClearLastIndexedBlock()
+	return _u
 }
 
 // SetTxHash sets the "tx_hash" field.
-func (lauo *LinkedAddressUpdateOne) SetTxHash(s string) *LinkedAddressUpdateOne {
-	lauo.mutation.SetTxHash(s)
-	return lauo
+func (_u *LinkedAddressUpdateOne) SetTxHash(v string) *LinkedAddressUpdateOne {
+	_u.mutation.SetTxHash(v)
+	return _u
 }
 
 // SetNillableTxHash sets the "tx_hash" field if the given value is not nil.
-func (lauo *LinkedAddressUpdateOne) SetNillableTxHash(s *string) *LinkedAddressUpdateOne {
-	if s != nil {
-		lauo.SetTxHash(*s)
+func (_u *LinkedAddressUpdateOne) SetNillableTxHash(v *string) *LinkedAddressUpdateOne {
+	if v != nil {
+		_u.SetTxHash(*v)
 	}
-	return lauo
+	return _u
 }
 
 // ClearTxHash clears the value of the "tx_hash" field.
-func (lauo *LinkedAddressUpdateOne) ClearTxHash() *LinkedAddressUpdateOne {
-	lauo.mutation.ClearTxHash()
-	return lauo
+func (_u *LinkedAddressUpdateOne) ClearTxHash() *LinkedAddressUpdateOne {
+	_u.mutation.ClearTxHash()
+	return _u
 }
 
 // AddPaymentOrderIDs adds the "payment_orders" edge to the PaymentOrder entity by IDs.
-func (lauo *LinkedAddressUpdateOne) AddPaymentOrderIDs(ids ...uuid.UUID) *LinkedAddressUpdateOne {
-	lauo.mutation.AddPaymentOrderIDs(ids...)
-	return lauo
+func (_u *LinkedAddressUpdateOne) AddPaymentOrderIDs(ids ...uuid.UUID) *LinkedAddressUpdateOne {
+	_u.mutation.AddPaymentOrderIDs(ids...)
+	return _u
 }
 
 // AddPaymentOrders adds the "payment_orders" edges to the PaymentOrder entity.
-func (lauo *LinkedAddressUpdateOne) AddPaymentOrders(p ...*PaymentOrder) *LinkedAddressUpdateOne {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *LinkedAddressUpdateOne) AddPaymentOrders(v ...*PaymentOrder) *LinkedAddressUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return lauo.AddPaymentOrderIDs(ids...)
+	return _u.AddPaymentOrderIDs(ids...)
 }
 
 // Mutation returns the LinkedAddressMutation object of the builder.
-func (lauo *LinkedAddressUpdateOne) Mutation() *LinkedAddressMutation {
-	return lauo.mutation
+func (_u *LinkedAddressUpdateOne) Mutation() *LinkedAddressMutation {
+	return _u.mutation
 }
 
 // ClearPaymentOrders clears all "payment_orders" edges to the PaymentOrder entity.
-func (lauo *LinkedAddressUpdateOne) ClearPaymentOrders() *LinkedAddressUpdateOne {
-	lauo.mutation.ClearPaymentOrders()
-	return lauo
+func (_u *LinkedAddressUpdateOne) ClearPaymentOrders() *LinkedAddressUpdateOne {
+	_u.mutation.ClearPaymentOrders()
+	return _u
 }
 
 // RemovePaymentOrderIDs removes the "payment_orders" edge to PaymentOrder entities by IDs.
-func (lauo *LinkedAddressUpdateOne) RemovePaymentOrderIDs(ids ...uuid.UUID) *LinkedAddressUpdateOne {
-	lauo.mutation.RemovePaymentOrderIDs(ids...)
-	return lauo
+func (_u *LinkedAddressUpdateOne) RemovePaymentOrderIDs(ids ...uuid.UUID) *LinkedAddressUpdateOne {
+	_u.mutation.RemovePaymentOrderIDs(ids...)
+	return _u
 }
 
 // RemovePaymentOrders removes "payment_orders" edges to PaymentOrder entities.
-func (lauo *LinkedAddressUpdateOne) RemovePaymentOrders(p ...*PaymentOrder) *LinkedAddressUpdateOne {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *LinkedAddressUpdateOne) RemovePaymentOrders(v ...*PaymentOrder) *LinkedAddressUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return lauo.RemovePaymentOrderIDs(ids...)
+	return _u.RemovePaymentOrderIDs(ids...)
 }
 
 // Where appends a list predicates to the LinkedAddressUpdate builder.
-func (lauo *LinkedAddressUpdateOne) Where(ps ...predicate.LinkedAddress) *LinkedAddressUpdateOne {
-	lauo.mutation.Where(ps...)
-	return lauo
+func (_u *LinkedAddressUpdateOne) Where(ps ...predicate.LinkedAddress) *LinkedAddressUpdateOne {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
-func (lauo *LinkedAddressUpdateOne) Select(field string, fields ...string) *LinkedAddressUpdateOne {
-	lauo.fields = append([]string{field}, fields...)
-	return lauo
+func (_u *LinkedAddressUpdateOne) Select(field string, fields ...string) *LinkedAddressUpdateOne {
+	_u.fields = append([]string{field}, fields...)
+	return _u
 }
 
 // Save executes the query and returns the updated LinkedAddress entity.
-func (lauo *LinkedAddressUpdateOne) Save(ctx context.Context) (*LinkedAddress, error) {
-	lauo.defaults()
-	return withHooks(ctx, lauo.sqlSave, lauo.mutation, lauo.hooks)
+func (_u *LinkedAddressUpdateOne) Save(ctx context.Context) (*LinkedAddress, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (lauo *LinkedAddressUpdateOne) SaveX(ctx context.Context) *LinkedAddress {
-	node, err := lauo.Save(ctx)
+func (_u *LinkedAddressUpdateOne) SaveX(ctx context.Context) *LinkedAddress {
+	node, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -603,29 +603,29 @@ func (lauo *LinkedAddressUpdateOne) SaveX(ctx context.Context) *LinkedAddress {
 }
 
 // Exec executes the query on the entity.
-func (lauo *LinkedAddressUpdateOne) Exec(ctx context.Context) error {
-	_, err := lauo.Save(ctx)
+func (_u *LinkedAddressUpdateOne) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (lauo *LinkedAddressUpdateOne) ExecX(ctx context.Context) {
-	if err := lauo.Exec(ctx); err != nil {
+func (_u *LinkedAddressUpdateOne) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (lauo *LinkedAddressUpdateOne) defaults() {
-	if _, ok := lauo.mutation.UpdatedAt(); !ok {
+func (_u *LinkedAddressUpdateOne) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := linkedaddress.UpdateDefaultUpdatedAt()
-		lauo.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (lauo *LinkedAddressUpdateOne) check() error {
-	if v, ok := lauo.mutation.TxHash(); ok {
+func (_u *LinkedAddressUpdateOne) check() error {
+	if v, ok := _u.mutation.TxHash(); ok {
 		if err := linkedaddress.TxHashValidator(v); err != nil {
 			return &ValidationError{Name: "tx_hash", err: fmt.Errorf(`ent: validator failed for field "LinkedAddress.tx_hash": %w`, err)}
 		}
@@ -633,17 +633,17 @@ func (lauo *LinkedAddressUpdateOne) check() error {
 	return nil
 }
 
-func (lauo *LinkedAddressUpdateOne) sqlSave(ctx context.Context) (_node *LinkedAddress, err error) {
-	if err := lauo.check(); err != nil {
+func (_u *LinkedAddressUpdateOne) sqlSave(ctx context.Context) (_node *LinkedAddress, err error) {
+	if err := _u.check(); err != nil {
 		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(linkedaddress.Table, linkedaddress.Columns, sqlgraph.NewFieldSpec(linkedaddress.FieldID, field.TypeInt))
-	id, ok := lauo.mutation.ID()
+	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "LinkedAddress.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
-	if fields := lauo.fields; len(fields) > 0 {
+	if fields := _u.fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, linkedaddress.FieldID)
 		for _, f := range fields {
@@ -655,59 +655,59 @@ func (lauo *LinkedAddressUpdateOne) sqlSave(ctx context.Context) (_node *LinkedA
 			}
 		}
 	}
-	if ps := lauo.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := lauo.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(linkedaddress.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := lauo.mutation.Address(); ok {
+	if value, ok := _u.mutation.Address(); ok {
 		_spec.SetField(linkedaddress.FieldAddress, field.TypeString, value)
 	}
-	if value, ok := lauo.mutation.Salt(); ok {
+	if value, ok := _u.mutation.Salt(); ok {
 		_spec.SetField(linkedaddress.FieldSalt, field.TypeBytes, value)
 	}
-	if lauo.mutation.SaltCleared() {
+	if _u.mutation.SaltCleared() {
 		_spec.ClearField(linkedaddress.FieldSalt, field.TypeBytes)
 	}
-	if value, ok := lauo.mutation.Institution(); ok {
+	if value, ok := _u.mutation.Institution(); ok {
 		_spec.SetField(linkedaddress.FieldInstitution, field.TypeString, value)
 	}
-	if value, ok := lauo.mutation.AccountIdentifier(); ok {
+	if value, ok := _u.mutation.AccountIdentifier(); ok {
 		_spec.SetField(linkedaddress.FieldAccountIdentifier, field.TypeString, value)
 	}
-	if value, ok := lauo.mutation.AccountName(); ok {
+	if value, ok := _u.mutation.AccountName(); ok {
 		_spec.SetField(linkedaddress.FieldAccountName, field.TypeString, value)
 	}
-	if value, ok := lauo.mutation.Metadata(); ok {
+	if value, ok := _u.mutation.Metadata(); ok {
 		_spec.SetField(linkedaddress.FieldMetadata, field.TypeJSON, value)
 	}
-	if lauo.mutation.MetadataCleared() {
+	if _u.mutation.MetadataCleared() {
 		_spec.ClearField(linkedaddress.FieldMetadata, field.TypeJSON)
 	}
-	if value, ok := lauo.mutation.OwnerAddress(); ok {
+	if value, ok := _u.mutation.OwnerAddress(); ok {
 		_spec.SetField(linkedaddress.FieldOwnerAddress, field.TypeString, value)
 	}
-	if value, ok := lauo.mutation.LastIndexedBlock(); ok {
+	if value, ok := _u.mutation.LastIndexedBlock(); ok {
 		_spec.SetField(linkedaddress.FieldLastIndexedBlock, field.TypeInt64, value)
 	}
-	if value, ok := lauo.mutation.AddedLastIndexedBlock(); ok {
+	if value, ok := _u.mutation.AddedLastIndexedBlock(); ok {
 		_spec.AddField(linkedaddress.FieldLastIndexedBlock, field.TypeInt64, value)
 	}
-	if lauo.mutation.LastIndexedBlockCleared() {
+	if _u.mutation.LastIndexedBlockCleared() {
 		_spec.ClearField(linkedaddress.FieldLastIndexedBlock, field.TypeInt64)
 	}
-	if value, ok := lauo.mutation.TxHash(); ok {
+	if value, ok := _u.mutation.TxHash(); ok {
 		_spec.SetField(linkedaddress.FieldTxHash, field.TypeString, value)
 	}
-	if lauo.mutation.TxHashCleared() {
+	if _u.mutation.TxHashCleared() {
 		_spec.ClearField(linkedaddress.FieldTxHash, field.TypeString)
 	}
-	if lauo.mutation.PaymentOrdersCleared() {
+	if _u.mutation.PaymentOrdersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -720,7 +720,7 @@ func (lauo *LinkedAddressUpdateOne) sqlSave(ctx context.Context) (_node *LinkedA
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := lauo.mutation.RemovedPaymentOrdersIDs(); len(nodes) > 0 && !lauo.mutation.PaymentOrdersCleared() {
+	if nodes := _u.mutation.RemovedPaymentOrdersIDs(); len(nodes) > 0 && !_u.mutation.PaymentOrdersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -736,7 +736,7 @@ func (lauo *LinkedAddressUpdateOne) sqlSave(ctx context.Context) (_node *LinkedA
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := lauo.mutation.PaymentOrdersIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.PaymentOrdersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -752,10 +752,10 @@ func (lauo *LinkedAddressUpdateOne) sqlSave(ctx context.Context) (_node *LinkedA
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	_node = &LinkedAddress{config: lauo.config}
+	_node = &LinkedAddress{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues
-	if err = sqlgraph.UpdateNode(ctx, lauo.driver, _spec); err != nil {
+	if err = sqlgraph.UpdateNode(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{linkedaddress.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -763,6 +763,6 @@ func (lauo *LinkedAddressUpdateOne) sqlSave(ctx context.Context) (_node *LinkedA
 		}
 		return nil, err
 	}
-	lauo.mutation.done = true
+	_u.mutation.done = true
 	return _node, nil
 }

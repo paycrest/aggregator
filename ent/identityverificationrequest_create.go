@@ -25,119 +25,119 @@ type IdentityVerificationRequestCreate struct {
 }
 
 // SetWalletAddress sets the "wallet_address" field.
-func (ivrc *IdentityVerificationRequestCreate) SetWalletAddress(s string) *IdentityVerificationRequestCreate {
-	ivrc.mutation.SetWalletAddress(s)
-	return ivrc
+func (_c *IdentityVerificationRequestCreate) SetWalletAddress(v string) *IdentityVerificationRequestCreate {
+	_c.mutation.SetWalletAddress(v)
+	return _c
 }
 
 // SetWalletSignature sets the "wallet_signature" field.
-func (ivrc *IdentityVerificationRequestCreate) SetWalletSignature(s string) *IdentityVerificationRequestCreate {
-	ivrc.mutation.SetWalletSignature(s)
-	return ivrc
+func (_c *IdentityVerificationRequestCreate) SetWalletSignature(v string) *IdentityVerificationRequestCreate {
+	_c.mutation.SetWalletSignature(v)
+	return _c
 }
 
 // SetPlatform sets the "platform" field.
-func (ivrc *IdentityVerificationRequestCreate) SetPlatform(i identityverificationrequest.Platform) *IdentityVerificationRequestCreate {
-	ivrc.mutation.SetPlatform(i)
-	return ivrc
+func (_c *IdentityVerificationRequestCreate) SetPlatform(v identityverificationrequest.Platform) *IdentityVerificationRequestCreate {
+	_c.mutation.SetPlatform(v)
+	return _c
 }
 
 // SetPlatformRef sets the "platform_ref" field.
-func (ivrc *IdentityVerificationRequestCreate) SetPlatformRef(s string) *IdentityVerificationRequestCreate {
-	ivrc.mutation.SetPlatformRef(s)
-	return ivrc
+func (_c *IdentityVerificationRequestCreate) SetPlatformRef(v string) *IdentityVerificationRequestCreate {
+	_c.mutation.SetPlatformRef(v)
+	return _c
 }
 
 // SetVerificationURL sets the "verification_url" field.
-func (ivrc *IdentityVerificationRequestCreate) SetVerificationURL(s string) *IdentityVerificationRequestCreate {
-	ivrc.mutation.SetVerificationURL(s)
-	return ivrc
+func (_c *IdentityVerificationRequestCreate) SetVerificationURL(v string) *IdentityVerificationRequestCreate {
+	_c.mutation.SetVerificationURL(v)
+	return _c
 }
 
 // SetStatus sets the "status" field.
-func (ivrc *IdentityVerificationRequestCreate) SetStatus(i identityverificationrequest.Status) *IdentityVerificationRequestCreate {
-	ivrc.mutation.SetStatus(i)
-	return ivrc
+func (_c *IdentityVerificationRequestCreate) SetStatus(v identityverificationrequest.Status) *IdentityVerificationRequestCreate {
+	_c.mutation.SetStatus(v)
+	return _c
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (ivrc *IdentityVerificationRequestCreate) SetNillableStatus(i *identityverificationrequest.Status) *IdentityVerificationRequestCreate {
-	if i != nil {
-		ivrc.SetStatus(*i)
+func (_c *IdentityVerificationRequestCreate) SetNillableStatus(v *identityverificationrequest.Status) *IdentityVerificationRequestCreate {
+	if v != nil {
+		_c.SetStatus(*v)
 	}
-	return ivrc
+	return _c
 }
 
 // SetFeeReclaimed sets the "fee_reclaimed" field.
-func (ivrc *IdentityVerificationRequestCreate) SetFeeReclaimed(b bool) *IdentityVerificationRequestCreate {
-	ivrc.mutation.SetFeeReclaimed(b)
-	return ivrc
+func (_c *IdentityVerificationRequestCreate) SetFeeReclaimed(v bool) *IdentityVerificationRequestCreate {
+	_c.mutation.SetFeeReclaimed(v)
+	return _c
 }
 
 // SetNillableFeeReclaimed sets the "fee_reclaimed" field if the given value is not nil.
-func (ivrc *IdentityVerificationRequestCreate) SetNillableFeeReclaimed(b *bool) *IdentityVerificationRequestCreate {
-	if b != nil {
-		ivrc.SetFeeReclaimed(*b)
+func (_c *IdentityVerificationRequestCreate) SetNillableFeeReclaimed(v *bool) *IdentityVerificationRequestCreate {
+	if v != nil {
+		_c.SetFeeReclaimed(*v)
 	}
-	return ivrc
+	return _c
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (ivrc *IdentityVerificationRequestCreate) SetUpdatedAt(t time.Time) *IdentityVerificationRequestCreate {
-	ivrc.mutation.SetUpdatedAt(t)
-	return ivrc
+func (_c *IdentityVerificationRequestCreate) SetUpdatedAt(v time.Time) *IdentityVerificationRequestCreate {
+	_c.mutation.SetUpdatedAt(v)
+	return _c
 }
 
 // SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (ivrc *IdentityVerificationRequestCreate) SetNillableUpdatedAt(t *time.Time) *IdentityVerificationRequestCreate {
-	if t != nil {
-		ivrc.SetUpdatedAt(*t)
+func (_c *IdentityVerificationRequestCreate) SetNillableUpdatedAt(v *time.Time) *IdentityVerificationRequestCreate {
+	if v != nil {
+		_c.SetUpdatedAt(*v)
 	}
-	return ivrc
+	return _c
 }
 
 // SetLastURLCreatedAt sets the "last_url_created_at" field.
-func (ivrc *IdentityVerificationRequestCreate) SetLastURLCreatedAt(t time.Time) *IdentityVerificationRequestCreate {
-	ivrc.mutation.SetLastURLCreatedAt(t)
-	return ivrc
+func (_c *IdentityVerificationRequestCreate) SetLastURLCreatedAt(v time.Time) *IdentityVerificationRequestCreate {
+	_c.mutation.SetLastURLCreatedAt(v)
+	return _c
 }
 
 // SetNillableLastURLCreatedAt sets the "last_url_created_at" field if the given value is not nil.
-func (ivrc *IdentityVerificationRequestCreate) SetNillableLastURLCreatedAt(t *time.Time) *IdentityVerificationRequestCreate {
-	if t != nil {
-		ivrc.SetLastURLCreatedAt(*t)
+func (_c *IdentityVerificationRequestCreate) SetNillableLastURLCreatedAt(v *time.Time) *IdentityVerificationRequestCreate {
+	if v != nil {
+		_c.SetLastURLCreatedAt(*v)
 	}
-	return ivrc
+	return _c
 }
 
 // SetID sets the "id" field.
-func (ivrc *IdentityVerificationRequestCreate) SetID(u uuid.UUID) *IdentityVerificationRequestCreate {
-	ivrc.mutation.SetID(u)
-	return ivrc
+func (_c *IdentityVerificationRequestCreate) SetID(v uuid.UUID) *IdentityVerificationRequestCreate {
+	_c.mutation.SetID(v)
+	return _c
 }
 
 // SetNillableID sets the "id" field if the given value is not nil.
-func (ivrc *IdentityVerificationRequestCreate) SetNillableID(u *uuid.UUID) *IdentityVerificationRequestCreate {
-	if u != nil {
-		ivrc.SetID(*u)
+func (_c *IdentityVerificationRequestCreate) SetNillableID(v *uuid.UUID) *IdentityVerificationRequestCreate {
+	if v != nil {
+		_c.SetID(*v)
 	}
-	return ivrc
+	return _c
 }
 
 // Mutation returns the IdentityVerificationRequestMutation object of the builder.
-func (ivrc *IdentityVerificationRequestCreate) Mutation() *IdentityVerificationRequestMutation {
-	return ivrc.mutation
+func (_c *IdentityVerificationRequestCreate) Mutation() *IdentityVerificationRequestMutation {
+	return _c.mutation
 }
 
 // Save creates the IdentityVerificationRequest in the database.
-func (ivrc *IdentityVerificationRequestCreate) Save(ctx context.Context) (*IdentityVerificationRequest, error) {
-	ivrc.defaults()
-	return withHooks(ctx, ivrc.sqlSave, ivrc.mutation, ivrc.hooks)
+func (_c *IdentityVerificationRequestCreate) Save(ctx context.Context) (*IdentityVerificationRequest, error) {
+	_c.defaults()
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (ivrc *IdentityVerificationRequestCreate) SaveX(ctx context.Context) *IdentityVerificationRequest {
-	v, err := ivrc.Save(ctx)
+func (_c *IdentityVerificationRequestCreate) SaveX(ctx context.Context) *IdentityVerificationRequest {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -145,90 +145,90 @@ func (ivrc *IdentityVerificationRequestCreate) SaveX(ctx context.Context) *Ident
 }
 
 // Exec executes the query.
-func (ivrc *IdentityVerificationRequestCreate) Exec(ctx context.Context) error {
-	_, err := ivrc.Save(ctx)
+func (_c *IdentityVerificationRequestCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (ivrc *IdentityVerificationRequestCreate) ExecX(ctx context.Context) {
-	if err := ivrc.Exec(ctx); err != nil {
+func (_c *IdentityVerificationRequestCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (ivrc *IdentityVerificationRequestCreate) defaults() {
-	if _, ok := ivrc.mutation.Status(); !ok {
+func (_c *IdentityVerificationRequestCreate) defaults() {
+	if _, ok := _c.mutation.Status(); !ok {
 		v := identityverificationrequest.DefaultStatus
-		ivrc.mutation.SetStatus(v)
+		_c.mutation.SetStatus(v)
 	}
-	if _, ok := ivrc.mutation.FeeReclaimed(); !ok {
+	if _, ok := _c.mutation.FeeReclaimed(); !ok {
 		v := identityverificationrequest.DefaultFeeReclaimed
-		ivrc.mutation.SetFeeReclaimed(v)
+		_c.mutation.SetFeeReclaimed(v)
 	}
-	if _, ok := ivrc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		v := identityverificationrequest.DefaultUpdatedAt()
-		ivrc.mutation.SetUpdatedAt(v)
+		_c.mutation.SetUpdatedAt(v)
 	}
-	if _, ok := ivrc.mutation.LastURLCreatedAt(); !ok {
+	if _, ok := _c.mutation.LastURLCreatedAt(); !ok {
 		v := identityverificationrequest.DefaultLastURLCreatedAt()
-		ivrc.mutation.SetLastURLCreatedAt(v)
+		_c.mutation.SetLastURLCreatedAt(v)
 	}
-	if _, ok := ivrc.mutation.ID(); !ok {
+	if _, ok := _c.mutation.ID(); !ok {
 		v := identityverificationrequest.DefaultID()
-		ivrc.mutation.SetID(v)
+		_c.mutation.SetID(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (ivrc *IdentityVerificationRequestCreate) check() error {
-	if _, ok := ivrc.mutation.WalletAddress(); !ok {
+func (_c *IdentityVerificationRequestCreate) check() error {
+	if _, ok := _c.mutation.WalletAddress(); !ok {
 		return &ValidationError{Name: "wallet_address", err: errors.New(`ent: missing required field "IdentityVerificationRequest.wallet_address"`)}
 	}
-	if _, ok := ivrc.mutation.WalletSignature(); !ok {
+	if _, ok := _c.mutation.WalletSignature(); !ok {
 		return &ValidationError{Name: "wallet_signature", err: errors.New(`ent: missing required field "IdentityVerificationRequest.wallet_signature"`)}
 	}
-	if _, ok := ivrc.mutation.Platform(); !ok {
+	if _, ok := _c.mutation.Platform(); !ok {
 		return &ValidationError{Name: "platform", err: errors.New(`ent: missing required field "IdentityVerificationRequest.platform"`)}
 	}
-	if v, ok := ivrc.mutation.Platform(); ok {
+	if v, ok := _c.mutation.Platform(); ok {
 		if err := identityverificationrequest.PlatformValidator(v); err != nil {
 			return &ValidationError{Name: "platform", err: fmt.Errorf(`ent: validator failed for field "IdentityVerificationRequest.platform": %w`, err)}
 		}
 	}
-	if _, ok := ivrc.mutation.PlatformRef(); !ok {
+	if _, ok := _c.mutation.PlatformRef(); !ok {
 		return &ValidationError{Name: "platform_ref", err: errors.New(`ent: missing required field "IdentityVerificationRequest.platform_ref"`)}
 	}
-	if _, ok := ivrc.mutation.VerificationURL(); !ok {
+	if _, ok := _c.mutation.VerificationURL(); !ok {
 		return &ValidationError{Name: "verification_url", err: errors.New(`ent: missing required field "IdentityVerificationRequest.verification_url"`)}
 	}
-	if _, ok := ivrc.mutation.Status(); !ok {
+	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "IdentityVerificationRequest.status"`)}
 	}
-	if v, ok := ivrc.mutation.Status(); ok {
+	if v, ok := _c.mutation.Status(); ok {
 		if err := identityverificationrequest.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "IdentityVerificationRequest.status": %w`, err)}
 		}
 	}
-	if _, ok := ivrc.mutation.FeeReclaimed(); !ok {
+	if _, ok := _c.mutation.FeeReclaimed(); !ok {
 		return &ValidationError{Name: "fee_reclaimed", err: errors.New(`ent: missing required field "IdentityVerificationRequest.fee_reclaimed"`)}
 	}
-	if _, ok := ivrc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "IdentityVerificationRequest.updated_at"`)}
 	}
-	if _, ok := ivrc.mutation.LastURLCreatedAt(); !ok {
+	if _, ok := _c.mutation.LastURLCreatedAt(); !ok {
 		return &ValidationError{Name: "last_url_created_at", err: errors.New(`ent: missing required field "IdentityVerificationRequest.last_url_created_at"`)}
 	}
 	return nil
 }
 
-func (ivrc *IdentityVerificationRequestCreate) sqlSave(ctx context.Context) (*IdentityVerificationRequest, error) {
-	if err := ivrc.check(); err != nil {
+func (_c *IdentityVerificationRequestCreate) sqlSave(ctx context.Context) (*IdentityVerificationRequest, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := ivrc.createSpec()
-	if err := sqlgraph.CreateNode(ctx, ivrc.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -241,54 +241,54 @@ func (ivrc *IdentityVerificationRequestCreate) sqlSave(ctx context.Context) (*Id
 			return nil, err
 		}
 	}
-	ivrc.mutation.id = &_node.ID
-	ivrc.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (ivrc *IdentityVerificationRequestCreate) createSpec() (*IdentityVerificationRequest, *sqlgraph.CreateSpec) {
+func (_c *IdentityVerificationRequestCreate) createSpec() (*IdentityVerificationRequest, *sqlgraph.CreateSpec) {
 	var (
-		_node = &IdentityVerificationRequest{config: ivrc.config}
+		_node = &IdentityVerificationRequest{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(identityverificationrequest.Table, sqlgraph.NewFieldSpec(identityverificationrequest.FieldID, field.TypeUUID))
 	)
-	_spec.OnConflict = ivrc.conflict
-	if id, ok := ivrc.mutation.ID(); ok {
+	_spec.OnConflict = _c.conflict
+	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := ivrc.mutation.WalletAddress(); ok {
+	if value, ok := _c.mutation.WalletAddress(); ok {
 		_spec.SetField(identityverificationrequest.FieldWalletAddress, field.TypeString, value)
 		_node.WalletAddress = value
 	}
-	if value, ok := ivrc.mutation.WalletSignature(); ok {
+	if value, ok := _c.mutation.WalletSignature(); ok {
 		_spec.SetField(identityverificationrequest.FieldWalletSignature, field.TypeString, value)
 		_node.WalletSignature = value
 	}
-	if value, ok := ivrc.mutation.Platform(); ok {
+	if value, ok := _c.mutation.Platform(); ok {
 		_spec.SetField(identityverificationrequest.FieldPlatform, field.TypeEnum, value)
 		_node.Platform = value
 	}
-	if value, ok := ivrc.mutation.PlatformRef(); ok {
+	if value, ok := _c.mutation.PlatformRef(); ok {
 		_spec.SetField(identityverificationrequest.FieldPlatformRef, field.TypeString, value)
 		_node.PlatformRef = value
 	}
-	if value, ok := ivrc.mutation.VerificationURL(); ok {
+	if value, ok := _c.mutation.VerificationURL(); ok {
 		_spec.SetField(identityverificationrequest.FieldVerificationURL, field.TypeString, value)
 		_node.VerificationURL = value
 	}
-	if value, ok := ivrc.mutation.Status(); ok {
+	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(identityverificationrequest.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
-	if value, ok := ivrc.mutation.FeeReclaimed(); ok {
+	if value, ok := _c.mutation.FeeReclaimed(); ok {
 		_spec.SetField(identityverificationrequest.FieldFeeReclaimed, field.TypeBool, value)
 		_node.FeeReclaimed = value
 	}
-	if value, ok := ivrc.mutation.UpdatedAt(); ok {
+	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(identityverificationrequest.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if value, ok := ivrc.mutation.LastURLCreatedAt(); ok {
+	if value, ok := _c.mutation.LastURLCreatedAt(); ok {
 		_spec.SetField(identityverificationrequest.FieldLastURLCreatedAt, field.TypeTime, value)
 		_node.LastURLCreatedAt = value
 	}
@@ -311,10 +311,10 @@ func (ivrc *IdentityVerificationRequestCreate) createSpec() (*IdentityVerificati
 //			SetWalletAddress(v+v).
 //		}).
 //		Exec(ctx)
-func (ivrc *IdentityVerificationRequestCreate) OnConflict(opts ...sql.ConflictOption) *IdentityVerificationRequestUpsertOne {
-	ivrc.conflict = opts
+func (_c *IdentityVerificationRequestCreate) OnConflict(opts ...sql.ConflictOption) *IdentityVerificationRequestUpsertOne {
+	_c.conflict = opts
 	return &IdentityVerificationRequestUpsertOne{
-		create: ivrc,
+		create: _c,
 	}
 }
 
@@ -324,10 +324,10 @@ func (ivrc *IdentityVerificationRequestCreate) OnConflict(opts ...sql.ConflictOp
 //	client.IdentityVerificationRequest.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (ivrc *IdentityVerificationRequestCreate) OnConflictColumns(columns ...string) *IdentityVerificationRequestUpsertOne {
-	ivrc.conflict = append(ivrc.conflict, sql.ConflictColumns(columns...))
+func (_c *IdentityVerificationRequestCreate) OnConflictColumns(columns ...string) *IdentityVerificationRequestUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &IdentityVerificationRequestUpsertOne{
-		create: ivrc,
+		create: _c,
 	}
 }
 
@@ -673,16 +673,16 @@ type IdentityVerificationRequestCreateBulk struct {
 }
 
 // Save creates the IdentityVerificationRequest entities in the database.
-func (ivrcb *IdentityVerificationRequestCreateBulk) Save(ctx context.Context) ([]*IdentityVerificationRequest, error) {
-	if ivrcb.err != nil {
-		return nil, ivrcb.err
+func (_c *IdentityVerificationRequestCreateBulk) Save(ctx context.Context) ([]*IdentityVerificationRequest, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(ivrcb.builders))
-	nodes := make([]*IdentityVerificationRequest, len(ivrcb.builders))
-	mutators := make([]Mutator, len(ivrcb.builders))
-	for i := range ivrcb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*IdentityVerificationRequest, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := ivrcb.builders[i]
+			builder := _c.builders[i]
 			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*IdentityVerificationRequestMutation)
@@ -696,12 +696,12 @@ func (ivrcb *IdentityVerificationRequestCreateBulk) Save(ctx context.Context) ([
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, ivrcb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = ivrcb.conflict
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, ivrcb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -721,7 +721,7 @@ func (ivrcb *IdentityVerificationRequestCreateBulk) Save(ctx context.Context) ([
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, ivrcb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -729,8 +729,8 @@ func (ivrcb *IdentityVerificationRequestCreateBulk) Save(ctx context.Context) ([
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (ivrcb *IdentityVerificationRequestCreateBulk) SaveX(ctx context.Context) []*IdentityVerificationRequest {
-	v, err := ivrcb.Save(ctx)
+func (_c *IdentityVerificationRequestCreateBulk) SaveX(ctx context.Context) []*IdentityVerificationRequest {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -738,14 +738,14 @@ func (ivrcb *IdentityVerificationRequestCreateBulk) SaveX(ctx context.Context) [
 }
 
 // Exec executes the query.
-func (ivrcb *IdentityVerificationRequestCreateBulk) Exec(ctx context.Context) error {
-	_, err := ivrcb.Save(ctx)
+func (_c *IdentityVerificationRequestCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (ivrcb *IdentityVerificationRequestCreateBulk) ExecX(ctx context.Context) {
-	if err := ivrcb.Exec(ctx); err != nil {
+func (_c *IdentityVerificationRequestCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
@@ -765,10 +765,10 @@ func (ivrcb *IdentityVerificationRequestCreateBulk) ExecX(ctx context.Context) {
 //			SetWalletAddress(v+v).
 //		}).
 //		Exec(ctx)
-func (ivrcb *IdentityVerificationRequestCreateBulk) OnConflict(opts ...sql.ConflictOption) *IdentityVerificationRequestUpsertBulk {
-	ivrcb.conflict = opts
+func (_c *IdentityVerificationRequestCreateBulk) OnConflict(opts ...sql.ConflictOption) *IdentityVerificationRequestUpsertBulk {
+	_c.conflict = opts
 	return &IdentityVerificationRequestUpsertBulk{
-		create: ivrcb,
+		create: _c,
 	}
 }
 
@@ -778,10 +778,10 @@ func (ivrcb *IdentityVerificationRequestCreateBulk) OnConflict(opts ...sql.Confl
 //	client.IdentityVerificationRequest.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (ivrcb *IdentityVerificationRequestCreateBulk) OnConflictColumns(columns ...string) *IdentityVerificationRequestUpsertBulk {
-	ivrcb.conflict = append(ivrcb.conflict, sql.ConflictColumns(columns...))
+func (_c *IdentityVerificationRequestCreateBulk) OnConflictColumns(columns ...string) *IdentityVerificationRequestUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &IdentityVerificationRequestUpsertBulk{
-		create: ivrcb,
+		create: _c,
 	}
 }
 

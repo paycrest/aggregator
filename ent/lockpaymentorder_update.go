@@ -31,505 +31,505 @@ type LockPaymentOrderUpdate struct {
 }
 
 // Where appends a list predicates to the LockPaymentOrderUpdate builder.
-func (lpou *LockPaymentOrderUpdate) Where(ps ...predicate.LockPaymentOrder) *LockPaymentOrderUpdate {
-	lpou.mutation.Where(ps...)
-	return lpou
+func (_u *LockPaymentOrderUpdate) Where(ps ...predicate.LockPaymentOrder) *LockPaymentOrderUpdate {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (lpou *LockPaymentOrderUpdate) SetUpdatedAt(t time.Time) *LockPaymentOrderUpdate {
-	lpou.mutation.SetUpdatedAt(t)
-	return lpou
+func (_u *LockPaymentOrderUpdate) SetUpdatedAt(v time.Time) *LockPaymentOrderUpdate {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetGatewayID sets the "gateway_id" field.
-func (lpou *LockPaymentOrderUpdate) SetGatewayID(s string) *LockPaymentOrderUpdate {
-	lpou.mutation.SetGatewayID(s)
-	return lpou
+func (_u *LockPaymentOrderUpdate) SetGatewayID(v string) *LockPaymentOrderUpdate {
+	_u.mutation.SetGatewayID(v)
+	return _u
 }
 
 // SetNillableGatewayID sets the "gateway_id" field if the given value is not nil.
-func (lpou *LockPaymentOrderUpdate) SetNillableGatewayID(s *string) *LockPaymentOrderUpdate {
-	if s != nil {
-		lpou.SetGatewayID(*s)
+func (_u *LockPaymentOrderUpdate) SetNillableGatewayID(v *string) *LockPaymentOrderUpdate {
+	if v != nil {
+		_u.SetGatewayID(*v)
 	}
-	return lpou
+	return _u
 }
 
 // SetAmount sets the "amount" field.
-func (lpou *LockPaymentOrderUpdate) SetAmount(d decimal.Decimal) *LockPaymentOrderUpdate {
-	lpou.mutation.ResetAmount()
-	lpou.mutation.SetAmount(d)
-	return lpou
+func (_u *LockPaymentOrderUpdate) SetAmount(v decimal.Decimal) *LockPaymentOrderUpdate {
+	_u.mutation.ResetAmount()
+	_u.mutation.SetAmount(v)
+	return _u
 }
 
 // SetNillableAmount sets the "amount" field if the given value is not nil.
-func (lpou *LockPaymentOrderUpdate) SetNillableAmount(d *decimal.Decimal) *LockPaymentOrderUpdate {
-	if d != nil {
-		lpou.SetAmount(*d)
+func (_u *LockPaymentOrderUpdate) SetNillableAmount(v *decimal.Decimal) *LockPaymentOrderUpdate {
+	if v != nil {
+		_u.SetAmount(*v)
 	}
-	return lpou
+	return _u
 }
 
-// AddAmount adds d to the "amount" field.
-func (lpou *LockPaymentOrderUpdate) AddAmount(d decimal.Decimal) *LockPaymentOrderUpdate {
-	lpou.mutation.AddAmount(d)
-	return lpou
+// AddAmount adds value to the "amount" field.
+func (_u *LockPaymentOrderUpdate) AddAmount(v decimal.Decimal) *LockPaymentOrderUpdate {
+	_u.mutation.AddAmount(v)
+	return _u
 }
 
 // SetProtocolFee sets the "protocol_fee" field.
-func (lpou *LockPaymentOrderUpdate) SetProtocolFee(d decimal.Decimal) *LockPaymentOrderUpdate {
-	lpou.mutation.ResetProtocolFee()
-	lpou.mutation.SetProtocolFee(d)
-	return lpou
+func (_u *LockPaymentOrderUpdate) SetProtocolFee(v decimal.Decimal) *LockPaymentOrderUpdate {
+	_u.mutation.ResetProtocolFee()
+	_u.mutation.SetProtocolFee(v)
+	return _u
 }
 
 // SetNillableProtocolFee sets the "protocol_fee" field if the given value is not nil.
-func (lpou *LockPaymentOrderUpdate) SetNillableProtocolFee(d *decimal.Decimal) *LockPaymentOrderUpdate {
-	if d != nil {
-		lpou.SetProtocolFee(*d)
+func (_u *LockPaymentOrderUpdate) SetNillableProtocolFee(v *decimal.Decimal) *LockPaymentOrderUpdate {
+	if v != nil {
+		_u.SetProtocolFee(*v)
 	}
-	return lpou
+	return _u
 }
 
-// AddProtocolFee adds d to the "protocol_fee" field.
-func (lpou *LockPaymentOrderUpdate) AddProtocolFee(d decimal.Decimal) *LockPaymentOrderUpdate {
-	lpou.mutation.AddProtocolFee(d)
-	return lpou
+// AddProtocolFee adds value to the "protocol_fee" field.
+func (_u *LockPaymentOrderUpdate) AddProtocolFee(v decimal.Decimal) *LockPaymentOrderUpdate {
+	_u.mutation.AddProtocolFee(v)
+	return _u
 }
 
 // SetRate sets the "rate" field.
-func (lpou *LockPaymentOrderUpdate) SetRate(d decimal.Decimal) *LockPaymentOrderUpdate {
-	lpou.mutation.ResetRate()
-	lpou.mutation.SetRate(d)
-	return lpou
+func (_u *LockPaymentOrderUpdate) SetRate(v decimal.Decimal) *LockPaymentOrderUpdate {
+	_u.mutation.ResetRate()
+	_u.mutation.SetRate(v)
+	return _u
 }
 
 // SetNillableRate sets the "rate" field if the given value is not nil.
-func (lpou *LockPaymentOrderUpdate) SetNillableRate(d *decimal.Decimal) *LockPaymentOrderUpdate {
-	if d != nil {
-		lpou.SetRate(*d)
+func (_u *LockPaymentOrderUpdate) SetNillableRate(v *decimal.Decimal) *LockPaymentOrderUpdate {
+	if v != nil {
+		_u.SetRate(*v)
 	}
-	return lpou
+	return _u
 }
 
-// AddRate adds d to the "rate" field.
-func (lpou *LockPaymentOrderUpdate) AddRate(d decimal.Decimal) *LockPaymentOrderUpdate {
-	lpou.mutation.AddRate(d)
-	return lpou
+// AddRate adds value to the "rate" field.
+func (_u *LockPaymentOrderUpdate) AddRate(v decimal.Decimal) *LockPaymentOrderUpdate {
+	_u.mutation.AddRate(v)
+	return _u
 }
 
 // SetOrderPercent sets the "order_percent" field.
-func (lpou *LockPaymentOrderUpdate) SetOrderPercent(d decimal.Decimal) *LockPaymentOrderUpdate {
-	lpou.mutation.ResetOrderPercent()
-	lpou.mutation.SetOrderPercent(d)
-	return lpou
+func (_u *LockPaymentOrderUpdate) SetOrderPercent(v decimal.Decimal) *LockPaymentOrderUpdate {
+	_u.mutation.ResetOrderPercent()
+	_u.mutation.SetOrderPercent(v)
+	return _u
 }
 
 // SetNillableOrderPercent sets the "order_percent" field if the given value is not nil.
-func (lpou *LockPaymentOrderUpdate) SetNillableOrderPercent(d *decimal.Decimal) *LockPaymentOrderUpdate {
-	if d != nil {
-		lpou.SetOrderPercent(*d)
+func (_u *LockPaymentOrderUpdate) SetNillableOrderPercent(v *decimal.Decimal) *LockPaymentOrderUpdate {
+	if v != nil {
+		_u.SetOrderPercent(*v)
 	}
-	return lpou
+	return _u
 }
 
-// AddOrderPercent adds d to the "order_percent" field.
-func (lpou *LockPaymentOrderUpdate) AddOrderPercent(d decimal.Decimal) *LockPaymentOrderUpdate {
-	lpou.mutation.AddOrderPercent(d)
-	return lpou
+// AddOrderPercent adds value to the "order_percent" field.
+func (_u *LockPaymentOrderUpdate) AddOrderPercent(v decimal.Decimal) *LockPaymentOrderUpdate {
+	_u.mutation.AddOrderPercent(v)
+	return _u
 }
 
 // SetSender sets the "sender" field.
-func (lpou *LockPaymentOrderUpdate) SetSender(s string) *LockPaymentOrderUpdate {
-	lpou.mutation.SetSender(s)
-	return lpou
+func (_u *LockPaymentOrderUpdate) SetSender(v string) *LockPaymentOrderUpdate {
+	_u.mutation.SetSender(v)
+	return _u
 }
 
 // SetNillableSender sets the "sender" field if the given value is not nil.
-func (lpou *LockPaymentOrderUpdate) SetNillableSender(s *string) *LockPaymentOrderUpdate {
-	if s != nil {
-		lpou.SetSender(*s)
+func (_u *LockPaymentOrderUpdate) SetNillableSender(v *string) *LockPaymentOrderUpdate {
+	if v != nil {
+		_u.SetSender(*v)
 	}
-	return lpou
+	return _u
 }
 
 // ClearSender clears the value of the "sender" field.
-func (lpou *LockPaymentOrderUpdate) ClearSender() *LockPaymentOrderUpdate {
-	lpou.mutation.ClearSender()
-	return lpou
+func (_u *LockPaymentOrderUpdate) ClearSender() *LockPaymentOrderUpdate {
+	_u.mutation.ClearSender()
+	return _u
 }
 
 // SetTxHash sets the "tx_hash" field.
-func (lpou *LockPaymentOrderUpdate) SetTxHash(s string) *LockPaymentOrderUpdate {
-	lpou.mutation.SetTxHash(s)
-	return lpou
+func (_u *LockPaymentOrderUpdate) SetTxHash(v string) *LockPaymentOrderUpdate {
+	_u.mutation.SetTxHash(v)
+	return _u
 }
 
 // SetNillableTxHash sets the "tx_hash" field if the given value is not nil.
-func (lpou *LockPaymentOrderUpdate) SetNillableTxHash(s *string) *LockPaymentOrderUpdate {
-	if s != nil {
-		lpou.SetTxHash(*s)
+func (_u *LockPaymentOrderUpdate) SetNillableTxHash(v *string) *LockPaymentOrderUpdate {
+	if v != nil {
+		_u.SetTxHash(*v)
 	}
-	return lpou
+	return _u
 }
 
 // ClearTxHash clears the value of the "tx_hash" field.
-func (lpou *LockPaymentOrderUpdate) ClearTxHash() *LockPaymentOrderUpdate {
-	lpou.mutation.ClearTxHash()
-	return lpou
+func (_u *LockPaymentOrderUpdate) ClearTxHash() *LockPaymentOrderUpdate {
+	_u.mutation.ClearTxHash()
+	return _u
 }
 
 // SetStatus sets the "status" field.
-func (lpou *LockPaymentOrderUpdate) SetStatus(l lockpaymentorder.Status) *LockPaymentOrderUpdate {
-	lpou.mutation.SetStatus(l)
-	return lpou
+func (_u *LockPaymentOrderUpdate) SetStatus(v lockpaymentorder.Status) *LockPaymentOrderUpdate {
+	_u.mutation.SetStatus(v)
+	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (lpou *LockPaymentOrderUpdate) SetNillableStatus(l *lockpaymentorder.Status) *LockPaymentOrderUpdate {
-	if l != nil {
-		lpou.SetStatus(*l)
+func (_u *LockPaymentOrderUpdate) SetNillableStatus(v *lockpaymentorder.Status) *LockPaymentOrderUpdate {
+	if v != nil {
+		_u.SetStatus(*v)
 	}
-	return lpou
+	return _u
 }
 
 // SetBlockNumber sets the "block_number" field.
-func (lpou *LockPaymentOrderUpdate) SetBlockNumber(i int64) *LockPaymentOrderUpdate {
-	lpou.mutation.ResetBlockNumber()
-	lpou.mutation.SetBlockNumber(i)
-	return lpou
+func (_u *LockPaymentOrderUpdate) SetBlockNumber(v int64) *LockPaymentOrderUpdate {
+	_u.mutation.ResetBlockNumber()
+	_u.mutation.SetBlockNumber(v)
+	return _u
 }
 
 // SetNillableBlockNumber sets the "block_number" field if the given value is not nil.
-func (lpou *LockPaymentOrderUpdate) SetNillableBlockNumber(i *int64) *LockPaymentOrderUpdate {
-	if i != nil {
-		lpou.SetBlockNumber(*i)
+func (_u *LockPaymentOrderUpdate) SetNillableBlockNumber(v *int64) *LockPaymentOrderUpdate {
+	if v != nil {
+		_u.SetBlockNumber(*v)
 	}
-	return lpou
+	return _u
 }
 
-// AddBlockNumber adds i to the "block_number" field.
-func (lpou *LockPaymentOrderUpdate) AddBlockNumber(i int64) *LockPaymentOrderUpdate {
-	lpou.mutation.AddBlockNumber(i)
-	return lpou
+// AddBlockNumber adds value to the "block_number" field.
+func (_u *LockPaymentOrderUpdate) AddBlockNumber(v int64) *LockPaymentOrderUpdate {
+	_u.mutation.AddBlockNumber(v)
+	return _u
 }
 
 // SetInstitution sets the "institution" field.
-func (lpou *LockPaymentOrderUpdate) SetInstitution(s string) *LockPaymentOrderUpdate {
-	lpou.mutation.SetInstitution(s)
-	return lpou
+func (_u *LockPaymentOrderUpdate) SetInstitution(v string) *LockPaymentOrderUpdate {
+	_u.mutation.SetInstitution(v)
+	return _u
 }
 
 // SetNillableInstitution sets the "institution" field if the given value is not nil.
-func (lpou *LockPaymentOrderUpdate) SetNillableInstitution(s *string) *LockPaymentOrderUpdate {
-	if s != nil {
-		lpou.SetInstitution(*s)
+func (_u *LockPaymentOrderUpdate) SetNillableInstitution(v *string) *LockPaymentOrderUpdate {
+	if v != nil {
+		_u.SetInstitution(*v)
 	}
-	return lpou
+	return _u
 }
 
 // SetAccountIdentifier sets the "account_identifier" field.
-func (lpou *LockPaymentOrderUpdate) SetAccountIdentifier(s string) *LockPaymentOrderUpdate {
-	lpou.mutation.SetAccountIdentifier(s)
-	return lpou
+func (_u *LockPaymentOrderUpdate) SetAccountIdentifier(v string) *LockPaymentOrderUpdate {
+	_u.mutation.SetAccountIdentifier(v)
+	return _u
 }
 
 // SetNillableAccountIdentifier sets the "account_identifier" field if the given value is not nil.
-func (lpou *LockPaymentOrderUpdate) SetNillableAccountIdentifier(s *string) *LockPaymentOrderUpdate {
-	if s != nil {
-		lpou.SetAccountIdentifier(*s)
+func (_u *LockPaymentOrderUpdate) SetNillableAccountIdentifier(v *string) *LockPaymentOrderUpdate {
+	if v != nil {
+		_u.SetAccountIdentifier(*v)
 	}
-	return lpou
+	return _u
 }
 
 // SetAccountName sets the "account_name" field.
-func (lpou *LockPaymentOrderUpdate) SetAccountName(s string) *LockPaymentOrderUpdate {
-	lpou.mutation.SetAccountName(s)
-	return lpou
+func (_u *LockPaymentOrderUpdate) SetAccountName(v string) *LockPaymentOrderUpdate {
+	_u.mutation.SetAccountName(v)
+	return _u
 }
 
 // SetNillableAccountName sets the "account_name" field if the given value is not nil.
-func (lpou *LockPaymentOrderUpdate) SetNillableAccountName(s *string) *LockPaymentOrderUpdate {
-	if s != nil {
-		lpou.SetAccountName(*s)
+func (_u *LockPaymentOrderUpdate) SetNillableAccountName(v *string) *LockPaymentOrderUpdate {
+	if v != nil {
+		_u.SetAccountName(*v)
 	}
-	return lpou
+	return _u
 }
 
 // SetMemo sets the "memo" field.
-func (lpou *LockPaymentOrderUpdate) SetMemo(s string) *LockPaymentOrderUpdate {
-	lpou.mutation.SetMemo(s)
-	return lpou
+func (_u *LockPaymentOrderUpdate) SetMemo(v string) *LockPaymentOrderUpdate {
+	_u.mutation.SetMemo(v)
+	return _u
 }
 
 // SetNillableMemo sets the "memo" field if the given value is not nil.
-func (lpou *LockPaymentOrderUpdate) SetNillableMemo(s *string) *LockPaymentOrderUpdate {
-	if s != nil {
-		lpou.SetMemo(*s)
+func (_u *LockPaymentOrderUpdate) SetNillableMemo(v *string) *LockPaymentOrderUpdate {
+	if v != nil {
+		_u.SetMemo(*v)
 	}
-	return lpou
+	return _u
 }
 
 // ClearMemo clears the value of the "memo" field.
-func (lpou *LockPaymentOrderUpdate) ClearMemo() *LockPaymentOrderUpdate {
-	lpou.mutation.ClearMemo()
-	return lpou
+func (_u *LockPaymentOrderUpdate) ClearMemo() *LockPaymentOrderUpdate {
+	_u.mutation.ClearMemo()
+	return _u
 }
 
 // SetMetadata sets the "metadata" field.
-func (lpou *LockPaymentOrderUpdate) SetMetadata(m map[string]interface{}) *LockPaymentOrderUpdate {
-	lpou.mutation.SetMetadata(m)
-	return lpou
+func (_u *LockPaymentOrderUpdate) SetMetadata(v map[string]interface{}) *LockPaymentOrderUpdate {
+	_u.mutation.SetMetadata(v)
+	return _u
 }
 
 // ClearMetadata clears the value of the "metadata" field.
-func (lpou *LockPaymentOrderUpdate) ClearMetadata() *LockPaymentOrderUpdate {
-	lpou.mutation.ClearMetadata()
-	return lpou
+func (_u *LockPaymentOrderUpdate) ClearMetadata() *LockPaymentOrderUpdate {
+	_u.mutation.ClearMetadata()
+	return _u
 }
 
 // SetCancellationCount sets the "cancellation_count" field.
-func (lpou *LockPaymentOrderUpdate) SetCancellationCount(i int) *LockPaymentOrderUpdate {
-	lpou.mutation.ResetCancellationCount()
-	lpou.mutation.SetCancellationCount(i)
-	return lpou
+func (_u *LockPaymentOrderUpdate) SetCancellationCount(v int) *LockPaymentOrderUpdate {
+	_u.mutation.ResetCancellationCount()
+	_u.mutation.SetCancellationCount(v)
+	return _u
 }
 
 // SetNillableCancellationCount sets the "cancellation_count" field if the given value is not nil.
-func (lpou *LockPaymentOrderUpdate) SetNillableCancellationCount(i *int) *LockPaymentOrderUpdate {
-	if i != nil {
-		lpou.SetCancellationCount(*i)
+func (_u *LockPaymentOrderUpdate) SetNillableCancellationCount(v *int) *LockPaymentOrderUpdate {
+	if v != nil {
+		_u.SetCancellationCount(*v)
 	}
-	return lpou
+	return _u
 }
 
-// AddCancellationCount adds i to the "cancellation_count" field.
-func (lpou *LockPaymentOrderUpdate) AddCancellationCount(i int) *LockPaymentOrderUpdate {
-	lpou.mutation.AddCancellationCount(i)
-	return lpou
+// AddCancellationCount adds value to the "cancellation_count" field.
+func (_u *LockPaymentOrderUpdate) AddCancellationCount(v int) *LockPaymentOrderUpdate {
+	_u.mutation.AddCancellationCount(v)
+	return _u
 }
 
 // SetCancellationReasons sets the "cancellation_reasons" field.
-func (lpou *LockPaymentOrderUpdate) SetCancellationReasons(s []string) *LockPaymentOrderUpdate {
-	lpou.mutation.SetCancellationReasons(s)
-	return lpou
+func (_u *LockPaymentOrderUpdate) SetCancellationReasons(v []string) *LockPaymentOrderUpdate {
+	_u.mutation.SetCancellationReasons(v)
+	return _u
 }
 
-// AppendCancellationReasons appends s to the "cancellation_reasons" field.
-func (lpou *LockPaymentOrderUpdate) AppendCancellationReasons(s []string) *LockPaymentOrderUpdate {
-	lpou.mutation.AppendCancellationReasons(s)
-	return lpou
+// AppendCancellationReasons appends value to the "cancellation_reasons" field.
+func (_u *LockPaymentOrderUpdate) AppendCancellationReasons(v []string) *LockPaymentOrderUpdate {
+	_u.mutation.AppendCancellationReasons(v)
+	return _u
 }
 
 // SetMessageHash sets the "message_hash" field.
-func (lpou *LockPaymentOrderUpdate) SetMessageHash(s string) *LockPaymentOrderUpdate {
-	lpou.mutation.SetMessageHash(s)
-	return lpou
+func (_u *LockPaymentOrderUpdate) SetMessageHash(v string) *LockPaymentOrderUpdate {
+	_u.mutation.SetMessageHash(v)
+	return _u
 }
 
 // SetNillableMessageHash sets the "message_hash" field if the given value is not nil.
-func (lpou *LockPaymentOrderUpdate) SetNillableMessageHash(s *string) *LockPaymentOrderUpdate {
-	if s != nil {
-		lpou.SetMessageHash(*s)
+func (_u *LockPaymentOrderUpdate) SetNillableMessageHash(v *string) *LockPaymentOrderUpdate {
+	if v != nil {
+		_u.SetMessageHash(*v)
 	}
-	return lpou
+	return _u
 }
 
 // ClearMessageHash clears the value of the "message_hash" field.
-func (lpou *LockPaymentOrderUpdate) ClearMessageHash() *LockPaymentOrderUpdate {
-	lpou.mutation.ClearMessageHash()
-	return lpou
+func (_u *LockPaymentOrderUpdate) ClearMessageHash() *LockPaymentOrderUpdate {
+	_u.mutation.ClearMessageHash()
+	return _u
 }
 
 // SetAmountInUsd sets the "amount_in_usd" field.
-func (lpou *LockPaymentOrderUpdate) SetAmountInUsd(d decimal.Decimal) *LockPaymentOrderUpdate {
-	lpou.mutation.ResetAmountInUsd()
-	lpou.mutation.SetAmountInUsd(d)
-	return lpou
+func (_u *LockPaymentOrderUpdate) SetAmountInUsd(v decimal.Decimal) *LockPaymentOrderUpdate {
+	_u.mutation.ResetAmountInUsd()
+	_u.mutation.SetAmountInUsd(v)
+	return _u
 }
 
 // SetNillableAmountInUsd sets the "amount_in_usd" field if the given value is not nil.
-func (lpou *LockPaymentOrderUpdate) SetNillableAmountInUsd(d *decimal.Decimal) *LockPaymentOrderUpdate {
-	if d != nil {
-		lpou.SetAmountInUsd(*d)
+func (_u *LockPaymentOrderUpdate) SetNillableAmountInUsd(v *decimal.Decimal) *LockPaymentOrderUpdate {
+	if v != nil {
+		_u.SetAmountInUsd(*v)
 	}
-	return lpou
+	return _u
 }
 
-// AddAmountInUsd adds d to the "amount_in_usd" field.
-func (lpou *LockPaymentOrderUpdate) AddAmountInUsd(d decimal.Decimal) *LockPaymentOrderUpdate {
-	lpou.mutation.AddAmountInUsd(d)
-	return lpou
+// AddAmountInUsd adds value to the "amount_in_usd" field.
+func (_u *LockPaymentOrderUpdate) AddAmountInUsd(v decimal.Decimal) *LockPaymentOrderUpdate {
+	_u.mutation.AddAmountInUsd(v)
+	return _u
 }
 
 // SetOrderType sets the "order_type" field.
-func (lpou *LockPaymentOrderUpdate) SetOrderType(lt lockpaymentorder.OrderType) *LockPaymentOrderUpdate {
-	lpou.mutation.SetOrderType(lt)
-	return lpou
+func (_u *LockPaymentOrderUpdate) SetOrderType(v lockpaymentorder.OrderType) *LockPaymentOrderUpdate {
+	_u.mutation.SetOrderType(v)
+	return _u
 }
 
 // SetNillableOrderType sets the "order_type" field if the given value is not nil.
-func (lpou *LockPaymentOrderUpdate) SetNillableOrderType(lt *lockpaymentorder.OrderType) *LockPaymentOrderUpdate {
-	if lt != nil {
-		lpou.SetOrderType(*lt)
+func (_u *LockPaymentOrderUpdate) SetNillableOrderType(v *lockpaymentorder.OrderType) *LockPaymentOrderUpdate {
+	if v != nil {
+		_u.SetOrderType(*v)
 	}
-	return lpou
+	return _u
 }
 
 // SetTokenID sets the "token" edge to the Token entity by ID.
-func (lpou *LockPaymentOrderUpdate) SetTokenID(id int) *LockPaymentOrderUpdate {
-	lpou.mutation.SetTokenID(id)
-	return lpou
+func (_u *LockPaymentOrderUpdate) SetTokenID(id int) *LockPaymentOrderUpdate {
+	_u.mutation.SetTokenID(id)
+	return _u
 }
 
 // SetToken sets the "token" edge to the Token entity.
-func (lpou *LockPaymentOrderUpdate) SetToken(t *Token) *LockPaymentOrderUpdate {
-	return lpou.SetTokenID(t.ID)
+func (_u *LockPaymentOrderUpdate) SetToken(v *Token) *LockPaymentOrderUpdate {
+	return _u.SetTokenID(v.ID)
 }
 
 // SetProvisionBucketID sets the "provision_bucket" edge to the ProvisionBucket entity by ID.
-func (lpou *LockPaymentOrderUpdate) SetProvisionBucketID(id int) *LockPaymentOrderUpdate {
-	lpou.mutation.SetProvisionBucketID(id)
-	return lpou
+func (_u *LockPaymentOrderUpdate) SetProvisionBucketID(id int) *LockPaymentOrderUpdate {
+	_u.mutation.SetProvisionBucketID(id)
+	return _u
 }
 
 // SetNillableProvisionBucketID sets the "provision_bucket" edge to the ProvisionBucket entity by ID if the given value is not nil.
-func (lpou *LockPaymentOrderUpdate) SetNillableProvisionBucketID(id *int) *LockPaymentOrderUpdate {
+func (_u *LockPaymentOrderUpdate) SetNillableProvisionBucketID(id *int) *LockPaymentOrderUpdate {
 	if id != nil {
-		lpou = lpou.SetProvisionBucketID(*id)
+		_u = _u.SetProvisionBucketID(*id)
 	}
-	return lpou
+	return _u
 }
 
 // SetProvisionBucket sets the "provision_bucket" edge to the ProvisionBucket entity.
-func (lpou *LockPaymentOrderUpdate) SetProvisionBucket(p *ProvisionBucket) *LockPaymentOrderUpdate {
-	return lpou.SetProvisionBucketID(p.ID)
+func (_u *LockPaymentOrderUpdate) SetProvisionBucket(v *ProvisionBucket) *LockPaymentOrderUpdate {
+	return _u.SetProvisionBucketID(v.ID)
 }
 
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
-func (lpou *LockPaymentOrderUpdate) SetProviderID(id string) *LockPaymentOrderUpdate {
-	lpou.mutation.SetProviderID(id)
-	return lpou
+func (_u *LockPaymentOrderUpdate) SetProviderID(id string) *LockPaymentOrderUpdate {
+	_u.mutation.SetProviderID(id)
+	return _u
 }
 
 // SetNillableProviderID sets the "provider" edge to the ProviderProfile entity by ID if the given value is not nil.
-func (lpou *LockPaymentOrderUpdate) SetNillableProviderID(id *string) *LockPaymentOrderUpdate {
+func (_u *LockPaymentOrderUpdate) SetNillableProviderID(id *string) *LockPaymentOrderUpdate {
 	if id != nil {
-		lpou = lpou.SetProviderID(*id)
+		_u = _u.SetProviderID(*id)
 	}
-	return lpou
+	return _u
 }
 
 // SetProvider sets the "provider" edge to the ProviderProfile entity.
-func (lpou *LockPaymentOrderUpdate) SetProvider(p *ProviderProfile) *LockPaymentOrderUpdate {
-	return lpou.SetProviderID(p.ID)
+func (_u *LockPaymentOrderUpdate) SetProvider(v *ProviderProfile) *LockPaymentOrderUpdate {
+	return _u.SetProviderID(v.ID)
 }
 
 // AddFulfillmentIDs adds the "fulfillments" edge to the LockOrderFulfillment entity by IDs.
-func (lpou *LockPaymentOrderUpdate) AddFulfillmentIDs(ids ...uuid.UUID) *LockPaymentOrderUpdate {
-	lpou.mutation.AddFulfillmentIDs(ids...)
-	return lpou
+func (_u *LockPaymentOrderUpdate) AddFulfillmentIDs(ids ...uuid.UUID) *LockPaymentOrderUpdate {
+	_u.mutation.AddFulfillmentIDs(ids...)
+	return _u
 }
 
 // AddFulfillments adds the "fulfillments" edges to the LockOrderFulfillment entity.
-func (lpou *LockPaymentOrderUpdate) AddFulfillments(l ...*LockOrderFulfillment) *LockPaymentOrderUpdate {
-	ids := make([]uuid.UUID, len(l))
-	for i := range l {
-		ids[i] = l[i].ID
+func (_u *LockPaymentOrderUpdate) AddFulfillments(v ...*LockOrderFulfillment) *LockPaymentOrderUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return lpou.AddFulfillmentIDs(ids...)
+	return _u.AddFulfillmentIDs(ids...)
 }
 
 // AddTransactionIDs adds the "transactions" edge to the TransactionLog entity by IDs.
-func (lpou *LockPaymentOrderUpdate) AddTransactionIDs(ids ...uuid.UUID) *LockPaymentOrderUpdate {
-	lpou.mutation.AddTransactionIDs(ids...)
-	return lpou
+func (_u *LockPaymentOrderUpdate) AddTransactionIDs(ids ...uuid.UUID) *LockPaymentOrderUpdate {
+	_u.mutation.AddTransactionIDs(ids...)
+	return _u
 }
 
 // AddTransactions adds the "transactions" edges to the TransactionLog entity.
-func (lpou *LockPaymentOrderUpdate) AddTransactions(t ...*TransactionLog) *LockPaymentOrderUpdate {
-	ids := make([]uuid.UUID, len(t))
-	for i := range t {
-		ids[i] = t[i].ID
+func (_u *LockPaymentOrderUpdate) AddTransactions(v ...*TransactionLog) *LockPaymentOrderUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return lpou.AddTransactionIDs(ids...)
+	return _u.AddTransactionIDs(ids...)
 }
 
 // Mutation returns the LockPaymentOrderMutation object of the builder.
-func (lpou *LockPaymentOrderUpdate) Mutation() *LockPaymentOrderMutation {
-	return lpou.mutation
+func (_u *LockPaymentOrderUpdate) Mutation() *LockPaymentOrderMutation {
+	return _u.mutation
 }
 
 // ClearToken clears the "token" edge to the Token entity.
-func (lpou *LockPaymentOrderUpdate) ClearToken() *LockPaymentOrderUpdate {
-	lpou.mutation.ClearToken()
-	return lpou
+func (_u *LockPaymentOrderUpdate) ClearToken() *LockPaymentOrderUpdate {
+	_u.mutation.ClearToken()
+	return _u
 }
 
 // ClearProvisionBucket clears the "provision_bucket" edge to the ProvisionBucket entity.
-func (lpou *LockPaymentOrderUpdate) ClearProvisionBucket() *LockPaymentOrderUpdate {
-	lpou.mutation.ClearProvisionBucket()
-	return lpou
+func (_u *LockPaymentOrderUpdate) ClearProvisionBucket() *LockPaymentOrderUpdate {
+	_u.mutation.ClearProvisionBucket()
+	return _u
 }
 
 // ClearProvider clears the "provider" edge to the ProviderProfile entity.
-func (lpou *LockPaymentOrderUpdate) ClearProvider() *LockPaymentOrderUpdate {
-	lpou.mutation.ClearProvider()
-	return lpou
+func (_u *LockPaymentOrderUpdate) ClearProvider() *LockPaymentOrderUpdate {
+	_u.mutation.ClearProvider()
+	return _u
 }
 
 // ClearFulfillments clears all "fulfillments" edges to the LockOrderFulfillment entity.
-func (lpou *LockPaymentOrderUpdate) ClearFulfillments() *LockPaymentOrderUpdate {
-	lpou.mutation.ClearFulfillments()
-	return lpou
+func (_u *LockPaymentOrderUpdate) ClearFulfillments() *LockPaymentOrderUpdate {
+	_u.mutation.ClearFulfillments()
+	return _u
 }
 
 // RemoveFulfillmentIDs removes the "fulfillments" edge to LockOrderFulfillment entities by IDs.
-func (lpou *LockPaymentOrderUpdate) RemoveFulfillmentIDs(ids ...uuid.UUID) *LockPaymentOrderUpdate {
-	lpou.mutation.RemoveFulfillmentIDs(ids...)
-	return lpou
+func (_u *LockPaymentOrderUpdate) RemoveFulfillmentIDs(ids ...uuid.UUID) *LockPaymentOrderUpdate {
+	_u.mutation.RemoveFulfillmentIDs(ids...)
+	return _u
 }
 
 // RemoveFulfillments removes "fulfillments" edges to LockOrderFulfillment entities.
-func (lpou *LockPaymentOrderUpdate) RemoveFulfillments(l ...*LockOrderFulfillment) *LockPaymentOrderUpdate {
-	ids := make([]uuid.UUID, len(l))
-	for i := range l {
-		ids[i] = l[i].ID
+func (_u *LockPaymentOrderUpdate) RemoveFulfillments(v ...*LockOrderFulfillment) *LockPaymentOrderUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return lpou.RemoveFulfillmentIDs(ids...)
+	return _u.RemoveFulfillmentIDs(ids...)
 }
 
 // ClearTransactions clears all "transactions" edges to the TransactionLog entity.
-func (lpou *LockPaymentOrderUpdate) ClearTransactions() *LockPaymentOrderUpdate {
-	lpou.mutation.ClearTransactions()
-	return lpou
+func (_u *LockPaymentOrderUpdate) ClearTransactions() *LockPaymentOrderUpdate {
+	_u.mutation.ClearTransactions()
+	return _u
 }
 
 // RemoveTransactionIDs removes the "transactions" edge to TransactionLog entities by IDs.
-func (lpou *LockPaymentOrderUpdate) RemoveTransactionIDs(ids ...uuid.UUID) *LockPaymentOrderUpdate {
-	lpou.mutation.RemoveTransactionIDs(ids...)
-	return lpou
+func (_u *LockPaymentOrderUpdate) RemoveTransactionIDs(ids ...uuid.UUID) *LockPaymentOrderUpdate {
+	_u.mutation.RemoveTransactionIDs(ids...)
+	return _u
 }
 
 // RemoveTransactions removes "transactions" edges to TransactionLog entities.
-func (lpou *LockPaymentOrderUpdate) RemoveTransactions(t ...*TransactionLog) *LockPaymentOrderUpdate {
-	ids := make([]uuid.UUID, len(t))
-	for i := range t {
-		ids[i] = t[i].ID
+func (_u *LockPaymentOrderUpdate) RemoveTransactions(v ...*TransactionLog) *LockPaymentOrderUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return lpou.RemoveTransactionIDs(ids...)
+	return _u.RemoveTransactionIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
-func (lpou *LockPaymentOrderUpdate) Save(ctx context.Context) (int, error) {
-	lpou.defaults()
-	return withHooks(ctx, lpou.sqlSave, lpou.mutation, lpou.hooks)
+func (_u *LockPaymentOrderUpdate) Save(ctx context.Context) (int, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (lpou *LockPaymentOrderUpdate) SaveX(ctx context.Context) int {
-	affected, err := lpou.Save(ctx)
+func (_u *LockPaymentOrderUpdate) SaveX(ctx context.Context) int {
+	affected, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -537,168 +537,168 @@ func (lpou *LockPaymentOrderUpdate) SaveX(ctx context.Context) int {
 }
 
 // Exec executes the query.
-func (lpou *LockPaymentOrderUpdate) Exec(ctx context.Context) error {
-	_, err := lpou.Save(ctx)
+func (_u *LockPaymentOrderUpdate) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (lpou *LockPaymentOrderUpdate) ExecX(ctx context.Context) {
-	if err := lpou.Exec(ctx); err != nil {
+func (_u *LockPaymentOrderUpdate) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (lpou *LockPaymentOrderUpdate) defaults() {
-	if _, ok := lpou.mutation.UpdatedAt(); !ok {
+func (_u *LockPaymentOrderUpdate) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := lockpaymentorder.UpdateDefaultUpdatedAt()
-		lpou.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (lpou *LockPaymentOrderUpdate) check() error {
-	if v, ok := lpou.mutation.TxHash(); ok {
+func (_u *LockPaymentOrderUpdate) check() error {
+	if v, ok := _u.mutation.TxHash(); ok {
 		if err := lockpaymentorder.TxHashValidator(v); err != nil {
 			return &ValidationError{Name: "tx_hash", err: fmt.Errorf(`ent: validator failed for field "LockPaymentOrder.tx_hash": %w`, err)}
 		}
 	}
-	if v, ok := lpou.mutation.Status(); ok {
+	if v, ok := _u.mutation.Status(); ok {
 		if err := lockpaymentorder.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "LockPaymentOrder.status": %w`, err)}
 		}
 	}
-	if v, ok := lpou.mutation.MessageHash(); ok {
+	if v, ok := _u.mutation.MessageHash(); ok {
 		if err := lockpaymentorder.MessageHashValidator(v); err != nil {
 			return &ValidationError{Name: "message_hash", err: fmt.Errorf(`ent: validator failed for field "LockPaymentOrder.message_hash": %w`, err)}
 		}
 	}
-	if v, ok := lpou.mutation.OrderType(); ok {
+	if v, ok := _u.mutation.OrderType(); ok {
 		if err := lockpaymentorder.OrderTypeValidator(v); err != nil {
 			return &ValidationError{Name: "order_type", err: fmt.Errorf(`ent: validator failed for field "LockPaymentOrder.order_type": %w`, err)}
 		}
 	}
-	if lpou.mutation.TokenCleared() && len(lpou.mutation.TokenIDs()) > 0 {
+	if _u.mutation.TokenCleared() && len(_u.mutation.TokenIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "LockPaymentOrder.token"`)
 	}
 	return nil
 }
 
-func (lpou *LockPaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	if err := lpou.check(); err != nil {
-		return n, err
+func (_u *LockPaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(lockpaymentorder.Table, lockpaymentorder.Columns, sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID))
-	if ps := lpou.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := lpou.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(lockpaymentorder.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := lpou.mutation.GatewayID(); ok {
+	if value, ok := _u.mutation.GatewayID(); ok {
 		_spec.SetField(lockpaymentorder.FieldGatewayID, field.TypeString, value)
 	}
-	if value, ok := lpou.mutation.Amount(); ok {
+	if value, ok := _u.mutation.Amount(); ok {
 		_spec.SetField(lockpaymentorder.FieldAmount, field.TypeFloat64, value)
 	}
-	if value, ok := lpou.mutation.AddedAmount(); ok {
+	if value, ok := _u.mutation.AddedAmount(); ok {
 		_spec.AddField(lockpaymentorder.FieldAmount, field.TypeFloat64, value)
 	}
-	if value, ok := lpou.mutation.ProtocolFee(); ok {
+	if value, ok := _u.mutation.ProtocolFee(); ok {
 		_spec.SetField(lockpaymentorder.FieldProtocolFee, field.TypeFloat64, value)
 	}
-	if value, ok := lpou.mutation.AddedProtocolFee(); ok {
+	if value, ok := _u.mutation.AddedProtocolFee(); ok {
 		_spec.AddField(lockpaymentorder.FieldProtocolFee, field.TypeFloat64, value)
 	}
-	if value, ok := lpou.mutation.Rate(); ok {
+	if value, ok := _u.mutation.Rate(); ok {
 		_spec.SetField(lockpaymentorder.FieldRate, field.TypeFloat64, value)
 	}
-	if value, ok := lpou.mutation.AddedRate(); ok {
+	if value, ok := _u.mutation.AddedRate(); ok {
 		_spec.AddField(lockpaymentorder.FieldRate, field.TypeFloat64, value)
 	}
-	if value, ok := lpou.mutation.OrderPercent(); ok {
+	if value, ok := _u.mutation.OrderPercent(); ok {
 		_spec.SetField(lockpaymentorder.FieldOrderPercent, field.TypeFloat64, value)
 	}
-	if value, ok := lpou.mutation.AddedOrderPercent(); ok {
+	if value, ok := _u.mutation.AddedOrderPercent(); ok {
 		_spec.AddField(lockpaymentorder.FieldOrderPercent, field.TypeFloat64, value)
 	}
-	if value, ok := lpou.mutation.Sender(); ok {
+	if value, ok := _u.mutation.Sender(); ok {
 		_spec.SetField(lockpaymentorder.FieldSender, field.TypeString, value)
 	}
-	if lpou.mutation.SenderCleared() {
+	if _u.mutation.SenderCleared() {
 		_spec.ClearField(lockpaymentorder.FieldSender, field.TypeString)
 	}
-	if value, ok := lpou.mutation.TxHash(); ok {
+	if value, ok := _u.mutation.TxHash(); ok {
 		_spec.SetField(lockpaymentorder.FieldTxHash, field.TypeString, value)
 	}
-	if lpou.mutation.TxHashCleared() {
+	if _u.mutation.TxHashCleared() {
 		_spec.ClearField(lockpaymentorder.FieldTxHash, field.TypeString)
 	}
-	if value, ok := lpou.mutation.Status(); ok {
+	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(lockpaymentorder.FieldStatus, field.TypeEnum, value)
 	}
-	if value, ok := lpou.mutation.BlockNumber(); ok {
+	if value, ok := _u.mutation.BlockNumber(); ok {
 		_spec.SetField(lockpaymentorder.FieldBlockNumber, field.TypeInt64, value)
 	}
-	if value, ok := lpou.mutation.AddedBlockNumber(); ok {
+	if value, ok := _u.mutation.AddedBlockNumber(); ok {
 		_spec.AddField(lockpaymentorder.FieldBlockNumber, field.TypeInt64, value)
 	}
-	if value, ok := lpou.mutation.Institution(); ok {
+	if value, ok := _u.mutation.Institution(); ok {
 		_spec.SetField(lockpaymentorder.FieldInstitution, field.TypeString, value)
 	}
-	if value, ok := lpou.mutation.AccountIdentifier(); ok {
+	if value, ok := _u.mutation.AccountIdentifier(); ok {
 		_spec.SetField(lockpaymentorder.FieldAccountIdentifier, field.TypeString, value)
 	}
-	if value, ok := lpou.mutation.AccountName(); ok {
+	if value, ok := _u.mutation.AccountName(); ok {
 		_spec.SetField(lockpaymentorder.FieldAccountName, field.TypeString, value)
 	}
-	if value, ok := lpou.mutation.Memo(); ok {
+	if value, ok := _u.mutation.Memo(); ok {
 		_spec.SetField(lockpaymentorder.FieldMemo, field.TypeString, value)
 	}
-	if lpou.mutation.MemoCleared() {
+	if _u.mutation.MemoCleared() {
 		_spec.ClearField(lockpaymentorder.FieldMemo, field.TypeString)
 	}
-	if value, ok := lpou.mutation.Metadata(); ok {
+	if value, ok := _u.mutation.Metadata(); ok {
 		_spec.SetField(lockpaymentorder.FieldMetadata, field.TypeJSON, value)
 	}
-	if lpou.mutation.MetadataCleared() {
+	if _u.mutation.MetadataCleared() {
 		_spec.ClearField(lockpaymentorder.FieldMetadata, field.TypeJSON)
 	}
-	if value, ok := lpou.mutation.CancellationCount(); ok {
+	if value, ok := _u.mutation.CancellationCount(); ok {
 		_spec.SetField(lockpaymentorder.FieldCancellationCount, field.TypeInt, value)
 	}
-	if value, ok := lpou.mutation.AddedCancellationCount(); ok {
+	if value, ok := _u.mutation.AddedCancellationCount(); ok {
 		_spec.AddField(lockpaymentorder.FieldCancellationCount, field.TypeInt, value)
 	}
-	if value, ok := lpou.mutation.CancellationReasons(); ok {
+	if value, ok := _u.mutation.CancellationReasons(); ok {
 		_spec.SetField(lockpaymentorder.FieldCancellationReasons, field.TypeJSON, value)
 	}
-	if value, ok := lpou.mutation.AppendedCancellationReasons(); ok {
+	if value, ok := _u.mutation.AppendedCancellationReasons(); ok {
 		_spec.AddModifier(func(u *sql.UpdateBuilder) {
 			sqljson.Append(u, lockpaymentorder.FieldCancellationReasons, value)
 		})
 	}
-	if value, ok := lpou.mutation.MessageHash(); ok {
+	if value, ok := _u.mutation.MessageHash(); ok {
 		_spec.SetField(lockpaymentorder.FieldMessageHash, field.TypeString, value)
 	}
-	if lpou.mutation.MessageHashCleared() {
+	if _u.mutation.MessageHashCleared() {
 		_spec.ClearField(lockpaymentorder.FieldMessageHash, field.TypeString)
 	}
-	if value, ok := lpou.mutation.AmountInUsd(); ok {
+	if value, ok := _u.mutation.AmountInUsd(); ok {
 		_spec.SetField(lockpaymentorder.FieldAmountInUsd, field.TypeFloat64, value)
 	}
-	if value, ok := lpou.mutation.AddedAmountInUsd(); ok {
+	if value, ok := _u.mutation.AddedAmountInUsd(); ok {
 		_spec.AddField(lockpaymentorder.FieldAmountInUsd, field.TypeFloat64, value)
 	}
-	if value, ok := lpou.mutation.OrderType(); ok {
+	if value, ok := _u.mutation.OrderType(); ok {
 		_spec.SetField(lockpaymentorder.FieldOrderType, field.TypeEnum, value)
 	}
-	if lpou.mutation.TokenCleared() {
+	if _u.mutation.TokenCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -711,7 +711,7 @@ func (lpou *LockPaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err err
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := lpou.mutation.TokenIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.TokenIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -727,7 +727,7 @@ func (lpou *LockPaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err err
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if lpou.mutation.ProvisionBucketCleared() {
+	if _u.mutation.ProvisionBucketCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -740,7 +740,7 @@ func (lpou *LockPaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err err
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := lpou.mutation.ProvisionBucketIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProvisionBucketIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -756,7 +756,7 @@ func (lpou *LockPaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err err
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if lpou.mutation.ProviderCleared() {
+	if _u.mutation.ProviderCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -769,7 +769,7 @@ func (lpou *LockPaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err err
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := lpou.mutation.ProviderIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProviderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -785,7 +785,7 @@ func (lpou *LockPaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err err
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if lpou.mutation.FulfillmentsCleared() {
+	if _u.mutation.FulfillmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -798,7 +798,7 @@ func (lpou *LockPaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err err
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := lpou.mutation.RemovedFulfillmentsIDs(); len(nodes) > 0 && !lpou.mutation.FulfillmentsCleared() {
+	if nodes := _u.mutation.RemovedFulfillmentsIDs(); len(nodes) > 0 && !_u.mutation.FulfillmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -814,7 +814,7 @@ func (lpou *LockPaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err err
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := lpou.mutation.FulfillmentsIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.FulfillmentsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -830,7 +830,7 @@ func (lpou *LockPaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err err
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if lpou.mutation.TransactionsCleared() {
+	if _u.mutation.TransactionsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -843,7 +843,7 @@ func (lpou *LockPaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err err
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := lpou.mutation.RemovedTransactionsIDs(); len(nodes) > 0 && !lpou.mutation.TransactionsCleared() {
+	if nodes := _u.mutation.RemovedTransactionsIDs(); len(nodes) > 0 && !_u.mutation.TransactionsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -859,7 +859,7 @@ func (lpou *LockPaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err err
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := lpou.mutation.TransactionsIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.TransactionsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -875,7 +875,7 @@ func (lpou *LockPaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err err
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if n, err = sqlgraph.UpdateNodes(ctx, lpou.driver, _spec); err != nil {
+	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{lockpaymentorder.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -883,8 +883,8 @@ func (lpou *LockPaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err err
 		}
 		return 0, err
 	}
-	lpou.mutation.done = true
-	return n, nil
+	_u.mutation.done = true
+	return _node, nil
 }
 
 // LockPaymentOrderUpdateOne is the builder for updating a single LockPaymentOrder entity.
@@ -896,512 +896,512 @@ type LockPaymentOrderUpdateOne struct {
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (lpouo *LockPaymentOrderUpdateOne) SetUpdatedAt(t time.Time) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.SetUpdatedAt(t)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) SetUpdatedAt(v time.Time) *LockPaymentOrderUpdateOne {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetGatewayID sets the "gateway_id" field.
-func (lpouo *LockPaymentOrderUpdateOne) SetGatewayID(s string) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.SetGatewayID(s)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) SetGatewayID(v string) *LockPaymentOrderUpdateOne {
+	_u.mutation.SetGatewayID(v)
+	return _u
 }
 
 // SetNillableGatewayID sets the "gateway_id" field if the given value is not nil.
-func (lpouo *LockPaymentOrderUpdateOne) SetNillableGatewayID(s *string) *LockPaymentOrderUpdateOne {
-	if s != nil {
-		lpouo.SetGatewayID(*s)
+func (_u *LockPaymentOrderUpdateOne) SetNillableGatewayID(v *string) *LockPaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetGatewayID(*v)
 	}
-	return lpouo
+	return _u
 }
 
 // SetAmount sets the "amount" field.
-func (lpouo *LockPaymentOrderUpdateOne) SetAmount(d decimal.Decimal) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.ResetAmount()
-	lpouo.mutation.SetAmount(d)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) SetAmount(v decimal.Decimal) *LockPaymentOrderUpdateOne {
+	_u.mutation.ResetAmount()
+	_u.mutation.SetAmount(v)
+	return _u
 }
 
 // SetNillableAmount sets the "amount" field if the given value is not nil.
-func (lpouo *LockPaymentOrderUpdateOne) SetNillableAmount(d *decimal.Decimal) *LockPaymentOrderUpdateOne {
-	if d != nil {
-		lpouo.SetAmount(*d)
+func (_u *LockPaymentOrderUpdateOne) SetNillableAmount(v *decimal.Decimal) *LockPaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetAmount(*v)
 	}
-	return lpouo
+	return _u
 }
 
-// AddAmount adds d to the "amount" field.
-func (lpouo *LockPaymentOrderUpdateOne) AddAmount(d decimal.Decimal) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.AddAmount(d)
-	return lpouo
+// AddAmount adds value to the "amount" field.
+func (_u *LockPaymentOrderUpdateOne) AddAmount(v decimal.Decimal) *LockPaymentOrderUpdateOne {
+	_u.mutation.AddAmount(v)
+	return _u
 }
 
 // SetProtocolFee sets the "protocol_fee" field.
-func (lpouo *LockPaymentOrderUpdateOne) SetProtocolFee(d decimal.Decimal) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.ResetProtocolFee()
-	lpouo.mutation.SetProtocolFee(d)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) SetProtocolFee(v decimal.Decimal) *LockPaymentOrderUpdateOne {
+	_u.mutation.ResetProtocolFee()
+	_u.mutation.SetProtocolFee(v)
+	return _u
 }
 
 // SetNillableProtocolFee sets the "protocol_fee" field if the given value is not nil.
-func (lpouo *LockPaymentOrderUpdateOne) SetNillableProtocolFee(d *decimal.Decimal) *LockPaymentOrderUpdateOne {
-	if d != nil {
-		lpouo.SetProtocolFee(*d)
+func (_u *LockPaymentOrderUpdateOne) SetNillableProtocolFee(v *decimal.Decimal) *LockPaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetProtocolFee(*v)
 	}
-	return lpouo
+	return _u
 }
 
-// AddProtocolFee adds d to the "protocol_fee" field.
-func (lpouo *LockPaymentOrderUpdateOne) AddProtocolFee(d decimal.Decimal) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.AddProtocolFee(d)
-	return lpouo
+// AddProtocolFee adds value to the "protocol_fee" field.
+func (_u *LockPaymentOrderUpdateOne) AddProtocolFee(v decimal.Decimal) *LockPaymentOrderUpdateOne {
+	_u.mutation.AddProtocolFee(v)
+	return _u
 }
 
 // SetRate sets the "rate" field.
-func (lpouo *LockPaymentOrderUpdateOne) SetRate(d decimal.Decimal) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.ResetRate()
-	lpouo.mutation.SetRate(d)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) SetRate(v decimal.Decimal) *LockPaymentOrderUpdateOne {
+	_u.mutation.ResetRate()
+	_u.mutation.SetRate(v)
+	return _u
 }
 
 // SetNillableRate sets the "rate" field if the given value is not nil.
-func (lpouo *LockPaymentOrderUpdateOne) SetNillableRate(d *decimal.Decimal) *LockPaymentOrderUpdateOne {
-	if d != nil {
-		lpouo.SetRate(*d)
+func (_u *LockPaymentOrderUpdateOne) SetNillableRate(v *decimal.Decimal) *LockPaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetRate(*v)
 	}
-	return lpouo
+	return _u
 }
 
-// AddRate adds d to the "rate" field.
-func (lpouo *LockPaymentOrderUpdateOne) AddRate(d decimal.Decimal) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.AddRate(d)
-	return lpouo
+// AddRate adds value to the "rate" field.
+func (_u *LockPaymentOrderUpdateOne) AddRate(v decimal.Decimal) *LockPaymentOrderUpdateOne {
+	_u.mutation.AddRate(v)
+	return _u
 }
 
 // SetOrderPercent sets the "order_percent" field.
-func (lpouo *LockPaymentOrderUpdateOne) SetOrderPercent(d decimal.Decimal) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.ResetOrderPercent()
-	lpouo.mutation.SetOrderPercent(d)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) SetOrderPercent(v decimal.Decimal) *LockPaymentOrderUpdateOne {
+	_u.mutation.ResetOrderPercent()
+	_u.mutation.SetOrderPercent(v)
+	return _u
 }
 
 // SetNillableOrderPercent sets the "order_percent" field if the given value is not nil.
-func (lpouo *LockPaymentOrderUpdateOne) SetNillableOrderPercent(d *decimal.Decimal) *LockPaymentOrderUpdateOne {
-	if d != nil {
-		lpouo.SetOrderPercent(*d)
+func (_u *LockPaymentOrderUpdateOne) SetNillableOrderPercent(v *decimal.Decimal) *LockPaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetOrderPercent(*v)
 	}
-	return lpouo
+	return _u
 }
 
-// AddOrderPercent adds d to the "order_percent" field.
-func (lpouo *LockPaymentOrderUpdateOne) AddOrderPercent(d decimal.Decimal) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.AddOrderPercent(d)
-	return lpouo
+// AddOrderPercent adds value to the "order_percent" field.
+func (_u *LockPaymentOrderUpdateOne) AddOrderPercent(v decimal.Decimal) *LockPaymentOrderUpdateOne {
+	_u.mutation.AddOrderPercent(v)
+	return _u
 }
 
 // SetSender sets the "sender" field.
-func (lpouo *LockPaymentOrderUpdateOne) SetSender(s string) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.SetSender(s)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) SetSender(v string) *LockPaymentOrderUpdateOne {
+	_u.mutation.SetSender(v)
+	return _u
 }
 
 // SetNillableSender sets the "sender" field if the given value is not nil.
-func (lpouo *LockPaymentOrderUpdateOne) SetNillableSender(s *string) *LockPaymentOrderUpdateOne {
-	if s != nil {
-		lpouo.SetSender(*s)
+func (_u *LockPaymentOrderUpdateOne) SetNillableSender(v *string) *LockPaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetSender(*v)
 	}
-	return lpouo
+	return _u
 }
 
 // ClearSender clears the value of the "sender" field.
-func (lpouo *LockPaymentOrderUpdateOne) ClearSender() *LockPaymentOrderUpdateOne {
-	lpouo.mutation.ClearSender()
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) ClearSender() *LockPaymentOrderUpdateOne {
+	_u.mutation.ClearSender()
+	return _u
 }
 
 // SetTxHash sets the "tx_hash" field.
-func (lpouo *LockPaymentOrderUpdateOne) SetTxHash(s string) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.SetTxHash(s)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) SetTxHash(v string) *LockPaymentOrderUpdateOne {
+	_u.mutation.SetTxHash(v)
+	return _u
 }
 
 // SetNillableTxHash sets the "tx_hash" field if the given value is not nil.
-func (lpouo *LockPaymentOrderUpdateOne) SetNillableTxHash(s *string) *LockPaymentOrderUpdateOne {
-	if s != nil {
-		lpouo.SetTxHash(*s)
+func (_u *LockPaymentOrderUpdateOne) SetNillableTxHash(v *string) *LockPaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetTxHash(*v)
 	}
-	return lpouo
+	return _u
 }
 
 // ClearTxHash clears the value of the "tx_hash" field.
-func (lpouo *LockPaymentOrderUpdateOne) ClearTxHash() *LockPaymentOrderUpdateOne {
-	lpouo.mutation.ClearTxHash()
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) ClearTxHash() *LockPaymentOrderUpdateOne {
+	_u.mutation.ClearTxHash()
+	return _u
 }
 
 // SetStatus sets the "status" field.
-func (lpouo *LockPaymentOrderUpdateOne) SetStatus(l lockpaymentorder.Status) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.SetStatus(l)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) SetStatus(v lockpaymentorder.Status) *LockPaymentOrderUpdateOne {
+	_u.mutation.SetStatus(v)
+	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (lpouo *LockPaymentOrderUpdateOne) SetNillableStatus(l *lockpaymentorder.Status) *LockPaymentOrderUpdateOne {
-	if l != nil {
-		lpouo.SetStatus(*l)
+func (_u *LockPaymentOrderUpdateOne) SetNillableStatus(v *lockpaymentorder.Status) *LockPaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetStatus(*v)
 	}
-	return lpouo
+	return _u
 }
 
 // SetBlockNumber sets the "block_number" field.
-func (lpouo *LockPaymentOrderUpdateOne) SetBlockNumber(i int64) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.ResetBlockNumber()
-	lpouo.mutation.SetBlockNumber(i)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) SetBlockNumber(v int64) *LockPaymentOrderUpdateOne {
+	_u.mutation.ResetBlockNumber()
+	_u.mutation.SetBlockNumber(v)
+	return _u
 }
 
 // SetNillableBlockNumber sets the "block_number" field if the given value is not nil.
-func (lpouo *LockPaymentOrderUpdateOne) SetNillableBlockNumber(i *int64) *LockPaymentOrderUpdateOne {
-	if i != nil {
-		lpouo.SetBlockNumber(*i)
+func (_u *LockPaymentOrderUpdateOne) SetNillableBlockNumber(v *int64) *LockPaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetBlockNumber(*v)
 	}
-	return lpouo
+	return _u
 }
 
-// AddBlockNumber adds i to the "block_number" field.
-func (lpouo *LockPaymentOrderUpdateOne) AddBlockNumber(i int64) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.AddBlockNumber(i)
-	return lpouo
+// AddBlockNumber adds value to the "block_number" field.
+func (_u *LockPaymentOrderUpdateOne) AddBlockNumber(v int64) *LockPaymentOrderUpdateOne {
+	_u.mutation.AddBlockNumber(v)
+	return _u
 }
 
 // SetInstitution sets the "institution" field.
-func (lpouo *LockPaymentOrderUpdateOne) SetInstitution(s string) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.SetInstitution(s)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) SetInstitution(v string) *LockPaymentOrderUpdateOne {
+	_u.mutation.SetInstitution(v)
+	return _u
 }
 
 // SetNillableInstitution sets the "institution" field if the given value is not nil.
-func (lpouo *LockPaymentOrderUpdateOne) SetNillableInstitution(s *string) *LockPaymentOrderUpdateOne {
-	if s != nil {
-		lpouo.SetInstitution(*s)
+func (_u *LockPaymentOrderUpdateOne) SetNillableInstitution(v *string) *LockPaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetInstitution(*v)
 	}
-	return lpouo
+	return _u
 }
 
 // SetAccountIdentifier sets the "account_identifier" field.
-func (lpouo *LockPaymentOrderUpdateOne) SetAccountIdentifier(s string) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.SetAccountIdentifier(s)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) SetAccountIdentifier(v string) *LockPaymentOrderUpdateOne {
+	_u.mutation.SetAccountIdentifier(v)
+	return _u
 }
 
 // SetNillableAccountIdentifier sets the "account_identifier" field if the given value is not nil.
-func (lpouo *LockPaymentOrderUpdateOne) SetNillableAccountIdentifier(s *string) *LockPaymentOrderUpdateOne {
-	if s != nil {
-		lpouo.SetAccountIdentifier(*s)
+func (_u *LockPaymentOrderUpdateOne) SetNillableAccountIdentifier(v *string) *LockPaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetAccountIdentifier(*v)
 	}
-	return lpouo
+	return _u
 }
 
 // SetAccountName sets the "account_name" field.
-func (lpouo *LockPaymentOrderUpdateOne) SetAccountName(s string) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.SetAccountName(s)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) SetAccountName(v string) *LockPaymentOrderUpdateOne {
+	_u.mutation.SetAccountName(v)
+	return _u
 }
 
 // SetNillableAccountName sets the "account_name" field if the given value is not nil.
-func (lpouo *LockPaymentOrderUpdateOne) SetNillableAccountName(s *string) *LockPaymentOrderUpdateOne {
-	if s != nil {
-		lpouo.SetAccountName(*s)
+func (_u *LockPaymentOrderUpdateOne) SetNillableAccountName(v *string) *LockPaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetAccountName(*v)
 	}
-	return lpouo
+	return _u
 }
 
 // SetMemo sets the "memo" field.
-func (lpouo *LockPaymentOrderUpdateOne) SetMemo(s string) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.SetMemo(s)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) SetMemo(v string) *LockPaymentOrderUpdateOne {
+	_u.mutation.SetMemo(v)
+	return _u
 }
 
 // SetNillableMemo sets the "memo" field if the given value is not nil.
-func (lpouo *LockPaymentOrderUpdateOne) SetNillableMemo(s *string) *LockPaymentOrderUpdateOne {
-	if s != nil {
-		lpouo.SetMemo(*s)
+func (_u *LockPaymentOrderUpdateOne) SetNillableMemo(v *string) *LockPaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetMemo(*v)
 	}
-	return lpouo
+	return _u
 }
 
 // ClearMemo clears the value of the "memo" field.
-func (lpouo *LockPaymentOrderUpdateOne) ClearMemo() *LockPaymentOrderUpdateOne {
-	lpouo.mutation.ClearMemo()
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) ClearMemo() *LockPaymentOrderUpdateOne {
+	_u.mutation.ClearMemo()
+	return _u
 }
 
 // SetMetadata sets the "metadata" field.
-func (lpouo *LockPaymentOrderUpdateOne) SetMetadata(m map[string]interface{}) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.SetMetadata(m)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) SetMetadata(v map[string]interface{}) *LockPaymentOrderUpdateOne {
+	_u.mutation.SetMetadata(v)
+	return _u
 }
 
 // ClearMetadata clears the value of the "metadata" field.
-func (lpouo *LockPaymentOrderUpdateOne) ClearMetadata() *LockPaymentOrderUpdateOne {
-	lpouo.mutation.ClearMetadata()
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) ClearMetadata() *LockPaymentOrderUpdateOne {
+	_u.mutation.ClearMetadata()
+	return _u
 }
 
 // SetCancellationCount sets the "cancellation_count" field.
-func (lpouo *LockPaymentOrderUpdateOne) SetCancellationCount(i int) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.ResetCancellationCount()
-	lpouo.mutation.SetCancellationCount(i)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) SetCancellationCount(v int) *LockPaymentOrderUpdateOne {
+	_u.mutation.ResetCancellationCount()
+	_u.mutation.SetCancellationCount(v)
+	return _u
 }
 
 // SetNillableCancellationCount sets the "cancellation_count" field if the given value is not nil.
-func (lpouo *LockPaymentOrderUpdateOne) SetNillableCancellationCount(i *int) *LockPaymentOrderUpdateOne {
-	if i != nil {
-		lpouo.SetCancellationCount(*i)
+func (_u *LockPaymentOrderUpdateOne) SetNillableCancellationCount(v *int) *LockPaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetCancellationCount(*v)
 	}
-	return lpouo
+	return _u
 }
 
-// AddCancellationCount adds i to the "cancellation_count" field.
-func (lpouo *LockPaymentOrderUpdateOne) AddCancellationCount(i int) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.AddCancellationCount(i)
-	return lpouo
+// AddCancellationCount adds value to the "cancellation_count" field.
+func (_u *LockPaymentOrderUpdateOne) AddCancellationCount(v int) *LockPaymentOrderUpdateOne {
+	_u.mutation.AddCancellationCount(v)
+	return _u
 }
 
 // SetCancellationReasons sets the "cancellation_reasons" field.
-func (lpouo *LockPaymentOrderUpdateOne) SetCancellationReasons(s []string) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.SetCancellationReasons(s)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) SetCancellationReasons(v []string) *LockPaymentOrderUpdateOne {
+	_u.mutation.SetCancellationReasons(v)
+	return _u
 }
 
-// AppendCancellationReasons appends s to the "cancellation_reasons" field.
-func (lpouo *LockPaymentOrderUpdateOne) AppendCancellationReasons(s []string) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.AppendCancellationReasons(s)
-	return lpouo
+// AppendCancellationReasons appends value to the "cancellation_reasons" field.
+func (_u *LockPaymentOrderUpdateOne) AppendCancellationReasons(v []string) *LockPaymentOrderUpdateOne {
+	_u.mutation.AppendCancellationReasons(v)
+	return _u
 }
 
 // SetMessageHash sets the "message_hash" field.
-func (lpouo *LockPaymentOrderUpdateOne) SetMessageHash(s string) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.SetMessageHash(s)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) SetMessageHash(v string) *LockPaymentOrderUpdateOne {
+	_u.mutation.SetMessageHash(v)
+	return _u
 }
 
 // SetNillableMessageHash sets the "message_hash" field if the given value is not nil.
-func (lpouo *LockPaymentOrderUpdateOne) SetNillableMessageHash(s *string) *LockPaymentOrderUpdateOne {
-	if s != nil {
-		lpouo.SetMessageHash(*s)
+func (_u *LockPaymentOrderUpdateOne) SetNillableMessageHash(v *string) *LockPaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetMessageHash(*v)
 	}
-	return lpouo
+	return _u
 }
 
 // ClearMessageHash clears the value of the "message_hash" field.
-func (lpouo *LockPaymentOrderUpdateOne) ClearMessageHash() *LockPaymentOrderUpdateOne {
-	lpouo.mutation.ClearMessageHash()
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) ClearMessageHash() *LockPaymentOrderUpdateOne {
+	_u.mutation.ClearMessageHash()
+	return _u
 }
 
 // SetAmountInUsd sets the "amount_in_usd" field.
-func (lpouo *LockPaymentOrderUpdateOne) SetAmountInUsd(d decimal.Decimal) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.ResetAmountInUsd()
-	lpouo.mutation.SetAmountInUsd(d)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) SetAmountInUsd(v decimal.Decimal) *LockPaymentOrderUpdateOne {
+	_u.mutation.ResetAmountInUsd()
+	_u.mutation.SetAmountInUsd(v)
+	return _u
 }
 
 // SetNillableAmountInUsd sets the "amount_in_usd" field if the given value is not nil.
-func (lpouo *LockPaymentOrderUpdateOne) SetNillableAmountInUsd(d *decimal.Decimal) *LockPaymentOrderUpdateOne {
-	if d != nil {
-		lpouo.SetAmountInUsd(*d)
+func (_u *LockPaymentOrderUpdateOne) SetNillableAmountInUsd(v *decimal.Decimal) *LockPaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetAmountInUsd(*v)
 	}
-	return lpouo
+	return _u
 }
 
-// AddAmountInUsd adds d to the "amount_in_usd" field.
-func (lpouo *LockPaymentOrderUpdateOne) AddAmountInUsd(d decimal.Decimal) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.AddAmountInUsd(d)
-	return lpouo
+// AddAmountInUsd adds value to the "amount_in_usd" field.
+func (_u *LockPaymentOrderUpdateOne) AddAmountInUsd(v decimal.Decimal) *LockPaymentOrderUpdateOne {
+	_u.mutation.AddAmountInUsd(v)
+	return _u
 }
 
 // SetOrderType sets the "order_type" field.
-func (lpouo *LockPaymentOrderUpdateOne) SetOrderType(lt lockpaymentorder.OrderType) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.SetOrderType(lt)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) SetOrderType(v lockpaymentorder.OrderType) *LockPaymentOrderUpdateOne {
+	_u.mutation.SetOrderType(v)
+	return _u
 }
 
 // SetNillableOrderType sets the "order_type" field if the given value is not nil.
-func (lpouo *LockPaymentOrderUpdateOne) SetNillableOrderType(lt *lockpaymentorder.OrderType) *LockPaymentOrderUpdateOne {
-	if lt != nil {
-		lpouo.SetOrderType(*lt)
+func (_u *LockPaymentOrderUpdateOne) SetNillableOrderType(v *lockpaymentorder.OrderType) *LockPaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetOrderType(*v)
 	}
-	return lpouo
+	return _u
 }
 
 // SetTokenID sets the "token" edge to the Token entity by ID.
-func (lpouo *LockPaymentOrderUpdateOne) SetTokenID(id int) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.SetTokenID(id)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) SetTokenID(id int) *LockPaymentOrderUpdateOne {
+	_u.mutation.SetTokenID(id)
+	return _u
 }
 
 // SetToken sets the "token" edge to the Token entity.
-func (lpouo *LockPaymentOrderUpdateOne) SetToken(t *Token) *LockPaymentOrderUpdateOne {
-	return lpouo.SetTokenID(t.ID)
+func (_u *LockPaymentOrderUpdateOne) SetToken(v *Token) *LockPaymentOrderUpdateOne {
+	return _u.SetTokenID(v.ID)
 }
 
 // SetProvisionBucketID sets the "provision_bucket" edge to the ProvisionBucket entity by ID.
-func (lpouo *LockPaymentOrderUpdateOne) SetProvisionBucketID(id int) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.SetProvisionBucketID(id)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) SetProvisionBucketID(id int) *LockPaymentOrderUpdateOne {
+	_u.mutation.SetProvisionBucketID(id)
+	return _u
 }
 
 // SetNillableProvisionBucketID sets the "provision_bucket" edge to the ProvisionBucket entity by ID if the given value is not nil.
-func (lpouo *LockPaymentOrderUpdateOne) SetNillableProvisionBucketID(id *int) *LockPaymentOrderUpdateOne {
+func (_u *LockPaymentOrderUpdateOne) SetNillableProvisionBucketID(id *int) *LockPaymentOrderUpdateOne {
 	if id != nil {
-		lpouo = lpouo.SetProvisionBucketID(*id)
+		_u = _u.SetProvisionBucketID(*id)
 	}
-	return lpouo
+	return _u
 }
 
 // SetProvisionBucket sets the "provision_bucket" edge to the ProvisionBucket entity.
-func (lpouo *LockPaymentOrderUpdateOne) SetProvisionBucket(p *ProvisionBucket) *LockPaymentOrderUpdateOne {
-	return lpouo.SetProvisionBucketID(p.ID)
+func (_u *LockPaymentOrderUpdateOne) SetProvisionBucket(v *ProvisionBucket) *LockPaymentOrderUpdateOne {
+	return _u.SetProvisionBucketID(v.ID)
 }
 
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
-func (lpouo *LockPaymentOrderUpdateOne) SetProviderID(id string) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.SetProviderID(id)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) SetProviderID(id string) *LockPaymentOrderUpdateOne {
+	_u.mutation.SetProviderID(id)
+	return _u
 }
 
 // SetNillableProviderID sets the "provider" edge to the ProviderProfile entity by ID if the given value is not nil.
-func (lpouo *LockPaymentOrderUpdateOne) SetNillableProviderID(id *string) *LockPaymentOrderUpdateOne {
+func (_u *LockPaymentOrderUpdateOne) SetNillableProviderID(id *string) *LockPaymentOrderUpdateOne {
 	if id != nil {
-		lpouo = lpouo.SetProviderID(*id)
+		_u = _u.SetProviderID(*id)
 	}
-	return lpouo
+	return _u
 }
 
 // SetProvider sets the "provider" edge to the ProviderProfile entity.
-func (lpouo *LockPaymentOrderUpdateOne) SetProvider(p *ProviderProfile) *LockPaymentOrderUpdateOne {
-	return lpouo.SetProviderID(p.ID)
+func (_u *LockPaymentOrderUpdateOne) SetProvider(v *ProviderProfile) *LockPaymentOrderUpdateOne {
+	return _u.SetProviderID(v.ID)
 }
 
 // AddFulfillmentIDs adds the "fulfillments" edge to the LockOrderFulfillment entity by IDs.
-func (lpouo *LockPaymentOrderUpdateOne) AddFulfillmentIDs(ids ...uuid.UUID) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.AddFulfillmentIDs(ids...)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) AddFulfillmentIDs(ids ...uuid.UUID) *LockPaymentOrderUpdateOne {
+	_u.mutation.AddFulfillmentIDs(ids...)
+	return _u
 }
 
 // AddFulfillments adds the "fulfillments" edges to the LockOrderFulfillment entity.
-func (lpouo *LockPaymentOrderUpdateOne) AddFulfillments(l ...*LockOrderFulfillment) *LockPaymentOrderUpdateOne {
-	ids := make([]uuid.UUID, len(l))
-	for i := range l {
-		ids[i] = l[i].ID
+func (_u *LockPaymentOrderUpdateOne) AddFulfillments(v ...*LockOrderFulfillment) *LockPaymentOrderUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return lpouo.AddFulfillmentIDs(ids...)
+	return _u.AddFulfillmentIDs(ids...)
 }
 
 // AddTransactionIDs adds the "transactions" edge to the TransactionLog entity by IDs.
-func (lpouo *LockPaymentOrderUpdateOne) AddTransactionIDs(ids ...uuid.UUID) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.AddTransactionIDs(ids...)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) AddTransactionIDs(ids ...uuid.UUID) *LockPaymentOrderUpdateOne {
+	_u.mutation.AddTransactionIDs(ids...)
+	return _u
 }
 
 // AddTransactions adds the "transactions" edges to the TransactionLog entity.
-func (lpouo *LockPaymentOrderUpdateOne) AddTransactions(t ...*TransactionLog) *LockPaymentOrderUpdateOne {
-	ids := make([]uuid.UUID, len(t))
-	for i := range t {
-		ids[i] = t[i].ID
+func (_u *LockPaymentOrderUpdateOne) AddTransactions(v ...*TransactionLog) *LockPaymentOrderUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return lpouo.AddTransactionIDs(ids...)
+	return _u.AddTransactionIDs(ids...)
 }
 
 // Mutation returns the LockPaymentOrderMutation object of the builder.
-func (lpouo *LockPaymentOrderUpdateOne) Mutation() *LockPaymentOrderMutation {
-	return lpouo.mutation
+func (_u *LockPaymentOrderUpdateOne) Mutation() *LockPaymentOrderMutation {
+	return _u.mutation
 }
 
 // ClearToken clears the "token" edge to the Token entity.
-func (lpouo *LockPaymentOrderUpdateOne) ClearToken() *LockPaymentOrderUpdateOne {
-	lpouo.mutation.ClearToken()
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) ClearToken() *LockPaymentOrderUpdateOne {
+	_u.mutation.ClearToken()
+	return _u
 }
 
 // ClearProvisionBucket clears the "provision_bucket" edge to the ProvisionBucket entity.
-func (lpouo *LockPaymentOrderUpdateOne) ClearProvisionBucket() *LockPaymentOrderUpdateOne {
-	lpouo.mutation.ClearProvisionBucket()
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) ClearProvisionBucket() *LockPaymentOrderUpdateOne {
+	_u.mutation.ClearProvisionBucket()
+	return _u
 }
 
 // ClearProvider clears the "provider" edge to the ProviderProfile entity.
-func (lpouo *LockPaymentOrderUpdateOne) ClearProvider() *LockPaymentOrderUpdateOne {
-	lpouo.mutation.ClearProvider()
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) ClearProvider() *LockPaymentOrderUpdateOne {
+	_u.mutation.ClearProvider()
+	return _u
 }
 
 // ClearFulfillments clears all "fulfillments" edges to the LockOrderFulfillment entity.
-func (lpouo *LockPaymentOrderUpdateOne) ClearFulfillments() *LockPaymentOrderUpdateOne {
-	lpouo.mutation.ClearFulfillments()
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) ClearFulfillments() *LockPaymentOrderUpdateOne {
+	_u.mutation.ClearFulfillments()
+	return _u
 }
 
 // RemoveFulfillmentIDs removes the "fulfillments" edge to LockOrderFulfillment entities by IDs.
-func (lpouo *LockPaymentOrderUpdateOne) RemoveFulfillmentIDs(ids ...uuid.UUID) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.RemoveFulfillmentIDs(ids...)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) RemoveFulfillmentIDs(ids ...uuid.UUID) *LockPaymentOrderUpdateOne {
+	_u.mutation.RemoveFulfillmentIDs(ids...)
+	return _u
 }
 
 // RemoveFulfillments removes "fulfillments" edges to LockOrderFulfillment entities.
-func (lpouo *LockPaymentOrderUpdateOne) RemoveFulfillments(l ...*LockOrderFulfillment) *LockPaymentOrderUpdateOne {
-	ids := make([]uuid.UUID, len(l))
-	for i := range l {
-		ids[i] = l[i].ID
+func (_u *LockPaymentOrderUpdateOne) RemoveFulfillments(v ...*LockOrderFulfillment) *LockPaymentOrderUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return lpouo.RemoveFulfillmentIDs(ids...)
+	return _u.RemoveFulfillmentIDs(ids...)
 }
 
 // ClearTransactions clears all "transactions" edges to the TransactionLog entity.
-func (lpouo *LockPaymentOrderUpdateOne) ClearTransactions() *LockPaymentOrderUpdateOne {
-	lpouo.mutation.ClearTransactions()
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) ClearTransactions() *LockPaymentOrderUpdateOne {
+	_u.mutation.ClearTransactions()
+	return _u
 }
 
 // RemoveTransactionIDs removes the "transactions" edge to TransactionLog entities by IDs.
-func (lpouo *LockPaymentOrderUpdateOne) RemoveTransactionIDs(ids ...uuid.UUID) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.RemoveTransactionIDs(ids...)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) RemoveTransactionIDs(ids ...uuid.UUID) *LockPaymentOrderUpdateOne {
+	_u.mutation.RemoveTransactionIDs(ids...)
+	return _u
 }
 
 // RemoveTransactions removes "transactions" edges to TransactionLog entities.
-func (lpouo *LockPaymentOrderUpdateOne) RemoveTransactions(t ...*TransactionLog) *LockPaymentOrderUpdateOne {
-	ids := make([]uuid.UUID, len(t))
-	for i := range t {
-		ids[i] = t[i].ID
+func (_u *LockPaymentOrderUpdateOne) RemoveTransactions(v ...*TransactionLog) *LockPaymentOrderUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return lpouo.RemoveTransactionIDs(ids...)
+	return _u.RemoveTransactionIDs(ids...)
 }
 
 // Where appends a list predicates to the LockPaymentOrderUpdate builder.
-func (lpouo *LockPaymentOrderUpdateOne) Where(ps ...predicate.LockPaymentOrder) *LockPaymentOrderUpdateOne {
-	lpouo.mutation.Where(ps...)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) Where(ps ...predicate.LockPaymentOrder) *LockPaymentOrderUpdateOne {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
-func (lpouo *LockPaymentOrderUpdateOne) Select(field string, fields ...string) *LockPaymentOrderUpdateOne {
-	lpouo.fields = append([]string{field}, fields...)
-	return lpouo
+func (_u *LockPaymentOrderUpdateOne) Select(field string, fields ...string) *LockPaymentOrderUpdateOne {
+	_u.fields = append([]string{field}, fields...)
+	return _u
 }
 
 // Save executes the query and returns the updated LockPaymentOrder entity.
-func (lpouo *LockPaymentOrderUpdateOne) Save(ctx context.Context) (*LockPaymentOrder, error) {
-	lpouo.defaults()
-	return withHooks(ctx, lpouo.sqlSave, lpouo.mutation, lpouo.hooks)
+func (_u *LockPaymentOrderUpdateOne) Save(ctx context.Context) (*LockPaymentOrder, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (lpouo *LockPaymentOrderUpdateOne) SaveX(ctx context.Context) *LockPaymentOrder {
-	node, err := lpouo.Save(ctx)
+func (_u *LockPaymentOrderUpdateOne) SaveX(ctx context.Context) *LockPaymentOrder {
+	node, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -1409,65 +1409,65 @@ func (lpouo *LockPaymentOrderUpdateOne) SaveX(ctx context.Context) *LockPaymentO
 }
 
 // Exec executes the query on the entity.
-func (lpouo *LockPaymentOrderUpdateOne) Exec(ctx context.Context) error {
-	_, err := lpouo.Save(ctx)
+func (_u *LockPaymentOrderUpdateOne) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (lpouo *LockPaymentOrderUpdateOne) ExecX(ctx context.Context) {
-	if err := lpouo.Exec(ctx); err != nil {
+func (_u *LockPaymentOrderUpdateOne) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (lpouo *LockPaymentOrderUpdateOne) defaults() {
-	if _, ok := lpouo.mutation.UpdatedAt(); !ok {
+func (_u *LockPaymentOrderUpdateOne) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := lockpaymentorder.UpdateDefaultUpdatedAt()
-		lpouo.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (lpouo *LockPaymentOrderUpdateOne) check() error {
-	if v, ok := lpouo.mutation.TxHash(); ok {
+func (_u *LockPaymentOrderUpdateOne) check() error {
+	if v, ok := _u.mutation.TxHash(); ok {
 		if err := lockpaymentorder.TxHashValidator(v); err != nil {
 			return &ValidationError{Name: "tx_hash", err: fmt.Errorf(`ent: validator failed for field "LockPaymentOrder.tx_hash": %w`, err)}
 		}
 	}
-	if v, ok := lpouo.mutation.Status(); ok {
+	if v, ok := _u.mutation.Status(); ok {
 		if err := lockpaymentorder.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "LockPaymentOrder.status": %w`, err)}
 		}
 	}
-	if v, ok := lpouo.mutation.MessageHash(); ok {
+	if v, ok := _u.mutation.MessageHash(); ok {
 		if err := lockpaymentorder.MessageHashValidator(v); err != nil {
 			return &ValidationError{Name: "message_hash", err: fmt.Errorf(`ent: validator failed for field "LockPaymentOrder.message_hash": %w`, err)}
 		}
 	}
-	if v, ok := lpouo.mutation.OrderType(); ok {
+	if v, ok := _u.mutation.OrderType(); ok {
 		if err := lockpaymentorder.OrderTypeValidator(v); err != nil {
 			return &ValidationError{Name: "order_type", err: fmt.Errorf(`ent: validator failed for field "LockPaymentOrder.order_type": %w`, err)}
 		}
 	}
-	if lpouo.mutation.TokenCleared() && len(lpouo.mutation.TokenIDs()) > 0 {
+	if _u.mutation.TokenCleared() && len(_u.mutation.TokenIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "LockPaymentOrder.token"`)
 	}
 	return nil
 }
 
-func (lpouo *LockPaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *LockPaymentOrder, err error) {
-	if err := lpouo.check(); err != nil {
+func (_u *LockPaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *LockPaymentOrder, err error) {
+	if err := _u.check(); err != nil {
 		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(lockpaymentorder.Table, lockpaymentorder.Columns, sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID))
-	id, ok := lpouo.mutation.ID()
+	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "LockPaymentOrder.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
-	if fields := lpouo.fields; len(fields) > 0 {
+	if fields := _u.fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, lockpaymentorder.FieldID)
 		for _, f := range fields {
@@ -1479,115 +1479,115 @@ func (lpouo *LockPaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *Loc
 			}
 		}
 	}
-	if ps := lpouo.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := lpouo.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(lockpaymentorder.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := lpouo.mutation.GatewayID(); ok {
+	if value, ok := _u.mutation.GatewayID(); ok {
 		_spec.SetField(lockpaymentorder.FieldGatewayID, field.TypeString, value)
 	}
-	if value, ok := lpouo.mutation.Amount(); ok {
+	if value, ok := _u.mutation.Amount(); ok {
 		_spec.SetField(lockpaymentorder.FieldAmount, field.TypeFloat64, value)
 	}
-	if value, ok := lpouo.mutation.AddedAmount(); ok {
+	if value, ok := _u.mutation.AddedAmount(); ok {
 		_spec.AddField(lockpaymentorder.FieldAmount, field.TypeFloat64, value)
 	}
-	if value, ok := lpouo.mutation.ProtocolFee(); ok {
+	if value, ok := _u.mutation.ProtocolFee(); ok {
 		_spec.SetField(lockpaymentorder.FieldProtocolFee, field.TypeFloat64, value)
 	}
-	if value, ok := lpouo.mutation.AddedProtocolFee(); ok {
+	if value, ok := _u.mutation.AddedProtocolFee(); ok {
 		_spec.AddField(lockpaymentorder.FieldProtocolFee, field.TypeFloat64, value)
 	}
-	if value, ok := lpouo.mutation.Rate(); ok {
+	if value, ok := _u.mutation.Rate(); ok {
 		_spec.SetField(lockpaymentorder.FieldRate, field.TypeFloat64, value)
 	}
-	if value, ok := lpouo.mutation.AddedRate(); ok {
+	if value, ok := _u.mutation.AddedRate(); ok {
 		_spec.AddField(lockpaymentorder.FieldRate, field.TypeFloat64, value)
 	}
-	if value, ok := lpouo.mutation.OrderPercent(); ok {
+	if value, ok := _u.mutation.OrderPercent(); ok {
 		_spec.SetField(lockpaymentorder.FieldOrderPercent, field.TypeFloat64, value)
 	}
-	if value, ok := lpouo.mutation.AddedOrderPercent(); ok {
+	if value, ok := _u.mutation.AddedOrderPercent(); ok {
 		_spec.AddField(lockpaymentorder.FieldOrderPercent, field.TypeFloat64, value)
 	}
-	if value, ok := lpouo.mutation.Sender(); ok {
+	if value, ok := _u.mutation.Sender(); ok {
 		_spec.SetField(lockpaymentorder.FieldSender, field.TypeString, value)
 	}
-	if lpouo.mutation.SenderCleared() {
+	if _u.mutation.SenderCleared() {
 		_spec.ClearField(lockpaymentorder.FieldSender, field.TypeString)
 	}
-	if value, ok := lpouo.mutation.TxHash(); ok {
+	if value, ok := _u.mutation.TxHash(); ok {
 		_spec.SetField(lockpaymentorder.FieldTxHash, field.TypeString, value)
 	}
-	if lpouo.mutation.TxHashCleared() {
+	if _u.mutation.TxHashCleared() {
 		_spec.ClearField(lockpaymentorder.FieldTxHash, field.TypeString)
 	}
-	if value, ok := lpouo.mutation.Status(); ok {
+	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(lockpaymentorder.FieldStatus, field.TypeEnum, value)
 	}
-	if value, ok := lpouo.mutation.BlockNumber(); ok {
+	if value, ok := _u.mutation.BlockNumber(); ok {
 		_spec.SetField(lockpaymentorder.FieldBlockNumber, field.TypeInt64, value)
 	}
-	if value, ok := lpouo.mutation.AddedBlockNumber(); ok {
+	if value, ok := _u.mutation.AddedBlockNumber(); ok {
 		_spec.AddField(lockpaymentorder.FieldBlockNumber, field.TypeInt64, value)
 	}
-	if value, ok := lpouo.mutation.Institution(); ok {
+	if value, ok := _u.mutation.Institution(); ok {
 		_spec.SetField(lockpaymentorder.FieldInstitution, field.TypeString, value)
 	}
-	if value, ok := lpouo.mutation.AccountIdentifier(); ok {
+	if value, ok := _u.mutation.AccountIdentifier(); ok {
 		_spec.SetField(lockpaymentorder.FieldAccountIdentifier, field.TypeString, value)
 	}
-	if value, ok := lpouo.mutation.AccountName(); ok {
+	if value, ok := _u.mutation.AccountName(); ok {
 		_spec.SetField(lockpaymentorder.FieldAccountName, field.TypeString, value)
 	}
-	if value, ok := lpouo.mutation.Memo(); ok {
+	if value, ok := _u.mutation.Memo(); ok {
 		_spec.SetField(lockpaymentorder.FieldMemo, field.TypeString, value)
 	}
-	if lpouo.mutation.MemoCleared() {
+	if _u.mutation.MemoCleared() {
 		_spec.ClearField(lockpaymentorder.FieldMemo, field.TypeString)
 	}
-	if value, ok := lpouo.mutation.Metadata(); ok {
+	if value, ok := _u.mutation.Metadata(); ok {
 		_spec.SetField(lockpaymentorder.FieldMetadata, field.TypeJSON, value)
 	}
-	if lpouo.mutation.MetadataCleared() {
+	if _u.mutation.MetadataCleared() {
 		_spec.ClearField(lockpaymentorder.FieldMetadata, field.TypeJSON)
 	}
-	if value, ok := lpouo.mutation.CancellationCount(); ok {
+	if value, ok := _u.mutation.CancellationCount(); ok {
 		_spec.SetField(lockpaymentorder.FieldCancellationCount, field.TypeInt, value)
 	}
-	if value, ok := lpouo.mutation.AddedCancellationCount(); ok {
+	if value, ok := _u.mutation.AddedCancellationCount(); ok {
 		_spec.AddField(lockpaymentorder.FieldCancellationCount, field.TypeInt, value)
 	}
-	if value, ok := lpouo.mutation.CancellationReasons(); ok {
+	if value, ok := _u.mutation.CancellationReasons(); ok {
 		_spec.SetField(lockpaymentorder.FieldCancellationReasons, field.TypeJSON, value)
 	}
-	if value, ok := lpouo.mutation.AppendedCancellationReasons(); ok {
+	if value, ok := _u.mutation.AppendedCancellationReasons(); ok {
 		_spec.AddModifier(func(u *sql.UpdateBuilder) {
 			sqljson.Append(u, lockpaymentorder.FieldCancellationReasons, value)
 		})
 	}
-	if value, ok := lpouo.mutation.MessageHash(); ok {
+	if value, ok := _u.mutation.MessageHash(); ok {
 		_spec.SetField(lockpaymentorder.FieldMessageHash, field.TypeString, value)
 	}
-	if lpouo.mutation.MessageHashCleared() {
+	if _u.mutation.MessageHashCleared() {
 		_spec.ClearField(lockpaymentorder.FieldMessageHash, field.TypeString)
 	}
-	if value, ok := lpouo.mutation.AmountInUsd(); ok {
+	if value, ok := _u.mutation.AmountInUsd(); ok {
 		_spec.SetField(lockpaymentorder.FieldAmountInUsd, field.TypeFloat64, value)
 	}
-	if value, ok := lpouo.mutation.AddedAmountInUsd(); ok {
+	if value, ok := _u.mutation.AddedAmountInUsd(); ok {
 		_spec.AddField(lockpaymentorder.FieldAmountInUsd, field.TypeFloat64, value)
 	}
-	if value, ok := lpouo.mutation.OrderType(); ok {
+	if value, ok := _u.mutation.OrderType(); ok {
 		_spec.SetField(lockpaymentorder.FieldOrderType, field.TypeEnum, value)
 	}
-	if lpouo.mutation.TokenCleared() {
+	if _u.mutation.TokenCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -1600,7 +1600,7 @@ func (lpouo *LockPaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *Loc
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := lpouo.mutation.TokenIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.TokenIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -1616,7 +1616,7 @@ func (lpouo *LockPaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *Loc
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if lpouo.mutation.ProvisionBucketCleared() {
+	if _u.mutation.ProvisionBucketCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -1629,7 +1629,7 @@ func (lpouo *LockPaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *Loc
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := lpouo.mutation.ProvisionBucketIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProvisionBucketIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -1645,7 +1645,7 @@ func (lpouo *LockPaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *Loc
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if lpouo.mutation.ProviderCleared() {
+	if _u.mutation.ProviderCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -1658,7 +1658,7 @@ func (lpouo *LockPaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *Loc
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := lpouo.mutation.ProviderIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProviderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -1674,7 +1674,7 @@ func (lpouo *LockPaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *Loc
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if lpouo.mutation.FulfillmentsCleared() {
+	if _u.mutation.FulfillmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -1687,7 +1687,7 @@ func (lpouo *LockPaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *Loc
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := lpouo.mutation.RemovedFulfillmentsIDs(); len(nodes) > 0 && !lpouo.mutation.FulfillmentsCleared() {
+	if nodes := _u.mutation.RemovedFulfillmentsIDs(); len(nodes) > 0 && !_u.mutation.FulfillmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -1703,7 +1703,7 @@ func (lpouo *LockPaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *Loc
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := lpouo.mutation.FulfillmentsIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.FulfillmentsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -1719,7 +1719,7 @@ func (lpouo *LockPaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *Loc
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if lpouo.mutation.TransactionsCleared() {
+	if _u.mutation.TransactionsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -1732,7 +1732,7 @@ func (lpouo *LockPaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *Loc
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := lpouo.mutation.RemovedTransactionsIDs(); len(nodes) > 0 && !lpouo.mutation.TransactionsCleared() {
+	if nodes := _u.mutation.RemovedTransactionsIDs(); len(nodes) > 0 && !_u.mutation.TransactionsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -1748,7 +1748,7 @@ func (lpouo *LockPaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *Loc
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := lpouo.mutation.TransactionsIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.TransactionsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -1764,10 +1764,10 @@ func (lpouo *LockPaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *Loc
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	_node = &LockPaymentOrder{config: lpouo.config}
+	_node = &LockPaymentOrder{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues
-	if err = sqlgraph.UpdateNode(ctx, lpouo.driver, _spec); err != nil {
+	if err = sqlgraph.UpdateNode(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{lockpaymentorder.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -1775,6 +1775,6 @@ func (lpouo *LockPaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *Loc
 		}
 		return nil, err
 	}
-	lpouo.mutation.done = true
+	_u.mutation.done = true
 	return _node, nil
 }

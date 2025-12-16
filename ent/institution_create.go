@@ -25,92 +25,92 @@ type InstitutionCreate struct {
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (ic *InstitutionCreate) SetCreatedAt(t time.Time) *InstitutionCreate {
-	ic.mutation.SetCreatedAt(t)
-	return ic
+func (_c *InstitutionCreate) SetCreatedAt(v time.Time) *InstitutionCreate {
+	_c.mutation.SetCreatedAt(v)
+	return _c
 }
 
 // SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (ic *InstitutionCreate) SetNillableCreatedAt(t *time.Time) *InstitutionCreate {
-	if t != nil {
-		ic.SetCreatedAt(*t)
+func (_c *InstitutionCreate) SetNillableCreatedAt(v *time.Time) *InstitutionCreate {
+	if v != nil {
+		_c.SetCreatedAt(*v)
 	}
-	return ic
+	return _c
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (ic *InstitutionCreate) SetUpdatedAt(t time.Time) *InstitutionCreate {
-	ic.mutation.SetUpdatedAt(t)
-	return ic
+func (_c *InstitutionCreate) SetUpdatedAt(v time.Time) *InstitutionCreate {
+	_c.mutation.SetUpdatedAt(v)
+	return _c
 }
 
 // SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (ic *InstitutionCreate) SetNillableUpdatedAt(t *time.Time) *InstitutionCreate {
-	if t != nil {
-		ic.SetUpdatedAt(*t)
+func (_c *InstitutionCreate) SetNillableUpdatedAt(v *time.Time) *InstitutionCreate {
+	if v != nil {
+		_c.SetUpdatedAt(*v)
 	}
-	return ic
+	return _c
 }
 
 // SetCode sets the "code" field.
-func (ic *InstitutionCreate) SetCode(s string) *InstitutionCreate {
-	ic.mutation.SetCode(s)
-	return ic
+func (_c *InstitutionCreate) SetCode(v string) *InstitutionCreate {
+	_c.mutation.SetCode(v)
+	return _c
 }
 
 // SetName sets the "name" field.
-func (ic *InstitutionCreate) SetName(s string) *InstitutionCreate {
-	ic.mutation.SetName(s)
-	return ic
+func (_c *InstitutionCreate) SetName(v string) *InstitutionCreate {
+	_c.mutation.SetName(v)
+	return _c
 }
 
 // SetType sets the "type" field.
-func (ic *InstitutionCreate) SetType(i institution.Type) *InstitutionCreate {
-	ic.mutation.SetType(i)
-	return ic
+func (_c *InstitutionCreate) SetType(v institution.Type) *InstitutionCreate {
+	_c.mutation.SetType(v)
+	return _c
 }
 
 // SetNillableType sets the "type" field if the given value is not nil.
-func (ic *InstitutionCreate) SetNillableType(i *institution.Type) *InstitutionCreate {
-	if i != nil {
-		ic.SetType(*i)
+func (_c *InstitutionCreate) SetNillableType(v *institution.Type) *InstitutionCreate {
+	if v != nil {
+		_c.SetType(*v)
 	}
-	return ic
+	return _c
 }
 
 // SetFiatCurrencyID sets the "fiat_currency" edge to the FiatCurrency entity by ID.
-func (ic *InstitutionCreate) SetFiatCurrencyID(id uuid.UUID) *InstitutionCreate {
-	ic.mutation.SetFiatCurrencyID(id)
-	return ic
+func (_c *InstitutionCreate) SetFiatCurrencyID(id uuid.UUID) *InstitutionCreate {
+	_c.mutation.SetFiatCurrencyID(id)
+	return _c
 }
 
 // SetNillableFiatCurrencyID sets the "fiat_currency" edge to the FiatCurrency entity by ID if the given value is not nil.
-func (ic *InstitutionCreate) SetNillableFiatCurrencyID(id *uuid.UUID) *InstitutionCreate {
+func (_c *InstitutionCreate) SetNillableFiatCurrencyID(id *uuid.UUID) *InstitutionCreate {
 	if id != nil {
-		ic = ic.SetFiatCurrencyID(*id)
+		_c = _c.SetFiatCurrencyID(*id)
 	}
-	return ic
+	return _c
 }
 
 // SetFiatCurrency sets the "fiat_currency" edge to the FiatCurrency entity.
-func (ic *InstitutionCreate) SetFiatCurrency(f *FiatCurrency) *InstitutionCreate {
-	return ic.SetFiatCurrencyID(f.ID)
+func (_c *InstitutionCreate) SetFiatCurrency(v *FiatCurrency) *InstitutionCreate {
+	return _c.SetFiatCurrencyID(v.ID)
 }
 
 // Mutation returns the InstitutionMutation object of the builder.
-func (ic *InstitutionCreate) Mutation() *InstitutionMutation {
-	return ic.mutation
+func (_c *InstitutionCreate) Mutation() *InstitutionMutation {
+	return _c.mutation
 }
 
 // Save creates the Institution in the database.
-func (ic *InstitutionCreate) Save(ctx context.Context) (*Institution, error) {
-	ic.defaults()
-	return withHooks(ctx, ic.sqlSave, ic.mutation, ic.hooks)
+func (_c *InstitutionCreate) Save(ctx context.Context) (*Institution, error) {
+	_c.defaults()
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (ic *InstitutionCreate) SaveX(ctx context.Context) *Institution {
-	v, err := ic.Save(ctx)
+func (_c *InstitutionCreate) SaveX(ctx context.Context) *Institution {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -118,52 +118,52 @@ func (ic *InstitutionCreate) SaveX(ctx context.Context) *Institution {
 }
 
 // Exec executes the query.
-func (ic *InstitutionCreate) Exec(ctx context.Context) error {
-	_, err := ic.Save(ctx)
+func (_c *InstitutionCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (ic *InstitutionCreate) ExecX(ctx context.Context) {
-	if err := ic.Exec(ctx); err != nil {
+func (_c *InstitutionCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (ic *InstitutionCreate) defaults() {
-	if _, ok := ic.mutation.CreatedAt(); !ok {
+func (_c *InstitutionCreate) defaults() {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := institution.DefaultCreatedAt()
-		ic.mutation.SetCreatedAt(v)
+		_c.mutation.SetCreatedAt(v)
 	}
-	if _, ok := ic.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		v := institution.DefaultUpdatedAt()
-		ic.mutation.SetUpdatedAt(v)
+		_c.mutation.SetUpdatedAt(v)
 	}
-	if _, ok := ic.mutation.GetType(); !ok {
+	if _, ok := _c.mutation.GetType(); !ok {
 		v := institution.DefaultType
-		ic.mutation.SetType(v)
+		_c.mutation.SetType(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (ic *InstitutionCreate) check() error {
-	if _, ok := ic.mutation.CreatedAt(); !ok {
+func (_c *InstitutionCreate) check() error {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Institution.created_at"`)}
 	}
-	if _, ok := ic.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "Institution.updated_at"`)}
 	}
-	if _, ok := ic.mutation.Code(); !ok {
+	if _, ok := _c.mutation.Code(); !ok {
 		return &ValidationError{Name: "code", err: errors.New(`ent: missing required field "Institution.code"`)}
 	}
-	if _, ok := ic.mutation.Name(); !ok {
+	if _, ok := _c.mutation.Name(); !ok {
 		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Institution.name"`)}
 	}
-	if _, ok := ic.mutation.GetType(); !ok {
+	if _, ok := _c.mutation.GetType(); !ok {
 		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "Institution.type"`)}
 	}
-	if v, ok := ic.mutation.GetType(); ok {
+	if v, ok := _c.mutation.GetType(); ok {
 		if err := institution.TypeValidator(v); err != nil {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "Institution.type": %w`, err)}
 		}
@@ -171,12 +171,12 @@ func (ic *InstitutionCreate) check() error {
 	return nil
 }
 
-func (ic *InstitutionCreate) sqlSave(ctx context.Context) (*Institution, error) {
-	if err := ic.check(); err != nil {
+func (_c *InstitutionCreate) sqlSave(ctx context.Context) (*Institution, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := ic.createSpec()
-	if err := sqlgraph.CreateNode(ctx, ic.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -184,38 +184,38 @@ func (ic *InstitutionCreate) sqlSave(ctx context.Context) (*Institution, error) 
 	}
 	id := _spec.ID.Value.(int64)
 	_node.ID = int(id)
-	ic.mutation.id = &_node.ID
-	ic.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (ic *InstitutionCreate) createSpec() (*Institution, *sqlgraph.CreateSpec) {
+func (_c *InstitutionCreate) createSpec() (*Institution, *sqlgraph.CreateSpec) {
 	var (
-		_node = &Institution{config: ic.config}
+		_node = &Institution{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(institution.Table, sqlgraph.NewFieldSpec(institution.FieldID, field.TypeInt))
 	)
-	_spec.OnConflict = ic.conflict
-	if value, ok := ic.mutation.CreatedAt(); ok {
+	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(institution.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
 	}
-	if value, ok := ic.mutation.UpdatedAt(); ok {
+	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(institution.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if value, ok := ic.mutation.Code(); ok {
+	if value, ok := _c.mutation.Code(); ok {
 		_spec.SetField(institution.FieldCode, field.TypeString, value)
 		_node.Code = value
 	}
-	if value, ok := ic.mutation.Name(); ok {
+	if value, ok := _c.mutation.Name(); ok {
 		_spec.SetField(institution.FieldName, field.TypeString, value)
 		_node.Name = value
 	}
-	if value, ok := ic.mutation.GetType(); ok {
+	if value, ok := _c.mutation.GetType(); ok {
 		_spec.SetField(institution.FieldType, field.TypeEnum, value)
 		_node.Type = value
 	}
-	if nodes := ic.mutation.FiatCurrencyIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.FiatCurrencyIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -251,10 +251,10 @@ func (ic *InstitutionCreate) createSpec() (*Institution, *sqlgraph.CreateSpec) {
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (ic *InstitutionCreate) OnConflict(opts ...sql.ConflictOption) *InstitutionUpsertOne {
-	ic.conflict = opts
+func (_c *InstitutionCreate) OnConflict(opts ...sql.ConflictOption) *InstitutionUpsertOne {
+	_c.conflict = opts
 	return &InstitutionUpsertOne{
-		create: ic,
+		create: _c,
 	}
 }
 
@@ -264,10 +264,10 @@ func (ic *InstitutionCreate) OnConflict(opts ...sql.ConflictOption) *Institution
 //	client.Institution.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (ic *InstitutionCreate) OnConflictColumns(columns ...string) *InstitutionUpsertOne {
-	ic.conflict = append(ic.conflict, sql.ConflictColumns(columns...))
+func (_c *InstitutionCreate) OnConflictColumns(columns ...string) *InstitutionUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &InstitutionUpsertOne{
-		create: ic,
+		create: _c,
 	}
 }
 
@@ -475,16 +475,16 @@ type InstitutionCreateBulk struct {
 }
 
 // Save creates the Institution entities in the database.
-func (icb *InstitutionCreateBulk) Save(ctx context.Context) ([]*Institution, error) {
-	if icb.err != nil {
-		return nil, icb.err
+func (_c *InstitutionCreateBulk) Save(ctx context.Context) ([]*Institution, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(icb.builders))
-	nodes := make([]*Institution, len(icb.builders))
-	mutators := make([]Mutator, len(icb.builders))
-	for i := range icb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*Institution, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := icb.builders[i]
+			builder := _c.builders[i]
 			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*InstitutionMutation)
@@ -498,12 +498,12 @@ func (icb *InstitutionCreateBulk) Save(ctx context.Context) ([]*Institution, err
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, icb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = icb.conflict
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, icb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -527,7 +527,7 @@ func (icb *InstitutionCreateBulk) Save(ctx context.Context) ([]*Institution, err
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, icb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -535,8 +535,8 @@ func (icb *InstitutionCreateBulk) Save(ctx context.Context) ([]*Institution, err
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (icb *InstitutionCreateBulk) SaveX(ctx context.Context) []*Institution {
-	v, err := icb.Save(ctx)
+func (_c *InstitutionCreateBulk) SaveX(ctx context.Context) []*Institution {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -544,14 +544,14 @@ func (icb *InstitutionCreateBulk) SaveX(ctx context.Context) []*Institution {
 }
 
 // Exec executes the query.
-func (icb *InstitutionCreateBulk) Exec(ctx context.Context) error {
-	_, err := icb.Save(ctx)
+func (_c *InstitutionCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (icb *InstitutionCreateBulk) ExecX(ctx context.Context) {
-	if err := icb.Exec(ctx); err != nil {
+func (_c *InstitutionCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
@@ -571,10 +571,10 @@ func (icb *InstitutionCreateBulk) ExecX(ctx context.Context) {
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (icb *InstitutionCreateBulk) OnConflict(opts ...sql.ConflictOption) *InstitutionUpsertBulk {
-	icb.conflict = opts
+func (_c *InstitutionCreateBulk) OnConflict(opts ...sql.ConflictOption) *InstitutionUpsertBulk {
+	_c.conflict = opts
 	return &InstitutionUpsertBulk{
-		create: icb,
+		create: _c,
 	}
 }
 
@@ -584,10 +584,10 @@ func (icb *InstitutionCreateBulk) OnConflict(opts ...sql.ConflictOption) *Instit
 //	client.Institution.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (icb *InstitutionCreateBulk) OnConflictColumns(columns ...string) *InstitutionUpsertBulk {
-	icb.conflict = append(icb.conflict, sql.ConflictColumns(columns...))
+func (_c *InstitutionCreateBulk) OnConflictColumns(columns ...string) *InstitutionUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &InstitutionUpsertBulk{
-		create: icb,
+		create: _c,
 	}
 }
 

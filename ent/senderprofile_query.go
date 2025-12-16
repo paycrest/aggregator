@@ -41,44 +41,44 @@ type SenderProfileQuery struct {
 }
 
 // Where adds a new predicate for the SenderProfileQuery builder.
-func (spq *SenderProfileQuery) Where(ps ...predicate.SenderProfile) *SenderProfileQuery {
-	spq.predicates = append(spq.predicates, ps...)
-	return spq
+func (_q *SenderProfileQuery) Where(ps ...predicate.SenderProfile) *SenderProfileQuery {
+	_q.predicates = append(_q.predicates, ps...)
+	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (spq *SenderProfileQuery) Limit(limit int) *SenderProfileQuery {
-	spq.ctx.Limit = &limit
-	return spq
+func (_q *SenderProfileQuery) Limit(limit int) *SenderProfileQuery {
+	_q.ctx.Limit = &limit
+	return _q
 }
 
 // Offset to start from.
-func (spq *SenderProfileQuery) Offset(offset int) *SenderProfileQuery {
-	spq.ctx.Offset = &offset
-	return spq
+func (_q *SenderProfileQuery) Offset(offset int) *SenderProfileQuery {
+	_q.ctx.Offset = &offset
+	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (spq *SenderProfileQuery) Unique(unique bool) *SenderProfileQuery {
-	spq.ctx.Unique = &unique
-	return spq
+func (_q *SenderProfileQuery) Unique(unique bool) *SenderProfileQuery {
+	_q.ctx.Unique = &unique
+	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (spq *SenderProfileQuery) Order(o ...senderprofile.OrderOption) *SenderProfileQuery {
-	spq.order = append(spq.order, o...)
-	return spq
+func (_q *SenderProfileQuery) Order(o ...senderprofile.OrderOption) *SenderProfileQuery {
+	_q.order = append(_q.order, o...)
+	return _q
 }
 
 // QueryUser chains the current query on the "user" edge.
-func (spq *SenderProfileQuery) QueryUser() *UserQuery {
-	query := (&UserClient{config: spq.config}).Query()
+func (_q *SenderProfileQuery) QueryUser() *UserQuery {
+	query := (&UserClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := spq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := spq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -87,20 +87,20 @@ func (spq *SenderProfileQuery) QueryUser() *UserQuery {
 			sqlgraph.To(user.Table, user.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, senderprofile.UserTable, senderprofile.UserColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(spq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryAPIKey chains the current query on the "api_key" edge.
-func (spq *SenderProfileQuery) QueryAPIKey() *APIKeyQuery {
-	query := (&APIKeyClient{config: spq.config}).Query()
+func (_q *SenderProfileQuery) QueryAPIKey() *APIKeyQuery {
+	query := (&APIKeyClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := spq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := spq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -109,20 +109,20 @@ func (spq *SenderProfileQuery) QueryAPIKey() *APIKeyQuery {
 			sqlgraph.To(apikey.Table, apikey.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, senderprofile.APIKeyTable, senderprofile.APIKeyColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(spq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryPaymentOrders chains the current query on the "payment_orders" edge.
-func (spq *SenderProfileQuery) QueryPaymentOrders() *PaymentOrderQuery {
-	query := (&PaymentOrderClient{config: spq.config}).Query()
+func (_q *SenderProfileQuery) QueryPaymentOrders() *PaymentOrderQuery {
+	query := (&PaymentOrderClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := spq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := spq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -131,20 +131,20 @@ func (spq *SenderProfileQuery) QueryPaymentOrders() *PaymentOrderQuery {
 			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, senderprofile.PaymentOrdersTable, senderprofile.PaymentOrdersColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(spq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryOrderTokens chains the current query on the "order_tokens" edge.
-func (spq *SenderProfileQuery) QueryOrderTokens() *SenderOrderTokenQuery {
-	query := (&SenderOrderTokenClient{config: spq.config}).Query()
+func (_q *SenderProfileQuery) QueryOrderTokens() *SenderOrderTokenQuery {
+	query := (&SenderOrderTokenClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := spq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := spq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -153,20 +153,20 @@ func (spq *SenderProfileQuery) QueryOrderTokens() *SenderOrderTokenQuery {
 			sqlgraph.To(senderordertoken.Table, senderordertoken.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, senderprofile.OrderTokensTable, senderprofile.OrderTokensColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(spq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryLinkedAddress chains the current query on the "linked_address" edge.
-func (spq *SenderProfileQuery) QueryLinkedAddress() *LinkedAddressQuery {
-	query := (&LinkedAddressClient{config: spq.config}).Query()
+func (_q *SenderProfileQuery) QueryLinkedAddress() *LinkedAddressQuery {
+	query := (&LinkedAddressClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := spq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := spq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -175,7 +175,7 @@ func (spq *SenderProfileQuery) QueryLinkedAddress() *LinkedAddressQuery {
 			sqlgraph.To(linkedaddress.Table, linkedaddress.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, senderprofile.LinkedAddressTable, senderprofile.LinkedAddressColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(spq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
@@ -183,8 +183,8 @@ func (spq *SenderProfileQuery) QueryLinkedAddress() *LinkedAddressQuery {
 
 // First returns the first SenderProfile entity from the query.
 // Returns a *NotFoundError when no SenderProfile was found.
-func (spq *SenderProfileQuery) First(ctx context.Context) (*SenderProfile, error) {
-	nodes, err := spq.Limit(1).All(setContextOp(ctx, spq.ctx, ent.OpQueryFirst))
+func (_q *SenderProfileQuery) First(ctx context.Context) (*SenderProfile, error) {
+	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
@@ -195,8 +195,8 @@ func (spq *SenderProfileQuery) First(ctx context.Context) (*SenderProfile, error
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (spq *SenderProfileQuery) FirstX(ctx context.Context) *SenderProfile {
-	node, err := spq.First(ctx)
+func (_q *SenderProfileQuery) FirstX(ctx context.Context) *SenderProfile {
+	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -205,9 +205,9 @@ func (spq *SenderProfileQuery) FirstX(ctx context.Context) *SenderProfile {
 
 // FirstID returns the first SenderProfile ID from the query.
 // Returns a *NotFoundError when no SenderProfile ID was found.
-func (spq *SenderProfileQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *SenderProfileQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = spq.Limit(1).IDs(setContextOp(ctx, spq.ctx, ent.OpQueryFirstID)); err != nil {
+	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -218,8 +218,8 @@ func (spq *SenderProfileQuery) FirstID(ctx context.Context) (id uuid.UUID, err e
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (spq *SenderProfileQuery) FirstIDX(ctx context.Context) uuid.UUID {
-	id, err := spq.FirstID(ctx)
+func (_q *SenderProfileQuery) FirstIDX(ctx context.Context) uuid.UUID {
+	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -229,8 +229,8 @@ func (spq *SenderProfileQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Only returns a single SenderProfile entity found by the query, ensuring it only returns one.
 // Returns a *NotSingularError when more than one SenderProfile entity is found.
 // Returns a *NotFoundError when no SenderProfile entities are found.
-func (spq *SenderProfileQuery) Only(ctx context.Context) (*SenderProfile, error) {
-	nodes, err := spq.Limit(2).All(setContextOp(ctx, spq.ctx, ent.OpQueryOnly))
+func (_q *SenderProfileQuery) Only(ctx context.Context) (*SenderProfile, error) {
+	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -245,8 +245,8 @@ func (spq *SenderProfileQuery) Only(ctx context.Context) (*SenderProfile, error)
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (spq *SenderProfileQuery) OnlyX(ctx context.Context) *SenderProfile {
-	node, err := spq.Only(ctx)
+func (_q *SenderProfileQuery) OnlyX(ctx context.Context) *SenderProfile {
+	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -256,9 +256,9 @@ func (spq *SenderProfileQuery) OnlyX(ctx context.Context) *SenderProfile {
 // OnlyID is like Only, but returns the only SenderProfile ID in the query.
 // Returns a *NotSingularError when more than one SenderProfile ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (spq *SenderProfileQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *SenderProfileQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = spq.Limit(2).IDs(setContextOp(ctx, spq.ctx, ent.OpQueryOnlyID)); err != nil {
+	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -273,8 +273,8 @@ func (spq *SenderProfileQuery) OnlyID(ctx context.Context) (id uuid.UUID, err er
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (spq *SenderProfileQuery) OnlyIDX(ctx context.Context) uuid.UUID {
-	id, err := spq.OnlyID(ctx)
+func (_q *SenderProfileQuery) OnlyIDX(ctx context.Context) uuid.UUID {
+	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -282,18 +282,18 @@ func (spq *SenderProfileQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 }
 
 // All executes the query and returns a list of SenderProfiles.
-func (spq *SenderProfileQuery) All(ctx context.Context) ([]*SenderProfile, error) {
-	ctx = setContextOp(ctx, spq.ctx, ent.OpQueryAll)
-	if err := spq.prepareQuery(ctx); err != nil {
+func (_q *SenderProfileQuery) All(ctx context.Context) ([]*SenderProfile, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
 	qr := querierAll[[]*SenderProfile, *SenderProfileQuery]()
-	return withInterceptors[[]*SenderProfile](ctx, spq, qr, spq.inters)
+	return withInterceptors[[]*SenderProfile](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (spq *SenderProfileQuery) AllX(ctx context.Context) []*SenderProfile {
-	nodes, err := spq.All(ctx)
+func (_q *SenderProfileQuery) AllX(ctx context.Context) []*SenderProfile {
+	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -301,20 +301,20 @@ func (spq *SenderProfileQuery) AllX(ctx context.Context) []*SenderProfile {
 }
 
 // IDs executes the query and returns a list of SenderProfile IDs.
-func (spq *SenderProfileQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
-	if spq.ctx.Unique == nil && spq.path != nil {
-		spq.Unique(true)
+func (_q *SenderProfileQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if _q.ctx.Unique == nil && _q.path != nil {
+		_q.Unique(true)
 	}
-	ctx = setContextOp(ctx, spq.ctx, ent.OpQueryIDs)
-	if err = spq.Select(senderprofile.FieldID).Scan(ctx, &ids); err != nil {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
+	if err = _q.Select(senderprofile.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (spq *SenderProfileQuery) IDsX(ctx context.Context) []uuid.UUID {
-	ids, err := spq.IDs(ctx)
+func (_q *SenderProfileQuery) IDsX(ctx context.Context) []uuid.UUID {
+	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -322,17 +322,17 @@ func (spq *SenderProfileQuery) IDsX(ctx context.Context) []uuid.UUID {
 }
 
 // Count returns the count of the given query.
-func (spq *SenderProfileQuery) Count(ctx context.Context) (int, error) {
-	ctx = setContextOp(ctx, spq.ctx, ent.OpQueryCount)
-	if err := spq.prepareQuery(ctx); err != nil {
+func (_q *SenderProfileQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, spq, querierCount[*SenderProfileQuery](), spq.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*SenderProfileQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (spq *SenderProfileQuery) CountX(ctx context.Context) int {
-	count, err := spq.Count(ctx)
+func (_q *SenderProfileQuery) CountX(ctx context.Context) int {
+	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -340,9 +340,9 @@ func (spq *SenderProfileQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (spq *SenderProfileQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = setContextOp(ctx, spq.ctx, ent.OpQueryExist)
-	switch _, err := spq.FirstID(ctx); {
+func (_q *SenderProfileQuery) Exist(ctx context.Context) (bool, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
+	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
 	case err != nil:
@@ -353,8 +353,8 @@ func (spq *SenderProfileQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (spq *SenderProfileQuery) ExistX(ctx context.Context) bool {
-	exist, err := spq.Exist(ctx)
+func (_q *SenderProfileQuery) ExistX(ctx context.Context) bool {
+	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -363,80 +363,80 @@ func (spq *SenderProfileQuery) ExistX(ctx context.Context) bool {
 
 // Clone returns a duplicate of the SenderProfileQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (spq *SenderProfileQuery) Clone() *SenderProfileQuery {
-	if spq == nil {
+func (_q *SenderProfileQuery) Clone() *SenderProfileQuery {
+	if _q == nil {
 		return nil
 	}
 	return &SenderProfileQuery{
-		config:            spq.config,
-		ctx:               spq.ctx.Clone(),
-		order:             append([]senderprofile.OrderOption{}, spq.order...),
-		inters:            append([]Interceptor{}, spq.inters...),
-		predicates:        append([]predicate.SenderProfile{}, spq.predicates...),
-		withUser:          spq.withUser.Clone(),
-		withAPIKey:        spq.withAPIKey.Clone(),
-		withPaymentOrders: spq.withPaymentOrders.Clone(),
-		withOrderTokens:   spq.withOrderTokens.Clone(),
-		withLinkedAddress: spq.withLinkedAddress.Clone(),
+		config:            _q.config,
+		ctx:               _q.ctx.Clone(),
+		order:             append([]senderprofile.OrderOption{}, _q.order...),
+		inters:            append([]Interceptor{}, _q.inters...),
+		predicates:        append([]predicate.SenderProfile{}, _q.predicates...),
+		withUser:          _q.withUser.Clone(),
+		withAPIKey:        _q.withAPIKey.Clone(),
+		withPaymentOrders: _q.withPaymentOrders.Clone(),
+		withOrderTokens:   _q.withOrderTokens.Clone(),
+		withLinkedAddress: _q.withLinkedAddress.Clone(),
 		// clone intermediate query.
-		sql:  spq.sql.Clone(),
-		path: spq.path,
+		sql:  _q.sql.Clone(),
+		path: _q.path,
 	}
 }
 
 // WithUser tells the query-builder to eager-load the nodes that are connected to
 // the "user" edge. The optional arguments are used to configure the query builder of the edge.
-func (spq *SenderProfileQuery) WithUser(opts ...func(*UserQuery)) *SenderProfileQuery {
-	query := (&UserClient{config: spq.config}).Query()
+func (_q *SenderProfileQuery) WithUser(opts ...func(*UserQuery)) *SenderProfileQuery {
+	query := (&UserClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	spq.withUser = query
-	return spq
+	_q.withUser = query
+	return _q
 }
 
 // WithAPIKey tells the query-builder to eager-load the nodes that are connected to
 // the "api_key" edge. The optional arguments are used to configure the query builder of the edge.
-func (spq *SenderProfileQuery) WithAPIKey(opts ...func(*APIKeyQuery)) *SenderProfileQuery {
-	query := (&APIKeyClient{config: spq.config}).Query()
+func (_q *SenderProfileQuery) WithAPIKey(opts ...func(*APIKeyQuery)) *SenderProfileQuery {
+	query := (&APIKeyClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	spq.withAPIKey = query
-	return spq
+	_q.withAPIKey = query
+	return _q
 }
 
 // WithPaymentOrders tells the query-builder to eager-load the nodes that are connected to
 // the "payment_orders" edge. The optional arguments are used to configure the query builder of the edge.
-func (spq *SenderProfileQuery) WithPaymentOrders(opts ...func(*PaymentOrderQuery)) *SenderProfileQuery {
-	query := (&PaymentOrderClient{config: spq.config}).Query()
+func (_q *SenderProfileQuery) WithPaymentOrders(opts ...func(*PaymentOrderQuery)) *SenderProfileQuery {
+	query := (&PaymentOrderClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	spq.withPaymentOrders = query
-	return spq
+	_q.withPaymentOrders = query
+	return _q
 }
 
 // WithOrderTokens tells the query-builder to eager-load the nodes that are connected to
 // the "order_tokens" edge. The optional arguments are used to configure the query builder of the edge.
-func (spq *SenderProfileQuery) WithOrderTokens(opts ...func(*SenderOrderTokenQuery)) *SenderProfileQuery {
-	query := (&SenderOrderTokenClient{config: spq.config}).Query()
+func (_q *SenderProfileQuery) WithOrderTokens(opts ...func(*SenderOrderTokenQuery)) *SenderProfileQuery {
+	query := (&SenderOrderTokenClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	spq.withOrderTokens = query
-	return spq
+	_q.withOrderTokens = query
+	return _q
 }
 
 // WithLinkedAddress tells the query-builder to eager-load the nodes that are connected to
 // the "linked_address" edge. The optional arguments are used to configure the query builder of the edge.
-func (spq *SenderProfileQuery) WithLinkedAddress(opts ...func(*LinkedAddressQuery)) *SenderProfileQuery {
-	query := (&LinkedAddressClient{config: spq.config}).Query()
+func (_q *SenderProfileQuery) WithLinkedAddress(opts ...func(*LinkedAddressQuery)) *SenderProfileQuery {
+	query := (&LinkedAddressClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	spq.withLinkedAddress = query
-	return spq
+	_q.withLinkedAddress = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -453,10 +453,10 @@ func (spq *SenderProfileQuery) WithLinkedAddress(opts ...func(*LinkedAddressQuer
 //		GroupBy(senderprofile.FieldWebhookURL).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (spq *SenderProfileQuery) GroupBy(field string, fields ...string) *SenderProfileGroupBy {
-	spq.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &SenderProfileGroupBy{build: spq}
-	grbuild.flds = &spq.ctx.Fields
+func (_q *SenderProfileQuery) GroupBy(field string, fields ...string) *SenderProfileGroupBy {
+	_q.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &SenderProfileGroupBy{build: _q}
+	grbuild.flds = &_q.ctx.Fields
 	grbuild.label = senderprofile.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -474,59 +474,59 @@ func (spq *SenderProfileQuery) GroupBy(field string, fields ...string) *SenderPr
 //	client.SenderProfile.Query().
 //		Select(senderprofile.FieldWebhookURL).
 //		Scan(ctx, &v)
-func (spq *SenderProfileQuery) Select(fields ...string) *SenderProfileSelect {
-	spq.ctx.Fields = append(spq.ctx.Fields, fields...)
-	sbuild := &SenderProfileSelect{SenderProfileQuery: spq}
+func (_q *SenderProfileQuery) Select(fields ...string) *SenderProfileSelect {
+	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
+	sbuild := &SenderProfileSelect{SenderProfileQuery: _q}
 	sbuild.label = senderprofile.Label
-	sbuild.flds, sbuild.scan = &spq.ctx.Fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
 // Aggregate returns a SenderProfileSelect configured with the given aggregations.
-func (spq *SenderProfileQuery) Aggregate(fns ...AggregateFunc) *SenderProfileSelect {
-	return spq.Select().Aggregate(fns...)
+func (_q *SenderProfileQuery) Aggregate(fns ...AggregateFunc) *SenderProfileSelect {
+	return _q.Select().Aggregate(fns...)
 }
 
-func (spq *SenderProfileQuery) prepareQuery(ctx context.Context) error {
-	for _, inter := range spq.inters {
+func (_q *SenderProfileQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
 		}
 		if trv, ok := inter.(Traverser); ok {
-			if err := trv.Traverse(ctx, spq); err != nil {
+			if err := trv.Traverse(ctx, _q); err != nil {
 				return err
 			}
 		}
 	}
-	for _, f := range spq.ctx.Fields {
+	for _, f := range _q.ctx.Fields {
 		if !senderprofile.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
-	if spq.path != nil {
-		prev, err := spq.path(ctx)
+	if _q.path != nil {
+		prev, err := _q.path(ctx)
 		if err != nil {
 			return err
 		}
-		spq.sql = prev
+		_q.sql = prev
 	}
 	return nil
 }
 
-func (spq *SenderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*SenderProfile, error) {
+func (_q *SenderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*SenderProfile, error) {
 	var (
 		nodes       = []*SenderProfile{}
-		withFKs     = spq.withFKs
-		_spec       = spq.querySpec()
+		withFKs     = _q.withFKs
+		_spec       = _q.querySpec()
 		loadedTypes = [5]bool{
-			spq.withUser != nil,
-			spq.withAPIKey != nil,
-			spq.withPaymentOrders != nil,
-			spq.withOrderTokens != nil,
-			spq.withLinkedAddress != nil,
+			_q.withUser != nil,
+			_q.withAPIKey != nil,
+			_q.withPaymentOrders != nil,
+			_q.withOrderTokens != nil,
+			_q.withLinkedAddress != nil,
 		}
 	)
-	if spq.withUser != nil {
+	if _q.withUser != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -536,7 +536,7 @@ func (spq *SenderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 		return (*SenderProfile).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &SenderProfile{config: spq.config}
+		node := &SenderProfile{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -544,40 +544,40 @@ func (spq *SenderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 	for i := range hooks {
 		hooks[i](ctx, _spec)
 	}
-	if err := sqlgraph.QueryNodes(ctx, spq.driver, _spec); err != nil {
+	if err := sqlgraph.QueryNodes(ctx, _q.driver, _spec); err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := spq.withUser; query != nil {
-		if err := spq.loadUser(ctx, query, nodes, nil,
+	if query := _q.withUser; query != nil {
+		if err := _q.loadUser(ctx, query, nodes, nil,
 			func(n *SenderProfile, e *User) { n.Edges.User = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := spq.withAPIKey; query != nil {
-		if err := spq.loadAPIKey(ctx, query, nodes, nil,
+	if query := _q.withAPIKey; query != nil {
+		if err := _q.loadAPIKey(ctx, query, nodes, nil,
 			func(n *SenderProfile, e *APIKey) { n.Edges.APIKey = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := spq.withPaymentOrders; query != nil {
-		if err := spq.loadPaymentOrders(ctx, query, nodes,
+	if query := _q.withPaymentOrders; query != nil {
+		if err := _q.loadPaymentOrders(ctx, query, nodes,
 			func(n *SenderProfile) { n.Edges.PaymentOrders = []*PaymentOrder{} },
 			func(n *SenderProfile, e *PaymentOrder) { n.Edges.PaymentOrders = append(n.Edges.PaymentOrders, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := spq.withOrderTokens; query != nil {
-		if err := spq.loadOrderTokens(ctx, query, nodes,
+	if query := _q.withOrderTokens; query != nil {
+		if err := _q.loadOrderTokens(ctx, query, nodes,
 			func(n *SenderProfile) { n.Edges.OrderTokens = []*SenderOrderToken{} },
 			func(n *SenderProfile, e *SenderOrderToken) { n.Edges.OrderTokens = append(n.Edges.OrderTokens, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := spq.withLinkedAddress; query != nil {
-		if err := spq.loadLinkedAddress(ctx, query, nodes,
+	if query := _q.withLinkedAddress; query != nil {
+		if err := _q.loadLinkedAddress(ctx, query, nodes,
 			func(n *SenderProfile) { n.Edges.LinkedAddress = []*LinkedAddress{} },
 			func(n *SenderProfile, e *LinkedAddress) { n.Edges.LinkedAddress = append(n.Edges.LinkedAddress, e) }); err != nil {
 			return nil, err
@@ -586,7 +586,7 @@ func (spq *SenderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 	return nodes, nil
 }
 
-func (spq *SenderProfileQuery) loadUser(ctx context.Context, query *UserQuery, nodes []*SenderProfile, init func(*SenderProfile), assign func(*SenderProfile, *User)) error {
+func (_q *SenderProfileQuery) loadUser(ctx context.Context, query *UserQuery, nodes []*SenderProfile, init func(*SenderProfile), assign func(*SenderProfile, *User)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*SenderProfile)
 	for i := range nodes {
@@ -618,7 +618,7 @@ func (spq *SenderProfileQuery) loadUser(ctx context.Context, query *UserQuery, n
 	}
 	return nil
 }
-func (spq *SenderProfileQuery) loadAPIKey(ctx context.Context, query *APIKeyQuery, nodes []*SenderProfile, init func(*SenderProfile), assign func(*SenderProfile, *APIKey)) error {
+func (_q *SenderProfileQuery) loadAPIKey(ctx context.Context, query *APIKeyQuery, nodes []*SenderProfile, init func(*SenderProfile), assign func(*SenderProfile, *APIKey)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*SenderProfile)
 	for i := range nodes {
@@ -646,7 +646,7 @@ func (spq *SenderProfileQuery) loadAPIKey(ctx context.Context, query *APIKeyQuer
 	}
 	return nil
 }
-func (spq *SenderProfileQuery) loadPaymentOrders(ctx context.Context, query *PaymentOrderQuery, nodes []*SenderProfile, init func(*SenderProfile), assign func(*SenderProfile, *PaymentOrder)) error {
+func (_q *SenderProfileQuery) loadPaymentOrders(ctx context.Context, query *PaymentOrderQuery, nodes []*SenderProfile, init func(*SenderProfile), assign func(*SenderProfile, *PaymentOrder)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*SenderProfile)
 	for i := range nodes {
@@ -677,7 +677,7 @@ func (spq *SenderProfileQuery) loadPaymentOrders(ctx context.Context, query *Pay
 	}
 	return nil
 }
-func (spq *SenderProfileQuery) loadOrderTokens(ctx context.Context, query *SenderOrderTokenQuery, nodes []*SenderProfile, init func(*SenderProfile), assign func(*SenderProfile, *SenderOrderToken)) error {
+func (_q *SenderProfileQuery) loadOrderTokens(ctx context.Context, query *SenderOrderTokenQuery, nodes []*SenderProfile, init func(*SenderProfile), assign func(*SenderProfile, *SenderOrderToken)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*SenderProfile)
 	for i := range nodes {
@@ -708,7 +708,7 @@ func (spq *SenderProfileQuery) loadOrderTokens(ctx context.Context, query *Sende
 	}
 	return nil
 }
-func (spq *SenderProfileQuery) loadLinkedAddress(ctx context.Context, query *LinkedAddressQuery, nodes []*SenderProfile, init func(*SenderProfile), assign func(*SenderProfile, *LinkedAddress)) error {
+func (_q *SenderProfileQuery) loadLinkedAddress(ctx context.Context, query *LinkedAddressQuery, nodes []*SenderProfile, init func(*SenderProfile), assign func(*SenderProfile, *LinkedAddress)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*SenderProfile)
 	for i := range nodes {
@@ -740,24 +740,24 @@ func (spq *SenderProfileQuery) loadLinkedAddress(ctx context.Context, query *Lin
 	return nil
 }
 
-func (spq *SenderProfileQuery) sqlCount(ctx context.Context) (int, error) {
-	_spec := spq.querySpec()
-	_spec.Node.Columns = spq.ctx.Fields
-	if len(spq.ctx.Fields) > 0 {
-		_spec.Unique = spq.ctx.Unique != nil && *spq.ctx.Unique
+func (_q *SenderProfileQuery) sqlCount(ctx context.Context) (int, error) {
+	_spec := _q.querySpec()
+	_spec.Node.Columns = _q.ctx.Fields
+	if len(_q.ctx.Fields) > 0 {
+		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
 	}
-	return sqlgraph.CountNodes(ctx, spq.driver, _spec)
+	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (spq *SenderProfileQuery) querySpec() *sqlgraph.QuerySpec {
+func (_q *SenderProfileQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := sqlgraph.NewQuerySpec(senderprofile.Table, senderprofile.Columns, sqlgraph.NewFieldSpec(senderprofile.FieldID, field.TypeUUID))
-	_spec.From = spq.sql
-	if unique := spq.ctx.Unique; unique != nil {
+	_spec.From = _q.sql
+	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
-	} else if spq.path != nil {
+	} else if _q.path != nil {
 		_spec.Unique = true
 	}
-	if fields := spq.ctx.Fields; len(fields) > 0 {
+	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, senderprofile.FieldID)
 		for i := range fields {
@@ -766,20 +766,20 @@ func (spq *SenderProfileQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if ps := spq.predicates; len(ps) > 0 {
+	if ps := _q.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if limit := spq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := spq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
-	if ps := spq.order; len(ps) > 0 {
+	if ps := _q.order; len(ps) > 0 {
 		_spec.Order = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
@@ -789,33 +789,33 @@ func (spq *SenderProfileQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (spq *SenderProfileQuery) sqlQuery(ctx context.Context) *sql.Selector {
-	builder := sql.Dialect(spq.driver.Dialect())
+func (_q *SenderProfileQuery) sqlQuery(ctx context.Context) *sql.Selector {
+	builder := sql.Dialect(_q.driver.Dialect())
 	t1 := builder.Table(senderprofile.Table)
-	columns := spq.ctx.Fields
+	columns := _q.ctx.Fields
 	if len(columns) == 0 {
 		columns = senderprofile.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
-	if spq.sql != nil {
-		selector = spq.sql
+	if _q.sql != nil {
+		selector = _q.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if spq.ctx.Unique != nil && *spq.ctx.Unique {
+	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
-	for _, p := range spq.predicates {
+	for _, p := range _q.predicates {
 		p(selector)
 	}
-	for _, p := range spq.order {
+	for _, p := range _q.order {
 		p(selector)
 	}
-	if offset := spq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := spq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -828,41 +828,41 @@ type SenderProfileGroupBy struct {
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (spgb *SenderProfileGroupBy) Aggregate(fns ...AggregateFunc) *SenderProfileGroupBy {
-	spgb.fns = append(spgb.fns, fns...)
-	return spgb
+func (_g *SenderProfileGroupBy) Aggregate(fns ...AggregateFunc) *SenderProfileGroupBy {
+	_g.fns = append(_g.fns, fns...)
+	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (spgb *SenderProfileGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, spgb.build.ctx, ent.OpQueryGroupBy)
-	if err := spgb.build.prepareQuery(ctx); err != nil {
+func (_g *SenderProfileGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
+	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*SenderProfileQuery, *SenderProfileGroupBy](ctx, spgb.build, spgb, spgb.build.inters, v)
+	return scanWithInterceptors[*SenderProfileQuery, *SenderProfileGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (spgb *SenderProfileGroupBy) sqlScan(ctx context.Context, root *SenderProfileQuery, v any) error {
+func (_g *SenderProfileGroupBy) sqlScan(ctx context.Context, root *SenderProfileQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
-	aggregation := make([]string, 0, len(spgb.fns))
-	for _, fn := range spgb.fns {
+	aggregation := make([]string, 0, len(_g.fns))
+	for _, fn := range _g.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
 	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(*spgb.flds)+len(spgb.fns))
-		for _, f := range *spgb.flds {
+		columns := make([]string, 0, len(*_g.flds)+len(_g.fns))
+		for _, f := range *_g.flds {
 			columns = append(columns, selector.C(f))
 		}
 		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
-	selector.GroupBy(selector.Columns(*spgb.flds...)...)
+	selector.GroupBy(selector.Columns(*_g.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := spgb.build.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _g.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
@@ -876,27 +876,27 @@ type SenderProfileSelect struct {
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (sps *SenderProfileSelect) Aggregate(fns ...AggregateFunc) *SenderProfileSelect {
-	sps.fns = append(sps.fns, fns...)
-	return sps
+func (_s *SenderProfileSelect) Aggregate(fns ...AggregateFunc) *SenderProfileSelect {
+	_s.fns = append(_s.fns, fns...)
+	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (sps *SenderProfileSelect) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, sps.ctx, ent.OpQuerySelect)
-	if err := sps.prepareQuery(ctx); err != nil {
+func (_s *SenderProfileSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
+	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*SenderProfileQuery, *SenderProfileSelect](ctx, sps.SenderProfileQuery, sps, sps.inters, v)
+	return scanWithInterceptors[*SenderProfileQuery, *SenderProfileSelect](ctx, _s.SenderProfileQuery, _s, _s.inters, v)
 }
 
-func (sps *SenderProfileSelect) sqlScan(ctx context.Context, root *SenderProfileQuery, v any) error {
+func (_s *SenderProfileSelect) sqlScan(ctx context.Context, root *SenderProfileQuery, v any) error {
 	selector := root.sqlQuery(ctx)
-	aggregation := make([]string, 0, len(sps.fns))
-	for _, fn := range sps.fns {
+	aggregation := make([]string, 0, len(_s.fns))
+	for _, fn := range _s.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
-	switch n := len(*sps.selector.flds); {
+	switch n := len(*_s.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
 		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
@@ -904,7 +904,7 @@ func (sps *SenderProfileSelect) sqlScan(ctx context.Context, root *SenderProfile
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := sps.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _s.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()

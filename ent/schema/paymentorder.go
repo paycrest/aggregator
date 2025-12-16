@@ -37,16 +37,16 @@ func (PaymentOrder) Fields() []ent.Field {
 			Optional(),
 		field.Int64("block_number").Default(0),
 		field.String("from_address").
-			MaxLen(60).
+			MaxLen(70).
 			Optional(),
 		field.String("return_address").
-			MaxLen(60).
+			MaxLen(70).
 			Optional(),
 		field.String("receive_address_text").
-			MaxLen(60),
+			MaxLen(70),
 		field.Float("fee_percent").GoType(decimal.Decimal{}),
 		field.String("fee_address").
-			MaxLen(60).
+			MaxLen(70).
 			Optional(),
 		field.String("gateway_id").
 			MaxLen(70).

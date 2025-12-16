@@ -129,7 +129,7 @@ func (*ProviderOrderToken) scanValues(columns []string) ([]any, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the ProviderOrderToken fields.
-func (pot *ProviderOrderToken) assignValues(columns []string, values []any) error {
+func (_m *ProviderOrderToken) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -140,102 +140,102 @@ func (pot *ProviderOrderToken) assignValues(columns []string, values []any) erro
 			if !ok {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
-			pot.ID = int(value.Int64)
+			_m.ID = int(value.Int64)
 		case providerordertoken.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
-				pot.CreatedAt = value.Time
+				_m.CreatedAt = value.Time
 			}
 		case providerordertoken.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
-				pot.UpdatedAt = value.Time
+				_m.UpdatedAt = value.Time
 			}
 		case providerordertoken.FieldFixedConversionRate:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field fixed_conversion_rate", values[i])
 			} else if value != nil {
-				pot.FixedConversionRate = *value
+				_m.FixedConversionRate = *value
 			}
 		case providerordertoken.FieldFloatingConversionRate:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field floating_conversion_rate", values[i])
 			} else if value != nil {
-				pot.FloatingConversionRate = *value
+				_m.FloatingConversionRate = *value
 			}
 		case providerordertoken.FieldConversionRateType:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field conversion_rate_type", values[i])
 			} else if value.Valid {
-				pot.ConversionRateType = providerordertoken.ConversionRateType(value.String)
+				_m.ConversionRateType = providerordertoken.ConversionRateType(value.String)
 			}
 		case providerordertoken.FieldMaxOrderAmount:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field max_order_amount", values[i])
 			} else if value != nil {
-				pot.MaxOrderAmount = *value
+				_m.MaxOrderAmount = *value
 			}
 		case providerordertoken.FieldMinOrderAmount:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field min_order_amount", values[i])
 			} else if value != nil {
-				pot.MinOrderAmount = *value
+				_m.MinOrderAmount = *value
 			}
 		case providerordertoken.FieldMaxOrderAmountOtc:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field max_order_amount_otc", values[i])
 			} else if value != nil {
-				pot.MaxOrderAmountOtc = *value
+				_m.MaxOrderAmountOtc = *value
 			}
 		case providerordertoken.FieldMinOrderAmountOtc:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field min_order_amount_otc", values[i])
 			} else if value != nil {
-				pot.MinOrderAmountOtc = *value
+				_m.MinOrderAmountOtc = *value
 			}
 		case providerordertoken.FieldRateSlippage:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field rate_slippage", values[i])
 			} else if value != nil {
-				pot.RateSlippage = *value
+				_m.RateSlippage = *value
 			}
 		case providerordertoken.FieldAddress:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field address", values[i])
 			} else if value.Valid {
-				pot.Address = value.String
+				_m.Address = value.String
 			}
 		case providerordertoken.FieldNetwork:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field network", values[i])
 			} else if value.Valid {
-				pot.Network = value.String
+				_m.Network = value.String
 			}
 		case providerordertoken.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field fiat_currency_provider_order_tokens", values[i])
 			} else if value.Valid {
-				pot.fiat_currency_provider_order_tokens = new(uuid.UUID)
-				*pot.fiat_currency_provider_order_tokens = *value.S.(*uuid.UUID)
+				_m.fiat_currency_provider_order_tokens = new(uuid.UUID)
+				*_m.fiat_currency_provider_order_tokens = *value.S.(*uuid.UUID)
 			}
 		case providerordertoken.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field provider_profile_order_tokens", values[i])
 			} else if value.Valid {
-				pot.provider_profile_order_tokens = new(string)
-				*pot.provider_profile_order_tokens = value.String
+				_m.provider_profile_order_tokens = new(string)
+				*_m.provider_profile_order_tokens = value.String
 			}
 		case providerordertoken.ForeignKeys[2]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field token_provider_order_tokens", value)
 			} else if value.Valid {
-				pot.token_provider_order_tokens = new(int)
-				*pot.token_provider_order_tokens = int(value.Int64)
+				_m.token_provider_order_tokens = new(int)
+				*_m.token_provider_order_tokens = int(value.Int64)
 			}
 		default:
-			pot.selectValues.Set(columns[i], values[i])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -243,83 +243,83 @@ func (pot *ProviderOrderToken) assignValues(columns []string, values []any) erro
 
 // Value returns the ent.Value that was dynamically selected and assigned to the ProviderOrderToken.
 // This includes values selected through modifiers, order, etc.
-func (pot *ProviderOrderToken) Value(name string) (ent.Value, error) {
-	return pot.selectValues.Get(name)
+func (_m *ProviderOrderToken) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
 }
 
 // QueryProvider queries the "provider" edge of the ProviderOrderToken entity.
-func (pot *ProviderOrderToken) QueryProvider() *ProviderProfileQuery {
-	return NewProviderOrderTokenClient(pot.config).QueryProvider(pot)
+func (_m *ProviderOrderToken) QueryProvider() *ProviderProfileQuery {
+	return NewProviderOrderTokenClient(_m.config).QueryProvider(_m)
 }
 
 // QueryToken queries the "token" edge of the ProviderOrderToken entity.
-func (pot *ProviderOrderToken) QueryToken() *TokenQuery {
-	return NewProviderOrderTokenClient(pot.config).QueryToken(pot)
+func (_m *ProviderOrderToken) QueryToken() *TokenQuery {
+	return NewProviderOrderTokenClient(_m.config).QueryToken(_m)
 }
 
 // QueryCurrency queries the "currency" edge of the ProviderOrderToken entity.
-func (pot *ProviderOrderToken) QueryCurrency() *FiatCurrencyQuery {
-	return NewProviderOrderTokenClient(pot.config).QueryCurrency(pot)
+func (_m *ProviderOrderToken) QueryCurrency() *FiatCurrencyQuery {
+	return NewProviderOrderTokenClient(_m.config).QueryCurrency(_m)
 }
 
 // Update returns a builder for updating this ProviderOrderToken.
 // Note that you need to call ProviderOrderToken.Unwrap() before calling this method if this ProviderOrderToken
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (pot *ProviderOrderToken) Update() *ProviderOrderTokenUpdateOne {
-	return NewProviderOrderTokenClient(pot.config).UpdateOne(pot)
+func (_m *ProviderOrderToken) Update() *ProviderOrderTokenUpdateOne {
+	return NewProviderOrderTokenClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the ProviderOrderToken entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (pot *ProviderOrderToken) Unwrap() *ProviderOrderToken {
-	_tx, ok := pot.config.driver.(*txDriver)
+func (_m *ProviderOrderToken) Unwrap() *ProviderOrderToken {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: ProviderOrderToken is not a transactional entity")
 	}
-	pot.config.driver = _tx.drv
-	return pot
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (pot *ProviderOrderToken) String() string {
+func (_m *ProviderOrderToken) String() string {
 	var builder strings.Builder
 	builder.WriteString("ProviderOrderToken(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", pot.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("created_at=")
-	builder.WriteString(pot.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
-	builder.WriteString(pot.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("fixed_conversion_rate=")
-	builder.WriteString(fmt.Sprintf("%v", pot.FixedConversionRate))
+	builder.WriteString(fmt.Sprintf("%v", _m.FixedConversionRate))
 	builder.WriteString(", ")
 	builder.WriteString("floating_conversion_rate=")
-	builder.WriteString(fmt.Sprintf("%v", pot.FloatingConversionRate))
+	builder.WriteString(fmt.Sprintf("%v", _m.FloatingConversionRate))
 	builder.WriteString(", ")
 	builder.WriteString("conversion_rate_type=")
-	builder.WriteString(fmt.Sprintf("%v", pot.ConversionRateType))
+	builder.WriteString(fmt.Sprintf("%v", _m.ConversionRateType))
 	builder.WriteString(", ")
 	builder.WriteString("max_order_amount=")
-	builder.WriteString(fmt.Sprintf("%v", pot.MaxOrderAmount))
+	builder.WriteString(fmt.Sprintf("%v", _m.MaxOrderAmount))
 	builder.WriteString(", ")
 	builder.WriteString("min_order_amount=")
-	builder.WriteString(fmt.Sprintf("%v", pot.MinOrderAmount))
+	builder.WriteString(fmt.Sprintf("%v", _m.MinOrderAmount))
 	builder.WriteString(", ")
 	builder.WriteString("max_order_amount_otc=")
-	builder.WriteString(fmt.Sprintf("%v", pot.MaxOrderAmountOtc))
+	builder.WriteString(fmt.Sprintf("%v", _m.MaxOrderAmountOtc))
 	builder.WriteString(", ")
 	builder.WriteString("min_order_amount_otc=")
-	builder.WriteString(fmt.Sprintf("%v", pot.MinOrderAmountOtc))
+	builder.WriteString(fmt.Sprintf("%v", _m.MinOrderAmountOtc))
 	builder.WriteString(", ")
 	builder.WriteString("rate_slippage=")
-	builder.WriteString(fmt.Sprintf("%v", pot.RateSlippage))
+	builder.WriteString(fmt.Sprintf("%v", _m.RateSlippage))
 	builder.WriteString(", ")
 	builder.WriteString("address=")
-	builder.WriteString(pot.Address)
+	builder.WriteString(_m.Address)
 	builder.WriteString(", ")
 	builder.WriteString("network=")
-	builder.WriteString(pot.Network)
+	builder.WriteString(_m.Network)
 	builder.WriteByte(')')
 	return builder.String()
 }

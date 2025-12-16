@@ -20,56 +20,56 @@ type WebhookRetryAttemptDelete struct {
 }
 
 // Where appends a list predicates to the WebhookRetryAttemptDelete builder.
-func (wrad *WebhookRetryAttemptDelete) Where(ps ...predicate.WebhookRetryAttempt) *WebhookRetryAttemptDelete {
-	wrad.mutation.Where(ps...)
-	return wrad
+func (_d *WebhookRetryAttemptDelete) Where(ps ...predicate.WebhookRetryAttempt) *WebhookRetryAttemptDelete {
+	_d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query and returns how many vertices were deleted.
-func (wrad *WebhookRetryAttemptDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks(ctx, wrad.sqlExec, wrad.mutation, wrad.hooks)
+func (_d *WebhookRetryAttemptDelete) Exec(ctx context.Context) (int, error) {
+	return withHooks(ctx, _d.sqlExec, _d.mutation, _d.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (wrad *WebhookRetryAttemptDelete) ExecX(ctx context.Context) int {
-	n, err := wrad.Exec(ctx)
+func (_d *WebhookRetryAttemptDelete) ExecX(ctx context.Context) int {
+	n, err := _d.Exec(ctx)
 	if err != nil {
 		panic(err)
 	}
 	return n
 }
 
-func (wrad *WebhookRetryAttemptDelete) sqlExec(ctx context.Context) (int, error) {
+func (_d *WebhookRetryAttemptDelete) sqlExec(ctx context.Context) (int, error) {
 	_spec := sqlgraph.NewDeleteSpec(webhookretryattempt.Table, sqlgraph.NewFieldSpec(webhookretryattempt.FieldID, field.TypeInt))
-	if ps := wrad.mutation.predicates; len(ps) > 0 {
+	if ps := _d.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	affected, err := sqlgraph.DeleteNodes(ctx, wrad.driver, _spec)
+	affected, err := sqlgraph.DeleteNodes(ctx, _d.driver, _spec)
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
-	wrad.mutation.done = true
+	_d.mutation.done = true
 	return affected, err
 }
 
 // WebhookRetryAttemptDeleteOne is the builder for deleting a single WebhookRetryAttempt entity.
 type WebhookRetryAttemptDeleteOne struct {
-	wrad *WebhookRetryAttemptDelete
+	_d *WebhookRetryAttemptDelete
 }
 
 // Where appends a list predicates to the WebhookRetryAttemptDelete builder.
-func (wrado *WebhookRetryAttemptDeleteOne) Where(ps ...predicate.WebhookRetryAttempt) *WebhookRetryAttemptDeleteOne {
-	wrado.wrad.mutation.Where(ps...)
-	return wrado
+func (_d *WebhookRetryAttemptDeleteOne) Where(ps ...predicate.WebhookRetryAttempt) *WebhookRetryAttemptDeleteOne {
+	_d._d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query.
-func (wrado *WebhookRetryAttemptDeleteOne) Exec(ctx context.Context) error {
-	n, err := wrado.wrad.Exec(ctx)
+func (_d *WebhookRetryAttemptDeleteOne) Exec(ctx context.Context) error {
+	n, err := _d._d.Exec(ctx)
 	switch {
 	case err != nil:
 		return err
@@ -81,8 +81,8 @@ func (wrado *WebhookRetryAttemptDeleteOne) Exec(ctx context.Context) error {
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (wrado *WebhookRetryAttemptDeleteOne) ExecX(ctx context.Context) {
-	if err := wrado.Exec(ctx); err != nil {
+func (_d *WebhookRetryAttemptDeleteOne) ExecX(ctx context.Context) {
+	if err := _d.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

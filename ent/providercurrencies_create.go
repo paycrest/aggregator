@@ -28,101 +28,101 @@ type ProviderCurrenciesCreate struct {
 }
 
 // SetAvailableBalance sets the "available_balance" field.
-func (pcc *ProviderCurrenciesCreate) SetAvailableBalance(d decimal.Decimal) *ProviderCurrenciesCreate {
-	pcc.mutation.SetAvailableBalance(d)
-	return pcc
+func (_c *ProviderCurrenciesCreate) SetAvailableBalance(v decimal.Decimal) *ProviderCurrenciesCreate {
+	_c.mutation.SetAvailableBalance(v)
+	return _c
 }
 
 // SetTotalBalance sets the "total_balance" field.
-func (pcc *ProviderCurrenciesCreate) SetTotalBalance(d decimal.Decimal) *ProviderCurrenciesCreate {
-	pcc.mutation.SetTotalBalance(d)
-	return pcc
+func (_c *ProviderCurrenciesCreate) SetTotalBalance(v decimal.Decimal) *ProviderCurrenciesCreate {
+	_c.mutation.SetTotalBalance(v)
+	return _c
 }
 
 // SetReservedBalance sets the "reserved_balance" field.
-func (pcc *ProviderCurrenciesCreate) SetReservedBalance(d decimal.Decimal) *ProviderCurrenciesCreate {
-	pcc.mutation.SetReservedBalance(d)
-	return pcc
+func (_c *ProviderCurrenciesCreate) SetReservedBalance(v decimal.Decimal) *ProviderCurrenciesCreate {
+	_c.mutation.SetReservedBalance(v)
+	return _c
 }
 
 // SetIsAvailable sets the "is_available" field.
-func (pcc *ProviderCurrenciesCreate) SetIsAvailable(b bool) *ProviderCurrenciesCreate {
-	pcc.mutation.SetIsAvailable(b)
-	return pcc
+func (_c *ProviderCurrenciesCreate) SetIsAvailable(v bool) *ProviderCurrenciesCreate {
+	_c.mutation.SetIsAvailable(v)
+	return _c
 }
 
 // SetNillableIsAvailable sets the "is_available" field if the given value is not nil.
-func (pcc *ProviderCurrenciesCreate) SetNillableIsAvailable(b *bool) *ProviderCurrenciesCreate {
-	if b != nil {
-		pcc.SetIsAvailable(*b)
+func (_c *ProviderCurrenciesCreate) SetNillableIsAvailable(v *bool) *ProviderCurrenciesCreate {
+	if v != nil {
+		_c.SetIsAvailable(*v)
 	}
-	return pcc
+	return _c
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (pcc *ProviderCurrenciesCreate) SetUpdatedAt(t time.Time) *ProviderCurrenciesCreate {
-	pcc.mutation.SetUpdatedAt(t)
-	return pcc
+func (_c *ProviderCurrenciesCreate) SetUpdatedAt(v time.Time) *ProviderCurrenciesCreate {
+	_c.mutation.SetUpdatedAt(v)
+	return _c
 }
 
 // SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (pcc *ProviderCurrenciesCreate) SetNillableUpdatedAt(t *time.Time) *ProviderCurrenciesCreate {
-	if t != nil {
-		pcc.SetUpdatedAt(*t)
+func (_c *ProviderCurrenciesCreate) SetNillableUpdatedAt(v *time.Time) *ProviderCurrenciesCreate {
+	if v != nil {
+		_c.SetUpdatedAt(*v)
 	}
-	return pcc
+	return _c
 }
 
 // SetID sets the "id" field.
-func (pcc *ProviderCurrenciesCreate) SetID(u uuid.UUID) *ProviderCurrenciesCreate {
-	pcc.mutation.SetID(u)
-	return pcc
+func (_c *ProviderCurrenciesCreate) SetID(v uuid.UUID) *ProviderCurrenciesCreate {
+	_c.mutation.SetID(v)
+	return _c
 }
 
 // SetNillableID sets the "id" field if the given value is not nil.
-func (pcc *ProviderCurrenciesCreate) SetNillableID(u *uuid.UUID) *ProviderCurrenciesCreate {
-	if u != nil {
-		pcc.SetID(*u)
+func (_c *ProviderCurrenciesCreate) SetNillableID(v *uuid.UUID) *ProviderCurrenciesCreate {
+	if v != nil {
+		_c.SetID(*v)
 	}
-	return pcc
+	return _c
 }
 
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
-func (pcc *ProviderCurrenciesCreate) SetProviderID(id string) *ProviderCurrenciesCreate {
-	pcc.mutation.SetProviderID(id)
-	return pcc
+func (_c *ProviderCurrenciesCreate) SetProviderID(id string) *ProviderCurrenciesCreate {
+	_c.mutation.SetProviderID(id)
+	return _c
 }
 
 // SetProvider sets the "provider" edge to the ProviderProfile entity.
-func (pcc *ProviderCurrenciesCreate) SetProvider(p *ProviderProfile) *ProviderCurrenciesCreate {
-	return pcc.SetProviderID(p.ID)
+func (_c *ProviderCurrenciesCreate) SetProvider(v *ProviderProfile) *ProviderCurrenciesCreate {
+	return _c.SetProviderID(v.ID)
 }
 
 // SetCurrencyID sets the "currency" edge to the FiatCurrency entity by ID.
-func (pcc *ProviderCurrenciesCreate) SetCurrencyID(id uuid.UUID) *ProviderCurrenciesCreate {
-	pcc.mutation.SetCurrencyID(id)
-	return pcc
+func (_c *ProviderCurrenciesCreate) SetCurrencyID(id uuid.UUID) *ProviderCurrenciesCreate {
+	_c.mutation.SetCurrencyID(id)
+	return _c
 }
 
 // SetCurrency sets the "currency" edge to the FiatCurrency entity.
-func (pcc *ProviderCurrenciesCreate) SetCurrency(f *FiatCurrency) *ProviderCurrenciesCreate {
-	return pcc.SetCurrencyID(f.ID)
+func (_c *ProviderCurrenciesCreate) SetCurrency(v *FiatCurrency) *ProviderCurrenciesCreate {
+	return _c.SetCurrencyID(v.ID)
 }
 
 // Mutation returns the ProviderCurrenciesMutation object of the builder.
-func (pcc *ProviderCurrenciesCreate) Mutation() *ProviderCurrenciesMutation {
-	return pcc.mutation
+func (_c *ProviderCurrenciesCreate) Mutation() *ProviderCurrenciesMutation {
+	return _c.mutation
 }
 
 // Save creates the ProviderCurrencies in the database.
-func (pcc *ProviderCurrenciesCreate) Save(ctx context.Context) (*ProviderCurrencies, error) {
-	pcc.defaults()
-	return withHooks(ctx, pcc.sqlSave, pcc.mutation, pcc.hooks)
+func (_c *ProviderCurrenciesCreate) Save(ctx context.Context) (*ProviderCurrencies, error) {
+	_c.defaults()
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (pcc *ProviderCurrenciesCreate) SaveX(ctx context.Context) *ProviderCurrencies {
-	v, err := pcc.Save(ctx)
+func (_c *ProviderCurrenciesCreate) SaveX(ctx context.Context) *ProviderCurrencies {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -130,66 +130,66 @@ func (pcc *ProviderCurrenciesCreate) SaveX(ctx context.Context) *ProviderCurrenc
 }
 
 // Exec executes the query.
-func (pcc *ProviderCurrenciesCreate) Exec(ctx context.Context) error {
-	_, err := pcc.Save(ctx)
+func (_c *ProviderCurrenciesCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pcc *ProviderCurrenciesCreate) ExecX(ctx context.Context) {
-	if err := pcc.Exec(ctx); err != nil {
+func (_c *ProviderCurrenciesCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (pcc *ProviderCurrenciesCreate) defaults() {
-	if _, ok := pcc.mutation.IsAvailable(); !ok {
+func (_c *ProviderCurrenciesCreate) defaults() {
+	if _, ok := _c.mutation.IsAvailable(); !ok {
 		v := providercurrencies.DefaultIsAvailable
-		pcc.mutation.SetIsAvailable(v)
+		_c.mutation.SetIsAvailable(v)
 	}
-	if _, ok := pcc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		v := providercurrencies.DefaultUpdatedAt()
-		pcc.mutation.SetUpdatedAt(v)
+		_c.mutation.SetUpdatedAt(v)
 	}
-	if _, ok := pcc.mutation.ID(); !ok {
+	if _, ok := _c.mutation.ID(); !ok {
 		v := providercurrencies.DefaultID()
-		pcc.mutation.SetID(v)
+		_c.mutation.SetID(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (pcc *ProviderCurrenciesCreate) check() error {
-	if _, ok := pcc.mutation.AvailableBalance(); !ok {
+func (_c *ProviderCurrenciesCreate) check() error {
+	if _, ok := _c.mutation.AvailableBalance(); !ok {
 		return &ValidationError{Name: "available_balance", err: errors.New(`ent: missing required field "ProviderCurrencies.available_balance"`)}
 	}
-	if _, ok := pcc.mutation.TotalBalance(); !ok {
+	if _, ok := _c.mutation.TotalBalance(); !ok {
 		return &ValidationError{Name: "total_balance", err: errors.New(`ent: missing required field "ProviderCurrencies.total_balance"`)}
 	}
-	if _, ok := pcc.mutation.ReservedBalance(); !ok {
+	if _, ok := _c.mutation.ReservedBalance(); !ok {
 		return &ValidationError{Name: "reserved_balance", err: errors.New(`ent: missing required field "ProviderCurrencies.reserved_balance"`)}
 	}
-	if _, ok := pcc.mutation.IsAvailable(); !ok {
+	if _, ok := _c.mutation.IsAvailable(); !ok {
 		return &ValidationError{Name: "is_available", err: errors.New(`ent: missing required field "ProviderCurrencies.is_available"`)}
 	}
-	if _, ok := pcc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ProviderCurrencies.updated_at"`)}
 	}
-	if len(pcc.mutation.ProviderIDs()) == 0 {
+	if len(_c.mutation.ProviderIDs()) == 0 {
 		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required edge "ProviderCurrencies.provider"`)}
 	}
-	if len(pcc.mutation.CurrencyIDs()) == 0 {
+	if len(_c.mutation.CurrencyIDs()) == 0 {
 		return &ValidationError{Name: "currency", err: errors.New(`ent: missing required edge "ProviderCurrencies.currency"`)}
 	}
 	return nil
 }
 
-func (pcc *ProviderCurrenciesCreate) sqlSave(ctx context.Context) (*ProviderCurrencies, error) {
-	if err := pcc.check(); err != nil {
+func (_c *ProviderCurrenciesCreate) sqlSave(ctx context.Context) (*ProviderCurrencies, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := pcc.createSpec()
-	if err := sqlgraph.CreateNode(ctx, pcc.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -202,42 +202,42 @@ func (pcc *ProviderCurrenciesCreate) sqlSave(ctx context.Context) (*ProviderCurr
 			return nil, err
 		}
 	}
-	pcc.mutation.id = &_node.ID
-	pcc.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (pcc *ProviderCurrenciesCreate) createSpec() (*ProviderCurrencies, *sqlgraph.CreateSpec) {
+func (_c *ProviderCurrenciesCreate) createSpec() (*ProviderCurrencies, *sqlgraph.CreateSpec) {
 	var (
-		_node = &ProviderCurrencies{config: pcc.config}
+		_node = &ProviderCurrencies{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(providercurrencies.Table, sqlgraph.NewFieldSpec(providercurrencies.FieldID, field.TypeUUID))
 	)
-	_spec.OnConflict = pcc.conflict
-	if id, ok := pcc.mutation.ID(); ok {
+	_spec.OnConflict = _c.conflict
+	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := pcc.mutation.AvailableBalance(); ok {
+	if value, ok := _c.mutation.AvailableBalance(); ok {
 		_spec.SetField(providercurrencies.FieldAvailableBalance, field.TypeFloat64, value)
 		_node.AvailableBalance = value
 	}
-	if value, ok := pcc.mutation.TotalBalance(); ok {
+	if value, ok := _c.mutation.TotalBalance(); ok {
 		_spec.SetField(providercurrencies.FieldTotalBalance, field.TypeFloat64, value)
 		_node.TotalBalance = value
 	}
-	if value, ok := pcc.mutation.ReservedBalance(); ok {
+	if value, ok := _c.mutation.ReservedBalance(); ok {
 		_spec.SetField(providercurrencies.FieldReservedBalance, field.TypeFloat64, value)
 		_node.ReservedBalance = value
 	}
-	if value, ok := pcc.mutation.IsAvailable(); ok {
+	if value, ok := _c.mutation.IsAvailable(); ok {
 		_spec.SetField(providercurrencies.FieldIsAvailable, field.TypeBool, value)
 		_node.IsAvailable = value
 	}
-	if value, ok := pcc.mutation.UpdatedAt(); ok {
+	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(providercurrencies.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if nodes := pcc.mutation.ProviderIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.ProviderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -254,7 +254,7 @@ func (pcc *ProviderCurrenciesCreate) createSpec() (*ProviderCurrencies, *sqlgrap
 		_node.provider_profile_provider_currencies = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := pcc.mutation.CurrencyIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.CurrencyIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -290,10 +290,10 @@ func (pcc *ProviderCurrenciesCreate) createSpec() (*ProviderCurrencies, *sqlgrap
 //			SetAvailableBalance(v+v).
 //		}).
 //		Exec(ctx)
-func (pcc *ProviderCurrenciesCreate) OnConflict(opts ...sql.ConflictOption) *ProviderCurrenciesUpsertOne {
-	pcc.conflict = opts
+func (_c *ProviderCurrenciesCreate) OnConflict(opts ...sql.ConflictOption) *ProviderCurrenciesUpsertOne {
+	_c.conflict = opts
 	return &ProviderCurrenciesUpsertOne{
-		create: pcc,
+		create: _c,
 	}
 }
 
@@ -303,10 +303,10 @@ func (pcc *ProviderCurrenciesCreate) OnConflict(opts ...sql.ConflictOption) *Pro
 //	client.ProviderCurrencies.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (pcc *ProviderCurrenciesCreate) OnConflictColumns(columns ...string) *ProviderCurrenciesUpsertOne {
-	pcc.conflict = append(pcc.conflict, sql.ConflictColumns(columns...))
+func (_c *ProviderCurrenciesCreate) OnConflictColumns(columns ...string) *ProviderCurrenciesUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &ProviderCurrenciesUpsertOne{
-		create: pcc,
+		create: _c,
 	}
 }
 
@@ -587,16 +587,16 @@ type ProviderCurrenciesCreateBulk struct {
 }
 
 // Save creates the ProviderCurrencies entities in the database.
-func (pccb *ProviderCurrenciesCreateBulk) Save(ctx context.Context) ([]*ProviderCurrencies, error) {
-	if pccb.err != nil {
-		return nil, pccb.err
+func (_c *ProviderCurrenciesCreateBulk) Save(ctx context.Context) ([]*ProviderCurrencies, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(pccb.builders))
-	nodes := make([]*ProviderCurrencies, len(pccb.builders))
-	mutators := make([]Mutator, len(pccb.builders))
-	for i := range pccb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*ProviderCurrencies, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := pccb.builders[i]
+			builder := _c.builders[i]
 			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*ProviderCurrenciesMutation)
@@ -610,12 +610,12 @@ func (pccb *ProviderCurrenciesCreateBulk) Save(ctx context.Context) ([]*Provider
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, pccb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = pccb.conflict
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, pccb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -635,7 +635,7 @@ func (pccb *ProviderCurrenciesCreateBulk) Save(ctx context.Context) ([]*Provider
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, pccb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -643,8 +643,8 @@ func (pccb *ProviderCurrenciesCreateBulk) Save(ctx context.Context) ([]*Provider
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (pccb *ProviderCurrenciesCreateBulk) SaveX(ctx context.Context) []*ProviderCurrencies {
-	v, err := pccb.Save(ctx)
+func (_c *ProviderCurrenciesCreateBulk) SaveX(ctx context.Context) []*ProviderCurrencies {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -652,14 +652,14 @@ func (pccb *ProviderCurrenciesCreateBulk) SaveX(ctx context.Context) []*Provider
 }
 
 // Exec executes the query.
-func (pccb *ProviderCurrenciesCreateBulk) Exec(ctx context.Context) error {
-	_, err := pccb.Save(ctx)
+func (_c *ProviderCurrenciesCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pccb *ProviderCurrenciesCreateBulk) ExecX(ctx context.Context) {
-	if err := pccb.Exec(ctx); err != nil {
+func (_c *ProviderCurrenciesCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
@@ -679,10 +679,10 @@ func (pccb *ProviderCurrenciesCreateBulk) ExecX(ctx context.Context) {
 //			SetAvailableBalance(v+v).
 //		}).
 //		Exec(ctx)
-func (pccb *ProviderCurrenciesCreateBulk) OnConflict(opts ...sql.ConflictOption) *ProviderCurrenciesUpsertBulk {
-	pccb.conflict = opts
+func (_c *ProviderCurrenciesCreateBulk) OnConflict(opts ...sql.ConflictOption) *ProviderCurrenciesUpsertBulk {
+	_c.conflict = opts
 	return &ProviderCurrenciesUpsertBulk{
-		create: pccb,
+		create: _c,
 	}
 }
 
@@ -692,10 +692,10 @@ func (pccb *ProviderCurrenciesCreateBulk) OnConflict(opts ...sql.ConflictOption)
 //	client.ProviderCurrencies.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (pccb *ProviderCurrenciesCreateBulk) OnConflictColumns(columns ...string) *ProviderCurrenciesUpsertBulk {
-	pccb.conflict = append(pccb.conflict, sql.ConflictColumns(columns...))
+func (_c *ProviderCurrenciesCreateBulk) OnConflictColumns(columns ...string) *ProviderCurrenciesUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &ProviderCurrenciesUpsertBulk{
-		create: pccb,
+		create: _c,
 	}
 }
 

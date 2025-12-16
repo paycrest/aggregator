@@ -90,7 +90,7 @@ func (*LinkedAddress) scanValues(columns []string) ([]any, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the LinkedAddress fields.
-func (la *LinkedAddress) assignValues(columns []string, values []any) error {
+func (_m *LinkedAddress) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -101,54 +101,54 @@ func (la *LinkedAddress) assignValues(columns []string, values []any) error {
 			if !ok {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
-			la.ID = int(value.Int64)
+			_m.ID = int(value.Int64)
 		case linkedaddress.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
-				la.CreatedAt = value.Time
+				_m.CreatedAt = value.Time
 			}
 		case linkedaddress.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
-				la.UpdatedAt = value.Time
+				_m.UpdatedAt = value.Time
 			}
 		case linkedaddress.FieldAddress:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field address", values[i])
 			} else if value.Valid {
-				la.Address = value.String
+				_m.Address = value.String
 			}
 		case linkedaddress.FieldSalt:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field salt", values[i])
 			} else if value != nil {
-				la.Salt = *value
+				_m.Salt = *value
 			}
 		case linkedaddress.FieldInstitution:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field institution", values[i])
 			} else if value.Valid {
-				la.Institution = value.String
+				_m.Institution = value.String
 			}
 		case linkedaddress.FieldAccountIdentifier:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field account_identifier", values[i])
 			} else if value.Valid {
-				la.AccountIdentifier = value.String
+				_m.AccountIdentifier = value.String
 			}
 		case linkedaddress.FieldAccountName:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field account_name", values[i])
 			} else if value.Valid {
-				la.AccountName = value.String
+				_m.AccountName = value.String
 			}
 		case linkedaddress.FieldMetadata:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field metadata", values[i])
 			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &la.Metadata); err != nil {
+				if err := json.Unmarshal(*value, &_m.Metadata); err != nil {
 					return fmt.Errorf("unmarshal field metadata: %w", err)
 				}
 			}
@@ -156,29 +156,29 @@ func (la *LinkedAddress) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field owner_address", values[i])
 			} else if value.Valid {
-				la.OwnerAddress = value.String
+				_m.OwnerAddress = value.String
 			}
 		case linkedaddress.FieldLastIndexedBlock:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field last_indexed_block", values[i])
 			} else if value.Valid {
-				la.LastIndexedBlock = value.Int64
+				_m.LastIndexedBlock = value.Int64
 			}
 		case linkedaddress.FieldTxHash:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field tx_hash", values[i])
 			} else if value.Valid {
-				la.TxHash = value.String
+				_m.TxHash = value.String
 			}
 		case linkedaddress.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field sender_profile_linked_address", values[i])
 			} else if value.Valid {
-				la.sender_profile_linked_address = new(uuid.UUID)
-				*la.sender_profile_linked_address = *value.S.(*uuid.UUID)
+				_m.sender_profile_linked_address = new(uuid.UUID)
+				*_m.sender_profile_linked_address = *value.S.(*uuid.UUID)
 			}
 		default:
-			la.selectValues.Set(columns[i], values[i])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -186,70 +186,70 @@ func (la *LinkedAddress) assignValues(columns []string, values []any) error {
 
 // Value returns the ent.Value that was dynamically selected and assigned to the LinkedAddress.
 // This includes values selected through modifiers, order, etc.
-func (la *LinkedAddress) Value(name string) (ent.Value, error) {
-	return la.selectValues.Get(name)
+func (_m *LinkedAddress) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
 }
 
 // QueryPaymentOrders queries the "payment_orders" edge of the LinkedAddress entity.
-func (la *LinkedAddress) QueryPaymentOrders() *PaymentOrderQuery {
-	return NewLinkedAddressClient(la.config).QueryPaymentOrders(la)
+func (_m *LinkedAddress) QueryPaymentOrders() *PaymentOrderQuery {
+	return NewLinkedAddressClient(_m.config).QueryPaymentOrders(_m)
 }
 
 // Update returns a builder for updating this LinkedAddress.
 // Note that you need to call LinkedAddress.Unwrap() before calling this method if this LinkedAddress
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (la *LinkedAddress) Update() *LinkedAddressUpdateOne {
-	return NewLinkedAddressClient(la.config).UpdateOne(la)
+func (_m *LinkedAddress) Update() *LinkedAddressUpdateOne {
+	return NewLinkedAddressClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the LinkedAddress entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (la *LinkedAddress) Unwrap() *LinkedAddress {
-	_tx, ok := la.config.driver.(*txDriver)
+func (_m *LinkedAddress) Unwrap() *LinkedAddress {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: LinkedAddress is not a transactional entity")
 	}
-	la.config.driver = _tx.drv
-	return la
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (la *LinkedAddress) String() string {
+func (_m *LinkedAddress) String() string {
 	var builder strings.Builder
 	builder.WriteString("LinkedAddress(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", la.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("created_at=")
-	builder.WriteString(la.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
-	builder.WriteString(la.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("address=")
-	builder.WriteString(la.Address)
+	builder.WriteString(_m.Address)
 	builder.WriteString(", ")
 	builder.WriteString("salt=")
-	builder.WriteString(fmt.Sprintf("%v", la.Salt))
+	builder.WriteString(fmt.Sprintf("%v", _m.Salt))
 	builder.WriteString(", ")
 	builder.WriteString("institution=")
-	builder.WriteString(la.Institution)
+	builder.WriteString(_m.Institution)
 	builder.WriteString(", ")
 	builder.WriteString("account_identifier=")
-	builder.WriteString(la.AccountIdentifier)
+	builder.WriteString(_m.AccountIdentifier)
 	builder.WriteString(", ")
 	builder.WriteString("account_name=")
-	builder.WriteString(la.AccountName)
+	builder.WriteString(_m.AccountName)
 	builder.WriteString(", ")
 	builder.WriteString("metadata=")
-	builder.WriteString(fmt.Sprintf("%v", la.Metadata))
+	builder.WriteString(fmt.Sprintf("%v", _m.Metadata))
 	builder.WriteString(", ")
 	builder.WriteString("owner_address=")
-	builder.WriteString(la.OwnerAddress)
+	builder.WriteString(_m.OwnerAddress)
 	builder.WriteString(", ")
 	builder.WriteString("last_indexed_block=")
-	builder.WriteString(fmt.Sprintf("%v", la.LastIndexedBlock))
+	builder.WriteString(fmt.Sprintf("%v", _m.LastIndexedBlock))
 	builder.WriteString(", ")
 	builder.WriteString("tx_hash=")
-	builder.WriteString(la.TxHash)
+	builder.WriteString(_m.TxHash)
 	builder.WriteByte(')')
 	return builder.String()
 }
