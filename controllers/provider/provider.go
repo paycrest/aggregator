@@ -261,8 +261,8 @@ func (ctrl *ProviderController) handleSearchLockPaymentOrders(ctx *gin.Context, 
 	}
 
 	searchPredicates = append(searchPredicates,
-		lockpaymentorder.AccountIdentifierContains(searchText),
-		lockpaymentorder.AccountNameContains(searchText),
+		lockpaymentorder.AccountIdentifierContainsFold(searchText),
+		lockpaymentorder.AccountNameContainsFold(searchText),
 	)
 
 	lockPaymentOrderQuery = lockPaymentOrderQuery.Where(
