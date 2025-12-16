@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/NethermindEth/juno/core/felt"
-	"github.com/NethermindEth/starknet.go/utils"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/common"
@@ -21,24 +20,32 @@ import (
 
 // IndexerStarknet performs blockchain to database extract, transform, load (ETL) operations for Starknet
 type IndexerStarknet struct {
-	priorityQueue *services.PriorityQueueService
-	order         types.OrderService
-	client        *starknetService.Client
+	priorityQueue  *services.PriorityQueueService
+	order          types.OrderService
+	voyagerService *services.VoyagerService
 }
 
 // NewIndexerStarknet creates a new instance of IndexerStarknet
 func NewIndexerStarknet() (types.Indexer, error) {
+	// Create RPC client for order service (write operations)
 	client, err := starknetService.NewClient()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create starknet client: %w", err)
 	}
 	orderService := order.NewOrderStarknet(client)
+
+	// Create Voyager service for read operations (with RPC fallback)
+	voyagerService, err := services.NewVoyagerService()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Voyager service: %w", err)
+	}
+
 	priorityQueue := services.NewPriorityQueueService()
 
 	return &IndexerStarknet{
-		priorityQueue: priorityQueue,
-		order:         orderService,
-		client:        client,
+		priorityQueue:  priorityQueue,
+		order:          orderService,
+		voyagerService: voyagerService,
 	}, nil
 }
 
@@ -48,7 +55,7 @@ func (s *IndexerStarknet) IndexReceiveAddress(ctx context.Context, token *ent.To
 
 	if txHash != "" {
 		// Process specific transaction
-		counts, err := s.indexReceiveAddressByTransaction(ctx, token, txHash, nil, userAccountAddress)
+		counts, err := s.indexReceiveAddressByTransaction(ctx, token, txHash, userAccountAddress)
 		if err != nil {
 			return eventCounts, fmt.Errorf("failed to index receive address by transaction: %w", err)
 		}
@@ -58,7 +65,7 @@ func (s *IndexerStarknet) IndexReceiveAddress(ctx context.Context, token *ent.To
 	var ChunkSize int
 	if fromBlock == 0 && toBlock == 0 {
 		ChunkSize = 5
-		currentBlock, err := s.client.GetBlockNumber(ctx)
+		currentBlock, err := s.voyagerService.GetLatestBlockNumber(ctx)
 		if err != nil {
 			return eventCounts, fmt.Errorf("failed to get latest block number: %w", err)
 		}
@@ -72,22 +79,17 @@ func (s *IndexerStarknet) IndexReceiveAddress(ctx context.Context, token *ent.To
 		ChunkSize = 100
 	}
 
-	tokenAddr, err := utils.HexToFelt(token.ContractAddress)
+	// Use Voyager service to get token transfers (handles RPC fallback internally)
+	transfers, err := s.voyagerService.GetAddressTokenTransfers(ctx, token.ContractAddress, ChunkSize, fromBlock, toBlock, "", "")
 	if err != nil {
-		return eventCounts, fmt.Errorf("invalid token address: %w", err)
+		return eventCounts, fmt.Errorf("failed to get token transfers for token %s: %w", token.Symbol, err)
 	}
 
-	transferSelectorFelt, _ := utils.HexToFelt(u.TransferStarknetSelector)
-	transactions, err := s.client.GetEvents(
-		ctx,
-		tokenAddr,
-		fromBlock,
-		toBlock,
-		[]*felt.Felt{transferSelectorFelt},
-		ChunkSize,
-	)
-	if err != nil {
-		return eventCounts, fmt.Errorf("failed to get transactions for token %s: %w", token.Symbol, err)
+	// Transform Voyager transfers to RPC format for processing
+	transactions := make([]map[string]interface{}, len(transfers))
+	for i, transfer := range transfers {
+		// Use transformation function from Voyager service
+		transactions[i] = services.TransformVoyagerTransferToRPCFormat(transfer)
 	}
 
 	if len(transactions) == 0 {
@@ -117,27 +119,39 @@ func (s *IndexerStarknet) IndexReceiveAddress(ctx context.Context, token *ent.To
 }
 
 // indexReceiveAddressByTransaction processes a specific transaction for receive address transfers
-func (s *IndexerStarknet) indexReceiveAddressByTransaction(ctx context.Context, token *ent.Token, txHash string, transactionEvents map[string]interface{}, userAccountAddress string) (*types.EventCounts, error) {
+func (s *IndexerStarknet) indexReceiveAddressByTransaction(ctx context.Context, token *ent.Token, txHash string, userAccountAddress string) (*types.EventCounts, error) {
 	eventCounts := &types.EventCounts{}
 	if txHash == "" {
 		return eventCounts, fmt.Errorf("transaction hash is required")
 	}
 
-	txHashFelt, err := utils.HexToFelt(txHash)
-	if err != nil {
-		return eventCounts, fmt.Errorf("invalid transaction hash: %w", err)
-	}
-	tokenContractFelt, _ := utils.HexToFelt(token.ContractAddress)
-	transferSelectorFelt, _ := utils.HexToFelt(u.TransferStarknetSelector)
-
-	transactions, err := s.client.GetTransactionReceipt(
-		ctx,
-		txHashFelt,
-		tokenContractFelt,
-		[]*felt.Felt{transferSelectorFelt},
-	)
+	// Use Voyager service to get events by transaction hash (handles RPC fallback internally)
+	events, err := s.voyagerService.GetEventsByTransactionHash(ctx, txHash, 100)
 	if err != nil && err.Error() != "no events found" {
 		return eventCounts, fmt.Errorf("error getting transfer events for token %s in transaction %s: %w", token.Symbol, txHash[:10]+"...", err)
+	}
+
+	// Filter for transfer events from this token contract and transform to RPC format
+	transactions := []map[string]interface{}{}
+	for _, event := range events {
+		// Check if event is from the token contract
+		fromAddr, ok := event["fromAddress"].(string)
+		if !ok {
+			// Try RPC format
+			fromAddr, ok = event["from_address"].(string)
+		}
+		if ok && strings.EqualFold(fromAddr, token.ContractAddress) {
+			// Check if it's a transfer event (name or selector)
+			name, _ := event["name"].(string)
+			if name == "Transfer" || name == "" {
+				// Transform Voyager event to RPC format if needed
+				if _, hasDecoded := event["decoded"]; !hasDecoded {
+					// This is a Voyager transfer event, transform it
+					event = services.TransformVoyagerTransferToRPCFormat(event)
+				}
+				transactions = append(transactions, event)
+			}
+		}
 	}
 
 	transferEventsCounts, err := s.processReceiveAddressByTransactionEvents(ctx, token, transactions, userAccountAddress)
@@ -287,21 +301,32 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 		return eventCounts, fmt.Errorf("transaction hash is required")
 	}
 
-	txHashFelt, err := utils.HexToFelt(txHash)
-	if err != nil {
-		return eventCounts, fmt.Errorf("invalid transaction hash: %w", err)
-	}
-
-	gatewayContractFelt, _ := utils.HexToFelt(network.GatewayContractAddress)
-
-	gatewayContractTransactions, err := s.client.GetTransactionReceipt(
-		ctx,
-		txHashFelt,
-		gatewayContractFelt,
-		nil,
-	)
+	// Use Voyager service to get events by transaction hash (handles RPC fallback internally)
+	events, err := s.voyagerService.GetEventsByTransactionHash(ctx, txHash, 100)
 	if err != nil && err.Error() != "no events found" {
 		return eventCounts, fmt.Errorf("error getting gateway events for transaction %s: %w", txHash[:10]+"...", err)
+	}
+
+	// Filter for gateway contract events and transform to RPC format
+	gatewayContractTransactions := []map[string]interface{}{}
+	for _, event := range events {
+		fromAddr, ok := event["fromAddress"].(string)
+		if !ok {
+			// Try RPC format
+			fromAddr, ok = event["from_address"].(string)
+		}
+		if ok && strings.EqualFold(fromAddr, network.GatewayContractAddress) {
+			// Transform Voyager event to RPC format if needed
+			if _, hasDecoded := event["decoded"]; !hasDecoded {
+				// This is a Voyager event, transform it
+				event = services.TransformVoyagerEventToRPCFormat(event)
+				// Update from_address to match the filtered address
+				if fromAddr != "" {
+					event["from_address"] = fromAddr
+				}
+			}
+			gatewayContractTransactions = append(gatewayContractTransactions, event)
+		}
 	}
 
 	// Process all events in a single pass
@@ -552,11 +577,6 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 func (s *IndexerStarknet) IndexGateway(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) (*types.EventCounts, error) {
 	eventCounts := &types.EventCounts{}
 
-	gatewayAddr, err := utils.HexToFelt(address)
-	if err != nil {
-		return eventCounts, fmt.Errorf("invalid gateway address: %w", err)
-	}
-
 	// Determine block range
 	var fromBlockNum, toBlockNum uint64
 	if txHash != "" {
@@ -570,7 +590,7 @@ func (s *IndexerStarknet) IndexGateway(ctx context.Context, network *ent.Network
 
 	// Use provided block range or get latest
 	if fromBlock == 0 && toBlock == 0 {
-		latest, err := s.client.GetBlockNumber(ctx)
+		latest, err := s.voyagerService.GetLatestBlockNumber(ctx)
 		if err != nil {
 			return eventCounts, fmt.Errorf("failed to get latest block: %w", err)
 		}
@@ -586,16 +606,17 @@ func (s *IndexerStarknet) IndexGateway(ctx context.Context, network *ent.Network
 		toBlockNum = uint64(toBlock)
 	}
 
-	transactions, err := s.client.GetEvents(
-		ctx,
-		gatewayAddr,
-		int64(fromBlockNum),
-		int64(toBlockNum),
-		nil,
-		100,
-	)
+	// Use Voyager service to get gateway events (handles RPC fallback internally)
+	events, err := s.voyagerService.GetContractEvents(ctx, address, 100, int64(fromBlockNum), int64(toBlockNum))
 	if err != nil {
 		return eventCounts, fmt.Errorf("failed to get gateway events: %w", err)
+	}
+
+	// Transform Voyager events to RPC format for processing
+	transactions := make([]map[string]interface{}, len(events))
+	for i, event := range events {
+		// Use transformation function from Voyager service
+		transactions[i] = services.TransformVoyagerEventToRPCFormat(event)
 	}
 	if len(transactions) == 0 {
 		logger.Infof("No gateway events found in block range %d-%d for address: %s", fromBlockNum, toBlockNum, address)
@@ -603,7 +624,12 @@ func (s *IndexerStarknet) IndexGateway(ctx context.Context, network *ent.Network
 	}
 
 	for _, tx := range transactions {
+		// Handle both Voyager format (transactionHash) and RPC format (transaction_hash)
 		txHash, ok := tx["transaction_hash"].(string)
+		if !ok {
+			// Try Voyager format
+			txHash, ok = tx["transactionHash"].(string)
+		}
 		if !ok || txHash == "" {
 			continue
 		}
@@ -630,7 +656,30 @@ func (s *IndexerStarknet) IndexProviderAddress(ctx context.Context, network *ent
 		}
 		return counts, nil
 	}
-	return s.IndexGateway(ctx, network, network.GatewayContractAddress, fromBlock, toBlock, txHash)
+
+	// Use Voyager transfers endpoint with from filter to get transfers from gateway to provider
+	// This directly returns transfers from gateway contract to provider address
+	transfers, err := s.voyagerService.GetAddressTokenTransfers(ctx, address, 100, fromBlock, toBlock, network.GatewayContractAddress, "")
+	if err != nil {
+		return eventCounts, fmt.Errorf("failed to get provider transfers: %w", err)
+	}
+
+	// Process transfers to identify OrderSettled vs OrderRefunded using txOperations field
+	for _, transfer := range transfers {
+		txOperations, ok := transfer["txOperations"].(string)
+		if !ok {
+			continue
+		}
+
+		// Check if transfer is for OrderSettled (contains "settle") or OrderRefunded (contains "refund")
+		if strings.Contains(txOperations, "settle") {
+			eventCounts.OrderSettled++
+		} else if strings.Contains(txOperations, "refund") {
+			eventCounts.OrderRefunded++
+		}
+	}
+
+	return eventCounts, nil
 }
 
 // indexProviderAddressByTransaction processes a specific transaction for provider address OrderSettled events
@@ -640,32 +689,39 @@ func (s *IndexerStarknet) indexProviderAddressByTransaction(ctx context.Context,
 		return eventCounts, fmt.Errorf("transaction hash is required")
 	}
 
-	txHashFelt, err := utils.HexToFelt(txHash)
-	if err != nil {
-		return eventCounts, fmt.Errorf("invalid transaction hash: %w", err)
-	}
-
-	gatewayContractFelt, err := utils.HexToFelt(network.GatewayContractAddress)
-	if err != nil {
-		return eventCounts, fmt.Errorf("invalid gateway contract address: %w", err)
-	}
-	orderSettledSelectorFelt, err := utils.HexToFelt(u.OrderSettledStarknetSelector)
-	if err != nil {
-		return eventCounts, fmt.Errorf("invalid order settled selector felt: %w", err)
-	}
-
-	// Get OrderSettled events for this transaction
-	events, err := s.client.GetTransactionReceipt(
-		ctx,
-		txHashFelt,
-		gatewayContractFelt,
-		[]*felt.Felt{orderSettledSelectorFelt},
-	)
+	// Use Voyager service to get events by transaction hash (handles RPC fallback internally)
+	allEvents, err := s.voyagerService.GetEventsByTransactionHash(ctx, txHash, 100)
 	if err != nil {
 		if err.Error() == "no events found" {
-			return eventCounts, nil // No OrderSettled events found for this transaction
+			return eventCounts, nil // No events found for this transaction
 		}
-		return eventCounts, fmt.Errorf("error getting OrderSettled events for transaction %s: %w", txHash[:10]+"...", err)
+		return eventCounts, fmt.Errorf("error getting events for transaction %s: %w", txHash[:10]+"...", err)
+	}
+
+	// Filter for OrderSettled events from gateway contract and transform to RPC format
+	events := []map[string]interface{}{}
+	for _, event := range allEvents {
+		fromAddr, ok := event["fromAddress"].(string)
+		if !ok {
+			// Try RPC format
+			fromAddr, ok = event["from_address"].(string)
+		}
+		if !ok || !strings.EqualFold(fromAddr, network.GatewayContractAddress) {
+			continue
+		}
+		name, _ := event["name"].(string)
+		if name == "OrderSettled" {
+			// Transform Voyager event to RPC format if needed
+			if _, hasDecoded := event["decoded"]; !hasDecoded {
+				// This is a Voyager event, transform it
+				event = services.TransformVoyagerEventToRPCFormat(event)
+				// Update from_address to match the filtered address
+				if fromAddr != "" {
+					event["from_address"] = fromAddr
+				}
+			}
+			events = append(events, event)
+		}
 	}
 
 	// Process OrderSettled events for the specific provider address

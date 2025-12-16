@@ -440,6 +440,7 @@ func TaskIndexBlockchainEvents() error {
 			if strings.HasPrefix(network.Identifier, "tron") {
 				indexerInstance = indexer.NewIndexerTron()
 				_, _ = indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
+				return
 			} else if strings.HasPrefix(network.Identifier, "starknet") {
 				indexerInstance, err = indexer.NewIndexerStarknet()
 				if err != nil {
@@ -450,7 +451,6 @@ func TaskIndexBlockchainEvents() error {
 					return
 				}
 				_, _ = indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
-				return
 			} else {
 				indexerInstance, err = indexer.NewIndexerEVM()
 				if err != nil {
@@ -461,102 +461,99 @@ func TaskIndexBlockchainEvents() error {
 					return
 				}
 				_, _ = indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
+			}
 
-				// Find payment orders with missed transfers
-				// Prioritize recent orders (created in last 30 minutes) - most likely to have transfers
-				recentCutoff := time.Now().Add(-30 * time.Minute)
-				paymentOrders, err := storage.Client.PaymentOrder.
-					Query().
-					Where(
-						paymentorder.StatusEQ(paymentorder.StatusInitiated),
-						paymentorder.TxHashIsNil(),
-						paymentorder.BlockNumberEQ(0),
-						paymentorder.AmountPaidEQ(decimal.Zero),
-						paymentorder.FromAddressIsNil(),
-						paymentorder.CreatedAtGTE(recentCutoff), // Focus on recent orders
-						paymentorder.HasReceiveAddressWith(
-							receiveaddress.StatusEQ(receiveaddress.StatusUnused),
+			// Find payment orders with missed transfers (for EVM and Starknet networks)
+			// Prioritize recent orders (created in last 30 minutes) - most likely to have transfers
+			recentCutoff := time.Now().Add(-30 * time.Minute)
+			paymentOrders, err := storage.Client.PaymentOrder.
+				Query().
+				Where(
+					paymentorder.StatusEQ(paymentorder.StatusInitiated),
+					paymentorder.TxHashIsNil(),
+					paymentorder.BlockNumberEQ(0),
+					paymentorder.AmountPaidEQ(decimal.Zero),
+					paymentorder.FromAddressIsNil(),
+					paymentorder.CreatedAtGTE(recentCutoff), // Focus on recent orders
+					paymentorder.HasReceiveAddressWith(
+						receiveaddress.StatusEQ(receiveaddress.StatusUnused),
+					),
+					paymentorder.HasTokenWith(
+						tokenent.HasNetworkWith(
+							networkent.IDEQ(network.ID),
 						),
-						paymentorder.HasTokenWith(
-							tokenent.HasNetworkWith(
-								networkent.IDEQ(network.ID),
-							),
-						),
-					).
-					WithToken(func(tq *ent.TokenQuery) {
-						tq.WithNetwork()
-					}).
-					WithReceiveAddress().
-					Order(ent.Desc(paymentorder.FieldCreatedAt)).
-					Limit(50). // Limit to 50 most recent to avoid processing too many at once
-					All(ctx)
-				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":             fmt.Sprintf("%v", err),
-						"NetworkIdentifier": network.Identifier,
-					}).Errorf("TaskIndexBlockchainEvents.fetchPaymentOrders")
-					return
-				}
+					),
+				).
+				WithToken(func(tq *ent.TokenQuery) {
+					tq.WithNetwork()
+				}).
+				WithReceiveAddress().
+				Order(ent.Desc(paymentorder.FieldCreatedAt)).
+				Limit(50). // Limit to 50 most recent to avoid processing too many at once
+				All(ctx)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":             fmt.Sprintf("%v", err),
+					"NetworkIdentifier": network.Identifier,
+				}).Errorf("TaskIndexBlockchainEvents.fetchPaymentOrders")
+				return
+			}
 
-				// Index Transfer events in parallel using goroutines
-				if len(paymentOrders) > 0 {
-					var wg sync.WaitGroup
+			// Index Transfer events in parallel using goroutines
+			if len(paymentOrders) > 0 {
+				var wg sync.WaitGroup
 
-					for _, order := range paymentOrders {
-						if order.Edges.ReceiveAddress == nil {
-							continue
-						}
-
-						address := order.Edges.ReceiveAddress.Address
-						chainID := network.ChainID
-						indexKey := fmt.Sprintf("%s_%d", address, chainID)
-
-						// Check if address is currently being indexed by another task
-						if _, indexing := indexingAddresses.Load(indexKey); indexing {
-							// Check if indexing started too long ago (stale)
-							if startTime, ok := indexingAddresses.Load(indexKey); ok {
-								if time.Since(startTime.(time.Time)) > indexingTimeout {
-									indexingAddresses.Delete(indexKey) // Remove stale entry
-								} else {
-									continue // Skip, already being indexed
-								}
-							}
-						}
-
-						// Check if address was recently indexed (within cooldown period)
-						if lastIndexed, indexed := recentlyIndexed.Load(indexKey); indexed {
-							if time.Since(lastIndexed.(time.Time)) < indexingCooldown {
-								continue // Skip, recently indexed
-							}
-						}
-
-						// Mark as being indexed
-						indexingAddresses.Store(indexKey, time.Now())
-
-						wg.Add(1)
-						go func(order *ent.PaymentOrder, addr string, key string) {
-							defer wg.Done()
-							defer indexingAddresses.Delete(key) // Remove from indexing map when done
-
-							// Check circuit breaker before indexing (if Etherscan service is available)
-							// Note: This is a best-effort check, actual circuit breaker is in etherscan service
-
-							_, err := indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, addr, 0, 0, "")
-							if err != nil {
-								logger.WithFields(logger.Fields{
-									"Error":   fmt.Sprintf("%v", err),
-									"OrderID": order.ID.String(),
-								}).Errorf("TaskIndexBlockchainEvents.IndexReceiveAddress")
-							} else {
-								// Mark as recently indexed on success
-								recentlyIndexed.Store(key, time.Now())
-							}
-						}(order, address, indexKey)
+				for _, order := range paymentOrders {
+					if order.Edges.ReceiveAddress == nil {
+						continue
 					}
 
-					// Wait for all transfer indexing to complete
-					wg.Wait()
+					address := order.Edges.ReceiveAddress.Address
+					chainID := network.ChainID
+					indexKey := fmt.Sprintf("%s_%d", address, chainID)
+
+					// Check if address is currently being indexed by another task
+					if _, indexing := indexingAddresses.Load(indexKey); indexing {
+						// Check if indexing started too long ago (stale)
+						if startTime, ok := indexingAddresses.Load(indexKey); ok {
+							if time.Since(startTime.(time.Time)) > indexingTimeout {
+								indexingAddresses.Delete(indexKey) // Remove stale entry
+							} else {
+								continue // Skip, already being indexed
+							}
+						}
+					}
+
+					// Check if address was recently indexed (within cooldown period)
+					if lastIndexed, indexed := recentlyIndexed.Load(indexKey); indexed {
+						if time.Since(lastIndexed.(time.Time)) < indexingCooldown {
+							continue // Skip, recently indexed
+						}
+					}
+
+					// Mark as being indexed
+					indexingAddresses.Store(indexKey, time.Now())
+
+					wg.Add(1)
+					go func(order *ent.PaymentOrder, addr string, key string) {
+						defer wg.Done()
+						defer indexingAddresses.Delete(key) // Remove from indexing map when done
+
+						_, err := indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, addr, 0, 0, "")
+						if err != nil {
+							logger.WithFields(logger.Fields{
+								"Error":   fmt.Sprintf("%v", err),
+								"OrderID": order.ID.String(),
+							}).Errorf("TaskIndexBlockchainEvents.IndexReceiveAddress")
+						} else {
+							// Mark as recently indexed on success
+							recentlyIndexed.Store(key, time.Now())
+						}
+					}(order, address, indexKey)
 				}
+
+				// Wait for all transfer indexing to complete
+				wg.Wait()
 			}
 		}(network)
 	}
