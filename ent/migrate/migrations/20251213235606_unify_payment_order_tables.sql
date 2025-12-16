@@ -26,7 +26,8 @@ BEGIN
 END $$;
 
 -- Drop lock_payment_order_transactions from transaction_logs (migrate data first in Step 7)
--- We'll drop the column after migrating data
+-- Column will be dropped after Step 9.5 verification completes (after line 571)
+-- This ensures the column remains available for verification checks in Step 9.5
 
 -- Rename receive_address_text to receive_address (if it exists)
 DO $$
@@ -403,9 +404,6 @@ WHERE tl."lock_payment_order_transactions" IS NOT NULL
       WHERE po."id" = tl."lock_payment_order_transactions"
   );
 
--- Now drop the lock_payment_order_transactions column
-ALTER TABLE "transaction_logs" DROP COLUMN IF EXISTS "lock_payment_order_transactions";
-
 -- Step 8: Add unique constraints and indexes (matching Atlas migration)
 -- Add unique constraint on receive_address (matching Atlas index name)
 CREATE UNIQUE INDEX IF NOT EXISTS "payment_orders_receive_address_key" ON "payment_orders" ("receive_address") WHERE "receive_address" IS NOT NULL;
@@ -569,6 +567,11 @@ BEGIN
     RAISE NOTICE '  duplicate matches: %', duplicate_matches;
     RAISE NOTICE '  mismatched tokens: %', mismatched_tokens;
 END $$;
+
+-- Drop lock_payment_order_transactions column after verification completes
+-- This column is referenced in Step 9.5 verification (lines 466, 472), so it must remain
+-- available until after verification succeeds
+ALTER TABLE "transaction_logs" DROP COLUMN IF EXISTS "lock_payment_order_transactions";
 
 -- Step 9.6: Set recipient fields to NOT NULL after data migration
 -- First verify all records have these fields populated
