@@ -427,7 +427,9 @@ func (s *IndexerEVM) indexReceiveAddressByUserAddressWithBypass(ctx context.Cont
 		return eventCounts, nil
 	}
 
-	logger.Infof(logMessage)
+	if logMessage != "" {
+		logger.Infof("%s", logMessage)
+	}
 
 	// Process each transaction to find transfer events to linked addresses
 	for i, tx := range transactions {
@@ -533,7 +535,9 @@ func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network 
 		return nil
 	}
 
-	logger.Infof(logMessage)
+	if logMessage != "" {
+		logger.Infof("%s", logMessage)
+	}
 
 	// Process each transaction to find gateway events
 	for i, tx := range transactions {
@@ -1016,7 +1020,9 @@ func (s *IndexerEVM) indexProviderAddressByAddress(ctx context.Context, network 
 		return nil
 	}
 
-	logger.Infof(logMessage)
+	if logMessage != "" {
+		logger.Infof("%s", logMessage)
+	}
 
 	// Process each transaction to find OrderSettled events
 	for i, tx := range transactions {

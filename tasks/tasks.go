@@ -40,6 +40,7 @@ import (
 	"github.com/paycrest/aggregator/services/email"
 	"github.com/paycrest/aggregator/services/indexer"
 	orderService "github.com/paycrest/aggregator/services/order"
+	starknetService "github.com/paycrest/aggregator/services/starknet"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
@@ -146,6 +147,16 @@ func RetryStaleUserOperations() error {
 				var service types.OrderService
 				if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {
 					service = orderService.NewOrderTron()
+				} else if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "starknet") {
+					client, err := starknetService.NewClient()
+					if err != nil {
+						logger.WithFields(logger.Fields{
+							"Error":   fmt.Sprintf("%v", err),
+							"OrderID": order.ID.String(),
+						}).Errorf("RetryStaleUserOperations.CreateOrder.NewStarknetClient")
+						continue
+					}
+					service = orderService.NewOrderStarknet(client)
 				} else {
 					service = orderService.NewOrderEVM()
 				}
@@ -214,6 +225,16 @@ func RetryStaleUserOperations() error {
 			var service types.OrderService
 			if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {
 				service = orderService.NewOrderTron()
+			} else if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "starknet") {
+				client, err := starknetService.NewClient()
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"OrderID": order.ID.String(),
+					}).Errorf("RetryStaleUserOperations.SettleOrder.NewStarknetClient")
+					continue
+				}
+				service = orderService.NewOrderStarknet(client)
 			} else {
 				service = orderService.NewOrderEVM()
 			}
@@ -306,6 +327,16 @@ func RetryStaleUserOperations() error {
 			var service types.OrderService
 			if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {
 				service = orderService.NewOrderTron()
+			} else if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "starknet") {
+				client, err := starknetService.NewClient()
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"OrderID": order.ID.String(),
+					}).Errorf("RetryStaleUserOperations.CreateOrder.NewStarknetClient")
+					continue
+				}
+				service = orderService.NewOrderStarknet(client)
 			} else {
 				service = orderService.NewOrderEVM()
 			}
@@ -392,6 +423,17 @@ func TaskIndexBlockchainEvents() error {
 			if strings.HasPrefix(network.Identifier, "tron") {
 				indexerInstance = indexer.NewIndexerTron()
 				_, _ = indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
+			} else if strings.HasPrefix(network.Identifier, "starknet") {
+				indexerInstance, err = indexer.NewIndexerStarknet()
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":             fmt.Sprintf("%v", err),
+						"NetworkIdentifier": network.Identifier,
+					}).Errorf("TaskIndexBlockchainEvents.createStarknetIndexer")
+					return
+				}
+				_, _ = indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
+				return
 			} else {
 				indexerInstance, err = indexer.NewIndexerEVM()
 				if err != nil {
@@ -1548,7 +1590,7 @@ func ResolvePaymentOrderMishaps() error {
 		return fmt.Errorf("ResolvePaymentOrderMishaps.fetchNetworks: %w", err)
 	}
 
-	// Process each network in parallel (EVM only)
+	// Process each network in parallel (EVM and Starknet)
 	for i, network := range networks {
 		// Skip Tron networks
 		if strings.HasPrefix(network.Identifier, "tron") {
@@ -1590,10 +1632,33 @@ func IndexGatewayEvents() error {
 		return fmt.Errorf("IndexGatewayEvents.fetchNetworks: %w", err)
 	}
 
-	// Process each network in parallel (EVM only)
+	// Process each network in parallel (EVM and Starknet)
 	for i, network := range networks {
 		// Skip Tron networks
 		if strings.HasPrefix(network.Identifier, "tron") {
+			continue
+		}
+
+		// Handle Starknet networks separately
+		if strings.HasPrefix(network.Identifier, "starknet") {
+			go func(network *ent.Network) {
+				ctx := context.Background()
+				indexerInstance, indexerErr := indexer.NewIndexerStarknet()
+				if indexerErr != nil {
+					logger.WithFields(logger.Fields{
+						"Error":             fmt.Sprintf("%v", indexerErr),
+						"NetworkIdentifier": network.Identifier,
+					}).Errorf("IndexGatewayEvents.createStarknetIndexer")
+					return
+				}
+				_, err := indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":             fmt.Sprintf("%v", err),
+						"NetworkIdentifier": network.Identifier,
+					}).Errorf("IndexGatewayEvents.indexStarknetGateway")
+				}
+			}(network)
 			continue
 		}
 
@@ -1669,13 +1734,27 @@ func resolveMissedEvents(ctx context.Context, network *ent.Network) {
 
 	// For missed transfers, we need to check each order's specific receive address
 	// Process sequentially to avoid overwhelming the RPC node and for better error handling
-	indexerInstance, indexerErr := indexer.NewIndexerEVM()
-	if indexerErr != nil {
-		logger.WithFields(logger.Fields{
-			"Error":             fmt.Sprintf("%v", indexerErr),
-			"NetworkIdentifier": network.Identifier,
-		}).Errorf("ResolvePaymentOrderMishaps.resolveMissedEvents.createIndexer")
-		return
+	var indexerInstance types.Indexer
+	var indexerErr error
+
+	if strings.HasPrefix(network.Identifier, "starknet") {
+		indexerInstance, indexerErr = indexer.NewIndexerStarknet()
+		if indexerErr != nil {
+			logger.WithFields(logger.Fields{
+				"Error":             fmt.Sprintf("%v", indexerErr),
+				"NetworkIdentifier": network.Identifier,
+			}).Errorf("ResolvePaymentOrderMishaps.resolveMissedEvents.createStarknetIndexer")
+			return
+		}
+	} else {
+		indexerInstance, indexerErr = indexer.NewIndexerEVM()
+		if indexerErr != nil {
+			logger.WithFields(logger.Fields{
+				"Error":             fmt.Sprintf("%v", indexerErr),
+				"NetworkIdentifier": network.Identifier,
+			}).Errorf("ResolvePaymentOrderMishaps.resolveMissedEvents.createEVMIndexer")
+			return
+		}
 	}
 	processedCount := 0
 	errorCount := 0
@@ -1816,6 +1895,15 @@ func ProcessStuckValidatedOrders() error {
 			var indexerInstance types.Indexer
 			if strings.HasPrefix(network.Identifier, "tron") {
 				indexerInstance = indexer.NewIndexerTron()
+			} else if strings.HasPrefix(network.Identifier, "starknet") {
+				indexerInstance, err = indexer.NewIndexerStarknet()
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":             fmt.Sprintf("%v", err),
+						"NetworkIdentifier": network.Identifier,
+					}).Errorf("ProcessStuckValidatedOrders.createStarknetIndexer")
+					return
+				}
 			} else {
 				indexerInstance, err = indexer.NewIndexerEVM()
 				if err != nil {

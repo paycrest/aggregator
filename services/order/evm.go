@@ -227,7 +227,7 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 		"value": "0",
 	}
 
-	_, err = s.engineService.SendTransactionBatch(ctx, lockOrder.Edges.Token.Edges.Network.ChainID, cryptoConf.AggregatorSmartAccount, []map[string]interface{}{txPayload})
+	_, err = s.engineService.SendTransactionBatch(ctx, lockOrder.Edges.Token.Edges.Network.ChainID, cryptoConf.AggregatorAccountEVM, []map[string]interface{}{txPayload})
 	if err != nil {
 		return fmt.Errorf("%s - RefundOrder.sendTransaction: %w", orderIDPrefix, err)
 	}
@@ -273,7 +273,7 @@ func (s *OrderEVM) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 		"value": "0",
 	}
 
-	_, err = s.engineService.SendTransactionBatch(ctx, order.Edges.Token.Edges.Network.ChainID, cryptoConf.AggregatorSmartAccount, []map[string]interface{}{txPayload})
+	_, err = s.engineService.SendTransactionBatch(ctx, order.Edges.Token.Edges.Network.ChainID, cryptoConf.AggregatorAccountEVM, []map[string]interface{}{txPayload})
 	if err != nil {
 		return fmt.Errorf("%s - SettleOrder.sendTransaction: %w", orderIDPrefix, err)
 	}
