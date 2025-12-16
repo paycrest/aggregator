@@ -560,7 +560,7 @@ func hasActiveOrderRequest(ctx context.Context, orderID uuid.UUID, logPrefix str
 
 // reassignCancelledOrder reassigns cancelled orders to providers
 func reassignCancelledOrder(ctx context.Context, order *ent.LockPaymentOrder, fulfillment *ent.LockOrderFulfillment) {
-	if order.Edges.Provider.VisibilityMode != providerprofile.VisibilityModePrivate && order.CancellationCount < orderConf.RefundCancellationCount {
+	if order.Edges.Provider.VisibilityMode != providerprofile.VisibilityModePrivate && order.CancellationCount < orderConf.RefundCancellationCount && order.CreatedAt.After(time.Now().Add(-orderConf.OrderRefundTimeout-10*time.Second)) {
 		// Push provider ID to order exclude list
 		orderKey := fmt.Sprintf("order_exclude_list_%s", order.ID)
 		_, err := storage.RedisClient.RPush(ctx, orderKey, order.Edges.Provider.ID).Result()
