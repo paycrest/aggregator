@@ -14,7 +14,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/apikey"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
+	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
@@ -238,14 +238,14 @@ func (_c *ProviderProfileCreate) SetProviderRating(v *ProviderRating) *ProviderP
 	return _c.SetProviderRatingID(v.ID)
 }
 
-// AddAssignedOrderIDs adds the "assigned_orders" edge to the LockPaymentOrder entity by IDs.
+// AddAssignedOrderIDs adds the "assigned_orders" edge to the PaymentOrder entity by IDs.
 func (_c *ProviderProfileCreate) AddAssignedOrderIDs(ids ...uuid.UUID) *ProviderProfileCreate {
 	_c.mutation.AddAssignedOrderIDs(ids...)
 	return _c
 }
 
-// AddAssignedOrders adds the "assigned_orders" edges to the LockPaymentOrder entity.
-func (_c *ProviderProfileCreate) AddAssignedOrders(v ...*LockPaymentOrder) *ProviderProfileCreate {
+// AddAssignedOrders adds the "assigned_orders" edges to the PaymentOrder entity.
+func (_c *ProviderProfileCreate) AddAssignedOrders(v ...*PaymentOrder) *ProviderProfileCreate {
 	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
@@ -533,7 +533,7 @@ func (_c *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Creat
 			Columns: []string{providerprofile.AssignedOrdersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

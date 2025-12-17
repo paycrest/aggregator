@@ -16,7 +16,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/jarcoal/httpmock v1.3.1
 	github.com/mailgun/mailgun-go/v3 v3.6.4
-	github.com/mattn/go-sqlite3 v1.14.16
+	github.com/mattn/go-sqlite3 v1.14.17
 	github.com/opus-domini/fast-shot v0.10.0
 	github.com/paycrest/tron-wallet v1.0.13
 	github.com/redis/go-redis/v9 v9.1.0
@@ -72,7 +72,6 @@ require (
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/sagikazarmark/locafero v0.11.0 // indirect
 	github.com/sendgrid/rest v2.6.9+incompatible // indirect
-	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/shengdoushi/base58 v1.0.0 // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 // indirect
@@ -94,10 +93,9 @@ require (
 )
 
 require (
-	ariga.io/atlas v0.31.1-0.20250212144724-069be8033e83 // indirect
-	entgo.io/ent v0.14.4
+	ariga.io/atlas v0.32.1-0.20250325101103-175b25e1c1b9 // indirect
+	entgo.io/ent v0.14.5
 	github.com/agext/levenshtein v1.2.3 // indirect
-	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
 	github.com/bytedance/sonic v1.10.0 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20230717121745-296ad89f973d // indirect
 	github.com/cosmos/go-bip39 v1.0.0
@@ -110,7 +108,7 @@ require (
 	github.com/go-playground/validator/v10 v10.27.0
 	github.com/goccy/go-json v0.10.4 // indirect
 	github.com/google/uuid v1.6.0
-	github.com/hashicorp/hcl/v2 v2.17.0 // indirect
+	github.com/hashicorp/hcl/v2 v2.18.1 // indirect
 	github.com/jackc/pgx/v5 v5.6.0
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
@@ -135,7 +133,7 @@ require (
 	golang.org/x/crypto v0.41.0
 	golang.org/x/mod v0.27.0 // indirect
 	golang.org/x/net v0.43.0 // indirect
-	golang.org/x/sys v0.35.0 // indirect
+	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
 	google.golang.org/protobuf v1.36.7
 	gopkg.in/yaml.v3 v3.0.1 // indirect

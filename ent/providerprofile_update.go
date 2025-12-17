@@ -13,7 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/apikey"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
+	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
@@ -221,14 +221,14 @@ func (_u *ProviderProfileUpdate) SetProviderRating(v *ProviderRating) *ProviderP
 	return _u.SetProviderRatingID(v.ID)
 }
 
-// AddAssignedOrderIDs adds the "assigned_orders" edge to the LockPaymentOrder entity by IDs.
+// AddAssignedOrderIDs adds the "assigned_orders" edge to the PaymentOrder entity by IDs.
 func (_u *ProviderProfileUpdate) AddAssignedOrderIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
 	_u.mutation.AddAssignedOrderIDs(ids...)
 	return _u
 }
 
-// AddAssignedOrders adds the "assigned_orders" edges to the LockPaymentOrder entity.
-func (_u *ProviderProfileUpdate) AddAssignedOrders(v ...*LockPaymentOrder) *ProviderProfileUpdate {
+// AddAssignedOrders adds the "assigned_orders" edges to the PaymentOrder entity.
+func (_u *ProviderProfileUpdate) AddAssignedOrders(v ...*PaymentOrder) *ProviderProfileUpdate {
 	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
@@ -331,20 +331,20 @@ func (_u *ProviderProfileUpdate) ClearProviderRating() *ProviderProfileUpdate {
 	return _u
 }
 
-// ClearAssignedOrders clears all "assigned_orders" edges to the LockPaymentOrder entity.
+// ClearAssignedOrders clears all "assigned_orders" edges to the PaymentOrder entity.
 func (_u *ProviderProfileUpdate) ClearAssignedOrders() *ProviderProfileUpdate {
 	_u.mutation.ClearAssignedOrders()
 	return _u
 }
 
-// RemoveAssignedOrderIDs removes the "assigned_orders" edge to LockPaymentOrder entities by IDs.
+// RemoveAssignedOrderIDs removes the "assigned_orders" edge to PaymentOrder entities by IDs.
 func (_u *ProviderProfileUpdate) RemoveAssignedOrderIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
 	_u.mutation.RemoveAssignedOrderIDs(ids...)
 	return _u
 }
 
-// RemoveAssignedOrders removes "assigned_orders" edges to LockPaymentOrder entities.
-func (_u *ProviderProfileUpdate) RemoveAssignedOrders(v ...*LockPaymentOrder) *ProviderProfileUpdate {
+// RemoveAssignedOrders removes "assigned_orders" edges to PaymentOrder entities.
+func (_u *ProviderProfileUpdate) RemoveAssignedOrders(v ...*PaymentOrder) *ProviderProfileUpdate {
 	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
@@ -672,7 +672,7 @@ func (_u *ProviderProfileUpdate) sqlSave(ctx context.Context) (_node int, err er
 			Columns: []string{providerprofile.AssignedOrdersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -685,7 +685,7 @@ func (_u *ProviderProfileUpdate) sqlSave(ctx context.Context) (_node int, err er
 			Columns: []string{providerprofile.AssignedOrdersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -701,7 +701,7 @@ func (_u *ProviderProfileUpdate) sqlSave(ctx context.Context) (_node int, err er
 			Columns: []string{providerprofile.AssignedOrdersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -959,14 +959,14 @@ func (_u *ProviderProfileUpdateOne) SetProviderRating(v *ProviderRating) *Provid
 	return _u.SetProviderRatingID(v.ID)
 }
 
-// AddAssignedOrderIDs adds the "assigned_orders" edge to the LockPaymentOrder entity by IDs.
+// AddAssignedOrderIDs adds the "assigned_orders" edge to the PaymentOrder entity by IDs.
 func (_u *ProviderProfileUpdateOne) AddAssignedOrderIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
 	_u.mutation.AddAssignedOrderIDs(ids...)
 	return _u
 }
 
-// AddAssignedOrders adds the "assigned_orders" edges to the LockPaymentOrder entity.
-func (_u *ProviderProfileUpdateOne) AddAssignedOrders(v ...*LockPaymentOrder) *ProviderProfileUpdateOne {
+// AddAssignedOrders adds the "assigned_orders" edges to the PaymentOrder entity.
+func (_u *ProviderProfileUpdateOne) AddAssignedOrders(v ...*PaymentOrder) *ProviderProfileUpdateOne {
 	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
@@ -1069,20 +1069,20 @@ func (_u *ProviderProfileUpdateOne) ClearProviderRating() *ProviderProfileUpdate
 	return _u
 }
 
-// ClearAssignedOrders clears all "assigned_orders" edges to the LockPaymentOrder entity.
+// ClearAssignedOrders clears all "assigned_orders" edges to the PaymentOrder entity.
 func (_u *ProviderProfileUpdateOne) ClearAssignedOrders() *ProviderProfileUpdateOne {
 	_u.mutation.ClearAssignedOrders()
 	return _u
 }
 
-// RemoveAssignedOrderIDs removes the "assigned_orders" edge to LockPaymentOrder entities by IDs.
+// RemoveAssignedOrderIDs removes the "assigned_orders" edge to PaymentOrder entities by IDs.
 func (_u *ProviderProfileUpdateOne) RemoveAssignedOrderIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
 	_u.mutation.RemoveAssignedOrderIDs(ids...)
 	return _u
 }
 
-// RemoveAssignedOrders removes "assigned_orders" edges to LockPaymentOrder entities.
-func (_u *ProviderProfileUpdateOne) RemoveAssignedOrders(v ...*LockPaymentOrder) *ProviderProfileUpdateOne {
+// RemoveAssignedOrders removes "assigned_orders" edges to PaymentOrder entities.
+func (_u *ProviderProfileUpdateOne) RemoveAssignedOrders(v ...*PaymentOrder) *ProviderProfileUpdateOne {
 	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
@@ -1440,7 +1440,7 @@ func (_u *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provide
 			Columns: []string{providerprofile.AssignedOrdersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1453,7 +1453,7 @@ func (_u *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provide
 			Columns: []string{providerprofile.AssignedOrdersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1469,7 +1469,7 @@ func (_u *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provide
 			Columns: []string{providerprofile.AssignedOrdersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

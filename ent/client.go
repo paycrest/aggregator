@@ -22,12 +22,9 @@ import (
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/kybprofile"
-	"github.com/paycrest/aggregator/ent/linkedaddress"
-	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
-	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
+	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
@@ -35,7 +32,6 @@ import (
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
-	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
@@ -62,18 +58,12 @@ type Client struct {
 	Institution *InstitutionClient
 	// KYBProfile is the client for interacting with the KYBProfile builders.
 	KYBProfile *KYBProfileClient
-	// LinkedAddress is the client for interacting with the LinkedAddress builders.
-	LinkedAddress *LinkedAddressClient
-	// LockOrderFulfillment is the client for interacting with the LockOrderFulfillment builders.
-	LockOrderFulfillment *LockOrderFulfillmentClient
-	// LockPaymentOrder is the client for interacting with the LockPaymentOrder builders.
-	LockPaymentOrder *LockPaymentOrderClient
 	// Network is the client for interacting with the Network builders.
 	Network *NetworkClient
 	// PaymentOrder is the client for interacting with the PaymentOrder builders.
 	PaymentOrder *PaymentOrderClient
-	// PaymentOrderRecipient is the client for interacting with the PaymentOrderRecipient builders.
-	PaymentOrderRecipient *PaymentOrderRecipientClient
+	// PaymentOrderFulfillment is the client for interacting with the PaymentOrderFulfillment builders.
+	PaymentOrderFulfillment *PaymentOrderFulfillmentClient
 	// PaymentWebhook is the client for interacting with the PaymentWebhook builders.
 	PaymentWebhook *PaymentWebhookClient
 	// ProviderCurrencies is the client for interacting with the ProviderCurrencies builders.
@@ -88,8 +78,6 @@ type Client struct {
 	ProviderRating *ProviderRatingClient
 	// ProvisionBucket is the client for interacting with the ProvisionBucket builders.
 	ProvisionBucket *ProvisionBucketClient
-	// ReceiveAddress is the client for interacting with the ReceiveAddress builders.
-	ReceiveAddress *ReceiveAddressClient
 	// SenderOrderToken is the client for interacting with the SenderOrderToken builders.
 	SenderOrderToken *SenderOrderTokenClient
 	// SenderProfile is the client for interacting with the SenderProfile builders.
@@ -121,12 +109,9 @@ func (c *Client) init() {
 	c.IdentityVerificationRequest = NewIdentityVerificationRequestClient(c.config)
 	c.Institution = NewInstitutionClient(c.config)
 	c.KYBProfile = NewKYBProfileClient(c.config)
-	c.LinkedAddress = NewLinkedAddressClient(c.config)
-	c.LockOrderFulfillment = NewLockOrderFulfillmentClient(c.config)
-	c.LockPaymentOrder = NewLockPaymentOrderClient(c.config)
 	c.Network = NewNetworkClient(c.config)
 	c.PaymentOrder = NewPaymentOrderClient(c.config)
-	c.PaymentOrderRecipient = NewPaymentOrderRecipientClient(c.config)
+	c.PaymentOrderFulfillment = NewPaymentOrderFulfillmentClient(c.config)
 	c.PaymentWebhook = NewPaymentWebhookClient(c.config)
 	c.ProviderCurrencies = NewProviderCurrenciesClient(c.config)
 	c.ProviderFiatAccount = NewProviderFiatAccountClient(c.config)
@@ -134,7 +119,6 @@ func (c *Client) init() {
 	c.ProviderProfile = NewProviderProfileClient(c.config)
 	c.ProviderRating = NewProviderRatingClient(c.config)
 	c.ProvisionBucket = NewProvisionBucketClient(c.config)
-	c.ReceiveAddress = NewReceiveAddressClient(c.config)
 	c.SenderOrderToken = NewSenderOrderTokenClient(c.config)
 	c.SenderProfile = NewSenderProfileClient(c.config)
 	c.Token = NewTokenClient(c.config)
@@ -240,12 +224,9 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		IdentityVerificationRequest: NewIdentityVerificationRequestClient(cfg),
 		Institution:                 NewInstitutionClient(cfg),
 		KYBProfile:                  NewKYBProfileClient(cfg),
-		LinkedAddress:               NewLinkedAddressClient(cfg),
-		LockOrderFulfillment:        NewLockOrderFulfillmentClient(cfg),
-		LockPaymentOrder:            NewLockPaymentOrderClient(cfg),
 		Network:                     NewNetworkClient(cfg),
 		PaymentOrder:                NewPaymentOrderClient(cfg),
-		PaymentOrderRecipient:       NewPaymentOrderRecipientClient(cfg),
+		PaymentOrderFulfillment:     NewPaymentOrderFulfillmentClient(cfg),
 		PaymentWebhook:              NewPaymentWebhookClient(cfg),
 		ProviderCurrencies:          NewProviderCurrenciesClient(cfg),
 		ProviderFiatAccount:         NewProviderFiatAccountClient(cfg),
@@ -253,7 +234,6 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ProviderProfile:             NewProviderProfileClient(cfg),
 		ProviderRating:              NewProviderRatingClient(cfg),
 		ProvisionBucket:             NewProvisionBucketClient(cfg),
-		ReceiveAddress:              NewReceiveAddressClient(cfg),
 		SenderOrderToken:            NewSenderOrderTokenClient(cfg),
 		SenderProfile:               NewSenderProfileClient(cfg),
 		Token:                       NewTokenClient(cfg),
@@ -286,12 +266,9 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		IdentityVerificationRequest: NewIdentityVerificationRequestClient(cfg),
 		Institution:                 NewInstitutionClient(cfg),
 		KYBProfile:                  NewKYBProfileClient(cfg),
-		LinkedAddress:               NewLinkedAddressClient(cfg),
-		LockOrderFulfillment:        NewLockOrderFulfillmentClient(cfg),
-		LockPaymentOrder:            NewLockPaymentOrderClient(cfg),
 		Network:                     NewNetworkClient(cfg),
 		PaymentOrder:                NewPaymentOrderClient(cfg),
-		PaymentOrderRecipient:       NewPaymentOrderRecipientClient(cfg),
+		PaymentOrderFulfillment:     NewPaymentOrderFulfillmentClient(cfg),
 		PaymentWebhook:              NewPaymentWebhookClient(cfg),
 		ProviderCurrencies:          NewProviderCurrenciesClient(cfg),
 		ProviderFiatAccount:         NewProviderFiatAccountClient(cfg),
@@ -299,7 +276,6 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ProviderProfile:             NewProviderProfileClient(cfg),
 		ProviderRating:              NewProviderRatingClient(cfg),
 		ProvisionBucket:             NewProvisionBucketClient(cfg),
-		ReceiveAddress:              NewReceiveAddressClient(cfg),
 		SenderOrderToken:            NewSenderOrderTokenClient(cfg),
 		SenderProfile:               NewSenderProfileClient(cfg),
 		Token:                       NewTokenClient(cfg),
@@ -337,12 +313,11 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.APIKey, c.BeneficialOwner, c.FiatCurrency, c.IdentityVerificationRequest,
-		c.Institution, c.KYBProfile, c.LinkedAddress, c.LockOrderFulfillment,
-		c.LockPaymentOrder, c.Network, c.PaymentOrder, c.PaymentOrderRecipient,
-		c.PaymentWebhook, c.ProviderCurrencies, c.ProviderFiatAccount,
-		c.ProviderOrderToken, c.ProviderProfile, c.ProviderRating, c.ProvisionBucket,
-		c.ReceiveAddress, c.SenderOrderToken, c.SenderProfile, c.Token,
-		c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
+		c.Institution, c.KYBProfile, c.Network, c.PaymentOrder,
+		c.PaymentOrderFulfillment, c.PaymentWebhook, c.ProviderCurrencies,
+		c.ProviderFiatAccount, c.ProviderOrderToken, c.ProviderProfile,
+		c.ProviderRating, c.ProvisionBucket, c.SenderOrderToken, c.SenderProfile,
+		c.Token, c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
 	} {
 		n.Use(hooks...)
 	}
@@ -353,12 +328,11 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.APIKey, c.BeneficialOwner, c.FiatCurrency, c.IdentityVerificationRequest,
-		c.Institution, c.KYBProfile, c.LinkedAddress, c.LockOrderFulfillment,
-		c.LockPaymentOrder, c.Network, c.PaymentOrder, c.PaymentOrderRecipient,
-		c.PaymentWebhook, c.ProviderCurrencies, c.ProviderFiatAccount,
-		c.ProviderOrderToken, c.ProviderProfile, c.ProviderRating, c.ProvisionBucket,
-		c.ReceiveAddress, c.SenderOrderToken, c.SenderProfile, c.Token,
-		c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
+		c.Institution, c.KYBProfile, c.Network, c.PaymentOrder,
+		c.PaymentOrderFulfillment, c.PaymentWebhook, c.ProviderCurrencies,
+		c.ProviderFiatAccount, c.ProviderOrderToken, c.ProviderProfile,
+		c.ProviderRating, c.ProvisionBucket, c.SenderOrderToken, c.SenderProfile,
+		c.Token, c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -379,18 +353,12 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Institution.mutate(ctx, m)
 	case *KYBProfileMutation:
 		return c.KYBProfile.mutate(ctx, m)
-	case *LinkedAddressMutation:
-		return c.LinkedAddress.mutate(ctx, m)
-	case *LockOrderFulfillmentMutation:
-		return c.LockOrderFulfillment.mutate(ctx, m)
-	case *LockPaymentOrderMutation:
-		return c.LockPaymentOrder.mutate(ctx, m)
 	case *NetworkMutation:
 		return c.Network.mutate(ctx, m)
 	case *PaymentOrderMutation:
 		return c.PaymentOrder.mutate(ctx, m)
-	case *PaymentOrderRecipientMutation:
-		return c.PaymentOrderRecipient.mutate(ctx, m)
+	case *PaymentOrderFulfillmentMutation:
+		return c.PaymentOrderFulfillment.mutate(ctx, m)
 	case *PaymentWebhookMutation:
 		return c.PaymentWebhook.mutate(ctx, m)
 	case *ProviderCurrenciesMutation:
@@ -405,8 +373,6 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.ProviderRating.mutate(ctx, m)
 	case *ProvisionBucketMutation:
 		return c.ProvisionBucket.mutate(ctx, m)
-	case *ReceiveAddressMutation:
-		return c.ReceiveAddress.mutate(ctx, m)
 	case *SenderOrderTokenMutation:
 		return c.SenderOrderToken.mutate(ctx, m)
 	case *SenderProfileMutation:
@@ -1400,517 +1366,6 @@ func (c *KYBProfileClient) mutate(ctx context.Context, m *KYBProfileMutation) (V
 	}
 }
 
-// LinkedAddressClient is a client for the LinkedAddress schema.
-type LinkedAddressClient struct {
-	config
-}
-
-// NewLinkedAddressClient returns a client for the LinkedAddress from the given config.
-func NewLinkedAddressClient(c config) *LinkedAddressClient {
-	return &LinkedAddressClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `linkedaddress.Hooks(f(g(h())))`.
-func (c *LinkedAddressClient) Use(hooks ...Hook) {
-	c.hooks.LinkedAddress = append(c.hooks.LinkedAddress, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `linkedaddress.Intercept(f(g(h())))`.
-func (c *LinkedAddressClient) Intercept(interceptors ...Interceptor) {
-	c.inters.LinkedAddress = append(c.inters.LinkedAddress, interceptors...)
-}
-
-// Create returns a builder for creating a LinkedAddress entity.
-func (c *LinkedAddressClient) Create() *LinkedAddressCreate {
-	mutation := newLinkedAddressMutation(c.config, OpCreate)
-	return &LinkedAddressCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of LinkedAddress entities.
-func (c *LinkedAddressClient) CreateBulk(builders ...*LinkedAddressCreate) *LinkedAddressCreateBulk {
-	return &LinkedAddressCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *LinkedAddressClient) MapCreateBulk(slice any, setFunc func(*LinkedAddressCreate, int)) *LinkedAddressCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &LinkedAddressCreateBulk{err: fmt.Errorf("calling to LinkedAddressClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*LinkedAddressCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &LinkedAddressCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for LinkedAddress.
-func (c *LinkedAddressClient) Update() *LinkedAddressUpdate {
-	mutation := newLinkedAddressMutation(c.config, OpUpdate)
-	return &LinkedAddressUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *LinkedAddressClient) UpdateOne(_m *LinkedAddress) *LinkedAddressUpdateOne {
-	mutation := newLinkedAddressMutation(c.config, OpUpdateOne, withLinkedAddress(_m))
-	return &LinkedAddressUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *LinkedAddressClient) UpdateOneID(id int) *LinkedAddressUpdateOne {
-	mutation := newLinkedAddressMutation(c.config, OpUpdateOne, withLinkedAddressID(id))
-	return &LinkedAddressUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for LinkedAddress.
-func (c *LinkedAddressClient) Delete() *LinkedAddressDelete {
-	mutation := newLinkedAddressMutation(c.config, OpDelete)
-	return &LinkedAddressDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *LinkedAddressClient) DeleteOne(_m *LinkedAddress) *LinkedAddressDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *LinkedAddressClient) DeleteOneID(id int) *LinkedAddressDeleteOne {
-	builder := c.Delete().Where(linkedaddress.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &LinkedAddressDeleteOne{builder}
-}
-
-// Query returns a query builder for LinkedAddress.
-func (c *LinkedAddressClient) Query() *LinkedAddressQuery {
-	return &LinkedAddressQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeLinkedAddress},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a LinkedAddress entity by its id.
-func (c *LinkedAddressClient) Get(ctx context.Context, id int) (*LinkedAddress, error) {
-	return c.Query().Where(linkedaddress.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *LinkedAddressClient) GetX(ctx context.Context, id int) *LinkedAddress {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QueryPaymentOrders queries the payment_orders edge of a LinkedAddress.
-func (c *LinkedAddressClient) QueryPaymentOrders(_m *LinkedAddress) *PaymentOrderQuery {
-	query := (&PaymentOrderClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(linkedaddress.Table, linkedaddress.FieldID, id),
-			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, linkedaddress.PaymentOrdersTable, linkedaddress.PaymentOrdersColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *LinkedAddressClient) Hooks() []Hook {
-	return c.hooks.LinkedAddress
-}
-
-// Interceptors returns the client interceptors.
-func (c *LinkedAddressClient) Interceptors() []Interceptor {
-	return c.inters.LinkedAddress
-}
-
-func (c *LinkedAddressClient) mutate(ctx context.Context, m *LinkedAddressMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&LinkedAddressCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&LinkedAddressUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&LinkedAddressUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&LinkedAddressDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("ent: unknown LinkedAddress mutation op: %q", m.Op())
-	}
-}
-
-// LockOrderFulfillmentClient is a client for the LockOrderFulfillment schema.
-type LockOrderFulfillmentClient struct {
-	config
-}
-
-// NewLockOrderFulfillmentClient returns a client for the LockOrderFulfillment from the given config.
-func NewLockOrderFulfillmentClient(c config) *LockOrderFulfillmentClient {
-	return &LockOrderFulfillmentClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `lockorderfulfillment.Hooks(f(g(h())))`.
-func (c *LockOrderFulfillmentClient) Use(hooks ...Hook) {
-	c.hooks.LockOrderFulfillment = append(c.hooks.LockOrderFulfillment, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `lockorderfulfillment.Intercept(f(g(h())))`.
-func (c *LockOrderFulfillmentClient) Intercept(interceptors ...Interceptor) {
-	c.inters.LockOrderFulfillment = append(c.inters.LockOrderFulfillment, interceptors...)
-}
-
-// Create returns a builder for creating a LockOrderFulfillment entity.
-func (c *LockOrderFulfillmentClient) Create() *LockOrderFulfillmentCreate {
-	mutation := newLockOrderFulfillmentMutation(c.config, OpCreate)
-	return &LockOrderFulfillmentCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of LockOrderFulfillment entities.
-func (c *LockOrderFulfillmentClient) CreateBulk(builders ...*LockOrderFulfillmentCreate) *LockOrderFulfillmentCreateBulk {
-	return &LockOrderFulfillmentCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *LockOrderFulfillmentClient) MapCreateBulk(slice any, setFunc func(*LockOrderFulfillmentCreate, int)) *LockOrderFulfillmentCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &LockOrderFulfillmentCreateBulk{err: fmt.Errorf("calling to LockOrderFulfillmentClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*LockOrderFulfillmentCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &LockOrderFulfillmentCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for LockOrderFulfillment.
-func (c *LockOrderFulfillmentClient) Update() *LockOrderFulfillmentUpdate {
-	mutation := newLockOrderFulfillmentMutation(c.config, OpUpdate)
-	return &LockOrderFulfillmentUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *LockOrderFulfillmentClient) UpdateOne(_m *LockOrderFulfillment) *LockOrderFulfillmentUpdateOne {
-	mutation := newLockOrderFulfillmentMutation(c.config, OpUpdateOne, withLockOrderFulfillment(_m))
-	return &LockOrderFulfillmentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *LockOrderFulfillmentClient) UpdateOneID(id uuid.UUID) *LockOrderFulfillmentUpdateOne {
-	mutation := newLockOrderFulfillmentMutation(c.config, OpUpdateOne, withLockOrderFulfillmentID(id))
-	return &LockOrderFulfillmentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for LockOrderFulfillment.
-func (c *LockOrderFulfillmentClient) Delete() *LockOrderFulfillmentDelete {
-	mutation := newLockOrderFulfillmentMutation(c.config, OpDelete)
-	return &LockOrderFulfillmentDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *LockOrderFulfillmentClient) DeleteOne(_m *LockOrderFulfillment) *LockOrderFulfillmentDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *LockOrderFulfillmentClient) DeleteOneID(id uuid.UUID) *LockOrderFulfillmentDeleteOne {
-	builder := c.Delete().Where(lockorderfulfillment.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &LockOrderFulfillmentDeleteOne{builder}
-}
-
-// Query returns a query builder for LockOrderFulfillment.
-func (c *LockOrderFulfillmentClient) Query() *LockOrderFulfillmentQuery {
-	return &LockOrderFulfillmentQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeLockOrderFulfillment},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a LockOrderFulfillment entity by its id.
-func (c *LockOrderFulfillmentClient) Get(ctx context.Context, id uuid.UUID) (*LockOrderFulfillment, error) {
-	return c.Query().Where(lockorderfulfillment.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *LockOrderFulfillmentClient) GetX(ctx context.Context, id uuid.UUID) *LockOrderFulfillment {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QueryOrder queries the order edge of a LockOrderFulfillment.
-func (c *LockOrderFulfillmentClient) QueryOrder(_m *LockOrderFulfillment) *LockPaymentOrderQuery {
-	query := (&LockPaymentOrderClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(lockorderfulfillment.Table, lockorderfulfillment.FieldID, id),
-			sqlgraph.To(lockpaymentorder.Table, lockpaymentorder.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, lockorderfulfillment.OrderTable, lockorderfulfillment.OrderColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *LockOrderFulfillmentClient) Hooks() []Hook {
-	return c.hooks.LockOrderFulfillment
-}
-
-// Interceptors returns the client interceptors.
-func (c *LockOrderFulfillmentClient) Interceptors() []Interceptor {
-	return c.inters.LockOrderFulfillment
-}
-
-func (c *LockOrderFulfillmentClient) mutate(ctx context.Context, m *LockOrderFulfillmentMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&LockOrderFulfillmentCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&LockOrderFulfillmentUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&LockOrderFulfillmentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&LockOrderFulfillmentDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("ent: unknown LockOrderFulfillment mutation op: %q", m.Op())
-	}
-}
-
-// LockPaymentOrderClient is a client for the LockPaymentOrder schema.
-type LockPaymentOrderClient struct {
-	config
-}
-
-// NewLockPaymentOrderClient returns a client for the LockPaymentOrder from the given config.
-func NewLockPaymentOrderClient(c config) *LockPaymentOrderClient {
-	return &LockPaymentOrderClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `lockpaymentorder.Hooks(f(g(h())))`.
-func (c *LockPaymentOrderClient) Use(hooks ...Hook) {
-	c.hooks.LockPaymentOrder = append(c.hooks.LockPaymentOrder, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `lockpaymentorder.Intercept(f(g(h())))`.
-func (c *LockPaymentOrderClient) Intercept(interceptors ...Interceptor) {
-	c.inters.LockPaymentOrder = append(c.inters.LockPaymentOrder, interceptors...)
-}
-
-// Create returns a builder for creating a LockPaymentOrder entity.
-func (c *LockPaymentOrderClient) Create() *LockPaymentOrderCreate {
-	mutation := newLockPaymentOrderMutation(c.config, OpCreate)
-	return &LockPaymentOrderCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of LockPaymentOrder entities.
-func (c *LockPaymentOrderClient) CreateBulk(builders ...*LockPaymentOrderCreate) *LockPaymentOrderCreateBulk {
-	return &LockPaymentOrderCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *LockPaymentOrderClient) MapCreateBulk(slice any, setFunc func(*LockPaymentOrderCreate, int)) *LockPaymentOrderCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &LockPaymentOrderCreateBulk{err: fmt.Errorf("calling to LockPaymentOrderClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*LockPaymentOrderCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &LockPaymentOrderCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for LockPaymentOrder.
-func (c *LockPaymentOrderClient) Update() *LockPaymentOrderUpdate {
-	mutation := newLockPaymentOrderMutation(c.config, OpUpdate)
-	return &LockPaymentOrderUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *LockPaymentOrderClient) UpdateOne(_m *LockPaymentOrder) *LockPaymentOrderUpdateOne {
-	mutation := newLockPaymentOrderMutation(c.config, OpUpdateOne, withLockPaymentOrder(_m))
-	return &LockPaymentOrderUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *LockPaymentOrderClient) UpdateOneID(id uuid.UUID) *LockPaymentOrderUpdateOne {
-	mutation := newLockPaymentOrderMutation(c.config, OpUpdateOne, withLockPaymentOrderID(id))
-	return &LockPaymentOrderUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for LockPaymentOrder.
-func (c *LockPaymentOrderClient) Delete() *LockPaymentOrderDelete {
-	mutation := newLockPaymentOrderMutation(c.config, OpDelete)
-	return &LockPaymentOrderDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *LockPaymentOrderClient) DeleteOne(_m *LockPaymentOrder) *LockPaymentOrderDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *LockPaymentOrderClient) DeleteOneID(id uuid.UUID) *LockPaymentOrderDeleteOne {
-	builder := c.Delete().Where(lockpaymentorder.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &LockPaymentOrderDeleteOne{builder}
-}
-
-// Query returns a query builder for LockPaymentOrder.
-func (c *LockPaymentOrderClient) Query() *LockPaymentOrderQuery {
-	return &LockPaymentOrderQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeLockPaymentOrder},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a LockPaymentOrder entity by its id.
-func (c *LockPaymentOrderClient) Get(ctx context.Context, id uuid.UUID) (*LockPaymentOrder, error) {
-	return c.Query().Where(lockpaymentorder.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *LockPaymentOrderClient) GetX(ctx context.Context, id uuid.UUID) *LockPaymentOrder {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QueryToken queries the token edge of a LockPaymentOrder.
-func (c *LockPaymentOrderClient) QueryToken(_m *LockPaymentOrder) *TokenQuery {
-	query := (&TokenClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(lockpaymentorder.Table, lockpaymentorder.FieldID, id),
-			sqlgraph.To(token.Table, token.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, lockpaymentorder.TokenTable, lockpaymentorder.TokenColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryProvisionBucket queries the provision_bucket edge of a LockPaymentOrder.
-func (c *LockPaymentOrderClient) QueryProvisionBucket(_m *LockPaymentOrder) *ProvisionBucketQuery {
-	query := (&ProvisionBucketClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(lockpaymentorder.Table, lockpaymentorder.FieldID, id),
-			sqlgraph.To(provisionbucket.Table, provisionbucket.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, lockpaymentorder.ProvisionBucketTable, lockpaymentorder.ProvisionBucketColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryProvider queries the provider edge of a LockPaymentOrder.
-func (c *LockPaymentOrderClient) QueryProvider(_m *LockPaymentOrder) *ProviderProfileQuery {
-	query := (&ProviderProfileClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(lockpaymentorder.Table, lockpaymentorder.FieldID, id),
-			sqlgraph.To(providerprofile.Table, providerprofile.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, lockpaymentorder.ProviderTable, lockpaymentorder.ProviderColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryFulfillments queries the fulfillments edge of a LockPaymentOrder.
-func (c *LockPaymentOrderClient) QueryFulfillments(_m *LockPaymentOrder) *LockOrderFulfillmentQuery {
-	query := (&LockOrderFulfillmentClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(lockpaymentorder.Table, lockpaymentorder.FieldID, id),
-			sqlgraph.To(lockorderfulfillment.Table, lockorderfulfillment.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, lockpaymentorder.FulfillmentsTable, lockpaymentorder.FulfillmentsColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryTransactions queries the transactions edge of a LockPaymentOrder.
-func (c *LockPaymentOrderClient) QueryTransactions(_m *LockPaymentOrder) *TransactionLogQuery {
-	query := (&TransactionLogClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(lockpaymentorder.Table, lockpaymentorder.FieldID, id),
-			sqlgraph.To(transactionlog.Table, transactionlog.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, lockpaymentorder.TransactionsTable, lockpaymentorder.TransactionsColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *LockPaymentOrderClient) Hooks() []Hook {
-	return c.hooks.LockPaymentOrder
-}
-
-// Interceptors returns the client interceptors.
-func (c *LockPaymentOrderClient) Interceptors() []Interceptor {
-	return c.inters.LockPaymentOrder
-}
-
-func (c *LockPaymentOrderClient) mutate(ctx context.Context, m *LockPaymentOrderMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&LockPaymentOrderCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&LockPaymentOrderUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&LockPaymentOrderUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&LockPaymentOrderDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("ent: unknown LockPaymentOrder mutation op: %q", m.Op())
-	}
-}
-
 // NetworkClient is a client for the Network schema.
 type NetworkClient struct {
 	config
@@ -2184,22 +1639,6 @@ func (c *PaymentOrderClient) GetX(ctx context.Context, id uuid.UUID) *PaymentOrd
 	return obj
 }
 
-// QuerySenderProfile queries the sender_profile edge of a PaymentOrder.
-func (c *PaymentOrderClient) QuerySenderProfile(_m *PaymentOrder) *SenderProfileQuery {
-	query := (&SenderProfileClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, id),
-			sqlgraph.To(senderprofile.Table, senderprofile.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, paymentorder.SenderProfileTable, paymentorder.SenderProfileColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // QueryToken queries the token edge of a PaymentOrder.
 func (c *PaymentOrderClient) QueryToken(_m *PaymentOrder) *TokenQuery {
 	query := (&TokenClient{config: c.config}).Query()
@@ -2216,63 +1655,15 @@ func (c *PaymentOrderClient) QueryToken(_m *PaymentOrder) *TokenQuery {
 	return query
 }
 
-// QueryLinkedAddress queries the linked_address edge of a PaymentOrder.
-func (c *PaymentOrderClient) QueryLinkedAddress(_m *PaymentOrder) *LinkedAddressQuery {
-	query := (&LinkedAddressClient{config: c.config}).Query()
+// QuerySenderProfile queries the sender_profile edge of a PaymentOrder.
+func (c *PaymentOrderClient) QuerySenderProfile(_m *PaymentOrder) *SenderProfileQuery {
+	query := (&SenderProfileClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := _m.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, id),
-			sqlgraph.To(linkedaddress.Table, linkedaddress.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, paymentorder.LinkedAddressTable, paymentorder.LinkedAddressColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryReceiveAddress queries the receive_address edge of a PaymentOrder.
-func (c *PaymentOrderClient) QueryReceiveAddress(_m *PaymentOrder) *ReceiveAddressQuery {
-	query := (&ReceiveAddressClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, id),
-			sqlgraph.To(receiveaddress.Table, receiveaddress.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, paymentorder.ReceiveAddressTable, paymentorder.ReceiveAddressColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryRecipient queries the recipient edge of a PaymentOrder.
-func (c *PaymentOrderClient) QueryRecipient(_m *PaymentOrder) *PaymentOrderRecipientQuery {
-	query := (&PaymentOrderRecipientClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, id),
-			sqlgraph.To(paymentorderrecipient.Table, paymentorderrecipient.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, paymentorder.RecipientTable, paymentorder.RecipientColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryTransactions queries the transactions edge of a PaymentOrder.
-func (c *PaymentOrderClient) QueryTransactions(_m *PaymentOrder) *TransactionLogQuery {
-	query := (&TransactionLogClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, id),
-			sqlgraph.To(transactionlog.Table, transactionlog.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, paymentorder.TransactionsTable, paymentorder.TransactionsColumn),
+			sqlgraph.To(senderprofile.Table, senderprofile.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, paymentorder.SenderProfileTable, paymentorder.SenderProfileColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -2289,6 +1680,70 @@ func (c *PaymentOrderClient) QueryPaymentWebhook(_m *PaymentOrder) *PaymentWebho
 			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, id),
 			sqlgraph.To(paymentwebhook.Table, paymentwebhook.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, paymentorder.PaymentWebhookTable, paymentorder.PaymentWebhookColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryProvider queries the provider edge of a PaymentOrder.
+func (c *PaymentOrderClient) QueryProvider(_m *PaymentOrder) *ProviderProfileQuery {
+	query := (&ProviderProfileClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, id),
+			sqlgraph.To(providerprofile.Table, providerprofile.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, paymentorder.ProviderTable, paymentorder.ProviderColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryProvisionBucket queries the provision_bucket edge of a PaymentOrder.
+func (c *PaymentOrderClient) QueryProvisionBucket(_m *PaymentOrder) *ProvisionBucketQuery {
+	query := (&ProvisionBucketClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, id),
+			sqlgraph.To(provisionbucket.Table, provisionbucket.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, paymentorder.ProvisionBucketTable, paymentorder.ProvisionBucketColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryFulfillments queries the fulfillments edge of a PaymentOrder.
+func (c *PaymentOrderClient) QueryFulfillments(_m *PaymentOrder) *PaymentOrderFulfillmentQuery {
+	query := (&PaymentOrderFulfillmentClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, id),
+			sqlgraph.To(paymentorderfulfillment.Table, paymentorderfulfillment.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, paymentorder.FulfillmentsTable, paymentorder.FulfillmentsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryTransactions queries the transactions edge of a PaymentOrder.
+func (c *PaymentOrderClient) QueryTransactions(_m *PaymentOrder) *TransactionLogQuery {
+	query := (&TransactionLogClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, id),
+			sqlgraph.To(transactionlog.Table, transactionlog.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, paymentorder.TransactionsTable, paymentorder.TransactionsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -2321,107 +1776,107 @@ func (c *PaymentOrderClient) mutate(ctx context.Context, m *PaymentOrderMutation
 	}
 }
 
-// PaymentOrderRecipientClient is a client for the PaymentOrderRecipient schema.
-type PaymentOrderRecipientClient struct {
+// PaymentOrderFulfillmentClient is a client for the PaymentOrderFulfillment schema.
+type PaymentOrderFulfillmentClient struct {
 	config
 }
 
-// NewPaymentOrderRecipientClient returns a client for the PaymentOrderRecipient from the given config.
-func NewPaymentOrderRecipientClient(c config) *PaymentOrderRecipientClient {
-	return &PaymentOrderRecipientClient{config: c}
+// NewPaymentOrderFulfillmentClient returns a client for the PaymentOrderFulfillment from the given config.
+func NewPaymentOrderFulfillmentClient(c config) *PaymentOrderFulfillmentClient {
+	return &PaymentOrderFulfillmentClient{config: c}
 }
 
 // Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `paymentorderrecipient.Hooks(f(g(h())))`.
-func (c *PaymentOrderRecipientClient) Use(hooks ...Hook) {
-	c.hooks.PaymentOrderRecipient = append(c.hooks.PaymentOrderRecipient, hooks...)
+// A call to `Use(f, g, h)` equals to `paymentorderfulfillment.Hooks(f(g(h())))`.
+func (c *PaymentOrderFulfillmentClient) Use(hooks ...Hook) {
+	c.hooks.PaymentOrderFulfillment = append(c.hooks.PaymentOrderFulfillment, hooks...)
 }
 
 // Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `paymentorderrecipient.Intercept(f(g(h())))`.
-func (c *PaymentOrderRecipientClient) Intercept(interceptors ...Interceptor) {
-	c.inters.PaymentOrderRecipient = append(c.inters.PaymentOrderRecipient, interceptors...)
+// A call to `Intercept(f, g, h)` equals to `paymentorderfulfillment.Intercept(f(g(h())))`.
+func (c *PaymentOrderFulfillmentClient) Intercept(interceptors ...Interceptor) {
+	c.inters.PaymentOrderFulfillment = append(c.inters.PaymentOrderFulfillment, interceptors...)
 }
 
-// Create returns a builder for creating a PaymentOrderRecipient entity.
-func (c *PaymentOrderRecipientClient) Create() *PaymentOrderRecipientCreate {
-	mutation := newPaymentOrderRecipientMutation(c.config, OpCreate)
-	return &PaymentOrderRecipientCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Create returns a builder for creating a PaymentOrderFulfillment entity.
+func (c *PaymentOrderFulfillmentClient) Create() *PaymentOrderFulfillmentCreate {
+	mutation := newPaymentOrderFulfillmentMutation(c.config, OpCreate)
+	return &PaymentOrderFulfillmentCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// CreateBulk returns a builder for creating a bulk of PaymentOrderRecipient entities.
-func (c *PaymentOrderRecipientClient) CreateBulk(builders ...*PaymentOrderRecipientCreate) *PaymentOrderRecipientCreateBulk {
-	return &PaymentOrderRecipientCreateBulk{config: c.config, builders: builders}
+// CreateBulk returns a builder for creating a bulk of PaymentOrderFulfillment entities.
+func (c *PaymentOrderFulfillmentClient) CreateBulk(builders ...*PaymentOrderFulfillmentCreate) *PaymentOrderFulfillmentCreateBulk {
+	return &PaymentOrderFulfillmentCreateBulk{config: c.config, builders: builders}
 }
 
 // MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
 // a builder and applies setFunc on it.
-func (c *PaymentOrderRecipientClient) MapCreateBulk(slice any, setFunc func(*PaymentOrderRecipientCreate, int)) *PaymentOrderRecipientCreateBulk {
+func (c *PaymentOrderFulfillmentClient) MapCreateBulk(slice any, setFunc func(*PaymentOrderFulfillmentCreate, int)) *PaymentOrderFulfillmentCreateBulk {
 	rv := reflect.ValueOf(slice)
 	if rv.Kind() != reflect.Slice {
-		return &PaymentOrderRecipientCreateBulk{err: fmt.Errorf("calling to PaymentOrderRecipientClient.MapCreateBulk with wrong type %T, need slice", slice)}
+		return &PaymentOrderFulfillmentCreateBulk{err: fmt.Errorf("calling to PaymentOrderFulfillmentClient.MapCreateBulk with wrong type %T, need slice", slice)}
 	}
-	builders := make([]*PaymentOrderRecipientCreate, rv.Len())
+	builders := make([]*PaymentOrderFulfillmentCreate, rv.Len())
 	for i := 0; i < rv.Len(); i++ {
 		builders[i] = c.Create()
 		setFunc(builders[i], i)
 	}
-	return &PaymentOrderRecipientCreateBulk{config: c.config, builders: builders}
+	return &PaymentOrderFulfillmentCreateBulk{config: c.config, builders: builders}
 }
 
-// Update returns an update builder for PaymentOrderRecipient.
-func (c *PaymentOrderRecipientClient) Update() *PaymentOrderRecipientUpdate {
-	mutation := newPaymentOrderRecipientMutation(c.config, OpUpdate)
-	return &PaymentOrderRecipientUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Update returns an update builder for PaymentOrderFulfillment.
+func (c *PaymentOrderFulfillmentClient) Update() *PaymentOrderFulfillmentUpdate {
+	mutation := newPaymentOrderFulfillmentMutation(c.config, OpUpdate)
+	return &PaymentOrderFulfillmentUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOne returns an update builder for the given entity.
-func (c *PaymentOrderRecipientClient) UpdateOne(_m *PaymentOrderRecipient) *PaymentOrderRecipientUpdateOne {
-	mutation := newPaymentOrderRecipientMutation(c.config, OpUpdateOne, withPaymentOrderRecipient(_m))
-	return &PaymentOrderRecipientUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+func (c *PaymentOrderFulfillmentClient) UpdateOne(_m *PaymentOrderFulfillment) *PaymentOrderFulfillmentUpdateOne {
+	mutation := newPaymentOrderFulfillmentMutation(c.config, OpUpdateOne, withPaymentOrderFulfillment(_m))
+	return &PaymentOrderFulfillmentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *PaymentOrderRecipientClient) UpdateOneID(id int) *PaymentOrderRecipientUpdateOne {
-	mutation := newPaymentOrderRecipientMutation(c.config, OpUpdateOne, withPaymentOrderRecipientID(id))
-	return &PaymentOrderRecipientUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+func (c *PaymentOrderFulfillmentClient) UpdateOneID(id uuid.UUID) *PaymentOrderFulfillmentUpdateOne {
+	mutation := newPaymentOrderFulfillmentMutation(c.config, OpUpdateOne, withPaymentOrderFulfillmentID(id))
+	return &PaymentOrderFulfillmentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// Delete returns a delete builder for PaymentOrderRecipient.
-func (c *PaymentOrderRecipientClient) Delete() *PaymentOrderRecipientDelete {
-	mutation := newPaymentOrderRecipientMutation(c.config, OpDelete)
-	return &PaymentOrderRecipientDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Delete returns a delete builder for PaymentOrderFulfillment.
+func (c *PaymentOrderFulfillmentClient) Delete() *PaymentOrderFulfillmentDelete {
+	mutation := newPaymentOrderFulfillmentMutation(c.config, OpDelete)
+	return &PaymentOrderFulfillmentDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // DeleteOne returns a builder for deleting the given entity.
-func (c *PaymentOrderRecipientClient) DeleteOne(_m *PaymentOrderRecipient) *PaymentOrderRecipientDeleteOne {
+func (c *PaymentOrderFulfillmentClient) DeleteOne(_m *PaymentOrderFulfillment) *PaymentOrderFulfillmentDeleteOne {
 	return c.DeleteOneID(_m.ID)
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *PaymentOrderRecipientClient) DeleteOneID(id int) *PaymentOrderRecipientDeleteOne {
-	builder := c.Delete().Where(paymentorderrecipient.ID(id))
+func (c *PaymentOrderFulfillmentClient) DeleteOneID(id uuid.UUID) *PaymentOrderFulfillmentDeleteOne {
+	builder := c.Delete().Where(paymentorderfulfillment.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
-	return &PaymentOrderRecipientDeleteOne{builder}
+	return &PaymentOrderFulfillmentDeleteOne{builder}
 }
 
-// Query returns a query builder for PaymentOrderRecipient.
-func (c *PaymentOrderRecipientClient) Query() *PaymentOrderRecipientQuery {
-	return &PaymentOrderRecipientQuery{
+// Query returns a query builder for PaymentOrderFulfillment.
+func (c *PaymentOrderFulfillmentClient) Query() *PaymentOrderFulfillmentQuery {
+	return &PaymentOrderFulfillmentQuery{
 		config: c.config,
-		ctx:    &QueryContext{Type: TypePaymentOrderRecipient},
+		ctx:    &QueryContext{Type: TypePaymentOrderFulfillment},
 		inters: c.Interceptors(),
 	}
 }
 
-// Get returns a PaymentOrderRecipient entity by its id.
-func (c *PaymentOrderRecipientClient) Get(ctx context.Context, id int) (*PaymentOrderRecipient, error) {
-	return c.Query().Where(paymentorderrecipient.ID(id)).Only(ctx)
+// Get returns a PaymentOrderFulfillment entity by its id.
+func (c *PaymentOrderFulfillmentClient) Get(ctx context.Context, id uuid.UUID) (*PaymentOrderFulfillment, error) {
+	return c.Query().Where(paymentorderfulfillment.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *PaymentOrderRecipientClient) GetX(ctx context.Context, id int) *PaymentOrderRecipient {
+func (c *PaymentOrderFulfillmentClient) GetX(ctx context.Context, id uuid.UUID) *PaymentOrderFulfillment {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
@@ -2429,15 +1884,15 @@ func (c *PaymentOrderRecipientClient) GetX(ctx context.Context, id int) *Payment
 	return obj
 }
 
-// QueryPaymentOrder queries the payment_order edge of a PaymentOrderRecipient.
-func (c *PaymentOrderRecipientClient) QueryPaymentOrder(_m *PaymentOrderRecipient) *PaymentOrderQuery {
+// QueryOrder queries the order edge of a PaymentOrderFulfillment.
+func (c *PaymentOrderFulfillmentClient) QueryOrder(_m *PaymentOrderFulfillment) *PaymentOrderQuery {
 	query := (&PaymentOrderClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := _m.ID
 		step := sqlgraph.NewStep(
-			sqlgraph.From(paymentorderrecipient.Table, paymentorderrecipient.FieldID, id),
+			sqlgraph.From(paymentorderfulfillment.Table, paymentorderfulfillment.FieldID, id),
 			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, paymentorderrecipient.PaymentOrderTable, paymentorderrecipient.PaymentOrderColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, paymentorderfulfillment.OrderTable, paymentorderfulfillment.OrderColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -2446,27 +1901,27 @@ func (c *PaymentOrderRecipientClient) QueryPaymentOrder(_m *PaymentOrderRecipien
 }
 
 // Hooks returns the client hooks.
-func (c *PaymentOrderRecipientClient) Hooks() []Hook {
-	return c.hooks.PaymentOrderRecipient
+func (c *PaymentOrderFulfillmentClient) Hooks() []Hook {
+	return c.hooks.PaymentOrderFulfillment
 }
 
 // Interceptors returns the client interceptors.
-func (c *PaymentOrderRecipientClient) Interceptors() []Interceptor {
-	return c.inters.PaymentOrderRecipient
+func (c *PaymentOrderFulfillmentClient) Interceptors() []Interceptor {
+	return c.inters.PaymentOrderFulfillment
 }
 
-func (c *PaymentOrderRecipientClient) mutate(ctx context.Context, m *PaymentOrderRecipientMutation) (Value, error) {
+func (c *PaymentOrderFulfillmentClient) mutate(ctx context.Context, m *PaymentOrderFulfillmentMutation) (Value, error) {
 	switch m.Op() {
 	case OpCreate:
-		return (&PaymentOrderRecipientCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+		return (&PaymentOrderFulfillmentCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
 	case OpUpdate:
-		return (&PaymentOrderRecipientUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+		return (&PaymentOrderFulfillmentUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
 	case OpUpdateOne:
-		return (&PaymentOrderRecipientUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+		return (&PaymentOrderFulfillmentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
 	case OpDelete, OpDeleteOne:
-		return (&PaymentOrderRecipientDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+		return (&PaymentOrderFulfillmentDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
-		return nil, fmt.Errorf("ent: unknown PaymentOrderRecipient mutation op: %q", m.Op())
+		return nil, fmt.Errorf("ent: unknown PaymentOrderFulfillment mutation op: %q", m.Op())
 	}
 }
 
@@ -3335,13 +2790,13 @@ func (c *ProviderProfileClient) QueryProviderRating(_m *ProviderProfile) *Provid
 }
 
 // QueryAssignedOrders queries the assigned_orders edge of a ProviderProfile.
-func (c *ProviderProfileClient) QueryAssignedOrders(_m *ProviderProfile) *LockPaymentOrderQuery {
-	query := (&LockPaymentOrderClient{config: c.config}).Query()
+func (c *ProviderProfileClient) QueryAssignedOrders(_m *ProviderProfile) *PaymentOrderQuery {
+	query := (&PaymentOrderClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := _m.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(providerprofile.Table, providerprofile.FieldID, id),
-			sqlgraph.To(lockpaymentorder.Table, lockpaymentorder.FieldID),
+			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.AssignedOrdersTable, providerprofile.AssignedOrdersColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
@@ -3664,15 +3119,15 @@ func (c *ProvisionBucketClient) QueryCurrency(_m *ProvisionBucket) *FiatCurrency
 	return query
 }
 
-// QueryLockPaymentOrders queries the lock_payment_orders edge of a ProvisionBucket.
-func (c *ProvisionBucketClient) QueryLockPaymentOrders(_m *ProvisionBucket) *LockPaymentOrderQuery {
-	query := (&LockPaymentOrderClient{config: c.config}).Query()
+// QueryPaymentOrders queries the payment_orders edge of a ProvisionBucket.
+func (c *ProvisionBucketClient) QueryPaymentOrders(_m *ProvisionBucket) *PaymentOrderQuery {
+	query := (&PaymentOrderClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := _m.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionbucket.Table, provisionbucket.FieldID, id),
-			sqlgraph.To(lockpaymentorder.Table, lockpaymentorder.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, provisionbucket.LockPaymentOrdersTable, provisionbucket.LockPaymentOrdersColumn),
+			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, provisionbucket.PaymentOrdersTable, provisionbucket.PaymentOrdersColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -3718,155 +3173,6 @@ func (c *ProvisionBucketClient) mutate(ctx context.Context, m *ProvisionBucketMu
 		return (&ProvisionBucketDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown ProvisionBucket mutation op: %q", m.Op())
-	}
-}
-
-// ReceiveAddressClient is a client for the ReceiveAddress schema.
-type ReceiveAddressClient struct {
-	config
-}
-
-// NewReceiveAddressClient returns a client for the ReceiveAddress from the given config.
-func NewReceiveAddressClient(c config) *ReceiveAddressClient {
-	return &ReceiveAddressClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `receiveaddress.Hooks(f(g(h())))`.
-func (c *ReceiveAddressClient) Use(hooks ...Hook) {
-	c.hooks.ReceiveAddress = append(c.hooks.ReceiveAddress, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `receiveaddress.Intercept(f(g(h())))`.
-func (c *ReceiveAddressClient) Intercept(interceptors ...Interceptor) {
-	c.inters.ReceiveAddress = append(c.inters.ReceiveAddress, interceptors...)
-}
-
-// Create returns a builder for creating a ReceiveAddress entity.
-func (c *ReceiveAddressClient) Create() *ReceiveAddressCreate {
-	mutation := newReceiveAddressMutation(c.config, OpCreate)
-	return &ReceiveAddressCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of ReceiveAddress entities.
-func (c *ReceiveAddressClient) CreateBulk(builders ...*ReceiveAddressCreate) *ReceiveAddressCreateBulk {
-	return &ReceiveAddressCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *ReceiveAddressClient) MapCreateBulk(slice any, setFunc func(*ReceiveAddressCreate, int)) *ReceiveAddressCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &ReceiveAddressCreateBulk{err: fmt.Errorf("calling to ReceiveAddressClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*ReceiveAddressCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &ReceiveAddressCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for ReceiveAddress.
-func (c *ReceiveAddressClient) Update() *ReceiveAddressUpdate {
-	mutation := newReceiveAddressMutation(c.config, OpUpdate)
-	return &ReceiveAddressUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *ReceiveAddressClient) UpdateOne(_m *ReceiveAddress) *ReceiveAddressUpdateOne {
-	mutation := newReceiveAddressMutation(c.config, OpUpdateOne, withReceiveAddress(_m))
-	return &ReceiveAddressUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *ReceiveAddressClient) UpdateOneID(id int) *ReceiveAddressUpdateOne {
-	mutation := newReceiveAddressMutation(c.config, OpUpdateOne, withReceiveAddressID(id))
-	return &ReceiveAddressUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for ReceiveAddress.
-func (c *ReceiveAddressClient) Delete() *ReceiveAddressDelete {
-	mutation := newReceiveAddressMutation(c.config, OpDelete)
-	return &ReceiveAddressDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *ReceiveAddressClient) DeleteOne(_m *ReceiveAddress) *ReceiveAddressDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *ReceiveAddressClient) DeleteOneID(id int) *ReceiveAddressDeleteOne {
-	builder := c.Delete().Where(receiveaddress.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &ReceiveAddressDeleteOne{builder}
-}
-
-// Query returns a query builder for ReceiveAddress.
-func (c *ReceiveAddressClient) Query() *ReceiveAddressQuery {
-	return &ReceiveAddressQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeReceiveAddress},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a ReceiveAddress entity by its id.
-func (c *ReceiveAddressClient) Get(ctx context.Context, id int) (*ReceiveAddress, error) {
-	return c.Query().Where(receiveaddress.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *ReceiveAddressClient) GetX(ctx context.Context, id int) *ReceiveAddress {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QueryPaymentOrder queries the payment_order edge of a ReceiveAddress.
-func (c *ReceiveAddressClient) QueryPaymentOrder(_m *ReceiveAddress) *PaymentOrderQuery {
-	query := (&PaymentOrderClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(receiveaddress.Table, receiveaddress.FieldID, id),
-			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, receiveaddress.PaymentOrderTable, receiveaddress.PaymentOrderColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *ReceiveAddressClient) Hooks() []Hook {
-	return c.hooks.ReceiveAddress
-}
-
-// Interceptors returns the client interceptors.
-func (c *ReceiveAddressClient) Interceptors() []Interceptor {
-	return c.inters.ReceiveAddress
-}
-
-func (c *ReceiveAddressClient) mutate(ctx context.Context, m *ReceiveAddressMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&ReceiveAddressCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&ReceiveAddressUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&ReceiveAddressUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&ReceiveAddressDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("ent: unknown ReceiveAddress mutation op: %q", m.Op())
 	}
 }
 
@@ -4207,22 +3513,6 @@ func (c *SenderProfileClient) QueryOrderTokens(_m *SenderProfile) *SenderOrderTo
 	return query
 }
 
-// QueryLinkedAddress queries the linked_address edge of a SenderProfile.
-func (c *SenderProfileClient) QueryLinkedAddress(_m *SenderProfile) *LinkedAddressQuery {
-	query := (&LinkedAddressClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(senderprofile.Table, senderprofile.FieldID, id),
-			sqlgraph.To(linkedaddress.Table, linkedaddress.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, senderprofile.LinkedAddressTable, senderprofile.LinkedAddressColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // Hooks returns the client hooks.
 func (c *SenderProfileClient) Hooks() []Hook {
 	return c.hooks.SenderProfile
@@ -4381,22 +3671,6 @@ func (c *TokenClient) QueryPaymentOrders(_m *Token) *PaymentOrderQuery {
 			sqlgraph.From(token.Table, token.FieldID, id),
 			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, token.PaymentOrdersTable, token.PaymentOrdersColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryLockPaymentOrders queries the lock_payment_orders edge of a Token.
-func (c *TokenClient) QueryLockPaymentOrders(_m *Token) *LockPaymentOrderQuery {
-	query := (&LockPaymentOrderClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(token.Table, token.FieldID, id),
-			sqlgraph.To(lockpaymentorder.Table, lockpaymentorder.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, token.LockPaymentOrdersTable, token.LockPaymentOrdersColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -5079,18 +4353,16 @@ func (c *WebhookRetryAttemptClient) mutate(ctx context.Context, m *WebhookRetryA
 type (
 	hooks struct {
 		APIKey, BeneficialOwner, FiatCurrency, IdentityVerificationRequest, Institution,
-		KYBProfile, LinkedAddress, LockOrderFulfillment, LockPaymentOrder, Network,
-		PaymentOrder, PaymentOrderRecipient, PaymentWebhook, ProviderCurrencies,
-		ProviderFiatAccount, ProviderOrderToken, ProviderProfile, ProviderRating,
-		ProvisionBucket, ReceiveAddress, SenderOrderToken, SenderProfile, Token,
+		KYBProfile, Network, PaymentOrder, PaymentOrderFulfillment, PaymentWebhook,
+		ProviderCurrencies, ProviderFiatAccount, ProviderOrderToken, ProviderProfile,
+		ProviderRating, ProvisionBucket, SenderOrderToken, SenderProfile, Token,
 		TransactionLog, User, VerificationToken, WebhookRetryAttempt []ent.Hook
 	}
 	inters struct {
 		APIKey, BeneficialOwner, FiatCurrency, IdentityVerificationRequest, Institution,
-		KYBProfile, LinkedAddress, LockOrderFulfillment, LockPaymentOrder, Network,
-		PaymentOrder, PaymentOrderRecipient, PaymentWebhook, ProviderCurrencies,
-		ProviderFiatAccount, ProviderOrderToken, ProviderProfile, ProviderRating,
-		ProvisionBucket, ReceiveAddress, SenderOrderToken, SenderProfile, Token,
+		KYBProfile, Network, PaymentOrder, PaymentOrderFulfillment, PaymentWebhook,
+		ProviderCurrencies, ProviderFiatAccount, ProviderOrderToken, ProviderProfile,
+		ProviderRating, ProvisionBucket, SenderOrderToken, SenderProfile, Token,
 		TransactionLog, User, VerificationToken, WebhookRetryAttempt []ent.Interceptor
 	}
 )

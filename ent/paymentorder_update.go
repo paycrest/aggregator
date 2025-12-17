@@ -10,14 +10,15 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/paymentorder"
-	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
+	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/predicate"
-	"github.com/paycrest/aggregator/ent/receiveaddress"
+	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
@@ -61,6 +62,48 @@ func (_u *PaymentOrderUpdate) SetNillableAmount(v *decimal.Decimal) *PaymentOrde
 // AddAmount adds value to the "amount" field.
 func (_u *PaymentOrderUpdate) AddAmount(v decimal.Decimal) *PaymentOrderUpdate {
 	_u.mutation.AddAmount(v)
+	return _u
+}
+
+// SetRate sets the "rate" field.
+func (_u *PaymentOrderUpdate) SetRate(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.ResetRate()
+	_u.mutation.SetRate(v)
+	return _u
+}
+
+// SetNillableRate sets the "rate" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableRate(v *decimal.Decimal) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetRate(*v)
+	}
+	return _u
+}
+
+// AddRate adds value to the "rate" field.
+func (_u *PaymentOrderUpdate) AddRate(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.AddRate(v)
+	return _u
+}
+
+// SetAmountInUsd sets the "amount_in_usd" field.
+func (_u *PaymentOrderUpdate) SetAmountInUsd(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.ResetAmountInUsd()
+	_u.mutation.SetAmountInUsd(v)
+	return _u
+}
+
+// SetNillableAmountInUsd sets the "amount_in_usd" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableAmountInUsd(v *decimal.Decimal) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetAmountInUsd(*v)
+	}
+	return _u
+}
+
+// AddAmountInUsd adds value to the "amount_in_usd" field.
+func (_u *PaymentOrderUpdate) AddAmountInUsd(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.AddAmountInUsd(v)
 	return _u
 }
 
@@ -169,24 +212,66 @@ func (_u *PaymentOrderUpdate) AddNetworkFee(v decimal.Decimal) *PaymentOrderUpda
 	return _u
 }
 
-// SetRate sets the "rate" field.
-func (_u *PaymentOrderUpdate) SetRate(v decimal.Decimal) *PaymentOrderUpdate {
-	_u.mutation.ResetRate()
-	_u.mutation.SetRate(v)
+// SetProtocolFee sets the "protocol_fee" field.
+func (_u *PaymentOrderUpdate) SetProtocolFee(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.ResetProtocolFee()
+	_u.mutation.SetProtocolFee(v)
 	return _u
 }
 
-// SetNillableRate sets the "rate" field if the given value is not nil.
-func (_u *PaymentOrderUpdate) SetNillableRate(v *decimal.Decimal) *PaymentOrderUpdate {
+// SetNillableProtocolFee sets the "protocol_fee" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableProtocolFee(v *decimal.Decimal) *PaymentOrderUpdate {
 	if v != nil {
-		_u.SetRate(*v)
+		_u.SetProtocolFee(*v)
 	}
 	return _u
 }
 
-// AddRate adds value to the "rate" field.
-func (_u *PaymentOrderUpdate) AddRate(v decimal.Decimal) *PaymentOrderUpdate {
-	_u.mutation.AddRate(v)
+// AddProtocolFee adds value to the "protocol_fee" field.
+func (_u *PaymentOrderUpdate) AddProtocolFee(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.AddProtocolFee(v)
+	return _u
+}
+
+// SetOrderPercent sets the "order_percent" field.
+func (_u *PaymentOrderUpdate) SetOrderPercent(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.ResetOrderPercent()
+	_u.mutation.SetOrderPercent(v)
+	return _u
+}
+
+// SetNillableOrderPercent sets the "order_percent" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableOrderPercent(v *decimal.Decimal) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetOrderPercent(*v)
+	}
+	return _u
+}
+
+// AddOrderPercent adds value to the "order_percent" field.
+func (_u *PaymentOrderUpdate) AddOrderPercent(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.AddOrderPercent(v)
+	return _u
+}
+
+// SetFeePercent sets the "fee_percent" field.
+func (_u *PaymentOrderUpdate) SetFeePercent(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.ResetFeePercent()
+	_u.mutation.SetFeePercent(v)
+	return _u
+}
+
+// SetNillableFeePercent sets the "fee_percent" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableFeePercent(v *decimal.Decimal) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetFeePercent(*v)
+	}
+	return _u
+}
+
+// AddFeePercent adds value to the "fee_percent" field.
+func (_u *PaymentOrderUpdate) AddFeePercent(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.AddFeePercent(v)
 	return _u
 }
 
@@ -231,6 +316,46 @@ func (_u *PaymentOrderUpdate) AddBlockNumber(v int64) *PaymentOrderUpdate {
 	return _u
 }
 
+// SetMessageHash sets the "message_hash" field.
+func (_u *PaymentOrderUpdate) SetMessageHash(v string) *PaymentOrderUpdate {
+	_u.mutation.SetMessageHash(v)
+	return _u
+}
+
+// SetNillableMessageHash sets the "message_hash" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableMessageHash(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetMessageHash(*v)
+	}
+	return _u
+}
+
+// ClearMessageHash clears the value of the "message_hash" field.
+func (_u *PaymentOrderUpdate) ClearMessageHash() *PaymentOrderUpdate {
+	_u.mutation.ClearMessageHash()
+	return _u
+}
+
+// SetGatewayID sets the "gateway_id" field.
+func (_u *PaymentOrderUpdate) SetGatewayID(v string) *PaymentOrderUpdate {
+	_u.mutation.SetGatewayID(v)
+	return _u
+}
+
+// SetNillableGatewayID sets the "gateway_id" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableGatewayID(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetGatewayID(*v)
+	}
+	return _u
+}
+
+// ClearGatewayID clears the value of the "gateway_id" field.
+func (_u *PaymentOrderUpdate) ClearGatewayID() *PaymentOrderUpdate {
+	_u.mutation.ClearGatewayID()
+	return _u
+}
+
 // SetFromAddress sets the "from_address" field.
 func (_u *PaymentOrderUpdate) SetFromAddress(v string) *PaymentOrderUpdate {
 	_u.mutation.SetFromAddress(v)
@@ -271,38 +396,55 @@ func (_u *PaymentOrderUpdate) ClearReturnAddress() *PaymentOrderUpdate {
 	return _u
 }
 
-// SetReceiveAddressText sets the "receive_address_text" field.
-func (_u *PaymentOrderUpdate) SetReceiveAddressText(v string) *PaymentOrderUpdate {
-	_u.mutation.SetReceiveAddressText(v)
+// SetReceiveAddress sets the "receive_address" field.
+func (_u *PaymentOrderUpdate) SetReceiveAddress(v string) *PaymentOrderUpdate {
+	_u.mutation.SetReceiveAddress(v)
 	return _u
 }
 
-// SetNillableReceiveAddressText sets the "receive_address_text" field if the given value is not nil.
-func (_u *PaymentOrderUpdate) SetNillableReceiveAddressText(v *string) *PaymentOrderUpdate {
+// SetNillableReceiveAddress sets the "receive_address" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableReceiveAddress(v *string) *PaymentOrderUpdate {
 	if v != nil {
-		_u.SetReceiveAddressText(*v)
+		_u.SetReceiveAddress(*v)
 	}
 	return _u
 }
 
-// SetFeePercent sets the "fee_percent" field.
-func (_u *PaymentOrderUpdate) SetFeePercent(v decimal.Decimal) *PaymentOrderUpdate {
-	_u.mutation.ResetFeePercent()
-	_u.mutation.SetFeePercent(v)
+// ClearReceiveAddress clears the value of the "receive_address" field.
+func (_u *PaymentOrderUpdate) ClearReceiveAddress() *PaymentOrderUpdate {
+	_u.mutation.ClearReceiveAddress()
 	return _u
 }
 
-// SetNillableFeePercent sets the "fee_percent" field if the given value is not nil.
-func (_u *PaymentOrderUpdate) SetNillableFeePercent(v *decimal.Decimal) *PaymentOrderUpdate {
+// SetReceiveAddressSalt sets the "receive_address_salt" field.
+func (_u *PaymentOrderUpdate) SetReceiveAddressSalt(v []byte) *PaymentOrderUpdate {
+	_u.mutation.SetReceiveAddressSalt(v)
+	return _u
+}
+
+// ClearReceiveAddressSalt clears the value of the "receive_address_salt" field.
+func (_u *PaymentOrderUpdate) ClearReceiveAddressSalt() *PaymentOrderUpdate {
+	_u.mutation.ClearReceiveAddressSalt()
+	return _u
+}
+
+// SetReceiveAddressExpiry sets the "receive_address_expiry" field.
+func (_u *PaymentOrderUpdate) SetReceiveAddressExpiry(v time.Time) *PaymentOrderUpdate {
+	_u.mutation.SetReceiveAddressExpiry(v)
+	return _u
+}
+
+// SetNillableReceiveAddressExpiry sets the "receive_address_expiry" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableReceiveAddressExpiry(v *time.Time) *PaymentOrderUpdate {
 	if v != nil {
-		_u.SetFeePercent(*v)
+		_u.SetReceiveAddressExpiry(*v)
 	}
 	return _u
 }
 
-// AddFeePercent adds value to the "fee_percent" field.
-func (_u *PaymentOrderUpdate) AddFeePercent(v decimal.Decimal) *PaymentOrderUpdate {
-	_u.mutation.AddFeePercent(v)
+// ClearReceiveAddressExpiry clears the value of the "receive_address_expiry" field.
+func (_u *PaymentOrderUpdate) ClearReceiveAddressExpiry() *PaymentOrderUpdate {
+	_u.mutation.ClearReceiveAddressExpiry()
 	return _u
 }
 
@@ -326,43 +468,97 @@ func (_u *PaymentOrderUpdate) ClearFeeAddress() *PaymentOrderUpdate {
 	return _u
 }
 
-// SetGatewayID sets the "gateway_id" field.
-func (_u *PaymentOrderUpdate) SetGatewayID(v string) *PaymentOrderUpdate {
-	_u.mutation.SetGatewayID(v)
+// SetInstitution sets the "institution" field.
+func (_u *PaymentOrderUpdate) SetInstitution(v string) *PaymentOrderUpdate {
+	_u.mutation.SetInstitution(v)
 	return _u
 }
 
-// SetNillableGatewayID sets the "gateway_id" field if the given value is not nil.
-func (_u *PaymentOrderUpdate) SetNillableGatewayID(v *string) *PaymentOrderUpdate {
+// SetNillableInstitution sets the "institution" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableInstitution(v *string) *PaymentOrderUpdate {
 	if v != nil {
-		_u.SetGatewayID(*v)
+		_u.SetInstitution(*v)
 	}
 	return _u
 }
 
-// ClearGatewayID clears the value of the "gateway_id" field.
-func (_u *PaymentOrderUpdate) ClearGatewayID() *PaymentOrderUpdate {
-	_u.mutation.ClearGatewayID()
+// SetAccountIdentifier sets the "account_identifier" field.
+func (_u *PaymentOrderUpdate) SetAccountIdentifier(v string) *PaymentOrderUpdate {
+	_u.mutation.SetAccountIdentifier(v)
 	return _u
 }
 
-// SetMessageHash sets the "message_hash" field.
-func (_u *PaymentOrderUpdate) SetMessageHash(v string) *PaymentOrderUpdate {
-	_u.mutation.SetMessageHash(v)
-	return _u
-}
-
-// SetNillableMessageHash sets the "message_hash" field if the given value is not nil.
-func (_u *PaymentOrderUpdate) SetNillableMessageHash(v *string) *PaymentOrderUpdate {
+// SetNillableAccountIdentifier sets the "account_identifier" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableAccountIdentifier(v *string) *PaymentOrderUpdate {
 	if v != nil {
-		_u.SetMessageHash(*v)
+		_u.SetAccountIdentifier(*v)
 	}
 	return _u
 }
 
-// ClearMessageHash clears the value of the "message_hash" field.
-func (_u *PaymentOrderUpdate) ClearMessageHash() *PaymentOrderUpdate {
-	_u.mutation.ClearMessageHash()
+// SetAccountName sets the "account_name" field.
+func (_u *PaymentOrderUpdate) SetAccountName(v string) *PaymentOrderUpdate {
+	_u.mutation.SetAccountName(v)
+	return _u
+}
+
+// SetNillableAccountName sets the "account_name" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableAccountName(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetAccountName(*v)
+	}
+	return _u
+}
+
+// SetMemo sets the "memo" field.
+func (_u *PaymentOrderUpdate) SetMemo(v string) *PaymentOrderUpdate {
+	_u.mutation.SetMemo(v)
+	return _u
+}
+
+// SetNillableMemo sets the "memo" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableMemo(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetMemo(*v)
+	}
+	return _u
+}
+
+// ClearMemo clears the value of the "memo" field.
+func (_u *PaymentOrderUpdate) ClearMemo() *PaymentOrderUpdate {
+	_u.mutation.ClearMemo()
+	return _u
+}
+
+// SetMetadata sets the "metadata" field.
+func (_u *PaymentOrderUpdate) SetMetadata(v map[string]interface{}) *PaymentOrderUpdate {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *PaymentOrderUpdate) ClearMetadata() *PaymentOrderUpdate {
+	_u.mutation.ClearMetadata()
+	return _u
+}
+
+// SetSender sets the "sender" field.
+func (_u *PaymentOrderUpdate) SetSender(v string) *PaymentOrderUpdate {
+	_u.mutation.SetSender(v)
+	return _u
+}
+
+// SetNillableSender sets the "sender" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableSender(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetSender(*v)
+	}
+	return _u
+}
+
+// ClearSender clears the value of the "sender" field.
+func (_u *PaymentOrderUpdate) ClearSender() *PaymentOrderUpdate {
+	_u.mutation.ClearSender()
 	return _u
 }
 
@@ -386,6 +582,51 @@ func (_u *PaymentOrderUpdate) ClearReference() *PaymentOrderUpdate {
 	return _u
 }
 
+// SetCancellationCount sets the "cancellation_count" field.
+func (_u *PaymentOrderUpdate) SetCancellationCount(v int) *PaymentOrderUpdate {
+	_u.mutation.ResetCancellationCount()
+	_u.mutation.SetCancellationCount(v)
+	return _u
+}
+
+// SetNillableCancellationCount sets the "cancellation_count" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableCancellationCount(v *int) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetCancellationCount(*v)
+	}
+	return _u
+}
+
+// AddCancellationCount adds value to the "cancellation_count" field.
+func (_u *PaymentOrderUpdate) AddCancellationCount(v int) *PaymentOrderUpdate {
+	_u.mutation.AddCancellationCount(v)
+	return _u
+}
+
+// ClearCancellationCount clears the value of the "cancellation_count" field.
+func (_u *PaymentOrderUpdate) ClearCancellationCount() *PaymentOrderUpdate {
+	_u.mutation.ClearCancellationCount()
+	return _u
+}
+
+// SetCancellationReasons sets the "cancellation_reasons" field.
+func (_u *PaymentOrderUpdate) SetCancellationReasons(v []string) *PaymentOrderUpdate {
+	_u.mutation.SetCancellationReasons(v)
+	return _u
+}
+
+// AppendCancellationReasons appends value to the "cancellation_reasons" field.
+func (_u *PaymentOrderUpdate) AppendCancellationReasons(v []string) *PaymentOrderUpdate {
+	_u.mutation.AppendCancellationReasons(v)
+	return _u
+}
+
+// ClearCancellationReasons clears the value of the "cancellation_reasons" field.
+func (_u *PaymentOrderUpdate) ClearCancellationReasons() *PaymentOrderUpdate {
+	_u.mutation.ClearCancellationReasons()
+	return _u
+}
+
 // SetStatus sets the "status" field.
 func (_u *PaymentOrderUpdate) SetStatus(v paymentorder.Status) *PaymentOrderUpdate {
 	_u.mutation.SetStatus(v)
@@ -397,27 +638,6 @@ func (_u *PaymentOrderUpdate) SetNillableStatus(v *paymentorder.Status) *Payment
 	if v != nil {
 		_u.SetStatus(*v)
 	}
-	return _u
-}
-
-// SetAmountInUsd sets the "amount_in_usd" field.
-func (_u *PaymentOrderUpdate) SetAmountInUsd(v decimal.Decimal) *PaymentOrderUpdate {
-	_u.mutation.ResetAmountInUsd()
-	_u.mutation.SetAmountInUsd(v)
-	return _u
-}
-
-// SetNillableAmountInUsd sets the "amount_in_usd" field if the given value is not nil.
-func (_u *PaymentOrderUpdate) SetNillableAmountInUsd(v *decimal.Decimal) *PaymentOrderUpdate {
-	if v != nil {
-		_u.SetAmountInUsd(*v)
-	}
-	return _u
-}
-
-// AddAmountInUsd adds value to the "amount_in_usd" field.
-func (_u *PaymentOrderUpdate) AddAmountInUsd(v decimal.Decimal) *PaymentOrderUpdate {
-	_u.mutation.AddAmountInUsd(v)
 	return _u
 }
 
@@ -433,6 +653,17 @@ func (_u *PaymentOrderUpdate) SetNillableOrderType(v *paymentorder.OrderType) *P
 		_u.SetOrderType(*v)
 	}
 	return _u
+}
+
+// SetTokenID sets the "token" edge to the Token entity by ID.
+func (_u *PaymentOrderUpdate) SetTokenID(id int) *PaymentOrderUpdate {
+	_u.mutation.SetTokenID(id)
+	return _u
+}
+
+// SetToken sets the "token" edge to the Token entity.
+func (_u *PaymentOrderUpdate) SetToken(v *Token) *PaymentOrderUpdate {
+	return _u.SetTokenID(v.ID)
 }
 
 // SetSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by ID.
@@ -454,89 +685,6 @@ func (_u *PaymentOrderUpdate) SetSenderProfile(v *SenderProfile) *PaymentOrderUp
 	return _u.SetSenderProfileID(v.ID)
 }
 
-// SetTokenID sets the "token" edge to the Token entity by ID.
-func (_u *PaymentOrderUpdate) SetTokenID(id int) *PaymentOrderUpdate {
-	_u.mutation.SetTokenID(id)
-	return _u
-}
-
-// SetToken sets the "token" edge to the Token entity.
-func (_u *PaymentOrderUpdate) SetToken(v *Token) *PaymentOrderUpdate {
-	return _u.SetTokenID(v.ID)
-}
-
-// SetLinkedAddressID sets the "linked_address" edge to the LinkedAddress entity by ID.
-func (_u *PaymentOrderUpdate) SetLinkedAddressID(id int) *PaymentOrderUpdate {
-	_u.mutation.SetLinkedAddressID(id)
-	return _u
-}
-
-// SetNillableLinkedAddressID sets the "linked_address" edge to the LinkedAddress entity by ID if the given value is not nil.
-func (_u *PaymentOrderUpdate) SetNillableLinkedAddressID(id *int) *PaymentOrderUpdate {
-	if id != nil {
-		_u = _u.SetLinkedAddressID(*id)
-	}
-	return _u
-}
-
-// SetLinkedAddress sets the "linked_address" edge to the LinkedAddress entity.
-func (_u *PaymentOrderUpdate) SetLinkedAddress(v *LinkedAddress) *PaymentOrderUpdate {
-	return _u.SetLinkedAddressID(v.ID)
-}
-
-// SetReceiveAddressID sets the "receive_address" edge to the ReceiveAddress entity by ID.
-func (_u *PaymentOrderUpdate) SetReceiveAddressID(id int) *PaymentOrderUpdate {
-	_u.mutation.SetReceiveAddressID(id)
-	return _u
-}
-
-// SetNillableReceiveAddressID sets the "receive_address" edge to the ReceiveAddress entity by ID if the given value is not nil.
-func (_u *PaymentOrderUpdate) SetNillableReceiveAddressID(id *int) *PaymentOrderUpdate {
-	if id != nil {
-		_u = _u.SetReceiveAddressID(*id)
-	}
-	return _u
-}
-
-// SetReceiveAddress sets the "receive_address" edge to the ReceiveAddress entity.
-func (_u *PaymentOrderUpdate) SetReceiveAddress(v *ReceiveAddress) *PaymentOrderUpdate {
-	return _u.SetReceiveAddressID(v.ID)
-}
-
-// SetRecipientID sets the "recipient" edge to the PaymentOrderRecipient entity by ID.
-func (_u *PaymentOrderUpdate) SetRecipientID(id int) *PaymentOrderUpdate {
-	_u.mutation.SetRecipientID(id)
-	return _u
-}
-
-// SetNillableRecipientID sets the "recipient" edge to the PaymentOrderRecipient entity by ID if the given value is not nil.
-func (_u *PaymentOrderUpdate) SetNillableRecipientID(id *int) *PaymentOrderUpdate {
-	if id != nil {
-		_u = _u.SetRecipientID(*id)
-	}
-	return _u
-}
-
-// SetRecipient sets the "recipient" edge to the PaymentOrderRecipient entity.
-func (_u *PaymentOrderUpdate) SetRecipient(v *PaymentOrderRecipient) *PaymentOrderUpdate {
-	return _u.SetRecipientID(v.ID)
-}
-
-// AddTransactionIDs adds the "transactions" edge to the TransactionLog entity by IDs.
-func (_u *PaymentOrderUpdate) AddTransactionIDs(ids ...uuid.UUID) *PaymentOrderUpdate {
-	_u.mutation.AddTransactionIDs(ids...)
-	return _u
-}
-
-// AddTransactions adds the "transactions" edges to the TransactionLog entity.
-func (_u *PaymentOrderUpdate) AddTransactions(v ...*TransactionLog) *PaymentOrderUpdate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddTransactionIDs(ids...)
-}
-
 // SetPaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID.
 func (_u *PaymentOrderUpdate) SetPaymentWebhookID(id uuid.UUID) *PaymentOrderUpdate {
 	_u.mutation.SetPaymentWebhookID(id)
@@ -556,15 +704,77 @@ func (_u *PaymentOrderUpdate) SetPaymentWebhook(v *PaymentWebhook) *PaymentOrder
 	return _u.SetPaymentWebhookID(v.ID)
 }
 
+// SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
+func (_u *PaymentOrderUpdate) SetProviderID(id string) *PaymentOrderUpdate {
+	_u.mutation.SetProviderID(id)
+	return _u
+}
+
+// SetNillableProviderID sets the "provider" edge to the ProviderProfile entity by ID if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableProviderID(id *string) *PaymentOrderUpdate {
+	if id != nil {
+		_u = _u.SetProviderID(*id)
+	}
+	return _u
+}
+
+// SetProvider sets the "provider" edge to the ProviderProfile entity.
+func (_u *PaymentOrderUpdate) SetProvider(v *ProviderProfile) *PaymentOrderUpdate {
+	return _u.SetProviderID(v.ID)
+}
+
+// SetProvisionBucketID sets the "provision_bucket" edge to the ProvisionBucket entity by ID.
+func (_u *PaymentOrderUpdate) SetProvisionBucketID(id int) *PaymentOrderUpdate {
+	_u.mutation.SetProvisionBucketID(id)
+	return _u
+}
+
+// SetNillableProvisionBucketID sets the "provision_bucket" edge to the ProvisionBucket entity by ID if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableProvisionBucketID(id *int) *PaymentOrderUpdate {
+	if id != nil {
+		_u = _u.SetProvisionBucketID(*id)
+	}
+	return _u
+}
+
+// SetProvisionBucket sets the "provision_bucket" edge to the ProvisionBucket entity.
+func (_u *PaymentOrderUpdate) SetProvisionBucket(v *ProvisionBucket) *PaymentOrderUpdate {
+	return _u.SetProvisionBucketID(v.ID)
+}
+
+// AddFulfillmentIDs adds the "fulfillments" edge to the PaymentOrderFulfillment entity by IDs.
+func (_u *PaymentOrderUpdate) AddFulfillmentIDs(ids ...uuid.UUID) *PaymentOrderUpdate {
+	_u.mutation.AddFulfillmentIDs(ids...)
+	return _u
+}
+
+// AddFulfillments adds the "fulfillments" edges to the PaymentOrderFulfillment entity.
+func (_u *PaymentOrderUpdate) AddFulfillments(v ...*PaymentOrderFulfillment) *PaymentOrderUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddFulfillmentIDs(ids...)
+}
+
+// AddTransactionIDs adds the "transactions" edge to the TransactionLog entity by IDs.
+func (_u *PaymentOrderUpdate) AddTransactionIDs(ids ...uuid.UUID) *PaymentOrderUpdate {
+	_u.mutation.AddTransactionIDs(ids...)
+	return _u
+}
+
+// AddTransactions adds the "transactions" edges to the TransactionLog entity.
+func (_u *PaymentOrderUpdate) AddTransactions(v ...*TransactionLog) *PaymentOrderUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddTransactionIDs(ids...)
+}
+
 // Mutation returns the PaymentOrderMutation object of the builder.
 func (_u *PaymentOrderUpdate) Mutation() *PaymentOrderMutation {
 	return _u.mutation
-}
-
-// ClearSenderProfile clears the "sender_profile" edge to the SenderProfile entity.
-func (_u *PaymentOrderUpdate) ClearSenderProfile() *PaymentOrderUpdate {
-	_u.mutation.ClearSenderProfile()
-	return _u
 }
 
 // ClearToken clears the "token" edge to the Token entity.
@@ -573,22 +783,49 @@ func (_u *PaymentOrderUpdate) ClearToken() *PaymentOrderUpdate {
 	return _u
 }
 
-// ClearLinkedAddress clears the "linked_address" edge to the LinkedAddress entity.
-func (_u *PaymentOrderUpdate) ClearLinkedAddress() *PaymentOrderUpdate {
-	_u.mutation.ClearLinkedAddress()
+// ClearSenderProfile clears the "sender_profile" edge to the SenderProfile entity.
+func (_u *PaymentOrderUpdate) ClearSenderProfile() *PaymentOrderUpdate {
+	_u.mutation.ClearSenderProfile()
 	return _u
 }
 
-// ClearReceiveAddress clears the "receive_address" edge to the ReceiveAddress entity.
-func (_u *PaymentOrderUpdate) ClearReceiveAddress() *PaymentOrderUpdate {
-	_u.mutation.ClearReceiveAddress()
+// ClearPaymentWebhook clears the "payment_webhook" edge to the PaymentWebhook entity.
+func (_u *PaymentOrderUpdate) ClearPaymentWebhook() *PaymentOrderUpdate {
+	_u.mutation.ClearPaymentWebhook()
 	return _u
 }
 
-// ClearRecipient clears the "recipient" edge to the PaymentOrderRecipient entity.
-func (_u *PaymentOrderUpdate) ClearRecipient() *PaymentOrderUpdate {
-	_u.mutation.ClearRecipient()
+// ClearProvider clears the "provider" edge to the ProviderProfile entity.
+func (_u *PaymentOrderUpdate) ClearProvider() *PaymentOrderUpdate {
+	_u.mutation.ClearProvider()
 	return _u
+}
+
+// ClearProvisionBucket clears the "provision_bucket" edge to the ProvisionBucket entity.
+func (_u *PaymentOrderUpdate) ClearProvisionBucket() *PaymentOrderUpdate {
+	_u.mutation.ClearProvisionBucket()
+	return _u
+}
+
+// ClearFulfillments clears all "fulfillments" edges to the PaymentOrderFulfillment entity.
+func (_u *PaymentOrderUpdate) ClearFulfillments() *PaymentOrderUpdate {
+	_u.mutation.ClearFulfillments()
+	return _u
+}
+
+// RemoveFulfillmentIDs removes the "fulfillments" edge to PaymentOrderFulfillment entities by IDs.
+func (_u *PaymentOrderUpdate) RemoveFulfillmentIDs(ids ...uuid.UUID) *PaymentOrderUpdate {
+	_u.mutation.RemoveFulfillmentIDs(ids...)
+	return _u
+}
+
+// RemoveFulfillments removes "fulfillments" edges to PaymentOrderFulfillment entities.
+func (_u *PaymentOrderUpdate) RemoveFulfillments(v ...*PaymentOrderFulfillment) *PaymentOrderUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveFulfillmentIDs(ids...)
 }
 
 // ClearTransactions clears all "transactions" edges to the TransactionLog entity.
@@ -610,12 +847,6 @@ func (_u *PaymentOrderUpdate) RemoveTransactions(v ...*TransactionLog) *PaymentO
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveTransactionIDs(ids...)
-}
-
-// ClearPaymentWebhook clears the "payment_webhook" edge to the PaymentWebhook entity.
-func (_u *PaymentOrderUpdate) ClearPaymentWebhook() *PaymentOrderUpdate {
-	_u.mutation.ClearPaymentWebhook()
-	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -661,6 +892,11 @@ func (_u *PaymentOrderUpdate) check() error {
 			return &ValidationError{Name: "tx_hash", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.tx_hash": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.GatewayID(); ok {
+		if err := paymentorder.GatewayIDValidator(v); err != nil {
+			return &ValidationError{Name: "gateway_id", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.gateway_id": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.FromAddress(); ok {
 		if err := paymentorder.FromAddressValidator(v); err != nil {
 			return &ValidationError{Name: "from_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.from_address": %w`, err)}
@@ -671,9 +907,9 @@ func (_u *PaymentOrderUpdate) check() error {
 			return &ValidationError{Name: "return_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.return_address": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.ReceiveAddressText(); ok {
-		if err := paymentorder.ReceiveAddressTextValidator(v); err != nil {
-			return &ValidationError{Name: "receive_address_text", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.receive_address_text": %w`, err)}
+	if v, ok := _u.mutation.ReceiveAddress(); ok {
+		if err := paymentorder.ReceiveAddressValidator(v); err != nil {
+			return &ValidationError{Name: "receive_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.receive_address": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.FeeAddress(); ok {
@@ -681,14 +917,29 @@ func (_u *PaymentOrderUpdate) check() error {
 			return &ValidationError{Name: "fee_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.fee_address": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.GatewayID(); ok {
-		if err := paymentorder.GatewayIDValidator(v); err != nil {
-			return &ValidationError{Name: "gateway_id", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.gateway_id": %w`, err)}
+	if v, ok := _u.mutation.Institution(); ok {
+		if err := paymentorder.InstitutionValidator(v); err != nil {
+			return &ValidationError{Name: "institution", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.institution": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.MessageHash(); ok {
-		if err := paymentorder.MessageHashValidator(v); err != nil {
-			return &ValidationError{Name: "message_hash", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.message_hash": %w`, err)}
+	if v, ok := _u.mutation.AccountIdentifier(); ok {
+		if err := paymentorder.AccountIdentifierValidator(v); err != nil {
+			return &ValidationError{Name: "account_identifier", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.account_identifier": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.AccountName(); ok {
+		if err := paymentorder.AccountNameValidator(v); err != nil {
+			return &ValidationError{Name: "account_name", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.account_name": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Memo(); ok {
+		if err := paymentorder.MemoValidator(v); err != nil {
+			return &ValidationError{Name: "memo", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.memo": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Sender(); ok {
+		if err := paymentorder.SenderValidator(v); err != nil {
+			return &ValidationError{Name: "sender", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.sender": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.Reference(); ok {
@@ -733,6 +984,18 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if value, ok := _u.mutation.AddedAmount(); ok {
 		_spec.AddField(paymentorder.FieldAmount, field.TypeFloat64, value)
 	}
+	if value, ok := _u.mutation.Rate(); ok {
+		_spec.SetField(paymentorder.FieldRate, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedRate(); ok {
+		_spec.AddField(paymentorder.FieldRate, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AmountInUsd(); ok {
+		_spec.SetField(paymentorder.FieldAmountInUsd, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedAmountInUsd(); ok {
+		_spec.AddField(paymentorder.FieldAmountInUsd, field.TypeFloat64, value)
+	}
 	if value, ok := _u.mutation.AmountPaid(); ok {
 		_spec.SetField(paymentorder.FieldAmountPaid, field.TypeFloat64, value)
 	}
@@ -763,11 +1026,23 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if value, ok := _u.mutation.AddedNetworkFee(); ok {
 		_spec.AddField(paymentorder.FieldNetworkFee, field.TypeFloat64, value)
 	}
-	if value, ok := _u.mutation.Rate(); ok {
-		_spec.SetField(paymentorder.FieldRate, field.TypeFloat64, value)
+	if value, ok := _u.mutation.ProtocolFee(); ok {
+		_spec.SetField(paymentorder.FieldProtocolFee, field.TypeFloat64, value)
 	}
-	if value, ok := _u.mutation.AddedRate(); ok {
-		_spec.AddField(paymentorder.FieldRate, field.TypeFloat64, value)
+	if value, ok := _u.mutation.AddedProtocolFee(); ok {
+		_spec.AddField(paymentorder.FieldProtocolFee, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.OrderPercent(); ok {
+		_spec.SetField(paymentorder.FieldOrderPercent, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedOrderPercent(); ok {
+		_spec.AddField(paymentorder.FieldOrderPercent, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.FeePercent(); ok {
+		_spec.SetField(paymentorder.FieldFeePercent, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedFeePercent(); ok {
+		_spec.AddField(paymentorder.FieldFeePercent, field.TypeFloat64, value)
 	}
 	if value, ok := _u.mutation.TxHash(); ok {
 		_spec.SetField(paymentorder.FieldTxHash, field.TypeString, value)
@@ -781,6 +1056,18 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if value, ok := _u.mutation.AddedBlockNumber(); ok {
 		_spec.AddField(paymentorder.FieldBlockNumber, field.TypeInt64, value)
 	}
+	if value, ok := _u.mutation.MessageHash(); ok {
+		_spec.SetField(paymentorder.FieldMessageHash, field.TypeString, value)
+	}
+	if _u.mutation.MessageHashCleared() {
+		_spec.ClearField(paymentorder.FieldMessageHash, field.TypeString)
+	}
+	if value, ok := _u.mutation.GatewayID(); ok {
+		_spec.SetField(paymentorder.FieldGatewayID, field.TypeString, value)
+	}
+	if _u.mutation.GatewayIDCleared() {
+		_spec.ClearField(paymentorder.FieldGatewayID, field.TypeString)
+	}
 	if value, ok := _u.mutation.FromAddress(); ok {
 		_spec.SetField(paymentorder.FieldFromAddress, field.TypeString, value)
 	}
@@ -793,14 +1080,23 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if _u.mutation.ReturnAddressCleared() {
 		_spec.ClearField(paymentorder.FieldReturnAddress, field.TypeString)
 	}
-	if value, ok := _u.mutation.ReceiveAddressText(); ok {
-		_spec.SetField(paymentorder.FieldReceiveAddressText, field.TypeString, value)
+	if value, ok := _u.mutation.ReceiveAddress(); ok {
+		_spec.SetField(paymentorder.FieldReceiveAddress, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.FeePercent(); ok {
-		_spec.SetField(paymentorder.FieldFeePercent, field.TypeFloat64, value)
+	if _u.mutation.ReceiveAddressCleared() {
+		_spec.ClearField(paymentorder.FieldReceiveAddress, field.TypeString)
 	}
-	if value, ok := _u.mutation.AddedFeePercent(); ok {
-		_spec.AddField(paymentorder.FieldFeePercent, field.TypeFloat64, value)
+	if value, ok := _u.mutation.ReceiveAddressSalt(); ok {
+		_spec.SetField(paymentorder.FieldReceiveAddressSalt, field.TypeBytes, value)
+	}
+	if _u.mutation.ReceiveAddressSaltCleared() {
+		_spec.ClearField(paymentorder.FieldReceiveAddressSalt, field.TypeBytes)
+	}
+	if value, ok := _u.mutation.ReceiveAddressExpiry(); ok {
+		_spec.SetField(paymentorder.FieldReceiveAddressExpiry, field.TypeTime, value)
+	}
+	if _u.mutation.ReceiveAddressExpiryCleared() {
+		_spec.ClearField(paymentorder.FieldReceiveAddressExpiry, field.TypeTime)
 	}
 	if value, ok := _u.mutation.FeeAddress(); ok {
 		_spec.SetField(paymentorder.FieldFeeAddress, field.TypeString, value)
@@ -808,17 +1104,32 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if _u.mutation.FeeAddressCleared() {
 		_spec.ClearField(paymentorder.FieldFeeAddress, field.TypeString)
 	}
-	if value, ok := _u.mutation.GatewayID(); ok {
-		_spec.SetField(paymentorder.FieldGatewayID, field.TypeString, value)
+	if value, ok := _u.mutation.Institution(); ok {
+		_spec.SetField(paymentorder.FieldInstitution, field.TypeString, value)
 	}
-	if _u.mutation.GatewayIDCleared() {
-		_spec.ClearField(paymentorder.FieldGatewayID, field.TypeString)
+	if value, ok := _u.mutation.AccountIdentifier(); ok {
+		_spec.SetField(paymentorder.FieldAccountIdentifier, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.MessageHash(); ok {
-		_spec.SetField(paymentorder.FieldMessageHash, field.TypeString, value)
+	if value, ok := _u.mutation.AccountName(); ok {
+		_spec.SetField(paymentorder.FieldAccountName, field.TypeString, value)
 	}
-	if _u.mutation.MessageHashCleared() {
-		_spec.ClearField(paymentorder.FieldMessageHash, field.TypeString)
+	if value, ok := _u.mutation.Memo(); ok {
+		_spec.SetField(paymentorder.FieldMemo, field.TypeString, value)
+	}
+	if _u.mutation.MemoCleared() {
+		_spec.ClearField(paymentorder.FieldMemo, field.TypeString)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(paymentorder.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(paymentorder.FieldMetadata, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.Sender(); ok {
+		_spec.SetField(paymentorder.FieldSender, field.TypeString, value)
+	}
+	if _u.mutation.SenderCleared() {
+		_spec.ClearField(paymentorder.FieldSender, field.TypeString)
 	}
 	if value, ok := _u.mutation.Reference(); ok {
 		_spec.SetField(paymentorder.FieldReference, field.TypeString, value)
@@ -826,46 +1137,31 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if _u.mutation.ReferenceCleared() {
 		_spec.ClearField(paymentorder.FieldReference, field.TypeString)
 	}
+	if value, ok := _u.mutation.CancellationCount(); ok {
+		_spec.SetField(paymentorder.FieldCancellationCount, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedCancellationCount(); ok {
+		_spec.AddField(paymentorder.FieldCancellationCount, field.TypeInt, value)
+	}
+	if _u.mutation.CancellationCountCleared() {
+		_spec.ClearField(paymentorder.FieldCancellationCount, field.TypeInt)
+	}
+	if value, ok := _u.mutation.CancellationReasons(); ok {
+		_spec.SetField(paymentorder.FieldCancellationReasons, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedCancellationReasons(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, paymentorder.FieldCancellationReasons, value)
+		})
+	}
+	if _u.mutation.CancellationReasonsCleared() {
+		_spec.ClearField(paymentorder.FieldCancellationReasons, field.TypeJSON)
+	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(paymentorder.FieldStatus, field.TypeEnum, value)
 	}
-	if value, ok := _u.mutation.AmountInUsd(); ok {
-		_spec.SetField(paymentorder.FieldAmountInUsd, field.TypeFloat64, value)
-	}
-	if value, ok := _u.mutation.AddedAmountInUsd(); ok {
-		_spec.AddField(paymentorder.FieldAmountInUsd, field.TypeFloat64, value)
-	}
 	if value, ok := _u.mutation.OrderType(); ok {
 		_spec.SetField(paymentorder.FieldOrderType, field.TypeEnum, value)
-	}
-	if _u.mutation.SenderProfileCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   paymentorder.SenderProfileTable,
-			Columns: []string{paymentorder.SenderProfileColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(senderprofile.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.SenderProfileIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   paymentorder.SenderProfileTable,
-			Columns: []string{paymentorder.SenderProfileColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(senderprofile.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _u.mutation.TokenCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -896,28 +1192,28 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.LinkedAddressCleared() {
+	if _u.mutation.SenderProfileCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   paymentorder.LinkedAddressTable,
-			Columns: []string{paymentorder.LinkedAddressColumn},
+			Table:   paymentorder.SenderProfileTable,
+			Columns: []string{paymentorder.SenderProfileColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(linkedaddress.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(senderprofile.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.LinkedAddressIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.SenderProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   paymentorder.LinkedAddressTable,
-			Columns: []string{paymentorder.LinkedAddressColumn},
+			Table:   paymentorder.SenderProfileTable,
+			Columns: []string{paymentorder.SenderProfileColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(linkedaddress.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(senderprofile.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -925,28 +1221,28 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.ReceiveAddressCleared() {
+	if _u.mutation.PaymentWebhookCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   paymentorder.ReceiveAddressTable,
-			Columns: []string{paymentorder.ReceiveAddressColumn},
+			Table:   paymentorder.PaymentWebhookTable,
+			Columns: []string{paymentorder.PaymentWebhookColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(receiveaddress.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.ReceiveAddressIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   paymentorder.ReceiveAddressTable,
-			Columns: []string{paymentorder.ReceiveAddressColumn},
+			Table:   paymentorder.PaymentWebhookTable,
+			Columns: []string{paymentorder.PaymentWebhookColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(receiveaddress.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -954,28 +1250,102 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.RecipientCleared() {
+	if _u.mutation.ProviderCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: false,
-			Table:   paymentorder.RecipientTable,
-			Columns: []string{paymentorder.RecipientColumn},
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   paymentorder.ProviderTable,
+			Columns: []string{paymentorder.ProviderColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(paymentorderrecipient.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.RecipientIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProviderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: false,
-			Table:   paymentorder.RecipientTable,
-			Columns: []string{paymentorder.RecipientColumn},
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   paymentorder.ProviderTable,
+			Columns: []string{paymentorder.ProviderColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(paymentorderrecipient.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ProvisionBucketCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   paymentorder.ProvisionBucketTable,
+			Columns: []string{paymentorder.ProvisionBucketColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(provisionbucket.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ProvisionBucketIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   paymentorder.ProvisionBucketTable,
+			Columns: []string{paymentorder.ProvisionBucketColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(provisionbucket.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.FulfillmentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.FulfillmentsTable,
+			Columns: []string{paymentorder.FulfillmentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentorderfulfillment.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedFulfillmentsIDs(); len(nodes) > 0 && !_u.mutation.FulfillmentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.FulfillmentsTable,
+			Columns: []string{paymentorder.FulfillmentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentorderfulfillment.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.FulfillmentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.FulfillmentsTable,
+			Columns: []string{paymentorder.FulfillmentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentorderfulfillment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1028,35 +1398,6 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.PaymentWebhookCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: false,
-			Table:   paymentorder.PaymentWebhookTable,
-			Columns: []string{paymentorder.PaymentWebhookColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: false,
-			Table:   paymentorder.PaymentWebhookTable,
-			Columns: []string{paymentorder.PaymentWebhookColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{paymentorder.Label}
@@ -1101,6 +1442,48 @@ func (_u *PaymentOrderUpdateOne) SetNillableAmount(v *decimal.Decimal) *PaymentO
 // AddAmount adds value to the "amount" field.
 func (_u *PaymentOrderUpdateOne) AddAmount(v decimal.Decimal) *PaymentOrderUpdateOne {
 	_u.mutation.AddAmount(v)
+	return _u
+}
+
+// SetRate sets the "rate" field.
+func (_u *PaymentOrderUpdateOne) SetRate(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.ResetRate()
+	_u.mutation.SetRate(v)
+	return _u
+}
+
+// SetNillableRate sets the "rate" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableRate(v *decimal.Decimal) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetRate(*v)
+	}
+	return _u
+}
+
+// AddRate adds value to the "rate" field.
+func (_u *PaymentOrderUpdateOne) AddRate(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.AddRate(v)
+	return _u
+}
+
+// SetAmountInUsd sets the "amount_in_usd" field.
+func (_u *PaymentOrderUpdateOne) SetAmountInUsd(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.ResetAmountInUsd()
+	_u.mutation.SetAmountInUsd(v)
+	return _u
+}
+
+// SetNillableAmountInUsd sets the "amount_in_usd" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableAmountInUsd(v *decimal.Decimal) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetAmountInUsd(*v)
+	}
+	return _u
+}
+
+// AddAmountInUsd adds value to the "amount_in_usd" field.
+func (_u *PaymentOrderUpdateOne) AddAmountInUsd(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.AddAmountInUsd(v)
 	return _u
 }
 
@@ -1209,24 +1592,66 @@ func (_u *PaymentOrderUpdateOne) AddNetworkFee(v decimal.Decimal) *PaymentOrderU
 	return _u
 }
 
-// SetRate sets the "rate" field.
-func (_u *PaymentOrderUpdateOne) SetRate(v decimal.Decimal) *PaymentOrderUpdateOne {
-	_u.mutation.ResetRate()
-	_u.mutation.SetRate(v)
+// SetProtocolFee sets the "protocol_fee" field.
+func (_u *PaymentOrderUpdateOne) SetProtocolFee(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.ResetProtocolFee()
+	_u.mutation.SetProtocolFee(v)
 	return _u
 }
 
-// SetNillableRate sets the "rate" field if the given value is not nil.
-func (_u *PaymentOrderUpdateOne) SetNillableRate(v *decimal.Decimal) *PaymentOrderUpdateOne {
+// SetNillableProtocolFee sets the "protocol_fee" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableProtocolFee(v *decimal.Decimal) *PaymentOrderUpdateOne {
 	if v != nil {
-		_u.SetRate(*v)
+		_u.SetProtocolFee(*v)
 	}
 	return _u
 }
 
-// AddRate adds value to the "rate" field.
-func (_u *PaymentOrderUpdateOne) AddRate(v decimal.Decimal) *PaymentOrderUpdateOne {
-	_u.mutation.AddRate(v)
+// AddProtocolFee adds value to the "protocol_fee" field.
+func (_u *PaymentOrderUpdateOne) AddProtocolFee(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.AddProtocolFee(v)
+	return _u
+}
+
+// SetOrderPercent sets the "order_percent" field.
+func (_u *PaymentOrderUpdateOne) SetOrderPercent(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.ResetOrderPercent()
+	_u.mutation.SetOrderPercent(v)
+	return _u
+}
+
+// SetNillableOrderPercent sets the "order_percent" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableOrderPercent(v *decimal.Decimal) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetOrderPercent(*v)
+	}
+	return _u
+}
+
+// AddOrderPercent adds value to the "order_percent" field.
+func (_u *PaymentOrderUpdateOne) AddOrderPercent(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.AddOrderPercent(v)
+	return _u
+}
+
+// SetFeePercent sets the "fee_percent" field.
+func (_u *PaymentOrderUpdateOne) SetFeePercent(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.ResetFeePercent()
+	_u.mutation.SetFeePercent(v)
+	return _u
+}
+
+// SetNillableFeePercent sets the "fee_percent" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableFeePercent(v *decimal.Decimal) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetFeePercent(*v)
+	}
+	return _u
+}
+
+// AddFeePercent adds value to the "fee_percent" field.
+func (_u *PaymentOrderUpdateOne) AddFeePercent(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.AddFeePercent(v)
 	return _u
 }
 
@@ -1271,6 +1696,46 @@ func (_u *PaymentOrderUpdateOne) AddBlockNumber(v int64) *PaymentOrderUpdateOne 
 	return _u
 }
 
+// SetMessageHash sets the "message_hash" field.
+func (_u *PaymentOrderUpdateOne) SetMessageHash(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetMessageHash(v)
+	return _u
+}
+
+// SetNillableMessageHash sets the "message_hash" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableMessageHash(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetMessageHash(*v)
+	}
+	return _u
+}
+
+// ClearMessageHash clears the value of the "message_hash" field.
+func (_u *PaymentOrderUpdateOne) ClearMessageHash() *PaymentOrderUpdateOne {
+	_u.mutation.ClearMessageHash()
+	return _u
+}
+
+// SetGatewayID sets the "gateway_id" field.
+func (_u *PaymentOrderUpdateOne) SetGatewayID(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetGatewayID(v)
+	return _u
+}
+
+// SetNillableGatewayID sets the "gateway_id" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableGatewayID(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetGatewayID(*v)
+	}
+	return _u
+}
+
+// ClearGatewayID clears the value of the "gateway_id" field.
+func (_u *PaymentOrderUpdateOne) ClearGatewayID() *PaymentOrderUpdateOne {
+	_u.mutation.ClearGatewayID()
+	return _u
+}
+
 // SetFromAddress sets the "from_address" field.
 func (_u *PaymentOrderUpdateOne) SetFromAddress(v string) *PaymentOrderUpdateOne {
 	_u.mutation.SetFromAddress(v)
@@ -1311,38 +1776,55 @@ func (_u *PaymentOrderUpdateOne) ClearReturnAddress() *PaymentOrderUpdateOne {
 	return _u
 }
 
-// SetReceiveAddressText sets the "receive_address_text" field.
-func (_u *PaymentOrderUpdateOne) SetReceiveAddressText(v string) *PaymentOrderUpdateOne {
-	_u.mutation.SetReceiveAddressText(v)
+// SetReceiveAddress sets the "receive_address" field.
+func (_u *PaymentOrderUpdateOne) SetReceiveAddress(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetReceiveAddress(v)
 	return _u
 }
 
-// SetNillableReceiveAddressText sets the "receive_address_text" field if the given value is not nil.
-func (_u *PaymentOrderUpdateOne) SetNillableReceiveAddressText(v *string) *PaymentOrderUpdateOne {
+// SetNillableReceiveAddress sets the "receive_address" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableReceiveAddress(v *string) *PaymentOrderUpdateOne {
 	if v != nil {
-		_u.SetReceiveAddressText(*v)
+		_u.SetReceiveAddress(*v)
 	}
 	return _u
 }
 
-// SetFeePercent sets the "fee_percent" field.
-func (_u *PaymentOrderUpdateOne) SetFeePercent(v decimal.Decimal) *PaymentOrderUpdateOne {
-	_u.mutation.ResetFeePercent()
-	_u.mutation.SetFeePercent(v)
+// ClearReceiveAddress clears the value of the "receive_address" field.
+func (_u *PaymentOrderUpdateOne) ClearReceiveAddress() *PaymentOrderUpdateOne {
+	_u.mutation.ClearReceiveAddress()
 	return _u
 }
 
-// SetNillableFeePercent sets the "fee_percent" field if the given value is not nil.
-func (_u *PaymentOrderUpdateOne) SetNillableFeePercent(v *decimal.Decimal) *PaymentOrderUpdateOne {
+// SetReceiveAddressSalt sets the "receive_address_salt" field.
+func (_u *PaymentOrderUpdateOne) SetReceiveAddressSalt(v []byte) *PaymentOrderUpdateOne {
+	_u.mutation.SetReceiveAddressSalt(v)
+	return _u
+}
+
+// ClearReceiveAddressSalt clears the value of the "receive_address_salt" field.
+func (_u *PaymentOrderUpdateOne) ClearReceiveAddressSalt() *PaymentOrderUpdateOne {
+	_u.mutation.ClearReceiveAddressSalt()
+	return _u
+}
+
+// SetReceiveAddressExpiry sets the "receive_address_expiry" field.
+func (_u *PaymentOrderUpdateOne) SetReceiveAddressExpiry(v time.Time) *PaymentOrderUpdateOne {
+	_u.mutation.SetReceiveAddressExpiry(v)
+	return _u
+}
+
+// SetNillableReceiveAddressExpiry sets the "receive_address_expiry" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableReceiveAddressExpiry(v *time.Time) *PaymentOrderUpdateOne {
 	if v != nil {
-		_u.SetFeePercent(*v)
+		_u.SetReceiveAddressExpiry(*v)
 	}
 	return _u
 }
 
-// AddFeePercent adds value to the "fee_percent" field.
-func (_u *PaymentOrderUpdateOne) AddFeePercent(v decimal.Decimal) *PaymentOrderUpdateOne {
-	_u.mutation.AddFeePercent(v)
+// ClearReceiveAddressExpiry clears the value of the "receive_address_expiry" field.
+func (_u *PaymentOrderUpdateOne) ClearReceiveAddressExpiry() *PaymentOrderUpdateOne {
+	_u.mutation.ClearReceiveAddressExpiry()
 	return _u
 }
 
@@ -1366,43 +1848,97 @@ func (_u *PaymentOrderUpdateOne) ClearFeeAddress() *PaymentOrderUpdateOne {
 	return _u
 }
 
-// SetGatewayID sets the "gateway_id" field.
-func (_u *PaymentOrderUpdateOne) SetGatewayID(v string) *PaymentOrderUpdateOne {
-	_u.mutation.SetGatewayID(v)
+// SetInstitution sets the "institution" field.
+func (_u *PaymentOrderUpdateOne) SetInstitution(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetInstitution(v)
 	return _u
 }
 
-// SetNillableGatewayID sets the "gateway_id" field if the given value is not nil.
-func (_u *PaymentOrderUpdateOne) SetNillableGatewayID(v *string) *PaymentOrderUpdateOne {
+// SetNillableInstitution sets the "institution" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableInstitution(v *string) *PaymentOrderUpdateOne {
 	if v != nil {
-		_u.SetGatewayID(*v)
+		_u.SetInstitution(*v)
 	}
 	return _u
 }
 
-// ClearGatewayID clears the value of the "gateway_id" field.
-func (_u *PaymentOrderUpdateOne) ClearGatewayID() *PaymentOrderUpdateOne {
-	_u.mutation.ClearGatewayID()
+// SetAccountIdentifier sets the "account_identifier" field.
+func (_u *PaymentOrderUpdateOne) SetAccountIdentifier(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetAccountIdentifier(v)
 	return _u
 }
 
-// SetMessageHash sets the "message_hash" field.
-func (_u *PaymentOrderUpdateOne) SetMessageHash(v string) *PaymentOrderUpdateOne {
-	_u.mutation.SetMessageHash(v)
-	return _u
-}
-
-// SetNillableMessageHash sets the "message_hash" field if the given value is not nil.
-func (_u *PaymentOrderUpdateOne) SetNillableMessageHash(v *string) *PaymentOrderUpdateOne {
+// SetNillableAccountIdentifier sets the "account_identifier" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableAccountIdentifier(v *string) *PaymentOrderUpdateOne {
 	if v != nil {
-		_u.SetMessageHash(*v)
+		_u.SetAccountIdentifier(*v)
 	}
 	return _u
 }
 
-// ClearMessageHash clears the value of the "message_hash" field.
-func (_u *PaymentOrderUpdateOne) ClearMessageHash() *PaymentOrderUpdateOne {
-	_u.mutation.ClearMessageHash()
+// SetAccountName sets the "account_name" field.
+func (_u *PaymentOrderUpdateOne) SetAccountName(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetAccountName(v)
+	return _u
+}
+
+// SetNillableAccountName sets the "account_name" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableAccountName(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetAccountName(*v)
+	}
+	return _u
+}
+
+// SetMemo sets the "memo" field.
+func (_u *PaymentOrderUpdateOne) SetMemo(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetMemo(v)
+	return _u
+}
+
+// SetNillableMemo sets the "memo" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableMemo(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetMemo(*v)
+	}
+	return _u
+}
+
+// ClearMemo clears the value of the "memo" field.
+func (_u *PaymentOrderUpdateOne) ClearMemo() *PaymentOrderUpdateOne {
+	_u.mutation.ClearMemo()
+	return _u
+}
+
+// SetMetadata sets the "metadata" field.
+func (_u *PaymentOrderUpdateOne) SetMetadata(v map[string]interface{}) *PaymentOrderUpdateOne {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *PaymentOrderUpdateOne) ClearMetadata() *PaymentOrderUpdateOne {
+	_u.mutation.ClearMetadata()
+	return _u
+}
+
+// SetSender sets the "sender" field.
+func (_u *PaymentOrderUpdateOne) SetSender(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetSender(v)
+	return _u
+}
+
+// SetNillableSender sets the "sender" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableSender(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetSender(*v)
+	}
+	return _u
+}
+
+// ClearSender clears the value of the "sender" field.
+func (_u *PaymentOrderUpdateOne) ClearSender() *PaymentOrderUpdateOne {
+	_u.mutation.ClearSender()
 	return _u
 }
 
@@ -1426,6 +1962,51 @@ func (_u *PaymentOrderUpdateOne) ClearReference() *PaymentOrderUpdateOne {
 	return _u
 }
 
+// SetCancellationCount sets the "cancellation_count" field.
+func (_u *PaymentOrderUpdateOne) SetCancellationCount(v int) *PaymentOrderUpdateOne {
+	_u.mutation.ResetCancellationCount()
+	_u.mutation.SetCancellationCount(v)
+	return _u
+}
+
+// SetNillableCancellationCount sets the "cancellation_count" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableCancellationCount(v *int) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetCancellationCount(*v)
+	}
+	return _u
+}
+
+// AddCancellationCount adds value to the "cancellation_count" field.
+func (_u *PaymentOrderUpdateOne) AddCancellationCount(v int) *PaymentOrderUpdateOne {
+	_u.mutation.AddCancellationCount(v)
+	return _u
+}
+
+// ClearCancellationCount clears the value of the "cancellation_count" field.
+func (_u *PaymentOrderUpdateOne) ClearCancellationCount() *PaymentOrderUpdateOne {
+	_u.mutation.ClearCancellationCount()
+	return _u
+}
+
+// SetCancellationReasons sets the "cancellation_reasons" field.
+func (_u *PaymentOrderUpdateOne) SetCancellationReasons(v []string) *PaymentOrderUpdateOne {
+	_u.mutation.SetCancellationReasons(v)
+	return _u
+}
+
+// AppendCancellationReasons appends value to the "cancellation_reasons" field.
+func (_u *PaymentOrderUpdateOne) AppendCancellationReasons(v []string) *PaymentOrderUpdateOne {
+	_u.mutation.AppendCancellationReasons(v)
+	return _u
+}
+
+// ClearCancellationReasons clears the value of the "cancellation_reasons" field.
+func (_u *PaymentOrderUpdateOne) ClearCancellationReasons() *PaymentOrderUpdateOne {
+	_u.mutation.ClearCancellationReasons()
+	return _u
+}
+
 // SetStatus sets the "status" field.
 func (_u *PaymentOrderUpdateOne) SetStatus(v paymentorder.Status) *PaymentOrderUpdateOne {
 	_u.mutation.SetStatus(v)
@@ -1437,27 +2018,6 @@ func (_u *PaymentOrderUpdateOne) SetNillableStatus(v *paymentorder.Status) *Paym
 	if v != nil {
 		_u.SetStatus(*v)
 	}
-	return _u
-}
-
-// SetAmountInUsd sets the "amount_in_usd" field.
-func (_u *PaymentOrderUpdateOne) SetAmountInUsd(v decimal.Decimal) *PaymentOrderUpdateOne {
-	_u.mutation.ResetAmountInUsd()
-	_u.mutation.SetAmountInUsd(v)
-	return _u
-}
-
-// SetNillableAmountInUsd sets the "amount_in_usd" field if the given value is not nil.
-func (_u *PaymentOrderUpdateOne) SetNillableAmountInUsd(v *decimal.Decimal) *PaymentOrderUpdateOne {
-	if v != nil {
-		_u.SetAmountInUsd(*v)
-	}
-	return _u
-}
-
-// AddAmountInUsd adds value to the "amount_in_usd" field.
-func (_u *PaymentOrderUpdateOne) AddAmountInUsd(v decimal.Decimal) *PaymentOrderUpdateOne {
-	_u.mutation.AddAmountInUsd(v)
 	return _u
 }
 
@@ -1473,6 +2033,17 @@ func (_u *PaymentOrderUpdateOne) SetNillableOrderType(v *paymentorder.OrderType)
 		_u.SetOrderType(*v)
 	}
 	return _u
+}
+
+// SetTokenID sets the "token" edge to the Token entity by ID.
+func (_u *PaymentOrderUpdateOne) SetTokenID(id int) *PaymentOrderUpdateOne {
+	_u.mutation.SetTokenID(id)
+	return _u
+}
+
+// SetToken sets the "token" edge to the Token entity.
+func (_u *PaymentOrderUpdateOne) SetToken(v *Token) *PaymentOrderUpdateOne {
+	return _u.SetTokenID(v.ID)
 }
 
 // SetSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by ID.
@@ -1494,89 +2065,6 @@ func (_u *PaymentOrderUpdateOne) SetSenderProfile(v *SenderProfile) *PaymentOrde
 	return _u.SetSenderProfileID(v.ID)
 }
 
-// SetTokenID sets the "token" edge to the Token entity by ID.
-func (_u *PaymentOrderUpdateOne) SetTokenID(id int) *PaymentOrderUpdateOne {
-	_u.mutation.SetTokenID(id)
-	return _u
-}
-
-// SetToken sets the "token" edge to the Token entity.
-func (_u *PaymentOrderUpdateOne) SetToken(v *Token) *PaymentOrderUpdateOne {
-	return _u.SetTokenID(v.ID)
-}
-
-// SetLinkedAddressID sets the "linked_address" edge to the LinkedAddress entity by ID.
-func (_u *PaymentOrderUpdateOne) SetLinkedAddressID(id int) *PaymentOrderUpdateOne {
-	_u.mutation.SetLinkedAddressID(id)
-	return _u
-}
-
-// SetNillableLinkedAddressID sets the "linked_address" edge to the LinkedAddress entity by ID if the given value is not nil.
-func (_u *PaymentOrderUpdateOne) SetNillableLinkedAddressID(id *int) *PaymentOrderUpdateOne {
-	if id != nil {
-		_u = _u.SetLinkedAddressID(*id)
-	}
-	return _u
-}
-
-// SetLinkedAddress sets the "linked_address" edge to the LinkedAddress entity.
-func (_u *PaymentOrderUpdateOne) SetLinkedAddress(v *LinkedAddress) *PaymentOrderUpdateOne {
-	return _u.SetLinkedAddressID(v.ID)
-}
-
-// SetReceiveAddressID sets the "receive_address" edge to the ReceiveAddress entity by ID.
-func (_u *PaymentOrderUpdateOne) SetReceiveAddressID(id int) *PaymentOrderUpdateOne {
-	_u.mutation.SetReceiveAddressID(id)
-	return _u
-}
-
-// SetNillableReceiveAddressID sets the "receive_address" edge to the ReceiveAddress entity by ID if the given value is not nil.
-func (_u *PaymentOrderUpdateOne) SetNillableReceiveAddressID(id *int) *PaymentOrderUpdateOne {
-	if id != nil {
-		_u = _u.SetReceiveAddressID(*id)
-	}
-	return _u
-}
-
-// SetReceiveAddress sets the "receive_address" edge to the ReceiveAddress entity.
-func (_u *PaymentOrderUpdateOne) SetReceiveAddress(v *ReceiveAddress) *PaymentOrderUpdateOne {
-	return _u.SetReceiveAddressID(v.ID)
-}
-
-// SetRecipientID sets the "recipient" edge to the PaymentOrderRecipient entity by ID.
-func (_u *PaymentOrderUpdateOne) SetRecipientID(id int) *PaymentOrderUpdateOne {
-	_u.mutation.SetRecipientID(id)
-	return _u
-}
-
-// SetNillableRecipientID sets the "recipient" edge to the PaymentOrderRecipient entity by ID if the given value is not nil.
-func (_u *PaymentOrderUpdateOne) SetNillableRecipientID(id *int) *PaymentOrderUpdateOne {
-	if id != nil {
-		_u = _u.SetRecipientID(*id)
-	}
-	return _u
-}
-
-// SetRecipient sets the "recipient" edge to the PaymentOrderRecipient entity.
-func (_u *PaymentOrderUpdateOne) SetRecipient(v *PaymentOrderRecipient) *PaymentOrderUpdateOne {
-	return _u.SetRecipientID(v.ID)
-}
-
-// AddTransactionIDs adds the "transactions" edge to the TransactionLog entity by IDs.
-func (_u *PaymentOrderUpdateOne) AddTransactionIDs(ids ...uuid.UUID) *PaymentOrderUpdateOne {
-	_u.mutation.AddTransactionIDs(ids...)
-	return _u
-}
-
-// AddTransactions adds the "transactions" edges to the TransactionLog entity.
-func (_u *PaymentOrderUpdateOne) AddTransactions(v ...*TransactionLog) *PaymentOrderUpdateOne {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddTransactionIDs(ids...)
-}
-
 // SetPaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID.
 func (_u *PaymentOrderUpdateOne) SetPaymentWebhookID(id uuid.UUID) *PaymentOrderUpdateOne {
 	_u.mutation.SetPaymentWebhookID(id)
@@ -1596,15 +2084,77 @@ func (_u *PaymentOrderUpdateOne) SetPaymentWebhook(v *PaymentWebhook) *PaymentOr
 	return _u.SetPaymentWebhookID(v.ID)
 }
 
+// SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
+func (_u *PaymentOrderUpdateOne) SetProviderID(id string) *PaymentOrderUpdateOne {
+	_u.mutation.SetProviderID(id)
+	return _u
+}
+
+// SetNillableProviderID sets the "provider" edge to the ProviderProfile entity by ID if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableProviderID(id *string) *PaymentOrderUpdateOne {
+	if id != nil {
+		_u = _u.SetProviderID(*id)
+	}
+	return _u
+}
+
+// SetProvider sets the "provider" edge to the ProviderProfile entity.
+func (_u *PaymentOrderUpdateOne) SetProvider(v *ProviderProfile) *PaymentOrderUpdateOne {
+	return _u.SetProviderID(v.ID)
+}
+
+// SetProvisionBucketID sets the "provision_bucket" edge to the ProvisionBucket entity by ID.
+func (_u *PaymentOrderUpdateOne) SetProvisionBucketID(id int) *PaymentOrderUpdateOne {
+	_u.mutation.SetProvisionBucketID(id)
+	return _u
+}
+
+// SetNillableProvisionBucketID sets the "provision_bucket" edge to the ProvisionBucket entity by ID if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableProvisionBucketID(id *int) *PaymentOrderUpdateOne {
+	if id != nil {
+		_u = _u.SetProvisionBucketID(*id)
+	}
+	return _u
+}
+
+// SetProvisionBucket sets the "provision_bucket" edge to the ProvisionBucket entity.
+func (_u *PaymentOrderUpdateOne) SetProvisionBucket(v *ProvisionBucket) *PaymentOrderUpdateOne {
+	return _u.SetProvisionBucketID(v.ID)
+}
+
+// AddFulfillmentIDs adds the "fulfillments" edge to the PaymentOrderFulfillment entity by IDs.
+func (_u *PaymentOrderUpdateOne) AddFulfillmentIDs(ids ...uuid.UUID) *PaymentOrderUpdateOne {
+	_u.mutation.AddFulfillmentIDs(ids...)
+	return _u
+}
+
+// AddFulfillments adds the "fulfillments" edges to the PaymentOrderFulfillment entity.
+func (_u *PaymentOrderUpdateOne) AddFulfillments(v ...*PaymentOrderFulfillment) *PaymentOrderUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddFulfillmentIDs(ids...)
+}
+
+// AddTransactionIDs adds the "transactions" edge to the TransactionLog entity by IDs.
+func (_u *PaymentOrderUpdateOne) AddTransactionIDs(ids ...uuid.UUID) *PaymentOrderUpdateOne {
+	_u.mutation.AddTransactionIDs(ids...)
+	return _u
+}
+
+// AddTransactions adds the "transactions" edges to the TransactionLog entity.
+func (_u *PaymentOrderUpdateOne) AddTransactions(v ...*TransactionLog) *PaymentOrderUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddTransactionIDs(ids...)
+}
+
 // Mutation returns the PaymentOrderMutation object of the builder.
 func (_u *PaymentOrderUpdateOne) Mutation() *PaymentOrderMutation {
 	return _u.mutation
-}
-
-// ClearSenderProfile clears the "sender_profile" edge to the SenderProfile entity.
-func (_u *PaymentOrderUpdateOne) ClearSenderProfile() *PaymentOrderUpdateOne {
-	_u.mutation.ClearSenderProfile()
-	return _u
 }
 
 // ClearToken clears the "token" edge to the Token entity.
@@ -1613,22 +2163,49 @@ func (_u *PaymentOrderUpdateOne) ClearToken() *PaymentOrderUpdateOne {
 	return _u
 }
 
-// ClearLinkedAddress clears the "linked_address" edge to the LinkedAddress entity.
-func (_u *PaymentOrderUpdateOne) ClearLinkedAddress() *PaymentOrderUpdateOne {
-	_u.mutation.ClearLinkedAddress()
+// ClearSenderProfile clears the "sender_profile" edge to the SenderProfile entity.
+func (_u *PaymentOrderUpdateOne) ClearSenderProfile() *PaymentOrderUpdateOne {
+	_u.mutation.ClearSenderProfile()
 	return _u
 }
 
-// ClearReceiveAddress clears the "receive_address" edge to the ReceiveAddress entity.
-func (_u *PaymentOrderUpdateOne) ClearReceiveAddress() *PaymentOrderUpdateOne {
-	_u.mutation.ClearReceiveAddress()
+// ClearPaymentWebhook clears the "payment_webhook" edge to the PaymentWebhook entity.
+func (_u *PaymentOrderUpdateOne) ClearPaymentWebhook() *PaymentOrderUpdateOne {
+	_u.mutation.ClearPaymentWebhook()
 	return _u
 }
 
-// ClearRecipient clears the "recipient" edge to the PaymentOrderRecipient entity.
-func (_u *PaymentOrderUpdateOne) ClearRecipient() *PaymentOrderUpdateOne {
-	_u.mutation.ClearRecipient()
+// ClearProvider clears the "provider" edge to the ProviderProfile entity.
+func (_u *PaymentOrderUpdateOne) ClearProvider() *PaymentOrderUpdateOne {
+	_u.mutation.ClearProvider()
 	return _u
+}
+
+// ClearProvisionBucket clears the "provision_bucket" edge to the ProvisionBucket entity.
+func (_u *PaymentOrderUpdateOne) ClearProvisionBucket() *PaymentOrderUpdateOne {
+	_u.mutation.ClearProvisionBucket()
+	return _u
+}
+
+// ClearFulfillments clears all "fulfillments" edges to the PaymentOrderFulfillment entity.
+func (_u *PaymentOrderUpdateOne) ClearFulfillments() *PaymentOrderUpdateOne {
+	_u.mutation.ClearFulfillments()
+	return _u
+}
+
+// RemoveFulfillmentIDs removes the "fulfillments" edge to PaymentOrderFulfillment entities by IDs.
+func (_u *PaymentOrderUpdateOne) RemoveFulfillmentIDs(ids ...uuid.UUID) *PaymentOrderUpdateOne {
+	_u.mutation.RemoveFulfillmentIDs(ids...)
+	return _u
+}
+
+// RemoveFulfillments removes "fulfillments" edges to PaymentOrderFulfillment entities.
+func (_u *PaymentOrderUpdateOne) RemoveFulfillments(v ...*PaymentOrderFulfillment) *PaymentOrderUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveFulfillmentIDs(ids...)
 }
 
 // ClearTransactions clears all "transactions" edges to the TransactionLog entity.
@@ -1650,12 +2227,6 @@ func (_u *PaymentOrderUpdateOne) RemoveTransactions(v ...*TransactionLog) *Payme
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveTransactionIDs(ids...)
-}
-
-// ClearPaymentWebhook clears the "payment_webhook" edge to the PaymentWebhook entity.
-func (_u *PaymentOrderUpdateOne) ClearPaymentWebhook() *PaymentOrderUpdateOne {
-	_u.mutation.ClearPaymentWebhook()
-	return _u
 }
 
 // Where appends a list predicates to the PaymentOrderUpdate builder.
@@ -1714,6 +2285,11 @@ func (_u *PaymentOrderUpdateOne) check() error {
 			return &ValidationError{Name: "tx_hash", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.tx_hash": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.GatewayID(); ok {
+		if err := paymentorder.GatewayIDValidator(v); err != nil {
+			return &ValidationError{Name: "gateway_id", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.gateway_id": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.FromAddress(); ok {
 		if err := paymentorder.FromAddressValidator(v); err != nil {
 			return &ValidationError{Name: "from_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.from_address": %w`, err)}
@@ -1724,9 +2300,9 @@ func (_u *PaymentOrderUpdateOne) check() error {
 			return &ValidationError{Name: "return_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.return_address": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.ReceiveAddressText(); ok {
-		if err := paymentorder.ReceiveAddressTextValidator(v); err != nil {
-			return &ValidationError{Name: "receive_address_text", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.receive_address_text": %w`, err)}
+	if v, ok := _u.mutation.ReceiveAddress(); ok {
+		if err := paymentorder.ReceiveAddressValidator(v); err != nil {
+			return &ValidationError{Name: "receive_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.receive_address": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.FeeAddress(); ok {
@@ -1734,14 +2310,29 @@ func (_u *PaymentOrderUpdateOne) check() error {
 			return &ValidationError{Name: "fee_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.fee_address": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.GatewayID(); ok {
-		if err := paymentorder.GatewayIDValidator(v); err != nil {
-			return &ValidationError{Name: "gateway_id", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.gateway_id": %w`, err)}
+	if v, ok := _u.mutation.Institution(); ok {
+		if err := paymentorder.InstitutionValidator(v); err != nil {
+			return &ValidationError{Name: "institution", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.institution": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.MessageHash(); ok {
-		if err := paymentorder.MessageHashValidator(v); err != nil {
-			return &ValidationError{Name: "message_hash", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.message_hash": %w`, err)}
+	if v, ok := _u.mutation.AccountIdentifier(); ok {
+		if err := paymentorder.AccountIdentifierValidator(v); err != nil {
+			return &ValidationError{Name: "account_identifier", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.account_identifier": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.AccountName(); ok {
+		if err := paymentorder.AccountNameValidator(v); err != nil {
+			return &ValidationError{Name: "account_name", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.account_name": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Memo(); ok {
+		if err := paymentorder.MemoValidator(v); err != nil {
+			return &ValidationError{Name: "memo", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.memo": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Sender(); ok {
+		if err := paymentorder.SenderValidator(v); err != nil {
+			return &ValidationError{Name: "sender", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.sender": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.Reference(); ok {
@@ -1803,6 +2394,18 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 	if value, ok := _u.mutation.AddedAmount(); ok {
 		_spec.AddField(paymentorder.FieldAmount, field.TypeFloat64, value)
 	}
+	if value, ok := _u.mutation.Rate(); ok {
+		_spec.SetField(paymentorder.FieldRate, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedRate(); ok {
+		_spec.AddField(paymentorder.FieldRate, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AmountInUsd(); ok {
+		_spec.SetField(paymentorder.FieldAmountInUsd, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedAmountInUsd(); ok {
+		_spec.AddField(paymentorder.FieldAmountInUsd, field.TypeFloat64, value)
+	}
 	if value, ok := _u.mutation.AmountPaid(); ok {
 		_spec.SetField(paymentorder.FieldAmountPaid, field.TypeFloat64, value)
 	}
@@ -1833,11 +2436,23 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 	if value, ok := _u.mutation.AddedNetworkFee(); ok {
 		_spec.AddField(paymentorder.FieldNetworkFee, field.TypeFloat64, value)
 	}
-	if value, ok := _u.mutation.Rate(); ok {
-		_spec.SetField(paymentorder.FieldRate, field.TypeFloat64, value)
+	if value, ok := _u.mutation.ProtocolFee(); ok {
+		_spec.SetField(paymentorder.FieldProtocolFee, field.TypeFloat64, value)
 	}
-	if value, ok := _u.mutation.AddedRate(); ok {
-		_spec.AddField(paymentorder.FieldRate, field.TypeFloat64, value)
+	if value, ok := _u.mutation.AddedProtocolFee(); ok {
+		_spec.AddField(paymentorder.FieldProtocolFee, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.OrderPercent(); ok {
+		_spec.SetField(paymentorder.FieldOrderPercent, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedOrderPercent(); ok {
+		_spec.AddField(paymentorder.FieldOrderPercent, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.FeePercent(); ok {
+		_spec.SetField(paymentorder.FieldFeePercent, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedFeePercent(); ok {
+		_spec.AddField(paymentorder.FieldFeePercent, field.TypeFloat64, value)
 	}
 	if value, ok := _u.mutation.TxHash(); ok {
 		_spec.SetField(paymentorder.FieldTxHash, field.TypeString, value)
@@ -1851,6 +2466,18 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 	if value, ok := _u.mutation.AddedBlockNumber(); ok {
 		_spec.AddField(paymentorder.FieldBlockNumber, field.TypeInt64, value)
 	}
+	if value, ok := _u.mutation.MessageHash(); ok {
+		_spec.SetField(paymentorder.FieldMessageHash, field.TypeString, value)
+	}
+	if _u.mutation.MessageHashCleared() {
+		_spec.ClearField(paymentorder.FieldMessageHash, field.TypeString)
+	}
+	if value, ok := _u.mutation.GatewayID(); ok {
+		_spec.SetField(paymentorder.FieldGatewayID, field.TypeString, value)
+	}
+	if _u.mutation.GatewayIDCleared() {
+		_spec.ClearField(paymentorder.FieldGatewayID, field.TypeString)
+	}
 	if value, ok := _u.mutation.FromAddress(); ok {
 		_spec.SetField(paymentorder.FieldFromAddress, field.TypeString, value)
 	}
@@ -1863,14 +2490,23 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 	if _u.mutation.ReturnAddressCleared() {
 		_spec.ClearField(paymentorder.FieldReturnAddress, field.TypeString)
 	}
-	if value, ok := _u.mutation.ReceiveAddressText(); ok {
-		_spec.SetField(paymentorder.FieldReceiveAddressText, field.TypeString, value)
+	if value, ok := _u.mutation.ReceiveAddress(); ok {
+		_spec.SetField(paymentorder.FieldReceiveAddress, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.FeePercent(); ok {
-		_spec.SetField(paymentorder.FieldFeePercent, field.TypeFloat64, value)
+	if _u.mutation.ReceiveAddressCleared() {
+		_spec.ClearField(paymentorder.FieldReceiveAddress, field.TypeString)
 	}
-	if value, ok := _u.mutation.AddedFeePercent(); ok {
-		_spec.AddField(paymentorder.FieldFeePercent, field.TypeFloat64, value)
+	if value, ok := _u.mutation.ReceiveAddressSalt(); ok {
+		_spec.SetField(paymentorder.FieldReceiveAddressSalt, field.TypeBytes, value)
+	}
+	if _u.mutation.ReceiveAddressSaltCleared() {
+		_spec.ClearField(paymentorder.FieldReceiveAddressSalt, field.TypeBytes)
+	}
+	if value, ok := _u.mutation.ReceiveAddressExpiry(); ok {
+		_spec.SetField(paymentorder.FieldReceiveAddressExpiry, field.TypeTime, value)
+	}
+	if _u.mutation.ReceiveAddressExpiryCleared() {
+		_spec.ClearField(paymentorder.FieldReceiveAddressExpiry, field.TypeTime)
 	}
 	if value, ok := _u.mutation.FeeAddress(); ok {
 		_spec.SetField(paymentorder.FieldFeeAddress, field.TypeString, value)
@@ -1878,17 +2514,32 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 	if _u.mutation.FeeAddressCleared() {
 		_spec.ClearField(paymentorder.FieldFeeAddress, field.TypeString)
 	}
-	if value, ok := _u.mutation.GatewayID(); ok {
-		_spec.SetField(paymentorder.FieldGatewayID, field.TypeString, value)
+	if value, ok := _u.mutation.Institution(); ok {
+		_spec.SetField(paymentorder.FieldInstitution, field.TypeString, value)
 	}
-	if _u.mutation.GatewayIDCleared() {
-		_spec.ClearField(paymentorder.FieldGatewayID, field.TypeString)
+	if value, ok := _u.mutation.AccountIdentifier(); ok {
+		_spec.SetField(paymentorder.FieldAccountIdentifier, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.MessageHash(); ok {
-		_spec.SetField(paymentorder.FieldMessageHash, field.TypeString, value)
+	if value, ok := _u.mutation.AccountName(); ok {
+		_spec.SetField(paymentorder.FieldAccountName, field.TypeString, value)
 	}
-	if _u.mutation.MessageHashCleared() {
-		_spec.ClearField(paymentorder.FieldMessageHash, field.TypeString)
+	if value, ok := _u.mutation.Memo(); ok {
+		_spec.SetField(paymentorder.FieldMemo, field.TypeString, value)
+	}
+	if _u.mutation.MemoCleared() {
+		_spec.ClearField(paymentorder.FieldMemo, field.TypeString)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(paymentorder.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(paymentorder.FieldMetadata, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.Sender(); ok {
+		_spec.SetField(paymentorder.FieldSender, field.TypeString, value)
+	}
+	if _u.mutation.SenderCleared() {
+		_spec.ClearField(paymentorder.FieldSender, field.TypeString)
 	}
 	if value, ok := _u.mutation.Reference(); ok {
 		_spec.SetField(paymentorder.FieldReference, field.TypeString, value)
@@ -1896,46 +2547,31 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 	if _u.mutation.ReferenceCleared() {
 		_spec.ClearField(paymentorder.FieldReference, field.TypeString)
 	}
+	if value, ok := _u.mutation.CancellationCount(); ok {
+		_spec.SetField(paymentorder.FieldCancellationCount, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedCancellationCount(); ok {
+		_spec.AddField(paymentorder.FieldCancellationCount, field.TypeInt, value)
+	}
+	if _u.mutation.CancellationCountCleared() {
+		_spec.ClearField(paymentorder.FieldCancellationCount, field.TypeInt)
+	}
+	if value, ok := _u.mutation.CancellationReasons(); ok {
+		_spec.SetField(paymentorder.FieldCancellationReasons, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedCancellationReasons(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, paymentorder.FieldCancellationReasons, value)
+		})
+	}
+	if _u.mutation.CancellationReasonsCleared() {
+		_spec.ClearField(paymentorder.FieldCancellationReasons, field.TypeJSON)
+	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(paymentorder.FieldStatus, field.TypeEnum, value)
 	}
-	if value, ok := _u.mutation.AmountInUsd(); ok {
-		_spec.SetField(paymentorder.FieldAmountInUsd, field.TypeFloat64, value)
-	}
-	if value, ok := _u.mutation.AddedAmountInUsd(); ok {
-		_spec.AddField(paymentorder.FieldAmountInUsd, field.TypeFloat64, value)
-	}
 	if value, ok := _u.mutation.OrderType(); ok {
 		_spec.SetField(paymentorder.FieldOrderType, field.TypeEnum, value)
-	}
-	if _u.mutation.SenderProfileCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   paymentorder.SenderProfileTable,
-			Columns: []string{paymentorder.SenderProfileColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(senderprofile.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.SenderProfileIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   paymentorder.SenderProfileTable,
-			Columns: []string{paymentorder.SenderProfileColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(senderprofile.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _u.mutation.TokenCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1966,28 +2602,28 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.LinkedAddressCleared() {
+	if _u.mutation.SenderProfileCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   paymentorder.LinkedAddressTable,
-			Columns: []string{paymentorder.LinkedAddressColumn},
+			Table:   paymentorder.SenderProfileTable,
+			Columns: []string{paymentorder.SenderProfileColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(linkedaddress.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(senderprofile.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.LinkedAddressIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.SenderProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   paymentorder.LinkedAddressTable,
-			Columns: []string{paymentorder.LinkedAddressColumn},
+			Table:   paymentorder.SenderProfileTable,
+			Columns: []string{paymentorder.SenderProfileColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(linkedaddress.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(senderprofile.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1995,28 +2631,28 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.ReceiveAddressCleared() {
+	if _u.mutation.PaymentWebhookCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   paymentorder.ReceiveAddressTable,
-			Columns: []string{paymentorder.ReceiveAddressColumn},
+			Table:   paymentorder.PaymentWebhookTable,
+			Columns: []string{paymentorder.PaymentWebhookColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(receiveaddress.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.ReceiveAddressIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   paymentorder.ReceiveAddressTable,
-			Columns: []string{paymentorder.ReceiveAddressColumn},
+			Table:   paymentorder.PaymentWebhookTable,
+			Columns: []string{paymentorder.PaymentWebhookColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(receiveaddress.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -2024,28 +2660,102 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.RecipientCleared() {
+	if _u.mutation.ProviderCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: false,
-			Table:   paymentorder.RecipientTable,
-			Columns: []string{paymentorder.RecipientColumn},
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   paymentorder.ProviderTable,
+			Columns: []string{paymentorder.ProviderColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(paymentorderrecipient.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.RecipientIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProviderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: false,
-			Table:   paymentorder.RecipientTable,
-			Columns: []string{paymentorder.RecipientColumn},
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   paymentorder.ProviderTable,
+			Columns: []string{paymentorder.ProviderColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(paymentorderrecipient.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ProvisionBucketCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   paymentorder.ProvisionBucketTable,
+			Columns: []string{paymentorder.ProvisionBucketColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(provisionbucket.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ProvisionBucketIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   paymentorder.ProvisionBucketTable,
+			Columns: []string{paymentorder.ProvisionBucketColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(provisionbucket.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.FulfillmentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.FulfillmentsTable,
+			Columns: []string{paymentorder.FulfillmentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentorderfulfillment.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedFulfillmentsIDs(); len(nodes) > 0 && !_u.mutation.FulfillmentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.FulfillmentsTable,
+			Columns: []string{paymentorder.FulfillmentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentorderfulfillment.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.FulfillmentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.FulfillmentsTable,
+			Columns: []string{paymentorder.FulfillmentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentorderfulfillment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -2091,35 +2801,6 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(transactionlog.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.PaymentWebhookCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: false,
-			Table:   paymentorder.PaymentWebhookTable,
-			Columns: []string{paymentorder.PaymentWebhookColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: false,
-			Table:   paymentorder.PaymentWebhookTable,
-			Columns: []string{paymentorder.PaymentWebhookColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

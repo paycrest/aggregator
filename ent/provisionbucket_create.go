@@ -13,7 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
+	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/shopspring/decimal"
@@ -64,19 +64,19 @@ func (_c *ProvisionBucketCreate) SetCurrency(v *FiatCurrency) *ProvisionBucketCr
 	return _c.SetCurrencyID(v.ID)
 }
 
-// AddLockPaymentOrderIDs adds the "lock_payment_orders" edge to the LockPaymentOrder entity by IDs.
-func (_c *ProvisionBucketCreate) AddLockPaymentOrderIDs(ids ...uuid.UUID) *ProvisionBucketCreate {
-	_c.mutation.AddLockPaymentOrderIDs(ids...)
+// AddPaymentOrderIDs adds the "payment_orders" edge to the PaymentOrder entity by IDs.
+func (_c *ProvisionBucketCreate) AddPaymentOrderIDs(ids ...uuid.UUID) *ProvisionBucketCreate {
+	_c.mutation.AddPaymentOrderIDs(ids...)
 	return _c
 }
 
-// AddLockPaymentOrders adds the "lock_payment_orders" edges to the LockPaymentOrder entity.
-func (_c *ProvisionBucketCreate) AddLockPaymentOrders(v ...*LockPaymentOrder) *ProvisionBucketCreate {
+// AddPaymentOrders adds the "payment_orders" edges to the PaymentOrder entity.
+func (_c *ProvisionBucketCreate) AddPaymentOrders(v ...*PaymentOrder) *ProvisionBucketCreate {
 	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return _c.AddLockPaymentOrderIDs(ids...)
+	return _c.AddPaymentOrderIDs(ids...)
 }
 
 // AddProviderProfileIDs adds the "provider_profiles" edge to the ProviderProfile entity by IDs.
@@ -205,15 +205,15 @@ func (_c *ProvisionBucketCreate) createSpec() (*ProvisionBucket, *sqlgraph.Creat
 		_node.fiat_currency_provision_buckets = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := _c.mutation.LockPaymentOrdersIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.PaymentOrdersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   provisionbucket.LockPaymentOrdersTable,
-			Columns: []string{provisionbucket.LockPaymentOrdersColumn},
+			Table:   provisionbucket.PaymentOrdersTable,
+			Columns: []string{provisionbucket.PaymentOrdersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

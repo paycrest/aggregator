@@ -37,8 +37,8 @@ type ProvisionBucket struct {
 type ProvisionBucketEdges struct {
 	// Currency holds the value of the currency edge.
 	Currency *FiatCurrency `json:"currency,omitempty"`
-	// LockPaymentOrders holds the value of the lock_payment_orders edge.
-	LockPaymentOrders []*LockPaymentOrder `json:"lock_payment_orders,omitempty"`
+	// PaymentOrders holds the value of the payment_orders edge.
+	PaymentOrders []*PaymentOrder `json:"payment_orders,omitempty"`
 	// ProviderProfiles holds the value of the provider_profiles edge.
 	ProviderProfiles []*ProviderProfile `json:"provider_profiles,omitempty"`
 	// loadedTypes holds the information for reporting if a
@@ -57,13 +57,13 @@ func (e ProvisionBucketEdges) CurrencyOrErr() (*FiatCurrency, error) {
 	return nil, &NotLoadedError{edge: "currency"}
 }
 
-// LockPaymentOrdersOrErr returns the LockPaymentOrders value or an error if the edge
+// PaymentOrdersOrErr returns the PaymentOrders value or an error if the edge
 // was not loaded in eager-loading.
-func (e ProvisionBucketEdges) LockPaymentOrdersOrErr() ([]*LockPaymentOrder, error) {
+func (e ProvisionBucketEdges) PaymentOrdersOrErr() ([]*PaymentOrder, error) {
 	if e.loadedTypes[1] {
-		return e.LockPaymentOrders, nil
+		return e.PaymentOrders, nil
 	}
-	return nil, &NotLoadedError{edge: "lock_payment_orders"}
+	return nil, &NotLoadedError{edge: "payment_orders"}
 }
 
 // ProviderProfilesOrErr returns the ProviderProfiles value or an error if the edge
@@ -152,9 +152,9 @@ func (_m *ProvisionBucket) QueryCurrency() *FiatCurrencyQuery {
 	return NewProvisionBucketClient(_m.config).QueryCurrency(_m)
 }
 
-// QueryLockPaymentOrders queries the "lock_payment_orders" edge of the ProvisionBucket entity.
-func (_m *ProvisionBucket) QueryLockPaymentOrders() *LockPaymentOrderQuery {
-	return NewProvisionBucketClient(_m.config).QueryLockPaymentOrders(_m)
+// QueryPaymentOrders queries the "payment_orders" edge of the ProvisionBucket entity.
+func (_m *ProvisionBucket) QueryPaymentOrders() *PaymentOrderQuery {
+	return NewProvisionBucketClient(_m.config).QueryPaymentOrders(_m)
 }
 
 // QueryProviderProfiles queries the "provider_profiles" edge of the ProvisionBucket entity.

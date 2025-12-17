@@ -14,7 +14,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/apikey"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
+	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
@@ -38,7 +38,7 @@ type ProviderProfileQuery struct {
 	withProvisionBuckets   *ProvisionBucketQuery
 	withOrderTokens        *ProviderOrderTokenQuery
 	withProviderRating     *ProviderRatingQuery
-	withAssignedOrders     *LockPaymentOrderQuery
+	withAssignedOrders     *PaymentOrderQuery
 	withFiatAccounts       *ProviderFiatAccountQuery
 	withFKs                bool
 	// intermediate query (i.e. traversal path).
@@ -210,8 +210,8 @@ func (_q *ProviderProfileQuery) QueryProviderRating() *ProviderRatingQuery {
 }
 
 // QueryAssignedOrders chains the current query on the "assigned_orders" edge.
-func (_q *ProviderProfileQuery) QueryAssignedOrders() *LockPaymentOrderQuery {
-	query := (&LockPaymentOrderClient{config: _q.config}).Query()
+func (_q *ProviderProfileQuery) QueryAssignedOrders() *PaymentOrderQuery {
+	query := (&PaymentOrderClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -222,7 +222,7 @@ func (_q *ProviderProfileQuery) QueryAssignedOrders() *LockPaymentOrderQuery {
 		}
 		step := sqlgraph.NewStep(
 			sqlgraph.From(providerprofile.Table, providerprofile.FieldID, selector),
-			sqlgraph.To(lockpaymentorder.Table, lockpaymentorder.FieldID),
+			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.AssignedOrdersTable, providerprofile.AssignedOrdersColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
@@ -527,8 +527,8 @@ func (_q *ProviderProfileQuery) WithProviderRating(opts ...func(*ProviderRatingQ
 
 // WithAssignedOrders tells the query-builder to eager-load the nodes that are connected to
 // the "assigned_orders" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *ProviderProfileQuery) WithAssignedOrders(opts ...func(*LockPaymentOrderQuery)) *ProviderProfileQuery {
-	query := (&LockPaymentOrderClient{config: _q.config}).Query()
+func (_q *ProviderProfileQuery) WithAssignedOrders(opts ...func(*PaymentOrderQuery)) *ProviderProfileQuery {
+	query := (&PaymentOrderClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -706,10 +706,8 @@ func (_q *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook) 
 	}
 	if query := _q.withAssignedOrders; query != nil {
 		if err := _q.loadAssignedOrders(ctx, query, nodes,
-			func(n *ProviderProfile) { n.Edges.AssignedOrders = []*LockPaymentOrder{} },
-			func(n *ProviderProfile, e *LockPaymentOrder) {
-				n.Edges.AssignedOrders = append(n.Edges.AssignedOrders, e)
-			}); err != nil {
+			func(n *ProviderProfile) { n.Edges.AssignedOrders = []*PaymentOrder{} },
+			func(n *ProviderProfile, e *PaymentOrder) { n.Edges.AssignedOrders = append(n.Edges.AssignedOrders, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -936,7 +934,7 @@ func (_q *ProviderProfileQuery) loadProviderRating(ctx context.Context, query *P
 	}
 	return nil
 }
-func (_q *ProviderProfileQuery) loadAssignedOrders(ctx context.Context, query *LockPaymentOrderQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *LockPaymentOrder)) error {
+func (_q *ProviderProfileQuery) loadAssignedOrders(ctx context.Context, query *PaymentOrderQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *PaymentOrder)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[string]*ProviderProfile)
 	for i := range nodes {
@@ -947,7 +945,7 @@ func (_q *ProviderProfileQuery) loadAssignedOrders(ctx context.Context, query *L
 		}
 	}
 	query.withFKs = true
-	query.Where(predicate.LockPaymentOrder(func(s *sql.Selector) {
+	query.Where(predicate.PaymentOrder(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(providerprofile.AssignedOrdersColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)

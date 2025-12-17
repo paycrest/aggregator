@@ -14,7 +14,6 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/apikey"
-	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
@@ -33,7 +32,6 @@ type SenderProfileQuery struct {
 	withAPIKey        *APIKeyQuery
 	withPaymentOrders *PaymentOrderQuery
 	withOrderTokens   *SenderOrderTokenQuery
-	withLinkedAddress *LinkedAddressQuery
 	withFKs           bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -152,28 +150,6 @@ func (_q *SenderProfileQuery) QueryOrderTokens() *SenderOrderTokenQuery {
 			sqlgraph.From(senderprofile.Table, senderprofile.FieldID, selector),
 			sqlgraph.To(senderordertoken.Table, senderordertoken.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, senderprofile.OrderTokensTable, senderprofile.OrderTokensColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryLinkedAddress chains the current query on the "linked_address" edge.
-func (_q *SenderProfileQuery) QueryLinkedAddress() *LinkedAddressQuery {
-	query := (&LinkedAddressClient{config: _q.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(senderprofile.Table, senderprofile.FieldID, selector),
-			sqlgraph.To(linkedaddress.Table, linkedaddress.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, senderprofile.LinkedAddressTable, senderprofile.LinkedAddressColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -377,7 +353,6 @@ func (_q *SenderProfileQuery) Clone() *SenderProfileQuery {
 		withAPIKey:        _q.withAPIKey.Clone(),
 		withPaymentOrders: _q.withPaymentOrders.Clone(),
 		withOrderTokens:   _q.withOrderTokens.Clone(),
-		withLinkedAddress: _q.withLinkedAddress.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -425,17 +400,6 @@ func (_q *SenderProfileQuery) WithOrderTokens(opts ...func(*SenderOrderTokenQuer
 		opt(query)
 	}
 	_q.withOrderTokens = query
-	return _q
-}
-
-// WithLinkedAddress tells the query-builder to eager-load the nodes that are connected to
-// the "linked_address" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *SenderProfileQuery) WithLinkedAddress(opts ...func(*LinkedAddressQuery)) *SenderProfileQuery {
-	query := (&LinkedAddressClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	_q.withLinkedAddress = query
 	return _q
 }
 
@@ -518,12 +482,11 @@ func (_q *SenderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 		nodes       = []*SenderProfile{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [5]bool{
+		loadedTypes = [4]bool{
 			_q.withUser != nil,
 			_q.withAPIKey != nil,
 			_q.withPaymentOrders != nil,
 			_q.withOrderTokens != nil,
-			_q.withLinkedAddress != nil,
 		}
 	)
 	if _q.withUser != nil {
@@ -573,13 +536,6 @@ func (_q *SenderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 		if err := _q.loadOrderTokens(ctx, query, nodes,
 			func(n *SenderProfile) { n.Edges.OrderTokens = []*SenderOrderToken{} },
 			func(n *SenderProfile, e *SenderOrderToken) { n.Edges.OrderTokens = append(n.Edges.OrderTokens, e) }); err != nil {
-			return nil, err
-		}
-	}
-	if query := _q.withLinkedAddress; query != nil {
-		if err := _q.loadLinkedAddress(ctx, query, nodes,
-			func(n *SenderProfile) { n.Edges.LinkedAddress = []*LinkedAddress{} },
-			func(n *SenderProfile, e *LinkedAddress) { n.Edges.LinkedAddress = append(n.Edges.LinkedAddress, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -703,37 +659,6 @@ func (_q *SenderProfileQuery) loadOrderTokens(ctx context.Context, query *Sender
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "sender_profile_order_tokens" returned %v for node %v`, *fk, n.ID)
-		}
-		assign(node, n)
-	}
-	return nil
-}
-func (_q *SenderProfileQuery) loadLinkedAddress(ctx context.Context, query *LinkedAddressQuery, nodes []*SenderProfile, init func(*SenderProfile), assign func(*SenderProfile, *LinkedAddress)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uuid.UUID]*SenderProfile)
-	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
-		}
-	}
-	query.withFKs = true
-	query.Where(predicate.LinkedAddress(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(senderprofile.LinkedAddressColumn), fks...))
-	}))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		fk := n.sender_profile_linked_address
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "sender_profile_linked_address" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
-		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "sender_profile_linked_address" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

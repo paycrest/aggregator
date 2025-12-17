@@ -12,7 +12,6 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/predicate"
@@ -143,21 +142,6 @@ func (_u *TokenUpdate) AddPaymentOrders(v ...*PaymentOrder) *TokenUpdate {
 	return _u.AddPaymentOrderIDs(ids...)
 }
 
-// AddLockPaymentOrderIDs adds the "lock_payment_orders" edge to the LockPaymentOrder entity by IDs.
-func (_u *TokenUpdate) AddLockPaymentOrderIDs(ids ...uuid.UUID) *TokenUpdate {
-	_u.mutation.AddLockPaymentOrderIDs(ids...)
-	return _u
-}
-
-// AddLockPaymentOrders adds the "lock_payment_orders" edges to the LockPaymentOrder entity.
-func (_u *TokenUpdate) AddLockPaymentOrders(v ...*LockPaymentOrder) *TokenUpdate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddLockPaymentOrderIDs(ids...)
-}
-
 // AddSenderOrderTokenIDs adds the "sender_order_tokens" edge to the SenderOrderToken entity by IDs.
 func (_u *TokenUpdate) AddSenderOrderTokenIDs(ids ...int) *TokenUpdate {
 	_u.mutation.AddSenderOrderTokenIDs(ids...)
@@ -218,27 +202,6 @@ func (_u *TokenUpdate) RemovePaymentOrders(v ...*PaymentOrder) *TokenUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemovePaymentOrderIDs(ids...)
-}
-
-// ClearLockPaymentOrders clears all "lock_payment_orders" edges to the LockPaymentOrder entity.
-func (_u *TokenUpdate) ClearLockPaymentOrders() *TokenUpdate {
-	_u.mutation.ClearLockPaymentOrders()
-	return _u
-}
-
-// RemoveLockPaymentOrderIDs removes the "lock_payment_orders" edge to LockPaymentOrder entities by IDs.
-func (_u *TokenUpdate) RemoveLockPaymentOrderIDs(ids ...uuid.UUID) *TokenUpdate {
-	_u.mutation.RemoveLockPaymentOrderIDs(ids...)
-	return _u
-}
-
-// RemoveLockPaymentOrders removes "lock_payment_orders" edges to LockPaymentOrder entities.
-func (_u *TokenUpdate) RemoveLockPaymentOrders(v ...*LockPaymentOrder) *TokenUpdate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveLockPaymentOrderIDs(ids...)
 }
 
 // ClearSenderOrderTokens clears all "sender_order_tokens" edges to the SenderOrderToken entity.
@@ -437,51 +400,6 @@ func (_u *TokenUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.LockPaymentOrdersCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   token.LockPaymentOrdersTable,
-			Columns: []string{token.LockPaymentOrdersColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedLockPaymentOrdersIDs(); len(nodes) > 0 && !_u.mutation.LockPaymentOrdersCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   token.LockPaymentOrdersTable,
-			Columns: []string{token.LockPaymentOrdersColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.LockPaymentOrdersIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   token.LockPaymentOrdersTable,
-			Columns: []string{token.LockPaymentOrdersColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -708,21 +626,6 @@ func (_u *TokenUpdateOne) AddPaymentOrders(v ...*PaymentOrder) *TokenUpdateOne {
 	return _u.AddPaymentOrderIDs(ids...)
 }
 
-// AddLockPaymentOrderIDs adds the "lock_payment_orders" edge to the LockPaymentOrder entity by IDs.
-func (_u *TokenUpdateOne) AddLockPaymentOrderIDs(ids ...uuid.UUID) *TokenUpdateOne {
-	_u.mutation.AddLockPaymentOrderIDs(ids...)
-	return _u
-}
-
-// AddLockPaymentOrders adds the "lock_payment_orders" edges to the LockPaymentOrder entity.
-func (_u *TokenUpdateOne) AddLockPaymentOrders(v ...*LockPaymentOrder) *TokenUpdateOne {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddLockPaymentOrderIDs(ids...)
-}
-
 // AddSenderOrderTokenIDs adds the "sender_order_tokens" edge to the SenderOrderToken entity by IDs.
 func (_u *TokenUpdateOne) AddSenderOrderTokenIDs(ids ...int) *TokenUpdateOne {
 	_u.mutation.AddSenderOrderTokenIDs(ids...)
@@ -783,27 +686,6 @@ func (_u *TokenUpdateOne) RemovePaymentOrders(v ...*PaymentOrder) *TokenUpdateOn
 		ids[i] = v[i].ID
 	}
 	return _u.RemovePaymentOrderIDs(ids...)
-}
-
-// ClearLockPaymentOrders clears all "lock_payment_orders" edges to the LockPaymentOrder entity.
-func (_u *TokenUpdateOne) ClearLockPaymentOrders() *TokenUpdateOne {
-	_u.mutation.ClearLockPaymentOrders()
-	return _u
-}
-
-// RemoveLockPaymentOrderIDs removes the "lock_payment_orders" edge to LockPaymentOrder entities by IDs.
-func (_u *TokenUpdateOne) RemoveLockPaymentOrderIDs(ids ...uuid.UUID) *TokenUpdateOne {
-	_u.mutation.RemoveLockPaymentOrderIDs(ids...)
-	return _u
-}
-
-// RemoveLockPaymentOrders removes "lock_payment_orders" edges to LockPaymentOrder entities.
-func (_u *TokenUpdateOne) RemoveLockPaymentOrders(v ...*LockPaymentOrder) *TokenUpdateOne {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveLockPaymentOrderIDs(ids...)
 }
 
 // ClearSenderOrderTokens clears all "sender_order_tokens" edges to the SenderOrderToken entity.
@@ -1032,51 +914,6 @@ func (_u *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error)
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.LockPaymentOrdersCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   token.LockPaymentOrdersTable,
-			Columns: []string{token.LockPaymentOrdersColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedLockPaymentOrdersIDs(); len(nodes) > 0 && !_u.mutation.LockPaymentOrdersCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   token.LockPaymentOrdersTable,
-			Columns: []string{token.LockPaymentOrdersColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.LockPaymentOrdersIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   token.LockPaymentOrdersTable,
-			Columns: []string{token.LockPaymentOrdersColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

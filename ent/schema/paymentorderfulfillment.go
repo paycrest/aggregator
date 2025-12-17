@@ -7,20 +7,20 @@ import (
 	"github.com/google/uuid"
 )
 
-// LockOrderFulfillment holds the schema definition for the LockOrderFulfillment entity.
-type LockOrderFulfillment struct {
+// PaymentOrderFulfillment holds the schema definition for the PaymentOrderFulfillment entity.
+type PaymentOrderFulfillment struct {
 	ent.Schema
 }
 
-// Mixin of the LockOrderFulfillment.
-func (LockOrderFulfillment) Mixin() []ent.Mixin {
+// Mixin of the PaymentOrderFulfillment.
+func (PaymentOrderFulfillment) Mixin() []ent.Mixin {
 	return []ent.Mixin{
 		TimeMixin{},
 	}
 }
 
-// Fields of the LockOrderFulfillment.
-func (LockOrderFulfillment) Fields() []ent.Field {
+// Fields of the PaymentOrderFulfillment.
+func (PaymentOrderFulfillment) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).
 			Default(uuid.New),
@@ -36,10 +36,10 @@ func (LockOrderFulfillment) Fields() []ent.Field {
 	}
 }
 
-// Edges of the LockOrderFulfillment.
-func (LockOrderFulfillment) Edges() []ent.Edge {
+// Edges of the PaymentOrderFulfillment.
+func (PaymentOrderFulfillment) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("order", LockPaymentOrder.Type).
+		edge.From("order", PaymentOrder.Type).
 			Ref("fulfillments").
 			Unique().
 			Required(),

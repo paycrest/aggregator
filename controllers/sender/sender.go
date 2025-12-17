@@ -14,13 +14,10 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
-	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
-	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
+	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/predicate"
-	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
@@ -361,7 +358,9 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	orderType := rateValidationResult.OrderType
 
 	// Generate receive address
-	var receiveAddress *ent.ReceiveAddress
+	var receiveAddress string
+	var receiveAddressSalt []byte
+	var receiveAddressExpiry time.Time
 
 	if strings.HasPrefix(payload.Network, "tron") {
 		address, salt, err := ctrl.receiveAddressService.CreateTronAddress(ctx)
@@ -377,21 +376,9 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			return
 		}
 
-		receiveAddress, err = storage.Client.ReceiveAddress.
-			Create().
-			SetAddress(address).
-			SetSalt(salt).
-			SetStatus(receiveaddress.StatusUnused).
-			SetValidUntil(time.Now().Add(orderConf.ReceiveAddressValidity)).
-			Save(ctx)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"error":   err,
-				"address": address,
-			}).Errorf("Failed to create receive address")
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
-			return
-		}
+		receiveAddress = address
+		receiveAddressSalt = salt
+		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
 	} else if strings.HasPrefix(payload.Network, "starknet") {
 		if ctrl.starknetClient == nil {
 			logger.WithFields(logger.Fields{
@@ -417,22 +404,9 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			})
 			return
 		}
-
-		receiveAddress, err = storage.Client.ReceiveAddress.
-			Create().
-			SetAddress(address).
-			SetSalt(salt).
-			SetStatus(receiveaddress.StatusUnused).
-			SetValidUntil(time.Now().Add(orderConf.ReceiveAddressValidity)).
-			Save(ctx)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"error":   err,
-				"address": address,
-			}).Errorf("Failed to create receive address")
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
-			return
-		}
+		receiveAddress = address
+		receiveAddressSalt = salt
+		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
 	} else {
 		// Generate unique label for smart address
 		uniqueLabel := fmt.Sprintf("payment_order_%d_%s", time.Now().UnixNano(), uuid.New().String()[:8])
@@ -448,27 +422,13 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			})
 			return
 		}
-
-		receiveAddress, err = storage.Client.ReceiveAddress.
-			Create().
-			SetAddress(address).
-			SetStatus(receiveaddress.StatusUnused).
-			SetValidUntil(time.Now().Add(orderConf.ReceiveAddressValidity)).
-			Save(ctx)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"error":   err,
-				"address": address,
-			}).Errorf("Failed to create receive address")
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
-			return
-		}
-
+		receiveAddress = address
+		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
 	}
 
 	// Prevent receive address expiry for private orders
 	if strings.HasPrefix(payload.Recipient.Memo, "P#P") {
-		receiveAddress.ValidUntil = time.Time{}
+		receiveAddressExpiry = time.Time{}
 	}
 
 	// Create payment order and recipient in a transaction
@@ -496,7 +456,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		SetStatus(transactionlog.StatusOrderInitiated).
 		SetMetadata(
 			map[string]interface{}{
-				"ReceiveAddress": receiveAddress.Address,
+				"ReceiveAddress": receiveAddress,
 				"SenderID":       sender.ID.String(),
 			},
 		).SetNetwork(token.Edges.Network.Identifier).
@@ -508,28 +468,36 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		return
 	}
 
-	// Create payment order
-	paymentOrder, err := tx.PaymentOrder.
+	// Create payment order with inlined recipient and receive address fields
+	paymentOrderBuilder := tx.PaymentOrder.
 		Create().
 		SetSenderProfile(sender).
 		SetAmount(payload.Amount).
 		SetAmountInUsd(amountInUSD).
-		SetAmountPaid(decimal.NewFromInt(0)).
-		SetAmountReturned(decimal.NewFromInt(0)).
-		SetPercentSettled(decimal.NewFromInt(0)).
 		SetNetworkFee(token.Edges.Network.Fee).
 		SetSenderFee(senderFee).
 		SetToken(token).
 		SetRate(payload.Rate).
 		SetReceiveAddress(receiveAddress).
-		SetReceiveAddressText(receiveAddress.Address).
+		SetReceiveAddressExpiry(receiveAddressExpiry).
 		SetFeePercent(feePercent).
 		SetFeeAddress(feeAddress).
 		SetReturnAddress(returnAddress).
 		SetReference(payload.Reference).
 		SetOrderType(orderType).
-		AddTransactions(transactionLog).
-		Save(ctx)
+		SetInstitution(payload.Recipient.Institution).
+		SetAccountIdentifier(payload.Recipient.AccountIdentifier).
+		SetAccountName(payload.Recipient.AccountName).
+		SetMemo(payload.Recipient.Memo).
+		SetMetadata(payload.Recipient.Metadata).
+		AddTransactions(transactionLog)
+
+	// Set salt for Tron addresses
+	if receiveAddressSalt != nil {
+		paymentOrderBuilder = paymentOrderBuilder.SetReceiveAddressSalt(receiveAddressSalt)
+	}
+
+	paymentOrder, err := paymentOrderBuilder.Save(ctx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
@@ -544,7 +512,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			ctx,
 			token.Edges.Network.ChainID,
 			token.ContractAddress,    // Token contract address
-			receiveAddress.Address,   // Smart address to monitor
+			receiveAddress,           // Smart address to monitor
 			paymentOrder.ID.String(), // Order ID for webhook name
 		)
 		if err != nil {
@@ -577,24 +545,6 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		}
 	}
 
-	// Create payment order recipient
-	_, err = tx.PaymentOrderRecipient.
-		Create().
-		SetInstitution(payload.Recipient.Institution).
-		SetAccountIdentifier(payload.Recipient.AccountIdentifier).
-		SetAccountName(payload.Recipient.AccountName).
-		SetProviderID(payload.Recipient.ProviderID).
-		SetMemo(payload.Recipient.Memo).
-		SetMetadata(payload.Recipient.Metadata).
-		SetPaymentOrder(paymentOrder).
-		Save(ctx)
-	if err != nil {
-		logger.Errorf("error: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
-		_ = tx.Rollback()
-		return
-	}
-
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
 		logger.Errorf("error: %v", err)
@@ -608,8 +558,8 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			Amount:         paymentOrder.Amount,
 			Token:          payload.Token,
 			Network:        token.Edges.Network.Identifier,
-			ReceiveAddress: receiveAddress.Address,
-			ValidUntil:     receiveAddress.ValidUntil,
+			ReceiveAddress: receiveAddress,
+			ValidUntil:     receiveAddressExpiry,
 			SenderFee:      senderFee,
 			TransactionFee: token.Edges.Network.Fee,
 			Reference:      paymentOrder.Reference,
@@ -649,7 +599,7 @@ func (ctrl *SenderController) GetPaymentOrderByID(ctx *gin.Context) {
 
 	paymentOrder, err := paymentOrderQuery.
 		Where(paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID))).
-		WithRecipient().
+		WithProvider().
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
@@ -680,7 +630,7 @@ func (ctrl *SenderController) GetPaymentOrderByID(ctx *gin.Context) {
 
 	institution, err := storage.Client.Institution.
 		Query().
-		Where(institution.CodeEQ(paymentOrder.Edges.Recipient.Institution)).
+		Where(institution.CodeEQ(paymentOrder.Institution)).
 		WithFiatCurrency().
 		Only(ctx)
 	if err != nil {
@@ -689,7 +639,7 @@ func (ctrl *SenderController) GetPaymentOrderByID(ctx *gin.Context) {
 		return
 	}
 
-	u.APIResponse(ctx, http.StatusOK, "success", "The order has been successfully retrieved", &types.PaymentOrderResponse{
+	u.APIResponse(ctx, http.StatusOK, "success", "The order has been successfully retrieved", &types.SenderOrderResponse{
 		ID:             paymentOrder.ID,
 		Amount:         paymentOrder.Amount,
 		AmountInUSD:    paymentOrder.AmountInUsd,
@@ -703,15 +653,20 @@ func (ctrl *SenderController) GetPaymentOrderByID(ctx *gin.Context) {
 		Recipient: types.PaymentOrderRecipient{
 			Currency:          institution.Edges.FiatCurrency.Code,
 			Institution:       institution.Name,
-			AccountIdentifier: paymentOrder.Edges.Recipient.AccountIdentifier,
-			AccountName:       paymentOrder.Edges.Recipient.AccountName,
-			ProviderID:        paymentOrder.Edges.Recipient.ProviderID,
-			Memo:              paymentOrder.Edges.Recipient.Memo,
+			AccountIdentifier: paymentOrder.AccountIdentifier,
+			AccountName:       paymentOrder.AccountName,
+			ProviderID: func() string {
+				if paymentOrder.Edges.Provider != nil {
+					return paymentOrder.Edges.Provider.ID
+				}
+				return ""
+			}(),
+			Memo: paymentOrder.Memo,
 		},
 		Transactions:   transactions,
 		FromAddress:    paymentOrder.FromAddress,
 		ReturnAddress:  paymentOrder.ReturnAddress,
-		ReceiveAddress: paymentOrder.ReceiveAddressText,
+		ReceiveAddress: paymentOrder.ReceiveAddress,
 		FeeAddress:     paymentOrder.FeeAddress,
 		Reference:      paymentOrder.Reference,
 		GatewayID:      paymentOrder.GatewayID,
@@ -803,7 +758,6 @@ func (ctrl *SenderController) handleListPaymentOrders(ctx *gin.Context, sender *
 
 	// Fetch payment orders
 	paymentOrders, err := paymentOrderQuery.
-		WithRecipient().
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
@@ -849,16 +803,14 @@ func (ctrl *SenderController) handleSearchPaymentOrders(ctx *gin.Context, sender
 	}
 
 	searchPredicates = append(searchPredicates,
-		paymentorder.ReceiveAddressTextContainsFold(searchText),
+		paymentorder.ReceiveAddressContainsFold(searchText),
 		paymentorder.FromAddressContainsFold(searchText),
 		paymentorder.ReturnAddressContainsFold(searchText),
-		paymentorder.HasRecipientWith(
-			paymentorderrecipient.Or(
-				paymentorderrecipient.AccountIdentifierContainsFold(searchText),
-				paymentorderrecipient.AccountNameContainsFold(searchText),
-				paymentorderrecipient.MemoContainsFold(searchText),
-				paymentorderrecipient.InstitutionContainsFold(searchText),
-			),
+		paymentorder.Or(
+			paymentorder.AccountIdentifierContainsFold(searchText),
+			paymentorder.AccountNameContainsFold(searchText),
+			paymentorder.MemoContainsFold(searchText),
+			paymentorder.InstitutionContainsFold(searchText),
 		),
 	)
 
@@ -885,7 +837,6 @@ func (ctrl *SenderController) handleSearchPaymentOrders(ctx *gin.Context, sender
 
 	// Execute query with default ordering (most recent first)
 	paymentOrders, err := paymentOrderQuery.
-		WithRecipient().
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
@@ -1010,7 +961,6 @@ func (ctrl *SenderController) handleExportPaymentOrders(ctx *gin.Context, sender
 
 	// Fetch orders for export (no limit since we're exporting)
 	paymentOrders, err := paymentOrderQuery.
-		WithRecipient().
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
@@ -1080,13 +1030,11 @@ func (ctrl *SenderController) applyFilters(ctx *gin.Context, query *ent.PaymentO
 }
 
 // buildPaymentOrderResponses converts ent PaymentOrder entities to API response format
-func (ctrl *SenderController) buildPaymentOrderResponses(ctx *gin.Context, paymentOrders []*ent.PaymentOrder) ([]types.PaymentOrderResponse, error) {
+func (ctrl *SenderController) buildPaymentOrderResponses(ctx *gin.Context, paymentOrders []*ent.PaymentOrder) ([]types.SenderOrderResponse, error) {
 	// Batch fetch institutions to avoid N+1 queries
 	institutionCodes := make(map[string]bool)
 	for _, paymentOrder := range paymentOrders {
-		if paymentOrder.Edges.Recipient != nil {
-			institutionCodes[paymentOrder.Edges.Recipient.Institution] = true
-		}
+		institutionCodes[paymentOrder.Institution] = true
 	}
 
 	// Convert map keys to slice
@@ -1111,15 +1059,15 @@ func (ctrl *SenderController) buildPaymentOrderResponses(ctx *gin.Context, payme
 		institutionMap[inst.Code] = inst
 	}
 
-	var orders []types.PaymentOrderResponse
+	var orders []types.SenderOrderResponse
 	for _, paymentOrder := range paymentOrders {
-		institution, ok := institutionMap[paymentOrder.Edges.Recipient.Institution]
+		institution, ok := institutionMap[paymentOrder.Institution]
 		if !ok {
-			logger.Errorf("Institution not found for code: %s", paymentOrder.Edges.Recipient.Institution)
+			logger.Errorf("Institution not found for code: %s", paymentOrder.Institution)
 			continue
 		}
 
-		orders = append(orders, types.PaymentOrderResponse{
+		orders = append(orders, types.SenderOrderResponse{
 			ID:             paymentOrder.ID,
 			Amount:         paymentOrder.Amount,
 			AmountInUSD:    paymentOrder.AmountInUsd,
@@ -1133,14 +1081,19 @@ func (ctrl *SenderController) buildPaymentOrderResponses(ctx *gin.Context, payme
 			Recipient: types.PaymentOrderRecipient{
 				Currency:          institution.Edges.FiatCurrency.Code,
 				Institution:       institution.Name,
-				AccountIdentifier: paymentOrder.Edges.Recipient.AccountIdentifier,
-				AccountName:       paymentOrder.Edges.Recipient.AccountName,
-				ProviderID:        paymentOrder.Edges.Recipient.ProviderID,
-				Memo:              paymentOrder.Edges.Recipient.Memo,
+				AccountIdentifier: paymentOrder.AccountIdentifier,
+				AccountName:       paymentOrder.AccountName,
+				ProviderID: func() string {
+					if paymentOrder.Edges.Provider != nil {
+						return paymentOrder.Edges.Provider.ID
+					}
+					return ""
+				}(),
+				Memo: paymentOrder.Memo,
 			},
 			FromAddress:    paymentOrder.FromAddress,
 			ReturnAddress:  paymentOrder.ReturnAddress,
-			ReceiveAddress: paymentOrder.ReceiveAddressText,
+			ReceiveAddress: paymentOrder.ReceiveAddress,
 			FeeAddress:     paymentOrder.FeeAddress,
 			Reference:      paymentOrder.Reference,
 			GatewayID:      paymentOrder.GatewayID,
@@ -1160,9 +1113,7 @@ func (ctrl *SenderController) generateCSVResponse(ctx *gin.Context, paymentOrder
 	// Batch fetch institutions to avoid N+1 queries
 	institutionCodes := make(map[string]bool)
 	for _, paymentOrder := range paymentOrders {
-		if paymentOrder.Edges.Recipient != nil {
-			institutionCodes[paymentOrder.Edges.Recipient.Institution] = true
-		}
+		institutionCodes[paymentOrder.Institution] = true
 	}
 
 	// Convert map keys to slice
@@ -1235,9 +1186,9 @@ func (ctrl *SenderController) generateCSVResponse(ctx *gin.Context, paymentOrder
 	// Write data rows
 	for _, paymentOrder := range paymentOrders {
 		// Get institution from pre-fetched map
-		institution := institutionMap[paymentOrder.Edges.Recipient.Institution]
+		institution := institutionMap[paymentOrder.Institution]
 		if institution == nil {
-			logger.Errorf("Institution not found for code: %s", paymentOrder.Edges.Recipient.Institution)
+			logger.Errorf("Institution not found for code: %s", paymentOrder.Institution)
 			continue // Skip this row but continue with others
 		}
 
@@ -1254,10 +1205,10 @@ func (ctrl *SenderController) generateCSVResponse(ctx *gin.Context, paymentOrder
 			string(paymentOrder.Status),
 			institution.Name,
 			institution.Edges.FiatCurrency.Code,
-			paymentOrder.Edges.Recipient.AccountIdentifier,
-			paymentOrder.Edges.Recipient.AccountName,
+			paymentOrder.AccountIdentifier,
+			paymentOrder.AccountName,
 			paymentOrder.FromAddress,
-			paymentOrder.ReceiveAddressText,
+			paymentOrder.ReceiveAddress,
 			paymentOrder.ReturnAddress,
 			paymentOrder.FeeAddress,
 			paymentOrder.TxHash,
@@ -1318,7 +1269,6 @@ func (ctrl *SenderController) Stats(ctx *gin.Context) {
 			paymentorder.HasTokenWith(tokenEnt.BaseCurrencyNEQ("USD")),
 			paymentorder.StatusEQ(paymentorder.StatusSettled),
 		).
-		WithRecipient().
 		All(ctx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
@@ -1331,7 +1281,7 @@ func (ctrl *SenderController) Stats(ctx *gin.Context) {
 
 	// Convert local stablecoin volume to USD
 	for _, paymentOrder := range paymentOrders {
-		institution, err := u.GetInstitutionByCode(ctx, paymentOrder.Edges.Recipient.Institution, false)
+		institution, err := u.GetInstitutionByCode(ctx, paymentOrder.Institution, false)
 		if err != nil {
 			logger.Errorf("error: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch sender stats", nil)
@@ -1396,7 +1346,6 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 			paymentorder.OrderTypeEQ(paymentorder.OrderTypeOtc),
 		).
 		WithSenderProfile().
-		WithRecipient().
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
@@ -1420,16 +1369,16 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 		return
 	}
 
-	// Fetch lock payment order using message hash and verify it's fulfilled and has successful fulfillment
-	lockOrder, err := storage.Client.LockPaymentOrder.
+	// Fetch payment order using message hash and verify it's fulfilled and has successful fulfillment
+	lockOrder, err := storage.Client.PaymentOrder.
 		Query().
 		Where(
-			lockpaymentorder.MessageHashEQ(paymentOrder.MessageHash),
-			lockpaymentorder.StatusIn(lockpaymentorder.StatusFulfilled, lockpaymentorder.StatusValidated),
-			lockpaymentorder.OrderTypeEQ(lockpaymentorder.OrderTypeOtc),
+			paymentorder.MessageHashEQ(paymentOrder.MessageHash),
+			paymentorder.StatusIn(paymentorder.StatusFulfilled, paymentorder.StatusValidated),
+			paymentorder.OrderTypeEQ(paymentorder.OrderTypeOtc),
 		).
-		WithFulfillments(func(fq *ent.LockOrderFulfillmentQuery) {
-			fq.Where(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusSuccess))
+		WithFulfillments(func(fq *ent.PaymentOrderFulfillmentQuery) {
+			fq.Where(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusSuccess))
 		}).
 		Only(ctx)
 	if err != nil {
@@ -1453,13 +1402,13 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 	}
 
 	fulfillment := lockOrder.Edges.Fulfillments[0]
-	if fulfillment.ValidationStatus != lockorderfulfillment.ValidationStatusSuccess {
+	if fulfillment.ValidationStatus != paymentorderfulfillment.ValidationStatusSuccess {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Order fulfillment must have success status", nil)
 		return
 	}
 
 	// Check if order is already validated
-	if lockOrder.Status == lockpaymentorder.StatusValidated {
+	if lockOrder.Status == paymentorder.StatusValidated {
 		u.APIResponse(ctx, http.StatusOK, "success", "Order already validated", nil)
 		return
 	}
@@ -1495,11 +1444,11 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 		return
 	}
 
-	// Update lock order status within transaction
-	_, err = tx.LockPaymentOrder.
+	// Update payment order status within transaction
+	_, err = tx.PaymentOrder.
 		Update().
-		Where(lockpaymentorder.IDEQ(lockOrder.ID)).
-		SetStatus(lockpaymentorder.StatusValidated).
+		Where(paymentorder.IDEQ(lockOrder.ID)).
+		SetStatus(paymentorder.StatusValidated).
 		AddTransactions(transactionLog).
 		Save(ctx)
 	if err != nil {

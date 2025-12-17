@@ -14,7 +14,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
+	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -23,14 +23,14 @@ import (
 // ProvisionBucketQuery is the builder for querying ProvisionBucket entities.
 type ProvisionBucketQuery struct {
 	config
-	ctx                   *QueryContext
-	order                 []provisionbucket.OrderOption
-	inters                []Interceptor
-	predicates            []predicate.ProvisionBucket
-	withCurrency          *FiatCurrencyQuery
-	withLockPaymentOrders *LockPaymentOrderQuery
-	withProviderProfiles  *ProviderProfileQuery
-	withFKs               bool
+	ctx                  *QueryContext
+	order                []provisionbucket.OrderOption
+	inters               []Interceptor
+	predicates           []predicate.ProvisionBucket
+	withCurrency         *FiatCurrencyQuery
+	withPaymentOrders    *PaymentOrderQuery
+	withProviderProfiles *ProviderProfileQuery
+	withFKs              bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -89,9 +89,9 @@ func (_q *ProvisionBucketQuery) QueryCurrency() *FiatCurrencyQuery {
 	return query
 }
 
-// QueryLockPaymentOrders chains the current query on the "lock_payment_orders" edge.
-func (_q *ProvisionBucketQuery) QueryLockPaymentOrders() *LockPaymentOrderQuery {
-	query := (&LockPaymentOrderClient{config: _q.config}).Query()
+// QueryPaymentOrders chains the current query on the "payment_orders" edge.
+func (_q *ProvisionBucketQuery) QueryPaymentOrders() *PaymentOrderQuery {
+	query := (&PaymentOrderClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -102,8 +102,8 @@ func (_q *ProvisionBucketQuery) QueryLockPaymentOrders() *LockPaymentOrderQuery 
 		}
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionbucket.Table, provisionbucket.FieldID, selector),
-			sqlgraph.To(lockpaymentorder.Table, lockpaymentorder.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, provisionbucket.LockPaymentOrdersTable, provisionbucket.LockPaymentOrdersColumn),
+			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, provisionbucket.PaymentOrdersTable, provisionbucket.PaymentOrdersColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -320,14 +320,14 @@ func (_q *ProvisionBucketQuery) Clone() *ProvisionBucketQuery {
 		return nil
 	}
 	return &ProvisionBucketQuery{
-		config:                _q.config,
-		ctx:                   _q.ctx.Clone(),
-		order:                 append([]provisionbucket.OrderOption{}, _q.order...),
-		inters:                append([]Interceptor{}, _q.inters...),
-		predicates:            append([]predicate.ProvisionBucket{}, _q.predicates...),
-		withCurrency:          _q.withCurrency.Clone(),
-		withLockPaymentOrders: _q.withLockPaymentOrders.Clone(),
-		withProviderProfiles:  _q.withProviderProfiles.Clone(),
+		config:               _q.config,
+		ctx:                  _q.ctx.Clone(),
+		order:                append([]provisionbucket.OrderOption{}, _q.order...),
+		inters:               append([]Interceptor{}, _q.inters...),
+		predicates:           append([]predicate.ProvisionBucket{}, _q.predicates...),
+		withCurrency:         _q.withCurrency.Clone(),
+		withPaymentOrders:    _q.withPaymentOrders.Clone(),
+		withProviderProfiles: _q.withProviderProfiles.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -345,14 +345,14 @@ func (_q *ProvisionBucketQuery) WithCurrency(opts ...func(*FiatCurrencyQuery)) *
 	return _q
 }
 
-// WithLockPaymentOrders tells the query-builder to eager-load the nodes that are connected to
-// the "lock_payment_orders" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *ProvisionBucketQuery) WithLockPaymentOrders(opts ...func(*LockPaymentOrderQuery)) *ProvisionBucketQuery {
-	query := (&LockPaymentOrderClient{config: _q.config}).Query()
+// WithPaymentOrders tells the query-builder to eager-load the nodes that are connected to
+// the "payment_orders" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ProvisionBucketQuery) WithPaymentOrders(opts ...func(*PaymentOrderQuery)) *ProvisionBucketQuery {
+	query := (&PaymentOrderClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withLockPaymentOrders = query
+	_q.withPaymentOrders = query
 	return _q
 }
 
@@ -448,7 +448,7 @@ func (_q *ProvisionBucketQuery) sqlAll(ctx context.Context, hooks ...queryHook) 
 		_spec       = _q.querySpec()
 		loadedTypes = [3]bool{
 			_q.withCurrency != nil,
-			_q.withLockPaymentOrders != nil,
+			_q.withPaymentOrders != nil,
 			_q.withProviderProfiles != nil,
 		}
 	)
@@ -482,12 +482,10 @@ func (_q *ProvisionBucketQuery) sqlAll(ctx context.Context, hooks ...queryHook) 
 			return nil, err
 		}
 	}
-	if query := _q.withLockPaymentOrders; query != nil {
-		if err := _q.loadLockPaymentOrders(ctx, query, nodes,
-			func(n *ProvisionBucket) { n.Edges.LockPaymentOrders = []*LockPaymentOrder{} },
-			func(n *ProvisionBucket, e *LockPaymentOrder) {
-				n.Edges.LockPaymentOrders = append(n.Edges.LockPaymentOrders, e)
-			}); err != nil {
+	if query := _q.withPaymentOrders; query != nil {
+		if err := _q.loadPaymentOrders(ctx, query, nodes,
+			func(n *ProvisionBucket) { n.Edges.PaymentOrders = []*PaymentOrder{} },
+			func(n *ProvisionBucket, e *PaymentOrder) { n.Edges.PaymentOrders = append(n.Edges.PaymentOrders, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -535,7 +533,7 @@ func (_q *ProvisionBucketQuery) loadCurrency(ctx context.Context, query *FiatCur
 	}
 	return nil
 }
-func (_q *ProvisionBucketQuery) loadLockPaymentOrders(ctx context.Context, query *LockPaymentOrderQuery, nodes []*ProvisionBucket, init func(*ProvisionBucket), assign func(*ProvisionBucket, *LockPaymentOrder)) error {
+func (_q *ProvisionBucketQuery) loadPaymentOrders(ctx context.Context, query *PaymentOrderQuery, nodes []*ProvisionBucket, init func(*ProvisionBucket), assign func(*ProvisionBucket, *PaymentOrder)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[int]*ProvisionBucket)
 	for i := range nodes {
@@ -546,21 +544,21 @@ func (_q *ProvisionBucketQuery) loadLockPaymentOrders(ctx context.Context, query
 		}
 	}
 	query.withFKs = true
-	query.Where(predicate.LockPaymentOrder(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(provisionbucket.LockPaymentOrdersColumn), fks...))
+	query.Where(predicate.PaymentOrder(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(provisionbucket.PaymentOrdersColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.provision_bucket_lock_payment_orders
+		fk := n.provision_bucket_payment_orders
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "provision_bucket_lock_payment_orders" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "provision_bucket_payment_orders" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "provision_bucket_lock_payment_orders" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "provision_bucket_payment_orders" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

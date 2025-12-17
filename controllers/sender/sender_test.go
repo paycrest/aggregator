@@ -206,20 +206,9 @@ func setup() error {
 		address := fmt.Sprintf("0x%040d", i) // Simple mock address
 		salt := []byte(fmt.Sprintf("salt_%d", i))
 
-		// Create receive address
-		receiveAddress, err := db.Client.ReceiveAddress.
-			Create().
-			SetAddress(address).
-			SetSalt(salt).
-			SetStatus("unused").
-			SetValidUntil(time.Now().Add(time.Millisecond * 5)).
-			Save(context.Background())
-		if err != nil {
-			return err
-		}
-
-		// Create payment order
-		paymentOrder, err := db.Client.PaymentOrder.
+		// Create payment order with inlined receive address and recipient fields
+		expiry := time.Now().Add(time.Millisecond * 5)
+		_, err := db.Client.PaymentOrder.
 			Create().
 			SetSenderProfile(senderProfile).
 			SetAmount(decimal.NewFromFloat(100.50)).
@@ -231,26 +220,17 @@ func setup() error {
 			SetSenderFee(decimal.NewFromFloat(0)).
 			SetToken(token).
 			SetRate(decimal.NewFromFloat(750.0)).
-			SetReceiveAddress(receiveAddress).
-			SetReceiveAddressText(receiveAddress.Address).
+			SetReceiveAddress(address).
+			SetReceiveAddressSalt(salt).
+			SetReceiveAddressExpiry(expiry).
 			SetFeePercent(decimal.NewFromFloat(0)).
 			SetFeeAddress("0x1234567890123456789012345678901234567890").
 			SetReturnAddress("0x0987654321098765432109876543210987654321").
-			SetStatus("pending").
-			Save(context.Background())
-		if err != nil {
-			return err
-		}
-
-		// Create payment order recipient
-		_, err = db.Client.PaymentOrderRecipient.
-			Create().
 			SetInstitution("MOMONGPC").
 			SetAccountIdentifier("1234567890").
 			SetAccountName("OK").
-			SetProviderID("").
 			SetMemo("Test memo").
-			SetPaymentOrder(paymentOrder).
+			SetStatus("pending").
 			Save(context.Background())
 		if err != nil {
 			return err
@@ -563,16 +543,14 @@ func TestSender(t *testing.T) {
 			paymentOrder, err := db.Client.PaymentOrder.
 				Query().
 				Where(paymentorder.IDEQ(paymentOrderUUID)).
-				WithRecipient().
 				Only(context.Background())
 			assert.NoError(t, err)
 
-			assert.NotNil(t, paymentOrder.Edges.Recipient)
-			assert.Equal(t, paymentOrder.Edges.Recipient.AccountIdentifier, payload["recipient"].(map[string]interface{})["accountIdentifier"])
-			assert.Equal(t, paymentOrder.Edges.Recipient.Memo, payload["recipient"].(map[string]interface{})["memo"])
+			assert.Equal(t, paymentOrder.AccountIdentifier, payload["recipient"].(map[string]interface{})["accountIdentifier"])
+			assert.Equal(t, paymentOrder.Memo, payload["recipient"].(map[string]interface{})["memo"])
 			// For mobile money institutions, ValidateAccount returns "OK"
-			assert.Equal(t, paymentOrder.Edges.Recipient.AccountName, "OK")
-			assert.Equal(t, paymentOrder.Edges.Recipient.Institution, payload["recipient"].(map[string]interface{})["institution"])
+			assert.Equal(t, paymentOrder.AccountName, "OK")
+			assert.Equal(t, paymentOrder.Institution, payload["recipient"].(map[string]interface{})["institution"])
 			assert.Equal(t, data["senderFee"], "5")
 			assert.Equal(t, data["transactionFee"], network.Fee.String())
 		})
@@ -589,9 +567,9 @@ func TestSender(t *testing.T) {
 			assert.NoError(t, err)
 
 			type Response struct {
-				Status  string                     `json:"status"`
-				Message string                     `json:"message"`
-				Data    types.PaymentOrderResponse `json:"data"`
+				Status  string                    `json:"status"`
+				Message string                    `json:"message"`
+				Data    types.SenderOrderResponse `json:"data"`
 			}
 
 			var response2 Response
@@ -1529,18 +1507,9 @@ func TestSender(t *testing.T) {
 			address := "0x0000000000000000000000000000000000000009" // Use address outside the setup loop range
 			salt := []byte("salt_settled")
 
-			// Create receive address
-			receiveAddress, err := db.Client.ReceiveAddress.
-				Create().
-				SetAddress(address).
-				SetSalt(salt).
-				SetStatus("unused").
-				SetValidUntil(time.Now().Add(time.Millisecond * 5)).
-				Save(context.Background())
-			assert.NoError(t, err)
-
-			// Create payment order
-			paymentOrder, err := db.Client.PaymentOrder.
+			// Create payment order with inlined receive address and recipient fields
+			expiry := time.Now().Add(time.Millisecond * 5)
+			_, err := db.Client.PaymentOrder.
 				Create().
 				SetSenderProfile(testCtx.user).
 				SetAmount(decimal.NewFromFloat(100.0)).
@@ -1552,24 +1521,17 @@ func TestSender(t *testing.T) {
 				SetSenderFee(decimal.NewFromFloat(5.0).Mul(decimal.NewFromFloat(100.0)).Div(decimal.NewFromFloat(750.0)).Round(int32(testCtx.token.Decimals))).
 				SetToken(testCtx.token).
 				SetRate(decimal.NewFromFloat(750.0)).
-				SetReceiveAddress(receiveAddress).
-				SetReceiveAddressText(receiveAddress.Address).
+				SetReceiveAddress(address).
+				SetReceiveAddressSalt(salt).
+				SetReceiveAddressExpiry(expiry).
 				SetFeePercent(decimal.NewFromFloat(5.0)).
 				SetFeeAddress("0x1234567890123456789012345678901234567890").
 				SetReturnAddress("0x0987654321098765432109876543210987654321").
-				SetStatus("settled").
-				Save(context.Background())
-			assert.NoError(t, err)
-
-			// Create payment order recipient for settled order
-			_, err = db.Client.PaymentOrderRecipient.
-				Create().
 				SetInstitution("MOMONGPC").
 				SetAccountIdentifier("1234567890").
 				SetAccountName("OK").
-				SetProviderID("").
 				SetMemo("Test memo").
-				SetPaymentOrder(paymentOrder).
+				SetStatus("settled").
 				Save(context.Background())
 			assert.NoError(t, err)
 			assert.NoError(t, err)
@@ -1733,15 +1695,10 @@ func TestSender(t *testing.T) {
 			)
 			assert.NoError(t, err)
 
-			// Create payment order for second sender
-			receiveAddress2, err := db.Client.ReceiveAddress.
-				Create().
-				SetAddress("0x9999999999999999999999999999999999999999").
-				SetSalt([]byte("salt_another")).
-				SetStatus("unused").
-				SetValidUntil(time.Now().Add(time.Hour)).
-				Save(context.Background())
-			assert.NoError(t, err)
+			// Create payment order for second sender with inlined fields
+			address2 := "0x9999999999999999999999999999999999999999"
+			salt2 := []byte("salt_another")
+			expiry2 := time.Now().Add(time.Hour)
 
 			paymentOrder2, err := db.Client.PaymentOrder.
 				Create().
@@ -1755,22 +1712,17 @@ func TestSender(t *testing.T) {
 				SetSenderFee(decimal.NewFromFloat(0)).
 				SetToken(testCtx.token).
 				SetRate(decimal.NewFromFloat(750.0)).
-				SetReceiveAddress(receiveAddress2).
-				SetReceiveAddressText(receiveAddress2.Address).
+				SetReceiveAddress(address2).
+				SetReceiveAddressSalt(salt2).
+				SetReceiveAddressExpiry(expiry2).
 				SetFeePercent(decimal.NewFromFloat(0)).
 				SetFeeAddress("0x1234567890123456789012345678901234567890").
 				SetReturnAddress("0x0987654321098765432109876543210987654321").
 				SetReference("unique_ref_second_sender").
-				SetStatus("pending").
-				Save(context.Background())
-			assert.NoError(t, err)
-
-			_, err = db.Client.PaymentOrderRecipient.
-				Create().
 				SetInstitution("MOMONGPC").
 				SetAccountIdentifier("9876543210").
 				SetAccountName("Second Sender Account").
-				SetPaymentOrder(paymentOrder2).
+				SetStatus("pending").
 				Save(context.Background())
 			assert.NoError(t, err)
 

@@ -12,59 +12,59 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
+	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/predicate"
 )
 
-// LockOrderFulfillmentQuery is the builder for querying LockOrderFulfillment entities.
-type LockOrderFulfillmentQuery struct {
+// PaymentOrderFulfillmentQuery is the builder for querying PaymentOrderFulfillment entities.
+type PaymentOrderFulfillmentQuery struct {
 	config
 	ctx        *QueryContext
-	order      []lockorderfulfillment.OrderOption
+	order      []paymentorderfulfillment.OrderOption
 	inters     []Interceptor
-	predicates []predicate.LockOrderFulfillment
-	withOrder  *LockPaymentOrderQuery
+	predicates []predicate.PaymentOrderFulfillment
+	withOrder  *PaymentOrderQuery
 	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
 }
 
-// Where adds a new predicate for the LockOrderFulfillmentQuery builder.
-func (_q *LockOrderFulfillmentQuery) Where(ps ...predicate.LockOrderFulfillment) *LockOrderFulfillmentQuery {
+// Where adds a new predicate for the PaymentOrderFulfillmentQuery builder.
+func (_q *PaymentOrderFulfillmentQuery) Where(ps ...predicate.PaymentOrderFulfillment) *PaymentOrderFulfillmentQuery {
 	_q.predicates = append(_q.predicates, ps...)
 	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (_q *LockOrderFulfillmentQuery) Limit(limit int) *LockOrderFulfillmentQuery {
+func (_q *PaymentOrderFulfillmentQuery) Limit(limit int) *PaymentOrderFulfillmentQuery {
 	_q.ctx.Limit = &limit
 	return _q
 }
 
 // Offset to start from.
-func (_q *LockOrderFulfillmentQuery) Offset(offset int) *LockOrderFulfillmentQuery {
+func (_q *PaymentOrderFulfillmentQuery) Offset(offset int) *PaymentOrderFulfillmentQuery {
 	_q.ctx.Offset = &offset
 	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (_q *LockOrderFulfillmentQuery) Unique(unique bool) *LockOrderFulfillmentQuery {
+func (_q *PaymentOrderFulfillmentQuery) Unique(unique bool) *PaymentOrderFulfillmentQuery {
 	_q.ctx.Unique = &unique
 	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (_q *LockOrderFulfillmentQuery) Order(o ...lockorderfulfillment.OrderOption) *LockOrderFulfillmentQuery {
+func (_q *PaymentOrderFulfillmentQuery) Order(o ...paymentorderfulfillment.OrderOption) *PaymentOrderFulfillmentQuery {
 	_q.order = append(_q.order, o...)
 	return _q
 }
 
 // QueryOrder chains the current query on the "order" edge.
-func (_q *LockOrderFulfillmentQuery) QueryOrder() *LockPaymentOrderQuery {
-	query := (&LockPaymentOrderClient{config: _q.config}).Query()
+func (_q *PaymentOrderFulfillmentQuery) QueryOrder() *PaymentOrderQuery {
+	query := (&PaymentOrderClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -74,9 +74,9 @@ func (_q *LockOrderFulfillmentQuery) QueryOrder() *LockPaymentOrderQuery {
 			return nil, err
 		}
 		step := sqlgraph.NewStep(
-			sqlgraph.From(lockorderfulfillment.Table, lockorderfulfillment.FieldID, selector),
-			sqlgraph.To(lockpaymentorder.Table, lockpaymentorder.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, lockorderfulfillment.OrderTable, lockorderfulfillment.OrderColumn),
+			sqlgraph.From(paymentorderfulfillment.Table, paymentorderfulfillment.FieldID, selector),
+			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, paymentorderfulfillment.OrderTable, paymentorderfulfillment.OrderColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -84,21 +84,21 @@ func (_q *LockOrderFulfillmentQuery) QueryOrder() *LockPaymentOrderQuery {
 	return query
 }
 
-// First returns the first LockOrderFulfillment entity from the query.
-// Returns a *NotFoundError when no LockOrderFulfillment was found.
-func (_q *LockOrderFulfillmentQuery) First(ctx context.Context) (*LockOrderFulfillment, error) {
+// First returns the first PaymentOrderFulfillment entity from the query.
+// Returns a *NotFoundError when no PaymentOrderFulfillment was found.
+func (_q *PaymentOrderFulfillmentQuery) First(ctx context.Context) (*PaymentOrderFulfillment, error) {
 	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
-		return nil, &NotFoundError{lockorderfulfillment.Label}
+		return nil, &NotFoundError{paymentorderfulfillment.Label}
 	}
 	return nodes[0], nil
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (_q *LockOrderFulfillmentQuery) FirstX(ctx context.Context) *LockOrderFulfillment {
+func (_q *PaymentOrderFulfillmentQuery) FirstX(ctx context.Context) *PaymentOrderFulfillment {
 	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -106,22 +106,22 @@ func (_q *LockOrderFulfillmentQuery) FirstX(ctx context.Context) *LockOrderFulfi
 	return node
 }
 
-// FirstID returns the first LockOrderFulfillment ID from the query.
-// Returns a *NotFoundError when no LockOrderFulfillment ID was found.
-func (_q *LockOrderFulfillmentQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+// FirstID returns the first PaymentOrderFulfillment ID from the query.
+// Returns a *NotFoundError when no PaymentOrderFulfillment ID was found.
+func (_q *PaymentOrderFulfillmentQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
 	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
-		err = &NotFoundError{lockorderfulfillment.Label}
+		err = &NotFoundError{paymentorderfulfillment.Label}
 		return
 	}
 	return ids[0], nil
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (_q *LockOrderFulfillmentQuery) FirstIDX(ctx context.Context) uuid.UUID {
+func (_q *PaymentOrderFulfillmentQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -129,10 +129,10 @@ func (_q *LockOrderFulfillmentQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	return id
 }
 
-// Only returns a single LockOrderFulfillment entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when more than one LockOrderFulfillment entity is found.
-// Returns a *NotFoundError when no LockOrderFulfillment entities are found.
-func (_q *LockOrderFulfillmentQuery) Only(ctx context.Context) (*LockOrderFulfillment, error) {
+// Only returns a single PaymentOrderFulfillment entity found by the query, ensuring it only returns one.
+// Returns a *NotSingularError when more than one PaymentOrderFulfillment entity is found.
+// Returns a *NotFoundError when no PaymentOrderFulfillment entities are found.
+func (_q *PaymentOrderFulfillmentQuery) Only(ctx context.Context) (*PaymentOrderFulfillment, error) {
 	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
@@ -141,14 +141,14 @@ func (_q *LockOrderFulfillmentQuery) Only(ctx context.Context) (*LockOrderFulfil
 	case 1:
 		return nodes[0], nil
 	case 0:
-		return nil, &NotFoundError{lockorderfulfillment.Label}
+		return nil, &NotFoundError{paymentorderfulfillment.Label}
 	default:
-		return nil, &NotSingularError{lockorderfulfillment.Label}
+		return nil, &NotSingularError{paymentorderfulfillment.Label}
 	}
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (_q *LockOrderFulfillmentQuery) OnlyX(ctx context.Context) *LockOrderFulfillment {
+func (_q *PaymentOrderFulfillmentQuery) OnlyX(ctx context.Context) *PaymentOrderFulfillment {
 	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
@@ -156,10 +156,10 @@ func (_q *LockOrderFulfillmentQuery) OnlyX(ctx context.Context) *LockOrderFulfil
 	return node
 }
 
-// OnlyID is like Only, but returns the only LockOrderFulfillment ID in the query.
-// Returns a *NotSingularError when more than one LockOrderFulfillment ID is found.
+// OnlyID is like Only, but returns the only PaymentOrderFulfillment ID in the query.
+// Returns a *NotSingularError when more than one PaymentOrderFulfillment ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (_q *LockOrderFulfillmentQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *PaymentOrderFulfillmentQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
 	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
@@ -168,15 +168,15 @@ func (_q *LockOrderFulfillmentQuery) OnlyID(ctx context.Context) (id uuid.UUID, 
 	case 1:
 		id = ids[0]
 	case 0:
-		err = &NotFoundError{lockorderfulfillment.Label}
+		err = &NotFoundError{paymentorderfulfillment.Label}
 	default:
-		err = &NotSingularError{lockorderfulfillment.Label}
+		err = &NotSingularError{paymentorderfulfillment.Label}
 	}
 	return
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (_q *LockOrderFulfillmentQuery) OnlyIDX(ctx context.Context) uuid.UUID {
+func (_q *PaymentOrderFulfillmentQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -184,18 +184,18 @@ func (_q *LockOrderFulfillmentQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	return id
 }
 
-// All executes the query and returns a list of LockOrderFulfillments.
-func (_q *LockOrderFulfillmentQuery) All(ctx context.Context) ([]*LockOrderFulfillment, error) {
+// All executes the query and returns a list of PaymentOrderFulfillments.
+func (_q *PaymentOrderFulfillmentQuery) All(ctx context.Context) ([]*PaymentOrderFulfillment, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	qr := querierAll[[]*LockOrderFulfillment, *LockOrderFulfillmentQuery]()
-	return withInterceptors[[]*LockOrderFulfillment](ctx, _q, qr, _q.inters)
+	qr := querierAll[[]*PaymentOrderFulfillment, *PaymentOrderFulfillmentQuery]()
+	return withInterceptors[[]*PaymentOrderFulfillment](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (_q *LockOrderFulfillmentQuery) AllX(ctx context.Context) []*LockOrderFulfillment {
+func (_q *PaymentOrderFulfillmentQuery) AllX(ctx context.Context) []*PaymentOrderFulfillment {
 	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
@@ -203,20 +203,20 @@ func (_q *LockOrderFulfillmentQuery) AllX(ctx context.Context) []*LockOrderFulfi
 	return nodes
 }
 
-// IDs executes the query and returns a list of LockOrderFulfillment IDs.
-func (_q *LockOrderFulfillmentQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+// IDs executes the query and returns a list of PaymentOrderFulfillment IDs.
+func (_q *PaymentOrderFulfillmentQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
 	if _q.ctx.Unique == nil && _q.path != nil {
 		_q.Unique(true)
 	}
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
-	if err = _q.Select(lockorderfulfillment.FieldID).Scan(ctx, &ids); err != nil {
+	if err = _q.Select(paymentorderfulfillment.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (_q *LockOrderFulfillmentQuery) IDsX(ctx context.Context) []uuid.UUID {
+func (_q *PaymentOrderFulfillmentQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -225,16 +225,16 @@ func (_q *LockOrderFulfillmentQuery) IDsX(ctx context.Context) []uuid.UUID {
 }
 
 // Count returns the count of the given query.
-func (_q *LockOrderFulfillmentQuery) Count(ctx context.Context) (int, error) {
+func (_q *PaymentOrderFulfillmentQuery) Count(ctx context.Context) (int, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, _q, querierCount[*LockOrderFulfillmentQuery](), _q.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*PaymentOrderFulfillmentQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (_q *LockOrderFulfillmentQuery) CountX(ctx context.Context) int {
+func (_q *PaymentOrderFulfillmentQuery) CountX(ctx context.Context) int {
 	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
@@ -243,7 +243,7 @@ func (_q *LockOrderFulfillmentQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (_q *LockOrderFulfillmentQuery) Exist(ctx context.Context) (bool, error) {
+func (_q *PaymentOrderFulfillmentQuery) Exist(ctx context.Context) (bool, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
 	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
@@ -256,7 +256,7 @@ func (_q *LockOrderFulfillmentQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (_q *LockOrderFulfillmentQuery) ExistX(ctx context.Context) bool {
+func (_q *PaymentOrderFulfillmentQuery) ExistX(ctx context.Context) bool {
 	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
@@ -264,18 +264,18 @@ func (_q *LockOrderFulfillmentQuery) ExistX(ctx context.Context) bool {
 	return exist
 }
 
-// Clone returns a duplicate of the LockOrderFulfillmentQuery builder, including all associated steps. It can be
+// Clone returns a duplicate of the PaymentOrderFulfillmentQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (_q *LockOrderFulfillmentQuery) Clone() *LockOrderFulfillmentQuery {
+func (_q *PaymentOrderFulfillmentQuery) Clone() *PaymentOrderFulfillmentQuery {
 	if _q == nil {
 		return nil
 	}
-	return &LockOrderFulfillmentQuery{
+	return &PaymentOrderFulfillmentQuery{
 		config:     _q.config,
 		ctx:        _q.ctx.Clone(),
-		order:      append([]lockorderfulfillment.OrderOption{}, _q.order...),
+		order:      append([]paymentorderfulfillment.OrderOption{}, _q.order...),
 		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.LockOrderFulfillment{}, _q.predicates...),
+		predicates: append([]predicate.PaymentOrderFulfillment{}, _q.predicates...),
 		withOrder:  _q.withOrder.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
@@ -285,8 +285,8 @@ func (_q *LockOrderFulfillmentQuery) Clone() *LockOrderFulfillmentQuery {
 
 // WithOrder tells the query-builder to eager-load the nodes that are connected to
 // the "order" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *LockOrderFulfillmentQuery) WithOrder(opts ...func(*LockPaymentOrderQuery)) *LockOrderFulfillmentQuery {
-	query := (&LockPaymentOrderClient{config: _q.config}).Query()
+func (_q *PaymentOrderFulfillmentQuery) WithOrder(opts ...func(*PaymentOrderQuery)) *PaymentOrderFulfillmentQuery {
+	query := (&PaymentOrderClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -304,15 +304,15 @@ func (_q *LockOrderFulfillmentQuery) WithOrder(opts ...func(*LockPaymentOrderQue
 //		Count int `json:"count,omitempty"`
 //	}
 //
-//	client.LockOrderFulfillment.Query().
-//		GroupBy(lockorderfulfillment.FieldCreatedAt).
+//	client.PaymentOrderFulfillment.Query().
+//		GroupBy(paymentorderfulfillment.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (_q *LockOrderFulfillmentQuery) GroupBy(field string, fields ...string) *LockOrderFulfillmentGroupBy {
+func (_q *PaymentOrderFulfillmentQuery) GroupBy(field string, fields ...string) *PaymentOrderFulfillmentGroupBy {
 	_q.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &LockOrderFulfillmentGroupBy{build: _q}
+	grbuild := &PaymentOrderFulfillmentGroupBy{build: _q}
 	grbuild.flds = &_q.ctx.Fields
-	grbuild.label = lockorderfulfillment.Label
+	grbuild.label = paymentorderfulfillment.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
 }
@@ -326,23 +326,23 @@ func (_q *LockOrderFulfillmentQuery) GroupBy(field string, fields ...string) *Lo
 //		CreatedAt time.Time `json:"created_at,omitempty"`
 //	}
 //
-//	client.LockOrderFulfillment.Query().
-//		Select(lockorderfulfillment.FieldCreatedAt).
+//	client.PaymentOrderFulfillment.Query().
+//		Select(paymentorderfulfillment.FieldCreatedAt).
 //		Scan(ctx, &v)
-func (_q *LockOrderFulfillmentQuery) Select(fields ...string) *LockOrderFulfillmentSelect {
+func (_q *PaymentOrderFulfillmentQuery) Select(fields ...string) *PaymentOrderFulfillmentSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
-	sbuild := &LockOrderFulfillmentSelect{LockOrderFulfillmentQuery: _q}
-	sbuild.label = lockorderfulfillment.Label
+	sbuild := &PaymentOrderFulfillmentSelect{PaymentOrderFulfillmentQuery: _q}
+	sbuild.label = paymentorderfulfillment.Label
 	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
-// Aggregate returns a LockOrderFulfillmentSelect configured with the given aggregations.
-func (_q *LockOrderFulfillmentQuery) Aggregate(fns ...AggregateFunc) *LockOrderFulfillmentSelect {
+// Aggregate returns a PaymentOrderFulfillmentSelect configured with the given aggregations.
+func (_q *PaymentOrderFulfillmentQuery) Aggregate(fns ...AggregateFunc) *PaymentOrderFulfillmentSelect {
 	return _q.Select().Aggregate(fns...)
 }
 
-func (_q *LockOrderFulfillmentQuery) prepareQuery(ctx context.Context) error {
+func (_q *PaymentOrderFulfillmentQuery) prepareQuery(ctx context.Context) error {
 	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
@@ -354,7 +354,7 @@ func (_q *LockOrderFulfillmentQuery) prepareQuery(ctx context.Context) error {
 		}
 	}
 	for _, f := range _q.ctx.Fields {
-		if !lockorderfulfillment.ValidColumn(f) {
+		if !paymentorderfulfillment.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
@@ -368,9 +368,9 @@ func (_q *LockOrderFulfillmentQuery) prepareQuery(ctx context.Context) error {
 	return nil
 }
 
-func (_q *LockOrderFulfillmentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*LockOrderFulfillment, error) {
+func (_q *PaymentOrderFulfillmentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*PaymentOrderFulfillment, error) {
 	var (
-		nodes       = []*LockOrderFulfillment{}
+		nodes       = []*PaymentOrderFulfillment{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
 		loadedTypes = [1]bool{
@@ -381,13 +381,13 @@ func (_q *LockOrderFulfillmentQuery) sqlAll(ctx context.Context, hooks ...queryH
 		withFKs = true
 	}
 	if withFKs {
-		_spec.Node.Columns = append(_spec.Node.Columns, lockorderfulfillment.ForeignKeys...)
+		_spec.Node.Columns = append(_spec.Node.Columns, paymentorderfulfillment.ForeignKeys...)
 	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
-		return (*LockOrderFulfillment).scanValues(nil, columns)
+		return (*PaymentOrderFulfillment).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &LockOrderFulfillment{config: _q.config}
+		node := &PaymentOrderFulfillment{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -403,21 +403,21 @@ func (_q *LockOrderFulfillmentQuery) sqlAll(ctx context.Context, hooks ...queryH
 	}
 	if query := _q.withOrder; query != nil {
 		if err := _q.loadOrder(ctx, query, nodes, nil,
-			func(n *LockOrderFulfillment, e *LockPaymentOrder) { n.Edges.Order = e }); err != nil {
+			func(n *PaymentOrderFulfillment, e *PaymentOrder) { n.Edges.Order = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (_q *LockOrderFulfillmentQuery) loadOrder(ctx context.Context, query *LockPaymentOrderQuery, nodes []*LockOrderFulfillment, init func(*LockOrderFulfillment), assign func(*LockOrderFulfillment, *LockPaymentOrder)) error {
+func (_q *PaymentOrderFulfillmentQuery) loadOrder(ctx context.Context, query *PaymentOrderQuery, nodes []*PaymentOrderFulfillment, init func(*PaymentOrderFulfillment), assign func(*PaymentOrderFulfillment, *PaymentOrder)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
-	nodeids := make(map[uuid.UUID][]*LockOrderFulfillment)
+	nodeids := make(map[uuid.UUID][]*PaymentOrderFulfillment)
 	for i := range nodes {
-		if nodes[i].lock_payment_order_fulfillments == nil {
+		if nodes[i].payment_order_fulfillments == nil {
 			continue
 		}
-		fk := *nodes[i].lock_payment_order_fulfillments
+		fk := *nodes[i].payment_order_fulfillments
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -426,7 +426,7 @@ func (_q *LockOrderFulfillmentQuery) loadOrder(ctx context.Context, query *LockP
 	if len(ids) == 0 {
 		return nil
 	}
-	query.Where(lockpaymentorder.IDIn(ids...))
+	query.Where(paymentorder.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
@@ -434,7 +434,7 @@ func (_q *LockOrderFulfillmentQuery) loadOrder(ctx context.Context, query *LockP
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "lock_payment_order_fulfillments" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "payment_order_fulfillments" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -443,7 +443,7 @@ func (_q *LockOrderFulfillmentQuery) loadOrder(ctx context.Context, query *LockP
 	return nil
 }
 
-func (_q *LockOrderFulfillmentQuery) sqlCount(ctx context.Context) (int, error) {
+func (_q *PaymentOrderFulfillmentQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
 	_spec.Node.Columns = _q.ctx.Fields
 	if len(_q.ctx.Fields) > 0 {
@@ -452,8 +452,8 @@ func (_q *LockOrderFulfillmentQuery) sqlCount(ctx context.Context) (int, error) 
 	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (_q *LockOrderFulfillmentQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := sqlgraph.NewQuerySpec(lockorderfulfillment.Table, lockorderfulfillment.Columns, sqlgraph.NewFieldSpec(lockorderfulfillment.FieldID, field.TypeUUID))
+func (_q *PaymentOrderFulfillmentQuery) querySpec() *sqlgraph.QuerySpec {
+	_spec := sqlgraph.NewQuerySpec(paymentorderfulfillment.Table, paymentorderfulfillment.Columns, sqlgraph.NewFieldSpec(paymentorderfulfillment.FieldID, field.TypeUUID))
 	_spec.From = _q.sql
 	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
@@ -462,9 +462,9 @@ func (_q *LockOrderFulfillmentQuery) querySpec() *sqlgraph.QuerySpec {
 	}
 	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
-		_spec.Node.Columns = append(_spec.Node.Columns, lockorderfulfillment.FieldID)
+		_spec.Node.Columns = append(_spec.Node.Columns, paymentorderfulfillment.FieldID)
 		for i := range fields {
-			if fields[i] != lockorderfulfillment.FieldID {
+			if fields[i] != paymentorderfulfillment.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
 		}
@@ -492,12 +492,12 @@ func (_q *LockOrderFulfillmentQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (_q *LockOrderFulfillmentQuery) sqlQuery(ctx context.Context) *sql.Selector {
+func (_q *PaymentOrderFulfillmentQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(_q.driver.Dialect())
-	t1 := builder.Table(lockorderfulfillment.Table)
+	t1 := builder.Table(paymentorderfulfillment.Table)
 	columns := _q.ctx.Fields
 	if len(columns) == 0 {
-		columns = lockorderfulfillment.Columns
+		columns = paymentorderfulfillment.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
 	if _q.sql != nil {
@@ -524,28 +524,28 @@ func (_q *LockOrderFulfillmentQuery) sqlQuery(ctx context.Context) *sql.Selector
 	return selector
 }
 
-// LockOrderFulfillmentGroupBy is the group-by builder for LockOrderFulfillment entities.
-type LockOrderFulfillmentGroupBy struct {
+// PaymentOrderFulfillmentGroupBy is the group-by builder for PaymentOrderFulfillment entities.
+type PaymentOrderFulfillmentGroupBy struct {
 	selector
-	build *LockOrderFulfillmentQuery
+	build *PaymentOrderFulfillmentQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (_g *LockOrderFulfillmentGroupBy) Aggregate(fns ...AggregateFunc) *LockOrderFulfillmentGroupBy {
+func (_g *PaymentOrderFulfillmentGroupBy) Aggregate(fns ...AggregateFunc) *PaymentOrderFulfillmentGroupBy {
 	_g.fns = append(_g.fns, fns...)
 	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (_g *LockOrderFulfillmentGroupBy) Scan(ctx context.Context, v any) error {
+func (_g *PaymentOrderFulfillmentGroupBy) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
 	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*LockOrderFulfillmentQuery, *LockOrderFulfillmentGroupBy](ctx, _g.build, _g, _g.build.inters, v)
+	return scanWithInterceptors[*PaymentOrderFulfillmentQuery, *PaymentOrderFulfillmentGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (_g *LockOrderFulfillmentGroupBy) sqlScan(ctx context.Context, root *LockOrderFulfillmentQuery, v any) error {
+func (_g *PaymentOrderFulfillmentGroupBy) sqlScan(ctx context.Context, root *PaymentOrderFulfillmentQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
 	aggregation := make([]string, 0, len(_g.fns))
 	for _, fn := range _g.fns {
@@ -572,28 +572,28 @@ func (_g *LockOrderFulfillmentGroupBy) sqlScan(ctx context.Context, root *LockOr
 	return sql.ScanSlice(rows, v)
 }
 
-// LockOrderFulfillmentSelect is the builder for selecting fields of LockOrderFulfillment entities.
-type LockOrderFulfillmentSelect struct {
-	*LockOrderFulfillmentQuery
+// PaymentOrderFulfillmentSelect is the builder for selecting fields of PaymentOrderFulfillment entities.
+type PaymentOrderFulfillmentSelect struct {
+	*PaymentOrderFulfillmentQuery
 	selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (_s *LockOrderFulfillmentSelect) Aggregate(fns ...AggregateFunc) *LockOrderFulfillmentSelect {
+func (_s *PaymentOrderFulfillmentSelect) Aggregate(fns ...AggregateFunc) *PaymentOrderFulfillmentSelect {
 	_s.fns = append(_s.fns, fns...)
 	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (_s *LockOrderFulfillmentSelect) Scan(ctx context.Context, v any) error {
+func (_s *PaymentOrderFulfillmentSelect) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
 	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*LockOrderFulfillmentQuery, *LockOrderFulfillmentSelect](ctx, _s.LockOrderFulfillmentQuery, _s, _s.inters, v)
+	return scanWithInterceptors[*PaymentOrderFulfillmentQuery, *PaymentOrderFulfillmentSelect](ctx, _s.PaymentOrderFulfillmentQuery, _s, _s.inters, v)
 }
 
-func (_s *LockOrderFulfillmentSelect) sqlScan(ctx context.Context, root *LockOrderFulfillmentQuery, v any) error {
+func (_s *PaymentOrderFulfillmentSelect) sqlScan(ctx context.Context, root *PaymentOrderFulfillmentQuery, v any) error {
 	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(_s.fns))
 	for _, fn := range _s.fns {

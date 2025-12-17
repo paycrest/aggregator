@@ -88,10 +88,10 @@ const (
 	// ProviderRatingColumn is the table column denoting the provider_rating relation/edge.
 	ProviderRatingColumn = "provider_profile_provider_rating"
 	// AssignedOrdersTable is the table that holds the assigned_orders relation/edge.
-	AssignedOrdersTable = "lock_payment_orders"
-	// AssignedOrdersInverseTable is the table name for the LockPaymentOrder entity.
-	// It exists in this package in order to avoid circular dependency with the "lockpaymentorder" package.
-	AssignedOrdersInverseTable = "lock_payment_orders"
+	AssignedOrdersTable = "payment_orders"
+	// AssignedOrdersInverseTable is the table name for the PaymentOrder entity.
+	// It exists in this package in order to avoid circular dependency with the "paymentorder" package.
+	AssignedOrdersInverseTable = "payment_orders"
 	// AssignedOrdersColumn is the table column denoting the assigned_orders relation/edge.
 	AssignedOrdersColumn = "provider_profile_assigned_orders"
 	// FiatAccountsTable is the table that holds the fiat_accounts relation/edge.

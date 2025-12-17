@@ -13,11 +13,11 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-	"github.com/paycrest/aggregator/ent/linkedaddress"
 	"github.com/paycrest/aggregator/ent/paymentorder"
-	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
+	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
-	"github.com/paycrest/aggregator/ent/receiveaddress"
+	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
@@ -66,9 +66,29 @@ func (_c *PaymentOrderCreate) SetAmount(v decimal.Decimal) *PaymentOrderCreate {
 	return _c
 }
 
+// SetRate sets the "rate" field.
+func (_c *PaymentOrderCreate) SetRate(v decimal.Decimal) *PaymentOrderCreate {
+	_c.mutation.SetRate(v)
+	return _c
+}
+
+// SetAmountInUsd sets the "amount_in_usd" field.
+func (_c *PaymentOrderCreate) SetAmountInUsd(v decimal.Decimal) *PaymentOrderCreate {
+	_c.mutation.SetAmountInUsd(v)
+	return _c
+}
+
 // SetAmountPaid sets the "amount_paid" field.
 func (_c *PaymentOrderCreate) SetAmountPaid(v decimal.Decimal) *PaymentOrderCreate {
 	_c.mutation.SetAmountPaid(v)
+	return _c
+}
+
+// SetNillableAmountPaid sets the "amount_paid" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableAmountPaid(v *decimal.Decimal) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetAmountPaid(*v)
+	}
 	return _c
 }
 
@@ -78,9 +98,25 @@ func (_c *PaymentOrderCreate) SetAmountReturned(v decimal.Decimal) *PaymentOrder
 	return _c
 }
 
+// SetNillableAmountReturned sets the "amount_returned" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableAmountReturned(v *decimal.Decimal) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetAmountReturned(*v)
+	}
+	return _c
+}
+
 // SetPercentSettled sets the "percent_settled" field.
 func (_c *PaymentOrderCreate) SetPercentSettled(v decimal.Decimal) *PaymentOrderCreate {
 	_c.mutation.SetPercentSettled(v)
+	return _c
+}
+
+// SetNillablePercentSettled sets the "percent_settled" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillablePercentSettled(v *decimal.Decimal) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetPercentSettled(*v)
+	}
 	return _c
 }
 
@@ -90,15 +126,67 @@ func (_c *PaymentOrderCreate) SetSenderFee(v decimal.Decimal) *PaymentOrderCreat
 	return _c
 }
 
+// SetNillableSenderFee sets the "sender_fee" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableSenderFee(v *decimal.Decimal) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetSenderFee(*v)
+	}
+	return _c
+}
+
 // SetNetworkFee sets the "network_fee" field.
 func (_c *PaymentOrderCreate) SetNetworkFee(v decimal.Decimal) *PaymentOrderCreate {
 	_c.mutation.SetNetworkFee(v)
 	return _c
 }
 
-// SetRate sets the "rate" field.
-func (_c *PaymentOrderCreate) SetRate(v decimal.Decimal) *PaymentOrderCreate {
-	_c.mutation.SetRate(v)
+// SetNillableNetworkFee sets the "network_fee" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableNetworkFee(v *decimal.Decimal) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetNetworkFee(*v)
+	}
+	return _c
+}
+
+// SetProtocolFee sets the "protocol_fee" field.
+func (_c *PaymentOrderCreate) SetProtocolFee(v decimal.Decimal) *PaymentOrderCreate {
+	_c.mutation.SetProtocolFee(v)
+	return _c
+}
+
+// SetNillableProtocolFee sets the "protocol_fee" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableProtocolFee(v *decimal.Decimal) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetProtocolFee(*v)
+	}
+	return _c
+}
+
+// SetOrderPercent sets the "order_percent" field.
+func (_c *PaymentOrderCreate) SetOrderPercent(v decimal.Decimal) *PaymentOrderCreate {
+	_c.mutation.SetOrderPercent(v)
+	return _c
+}
+
+// SetNillableOrderPercent sets the "order_percent" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableOrderPercent(v *decimal.Decimal) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetOrderPercent(*v)
+	}
+	return _c
+}
+
+// SetFeePercent sets the "fee_percent" field.
+func (_c *PaymentOrderCreate) SetFeePercent(v decimal.Decimal) *PaymentOrderCreate {
+	_c.mutation.SetFeePercent(v)
+	return _c
+}
+
+// SetNillableFeePercent sets the "fee_percent" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableFeePercent(v *decimal.Decimal) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetFeePercent(*v)
+	}
 	return _c
 }
 
@@ -126,6 +214,34 @@ func (_c *PaymentOrderCreate) SetBlockNumber(v int64) *PaymentOrderCreate {
 func (_c *PaymentOrderCreate) SetNillableBlockNumber(v *int64) *PaymentOrderCreate {
 	if v != nil {
 		_c.SetBlockNumber(*v)
+	}
+	return _c
+}
+
+// SetMessageHash sets the "message_hash" field.
+func (_c *PaymentOrderCreate) SetMessageHash(v string) *PaymentOrderCreate {
+	_c.mutation.SetMessageHash(v)
+	return _c
+}
+
+// SetNillableMessageHash sets the "message_hash" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableMessageHash(v *string) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetMessageHash(*v)
+	}
+	return _c
+}
+
+// SetGatewayID sets the "gateway_id" field.
+func (_c *PaymentOrderCreate) SetGatewayID(v string) *PaymentOrderCreate {
+	_c.mutation.SetGatewayID(v)
+	return _c
+}
+
+// SetNillableGatewayID sets the "gateway_id" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableGatewayID(v *string) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetGatewayID(*v)
 	}
 	return _c
 }
@@ -158,15 +274,37 @@ func (_c *PaymentOrderCreate) SetNillableReturnAddress(v *string) *PaymentOrderC
 	return _c
 }
 
-// SetReceiveAddressText sets the "receive_address_text" field.
-func (_c *PaymentOrderCreate) SetReceiveAddressText(v string) *PaymentOrderCreate {
-	_c.mutation.SetReceiveAddressText(v)
+// SetReceiveAddress sets the "receive_address" field.
+func (_c *PaymentOrderCreate) SetReceiveAddress(v string) *PaymentOrderCreate {
+	_c.mutation.SetReceiveAddress(v)
 	return _c
 }
 
-// SetFeePercent sets the "fee_percent" field.
-func (_c *PaymentOrderCreate) SetFeePercent(v decimal.Decimal) *PaymentOrderCreate {
-	_c.mutation.SetFeePercent(v)
+// SetNillableReceiveAddress sets the "receive_address" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableReceiveAddress(v *string) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetReceiveAddress(*v)
+	}
+	return _c
+}
+
+// SetReceiveAddressSalt sets the "receive_address_salt" field.
+func (_c *PaymentOrderCreate) SetReceiveAddressSalt(v []byte) *PaymentOrderCreate {
+	_c.mutation.SetReceiveAddressSalt(v)
+	return _c
+}
+
+// SetReceiveAddressExpiry sets the "receive_address_expiry" field.
+func (_c *PaymentOrderCreate) SetReceiveAddressExpiry(v time.Time) *PaymentOrderCreate {
+	_c.mutation.SetReceiveAddressExpiry(v)
+	return _c
+}
+
+// SetNillableReceiveAddressExpiry sets the "receive_address_expiry" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableReceiveAddressExpiry(v *time.Time) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetReceiveAddressExpiry(*v)
+	}
 	return _c
 }
 
@@ -184,30 +322,54 @@ func (_c *PaymentOrderCreate) SetNillableFeeAddress(v *string) *PaymentOrderCrea
 	return _c
 }
 
-// SetGatewayID sets the "gateway_id" field.
-func (_c *PaymentOrderCreate) SetGatewayID(v string) *PaymentOrderCreate {
-	_c.mutation.SetGatewayID(v)
+// SetInstitution sets the "institution" field.
+func (_c *PaymentOrderCreate) SetInstitution(v string) *PaymentOrderCreate {
+	_c.mutation.SetInstitution(v)
 	return _c
 }
 
-// SetNillableGatewayID sets the "gateway_id" field if the given value is not nil.
-func (_c *PaymentOrderCreate) SetNillableGatewayID(v *string) *PaymentOrderCreate {
+// SetAccountIdentifier sets the "account_identifier" field.
+func (_c *PaymentOrderCreate) SetAccountIdentifier(v string) *PaymentOrderCreate {
+	_c.mutation.SetAccountIdentifier(v)
+	return _c
+}
+
+// SetAccountName sets the "account_name" field.
+func (_c *PaymentOrderCreate) SetAccountName(v string) *PaymentOrderCreate {
+	_c.mutation.SetAccountName(v)
+	return _c
+}
+
+// SetMemo sets the "memo" field.
+func (_c *PaymentOrderCreate) SetMemo(v string) *PaymentOrderCreate {
+	_c.mutation.SetMemo(v)
+	return _c
+}
+
+// SetNillableMemo sets the "memo" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableMemo(v *string) *PaymentOrderCreate {
 	if v != nil {
-		_c.SetGatewayID(*v)
+		_c.SetMemo(*v)
 	}
 	return _c
 }
 
-// SetMessageHash sets the "message_hash" field.
-func (_c *PaymentOrderCreate) SetMessageHash(v string) *PaymentOrderCreate {
-	_c.mutation.SetMessageHash(v)
+// SetMetadata sets the "metadata" field.
+func (_c *PaymentOrderCreate) SetMetadata(v map[string]interface{}) *PaymentOrderCreate {
+	_c.mutation.SetMetadata(v)
 	return _c
 }
 
-// SetNillableMessageHash sets the "message_hash" field if the given value is not nil.
-func (_c *PaymentOrderCreate) SetNillableMessageHash(v *string) *PaymentOrderCreate {
+// SetSender sets the "sender" field.
+func (_c *PaymentOrderCreate) SetSender(v string) *PaymentOrderCreate {
+	_c.mutation.SetSender(v)
+	return _c
+}
+
+// SetNillableSender sets the "sender" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableSender(v *string) *PaymentOrderCreate {
 	if v != nil {
-		_c.SetMessageHash(*v)
+		_c.SetSender(*v)
 	}
 	return _c
 }
@@ -226,6 +388,26 @@ func (_c *PaymentOrderCreate) SetNillableReference(v *string) *PaymentOrderCreat
 	return _c
 }
 
+// SetCancellationCount sets the "cancellation_count" field.
+func (_c *PaymentOrderCreate) SetCancellationCount(v int) *PaymentOrderCreate {
+	_c.mutation.SetCancellationCount(v)
+	return _c
+}
+
+// SetNillableCancellationCount sets the "cancellation_count" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableCancellationCount(v *int) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetCancellationCount(*v)
+	}
+	return _c
+}
+
+// SetCancellationReasons sets the "cancellation_reasons" field.
+func (_c *PaymentOrderCreate) SetCancellationReasons(v []string) *PaymentOrderCreate {
+	_c.mutation.SetCancellationReasons(v)
+	return _c
+}
+
 // SetStatus sets the "status" field.
 func (_c *PaymentOrderCreate) SetStatus(v paymentorder.Status) *PaymentOrderCreate {
 	_c.mutation.SetStatus(v)
@@ -237,12 +419,6 @@ func (_c *PaymentOrderCreate) SetNillableStatus(v *paymentorder.Status) *Payment
 	if v != nil {
 		_c.SetStatus(*v)
 	}
-	return _c
-}
-
-// SetAmountInUsd sets the "amount_in_usd" field.
-func (_c *PaymentOrderCreate) SetAmountInUsd(v decimal.Decimal) *PaymentOrderCreate {
-	_c.mutation.SetAmountInUsd(v)
 	return _c
 }
 
@@ -274,6 +450,17 @@ func (_c *PaymentOrderCreate) SetNillableID(v *uuid.UUID) *PaymentOrderCreate {
 	return _c
 }
 
+// SetTokenID sets the "token" edge to the Token entity by ID.
+func (_c *PaymentOrderCreate) SetTokenID(id int) *PaymentOrderCreate {
+	_c.mutation.SetTokenID(id)
+	return _c
+}
+
+// SetToken sets the "token" edge to the Token entity.
+func (_c *PaymentOrderCreate) SetToken(v *Token) *PaymentOrderCreate {
+	return _c.SetTokenID(v.ID)
+}
+
 // SetSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by ID.
 func (_c *PaymentOrderCreate) SetSenderProfileID(id uuid.UUID) *PaymentOrderCreate {
 	_c.mutation.SetSenderProfileID(id)
@@ -293,89 +480,6 @@ func (_c *PaymentOrderCreate) SetSenderProfile(v *SenderProfile) *PaymentOrderCr
 	return _c.SetSenderProfileID(v.ID)
 }
 
-// SetTokenID sets the "token" edge to the Token entity by ID.
-func (_c *PaymentOrderCreate) SetTokenID(id int) *PaymentOrderCreate {
-	_c.mutation.SetTokenID(id)
-	return _c
-}
-
-// SetToken sets the "token" edge to the Token entity.
-func (_c *PaymentOrderCreate) SetToken(v *Token) *PaymentOrderCreate {
-	return _c.SetTokenID(v.ID)
-}
-
-// SetLinkedAddressID sets the "linked_address" edge to the LinkedAddress entity by ID.
-func (_c *PaymentOrderCreate) SetLinkedAddressID(id int) *PaymentOrderCreate {
-	_c.mutation.SetLinkedAddressID(id)
-	return _c
-}
-
-// SetNillableLinkedAddressID sets the "linked_address" edge to the LinkedAddress entity by ID if the given value is not nil.
-func (_c *PaymentOrderCreate) SetNillableLinkedAddressID(id *int) *PaymentOrderCreate {
-	if id != nil {
-		_c = _c.SetLinkedAddressID(*id)
-	}
-	return _c
-}
-
-// SetLinkedAddress sets the "linked_address" edge to the LinkedAddress entity.
-func (_c *PaymentOrderCreate) SetLinkedAddress(v *LinkedAddress) *PaymentOrderCreate {
-	return _c.SetLinkedAddressID(v.ID)
-}
-
-// SetReceiveAddressID sets the "receive_address" edge to the ReceiveAddress entity by ID.
-func (_c *PaymentOrderCreate) SetReceiveAddressID(id int) *PaymentOrderCreate {
-	_c.mutation.SetReceiveAddressID(id)
-	return _c
-}
-
-// SetNillableReceiveAddressID sets the "receive_address" edge to the ReceiveAddress entity by ID if the given value is not nil.
-func (_c *PaymentOrderCreate) SetNillableReceiveAddressID(id *int) *PaymentOrderCreate {
-	if id != nil {
-		_c = _c.SetReceiveAddressID(*id)
-	}
-	return _c
-}
-
-// SetReceiveAddress sets the "receive_address" edge to the ReceiveAddress entity.
-func (_c *PaymentOrderCreate) SetReceiveAddress(v *ReceiveAddress) *PaymentOrderCreate {
-	return _c.SetReceiveAddressID(v.ID)
-}
-
-// SetRecipientID sets the "recipient" edge to the PaymentOrderRecipient entity by ID.
-func (_c *PaymentOrderCreate) SetRecipientID(id int) *PaymentOrderCreate {
-	_c.mutation.SetRecipientID(id)
-	return _c
-}
-
-// SetNillableRecipientID sets the "recipient" edge to the PaymentOrderRecipient entity by ID if the given value is not nil.
-func (_c *PaymentOrderCreate) SetNillableRecipientID(id *int) *PaymentOrderCreate {
-	if id != nil {
-		_c = _c.SetRecipientID(*id)
-	}
-	return _c
-}
-
-// SetRecipient sets the "recipient" edge to the PaymentOrderRecipient entity.
-func (_c *PaymentOrderCreate) SetRecipient(v *PaymentOrderRecipient) *PaymentOrderCreate {
-	return _c.SetRecipientID(v.ID)
-}
-
-// AddTransactionIDs adds the "transactions" edge to the TransactionLog entity by IDs.
-func (_c *PaymentOrderCreate) AddTransactionIDs(ids ...uuid.UUID) *PaymentOrderCreate {
-	_c.mutation.AddTransactionIDs(ids...)
-	return _c
-}
-
-// AddTransactions adds the "transactions" edges to the TransactionLog entity.
-func (_c *PaymentOrderCreate) AddTransactions(v ...*TransactionLog) *PaymentOrderCreate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddTransactionIDs(ids...)
-}
-
 // SetPaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID.
 func (_c *PaymentOrderCreate) SetPaymentWebhookID(id uuid.UUID) *PaymentOrderCreate {
 	_c.mutation.SetPaymentWebhookID(id)
@@ -393,6 +497,74 @@ func (_c *PaymentOrderCreate) SetNillablePaymentWebhookID(id *uuid.UUID) *Paymen
 // SetPaymentWebhook sets the "payment_webhook" edge to the PaymentWebhook entity.
 func (_c *PaymentOrderCreate) SetPaymentWebhook(v *PaymentWebhook) *PaymentOrderCreate {
 	return _c.SetPaymentWebhookID(v.ID)
+}
+
+// SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
+func (_c *PaymentOrderCreate) SetProviderID(id string) *PaymentOrderCreate {
+	_c.mutation.SetProviderID(id)
+	return _c
+}
+
+// SetNillableProviderID sets the "provider" edge to the ProviderProfile entity by ID if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableProviderID(id *string) *PaymentOrderCreate {
+	if id != nil {
+		_c = _c.SetProviderID(*id)
+	}
+	return _c
+}
+
+// SetProvider sets the "provider" edge to the ProviderProfile entity.
+func (_c *PaymentOrderCreate) SetProvider(v *ProviderProfile) *PaymentOrderCreate {
+	return _c.SetProviderID(v.ID)
+}
+
+// SetProvisionBucketID sets the "provision_bucket" edge to the ProvisionBucket entity by ID.
+func (_c *PaymentOrderCreate) SetProvisionBucketID(id int) *PaymentOrderCreate {
+	_c.mutation.SetProvisionBucketID(id)
+	return _c
+}
+
+// SetNillableProvisionBucketID sets the "provision_bucket" edge to the ProvisionBucket entity by ID if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableProvisionBucketID(id *int) *PaymentOrderCreate {
+	if id != nil {
+		_c = _c.SetProvisionBucketID(*id)
+	}
+	return _c
+}
+
+// SetProvisionBucket sets the "provision_bucket" edge to the ProvisionBucket entity.
+func (_c *PaymentOrderCreate) SetProvisionBucket(v *ProvisionBucket) *PaymentOrderCreate {
+	return _c.SetProvisionBucketID(v.ID)
+}
+
+// AddFulfillmentIDs adds the "fulfillments" edge to the PaymentOrderFulfillment entity by IDs.
+func (_c *PaymentOrderCreate) AddFulfillmentIDs(ids ...uuid.UUID) *PaymentOrderCreate {
+	_c.mutation.AddFulfillmentIDs(ids...)
+	return _c
+}
+
+// AddFulfillments adds the "fulfillments" edges to the PaymentOrderFulfillment entity.
+func (_c *PaymentOrderCreate) AddFulfillments(v ...*PaymentOrderFulfillment) *PaymentOrderCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddFulfillmentIDs(ids...)
+}
+
+// AddTransactionIDs adds the "transactions" edge to the TransactionLog entity by IDs.
+func (_c *PaymentOrderCreate) AddTransactionIDs(ids ...uuid.UUID) *PaymentOrderCreate {
+	_c.mutation.AddTransactionIDs(ids...)
+	return _c
+}
+
+// AddTransactions adds the "transactions" edges to the TransactionLog entity.
+func (_c *PaymentOrderCreate) AddTransactions(v ...*TransactionLog) *PaymentOrderCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddTransactionIDs(ids...)
 }
 
 // Mutation returns the PaymentOrderMutation object of the builder.
@@ -438,9 +610,49 @@ func (_c *PaymentOrderCreate) defaults() {
 		v := paymentorder.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
+	if _, ok := _c.mutation.AmountPaid(); !ok {
+		v := paymentorder.DefaultAmountPaid()
+		_c.mutation.SetAmountPaid(v)
+	}
+	if _, ok := _c.mutation.AmountReturned(); !ok {
+		v := paymentorder.DefaultAmountReturned()
+		_c.mutation.SetAmountReturned(v)
+	}
+	if _, ok := _c.mutation.PercentSettled(); !ok {
+		v := paymentorder.DefaultPercentSettled()
+		_c.mutation.SetPercentSettled(v)
+	}
+	if _, ok := _c.mutation.SenderFee(); !ok {
+		v := paymentorder.DefaultSenderFee()
+		_c.mutation.SetSenderFee(v)
+	}
+	if _, ok := _c.mutation.NetworkFee(); !ok {
+		v := paymentorder.DefaultNetworkFee()
+		_c.mutation.SetNetworkFee(v)
+	}
+	if _, ok := _c.mutation.ProtocolFee(); !ok {
+		v := paymentorder.DefaultProtocolFee()
+		_c.mutation.SetProtocolFee(v)
+	}
+	if _, ok := _c.mutation.OrderPercent(); !ok {
+		v := paymentorder.DefaultOrderPercent()
+		_c.mutation.SetOrderPercent(v)
+	}
+	if _, ok := _c.mutation.FeePercent(); !ok {
+		v := paymentorder.DefaultFeePercent()
+		_c.mutation.SetFeePercent(v)
+	}
 	if _, ok := _c.mutation.BlockNumber(); !ok {
 		v := paymentorder.DefaultBlockNumber
 		_c.mutation.SetBlockNumber(v)
+	}
+	if _, ok := _c.mutation.CancellationCount(); !ok {
+		v := paymentorder.DefaultCancellationCount
+		_c.mutation.SetCancellationCount(v)
+	}
+	if _, ok := _c.mutation.CancellationReasons(); !ok {
+		v := paymentorder.DefaultCancellationReasons
+		_c.mutation.SetCancellationReasons(v)
 	}
 	if _, ok := _c.mutation.Status(); !ok {
 		v := paymentorder.DefaultStatus
@@ -467,6 +679,12 @@ func (_c *PaymentOrderCreate) check() error {
 	if _, ok := _c.mutation.Amount(); !ok {
 		return &ValidationError{Name: "amount", err: errors.New(`ent: missing required field "PaymentOrder.amount"`)}
 	}
+	if _, ok := _c.mutation.Rate(); !ok {
+		return &ValidationError{Name: "rate", err: errors.New(`ent: missing required field "PaymentOrder.rate"`)}
+	}
+	if _, ok := _c.mutation.AmountInUsd(); !ok {
+		return &ValidationError{Name: "amount_in_usd", err: errors.New(`ent: missing required field "PaymentOrder.amount_in_usd"`)}
+	}
 	if _, ok := _c.mutation.AmountPaid(); !ok {
 		return &ValidationError{Name: "amount_paid", err: errors.New(`ent: missing required field "PaymentOrder.amount_paid"`)}
 	}
@@ -482,8 +700,14 @@ func (_c *PaymentOrderCreate) check() error {
 	if _, ok := _c.mutation.NetworkFee(); !ok {
 		return &ValidationError{Name: "network_fee", err: errors.New(`ent: missing required field "PaymentOrder.network_fee"`)}
 	}
-	if _, ok := _c.mutation.Rate(); !ok {
-		return &ValidationError{Name: "rate", err: errors.New(`ent: missing required field "PaymentOrder.rate"`)}
+	if _, ok := _c.mutation.ProtocolFee(); !ok {
+		return &ValidationError{Name: "protocol_fee", err: errors.New(`ent: missing required field "PaymentOrder.protocol_fee"`)}
+	}
+	if _, ok := _c.mutation.OrderPercent(); !ok {
+		return &ValidationError{Name: "order_percent", err: errors.New(`ent: missing required field "PaymentOrder.order_percent"`)}
+	}
+	if _, ok := _c.mutation.FeePercent(); !ok {
+		return &ValidationError{Name: "fee_percent", err: errors.New(`ent: missing required field "PaymentOrder.fee_percent"`)}
 	}
 	if v, ok := _c.mutation.TxHash(); ok {
 		if err := paymentorder.TxHashValidator(v); err != nil {
@@ -492,6 +716,11 @@ func (_c *PaymentOrderCreate) check() error {
 	}
 	if _, ok := _c.mutation.BlockNumber(); !ok {
 		return &ValidationError{Name: "block_number", err: errors.New(`ent: missing required field "PaymentOrder.block_number"`)}
+	}
+	if v, ok := _c.mutation.GatewayID(); ok {
+		if err := paymentorder.GatewayIDValidator(v); err != nil {
+			return &ValidationError{Name: "gateway_id", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.gateway_id": %w`, err)}
+		}
 	}
 	if v, ok := _c.mutation.FromAddress(); ok {
 		if err := paymentorder.FromAddressValidator(v); err != nil {
@@ -503,30 +732,48 @@ func (_c *PaymentOrderCreate) check() error {
 			return &ValidationError{Name: "return_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.return_address": %w`, err)}
 		}
 	}
-	if _, ok := _c.mutation.ReceiveAddressText(); !ok {
-		return &ValidationError{Name: "receive_address_text", err: errors.New(`ent: missing required field "PaymentOrder.receive_address_text"`)}
-	}
-	if v, ok := _c.mutation.ReceiveAddressText(); ok {
-		if err := paymentorder.ReceiveAddressTextValidator(v); err != nil {
-			return &ValidationError{Name: "receive_address_text", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.receive_address_text": %w`, err)}
+	if v, ok := _c.mutation.ReceiveAddress(); ok {
+		if err := paymentorder.ReceiveAddressValidator(v); err != nil {
+			return &ValidationError{Name: "receive_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.receive_address": %w`, err)}
 		}
-	}
-	if _, ok := _c.mutation.FeePercent(); !ok {
-		return &ValidationError{Name: "fee_percent", err: errors.New(`ent: missing required field "PaymentOrder.fee_percent"`)}
 	}
 	if v, ok := _c.mutation.FeeAddress(); ok {
 		if err := paymentorder.FeeAddressValidator(v); err != nil {
 			return &ValidationError{Name: "fee_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.fee_address": %w`, err)}
 		}
 	}
-	if v, ok := _c.mutation.GatewayID(); ok {
-		if err := paymentorder.GatewayIDValidator(v); err != nil {
-			return &ValidationError{Name: "gateway_id", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.gateway_id": %w`, err)}
+	if _, ok := _c.mutation.Institution(); !ok {
+		return &ValidationError{Name: "institution", err: errors.New(`ent: missing required field "PaymentOrder.institution"`)}
+	}
+	if v, ok := _c.mutation.Institution(); ok {
+		if err := paymentorder.InstitutionValidator(v); err != nil {
+			return &ValidationError{Name: "institution", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.institution": %w`, err)}
 		}
 	}
-	if v, ok := _c.mutation.MessageHash(); ok {
-		if err := paymentorder.MessageHashValidator(v); err != nil {
-			return &ValidationError{Name: "message_hash", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.message_hash": %w`, err)}
+	if _, ok := _c.mutation.AccountIdentifier(); !ok {
+		return &ValidationError{Name: "account_identifier", err: errors.New(`ent: missing required field "PaymentOrder.account_identifier"`)}
+	}
+	if v, ok := _c.mutation.AccountIdentifier(); ok {
+		if err := paymentorder.AccountIdentifierValidator(v); err != nil {
+			return &ValidationError{Name: "account_identifier", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.account_identifier": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.AccountName(); !ok {
+		return &ValidationError{Name: "account_name", err: errors.New(`ent: missing required field "PaymentOrder.account_name"`)}
+	}
+	if v, ok := _c.mutation.AccountName(); ok {
+		if err := paymentorder.AccountNameValidator(v); err != nil {
+			return &ValidationError{Name: "account_name", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.account_name": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.Memo(); ok {
+		if err := paymentorder.MemoValidator(v); err != nil {
+			return &ValidationError{Name: "memo", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.memo": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.Sender(); ok {
+		if err := paymentorder.SenderValidator(v); err != nil {
+			return &ValidationError{Name: "sender", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.sender": %w`, err)}
 		}
 	}
 	if v, ok := _c.mutation.Reference(); ok {
@@ -541,9 +788,6 @@ func (_c *PaymentOrderCreate) check() error {
 		if err := paymentorder.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.status": %w`, err)}
 		}
-	}
-	if _, ok := _c.mutation.AmountInUsd(); !ok {
-		return &ValidationError{Name: "amount_in_usd", err: errors.New(`ent: missing required field "PaymentOrder.amount_in_usd"`)}
 	}
 	if _, ok := _c.mutation.OrderType(); !ok {
 		return &ValidationError{Name: "order_type", err: errors.New(`ent: missing required field "PaymentOrder.order_type"`)}
@@ -604,6 +848,14 @@ func (_c *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec)
 		_spec.SetField(paymentorder.FieldAmount, field.TypeFloat64, value)
 		_node.Amount = value
 	}
+	if value, ok := _c.mutation.Rate(); ok {
+		_spec.SetField(paymentorder.FieldRate, field.TypeFloat64, value)
+		_node.Rate = value
+	}
+	if value, ok := _c.mutation.AmountInUsd(); ok {
+		_spec.SetField(paymentorder.FieldAmountInUsd, field.TypeFloat64, value)
+		_node.AmountInUsd = value
+	}
 	if value, ok := _c.mutation.AmountPaid(); ok {
 		_spec.SetField(paymentorder.FieldAmountPaid, field.TypeFloat64, value)
 		_node.AmountPaid = value
@@ -624,9 +876,17 @@ func (_c *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec)
 		_spec.SetField(paymentorder.FieldNetworkFee, field.TypeFloat64, value)
 		_node.NetworkFee = value
 	}
-	if value, ok := _c.mutation.Rate(); ok {
-		_spec.SetField(paymentorder.FieldRate, field.TypeFloat64, value)
-		_node.Rate = value
+	if value, ok := _c.mutation.ProtocolFee(); ok {
+		_spec.SetField(paymentorder.FieldProtocolFee, field.TypeFloat64, value)
+		_node.ProtocolFee = value
+	}
+	if value, ok := _c.mutation.OrderPercent(); ok {
+		_spec.SetField(paymentorder.FieldOrderPercent, field.TypeFloat64, value)
+		_node.OrderPercent = value
+	}
+	if value, ok := _c.mutation.FeePercent(); ok {
+		_spec.SetField(paymentorder.FieldFeePercent, field.TypeFloat64, value)
+		_node.FeePercent = value
 	}
 	if value, ok := _c.mutation.TxHash(); ok {
 		_spec.SetField(paymentorder.FieldTxHash, field.TypeString, value)
@@ -636,6 +896,14 @@ func (_c *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec)
 		_spec.SetField(paymentorder.FieldBlockNumber, field.TypeInt64, value)
 		_node.BlockNumber = value
 	}
+	if value, ok := _c.mutation.MessageHash(); ok {
+		_spec.SetField(paymentorder.FieldMessageHash, field.TypeString, value)
+		_node.MessageHash = value
+	}
+	if value, ok := _c.mutation.GatewayID(); ok {
+		_spec.SetField(paymentorder.FieldGatewayID, field.TypeString, value)
+		_node.GatewayID = value
+	}
 	if value, ok := _c.mutation.FromAddress(); ok {
 		_spec.SetField(paymentorder.FieldFromAddress, field.TypeString, value)
 		_node.FromAddress = value
@@ -644,58 +912,65 @@ func (_c *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec)
 		_spec.SetField(paymentorder.FieldReturnAddress, field.TypeString, value)
 		_node.ReturnAddress = value
 	}
-	if value, ok := _c.mutation.ReceiveAddressText(); ok {
-		_spec.SetField(paymentorder.FieldReceiveAddressText, field.TypeString, value)
-		_node.ReceiveAddressText = value
+	if value, ok := _c.mutation.ReceiveAddress(); ok {
+		_spec.SetField(paymentorder.FieldReceiveAddress, field.TypeString, value)
+		_node.ReceiveAddress = value
 	}
-	if value, ok := _c.mutation.FeePercent(); ok {
-		_spec.SetField(paymentorder.FieldFeePercent, field.TypeFloat64, value)
-		_node.FeePercent = value
+	if value, ok := _c.mutation.ReceiveAddressSalt(); ok {
+		_spec.SetField(paymentorder.FieldReceiveAddressSalt, field.TypeBytes, value)
+		_node.ReceiveAddressSalt = value
+	}
+	if value, ok := _c.mutation.ReceiveAddressExpiry(); ok {
+		_spec.SetField(paymentorder.FieldReceiveAddressExpiry, field.TypeTime, value)
+		_node.ReceiveAddressExpiry = value
 	}
 	if value, ok := _c.mutation.FeeAddress(); ok {
 		_spec.SetField(paymentorder.FieldFeeAddress, field.TypeString, value)
 		_node.FeeAddress = value
 	}
-	if value, ok := _c.mutation.GatewayID(); ok {
-		_spec.SetField(paymentorder.FieldGatewayID, field.TypeString, value)
-		_node.GatewayID = value
+	if value, ok := _c.mutation.Institution(); ok {
+		_spec.SetField(paymentorder.FieldInstitution, field.TypeString, value)
+		_node.Institution = value
 	}
-	if value, ok := _c.mutation.MessageHash(); ok {
-		_spec.SetField(paymentorder.FieldMessageHash, field.TypeString, value)
-		_node.MessageHash = value
+	if value, ok := _c.mutation.AccountIdentifier(); ok {
+		_spec.SetField(paymentorder.FieldAccountIdentifier, field.TypeString, value)
+		_node.AccountIdentifier = value
+	}
+	if value, ok := _c.mutation.AccountName(); ok {
+		_spec.SetField(paymentorder.FieldAccountName, field.TypeString, value)
+		_node.AccountName = value
+	}
+	if value, ok := _c.mutation.Memo(); ok {
+		_spec.SetField(paymentorder.FieldMemo, field.TypeString, value)
+		_node.Memo = value
+	}
+	if value, ok := _c.mutation.Metadata(); ok {
+		_spec.SetField(paymentorder.FieldMetadata, field.TypeJSON, value)
+		_node.Metadata = value
+	}
+	if value, ok := _c.mutation.Sender(); ok {
+		_spec.SetField(paymentorder.FieldSender, field.TypeString, value)
+		_node.Sender = value
 	}
 	if value, ok := _c.mutation.Reference(); ok {
 		_spec.SetField(paymentorder.FieldReference, field.TypeString, value)
 		_node.Reference = value
 	}
+	if value, ok := _c.mutation.CancellationCount(); ok {
+		_spec.SetField(paymentorder.FieldCancellationCount, field.TypeInt, value)
+		_node.CancellationCount = value
+	}
+	if value, ok := _c.mutation.CancellationReasons(); ok {
+		_spec.SetField(paymentorder.FieldCancellationReasons, field.TypeJSON, value)
+		_node.CancellationReasons = value
+	}
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(paymentorder.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
-	if value, ok := _c.mutation.AmountInUsd(); ok {
-		_spec.SetField(paymentorder.FieldAmountInUsd, field.TypeFloat64, value)
-		_node.AmountInUsd = value
-	}
 	if value, ok := _c.mutation.OrderType(); ok {
 		_spec.SetField(paymentorder.FieldOrderType, field.TypeEnum, value)
 		_node.OrderType = value
-	}
-	if nodes := _c.mutation.SenderProfileIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   paymentorder.SenderProfileTable,
-			Columns: []string{paymentorder.SenderProfileColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(senderprofile.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_node.sender_profile_payment_orders = &nodes[0]
-		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.TokenIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -714,32 +989,32 @@ func (_c *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec)
 		_node.token_payment_orders = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := _c.mutation.LinkedAddressIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.SenderProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   paymentorder.LinkedAddressTable,
-			Columns: []string{paymentorder.LinkedAddressColumn},
+			Table:   paymentorder.SenderProfileTable,
+			Columns: []string{paymentorder.SenderProfileColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(linkedaddress.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(senderprofile.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.linked_address_payment_orders = &nodes[0]
+		_node.sender_profile_payment_orders = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := _c.mutation.ReceiveAddressIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   paymentorder.ReceiveAddressTable,
-			Columns: []string{paymentorder.ReceiveAddressColumn},
+			Table:   paymentorder.PaymentWebhookTable,
+			Columns: []string{paymentorder.PaymentWebhookColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(receiveaddress.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -747,15 +1022,49 @@ func (_c *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec)
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := _c.mutation.RecipientIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.ProviderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: false,
-			Table:   paymentorder.RecipientTable,
-			Columns: []string{paymentorder.RecipientColumn},
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   paymentorder.ProviderTable,
+			Columns: []string{paymentorder.ProviderColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(paymentorderrecipient.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.provider_profile_assigned_orders = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ProvisionBucketIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   paymentorder.ProvisionBucketTable,
+			Columns: []string{paymentorder.ProvisionBucketColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(provisionbucket.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.provision_bucket_payment_orders = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.FulfillmentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.FulfillmentsTable,
+			Columns: []string{paymentorder.FulfillmentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentorderfulfillment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -772,22 +1081,6 @@ func (_c *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec)
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(transactionlog.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: false,
-			Table:   paymentorder.PaymentWebhookTable,
-			Columns: []string{paymentorder.PaymentWebhookColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -874,6 +1167,42 @@ func (u *PaymentOrderUpsert) UpdateAmount() *PaymentOrderUpsert {
 // AddAmount adds v to the "amount" field.
 func (u *PaymentOrderUpsert) AddAmount(v decimal.Decimal) *PaymentOrderUpsert {
 	u.Add(paymentorder.FieldAmount, v)
+	return u
+}
+
+// SetRate sets the "rate" field.
+func (u *PaymentOrderUpsert) SetRate(v decimal.Decimal) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldRate, v)
+	return u
+}
+
+// UpdateRate sets the "rate" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateRate() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldRate)
+	return u
+}
+
+// AddRate adds v to the "rate" field.
+func (u *PaymentOrderUpsert) AddRate(v decimal.Decimal) *PaymentOrderUpsert {
+	u.Add(paymentorder.FieldRate, v)
+	return u
+}
+
+// SetAmountInUsd sets the "amount_in_usd" field.
+func (u *PaymentOrderUpsert) SetAmountInUsd(v decimal.Decimal) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldAmountInUsd, v)
+	return u
+}
+
+// UpdateAmountInUsd sets the "amount_in_usd" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateAmountInUsd() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldAmountInUsd)
+	return u
+}
+
+// AddAmountInUsd adds v to the "amount_in_usd" field.
+func (u *PaymentOrderUpsert) AddAmountInUsd(v decimal.Decimal) *PaymentOrderUpsert {
+	u.Add(paymentorder.FieldAmountInUsd, v)
 	return u
 }
 
@@ -967,21 +1296,57 @@ func (u *PaymentOrderUpsert) AddNetworkFee(v decimal.Decimal) *PaymentOrderUpser
 	return u
 }
 
-// SetRate sets the "rate" field.
-func (u *PaymentOrderUpsert) SetRate(v decimal.Decimal) *PaymentOrderUpsert {
-	u.Set(paymentorder.FieldRate, v)
+// SetProtocolFee sets the "protocol_fee" field.
+func (u *PaymentOrderUpsert) SetProtocolFee(v decimal.Decimal) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldProtocolFee, v)
 	return u
 }
 
-// UpdateRate sets the "rate" field to the value that was provided on create.
-func (u *PaymentOrderUpsert) UpdateRate() *PaymentOrderUpsert {
-	u.SetExcluded(paymentorder.FieldRate)
+// UpdateProtocolFee sets the "protocol_fee" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateProtocolFee() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldProtocolFee)
 	return u
 }
 
-// AddRate adds v to the "rate" field.
-func (u *PaymentOrderUpsert) AddRate(v decimal.Decimal) *PaymentOrderUpsert {
-	u.Add(paymentorder.FieldRate, v)
+// AddProtocolFee adds v to the "protocol_fee" field.
+func (u *PaymentOrderUpsert) AddProtocolFee(v decimal.Decimal) *PaymentOrderUpsert {
+	u.Add(paymentorder.FieldProtocolFee, v)
+	return u
+}
+
+// SetOrderPercent sets the "order_percent" field.
+func (u *PaymentOrderUpsert) SetOrderPercent(v decimal.Decimal) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldOrderPercent, v)
+	return u
+}
+
+// UpdateOrderPercent sets the "order_percent" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateOrderPercent() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldOrderPercent)
+	return u
+}
+
+// AddOrderPercent adds v to the "order_percent" field.
+func (u *PaymentOrderUpsert) AddOrderPercent(v decimal.Decimal) *PaymentOrderUpsert {
+	u.Add(paymentorder.FieldOrderPercent, v)
+	return u
+}
+
+// SetFeePercent sets the "fee_percent" field.
+func (u *PaymentOrderUpsert) SetFeePercent(v decimal.Decimal) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldFeePercent, v)
+	return u
+}
+
+// UpdateFeePercent sets the "fee_percent" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateFeePercent() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldFeePercent)
+	return u
+}
+
+// AddFeePercent adds v to the "fee_percent" field.
+func (u *PaymentOrderUpsert) AddFeePercent(v decimal.Decimal) *PaymentOrderUpsert {
+	u.Add(paymentorder.FieldFeePercent, v)
 	return u
 }
 
@@ -1021,6 +1386,42 @@ func (u *PaymentOrderUpsert) AddBlockNumber(v int64) *PaymentOrderUpsert {
 	return u
 }
 
+// SetMessageHash sets the "message_hash" field.
+func (u *PaymentOrderUpsert) SetMessageHash(v string) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldMessageHash, v)
+	return u
+}
+
+// UpdateMessageHash sets the "message_hash" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateMessageHash() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldMessageHash)
+	return u
+}
+
+// ClearMessageHash clears the value of the "message_hash" field.
+func (u *PaymentOrderUpsert) ClearMessageHash() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldMessageHash)
+	return u
+}
+
+// SetGatewayID sets the "gateway_id" field.
+func (u *PaymentOrderUpsert) SetGatewayID(v string) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldGatewayID, v)
+	return u
+}
+
+// UpdateGatewayID sets the "gateway_id" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateGatewayID() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldGatewayID)
+	return u
+}
+
+// ClearGatewayID clears the value of the "gateway_id" field.
+func (u *PaymentOrderUpsert) ClearGatewayID() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldGatewayID)
+	return u
+}
+
 // SetFromAddress sets the "from_address" field.
 func (u *PaymentOrderUpsert) SetFromAddress(v string) *PaymentOrderUpsert {
 	u.Set(paymentorder.FieldFromAddress, v)
@@ -1057,33 +1458,57 @@ func (u *PaymentOrderUpsert) ClearReturnAddress() *PaymentOrderUpsert {
 	return u
 }
 
-// SetReceiveAddressText sets the "receive_address_text" field.
-func (u *PaymentOrderUpsert) SetReceiveAddressText(v string) *PaymentOrderUpsert {
-	u.Set(paymentorder.FieldReceiveAddressText, v)
+// SetReceiveAddress sets the "receive_address" field.
+func (u *PaymentOrderUpsert) SetReceiveAddress(v string) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldReceiveAddress, v)
 	return u
 }
 
-// UpdateReceiveAddressText sets the "receive_address_text" field to the value that was provided on create.
-func (u *PaymentOrderUpsert) UpdateReceiveAddressText() *PaymentOrderUpsert {
-	u.SetExcluded(paymentorder.FieldReceiveAddressText)
+// UpdateReceiveAddress sets the "receive_address" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateReceiveAddress() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldReceiveAddress)
 	return u
 }
 
-// SetFeePercent sets the "fee_percent" field.
-func (u *PaymentOrderUpsert) SetFeePercent(v decimal.Decimal) *PaymentOrderUpsert {
-	u.Set(paymentorder.FieldFeePercent, v)
+// ClearReceiveAddress clears the value of the "receive_address" field.
+func (u *PaymentOrderUpsert) ClearReceiveAddress() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldReceiveAddress)
 	return u
 }
 
-// UpdateFeePercent sets the "fee_percent" field to the value that was provided on create.
-func (u *PaymentOrderUpsert) UpdateFeePercent() *PaymentOrderUpsert {
-	u.SetExcluded(paymentorder.FieldFeePercent)
+// SetReceiveAddressSalt sets the "receive_address_salt" field.
+func (u *PaymentOrderUpsert) SetReceiveAddressSalt(v []byte) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldReceiveAddressSalt, v)
 	return u
 }
 
-// AddFeePercent adds v to the "fee_percent" field.
-func (u *PaymentOrderUpsert) AddFeePercent(v decimal.Decimal) *PaymentOrderUpsert {
-	u.Add(paymentorder.FieldFeePercent, v)
+// UpdateReceiveAddressSalt sets the "receive_address_salt" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateReceiveAddressSalt() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldReceiveAddressSalt)
+	return u
+}
+
+// ClearReceiveAddressSalt clears the value of the "receive_address_salt" field.
+func (u *PaymentOrderUpsert) ClearReceiveAddressSalt() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldReceiveAddressSalt)
+	return u
+}
+
+// SetReceiveAddressExpiry sets the "receive_address_expiry" field.
+func (u *PaymentOrderUpsert) SetReceiveAddressExpiry(v time.Time) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldReceiveAddressExpiry, v)
+	return u
+}
+
+// UpdateReceiveAddressExpiry sets the "receive_address_expiry" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateReceiveAddressExpiry() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldReceiveAddressExpiry)
+	return u
+}
+
+// ClearReceiveAddressExpiry clears the value of the "receive_address_expiry" field.
+func (u *PaymentOrderUpsert) ClearReceiveAddressExpiry() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldReceiveAddressExpiry)
 	return u
 }
 
@@ -1105,39 +1530,93 @@ func (u *PaymentOrderUpsert) ClearFeeAddress() *PaymentOrderUpsert {
 	return u
 }
 
-// SetGatewayID sets the "gateway_id" field.
-func (u *PaymentOrderUpsert) SetGatewayID(v string) *PaymentOrderUpsert {
-	u.Set(paymentorder.FieldGatewayID, v)
+// SetInstitution sets the "institution" field.
+func (u *PaymentOrderUpsert) SetInstitution(v string) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldInstitution, v)
 	return u
 }
 
-// UpdateGatewayID sets the "gateway_id" field to the value that was provided on create.
-func (u *PaymentOrderUpsert) UpdateGatewayID() *PaymentOrderUpsert {
-	u.SetExcluded(paymentorder.FieldGatewayID)
+// UpdateInstitution sets the "institution" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateInstitution() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldInstitution)
 	return u
 }
 
-// ClearGatewayID clears the value of the "gateway_id" field.
-func (u *PaymentOrderUpsert) ClearGatewayID() *PaymentOrderUpsert {
-	u.SetNull(paymentorder.FieldGatewayID)
+// SetAccountIdentifier sets the "account_identifier" field.
+func (u *PaymentOrderUpsert) SetAccountIdentifier(v string) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldAccountIdentifier, v)
 	return u
 }
 
-// SetMessageHash sets the "message_hash" field.
-func (u *PaymentOrderUpsert) SetMessageHash(v string) *PaymentOrderUpsert {
-	u.Set(paymentorder.FieldMessageHash, v)
+// UpdateAccountIdentifier sets the "account_identifier" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateAccountIdentifier() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldAccountIdentifier)
 	return u
 }
 
-// UpdateMessageHash sets the "message_hash" field to the value that was provided on create.
-func (u *PaymentOrderUpsert) UpdateMessageHash() *PaymentOrderUpsert {
-	u.SetExcluded(paymentorder.FieldMessageHash)
+// SetAccountName sets the "account_name" field.
+func (u *PaymentOrderUpsert) SetAccountName(v string) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldAccountName, v)
 	return u
 }
 
-// ClearMessageHash clears the value of the "message_hash" field.
-func (u *PaymentOrderUpsert) ClearMessageHash() *PaymentOrderUpsert {
-	u.SetNull(paymentorder.FieldMessageHash)
+// UpdateAccountName sets the "account_name" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateAccountName() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldAccountName)
+	return u
+}
+
+// SetMemo sets the "memo" field.
+func (u *PaymentOrderUpsert) SetMemo(v string) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldMemo, v)
+	return u
+}
+
+// UpdateMemo sets the "memo" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateMemo() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldMemo)
+	return u
+}
+
+// ClearMemo clears the value of the "memo" field.
+func (u *PaymentOrderUpsert) ClearMemo() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldMemo)
+	return u
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *PaymentOrderUpsert) SetMetadata(v map[string]interface{}) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldMetadata, v)
+	return u
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateMetadata() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldMetadata)
+	return u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *PaymentOrderUpsert) ClearMetadata() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldMetadata)
+	return u
+}
+
+// SetSender sets the "sender" field.
+func (u *PaymentOrderUpsert) SetSender(v string) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldSender, v)
+	return u
+}
+
+// UpdateSender sets the "sender" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateSender() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldSender)
+	return u
+}
+
+// ClearSender clears the value of the "sender" field.
+func (u *PaymentOrderUpsert) ClearSender() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldSender)
 	return u
 }
 
@@ -1159,6 +1638,48 @@ func (u *PaymentOrderUpsert) ClearReference() *PaymentOrderUpsert {
 	return u
 }
 
+// SetCancellationCount sets the "cancellation_count" field.
+func (u *PaymentOrderUpsert) SetCancellationCount(v int) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldCancellationCount, v)
+	return u
+}
+
+// UpdateCancellationCount sets the "cancellation_count" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateCancellationCount() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldCancellationCount)
+	return u
+}
+
+// AddCancellationCount adds v to the "cancellation_count" field.
+func (u *PaymentOrderUpsert) AddCancellationCount(v int) *PaymentOrderUpsert {
+	u.Add(paymentorder.FieldCancellationCount, v)
+	return u
+}
+
+// ClearCancellationCount clears the value of the "cancellation_count" field.
+func (u *PaymentOrderUpsert) ClearCancellationCount() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldCancellationCount)
+	return u
+}
+
+// SetCancellationReasons sets the "cancellation_reasons" field.
+func (u *PaymentOrderUpsert) SetCancellationReasons(v []string) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldCancellationReasons, v)
+	return u
+}
+
+// UpdateCancellationReasons sets the "cancellation_reasons" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateCancellationReasons() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldCancellationReasons)
+	return u
+}
+
+// ClearCancellationReasons clears the value of the "cancellation_reasons" field.
+func (u *PaymentOrderUpsert) ClearCancellationReasons() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldCancellationReasons)
+	return u
+}
+
 // SetStatus sets the "status" field.
 func (u *PaymentOrderUpsert) SetStatus(v paymentorder.Status) *PaymentOrderUpsert {
 	u.Set(paymentorder.FieldStatus, v)
@@ -1168,24 +1689,6 @@ func (u *PaymentOrderUpsert) SetStatus(v paymentorder.Status) *PaymentOrderUpser
 // UpdateStatus sets the "status" field to the value that was provided on create.
 func (u *PaymentOrderUpsert) UpdateStatus() *PaymentOrderUpsert {
 	u.SetExcluded(paymentorder.FieldStatus)
-	return u
-}
-
-// SetAmountInUsd sets the "amount_in_usd" field.
-func (u *PaymentOrderUpsert) SetAmountInUsd(v decimal.Decimal) *PaymentOrderUpsert {
-	u.Set(paymentorder.FieldAmountInUsd, v)
-	return u
-}
-
-// UpdateAmountInUsd sets the "amount_in_usd" field to the value that was provided on create.
-func (u *PaymentOrderUpsert) UpdateAmountInUsd() *PaymentOrderUpsert {
-	u.SetExcluded(paymentorder.FieldAmountInUsd)
-	return u
-}
-
-// AddAmountInUsd adds v to the "amount_in_usd" field.
-func (u *PaymentOrderUpsert) AddAmountInUsd(v decimal.Decimal) *PaymentOrderUpsert {
-	u.Add(paymentorder.FieldAmountInUsd, v)
 	return u
 }
 
@@ -1284,6 +1787,48 @@ func (u *PaymentOrderUpsertOne) AddAmount(v decimal.Decimal) *PaymentOrderUpsert
 func (u *PaymentOrderUpsertOne) UpdateAmount() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.UpdateAmount()
+	})
+}
+
+// SetRate sets the "rate" field.
+func (u *PaymentOrderUpsertOne) SetRate(v decimal.Decimal) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetRate(v)
+	})
+}
+
+// AddRate adds v to the "rate" field.
+func (u *PaymentOrderUpsertOne) AddRate(v decimal.Decimal) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.AddRate(v)
+	})
+}
+
+// UpdateRate sets the "rate" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateRate() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateRate()
+	})
+}
+
+// SetAmountInUsd sets the "amount_in_usd" field.
+func (u *PaymentOrderUpsertOne) SetAmountInUsd(v decimal.Decimal) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetAmountInUsd(v)
+	})
+}
+
+// AddAmountInUsd adds v to the "amount_in_usd" field.
+func (u *PaymentOrderUpsertOne) AddAmountInUsd(v decimal.Decimal) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.AddAmountInUsd(v)
+	})
+}
+
+// UpdateAmountInUsd sets the "amount_in_usd" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateAmountInUsd() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateAmountInUsd()
 	})
 }
 
@@ -1392,24 +1937,66 @@ func (u *PaymentOrderUpsertOne) UpdateNetworkFee() *PaymentOrderUpsertOne {
 	})
 }
 
-// SetRate sets the "rate" field.
-func (u *PaymentOrderUpsertOne) SetRate(v decimal.Decimal) *PaymentOrderUpsertOne {
+// SetProtocolFee sets the "protocol_fee" field.
+func (u *PaymentOrderUpsertOne) SetProtocolFee(v decimal.Decimal) *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.SetRate(v)
+		s.SetProtocolFee(v)
 	})
 }
 
-// AddRate adds v to the "rate" field.
-func (u *PaymentOrderUpsertOne) AddRate(v decimal.Decimal) *PaymentOrderUpsertOne {
+// AddProtocolFee adds v to the "protocol_fee" field.
+func (u *PaymentOrderUpsertOne) AddProtocolFee(v decimal.Decimal) *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.AddRate(v)
+		s.AddProtocolFee(v)
 	})
 }
 
-// UpdateRate sets the "rate" field to the value that was provided on create.
-func (u *PaymentOrderUpsertOne) UpdateRate() *PaymentOrderUpsertOne {
+// UpdateProtocolFee sets the "protocol_fee" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateProtocolFee() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.UpdateRate()
+		s.UpdateProtocolFee()
+	})
+}
+
+// SetOrderPercent sets the "order_percent" field.
+func (u *PaymentOrderUpsertOne) SetOrderPercent(v decimal.Decimal) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetOrderPercent(v)
+	})
+}
+
+// AddOrderPercent adds v to the "order_percent" field.
+func (u *PaymentOrderUpsertOne) AddOrderPercent(v decimal.Decimal) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.AddOrderPercent(v)
+	})
+}
+
+// UpdateOrderPercent sets the "order_percent" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateOrderPercent() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateOrderPercent()
+	})
+}
+
+// SetFeePercent sets the "fee_percent" field.
+func (u *PaymentOrderUpsertOne) SetFeePercent(v decimal.Decimal) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetFeePercent(v)
+	})
+}
+
+// AddFeePercent adds v to the "fee_percent" field.
+func (u *PaymentOrderUpsertOne) AddFeePercent(v decimal.Decimal) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.AddFeePercent(v)
+	})
+}
+
+// UpdateFeePercent sets the "fee_percent" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateFeePercent() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateFeePercent()
 	})
 }
 
@@ -1455,6 +2042,48 @@ func (u *PaymentOrderUpsertOne) UpdateBlockNumber() *PaymentOrderUpsertOne {
 	})
 }
 
+// SetMessageHash sets the "message_hash" field.
+func (u *PaymentOrderUpsertOne) SetMessageHash(v string) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetMessageHash(v)
+	})
+}
+
+// UpdateMessageHash sets the "message_hash" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateMessageHash() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateMessageHash()
+	})
+}
+
+// ClearMessageHash clears the value of the "message_hash" field.
+func (u *PaymentOrderUpsertOne) ClearMessageHash() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearMessageHash()
+	})
+}
+
+// SetGatewayID sets the "gateway_id" field.
+func (u *PaymentOrderUpsertOne) SetGatewayID(v string) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetGatewayID(v)
+	})
+}
+
+// UpdateGatewayID sets the "gateway_id" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateGatewayID() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateGatewayID()
+	})
+}
+
+// ClearGatewayID clears the value of the "gateway_id" field.
+func (u *PaymentOrderUpsertOne) ClearGatewayID() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearGatewayID()
+	})
+}
+
 // SetFromAddress sets the "from_address" field.
 func (u *PaymentOrderUpsertOne) SetFromAddress(v string) *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
@@ -1497,38 +2126,66 @@ func (u *PaymentOrderUpsertOne) ClearReturnAddress() *PaymentOrderUpsertOne {
 	})
 }
 
-// SetReceiveAddressText sets the "receive_address_text" field.
-func (u *PaymentOrderUpsertOne) SetReceiveAddressText(v string) *PaymentOrderUpsertOne {
+// SetReceiveAddress sets the "receive_address" field.
+func (u *PaymentOrderUpsertOne) SetReceiveAddress(v string) *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.SetReceiveAddressText(v)
+		s.SetReceiveAddress(v)
 	})
 }
 
-// UpdateReceiveAddressText sets the "receive_address_text" field to the value that was provided on create.
-func (u *PaymentOrderUpsertOne) UpdateReceiveAddressText() *PaymentOrderUpsertOne {
+// UpdateReceiveAddress sets the "receive_address" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateReceiveAddress() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.UpdateReceiveAddressText()
+		s.UpdateReceiveAddress()
 	})
 }
 
-// SetFeePercent sets the "fee_percent" field.
-func (u *PaymentOrderUpsertOne) SetFeePercent(v decimal.Decimal) *PaymentOrderUpsertOne {
+// ClearReceiveAddress clears the value of the "receive_address" field.
+func (u *PaymentOrderUpsertOne) ClearReceiveAddress() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.SetFeePercent(v)
+		s.ClearReceiveAddress()
 	})
 }
 
-// AddFeePercent adds v to the "fee_percent" field.
-func (u *PaymentOrderUpsertOne) AddFeePercent(v decimal.Decimal) *PaymentOrderUpsertOne {
+// SetReceiveAddressSalt sets the "receive_address_salt" field.
+func (u *PaymentOrderUpsertOne) SetReceiveAddressSalt(v []byte) *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.AddFeePercent(v)
+		s.SetReceiveAddressSalt(v)
 	})
 }
 
-// UpdateFeePercent sets the "fee_percent" field to the value that was provided on create.
-func (u *PaymentOrderUpsertOne) UpdateFeePercent() *PaymentOrderUpsertOne {
+// UpdateReceiveAddressSalt sets the "receive_address_salt" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateReceiveAddressSalt() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.UpdateFeePercent()
+		s.UpdateReceiveAddressSalt()
+	})
+}
+
+// ClearReceiveAddressSalt clears the value of the "receive_address_salt" field.
+func (u *PaymentOrderUpsertOne) ClearReceiveAddressSalt() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearReceiveAddressSalt()
+	})
+}
+
+// SetReceiveAddressExpiry sets the "receive_address_expiry" field.
+func (u *PaymentOrderUpsertOne) SetReceiveAddressExpiry(v time.Time) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetReceiveAddressExpiry(v)
+	})
+}
+
+// UpdateReceiveAddressExpiry sets the "receive_address_expiry" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateReceiveAddressExpiry() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateReceiveAddressExpiry()
+	})
+}
+
+// ClearReceiveAddressExpiry clears the value of the "receive_address_expiry" field.
+func (u *PaymentOrderUpsertOne) ClearReceiveAddressExpiry() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearReceiveAddressExpiry()
 	})
 }
 
@@ -1553,45 +2210,108 @@ func (u *PaymentOrderUpsertOne) ClearFeeAddress() *PaymentOrderUpsertOne {
 	})
 }
 
-// SetGatewayID sets the "gateway_id" field.
-func (u *PaymentOrderUpsertOne) SetGatewayID(v string) *PaymentOrderUpsertOne {
+// SetInstitution sets the "institution" field.
+func (u *PaymentOrderUpsertOne) SetInstitution(v string) *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.SetGatewayID(v)
+		s.SetInstitution(v)
 	})
 }
 
-// UpdateGatewayID sets the "gateway_id" field to the value that was provided on create.
-func (u *PaymentOrderUpsertOne) UpdateGatewayID() *PaymentOrderUpsertOne {
+// UpdateInstitution sets the "institution" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateInstitution() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.UpdateGatewayID()
+		s.UpdateInstitution()
 	})
 }
 
-// ClearGatewayID clears the value of the "gateway_id" field.
-func (u *PaymentOrderUpsertOne) ClearGatewayID() *PaymentOrderUpsertOne {
+// SetAccountIdentifier sets the "account_identifier" field.
+func (u *PaymentOrderUpsertOne) SetAccountIdentifier(v string) *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.ClearGatewayID()
+		s.SetAccountIdentifier(v)
 	})
 }
 
-// SetMessageHash sets the "message_hash" field.
-func (u *PaymentOrderUpsertOne) SetMessageHash(v string) *PaymentOrderUpsertOne {
+// UpdateAccountIdentifier sets the "account_identifier" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateAccountIdentifier() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.SetMessageHash(v)
+		s.UpdateAccountIdentifier()
 	})
 }
 
-// UpdateMessageHash sets the "message_hash" field to the value that was provided on create.
-func (u *PaymentOrderUpsertOne) UpdateMessageHash() *PaymentOrderUpsertOne {
+// SetAccountName sets the "account_name" field.
+func (u *PaymentOrderUpsertOne) SetAccountName(v string) *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.UpdateMessageHash()
+		s.SetAccountName(v)
 	})
 }
 
-// ClearMessageHash clears the value of the "message_hash" field.
-func (u *PaymentOrderUpsertOne) ClearMessageHash() *PaymentOrderUpsertOne {
+// UpdateAccountName sets the "account_name" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateAccountName() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.ClearMessageHash()
+		s.UpdateAccountName()
+	})
+}
+
+// SetMemo sets the "memo" field.
+func (u *PaymentOrderUpsertOne) SetMemo(v string) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetMemo(v)
+	})
+}
+
+// UpdateMemo sets the "memo" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateMemo() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateMemo()
+	})
+}
+
+// ClearMemo clears the value of the "memo" field.
+func (u *PaymentOrderUpsertOne) ClearMemo() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearMemo()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *PaymentOrderUpsertOne) SetMetadata(v map[string]interface{}) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateMetadata() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *PaymentOrderUpsertOne) ClearMetadata() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearMetadata()
+	})
+}
+
+// SetSender sets the "sender" field.
+func (u *PaymentOrderUpsertOne) SetSender(v string) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetSender(v)
+	})
+}
+
+// UpdateSender sets the "sender" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateSender() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateSender()
+	})
+}
+
+// ClearSender clears the value of the "sender" field.
+func (u *PaymentOrderUpsertOne) ClearSender() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearSender()
 	})
 }
 
@@ -1616,6 +2336,55 @@ func (u *PaymentOrderUpsertOne) ClearReference() *PaymentOrderUpsertOne {
 	})
 }
 
+// SetCancellationCount sets the "cancellation_count" field.
+func (u *PaymentOrderUpsertOne) SetCancellationCount(v int) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetCancellationCount(v)
+	})
+}
+
+// AddCancellationCount adds v to the "cancellation_count" field.
+func (u *PaymentOrderUpsertOne) AddCancellationCount(v int) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.AddCancellationCount(v)
+	})
+}
+
+// UpdateCancellationCount sets the "cancellation_count" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateCancellationCount() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateCancellationCount()
+	})
+}
+
+// ClearCancellationCount clears the value of the "cancellation_count" field.
+func (u *PaymentOrderUpsertOne) ClearCancellationCount() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearCancellationCount()
+	})
+}
+
+// SetCancellationReasons sets the "cancellation_reasons" field.
+func (u *PaymentOrderUpsertOne) SetCancellationReasons(v []string) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetCancellationReasons(v)
+	})
+}
+
+// UpdateCancellationReasons sets the "cancellation_reasons" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateCancellationReasons() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateCancellationReasons()
+	})
+}
+
+// ClearCancellationReasons clears the value of the "cancellation_reasons" field.
+func (u *PaymentOrderUpsertOne) ClearCancellationReasons() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearCancellationReasons()
+	})
+}
+
 // SetStatus sets the "status" field.
 func (u *PaymentOrderUpsertOne) SetStatus(v paymentorder.Status) *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
@@ -1627,27 +2396,6 @@ func (u *PaymentOrderUpsertOne) SetStatus(v paymentorder.Status) *PaymentOrderUp
 func (u *PaymentOrderUpsertOne) UpdateStatus() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.UpdateStatus()
-	})
-}
-
-// SetAmountInUsd sets the "amount_in_usd" field.
-func (u *PaymentOrderUpsertOne) SetAmountInUsd(v decimal.Decimal) *PaymentOrderUpsertOne {
-	return u.Update(func(s *PaymentOrderUpsert) {
-		s.SetAmountInUsd(v)
-	})
-}
-
-// AddAmountInUsd adds v to the "amount_in_usd" field.
-func (u *PaymentOrderUpsertOne) AddAmountInUsd(v decimal.Decimal) *PaymentOrderUpsertOne {
-	return u.Update(func(s *PaymentOrderUpsert) {
-		s.AddAmountInUsd(v)
-	})
-}
-
-// UpdateAmountInUsd sets the "amount_in_usd" field to the value that was provided on create.
-func (u *PaymentOrderUpsertOne) UpdateAmountInUsd() *PaymentOrderUpsertOne {
-	return u.Update(func(s *PaymentOrderUpsert) {
-		s.UpdateAmountInUsd()
 	})
 }
 
@@ -1918,6 +2666,48 @@ func (u *PaymentOrderUpsertBulk) UpdateAmount() *PaymentOrderUpsertBulk {
 	})
 }
 
+// SetRate sets the "rate" field.
+func (u *PaymentOrderUpsertBulk) SetRate(v decimal.Decimal) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetRate(v)
+	})
+}
+
+// AddRate adds v to the "rate" field.
+func (u *PaymentOrderUpsertBulk) AddRate(v decimal.Decimal) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.AddRate(v)
+	})
+}
+
+// UpdateRate sets the "rate" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateRate() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateRate()
+	})
+}
+
+// SetAmountInUsd sets the "amount_in_usd" field.
+func (u *PaymentOrderUpsertBulk) SetAmountInUsd(v decimal.Decimal) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetAmountInUsd(v)
+	})
+}
+
+// AddAmountInUsd adds v to the "amount_in_usd" field.
+func (u *PaymentOrderUpsertBulk) AddAmountInUsd(v decimal.Decimal) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.AddAmountInUsd(v)
+	})
+}
+
+// UpdateAmountInUsd sets the "amount_in_usd" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateAmountInUsd() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateAmountInUsd()
+	})
+}
+
 // SetAmountPaid sets the "amount_paid" field.
 func (u *PaymentOrderUpsertBulk) SetAmountPaid(v decimal.Decimal) *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
@@ -2023,24 +2813,66 @@ func (u *PaymentOrderUpsertBulk) UpdateNetworkFee() *PaymentOrderUpsertBulk {
 	})
 }
 
-// SetRate sets the "rate" field.
-func (u *PaymentOrderUpsertBulk) SetRate(v decimal.Decimal) *PaymentOrderUpsertBulk {
+// SetProtocolFee sets the "protocol_fee" field.
+func (u *PaymentOrderUpsertBulk) SetProtocolFee(v decimal.Decimal) *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.SetRate(v)
+		s.SetProtocolFee(v)
 	})
 }
 
-// AddRate adds v to the "rate" field.
-func (u *PaymentOrderUpsertBulk) AddRate(v decimal.Decimal) *PaymentOrderUpsertBulk {
+// AddProtocolFee adds v to the "protocol_fee" field.
+func (u *PaymentOrderUpsertBulk) AddProtocolFee(v decimal.Decimal) *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.AddRate(v)
+		s.AddProtocolFee(v)
 	})
 }
 
-// UpdateRate sets the "rate" field to the value that was provided on create.
-func (u *PaymentOrderUpsertBulk) UpdateRate() *PaymentOrderUpsertBulk {
+// UpdateProtocolFee sets the "protocol_fee" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateProtocolFee() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.UpdateRate()
+		s.UpdateProtocolFee()
+	})
+}
+
+// SetOrderPercent sets the "order_percent" field.
+func (u *PaymentOrderUpsertBulk) SetOrderPercent(v decimal.Decimal) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetOrderPercent(v)
+	})
+}
+
+// AddOrderPercent adds v to the "order_percent" field.
+func (u *PaymentOrderUpsertBulk) AddOrderPercent(v decimal.Decimal) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.AddOrderPercent(v)
+	})
+}
+
+// UpdateOrderPercent sets the "order_percent" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateOrderPercent() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateOrderPercent()
+	})
+}
+
+// SetFeePercent sets the "fee_percent" field.
+func (u *PaymentOrderUpsertBulk) SetFeePercent(v decimal.Decimal) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetFeePercent(v)
+	})
+}
+
+// AddFeePercent adds v to the "fee_percent" field.
+func (u *PaymentOrderUpsertBulk) AddFeePercent(v decimal.Decimal) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.AddFeePercent(v)
+	})
+}
+
+// UpdateFeePercent sets the "fee_percent" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateFeePercent() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateFeePercent()
 	})
 }
 
@@ -2086,6 +2918,48 @@ func (u *PaymentOrderUpsertBulk) UpdateBlockNumber() *PaymentOrderUpsertBulk {
 	})
 }
 
+// SetMessageHash sets the "message_hash" field.
+func (u *PaymentOrderUpsertBulk) SetMessageHash(v string) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetMessageHash(v)
+	})
+}
+
+// UpdateMessageHash sets the "message_hash" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateMessageHash() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateMessageHash()
+	})
+}
+
+// ClearMessageHash clears the value of the "message_hash" field.
+func (u *PaymentOrderUpsertBulk) ClearMessageHash() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearMessageHash()
+	})
+}
+
+// SetGatewayID sets the "gateway_id" field.
+func (u *PaymentOrderUpsertBulk) SetGatewayID(v string) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetGatewayID(v)
+	})
+}
+
+// UpdateGatewayID sets the "gateway_id" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateGatewayID() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateGatewayID()
+	})
+}
+
+// ClearGatewayID clears the value of the "gateway_id" field.
+func (u *PaymentOrderUpsertBulk) ClearGatewayID() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearGatewayID()
+	})
+}
+
 // SetFromAddress sets the "from_address" field.
 func (u *PaymentOrderUpsertBulk) SetFromAddress(v string) *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
@@ -2128,38 +3002,66 @@ func (u *PaymentOrderUpsertBulk) ClearReturnAddress() *PaymentOrderUpsertBulk {
 	})
 }
 
-// SetReceiveAddressText sets the "receive_address_text" field.
-func (u *PaymentOrderUpsertBulk) SetReceiveAddressText(v string) *PaymentOrderUpsertBulk {
+// SetReceiveAddress sets the "receive_address" field.
+func (u *PaymentOrderUpsertBulk) SetReceiveAddress(v string) *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.SetReceiveAddressText(v)
+		s.SetReceiveAddress(v)
 	})
 }
 
-// UpdateReceiveAddressText sets the "receive_address_text" field to the value that was provided on create.
-func (u *PaymentOrderUpsertBulk) UpdateReceiveAddressText() *PaymentOrderUpsertBulk {
+// UpdateReceiveAddress sets the "receive_address" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateReceiveAddress() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.UpdateReceiveAddressText()
+		s.UpdateReceiveAddress()
 	})
 }
 
-// SetFeePercent sets the "fee_percent" field.
-func (u *PaymentOrderUpsertBulk) SetFeePercent(v decimal.Decimal) *PaymentOrderUpsertBulk {
+// ClearReceiveAddress clears the value of the "receive_address" field.
+func (u *PaymentOrderUpsertBulk) ClearReceiveAddress() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.SetFeePercent(v)
+		s.ClearReceiveAddress()
 	})
 }
 
-// AddFeePercent adds v to the "fee_percent" field.
-func (u *PaymentOrderUpsertBulk) AddFeePercent(v decimal.Decimal) *PaymentOrderUpsertBulk {
+// SetReceiveAddressSalt sets the "receive_address_salt" field.
+func (u *PaymentOrderUpsertBulk) SetReceiveAddressSalt(v []byte) *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.AddFeePercent(v)
+		s.SetReceiveAddressSalt(v)
 	})
 }
 
-// UpdateFeePercent sets the "fee_percent" field to the value that was provided on create.
-func (u *PaymentOrderUpsertBulk) UpdateFeePercent() *PaymentOrderUpsertBulk {
+// UpdateReceiveAddressSalt sets the "receive_address_salt" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateReceiveAddressSalt() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.UpdateFeePercent()
+		s.UpdateReceiveAddressSalt()
+	})
+}
+
+// ClearReceiveAddressSalt clears the value of the "receive_address_salt" field.
+func (u *PaymentOrderUpsertBulk) ClearReceiveAddressSalt() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearReceiveAddressSalt()
+	})
+}
+
+// SetReceiveAddressExpiry sets the "receive_address_expiry" field.
+func (u *PaymentOrderUpsertBulk) SetReceiveAddressExpiry(v time.Time) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetReceiveAddressExpiry(v)
+	})
+}
+
+// UpdateReceiveAddressExpiry sets the "receive_address_expiry" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateReceiveAddressExpiry() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateReceiveAddressExpiry()
+	})
+}
+
+// ClearReceiveAddressExpiry clears the value of the "receive_address_expiry" field.
+func (u *PaymentOrderUpsertBulk) ClearReceiveAddressExpiry() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearReceiveAddressExpiry()
 	})
 }
 
@@ -2184,45 +3086,108 @@ func (u *PaymentOrderUpsertBulk) ClearFeeAddress() *PaymentOrderUpsertBulk {
 	})
 }
 
-// SetGatewayID sets the "gateway_id" field.
-func (u *PaymentOrderUpsertBulk) SetGatewayID(v string) *PaymentOrderUpsertBulk {
+// SetInstitution sets the "institution" field.
+func (u *PaymentOrderUpsertBulk) SetInstitution(v string) *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.SetGatewayID(v)
+		s.SetInstitution(v)
 	})
 }
 
-// UpdateGatewayID sets the "gateway_id" field to the value that was provided on create.
-func (u *PaymentOrderUpsertBulk) UpdateGatewayID() *PaymentOrderUpsertBulk {
+// UpdateInstitution sets the "institution" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateInstitution() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.UpdateGatewayID()
+		s.UpdateInstitution()
 	})
 }
 
-// ClearGatewayID clears the value of the "gateway_id" field.
-func (u *PaymentOrderUpsertBulk) ClearGatewayID() *PaymentOrderUpsertBulk {
+// SetAccountIdentifier sets the "account_identifier" field.
+func (u *PaymentOrderUpsertBulk) SetAccountIdentifier(v string) *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.ClearGatewayID()
+		s.SetAccountIdentifier(v)
 	})
 }
 
-// SetMessageHash sets the "message_hash" field.
-func (u *PaymentOrderUpsertBulk) SetMessageHash(v string) *PaymentOrderUpsertBulk {
+// UpdateAccountIdentifier sets the "account_identifier" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateAccountIdentifier() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.SetMessageHash(v)
+		s.UpdateAccountIdentifier()
 	})
 }
 
-// UpdateMessageHash sets the "message_hash" field to the value that was provided on create.
-func (u *PaymentOrderUpsertBulk) UpdateMessageHash() *PaymentOrderUpsertBulk {
+// SetAccountName sets the "account_name" field.
+func (u *PaymentOrderUpsertBulk) SetAccountName(v string) *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.UpdateMessageHash()
+		s.SetAccountName(v)
 	})
 }
 
-// ClearMessageHash clears the value of the "message_hash" field.
-func (u *PaymentOrderUpsertBulk) ClearMessageHash() *PaymentOrderUpsertBulk {
+// UpdateAccountName sets the "account_name" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateAccountName() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.ClearMessageHash()
+		s.UpdateAccountName()
+	})
+}
+
+// SetMemo sets the "memo" field.
+func (u *PaymentOrderUpsertBulk) SetMemo(v string) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetMemo(v)
+	})
+}
+
+// UpdateMemo sets the "memo" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateMemo() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateMemo()
+	})
+}
+
+// ClearMemo clears the value of the "memo" field.
+func (u *PaymentOrderUpsertBulk) ClearMemo() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearMemo()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *PaymentOrderUpsertBulk) SetMetadata(v map[string]interface{}) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateMetadata() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *PaymentOrderUpsertBulk) ClearMetadata() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearMetadata()
+	})
+}
+
+// SetSender sets the "sender" field.
+func (u *PaymentOrderUpsertBulk) SetSender(v string) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetSender(v)
+	})
+}
+
+// UpdateSender sets the "sender" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateSender() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateSender()
+	})
+}
+
+// ClearSender clears the value of the "sender" field.
+func (u *PaymentOrderUpsertBulk) ClearSender() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearSender()
 	})
 }
 
@@ -2247,6 +3212,55 @@ func (u *PaymentOrderUpsertBulk) ClearReference() *PaymentOrderUpsertBulk {
 	})
 }
 
+// SetCancellationCount sets the "cancellation_count" field.
+func (u *PaymentOrderUpsertBulk) SetCancellationCount(v int) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetCancellationCount(v)
+	})
+}
+
+// AddCancellationCount adds v to the "cancellation_count" field.
+func (u *PaymentOrderUpsertBulk) AddCancellationCount(v int) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.AddCancellationCount(v)
+	})
+}
+
+// UpdateCancellationCount sets the "cancellation_count" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateCancellationCount() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateCancellationCount()
+	})
+}
+
+// ClearCancellationCount clears the value of the "cancellation_count" field.
+func (u *PaymentOrderUpsertBulk) ClearCancellationCount() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearCancellationCount()
+	})
+}
+
+// SetCancellationReasons sets the "cancellation_reasons" field.
+func (u *PaymentOrderUpsertBulk) SetCancellationReasons(v []string) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetCancellationReasons(v)
+	})
+}
+
+// UpdateCancellationReasons sets the "cancellation_reasons" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateCancellationReasons() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateCancellationReasons()
+	})
+}
+
+// ClearCancellationReasons clears the value of the "cancellation_reasons" field.
+func (u *PaymentOrderUpsertBulk) ClearCancellationReasons() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearCancellationReasons()
+	})
+}
+
 // SetStatus sets the "status" field.
 func (u *PaymentOrderUpsertBulk) SetStatus(v paymentorder.Status) *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
@@ -2258,27 +3272,6 @@ func (u *PaymentOrderUpsertBulk) SetStatus(v paymentorder.Status) *PaymentOrderU
 func (u *PaymentOrderUpsertBulk) UpdateStatus() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.UpdateStatus()
-	})
-}
-
-// SetAmountInUsd sets the "amount_in_usd" field.
-func (u *PaymentOrderUpsertBulk) SetAmountInUsd(v decimal.Decimal) *PaymentOrderUpsertBulk {
-	return u.Update(func(s *PaymentOrderUpsert) {
-		s.SetAmountInUsd(v)
-	})
-}
-
-// AddAmountInUsd adds v to the "amount_in_usd" field.
-func (u *PaymentOrderUpsertBulk) AddAmountInUsd(v decimal.Decimal) *PaymentOrderUpsertBulk {
-	return u.Update(func(s *PaymentOrderUpsert) {
-		s.AddAmountInUsd(v)
-	})
-}
-
-// UpdateAmountInUsd sets the "amount_in_usd" field to the value that was provided on create.
-func (u *PaymentOrderUpsertBulk) UpdateAmountInUsd() *PaymentOrderUpsertBulk {
-	return u.Update(func(s *PaymentOrderUpsert) {
-		s.UpdateAmountInUsd()
 	})
 }
 

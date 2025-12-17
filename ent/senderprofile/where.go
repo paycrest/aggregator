@@ -383,29 +383,6 @@ func HasOrderTokensWith(preds ...predicate.SenderOrderToken) predicate.SenderPro
 	})
 }
 
-// HasLinkedAddress applies the HasEdge predicate on the "linked_address" edge.
-func HasLinkedAddress() predicate.SenderProfile {
-	return predicate.SenderProfile(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, LinkedAddressTable, LinkedAddressColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasLinkedAddressWith applies the HasEdge predicate on the "linked_address" edge with a given conditions (other predicates).
-func HasLinkedAddressWith(preds ...predicate.LinkedAddress) predicate.SenderProfile {
-	return predicate.SenderProfile(func(s *sql.Selector) {
-		step := newLinkedAddressStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.SenderProfile) predicate.SenderProfile {
 	return predicate.SenderProfile(sql.AndPredicates(predicates...))

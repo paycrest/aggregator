@@ -10,12 +10,12 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
-	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
+	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 )
 
-// LockOrderFulfillment is the model entity for the LockOrderFulfillment schema.
-type LockOrderFulfillment struct {
+// PaymentOrderFulfillment is the model entity for the PaymentOrderFulfillment schema.
+type PaymentOrderFulfillment struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
@@ -28,20 +28,20 @@ type LockOrderFulfillment struct {
 	// Psp holds the value of the "psp" field.
 	Psp string `json:"psp,omitempty"`
 	// ValidationStatus holds the value of the "validation_status" field.
-	ValidationStatus lockorderfulfillment.ValidationStatus `json:"validation_status,omitempty"`
+	ValidationStatus paymentorderfulfillment.ValidationStatus `json:"validation_status,omitempty"`
 	// ValidationError holds the value of the "validation_error" field.
 	ValidationError string `json:"validation_error,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
-	// The values are being populated by the LockOrderFulfillmentQuery when eager-loading is set.
-	Edges                           LockOrderFulfillmentEdges `json:"edges"`
-	lock_payment_order_fulfillments *uuid.UUID
-	selectValues                    sql.SelectValues
+	// The values are being populated by the PaymentOrderFulfillmentQuery when eager-loading is set.
+	Edges                      PaymentOrderFulfillmentEdges `json:"edges"`
+	payment_order_fulfillments *uuid.UUID
+	selectValues               sql.SelectValues
 }
 
-// LockOrderFulfillmentEdges holds the relations/edges for other nodes in the graph.
-type LockOrderFulfillmentEdges struct {
+// PaymentOrderFulfillmentEdges holds the relations/edges for other nodes in the graph.
+type PaymentOrderFulfillmentEdges struct {
 	// Order holds the value of the order edge.
-	Order *LockPaymentOrder `json:"order,omitempty"`
+	Order *PaymentOrder `json:"order,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [1]bool
@@ -49,27 +49,27 @@ type LockOrderFulfillmentEdges struct {
 
 // OrderOrErr returns the Order value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e LockOrderFulfillmentEdges) OrderOrErr() (*LockPaymentOrder, error) {
+func (e PaymentOrderFulfillmentEdges) OrderOrErr() (*PaymentOrder, error) {
 	if e.Order != nil {
 		return e.Order, nil
 	} else if e.loadedTypes[0] {
-		return nil, &NotFoundError{label: lockpaymentorder.Label}
+		return nil, &NotFoundError{label: paymentorder.Label}
 	}
 	return nil, &NotLoadedError{edge: "order"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*LockOrderFulfillment) scanValues(columns []string) ([]any, error) {
+func (*PaymentOrderFulfillment) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case lockorderfulfillment.FieldTxID, lockorderfulfillment.FieldPsp, lockorderfulfillment.FieldValidationStatus, lockorderfulfillment.FieldValidationError:
+		case paymentorderfulfillment.FieldTxID, paymentorderfulfillment.FieldPsp, paymentorderfulfillment.FieldValidationStatus, paymentorderfulfillment.FieldValidationError:
 			values[i] = new(sql.NullString)
-		case lockorderfulfillment.FieldCreatedAt, lockorderfulfillment.FieldUpdatedAt:
+		case paymentorderfulfillment.FieldCreatedAt, paymentorderfulfillment.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
-		case lockorderfulfillment.FieldID:
+		case paymentorderfulfillment.FieldID:
 			values[i] = new(uuid.UUID)
-		case lockorderfulfillment.ForeignKeys[0]: // lock_payment_order_fulfillments
+		case paymentorderfulfillment.ForeignKeys[0]: // payment_order_fulfillments
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
@@ -79,61 +79,61 @@ func (*LockOrderFulfillment) scanValues(columns []string) ([]any, error) {
 }
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
-// to the LockOrderFulfillment fields.
-func (_m *LockOrderFulfillment) assignValues(columns []string, values []any) error {
+// to the PaymentOrderFulfillment fields.
+func (_m *PaymentOrderFulfillment) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
 	for i := range columns {
 		switch columns[i] {
-		case lockorderfulfillment.FieldID:
+		case paymentorderfulfillment.FieldID:
 			if value, ok := values[i].(*uuid.UUID); !ok {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
 				_m.ID = *value
 			}
-		case lockorderfulfillment.FieldCreatedAt:
+		case paymentorderfulfillment.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
 				_m.CreatedAt = value.Time
 			}
-		case lockorderfulfillment.FieldUpdatedAt:
+		case paymentorderfulfillment.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
 				_m.UpdatedAt = value.Time
 			}
-		case lockorderfulfillment.FieldTxID:
+		case paymentorderfulfillment.FieldTxID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field tx_id", values[i])
 			} else if value.Valid {
 				_m.TxID = value.String
 			}
-		case lockorderfulfillment.FieldPsp:
+		case paymentorderfulfillment.FieldPsp:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field psp", values[i])
 			} else if value.Valid {
 				_m.Psp = value.String
 			}
-		case lockorderfulfillment.FieldValidationStatus:
+		case paymentorderfulfillment.FieldValidationStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field validation_status", values[i])
 			} else if value.Valid {
-				_m.ValidationStatus = lockorderfulfillment.ValidationStatus(value.String)
+				_m.ValidationStatus = paymentorderfulfillment.ValidationStatus(value.String)
 			}
-		case lockorderfulfillment.FieldValidationError:
+		case paymentorderfulfillment.FieldValidationError:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field validation_error", values[i])
 			} else if value.Valid {
 				_m.ValidationError = value.String
 			}
-		case lockorderfulfillment.ForeignKeys[0]:
+		case paymentorderfulfillment.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field lock_payment_order_fulfillments", values[i])
+				return fmt.Errorf("unexpected type %T for field payment_order_fulfillments", values[i])
 			} else if value.Valid {
-				_m.lock_payment_order_fulfillments = new(uuid.UUID)
-				*_m.lock_payment_order_fulfillments = *value.S.(*uuid.UUID)
+				_m.payment_order_fulfillments = new(uuid.UUID)
+				*_m.payment_order_fulfillments = *value.S.(*uuid.UUID)
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -142,39 +142,39 @@ func (_m *LockOrderFulfillment) assignValues(columns []string, values []any) err
 	return nil
 }
 
-// Value returns the ent.Value that was dynamically selected and assigned to the LockOrderFulfillment.
+// Value returns the ent.Value that was dynamically selected and assigned to the PaymentOrderFulfillment.
 // This includes values selected through modifiers, order, etc.
-func (_m *LockOrderFulfillment) Value(name string) (ent.Value, error) {
+func (_m *PaymentOrderFulfillment) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
-// QueryOrder queries the "order" edge of the LockOrderFulfillment entity.
-func (_m *LockOrderFulfillment) QueryOrder() *LockPaymentOrderQuery {
-	return NewLockOrderFulfillmentClient(_m.config).QueryOrder(_m)
+// QueryOrder queries the "order" edge of the PaymentOrderFulfillment entity.
+func (_m *PaymentOrderFulfillment) QueryOrder() *PaymentOrderQuery {
+	return NewPaymentOrderFulfillmentClient(_m.config).QueryOrder(_m)
 }
 
-// Update returns a builder for updating this LockOrderFulfillment.
-// Note that you need to call LockOrderFulfillment.Unwrap() before calling this method if this LockOrderFulfillment
+// Update returns a builder for updating this PaymentOrderFulfillment.
+// Note that you need to call PaymentOrderFulfillment.Unwrap() before calling this method if this PaymentOrderFulfillment
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (_m *LockOrderFulfillment) Update() *LockOrderFulfillmentUpdateOne {
-	return NewLockOrderFulfillmentClient(_m.config).UpdateOne(_m)
+func (_m *PaymentOrderFulfillment) Update() *PaymentOrderFulfillmentUpdateOne {
+	return NewPaymentOrderFulfillmentClient(_m.config).UpdateOne(_m)
 }
 
-// Unwrap unwraps the LockOrderFulfillment entity that was returned from a transaction after it was closed,
+// Unwrap unwraps the PaymentOrderFulfillment entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (_m *LockOrderFulfillment) Unwrap() *LockOrderFulfillment {
+func (_m *PaymentOrderFulfillment) Unwrap() *PaymentOrderFulfillment {
 	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
-		panic("ent: LockOrderFulfillment is not a transactional entity")
+		panic("ent: PaymentOrderFulfillment is not a transactional entity")
 	}
 	_m.config.driver = _tx.drv
 	return _m
 }
 
 // String implements the fmt.Stringer.
-func (_m *LockOrderFulfillment) String() string {
+func (_m *PaymentOrderFulfillment) String() string {
 	var builder strings.Builder
-	builder.WriteString("LockOrderFulfillment(")
+	builder.WriteString("PaymentOrderFulfillment(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
@@ -197,5 +197,5 @@ func (_m *LockOrderFulfillment) String() string {
 	return builder.String()
 }
 
-// LockOrderFulfillments is a parsable slice of LockOrderFulfillment.
-type LockOrderFulfillments []*LockOrderFulfillment
+// PaymentOrderFulfillments is a parsable slice of PaymentOrderFulfillment.
+type PaymentOrderFulfillments []*PaymentOrderFulfillment

@@ -266,7 +266,7 @@ func (s *IndexerStarknet) processReceiveAddressByTransactionEvents(ctx context.C
 			toStr: transferEvent,
 		}
 
-		err = common.ProcessTransfers(ctx, s.order, s.priorityQueue, []string{toStr}, addressToEvent, token)
+		err = common.ProcessTransfers(ctx, s.order, s.priorityQueue, []string{toStr}, addressToEvent)
 		if err != nil {
 			logger.Errorf("Error processing transfer for token %s: %v", token.Symbol, err)
 			continue

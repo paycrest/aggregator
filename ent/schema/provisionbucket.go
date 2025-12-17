@@ -35,7 +35,7 @@ func (ProvisionBucket) Edges() []ent.Edge {
 			Ref("provision_buckets").
 			Unique().
 			Required(),
-		edge.To("lock_payment_orders", LockPaymentOrder.Type).
+		edge.To("payment_orders", PaymentOrder.Type).
 			Annotations(entsql.OnDelete(entsql.SetNull)),
 		edge.To("provider_profiles", ProviderProfile.Type),
 	}

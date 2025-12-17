@@ -12,7 +12,6 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
@@ -126,21 +125,6 @@ func (_c *TokenCreate) AddPaymentOrders(v ...*PaymentOrder) *TokenCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddPaymentOrderIDs(ids...)
-}
-
-// AddLockPaymentOrderIDs adds the "lock_payment_orders" edge to the LockPaymentOrder entity by IDs.
-func (_c *TokenCreate) AddLockPaymentOrderIDs(ids ...uuid.UUID) *TokenCreate {
-	_c.mutation.AddLockPaymentOrderIDs(ids...)
-	return _c
-}
-
-// AddLockPaymentOrders adds the "lock_payment_orders" edges to the LockPaymentOrder entity.
-func (_c *TokenCreate) AddLockPaymentOrders(v ...*LockPaymentOrder) *TokenCreate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddLockPaymentOrderIDs(ids...)
 }
 
 // AddSenderOrderTokenIDs adds the "sender_order_tokens" edge to the SenderOrderToken entity by IDs.
@@ -343,22 +327,6 @@ func (_c *TokenCreate) createSpec() (*Token, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.LockPaymentOrdersIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   token.LockPaymentOrdersTable,
-			Columns: []string{token.LockPaymentOrdersColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(lockpaymentorder.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

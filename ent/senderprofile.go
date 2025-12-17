@@ -50,11 +50,9 @@ type SenderProfileEdges struct {
 	PaymentOrders []*PaymentOrder `json:"payment_orders,omitempty"`
 	// OrderTokens holds the value of the order_tokens edge.
 	OrderTokens []*SenderOrderToken `json:"order_tokens,omitempty"`
-	// LinkedAddress holds the value of the linked_address edge.
-	LinkedAddress []*LinkedAddress `json:"linked_address,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [5]bool
+	loadedTypes [4]bool
 }
 
 // UserOrErr returns the User value or an error if the edge
@@ -95,15 +93,6 @@ func (e SenderProfileEdges) OrderTokensOrErr() ([]*SenderOrderToken, error) {
 		return e.OrderTokens, nil
 	}
 	return nil, &NotLoadedError{edge: "order_tokens"}
-}
-
-// LinkedAddressOrErr returns the LinkedAddress value or an error if the edge
-// was not loaded in eager-loading.
-func (e SenderProfileEdges) LinkedAddressOrErr() ([]*LinkedAddress, error) {
-	if e.loadedTypes[4] {
-		return e.LinkedAddress, nil
-	}
-	return nil, &NotLoadedError{edge: "linked_address"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -220,11 +209,6 @@ func (_m *SenderProfile) QueryPaymentOrders() *PaymentOrderQuery {
 // QueryOrderTokens queries the "order_tokens" edge of the SenderProfile entity.
 func (_m *SenderProfile) QueryOrderTokens() *SenderOrderTokenQuery {
 	return NewSenderProfileClient(_m.config).QueryOrderTokens(_m)
-}
-
-// QueryLinkedAddress queries the "linked_address" edge of the SenderProfile entity.
-func (_m *SenderProfile) QueryLinkedAddress() *LinkedAddressQuery {
-	return NewSenderProfileClient(_m.config).QueryLinkedAddress(_m)
 }
 
 // Update returns a builder for updating this SenderProfile.
