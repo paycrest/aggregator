@@ -849,15 +849,15 @@ func (ctrl *SenderController) handleSearchPaymentOrders(ctx *gin.Context, sender
 	}
 
 	searchPredicates = append(searchPredicates,
-		paymentorder.ReceiveAddressTextContains(searchText),
-		paymentorder.FromAddressContains(searchText),
-		paymentorder.ReturnAddressContains(searchText),
+		paymentorder.ReceiveAddressTextContainsFold(searchText),
+		paymentorder.FromAddressContainsFold(searchText),
+		paymentorder.ReturnAddressContainsFold(searchText),
 		paymentorder.HasRecipientWith(
 			paymentorderrecipient.Or(
-				paymentorderrecipient.AccountIdentifierContains(searchText),
-				paymentorderrecipient.AccountNameContains(searchText),
-				paymentorderrecipient.MemoContains(searchText),
-				paymentorderrecipient.InstitutionContains(searchText),
+				paymentorderrecipient.AccountIdentifierContainsFold(searchText),
+				paymentorderrecipient.AccountNameContainsFold(searchText),
+				paymentorderrecipient.MemoContainsFold(searchText),
+				paymentorderrecipient.InstitutionContainsFold(searchText),
 			),
 		),
 	)
