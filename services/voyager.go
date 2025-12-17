@@ -247,34 +247,31 @@ func startVoyagerRequestCleanup(ctx context.Context) {
 
 // startVoyagerMonthlyLimitReset resets monthly call counter at start of each month UTC
 func startVoyagerMonthlyLimitReset(ctx context.Context) {
-	// Calculate time until next month start
+	// Calculate time until next month start using AddDate to avoid month overflow
 	now := time.Now().UTC()
-	nextMonth := time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, time.UTC)
-	initialDelay := nextMonth.Sub(now)
-
-	// Set initial reset time
+	nextMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC).AddDate(0, 1, 0)
 	voyagerMonthlyLimitResetTime = nextMonth
 
-	// Wait until next month
-	time.Sleep(initialDelay)
-
-	// Reset counter and schedule next reset
-	ticker := time.NewTicker(24 * time.Hour)
-	defer ticker.Stop()
-
 	for {
+		// Calculate duration until next month
+		now := time.Now().UTC()
+		duration := nextMonth.Sub(now)
+
+		// Create timer for next month reset
+		timer := time.NewTimer(duration)
+		defer timer.Stop()
+
 		select {
 		case <-ctx.Done():
 			return
-		case <-ticker.C:
-			// Check if it's the first day of the month
-			now := time.Now().UTC()
-			if now.Day() == 1 && now.Hour() == 0 && now.Minute() == 0 {
-				atomic.StoreInt64(&voyagerMonthlyCallsCounter, 0)
-				nextMonth := time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, time.UTC)
-				voyagerMonthlyLimitResetTime = nextMonth
-				logger.Infof("Monthly Voyager API call counter reset. Limit: %d calls", atomic.LoadInt64(&voyagerMonthlyLimitCalls))
-			}
+		case <-timer.C:
+			// Reset counter at start of month
+			atomic.StoreInt64(&voyagerMonthlyCallsCounter, 0)
+			logger.Infof("Monthly Voyager API call counter reset. Limit: %d calls", atomic.LoadInt64(&voyagerMonthlyLimitCalls))
+
+			// Advance to next month
+			nextMonth = nextMonth.AddDate(0, 1, 0)
+			voyagerMonthlyLimitResetTime = nextMonth
 		}
 	}
 }
@@ -450,19 +447,27 @@ func (w *VoyagerWorker) start(ctx context.Context) {
 // isCircuitOpen checks if the circuit breaker is open
 func (w *VoyagerWorker) isCircuitOpen() bool {
 	w.Mutex.RLock()
-	defer w.Mutex.RUnlock()
+	circuitOpen := w.CircuitOpen
+	lastFailure := w.LastFailure
+	w.Mutex.RUnlock()
 
-	if w.CircuitOpen && time.Since(w.LastFailure) < voyagerCircuitBreakerTimeout {
+	if circuitOpen && time.Since(lastFailure) < voyagerCircuitBreakerTimeout {
 		return true
 	}
 
-	if w.CircuitOpen && time.Since(w.LastFailure) >= voyagerCircuitBreakerTimeout {
+	// Circuit should be reset - acquire write lock after releasing read lock
+	if circuitOpen && time.Since(lastFailure) >= voyagerCircuitBreakerTimeout {
 		w.Mutex.Lock()
-		w.CircuitOpen = false
-		w.Mutex.Unlock()
-		logger.WithFields(logger.Fields{
-			"WorkerID": w.WorkerID,
-		}).Infof("Voyager circuit breaker reset")
+		// Re-check condition after acquiring write lock to avoid race
+		if w.CircuitOpen && time.Since(w.LastFailure) >= voyagerCircuitBreakerTimeout {
+			w.CircuitOpen = false
+			w.Mutex.Unlock()
+			logger.WithFields(logger.Fields{
+				"WorkerID": w.WorkerID,
+			}).Infof("Voyager circuit breaker reset")
+		} else {
+			w.Mutex.Unlock()
+		}
 	}
 
 	return false
@@ -654,15 +659,23 @@ func (w *VoyagerWorker) makeVoyagerTransfersAPICall(request VoyagerRequest) ([]m
 	}
 
 	// Voyager returns { "items": [...], "hasMore": bool }
-	if data["items"] == nil {
+	itemsRaw, ok := data["items"]
+	if !ok || itemsRaw == nil {
 		return []map[string]interface{}{}, nil
 	}
 
-	items := data["items"].([]interface{})
-	result := make([]map[string]interface{}, len(items))
+	items, ok := itemsRaw.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid items type in Voyager response")
+	}
 
-	for i, item := range items {
-		result[i] = item.(map[string]interface{})
+	result := make([]map[string]interface{}, 0, len(items))
+	for _, item := range items {
+		itemMap, ok := item.(map[string]interface{})
+		if !ok {
+			continue // Skip non-map items
+		}
+		result = append(result, itemMap)
 	}
 
 	return result, nil
@@ -724,15 +737,23 @@ func (w *VoyagerWorker) makeVoyagerEventsAPICall(request VoyagerRequest) ([]map[
 		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
 	}
 
-	if data["items"] == nil {
+	itemsRaw, ok := data["items"]
+	if !ok || itemsRaw == nil {
 		return []map[string]interface{}{}, nil
 	}
 
-	items := data["items"].([]interface{})
-	result := make([]map[string]interface{}, len(items))
+	items, ok := itemsRaw.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid items type in Voyager response")
+	}
 
-	for i, item := range items {
-		result[i] = item.(map[string]interface{})
+	result := make([]map[string]interface{}, 0, len(items))
+	for _, item := range items {
+		itemMap, ok := item.(map[string]interface{})
+		if !ok {
+			continue // Skip non-map items
+		}
+		result = append(result, itemMap)
 	}
 
 	return result, nil
@@ -773,15 +794,23 @@ func (w *VoyagerWorker) makeVoyagerEventsByTxAPICall(request VoyagerRequest) ([]
 		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
 	}
 
-	if data["items"] == nil {
+	itemsRaw, ok := data["items"]
+	if !ok || itemsRaw == nil {
 		return []map[string]interface{}{}, nil
 	}
 
-	items := data["items"].([]interface{})
-	result := make([]map[string]interface{}, len(items))
+	items, ok := itemsRaw.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid items type in Voyager response")
+	}
 
-	for i, item := range items {
-		result[i] = item.(map[string]interface{})
+	result := make([]map[string]interface{}, 0, len(items))
+	for _, item := range items {
+		itemMap, ok := item.(map[string]interface{})
+		if !ok {
+			continue // Skip non-map items
+		}
+		result = append(result, itemMap)
 	}
 
 	return result, nil
@@ -825,13 +854,27 @@ func (w *VoyagerWorker) makeVoyagerBlocksAPICall() (map[string]interface{}, erro
 		return nil, fmt.Errorf("no blocks found")
 	}
 
-	items := data["items"].([]interface{})
+	itemsRaw, ok := data["items"]
+	if !ok || itemsRaw == nil {
+		return nil, fmt.Errorf("no blocks found")
+	}
+
+	items, ok := itemsRaw.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid items type in Voyager blocks response")
+	}
+
 	if len(items) == 0 {
 		return nil, fmt.Errorf("no blocks found")
 	}
 
 	// Return the first (latest) block
-	return items[0].(map[string]interface{}), nil
+	block, ok := items[0].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid block type in Voyager blocks response")
+	}
+
+	return block, nil
 }
 
 // getBlockByNumber queries Voyager blocks endpoint for a specific block number
@@ -1032,20 +1075,14 @@ func (s *VoyagerService) GetAddressTokenTransfers(ctx context.Context, address s
 	// Check for duplicate request
 	if existingCtx, exists := voyagerPendingRequests.Load(requestID); exists {
 		if existingReqCtx, ok := existingCtx.(*VoyagerRequestContext); ok {
+			// Wait for the original request to complete instead of consuming its response
+			// This ensures the original requester receives the response
 			select {
-			case response := <-existingReqCtx.Response:
-				if response.Error != nil {
-					// If Voyager fails, fallback to RPC
-					return s.getAddressTokenTransfersRPC(ctx, address, limit, fromBlock, toBlock)
-				}
-				if transfers, ok := response.Data.([]map[string]interface{}); ok {
-					return transfers, nil
-				}
-				return []map[string]interface{}{}, nil
+			case <-existingReqCtx.Context.Done():
+				// Original request completed, make our own immediate request
+				return s.GetAddressTokenTransfersImmediate(ctx, address, limit, fromBlock, toBlock, fromAddress, toAddress)
 			case <-reqCtx.Done():
 				return nil, reqCtx.Err()
-			case <-existingReqCtx.Context.Done():
-				return nil, existingReqCtx.Context.Err()
 			}
 		}
 	}
@@ -1185,19 +1222,14 @@ func (s *VoyagerService) GetContractEvents(ctx context.Context, contractAddress 
 
 	if existingCtx, exists := voyagerPendingRequests.Load(requestID); exists {
 		if existingReqCtx, ok := existingCtx.(*VoyagerRequestContext); ok {
+			// Wait for the original request to complete instead of consuming its response
+			// This ensures the original requester receives the response
 			select {
-			case response := <-existingReqCtx.Response:
-				if response.Error != nil {
-					return s.getContractEventsRPC(ctx, contractAddress, limit, fromBlock, toBlock)
-				}
-				if events, ok := response.Data.([]map[string]interface{}); ok {
-					return events, nil
-				}
-				return []map[string]interface{}{}, nil
+			case <-existingReqCtx.Context.Done():
+				// Original request completed, make our own immediate request
+				return s.GetContractEventsImmediate(ctx, contractAddress, limit, fromBlock, toBlock)
 			case <-reqCtx.Done():
 				return nil, reqCtx.Err()
-			case <-existingReqCtx.Context.Done():
-				return nil, existingReqCtx.Context.Err()
 			}
 		}
 	}
@@ -1327,19 +1359,14 @@ func (s *VoyagerService) GetEventsByTransactionHash(ctx context.Context, txHash 
 
 	if existingCtx, exists := voyagerPendingRequests.Load(requestID); exists {
 		if existingReqCtx, ok := existingCtx.(*VoyagerRequestContext); ok {
+			// Wait for the original request to complete instead of consuming its response
+			// This ensures the original requester receives the response
 			select {
-			case response := <-existingReqCtx.Response:
-				if response.Error != nil {
-					return s.getEventsByTransactionHashRPC(ctx, txHash)
-				}
-				if events, ok := response.Data.([]map[string]interface{}); ok {
-					return events, nil
-				}
-				return []map[string]interface{}{}, nil
+			case <-existingReqCtx.Context.Done():
+				// Original request completed, make our own immediate request
+				return s.GetEventsByTransactionHashImmediate(ctx, txHash, limit)
 			case <-reqCtx.Done():
 				return nil, reqCtx.Err()
-			case <-existingReqCtx.Context.Done():
-				return nil, existingReqCtx.Context.Err()
 			}
 		}
 	}
@@ -1412,21 +1439,15 @@ func (s *VoyagerService) GetLatestBlockNumber(ctx context.Context) (uint64, erro
 
 	if existingCtx, exists := voyagerPendingRequests.Load(requestID); exists {
 		if existingReqCtx, ok := existingCtx.(*VoyagerRequestContext); ok {
+			// Wait for the original request to complete instead of consuming its response
+			// This ensures the original requester receives the response
 			select {
-			case response := <-existingReqCtx.Response:
-				if response.Error != nil {
-					return s.getLatestBlockNumberRPC(ctx)
-				}
-				if block, ok := response.Data.(map[string]interface{}); ok {
-					if blockNum, ok := block["blockNumber"].(float64); ok {
-						return uint64(blockNum), nil
-					}
-				}
-				return 0, fmt.Errorf("invalid block data")
+			case <-existingReqCtx.Context.Done():
+				// Original request completed, make our own request
+				// The original request will have been removed from pending, so this will be a new request
+				return s.GetLatestBlockNumber(ctx)
 			case <-reqCtx.Done():
 				return 0, reqCtx.Err()
-			case <-existingReqCtx.Context.Done():
-				return 0, existingReqCtx.Context.Err()
 			}
 		}
 	}
