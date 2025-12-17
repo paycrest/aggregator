@@ -259,10 +259,10 @@ func startVoyagerMonthlyLimitReset(ctx context.Context) {
 
 		// Create timer for next month reset
 		timer := time.NewTimer(duration)
-		defer timer.Stop()
 
 		select {
 		case <-ctx.Done():
+			timer.Stop()
 			return
 		case <-timer.C:
 			// Reset counter at start of month
@@ -407,7 +407,17 @@ func (w *VoyagerWorker) start(ctx context.Context) {
 			if atomic.LoadInt64(&voyagerMonthlyCallsCounter) >= monthlyLimit {
 				logger.Warnf("Monthly Voyager API limit reached (%d/%d). Worker %d paused until reset.",
 					atomic.LoadInt64(&voyagerMonthlyCallsCounter), monthlyLimit, w.WorkerID)
-				time.Sleep(time.Until(voyagerMonthlyLimitResetTime))
+				
+				// Calculate sleep duration, ensuring a minimum wait to avoid busy-looping
+				sleepDuration := time.Until(voyagerMonthlyLimitResetTime)
+				const minBackoff = 1 * time.Second
+				if sleepDuration <= 0 {
+					// Reset time is in the past or not initialized - use short backoff
+					sleepDuration = minBackoff
+					logger.Warnf("Worker %d: monthly limit reset time is in the past, using %v backoff", w.WorkerID, minBackoff)
+				}
+				
+				time.Sleep(sleepDuration)
 				continue
 			}
 
