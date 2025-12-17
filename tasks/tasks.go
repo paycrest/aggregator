@@ -554,7 +554,7 @@ func reassignCancelledOrder(ctx context.Context, order *ent.PaymentOrder, fulfil
 		}
 
 		// Reassign the order to a provider
-		lockPaymentOrder := types.PaymentOrderFields{
+		paymentOrder := types.PaymentOrderFields{
 			ID:                order.ID,
 			Token:             order.Edges.Token,
 			GatewayID:         order.GatewayID,
@@ -569,7 +569,7 @@ func reassignCancelledOrder(ctx context.Context, order *ent.PaymentOrder, fulfil
 			ProvisionBucket:   order.Edges.ProvisionBucket,
 		}
 
-		err = services.NewPriorityQueueService().AssignLockPaymentOrder(ctx, lockPaymentOrder)
+		err = services.NewPriorityQueueService().AssignPaymentOrder(ctx, paymentOrder)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":     fmt.Sprintf("%v", err),
@@ -589,57 +589,8 @@ func SyncLockOrderFulfillments() {
 	// defer cancel()
 	ctx := context.Background()
 
-	updatePaymentOrderValidated := func(ctx context.Context, lockOrder *ent.PaymentOrder) {
-		if lockOrder == nil || lockOrder.MessageHash == "" {
-			return
-		}
-
-		paymentOrder, err := storage.Client.PaymentOrder.
-			Query().
-			Where(paymentorder.MessageHashEQ(lockOrder.MessageHash)).
-			WithSenderProfile().
-			WithToken(func(tq *ent.TokenQuery) {
-				tq.WithNetwork()
-			}).
-			Only(ctx)
-		if err != nil {
-			if !ent.IsNotFound(err) {
-				logger.WithFields(logger.Fields{
-					"Error":       fmt.Sprintf("%v", err),
-					"MessageHash": lockOrder.MessageHash,
-					"OrderID":     lockOrder.ID,
-				}).Errorf("SyncLockOrderFulfillments.UpdatePaymentOrderValidated.query")
-			}
-			return
-		}
-
-		_, err = storage.Client.PaymentOrder.
-			Update().
-			Where(paymentorder.IDEQ(paymentOrder.ID)).
-			SetStatus(paymentorder.StatusValidated).
-			Save(ctx)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":       fmt.Sprintf("%v", err),
-				"MessageHash": lockOrder.MessageHash,
-				"OrderID":     lockOrder.ID,
-				"PaymentID":   paymentOrder.ID,
-			}).Errorf("SyncLockOrderFulfillments.UpdatePaymentOrderValidated.update")
-			return
-		}
-
-		paymentOrder.Status = paymentorder.StatusValidated
-		if err := utils.SendPaymentOrderWebhook(ctx, paymentOrder); err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":       fmt.Sprintf("%v", err),
-				"MessageHash": lockOrder.MessageHash,
-				"OrderID":     lockOrder.ID,
-				"PaymentID":   paymentOrder.ID,
-			}).Errorf("SyncLockOrderFulfillments.UpdatePaymentOrderValidated.webhook")
-		}
-	}
 	// Query unvalidated lock orders (regular orders only - exclude OTC)
-	lockOrders, err := storage.Client.PaymentOrder.
+	paymentOrders, err := storage.Client.PaymentOrder.
 		Query().
 		Where(
 			paymentorder.OrderTypeEQ(paymentorder.OrderTypeRegular), // Only regular orders
@@ -692,7 +643,7 @@ func SyncLockOrderFulfillments() {
 		return
 	}
 
-	for _, order := range lockOrders {
+	for _, order := range paymentOrders {
 		if order.Edges.Provider == nil {
 			continue
 		}
@@ -843,10 +794,16 @@ func SyncLockOrderFulfillments() {
 					SetStatus(paymentorder.StatusValidated).
 					AddTransactions(transactionLog).
 					Save(ctx)
-				if err == nil {
-					updatePaymentOrderValidated(ctx, order)
-				} else {
+				if err != nil {
 					continue
+				}
+
+				if err := utils.SendPaymentOrderWebhook(ctx, order); err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":       fmt.Sprintf("%v", err),
+						"MessageHash": order.MessageHash,
+						"OrderID":     order.ID,
+					}).Errorf("SyncLockOrderFulfillments.UpdatePaymentOrderValidated.webhook")
 				}
 			}
 		} else {
@@ -974,10 +931,16 @@ func SyncLockOrderFulfillments() {
 							SetStatus(paymentorder.StatusValidated).
 							AddTransactions(transactionLog).
 							Save(ctx)
-						if err == nil {
-							updatePaymentOrderValidated(ctx, order)
-						} else {
+						if err != nil {
 							continue
+						}
+
+						if err := utils.SendPaymentOrderWebhook(ctx, order); err != nil {
+							logger.WithFields(logger.Fields{
+								"Error":       fmt.Sprintf("%v", err),
+								"MessageHash": order.MessageHash,
+								"OrderID":     order.ID,
+							}).Errorf("SyncLockOrderFulfillments.UpdatePaymentOrderValidated.webhook")
 						}
 					}
 
@@ -1004,10 +967,16 @@ func SyncLockOrderFulfillments() {
 						SetStatus(paymentorder.StatusValidated).
 						AddTransactions(transactionLog).
 						Save(ctx)
-					if err == nil {
-						updatePaymentOrderValidated(ctx, order)
-					} else {
+					if err != nil {
 						continue
+					}
+
+					if err := utils.SendPaymentOrderWebhook(ctx, order); err != nil {
+						logger.WithFields(logger.Fields{
+							"Error":       fmt.Sprintf("%v", err),
+							"MessageHash": order.MessageHash,
+							"OrderID":     order.ID,
+						}).Errorf("SyncLockOrderFulfillments.UpdatePaymentOrderValidated.webhook")
 					}
 				}
 			}
@@ -1083,9 +1052,9 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 		}
 
 		// Assign the order to a provider
-		err = services.NewPriorityQueueService().AssignLockPaymentOrder(ctx, orderFields)
+		err = services.NewPriorityQueueService().AssignPaymentOrder(ctx, orderFields)
 		if err != nil {
-			// logger.Errorf("ReassignStaleOrderRequest.AssignLockPaymentOrder: %v", err)
+			// logger.Errorf("ReassignStaleOrderRequest.AssignPaymentOrder: %v", err)
 			logger.WithFields(logger.Fields{
 				"Error":     fmt.Sprintf("%v", err),
 				"OrderID":   order.ID.String(),

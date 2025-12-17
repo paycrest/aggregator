@@ -250,7 +250,7 @@ func (s *TestPriorityQueueService) matchRate(ctx context.Context, redisKey strin
 
 					// Note: Balance cleanup is now handled in sendOrderRequest via defer
 					// Reassign the lock payment order to another provider
-					return s.AssignLockPaymentOrder(ctx, order)
+					return s.AssignPaymentOrder(ctx, order)
 				}
 
 				break
@@ -586,7 +586,7 @@ func TestPriorityQueueTest(t *testing.T) {
 		assert.Equal(t, 1, len(data))
 	})
 
-	t.Run("TestAssignLockPaymentOrder", func(t *testing.T) {
+	t.Run("TestAssignPaymentOrder", func(t *testing.T) {
 		ctx := context.Background()
 
 		bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
@@ -628,7 +628,7 @@ func TestPriorityQueueTest(t *testing.T) {
 
 		service.CreatePriorityQueueForBucket(ctx, _bucket)
 
-		err = service.AssignLockPaymentOrder(ctx, types.PaymentOrderFields{
+		err = service.AssignPaymentOrder(ctx, types.PaymentOrderFields{
 			ID:                order.ID,
 			Token:             testCtxForPQ.token,
 			GatewayID:         order.GatewayID,

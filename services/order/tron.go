@@ -186,17 +186,8 @@ func (s *OrderTron) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 		return fmt.Errorf("%s - Tron.CreateOrder.updateTxHash: %w", orderIDPrefix, err)
 	}
 
-	paymentOrder, err := db.Client.PaymentOrder.
-		Query().
-		Where(paymentorder.IDEQ(orderID)).
-		WithSenderProfile().
-		Only(ctx)
-	if err != nil {
-		return fmt.Errorf("%s - Tron.CreateOrder.refetchOrder: %w", orderIDPrefix, err)
-	}
-
 	// Send webhook notifcation to sender
-	err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
+	err = utils.SendPaymentOrderWebhook(ctx, order)
 	if err != nil {
 		return fmt.Errorf("%s - Tron.CreateOrder.webhook: %w", orderIDPrefix, err)
 	}

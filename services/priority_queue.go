@@ -366,8 +366,8 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 	}
 }
 
-// AssignLockPaymentOrders assigns payment orders to providers
-func (s *PriorityQueueService) AssignLockPaymentOrder(ctx context.Context, order types.PaymentOrderFields) error {
+// AssignPaymentOrder assigns payment orders to providers
+func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order types.PaymentOrderFields) error {
 	orderIDPrefix := strings.Split(order.ID.String(), "-")[0]
 
 	excludeList, err := storage.RedisClient.LRange(ctx, fmt.Sprintf("order_exclude_list_%s", order.ID), 0, -1).Result()
@@ -491,20 +491,10 @@ func (s *PriorityQueueService) assignOtcOrder(ctx context.Context, order types.P
 				Update().
 				Where(paymentorder.IDEQ(order.ID)).
 				SetProvider(provider).
-				SetStatus(paymentorder.StatusPending).
 				Save(ctx)
 			if err != nil {
 				return err
 			}
-		}
-	} else {
-		_, err = tx.PaymentOrder.
-			Update().
-			Where(paymentorder.IDEQ(order.ID)).
-			SetStatus(paymentorder.StatusPending).
-			Save(ctx)
-		if err != nil {
-			return err
 		}
 	}
 	if err != nil {
@@ -909,8 +899,8 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 					s.addProviderToExcludeList(ctx, order.ID.String(), order.ProviderID, orderConf.OrderRequestValidity*2)
 
 					// Note: Balance cleanup is now handled in sendOrderRequest via defer
-					// Reassign the lock payment order to another provider
-					return s.AssignLockPaymentOrder(ctx, order)
+					// Reassign the payment order to another provider
+					return s.AssignPaymentOrder(ctx, order)
 				}
 
 				break

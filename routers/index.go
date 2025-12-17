@@ -41,7 +41,7 @@ func RegisterRoutes(route *gin.Engine) {
 	v1.GET("rates/:token/:amount/:fiat", ctrl.GetTokenRate)
 	v1.GET("pubkey", ctrl.GetAggregatorPublicKey)
 	v1.POST("verify-account", ctrl.VerifyAccount)
-	v1.GET("orders/:chain_id/:id", ctrl.GetLockPaymentOrderStatus)
+	v1.GET("orders/:chain_id/:id", ctrl.GetProviderOrderStatus)
 
 	// Reindex transaction endpoint
 	v1.GET("reindex/:network/:tx_hash_or_address", ctrl.IndexTransaction)
@@ -132,7 +132,7 @@ func providerRoutes(route *gin.Engine) {
 	v1.Use(middleware.DynamicAuthMiddleware)
 	v1.Use(middleware.OnlyProviderMiddleware)
 
-	v1.GET("orders", providerCtrl.GetLockPaymentOrders)
+	v1.GET("orders", providerCtrl.GetPaymentOrders)
 	v1.POST("orders/:id/accept", providerCtrl.AcceptOrder)
 	v1.POST("orders/:id/decline", providerCtrl.DeclineOrder)
 	v1.POST("orders/:id/fulfill", providerCtrl.FulfillOrder)

@@ -37,7 +37,7 @@ var testCtx = struct {
 	currency     *ent.FiatCurrency
 	token        *ent.Token
 	apiKeySecret string
-	lockOrder    *ent.PaymentOrder
+	order        *ent.PaymentOrder
 }{}
 
 func setup() error {
@@ -210,17 +210,17 @@ func TestProvider(t *testing.T) {
 
 	// Create a new instance of the SenderController with the mock service
 	ctrl := NewProviderController()
-	router.GET("/orders", ctrl.GetLockPaymentOrders) // Now handles search and export
+	router.GET("/orders", ctrl.GetPaymentOrders) // Now handles search and export
 	router.GET("/stats", ctrl.Stats)
 	router.GET("/node-info", ctrl.NodeInfo)
-	router.GET("/orders/:id", ctrl.GetLockPaymentOrderByID)
+	router.GET("/orders/:id", ctrl.GetPaymentOrderByID)
 	router.POST("/orders/:id/accept", ctrl.AcceptOrder)
 	router.POST("/orders/:id/decline", ctrl.DeclineOrder)
 	router.POST("/orders/:id/fulfill", ctrl.FulfillOrder)
 	router.POST("/orders/:id/cancel", ctrl.CancelOrder)
 	router.GET("/rates/:token/:fiat", ctrl.GetMarketRate)
 
-	t.Run("GetLockPaymentOrders", func(t *testing.T) {
+	t.Run("GetPaymentOrders", func(t *testing.T) {
 		_, _, cleanup := setupIsolatedTest(t)
 		defer cleanup()
 
@@ -655,7 +655,7 @@ func TestProvider(t *testing.T) {
 			// Assert the totalOrders value
 			totalOrders, ok := data["totalOrders"].(float64)
 			assert.True(t, ok, "totalOrders is not of type float64")
-			// setup() seeds 10 lock payment orders for the provider context
+			// setup() seeds 10 provider orders for the provider context
 			assert.Equal(t, 10, int(totalOrders))
 
 			// Assert the totalFiatVolume value
@@ -1952,7 +1952,7 @@ func TestProvider(t *testing.T) {
 		})
 	})
 
-	t.Run("SearchLockPaymentOrders", func(t *testing.T) {
+	t.Run("SearchPaymentOrders", func(t *testing.T) {
 		_, _, cleanup := setupIsolatedTest(t)
 		defer cleanup()
 
@@ -2082,9 +2082,9 @@ func TestProvider(t *testing.T) {
 			)
 			assert.NoError(t, err)
 
-			// Create lock payment order for second provider
+			// Create provider order for second provider
 			uniqueGatewayID := "unique-gateway-second-provider"
-			lockOrder2, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
+			order2, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 				"gateway_id": uniqueGatewayID,
 				"provider":   providerProfile2,
 			})
@@ -2092,7 +2092,7 @@ func TestProvider(t *testing.T) {
 
 			// Search using first provider's credentials - should not find second provider's order
 			var payload = map[string]interface{}{
-				"search": lockOrder2.ID.String(),
+				"search": order2.ID.String(),
 
 				"timestamp": time.Now().Unix(),
 			}
@@ -2117,7 +2117,7 @@ func TestProvider(t *testing.T) {
 
 			// Search using second provider's credentials - should find their order
 			payload2 := map[string]interface{}{
-				"search": lockOrder2.ID.String(),
+				"search": order2.ID.String(),
 
 				"timestamp": time.Now().Unix(),
 			}
@@ -2142,11 +2142,11 @@ func TestProvider(t *testing.T) {
 
 			orders := data2["orders"].([]interface{})
 			order := orders[0].(map[string]interface{})
-			assert.Equal(t, lockOrder2.ID.String(), order["id"])
+			assert.Equal(t, order2.ID.String(), order["id"])
 		})
 	})
 
-	t.Run("ExportLockPaymentOrdersCSV", func(t *testing.T) {
+	t.Run("ExportPaymentOrdersCSV", func(t *testing.T) {
 		_, _, cleanup := setupIsolatedTest(t)
 		defer cleanup()
 
