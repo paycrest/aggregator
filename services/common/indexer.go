@@ -96,7 +96,7 @@ func ProcessCreatedOrders(
 		go func(createdEvent *types.OrderCreatedEvent) {
 			defer wg.Done()
 
-			err := CreateLockPaymentOrder(ctx, network, createdEvent, orderService.RefundOrder, priorityQueueService.AssignLockPaymentOrder)
+			err := ProcessPaymentOrderFromBlockchain(ctx, network, createdEvent, orderService.RefundOrder, priorityQueueService.AssignPaymentOrder)
 			if err != nil {
 				if !strings.Contains(fmt.Sprintf("%v", err), "duplicate key value violates unique constraint") {
 					logger.WithFields(logger.Fields{
@@ -104,7 +104,7 @@ func ProcessCreatedOrders(
 						"OrderID": createdEvent.OrderId,
 						"TxHash":  createdEvent.TxHash,
 						"Network": network.Identifier,
-					}).Errorf("Failed to create lock payment order when indexing order created events for %s", network.Identifier)
+					}).Errorf("Failed to create payment order when indexing order created events for %s", network.Identifier)
 				}
 				return
 			}
@@ -260,8 +260,8 @@ func UpdateReceiveAddressStatus(
 
 		if !transferMatchesOrderAmount {
 			// Update the order amount will be updated to whatever amount was sent to the receive address
-			newOrderAmount := event.Value.Sub(fees.Round(int32(paymentOrder.Edges.Token.Decimals)))                           // 1.99
-			paymentOrderUpdate = paymentOrderUpdate.SetAmount(newOrderAmount.Round(int32(paymentOrder.Edges.Token.Decimals))) // 1.99
+			newOrderAmount := event.Value.Sub(fees.Round(int32(paymentOrder.Edges.Token.Decimals)))
+			paymentOrderUpdate = paymentOrderUpdate.SetAmount(newOrderAmount.Round(int32(paymentOrder.Edges.Token.Decimals)))
 			// Update the rate with the current rate if order is older than 30 mins for a P2P order from the sender dashboard
 			if paymentOrder.Memo != "" && strings.HasPrefix(paymentOrder.Memo, "P#P") && paymentOrder.Edges.Provider != nil && paymentOrder.CreatedAt.Before(time.Now().Add(-30*time.Minute)) {
 				providerProfile := paymentOrder.Edges.Provider
@@ -337,6 +337,9 @@ func UpdateReceiveAddressStatus(
 				return true, fmt.Errorf("UpdateReceiveAddressStatus.db: %v", err)
 			}
 
+			// Webhook for pending status is sent from ProcessPaymentOrderFromBlockchain
+			// when the OrderCreatedEvent is indexed from blockchain (authoritative source)
+
 			err = deleteTransferWebhook(ctx, event.TxHash)
 			if err != nil {
 				logger.Errorf("Failed to delete transfer webhook for transaction %s: %v", event.TxHash, err)
@@ -391,25 +394,25 @@ func GetProviderAddresses(ctx context.Context, token *ent.Token, currencyCode st
 	return addresses, nil
 }
 
-// GetProviderAddressFromLockOrder gets the provider address for a lock payment order
-func GetProviderAddressFromLockOrder(ctx context.Context, lockOrder *ent.PaymentOrder) (string, error) {
-	if lockOrder.Edges.Provider == nil {
-		return "", fmt.Errorf("lock order has no provider")
+// GetProviderAddressFromOrder gets the provider address for a payment order
+func GetProviderAddressFromOrder(ctx context.Context, order *ent.PaymentOrder) (string, error) {
+	if order.Edges.Provider == nil {
+		return "", fmt.Errorf("payment order has no provider")
 	}
 
 	// Get the currency from the provision bucket
-	if lockOrder.Edges.ProvisionBucket == nil {
-		return "", fmt.Errorf("lock order has no provision bucket")
+	if order.Edges.ProvisionBucket == nil {
+		return "", fmt.Errorf("payment order has no provision bucket")
 	}
 
-	currencyCode := lockOrder.Edges.ProvisionBucket.Edges.Currency.Code
+	currencyCode := order.Edges.ProvisionBucket.Edges.Currency.Code
 
 	// Get provider order token for this provider, token, and currency
 	providerOrderToken, err := storage.Client.ProviderOrderToken.
 		Query().
 		Where(
-			providerordertoken.HasProviderWith(providerprofile.IDEQ(lockOrder.Edges.Provider.ID)),
-			providerordertoken.HasTokenWith(tokenent.IDEQ(lockOrder.Edges.Token.ID)),
+			providerordertoken.HasProviderWith(providerprofile.IDEQ(order.Edges.Provider.ID)),
+			providerordertoken.HasTokenWith(tokenent.IDEQ(order.Edges.Token.ID)),
 			providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(currencyCode)),
 			providerordertoken.AddressNEQ(""),
 		).

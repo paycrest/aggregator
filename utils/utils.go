@@ -238,11 +238,23 @@ func CalculatePaymentOrderAmountInUSD(amount decimal.Decimal, token *ent.Token, 
 func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder) error {
 	var err error
 
+	paymentOrder, err = storage.Client.PaymentOrder.
+		Query().
+		Where(paymentorder.IDEQ(paymentOrder.ID)).
+		WithSenderProfile().
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
+		Only(ctx)
+	if err != nil {
+		return err
+	}
+
 	profile := paymentOrder.Edges.SenderProfile
 	if profile == nil {
 		return nil
 	}
-
+	
 	// If webhook URL is empty, return
 	if profile.WebhookURL == "" {
 		return nil
@@ -254,6 +266,8 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 	switch paymentOrder.Status {
 	case paymentorder.StatusPending:
 		event = "payment_order.pending"
+	case paymentorder.StatusFulfilled:
+		event = "payment_order.fulfilled"
 	case paymentorder.StatusValidated:
 		event = "payment_order.validated"
 	case paymentorder.StatusExpired:
@@ -264,18 +278,6 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 		event = "payment_order.refunded"
 	default:
 		return nil
-	}
-
-	// Fetch the token
-	token := paymentOrder.Edges.Token
-	if token == nil {
-		token, err = paymentOrder.
-			QueryToken().
-			WithNetwork().
-			Only(ctx)
-		if err != nil {
-			return err
-		}
 	}
 
 	institution, err := storage.Client.Institution.
@@ -303,7 +305,7 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 			SenderFee:      paymentOrder.SenderFee,
 			NetworkFee:     paymentOrder.NetworkFee,
 			Rate:           paymentOrder.Rate,
-			Network:        token.Edges.Network.Identifier,
+			Network:        paymentOrder.Edges.Token.Edges.Network.Identifier,
 			GatewayID:      paymentOrder.GatewayID,
 			SenderID:       profile.ID,
 			Recipient: types.PaymentOrderRecipient{

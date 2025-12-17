@@ -327,8 +327,8 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 	u.APIResponse(ctx, http.StatusOK, "success", "Account name was fetched successfully", accountName)
 }
 
-// GetLockPaymentOrderStatus controller fetches a payment order status by ID
-func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
+// GetProviderOrderStatus controller fetches a payment order status by ID
+func (ctrl *Controller) GetProviderOrderStatus(ctx *gin.Context) {
 	// Get order and chain ID from the URL
 	orderID := ctx.Param("id")
 	chainID, err := strconv.ParseInt(ctx.Param("chain_id"), 10, 64)
@@ -2049,7 +2049,7 @@ func (ctrl *Controller) handleOrderSettledEvent(ctx *gin.Context, event types.Th
 		Where(paymentorder.GatewayIDEQ(settledEvent.OrderId)).
 		Only(ctx)
 	if err != nil {
-		return fmt.Errorf("lock payment order not found: %w", err)
+		return fmt.Errorf("payment order not found: %w", err)
 	}
 
 	err = common.UpdateOrderStatusSettled(ctx, network, settledEvent, lockOrder.MessageHash)
@@ -2108,7 +2108,7 @@ func (ctrl *Controller) handleOrderRefundedEvent(ctx *gin.Context, event types.T
 		Where(paymentorder.GatewayIDEQ(refundedEvent.OrderId)).
 		Only(ctx)
 	if err != nil {
-		return fmt.Errorf("lock payment order not found: %w", err)
+		return fmt.Errorf("payment order not found: %w", err)
 	}
 
 	err = common.UpdateOrderStatusRefunded(ctx, network, refundedEvent, lockOrder.MessageHash)

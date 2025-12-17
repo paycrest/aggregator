@@ -5,6 +5,9 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/NethermindEth/juno/core/felt"
+	"github.com/NethermindEth/starknet.go/account"
+	"github.com/NethermindEth/starknet.go/rpc"
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -19,9 +22,6 @@ import (
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/user"
 	"github.com/shopspring/decimal"
-	"github.com/NethermindEth/juno/core/felt"
-	"github.com/NethermindEth/starknet.go/account"
-	"github.com/NethermindEth/starknet.go/rpc"
 )
 
 // RPCClient is an interface for interacting with the blockchain.
@@ -175,18 +175,6 @@ type RegisterResponse struct {
 	Email     string    `json:"email"`
 }
 
-// LockOrderResponse is the response for the lock payment order model
-type LockOrderResponse struct {
-	ID                uuid.UUID           `json:"id"`
-	Amount            decimal.Decimal     `json:"amount"`
-	Token             string              `json:"token"`
-	Institution       string              `json:"institution"`
-	AccountIdentifier string              `json:"accountIdentifier"`
-	AccountName       string              `json:"accountName"`
-	Status            paymentorder.Status `json:"status"`
-	UpdatedAt         time.Time           `json:"updatedAt"`
-}
-
 // AcceptOrderResponse is the response for the accept order endpoint
 type AcceptOrderResponse struct {
 	ID                uuid.UUID              `json:"id"`
@@ -198,16 +186,16 @@ type AcceptOrderResponse struct {
 	Metadata          map[string]interface{} `json:"metadata"`
 }
 
-// FulfillLockOrderPayload is the payload for the fulfill order endpoint
-type FulfillLockOrderPayload struct {
+// FulfillOrderPayload is the payload for the fulfill order endpoint
+type FulfillOrderPayload struct {
 	PSP              string                                   `json:"psp" binding:"required"`
 	TxID             string                                   `json:"txId" binding:"required"`
 	ValidationStatus paymentorderfulfillment.ValidationStatus `json:"validationStatus"`
 	ValidationError  string                                   `json:"validationError"`
 }
 
-// CancelLockOrderPayload is the payload for the cancel order endpoint
-type CancelLockOrderPayload struct {
+// CancelOrderPayload is the payload for the cancel order endpoint
+type CancelOrderPayload struct {
 	Reason string `json:"reason" binding:"required"`
 }
 
@@ -844,7 +832,7 @@ type ThirdwebDecodedEvent struct {
 
 // StarknetEventsData represents the structure for Starknet event data
 type StarknetEventsData struct {
-	Events             rpc.EmittedEvent            `json:"events"`
+	Events rpc.EmittedEvent `json:"events"`
 }
 
 // StarknetDeterministicAccountInfo represents the structure for Starknet deterministic account info
@@ -853,7 +841,6 @@ type StarknetDeterministicAccountInfo struct {
 	PublicKey  *felt.Felt
 	NewAccount *account.Account
 }
-
 
 // WebhookSignatureVerification represents the result of signature verification
 type WebhookSignatureVerification struct {

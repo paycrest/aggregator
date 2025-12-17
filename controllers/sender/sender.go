@@ -1343,16 +1343,20 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 		Where(
 			paymentorder.IDEQ(paymentOrderID),
 			paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)),
+			paymentorder.StatusIn(paymentorder.StatusFulfilled, paymentorder.StatusValidated),
 			paymentorder.OrderTypeEQ(paymentorder.OrderTypeOtc),
 		).
 		WithSenderProfile().
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
+		WithFulfillments(func(fq *ent.PaymentOrderFulfillmentQuery) {
+			fq.Where(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusSuccess))
+		}).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found or does not belong to sender", nil)
+			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found or not eligible for validation", nil)
 			return
 		}
 		logger.WithFields(logger.Fields{
@@ -1369,46 +1373,20 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 		return
 	}
 
-	// Fetch payment order using message hash and verify it's fulfilled and has successful fulfillment
-	lockOrder, err := storage.Client.PaymentOrder.
-		Query().
-		Where(
-			paymentorder.MessageHashEQ(paymentOrder.MessageHash),
-			paymentorder.StatusIn(paymentorder.StatusFulfilled, paymentorder.StatusValidated),
-			paymentorder.OrderTypeEQ(paymentorder.OrderTypeOtc),
-		).
-		WithFulfillments(func(fq *ent.PaymentOrderFulfillmentQuery) {
-			fq.Where(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusSuccess))
-		}).
-		Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			u.APIResponse(ctx, http.StatusNotFound, "error", "Lock order not found or not eligible for validation", nil)
-			return
-		}
-		logger.WithFields(logger.Fields{
-			"Error":          fmt.Sprintf("%v", err),
-			"PaymentOrderID": paymentOrderID.String(),
-			"MessageHash":    paymentOrder.MessageHash,
-		}).Errorf("Failed to fetch lock payment order: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch lock order", nil)
-		return
-	}
-
 	// Verify fulfillment exists and has success status
-	if len(lockOrder.Edges.Fulfillments) == 0 {
+	if len(paymentOrder.Edges.Fulfillments) == 0 {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Order fulfillment not found or not successful", nil)
 		return
 	}
 
-	fulfillment := lockOrder.Edges.Fulfillments[0]
+	fulfillment := paymentOrder.Edges.Fulfillments[0]
 	if fulfillment.ValidationStatus != paymentorderfulfillment.ValidationStatusSuccess {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Order fulfillment must have success status", nil)
 		return
 	}
 
 	// Check if order is already validated
-	if lockOrder.Status == paymentorder.StatusValidated {
+	if paymentOrder.Status == paymentorder.StatusValidated {
 		u.APIResponse(ctx, http.StatusOK, "success", "Order already validated", nil)
 		return
 	}
@@ -1427,7 +1405,7 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 	// Create transaction log within transaction
 	transactionLog, err := tx.TransactionLog.Create().
 		SetStatus(transactionlog.StatusOrderValidated).
-		SetNetwork(lockOrder.Edges.Token.Edges.Network.Identifier).
+		SetNetwork(paymentOrder.Edges.Token.Edges.Network.Identifier).
 		SetMetadata(map[string]interface{}{
 			"TransactionID": fulfillment.TxID,
 			"PSP":           fulfillment.Psp,
@@ -1437,7 +1415,7 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 		logger.WithFields(logger.Fields{
 			"Error":          fmt.Sprintf("%v", err),
 			"PaymentOrderID": paymentOrderID.String(),
-			"Network":        lockOrder.Edges.Token.Edges.Network.Identifier,
+			"Network":        paymentOrder.Edges.Token.Edges.Network.Identifier,
 		}).Errorf("Failed to create transaction log: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to validate order", nil)
 		_ = tx.Rollback()
@@ -1447,7 +1425,7 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 	// Update payment order status within transaction
 	_, err = tx.PaymentOrder.
 		Update().
-		Where(paymentorder.IDEQ(lockOrder.ID)).
+		Where(paymentorder.IDEQ(paymentOrder.ID)).
 		SetStatus(paymentorder.StatusValidated).
 		AddTransactions(transactionLog).
 		Save(ctx)
@@ -1455,25 +1433,7 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 		logger.WithFields(logger.Fields{
 			"Error":          fmt.Sprintf("%v", err),
 			"PaymentOrderID": paymentOrderID.String(),
-			"LockOrderID":    lockOrder.ID.String(),
 		}).Errorf("Failed to update lock order status: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to validate order", nil)
-		_ = tx.Rollback()
-		return
-	}
-
-	// Update payment order status within the same transaction
-	_, err = tx.PaymentOrder.
-		Update().
-		Where(paymentorder.IDEQ(paymentOrder.ID)).
-		SetStatus(paymentorder.StatusValidated).
-		Save(ctx)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":          fmt.Sprintf("%v", err),
-			"PaymentOrderID": paymentOrderID.String(),
-			"LockOrderID":    lockOrder.ID.String(),
-		}).Errorf("Failed to update payment order status within transaction: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to validate order", nil)
 		_ = tx.Rollback()
 		return
@@ -1490,11 +1450,10 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 	}
 
 	// Clean up order exclude list from Redis (best effort, don't fail if it errors)
-	orderKey := fmt.Sprintf("order_exclude_list_%s", lockOrder.ID)
+	orderKey := fmt.Sprintf("order_exclude_list_%s", paymentOrder.ID)
 	_ = storage.RedisClient.Del(ctx, orderKey).Err()
 
-	// Update paymentOrder.Status for webhook (transaction already committed)
-	paymentOrder.Status = paymentorder.StatusValidated
+	// Send webhook notification to sender
 	err = u.SendPaymentOrderWebhook(ctx, paymentOrder)
 	if err != nil {
 		logger.WithFields(logger.Fields{
